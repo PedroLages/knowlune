@@ -35,11 +35,11 @@ export function ReadingOverviewSection() {
 
     async function loadData() {
       try {
-        // Currently reading: most recent unfinished book
+        // Currently reading: most recent unfinished book (uses indexed status field)
         const inProgressBooks = await db.books
-          .where('progress')
-          .between(1, 99)
-          .filter(b => b.status === 'reading')
+          .where('status')
+          .equals('reading')
+          .filter(b => b.progress >= 1 && b.progress <= 99)
           .toArray()
 
         inProgressBooks.sort(
@@ -69,18 +69,27 @@ export function ReadingOverviewSection() {
         )
         const recent = bookSessions.slice(0, 5)
 
-        const recentWithTitles: RecentSession[] = []
-        for (const session of recent) {
-          const book = session.contentItemId
-            ? await db.books.get(session.contentItemId)
-            : null
-          recentWithTitles.push({
-            id: session.id,
-            bookId: session.contentItemId || '',
-            bookTitle: book?.title ?? 'Unknown Book',
-            duration: session.duration || 0,
-            startTime: session.startTime || '',
-          })
+        const recentWithTitles: RecentSession[] = recent.map(session => ({
+          id: session.id,
+          bookId: session.contentItemId || '',
+          bookTitle: '...',
+          duration: session.duration || 0,
+          startTime: session.startTime || '',
+        }))
+
+        // Batch-resolve book titles
+        const bookIds = [...new Set(recent.map(s => s.contentItemId).filter(Boolean) as string[])]
+        if (bookIds.length > 0) {
+          const books = await db.books.bulkGet(bookIds)
+          const titleMap = new Map<string, string>()
+          for (let i = 0; i < bookIds.length; i++) {
+            if (books[i]) titleMap.set(bookIds[i], books[i]!.title)
+          }
+          for (const item of recentWithTitles) {
+            if (item.bookId) {
+              item.bookTitle = titleMap.get(item.bookId) ?? 'Unknown Book'
+            }
+          }
         }
 
         if (!cancelled) {
@@ -96,8 +105,9 @@ export function ReadingOverviewSection() {
           setRecentSessions(recentWithTitles)
           setIsLoading(false)
         }
-      } catch {
+      } catch (err) {
         if (!cancelled) {
+          console.error('[ReadingOverviewSection] Failed to load reading data:', err)
           setIsLoading(false)
         }
       }

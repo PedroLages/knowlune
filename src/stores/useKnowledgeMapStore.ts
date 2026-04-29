@@ -245,51 +245,40 @@ export const useKnowledgeMapStore = create<KnowledgeMapState>((set, get) => ({
       // 3d. Most recent engagement timestamps
       // Build: courseId → most recent ISO timestamp
       const lastEngagementByCourse = new Map<string, string>()
+      let globalLastEngagement: string | null = null
       for (const session of allSessions) {
         const existing = lastEngagementByCourse.get(session.courseId)
         const sessionTime = session.endTime ?? session.startTime
         if (!existing || sessionTime > existing) {
           lastEngagementByCourse.set(session.courseId, sessionTime)
         }
+        if (!globalLastEngagement || sessionTime > globalLastEngagement) {
+          globalLastEngagement = sessionTime
+        }
       }
       // Also consider quiz attempt timestamps
       for (const attempt of allAttempts) {
         const courseId = quizToCourseId.get(attempt.quizId)
-        if (!courseId) continue
-        const existing = lastEngagementByCourse.get(courseId)
-        if (!existing || attempt.completedAt > existing) {
-          lastEngagementByCourse.set(courseId, attempt.completedAt)
+        if (courseId) {
+          const existing = lastEngagementByCourse.get(courseId)
+          if (!existing || attempt.completedAt > existing) {
+            lastEngagementByCourse.set(courseId, attempt.completedAt)
+          }
+        }
+        if (!globalLastEngagement || attempt.completedAt > globalLastEngagement) {
+          globalLastEngagement = attempt.completedAt
         }
       }
       // Also consider flashcard last_review timestamps
       for (const card of allFlashcards) {
-        if (!card.courseId || !card.last_review) continue
-        const existing = lastEngagementByCourse.get(card.courseId)
-        if (!existing || card.last_review > existing) {
-          lastEngagementByCourse.set(card.courseId, card.last_review)
-        }
-      }
-
-      // Global engagement: most recent session timestamp regardless of courseId.
-      // Includes book/audiobook sessions (courseId: '') that are invisible to per-topic recency.
-      let globalLastEngagement: string | null = null
-      for (const session of allSessions) {
-        const ts = session.endTime ?? session.startTime
-        if (!globalLastEngagement || ts > globalLastEngagement) {
-          globalLastEngagement = ts
-        }
-      }
-      if (!globalLastEngagement) {
-        // Fall back to quiz and flashcard timestamps if no sessions exist
-        for (const attempt of allAttempts) {
-          if (!globalLastEngagement || attempt.completedAt > globalLastEngagement) {
-            globalLastEngagement = attempt.completedAt
+        if (card.courseId && card.last_review) {
+          const existing = lastEngagementByCourse.get(card.courseId)
+          if (!existing || card.last_review > existing) {
+            lastEngagementByCourse.set(card.courseId, card.last_review)
           }
         }
-        for (const card of allFlashcards) {
-          if (card.last_review && (!globalLastEngagement || card.last_review > globalLastEngagement)) {
-            globalLastEngagement = card.last_review
-          }
+        if (card.last_review && (!globalLastEngagement || card.last_review > globalLastEngagement)) {
+          globalLastEngagement = card.last_review
         }
       }
 
@@ -440,11 +429,11 @@ export const useKnowledgeMapStore = create<KnowledgeMapState>((set, get) => ({
       })
     } catch (error) {
       console.error('[KnowledgeMapStore] Failed to compute scores:', error)
-      set({
+      set(state => ({
         isLoading: false,
         error: error instanceof Error ? error.message : 'Failed to compute knowledge scores',
-        globalLastEngagement: null,
-      })
+        globalLastEngagement: state.globalLastEngagement,
+      }))
     }
   },
 
