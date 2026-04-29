@@ -4,11 +4,12 @@ import { PdfViewer } from '../PdfViewer'
 
 describe('PdfViewer smoke', () => {
   it('sets the pdf.js worker source from the bundled worker module', async () => {
-    // Import triggers pdfWorker.ts side-effect: pdfjs.GlobalWorkerOptions.workerSrc = workerSrc
-    await import('../../../../../lib/pdfWorker')
+    await import('@/lib/pdfWorker')
     const { pdfjs } = await import('react-pdf')
-    expect(pdfjs.GlobalWorkerOptions.workerSrc).toBeTruthy()
-    expect(pdfjs.GlobalWorkerOptions.workerSrc).toMatch(/pdf\.worker/i)
+    // react-pdf 10.4.1 bundles pdfjs-dist 5.4.296 — top-level pin must match
+    expect(pdfjs.version).toBe('5.4.296')
+    // Must be a local bundled asset (starts with /), not pdfjs-dist's CDN fallback
+    expect(pdfjs.GlobalWorkerOptions.workerSrc).toMatch(/^\/.*pdf\.worker.*\.mjs/)
   })
 
   it('shows the error fallback when PDF fails to load', async () => {

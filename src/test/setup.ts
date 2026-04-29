@@ -47,9 +47,11 @@ if (!(globalThis.localStorage instanceof Storage)) {
 }
 
 // jsdom does not implement DOMMatrix — required by pdfjs-dist's canvas module
-// (used for PDF page transform calculations). DOMMatrix is a standard Web API
-// for 2D/3D matrix operations. pdfjs-dist references it at module load time,
-// not just during rendering, so it must be polyfilled before any import.
+// (used for PDF page transform calculations). This is a minimal polyfill for
+// module-load-time checks: pdfjs-dist references DOMMatrix at import time,
+// not just during rendering. Stub methods return identity / no-op results —
+// they prevent import crashes but will not produce correct values if exercised
+// by real PDF rendering. Full rendering tests should run in E2E (real browser).
 if (typeof globalThis.DOMMatrix === 'undefined') {
   class DOMMatrixPolyfill {
     a = 1; b = 0; c = 0; d = 1; e = 0; f = 0
@@ -69,8 +71,14 @@ if (typeof globalThis.DOMMatrix === 'undefined') {
             this.a = vals[0]; this.b = vals[1]
             this.c = vals[2]; this.d = vals[3]
             this.e = vals[4]; this.f = vals[5]
+            this.isIdentity = false
           }
         }
+      } else if (Array.isArray(init) && init.length >= 6) {
+        this.a = init[0]; this.b = init[1]
+        this.c = init[2]; this.d = init[3]
+        this.e = init[4]; this.f = init[5]
+        this.isIdentity = false
       }
     }
     translate(_x: number, _y: number) { return this }
@@ -79,8 +87,8 @@ if (typeof globalThis.DOMMatrix === 'undefined') {
     multiply(_other: DOMMatrix) { return this }
     invert() { return this }
     transformPoint() { return { x: 0, y: 0, z: 0, w: 1 } }
-    toFloat32Array() { return new Float32Array([1,0,0,1,0,0,0,0,0,1,0,0,0,0,0,1]) }
-    toFloat64Array() { return new Float64Array([1,0,0,1,0,0,0,0,0,1,0,0,0,0,0,1]) }
+    toFloat32Array() { return new Float32Array([1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1]) }
+    toFloat64Array() { return new Float64Array([1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1]) }
     toString() { return `matrix(${this.a}, ${this.b}, ${this.c}, ${this.d}, ${this.e}, ${this.f})` }
   }
   globalThis.DOMMatrix = DOMMatrixPolyfill as unknown as typeof DOMMatrix
