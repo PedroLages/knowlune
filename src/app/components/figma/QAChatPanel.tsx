@@ -14,7 +14,7 @@
  * @see docs/implementation-artifacts/9b-2-qa-from-notes-with-vercel-ai-sdk.md
  */
 
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
+import { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo } from 'react'
 import { MessageCircle, Send, AlertCircle, BookOpen, X, Loader2 } from 'lucide-react'
 import { Link } from 'react-router'
 import { Button } from '@/app/components/ui/button'
@@ -23,7 +23,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/ap
 import { Popover, PopoverContent, PopoverTrigger } from '@/app/components/ui/popover'
 import { ScrollArea } from '@/app/components/ui/scroll-area'
 import { useQAChatStore } from '@/stores/useQAChatStore'
-import { retrieveRelevantNotes, generateQAAnswer } from '@/lib/noteQA'
+import { retrieveRelevantNotes, generateQAAnswer, getNoteDisplayName } from '@/lib/noteQA'
 import { trackAIUsage } from '@/lib/aiEventTracking'
 import { db } from '@/db'
 import { useMediaQuery } from '@/app/hooks/useMediaQuery'
@@ -93,10 +93,11 @@ export function QAChatPanel() {
     }
   }, [])
 
-  // Auto-scroll to bottom when messages change
-  useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight
+  // Auto-scroll to bottom when messages change (layout effect avoids visible scroll jank before paint)
+  useLayoutEffect(() => {
+    const viewport = scrollRef.current?.querySelector('[data-slot="scroll-area-viewport"]') as HTMLElement | null
+    if (viewport) {
+      viewport.scrollTop = viewport.scrollHeight
     }
   }, [messages])
 
@@ -286,7 +287,7 @@ export function QAChatPanel() {
             <div key={msg.id} className={msg.type === 'question' ? 'text-right' : 'text-left'}>
               {/* Question (user) */}
               {msg.type === 'question' && (
-                <div className="inline-block max-w-[80%] rounded-lg bg-brand px-4 py-2 text-sm text-brand-foreground">
+                <div className="inline-block max-w-[80%] min-w-0 rounded-lg bg-brand px-4 py-2 text-sm text-brand-foreground break-words [overflow-wrap:anywhere]">
                   {msg.content}
                 </div>
               )}
@@ -294,7 +295,7 @@ export function QAChatPanel() {
               {/* Answer (AI) */}
               {msg.type === 'answer' && (
                 <div className="inline-block max-w-[90%] rounded-lg border bg-muted px-4 py-3 text-sm">
-                  <div className="whitespace-pre-wrap">{msg.content}</div>
+                  <div className="whitespace-pre-wrap break-words [overflow-wrap:anywhere]">{msg.content}</div>
 
                   {/* Citations */}
                   {msg.retrievedNotes && msg.retrievedNotes.length > 0 && (
@@ -306,7 +307,7 @@ export function QAChatPanel() {
                           to={`/courses/${retrieved.note.courseId}/lessons/${retrieved.note.videoId}${retrieved.note.timestamp ? `?t=${Math.floor(retrieved.note.timestamp)}` : ''}`}
                           className="block text-brand hover:underline"
                         >
-                          [{idx + 1}] {retrieved.note.courseId}/{retrieved.note.videoId}
+                          [{idx + 1}] {getNoteDisplayName(retrieved)}
                           {retrieved.note.timestamp &&
                             ` (${Math.floor(retrieved.note.timestamp)}s)`}
                           {' — '}
