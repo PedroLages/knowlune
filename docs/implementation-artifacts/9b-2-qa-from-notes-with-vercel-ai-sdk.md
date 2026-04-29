@@ -288,6 +288,30 @@ Added `page.evaluate()` to call `vectorStorePersistence.loadAll()` after seeding
 
 Unlike database-backed systems where seeded data is immediately available, in-memory indexes (vector stores, caches) must be explicitly reloaded after test data changes.
 
+### UUID Leakage in RAG Pipeline — Resolve Names Before Passing to LLM
+
+**Challenge:** AI responses contained raw UUIDs instead of human-readable course/video names
+
+The `noteQA.ts` pipeline (Path B) built LLM context using raw `courseId`/`videoId` fields — which are UUIDs in the database (e.g., `cea6d051-2dd1-.../8c930b6a-...`). The system prompt told the LLM to "cite sources by mentioning the course/video", causing UUIDs to appear verbatim in responses. The same UUIDs leaked into source citation links rendered in the UI.
+
+Meanwhile, the newer `ragCoordinator.ts` pipeline (Path A) already resolved human-readable names from `db.importedVideos` and `db.importedCourses` tables. The fix was to backport this pattern.
+
+**Solution:** Resolve names at retrieval time, use a shared display-name helper everywhere
+
+1. Extended `RetrievedNote` with optional `courseName` and `videoFilename` fields
+2. Added `enrichWithNames()` using `Promise.allSettled` for graceful batch resolution
+3. Created shared `getNoteDisplayName()` helper (`"hooks-overview.mp4 — React Basics"`)
+4. Updated LLM context format and system prompt to use human-readable names
+5. Updated UI source citations and `extractCitations` to use the same helper
+
+**Key insight:** Never pass raw database keys to an LLM context or render them in the UI
+
+When building RAG pipelines, resolve human-readable display names as early as possible (at retrieval time) and use a single shared helper for both context formatting and UI rendering. This prevents the two systems from diverging and avoids the "looks correct in the prompt, wrong in the UI" class of bugs.
+
+**Time saved:** ~2 hours. After initial investigation, the fix followed established patterns from `ragCoordinator.ts` and `promptBuilder.ts`, making the implementation straightforward once the root cause was identified.
+
+For full details, see [docs/solutions/ui-bugs/qa-chat-panel-uuid-leakage-overflow-auto-scroll-2026-04-29.md](../solutions/ui-bugs/qa-chat-panel-uuid-leakage-overflow-auto-scroll-2026-04-29.md).
+
 ## Implementation Plan
 
 [To be created using `/start-story E09B-S02`]

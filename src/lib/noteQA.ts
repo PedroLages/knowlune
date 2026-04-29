@@ -34,6 +34,17 @@ export type GenerateQAAnswerOptions = {
 export interface RetrievedNote {
   note: Note
   similarity: number
+  /** Human-readable course name (resolved from importedCourses) */
+  courseName?: string
+  /** Human-readable video filename (resolved from importedVideos) */
+  videoFilename?: string
+}
+
+export function getNoteDisplayName(retrieved: RetrievedNote): string {
+  if (retrieved.videoFilename && retrieved.courseName) {
+    return `${retrieved.videoFilename} — ${retrieved.courseName}`
+  }
+  return `${retrieved.note.courseId}/${retrieved.note.videoId}`
 }
 
 /**
@@ -105,7 +116,7 @@ export async function retrieveRelevantNotes(query: string): Promise<RetrievedNot
     }
   }
 
-  return retrievedNotes
+  return enrichWithNames(retrievedNotes)
 }
 
 async function retrieveRelevantNotesByText(query: string, limit = 5): Promise<RetrievedNote[]> {
@@ -114,7 +125,7 @@ async function retrieveRelevantNotesByText(query: string, limit = 5): Promise<Re
 
   const notes = await db.notes.toArray()
 
-  return notes
+  const results = notes
     .filter(note => !note.deleted)
     .map(note => {
       const searchableText = [
@@ -135,10 +146,29 @@ async function retrieveRelevantNotesByText(query: string, limit = 5): Promise<Re
     .filter(retrieved => retrieved.similarity > 0)
     .sort((a, b) => b.similarity - a.similarity)
     .slice(0, limit)
+
+  return enrichWithNames(results)
 }
 
 function tokenize(value: string): string[] {
   return value.toLowerCase().match(/[\p{L}\p{N}]+/gu) ?? []
+}
+
+async function enrichWithNames(retrievedNotes: RetrievedNote[]): Promise<RetrievedNote[]> {
+  const results = await Promise.allSettled(
+    retrievedNotes.map(async retrieved => {
+      const video = await db.importedVideos.get(retrieved.note.videoId)
+      const course = video ? await db.importedCourses.get(video.courseId) : null
+      return {
+        ...retrieved,
+        courseName: course?.name,
+        videoFilename: video?.filename,
+      }
+    }),
+  )
+  return results.map((result, i) =>
+    result.status === 'fulfilled' ? result.value : retrievedNotes[i],
+  )
 }
 
 /**
@@ -168,8 +198,9 @@ export async function* generateQAAnswer(
   const notesContext = retrievedNotes
     .map((retrieved, index) => {
       const { note } = retrieved
+      const displayName = getNoteDisplayName(retrieved)
       const timestamp = note.timestamp ? ` (at ${formatTimestamp(note.timestamp)})` : ''
-      return `[Note ${index + 1}] ${note.courseId}/${note.videoId}${timestamp}\n${note.content}`
+      return `[Note ${index + 1}] ${displayName}${timestamp}\n${note.content}`
     })
     .join('\n\n---\n\n')
 
@@ -178,7 +209,7 @@ export async function* generateQAAnswer(
 
 Rules:
 - Keep answers concise (50-200 words)
-- Always cite sources by mentioning the course/video (e.g., "According to your note from 001/001-001...")
+- Always cite sources by mentioning the course/video filename (e.g., "According to your note from hooks-overview.mp4 — React Basics...")
 - If notes don't contain relevant info, say "I don't have notes covering that topic."
 - Focus on key concepts and practical insights
 - Do not make up information outside the provided notes`
@@ -223,12 +254,19 @@ Provide a concise answer citing specific notes.`
 export function extractCitations(answerText: string, retrievedNotes: RetrievedNote[]): string[] {
   const citedNoteIds: string[] = []
 
-  for (const { note } of retrievedNotes) {
-    // Check if note's course/video is mentioned in answer
-    // Example: "001/001-001" or "course 001"
+  for (const retrieved of retrievedNotes) {
+    const { note } = retrieved
+    // Match raw courseId/videoId patterns (backward compatible)
     const courseVideoPattern = `${note.courseId}/${note.videoId}`
+    const idMatch =
+      answerText.includes(courseVideoPattern) || answerText.includes(note.courseId)
 
-    if (answerText.includes(courseVideoPattern) || answerText.includes(note.courseId)) {
+    // Match structured human-readable display name (only when both parts available)
+    const displayName = getNoteDisplayName(retrieved)
+    const displayMatch =
+      displayName !== courseVideoPattern && answerText.includes(displayName)
+
+    if (idMatch || displayMatch) {
       citedNoteIds.push(note.id)
     }
   }

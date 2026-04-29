@@ -22,6 +22,8 @@ vi.mock('@/ai/workers/coordinator', () => ({
 const mockEmbeddingsToArray = vi.fn()
 const mockNotesGet = vi.fn()
 const mockNotesToArray = vi.fn()
+const mockImportedVideosGet = vi.fn()
+const mockImportedCoursesGet = vi.fn()
 vi.mock('@/db', () => ({
   db: {
     embeddings: { toArray: () => mockEmbeddingsToArray() },
@@ -29,6 +31,8 @@ vi.mock('@/db', () => ({
       get: (id: string) => mockNotesGet(id),
       toArray: () => mockNotesToArray(),
     },
+    importedVideos: { get: (id: string) => mockImportedVideosGet(id) },
+    importedCourses: { get: (id: string) => mockImportedCoursesGet(id) },
   },
 }))
 
@@ -71,7 +75,7 @@ vi.mock('@/lib/aiConfiguration', () => ({
 }))
 
 // Import after mocks
-import { retrieveRelevantNotes, extractCitations, generateQAAnswer } from '../noteQA'
+import { retrieveRelevantNotes, extractCitations, generateQAAnswer, getNoteDisplayName } from '../noteQA'
 import type { RetrievedNote } from '../noteQA'
 
 // ---------------------------------------------------------------------------
@@ -91,8 +95,8 @@ function makeNote(overrides: Partial<Note> = {}): Note {
   } as Note
 }
 
-function makeRetrievedNote(overrides: Partial<Note> = {}, similarity = 0.9): RetrievedNote {
-  return { note: makeNote(overrides), similarity }
+function makeRetrievedNote(overrides: Partial<Note> = {}, similarity = 0.9, names?: { courseName?: string; videoFilename?: string }): RetrievedNote {
+  return { note: makeNote(overrides), similarity, ...names }
 }
 
 /** Collects all yielded values from an async generator */
@@ -503,6 +507,94 @@ describe('noteQA', () => {
       const messages = mockStreamCompletion.mock.calls[0][0]
       const userMessage = messages.find((m: { role: string }) => m.role === 'user')
       expect(userMessage.content).toContain('(at 61:01)')
+    })
+
+    it('should use human-readable display name when courseName and videoFilename are resolved', async () => {
+      const notes: RetrievedNote[] = [
+        makeRetrievedNote({ content: 'Note content', courseId: 'uuid-1', videoId: 'uuid-2' }, 0.9, {
+          courseName: 'React Basics',
+          videoFilename: 'hooks-overview.mp4',
+        }),
+      ]
+      mockStreamCompletion.mockImplementation(() => createMockStream(['answer']))
+
+      const gen = generateQAAnswer('question', notes)
+      await collectGenerator(gen)
+
+      const messages = mockStreamCompletion.mock.calls[0][0]
+      const userMessage = messages.find((m: { role: string }) => m.role === 'user')
+      expect(userMessage.content).toContain('hooks-overview.mp4 — React Basics')
+      expect(userMessage.content).not.toContain('uuid-1/uuid-2')
+    })
+  })
+
+  // =========================================================================
+  // getNoteDisplayName
+  // =========================================================================
+
+  describe('getNoteDisplayName', () => {
+    it('returns human-readable name when both courseName and videoFilename are present', () => {
+      const retrieved = makeRetrievedNote({ courseId: 'uuid-1', videoId: 'uuid-2' }, 0.9, {
+        courseName: 'React Basics',
+        videoFilename: 'hooks-overview.mp4',
+      })
+      expect(getNoteDisplayName(retrieved)).toBe('hooks-overview.mp4 — React Basics')
+    })
+
+    it('falls back to raw courseId/videoId when names are missing', () => {
+      const retrieved = makeRetrievedNote({ courseId: 'uuid-1', videoId: 'uuid-2' })
+      expect(getNoteDisplayName(retrieved)).toBe('uuid-1/uuid-2')
+    })
+
+    it('falls back when only courseName is present', () => {
+      const retrieved = makeRetrievedNote({ courseId: 'uuid-1', videoId: 'uuid-2' }, 0.9, {
+        courseName: 'React Basics',
+      })
+      expect(getNoteDisplayName(retrieved)).toBe('uuid-1/uuid-2')
+    })
+
+    it('falls back when only videoFilename is present', () => {
+      const retrieved = makeRetrievedNote({ courseId: 'uuid-1', videoId: 'uuid-2' }, 0.9, {
+        videoFilename: 'hooks-overview.mp4',
+      })
+      expect(getNoteDisplayName(retrieved)).toBe('uuid-1/uuid-2')
+    })
+  })
+
+  // =========================================================================
+  // extractCitations — human-readable name matching
+  // =========================================================================
+
+  describe('extractCitations with human-readable names', () => {
+    it('matches on structured display name when names are resolved', () => {
+      const retrieved = makeRetrievedNote({ id: 'note-1', courseId: 'uuid-1', videoId: 'uuid-2' }, 0.9, {
+        courseName: 'React Basics',
+        videoFilename: 'hooks-overview.mp4',
+      })
+      const answer = 'According to your note from hooks-overview.mp4 — React Basics, hooks are functions.'
+      const citations = extractCitations(answer, [retrieved])
+      expect(citations).toEqual(['note-1'])
+    })
+
+    it('does NOT match courseName or videoFilename independently (prevents false positives)', () => {
+      const retrieved = makeRetrievedNote({ id: 'note-1', courseId: 'uuid-1', videoId: 'uuid-2' }, 0.9, {
+        courseName: 'Introduction',
+        videoFilename: 'overview.mp4',
+      })
+      // "introduction" and "overview" are common words — should not trigger a match alone
+      const answer = 'This is an introduction to the course overview concepts.'
+      const citations = extractCitations(answer, [retrieved])
+      expect(citations).toEqual([])
+    })
+
+    it('still matches raw courseId/videoId pattern for backward compatibility', () => {
+      const retrieved = makeRetrievedNote({ id: 'note-1', courseId: 'uuid-1', videoId: 'uuid-2' }, 0.9, {
+        courseName: 'React Basics',
+        videoFilename: 'hooks-overview.mp4',
+      })
+      const answer = 'From uuid-1/uuid-2 we learn about hooks.'
+      const citations = extractCitations(answer, [retrieved])
+      expect(citations).toEqual(['note-1'])
     })
   })
 })
