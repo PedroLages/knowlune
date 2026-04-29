@@ -45,8 +45,8 @@ beforeEach(() => {
 // ---------------------------------------------------------------------------
 
 describe('constants', () => {
-  it('DEFAULT_ORDER contains 11 sections', () => {
-    expect(DEFAULT_ORDER).toHaveLength(11)
+  it('DEFAULT_ORDER contains 12 sections', () => {
+    expect(DEFAULT_ORDER).toHaveLength(12)
   })
 
   it('SECTION_LABELS has entry for every default section', () => {

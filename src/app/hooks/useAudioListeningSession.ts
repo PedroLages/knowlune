@@ -18,9 +18,9 @@
  * @since E87-S06
  */
 import { useEffect, useRef, useCallback } from 'react'
-import { db } from '@/db/schema'
 import { appEventBus } from '@/lib/eventBus'
 import { logStudyAction } from '@/lib/studyLog'
+import { persistStudySession } from '@/lib/sessions/persistStudySession'
 
 const MIN_SESSION_SECONDS = 30
 
@@ -49,9 +49,7 @@ export function useAudioListeningSession({ bookId, isPlaying }: UseAudioListenin
     const startTime = new Date(sessionStart).toISOString()
     const endTime = new Date(now).toISOString()
 
-    // Reuse studySessions table — sentinel pattern mirrors useReadingSession:
-    //   courseId: '' = non-course session
-    //   contentItemId: bookId = the audiobook being listened to
+    // Persist to Dexie via shared helper (syncs to Supabase, stamps userId/updatedAt)
     const sessionRecord = {
       id: crypto.randomUUID(),
       courseId: '', // non-course sentinel (same as reading sessions)
@@ -66,17 +64,19 @@ export function useAudioListeningSession({ bookId, isPlaying }: UseAudioListenin
     }
 
     // silent-catch-ok: session tracking is non-critical — never disrupt playback UX
-    db.studySessions.add(sessionRecord).catch(err => {
+    persistStudySession('add', sessionRecord).catch(err => {
       console.error('[useAudioListeningSession] Failed to persist listening session:', err)
     })
 
-    // Log study action for streak counting — reuses studyLog streak pipeline
-    logStudyAction({
-      type: 'book_listened',
-      courseId: bookId, // bookId as courseId sentinel (mirrors book_read pattern)
-      timestamp: endTime,
-      metadata: { durationMinutes },
-    })
+    // Log study action for streak counting (R9: 5-minute minimum for streak eligibility)
+    if (durationMs >= 5 * 60 * 1000) {
+      logStudyAction({
+        type: 'book_listened',
+        courseId: bookId, // bookId as courseId sentinel (mirrors book_read pattern)
+        timestamp: endTime,
+        metadata: { durationMinutes },
+      })
+    }
 
     // Emit event for ReadingStatsService and any other consumers (E87-S06)
     appEventBus.emit({

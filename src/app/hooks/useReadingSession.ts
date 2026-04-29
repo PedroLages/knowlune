@@ -14,9 +14,9 @@
  * @module useReadingSession
  */
 import { useEffect, useRef, useCallback } from 'react'
-import { db } from '@/db/schema'
 import { appEventBus } from '@/lib/eventBus'
 import { logStudyAction } from '@/lib/studyLog'
+import { persistStudySession } from '@/lib/sessions/persistStudySession'
 
 const MIN_SESSION_SECONDS = 30 // Minimum session duration to persist (AC: 2.4)
 const IDLE_PAUSE_MS = 5 * 60 * 1000 // 5 minutes of hidden tab = pause timer (AC: 4.1)
@@ -52,8 +52,7 @@ export function useReadingSession({ bookId, isReady }: UseReadingSessionOptions)
     const startTime = new Date(sessionStart).toISOString()
     const endTime = new Date(now).toISOString()
 
-    // Persist to Dexie — reuse studySessions table with book sentinel fields (architecture decision 1)
-    // courseId: '' and contentItemId: bookId are sentinels for book sessions (same pattern as Flashcard)
+    // Persist to Dexie via shared helper (syncs to Supabase, stamps userId/updatedAt)
     const sessionRecord = {
       id: crypto.randomUUID(),
       courseId: '', // book-sourced session sentinel (mirrors Flashcard.courseId pattern)
@@ -68,17 +67,19 @@ export function useReadingSession({ bookId, isReady }: UseReadingSessionOptions)
     }
 
     // silent-catch-ok: reading session tracking is non-critical — never disrupt reading UX
-    db.studySessions.add(sessionRecord).catch(err => {
+    persistStudySession('add', sessionRecord).catch(err => {
       console.error('[useReadingSession] Failed to persist reading session:', err)
     })
 
-    // Log study action for streak counting (E85-S06)
-    logStudyAction({
-      type: 'book_read',
-      courseId: bookId, // bookId used as courseId sentinel for streak system
-      timestamp: endTime,
-      metadata: { durationMinutes },
-    })
+    // Log study action for streak counting (R9: 5-minute minimum for streak eligibility)
+    if (activeDurationMs >= 5 * 60 * 1000) {
+      logStudyAction({
+        type: 'book_read',
+        courseId: bookId, // bookId used as courseId sentinel for streak system
+        timestamp: endTime,
+        metadata: { durationMinutes },
+      })
+    }
 
     // Emit event bus event for any other listeners (e.g., reading stats in E86)
     appEventBus.emit({
