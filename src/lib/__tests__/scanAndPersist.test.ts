@@ -83,9 +83,12 @@ beforeEach(async () => {
 function setupScanMocks(dirName: string, files: { name: string; isVideo: boolean }[]) {
   const dirHandle = createMockDirHandle(dirName)
   fileSystemMocks.showDirectoryPicker.mockResolvedValue(dirHandle)
-  fileSystemMocks.scanDirectory.mockImplementation(async function* () {
+  fileSystemMocks.scanDirectory.mockImplementation(async function* (_dirHandle, _basePath, options) {
     for (const file of files) {
-      yield { handle: createMockFileHandle(file.name), path: file.name }
+      const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(file.name)
+      if (options?.includeImages ? isImage : !isImage) {
+        yield { handle: createMockFileHandle(file.name), path: file.name }
+      }
     }
   })
   fileSystemMocks.isSupportedVideoFormat.mockImplementation((name: string) =>

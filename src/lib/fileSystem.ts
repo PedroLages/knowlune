@@ -52,8 +52,10 @@ export async function showDirectoryPicker(): Promise<FileSystemDirectoryHandle> 
 export async function* scanDirectory(
   dirHandle: FileSystemDirectoryHandle,
   basePath = '',
-  options?: { includeImages?: boolean }
+  options?: { includeImages?: boolean; maxDepth?: number }
 ): AsyncGenerator<{ handle: FileSystemFileHandle; path: string }> {
+  const currentDepth = basePath ? basePath.split('/').length : 0
+
   for await (const entry of dirHandle.values()) {
     const entryPath = basePath ? `${basePath}/${entry.name}` : entry.name
     if (entry.kind === 'file') {
@@ -61,6 +63,7 @@ export async function* scanDirectory(
         yield { handle: entry as FileSystemFileHandle, path: entryPath }
       }
     } else if (entry.kind === 'directory') {
+      if (options?.maxDepth !== undefined && currentDepth >= options.maxDepth) continue
       yield* scanDirectory(entry as FileSystemDirectoryHandle, entryPath, options)
     }
   }

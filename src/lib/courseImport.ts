@@ -151,8 +151,8 @@ export async function scanCourseFolder(): Promise<ScannedCourse> {
     let scanCount = 0
 
     try {
-      for await (const entry of scanDirectory(dirHandle, '', { includeImages: true })) {
-        // Check for cancellation during scan
+      // Recursive pass: videos + PDFs (course content may be in subdirectories)
+      for await (const entry of scanDirectory(dirHandle, '', { includeImages: false })) {
         if (useImportProgressStore.getState().cancelRequested) {
           useImportProgressStore.getState().confirmCancellation()
           throw new Error('Import cancelled by user')
@@ -160,16 +160,23 @@ export async function scanCourseFolder(): Promise<ScannedCourse> {
 
         if (isSupportedVideoFormat(entry.handle.name)) {
           videoFiles.push(entry)
-        } else if (isImageFile(entry.handle.name)) {
-          imageFiles.push(entry)
         } else {
           pdfFiles.push(entry)
         }
         scanCount++
-        // AC2: Update progress every 10 files during scan
         if (scanCount % 10 === 0) {
           progressStore.updateScanProgress(tempCourseId, scanCount, null)
         }
+      }
+
+      // Root-only pass: images (cover selection should only see root-folder images)
+      for await (const entry of scanDirectory(dirHandle, '', { includeImages: true, maxDepth: 0 })) {
+        if (useImportProgressStore.getState().cancelRequested) {
+          useImportProgressStore.getState().confirmCancellation()
+          throw new Error('Import cancelled by user')
+        }
+
+        if (isImageFile(entry.handle.name)) imageFiles.push(entry)
       }
     } catch (error) {
       if (error instanceof Error && error.message.includes('cancelled')) {
@@ -596,7 +603,8 @@ export async function scanCourseFolderFromHandle(
     const pdfFiles: { handle: FileSystemFileHandle; path: string }[] = []
     const imageFiles: { handle: FileSystemFileHandle; path: string }[] = []
     try {
-      for await (const entry of scanDirectory(dirHandle, '', { includeImages: true })) {
+      // Recursive pass: videos + PDFs (course content may be in subdirectories)
+      for await (const entry of scanDirectory(dirHandle, '', { includeImages: false })) {
         // Check for cancellation during scan (AC4)
         if (useImportProgressStore.getState().cancelRequested) {
           return { status: 'error', folderName: dirHandle.name, message: 'Cancelled' }
@@ -604,11 +612,18 @@ export async function scanCourseFolderFromHandle(
 
         if (isSupportedVideoFormat(entry.handle.name)) {
           videoFiles.push(entry)
-        } else if (isImageFile(entry.handle.name)) {
-          imageFiles.push(entry)
         } else {
           pdfFiles.push(entry)
         }
+      }
+
+      // Root-only pass: images (cover selection should only see root-folder images)
+      for await (const entry of scanDirectory(dirHandle, '', { includeImages: true, maxDepth: 0 })) {
+        if (useImportProgressStore.getState().cancelRequested) {
+          return { status: 'error', folderName: dirHandle.name, message: 'Cancelled' }
+        }
+
+        if (isImageFile(entry.handle.name)) imageFiles.push(entry)
       }
     } catch (error) {
       console.error('[BulkImport] Directory scan failed:', error)
