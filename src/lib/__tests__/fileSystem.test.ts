@@ -195,38 +195,6 @@ describe('scanDirectory', () => {
   })
 
   describe('maxDepth', () => {
-    function createMockFileHandle(name: string): FileSystemFileHandle {
-      return {
-        kind: 'file' as const,
-        name,
-        getFile: vi.fn(),
-        createWritable: vi.fn(),
-        isSameEntry: vi.fn(),
-        queryPermission: vi.fn(),
-        requestPermission: vi.fn(),
-      } as unknown as FileSystemFileHandle
-    }
-
-    function createMockDirectoryHandle(
-      name: string,
-      entries: (FileSystemFileHandle | FileSystemDirectoryHandle)[]
-    ): FileSystemDirectoryHandle {
-      return {
-        kind: 'directory' as const,
-        name,
-        values: vi.fn().mockImplementation(function* () {
-          yield* entries
-        }),
-        getFileHandle: vi.fn(),
-        getDirectoryHandle: vi.fn(),
-        removeEntry: vi.fn(),
-        resolve: vi.fn(),
-        isSameEntry: vi.fn(),
-        queryPermission: vi.fn(),
-        requestPermission: vi.fn(),
-      } as unknown as FileSystemDirectoryHandle
-    }
-
     it('maxDepth: 0 yields root files but skips subdirectory recursion', async () => {
       const rootImage = createMockFileHandle('cover.jpg')
       const subImage = createMockFileHandle('icon.png')

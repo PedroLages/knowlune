@@ -176,7 +176,7 @@ export async function scanCourseFolder(): Promise<ScannedCourse> {
           throw new Error('Import cancelled by user')
         }
 
-        imageFiles.push(entry)
+        if (isImageFile(entry.handle.name)) imageFiles.push(entry)
       }
     } catch (error) {
       if (error instanceof Error && error.message.includes('cancelled')) {
@@ -623,7 +623,7 @@ export async function scanCourseFolderFromHandle(
           return { status: 'error', folderName: dirHandle.name, message: 'Cancelled' }
         }
 
-        imageFiles.push(entry)
+        if (isImageFile(entry.handle.name)) imageFiles.push(entry)
       }
     } catch (error) {
       console.error('[BulkImport] Directory scan failed:', error)
