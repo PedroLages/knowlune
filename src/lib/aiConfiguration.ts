@@ -17,7 +17,7 @@ import type { AIFeatureId, AIProviderId, FeatureModelConfig } from './modelDefau
 import { PROVIDER_DEFAULTS, FEATURE_DEFAULTS } from './modelDefaults'
 import type { DiscoveredModel } from './modelDiscovery'
 import { getFreeTierDefaultModel } from './modelDiscovery.static'
-import { checkCredential, storeCredential } from './vaultCredentials'
+import { checkCredential, storeCredential, readCredentialWithStatus } from './vaultCredentials'
 
 // Re-export for convenience — consumers can import from aiConfiguration
 export type { AIFeatureId, AIProviderId, FeatureModelConfig } from './modelDefaults'
@@ -483,6 +483,58 @@ export function resolveFeatureModel(feature: AIFeatureId): FeatureModelConfig {
  *
  * Security note: Never log or display the returned value.
  */
+
+/**
+ * Re-encrypts a provider API key to localStorage during Vault recovery.
+ *
+ * Unlike `saveProviderApiKey`, this does NOT dispatch `ai-configuration-updated`
+ * or call `storeCredential` — the Vault already holds the plaintext, so re-writing
+ * it is redundant. Only the localStorage encrypted copy is refreshed so future
+ * reads decrypt locally without a Vault round-trip (self-healing).
+ */
+async function reEncryptProviderKeyLocally(
+  provider: AIProviderId,
+  apiKey: string
+): Promise<AIConfigurationSettings> {
+  const encrypted = await encryptData(apiKey)
+  const current = getAIConfiguration()
+
+  const updatedProviderKeys: Partial<Record<AIProviderId, EncryptedData>> = {
+    ...current.providerKeys,
+    [provider]: encrypted,
+  }
+
+  const updated: AIConfigurationSettings = {
+    ...current,
+    providerKeys: updatedProviderKeys,
+  }
+
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(updated))
+  return updated
+}
+
+// In-flight Vault reads: deduplicate concurrent calls for the same provider
+// within the same event-loop tick. Cleared on settlement (success or failure).
+const inFlightVaultReads = new Map<AIProviderId, Promise<string | null>>()
+
+/** Reads a credential from Vault with one automatic retry on transient network errors. */
+async function readVaultCredentialWithRetry(
+  provider: AIProviderId
+): Promise<string | null> {
+  const result = await readCredentialWithStatus('ai-provider', provider)
+  if (result.ok) {
+    return result.value
+  }
+  // Auth failures are not transient — return null without retrying
+  if (result.reason === 'unauthenticated' || result.reason === 'auth-failed') {
+    return null
+  }
+  // Network/unknown error: wait 1s and retry once
+  await new Promise(resolve => setTimeout(resolve, 1000))
+  const retryResult = await readCredentialWithStatus('ai-provider', provider)
+  return retryResult.ok ? retryResult.value : null
+}
+
 export async function getDecryptedApiKeyForProvider(
   provider: AIProviderId
 ): Promise<string | null> {
@@ -498,28 +550,66 @@ export async function getDecryptedApiKeyForProvider(
     return config.ollamaSettings?.serverUrl ? 'ollama' : null
   }
 
-  // Check providerKeys map first (E90-S03 will populate this)
+  let decryptedResult: string | null = null
+
+  // Check providerKeys map first
   const providerKeyData = config.providerKeys?.[provider]
   if (providerKeyData) {
     try {
-      return await decryptData(providerKeyData.iv, providerKeyData.encryptedData)
+      decryptedResult = await decryptData(providerKeyData.iv, providerKeyData.encryptedData)
     } catch (error) {
       console.warn(`Failed to decrypt provider key for ${provider}:`, error) // silent-catch-ok: logged
-      return null
     }
   }
 
   // Fall back to legacy single-key field if provider matches global
-  if (provider === config.provider && config.apiKeyEncrypted) {
+  if (!decryptedResult && provider === config.provider && config.apiKeyEncrypted) {
     try {
-      return await decryptData(config.apiKeyEncrypted.iv, config.apiKeyEncrypted.encryptedData)
+      decryptedResult = await decryptData(config.apiKeyEncrypted.iv, config.apiKeyEncrypted.encryptedData)
     } catch (error) {
       console.warn('Failed to decrypt legacy API key:', error) // silent-catch-ok: logged
-      return null
     }
   }
 
-  return null
+  // Vault fallback: if local decryption failed but encrypted data proves a key was
+  // configured, attempt to retrieve the plaintext from Supabase Vault and re-encrypt
+  // with the current CryptoKey for future local reads (self-healing).
+  if (!decryptedResult) {
+    const hasEncryptedData = !!(
+      config.providerKeys?.[provider] ||
+      (provider === config.provider && config.apiKeyEncrypted)
+    )
+    if (hasEncryptedData) {
+      try {
+        // Deduplicate concurrent Vault reads for the same provider
+        let vaultSecretPromise: Promise<string | null>
+        const inFlight = inFlightVaultReads.get(provider)
+        if (inFlight) {
+          vaultSecretPromise = inFlight
+        } else {
+          vaultSecretPromise = readVaultCredentialWithRetry(provider)
+          inFlightVaultReads.set(provider, vaultSecretPromise)
+          vaultSecretPromise.finally(() => inFlightVaultReads.delete(provider))
+        }
+        const vaultSecret = await vaultSecretPromise
+        if (vaultSecret) {
+          decryptedResult = vaultSecret
+          try {
+            await reEncryptProviderKeyLocally(provider, vaultSecret)
+          } catch (reEncryptError) {
+            console.warn(
+              `Failed to re-encrypt Vault key for ${provider}:`,
+              reEncryptError
+            ) // silent-catch-ok: logged
+          }
+        }
+      } catch (error) {
+        console.warn(`Vault fallback failed for ${provider}:`, error) // silent-catch-ok: logged
+      }
+    }
+  }
+
+  return decryptedResult
 }
 
 /**
@@ -835,3 +925,6 @@ export function sanitizeAIRequestPayload(content: string): { content: string } {
   // Only include content being analyzed — no metadata
   return { content }
 }
+
+// Internal export for testing — do not import in application code
+export { reEncryptProviderKeyLocally as _reEncryptProviderKeyLocallyForTesting }

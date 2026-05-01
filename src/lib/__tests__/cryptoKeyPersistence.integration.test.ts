@@ -5,12 +5,27 @@
  *   saveProviderApiKey() → encryptData() → localStorage
  *   → [page refresh] →
  *   getDecryptedApiKeyForProvider() → loadCryptoKey() → decryptData()
+ *   → [IndexedDB cleared] →
+ *   getDecryptedApiKeyForProvider() → Vault fallback → re-encrypt
  */
 
 import 'fake-indexeddb/auto'
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { _resetKeyCache } from '../crypto'
 import { _resetDBForTesting } from '../cryptoKeyStore'
+
+const vaultMocks = vi.hoisted(() => ({
+  readCredential: vi.fn().mockResolvedValue(null),
+  storeCredential: vi.fn().mockResolvedValue(undefined),
+  readCredentialWithStatus: vi.fn(),
+}))
+
+vi.mock('@/lib/vaultCredentials', () => ({
+  checkCredential: vi.fn(),
+  storeCredential: vaultMocks.storeCredential,
+  readCredential: vaultMocks.readCredential,
+  readCredentialWithStatus: vaultMocks.readCredentialWithStatus,
+}))
 
 // We need localStorage for aiConfiguration / youtubeConfiguration
 const localStorageMock = (() => {
@@ -34,7 +49,7 @@ vi.stubGlobal('localStorage', localStorageMock)
 vi.stubGlobal('dispatchEvent', vi.fn())
 
 // Import AFTER mocks are set up
-const { saveProviderApiKey, getDecryptedApiKeyForProvider } = await import('../aiConfiguration')
+const { saveProviderApiKey, saveAIConfiguration, getDecryptedApiKeyForProvider } = await import('../aiConfiguration')
 const { saveYouTubeConfiguration, getDecryptedYouTubeApiKey } =
   await import('../youtubeConfiguration')
 
@@ -43,6 +58,8 @@ beforeEach(async () => {
   await _resetDBForTesting()
   localStorageMock.clear()
   indexedDB.deleteDatabase('CryptoKeyStore')
+  vaultMocks.readCredentialWithStatus.mockReset().mockResolvedValue({ ok: true, value: null })
+  vaultMocks.storeCredential.mockClear()
 })
 
 describe('API key persistence across page refresh', () => {
@@ -79,17 +96,54 @@ describe('API key persistence across page refresh', () => {
     expect(decrypted).toBe('AIzaSyTestYouTubeKey12345')
   })
 
-  it('returns null when IndexedDB is cleared (browsing data deleted)', async () => {
-    await saveProviderApiKey('openai', 'sk-will-be-lost-12345678')
+  it('recovers key from Vault when IndexedDB is cleared', async () => {
+    await saveProviderApiKey('openai', 'sk-will-survive-12345678')
 
-    // Simulate user clearing browsing data
+    // Simulate user clearing browsing data (IndexedDB lost, new CryptoKey)
     _resetKeyCache()
     await _resetDBForTesting()
     indexedDB.deleteDatabase('CryptoKeyStore')
 
-    // Key should be null — new session key can't decrypt old ciphertext
+    // Vault has the plaintext key
+    vaultMocks.readCredentialWithStatus.mockResolvedValue({ ok: true, value: 'sk-will-survive-12345678' })
+
+    const decrypted = await getDecryptedApiKeyForProvider('openai')
+    expect(decrypted).toBe('sk-will-survive-12345678')
+    expect(vaultMocks.readCredentialWithStatus).toHaveBeenCalledWith('ai-provider', 'openai')
+  })
+
+  it('returns null when IndexedDB is cleared and Vault has no credential', async () => {
+    await saveProviderApiKey('openai', 'sk-will-be-lost-12345678')
+
+    _resetKeyCache()
+    await _resetDBForTesting()
+    indexedDB.deleteDatabase('CryptoKeyStore')
+
+    // Vault has no credential for this provider (default mock returns null)
     const decrypted = await getDecryptedApiKeyForProvider('openai')
     expect(decrypted).toBeNull()
+  })
+
+  it('self-heals after Vault recovery: second call decrypts locally', async () => {
+    await saveProviderApiKey('openai', 'sk-self-healing-12345678')
+
+    // Clear IndexedDB
+    _resetKeyCache()
+    await _resetDBForTesting()
+    indexedDB.deleteDatabase('CryptoKeyStore')
+
+    // First call: Vault recovers the key and re-encrypts locally
+    vaultMocks.readCredentialWithStatus.mockResolvedValue({ ok: true, value: 'sk-self-healing-12345678' })
+    const first = await getDecryptedApiKeyForProvider('openai')
+    expect(first).toBe('sk-self-healing-12345678')
+    expect(vaultMocks.readCredentialWithStatus).toHaveBeenCalledTimes(1)
+
+    // Second call: local decrypt succeeds, no Vault call needed
+    vaultMocks.readCredentialWithStatus.mockClear()
+    _resetKeyCache() // simulate another refresh
+    const second = await getDecryptedApiKeyForProvider('openai')
+    expect(second).toBe('sk-self-healing-12345678')
+    expect(vaultMocks.readCredentialWithStatus).not.toHaveBeenCalled()
   })
 
   it('provider without saved key returns null', async () => {
@@ -99,6 +153,37 @@ describe('API key persistence across page refresh', () => {
 
     // Anthropic was never saved
     const decrypted = await getDecryptedApiKeyForProvider('anthropic')
+    expect(decrypted).toBeNull()
+  })
+
+  it('recovers legacy apiKeyEncrypted key from Vault when IndexedDB is cleared', async () => {
+    // Save using the legacy single-key API (apiKeyEncrypted, not providerKeys)
+    await saveAIConfiguration({ provider: 'openai' }, 'sk-legacy-test-key')
+
+    // Clear IndexedDB to simulate CryptoKey loss
+    _resetKeyCache()
+    await _resetDBForTesting()
+    indexedDB.deleteDatabase('CryptoKeyStore')
+
+    // Vault has the plaintext key
+    vaultMocks.readCredentialWithStatus.mockResolvedValue({ ok: true, value: 'sk-legacy-test-key' })
+
+    const decrypted = await getDecryptedApiKeyForProvider('openai')
+    expect(decrypted).toBe('sk-legacy-test-key')
+    expect(vaultMocks.readCredentialWithStatus).toHaveBeenCalledWith('ai-provider', 'openai')
+  })
+
+  it('returns null when legacy apiKeyEncrypted with cleared IndexedDB and empty Vault', async () => {
+    await saveAIConfiguration({ provider: 'openai' }, 'sk-legacy-will-be-lost')
+
+    _resetKeyCache()
+    await _resetDBForTesting()
+    indexedDB.deleteDatabase('CryptoKeyStore')
+
+    // Vault has no credential for this provider (default mock returns { ok: true, value: null })
+    vaultMocks.readCredentialWithStatus.mockResolvedValue({ ok: true, value: null })
+
+    const decrypted = await getDecryptedApiKeyForProvider('openai')
     expect(decrypted).toBeNull()
   })
 })

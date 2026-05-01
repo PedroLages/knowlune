@@ -9,13 +9,14 @@
  * - sanitizeAIRequestPayload: PII stripping
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import {
   getAIConfiguration,
   saveAIConfiguration,
   isFeatureEnabled,
   isAIAvailable,
   getNoteQAAvailability,
+  getDecryptedApiKeyForProvider,
   isBudgetMode,
   filterFreeModels,
   resolveFeatureModel,
@@ -24,13 +25,17 @@ import {
   isOllamaDirectConnection,
   AI_PROVIDERS,
   DEFAULTS,
+  _reEncryptProviderKeyLocallyForTesting,
   type AIConfigurationSettings,
 } from '@/lib/aiConfiguration'
 import type { DiscoveredModel } from '@/lib/modelDiscovery'
 
 // Mock crypto module
 vi.mock('@/lib/crypto', () => ({
-  encryptData: vi.fn(async (data: string) => `encrypted:${data}`),
+  encryptData: vi.fn(async (data: string) => ({
+    iv: 'mock-iv',
+    encryptedData: `encrypted:${data}`,
+  })),
   decryptData: vi.fn(async (ivOrEncrypted: string, encryptedData?: string) => {
     const encrypted = encryptedData ?? ivOrEncrypted
     if (encrypted.startsWith('encrypted:')) {
@@ -39,6 +44,15 @@ vi.mock('@/lib/crypto', () => ({
     throw new Error('Invalid encrypted data')
   }),
 }))
+
+const vaultMocks = vi.hoisted(() => ({
+  readCredential: vi.fn(),
+  storeCredential: vi.fn().mockResolvedValue(undefined),
+  checkCredential: vi.fn(),
+  readCredentialWithStatus: vi.fn(),
+}))
+
+vi.mock('@/lib/vaultCredentials', () => vaultMocks)
 
 describe('aiConfiguration.ts', () => {
   beforeEach(() => {
@@ -143,7 +157,10 @@ describe('aiConfiguration.ts', () => {
       const stored = localStorage.getItem('ai-configuration')
       expect(stored).toBeTruthy()
       const parsed = JSON.parse(stored!)
-      expect(parsed.apiKeyEncrypted).toBe(`encrypted:${apiKey}`)
+      expect(parsed.apiKeyEncrypted).toEqual({
+        iv: 'mock-iv',
+        encryptedData: `encrypted:${apiKey}`,
+      })
     })
 
     it('dispatches ai-configuration-updated event', async () => {
@@ -692,6 +709,534 @@ describe('aiConfiguration.ts', () => {
 
     it('Groq name still includes (FREE)', () => {
       expect(AI_PROVIDERS.groq.name).toBe('Groq (FREE)')
+    })
+  })
+
+  // ===========================================================================
+  // getDecryptedApiKeyForProvider — Vault fallback (2026-05-01 fix)
+  // ===========================================================================
+
+  describe('getDecryptedApiKeyForProvider', () => {
+    beforeEach(() => {
+      vaultMocks.readCredentialWithStatus.mockReset()
+      vaultMocks.storeCredential.mockClear()
+    })
+
+    it('returns decrypted key when local provider key decrypts successfully', async () => {
+      localStorage.setItem(
+        'ai-configuration',
+        JSON.stringify({
+          ...DEFAULTS,
+          providerKeys: {
+            gemini: { iv: 'mock-iv', encryptedData: 'encrypted:AIza-test-key' },
+          },
+        })
+      )
+
+      const result = await getDecryptedApiKeyForProvider('gemini')
+      expect(result).toBe('AIza-test-key')
+      expect(vaultMocks.readCredentialWithStatus).not.toHaveBeenCalled()
+    })
+
+    it('falls back to Vault when local decrypt fails and encrypted data exists', async () => {
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+      vaultMocks.readCredentialWithStatus.mockResolvedValue({ ok: true, value: 'AIza-vault-recovered-key' })
+
+      localStorage.setItem(
+        'ai-configuration',
+        JSON.stringify({
+          ...DEFAULTS,
+          providerKeys: {
+            gemini: { iv: 'old-iv', encryptedData: 'corrupted-data' },
+          },
+        })
+      )
+
+      const result = await getDecryptedApiKeyForProvider('gemini')
+      expect(result).toBe('AIza-vault-recovered-key')
+      expect(vaultMocks.readCredentialWithStatus).toHaveBeenCalledWith('ai-provider', 'gemini')
+
+      warnSpy.mockRestore()
+    })
+
+    it('re-encrypts locally when Vault fallback succeeds (self-healing)', async () => {
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+      const dispatchSpy = vi.spyOn(window, 'dispatchEvent')
+      vaultMocks.readCredentialWithStatus.mockResolvedValue({ ok: true, value: 'AIza-vault-recovered-key' })
+
+      localStorage.setItem(
+        'ai-configuration',
+        JSON.stringify({
+          ...DEFAULTS,
+          providerKeys: {
+            gemini: { iv: 'old-iv', encryptedData: 'corrupted-data' },
+          },
+        })
+      )
+
+      await getDecryptedApiKeyForProvider('gemini')
+
+      // After self-healing, the key should be stored
+      const stored = JSON.parse(localStorage.getItem('ai-configuration')!)
+      expect(stored.providerKeys.gemini).toBeDefined()
+      expect(stored.providerKeys.gemini.encryptedData).toBe('encrypted:AIza-vault-recovered-key')
+
+      // Silent re-encrypt — no side effects
+      expect(vaultMocks.storeCredential).not.toHaveBeenCalled()
+      const updateEvents = dispatchSpy.mock.calls.filter(
+        ([e]) => e instanceof CustomEvent && e.type === 'ai-configuration-updated'
+      )
+      expect(updateEvents).toHaveLength(0)
+
+      dispatchSpy.mockRestore()
+      warnSpy.mockRestore()
+    })
+
+    it('self-healing: subsequent call decrypts locally without Vault', async () => {
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+      // First call: Vault provides the key
+      vaultMocks.readCredentialWithStatus.mockResolvedValueOnce({ ok: true, value: 'AIza-vault-recovered-key' })
+
+      localStorage.setItem(
+        'ai-configuration',
+        JSON.stringify({
+          ...DEFAULTS,
+          providerKeys: {
+            gemini: { iv: 'old-iv', encryptedData: 'corrupted-data' },
+          },
+        })
+      )
+
+      await getDecryptedApiKeyForProvider('gemini')
+      expect(vaultMocks.readCredentialWithStatus).toHaveBeenCalledTimes(1)
+
+      // Second call: re-encrypted data decrypts locally, Vault not called again
+      vaultMocks.readCredentialWithStatus.mockClear()
+      const result = await getDecryptedApiKeyForProvider('gemini')
+      expect(result).toBe('AIza-vault-recovered-key')
+      expect(vaultMocks.readCredentialWithStatus).not.toHaveBeenCalled()
+
+      warnSpy.mockRestore()
+    })
+
+    it('returns null when no encrypted data exists for provider', async () => {
+      localStorage.setItem('ai-configuration', JSON.stringify(DEFAULTS))
+
+      const result = await getDecryptedApiKeyForProvider('gemini')
+      expect(result).toBeNull()
+      expect(vaultMocks.readCredentialWithStatus).not.toHaveBeenCalled()
+    })
+
+    it('returns null when Vault returns null (key not in Vault)', async () => {
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+      vaultMocks.readCredentialWithStatus.mockResolvedValue({ ok: true, value: null })
+
+      localStorage.setItem(
+        'ai-configuration',
+        JSON.stringify({
+          ...DEFAULTS,
+          providerKeys: {
+            gemini: { iv: 'old-iv', encryptedData: 'corrupted-data' },
+          },
+        })
+      )
+
+      const result = await getDecryptedApiKeyForProvider('gemini')
+      expect(result).toBeNull()
+
+      warnSpy.mockRestore()
+    })
+
+    it('returns null when Vault returns transient error on both attempts', async () => {
+      vi.useFakeTimers({ shouldAdvanceTime: false })
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+      // readCredentialWithStatus returns error on every call — retry exhausts
+      vaultMocks.readCredentialWithStatus.mockResolvedValue({ ok: false, reason: 'error', message: 'Network error' })
+
+      localStorage.setItem(
+        'ai-configuration',
+        JSON.stringify({
+          ...DEFAULTS,
+          providerKeys: {
+            gemini: { iv: 'old-iv', encryptedData: 'corrupted-data' },
+          },
+        })
+      )
+
+      const promise = getDecryptedApiKeyForProvider('gemini')
+      await vi.advanceTimersByTimeAsync(0)
+      await vi.advanceTimersByTimeAsync(1000)
+      const result = await promise
+      // Retry exhausted — returns null without throwing
+      expect(result).toBeNull()
+      // Two attempts: first + retry
+      expect(vaultMocks.readCredentialWithStatus).toHaveBeenCalledTimes(2)
+
+      vi.useRealTimers()
+      warnSpy.mockRestore()
+    })
+
+    it('returns key when Vault succeeds but re-encrypt fails', async () => {
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+      vaultMocks.readCredentialWithStatus.mockResolvedValue({ ok: true, value: 'AIza-vault-key' })
+
+      localStorage.setItem(
+        'ai-configuration',
+        JSON.stringify({
+          ...DEFAULTS,
+          providerKeys: {
+            gemini: { iv: 'old-iv', encryptedData: 'corrupted-data' },
+          },
+        })
+      )
+      // Make encryptData throw on the NEXT call (during saveProviderApiKey)
+      const { encryptData } = await import('@/lib/crypto')
+      vi.mocked(encryptData).mockRejectedValueOnce(new Error('Encryption failed'))
+
+      const result = await getDecryptedApiKeyForProvider('gemini')
+      // Key should still be returned even though re-encrypt failed
+      expect(result).toBe('AIza-vault-key')
+
+      warnSpy.mockRestore()
+    })
+
+    it('skips Vault fallback for ollama provider', async () => {
+      localStorage.setItem(
+        'ai-configuration',
+        JSON.stringify({
+          ...DEFAULTS,
+          provider: 'ollama',
+          ollamaSettings: { serverUrl: 'http://localhost:11434', directConnection: false },
+          providerKeys: {
+            ollama: { iv: 'old-iv', encryptedData: 'corrupted-data' },
+          },
+        })
+      )
+
+      const result = await getDecryptedApiKeyForProvider('ollama')
+      // Ollama returns 'ollama' when serverUrl is configured, not an API key
+      expect(result).toBe('ollama')
+      expect(vaultMocks.readCredentialWithStatus).not.toHaveBeenCalled()
+    })
+
+    it('falls back via legacy apiKeyEncrypted when provider matches global', async () => {
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+      vaultMocks.readCredentialWithStatus.mockResolvedValue({ ok: true, value: 'sk-legacy-vault-key' })
+
+      localStorage.setItem(
+        'ai-configuration',
+        JSON.stringify({
+          ...DEFAULTS,
+          provider: 'openai',
+          apiKeyEncrypted: { iv: 'old-iv', encryptedData: 'corrupted-legacy-data' },
+        })
+      )
+
+      const result = await getDecryptedApiKeyForProvider('openai')
+      expect(result).toBe('sk-legacy-vault-key')
+      expect(vaultMocks.readCredentialWithStatus).toHaveBeenCalledWith('ai-provider', 'openai')
+
+      warnSpy.mockRestore()
+    })
+
+    it('triggers Vault fallback for empty-string decryption result', async () => {
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+      vaultMocks.readCredentialWithStatus.mockResolvedValue({ ok: true, value: 'AIza-vault-recovered-key' })
+
+      // encryptedData ending in 'encrypted:' decrypts to empty string
+      localStorage.setItem(
+        'ai-configuration',
+        JSON.stringify({
+          ...DEFAULTS,
+          providerKeys: {
+            gemini: { iv: 'mock-iv', encryptedData: 'encrypted:' },
+          },
+        })
+      )
+
+      const result = await getDecryptedApiKeyForProvider('gemini')
+      // Vault fallback should fire because !'' === true
+      expect(result).toBe('AIza-vault-recovered-key')
+      expect(vaultMocks.readCredentialWithStatus).toHaveBeenCalledWith('ai-provider', 'gemini')
+
+      warnSpy.mockRestore()
+    })
+
+    it('deduplicates concurrent Vault reads for the same provider', async () => {
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+      vaultMocks.readCredentialWithStatus.mockResolvedValue({ ok: true, value: 'AIza-vault-recovered-key' })
+
+      localStorage.setItem(
+        'ai-configuration',
+        JSON.stringify({
+          ...DEFAULTS,
+          providerKeys: {
+            gemini: { iv: 'old-iv', encryptedData: 'corrupted-data' },
+          },
+        })
+      )
+
+      // Two concurrent calls for the same provider
+      const [a, b] = await Promise.all([
+        getDecryptedApiKeyForProvider('gemini'),
+        getDecryptedApiKeyForProvider('gemini'),
+      ])
+
+      expect(a).toBe('AIza-vault-recovered-key')
+      expect(b).toBe('AIza-vault-recovered-key')
+      // Vault should only be called once
+      expect(vaultMocks.readCredentialWithStatus).toHaveBeenCalledTimes(1)
+
+      warnSpy.mockRestore()
+    })
+
+    it('allows retry after concurrent Vault cache is cleared on double failure', async () => {
+      vi.useFakeTimers({ shouldAdvanceTime: false })
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+      // Both attempts fail — retry exhausted
+      vaultMocks.readCredentialWithStatus.mockResolvedValue({ ok: false, reason: 'error' })
+
+      localStorage.setItem(
+        'ai-configuration',
+        JSON.stringify({
+          ...DEFAULTS,
+          providerKeys: {
+            gemini: { iv: 'old-iv', encryptedData: 'corrupted-data' },
+          },
+        })
+      )
+
+      // Two concurrent calls share the same in-flight retry promise
+      const promise = Promise.all([
+        getDecryptedApiKeyForProvider('gemini'),
+        getDecryptedApiKeyForProvider('gemini'),
+      ])
+      await vi.advanceTimersByTimeAsync(0)
+      await vi.advanceTimersByTimeAsync(1000)
+      const [a, b] = await promise
+      expect(a).toBeNull()
+      expect(b).toBeNull()
+      // Two calls total: first attempt + retry (shared by both concurrent callers)
+      expect(vaultMocks.readCredentialWithStatus).toHaveBeenCalledTimes(2)
+
+      // After cache cleared, a fresh call starts a new retry cycle
+      vaultMocks.readCredentialWithStatus.mockReset()
+      vaultMocks.readCredentialWithStatus
+        .mockResolvedValueOnce({ ok: false, reason: 'error' })
+        .mockResolvedValueOnce({ ok: true, value: 'AIza-recovered-on-retry' })
+
+      const freshPromise = getDecryptedApiKeyForProvider('gemini')
+      await vi.advanceTimersByTimeAsync(0)
+      await vi.advanceTimersByTimeAsync(1000)
+      const result = await freshPromise
+      expect(result).toBe('AIza-recovered-on-retry')
+      expect(vaultMocks.readCredentialWithStatus).toHaveBeenCalledTimes(2)
+
+      vi.useRealTimers()
+      warnSpy.mockRestore()
+    })
+
+    it('deduplicates per provider — concurrent calls for different providers each call Vault', async () => {
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+      vaultMocks.readCredentialWithStatus
+        .mockResolvedValueOnce({ ok: true, value: 'AIza-gemini-key' })
+        .mockResolvedValueOnce({ ok: true, value: 'sk-openai-key' })
+
+      localStorage.setItem(
+        'ai-configuration',
+        JSON.stringify({
+          ...DEFAULTS,
+          providerKeys: {
+            gemini: { iv: 'old-iv', encryptedData: 'corrupted-data' },
+            openai: { iv: 'old-iv', encryptedData: 'corrupted-data' },
+          },
+        })
+      )
+
+      const [geminiResult, openaiResult] = await Promise.all([
+        getDecryptedApiKeyForProvider('gemini'),
+        getDecryptedApiKeyForProvider('openai'),
+      ])
+
+      expect(geminiResult).toBe('AIza-gemini-key')
+      expect(openaiResult).toBe('sk-openai-key')
+      // One call per provider
+      expect(vaultMocks.readCredentialWithStatus).toHaveBeenCalledTimes(2)
+      expect(vaultMocks.readCredentialWithStatus).toHaveBeenCalledWith('ai-provider', 'gemini')
+      expect(vaultMocks.readCredentialWithStatus).toHaveBeenCalledWith('ai-provider', 'openai')
+
+      warnSpy.mockRestore()
+    })
+
+    describe('Vault read retry', () => {
+      beforeEach(() => {
+        vi.useFakeTimers({ shouldAdvanceTime: false })
+      })
+      afterEach(() => {
+        vi.useRealTimers()
+      })
+
+      it('succeeds on first attempt without retry', async () => {
+        vaultMocks.readCredentialWithStatus.mockResolvedValue({ ok: true, value: 'AIza-test-key' })
+
+        localStorage.setItem(
+          'ai-configuration',
+          JSON.stringify({
+            ...DEFAULTS,
+            providerKeys: {
+              gemini: { iv: 'old-iv', encryptedData: 'corrupted-data' },
+            },
+          })
+        )
+
+        const promise = getDecryptedApiKeyForProvider('gemini')
+        const result = await promise
+        expect(result).toBe('AIza-test-key')
+        expect(vaultMocks.readCredentialWithStatus).toHaveBeenCalledTimes(1)
+      })
+
+      it('retries once on network error and succeeds', async () => {
+        vaultMocks.readCredentialWithStatus
+          .mockResolvedValueOnce({ ok: false, reason: 'error' })
+          .mockResolvedValueOnce({ ok: true, value: 'AIza-retry-key' })
+
+        localStorage.setItem(
+          'ai-configuration',
+          JSON.stringify({
+            ...DEFAULTS,
+            providerKeys: {
+              gemini: { iv: 'old-iv', encryptedData: 'corrupted-data' },
+            },
+          })
+        )
+
+        const promise = getDecryptedApiKeyForProvider('gemini')
+        // Let the first call settle, advance past the 1s delay
+        await vi.advanceTimersByTimeAsync(0)
+        await vi.advanceTimersByTimeAsync(1000)
+        const result = await promise
+        expect(result).toBe('AIza-retry-key')
+        expect(vaultMocks.readCredentialWithStatus).toHaveBeenCalledTimes(2)
+      })
+
+      it('returns null after both attempts fail with network error', async () => {
+        vaultMocks.readCredentialWithStatus.mockResolvedValue({ ok: false, reason: 'error' })
+
+        localStorage.setItem(
+          'ai-configuration',
+          JSON.stringify({
+            ...DEFAULTS,
+            providerKeys: {
+              gemini: { iv: 'old-iv', encryptedData: 'corrupted-data' },
+            },
+          })
+        )
+
+        const promise = getDecryptedApiKeyForProvider('gemini')
+        await vi.advanceTimersByTimeAsync(0)
+        await vi.advanceTimersByTimeAsync(1000)
+        const result = await promise
+        expect(result).toBeNull()
+        expect(vaultMocks.readCredentialWithStatus).toHaveBeenCalledTimes(2)
+      })
+
+      it('returns null immediately on unauthenticated without retry', async () => {
+        vaultMocks.readCredentialWithStatus.mockResolvedValue({ ok: false, reason: 'unauthenticated' })
+
+        localStorage.setItem(
+          'ai-configuration',
+          JSON.stringify({
+            ...DEFAULTS,
+            providerKeys: {
+              gemini: { iv: 'old-iv', encryptedData: 'corrupted-data' },
+            },
+          })
+        )
+
+        const result = await getDecryptedApiKeyForProvider('gemini')
+        expect(result).toBeNull()
+        // No retry for auth failures
+        expect(vaultMocks.readCredentialWithStatus).toHaveBeenCalledTimes(1)
+      })
+
+      it('returns null immediately on auth-failed without retry', async () => {
+        vaultMocks.readCredentialWithStatus.mockResolvedValue({ ok: false, reason: 'auth-failed' })
+
+        localStorage.setItem(
+          'ai-configuration',
+          JSON.stringify({
+            ...DEFAULTS,
+            providerKeys: {
+              gemini: { iv: 'old-iv', encryptedData: 'corrupted-data' },
+            },
+          })
+        )
+
+        const result = await getDecryptedApiKeyForProvider('gemini')
+        expect(result).toBeNull()
+        expect(vaultMocks.readCredentialWithStatus).toHaveBeenCalledTimes(1)
+      })
+    })
+  })
+
+  describe('_reEncryptProviderKeyLocallyForTesting', () => {
+    beforeEach(() => {
+      vaultMocks.storeCredential.mockClear()
+    })
+
+    it('writes encrypted data to localStorage for the specified provider', async () => {
+      localStorage.setItem(
+        'ai-configuration',
+        JSON.stringify({
+          ...DEFAULTS,
+          providerKeys: {},
+        })
+      )
+
+      await _reEncryptProviderKeyLocallyForTesting('gemini', 'test-key')
+
+      const stored = JSON.parse(localStorage.getItem('ai-configuration')!)
+      expect(stored.providerKeys.gemini).toBeDefined()
+      expect(stored.providerKeys.gemini.encryptedData).toBe('encrypted:test-key')
+    })
+
+    it('preserves existing provider keys when re-encrypting', async () => {
+      localStorage.setItem(
+        'ai-configuration',
+        JSON.stringify({
+          ...DEFAULTS,
+          providerKeys: {
+            openai: { iv: 'existing-iv', encryptedData: 'existing-encrypted' },
+          },
+        })
+      )
+
+      await _reEncryptProviderKeyLocallyForTesting('gemini', 'test-key')
+
+      const stored = JSON.parse(localStorage.getItem('ai-configuration')!)
+      expect(stored.providerKeys.openai).toBeDefined()
+      expect(stored.providerKeys.gemini).toBeDefined()
+    })
+
+    it('does NOT dispatch ai-configuration-updated event', async () => {
+      const dispatchSpy = vi.spyOn(window, 'dispatchEvent')
+      localStorage.setItem('ai-configuration', JSON.stringify(DEFAULTS))
+
+      await _reEncryptProviderKeyLocallyForTesting('gemini', 'test-key')
+
+      const updateEvents = dispatchSpy.mock.calls.filter(
+        ([e]) => e instanceof CustomEvent && e.type === 'ai-configuration-updated'
+      )
+      expect(updateEvents).toHaveLength(0)
+      dispatchSpy.mockRestore()
+    })
+
+    it('does NOT call storeCredential (no Vault write)', async () => {
+      localStorage.setItem('ai-configuration', JSON.stringify(DEFAULTS))
+
+      await _reEncryptProviderKeyLocallyForTesting('gemini', 'test-key')
+
+      expect(vaultMocks.storeCredential).not.toHaveBeenCalled()
     })
   })
 })
