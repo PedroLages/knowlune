@@ -17,7 +17,7 @@ import type { AIFeatureId, AIProviderId, FeatureModelConfig } from './modelDefau
 import { PROVIDER_DEFAULTS, FEATURE_DEFAULTS } from './modelDefaults'
 import type { DiscoveredModel } from './modelDiscovery'
 import { getFreeTierDefaultModel } from './modelDiscovery.static'
-import { checkCredential, readCredential, storeCredential } from './vaultCredentials'
+import { checkCredential, readCredential, storeCredential, readCredentialWithStatus } from './vaultCredentials'
 
 // Re-export for convenience — consumers can import from aiConfiguration
 export type { AIFeatureId, AIProviderId, FeatureModelConfig } from './modelDefaults'
@@ -517,6 +517,24 @@ async function reEncryptProviderKeyLocally(
 // within the same event-loop tick. Cleared on settlement (success or failure).
 const inFlightVaultReads = new Map<AIProviderId, Promise<string | null>>()
 
+/** Reads a credential from Vault with one automatic retry on transient network errors. */
+async function readVaultCredentialWithRetry(
+  provider: AIProviderId
+): Promise<string | null> {
+  const result = await readCredentialWithStatus('ai-provider', provider)
+  if (result.ok) {
+    return result.value
+  }
+  // Auth failures are not transient — return null without retrying
+  if (result.reason === 'unauthenticated' || result.reason === 'auth-failed') {
+    return null
+  }
+  // Network/unknown error: wait 1s and retry once
+  await new Promise(resolve => setTimeout(resolve, 1000))
+  const retryResult = await readCredentialWithStatus('ai-provider', provider)
+  return retryResult.ok ? retryResult.value : null
+}
+
 export async function getDecryptedApiKeyForProvider(
   provider: AIProviderId
 ): Promise<string | null> {
@@ -569,7 +587,7 @@ export async function getDecryptedApiKeyForProvider(
         if (inFlight) {
           vaultSecretPromise = inFlight
         } else {
-          vaultSecretPromise = readCredential('ai-provider', provider)
+          vaultSecretPromise = readVaultCredentialWithRetry(provider)
           inFlightVaultReads.set(provider, vaultSecretPromise)
           vaultSecretPromise.finally(() => inFlightVaultReads.delete(provider))
         }
