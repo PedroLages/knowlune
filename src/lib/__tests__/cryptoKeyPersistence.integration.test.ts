@@ -49,7 +49,7 @@ vi.stubGlobal('localStorage', localStorageMock)
 vi.stubGlobal('dispatchEvent', vi.fn())
 
 // Import AFTER mocks are set up
-const { saveProviderApiKey, getDecryptedApiKeyForProvider } = await import('../aiConfiguration')
+const { saveProviderApiKey, saveAIConfiguration, getDecryptedApiKeyForProvider } = await import('../aiConfiguration')
 const { saveYouTubeConfiguration, getDecryptedYouTubeApiKey } =
   await import('../youtubeConfiguration')
 
@@ -153,6 +153,37 @@ describe('API key persistence across page refresh', () => {
 
     // Anthropic was never saved
     const decrypted = await getDecryptedApiKeyForProvider('anthropic')
+    expect(decrypted).toBeNull()
+  })
+
+  it('recovers legacy apiKeyEncrypted key from Vault when IndexedDB is cleared', async () => {
+    // Save using the legacy single-key API (apiKeyEncrypted, not providerKeys)
+    await saveAIConfiguration({ provider: 'openai' }, 'sk-legacy-test-key')
+
+    // Clear IndexedDB to simulate CryptoKey loss
+    _resetKeyCache()
+    await _resetDBForTesting()
+    indexedDB.deleteDatabase('CryptoKeyStore')
+
+    // Vault has the plaintext key
+    vaultMocks.readCredentialWithStatus.mockResolvedValue({ ok: true, value: 'sk-legacy-test-key' })
+
+    const decrypted = await getDecryptedApiKeyForProvider('openai')
+    expect(decrypted).toBe('sk-legacy-test-key')
+    expect(vaultMocks.readCredentialWithStatus).toHaveBeenCalledWith('ai-provider', 'openai')
+  })
+
+  it('returns null when legacy apiKeyEncrypted with cleared IndexedDB and empty Vault', async () => {
+    await saveAIConfiguration({ provider: 'openai' }, 'sk-legacy-will-be-lost')
+
+    _resetKeyCache()
+    await _resetDBForTesting()
+    indexedDB.deleteDatabase('CryptoKeyStore')
+
+    // Vault has no credential for this provider (default mock returns { ok: true, value: null })
+    vaultMocks.readCredentialWithStatus.mockResolvedValue({ ok: true, value: null })
+
+    const decrypted = await getDecryptedApiKeyForProvider('openai')
     expect(decrypted).toBeNull()
   })
 })
