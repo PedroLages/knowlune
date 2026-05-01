@@ -932,6 +932,29 @@ describe('aiConfiguration.ts', () => {
 
       warnSpy.mockRestore()
     })
+
+    it('triggers Vault fallback for empty-string decryption result', async () => {
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+      vaultMocks.readCredential.mockResolvedValue('AIza-vault-recovered-key')
+
+      // encryptedData ending in 'encrypted:' decrypts to empty string
+      localStorage.setItem(
+        'ai-configuration',
+        JSON.stringify({
+          ...DEFAULTS,
+          providerKeys: {
+            gemini: { iv: 'mock-iv', encryptedData: 'encrypted:' },
+          },
+        })
+      )
+
+      const result = await getDecryptedApiKeyForProvider('gemini')
+      // Vault fallback should fire because !'' === true
+      expect(result).toBe('AIza-vault-recovered-key')
+      expect(vaultMocks.readCredential).toHaveBeenCalledWith('ai-provider', 'gemini')
+
+      warnSpy.mockRestore()
+    })
   })
 
   describe('_reEncryptProviderKeyLocallyForTesting', () => {

@@ -541,7 +541,7 @@ export async function getDecryptedApiKeyForProvider(
   }
 
   // Fall back to legacy single-key field if provider matches global
-  if (decryptedResult === null && provider === config.provider && config.apiKeyEncrypted) {
+  if (!decryptedResult && provider === config.provider && config.apiKeyEncrypted) {
     try {
       decryptedResult = await decryptData(config.apiKeyEncrypted.iv, config.apiKeyEncrypted.encryptedData)
     } catch (error) {
@@ -552,7 +552,7 @@ export async function getDecryptedApiKeyForProvider(
   // Vault fallback: if local decryption failed but encrypted data proves a key was
   // configured, attempt to retrieve the plaintext from Supabase Vault and re-encrypt
   // with the current CryptoKey for future local reads (self-healing).
-  if (decryptedResult === null) {
+  if (!decryptedResult) {
     const hasEncryptedData = !!(
       config.providerKeys?.[provider] ||
       (provider === config.provider && config.apiKeyEncrypted)
