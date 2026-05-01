@@ -483,6 +483,36 @@ export function resolveFeatureModel(feature: AIFeatureId): FeatureModelConfig {
  *
  * Security note: Never log or display the returned value.
  */
+
+/**
+ * Re-encrypts a provider API key to localStorage during Vault recovery.
+ *
+ * Unlike `saveProviderApiKey`, this does NOT dispatch `ai-configuration-updated`
+ * or call `storeCredential` — the Vault already holds the plaintext, so re-writing
+ * it is redundant. Only the localStorage encrypted copy is refreshed so future
+ * reads decrypt locally without a Vault round-trip (self-healing).
+ */
+async function reEncryptProviderKeyLocally(
+  provider: AIProviderId,
+  apiKey: string
+): Promise<AIConfigurationSettings> {
+  const encrypted = await encryptData(apiKey)
+  const current = getAIConfiguration()
+
+  const updatedProviderKeys: Partial<Record<AIProviderId, EncryptedData>> = {
+    ...current.providerKeys,
+    [provider]: encrypted,
+  }
+
+  const updated: AIConfigurationSettings = {
+    ...current,
+    providerKeys: updatedProviderKeys,
+  }
+
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(updated))
+  return updated
+}
+
 export async function getDecryptedApiKeyForProvider(
   provider: AIProviderId
 ): Promise<string | null> {
@@ -533,7 +563,7 @@ export async function getDecryptedApiKeyForProvider(
         if (vaultSecret) {
           decryptedResult = vaultSecret
           try {
-            await saveProviderApiKey(provider, vaultSecret)
+            await reEncryptProviderKeyLocally(provider, vaultSecret)
           } catch (reEncryptError) {
             console.warn(
               `Failed to re-encrypt Vault key for ${provider}:`,
@@ -863,3 +893,6 @@ export function sanitizeAIRequestPayload(content: string): { content: string } {
   // Only include content being analyzed — no metadata
   return { content }
 }
+
+// Internal export for testing — do not import in application code
+export { reEncryptProviderKeyLocally as _reEncryptProviderKeyLocallyForTesting }

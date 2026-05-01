@@ -25,6 +25,7 @@ import {
   isOllamaDirectConnection,
   AI_PROVIDERS,
   DEFAULTS,
+  _reEncryptProviderKeyLocallyForTesting,
   type AIConfigurationSettings,
 } from '@/lib/aiConfiguration'
 import type { DiscoveredModel } from '@/lib/modelDiscovery'
@@ -759,6 +760,7 @@ describe('aiConfiguration.ts', () => {
 
     it('re-encrypts locally when Vault fallback succeeds (self-healing)', async () => {
       const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+      const dispatchSpy = vi.spyOn(window, 'dispatchEvent')
       vaultMocks.readCredential.mockResolvedValue('AIza-vault-recovered-key')
 
       localStorage.setItem(
@@ -778,6 +780,14 @@ describe('aiConfiguration.ts', () => {
       expect(stored.providerKeys.gemini).toBeDefined()
       expect(stored.providerKeys.gemini.encryptedData).toBe('encrypted:AIza-vault-recovered-key')
 
+      // Silent re-encrypt — no side effects
+      expect(vaultMocks.storeCredential).not.toHaveBeenCalled()
+      const updateEvents = dispatchSpy.mock.calls.filter(
+        ([e]) => e instanceof CustomEvent && e.type === 'ai-configuration-updated'
+      )
+      expect(updateEvents).toHaveLength(0)
+
+      dispatchSpy.mockRestore()
       warnSpy.mockRestore()
     })
 
@@ -921,6 +931,67 @@ describe('aiConfiguration.ts', () => {
       expect(vaultMocks.readCredential).toHaveBeenCalledWith('ai-provider', 'openai')
 
       warnSpy.mockRestore()
+    })
+  })
+
+  describe('_reEncryptProviderKeyLocallyForTesting', () => {
+    beforeEach(() => {
+      vaultMocks.storeCredential.mockClear()
+    })
+
+    it('writes encrypted data to localStorage for the specified provider', async () => {
+      localStorage.setItem(
+        'ai-configuration',
+        JSON.stringify({
+          ...DEFAULTS,
+          providerKeys: {},
+        })
+      )
+
+      await _reEncryptProviderKeyLocallyForTesting('gemini', 'test-key')
+
+      const stored = JSON.parse(localStorage.getItem('ai-configuration')!)
+      expect(stored.providerKeys.gemini).toBeDefined()
+      expect(stored.providerKeys.gemini.encryptedData).toBe('encrypted:test-key')
+    })
+
+    it('preserves existing provider keys when re-encrypting', async () => {
+      localStorage.setItem(
+        'ai-configuration',
+        JSON.stringify({
+          ...DEFAULTS,
+          providerKeys: {
+            openai: { iv: 'existing-iv', encryptedData: 'existing-encrypted' },
+          },
+        })
+      )
+
+      await _reEncryptProviderKeyLocallyForTesting('gemini', 'test-key')
+
+      const stored = JSON.parse(localStorage.getItem('ai-configuration')!)
+      expect(stored.providerKeys.openai).toBeDefined()
+      expect(stored.providerKeys.gemini).toBeDefined()
+    })
+
+    it('does NOT dispatch ai-configuration-updated event', async () => {
+      const dispatchSpy = vi.spyOn(window, 'dispatchEvent')
+      localStorage.setItem('ai-configuration', JSON.stringify(DEFAULTS))
+
+      await _reEncryptProviderKeyLocallyForTesting('gemini', 'test-key')
+
+      const updateEvents = dispatchSpy.mock.calls.filter(
+        ([e]) => e instanceof CustomEvent && e.type === 'ai-configuration-updated'
+      )
+      expect(updateEvents).toHaveLength(0)
+      dispatchSpy.mockRestore()
+    })
+
+    it('does NOT call storeCredential (no Vault write)', async () => {
+      localStorage.setItem('ai-configuration', JSON.stringify(DEFAULTS))
+
+      await _reEncryptProviderKeyLocallyForTesting('gemini', 'test-key')
+
+      expect(vaultMocks.storeCredential).not.toHaveBeenCalled()
     })
   })
 })
