@@ -17,7 +17,7 @@ import type { AIFeatureId, AIProviderId, FeatureModelConfig } from './modelDefau
 import { PROVIDER_DEFAULTS, FEATURE_DEFAULTS } from './modelDefaults'
 import type { DiscoveredModel } from './modelDiscovery'
 import { getFreeTierDefaultModel } from './modelDiscovery.static'
-import { checkCredential, readCredential, storeCredential, readCredentialWithStatus } from './vaultCredentials'
+import { checkCredential, storeCredential, readCredentialWithStatus } from './vaultCredentials'
 
 // Re-export for convenience — consumers can import from aiConfiguration
 export type { AIFeatureId, AIProviderId, FeatureModelConfig } from './modelDefaults'
