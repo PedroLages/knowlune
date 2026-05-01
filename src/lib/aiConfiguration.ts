@@ -17,7 +17,7 @@ import type { AIFeatureId, AIProviderId, FeatureModelConfig } from './modelDefau
 import { PROVIDER_DEFAULTS, FEATURE_DEFAULTS } from './modelDefaults'
 import type { DiscoveredModel } from './modelDiscovery'
 import { getFreeTierDefaultModel } from './modelDiscovery.static'
-import { checkCredential, storeCredential } from './vaultCredentials'
+import { checkCredential, readCredential, storeCredential } from './vaultCredentials'
 
 // Re-export for convenience — consumers can import from aiConfiguration
 export type { AIFeatureId, AIProviderId, FeatureModelConfig } from './modelDefaults'
@@ -498,28 +498,56 @@ export async function getDecryptedApiKeyForProvider(
     return config.ollamaSettings?.serverUrl ? 'ollama' : null
   }
 
-  // Check providerKeys map first (E90-S03 will populate this)
+  let decryptedResult: string | null = null
+
+  // Check providerKeys map first
   const providerKeyData = config.providerKeys?.[provider]
   if (providerKeyData) {
     try {
-      return await decryptData(providerKeyData.iv, providerKeyData.encryptedData)
+      decryptedResult = await decryptData(providerKeyData.iv, providerKeyData.encryptedData)
     } catch (error) {
       console.warn(`Failed to decrypt provider key for ${provider}:`, error) // silent-catch-ok: logged
-      return null
     }
   }
 
   // Fall back to legacy single-key field if provider matches global
-  if (provider === config.provider && config.apiKeyEncrypted) {
+  if (decryptedResult === null && provider === config.provider && config.apiKeyEncrypted) {
     try {
-      return await decryptData(config.apiKeyEncrypted.iv, config.apiKeyEncrypted.encryptedData)
+      decryptedResult = await decryptData(config.apiKeyEncrypted.iv, config.apiKeyEncrypted.encryptedData)
     } catch (error) {
       console.warn('Failed to decrypt legacy API key:', error) // silent-catch-ok: logged
-      return null
     }
   }
 
-  return null
+  // Vault fallback: if local decryption failed but encrypted data proves a key was
+  // configured, attempt to retrieve the plaintext from Supabase Vault and re-encrypt
+  // with the current CryptoKey for future local reads (self-healing).
+  if (decryptedResult === null) {
+    const hasEncryptedData = !!(
+      config.providerKeys?.[provider] ||
+      (provider === config.provider && config.apiKeyEncrypted)
+    )
+    if (hasEncryptedData) {
+      try {
+        const vaultSecret = await readCredential('ai-provider', provider)
+        if (vaultSecret) {
+          decryptedResult = vaultSecret
+          try {
+            await saveProviderApiKey(provider, vaultSecret)
+          } catch (reEncryptError) {
+            console.warn(
+              `Failed to re-encrypt Vault key for ${provider}:`,
+              reEncryptError
+            ) // silent-catch-ok: logged
+          }
+        }
+      } catch (error) {
+        console.warn(`Vault fallback failed for ${provider}:`, error) // silent-catch-ok: logged
+      }
+    }
+  }
+
+  return decryptedResult
 }
 
 /**
