@@ -513,6 +513,10 @@ async function reEncryptProviderKeyLocally(
   return updated
 }
 
+// In-flight Vault reads: deduplicate concurrent calls for the same provider
+// within the same event-loop tick. Cleared on settlement (success or failure).
+const inFlightVaultReads = new Map<AIProviderId, Promise<string | null>>()
+
 export async function getDecryptedApiKeyForProvider(
   provider: AIProviderId
 ): Promise<string | null> {
@@ -559,7 +563,17 @@ export async function getDecryptedApiKeyForProvider(
     )
     if (hasEncryptedData) {
       try {
-        const vaultSecret = await readCredential('ai-provider', provider)
+        // Deduplicate concurrent Vault reads for the same provider
+        let vaultSecretPromise: Promise<string | null>
+        const inFlight = inFlightVaultReads.get(provider)
+        if (inFlight) {
+          vaultSecretPromise = inFlight
+        } else {
+          vaultSecretPromise = readCredential('ai-provider', provider)
+          inFlightVaultReads.set(provider, vaultSecretPromise)
+          vaultSecretPromise.finally(() => inFlightVaultReads.delete(provider))
+        }
+        const vaultSecret = await vaultSecretPromise
         if (vaultSecret) {
           decryptedResult = vaultSecret
           try {
