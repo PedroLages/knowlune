@@ -121,7 +121,7 @@ async function seedProgressData(page: import('@playwright/test').Page): Promise<
 test.describe('E101-S06: Progress Tracking & Streaks', () => {
   test('AC4: Library book card shows progress percentage for ABS book', async ({ page }) => {
     await seedProgressData(page)
-    await page.goto('/library')
+    await page.goto('/library?tab=browse')
     await page.waitForLoadState('domcontentloaded')
 
     // Book card should show 42% progress
@@ -134,7 +134,7 @@ test.describe('E101-S06: Progress Tracking & Streaks', () => {
     page,
   }) => {
     await seedProgressData(page)
-    await page.goto('/library')
+    await page.goto('/library?tab=browse')
     await page.waitForLoadState('domcontentloaded')
 
     // Book at 504s is in Chapter 1 (0-599s range)
@@ -145,7 +145,7 @@ test.describe('E101-S06: Progress Tracking & Streaks', () => {
 
   test('AC4: Library book card shows time remaining for ABS book', async ({ page }) => {
     await seedProgressData(page)
-    await page.goto('/library')
+    await page.goto('/library?tab=browse')
     await page.waitForLoadState('domcontentloaded')
 
     // totalDuration=1200, currentPosition=504 => 696s left = 11m 36s => "11m left" display
@@ -156,7 +156,7 @@ test.describe('E101-S06: Progress Tracking & Streaks', () => {
 
   test('AC4: Book with 0% shows full duration (no "left" suffix)', async ({ page }) => {
     await seedProgressData(page)
-    await page.goto('/library')
+    await page.goto('/library?tab=browse')
     await page.waitForLoadState('domcontentloaded')
 
     const durationText = page.getByTestId(`duration-${ABS_BOOK_NO_PROGRESS.id}`)
@@ -207,7 +207,7 @@ test.describe('E101-S06: Progress Tracking & Streaks', () => {
       }
     })
 
-    await page.goto('/library')
+    await page.goto('/library?tab=browse')
     await page.waitForLoadState('domcontentloaded')
 
     // Book card should be visible with progress (loaded from Dexie, not ABS)

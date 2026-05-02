@@ -56,7 +56,7 @@ async function seedBooksAndNavigate(page: import('@playwright/test').Page): Prom
     'books',
     TEST_BOOKS as unknown as Record<string, unknown>[]
   )
-  await page.goto('/library')
+  await page.goto('/library?tab=browse')
   await page.reload()
 }
 

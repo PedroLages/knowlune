@@ -76,7 +76,7 @@ async function seedBooksAndHighlights(page: import('@playwright/test').Page): Pr
       JSON.stringify({ completedAt: '2026-01-01T00:00:00.000Z', skipped: true })
     )
   })
-  await page.goto('/library')
+  await page.goto('/library?tab=browse')
   await page.reload()
 }
 
@@ -98,7 +98,7 @@ test.describe('E83-S06: Book Deletion with OPFS Cleanup', () => {
     await expect(page.getByRole('alertdialog')).toContainText('Delete')
     await expect(page.getByRole('alertdialog')).toContainText('TypeScript Handbook')
     await expect(page.getByRole('alertdialog')).toContainText(
-      'This will remove the book and all its highlights'
+      'This will permanently remove the book'
     )
   })
 

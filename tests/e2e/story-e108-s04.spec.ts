@@ -44,7 +44,7 @@ test.describe('E108-S04: Audiobook Settings Panel', () => {
       localStorage.setItem('knowlune-sidebar-v1', 'false')
     })
 
-    await page.goto('/library')
+    await page.goto('/library?tab=browse')
     await seedBooks(page, [testAudiobook])
     await page.reload({ waitUntil: 'domcontentloaded' })
   })

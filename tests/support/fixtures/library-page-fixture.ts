@@ -13,7 +13,7 @@
 import { test as base } from '@playwright/test'
 
 export interface LibraryPageHelper {
-  goto: () => Promise<void>
+  goto: (tab?: 'continue' | 'browse' | 'collections' | 'history') => Promise<void>
   switchToListView: () => Promise<void>
   openBookCardContextMenu: (index: number) => Promise<void>
   openBookListItemContextMenu: (index: number) => Promise<void>
@@ -25,7 +25,7 @@ export const test = base.extend<{
 }>({
   libraryPage: async ({ page }, use) => {
     const helper: LibraryPageHelper = {
-      goto: () => page.goto('/library'),
+      goto: (tab = 'browse') => page.goto(`/library?tab=${tab}`),
 
       switchToListView: () => page.locator('[data-testid="local-view-list"]').click(),
 

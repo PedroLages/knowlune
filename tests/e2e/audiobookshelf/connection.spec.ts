@@ -58,7 +58,7 @@ async function seedServerData(page: import('@playwright/test').Page): Promise<vo
 }
 
 async function openAbsSettings(page: import('@playwright/test').Page): Promise<void> {
-  await page.goto('/library')
+  await page.goto('/library?tab=browse')
   await page.waitForLoadState('domcontentloaded')
   await page.getByTestId('abs-settings-trigger').click()
   await expect(page.getByTestId('abs-settings')).toBeVisible()

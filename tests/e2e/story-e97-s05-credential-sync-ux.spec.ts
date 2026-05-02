@@ -107,7 +107,7 @@ test.describe('E97-S05 Credential Setup Banner', () => {
 // Flow A's navigation mutates the page URL, and Playwright's context isolation
 // does NOT reset `page`'s in-memory URL between sibling `test(...)` blocks
 // that share the file-level beforeEach. Every new block below MUST explicitly
-// reset via `page.goto('/library')` (handled by the scoped beforeEach below)
+// reset via `page.goto('/library?tab=browse')` (handled by the scoped beforeEach below)
 // to prevent `?focus=` bleed-through into Flow B / Flow C.
 
 const CATALOG_ID = 'e97-s05-edge-catalog'
@@ -156,7 +156,7 @@ test.describe('E97-S05 deep-link edge flows', () => {
     // sibling block that navigated with query strings (Flow A writes
     // ?focus=opds:<id>). Playwright context isolation already resets
     // storage between tests, but the page.url() is per-test state.
-    await page.goto('/library')
+    await page.goto('/library?tab=browse')
     await setFakeAuthUser(page)
     await setFakeSyncComplete(page)
     await seedOpdsCatalog(page)

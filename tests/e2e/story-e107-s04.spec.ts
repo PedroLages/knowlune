@@ -26,7 +26,7 @@ test.describe('E107-S04: About Book Dialog', () => {
     })
 
     // Navigate to library page directly
-    await page.goto('/library')
+    await page.goto('/library?tab=browse')
 
     // Seed test books - one complete EPUB, one missing metadata, one audiobook
     await seedBooks(page, [
