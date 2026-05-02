@@ -24,19 +24,18 @@ test.describe('Reports Page — Study Analytics', () => {
     )
   })
 
-  test('should render all four stat cards', async ({ page }) => {
+  test('should render all four hero stats', async ({ page }) => {
     await goToReports(page)
 
-    await expect(page.getByText('Lessons Completed', { exact: true })).toBeVisible()
-    await expect(page.getByText('Courses In Progress')).toBeVisible()
-    await expect(page.getByText('Courses Completed')).toBeVisible()
-    await expect(page.getByText('Study Notes')).toBeVisible()
+    await expect(page.getByText('Lessons', { exact: true })).toBeVisible()
+    await expect(page.getByText('Streak')).toBeVisible()
+    await expect(page.getByText('Quiz Avg')).toBeVisible()
   })
 
-  test('should render Weekly Study Goal section', async ({ page }) => {
+  test('should render This Week section', async ({ page }) => {
     await goToReports(page)
 
-    await expect(page.getByText('Weekly Study Goal')).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'This Week', level: 2 })).toBeVisible()
   })
 
   test('should render Course Completion chart', async ({ page }) => {
@@ -91,9 +90,13 @@ test.describe('Reports Page — Study Analytics', () => {
     await page.reload()
     await page.waitForLoadState('load')
 
-    await expect(
-      page.getByText('No activity yet. Start studying to see your progress here.')
-    ).toBeVisible()
+    // The page should show the Reports heading even without activity
+    await expect(page.getByRole('heading', { name: 'Reports', level: 1 })).toBeVisible()
+
+    // Empty state: insight text and zero-value hero stats
+    await expect(page.getByText('Start studying to build your learning fingerprint')).toBeVisible()
+    await expect(page.getByText('0d')).toBeVisible()
+    await expect(page.getByText('0/')).toBeVisible()
   })
 })
 
@@ -123,7 +126,7 @@ test.describe('Reports Page — Tab Switching', () => {
     await expect(studyTab).toHaveAttribute('data-state', 'active')
 
     // Study content should be visible again
-    await expect(page.getByText('Weekly Study Goal')).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'This Week', level: 2 })).toBeVisible()
   })
 })
 

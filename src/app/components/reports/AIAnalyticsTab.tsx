@@ -9,7 +9,11 @@ import {
   Tags,
   Search,
   AlertCircle,
+  Zap,
+  Star,
+  Calendar,
 } from 'lucide-react'
+import { HeroStat } from '@/app/components/reports/HeroStat'
 import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/card'
 import {
   ChartContainer,
@@ -114,6 +118,7 @@ export function AIAnalyticsTab() {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [retryCount, setRetryCount] = useState(0)
+  const [monthlyStats, setMonthlyStats] = useState<AIUsageStats | null>(null)
   const aiAvailable = isAIAvailable()
 
   useEffect(() => {
@@ -148,6 +153,14 @@ export function AIAnalyticsTab() {
       ignore = true
     }
   }, [period, retryCount])
+
+  useEffect(() => {
+    let ignore = false
+    getAIUsageStats('monthly')
+      .then(stats => { if (!ignore) setMonthlyStats(stats) })
+      .catch(err => { console.error('[AIAnalyticsTab] Failed to load monthly stats:', err) })
+    return () => { ignore = true }
+  }, [retryCount])
 
   // Period status announcement for screen readers (single region instead of 5)
   const periodStatusMessage = useMemo(() => {
@@ -202,6 +215,12 @@ export function AIAnalyticsTab() {
 
   const hasData = stats && stats.totalEvents > 0
 
+  const mostUsedLabel = (() => {
+    if (!stats?.features || stats.features.length === 0) return '—'
+    const top = stats.features.reduce((a, b) => (a.count > b.count ? a : b))
+    return top.count === 0 ? '—' : AI_FEATURE_LABELS[top.featureType]
+  })()
+
   return (
     <section aria-labelledby="ai-analytics-heading" className="space-y-6">
       {/* Screen reader announcement for period changes */}
@@ -213,6 +232,13 @@ export function AIAnalyticsTab() {
       <h2 id="ai-analytics-heading" className="sr-only">
         AI Feature Analytics
       </h2>
+
+      {/* ── Hero stat strip ── */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+        <HeroStat label="Total AI Used" value={String(stats?.totalEvents ?? '—')} icon={Zap} />
+        <HeroStat label="Most Used" value={mostUsedLabel} icon={Star} />
+        <HeroStat label="This Month" value={String(monthlyStats?.totalEvents ?? '—')} icon={Calendar} />
+      </div>
 
       {/* Period toggle */}
       <div role="group" aria-label="Time period selection" className="flex gap-1">

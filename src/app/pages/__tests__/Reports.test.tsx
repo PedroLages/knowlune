@@ -90,11 +90,18 @@ vi.mock('@/lib/analytics', () => ({
   interpretRetakeFrequency: () => 'No retakes yet — each quiz taken once.',
 }))
 
-// ── Mock @/db (for db.quizAttempts.count()) ──
+// ── Mock @/db ──
 vi.mock('@/db', () => ({
   db: {
     quizAttempts: {
       count: () => Promise.resolve(0),
+    },
+    studySessions: {
+      where: () => ({
+        above: () => ({
+          toArray: () => Promise.resolve([]),
+        }),
+      }),
     },
   },
 }))
@@ -103,6 +110,8 @@ vi.mock('@/db', () => ({
 vi.mock('@/lib/studyLog', () => ({
   getActionsPerDay: () => [],
   getRecentActions: () => [],
+  getCurrentStreak: () => 0,
+  getLongestStreak: () => 0,
 }))
 
 // ── Mock reportStats ──
@@ -123,22 +132,16 @@ vi.mock('@/stores/useSessionStore', () => ({
 }))
 
 // ── Mock child components ──
-vi.mock('@/app/components/StatsCard', () => ({
-  StatsCard: ({ label, value }: { label: string; value: number }) => (
-    <div data-testid={`stat-${label}`}>
-      <span>{label}</span>
-      <span>{value}</span>
-    </div>
-  ),
+vi.mock('@/lib/insights', () => ({
+  generateStudyInsight: () => 'Test insight message.',
 }))
 
-vi.mock('@/app/components/EmptyState', () => ({
-  EmptyState: ({ title }: { title: string }) => <div data-testid="empty-state">{title}</div>,
+vi.mock('@/app/components/reports/ThisWeekSection', () => ({
+  ThisWeekSection: () => <div data-testid="this-week-section">ThisWeekSection</div>,
 }))
 
-vi.mock('@/app/components/StudyTimeAnalytics', () => ({
-  __esModule: true,
-  default: () => <div data-testid="study-time-analytics">StudyTimeAnalytics</div>,
+vi.mock('@/app/components/reports/ReadingSection', () => ({
+  ReadingSection: () => <div data-testid="reading-section">ReadingSection</div>,
 }))
 
 vi.mock('@/app/components/reports/AIAnalyticsTab', () => ({
@@ -151,20 +154,12 @@ vi.mock('@/app/components/reports/QuizAnalyticsDashboard', () => ({
   ),
 }))
 
-vi.mock('@/app/components/reports/QuizAnalyticsTab', () => ({
-  QuizAnalyticsTab: () => <div data-testid="quiz-analytics-tab">QuizAnalyticsTab</div>,
-}))
-
 vi.mock('@/app/components/reports/CategoryRadar', () => ({
   CategoryRadar: () => <div data-testid="category-radar">CategoryRadar</div>,
 }))
 
 vi.mock('@/app/components/reports/SkillsRadar', () => ({
   SkillsRadar: () => <div data-testid="skills-radar">SkillsRadar</div>,
-}))
-
-vi.mock('@/app/components/reports/WeeklyGoalRing', () => ({
-  WeeklyGoalRing: () => <div data-testid="weekly-goal-ring">WeeklyGoalRing</div>,
 }))
 
 vi.mock('@/app/components/reports/RecentActivityTimeline', () => ({
@@ -260,27 +255,30 @@ describe('Reports page', () => {
     expect(screen.getByText('Reports')).toBeInTheDocument()
   })
 
-  it('renders stat labels', () => {
+  it('renders stat labels in the hero', () => {
     render(
       <MemoryRouter>
         <Reports />
       </MemoryRouter>
     )
-    expect(screen.getByText('Lessons Completed')).toBeInTheDocument()
-    expect(screen.getByText('Courses In Progress')).toBeInTheDocument()
-    expect(screen.getByText('Courses Completed')).toBeInTheDocument()
-    expect(screen.getByText('Study Notes')).toBeInTheDocument()
+    expect(screen.getByText('Lessons')).toBeInTheDocument()
+    const coursesElements = screen.getAllByText('Courses')
+    expect(coursesElements.length).toBeGreaterThanOrEqual(1)
+    expect(screen.getByText('Streak')).toBeInTheDocument()
+    expect(screen.getByText('Quiz Avg')).toBeInTheDocument()
   })
 
-  it('renders chart section headings', () => {
+  it('renders section headers', () => {
     render(
       <MemoryRouter>
         <Reports />
       </MemoryRouter>
     )
-    expect(screen.getByText('Course Completion')).toBeInTheDocument()
-    expect(screen.getByText('Progress by Category')).toBeInTheDocument()
-    expect(screen.getByText('Study Activity (Last 30 Days)')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'This Week', level: 2 })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Courses', level: 2 })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Learning Behavior', level: 2 })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Reading', level: 2 })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Activity', level: 2 })).toBeInTheDocument()
   })
 
   it('mounts QuizAnalyticsDashboard when navigating to ?tab=quizzes', () => {
@@ -300,5 +298,14 @@ describe('Reports page', () => {
     )
     expect(screen.getByText('Course Completion')).toBeInTheDocument()
     expect(screen.queryByTestId('quiz-analytics-dashboard')).not.toBeInTheDocument()
+  })
+
+  it('renders the insight headline', () => {
+    render(
+      <MemoryRouter>
+        <Reports />
+      </MemoryRouter>
+    )
+    expect(screen.getByText('Test insight message.')).toBeInTheDocument()
   })
 })

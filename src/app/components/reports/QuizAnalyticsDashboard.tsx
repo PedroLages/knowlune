@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router'
-import { Trophy, Target, RotateCcw, BookOpen, TrendingUp, TrendingDown } from 'lucide-react'
+import { Trophy, Target, RotateCcw, BookOpen, TrendingUp, TrendingDown, CheckCircle } from 'lucide-react'
+import { HeroStat } from '@/app/components/reports/HeroStat'
 import { motion } from 'motion/react'
 import { cn } from '@/app/components/ui/utils'
 import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/card'
@@ -105,6 +106,14 @@ export function QuizAnalyticsDashboard() {
   return (
     <div className="space-y-6">
       <h2 className="sr-only">Quiz Analytics</h2>
+
+      {/* ── Hero stat strip ── */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+        <HeroStat label="Total Quizzes" value={String(summary.totalQuizzesCompleted)} icon={CheckCircle} />
+        <HeroStat label="Avg Score" value={`${Math.round(summary.averageScore)}%`} icon={Target} />
+        <HeroStat label="Completion Rate" value={`${Math.round(summary.completionRate)}%`} icon={TrendingUp} />
+      </div>
+
       {/* ── Row 1: Metric cards (3-col → 1-col) ── */}
       <motion.div
         variants={fadeUp}
