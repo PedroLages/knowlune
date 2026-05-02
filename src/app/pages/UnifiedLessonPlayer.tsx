@@ -7,7 +7,6 @@
  * modern adapter-driven architecture.
  *
  * Sub-components:
- * - PlayerHeader: action toolbar (Pomodoro, Q&A, theater, notes, completion)
  * - LessonContentRenderer: PDF, YouTube, or local video content
  * - LessonHeaderCard: title, description, badges, tags, actions slot
  * - BelowVideoTabs: Notes, Bookmarks, Transcript, AI Summary, Materials
@@ -26,11 +25,10 @@
  * @see E89-S05, E89-S06, E89-S07, E89-S08
  */
 
-import { useEffect, useMemo, useRef, useState } from 'react'
-import { useParams, useNavigate, useLocation, Link } from 'react-router'
+import { useEffect, useMemo, useRef } from 'react'
+import { useParams, useNavigate, useLocation } from 'react-router'
 import { recordVisit } from '@/lib/searchFrecency'
 import {
-  ArrowLeft,
   ChevronLeft,
   ChevronRight,
   PanelRight,
@@ -50,7 +48,7 @@ import { useMiniPlayerState } from '@/app/hooks/useMiniPlayerState'
 import { useDeepLinkEffects } from '@/app/hooks/useDeepLinkEffects'
 import { useLessonFocusEffects } from '@/app/hooks/useLessonFocusEffects'
 import { useFrameCapture } from '@/app/hooks/useFrameCapture'
-import { PlayerHeader } from '@/app/components/course/PlayerHeader'
+
 import { AutoAdvanceCountdown } from '@/app/components/figma/AutoAdvanceCountdown'
 import { CompletionModal } from '@/app/components/celebrations/CompletionModal'
 import { LessonContentRenderer } from '@/app/components/course/LessonContentRenderer'
@@ -107,7 +105,6 @@ export function UnifiedLessonPlayer() {
   const isLesson = Boolean(courseId && lessonId)
   const {
     isReadingMode,
-    toggleReadingMode,
     exitReadingMode,
     announcement: readingModeAnnouncement,
   } = useReadingMode(isLesson)
@@ -115,22 +112,6 @@ export function UnifiedLessonPlayer() {
   const videoPlayerRef = useRef<VideoPlayerHandle>(null)
   const titleRef = useRef<HTMLHeadingElement>(null)
   const videoContainerRef = useRef<HTMLDivElement>(null)
-
-  // Sticky toolbar detection: sentinel element goes above toolbar,
-  // when it scrolls out of view the toolbar is "stuck" at the top
-  const toolbarSentinelRef = useRef<HTMLDivElement>(null)
-  const [isToolbarStuck, setIsToolbarStuck] = useState(false)
-
-  useEffect(() => {
-    const sentinel = toolbarSentinelRef.current
-    if (!sentinel) return
-    const observer = new IntersectionObserver(
-      ([entry]) => setIsToolbarStuck(!entry.isIntersecting),
-      { threshold: 0 }
-    )
-    observer.observe(sentinel)
-    return () => observer.disconnect()
-  }, [])
 
   // Lesson navigation: prev/next lesson via adapter
   const { prevLesson, nextLesson, totalLessons, lessons } = useLessonNavigation(adapter, lessonId)
@@ -509,43 +490,6 @@ export function UnifiedLessonPlayer() {
       <div role="status" aria-live="polite" className="sr-only">
         {readingModeAnnouncement}
       </div>
-      {/* Sentinel: when this scrolls out of view, toolbar is "stuck" */}
-      <div ref={toolbarSentinelRef} className="h-0 shrink-0" aria-hidden="true" />
-      {/* Slim toolbar: back arrow + course name (left), action buttons (right) */}
-      <div
-        className={cn(
-          'flex items-center gap-3 px-4 py-2 shrink-0 sticky top-0 z-20 transition-all duration-200',
-          isToolbarStuck
-            ? 'bg-card shadow-lg shadow-black/25 border-b border-border/30 rounded-none'
-            : 'border border-border/30 bg-card/80 backdrop-blur-sm rounded-xl -mt-3 mb-3'
-        )}
-        data-theater-hide
-      >
-        <Link
-          to={`/courses/${courseId}`}
-          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors group"
-          aria-label="Back to course"
-        >
-          <ArrowLeft className="size-5 group-hover:-translate-x-0.5 transition-transform" />
-          <span className="truncate max-w-[200px] sm:max-w-[300px]">{courseName}</span>
-        </Link>
-        <div className="flex-1" />
-        <PlayerHeader
-          courseId={courseId!}
-          lessonId={lessonId!}
-          showCompletionToggle={
-            state.isPdf || capabilities.requiresNetwork || capabilities.hasVideo
-          }
-          onStatusChange={completion.handleManualStatusChange}
-          isTheater={isTheater}
-          onToggleTheater={toggleTheater}
-          notesOpen={state.notesOpen}
-          onToggleNotes={state.handleNotesToggle}
-          onToggleReadingMode={toggleReadingMode}
-          isReadingMode={isReadingMode}
-        />
-      </div>
-
       {/* Content area: classic horizontal layout — scrolls via #main-content (no nested scroll) */}
       {isDesktop ? (
         <div className={cn('flex gap-[var(--content-gap)]')}>
