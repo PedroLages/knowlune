@@ -35,5 +35,10 @@
 - Test factories at `tests/support/fixtures/factories/`
 - E2E sidebar seed: `localStorage.setItem('knowlune-sidebar-v1', 'false')` before navigating
 
+## Recurring Pattern: Store Integration Gaps (PR #484)
+- Zustand stores with `register*`/`sync*` methods that unit tests pass but zero production consumers call
+- grep for each store method in src/ (excluding __tests__ and the store file) — 0 callers = BLOCKER
+- See [feedback_store_integration_gaps.md](feedback_store_integration_gaps.md)
+
 ## Story-Level Details
 See [story-details.md](story-details.md) for per-story findings.

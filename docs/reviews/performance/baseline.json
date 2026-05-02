@@ -1,60 +1,114 @@
 {
-  "captured_at": "2026-04-17",
-  "commit": "68239d6",
+  "captured_at": "2026-05-02",
+  "commit": "524974f1",
   "bundle": {
     "total_js_bytes": 9728000,
-    "total_css_bytes": 288000,
+    "total_css_bytes": 312000,
     "chunks": {
       "Library": {
-        "raw": 187740,
-        "file": "Library-BAib0wfu.js"
+        "raw": 283887,
+        "file": "Library-COjpljq7.js"
       },
       "BookReader": {
-        "raw": 71096320,
-        "file": "BookReader-CZMr9Tui.js"
+        "raw": 104834,
+        "file": "BookReader-EO3Njzvd.js"
+      },
+      "UnifiedLessonPlayer": {
+        "raw": 356795,
+        "file": "UnifiedLessonPlayer-BG2PCCa4.js"
+      },
+      "Overview": {
+        "raw": 170009,
+        "file": "Overview-BNXOqVY1.js"
+      },
+      "CourseOverview": {
+        "raw": 17055,
+        "file": "CourseOverview-DafOEXPD.js"
       }
     }
   },
   "page_metrics": {
     "/": {
-      "ttfb": 1,
-      "dom_interactive": 33,
-      "dom_complete": 226,
-      "load_complete": 226,
-      "fcp": 372,
+      "ttfb": 416,
+      "dom_interactive": 457,
+      "dom_complete": 1993,
+      "load_complete": 1993,
+      "fcp": 2105,
       "lcp": null,
       "cls": 0,
       "tbt": 0,
       "resource_count": 250,
-      "js_resource_count": 249,
-      "css_resource_count": 1,
-      "total_transfer_bytes": 61800,
+      "js_resource_count": 250,
+      "css_resource_count": 0,
+      "total_transfer_bytes": 63000,
       "samples": 3,
       "largest_resources": [
         {
           "name": "client",
           "size": 300,
-          "duration": 8
+          "duration": 3
         },
         {
           "name": "reduce-motion-init.js",
           "size": 300,
-          "duration": 6
+          "duration": 3
         },
         {
           "name": "@react-refresh",
           "size": 300,
-          "duration": 8
+          "duration": 3
         },
         {
           "name": "main.tsx",
           "size": 300,
-          "duration": 9
+          "duration": 3
         },
         {
           "name": "env.mjs",
           "size": 300,
-          "duration": 4
+          "duration": 3
+        }
+      ]
+    },
+    "/overview": {
+      "ttfb": 137,
+      "dom_interactive": 346,
+      "dom_complete": 2460,
+      "load_complete": 2460,
+      "fcp": 2592,
+      "lcp": null,
+      "cls": 0,
+      "tbt": 0,
+      "resource_count": 250,
+      "js_resource_count": 250,
+      "css_resource_count": 0,
+      "total_transfer_bytes": 63000,
+      "samples": 3,
+      "largest_resources": [
+        {
+          "name": "client",
+          "size": 300,
+          "duration": 50
+        },
+        {
+          "name": "reduce-motion-init.js",
+          "size": 300,
+          "duration": 51
+        },
+        {
+          "name": "@react-refresh",
+          "size": 300,
+          "duration": 52
+        },
+        {
+          "name": "env.mjs",
+          "size": 300,
+          "duration": 12
+        },
+        {
+          "name": "main.tsx",
+          "size": 300,
+          "duration": 11
         }
       ]
     },
@@ -131,19 +185,88 @@
       "samples": 3
     },
     "/courses/:courseId": {
-      "ttfb": 3,
-      "dom_interactive": 10,
-      "dom_complete": 108,
-      "load_complete": 108,
-      "fcp": 171,
+      "ttfb": 289,
+      "dom_interactive": 326,
+      "dom_complete": 1903,
+      "load_complete": 1903,
+      "fcp": 2029,
       "lcp": null,
       "cls": 0,
       "tbt": 0,
-      "resource_count": 193,
-      "js_resource_count": 192,
-      "css_resource_count": 1,
-      "total_transfer_bytes": 166809,
-      "samples": 3
+      "resource_count": 250,
+      "js_resource_count": 250,
+      "css_resource_count": 0,
+      "total_transfer_bytes": 63000,
+      "samples": 3,
+      "largest_resources": [
+        {
+          "name": "client",
+          "size": 300,
+          "duration": 66
+        },
+        {
+          "name": "reduce-motion-init.js",
+          "size": 300,
+          "duration": 66
+        },
+        {
+          "name": "@react-refresh",
+          "size": 300,
+          "duration": 67
+        },
+        {
+          "name": "main.tsx",
+          "size": 300,
+          "duration": 24
+        },
+        {
+          "name": "env.mjs",
+          "size": 300,
+          "duration": 40
+        }
+      ]
+    },
+    "/courses/:courseId/lessons/:lessonId": {
+      "ttfb": 277,
+      "dom_interactive": 302,
+      "dom_complete": 2729,
+      "load_complete": 2729,
+      "fcp": 2841,
+      "lcp": null,
+      "cls": 0,
+      "tbt": 0,
+      "resource_count": 250,
+      "js_resource_count": 250,
+      "css_resource_count": 0,
+      "total_transfer_bytes": 63000,
+      "samples": 3,
+      "largest_resources": [
+        {
+          "name": "client",
+          "size": 300,
+          "duration": 9
+        },
+        {
+          "name": "reduce-motion-init.js",
+          "size": 300,
+          "duration": 9
+        },
+        {
+          "name": "@react-refresh",
+          "size": 300,
+          "duration": 9
+        },
+        {
+          "name": "main.tsx",
+          "size": 300,
+          "duration": 14
+        },
+        {
+          "name": "env.mjs",
+          "size": 300,
+          "duration": 13
+        }
+      ]
     },
     "/library/:bookId/read": {
       "ttfb": 6,
@@ -190,20 +313,32 @@
   },
   "bundle_sizes": {
     "index_js": {
-      "raw": 843050,
-      "file": "index-D6aS1cIz.js"
+      "raw": 1157363,
+      "file": "index-DEoFzhMW.js"
     },
     "Library": {
-      "raw": 232290,
-      "file": "Library-CDfU-rJa.js"
+      "raw": 283887,
+      "file": "Library-COjpljq7.js"
     },
     "index_css": {
-      "raw": 277205,
-      "file": "index-D7NvZWye.css"
+      "raw": 308635,
+      "file": "index-crUhstZ0.css"
     },
     "BookReader": {
-      "raw": 73163,
-      "file": "BookReader-CTeG5glo.js"
+      "raw": 104834,
+      "file": "BookReader-EO3Njzvd.js"
+    },
+    "UnifiedLessonPlayer": {
+      "raw": 356795,
+      "file": "UnifiedLessonPlayer-BG2PCCa4.js"
+    },
+    "Overview": {
+      "raw": 170009,
+      "file": "Overview-BNXOqVY1.js"
+    },
+    "CourseOverview": {
+      "raw": 17055,
+      "file": "CourseOverview-DafOEXPD.js"
     }
   }
 }
