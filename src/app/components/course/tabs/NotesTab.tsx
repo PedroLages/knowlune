@@ -5,11 +5,20 @@
  */
 
 import { useEffect, useCallback, useState } from 'react'
+import { Link2 } from 'lucide-react'
 import { Skeleton } from '@/app/components/ui/skeleton'
+import { Badge } from '@/app/components/ui/badge'
+import { Popover, PopoverContent, PopoverTrigger } from '@/app/components/ui/popover'
+import { Button } from '@/app/components/ui/button'
 import { NoteEditor } from '@/app/components/notes/NoteEditor'
 import { useNoteStore } from '@/stores/useNoteStore'
+import {
+  acceptNoteLinkSuggestion,
+  dismissNoteLinkPair,
+} from '@/ai/knowledgeGaps/noteLinkSuggestions'
 import { db } from '@/db'
 import type { Note } from '@/data/types'
+import type { NoteLinkSuggestion } from '@/ai/knowledgeGaps/types'
 import type { CapturedFrame } from '@/lib/frame-capture'
 
 export interface NotesTabProps {
@@ -35,6 +44,13 @@ export function NotesTab({
   const saveNote = useNoteStore(s => s.saveNote)
   const addNote = useNoteStore(s => s.addNote)
   const isLoading = useNoteStore(s => s.isLoading)
+  const pendingNoteLinkSuggestions = useNoteStore(s => s.pendingNoteLinkSuggestions)
+  const clearPendingNoteLinkSuggestions = useNoteStore(s => s.clearPendingNoteLinkSuggestions)
+
+  // Clear stale suggestions on lesson/course change
+  useEffect(() => {
+    clearPendingNoteLinkSuggestions()
+  }, [courseId, lessonId, clearPendingNoteLinkSuggestions])
 
   useEffect(() => {
     loadNotesByLesson(courseId, lessonId)
@@ -91,6 +107,46 @@ export function NotesTab({
     [courseId, lessonId, existingNote, saveNote, addNote]
   )
 
+  const handleLinkNotes = useCallback(
+    async (suggestion: NoteLinkSuggestion) => {
+      try {
+        await acceptNoteLinkSuggestion(suggestion, (source, target) => {
+          useNoteStore.setState(state => ({
+            notes: state.notes.map(n => {
+              if (n.id === source.id) return source
+              if (n.id === target.id) return target
+              return n
+            }),
+          }))
+        })
+        useNoteStore.setState(state => ({
+          pendingNoteLinkSuggestions: state.pendingNoteLinkSuggestions.filter(
+            s =>
+              s.sourceNoteId !== suggestion.sourceNoteId ||
+              s.targetNoteId !== suggestion.targetNoteId
+          ),
+        }))
+      } catch {
+        // Error toast already shown by acceptNoteLinkSuggestion
+      }
+    },
+    []
+  )
+
+  const handleDismissSuggestion = useCallback(
+    (suggestion: NoteLinkSuggestion) => {
+      dismissNoteLinkPair(suggestion.sourceNoteId, suggestion.targetNoteId)
+      useNoteStore.setState(state => ({
+        pendingNoteLinkSuggestions: state.pendingNoteLinkSuggestions.filter(
+          s =>
+            s.sourceNoteId !== suggestion.sourceNoteId ||
+            s.targetNoteId !== suggestion.targetNoteId
+        ),
+      }))
+    },
+    []
+  )
+
   if (isLoading) {
     return (
       <div className="p-4 space-y-3">
@@ -102,6 +158,69 @@ export function NotesTab({
 
   return (
     <div className="h-full overflow-auto">
+      {/* Inline note link suggestions badge */}
+      {pendingNoteLinkSuggestions.length > 0 && (
+        <div className="px-5 pt-3">
+          <Popover>
+            <PopoverTrigger asChild>
+              <Badge variant="secondary" className="cursor-pointer gap-1">
+                <Link2 className="size-3" />
+                {pendingNoteLinkSuggestions.length}{' '}
+                suggestion{pendingNoteLinkSuggestions.length !== 1 ? 's' : ''}
+              </Badge>
+            </PopoverTrigger>
+            <PopoverContent align="start" className="w-80">
+              <div className="space-y-3">
+                <p className="text-sm font-medium">
+                  Note connection{pendingNoteLinkSuggestions.length !== 1 ? 's' : ''} found
+                </p>
+                {pendingNoteLinkSuggestions.map(suggestion => (
+                  <div
+                    key={`${suggestion.sourceNoteId}:${suggestion.targetNoteId}`}
+                    className="space-y-2 rounded-md border p-3"
+                  >
+                    <p className="text-xs text-muted-foreground">
+                      <span className="font-medium text-foreground">
+                        {suggestion.targetCourseTitle}
+                      </span>
+                    </p>
+                    <p className="text-xs text-muted-foreground line-clamp-2">
+                      &ldquo;{suggestion.previewContent}&rdquo;
+                    </p>
+                    {suggestion.sharedTags.length > 0 && (
+                      <div className="flex flex-wrap gap-1">
+                        {suggestion.sharedTags.map(tag => (
+                          <Badge key={tag} variant="outline" className="text-[10px] px-1.5 py-0">
+                            {tag}
+                          </Badge>
+                        ))}
+                      </div>
+                    )}
+                    <div className="flex items-center gap-2 pt-1">
+                      <Button
+                        variant="brand"
+                        size="sm"
+                        className="h-7 text-xs"
+                        onClick={() => handleLinkNotes(suggestion)}
+                      >
+                        Link
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 text-xs"
+                        onClick={() => handleDismissSuggestion(suggestion)}
+                      >
+                        Dismiss
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </PopoverContent>
+          </Popover>
+        </div>
+      )}
       <NoteEditor
         courseId={courseId}
         lessonId={lessonId}

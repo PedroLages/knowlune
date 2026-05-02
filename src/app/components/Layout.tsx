@@ -616,9 +616,18 @@ export function Layout() {
           </div>
 
           {/* Search trigger — centered (flex-1 on mobile, absolute on desktop).
+              On lesson pages, left-aligned next to the back link to free space
+              for right-side header tools at 100% browser zoom.
               pointer-events-none on the absolute container prevents it from
               blocking clicks on LessonHeaderTools buttons behind it (B4). */}
-          <div className="flex-1 flex justify-center sm:absolute sm:left-1/2 sm:-translate-x-1/2 sm:flex-none sm:w-96 lg:w-80 sm:pointer-events-none">
+          <div
+            className={cn(
+              'flex-1 flex justify-center',
+              isLessonRoute
+                ? 'sm:max-w-sm'
+                : 'sm:absolute sm:left-1/2 sm:-translate-x-1/2 sm:flex-none sm:w-96 lg:w-80 sm:pointer-events-none'
+            )}
+          >
             <div className="relative w-full" role="search" aria-label="Site search">
               {/* Mobile: Icon-only button */}
               <Button
@@ -634,11 +643,16 @@ export function Layout() {
               </Button>
 
               {/* Tablet/Desktop: Full search bar — pointer-events-auto restores
-                  clickability within the pointer-events-none container (B4). */}
+                  clickability within the pointer-events-none container (B4).
+                  On lesson pages the container is not pointer-events-none, so
+                  pointer-events-auto is not needed. */}
               <button
                 type="button"
                 onClick={() => setSearchOpen(true)}
-                className="hidden sm:flex items-center w-full h-11 pl-10 pr-4 bg-muted rounded-md text-sm text-muted-foreground hover:bg-accent transition-colors duration-150 text-left cursor-pointer sm:pointer-events-auto"
+                className={cn(
+                  'hidden sm:flex items-center w-full h-11 pl-10 pr-4 bg-muted rounded-md text-sm text-muted-foreground hover:bg-accent transition-colors duration-150 text-left cursor-pointer',
+                  !isLessonRoute && 'sm:pointer-events-auto'
+                )}
                 aria-label="Open search (Cmd+K)"
                 aria-keyshortcuts="Meta+K Control+K"
               >

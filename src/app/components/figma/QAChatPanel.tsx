@@ -36,8 +36,15 @@ import { useProviderReconsent } from '@/ai/hooks/useProviderReconsent'
 import { ProviderReconsentModal } from '@/app/components/compliance/ProviderReconsentModal'
 import { AIConsentDeclinedBanner } from '@/app/components/compliance/AIConsentDeclinedBanner'
 
-export function QAChatPanel() {
-  const [isOpen, setIsOpen] = useState(false)
+export interface QAChatPanelProps {
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
+}
+
+export function QAChatPanel({ open: controlledOpen, onOpenChange: controlledOnOpenChange }: QAChatPanelProps = {}) {
+  const [internalOpen, setInternalOpen] = useState(false)
+  const isOpen = controlledOpen ?? internalOpen
+  const setIsOpen = controlledOnOpenChange ?? setInternalOpen
   const [inputValue, setInputValue] = useState('')
   const [hasNotes, setHasNotes] = useState(false)
   const [notesLoaded, setNotesLoaded] = useState(false)

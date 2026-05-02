@@ -8,6 +8,7 @@
  */
 
 import { useCallback } from 'react'
+import { useLessonChromeStore } from '@/stores/useLessonChromeStore'
 import type { NavigateFunction } from 'react-router'
 import { toast } from 'sonner'
 import type { LessonItem } from '@/lib/courseAdapter'
@@ -145,7 +146,10 @@ export function useCompletionFlow(params: CompletionFlowParams): CompletionFlowR
 
   const handleAutoAdvance = useCallback(() => {
     if (nextLesson && courseId) {
-      navigate(`/courses/${courseId}/lessons/${nextLesson.id}`)
+      const autoPlay = useLessonChromeStore.getState().autoPlay
+      navigate(`/courses/${courseId}/lessons/${nextLesson.id}`, {
+        state: autoPlay ? { autoPlay: true } : undefined,
+      })
     }
   }, [nextLesson, courseId, navigate])
 
@@ -171,7 +175,10 @@ export function useCompletionFlow(params: CompletionFlowParams): CompletionFlowR
   const handleCelebrationContinue = useCallback(() => {
     setCelebrationOpen(false)
     if (nextLesson && courseId) {
-      navigate(`/courses/${courseId}/lessons/${nextLesson.id}`)
+      const autoPlay = useLessonChromeStore.getState().autoPlay
+      navigate(`/courses/${courseId}/lessons/${nextLesson.id}`, {
+        state: autoPlay ? { autoPlay: true } : undefined,
+      })
     }
   }, [nextLesson, courseId, navigate, setCelebrationOpen])
 

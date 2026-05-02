@@ -154,60 +154,50 @@ export function findNoteLinkSuggestions(
 }
 
 /**
- * After a note is saved, run cross-course link detection and show a Sonner
- * toast for the first matching suggestion. Non-blocking — errors are swallowed.
+ * Build course map, find cross-course note link suggestions, and return the
+ * full suggestions array (no slicing, no toast). Non-blocking — errors are
+ * swallowed and an empty array is returned.
+ *
+ * This is the primary entry point for the NotesTab inline badge flow.
  *
  * @param savedNote - The note that was just saved
  * @param allNotes  - All notes in memory (passed to avoid extra DB read)
- * @param onLinked  - Optional callback after notes are linked (e.g. to update Zustand store)
  */
-export function triggerNoteLinkSuggestions(
+export async function findAndReturnNoteLinkSuggestions(
   savedNote: Note,
-  allNotes: Note[],
-  onLinked?: (source: Note, target: Note) => void
-): void {
+  allNotes: Note[]
+): Promise<NoteLinkSuggestion[]> {
   try {
-    db.importedCourses
-      .toArray()
-      .then(courses => {
-        const courseMap = new Map(courses.map(c => [c.id, c.name]))
-        const suggestions = findNoteLinkSuggestions(savedNote, allNotes, courseMap)
-        if (suggestions.length === 0) return
-
-        suggestions.slice(0, 2).forEach(s => {
-          showNoteLinkToast(s, onLinked)
-        })
-      })
-      .catch(err => console.error('[NoteLinkSuggestions] Suggestion failed:', err))
+    const courses = await db.importedCourses.toArray()
+    const courseMap = new Map(courses.map(c => [c.id, c.name]))
+    return findNoteLinkSuggestions(savedNote, allNotes, courseMap)
   } catch (err) {
     console.error('[NoteLinkSuggestions] Suggestion failed:', err)
+    return []
   }
 }
 
-function showNoteLinkToast(
-  suggestion: NoteLinkSuggestion,
-  onLinked?: (source: Note, target: Note) => void
-): void {
-  const preview =
-    suggestion.previewContent.length > 60
-      ? suggestion.previewContent.slice(0, 60) + '…'
-      : suggestion.previewContent
-
-  toast('Note connection found', {
-    description: `"${preview}" — ${suggestion.targetCourseTitle}`,
-    duration: 8000,
-    action: {
-      label: 'Link notes',
-      onClick: () => acceptNoteLinkSuggestion(suggestion, onLinked),
-    },
-    cancel: {
-      label: 'Dismiss',
-      onClick: () => dismissNoteLinkPair(suggestion.sourceNoteId, suggestion.targetNoteId),
-    },
-  })
+/**
+ * Legacy trigger — runs cross-course link detection but does NOT show a toast.
+ * Returns the full suggestions array. Callers are responsible for UI rendering.
+ *
+ * @deprecated Prefer {@link findAndReturnNoteLinkSuggestions} for new code.
+ *             This function exists for backward compatibility; it no longer
+ *             displays toasts.
+ *
+ * @param savedNote - The note that was just saved
+ * @param allNotes  - All notes in memory (passed to avoid extra DB read)
+ * @param onLinked  - Optional callback after notes are linked (unused here)
+ */
+export async function triggerNoteLinkSuggestions(
+  savedNote: Note,
+  allNotes: Note[],
+  _onLinked?: (source: Note, target: Note) => void
+): Promise<NoteLinkSuggestion[]> {
+  return findAndReturnNoteLinkSuggestions(savedNote, allNotes)
 }
 
-async function acceptNoteLinkSuggestion(
+export async function acceptNoteLinkSuggestion(
   suggestion: NoteLinkSuggestion,
   onLinked?: (source: Note, target: Note) => void
 ): Promise<void> {
