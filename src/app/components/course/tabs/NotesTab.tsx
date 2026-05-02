@@ -44,7 +44,11 @@ export function NotesTab({
   const saveNote = useNoteStore(s => s.saveNote)
   const addNote = useNoteStore(s => s.addNote)
   const isLoading = useNoteStore(s => s.isLoading)
-  const pendingNoteLinkSuggestions = useNoteStore(s => s.pendingNoteLinkSuggestions)
+  const pendingData = useNoteStore(s => s.pendingNoteLinkSuggestions)
+  const pendingNoteLinkSuggestions =
+    pendingData?.courseId === courseId && pendingData?.videoId === lessonId
+      ? pendingData.suggestions
+      : []
   const clearPendingNoteLinkSuggestions = useNoteStore(s => s.clearPendingNoteLinkSuggestions)
 
   // Clear stale suggestions on lesson/course change
@@ -109,26 +113,29 @@ export function NotesTab({
 
   const handleLinkNotes = useCallback(
     async (suggestion: NoteLinkSuggestion) => {
-      try {
-        await acceptNoteLinkSuggestion(suggestion, (source, target) => {
-          useNoteStore.setState(state => ({
-            notes: state.notes.map(n => {
-              if (n.id === source.id) return source
-              if (n.id === target.id) return target
-              return n
-            }),
-          }))
-        })
+      await acceptNoteLinkSuggestion(suggestion, (source, target) => {
         useNoteStore.setState(state => ({
-          pendingNoteLinkSuggestions: state.pendingNoteLinkSuggestions.filter(
-            s =>
-              s.sourceNoteId !== suggestion.sourceNoteId ||
-              s.targetNoteId !== suggestion.targetNoteId
-          ),
+          notes: state.notes.map(n => {
+            if (n.id === source.id) return source
+            if (n.id === target.id) return target
+            return n
+          }),
         }))
-      } catch {
-        // Error toast already shown by acceptNoteLinkSuggestion
-      }
+      })
+      useNoteStore.setState(state => {
+        const data = state.pendingNoteLinkSuggestions
+        if (!data) return state
+        return {
+          pendingNoteLinkSuggestions: {
+            ...data,
+            suggestions: data.suggestions.filter(
+              s =>
+                s.sourceNoteId !== suggestion.sourceNoteId ||
+                s.targetNoteId !== suggestion.targetNoteId
+            ),
+          },
+        }
+      })
     },
     []
   )
@@ -136,13 +143,20 @@ export function NotesTab({
   const handleDismissSuggestion = useCallback(
     (suggestion: NoteLinkSuggestion) => {
       dismissNoteLinkPair(suggestion.sourceNoteId, suggestion.targetNoteId)
-      useNoteStore.setState(state => ({
-        pendingNoteLinkSuggestions: state.pendingNoteLinkSuggestions.filter(
-          s =>
-            s.sourceNoteId !== suggestion.sourceNoteId ||
-            s.targetNoteId !== suggestion.targetNoteId
-        ),
-      }))
+      useNoteStore.setState(state => {
+        const data = state.pendingNoteLinkSuggestions
+        if (!data) return state
+        return {
+          pendingNoteLinkSuggestions: {
+            ...data,
+            suggestions: data.suggestions.filter(
+              s =>
+                s.sourceNoteId !== suggestion.sourceNoteId ||
+                s.targetNoteId !== suggestion.targetNoteId
+            ),
+          },
+        }
+      })
     },
     []
   )
@@ -163,7 +177,12 @@ export function NotesTab({
         <div className="px-5 pt-3">
           <Popover>
             <PopoverTrigger asChild>
-              <Badge variant="secondary" className="cursor-pointer gap-1">
+              <Badge
+                variant="secondary"
+                className="cursor-pointer gap-1"
+                data-testid="note-link-suggestions-badge"
+                aria-label="View note link suggestions"
+              >
                 <Link2 className="size-3" />
                 {pendingNoteLinkSuggestions.length}{' '}
                 suggestion{pendingNoteLinkSuggestions.length !== 1 ? 's' : ''}
@@ -202,6 +221,7 @@ export function NotesTab({
                         size="sm"
                         className="h-7 text-xs"
                         onClick={() => handleLinkNotes(suggestion)}
+                        data-testid="note-link-accept"
                       >
                         Link
                       </Button>
@@ -210,6 +230,7 @@ export function NotesTab({
                         size="sm"
                         className="h-7 text-xs"
                         onClick={() => handleDismissSuggestion(suggestion)}
+                        data-testid="note-link-dismiss"
                       >
                         Dismiss
                       </Button>

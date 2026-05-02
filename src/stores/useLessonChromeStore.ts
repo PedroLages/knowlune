@@ -82,6 +82,8 @@ export interface LessonChromeState {
   qaPanelOpen: boolean
   /** Toggle the QA chat panel open/closed. */
   toggleQAPanel: () => void
+  /** Set the QA panel open/closed to a specific value (matches Radix onOpenChange contract). */
+  setQAPanelOpen: (open: boolean) => void
 
   /** Reset all state to defaults. Called on route change when leaving a lesson page. */
   reset: () => void
@@ -145,6 +147,10 @@ export const useLessonChromeStore = create<LessonChromeState>((set, get) => ({
 
   toggleQAPanel: () => {
     set(s => ({ qaPanelOpen: !s.qaPanelOpen }))
+  },
+
+  setQAPanelOpen: (open: boolean) => {
+    set({ qaPanelOpen: open })
   },
 
   reset: () => {

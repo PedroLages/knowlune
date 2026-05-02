@@ -111,6 +111,12 @@ export function TranscriptTab({
 
   const abortControllerRef = useRef<AbortController | null>(null)
 
+  // Track the lesson that started generation — guards against stale UI updates
+  // when the user navigates to a different lesson mid-generation.
+  const generationLessonIdRef = useRef<string | null>(null)
+  const latestLessonIdRef = useRef(lessonId)
+  latestLessonIdRef.current = lessonId
+
   // Single effect for transcript loading. For YouTube sources, prefer Dexie
   // (richer cue data with timing) and fall back to adapter.getTranscript().
   // For local sources, use adapter.getTranscript() only.
@@ -178,14 +184,14 @@ export function TranscriptTab({
     [externalSeek]
   )
 
-  // Cancel in-flight generation on unmount
+  // Cancel in-flight generation on unmount or lesson change
   useEffect(() => {
     return () => {
       if (abortControllerRef.current) {
         abortControllerRef.current.abort()
       }
     }
-  }, [])
+  }, [lessonId])
 
   // ---------------------------------------------------------------------------
   // Generate transcript handler
@@ -213,6 +219,8 @@ export function TranscriptTab({
       return
     }
 
+    generationLessonIdRef.current = lessonId
+
     if (abortControllerRef.current) {
       abortControllerRef.current.abort()
     }
@@ -226,6 +234,7 @@ export function TranscriptTab({
     try {
       const video = await db.importedVideos.get(lessonId)
       if (controller.signal.aborted) return
+      if (generationLessonIdRef.current !== latestLessonIdRef.current) return
 
       if (!video?.fileHandle) {
         setGenerationError('File access lost — re-import the video to enable transcription.')
@@ -243,39 +252,46 @@ export function TranscriptTab({
       }
 
       if (controller.signal.aborted) return
+      if (generationLessonIdRef.current !== latestLessonIdRef.current) return
 
-      const result = await transcribe(file)
+      const result = await transcribe(file, undefined, controller.signal)
       if (controller.signal.aborted) return
+      if (generationLessonIdRef.current !== latestLessonIdRef.current) return
 
       const parsedCues = parseTranscriptText(result.vtt)
       const fullText = parsedCues.map(c => c.text).join(' ')
       const now = new Date().toISOString()
 
-      await db.videoCaptions.put({
-        courseId,
-        videoId: lessonId,
-        filename: `${lessonId}.vtt`,
-        content: result.vtt,
-        format: 'vtt',
-        createdAt: now,
+      await db.transaction('rw', db.videoCaptions, db.youtubeTranscripts, async () => {
+        await db.videoCaptions.put({
+          courseId,
+          videoId: lessonId,
+          filename: `${lessonId}.vtt`,
+          content: result.vtt,
+          format: 'vtt',
+          createdAt: now,
+        })
+
+        await db.youtubeTranscripts.put({
+          courseId,
+          videoId: lessonId,
+          language: result.language,
+          cues: parsedCues,
+          fullText,
+          source: 'whisper',
+          status: 'done',
+          fetchedAt: now,
+        })
       })
 
-      await db.youtubeTranscripts.put({
-        courseId,
-        videoId: lessonId,
-        language: result.language,
-        cues: parsedCues,
-        fullText,
-        source: 'whisper',
-        status: 'done',
-        fetchedAt: now,
-      })
+      if (generationLessonIdRef.current !== latestLessonIdRef.current) return
 
       setCues(parsedCues)
       setLoadingState('ready')
       setGenerationState('completed')
       onTranscriptGenerated?.()
     } catch (err) {
+      if (err instanceof DOMException && err.name === 'AbortError') return
       if (controller.signal.aborted) return
       const message = err instanceof Error ? err.message : 'Transcription failed'
       setGenerationError(message)

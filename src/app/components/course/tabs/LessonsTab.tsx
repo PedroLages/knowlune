@@ -258,6 +258,81 @@ function LessonLink({
 }
 
 // ---------------------------------------------------------------------------
+// MaterialRow — a single companion PDF sub-row (extracted from .map() to satisfy
+// Rules of Hooks — useContentProgressStore must be called at component top level)
+// ---------------------------------------------------------------------------
+
+function MaterialRow({
+  material,
+  courseId,
+  lessonId,
+  searchQuery,
+}: {
+  material: LessonItem
+  courseId: string
+  lessonId: string
+  searchQuery: string
+}) {
+  const completionStatus = useContentProgressStore(
+    state => state.statusMap[`${courseId}:${material.id}`] ?? 'not-started'
+  )
+  const isCompleted = completionStatus === 'completed'
+
+  return (
+    <Link
+      to={`/courses/${courseId}/lessons/${material.id}`}
+      className={cn(
+        'flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors',
+        material.id === lessonId
+          ? 'bg-brand-soft text-brand-soft-foreground font-medium'
+          : 'hover:bg-accent'
+      )}
+      aria-current={material.id === lessonId ? 'page' : undefined}
+      data-testid={`material-link-${material.id}`}
+    >
+      <span
+        className={cn(
+          'flex-shrink-0 size-7 rounded-lg flex items-center justify-center',
+          isCompleted && material.id !== lessonId ? 'bg-success/10' : 'bg-resource-pdf-bg'
+        )}
+      >
+        {isCompleted && material.id !== lessonId ? (
+          <CheckCircle2
+            className="size-3.5 text-success"
+            aria-hidden="true"
+            data-testid={`completion-check-${material.id}`}
+          />
+        ) : (
+          <FileText
+            className={cn(
+              'size-3.5',
+              material.id === lessonId ? 'text-brand' : 'text-resource-pdf'
+            )}
+            aria-hidden="true"
+          />
+        )}
+      </span>
+      <div className="flex-1 min-w-0">
+        <p
+          className={cn(
+            'text-sm truncate',
+            isCompleted && 'line-through text-muted-foreground'
+          )}
+        >
+          <HighlightedLessonTitle text={material.title} query={searchQuery} />
+        </p>
+        {material.sourceMetadata?.pageCount ? (
+          <div className="flex items-center gap-1 mt-0.5 text-xs text-muted-foreground">
+            <FileText className="size-3" aria-hidden="true" />
+            <span>{String(material.sourceMetadata.pageCount)} pgs</span>
+          </div>
+        ) : null}
+      </div>
+    </Link>
+  )
+}
+
+// ---------------------------------------------------------------------------
 // MaterialGroupRow — primary lesson with collapsible companion PDF sub-rows
 // ---------------------------------------------------------------------------
 
@@ -321,6 +396,7 @@ function MaterialGroupRow({
             type="button"
             className="flex-shrink-0 size-6 flex items-center justify-center rounded-md hover:bg-accent transition-colors"
             aria-label={isExpanded ? 'Collapse materials' : 'Expand materials'}
+            data-testid={`materials-collapse-${group.primary.id}`}
           >
             <ChevronDown
               className={cn(
@@ -334,67 +410,15 @@ function MaterialGroupRow({
       </div>
       <CollapsibleContent>
         <div className="ml-6 pl-2 border-l border-border/50 space-y-0.5">
-          {group.materials.map((material) => {
-            const materialCompletionStatus = useContentProgressStore(
-              state => state.statusMap[`${courseId}:${material.id}`] ?? 'not-started'
-            )
-            const materialCompleted = materialCompletionStatus === 'completed'
-
-            return (
-              <Link
-                key={material.id}
-                to={`/courses/${courseId}/lessons/${material.id}`}
-                className={cn(
-                  'flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors',
-                  material.id === lessonId
-                    ? 'bg-brand-soft text-brand-soft-foreground font-medium'
-                    : 'hover:bg-accent'
-                )}
-                aria-current={material.id === lessonId ? 'page' : undefined}
-              >
-                <span
-                  className={cn(
-                    'flex-shrink-0 size-7 rounded-lg flex items-center justify-center',
-                    materialCompleted && material.id !== lessonId
-                      ? 'bg-success/10'
-                      : 'bg-resource-pdf-bg'
-                  )}
-                >
-                  {materialCompleted && material.id !== lessonId ? (
-                    <CheckCircle2
-                      className="size-3.5 text-success"
-                      aria-hidden="true"
-                      data-testid={`completion-check-${material.id}`}
-                    />
-                  ) : (
-                    <FileText
-                      className={cn(
-                        'size-3.5',
-                        material.id === lessonId ? 'text-brand' : 'text-resource-pdf'
-                      )}
-                      aria-hidden="true"
-                    />
-                  )}
-                </span>
-                <div className="flex-1 min-w-0">
-                  <p
-                    className={cn(
-                      'text-sm truncate',
-                      materialCompleted && 'line-through text-muted-foreground'
-                    )}
-                  >
-                    <HighlightedLessonTitle text={material.title} query={searchQuery} />
-                  </p>
-                  {material.sourceMetadata?.pageCount ? (
-                    <div className="flex items-center gap-1 mt-0.5 text-xs text-muted-foreground">
-                      <FileText className="size-3" aria-hidden="true" />
-                      <span>{String(material.sourceMetadata.pageCount)} pgs</span>
-                    </div>
-                  ) : null}
-                </div>
-              </Link>
-            )
-          })}
+          {group.materials.map((material) => (
+            <MaterialRow
+              key={material.id}
+              material={material}
+              courseId={courseId}
+              lessonId={lessonId}
+              searchQuery={searchQuery}
+            />
+          ))}
         </div>
       </CollapsibleContent>
     </Collapsible>

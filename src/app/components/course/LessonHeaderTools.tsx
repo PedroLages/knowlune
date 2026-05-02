@@ -87,6 +87,7 @@ export function LessonHeaderTools() {
   const toggleAutoPlay = useLessonChromeStore(s => s.toggleAutoPlay)
   const qaPanelOpen = useLessonChromeStore(s => s.qaPanelOpen)
   const toggleQAPanel = useLessonChromeStore(s => s.toggleQAPanel)
+  const setQAPanelOpen = useLessonChromeStore(s => s.setQAPanelOpen)
 
   // Completion state
   const getItemStatus = useContentProgressStore(s => s.getItemStatus)
@@ -129,7 +130,7 @@ export function LessonHeaderTools() {
         <PomodoroTimer />
 
         <Suspense fallback={null}>
-          <QAChatPanel open={qaPanelOpen} onOpenChange={toggleQAPanel} />
+          <QAChatPanel open={qaPanelOpen} onOpenChange={setQAPanelOpen} />
         </Suspense>
 
         {/* Reading mode toggle */}

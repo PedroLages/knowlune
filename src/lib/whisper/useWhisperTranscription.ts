@@ -10,8 +10,8 @@ import type { WhisperTranscription, WhisperProgress, WhisperProviderId } from '.
 import { getWhisperConfig, getWhisperProvider } from './index'
 
 interface UseWhisperTranscriptionReturn {
-  /** Transcribe an audio blob. Returns VTT transcript. */
-  transcribe: (audio: Blob, lang?: string) => Promise<WhisperTranscription>
+  /** Transcribe an audio blob. Returns VTT transcript. Pass signal to abort. */
+  transcribe: (audio: Blob, lang?: string, signal?: AbortSignal) => Promise<WhisperTranscription>
   /** Whether a transcription is currently in progress */
   isTranscribing: boolean
   /** Current progress (model download, transcription) */
@@ -31,9 +31,13 @@ export function useWhisperTranscription(): UseWhisperTranscriptionReturn {
   const activeRef = useRef(false)
 
   const transcribe = useCallback(
-    async (audio: Blob, lang?: string): Promise<WhisperTranscription> => {
+    async (audio: Blob, lang?: string, signal?: AbortSignal): Promise<WhisperTranscription> => {
       if (activeRef.current) {
         throw new Error('A transcription is already in progress')
+      }
+
+      if (signal?.aborted) {
+        throw new DOMException('Aborted', 'AbortError')
       }
 
       activeRef.current = true
@@ -45,7 +49,7 @@ export function useWhisperTranscription(): UseWhisperTranscriptionReturn {
       try {
         const provider = await getWhisperProvider()
         const result = await provider.transcribe(audio, lang, p => {
-          if (!abortRef.current) setProgress(p)
+          if (!abortRef.current && !signal?.aborted) setProgress(p)
         })
         return result
       } catch (err) {

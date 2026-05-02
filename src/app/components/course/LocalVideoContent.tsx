@@ -165,7 +165,7 @@ export const LocalVideoContent = forwardRef<VideoPlayerHandle, LocalVideoContent
 
     // Show resume toast once when position is restored
     useEffect(() => {
-      if (savedPosition && savedPosition > 5 && !hasShownResumeToast.current) {
+      if (savedPosition && savedPosition > 5 && !hasShownResumeToast.current && !autoplay) {
         hasShownResumeToast.current = true
         toast(`Resuming from ${formatBookmarkTimestamp(Math.floor(savedPosition))}`, {
           duration: 2000,

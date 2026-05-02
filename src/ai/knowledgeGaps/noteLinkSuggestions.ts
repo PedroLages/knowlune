@@ -177,26 +177,6 @@ export async function findAndReturnNoteLinkSuggestions(
   }
 }
 
-/**
- * Legacy trigger — runs cross-course link detection but does NOT show a toast.
- * Returns the full suggestions array. Callers are responsible for UI rendering.
- *
- * @deprecated Prefer {@link findAndReturnNoteLinkSuggestions} for new code.
- *             This function exists for backward compatibility; it no longer
- *             displays toasts.
- *
- * @param savedNote - The note that was just saved
- * @param allNotes  - All notes in memory (passed to avoid extra DB read)
- * @param onLinked  - Optional callback after notes are linked (unused here)
- */
-export async function triggerNoteLinkSuggestions(
-  savedNote: Note,
-  allNotes: Note[],
-  _onLinked?: (source: Note, target: Note) => void
-): Promise<NoteLinkSuggestion[]> {
-  return findAndReturnNoteLinkSuggestions(savedNote, allNotes)
-}
-
 export async function acceptNoteLinkSuggestion(
   suggestion: NoteLinkSuggestion,
   onLinked?: (source: Note, target: Note) => void
