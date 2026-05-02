@@ -62,6 +62,8 @@ import { DailyGoalRing } from '@/app/components/library/DailyGoalRing'
 import { YearlyGoalProgress } from '@/app/components/library/YearlyGoalProgress'
 import { DailyHighlightsStrip } from '@/app/components/library/DailyHighlightsStrip'
 import { LibraryFormatModeTabs } from '@/app/components/library/LibraryFormatModeTabs'
+import { LibraryTabBar, VALID_LIBRARY_TABS } from '@/app/components/library/LibraryTabBar'
+import type { LibraryTab } from '@/app/components/library/LibraryTabBar'
 import { LibraryMediaHero } from '@/app/components/library/LibraryMediaHero'
 import { LibraryMediaShelfColumn } from '@/app/components/library/LibraryMediaShelfColumn'
 import { useBookStore } from '@/stores/useBookStore'
@@ -126,11 +128,34 @@ export function Library() {
   const { isSyncing: isAbsSyncing, syncCatalog, loadNextPage, pagination } = useAudiobookshelfSync()
 
   // Series & Collections browsing (E102-S02, E102-S03)
-  const [searchParams] = useSearchParams()
+  const [searchParams, setSearchParams] = useSearchParams()
   const initialView = searchParams.get('view')
   const [absViewMode, setAbsViewMode] = useState<'grid' | 'series' | 'collections'>(
     initialView === 'collections' ? 'collections' : initialView === 'series' ? 'series' : 'grid'
   )
+
+  // Library tab IA (E116-S03): Continue | Browse | Collections | History
+  // URL param ?tab= overrides localStorage for deep-linking and E2E tests
+  const [libraryTab, setLibraryTab] = useState<LibraryTab>(() => {
+    const urlTab = searchParams.get('tab')
+    if (urlTab && VALID_LIBRARY_TABS.has(urlTab)) return urlTab as LibraryTab
+    const stored = localStorage.getItem('knowlune-library-tab')
+    if (stored && VALID_LIBRARY_TABS.has(stored)) return stored as LibraryTab
+    return 'continue'
+  })
+  const handleTabChange = useCallback((tab: LibraryTab) => {
+    setLibraryTab(tab)
+    try {
+      localStorage.setItem('knowlune-library-tab', tab)
+    } catch {
+      // QuotaExceeded or unavailable — tab persists in React state for this session
+    }
+    setSearchParams(prev => {
+      const next = new URLSearchParams(prev)
+      next.set('tab', tab)
+      return next
+    }, { replace: true })
+  }, [setSearchParams])
 
   const getBooksBySeries = useBookStore(s => s.getBooksBySeries)
 
@@ -221,7 +246,6 @@ export function Library() {
   // with deep-link focus. The banner dispatches these CustomEvents; Library.tsx
   // listens and opens the dialog + sets ?focus=<kind>:<id> for useDeepLinkFocus
   // inside the dialog to drive credential input focus.
-  const [, setSearchParams] = useSearchParams()
   useEffect(() => {
     function onOpenOpdsSettings(e: Event) {
       const { focusId } = (e as CustomEvent<{ focusId: string }>).detail
@@ -361,13 +385,18 @@ export function Library() {
   }, [loadBooks])
 
   // Media-first default: when books exist and no format is chosen,
-  // make Audiobooks the active top-level mode.
+  // prefer audiobooks if present, otherwise fall back to ebooks.
   useEffect(() => {
     if (books.length === 0) return
     if (!filters.format || filters.format.length === 0) {
-      setFilter('format', ['audiobook'])
+      const hasAudiobooks = books.some(b => b.format === 'audiobook')
+      if (hasAudiobooks) {
+        setFilter('format', ['audiobook'])
+      } else if (books.some(b => b.format === 'epub' || b.format === 'pdf')) {
+        setFilter('format', ['epub', 'pdf'])
+      }
     }
-  }, [books.length, filters.format, setFilter])
+  }, [books.length, filters.format, setFilter, books])
 
   // Yearly goal celebration — fires when a book is marked finished (E86-S05)
   useEffect(() => {
@@ -615,75 +644,14 @@ export function Library() {
         <YearlyGoalProgress />
       </div>
 
-      {/* Top-level format mode tabs (media-first) */}
-      {books.length > 0 && <LibraryFormatModeTabs />}
-
-      {/* Media-first hero + shelves */}
+      {/* Segmented tab bar — primary IA (Continue | Browse | Collections | History) */}
       {books.length > 0 && (
-        <div className="flex flex-col gap-8" data-testid="library-media-first">
-          {modeBooksForMedia.length === 0 ? (
-            <section
-              className="rounded-[28px] border border-border/50 bg-card p-6 sm:p-8 shadow-card-ambient"
-              data-testid="library-format-empty-state"
-            >
-              <div className="flex flex-col gap-2">
-                <h2 className="text-xl font-semibold tracking-tight text-foreground">
-                  No {activeModeLabel.toLowerCase()} yet.
-                </h2>
-                <p className="text-sm text-muted-foreground">
-                  Your library has books in the other format. Switch modes, or add your first{' '}
-                  {activeModeLabel.toLowerCase()}.
-                </p>
-              </div>
-
-              <div className="mt-5 flex flex-col sm:flex-row items-start sm:items-center gap-3">
-                <Button
-                  variant="outline"
-                  onClick={() =>
-                    setFilter(
-                      'format',
-                      activeModeLabel === 'Audiobooks' ? (['epub', 'pdf'] as string[]) : (['audiobook'] as string[])
-                    )
-                  }
-                  className="min-h-[44px]"
-                  data-testid="library-format-empty-switch"
-                >
-                  Switch to {activeModeLabel === 'Audiobooks' ? 'Ebooks' : 'Audiobooks'}
-                </Button>
-
-                <Button
-                  variant="brand"
-                  onClick={() => setImportOpen(true)}
-                  className="min-h-[44px]"
-                  data-testid="library-format-empty-import"
-                >
-                  <Plus className="mr-2 h-4 w-4" />
-                  Import Book
-                </Button>
-
-                {activeModeLabel === 'Audiobooks' && (
-                  <Button
-                    variant="outline"
-                    onClick={() => setAbsSettingsOpen(true)}
-                    className="min-h-[44px]"
-                    data-testid="library-format-empty-connect-abs"
-                  >
-                    <Headphones className="mr-2 h-4 w-4" />
-                    Connect Audiobookshelf
-                  </Button>
-                )}
-              </div>
-            </section>
-          ) : (
-            <>
-              <LibraryMediaHero books={modeBooksForMedia} modeLabel={activeModeLabel} />
-              <LibraryMediaShelfColumn />
-            </>
-          )}
+        <div className="flex justify-start" data-testid="library-tab-bar-container">
+          <LibraryTabBar active={libraryTab} onChange={handleTabChange} />
         </div>
       )}
 
-      {/* Empty state */}
+      {/* Empty state — shown regardless of tab when no books */}
       {books.length === 0 && (
         <section
           ref={dropRef}
@@ -777,126 +745,136 @@ export function Library() {
         </section>
       )}
 
-      {/* Reading Queue — always visible when books exist (E110-S03 AC-1) */}
-      {books.length > 0 && <ReadingQueue />}
+      {/* ============================================================ */}
+      {/* CONTINUE tab — hero + shelves + queue + highlights            */}
+      {/* ============================================================ */}
+      {books.length > 0 && libraryTab === 'continue' && (
+        <div className="flex flex-col gap-8" data-testid="library-tab-panel-continue">
+          {/* Format tabs for switching Audiobooks/Ebooks context */}
+          <LibraryFormatModeTabs />
 
-      {/* Daily Highlights — cinematic highlight strip from annotated books */}
-      {books.length > 0 && <DailyHighlightsStrip />}
+          {/* Media-first hero + shelves */}
+          {modeBooksForMedia.length === 0 ? (
+            <section
+              className="rounded-[28px] border border-border/50 bg-card p-6 sm:p-8 shadow-card-ambient"
+              data-testid="library-format-empty-state"
+            >
+              <div className="flex flex-col gap-2">
+                <h2 className="text-xl font-semibold tracking-tight text-foreground">
+                  No {activeModeLabel.toLowerCase()} yet.
+                </h2>
+                <p className="text-sm text-muted-foreground">
+                  Your library has books in the other format. Switch modes, or add your first{' '}
+                  {activeModeLabel.toLowerCase()}.
+                </p>
+              </div>
+              <div className="mt-5 flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                <Button
+                  variant="outline"
+                  onClick={() =>
+                    setFilter(
+                      'format',
+                      activeModeLabel === 'Audiobooks' ? (['epub', 'pdf'] as string[]) : (['audiobook'] as string[])
+                    )
+                  }
+                  className="min-h-[44px]"
+                  data-testid="library-format-empty-switch"
+                >
+                  Switch to {activeModeLabel === 'Audiobooks' ? 'Ebooks' : 'Audiobooks'}
+                </Button>
+                <Button
+                  variant="brand"
+                  onClick={() => setImportOpen(true)}
+                  className="min-h-[44px]"
+                  data-testid="library-format-empty-import"
+                >
+                  <Plus className="mr-2 h-4 w-4" />
+                  Import Book
+                </Button>
+                {activeModeLabel === 'Audiobooks' && (
+                  <Button
+                    variant="outline"
+                    onClick={() => setAbsSettingsOpen(true)}
+                    className="min-h-[44px]"
+                    data-testid="library-format-empty-connect-abs"
+                  >
+                    <Headphones className="mr-2 h-4 w-4" />
+                    Connect Audiobookshelf
+                  </Button>
+                )}
+              </div>
+            </section>
+          ) : (
+            <>
+              <LibraryMediaHero books={modeBooksForMedia} modeLabel={activeModeLabel} />
+              <LibraryMediaShelfColumn />
+            </>
+          )}
 
-      {/* Syncing indicator (E101-S03) */}
-      {isAbsSyncing && (
-        <div
-          className="flex items-center gap-2 text-sm text-muted-foreground"
-          data-testid="abs-syncing-indicator"
-        >
-          <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-          Syncing Audiobookshelf library...
+          <ReadingQueue />
+          <DailyHighlightsStrip />
         </div>
       )}
 
-      {/* PRIMARY row: status pills + view toggle + search + filter */}
-      {books.length > 0 && (
-        <LibraryFilters
-          viewToggle={
-            filters.source === 'audiobookshelf' && absServers.length > 0 ? (
-              <div
-                className="flex gap-0.5 rounded-lg bg-muted p-0.5 flex-shrink-0"
-                role="tablist"
-                aria-label="Audiobookshelf view mode"
-                data-testid="abs-view-toggle"
-              >
-                {(
-                  [
-                    { mode: 'grid', Icon: Grid3X3, label: 'Grid', testId: 'abs-view-grid' },
-                    { mode: 'series', Icon: List, label: 'Series', testId: 'abs-view-series' },
-                    {
-                      mode: 'collections',
-                      Icon: FolderOpen,
-                      label: 'Collections',
-                      testId: 'abs-view-collections',
-                    },
-                  ] as const
-                ).map(({ mode, Icon, label, testId }) => (
-                  <button
-                    key={mode}
-                    role="tab"
-                    aria-selected={absViewMode === mode}
-                    aria-label={label}
-                    onClick={() => {
-                      setAbsViewMode(mode)
-                      if (mode !== 'grid') {
-                        const s = absServers.find(sv => sv.status === 'connected')
-                        if (s?.libraryIds.length) {
-                          if (mode === 'series') {
-                            loadSeries(s.id, s.libraryIds[0])
-                          } else {
-                            loadCollections(s.id, s.libraryIds[0])
-                          }
-                        }
-                      }
-                    }}
-                    className={cn(
-                      'rounded-md p-1.5 transition-colors min-h-[32px] min-w-[32px] flex items-center justify-center',
-                      absViewMode === mode
-                        ? 'bg-brand text-brand-foreground'
-                        : 'text-muted-foreground hover:text-foreground'
-                    )}
-                    data-testid={testId}
-                  >
-                    <Icon className="size-3.5" aria-hidden="true" />
-                  </button>
-                ))}
-              </div>
-            ) : (
-              <div
-                className="flex gap-0.5 rounded-lg bg-muted p-0.5 flex-shrink-0"
-                role="tablist"
-                aria-label="Library view mode"
-                data-testid="local-view-toggle"
-              >
-                {[
-                  {
-                    mode: 'grid' as const,
-                    series: false,
-                    Icon: Grid3X3,
-                    label: 'Grid',
-                    testId: 'local-view-grid',
-                  },
-                  {
-                    mode: 'list' as const,
-                    series: false,
-                    Icon: List,
-                    label: 'List',
-                    testId: 'local-view-list',
-                  },
-                  {
-                    mode: 'grid' as const,
-                    series: true,
-                    Icon: Layers,
-                    label: 'Series',
-                    testId: 'local-view-series',
-                  },
-                ].map(({ mode, series, Icon, label, testId }) => {
-                  const isActive = series
-                    ? localSeriesView
-                    : !localSeriesView && libraryView === mode
-                  return (
+      {/* ============================================================ */}
+      {/* BROWSE tab — filters + grid/list/series + source tabs         */}
+      {/* ============================================================ */}
+      {books.length > 0 && libraryTab === 'browse' && (
+        <div className="flex flex-col gap-6" data-testid="library-tab-panel-browse">
+          {/* Syncing indicator (E101-S03) */}
+          {isAbsSyncing && (
+            <div
+              className="flex items-center gap-2 text-sm text-muted-foreground"
+              data-testid="abs-syncing-indicator"
+            >
+              <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+              Syncing Audiobookshelf library...
+            </div>
+          )}
+
+          {/* PRIMARY row: status pills + view toggle + search + filter */}
+          <LibraryFilters
+            viewToggle={
+              filters.source === 'audiobookshelf' && absServers.length > 0 ? (
+                <div
+                  className="flex gap-0.5 rounded-lg bg-muted p-0.5 flex-shrink-0"
+                  role="tablist"
+                  aria-label="Audiobookshelf view mode"
+                  data-testid="abs-view-toggle"
+                >
+                  {(
+                    [
+                      { mode: 'grid', Icon: Grid3X3, label: 'Grid', testId: 'abs-view-grid' },
+                      { mode: 'series', Icon: List, label: 'Series', testId: 'abs-view-series' },
+                      {
+                        mode: 'collections',
+                        Icon: FolderOpen,
+                        label: 'Collections',
+                        testId: 'abs-view-collections',
+                      },
+                    ] as const
+                  ).map(({ mode, Icon, label, testId }) => (
                     <button
-                      key={testId}
+                      key={mode}
                       role="tab"
-                      aria-selected={isActive}
+                      aria-selected={absViewMode === mode}
                       aria-label={label}
                       onClick={() => {
-                        if (series) {
-                          setLocalSeriesView(true)
-                        } else {
-                          setLocalSeriesView(false)
-                          useBookStore.getState().setLibraryView(mode)
+                        setAbsViewMode(mode)
+                        if (mode !== 'grid') {
+                          const s = absServers.find(sv => sv.status === 'connected')
+                          if (s?.libraryIds.length) {
+                            if (mode === 'series') {
+                              loadSeries(s.id, s.libraryIds[0])
+                            } else {
+                              loadCollections(s.id, s.libraryIds[0])
+                            }
+                          }
                         }
                       }}
                       className={cn(
                         'rounded-md p-1.5 transition-colors min-h-[32px] min-w-[32px] flex items-center justify-center',
-                        isActive
+                        absViewMode === mode
                           ? 'bg-brand text-brand-foreground'
                           : 'text-muted-foreground hover:text-foreground'
                       )}
@@ -904,135 +882,351 @@ export function Library() {
                     >
                       <Icon className="size-3.5" aria-hidden="true" />
                     </button>
-                  )
-                })}
-              </div>
-            )
-          }
-        />
-      )}
-
-      {/* SECONDARY row: source — smaller pills, lower visual weight */}
-      {books.length > 0 && (
-        <div className="flex items-center gap-1.5 flex-wrap">
-          {absServers.length > 0 && (
-            <>
-              <LibrarySourceTabs />
-            </>
-          )}
-        </div>
-      )}
-
-      {/* Series view (E102-S02) — replaces grid when active */}
-      {books.length > 0 && filters.source === 'audiobookshelf' && absViewMode === 'series' && (
-        <div data-testid="series-view">
-          {isLoadingSeries && (
-            <div className="flex flex-col gap-3">
-              {Array.from({ length: 3 }).map((_, i) => (
-                <div key={i} className="h-16 rounded-2xl bg-muted animate-pulse" />
-              ))}
-            </div>
-          )}
-          {!isLoadingSeries && absSeries.length === 0 && (
-            <div className="flex flex-col items-center gap-3 py-12">
-              <p className="text-muted-foreground" data-testid="series-empty-state">
-                No series found in this library.
-              </p>
-            </div>
-          )}
-          {!isLoadingSeries && absSeries.length > 0 && (
-            <div className="flex flex-col gap-3">
-              {absSeries.map(s => (
-                <SeriesCard key={s.id} series={s} />
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Collections view (E102-S03) — replaces grid when active */}
-      {books.length > 0 && filters.source === 'audiobookshelf' && absViewMode === 'collections' && (
-        <CollectionsView />
-      )}
-
-      {/* Smart grouped view — series view OR "All" format tab in grid/list (prevents mixed aspect ratios) */}
-      {books.length > 0 &&
-        filters.source !== 'audiobookshelf' &&
-        (localSeriesView || activeFormatTab === 'all') && (
-          <SmartGroupedView
-            getBooksBySeries={getBooksBySeries}
-            onEdit={setEditingBook}
-            filteredBookIds={filteredBookIds}
-            formatTab={activeFormatTab}
-            viewMode={libraryView}
+                  ))}
+                </div>
+              ) : (
+                <div
+                  className="flex gap-0.5 rounded-lg bg-muted p-0.5 flex-shrink-0"
+                  role="tablist"
+                  aria-label="Library view mode"
+                  data-testid="local-view-toggle"
+                >
+                  {[
+                    {
+                      mode: 'grid' as const,
+                      series: false,
+                      Icon: Grid3X3,
+                      label: 'Grid',
+                      testId: 'local-view-grid',
+                    },
+                    {
+                      mode: 'list' as const,
+                      series: false,
+                      Icon: List,
+                      label: 'List',
+                      testId: 'local-view-list',
+                    },
+                    {
+                      mode: 'grid' as const,
+                      series: true,
+                      Icon: Layers,
+                      label: 'Series',
+                      testId: 'local-view-series',
+                    },
+                  ].map(({ mode, series, Icon, label, testId }) => {
+                    const isActive = series
+                      ? localSeriesView
+                      : !localSeriesView && libraryView === mode
+                    return (
+                      <button
+                        key={testId}
+                        role="tab"
+                        aria-selected={isActive}
+                        aria-label={label}
+                        onClick={() => {
+                          if (series) {
+                            setLocalSeriesView(true)
+                          } else {
+                            setLocalSeriesView(false)
+                            useBookStore.getState().setLibraryView(mode)
+                          }
+                        }}
+                        className={cn(
+                          'rounded-md p-1.5 transition-colors min-h-[32px] min-w-[32px] flex items-center justify-center',
+                          isActive
+                            ? 'bg-brand text-brand-foreground'
+                            : 'text-muted-foreground hover:text-foreground'
+                        )}
+                        data-testid={testId}
+                      >
+                        <Icon className="size-3.5" aria-hidden="true" />
+                      </button>
+                    )
+                  })}
+                </div>
+              )
+            }
           />
-        )}
 
-      {/* Grid view — specific format tabs OR ABS grid (SmartGroupedView handles local "All" tab) */}
-      {books.length > 0 &&
-        libraryView === 'grid' &&
-        !localSeriesView &&
-        (activeFormatTab !== 'all' || filters.source === 'audiobookshelf') &&
-        !(
-          filters.source === 'audiobookshelf' &&
-          (absViewMode === 'series' || absViewMode === 'collections')
-        ) && (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-            {filteredBooks.map(book => (
-              <BookContextMenu key={book.id} book={book} onEdit={() => setEditingBook(book)}>
-                <BookCard book={book} />
-              </BookContextMenu>
-            ))}
+          {/* SECONDARY row: source — smaller pills, lower visual weight */}
+          <div className="flex items-center gap-1.5 flex-wrap">
+            {absServers.length > 0 && <LibrarySourceTabs />}
           </div>
-        )}
 
-      {/* List view — specific format tabs OR ABS list (SmartGroupedView handles local "All" tab) */}
-      {books.length > 0 &&
-        libraryView === 'list' &&
-        !localSeriesView &&
-        (activeFormatTab !== 'all' || filters.source === 'audiobookshelf') &&
-        !(
-          filters.source === 'audiobookshelf' &&
-          (absViewMode === 'series' || absViewMode === 'collections')
-        ) && (
-          <div className="flex flex-col gap-2">
-            {filteredBooks.map(book => (
-              <BookContextMenu key={book.id} book={book} onEdit={() => setEditingBook(book)}>
-                <BookListItem book={book} />
-              </BookContextMenu>
-            ))}
-          </div>
-        )}
+          {/* Series view (E102-S02) */}
+          {filters.source === 'audiobookshelf' && absViewMode === 'series' && (
+            <div data-testid="series-view">
+              {isLoadingSeries && (
+                <div className="flex flex-col gap-3">
+                  {Array.from({ length: 3 }).map((_, i) => (
+                    <div key={i} className="h-16 rounded-2xl bg-muted animate-pulse" />
+                  ))}
+                </div>
+              )}
+              {!isLoadingSeries && absSeries.length === 0 && (
+                <div className="flex flex-col items-center gap-3 py-12">
+                  <p className="text-muted-foreground" data-testid="series-empty-state">
+                    No series found in this library.
+                  </p>
+                </div>
+              )}
+              {!isLoadingSeries && absSeries.length > 0 && (
+                <div className="flex flex-col gap-3">
+                  {absSeries.map(s => (
+                    <SeriesCard key={s.id} series={s} />
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
-      {/* Infinite scroll sentinel for ABS pagination (E101-S03) */}
-      {filters.source === 'audiobookshelf' && absServers.length > 0 && (
-        <AbsPaginationSentinel
-          servers={absServers}
-          pagination={pagination}
-          loadNextPage={loadNextPage}
-          isSyncing={isAbsSyncing}
-        />
-      )}
+          {/* Collections view (E102-S03) */}
+          {filters.source === 'audiobookshelf' && absViewMode === 'collections' && (
+            <CollectionsView />
+          )}
 
-      {/* No results message — hidden when local series view handles its own empty state */}
-      {books.length > 0 && filteredBooks.length === 0 && !localSeriesView && (
-        <div className="flex flex-col items-center gap-3 py-12">
-          <p className="text-muted-foreground">No books match your filters.</p>
-          <Button
-            variant="outline"
-            onClick={() => setFilters({})}
-            className="min-h-[44px]"
-            data-testid="clear-filters"
-          >
-            Clear filters
-          </Button>
+          {/* Smart grouped view */}
+          {filters.source !== 'audiobookshelf' &&
+            (localSeriesView || activeFormatTab === 'all') && (
+              <SmartGroupedView
+                getBooksBySeries={getBooksBySeries}
+                onEdit={setEditingBook}
+                filteredBookIds={filteredBookIds}
+                formatTab={activeFormatTab}
+                viewMode={libraryView}
+              />
+            )}
+
+          {/* Grid view */}
+          {libraryView === 'grid' &&
+            !localSeriesView &&
+            (activeFormatTab !== 'all' || filters.source === 'audiobookshelf') &&
+            !(
+              filters.source === 'audiobookshelf' &&
+              (absViewMode === 'series' || absViewMode === 'collections')
+            ) && (
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+                {filteredBooks.map(book => (
+                  <BookContextMenu key={book.id} book={book} onEdit={() => setEditingBook(book)}>
+                    <BookCard book={book} />
+                  </BookContextMenu>
+                ))}
+              </div>
+            )}
+
+          {/* List view */}
+          {libraryView === 'list' &&
+            !localSeriesView &&
+            (activeFormatTab !== 'all' || filters.source === 'audiobookshelf') &&
+            !(
+              filters.source === 'audiobookshelf' &&
+              (absViewMode === 'series' || absViewMode === 'collections')
+            ) && (
+              <div className="flex flex-col gap-2">
+                {filteredBooks.map(book => (
+                  <BookContextMenu key={book.id} book={book} onEdit={() => setEditingBook(book)}>
+                    <BookListItem book={book} />
+                  </BookContextMenu>
+                ))}
+              </div>
+            )}
+
+          {/* Infinite scroll sentinel for ABS pagination */}
+          {filters.source === 'audiobookshelf' && absServers.length > 0 && (
+            <AbsPaginationSentinel
+              servers={absServers}
+              pagination={pagination}
+              loadNextPage={loadNextPage}
+              isSyncing={isAbsSyncing}
+            />
+          )}
+
+          {/* No results */}
+          {filteredBooks.length === 0 && !localSeriesView && (
+            <div className="flex flex-col items-center gap-3 py-12">
+              <p className="text-muted-foreground">No books match your filters.</p>
+              <Button
+                variant="outline"
+                onClick={() => setFilters({})}
+                className="min-h-[44px]"
+                data-testid="clear-filters"
+              >
+                Clear filters
+              </Button>
+            </div>
+          )}
         </div>
       )}
 
-      {/* Storage indicator — only when books exist.
-          fix/E-ABS-QA: scope `bookCount` to the active source filter so the
-          footer matches what the user sees; show the global total as
-          secondary text when a filter is active. */}
+      {/* ============================================================ */}
+      {/* COLLECTIONS tab — shelves, series, collections views          */}
+      {/* ============================================================ */}
+      {books.length > 0 && libraryTab === 'collections' && (
+        <div className="flex flex-col gap-6" data-testid="library-tab-panel-collections">
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShelvesOpen(true)}
+              className="min-h-[40px]"
+              data-testid="manage-shelves-inline"
+            >
+              <LibraryIcon className="mr-2 size-4" />
+              Manage Shelves
+            </Button>
+            {absServers.length > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setFilter('source', 'audiobookshelf')
+                  setAbsViewMode('collections')
+                  handleTabChange('browse')
+                }}
+                className="min-h-[40px]"
+              >
+                <Globe className="mr-2 size-4" />
+                Browse ABS Collections
+              </Button>
+            )}
+          </div>
+
+          {/* ABS collections — always show when ABS source is active */}
+          {filters.source === 'audiobookshelf' && (
+            <CollectionsView />
+          )}
+
+          {/* Local series groups + shelf-aware empty state */}
+          {filters.source !== 'audiobookshelf' &&
+            (filteredBooks.length > 0 ? (
+              <SmartGroupedView
+                getBooksBySeries={getBooksBySeries}
+                onEdit={setEditingBook}
+                filteredBookIds={filteredBookIds}
+                formatTab={activeFormatTab}
+                viewMode={libraryView}
+              />
+            ) : (
+              <div className="flex flex-col items-center gap-3 py-12">
+                <FolderOpen className="size-12 text-muted-foreground/40" />
+                <p className="text-muted-foreground">No collections yet.</p>
+                <Button
+                  variant="outline"
+                  onClick={() => setShelvesOpen(true)}
+                  className="min-h-[44px]"
+                >
+                  <Plus className="mr-2 size-4" />
+                  Create your first shelf
+                </Button>
+              </div>
+            ))}
+        </div>
+      )}
+
+      {/* ============================================================ */}
+      {/* HISTORY tab — stats + recently finished                       */}
+      {/* ============================================================ */}
+      {books.length > 0 && libraryTab === 'history' && (
+        <div className="flex flex-col gap-6" data-testid="library-tab-panel-history">
+          {/* Stats row */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {(() => {
+              const currentYear = new Date().getFullYear().toString()
+              let finishedThisYear = 0
+              let totalPages = 0
+              let totalSeconds = 0
+              for (const b of books) {
+                if (b.status !== 'finished' || !b.finishedAt?.startsWith(currentYear)) continue
+                finishedThisYear++
+                totalPages += b.totalPages ?? 0
+                if (b.format === 'audiobook') totalSeconds += b.totalDuration ?? 0
+              }
+              const totalHours = Math.round(totalSeconds / 3600)
+              return (
+                <>
+                  <div className="rounded-xl bg-card border border-border p-5 text-center shadow-card-ambient">
+                    <div className="text-3xl font-bold text-brand-soft-foreground font-display tracking-tight">
+                      {finishedThisYear}
+                    </div>
+                    <div className="text-sm text-muted-foreground mt-1">Books finished this year</div>
+                  </div>
+                  <div className="rounded-xl bg-card border border-border p-5 text-center shadow-card-ambient">
+                    <div className="text-3xl font-bold text-brand-soft-foreground font-display tracking-tight">
+                      {totalPages.toLocaleString()}
+                    </div>
+                    <div className="text-sm text-muted-foreground mt-1">Pages read</div>
+                  </div>
+                  <div className="rounded-xl bg-card border border-border p-5 text-center shadow-card-ambient">
+                    <div className="text-3xl font-bold text-brand-soft-foreground font-display tracking-tight">
+                      {totalHours}h
+                    </div>
+                    <div className="text-sm text-muted-foreground mt-1">Hours listened</div>
+                  </div>
+                </>
+              )
+            })()}
+          </div>
+
+          {/* Recently finished list */}
+          <div className="flex flex-col gap-2">
+            <h2 className="text-sm font-semibold text-foreground font-display tracking-tight">
+              Recently Finished
+            </h2>
+            {books
+              .filter(b => b.status === 'finished')
+              .sort((a, b) => {
+                const da = a.finishedAt ?? a.updatedAt ?? ''
+                const db = b.finishedAt ?? b.updatedAt ?? ''
+                return db.localeCompare(da)
+              })
+              .slice(0, 10)
+              .map(book => (
+                <div
+                  key={book.id}
+                  className="flex items-center gap-3 p-3 rounded-xl bg-card border border-border hover:bg-surface-elevated transition-colors"
+                >
+                  <div className="w-9 h-9 rounded-lg bg-muted flex-shrink-0 flex items-center justify-center overflow-hidden">
+                    <BookOpen className="size-4 text-muted-foreground" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-medium text-foreground truncate">
+                      {book.title}
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      {book.author}
+                      {book.totalPages ? ` · ${book.totalPages} pages` : ''}
+                      {book.totalDuration ? ` · ${Math.round(book.totalDuration / 60)}m` : ''}
+                    </div>
+                  </div>
+                  {book.rating && (
+                    <span className="text-xs font-medium text-gold">
+                      {'★'.repeat(book.rating)}{'☆'.repeat(5 - book.rating)}
+                    </span>
+                  )}
+                  <span className="text-xs text-muted-foreground whitespace-nowrap">
+                    {book.finishedAt
+                      ? new Date(book.finishedAt).toLocaleDateString('en-US', {
+                          month: 'short',
+                          day: 'numeric',
+                          year: 'numeric',
+                        })
+                      : ''}
+                  </span>
+                </div>
+              ))}
+            {books.filter(b => b.status === 'finished').length === 0 && (
+              <div className="flex flex-col items-center gap-3 py-12">
+                <BookOpen className="size-12 text-muted-foreground/40" />
+                <p className="text-muted-foreground">
+                  No finished books yet. Finish a book to see it here.
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Storage indicator — always visible when books exist */}
       {books.length > 0 && (
         <StorageIndicator
           bookCount={filters.source ? filteredBooks.length : books.length}

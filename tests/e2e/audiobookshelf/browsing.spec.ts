@@ -111,7 +111,7 @@ async function seedLibraryWithAbs(page: import('@playwright/test').Page): Promis
     ALL_BOOKS as unknown as Record<string, unknown>[]
   )
   // Reload so Zustand picks up seeded data
-  await page.goto('/library')
+  await page.goto('/library?tab=browse')
   await page.waitForLoadState('domcontentloaded')
 }
 
@@ -134,7 +134,7 @@ async function seedLibraryLocalOnly(page: import('@playwright/test').Page): Prom
     'books',
     LOCAL_BOOKS as unknown as Record<string, unknown>[]
   )
-  await page.goto('/library')
+  await page.goto('/library?tab=browse')
   await page.waitForLoadState('domcontentloaded')
 }
 
@@ -303,7 +303,7 @@ test.describe('E101-S03: Library Browsing & Catalog Sync', () => {
       'books',
       ALL_BOOKS as unknown as Record<string, unknown>[]
     )
-    await page.goto('/library')
+    await page.goto('/library?tab=browse')
     await page.waitForLoadState('domcontentloaded')
 
     await expect(page.getByText('Thinking, Fast and Slow')).toBeVisible({ timeout: 10000 })

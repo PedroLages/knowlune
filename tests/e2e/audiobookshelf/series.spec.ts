@@ -170,7 +170,7 @@ async function seedAndNavigate(page: import('@playwright/test').Page): Promise<v
     'books',
     ABS_BOOKS as unknown as Record<string, unknown>[]
   )
-  await page.goto('/library')
+  await page.goto('/library?tab=browse')
   await page.waitForLoadState('domcontentloaded')
 }
 
@@ -291,7 +291,7 @@ test.describe('E102-S02: Series Browsing', () => {
       'books',
       ABS_BOOKS as unknown as Record<string, unknown>[]
     )
-    await page.goto('/library')
+    await page.goto('/library?tab=browse')
     await page.waitForLoadState('domcontentloaded')
 
     await expect(page.getByText('Leviathan Wakes')).toBeVisible({ timeout: 10000 })

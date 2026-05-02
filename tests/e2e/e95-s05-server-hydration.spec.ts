@@ -61,7 +61,7 @@ test.describe('E95-S05 server connection hydration', () => {
       ABS_SERVER,
     ] as unknown as Record<string, unknown>[])
 
-    await page.goto('/library')
+    await page.goto('/library?tab=browse')
     await page.waitForLoadState('domcontentloaded')
     await page.getByTestId('abs-settings-trigger').click()
     await expect(page.getByTestId('abs-settings')).toBeVisible()
@@ -104,7 +104,7 @@ test.describe('E95-S05 server connection hydration', () => {
       OPDS_CATALOG,
     ] as unknown as Record<string, unknown>[])
 
-    await page.goto('/library')
+    await page.goto('/library?tab=browse')
     await page.waitForLoadState('domcontentloaded')
     await page.getByTestId('opds-catalog-settings-trigger').click({ trial: false }).catch(() => {
       // Fallback trigger name — some UI variants use a different testid.

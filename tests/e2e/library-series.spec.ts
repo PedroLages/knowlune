@@ -2,8 +2,7 @@
  * Smoke tests for the Library series grouping view (E110-S02).
  */
 
-import { test, expect } from '@playwright/test'
-import { dismissOnboarding } from '../helpers/dismiss-onboarding'
+import { test, expect } from '../support/fixtures'
 import { seedBooks } from '../support/helpers/indexeddb-seed'
 import { FIXED_DATE } from '../utils/test-time'
 
@@ -51,15 +50,12 @@ const TEST_BOOKS = [
 ]
 
 test.beforeEach(async ({ page }) => {
-  // Dismiss onboarding/welcome overlays to prevent pointer interception
-  await dismissOnboarding(page)
-  // Navigate to seed books into IndexedDB (requires a real URL, not about:blank)
   await page.goto('/')
   await seedBooks(page, TEST_BOOKS)
 })
 
 test('series view renders when switching to series tab', async ({ page }) => {
-  await page.goto('/library')
+  await page.goto('/library?tab=browse')
 
   // Switch to local series view via the tab button
   const seriesTab = page.locator('[data-testid="local-view-series"]')
@@ -67,17 +63,17 @@ test('series view renders when switching to series tab', async ({ page }) => {
   await seriesTab.click()
 
   // Verify the series view container renders
-  await expect(page.locator('[data-testid="local-series-view"]')).toBeVisible()
+  await expect(page.locator('[data-testid="smart-grouped-view"]')).toBeVisible()
 })
 
 test('series view shows ungrouped books alongside series groups', async ({ page }) => {
-  await page.goto('/library')
+  await page.goto('/library?tab=browse')
 
   const seriesTab = page.locator('[data-testid="local-view-series"]')
   await expect(seriesTab).toBeVisible()
   await seriesTab.click()
 
-  const seriesView = page.locator('[data-testid="local-series-view"]')
+  const seriesView = page.locator('[data-testid="smart-grouped-view"]')
   await expect(seriesView).toBeVisible()
 
   // Verify no JS errors during render
@@ -87,6 +83,6 @@ test('series view shows ungrouped books alongside series groups', async ({ page 
   })
 
   // Wait for the series view to be stable (auto-retry)
-  await expect(page.locator('[data-testid="local-series-view"]')).toBeVisible()
+  await expect(page.locator('[data-testid="smart-grouped-view"]')).toBeVisible()
   expect(consoleErrors.filter(e => !e.includes('favicon'))).toHaveLength(0)
 })

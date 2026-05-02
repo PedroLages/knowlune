@@ -147,7 +147,7 @@ async function seedAndNavigate(
     'books',
     ABS_BOOKS as unknown as Record<string, unknown>[]
   )
-  await page.goto('/library')
+  await page.goto('/library?tab=browse')
   await page.waitForLoadState('domcontentloaded')
 }
 

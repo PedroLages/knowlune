@@ -16,3 +16,6 @@ export { LibraryShelfRow } from './LibraryShelfRow'
 export type { LibraryShelfRowProps } from './LibraryShelfRow'
 
 export { LibraryContinueShelves, LibraryDiscoveryShelves } from './LibraryShelves'
+
+export { LibraryTabBar, VALID_LIBRARY_TABS } from './LibraryTabBar'
+export type { LibraryTab } from './LibraryTabBar'
