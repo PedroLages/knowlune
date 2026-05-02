@@ -189,7 +189,7 @@ export default function MyClass() {
   if (!hasAnyCourses) {
     return (
       <div>
-        <h1 className="text-2xl font-bold mb-6">My Courses</h1>
+        <h1 className="text-2xl font-semibold mb-8 pt-2">My Courses</h1>
         <EmptyState
           data-testid="empty-state-my-courses"
           icon={PlayCircle}
@@ -204,7 +204,7 @@ export default function MyClass() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold mb-6">My Courses</h1>
+      <h1 className="text-2xl font-semibold mb-8 pt-2">My Courses</h1>
 
       {/* Stats Dashboard */}
       <ProgressStats courses={allCourses} />

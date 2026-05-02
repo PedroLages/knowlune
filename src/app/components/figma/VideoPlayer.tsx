@@ -58,6 +58,15 @@ interface VideoPlayerProps {
   onTheaterModeToggle?: () => void
   onLoadCaptions?: (file: File) => void
   onFocusNotes?: () => void
+  /**
+   * When true, autoplay the video as soon as it can play — preferring
+   * audio-on. Used for preview surfaces (e.g. the course card preview
+   * dialog) where the user initiated playback via a prior click gesture.
+   * Browsers may block unmuted autoplay if the gesture token is stale;
+   * we catch that rejection and retry muted so the preview still plays.
+   * The isMuted state stays in sync with the actual fallback path.
+   */
+  autoplay?: boolean
 }
 
 export interface VideoPlayerHandle {
@@ -105,6 +114,7 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
     onTheaterModeToggle,
     onLoadCaptions,
     onFocusNotes,
+    autoplay = false,
   },
   ref
 ) {
@@ -204,6 +214,31 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
     setLoopStart(null)
     setLoopEnd(null)
   }, [src])
+
+  // Autoplay when the caller opts in (preview dialogs). Try unmuted first
+  // — the click that opened the dialog is a user gesture, so browsers
+  // usually allow audible playback. If the browser rejects (gesture token
+  // stale due to blob-load delay), fall back to muted autoplay. State is
+  // kept in sync with whichever path succeeded so the volume icon renders
+  // correctly and a single Unmute tap actually unmutes.
+  useEffect(() => {
+    if (!autoplay) return
+    const video = videoRef.current
+    if (!video) return
+    video.muted = false
+    setIsMuted(false)
+    const playPromise = video.play()
+    if (playPromise && typeof playPromise.catch === 'function') {
+      playPromise.catch(() => {
+        // Audible autoplay blocked — retry muted so the preview still plays.
+        video.muted = true
+        setIsMuted(true)
+        video.play().catch(() => {
+          // silent-catch-ok: both paths blocked — user can click Play
+        })
+      })
+    }
+  }, [autoplay, src])
 
   // PiP enter/leave listeners
   useEffect(() => {
@@ -857,6 +892,21 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
     }
   }, [])
 
+  // Auto-hide controls when playback starts without a mouse interaction.
+  // resetControlsTimeout only arms the 3s hide-timer from mouse/touch/focus
+  // events — so programmatic play() (e.g. autoplay when a preview modal
+  // opens) previously left controls visible forever. Mirror the same guards
+  // used in resetControlsTimeout so menus/dialogs keep the chrome visible.
+  useEffect(() => {
+    if (!isPlaying) return
+    if (speedMenuOpen || shortcutsOpen || captionSettingsOpen) return
+    if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current)
+    controlsTimeoutRef.current = setTimeout(() => setShowControls(false), 3000)
+    return () => {
+      if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current)
+    }
+  }, [isPlaying, speedMenuOpen, shortcutsOpen, captionSettingsOpen])
+
   // When controls auto-hide, move focus to the container so keyboard shortcuts remain active
   useEffect(() => {
     if (!showControls && containerRef.current?.contains(document.activeElement)) {
@@ -930,6 +980,14 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
           onWaiting={handleWaiting}
           onCanPlay={handleCanPlay}
           onPlaying={handleCanPlay}
+          onPlay={() => {
+            setIsPlaying(true)
+            onPlayStateChange?.(true)
+          }}
+          onPause={() => {
+            setIsPlaying(false)
+            onPlayStateChange?.(false)
+          }}
           onProgress={handleProgress}
           onError={handleVideoError}
           onClick={togglePlayPause}
@@ -1109,7 +1167,7 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="size-11 text-white hover:bg-white/20"
+                  className="size-11 text-white hover:bg-white/20 hover:text-white"
                   onClick={togglePlayPause}
                   aria-label={isPlaying ? 'Pause' : 'Play'}
                 >
@@ -1120,7 +1178,7 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="size-11 text-white hover:bg-white/20"
+                  className="size-11 text-white hover:bg-white/20 hover:text-white"
                   onClick={() => {
                     seek(-10)
                     announce('Skipped back 10 seconds')
@@ -1134,7 +1192,7 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="size-11 text-white hover:bg-white/20"
+                  className="size-11 text-white hover:bg-white/20 hover:text-white"
                   onClick={() => {
                     seek(10)
                     announce('Skipped forward 10 seconds')
@@ -1157,7 +1215,7 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
                     variant="ghost"
                     size="icon"
                     data-testid="volume-button"
-                    className="size-11 text-white hover:bg-white/20"
+                    className="size-11 text-white hover:bg-white/20 hover:text-white"
                     onClick={() => {
                       const isMobile = !window.matchMedia('(min-width: 640px)').matches
                       if (isMobile) {
@@ -1222,7 +1280,7 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
                       variant="ghost"
                       size="sm"
                       data-testid="speed-menu-trigger"
-                      className="h-11 px-3 text-white hover:bg-white/20 text-xs font-medium"
+                      className="h-11 px-3 text-white hover:bg-white/20 hover:text-white text-xs font-medium"
                       aria-label="Playback speed"
                     >
                       <Settings className="size-5 mr-1" />
@@ -1250,7 +1308,7 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
                   size="icon"
                   data-testid="loop-toggle-button"
                   className={cn(
-                    'size-11 text-white hover:bg-white/20 transition-colors duration-150',
+                    'size-11 text-white hover:bg-white/20 hover:text-white transition-colors duration-150',
                     loopStart !== null && loopEnd === null && 'bg-white/20',
                     loopStart !== null &&
                       loopEnd !== null &&
@@ -1284,7 +1342,7 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
                     variant="ghost"
                     size="icon"
                     data-testid="loop-clear-button"
-                    className="size-11 text-white/60 hover:text-white hover:bg-white/20"
+                    className="size-11 text-white/60 hover:text-white hover:bg-white/20 hover:text-white"
                     onClick={clearLoop}
                     aria-label="Clear loop"
                   >
@@ -1298,7 +1356,7 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
                     variant="ghost"
                     size="icon"
                     className={cn(
-                      'size-11 text-white hover:bg-white/20 transition-colors duration-150',
+                      'size-11 text-white hover:bg-white/20 hover:text-white transition-colors duration-150',
                       justBookmarked && 'bg-yellow-500/30 text-yellow-300 hover:bg-yellow-500/40'
                     )}
                     onClick={handleAddBookmark}
@@ -1317,7 +1375,7 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
                   variant="ghost"
                   size="icon"
                   className={cn(
-                    'size-11 text-white hover:bg-white/20',
+                    'size-11 text-white hover:bg-white/20 hover:text-white',
                     captionsEnabled && captions && captions.length > 0 && 'bg-white/20',
                     !onLoadCaptions &&
                       (!captions || captions.length === 0) &&
@@ -1345,7 +1403,7 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="size-11 text-white hover:bg-white/20"
+                        className="size-11 text-white hover:bg-white/20 hover:text-white"
                         aria-label="Caption settings"
                         data-testid="caption-settings-button"
                       >
@@ -1409,7 +1467,7 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
                     variant="ghost"
                     size="icon"
                     className={cn(
-                      'hidden xl:flex size-11 text-white hover:bg-white/20',
+                      'hidden xl:flex size-11 text-white hover:bg-white/20 hover:text-white',
                       theaterMode && 'bg-white/20'
                     )}
                     onClick={onTheaterModeToggle}
@@ -1426,7 +1484,7 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
                     <Button
                       variant="ghost"
                       size="icon"
-                      className={cn('size-11 text-white hover:bg-white/20', isPiP && 'bg-white/20')}
+                      className={cn('size-11 text-white hover:bg-white/20 hover:text-white', isPiP && 'bg-white/20')}
                       onClick={togglePiP}
                       aria-label={isPiP ? 'Exit Picture-in-Picture' : 'Enter Picture-in-Picture'}
                       aria-pressed={isPiP}
@@ -1439,7 +1497,7 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="size-11 text-white hover:bg-white/20"
+                  className="size-11 text-white hover:bg-white/20 hover:text-white"
                   onClick={toggleFullscreen}
                   aria-label={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
                 >

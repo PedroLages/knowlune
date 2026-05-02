@@ -14,6 +14,7 @@ import {
   Loader2,
   Pencil,
   Clock,
+  X,
 } from 'lucide-react'
 import { useNavigate } from 'react-router'
 import { Badge } from '@/app/components/ui/badge'
@@ -39,7 +40,13 @@ import {
   AlertDialogTitle,
 } from '@/app/components/ui/alert-dialog'
 import { toast } from 'sonner'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/app/components/ui/dialog'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogClose,
+} from '@/app/components/ui/dialog'
 import { TagBadgeList } from '@/app/components/figma/TagBadgeList'
 import { TagEditor } from '@/app/components/figma/TagEditor'
 import { VideoPlayer } from '@/app/components/figma/VideoPlayer'
@@ -53,16 +60,17 @@ import { useLazyVisible } from '@/hooks/useLazyVisible'
 import { useVideoFromHandle } from '@/hooks/useVideoFromHandle'
 import { getAvatarSrc } from '@/lib/authors'
 import { db } from '@/db/schema'
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/app/components/ui/tooltip'
 import { formatCourseDuration, formatFileSize, getResolutionLabel } from '@/lib/format'
 import { MomentumBadge } from './MomentumBadge'
 import { ProgressRing } from './ProgressRing'
-import { CardCover, CoverProgressBar, PlayOverlay, CompletionOverlay } from './CourseCardShell'
+import {
+  CardCover,
+  CoverProgressBar,
+  PlayOverlay,
+  CompletionOverlay,
+  CoverCornerChip,
+  OVERLAY_SCRIM_CLASS,
+} from './CourseCardShell'
 import type { ImportedCourse, ImportedVideo, LearnerCourseStatus } from '@/data/types'
 import type { MomentumScore } from '@/lib/momentum'
 
@@ -90,6 +98,16 @@ const statusConfig: Record<
     icon: PauseCircle,
     badgeClass: 'bg-muted text-muted-foreground',
   },
+}
+
+/**
+ * Trim minutes from course duration at card scale when hours >= 10.
+ * "134h 36m" → "134h"; "8h 24m" stays as-is.
+ */
+function formatCourseDurationCompact(totalSeconds: number): string {
+  const hours = Math.floor(Math.max(0, totalSeconds) / 3600)
+  if (hours >= 10) return `${hours}h`
+  return formatCourseDuration(totalSeconds)
 }
 
 interface ImportedCourseCardProps {
@@ -285,7 +303,7 @@ export function ImportedCourseCard({
           showPreview && videoReady && 'z-10'
         )}
       >
-        <CardCover heightClass="h-44">
+        <CardCover heightClass="aspect-video w-full">
           {/* Background: gradient placeholder or lazy-loaded thumbnail */}
           <div
             data-testid="course-card-placeholder"
@@ -301,7 +319,7 @@ export function ImportedCourseCard({
               alt=""
               aria-hidden="true"
               loading="lazy"
-              className="absolute inset-0 w-full h-full object-cover"
+              className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 motion-reduce:transition-none motion-reduce:group-hover:scale-100"
             />
           )}
           {/* Inline video preview — suppressed on not-started cards so it doesn't compete with PlayOverlay */}
@@ -341,89 +359,100 @@ export function ImportedCourseCard({
             </div>
           ) : null}
 
-          {/* Status dropdown — top-right */}
+          {/* Status dropdown — top-right.
+              When status is 'active' (default on My Courses), show an icon-only
+              affordance instead of the pill — every card is active, so the label
+              adds noise. Other statuses render the pill with an overlay scrim. */}
           <div className="absolute top-3 right-3 z-30">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button
-                  ref={statusBadgeRef}
-                  data-testid="status-badge"
-                  onClick={e => e.stopPropagation()}
-                  className="focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 rounded-full outline-none min-h-[44px] flex items-center"
-                  aria-label={`Course status: ${config.label}. Click to change.`}
-                >
-                  <Badge
-                    className={cn(
-                      'border-0 text-xs gap-1 cursor-pointer hover:opacity-80 transition-opacity',
-                      config.badgeClass
-                    )}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    ref={statusBadgeRef}
+                    data-testid="status-badge"
+                    onClick={e => e.stopPropagation()}
+                    className="focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 rounded-full outline-none min-h-[44px] flex items-center"
+                    aria-label={`Course status: ${config.label}. Click to change.`}
                   >
-                    <StatusIcon className="size-3" aria-hidden="true" />
-                    {config.label}
-                  </Badge>
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" onClick={e => e.stopPropagation()}>
-                {(Object.entries(statusConfig) as [LearnerCourseStatus, typeof config][]).map(
-                  ([key, cfg]) => {
-                    const Icon = cfg.icon
-                    return (
-                      <DropdownMenuItem
-                        key={key}
-                        onClick={() => handleStatusChange(key)}
-                        className="gap-2"
-                      >
-                        <Icon className="size-4" aria-hidden="true" />
-                        {cfg.label}
-                        {key === status && (
-                          <CheckCircle2
-                            className="size-3.5 ml-auto text-brand"
-                            aria-hidden="true"
-                          />
+                    {status === 'active' ? (
+                      <span
+                        className={cn(
+                          'inline-flex items-center justify-center rounded-full p-1.5 cursor-pointer hover:opacity-80 transition-opacity',
+                          OVERLAY_SCRIM_CLASS
                         )}
+                      >
+                        <StatusIcon className="size-3.5" aria-hidden="true" />
+                      </span>
+                    ) : (
+                      <Badge
+                        className={cn(
+                          'border-0 text-xs gap-1 cursor-pointer hover:opacity-80 transition-opacity',
+                          OVERLAY_SCRIM_CLASS
+                        )}
+                      >
+                        <StatusIcon className="size-3" aria-hidden="true" />
+                        {config.label}
+                      </Badge>
+                    )}
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" onClick={e => e.stopPropagation()}>
+                  {(Object.entries(statusConfig) as [LearnerCourseStatus, typeof config][]).map(
+                    ([key, cfg]) => {
+                      const Icon = cfg.icon
+                      return (
+                        <DropdownMenuItem
+                          key={key}
+                          onClick={() => handleStatusChange(key)}
+                          className="gap-2"
+                        >
+                          <Icon className="size-4" aria-hidden="true" />
+                          {cfg.label}
+                          {key === status && (
+                            <CheckCircle2
+                              className="size-3.5 ml-auto text-brand"
+                              aria-hidden="true"
+                            />
+                          )}
+                        </DropdownMenuItem>
+                      )
+                    }
+                  )}
+                  {!readOnly && (
+                    <>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        data-testid="edit-course-menu-item"
+                        className="gap-2 min-h-[44px]"
+                        onClick={e => {
+                          e.stopPropagation()
+                          setEditDialogOpen(true)
+                        }}
+                      >
+                        <Pencil className="size-4" aria-hidden="true" />
+                        Edit details
                       </DropdownMenuItem>
-                    )
-                  }
-                )}
-                {!readOnly && (
-                  <>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem
-                      data-testid="edit-course-menu-item"
-                      className="gap-2 min-h-[44px]"
-                      onClick={e => {
-                        e.stopPropagation()
-                        setEditDialogOpen(true)
-                      }}
-                    >
-                      <Pencil className="size-4" aria-hidden="true" />
-                      Edit details
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      data-testid="delete-course-menu-item"
-                      variant="destructive"
-                      className="gap-2 min-h-[44px]"
-                      onClick={e => {
-                        e.stopPropagation()
-                        setDeleteDialogOpen(true)
-                      }}
-                    >
-                      <Trash2 className="size-4" aria-hidden="true" />
-                      Delete course
-                    </DropdownMenuItem>
-                  </>
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
+                      <DropdownMenuItem
+                        data-testid="delete-course-menu-item"
+                        variant="destructive"
+                        className="gap-2 min-h-[44px]"
+                        onClick={e => {
+                          e.stopPropagation()
+                          setDeleteDialogOpen(true)
+                        }}
+                      >
+                        <Trash2 className="size-4" aria-hidden="true" />
+                        Delete course
+                      </DropdownMenuItem>
+                    </>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
 
           {/* Info button — bottom-right, hover-revealed */}
           <div
             className="absolute bottom-3 right-3 z-30"
-            onClick={e => {
-              e.preventDefault()
-              e.stopPropagation()
-            }}
+            onClick={e => { e.preventDefault(); e.stopPropagation() }}
           >
             <Popover open={infoOpen} onOpenChange={setInfoOpen}>
               <PopoverTrigger asChild>
@@ -440,31 +469,40 @@ export function ImportedCourseCard({
                 <div className="space-y-3">
                   <div>
                     <h4 className="font-semibold text-sm leading-tight">{course.name}</h4>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Imported {new Date(course.importedAt).toLocaleDateString()}
-                    </p>
+                    <div className="flex items-center justify-between gap-2 mt-1">
+                      <p className="text-xs text-muted-foreground">
+                        Imported {new Date(course.importedAt).toLocaleDateString()}
+                      </p>
+                      <span
+                        className={cn(
+                          'inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium leading-none shrink-0',
+                          config.badgeClass
+                        )}
+                      >
+                        {config.label}
+                      </span>
+                    </div>
                   </div>
 
-                  <Badge className={cn('border-0 text-xs gap-1', config.badgeClass)}>
-                    <StatusIcon className="size-3" aria-hidden="true" />
-                    {config.label}
-                  </Badge>
-
                   <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
-                    <span className="flex items-center gap-1">
-                      <Video className="size-3.5" aria-hidden="true" />
-                      {course.videoCount} {course.videoCount === 1 ? 'video' : 'videos'}
-                    </span>
+                    {course.videoCount > 0 && (
+                      <span className="flex items-center gap-1">
+                        <Video className="size-3.5" aria-hidden="true" />
+                        {course.videoCount} {course.videoCount === 1 ? 'video' : 'videos'}
+                      </span>
+                    )}
                     {course.totalDuration != null && course.totalDuration > 0 && (
                       <span className="flex items-center gap-1">
                         <Clock className="size-3.5" aria-hidden="true" />
                         {formatCourseDuration(course.totalDuration)}
                       </span>
                     )}
-                    <span className="flex items-center gap-1">
-                      <FileText className="size-3.5" aria-hidden="true" />
-                      {course.pdfCount} {course.pdfCount === 1 ? 'PDF' : 'PDFs'}
-                    </span>
+                    {course.pdfCount > 0 && (
+                      <span className="flex items-center gap-1">
+                        <FileText className="size-3.5" aria-hidden="true" />
+                        {course.pdfCount} {course.pdfCount === 1 ? 'PDF' : 'PDFs'}
+                      </span>
+                    )}
                     {course.totalFileSize != null && course.totalFileSize > 0 && (
                       <span className="text-muted-foreground/70">
                         {formatFileSize(course.totalFileSize)}
@@ -528,6 +566,27 @@ export function ImportedCourseCard({
           {/* Full completion overlay */}
           <CompletionOverlay show={isCompleted} />
 
+          {/* Resolution chip — bottom-left, only when ≥1080p (sub-HD is not a selling point) */}
+          {course.maxResolutionHeight != null && course.maxResolutionHeight >= 1080 && (
+            <CoverCornerChip position="bottom-left" data-testid="course-card-resolution">
+              {getResolutionLabel(course.maxResolutionHeight)}
+            </CoverCornerChip>
+          )}
+
+          {/* Duration chip — bottom-right (YouTube/Vimeo convention).
+              Hidden on hover so the hover-revealed info button (same corner)
+              has clear space. */}
+          {course.totalDuration != null && course.totalDuration > 0 && (
+            <span
+              className="transition-opacity duration-200 group-hover:opacity-0 [@media(hover:none)]:group-hover:opacity-100 motion-reduce:transition-none"
+            >
+              <CoverCornerChip position="bottom-right" data-testid="course-card-duration">
+                <Clock className="size-3" aria-hidden="true" />
+                {formatCourseDurationCompact(course.totalDuration)}
+              </CoverCornerChip>
+            </span>
+          )}
+
           {/* Cover-edge progress bar */}
           <div data-testid="completion-progress-bar" className="contents">
             <CoverProgressBar progress={completionPercent} />
@@ -536,118 +595,120 @@ export function ImportedCourseCard({
 
         {/* Card body */}
         <div className="mt-3 px-1 min-h-32 flex flex-col">
-          <h3
-            data-testid="course-card-title"
-            className="font-bold text-sm leading-tight mb-1 line-clamp-2 group-hover:text-brand transition-colors"
-          >
-            {course.name}
-          </h3>
-          {authorData ? (
-            <button
-              type="button"
-              data-testid="course-card-author"
-              onClick={e => {
-                e.stopPropagation()
-                navigate(`/authors/${authorData.id}`)
-              }}
-              className="flex items-center gap-1.5 mb-1 text-xs text-muted-foreground hover:text-brand transition-colors w-fit"
+            <h3
+              data-testid="course-card-title"
+              className="font-bold text-sm leading-tight mb-1 line-clamp-2 group-hover:text-brand transition-colors"
             >
-              <Avatar className="size-5">
-                <AvatarImage {...getAvatarSrc(authorData.photoUrl ?? '', 20)} alt="" />
-                <AvatarFallback className="text-[8px]">
-                  {authorData.name
-                    .split(' ')
-                    .map(n => n[0])
-                    .join('')
-                    .toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
-              <span>{authorData.name}</span>
-            </button>
-          ) : (
-            <p
-              data-testid="course-card-unknown-author"
-              className="text-xs text-muted-foreground mb-1"
-            >
-              Unknown Author
-            </p>
-          )}
-          <div className="flex items-center gap-1.5 mt-1 mb-2">
-            <span aria-live="polite" className="contents">
-              {analysisStatus === 'analyzing' && (
-                <span
-                  data-testid="ai-tagging-indicator"
-                  className="text-xs text-muted-foreground animate-pulse flex items-center gap-1"
+              {course.name}
+            </h3>
+            {/* Author + inline "+ add tag" row.
+                When there are no tags yet (and the card is editable), the tag-add
+                affordance folds into this row as a muted text trigger — avoiding
+                the standalone "+" button under the title. Hidden at rest and
+                revealed on hover/focus so empty cards stay visually calm.
+                When tags exist, they render in their own row below with the
+                original pill-style "+" for adding more. */}
+            <div className="flex items-center gap-2 mb-1 min-h-5">
+              {authorData ? (
+                <button
+                  type="button"
+                  data-testid="course-card-author"
+                  onClick={e => {
+                    e.stopPropagation()
+                    navigate(`/authors/${authorData.id}`)
+                  }}
+                  className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-brand transition-colors w-fit"
                 >
-                  <Loader2 className="size-3 animate-spin" aria-hidden="true" />
-                  AI tagging...
-                </span>
+                  <Avatar className="size-5">
+                    <AvatarImage {...getAvatarSrc(authorData.photoUrl ?? '', 20)} alt="" />
+                    <AvatarFallback className="text-[8px]">
+                      {authorData.name
+                        .split(' ')
+                        .map(n => n[0])
+                        .join('')
+                        .toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <span>{authorData.name}</span>
+                </button>
+              ) : (
+                // Author row is hidden when no author is set — exposing "Unknown Author"
+                // as user-facing text reads as a bug. A visually hidden span preserves
+                // the data-testid for any tests that rely on the fallback element.
+                <span data-testid="course-card-unknown-author" className="sr-only" aria-hidden="true" />
               )}
-              {analysisStatus === 'complete' && course.tags.length > 0 && (
-                <span className="sr-only">
-                  AI tagging complete. {course.tags.length} tags added.
-                </span>
-              )}
-            </span>
-            <TagBadgeList
-              tags={course.tags}
-              onRemove={readOnly ? undefined : handleRemoveTag}
-              maxVisible={3}
-            />
-            {!readOnly && (
-              <TagEditor currentTags={course.tags} allTags={allTags} onAddTag={handleAddTag} />
-            )}
-          </div>
-          <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-            <span data-testid="course-card-video-count" className="flex items-center gap-1">
-              <Video className="size-3.5" aria-hidden="true" />
-              <span>
-                {course.videoCount} {course.videoCount === 1 ? 'video' : 'videos'}
-              </span>
-            </span>
-            {course.totalDuration != null && course.totalDuration > 0 && (
-              <TooltipProvider delayDuration={300}>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <span
-                      data-testid="course-card-duration"
-                      className="flex items-center gap-1 cursor-default"
-                    >
-                      <Clock className="size-3.5" aria-hidden="true" />
-                      <span>{formatCourseDuration(course.totalDuration)}</span>
-                    </span>
-                  </TooltipTrigger>
-                  {course.totalFileSize != null && course.totalFileSize > 0 && (
-                    <TooltipContent>
-                      <span data-testid="course-card-file-size">
-                        Total size: {formatFileSize(course.totalFileSize)}
-                      </span>
-                    </TooltipContent>
+              {!readOnly && course.tags.length === 0 && analysisStatus !== 'analyzing' && (
+                <>
+                  {authorData && (
+                    <span className="text-muted-foreground/40" aria-hidden="true">·</span>
                   )}
-                </Tooltip>
-              </TooltipProvider>
-            )}
-            <span data-testid="course-card-pdf-count" className="flex items-center gap-1">
-              <FileText className="size-3.5" aria-hidden="true" />
-              <span>
-                {course.pdfCount} {course.pdfCount === 1 ? 'PDF' : 'PDFs'}
-              </span>
-            </span>
-            {course.maxResolutionHeight != null && course.maxResolutionHeight > 0 && (
-              <Badge
-                data-testid="course-card-resolution"
-                variant="secondary"
-                className="text-[10px] px-1.5 py-0 font-medium opacity-70"
-              >
-                {getResolutionLabel(course.maxResolutionHeight)}
-              </Badge>
-            )}
-          </div>
-          {momentumScore && momentumScore.score > 0 && (
-            <div className="mt-2">
-              <MomentumBadge score={momentumScore.score} tier={momentumScore.tier} />
+                  <span className="opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity duration-200 motion-reduce:transition-none">
+                    <TagEditor
+                      variant="inline"
+                      currentTags={course.tags}
+                      allTags={allTags}
+                      onAddTag={handleAddTag}
+                    />
+                  </span>
+                </>
+              )}
             </div>
-          )}
+            {(course.tags.length > 0 || analysisStatus === 'analyzing') && (
+              <div className="flex items-center gap-1.5 mt-1 mb-2">
+                <span aria-live="polite" className="contents">
+                  {analysisStatus === 'analyzing' && (
+                    <span
+                      data-testid="ai-tagging-indicator"
+                      className="text-xs text-muted-foreground animate-pulse flex items-center gap-1"
+                    >
+                      <Loader2 className="size-3 animate-spin" aria-hidden="true" />
+                      AI tagging...
+                    </span>
+                  )}
+                  {analysisStatus === 'complete' && course.tags.length > 0 && (
+                    <span className="sr-only">
+                      AI tagging complete. {course.tags.length} tags added.
+                    </span>
+                  )}
+                </span>
+                <TagBadgeList
+                  tags={course.tags}
+                  onRemove={readOnly ? undefined : handleRemoveTag}
+                  maxVisible={3}
+                />
+                {!readOnly && course.tags.length > 0 && (
+                  <TagEditor currentTags={course.tags} allTags={allTags} onAddTag={handleAddTag} />
+                )}
+              </div>
+            )}
+            <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+              {course.videoCount > 0 && (
+                <span data-testid="course-card-video-count" className="flex items-center gap-1">
+                  <Video className="size-3.5" aria-hidden="true" />
+                  <span>
+                    {course.videoCount} {course.videoCount === 1 ? 'video' : 'videos'}
+                  </span>
+                </span>
+              )}
+              {course.pdfCount > 0 && (
+                <span data-testid="course-card-pdf-count" className="flex items-center gap-1">
+                  <FileText className="size-3.5" aria-hidden="true" />
+                  <span>
+                    {course.pdfCount} {course.pdfCount === 1 ? 'PDF' : 'PDFs'}
+                  </span>
+                </span>
+              )}
+              {course.totalFileSize != null && course.totalFileSize > 0 && (
+                <span data-testid="course-card-file-size" className="text-muted-foreground/70">
+                  {formatFileSize(course.totalFileSize)}
+                </span>
+              )}
+            </div>
+            {momentumScore && momentumScore.score > 0 && (
+              <div className="mt-2">
+                <MomentumBadge score={momentumScore.score} tier={momentumScore.tier} />
+              </div>
+            )}
         </div>
       </article>
 
@@ -696,23 +757,43 @@ export function ImportedCourseCard({
       />
 
       <Dialog open={previewOpen} onOpenChange={handleDialogChange}>
-        <DialogContent className="max-w-3xl p-0 overflow-hidden rounded-2xl">
-          <DialogHeader className="px-6 pt-5 pb-2">
+        <DialogContent
+          hideClose
+          overlayClassName="bg-black/80"
+          onOpenAutoFocus={e => e.preventDefault()}
+          className="sm:max-w-[92vw] lg:max-w-5xl p-0 overflow-visible border-0 shadow-none bg-transparent"
+        >
+          {/* Title is redundant with the card that spawned the modal — keep
+              for screen readers but hide visually. */}
+          <DialogHeader className="sr-only">
             <DialogTitle>{course.name} — Preview</DialogTitle>
           </DialogHeader>
-          <div className="px-6 pb-6">
-            {isLoading && <Skeleton className="h-64 w-full rounded-xl" />}
+          <div className="relative aspect-video w-full rounded-2xl overflow-hidden bg-black shadow-2xl">
+            {isLoading && <Skeleton className="absolute inset-0 rounded-2xl" />}
             {!isLoading && videoError && (
-              <p className="text-destructive text-sm py-8 text-center">{videoError}</p>
+              <p className="absolute inset-0 flex items-center justify-center text-white/90 text-sm text-center px-6">
+                {videoError}
+              </p>
             )}
             {!isLoading && !videoError && blobUrl && (
-              <VideoPlayer src={blobUrl} title={firstVideo?.filename} />
+              <VideoPlayer src={blobUrl} title={firstVideo?.filename} autoplay />
             )}
             {!isLoading && !videoError && !blobUrl && (
-              <p className="text-muted-foreground text-sm py-8 text-center">
+              <p className="absolute inset-0 flex items-center justify-center text-white/70 text-sm text-center px-6">
                 No video found in this course.
               </p>
             )}
+            <DialogClose
+              aria-label="Close preview"
+              className={cn(
+                'absolute top-4 right-4 z-50 size-10 rounded-full flex items-center justify-center',
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white',
+                'transition-opacity hover:opacity-90',
+                OVERLAY_SCRIM_CLASS
+              )}
+            >
+              <X className="size-5" aria-hidden="true" />
+            </DialogClose>
           </div>
         </DialogContent>
       </Dialog>

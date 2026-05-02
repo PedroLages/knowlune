@@ -189,10 +189,14 @@ describe('ImportedCourseCard', () => {
   })
 
   describe('status badge', () => {
-    it('renders Active badge for active course', () => {
+    it('renders Active status as icon-only affordance (label carried via aria-label only)', () => {
       renderCard({ status: 'active' })
-      expect(screen.getByTestId('status-badge')).toBeInTheDocument()
-      expect(screen.getByText('Active')).toBeInTheDocument()
+      const badge = screen.getByTestId('status-badge')
+      expect(badge).toBeInTheDocument()
+      // Active state renders an icon-only pill — aria-label preserves the status text
+      // for screen readers without adding visual noise to every card in My Courses.
+      expect(badge).toHaveAttribute('aria-label', expect.stringContaining('Active'))
+      expect(screen.queryByText('Active')).not.toBeInTheDocument()
     })
 
     it('renders Completed badge for completed course', () => {
