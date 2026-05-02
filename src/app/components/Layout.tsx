@@ -447,6 +447,21 @@ export function Layout() {
     }
   }, [isLessonRoute])
 
+  // Reading mode shortcut: on non-lesson pages, Cmd+Option+R shows an
+  // informational toast. Lesson pages are handled by useReadingMode inside
+  // UnifiedLessonPlayer (single source of truth for reading mode controls).
+  useEffect(() => {
+    if (isLessonRoute) return
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.altKey && e.key.toLowerCase() === 'r') {
+        e.preventDefault()
+        toast.info('Reading mode is available on lesson pages')
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [isLessonRoute])
+
   // Show mini-player padding when audiobook is active and not on the player page (E87-S05)
   const audiobookCurrentBookId = useAudioPlayerStore(s => s.currentBookId)
   const isAudiobookPlayerPage = audiobookCurrentBookId
@@ -557,15 +572,19 @@ export function Layout() {
       <div
         data-testid={nonLessonMobileScroll ? 'main-scroll-container' : undefined}
         className={`flex-1 flex flex-col min-h-0 min-w-0 ${
-          isLessonPlayerRoute ? 'overflow-auto' : nonLessonMobileScroll ? 'overflow-auto md:overflow-hidden' : 'overflow-hidden'
+          isLessonPlayerRoute
+            ? 'overflow-auto'
+            : nonLessonMobileScroll
+              ? 'overflow-auto md:overflow-hidden'
+              : 'overflow-hidden'
         }`}
       >
         {/* Header */}
         <header
           data-theater-hide
           className={cn(
-            "bg-card m-6 mb-0 p-4 px-6 flex items-center gap-4 justify-between relative z-10",
-            isLessonRoute && "border-b-2 border-brand"
+            'bg-card m-6 mb-0 p-4 px-6 flex items-center gap-4 justify-between relative z-10',
+            isLessonRoute && 'border-b-2 border-brand'
           )}
           role="banner"
         >
@@ -774,9 +793,7 @@ export function Layout() {
               onAcknowledged={refetchNoticeAck}
             />
           )}
-          {stale && staleDays > 30 && (
-            <SoftBlockGate onAcknowledged={refetchNoticeAck} />
-          )}
+          {stale && staleDays > 30 && <SoftBlockGate onAcknowledged={refetchNoticeAck} />}
           <PaletteControllerProvider
             value={{
               open: (scope?: EntityType) => {
