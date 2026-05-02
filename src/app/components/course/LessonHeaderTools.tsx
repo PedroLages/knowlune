@@ -22,6 +22,7 @@ import {
   Clock,
   Maximize2,
   Minimize2,
+  MoreHorizontal,
   PencilLine,
 } from 'lucide-react'
 import { toast } from 'sonner'
@@ -113,53 +114,93 @@ export function LessonHeaderTools() {
   )
 
   return (
-    <div data-theater-hide className="flex items-center gap-2">
-      <PomodoroTimer />
+    <div
+      data-theater-hide
+      className="hidden md:flex items-center gap-2"
+    >
+      {/* Secondary tools group — visible inline on desktop, collapsed into kebab on tablet */}
+      <span className="hidden lg:contents">
+        <PomodoroTimer />
 
-      <Suspense fallback={null}>
-        <QAChatPanel />
-      </Suspense>
+        <Suspense fallback={null}>
+          <QAChatPanel />
+        </Suspense>
 
-      {/* Reading mode toggle */}
-      <Tooltip>
-        <TooltipTrigger asChild>
+        {/* Reading mode toggle */}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={toggleReadingMode}
+              aria-label={isReadingMode ? 'Exit reading mode' : 'Enter reading mode (Cmd+Shift+R)'}
+              aria-pressed={isReadingMode}
+              data-testid="reading-mode-toggle"
+            >
+              <BookOpen className="size-5" aria-hidden="true" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Reading mode (Cmd+Shift+R)</TooltipContent>
+        </Tooltip>
+
+        {/* Theater mode toggle */}
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={toggleTheater}
+          aria-label={isTheater ? 'Exit theater mode' : 'Enter theater mode'}
+          data-testid="theater-mode-toggle"
+        >
+          {isTheater ? (
+            <Minimize2 className="size-5" aria-hidden="true" />
+          ) : (
+            <Maximize2 className="size-5" aria-hidden="true" />
+          )}
+        </Button>
+      </span>
+
+      {/* Tablet kebab menu — secondary tools */}
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
           <Button
             variant="ghost"
             size="icon"
-            onClick={toggleReadingMode}
-            aria-label={isReadingMode ? 'Exit reading mode' : 'Enter reading mode (Cmd+Shift+R)'}
-            aria-pressed={isReadingMode}
-            data-testid="reading-mode-toggle"
+            className="hidden md:inline-flex lg:hidden"
+            aria-label="More lesson tools"
+            data-testid="tablet-kebab-trigger"
           >
-            <BookOpen className="size-5" aria-hidden="true" />
+            <MoreHorizontal className="size-5" aria-hidden="true" />
           </Button>
-        </TooltipTrigger>
-        <TooltipContent>Reading mode (Cmd+Shift+R)</TooltipContent>
-      </Tooltip>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem
+            onSelect={toggleReadingMode}
+            data-testid="kebab-reading-mode"
+          >
+            <BookOpen className="size-5 mr-2" aria-hidden="true" />
+            {isReadingMode ? 'Exit Reading Mode' : 'Reading Mode'}
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onSelect={toggleTheater}
+            data-testid="kebab-theater-mode"
+          >
+            {isTheater ? (
+              <Minimize2 className="size-5 mr-2" aria-hidden="true" />
+            ) : (
+              <Maximize2 className="size-5 mr-2" aria-hidden="true" />
+            )}
+            {isTheater ? 'Exit Theater' : 'Theater Mode'}
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
 
-      {/* Theater mode toggle — desktop only */}
-      <Button
-        variant="ghost"
-        size="icon"
-        className="hidden lg:inline-flex"
-        onClick={toggleTheater}
-        aria-label={isTheater ? 'Exit theater mode' : 'Enter theater mode'}
-        data-testid="theater-mode-toggle"
-      >
-        {isTheater ? (
-          <Minimize2 className="size-5" aria-hidden="true" />
-        ) : (
-          <Maximize2 className="size-5" aria-hidden="true" />
-        )}
-      </Button>
-
-      {/* Notes toggle — desktop only */}
+      {/* Notes toggle — visible on tablet and desktop */}
       <Button
         variant="outline"
         size="sm"
         onClick={toggleNotes}
         aria-expanded={notesOpen}
-        className="hidden lg:flex gap-1.5"
+        className="flex gap-1.5"
         data-testid="notes-toggle"
       >
         <span className="relative">

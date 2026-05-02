@@ -13,6 +13,7 @@ import {
   LogOut,
   User,
   MessageSquarePlus,
+  ArrowLeft,
 } from 'lucide-react'
 import { KnowluneLogo, KnowluneIcon } from './figma/KnowluneLogo'
 import { Button } from './ui/button'
@@ -71,6 +72,10 @@ import {
 } from '@/lib/compliance/noticeVersion'
 import { PWAInstallBanner } from './PWAInstallBanner'
 import { PWAUpdatePrompt } from './PWAUpdatePrompt'
+import { cn } from '@/app/components/ui/utils'
+import { useCourseRoute } from '@/app/hooks/useCourseRoute'
+import { useLessonChromeStore } from '@/stores/useLessonChromeStore'
+import { LessonHeaderTools } from '@/app/components/course/LessonHeaderTools'
 
 // Individual nav link — wraps in Tooltip when collapsed
 function NavLink({
@@ -431,7 +436,15 @@ export function Layout() {
     localStorage.setItem('knowlune-sidebar-collapsed-v1', JSON.stringify(sidebarCollapsed))
   }, [sidebarCollapsed])
 
-  const isLessonPlayerRoute = /\/courses\/[^/]+\/lessons\/[^/]+$/.test(location.pathname)
+  const { isLessonRoute, isCourseRoute, courseId, lessonId, courseName } = useCourseRoute()
+  const isLessonPlayerRoute = isLessonRoute
+
+  // Reset lesson chrome store when leaving a lesson page
+  useEffect(() => {
+    if (!isLessonRoute) {
+      useLessonChromeStore.getState().reset()
+    }
+  }, [isLessonRoute])
 
   // Show mini-player padding when audiobook is active and not on the player page (E87-S05)
   const audiobookCurrentBookId = useAudioPlayerStore(s => s.currentBookId)
@@ -549,63 +562,78 @@ export function Layout() {
         {/* Header */}
         <header
           data-theater-hide
-          className="bg-card m-6 mb-0 p-4 px-6 flex items-center gap-4 justify-between relative z-10"
+          className={cn(
+            "bg-card m-6 mb-0 p-4 px-6 flex items-center gap-4 justify-between relative z-10",
+            isLessonRoute && "border-b-2 border-brand"
+          )}
           role="banner"
         >
-          {/* Hamburger Menu Button - Only on tablet (640-1023px) */}
-          {isTablet && (
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setSidebarOpen(true)}
-              className="min-h-[44px] min-w-[44px]"
-              aria-label="Open navigation menu"
-              aria-expanded={sidebarOpen}
-            >
-              <Menu className="size-5 text-muted-foreground" aria-hidden="true" />
-            </Button>
-          )}
+          {/* Left slot: back link (course pages) + hamburger (tablet) */}
+          <div className="flex items-center gap-3 min-w-0">
+            {isTablet && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setSidebarOpen(true)}
+                className="min-h-[44px] min-w-[44px]"
+                aria-label="Open navigation menu"
+                aria-expanded={sidebarOpen}
+              >
+                <Menu className="size-5 text-muted-foreground" aria-hidden="true" />
+              </Button>
+            )}
 
-          {/* Search trigger - Responsive */}
-          <div
-            className="relative flex-1 max-w-md sm:flex-none sm:w-96 lg:w-80"
-            role="search"
-            aria-label="Site search"
-          >
-            {/* Mobile: Icon-only button */}
-            <Button
-              variant="ghost"
-              size="icon"
-              type="button"
-              onClick={() => setSearchOpen(true)}
-              className="sm:hidden min-h-[44px] min-w-[44px]"
-              aria-label="Open search (Cmd+K)"
-              aria-keyshortcuts="Meta+K Control+K"
-            >
-              <Search className="size-5 text-muted-foreground" aria-hidden="true" />
-            </Button>
-
-            {/* Tablet/Desktop: Full search bar */}
-            <button
-              type="button"
-              onClick={() => setSearchOpen(true)}
-              className="hidden sm:flex items-center w-full h-11 pl-10 pr-4 bg-muted rounded-md text-sm text-muted-foreground hover:bg-accent transition-colors duration-150 text-left cursor-pointer"
-              aria-label="Open search (Cmd+K)"
-              aria-keyshortcuts="Meta+K Control+K"
-            >
-              <Search
-                className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-muted-foreground"
-                aria-hidden="true"
-              />
-              <span>Search...</span>
-              <Kbd className="ml-auto hidden sm:inline-flex">
-                <span className="text-xs">&#8984;</span>K
-              </Kbd>
-            </button>
+            {isCourseRoute && (
+              <Link
+                to={`/courses/${courseId}`}
+                className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                aria-label="Back to course"
+              >
+                <ArrowLeft className="size-5" />
+                <span className="hidden sm:inline truncate max-w-[200px]">{courseName}</span>
+              </Link>
+            )}
           </div>
 
-          {/* User Actions */}
+          {/* Search trigger — centered (flex-1 on mobile, absolute on desktop) */}
+          <div className="flex-1 flex justify-center sm:absolute sm:left-1/2 sm:-translate-x-1/2 sm:flex-none sm:w-96 lg:w-80">
+            <div className="relative w-full" role="search" aria-label="Site search">
+              {/* Mobile: Icon-only button */}
+              <Button
+                variant="ghost"
+                size="icon"
+                type="button"
+                onClick={() => setSearchOpen(true)}
+                className="sm:hidden min-h-[44px] min-w-[44px]"
+                aria-label="Open search (Cmd+K)"
+                aria-keyshortcuts="Meta+K Control+K"
+              >
+                <Search className="size-5 text-muted-foreground" aria-hidden="true" />
+              </Button>
+
+              {/* Tablet/Desktop: Full search bar */}
+              <button
+                type="button"
+                onClick={() => setSearchOpen(true)}
+                className="hidden sm:flex items-center w-full h-11 pl-10 pr-4 bg-muted rounded-md text-sm text-muted-foreground hover:bg-accent transition-colors duration-150 text-left cursor-pointer"
+                aria-label="Open search (Cmd+K)"
+                aria-keyshortcuts="Meta+K Control+K"
+              >
+                <Search
+                  className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-muted-foreground"
+                  aria-hidden="true"
+                />
+                <span>Search...</span>
+                <Kbd className="ml-auto hidden sm:inline-flex">
+                  <span className="text-xs">&#8984;</span>K
+                </Kbd>
+              </button>
+            </div>
+          </div>
+
+          {/* Right slot: Lesson tools + User Actions */}
           <div className="flex items-center gap-4">
+            {isLessonRoute && <LessonHeaderTools />}
             <TrialIndicator />
             <SyncStatusIndicator />
             <Button
@@ -785,7 +813,12 @@ export function Layout() {
       {/* Mobile Bottom Navigation - Only visible on mobile (<640px) */}
       {isMobile && (
         <div data-theater-hide>
-          <BottomNav onFeedbackClick={() => setFeedbackOpen(true)} />
+          <BottomNav
+            mode={isLessonRoute ? 'lesson' : 'standard'}
+            courseId={isLessonRoute ? (courseId ?? undefined) : undefined}
+            lessonId={isLessonRoute ? (lessonId ?? undefined) : undefined}
+            onFeedbackClick={() => setFeedbackOpen(true)}
+          />
         </div>
       )}
 
