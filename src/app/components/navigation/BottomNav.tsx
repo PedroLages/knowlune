@@ -26,6 +26,7 @@ import {
 import { useProgressiveDisclosure } from '@/app/hooks/useProgressiveDisclosure'
 import { useLessonChromeStore } from '@/stores/useLessonChromeStore'
 import { useContentProgressStore } from '@/stores/useContentProgressStore'
+import { useAuthStore, selectIsGuestMode } from '@/stores/useAuthStore'
 import { toast } from 'sonner'
 import type { CompletionStatus } from '@/data/types'
 
@@ -218,6 +219,7 @@ export function BottomNav({ mode = 'standard', courseId, lessonId, onFeedbackCli
   const location = useLocation()
   const [moreOpen, setMoreOpen] = useState(false)
   const { isVisible } = useProgressiveDisclosure()
+  const isGuest = useAuthStore(selectIsGuestMode)
 
   // Filter nav items by progressive disclosure
   const primaryNav = getPrimaryNav().filter(item => isVisible(item.disclosureKey))
@@ -301,22 +303,24 @@ export function BottomNav({ mode = 'standard', courseId, lessonId, onFeedbackCli
         <span className="text-[10px] font-medium leading-none">Notes</span>
       </button>
 
-      {/* Completion */}
-      <button
-        type="button"
-        onClick={handleCompletionToggle}
-        aria-label={isLessonCompleted ? 'Mark as not started' : 'Mark as completed'}
-        data-testid="bottomnav-completion-toggle"
-        className={cn(
-          'flex flex-col items-center justify-center gap-1 flex-1 h-14 transition-colors duration-150',
-          isLessonCompleted ? 'text-success' : 'text-muted-foreground active:text-brand'
-        )}
-      >
-        <CircleCheck className="size-6" aria-hidden="true" />
-        <span className="text-[10px] font-medium leading-none">
-          {isLessonCompleted ? 'Done' : 'Complete'}
-        </span>
-      </button>
+      {/* Completion — hidden for guest users (H5), consistent with desktop LessonHeaderTools */}
+      {!isGuest && (
+        <button
+          type="button"
+          onClick={handleCompletionToggle}
+          aria-label={isLessonCompleted ? 'Mark as not started' : 'Mark as completed'}
+          data-testid="bottomnav-completion-toggle"
+          className={cn(
+            'flex flex-col items-center justify-center gap-1 flex-1 h-14 transition-colors duration-150',
+            isLessonCompleted ? 'text-success' : 'text-muted-foreground active:text-brand'
+          )}
+        >
+          <CircleCheck className="size-6" aria-hidden="true" />
+          <span className="text-[10px] font-medium leading-none">
+            {isLessonCompleted ? 'Done' : 'Complete'}
+          </span>
+        </button>
+      )}
 
       {/* More (opens lesson drawer) */}
       <button

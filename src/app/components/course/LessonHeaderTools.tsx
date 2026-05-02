@@ -133,14 +133,14 @@ export function LessonHeaderTools() {
               variant="ghost"
               size="icon"
               onClick={toggleReadingMode}
-              aria-label={isReadingMode ? 'Exit reading mode' : 'Enter reading mode (Cmd+Shift+R)'}
+              aria-label={isReadingMode ? 'Exit reading mode' : 'Enter reading mode (Cmd+Option+R)'}
               aria-pressed={isReadingMode}
               data-testid="reading-mode-toggle"
             >
               <BookOpen className="size-5" aria-hidden="true" />
             </Button>
           </TooltipTrigger>
-          <TooltipContent>Reading mode (Cmd+Shift+R)</TooltipContent>
+          <TooltipContent>Reading mode (Cmd+Option+R)</TooltipContent>
         </Tooltip>
 
         {/* Theater mode toggle */}

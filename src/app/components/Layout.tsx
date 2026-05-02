@@ -48,7 +48,7 @@ import { getInitials } from '@/lib/textUtils'
 import { useOnlineStatus } from '@/app/hooks/useOnlineStatus'
 import { NotificationCenter } from './figma/NotificationCenter'
 import { SyncStatusIndicator } from './sync/SyncStatusIndicator'
-import { useCourseStore } from '@/stores/useCourseStore'
+import { useCourseImportStore } from '@/stores/useCourseImportStore'
 import { useAuthStore, selectIsGuestMode } from '@/stores/useAuthStore'
 import { GuestBanner } from './auth/GuestBanner'
 import { toast } from 'sonner'
@@ -268,11 +268,12 @@ export function Layout() {
     items: group.items.filter(item => !(isGuest && item.guestHidden)),
   }))
 
-  // Ensure courses are loaded from IndexedDB (backup for deferInit race)
-  const loadCourses = useCourseStore(s => s.loadCourses)
+  // Ensure imported courses are loaded from IndexedDB so useCourseRoute
+  // can resolve courseName from the URL courseId (H4 fix).
+  const loadImportedCourses = useCourseImportStore(s => s.loadImportedCourses)
   useEffect(() => {
-    loadCourses()
-  }, [loadCourses])
+    loadImportedCourses()
+  }, [loadImportedCourses])
 
   const signOut = useAuthStore(s => s.signOut)
   const authUser = useAuthStore(s => s.user)
@@ -595,8 +596,10 @@ export function Layout() {
             )}
           </div>
 
-          {/* Search trigger — centered (flex-1 on mobile, absolute on desktop) */}
-          <div className="flex-1 flex justify-center sm:absolute sm:left-1/2 sm:-translate-x-1/2 sm:flex-none sm:w-96 lg:w-80">
+          {/* Search trigger — centered (flex-1 on mobile, absolute on desktop).
+              pointer-events-none on the absolute container prevents it from
+              blocking clicks on LessonHeaderTools buttons behind it (B4). */}
+          <div className="flex-1 flex justify-center sm:absolute sm:left-1/2 sm:-translate-x-1/2 sm:flex-none sm:w-96 lg:w-80 sm:pointer-events-none">
             <div className="relative w-full" role="search" aria-label="Site search">
               {/* Mobile: Icon-only button */}
               <Button
@@ -611,11 +614,12 @@ export function Layout() {
                 <Search className="size-5 text-muted-foreground" aria-hidden="true" />
               </Button>
 
-              {/* Tablet/Desktop: Full search bar */}
+              {/* Tablet/Desktop: Full search bar — pointer-events-auto restores
+                  clickability within the pointer-events-none container (B4). */}
               <button
                 type="button"
                 onClick={() => setSearchOpen(true)}
-                className="hidden sm:flex items-center w-full h-11 pl-10 pr-4 bg-muted rounded-md text-sm text-muted-foreground hover:bg-accent transition-colors duration-150 text-left cursor-pointer"
+                className="hidden sm:flex items-center w-full h-11 pl-10 pr-4 bg-muted rounded-md text-sm text-muted-foreground hover:bg-accent transition-colors duration-150 text-left cursor-pointer sm:pointer-events-auto"
                 aria-label="Open search (Cmd+K)"
                 aria-keyshortcuts="Meta+K Control+K"
               >
