@@ -109,9 +109,7 @@ export const useHighlightStore = create<HighlightStoreState>((set, get) => ({
     }))
 
     try {
-      await persistWithRetry(() =>
-        syncableWrite('bookHighlights', 'delete', highlightId)
-      )
+      await persistWithRetry(() => syncableWrite('bookHighlights', 'delete', highlightId))
       appEventBus.emit({ type: 'highlight:deleted', highlightId, bookId: highlight.bookId })
     } catch {
       // Rollback

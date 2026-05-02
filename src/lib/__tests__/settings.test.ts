@@ -267,24 +267,24 @@ describe('settings', () => {
   })
 
   describe('resetAllData', () => {
-    it('clears all localStorage data', () => {
+    it('clears all localStorage data', async () => {
       saveSettings({ displayName: 'Gone' })
       localStorage.setItem('other', 'data')
-      resetAllData()
+      await resetAllData()
       expect(localStorage.length).toBe(0)
     })
 
-    it('settings return defaults after reset', () => {
+    it('settings return defaults after reset', async () => {
       saveSettings({ displayName: 'Gone', theme: 'dark' })
-      resetAllData()
+      await resetAllData()
       const settings = getSettings()
       expect(settings.displayName).toBe('Learner')
       expect(settings.theme).toBe('system')
     })
 
-    it('is idempotent (safe to call on empty storage)', () => {
-      resetAllData()
-      resetAllData()
+    it('is idempotent (safe to call on empty storage)', async () => {
+      await resetAllData()
+      await resetAllData()
       expect(localStorage.length).toBe(0)
     })
   })
@@ -565,6 +565,30 @@ describe('settings', () => {
       } finally {
         window.removeEventListener('settingsUpdated', handler)
       }
+    })
+
+    it('updates displayName when stored value is legacy default "Student"', async () => {
+      saveSettings({ displayName: 'Student' })
+      await hydrateSettingsFromSupabase({ full_name: 'Pedro' })
+      expect(getSettings().displayName).toBe('Pedro')
+    })
+
+    it('updates displayName when stored value is empty string', async () => {
+      saveSettings({ displayName: '' })
+      await hydrateSettingsFromSupabase({ full_name: 'Pedro' })
+      expect(getSettings().displayName).toBe('Pedro')
+    })
+
+    it('falls back to image_url field when avatar_url and picture are missing', async () => {
+      await hydrateSettingsFromSupabase({
+        image_url: 'https://example.com/photo.jpg',
+      })
+      expect(getSettings().profilePhotoUrl).toBe('https://example.com/photo.jpg')
+    })
+
+    it('does not write displayName when full_name is empty string', async () => {
+      await hydrateSettingsFromSupabase({ full_name: '' })
+      expect(getSettings().displayName).toBe('Learner')
     })
 
     it('does not dispatch settingsUpdated event when no updates needed', async () => {

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { RouterProvider } from 'react-router'
 import { ThemeProvider } from 'next-themes'
@@ -21,12 +21,7 @@ import { useReducedMotion } from '@/hooks/useReducedMotion'
 import { useAccessibilityFont } from '@/hooks/useAccessibilityFont'
 import { useContentDensity } from '@/hooks/useContentDensity'
 import { MotionConfig } from 'motion/react'
-import { useAuthLifecycle } from '@/app/hooks/useAuthLifecycle'
-import { useSyncLifecycle } from '@/app/hooks/useSyncLifecycle'
-import { LinkDataDialog } from '@/app/components/sync/LinkDataDialog'
-import { InitialUploadWizard } from '@/app/components/sync/InitialUploadWizard'
-import { shouldShowInitialUploadWizard } from '@/lib/sync/shouldShowInitialUploadWizard'
-import { useAuthStore } from '@/stores/useAuthStore'
+import { SyncUXShell } from '@/app/components/sync/SyncUXShell'
 import { initNotificationService, destroyNotificationService } from '@/services/NotificationService'
 import { useNotificationPrefsStore } from '@/stores/useNotificationPrefsStore'
 
@@ -69,68 +64,6 @@ export default function App() {
     initWizard()
   }, [initWizard])
 
-  // E92-S08: State for the non-dismissible "link your data" dialog shown on first sign-in
-  // when the device has local records not yet linked to the signed-in account.
-  const [linkDialogUserId, setLinkDialogUserId] = useState<string | null>(null)
-
-  // E97-S03: State for the first-run initial-upload wizard. Mounts only when
-  // `shouldShowInitialUploadWizard(userId)` resolves true; never co-appears with
-  // LinkDataDialog (the wizard evaluation is deferred until link dialog resolves).
-  const [uploadWizardUserId, setUploadWizardUserId] = useState<string | null>(null)
-  // Guard against double-evaluation on the same render cycle. Both the
-  // `onResolved` path (LinkDataDialog closed) and the `useAuthStore.user`
-  // effect can race on the same tick — we coordinate via this ref so only
-  // one evaluation runs at a time for a given userId.
-  const evaluationInFlightRef = useRef<string | null>(null)
-  const authUser = useAuthStore((s) => s.user)
-
-  const evaluateWizard = useCallback(async (userId: string) => {
-    if (!userId) return
-    if (evaluationInFlightRef.current === userId) return
-    evaluationInFlightRef.current = userId
-    try {
-      const show = await shouldShowInitialUploadWizard(userId)
-      if (show) setUploadWizardUserId(userId)
-    } catch (err) {
-      // silent-catch-ok — detection is best-effort; on failure we simply do
-      // not show the wizard. Next sign-in will retry.
-      console.error('[App] shouldShowInitialUploadWizard failed:', err)
-    } finally {
-      evaluationInFlightRef.current = null
-    }
-  }, [])
-
-  // Stable callback — useAuthLifecycle's dependency array includes this.
-  // useCallback with [] ensures the effect never re-registers unnecessarily.
-  const handleUnlinkedDetected = useCallback((userId: string) => {
-    setLinkDialogUserId(userId)
-  }, [])
-
-  // Callback fired when LinkDataDialog resolves. Evaluates the wizard gate
-  // AFTER the dialog-induced backfill enqueues rows.
-  const handleLinkDialogResolved = useCallback(
-    (userId: string) => {
-      setLinkDialogUserId(null)
-      void evaluateWizard(userId)
-    },
-    [evaluateWizard],
-  )
-
-  // Fast-path trigger: when the user becomes authenticated and no link dialog
-  // is in flight, evaluate the wizard gate. The guard ref prevents this from
-  // double-firing against the onResolved path.
-  useEffect(() => {
-    if (!authUser || linkDialogUserId) return
-    if (uploadWizardUserId) return
-    void evaluateWizard(authUser.id)
-  }, [authUser, linkDialogUserId, uploadWizardUserId, evaluateWizard])
-
-  // E43-S04: Auth lifecycle hook — session expiry detection, token refresh, settings hydration
-  // E92-S08: onUnlinkedDetected defers syncEngine.start() until dialog resolves
-  useAuthLifecycle({ onUnlinkedDetected: handleUnlinkedDetected })
-  // E92-S07: Sync triggers, offline handling, store refresh registrations
-  useSyncLifecycle()
-
   // Load notification preferences before subscribing to domain events
   useEffect(() => {
     useNotificationPrefsStore.getState().init()
@@ -164,26 +97,15 @@ export default function App() {
     <ErrorBoundary>
       <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
         <MotionConfig reducedMotion={shouldReduceMotion ? 'always' : 'never'}>
-          <RouterProvider router={router} />
-          <Toaster />
-          <WelcomeWizard />
-          {/* E92-S08: Non-dismissible dialog on first sign-in with pre-existing local data */}
-          {linkDialogUserId && (
-            <LinkDataDialog
-              open={true}
-              userId={linkDialogUserId}
-              onResolved={() => handleLinkDialogResolved(linkDialogUserId)}
-            />
-          )}
-          {/* E97-S03: Initial upload wizard — first-run backup explainer. */}
-          <InitialUploadWizard
-            open={uploadWizardUserId !== null && linkDialogUserId === null}
-            userId={uploadWizardUserId ?? ''}
-            onClose={() => setUploadWizardUserId(null)}
-          />
-          {import.meta.env.PROD && <PWAUpdatePrompt />}
-          <PWAInstallBanner />
-          {process.env.NODE_ENV === 'development' && createPortal(<Agentation />, document.body)}
+          <SyncUXShell>
+            <RouterProvider router={router} />
+            <Toaster />
+            <WelcomeWizard />
+            {import.meta.env.PROD && <PWAUpdatePrompt />}
+            <PWAInstallBanner />
+            {process.env.NODE_ENV === 'development' &&
+              createPortal(<Agentation />, document.body)}
+          </SyncUXShell>
         </MotionConfig>
       </ThemeProvider>
     </ErrorBoundary>

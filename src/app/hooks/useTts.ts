@@ -12,10 +12,33 @@
  */
 import { useState, useCallback, useEffect, useRef } from 'react'
 import type { Rendition } from 'epubjs'
+import type { TtsOptions, TtsVoice } from '@/services/TtsService'
 import { ttsService } from '@/services/TtsService'
 
 /** CSS class name injected into epub iframe for the active word */
 const TTS_HIGHLIGHT_CLASS = 'tts-active-word'
+const TTS_VOICE_STORAGE_KEY = 'knowlune-tts-voice-uri-v1'
+
+function loadStoredVoiceURI(): string | null {
+  try {
+    return localStorage.getItem(TTS_VOICE_STORAGE_KEY)
+  } catch {
+    // silent-catch-ok: private browsing or disabled storage should not block TTS
+    return null
+  }
+}
+
+function saveStoredVoiceURI(voiceURI: string | null): void {
+  try {
+    if (voiceURI) {
+      localStorage.setItem(TTS_VOICE_STORAGE_KEY, voiceURI)
+    } else {
+      localStorage.removeItem(TTS_VOICE_STORAGE_KEY)
+    }
+  } catch {
+    // silent-catch-ok: voice choice can fall back to the browser default
+  }
+}
 
 /** Injects TTS highlight styles into the epub iframe document */
 function injectTtsStyles(doc: Document): void {
@@ -128,6 +151,8 @@ export interface UseTtsReturn {
   isTtsPlaying: boolean
   isTtsPaused: boolean
   ttsRate: number
+  ttsVoiceURI: string | null
+  ttsVoices: TtsVoice[]
   ttsCurrentChunk: number
   ttsTotalChunks: number
   startTts: () => void
@@ -135,106 +160,116 @@ export interface UseTtsReturn {
   resumeTts: () => void
   stopTts: () => void
   setTtsRate: (rate: number) => void
+  setTtsVoiceURI: (voiceURI: string | null) => void
   toggleTts: () => void
 }
+
+type SpeakEndMode = 'page-advance' | 'stop'
 
 export function useTts(renditionRef: React.RefObject<Rendition | null>): UseTtsReturn {
   const [isTtsAvailable] = useState(() => ttsService.isTtsAvailable())
   const [isTtsPlaying, setIsTtsPlaying] = useState(false)
   const [isTtsPaused, setIsTtsPaused] = useState(false)
   const [ttsRate, setTtsRateState] = useState(1.0)
+  const [ttsVoiceURI, setTtsVoiceURIState] = useState<string | null>(() => loadStoredVoiceURI())
+  const [ttsVoices, setTtsVoices] = useState<TtsVoice[]>(() => ttsService.getVoices())
   const [ttsCurrentChunk, setTtsCurrentChunk] = useState(0)
   const [ttsTotalChunks, setTtsTotalChunks] = useState(0)
   const fullTextRef = useRef<string>('')
+  /** Next character index in `fullTextRef` to resume after rate/voice change or pause. */
+  const ttsResumeCharRef = useRef(0)
+  const ttsRateRef = useRef(ttsRate)
+  const ttsVoiceURIRef = useRef(ttsVoiceURI)
 
-  /** Stop TTS and clear all highlighting */
-  const stopTts = useCallback(() => {
-    ttsService.stop()
-    setIsTtsPlaying(false)
-    setIsTtsPaused(false)
-    setTtsCurrentChunk(0)
-    setTtsTotalChunks(0)
+  useEffect(() => {
+    ttsRateRef.current = ttsRate
+  }, [ttsRate])
 
-    // Clear highlight from epub iframe
-    if (renditionRef.current) {
-      const doc = getEpubDocument(renditionRef.current)
-      if (doc) clearHighlight(doc)
-    }
-  }, [renditionRef])
+  useEffect(() => {
+    ttsVoiceURIRef.current = ttsVoiceURI
+  }, [ttsVoiceURI])
 
-  /** Start TTS from the current visible page */
-  const startTts = useCallback(() => {
-    if (!isTtsAvailable || !renditionRef.current) return
-
-    const text = extractPageText(renditionRef.current)
-    if (!text) return
-    fullTextRef.current = text
-
-    setIsTtsPlaying(true)
-    setIsTtsPaused(false)
-
-    ttsService.speak(text, {
-      rate: ttsRate,
-      onChunkStart: (chunkIndex, total) => {
+  const buildSpeakOptions = useCallback(
+    (
+      baseOffsetInFullText: number,
+      rate: number,
+      voiceURI: string | null,
+      endMode: SpeakEndMode
+    ): TtsOptions => ({
+      rate,
+      voiceURI,
+      onChunkStart: (chunkIndex, totalChunks, offsetInSlice) => {
+        const absChunkStart = baseOffsetInFullText + offsetInSlice
+        ttsResumeCharRef.current = Math.max(ttsResumeCharRef.current, absChunkStart)
         setTtsCurrentChunk(chunkIndex + 1)
-        setTtsTotalChunks(total)
+        setTtsTotalChunks(totalChunks)
       },
-      onBoundary: (event, chunkOffset) => {
+      onBoundary: (event, offsetInSlice) => {
+        const chunkOffsetFull = baseOffsetInFullText + offsetInSlice
         if (renditionRef.current) {
           const doc = getEpubDocument(renditionRef.current)
           if (doc) {
-            highlightWord(doc, fullTextRef.current, event.charIndex, event.charLength, chunkOffset)
+            highlightWord(
+              doc,
+              fullTextRef.current,
+              event.charIndex,
+              event.charLength,
+              chunkOffsetFull
+            )
           }
         }
+        ttsResumeCharRef.current =
+          chunkOffsetFull + event.charIndex + event.charLength
       },
       onEnd: () => {
-        // Auto-advance to next page when TTS finishes the visible content
-        if (renditionRef.current && ttsService.active) {
+        if (endMode === 'page-advance' && renditionRef.current) {
           renditionRef.current
             .next()
             .then(() => {
-              // Brief delay to let epub.js render the new page before extracting text
               setTimeout(() => {
-                if (renditionRef.current) {
-                  const newText = extractPageText(renditionRef.current)
-                  if (newText) {
-                    fullTextRef.current = newText
-                    ttsService.speak(newText, {
-                      rate: ttsRate,
-                      onChunkStart: (chunkIndex, total) => {
-                        setTtsCurrentChunk(chunkIndex + 1)
-                        setTtsTotalChunks(total)
-                      },
-                      onBoundary: (event, chunkOffset) => {
-                        if (renditionRef.current) {
-                          const doc = getEpubDocument(renditionRef.current)
-                          if (doc) {
-                            highlightWord(
-                              doc,
-                              fullTextRef.current,
-                              event.charIndex,
-                              event.charLength,
-                              chunkOffset
-                            )
-                          }
+                if (!renditionRef.current) return
+                const newText = extractPageText(renditionRef.current)
+                if (newText) {
+                  fullTextRef.current = newText
+                  ttsResumeCharRef.current = 0
+                  ttsService.speak(newText, {
+                    rate: ttsRateRef.current,
+                    voiceURI: ttsVoiceURIRef.current,
+                    onChunkStart: (chunkIndex, totalChunks, offsetInSlice) => {
+                      const absChunkStart = offsetInSlice
+                      ttsResumeCharRef.current = Math.max(ttsResumeCharRef.current, absChunkStart)
+                      setTtsCurrentChunk(chunkIndex + 1)
+                      setTtsTotalChunks(totalChunks)
+                    },
+                    onBoundary: (event, offsetInSlice) => {
+                      const chunkOffsetFull = offsetInSlice
+                      if (renditionRef.current) {
+                        const doc = getEpubDocument(renditionRef.current)
+                        if (doc) {
+                          highlightWord(
+                            doc,
+                            fullTextRef.current,
+                            event.charIndex,
+                            event.charLength,
+                            chunkOffsetFull
+                          )
                         }
-                      },
-                      onEnd: () => {
-                        // Stop at end of book (no more pages)
-                        setIsTtsPlaying(false)
-                        setIsTtsPaused(false)
-                      },
-                    })
-                  } else {
-                    // End of book
-                    setIsTtsPlaying(false)
-                    setIsTtsPaused(false)
-                  }
+                      }
+                      ttsResumeCharRef.current =
+                        chunkOffsetFull + event.charIndex + event.charLength
+                    },
+                    onEnd: () => {
+                      setIsTtsPlaying(false)
+                      setIsTtsPaused(false)
+                    },
+                  })
+                } else {
+                  setIsTtsPlaying(false)
+                  setIsTtsPaused(false)
                 }
               }, 500)
             })
             .catch(() => {
-              // silent-catch-ok: at last page, next() is a no-op
               setIsTtsPlaying(false)
               setIsTtsPaused(false)
             })
@@ -243,8 +278,57 @@ export function useTts(renditionRef: React.RefObject<Rendition | null>): UseTtsR
           setIsTtsPaused(false)
         }
       },
-    })
-  }, [isTtsAvailable, renditionRef, ttsRate])
+    }),
+    [renditionRef]
+  )
+
+  /** Stop TTS and clear all highlighting */
+  const stopTts = useCallback(() => {
+    ttsService.stop()
+    setIsTtsPlaying(false)
+    setIsTtsPaused(false)
+    setTtsCurrentChunk(0)
+    setTtsTotalChunks(0)
+    ttsResumeCharRef.current = 0
+
+    // Clear highlight from epub iframe
+    if (renditionRef.current) {
+      const doc = getEpubDocument(renditionRef.current)
+      if (doc) clearHighlight(doc)
+    }
+  }, [renditionRef])
+
+  const speakFromOffset = useCallback(
+    (baseOffsetInFullText: number, rate: number, voiceURI: string | null, endMode: SpeakEndMode) => {
+      const full = fullTextRef.current
+      if (baseOffsetInFullText >= full.length) {
+        stopTts()
+        return
+      }
+      const slice = full.slice(baseOffsetInFullText)
+      if (!slice) {
+        stopTts()
+        return
+      }
+      ttsService.speak(slice, buildSpeakOptions(baseOffsetInFullText, rate, voiceURI, endMode))
+    },
+    [buildSpeakOptions, stopTts]
+  )
+
+  /** Start TTS from the current visible page */
+  const startTts = useCallback(() => {
+    if (!isTtsAvailable || !renditionRef.current) return
+
+    const text = extractPageText(renditionRef.current)
+    if (!text) return
+    fullTextRef.current = text
+    ttsResumeCharRef.current = 0
+
+    setIsTtsPlaying(true)
+    setIsTtsPaused(false)
+
+    speakFromOffset(0, ttsRateRef.current, ttsVoiceURIRef.current, 'page-advance')
+  }, [isTtsAvailable, renditionRef, speakFromOffset])
 
   const pauseTts = useCallback(() => {
     ttsService.pause()
@@ -271,14 +355,57 @@ export function useTts(renditionRef: React.RefObject<Rendition | null>): UseTtsR
   const setTtsRate = useCallback(
     (rate: number) => {
       setTtsRateState(rate)
-      // Restart with new rate if currently playing
+      ttsRateRef.current = rate
       if (isTtsPlaying || isTtsPaused) {
         ttsService.stop()
-        setTimeout(() => startTts(), 50)
+        const from = ttsResumeCharRef.current
+        const tail = fullTextRef.current.slice(from)
+        if (!tail) {
+          stopTts()
+          return
+        }
+        setIsTtsPlaying(true)
+        setIsTtsPaused(false)
+        speakFromOffset(from, rate, ttsVoiceURIRef.current, 'page-advance')
       }
     },
-    [isTtsPlaying, isTtsPaused, startTts]
+    [isTtsPlaying, isTtsPaused, speakFromOffset, stopTts]
   )
+
+  const setTtsVoiceURI = useCallback(
+    (voiceURI: string | null) => {
+      setTtsVoiceURIState(voiceURI)
+      ttsVoiceURIRef.current = voiceURI
+      saveStoredVoiceURI(voiceURI)
+      if (isTtsPlaying || isTtsPaused) {
+        ttsService.stop()
+        const from = ttsResumeCharRef.current
+        const tail = fullTextRef.current.slice(from)
+        if (!tail) {
+          stopTts()
+          return
+        }
+        setIsTtsPlaying(true)
+        setIsTtsPaused(false)
+        speakFromOffset(from, ttsRateRef.current, voiceURI, 'page-advance')
+      }
+    },
+    [isTtsPlaying, isTtsPaused, speakFromOffset, stopTts]
+  )
+
+  useEffect(() => {
+    if (!isTtsAvailable) return
+
+    const refreshVoices = () => {
+      setTtsVoices(ttsService.getVoices())
+    }
+
+    refreshVoices()
+    window.speechSynthesis.addEventListener('voiceschanged', refreshVoices)
+    return () => {
+      window.speechSynthesis.removeEventListener('voiceschanged', refreshVoices)
+    }
+  }, [isTtsAvailable])
 
   // Stop TTS on unmount
   useEffect(() => {
@@ -292,6 +419,8 @@ export function useTts(renditionRef: React.RefObject<Rendition | null>): UseTtsR
     isTtsPlaying,
     isTtsPaused,
     ttsRate,
+    ttsVoiceURI,
+    ttsVoices,
     ttsCurrentChunk,
     ttsTotalChunks,
     startTts,
@@ -299,6 +428,7 @@ export function useTts(renditionRef: React.RefObject<Rendition | null>): UseTtsR
     resumeTts,
     stopTts,
     setTtsRate,
+    setTtsVoiceURI,
     toggleTts,
   }
 }

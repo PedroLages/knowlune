@@ -318,7 +318,8 @@ export function ClipListPanel({ open, onClose, bookId, chapters, onPlayClip }: C
     >
       <SheetContent
         side="right"
-        className="flex flex-col w-full sm:max-w-md p-0"
+        overlayClassName="z-[130]"
+        className={cn('z-[130] flex flex-col w-full sm:max-w-md p-0')}
         data-testid="clip-list-panel"
       >
         <SheetHeader className="px-4 pt-4 pb-2 border-b border-border/50">

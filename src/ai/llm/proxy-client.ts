@@ -12,10 +12,11 @@ import { BaseLLMClient } from './client'
 import type { LLMMessage, LLMStreamChunk } from './types'
 import { LLMError, LLM_REQUEST_TIMEOUT } from './types'
 import type { AIProviderId } from '@/lib/aiConfiguration'
+import { apiUrl } from '@/lib/apiBaseUrl'
 import { useAuthStore } from '@/stores/useAuthStore'
 
 /** Local proxy endpoint for streaming completions */
-const PROXY_STREAM_URL = '/api/ai/stream'
+const PROXY_STREAM_URL = apiUrl('ai-stream')
 
 /**
  * LLM client that proxies requests through the local Express server.

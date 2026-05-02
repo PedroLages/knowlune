@@ -2,7 +2,8 @@ import { useEffect } from 'react'
 import { supabase } from '@/lib/auth/supabase'
 import { useAuthStore } from '@/stores/useAuthStore'
 import { hydrateSettingsFromSupabase } from '@/lib/settings'
-import { hydrateP3P4FromSupabase } from '@/lib/sync/hydrateP3P4'
+import { observedHydrate } from '@/lib/sync/observedHydrate'
+import { useDownloadStatusStore } from '@/app/stores/useDownloadStatusStore'
 import { backfillUserId } from '@/lib/sync/backfill'
 import { syncEngine } from '@/lib/sync/syncEngine'
 import { clearSyncState } from '@/lib/sync/clearSyncState'
@@ -62,6 +63,9 @@ export function useAuthLifecycle({ onUnlinkedDetected }: UseAuthLifecycleOptions
     async function handleSignIn(userId: string, userMetadata: Record<string, unknown>) {
       if (ignore) return
 
+      // Read guest session id before any async work so it's stable throughout this call.
+      const guestSessionId = sessionStorage.getItem('knowlune-guest-id')
+
       await hydrateSettingsFromSupabase(userMetadata, userId)
 
       // E96-S02: fan-out hydrate for the 9 P3/P4 LWW Dexie tables. Uses
@@ -70,7 +74,11 @@ export function useAuthLifecycle({ onUnlinkedDetected }: UseAuthLifecycleOptions
       // F3 fix: await before syncEngine.start() so download-phase bulkPuts
       // do not race with syncEngine writes (mirrors hydrateSettingsFromSupabase
       // ordering pattern).
-      await hydrateP3P4FromSupabase(userId).catch(err => {
+      // E97-S04: Wrapped in `observedHydrate` so `useDownloadStatusStore`
+      // tracks the lifecycle (`hydrating-p3p4` → `downloading-p0p2`). Hydrator
+      // contract unchanged — this wrapper only observes the phase transition
+      // and re-throws on rejection so the existing error log still fires.
+      await observedHydrate(userId).catch(err => {
         console.error('[useAuthLifecycle] hydrateP3P4FromSupabase failed:', err)
       })
 
@@ -79,7 +87,7 @@ export function useAuthLifecycle({ onUnlinkedDetected }: UseAuthLifecycleOptions
       // and marked itself `done` in `syncMetadata`. Idempotent; safe to await
       // here because collecting & uploading a handful of rows is fast.
       // silent-catch-ok — migration self-heals on next sign-in.
-      runCredentialsToVaultMigration().catch((err) => {
+      runCredentialsToVaultMigration().catch(err => {
         console.error('[useAuthLifecycle] runCredentialsToVaultMigration failed:', err)
       })
 
@@ -87,19 +95,20 @@ export function useAuthLifecycle({ onUnlinkedDetected }: UseAuthLifecycleOptions
       const alreadyLinked = localStorage.getItem(`${LINKED_FLAG_PREFIX}${userId}`) === 'true'
       if (alreadyLinked) {
         // silent-catch-ok — backfill is idempotent and self-healing.
-        backfillUserId(userId).catch((err) => {
+        backfillUserId(userId, guestSessionId).catch(err => {
           console.error('[useAuthLifecycle] backfillUserId (fast-path) failed:', err)
         })
-        syncEngine.start(userId).catch((err) => {
+        syncEngine.start(userId).catch(err => {
           console.error('[useAuthLifecycle] syncEngine.start (fast-path) failed:', err)
         })
+        clearGuestFlags()
         return
       }
 
       // Check whether any local records are not yet linked to this userId.
       let unlinked = false
       try {
-        unlinked = await hasUnlinkedRecords(userId)
+        unlinked = await hasUnlinkedRecords(userId, guestSessionId)
       } catch (err) {
         // silent-catch-ok: gate is best-effort. On failure, default to showing
         // the dialog so the user can decide — safer than silently overwriting.
@@ -113,18 +122,26 @@ export function useAuthLifecycle({ onUnlinkedDetected }: UseAuthLifecycleOptions
         // Defer syncEngine.start() — the dialog handlers (Link / Start fresh)
         // will call it after the user resolves their choice.
         onUnlinkedDetected(userId)
+        // Guest flags cleared after the user resolves the dialog (in App.tsx handlers)
       } else {
         // No unlinked records (or no dialog handler): backfill + start sync now.
         // silent-catch-ok — backfill is self-healing; next sign-in retries.
-        backfillUserId(userId).catch((err) => {
+        backfillUserId(userId, guestSessionId).catch(err => {
           console.error('[useAuthLifecycle] backfillUserId failed:', err)
         })
-        syncEngine.start(userId).catch((err) => {
+        syncEngine.start(userId).catch(err => {
           console.error('[useAuthLifecycle] syncEngine.start failed:', err)
         })
         // Mark this device as linked so the dialog is not shown again.
         localStorage.setItem(`${LINKED_FLAG_PREFIX}${userId}`, 'true')
+        clearGuestFlags()
       }
+    }
+
+    function clearGuestFlags() {
+      sessionStorage.removeItem('knowlune-guest')
+      sessionStorage.removeItem('knowlune-guest-id')
+      sessionStorage.removeItem('knowlune-guest-banner-dismissed')
     }
 
     const {
@@ -158,6 +175,16 @@ export function useAuthLifecycle({ onUnlinkedDetected }: UseAuthLifecycleOptions
           }
         }
 
+        // E97-S04: Reset the new-device download lifecycle store so a stale
+        // `error` or active phase from a previous user does not bleed into
+        // the next sign-in (potentially for a different account).
+        try {
+          useDownloadStatusStore.getState().reset()
+        } catch (err) {
+          // silent-catch-ok — store reset is best-effort UI cleanup.
+          console.error('[useAuthLifecycle] download store reset failed:', err)
+        }
+
         // Stop sync and discard the in-flight upload queue + download cursors.
         // Local content records (notes, books, etc.) are intentionally kept —
         // the next sign-in will offer the Link/Start-fresh dialog.
@@ -165,7 +192,7 @@ export function useAuthLifecycle({ onUnlinkedDetected }: UseAuthLifecycleOptions
         // E95-S05: drop cached server/catalog credentials on sign-out. The
         // next authenticated session re-reads them through the vault broker.
         credentialCache.clear()
-        clearSyncState().catch((err) => {
+        clearSyncState().catch(err => {
           // silent-catch-ok: state is best-effort; next sign-in clears again.
           console.error('[useAuthLifecycle] clearSyncState failed:', err)
         })
@@ -182,7 +209,7 @@ export function useAuthLifecycle({ onUnlinkedDetected }: UseAuthLifecycleOptions
 
       // Hydrate localStorage settings from Supabase user_metadata on sign-in
       if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session?.user) {
-        handleSignIn(session.user.id, session.user.user_metadata ?? {}).catch((err) => {
+        handleSignIn(session.user.id, session.user.user_metadata ?? {}).catch(err => {
           console.error('[useAuthLifecycle] handleSignIn (onAuthStateChange) failed:', err)
         })
       }
@@ -198,7 +225,7 @@ export function useAuthLifecycle({ onUnlinkedDetected }: UseAuthLifecycleOptions
       const state = useAuthStore.getState()
       state.setSession(session)
       if (session?.user) {
-        handleSignIn(session.user.id, session.user.user_metadata ?? {}).catch((err) => {
+        handleSignIn(session.user.id, session.user.user_metadata ?? {}).catch(err => {
           console.error('[useAuthLifecycle] handleSignIn (getSession) failed:', err)
         })
       }

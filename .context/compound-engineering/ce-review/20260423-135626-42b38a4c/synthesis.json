@@ -1,0 +1,85 @@
+{
+  "run_id": "20260423-135626-42b38a4c",
+  "branch": "feature/e119-s03-erasure-cascade",
+  "base": "bd125149d5daf8e89424269ec76423fdfb840e8f",
+  "intent": "Implement GDPR Article 17 registry-driven erasure cascade — hardDeleteUser helper, cancel-account-deletion, retention-tick skeleton, registry-drift probe tests",
+  "verdict": "Ready with fixes",
+  "findings": [
+    {
+      "title": "retention-tick has no authentication — anyone can trigger hard-deletes",
+      "severity": "P1",
+      "file": "supabase/functions/retention-tick/index.ts",
+      "line": 60,
+      "confidence": 0.88,
+      "autofix_class": "gated_auto",
+      "owner": "downstream-resolver",
+      "requires_verification": true,
+      "pre_existing": false,
+      "suggested_fix": "Add a shared-secret header check: require an `X-Retention-Secret` header matching a `RETENTION_TICK_SECRET` env var. Reject with 401 if missing/wrong.",
+      "why_it_matters": "Any external party who discovers the endpoint URL can POST to it and trigger the retention-tick loop, hard-deleting all accounts whose grace period has expired. While the function only operates on legitimately expired accounts, unauthenticated triggering is a security concern.",
+      "evidence": ["retention-tick/index.ts:60-62: accepts POST and GET with no auth check — no JWT, no shared secret, no IP allowlist"]
+    },
+    {
+      "title": "retention-tick fallback for missing pending_deletion_at not implemented",
+      "severity": "P1",
+      "file": "supabase/functions/delete-account/index.ts",
+      "line": 125,
+      "confidence": 0.82,
+      "autofix_class": "gated_auto",
+      "owner": "downstream-resolver",
+      "requires_verification": false,
+      "pre_existing": false,
+      "suggested_fix": "Either: (a) make the metadata stamp failure fatal (return 500 instead of logging and continuing), or (b) add a fallback in retention-tick to also catch users with deleted_at older than 7+N days but no pending_deletion_at in metadata. Option (a) is simpler.",
+      "why_it_matters": "delete-account comment says 'retention-tick will fall back to checking deleted_at' but retention-tick only checks raw_user_meta_data.pending_deletion_at. If updateUserById fails silently, the user's data will never be hard-deleted — a GDPR erasure gap.",
+      "evidence": [
+        "delete-account/index.ts:123-130: metaError is non-blocking; comment promises fallback",
+        "retention-tick/index.ts:1265-1274: only checks meta?.pending_deletion_at — no deleted_at fallback"
+      ]
+    },
+    {
+      "title": "Stripe metadata key assumption undocumented — silent anonymisation bypass",
+      "severity": "P2",
+      "file": "supabase/functions/_shared/hardDeleteUser.ts",
+      "line": 175,
+      "confidence": 0.78,
+      "autofix_class": "manual",
+      "owner": "downstream-resolver",
+      "requires_verification": false,
+      "pre_existing": false,
+      "suggested_fix": "Add a code comment documenting that Stripe customers must be created with metadata key `supabase_uid` set to the Supabase user UUID. Also check stripe-webhook/index.ts and create-checkout/index.ts to verify this metadata is indeed set on customer creation.",
+      "why_it_matters": "If Stripe customers were created without the `supabase_uid` metadata key, the search returns no customers and stripeAnonymised is set to true (success) — but no actual anonymisation occurred. The operator would believe PII was scrubbed when it wasn't.",
+      "evidence": [
+        "hardDeleteUser.ts:175: query: `metadata['supabase_uid']:'${userId}'`",
+        "hardDeleteUser.ts:186-189: if customers.length === 0 → stripeAnonymised = true (silent success)"
+      ]
+    },
+    {
+      "title": "HARD_DELETE_TABLE_NAMES duplicated in 3 places — maintenance burden",
+      "severity": "P3",
+      "file": "src/lib/__tests__/deleteAccount.test.ts",
+      "line": 462,
+      "confidence": 0.72,
+      "autofix_class": "advisory",
+      "owner": "human",
+      "requires_verification": false,
+      "pre_existing": false,
+      "suggested_fix": "Add a prominent comment at the top of the HARD_DELETE_TABLE_NAMES declaration in deleteAccount.test.ts explaining all 3 locations that must be updated in sync: (1) this file, (2) _shared/hardDeleteUser.ts TABLE_NAMES, (3) tableRegistry.ts ERASURE_TABLE_NAMES. The drift test will catch number mismatches but not ordering differences.",
+      "why_it_matters": "Three separate copies of the same table list (test file inline, hardDeleteUser.ts TABLE_NAMES, tableRegistry.ts ERASURE_TABLE_NAMES) means three manual edits per new table. The drift test catches count divergence but ordering differences in TABLE_NAMES vs ERASURE_TABLE_NAMES would be invisible.",
+      "evidence": [
+        "deleteAccount.test.ts:462-506: HARD_DELETE_TABLE_NAMES inline snapshot",
+        "hardDeleteUser.ts:692-736: TABLE_NAMES",
+        "tableRegistry.ts: ERASURE_TABLE_NAMES = tableRegistry.map(e => e.supabaseTable)"
+      ]
+    }
+  ],
+  "residual_risks": [
+    "retention-tick is unauthenticated — see P1 finding. Until secured, it should not be exposed publicly.",
+    "Storage removal only handles flat-prefix objects (userId/filename). Nested paths (userId/subfolder/filename) would not be included in the list prefix — verify actual Storage path structure matches the prefix assumption.",
+    "The cascade processes tables serially, which for 38 tables could take 10-30 seconds per user. If the Edge Function times out (60s default), some tables may not be deleted. Consider parallelizing table deletes with Promise.allSettled."
+  ],
+  "testing_gaps": [
+    "No test verifies that retention-tick correctly filters users whose pending_deletion_at is within the grace period (not yet expired) — only expired users should be deleted.",
+    "No integration test for the two-call sequence in cancel-account-deletion (clear metadata then reactivate) — specifically the failure case where first call succeeds but second fails.",
+    "The probe tests assert table names match but don't exercise the actual hardDeleteUser logic — acceptable for the Deno/Vitest boundary reason documented in the test, but worth noting."
+  ]
+}

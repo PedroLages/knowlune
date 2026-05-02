@@ -2,7 +2,7 @@
  * ReaderHeader — fixed top bar for the EPUB reader.
  *
  * Contains: back button, book title (truncated), chapter indicator,
- * and menu button with stubs for Highlights/TOC/Settings/About.
+ * and menu button for Highlights, TOC, Settings, and optional Read Aloud.
  *
  * Auto-hides after 3 seconds of idle (managed by BookReader page).
  *
@@ -19,7 +19,7 @@ import {
 } from '@/app/components/ui/dropdown-menu'
 import { cn } from '@/app/components/ui/utils'
 import type { ReaderTheme } from '@/stores/useReaderStore'
-import { getReaderChromeClasses, useAppColorScheme } from './readerThemeConfig'
+import { getReaderChromeClasses } from './readerThemeConfig'
 
 interface ReaderHeaderProps {
   title: string
@@ -50,8 +50,7 @@ export function ReaderHeader({
   readingProgress,
 }: ReaderHeaderProps) {
   const navigate = useNavigate()
-  const colorScheme = useAppColorScheme()
-  const chrome = getReaderChromeClasses(theme, colorScheme)
+  const chrome = getReaderChromeClasses(theme)
 
   // Chapter display: use chapter name when available, fall back to progress percentage
   // Treat empty string as unavailable (should show progress percentage instead)
@@ -132,23 +131,31 @@ export function ReaderHeader({
             <MoreHorizontal className="size-5" />
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-48">
-          <DropdownMenuItem onClick={onTocOpen} data-testid="reader-menu-toc">
+        <DropdownMenuContent align="end" className="z-[130] w-48">
+          <DropdownMenuItem
+            onClick={() => onTocOpen?.()}
+            data-testid="reader-menu-toc"
+          >
             Table of Contents
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={onSettingsOpen} data-testid="reader-menu-settings">
+          <DropdownMenuItem
+            onClick={() => onSettingsOpen?.()}
+            data-testid="reader-menu-settings"
+          >
             Reading Settings
           </DropdownMenuItem>
           {onReadAloud && (
-            <DropdownMenuItem onClick={onReadAloud} data-testid="reader-menu-read-aloud">
+            <DropdownMenuItem onClick={() => onReadAloud()} data-testid="reader-menu-read-aloud">
               <Volume2 className="size-4 mr-2" aria-hidden="true" />
               Read Aloud
             </DropdownMenuItem>
           )}
-          <DropdownMenuItem onClick={onHighlightsOpen} data-testid="reader-menu-highlights">
-            Highlights
+          <DropdownMenuItem
+            onClick={() => onHighlightsOpen?.()}
+            data-testid="reader-menu-highlights"
+          >
+            Highlights & Notes
           </DropdownMenuItem>
-          <DropdownMenuItem data-testid="reader-menu-about">About Book</DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
     </header>

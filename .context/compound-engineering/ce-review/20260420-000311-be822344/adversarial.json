@@ -1,0 +1,168 @@
+{
+  "reviewer": "adversarial",
+  "findings": [
+    {
+      "id": "ADV-001",
+      "title": "Touch devices: PlayOverlay (z-20 inset-0) buries Status dropdown and Info button on not-started cards",
+      "severity": "high",
+      "confidence": 0.88,
+      "category": "composition-failure",
+      "files": [
+        "src/app/components/figma/courseCardShell.tsx:60-79",
+        "src/app/components/figma/ImportedCourseCard.tsx:323,399,494"
+      ],
+      "evidence": [
+        "Trigger: a tablet/touch user views a not-started ImportedCourseCard.",
+        "PlayOverlay applies '[@media(hover:none)]:opacity-100' (courseCardShell.tsx:69) so it is permanently visible on touch.",
+        "PlayOverlay is `absolute inset-0 z-20` and is rendered LATER in JSX (line 494) than the Status dropdown (line 323, z-20) and the Info button (line 399, z-20).",
+        "At equal z-index, later DOM order paints on top. Therefore PlayOverlay covers the Status dropdown trigger and the Info button on touch.",
+        "Outcome: a touch user on a not-started imported course cannot change status to 'paused' or 'active' via the badge, cannot open Edit/Delete, and cannot open the Info popover. The only available action is Play, which forces the status transition. The plan claims hover-revealed but only documents always-visible-on-touch — it did not consider that always-visible occludes other interactive controls."
+      ],
+      "autofix_class": "advisory",
+      "owner": "human"
+    },
+    {
+      "id": "ADV-002",
+      "title": "CompletionOverlay (z-10) paints on top of CoverProgressBar (no z-index) — at 100% the progress bar disappears under the overlay",
+      "severity": "medium",
+      "confidence": 0.82,
+      "category": "composition-failure",
+      "files": [
+        "src/app/components/figma/courseCardShell.tsx:54-66,82-100",
+        "src/app/components/figma/ImportedCourseCard.tsx:502-505",
+        "src/app/components/figma/CourseCard.tsx:285-286"
+      ],
+      "evidence": [
+        "Trigger: course at completionPercent === 100.",
+        "CardCover renders both `<CompletionOverlay show={true}>` (z-10, `inset-0`, `bg-background/40`) and `<CoverProgressBar progress={100}>` (no z-index class, sits at `absolute bottom-0 h-1.5`).",
+        "CoverProgressBar has implicit z-auto. CompletionOverlay's z-10 stacking context wins for any overlapping pixels along the bottom edge of the cover.",
+        "Outcome: at 100%, the cover-edge progress bar is overdrawn by the translucent completion overlay. The completion overlay is `bg-background/40` (semi-opaque), so the bar is dimmed/tinted, not entirely hidden — but the visual continuity (BookCard parity claim) is broken precisely at the 'success' state. Visual regression specifically at the most celebratory moment."
+      ],
+      "autofix_class": "manual",
+      "owner": "downstream-resolver"
+    },
+    {
+      "id": "ADV-003",
+      "title": "Cascade: status update rollback after navigation strands user on overview with no error toast",
+      "severity": "high",
+      "confidence": 0.83,
+      "category": "cascade",
+      "files": [
+        "src/app/components/figma/ImportedCourseCard.tsx:244-248,205-209",
+        "src/stores/useCourseImportStore.ts:196-225"
+      ],
+      "evidence": [
+        "Trigger: user clicks the Play overlay on a not-started course while IndexedDB write is failing (quota exceeded, browser private mode write-block, file-system handle revoked).",
+        "Step 1: handleStartStudying (line 244) calls handleStatusChange('active') WITHOUT await, then synchronously navigates to /courses/:id/overview.",
+        "Step 2: updateCourseStatus does an optimistic in-memory set (status='active'), then awaits persistWithRetry.",
+        "Step 3: navigate fires immediately; React Router unmounts the Courses list and mounts the course Overview page; the Play card is gone.",
+        "Step 4: persistWithRetry eventually rejects. Rollback path (line 217-223) sets status back to 'not-started' and stores `importError: 'Failed to update status'`. NO `toast.error` is fired (compare to handleDelete on line 235 which does show a toast).",
+        "Outcome: user is on /courses/:id/overview viewing a course that is silently still 'not-started' in the store. Any UI on Overview that branches on `status === 'active'` shows the wrong state. Returning to the library shows the same Play overlay — the user re-clicks, the same failure repeats. No surfaced error explains why."
+      ],
+      "autofix_class": "manual",
+      "owner": "downstream-resolver"
+    },
+    {
+      "id": "ADV-004",
+      "title": "Repeated Play clicks within the same tick fire duplicate updateCourseStatus calls (idempotent on state, but enqueue duplicate sync writes)",
+      "severity": "medium",
+      "confidence": 0.72,
+      "category": "abuse-case",
+      "files": [
+        "src/app/components/figma/ImportedCourseCard.tsx:244-248,205-209",
+        "src/stores/useCourseImportStore.ts:196-225"
+      ],
+      "evidence": [
+        "Trigger: user double- or triple-clicks the Play overlay before React commits the next render (or fires synthetic dblclick which delivers two click events). PlayOverlay has no disabled/in-flight guard.",
+        "handleStartStudying calls handleStatusChange every time. handleStatusChange only short-circuits on `newStatus !== status` — but `status` is a closure value captured at render. If two click events fire on the same render, both see status='not-started' and both proceed.",
+        "updateCourseStatus runs the optimistic set + persistWithRetry path on each call. Two awaits → two `syncableWrite` enqueues for the same record. The state ends idempotent ('active' = 'active'), but the syncQueue gets two operations.",
+        "Outcome: doubled sync queue traffic, doubled retry budget if the network is flaky. Combined with ADV-003, a flaky write yields two rollback toasts (well — zero toasts, but two error log entries) and two state flips. Also doubled navigate() calls — React Router collapses identical pushes, so navigation outcome is fine, but the intent was a single guarded transition."
+      ],
+      "autofix_class": "manual",
+      "owner": "downstream-resolver"
+    },
+    {
+      "id": "ADV-005",
+      "title": "completionPercent === 100 with status === 'not-started' renders BOTH PlayOverlay and CompletionOverlay; Play wins (z-20) and hides Complete check",
+      "severity": "medium",
+      "confidence": 0.78,
+      "category": "assumption-violation",
+      "files": [
+        "src/app/components/figma/ImportedCourseCard.tsx:494-502"
+      ],
+      "evidence": [
+        "Assumption (per plan): Play overlay and CompletionOverlay are mutually exclusive.",
+        "Implementation: PlayOverlay gates on `status === 'not-started' && !readOnly`. CompletionOverlay gates on `completionPercent === 100`. These two gates are independent — `status` is the learner status from the store, `completionPercent` is a derived prop computed elsewhere from video-progress data.",
+        "Construct the violation: a course where the learner never explicitly transitioned status (still 'not-started') but a sync from another tab/device, or a backfill, or a manual progress backfill, marked progress=100. Both conditions hold.",
+        "Outcome: PlayOverlay (z-20) renders over CompletionOverlay (z-10). User sees a Play CTA on a fully-completed course; clicking it sets status='active' for a course they 'completed'. Top-left also shows the green 'Complete' badge — direct contradiction in the same card."
+      ],
+      "autofix_class": "advisory",
+      "owner": "human"
+    },
+    {
+      "id": "ADV-006",
+      "title": "Hover video preview plays underneath PlayOverlay — user sees moving video with a stationary Play button overlay",
+      "severity": "low",
+      "confidence": 0.75,
+      "category": "composition-failure",
+      "files": [
+        "src/app/components/figma/ImportedCourseCard.tsx:286-306,494-499"
+      ],
+      "evidence": [
+        "Trigger: hover a not-started ImportedCourseCard for >1000ms (useHoverPreview threshold).",
+        "useCourseCardPreview activates showPreview=true. The <video> element renders with `pointer-events-none` and no z-index (default z-auto).",
+        "PlayOverlay (status==='not-started') is z-20 inset-0 with the dark `bg-black/50` Play badge in the center.",
+        "Outcome: while the video preview is playing in the background, the central Play CTA is visually overlaid. The user is told 'press Play to start' on a card that is already playing video. UX is contradictory; clicking the visible Play does NOT play the underlying preview — it mutates state and navigates. The hover-preview affordance and the start-studying affordance occupy the same visual region with conflicting semantics."
+      ],
+      "autofix_class": "advisory",
+      "owner": "human"
+    },
+    {
+      "id": "ADV-007",
+      "title": "CoverProgressBar lacks motion-reduce variant — animates width on every progress tick under prefers-reduced-motion",
+      "severity": "low",
+      "confidence": 0.85,
+      "category": "assumption-violation",
+      "files": [
+        "src/app/components/figma/courseCardShell.tsx:43-52"
+      ],
+      "evidence": [
+        "Plan claim: 'reduced motion respected'.",
+        "Implementation: `<div className=\"h-full bg-brand rounded-full transition-all\" style={{ width: `${clamped}%` }} />` — `transition-all` with no duration cap and no `motion-reduce:transition-none`.",
+        "While CardCover (line 32) and PlayOverlay (line 73) both add `motion-reduce:` modifiers, the inner progress bar does not. Any prop change to `progress` (e.g., a video tick from 41% → 42%) animates the width transition for users with prefers-reduced-motion.",
+        "Outcome: the cover-edge progress bar is the most frequently-changing element on the card; it slips through the reduced-motion gate that the rest of the visual language honors."
+      ],
+      "autofix_class": "manual",
+      "owner": "downstream-resolver"
+    },
+    {
+      "id": "ADV-008",
+      "title": "Wrapper div around Info button uses preventDefault+stopPropagation — swallows accidental adjacent clicks but also any keyboard activation that bubbles from PopoverContent",
+      "severity": "low",
+      "confidence": 0.62,
+      "category": "composition-failure",
+      "files": [
+        "src/app/components/figma/ImportedCourseCard.tsx:399-402"
+      ],
+      "evidence": [
+        "The wrapper `<div className=\"absolute bottom-3 right-3 z-20\" onClick={e => { e.preventDefault(); e.stopPropagation() }}>` wraps the Popover.",
+        "PopoverContent is portaled (Radix), so most internal clicks won't bubble through this wrapper. However, if a future change inlines the popover or if focus-managed click events from the trigger button bubble, this wrapper unconditionally preventDefaults — not just stops propagation. The button inside uses `onClick={e => e.stopPropagation()}` (no preventDefault). Defensive but inconsistent.",
+        "More concretely: the wrapper's onClick captures any phantom click on the empty padding around the button (none here) but more importantly indicates intent that the parent already swallows clicks — meaning the button's own stopPropagation is redundant and the entire chain (button → wrapper → article) has 3 layers of defensive guards. Future maintainers altering one layer can inadvertently break navigation guarding."
+      ],
+      "autofix_class": "advisory",
+      "owner": "human"
+    }
+  ],
+  "residual_risks": [
+    "PlayOverlay's `[@media(hover:none)]:opacity-100` was meant to expose the action on touch, but turning the entire cover into a tap target of a single Action removes nuance — there is no longer a way for a touch user to reach the card's underlying nav (overview page) without first being forced through state mutation. This is by design per the plan, but it eliminates 'preview before starting' on touch.",
+    "The handleStartStudying control flow assumes single-click, single-render. There is no React in-flight ref, no AbortController, no disabled prop. Any future addition that delays render commit (Suspense boundary, transition) widens the double-fire window described in ADV-004.",
+    "The data contract between the learner status (`course.status`) and the derived `completionPercent` is implicit and not enforced — ADV-005 demonstrates this. A future sync engine or backfill could introduce inconsistency the UI cannot represent coherently."
+  ],
+  "testing_gaps": [
+    "No test exercises the touch-device case ([@media(hover:none)]). All Vitest tests run under jsdom which has no media queries. The 'PlayOverlay covers status dropdown' regression in ADV-001 is invisible to the current test suite.",
+    "No test triggers updateCourseStatus rejection while observing post-navigation state (ADV-003). The Vitest spec mocks `updateCourseStatus` and only asserts it was called.",
+    "No test asserts mutual-exclusion behavior when both gates of PlayOverlay and CompletionOverlay are active simultaneously (ADV-005). The unit tests gate on `status` but do not parametrize over `completionPercent`.",
+    "No double-click / rapid-click test on PlayOverlay (ADV-004).",
+    "No z-index regression test asserts CoverProgressBar visibility at 100% on top of CompletionOverlay (ADV-002). The courseCardShell.test.tsx tests each primitive in isolation, not their stacking inside CardCover."
+  ]
+}

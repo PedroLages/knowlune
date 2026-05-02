@@ -25,13 +25,14 @@ vi.mock('react-reader', () => ({
 
 // Mutable store state — allows individual tests to override theme/settings
 const mockStoreState: Record<string, unknown> = {
-  theme: 'light',
+  theme: 'white',
   fontSize: 100,
   fontFamily: 'default',
   lineHeight: 1.6,
   letterSpacing: 0,
   wordSpacing: 0,
   scrollMode: false,
+  dualPage: false,
   toggleHeader: vi.fn(),
 }
 const mockToggleHeader = mockStoreState.toggleHeader as ReturnType<typeof vi.fn>
@@ -40,17 +41,6 @@ vi.mock('@/stores/useReaderStore', () => ({
   useReaderStore: (selector: (s: Record<string, unknown>) => unknown) => selector(mockStoreState),
 }))
 
-// Mock useAppColorScheme — default to 'professional', tests can override via mockColorScheme
-let mockColorScheme = 'professional'
-vi.mock('../readerThemeConfig', async () => {
-  const actual =
-    await vi.importActual<typeof import('../readerThemeConfig')>('../readerThemeConfig')
-  return {
-    ...actual,
-    useAppColorScheme: () => mockColorScheme,
-  }
-})
-
 // Mock Rendition
 function createMockRendition() {
   return {
@@ -58,6 +48,7 @@ function createMockRendition() {
     prev: vi.fn().mockResolvedValue(undefined),
     next: vi.fn().mockResolvedValue(undefined),
     flow: vi.fn(),
+    spread: vi.fn(),
     themes: {
       default: vi.fn(),
     },
@@ -106,14 +97,14 @@ describe('EpubRenderer', () => {
     mockEpubViewProps.mockClear()
     mockToggleHeader.mockClear()
     // Reset store to defaults
-    mockStoreState.theme = 'light'
+    mockStoreState.theme = 'white'
     mockStoreState.fontSize = 100
     mockStoreState.fontFamily = 'default'
     mockStoreState.lineHeight = 1.6
     mockStoreState.letterSpacing = 0
     mockStoreState.wordSpacing = 0
     mockStoreState.scrollMode = false
-    mockColorScheme = 'professional'
+    mockStoreState.dualPage = false
     vi.useFakeTimers()
   })
 
@@ -196,10 +187,10 @@ describe('EpubRenderer', () => {
   })
 
   describe('Bug 2 — Container background matches theme (AC-3)', () => {
-    it('applies light theme background to container (professional)', () => {
+    it('applies white theme background to container', () => {
       render(<EpubRenderer {...defaultProps} />)
       const container = screen.getByTestId('epub-renderer')
-      expect(container.className).toContain('bg-[#faf5ee]')
+      expect(container.className).toContain('bg-[#ffffff]')
     })
 
     it('applies sepia theme background to container', () => {
@@ -213,14 +204,21 @@ describe('EpubRenderer', () => {
       mockStoreState.theme = 'dark'
       render(<EpubRenderer {...defaultProps} />)
       const container = screen.getByTestId('epub-renderer')
-      expect(container.className).toContain('bg-[#1a1b26]')
+      expect(container.className).toContain('bg-[#383a56]')
     })
 
-    it('applies clean color scheme light background to container', () => {
-      mockColorScheme = 'clean'
+    it('applies gray theme background to container', () => {
+      mockStoreState.theme = 'gray'
       render(<EpubRenderer {...defaultProps} />)
       const container = screen.getByTestId('epub-renderer')
-      expect(container.className).toContain('bg-[#f9f9fe]')
+      expect(container.className).toContain('bg-[#e5e5e5]')
+    })
+
+    it('applies black theme background to container', () => {
+      mockStoreState.theme = 'black'
+      render(<EpubRenderer {...defaultProps} />)
+      const container = screen.getByTestId('epub-renderer')
+      expect(container.className).toContain('bg-[#000000]')
     })
   })
 
@@ -244,6 +242,28 @@ describe('EpubRenderer', () => {
       const passedProps = mockEpubViewProps.mock.calls[0][0]
       expect(passedProps.epubOptions.allowPopups).toBe(false)
     })
+
+    it('uses a narrower centered viewport for single-page mode', () => {
+      mockStoreState.dualPage = false
+      render(<EpubRenderer {...defaultProps} />)
+
+      const viewport = screen.getByTestId('epub-viewport')
+      expect(viewport).toHaveClass('mx-auto', 'max-w-[44rem]')
+    })
+
+    it('uses a wider viewport and auto spread for two-page mode', () => {
+      mockStoreState.dualPage = true
+      render(<EpubRenderer {...defaultProps} />)
+
+      const passedProps = mockEpubViewProps.mock.calls[0][0]
+      expect(passedProps.epubOptions).toEqual(
+        expect.objectContaining({
+          spread: 'auto',
+          flow: 'paginated',
+        })
+      )
+      expect(screen.getByTestId('epub-viewport')).toHaveClass('max-w-6xl')
+    })
   })
 
   describe('Bug 4 — Interaction zone stacking (AC-5)', () => {
@@ -258,23 +278,22 @@ describe('EpubRenderer', () => {
       expect(parentContainer.className).toContain('z-10')
     })
 
-    it('gives each interaction zone pointer-events-auto', () => {
+    it('gives gutter interaction zones pointer-events-auto', () => {
       render(<EpubRenderer {...defaultProps} />)
 
       const prevZone = screen.getByLabelText('Previous page')
-      const toggleZone = screen.getByLabelText('Toggle reader controls')
       const nextZone = screen.getByLabelText('Next page')
 
       expect(prevZone.className).toContain('pointer-events-auto')
-      expect(toggleZone.className).toContain('pointer-events-auto')
       expect(nextZone.className).toContain('pointer-events-auto')
+      expect(screen.queryByLabelText('Toggle reader controls')).toBeNull()
     })
 
-    it('clicking toggle zone calls toggleHeader', () => {
+    it('clicking reader margin calls toggleHeader without adding a center overlay', () => {
       render(<EpubRenderer {...defaultProps} />)
 
-      const toggleZone = screen.getByLabelText('Toggle reader controls')
-      fireEvent.click(toggleZone)
+      const container = screen.getByTestId('epub-renderer')
+      fireEvent.click(container)
       expect(mockToggleHeader).toHaveBeenCalledTimes(1)
     })
   })
@@ -291,10 +310,27 @@ describe('EpubRenderer', () => {
 
       expect(mockRendition.themes.default).toHaveBeenCalledWith({
         body: expect.objectContaining({
-          background: '#faf5ee',
+          background: '#ffffff',
           color: '#1c1d2b',
           'font-size': '100%',
           'line-height': '1.6',
+        }),
+      })
+    })
+
+    it('applies the Atkinson Hyperlegible reader font', () => {
+      mockStoreState.fontFamily = 'atkinson'
+      render(<EpubRenderer {...defaultProps} />)
+
+      const mockRendition = createMockRendition()
+      const epubViewCall = mockEpubViewProps.mock.calls[0][0]
+      act(() => {
+        epubViewCall.getRendition(mockRendition)
+      })
+
+      expect(mockRendition.themes.default).toHaveBeenCalledWith({
+        body: expect.objectContaining({
+          'font-family': "'Atkinson Hyperlegible', system-ui, -apple-system, sans-serif",
         }),
       })
     })
@@ -339,14 +375,14 @@ describe('EpubRenderer', () => {
 
       expect(mockRendition.themes.default).toHaveBeenCalledWith({
         body: expect.objectContaining({
-          background: '#1a1b26',
-          color: '#e8e9f0',
+          background: '#383a56',
+          color: '#f7f7fb',
         }),
       })
     })
 
-    it('applies clean color scheme colors for light theme', () => {
-      mockColorScheme = 'clean'
+    it('applies gray theme colors to the EPUB iframe', () => {
+      mockStoreState.theme = 'gray'
       render(<EpubRenderer {...defaultProps} />)
 
       const mockRendition = createMockRendition()
@@ -357,15 +393,15 @@ describe('EpubRenderer', () => {
 
       expect(mockRendition.themes.default).toHaveBeenCalledWith({
         body: expect.objectContaining({
-          background: '#f9f9fe',
-          color: '#2c333d',
+          background: '#e5e5e5',
+          color: '#1f2937',
         }),
       })
     })
 
-    it('re-applies theme when color scheme changes mid-render', () => {
-      mockColorScheme = 'professional'
-      const { rerender } = render(<EpubRenderer {...defaultProps} />)
+    it('applies black theme colors to the EPUB iframe', () => {
+      mockStoreState.theme = 'black'
+      render(<EpubRenderer {...defaultProps} />)
 
       const mockRendition = createMockRendition()
       const epubViewCall = mockEpubViewProps.mock.calls[0][0]
@@ -373,24 +409,10 @@ describe('EpubRenderer', () => {
         epubViewCall.getRendition(mockRendition)
       })
 
-      // Confirm initial professional colors
       expect(mockRendition.themes.default).toHaveBeenCalledWith({
         body: expect.objectContaining({
-          background: '#faf5ee',
-          color: '#1c1d2b',
-        }),
-      })
-
-      mockRendition.themes.default.mockClear()
-
-      // Switch color scheme to clean mid-render
-      mockColorScheme = 'clean'
-      rerender(<EpubRenderer {...defaultProps} />)
-
-      expect(mockRendition.themes.default).toHaveBeenCalledWith({
-        body: expect.objectContaining({
-          background: '#f9f9fe',
-          color: '#2c333d',
+          background: '#000000',
+          color: '#f8fafc',
         }),
       })
     })
@@ -550,8 +572,8 @@ describe('EpubRenderer', () => {
       render(<EpubRenderer {...defaultProps} />)
 
       expect(screen.getByLabelText('Previous page')).toBeInTheDocument()
-      expect(screen.getByLabelText('Toggle reader controls')).toBeInTheDocument()
       expect(screen.getByLabelText('Next page')).toBeInTheDocument()
+      expect(screen.queryByLabelText('Toggle reader controls')).toBeNull()
     })
   })
 
@@ -651,11 +673,20 @@ describe('EpubRenderer', () => {
       expect(screen.getByLabelText('Next page')).toBeInTheDocument()
     })
 
-    it('center toggle zone remains visible in scroll mode (AC-5)', () => {
+    it('does not render overlay interaction zones in scroll mode (AC-5)', () => {
       mockStoreState.scrollMode = true
       render(<EpubRenderer {...defaultProps} />)
 
-      expect(screen.getByLabelText('Toggle reader controls')).toBeInTheDocument()
+      expect(screen.queryByLabelText('Toggle reader controls')).toBeNull()
+      expect(screen.queryByLabelText('Previous page')).toBeNull()
+      expect(screen.queryByLabelText('Next page')).toBeNull()
+    })
+
+    it('uses a readable continuous-scroll viewport width', () => {
+      mockStoreState.scrollMode = true
+      render(<EpubRenderer {...defaultProps} />)
+
+      expect(screen.getByTestId('epub-viewport')).toHaveClass('max-w-[72ch]')
     })
 
     it('disables onTouchStart/onTouchEnd handlers in scroll mode (AC-4)', () => {

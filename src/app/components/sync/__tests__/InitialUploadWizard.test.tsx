@@ -34,6 +34,13 @@ vi.mock('@/lib/toastHelpers', () => ({
   },
 }))
 
+const mockAnnounce = vi.fn()
+
+vi.mock('@/app/hooks/useLiveRegion', () => ({
+  LiveRegionProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  useLiveRegion: () => ({ announce: mockAnnounce }),
+}))
+
 // Zustand store mock — supports both selector call and getState().
 const storeState = {
   status: 'synced' as 'synced' | 'syncing' | 'error' | 'offline',
@@ -52,10 +59,7 @@ vi.mock('@/app/stores/useSyncStatusStore', () => ({
 import { InitialUploadWizard } from '../InitialUploadWizard'
 import { syncEngine } from '@/lib/sync/syncEngine'
 import { toastSuccess } from '@/lib/toastHelpers'
-import {
-  wizardCompleteKey,
-  wizardDismissedKey,
-} from '@/lib/sync/shouldShowInitialUploadWizard'
+import { wizardCompleteKey, wizardDismissedKey } from '@/lib/sync/shouldShowInitialUploadWizard'
 
 const USER = 'user-97-03'
 
@@ -76,15 +80,14 @@ function resetProgress(total = 0) {
 
 function renderWizard(props?: Partial<React.ComponentProps<typeof InitialUploadWizard>>) {
   const onClose = vi.fn()
-  const utils = render(
-    <InitialUploadWizard open userId={USER} onClose={onClose} {...props} />,
-  )
+  const utils = render(<InitialUploadWizard open userId={USER} onClose={onClose} {...props} />)
   return { onClose, ...utils }
 }
 
 beforeEach(() => {
   localStorage.clear()
   vi.clearAllMocks()
+  mockAnnounce.mockClear()
   resetStore()
   resetProgress(3) // default: there is data to upload
 })
@@ -95,16 +98,12 @@ afterEach(() => {
 
 describe('InitialUploadWizard', () => {
   it('renders nothing when open is false', () => {
-    render(
-      <InitialUploadWizard open={false} userId={USER} onClose={() => {}} />,
-    )
+    render(<InitialUploadWizard open={false} userId={USER} onClose={() => {}} />)
     expect(screen.queryByTestId('initial-upload-wizard')).toBeNull()
   })
 
   it('renders nothing when userId is empty', () => {
-    render(
-      <InitialUploadWizard open userId="" onClose={() => {}} />,
-    )
+    render(<InitialUploadWizard open userId="" onClose={() => {}} />)
     expect(screen.queryByTestId('initial-upload-wizard')).toBeNull()
   })
 
@@ -114,6 +113,8 @@ describe('InitialUploadWizard', () => {
     fireEvent.click(screen.getByTestId('initial-upload-start'))
     expect(syncEngine.fullSync).toHaveBeenCalledTimes(1)
     expect(screen.getByTestId('initial-upload-wizard')).toHaveAttribute('data-phase', 'uploading')
+    // Announce fires on uploading transition
+    expect(mockAnnounce).toHaveBeenCalledWith('Uploading your data. Please wait.')
   })
 
   it('fast-path: mounts directly in uploading when status === syncing', () => {
@@ -151,6 +152,8 @@ describe('InitialUploadWizard', () => {
 
     expect(localStorage.getItem(wizardCompleteKey(USER))).not.toBeNull()
     expect(toastSuccess.saved).toHaveBeenCalledWith('Initial upload complete')
+    // Announce fires on success transition
+    expect(mockAnnounce).toHaveBeenCalledWith('Upload complete. Your data is safely backed up.')
   })
 
   it('clears dismissal flag when writing completion flag on success', async () => {
@@ -185,6 +188,8 @@ describe('InitialUploadWizard', () => {
       expect(screen.getByTestId('initial-upload-wizard')).toHaveAttribute('data-phase', 'error')
     })
     expect(screen.getByText('Network unreachable')).toBeInTheDocument()
+    // Announce fires on error transition
+    expect(mockAnnounce).toHaveBeenCalledWith('Upload failed. Network unreachable')
   })
 
   it('Retry from error re-invokes fullSync and returns to uploading', async () => {
@@ -196,7 +201,7 @@ describe('InitialUploadWizard', () => {
     })
     rerender(<InitialUploadWizard open userId={USER} onClose={() => {}} />)
     await waitFor(() =>
-      expect(screen.getByTestId('initial-upload-wizard')).toHaveAttribute('data-phase', 'error'),
+      expect(screen.getByTestId('initial-upload-wizard')).toHaveAttribute('data-phase', 'error')
     )
 
     vi.mocked(syncEngine.fullSync).mockClear()

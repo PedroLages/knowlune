@@ -99,7 +99,9 @@ function ConversationSessionCard({
                 </TooltipTrigger>
                 <TooltipContent>
                   {topics.slice(3).map((t, i) => (
-                    <div key={i} className="text-xs">{t}</div>
+                    <div key={i} className="text-xs">
+                      {t}
+                    </div>
                   ))}
                 </TooltipContent>
               </Tooltip>
@@ -173,7 +175,9 @@ export function ConversationHistorySheet({
     const thisLesson: ChatConversation[] = []
     const otherLessons: ChatConversation[] = []
 
-    const sorted = [...conversations].sort((a, b) => toEpochMs(b.updatedAt) - toEpochMs(a.updatedAt))
+    const sorted = [...conversations].sort(
+      (a, b) => toEpochMs(b.updatedAt) - toEpochMs(a.updatedAt)
+    )
 
     for (const conv of sorted) {
       if (conv.courseId === courseId && conv.videoId === currentLessonId) {

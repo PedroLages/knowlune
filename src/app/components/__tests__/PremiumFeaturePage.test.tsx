@@ -52,14 +52,6 @@ vi.mock('@/lib/toastHelpers', () => ({
   toastError: { saveFailed: vi.fn() },
 }))
 
-// ---------------------------------------------------------------------------
-// Mock AuthDialog
-// ---------------------------------------------------------------------------
-
-vi.mock('@/app/components/auth/AuthDialog', () => ({
-  AuthDialog: ({ open }: { open: boolean }) => (open ? <div data-testid="auth-dialog" /> : null),
-}))
-
 import { PremiumFeaturePage, PREMIUM_FEATURES } from '@/app/components/PremiumFeaturePage'
 
 // ---------------------------------------------------------------------------

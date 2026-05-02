@@ -9,6 +9,7 @@
 
 import type { LearningPath, LearningPathEntry } from '@/data/types'
 import { getAIConfiguration, getDecryptedApiKey, isAIAvailable } from '@/lib/aiConfiguration'
+import { apiUrl } from '@/lib/apiBaseUrl'
 
 /** Placement suggestion returned by AI */
 export interface PathPlacementSuggestion {
@@ -131,7 +132,7 @@ IMPORTANT: Return ONLY the JSON object, no markdown code blocks, no extra text.`
   }
 
   try {
-    const response = await fetch('/api/ai/generate', {
+    const response = await fetch(apiUrl('ai-generate'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

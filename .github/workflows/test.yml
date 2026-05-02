@@ -139,18 +139,89 @@ jobs:
           retention-days: 30
 
   # ──────────────────────────────────────────────
+  # Deletion Probe — GDPR erasure verification
+  #
+  # Runs only on pull_request events that touch the erasure surface:
+  #   - src/lib/sync/tableRegistry.ts
+  #   - supabase/functions/delete-account/**
+  #   - supabase/functions/retention-tick/**
+  #   - supabase/functions/_shared/hardDeleteUser.ts
+  #
+  # Requires GitHub secrets:
+  #   SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, DELETION_PROBE_USER_ID
+  #
+  # DELETION_PROBE_USER_ID must be the UUID of a test Supabase user that has
+  # been hard-deleted (all application data erased). To set up:
+  #   1. Create a test user in the Supabase dashboard
+  #   2. Call the delete-account Edge Function for that user
+  #   3. Run retention-tick manually in the test environment (or wait 7 days)
+  #   4. Record the UUID as the DELETION_PROBE_USER_ID secret
+  #
+  # Fork PRs without secrets: the job skips gracefully (continue-on-error).
+  # ──────────────────────────────────────────────
+  deletion-probe:
+    name: GDPR Deletion Probe
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Detect erasure-surface changes
+        id: paths-filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            erasure:
+              - 'src/lib/sync/tableRegistry.ts'
+              - 'supabase/functions/delete-account/**'
+              - 'supabase/functions/retention-tick/**'
+              - 'supabase/functions/_shared/hardDeleteUser.ts'
+              - 'scripts/ci/probe-constants.ts'
+
+      - name: Setup Node.js
+        if: steps.paths-filter.outputs.erasure == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+
+      - name: Install dependencies
+        if: steps.paths-filter.outputs.erasure == 'true'
+        run: npm ci
+
+      - name: Run deletion probe
+        if: steps.paths-filter.outputs.erasure == 'true'
+        continue-on-error: true
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          USER_ID: ${{ secrets.DELETION_PROBE_USER_ID }}
+        run: |
+          if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_SERVICE_ROLE_KEY" ] || [ -z "$USER_ID" ]; then
+            echo "Deletion probe secrets not available (fork PR or missing configuration). Skipping."
+            exit 0
+          fi
+          npx tsx scripts/ci/deletion-probe.ts
+
+      - name: Skip message (no erasure-surface changes)
+        if: steps.paths-filter.outputs.erasure != 'true'
+        run: echo "No erasure-surface files changed — deletion probe skipped."
+
+  # ──────────────────────────────────────────────
   # Test Report — Aggregate results
   # ──────────────────────────────────────────────
   test-report:
     name: Test Pipeline Status
     runs-on: ubuntu-latest
-    needs: [e2e-tests, burn-in]
+    needs: [e2e-tests, burn-in, deletion-probe]
     if: always()
     steps:
       - name: Check test results
         run: |
           echo "E2E Tests: ${{ needs.e2e-tests.result }}"
           echo "Burn-In: ${{ needs.burn-in.result }}"
+          echo "Deletion Probe: ${{ needs.deletion-probe.result }}"
 
           if [ "${{ needs.e2e-tests.result }}" == "failure" ]; then
             echo "E2E tests failed - check shard artifacts for details"

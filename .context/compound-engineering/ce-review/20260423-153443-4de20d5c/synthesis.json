@@ -1,0 +1,113 @@
+{
+  "run_id": "20260423-153443-4de20d5c",
+  "scope": "feature/e119-s07-consent-schema-inventory vs main (5ab64c2)",
+  "intent": "GDPR consent schema foundation: user_consents migration, consentService gatekeeper, consent-inventory.md, Dexie v58, parity+LWW tests",
+  "verdict": "Ready with fixes",
+  "findings": [
+    {
+      "title": "Missing moddatetime trigger on user_consents.updated_at",
+      "severity": "P1",
+      "file": "supabase/migrations/20260431000001_user_consents.sql",
+      "line": 32,
+      "confidence": 0.97,
+      "autofix_class": "safe_auto",
+      "owner": "review-fixer",
+      "requires_verification": true,
+      "pre_existing": false,
+      "suggested_fix": "Add DROP/CREATE TRIGGER set_updated_at using extensions.moddatetime('updated_at') on user_consents, matching pattern from P1 migration"
+    },
+    {
+      "title": "consentService has no unit tests for fail-closed gatekeeper",
+      "severity": "P1",
+      "file": "src/lib/compliance/consentService.ts",
+      "line": 1,
+      "confidence": 0.95,
+      "autofix_class": "safe_auto",
+      "owner": "review-fixer",
+      "requires_verification": true,
+      "pre_existing": false,
+      "suggested_fix": "Create src/lib/compliance/__tests__/consentService.test.ts with mocked db testing isGranted (granted, withdrawn, unknown purpose, DB error), listForUser, isGrantedForProvider"
+    },
+    {
+      "title": "IConsentService interface missing isGrantedForProvider",
+      "severity": "P2",
+      "file": "src/lib/compliance/consentService.ts",
+      "line": 62,
+      "confidence": 0.90,
+      "autofix_class": "safe_auto",
+      "owner": "review-fixer",
+      "requires_verification": false,
+      "pre_existing": false,
+      "suggested_fix": "Add isGrantedForProvider(userId: string, purpose: string, providerId: string): Promise<boolean> to IConsentService interface"
+    },
+    {
+      "title": "Invalid migration filename date: April 31 does not exist",
+      "severity": "P2",
+      "file": "supabase/migrations/20260431000001_user_consents.sql",
+      "line": 1,
+      "confidence": 0.98,
+      "autofix_class": "safe_auto",
+      "owner": "review-fixer",
+      "requires_verification": false,
+      "pre_existing": false,
+      "suggested_fix": "Rename to 20260423000002_user_consents.sql (April 23 is the actual commit date; sequence after 20260423000001)"
+    },
+    {
+      "title": "Migration comment: withdrawn_at NULL != currently granted for never-granted rows",
+      "severity": "P2",
+      "file": "supabase/migrations/20260431000001_user_consents.sql",
+      "line": 10,
+      "confidence": 0.92,
+      "autofix_class": "safe_auto",
+      "owner": "review-fixer",
+      "requires_verification": false,
+      "pre_existing": false,
+      "suggested_fix": "Change comment to: withdrawn_at NULL + granted_at NOT NULL → consent currently granted; both NULL → never granted"
+    },
+    {
+      "title": "tableRegistry JSDoc says 38 tables, should be 39",
+      "severity": "P2",
+      "file": "src/lib/sync/tableRegistry.ts",
+      "line": 642,
+      "confidence": 0.99,
+      "autofix_class": "safe_auto",
+      "owner": "review-fixer",
+      "requires_verification": false,
+      "pre_existing": false,
+      "suggested_fix": "Change 'Array of all 38 syncable tables' to 'Array of all 39 syncable tables'"
+    },
+    {
+      "title": "checkpoint.ts docblock references stale version 52",
+      "severity": "P2",
+      "file": "src/db/checkpoint.ts",
+      "line": 4,
+      "confidence": 0.99,
+      "autofix_class": "safe_auto",
+      "owner": "review-fixer",
+      "requires_verification": false,
+      "pre_existing": false,
+      "suggested_fix": "Update 'frozen snapshot of the complete IndexedDB schema at version 52' to 'at version 58' and 'result of applying all migrations v1-v52' to 'v1-v58'"
+    },
+    {
+      "title": "isGrantedForProvider duplicates granted-check from isGranted",
+      "severity": "P2",
+      "file": "src/lib/compliance/consentService.ts",
+      "line": 148,
+      "confidence": 0.80,
+      "autofix_class": "safe_auto",
+      "owner": "review-fixer",
+      "requires_verification": false,
+      "pre_existing": false,
+      "suggested_fix": "Refactor: call isGranted(userId, purpose) first; return false if not granted; then check evidence.provider_id for the provider match"
+    }
+  ],
+  "residual_risks": [
+    "userConsents rows that exist in Supabase before the moddatetime trigger is installed will have stale updated_at values — this affects sync ordering but not data correctness",
+    "consentService reads from Dexie (local-only); if sync hasn't run yet after browser fresh start, AI features could be incorrectly blocked or opened depending on timing"
+  ],
+  "testing_gaps": [
+    "No unit test for consentService.isGranted() with mocked Dexie",
+    "No unit test for isGrantedForProvider() covering provider mismatch case",
+    "No test for isGranted() with DB throwing an error (fail-closed verification)"
+  ]
+}

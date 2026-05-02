@@ -18,8 +18,9 @@ import { useCallback, useEffect, useState } from 'react'
 import { Play, Pause, SkipBack, SkipForward, ChevronUp, BookOpen, X } from 'lucide-react'
 import { useNavigate, useLocation } from 'react-router'
 import { useAudioPlayerStore } from '@/stores/useAudioPlayerStore'
+import { useAudiobookPrefsStore } from '@/stores/useAudiobookPrefsStore'
 import { useBookStore } from '@/stores/useBookStore'
-import { sharedAudioRef } from '@/app/hooks/useAudioPlayer'
+import { cleanupActiveAbsPlaybackSession, sharedAudioRef } from '@/app/hooks/useAudioPlayer'
 import { formatAudioTime } from '@/app/hooks/useAudioPlayer'
 import { useBookCoverUrl } from '@/app/hooks/useBookCoverUrl'
 import { SpeedControl } from './SpeedControl'
@@ -34,6 +35,10 @@ export function AudioMiniPlayer() {
   const currentTime = useAudioPlayerStore(s => s.currentTime)
   const currentChapterIndex = useAudioPlayerStore(s => s.currentChapterIndex)
   const setIsPlaying = useAudioPlayerStore(s => s.setIsPlaying)
+
+  // Configurable skip intervals (E121-style polish — defaults 15/30)
+  const skipBackSeconds = useAudiobookPrefsStore(s => s.skipBackSeconds)
+  const skipForwardSeconds = useAudiobookPrefsStore(s => s.skipForwardSeconds)
 
   const books = useBookStore(s => s.books)
   const book = books.find(b => b.id === currentBookId) ?? null
@@ -82,17 +87,17 @@ export function AudioMiniPlayer() {
   const handleSkipBack = useCallback(() => {
     const audio = sharedAudioRef.current
     if (!audio) return
-    audio.currentTime = Math.max(0, audio.currentTime - 15)
-  }, [])
+    audio.currentTime = Math.max(0, audio.currentTime - skipBackSeconds)
+  }, [skipBackSeconds])
 
   const handleSkipForward = useCallback(() => {
     const audio = sharedAudioRef.current
     if (!audio) return
-    audio.currentTime = Math.min(audio.duration || 0, audio.currentTime + 30)
-  }, [])
+    audio.currentTime = Math.min(audio.duration || 0, audio.currentTime + skipForwardSeconds)
+  }, [skipForwardSeconds])
 
   const handleExpand = () => {
-    navigate(`/library/${currentBookId}/read`)
+    navigate(`/library/${currentBookId}/read`, { state: { __fromMiniPlayer: true } })
   }
 
   const handleDismiss = useCallback(() => {
@@ -101,12 +106,13 @@ export function AudioMiniPlayer() {
       audio.pause()
       audio.currentTime = 0
     }
+    cleanupActiveAbsPlaybackSession()
     useAudioPlayerStore.getState().reset()
   }, [])
 
   return (
     <div
-      className="fixed bottom-0 left-0 right-0 z-50 bg-card/70 backdrop-blur-[32px] shadow-[0_-12px_40px_-5px_rgba(27,28,21,0.08)]"
+      className="fixed bottom-0 left-0 right-0 z-50 bg-card/70 backdrop-blur-[32px] shadow-[0_-12px_40px_-5px_rgba(27,28,21,0.08)] pb-[env(safe-area-inset-bottom)]"
       data-testid="audio-mini-player"
       role="complementary"
       aria-label="Audiobook mini-player"
@@ -126,7 +132,7 @@ export function AudioMiniPlayer() {
         <button
           type="button"
           onClick={handleExpand}
-          className="flex-shrink-0 w-14 h-14 rounded-lg overflow-hidden bg-muted flex items-center justify-center shadow-md focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none"
+          className="flex-shrink-0 w-14 h-14 rounded-lg overflow-hidden bg-muted flex items-center justify-center shadow-md focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:outline-none"
           aria-label="Open full player"
         >
           {resolvedCoverUrl && !coverError ? (
@@ -145,7 +151,7 @@ export function AudioMiniPlayer() {
         <button
           type="button"
           onClick={handleExpand}
-          className="flex flex-col items-start min-w-0 flex-1 text-left min-h-[44px] justify-center sm:hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none rounded"
+          className="flex flex-col items-start min-w-0 flex-1 text-left min-h-[44px] justify-center sm:hidden focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:outline-none rounded"
           aria-label="Open full player"
         >
           <span className="text-sm font-medium text-foreground truncate w-full">{book.title}</span>
@@ -162,7 +168,7 @@ export function AudioMiniPlayer() {
         <button
           type="button"
           onClick={handlePlayPause}
-          className="flex-shrink-0 flex w-12 h-12 items-center justify-center rounded-full bg-gradient-to-br from-brand to-brand-hover text-brand-foreground shadow-lg transition-all focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none"
+          className="flex-shrink-0 flex w-12 h-12 items-center justify-center rounded-full bg-gradient-to-br from-brand to-brand-hover text-brand-foreground shadow-lg transition-all focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:outline-none"
           aria-label={isPlaying ? 'Pause' : 'Play'}
         >
           {isPlaying ? (
@@ -176,16 +182,16 @@ export function AudioMiniPlayer() {
         <button
           type="button"
           onClick={handleSkipBack}
-          className="hidden sm:flex flex-shrink-0 size-9 items-center justify-center rounded-full text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none"
-          aria-label="Skip back 15 seconds"
+          className="hidden sm:flex flex-shrink-0 size-9 items-center justify-center rounded-full text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:outline-none"
+          aria-label={`Skip back ${skipBackSeconds} seconds`}
         >
           <SkipBack className="size-5" aria-hidden="true" />
         </button>
         <button
           type="button"
           onClick={handleSkipForward}
-          className="hidden sm:flex flex-shrink-0 size-9 items-center justify-center rounded-full text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none"
-          aria-label="Skip forward 30 seconds"
+          className="hidden sm:flex flex-shrink-0 size-9 items-center justify-center rounded-full text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:outline-none"
+          aria-label={`Skip forward ${skipForwardSeconds} seconds`}
         >
           <SkipForward className="size-5" aria-hidden="true" />
         </button>
@@ -199,7 +205,7 @@ export function AudioMiniPlayer() {
         <button
           type="button"
           onClick={handleExpand}
-          className="hidden sm:flex flex-shrink-0 size-9 items-center justify-center rounded-full text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none"
+          className="hidden sm:flex flex-shrink-0 size-9 items-center justify-center rounded-full text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:outline-none"
           aria-label="Open full player"
         >
           <ChevronUp className="size-5" aria-hidden="true" />
@@ -209,7 +215,7 @@ export function AudioMiniPlayer() {
         <button
           type="button"
           onClick={handleDismiss}
-          className="flex-shrink-0 size-11 flex items-center justify-center rounded-full text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none"
+          className="flex-shrink-0 size-11 flex items-center justify-center rounded-full text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:outline-none"
           aria-label="Close mini player"
           data-testid="audio-mini-player-close"
         >

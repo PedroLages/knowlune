@@ -182,6 +182,21 @@ describe('getDueFlashcards', () => {
     const due = useFlashcardStore.getState().getDueFlashcards(FIXED_DATE)
     expect(due[0].id).toBe('low')
   })
+
+  it('filters due flashcards by course when courseId is provided', () => {
+    const courseOneDue = makeDueFlashcard({ id: 'course-1-due', courseId: 'course-1' })
+    const courseTwoDue = makeDueFlashcard({ id: 'course-2-due', courseId: 'course-2' })
+    const courseOneFuture = makeFlashcard({
+      id: 'course-1-future',
+      courseId: 'course-1',
+      due: new Date(FIXED_DATE.getTime() + 86400000).toISOString(),
+    })
+    useFlashcardStore.setState({ flashcards: [courseOneDue, courseTwoDue, courseOneFuture] })
+
+    const due = useFlashcardStore.getState().getDueFlashcards(FIXED_DATE, 'course-1')
+    expect(due).toHaveLength(1)
+    expect(due[0].id).toBe('course-1-due')
+  })
 })
 
 describe('review session', () => {
@@ -198,6 +213,18 @@ describe('review session', () => {
     expect(reviewQueue).toHaveLength(1)
     expect(isReviewActive).toBe(true)
     expect(reviewIndex).toBe(0)
+  })
+
+  it('startReviewSession can scope the reviewQueue to a course', () => {
+    const courseOneDue = makeDueFlashcard({ id: 'course-1-due', courseId: 'course-1' })
+    const courseTwoDue = makeDueFlashcard({ id: 'course-2-due', courseId: 'course-2' })
+    useFlashcardStore.setState({ flashcards: [courseOneDue, courseTwoDue] })
+
+    useFlashcardStore.getState().startReviewSession(FIXED_DATE, 'course-2')
+
+    const { reviewQueue } = useFlashcardStore.getState()
+    expect(reviewQueue).toHaveLength(1)
+    expect(reviewQueue[0].id).toBe('course-2-due')
   })
 
   it('rateFlashcard advances reviewIndex and updates FSRS fields', async () => {
@@ -255,6 +282,26 @@ describe('review session', () => {
     expect(summary.ratings.easy).toBe(1)
   })
 
+  it('getSessionSummary can scope nextReviewDate to a course', () => {
+    const courseOneReviewed = makeDueFlashcard({
+      id: 'course-1-reviewed',
+      courseId: 'course-1',
+      due: '2026-03-30T10:00:00.000Z',
+    })
+    const courseTwoReviewed = makeDueFlashcard({
+      id: 'course-2-reviewed',
+      courseId: 'course-2',
+      due: '2026-03-24T10:00:00.000Z',
+    })
+    useFlashcardStore.setState({
+      sessionRatings: ['good'],
+      flashcards: [courseOneReviewed, courseTwoReviewed],
+    })
+
+    const summary = useFlashcardStore.getState().getSessionSummary('course-1')
+    expect(summary.nextReviewDate).toBe('2026-03-30T10:00:00.000Z')
+  })
+
   it('resetReviewSession clears session state', () => {
     useFlashcardStore.setState({
       reviewQueue: [makeFlashcard()],
@@ -289,6 +336,24 @@ describe('getStats', () => {
     expect(stats.total).toBe(3)
     expect(stats.dueToday).toBe(2) // dueCard + neverReviewedCard
     expect(stats.nextReviewDate).toBe(futureCard.due)
+  })
+
+  it('can scope total, dueToday, and nextReviewDate to a course', () => {
+    const courseOneDue = makeDueFlashcard({ id: 'course-1-due', courseId: 'course-1' })
+    const courseOneFuture = makeFlashcard({
+      id: 'course-1-future',
+      courseId: 'course-1',
+      due: new Date(FIXED_DATE.getTime() + 3 * 86400000).toISOString(),
+      last_review: FIXED_DATE.toISOString(),
+      reps: 1,
+    })
+    const courseTwoDue = makeDueFlashcard({ id: 'course-2-due', courseId: 'course-2' })
+    useFlashcardStore.setState({ flashcards: [courseOneDue, courseOneFuture, courseTwoDue] })
+
+    const stats = useFlashcardStore.getState().getStats(FIXED_DATE, 'course-1')
+    expect(stats.total).toBe(2)
+    expect(stats.dueToday).toBe(1)
+    expect(stats.nextReviewDate).toBe(courseOneFuture.due)
   })
 
   it('returns nextReviewDate null when no cards have future reviews', () => {

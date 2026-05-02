@@ -161,6 +161,7 @@ export function ClozeFlashcardCreator({
         side="bottom"
         className="max-h-[80vh] rounded-t-2xl px-4 pb-6 pt-0 overflow-y-auto"
         data-testid="cloze-creator"
+        showCloseButton={false}
       >
         <SheetHeader className="py-4 border-b border-border/50 mb-4">
           <div className="flex items-center justify-between">

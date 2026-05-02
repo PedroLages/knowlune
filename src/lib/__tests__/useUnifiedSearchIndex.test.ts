@@ -111,7 +111,11 @@ describe('useUnifiedSearchIndex — diffSnapshot', () => {
 // searchBestMatches — frecency-aware ranking (Unit 3)
 // ───────────────────────────────────────────────────────────────────────────
 
-function makeCourse(id: string, name: string, importedAt = '2026-01-01T00:00:00.000Z'): ImportedCourse {
+function makeCourse(
+  id: string,
+  name: string,
+  importedAt = '2026-01-01T00:00:00.000Z'
+): ImportedCourse {
   return {
     id,
     name,

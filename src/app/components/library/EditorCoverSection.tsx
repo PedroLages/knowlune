@@ -36,7 +36,9 @@ export function EditorCoverSection({
   onCoverUpload,
 }: EditorCoverSectionProps) {
   const [imgError, setImgError] = useState(false)
-  useEffect(() => { setImgError(false) }, [coverPreviewUrl])
+  useEffect(() => {
+    setImgError(false)
+  }, [coverPreviewUrl])
   const showImage = coverPreviewUrl && !imgError
 
   const isAudiobook = format === 'audiobook'

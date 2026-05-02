@@ -19,13 +19,23 @@ interface StorageData {
 }
 
 interface StorageIndicatorProps {
-  /** Number of books in the library */
+  /** Number of books in the library (filtered by active source when provided) */
   bookCount: number
+  /**
+   * Global total when a source filter is active. When present and different
+   * from `bookCount`, shown as secondary "{n} total across all sources" text.
+   * Omit when no filter is active.
+   */
+  totalBookCount?: number
   /** Increment to trigger a re-fetch (bump after import/delete) */
   refreshKey?: number
 }
 
-export function StorageIndicator({ bookCount, refreshKey = 0 }: StorageIndicatorProps) {
+export function StorageIndicator({
+  bookCount,
+  totalBookCount,
+  refreshKey = 0,
+}: StorageIndicatorProps) {
   const [data, setData] = useState<StorageData | null>(null)
   const [unavailable, setUnavailable] = useState(false)
 
@@ -84,8 +94,16 @@ export function StorageIndicator({ bookCount, refreshKey = 0 }: StorageIndicator
       <div className="flex items-center gap-3">
         <HardDrive className="size-4 text-muted-foreground flex-shrink-0" aria-hidden="true" />
         <span className="text-xs text-muted-foreground">
-          {bookCount} {bookCount === 1 ? 'book' : 'books'} &middot; {formatFileSize(data.usage)}{' '}
-          used &middot; {formatFileSize(available)} available
+          {bookCount} {bookCount === 1 ? 'book' : 'books'}
+          {totalBookCount !== undefined && totalBookCount !== bookCount && (
+            <span
+              className="ml-1 text-muted-foreground/80"
+              data-testid="storage-indicator-total"
+            >
+              ({totalBookCount} total across all sources)
+            </span>
+          )}{' '}
+          &middot; {formatFileSize(data.usage)} used &middot; {formatFileSize(available)} available
         </span>
       </div>
 

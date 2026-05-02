@@ -34,8 +34,11 @@ import { WhisperSettings } from '@/app/components/settings/WhisperSettings'
 import { DataRetentionSettings } from '@/app/components/settings/DataRetentionSettings'
 import { StorageManagement } from '@/app/components/settings/StorageManagement'
 import { useSettingsPage } from '@/app/components/settings/SettingsPageContext'
+import { useAuthStore, selectIsGuestMode } from '@/stores/useAuthStore'
+import { GatedFeatureCard } from '@/app/components/auth/GatedFeatureCard'
 
 export function IntegrationsDataSection() {
+  const isGuest = useAuthStore(selectIsGuestMode)
   const {
     isExporting,
     exportProgress,
@@ -51,6 +54,15 @@ export function IntegrationsDataSection() {
     handleReset,
     importFileRef,
   } = useSettingsPage()
+
+  if (isGuest) {
+    return (
+      <GatedFeatureCard
+        title="Integrations"
+        description="Sign up to connect AI services, YouTube, audiobook servers, and other integrations."
+      />
+    )
+  }
 
   return (
     <div className="space-y-6">

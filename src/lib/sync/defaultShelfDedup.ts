@@ -73,10 +73,7 @@ function normalizeName(name: string): string {
  *      (subsequent remote-side duplicates collapse to the same canonical
  *      local row).
  */
-export function dedupDefaultShelves(
-  incoming: Shelf[],
-  existingLocal: Shelf[],
-): DedupResult {
+export function dedupDefaultShelves(incoming: Shelf[], existingLocal: Shelf[]): DedupResult {
   // Build lookup table of local defaults by normalized name.
   const localDefaultsByName = new Map<string, Shelf>()
   for (const shelf of existingLocal) {

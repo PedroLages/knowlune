@@ -39,8 +39,14 @@ const TEST_CARD_ID = 'card-e93-s04'
 // Supabase mock — controls INSERT and SELECT responses per test.
 // Using module-level mutable state so vi.resetModules() + re-import works.
 // ---------------------------------------------------------------------------
-type MockInsertResponse = { data: unknown[] | null; error: { code?: string; message?: string } | null }
-type MockSelectResponse = { data: Record<string, unknown>[] | null; error: { message: string } | null }
+type MockInsertResponse = {
+  data: unknown[] | null
+  error: { code?: string; message?: string } | null
+}
+type MockSelectResponse = {
+  data: Record<string, unknown>[] | null
+  error: { message: string } | null
+}
 
 let mockInsertResponse: MockInsertResponse = { data: [], error: null }
 let mockSelectResponse: MockSelectResponse = { data: [], error: null }
@@ -272,9 +278,27 @@ describe('E93-S04 — replayFlashcardReviews', () => {
     const r2Date = new Date('2026-04-19T10:00:00Z')
     const r3Date = new Date('2026-04-22T10:00:00Z')
     const reviews = [
-      { id: 'rev-1', flashcard_id: TEST_CARD_ID, user_id: TEST_USER_ID, rating: 'again' as ReviewRating, reviewed_at: r1Date.toISOString() },
-      { id: 'rev-2', flashcard_id: TEST_CARD_ID, user_id: TEST_USER_ID, rating: 'good' as ReviewRating, reviewed_at: r2Date.toISOString() },
-      { id: 'rev-3', flashcard_id: TEST_CARD_ID, user_id: TEST_USER_ID, rating: 'easy' as ReviewRating, reviewed_at: r3Date.toISOString() },
+      {
+        id: 'rev-1',
+        flashcard_id: TEST_CARD_ID,
+        user_id: TEST_USER_ID,
+        rating: 'again' as ReviewRating,
+        reviewed_at: r1Date.toISOString(),
+      },
+      {
+        id: 'rev-2',
+        flashcard_id: TEST_CARD_ID,
+        user_id: TEST_USER_ID,
+        rating: 'good' as ReviewRating,
+        reviewed_at: r2Date.toISOString(),
+      },
+      {
+        id: 'rev-3',
+        flashcard_id: TEST_CARD_ID,
+        user_id: TEST_USER_ID,
+        rating: 'easy' as ReviewRating,
+        reviewed_at: r3Date.toISOString(),
+      },
     ]
 
     // Mock Supabase to return these reviews.

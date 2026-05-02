@@ -14,6 +14,7 @@ import { BaseLLMClient } from './client'
 import type { LLMMessage, LLMStreamChunk } from './types'
 import { LLMError } from './types'
 import { formatModelSize, type OllamaModel } from '@/lib/aiConfiguration'
+import { apiUrl } from '@/lib/apiBaseUrl'
 import { useAuthStore } from '@/stores/useAuthStore'
 
 /** Default model for Ollama when none is specified */
@@ -54,7 +55,7 @@ export class OllamaLLMClient extends BaseLLMClient {
       return `${this.serverUrl}/v1`
     }
     // Proxy: browser → Express proxy → Ollama server
-    return '/api/ai/ollama'
+    return apiUrl('ai-ollama')
   }
 
   async *streamCompletion(messages: LLMMessage[]): AsyncGenerator<LLMStreamChunk, void, unknown> {
@@ -218,7 +219,7 @@ export class OllamaLLMClient extends BaseLLMClient {
           headers['Authorization'] = `Bearer ${accessToken}`
         }
         response = await fetch(
-          `/api/ai/ollama/tags?serverUrl=${encodeURIComponent(normalizedUrl)}`,
+          apiUrl('ai-ollama/tags', { serverUrl: normalizedUrl }),
           {
             method: 'GET',
             headers,

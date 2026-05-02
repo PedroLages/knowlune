@@ -21,12 +21,13 @@ import {
   getDecryptedApiKey,
   sanitizeAIRequestPayload,
 } from '@/lib/aiConfiguration'
+import { apiUrl } from '@/lib/apiBaseUrl'
 import { trackAIUsage } from '@/lib/aiEventTracking'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
 import type { ImportedCourse } from '@/data/types'
 
 /** Local proxy endpoint for non-streaming completions */
-const PROXY_GENERATE_URL = '/api/ai/generate'
+const PROXY_GENERATE_URL = apiUrl('ai-generate')
 
 /** Auto-analysis status for a course */
 export type AutoAnalysisStatus = 'analyzing' | 'complete' | 'error' | null

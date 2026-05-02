@@ -51,27 +51,45 @@ async function clearAppStorage(page: Page): Promise<void> {
   )
 }
 
-export const test = base.extend<{ localStorage: LocalStorageHelper }>({
-  localStorage: async ({ page }, use) => {
-    // Seed sidebar + onboarding dismissal via addInitScript so they are applied
-    // before every page.goto() within this test. This prevents the onboarding
-    // overlay and mobile sidebar Sheet from blocking test interactions.
-    // Tests that rely on the onboarding dialog being visible (e.g. onboarding.spec.ts)
-    // use page.addInitScript with __test_show_onboarding=1 BEFORE this fixture runs,
-    // which takes precedence via the navigateAndWait guard logic.
-    await page.addInitScript(() => {
-      localStorage.setItem('knowlune-sidebar-v1', 'false')
-      localStorage.setItem(
-        'knowlune-onboarding-v1',
-        JSON.stringify({ completedAt: '2026-01-01T00:00:00.000Z', skipped: true })
-      )
-      // Dismiss WelcomeWizard (uses a different storage key than onboarding)
-      localStorage.setItem(
-        'knowlune-welcome-wizard-v1',
-        JSON.stringify({ completedAt: '2026-01-01T00:00:00.000Z' })
-      )
-    })
+type KnowluneE2eInitFixtures = {
+  /** Runs for every test — specs that only use `{ page }` still need guest + UI dismiss seeds. */
+  _knowluneE2eBrowserInit: void
+}
 
+export const test = base.extend<KnowluneE2eInitFixtures & { localStorage: LocalStorageHelper }>({
+  _knowluneE2eBrowserInit: [
+    async ({ page }, use) => {
+      // Seed sidebar + onboarding dismissal via addInitScript so they are applied
+      // before every page.goto() within this test. This prevents the onboarding
+      // overlay and mobile sidebar Sheet from blocking test interactions.
+      // Tests that rely on the onboarding dialog being visible (e.g. onboarding.spec.ts)
+      // use page.addInitScript with __test_show_onboarding=1 BEFORE this fixture runs,
+      // which takes precedence via the navigateAndWait guard logic.
+      await page.addInitScript(() => {
+        // App routes (including /library/:bookId/read) render under RouteGuard.
+        // Guest mode passes the guard without a Supabase session — required for most E2E.
+        // Specs that assert true anonymous Landing on `/` clear these keys in their own addInitScript.
+        sessionStorage.setItem('knowlune-guest', 'true')
+        if (!sessionStorage.getItem('knowlune-guest-id')) {
+          sessionStorage.setItem('knowlune-guest-id', crypto.randomUUID())
+        }
+        localStorage.setItem('knowlune-sidebar-v1', 'false')
+        localStorage.setItem(
+          'knowlune-onboarding-v1',
+          JSON.stringify({ completedAt: '2026-01-01T00:00:00.000Z', skipped: true })
+        )
+        // Dismiss WelcomeWizard (uses a different storage key than onboarding)
+        localStorage.setItem(
+          'knowlune-welcome-wizard-v1',
+          JSON.stringify({ completedAt: '2026-01-01T00:00:00.000Z' })
+        )
+      })
+      await use(undefined)
+    },
+    { auto: true },
+  ],
+
+  localStorage: async ({ page }, use) => {
     const helper: LocalStorageHelper = {
       seed: async (key, data) => {
         await page.evaluate(

@@ -1,0 +1,92 @@
+{
+  "reviewer": "maintainability",
+  "findings": [
+    {
+      "id": "M1",
+      "severity": "medium",
+      "confidence": 0.85,
+      "category": "premature-abstraction",
+      "title": "CardCover.aspectClass prop has zero call sites",
+      "file": "/Volumes/SSD/Dev/Apps/Knowlune/.worktrees/dev-server/src/app/components/figma/courseCardShell.tsx",
+      "lines": "7-30",
+      "evidence": "CardCoverProps declares both `aspectClass?: string` and `heightClass?: string`. All four production call sites (CourseCard.tsx:496 and ImportedCourseCard.tsx:266) pass only `heightClass`. The doc comment claims 'Use aspectClass for square/portrait covers' but no card uses it. The shell file's own preamble says 'Not exported from the figma barrel — imported directly by those two files only,' so there is no third consumer waiting in the wings.",
+      "recommendation": "Drop `aspectClass` until a real square/portrait cover ships. The prop adds an untested code path and invites future callers to pass both, which the component silently allows (cn just concatenates them)."
+    },
+    {
+      "id": "M2",
+      "severity": "medium",
+      "confidence": 0.80,
+      "category": "duplication-survived",
+      "title": "renderThumbnailContent still duplicates the same <picture>/srcSet markup three times",
+      "file": "/Volumes/SSD/Dev/Apps/Knowlune/.worktrees/dev-server/src/app/components/figma/CourseCard.tsx",
+      "lines": "401-492",
+      "evidence": "The function has three separate <picture> blocks (progress, library, overview) that differ only in the `sizes` attribute and whether a PNG fallback srcSet is present. The webp srcSet template (-320w/-640w/-768w/-1024w/-1280w) is repeated verbatim three times. The empty-cover gradient `<div>` with the BookOpen icon is duplicated twice (lines 423-426 and 432-436). This is the largest pre-existing duplication and the refactor's stated goal of 'reduce duplication' did not address it.",
+      "recommendation": "Extract a `<ResponsiveCover image sizes pngFallback?>` helper alongside CardCover, or hoist the srcSet template into a small `buildSrcSet(coverImage)` function. Either eliminates ~60 lines of near-identical JSX."
+    },
+    {
+      "id": "M3",
+      "severity": "medium",
+      "confidence": 0.75,
+      "category": "coupling",
+      "title": "Shell-agnostic claim leaks: CourseCard hardcodes `variant !== 'progress'` when calling CompletionOverlay",
+      "file": "/Volumes/SSD/Dev/Apps/Knowlune/.worktrees/dev-server/src/app/components/figma/CourseCard.tsx",
+      "lines": "502",
+      "evidence": "`<CompletionOverlay show={isCompleted && variant !== 'progress'} />` mixes shell-presentation logic with variant-specific knowledge at the call site. Meanwhile ImportedCourseCard.tsx:502 uses `<CompletionOverlay show={completionPercent === 100} />`. The 'don't show completion overlay on progress variant' rule is invisible to anyone reading the shell and easy to forget when adding a fourth variant.",
+      "recommendation": "Either (a) lift the progress-variant exclusion into a named local boolean `const showCompletionOverlay = isCompleted && variant !== 'progress'  // progress variant uses inline 'Completed · N lessons' line in body` with the WHY comment, or (b) make CompletionOverlay accept a `placement` and let progress opt out by not rendering it at all."
+    },
+    {
+      "id": "M4",
+      "severity": "low",
+      "confidence": 0.70,
+      "category": "naming",
+      "title": "courseCardShell.tsx filename is camelCase while every sibling component file is PascalCase",
+      "file": "/Volumes/SSD/Dev/Apps/Knowlune/.worktrees/dev-server/src/app/components/figma/courseCardShell.tsx",
+      "lines": "1",
+      "evidence": "All ~30 sibling files in src/app/components/figma/ use PascalCase (CourseCard.tsx, ImportedCourseCard.tsx, ProgressRing.tsx, MomentumBadge.tsx, etc.). The new file uses camelCase. This is the established convention for component files in this directory; the lowercase name will look like a utility module to future readers and breaks the alphabetic grouping.",
+      "recommendation": "Rename to `CourseCardShell.tsx` (or `CourseCardPrimitives.tsx` since it exports multiple components). The plan calling these 'internal helpers' doesn't justify breaking the file-naming convention — they're still React components."
+    },
+    {
+      "id": "M5",
+      "severity": "low",
+      "confidence": 0.75,
+      "category": "dead-code",
+      "title": "Stale 'E1B-S04 AC2+AC5' / 'E43-S05' comments dropped, but ImportedCourseCard still has dead-comment debris",
+      "file": "/Volumes/SSD/Dev/Apps/Knowlune/.worktrees/dev-server/src/app/components/figma/ImportedCourseCard.tsx",
+      "lines": "287-288, 530, 532",
+      "evidence": "Comment `// width/height attrs prevent the browser from using intrinsic video dimensions before layout. // This was the root cause of the pixelated/cropped preview on non-16:9 source videos.` is duplicated verbatim in CourseCard.tsx (lines 42-43) and ImportedCourseCard.tsx (lines 287-288). Comment `{/* "Imported DATE" moved to info popover — frees body for stats row */}` (line 530) and `{/* Import date moved here from body — frees a body line for the stats row */}` (line 532 of diff) are commit-message-style historical notes, not invariants — they decay quickly.",
+      "recommendation": "(a) Move the video width/height rationale into a code comment on a shared `<InlineVideoPreview>` helper or, since the CSS is identical, extract that 18-line video element into the shell. (b) Strip 'moved here from body' migration comments — once merged, the historical motion has no value to a future reader; the popover content is self-evident."
+    },
+    {
+      "id": "M6",
+      "severity": "low",
+      "confidence": 0.65,
+      "category": "naming",
+      "title": "renderThumbnailContent / renderThumbnail naming pair is confusing",
+      "file": "/Volumes/SSD/Dev/Apps/Knowlune/.worktrees/dev-server/src/app/components/figma/CourseCard.tsx",
+      "lines": "401, 494",
+      "evidence": "Two functions sit side-by-side: `renderThumbnailContent()` returns the cover image, and `renderThumbnail()` wraps it in <CardCover> plus overlays. The names don't telegraph the layered relationship; reading top-to-bottom you see Content first without context for what it's content of. Compounds with `renderThumbnailOverlays()` and `renderInfoButton()` defined hundreds of lines earlier.",
+      "recommendation": "Rename to `renderCoverImage()` (the inner picture/img) and keep `renderThumbnail()` as the composition. Or inline `renderThumbnailContent` since it's only called from one place — extracting it didn't actually reduce duplication, just split one function in two."
+    },
+    {
+      "id": "M7",
+      "severity": "low",
+      "confidence": 0.70,
+      "category": "coupling",
+      "title": "ImportedCourseCard's <CardCover> contains 240 lines of children (dropdown, popover, camera button, status menu) — semantic coupling",
+      "file": "/Volumes/SSD/Dev/Apps/Knowlune/.worktrees/dev-server/src/app/components/figma/ImportedCourseCard.tsx",
+      "lines": "266-506",
+      "evidence": "The CardCover wraps not only the image/overlay primitives but also a full DropdownMenu (status), a Popover (info), an AlertDialog trigger flow, and a Camera button. The shell's name suggests a thin presentation primitive but in practice it's a parent for ~240 lines of complex stateful UI. This puts inversely-related concerns (status mutation, delete confirmation) inside a 'cover' container, making the article's structure hard to scan.",
+      "recommendation": "Consider extracting top-right status menu and bottom-right info popover into `<CardStatusMenu>` and `<CardInfoPopover>` siblings rendered inside CardCover, or move them outside CardCover and absolutely-position relative to the article. The current structure is technically correct but the 240-line CardCover body buries the simple 'show image + overlays' purpose."
+    }
+  ],
+  "residual_risks": [
+    "PlayOverlay is used by exactly one component (ImportedCourseCard). Per the 'multiple implementors' rule it sits on the threshold of premature extraction, but the extraction earns its keep by giving the touch-device opacity rule (`[@media(hover:none)]:opacity-100`) a tested home. Acceptable for now; revisit if no second consumer appears within 2 sprints.",
+    "CompletionOverlay (full-cover green check) is rendered by both cards but the conditions differ subtly (`isCompleted && variant !== 'progress'` vs `completionPercent === 100`). A future bug where 'completed' diverges between the two cards is likely.",
+    "The diff comment 'Labeled body progress bar retained for MyClass — carries textual percentage' (CourseCard.tsx around line 530 of diff) is the only signal explaining why progress variant has BOTH CoverProgressBar and an inner Progress. Removing one without re-reading that comment will regress the percentage label."
+  ],
+  "testing_gaps": [
+    "courseCardShell.test.tsx covers progress clamping but does not assert that CardCover passes through both `aspectClass` and `heightClass` simultaneously — the unused prop is also untested.",
+    "No test asserts that CompletionOverlay is suppressed for progress variant in CourseCard (the `variant !== 'progress'` invariant lives only at one call site).",
+    "PlayOverlay's `[@media(hover:none)]:opacity-100` touch-device behavior is not asserted — the unit test only covers the show=true/false branches and click propagation."
+  ]
+}

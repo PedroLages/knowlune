@@ -33,7 +33,7 @@ export function TagBadgeList({ tags, onRemove, maxVisible, className }: TagBadge
                 e.stopPropagation()
                 onRemove(tag)
               }}
-              className="ml-1 rounded-full hover:bg-muted-foreground/20 p-0.5 -mr-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
+              className="ml-1 rounded-full hover:bg-muted-foreground/20 p-0.5 -mr-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-1"
             >
               <X className="size-3" />
             </button>

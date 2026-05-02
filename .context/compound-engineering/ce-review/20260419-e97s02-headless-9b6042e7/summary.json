@@ -1,0 +1,179 @@
+{
+  "run_id": "20260419-e97s02-headless-9b6042e7",
+  "mode": "headless",
+  "scope": {
+    "base": "8444ec8dfbb08ef1f20c91c8bd197858f85ec976",
+    "branch": "feature/e97-s02-sync-settings-panel",
+    "files_changed": 13,
+    "lines_added": 1072,
+    "lines_deleted": 16
+  },
+  "plan": {
+    "path": "docs/plans/2026-04-19-023-feat-e97-s02-sync-settings-panel-plan.md",
+    "source": "explicit",
+    "requirements": ["R1", "R2", "R3", "R4", "R5", "R6"]
+  },
+  "intent": "E97-S02: Add a Sync section to Settings — auto-sync toggle, manual Sync Now, status readout, and destructive Clear-and-Re-sync escape hatch. Persists autoSyncEnabled to localStorage; gates useSyncLifecycle on the preference.",
+  "reviewers": ["correctness", "testing", "maintainability", "project-standards", "agent-native", "learnings", "security", "reliability", "api-contract", "kieran-typescript", "adversarial", "previous-comments"],
+  "applied_fixes": [],
+  "findings": [
+    {
+      "id": "F1",
+      "severity": "P2",
+      "autofix_class": "gated_auto",
+      "owner": "downstream-resolver",
+      "requires_verification": true,
+      "confidence": 0.82,
+      "pre_existing": false,
+      "reviewer": ["correctness", "reliability"],
+      "file": "src/app/components/settings/sections/SyncSection.tsx",
+      "line": 194,
+      "title": "handleSyncNow stamps setStatus('syncing')/markSyncComplete() outside syncEngine, creating a status race with useSyncLifecycle",
+      "why_it_matters": "SyncSection manually calls useSyncStatusStore.getState().setStatus('syncing') and markSyncComplete() around its fullSync() call. useSyncLifecycle and other callers also drive this store. If a periodic 30s nudge, an online reconnection fullSync, or the E97-S01 header Retry button fires while Sync Now is in flight, the two sources will stamp overlapping status transitions (e.g. one succeeds and clears status while the other is still awaiting fullSync, or lastError from another path gets wiped mid-flight). The header's handleRetry explicitly guards against this with a `if (current === 'syncing') return` check; Sync Now does not.",
+      "evidence": [
+        "SyncSection.tsx:194-200 — setStatus('syncing'); await syncEngine.fullSync(); markSyncComplete()",
+        "SyncStatusIndicator.tsx:147-149 — race guard: `if (current === 'syncing') return`",
+        "useSyncLifecycle.ts:237-253 — handleOnline also calls setStatus('syncing') + fullSync + markSyncComplete"
+      ],
+      "suggested_fix": "Mirror SyncStatusIndicator.handleRetry's race guard: early-return if useSyncStatusStore.getState().status === 'syncing'. Also consider letting syncEngine.fullSync internally own the status transitions to centralize the invariant."
+    },
+    {
+      "id": "F2",
+      "severity": "P2",
+      "autofix_class": "manual",
+      "owner": "downstream-resolver",
+      "requires_verification": true,
+      "confidence": 0.78,
+      "pre_existing": false,
+      "reviewer": ["correctness"],
+      "file": "src/app/hooks/useSyncLifecycle.ts",
+      "line": 303,
+      "title": "settingsUpdated handler calls syncEngine.start(userId) without triggering an immediate fullSync when auto-sync is re-enabled",
+      "why_it_matters": "When the user toggles auto-sync from off → on, handleSettingsUpdate calls syncEngine.start(userId). syncEngine.start() is intended to initialize the engine; the initial fullSync was previously performed in the mount effect and is gated behind `autoSyncEnabledRef.current`. If the hook mounted with autoSyncEnabled=false, no initial fullSync ran. Re-enabling only calls start(), and unless start() internally triggers a fullSync, the user sees no download until the next 30s interval tick or reconnection event. The SyncSection handleToggle has the same gap — it calls start() but does not run a manual fullSync, so enabling auto-sync does not feel immediate to the user.",
+      "evidence": [
+        "useSyncLifecycle.ts:303-320 — handleSettingsUpdate calls syncEngine.start(userId) only",
+        "useSyncLifecycle.ts:186-199 — initial fullSync is gated by autoSyncEnabledRef.current at mount time",
+        "SyncSection.tsx:172-178 — handleToggle also calls syncEngine.start() without a fullSync"
+      ],
+      "suggested_fix": "After calling syncEngine.start(userId) in the enable path, trigger a fullSync() (or ensure start() internally fullSyncs on first start). Surface through the existing setStatus('syncing') / markSyncComplete path, respecting the F1 race guard."
+    },
+    {
+      "id": "F3",
+      "severity": "P2",
+      "autofix_class": "manual",
+      "owner": "downstream-resolver",
+      "requires_verification": true,
+      "confidence": 0.80,
+      "pre_existing": false,
+      "reviewer": ["testing"],
+      "file": "tests/e2e/story-97-02-sync-settings.spec.ts",
+      "line": 54,
+      "title": "E2E spec omits AC3 (Sync Now happy path) and AC4 (destructive confirm) coverage promised in the plan",
+      "why_it_matters": "The plan's Unit 7 enumerates seven E2E scenarios (visibility, toggle persistence, Sync Now success + error, destructive cancel + confirm, offline guard). The spec ships 5 tests and only exercises the CANCEL path of the destructive flow; the CONFIRM path (which wipes Dexie + calls resetLocalData + fires toast) is explicitly absent. Sync Now happy path / error path are also missing. This leaves R3 and the most sensitive half of R4 (the destructive behavior that matters, not the cancel) without E2E coverage.",
+      "evidence": [
+        "docs/plans/2026-04-19-023-feat-e97-s02-sync-settings-panel-plan.md:395-402 — scenarios list includes Sync Now success/error + destructive confirm",
+        "tests/e2e/story-97-02-sync-settings.spec.ts:195-216 — only cancel path covered",
+        "No spec.ts entry for the Sync Now happy or error path"
+      ],
+      "suggested_fix": "Add two specs: (1) Sync Now happy path with mocked fullSync success → assert lastSyncAt updates + pendingCount drops + toast.success; (2) destructive confirm path — seed Dexie, click Clear & Re-sync, assert rows cleared and toast fires. Optionally a third for the Sync Now error path."
+    },
+    {
+      "id": "F4",
+      "severity": "P3",
+      "autofix_class": "manual",
+      "owner": "downstream-resolver",
+      "requires_verification": false,
+      "confidence": 0.72,
+      "pre_existing": false,
+      "reviewer": ["testing", "maintainability"],
+      "file": "src/app/components/settings/sections/SyncSection.tsx",
+      "line": 89,
+      "title": "No unit test file for SyncSection component — plan Unit 5 prescribed one at src/app/components/settings/__tests__/SyncSection.test.tsx",
+      "why_it_matters": "The plan Unit 5 explicitly lists `Create: src/app/components/settings/__tests__/SyncSection.test.tsx` with 10 test scenarios (auth gate, toggle persistence, sync now spinner, never-synced placeholder, error rejection, resetLocalData invocation, etc.). No such file exists in the diff. The E2E spec covers gross behavior but not the per-branch error handling (classifyError toast surface, status='error' path, resetLocalData rejection) — those live in the component's callbacks and are unit-test shaped.",
+      "evidence": [
+        "Plan Unit 5 test scenarios — src/app/components/settings/__tests__/SyncSection.test.tsx",
+        "git diff --name-only shows no SyncSection.test.tsx file"
+      ],
+      "suggested_fix": "Create the component test file with at minimum: auth gate returns null, toggle dispatches settingsUpdated, Sync Now error path calls toastError, resetLocalData rejection closes dialog + toasts error."
+    },
+    {
+      "id": "F5",
+      "severity": "P3",
+      "autofix_class": "gated_auto",
+      "owner": "downstream-resolver",
+      "requires_verification": false,
+      "confidence": 0.75,
+      "pre_existing": false,
+      "reviewer": ["maintainability", "reliability"],
+      "file": "src/app/components/settings/sections/SyncSection.tsx",
+      "line": 149,
+      "title": "refreshPendingCount useEffect has empty dep array but reads store via getState — stale on remount only",
+      "why_it_matters": "The mount-time refreshPendingCount call is fine, but it's the only source of a fresh pendingCount read inside SyncSection; subsequent drift is picked up only via lifecycle's 30s interval (which no longer runs when auto-sync is disabled). If the user pauses auto-sync, opens the Sync panel, and creates a new bookmark/note from another tab, the pending count will be stale until remount. A cheap fix is to call refreshPendingCount in the same effect keyed on `lastSyncAt` (or on a visibilitychange listener).",
+      "evidence": [
+        "SyncSection.tsx:149-151 — single refresh on mount",
+        "useSyncLifecycle.ts:205-219 — periodic refreshPendingCount is gated on autoSyncEnabledRef"
+      ],
+      "suggested_fix": "Call refreshPendingCount inside the lastSyncAt-keyed effect (already recomputes totalItems there), or on visibilitychange/focus when the panel is visible."
+    },
+    {
+      "id": "F6",
+      "severity": "P3",
+      "autofix_class": "advisory",
+      "owner": "human",
+      "requires_verification": false,
+      "confidence": 0.68,
+      "pre_existing": false,
+      "reviewer": ["maintainability"],
+      "file": "src/app/components/settings/sections/SyncSection.tsx",
+      "line": 61,
+      "title": "Dexie `db as unknown as Record<string, ...>` duck-type appears twice — extract helper",
+      "why_it_matters": "The same `dbAny = db as unknown as Record<string, { ... } | undefined>` pattern is repeated in SyncSection.computeTotalSyncedItems and in resetLocalData.ts. It's small duplication now but both copies silently swallow typos in dexieTable names. A shared `getDexieTable(db, name): { clear, count, ... } | undefined` helper would centralize the safety check and make future registry changes a single-file edit.",
+      "evidence": [
+        "SyncSection.tsx:61-64",
+        "resetLocalData.ts:51-57"
+      ],
+      "suggested_fix": "Export a typed helper from tableRegistry.ts (or a new tableAccess.ts) that returns the Dexie table by registry name with the same guard, and use it from both call sites."
+    },
+    {
+      "id": "F7",
+      "severity": "P3",
+      "autofix_class": "advisory",
+      "owner": "human",
+      "requires_verification": false,
+      "confidence": 0.65,
+      "pre_existing": false,
+      "reviewer": ["testing"],
+      "file": "tests/e2e/story-97-02-sync-settings.spec.ts",
+      "line": 113,
+      "title": "Offline-guard test redefines navigator.onLine on a page whose property may already be mocked by a prior test — restoration is best-effort",
+      "why_it_matters": "The spec overrides `window.navigator.onLine` via Object.defineProperty with `configurable: true`, then 'restores' it at test end by re-defining it to return true. Playwright isolates contexts per test, so this restoration is mostly cosmetic — but if a future test in the same file wraps further behavior around navigator.onLine and relies on the native implementation, the defineProperty shim persists for the remainder of that test's page lifetime. Consider using `context.setOffline(true/false)` from Playwright's API instead — it's the supported mechanism and triggers `online`/`offline` events natively.",
+      "evidence": [
+        "tests/e2e/story-97-02-sync-settings.spec.ts:113-130 — Object.defineProperty(window.navigator, 'onLine', ...)"
+      ],
+      "suggested_fix": "Replace the navigator.onLine override with `await context.setOffline(true)` / `await context.setOffline(false)` in beforeEach/afterEach or per-test."
+    }
+  ],
+  "residual_risks": [
+    "Mid-flight upload lock during resetLocalData cannot be canceled — the user may wait briefly for navigator.locks to release",
+    "Soft re-render after reset depends on every registered storeRefresh callback actually reloading; tables with per-id loaders (audioClips, bookHighlights) are no-ops and will appear stale until navigation",
+    "autoSyncEnabled is localStorage-only — a user who disables sync on one device then signs in on a second device will still auto-sync there (documented as intentional)"
+  ],
+  "testing_gaps": [
+    "No SyncSection component unit test file (plan Unit 5)",
+    "No useSyncLifecycle test for the new autoSyncEnabled gating (plan Unit 4)",
+    "No E2E for Sync Now happy path (AC3) or destructive confirm path (AC4)"
+  ],
+  "learnings": [
+    "Pattern extension opportunity: reference_sync_engine_api.md should be updated to note that resetLocalData is now the canonical escape hatch, distinct from clearSyncState (which preserves user data)."
+  ],
+  "agent_native_gaps": [],
+  "requirements_completeness": {
+    "R1_auto_sync_toggle": "met",
+    "R2_status_readout": "met",
+    "R3_sync_now": "met-partially (no E2E)",
+    "R4_destructive_reset": "met-partially (no E2E confirm path)",
+    "R5_auth_gating": "met",
+    "R6_preference_persistence": "met"
+  },
+  "verdict": "Ready with fixes"
+}

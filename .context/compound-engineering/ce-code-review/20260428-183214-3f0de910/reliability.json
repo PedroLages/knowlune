@@ -1,0 +1,64 @@
+{
+  "reviewer": "reliability",
+  "findings": [
+    {
+      "id": "REL-01",
+      "severity": "P2",
+      "title": "AbortError swallowed — user cancellation silently falls back instead of aborting",
+      "description": "The catch block at line 59 catches all error types unconditionally, including AbortError. If an upstream caller cancels an in-flight embedding request (e.g. via an AbortController tied to route navigation), the catch fires and launches a full db.notes.toArray() scan instead of propagating the cancellation. This causes unnecessary IndexedDB work after the user has left the feature and confuses abort-aware callers who expect a clean teardown.",
+      "file": "src/lib/noteQA.ts",
+      "lines": [59, 62],
+      "evidence": [
+        "catch (error) { ... return retrieveRelevantNotesByText(cleanQuery) } — no error-type guard before falling back",
+        "retrieveRelevantNotes() does not accept an AbortSignal parameter, so callers cannot thread cancellation through to the embedding call"
+      ],
+      "recommendation": "Check error type before falling back: if (error instanceof DOMException && error.name === 'AbortError') throw error; — then fall back only for non-abort failures.",
+      "autofix_class": "manual",
+      "owner": "review-fixer",
+      "confidence": 75,
+      "pre_existing": false
+    },
+    {
+      "id": "REL-02",
+      "severity": "P2",
+      "title": "No timeout on generateEmbeddings — embedding worker hang blocks indefinitely",
+      "description": "await generateEmbeddings([cleanQuery]) at line 57 has no timeout wrapper. The fallback only activates on a thrown error, not on a stall. If the embedding worker deadlocks (e.g. WASM thread starvation, unresolved promise in the coordinator), retrieveRelevantNotes hangs indefinitely, leaving the caller waiting with no escape path short of a page reload.",
+      "file": "src/lib/noteQA.ts",
+      "lines": [56, 58],
+      "evidence": [
+        "await generateEmbeddings([cleanQuery]) — no Promise.race() with a timeout or AbortSignal timeout",
+        "The try/catch only fires on rejection; a promise that never settles is invisible to it"
+      ],
+      "recommendation": "Wrap the call with a race: const embeddings = await Promise.race([generateEmbeddings([cleanQuery]), rejectAfter(5000, 'Embedding timeout')]). The rejectAfter helper throws, which the existing catch block then catches and routes to the text fallback.",
+      "autofix_class": "manual",
+      "owner": "review-fixer",
+      "confidence": 75,
+      "pre_existing": false
+    },
+    {
+      "id": "REL-03",
+      "severity": "P3",
+      "title": "console.warn for user-visible quality degradation is invisible in production",
+      "description": "Using console.warn when semantic search fails means the degradation (semantically ranked results → BM25 token matching) is invisible to any production monitoring or error tracking. The embedding worker failure is user-impacting — answers will be qualitatively worse — but there is no telemetry signal to alert on or dashboard to track.",
+      "file": "src/lib/noteQA.ts",
+      "lines": [60],
+      "evidence": [
+        "console.warn('[noteQA] Semantic retrieval failed; falling back to text search:', error) — warn level, no structured event emitted"
+      ],
+      "recommendation": "Emit a structured error event (e.g. via your existing analytics/telemetry hook, or at minimum console.error) so the fallback rate is observable. Optionally surface a subtle UI indicator (e.g. 'Results based on keyword search') so the user understands result quality may differ.",
+      "autofix_class": "advisory",
+      "owner": "human",
+      "confidence": 100,
+      "pre_existing": false
+    }
+  ],
+  "residual_risks": [
+    "If retrieveRelevantNotesByText itself throws (db.notes.toArray() IndexedDB failure), the error propagates uncaught through retrieveRelevantNotes — this is consistent with the function's documented @throws contract and is acceptable, but callers should be verified to handle it.",
+    "The text-search similarity score (0–1.25, boosted by phrase match) is not normalised to the same scale as semantic similarity (0–1, threshold 0.5). Callers or downstream consumers that compare or threshold the returned similarity values will get inconsistent behaviour depending on which path ran."
+  ],
+  "testing_gaps": [
+    "No test verifies that an AbortError from generateEmbeddings is re-thrown rather than swallowed by the fallback.",
+    "No test covers the retrieveRelevantNotesByText path triggered by embedding failure (the fallback is new but has no dedicated test).",
+    "No test asserts that a hanging generateEmbeddings call eventually resolves or rejects within a bounded time."
+  ]
+}

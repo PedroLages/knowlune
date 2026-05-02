@@ -29,6 +29,8 @@ import { Badge } from '@/app/components/ui/badge'
 import { Progress } from '@/app/components/ui/progress'
 import { ScrollArea } from '@/app/components/ui/scroll-area'
 import { Skeleton } from '@/app/components/ui/skeleton'
+import { Checkbox } from '@/app/components/ui/checkbox'
+import type { UnembeddableReason } from '@/data/types'
 import {
   Youtube,
   ChevronRight,
@@ -290,10 +292,8 @@ export function YouTubeImportDialog({ open, onOpenChange }: YouTubeImportDialogP
       if (fetchAbortRef.current) return
 
       if (result.ok) {
-        store.updateVideoMetadata(id, {
-          metadata: result.data,
-          status: 'loaded',
-        })
+        // Classify embeddability (Data API status OR oEmbed probe fallback).
+        await store.applyLoadedMetadata(id, result.data)
       } else if (result.code === 'NOT_FOUND') {
         store.updateVideoMetadata(id, {
           status: 'unavailable',
@@ -495,6 +495,7 @@ export function YouTubeImportDialog({ open, onOpenChange }: YouTubeImportDialogP
                     key={video.videoId}
                     video={video}
                     onRemove={() => store.removeVideo(video.videoId)}
+                    onSaveAsLinkOnly={value => store.setSaveAsLinkOnly(video.videoId, value)}
                   />
                 ))}
               </div>
@@ -829,9 +830,36 @@ function VideoRowSkeleton() {
   )
 }
 
+/** Copy for each non-embeddable reason shown in the wizard preview row. */
+function unembeddableLabel(reason: UnembeddableReason | undefined): string {
+  switch (reason) {
+    case 'embedding-disabled':
+      return 'Embedding disabled by owner'
+    case 'deleted-or-private':
+      return 'Video unavailable'
+    case 'private':
+      return 'Private video'
+    case 'deleted':
+      return 'Video deleted'
+    case 'region-restricted':
+      return 'May be region-restricted'
+    default:
+      return "Can't embed this video"
+  }
+}
+
 /** Single video preview row with metadata */
-function VideoPreviewRow({ video, onRemove }: { video: YouTubeImportVideo; onRemove: () => void }) {
+function VideoPreviewRow({
+  video,
+  onRemove,
+  onSaveAsLinkOnly,
+}: {
+  video: YouTubeImportVideo
+  onRemove: () => void
+  onSaveAsLinkOnly: (value: boolean) => void
+}) {
   const isUnavailable = video.status === 'unavailable'
+  const isUnembeddable = video.status === 'unembeddable'
   const isLoading = video.status === 'loading' || video.status === 'pending'
 
   if (isLoading) {
@@ -842,12 +870,14 @@ function VideoPreviewRow({ video, onRemove }: { video: YouTubeImportVideo; onRem
     <div
       className={`group flex items-center gap-3 rounded-xl p-2 transition-colors hover:bg-accent ${
         isUnavailable ? 'opacity-50' : ''
-      }`}
+      } ${isUnembeddable ? 'bg-warning/10' : ''}`}
       role="listitem"
       data-testid={`video-row-${video.videoId}`}
       aria-label={
         video.metadata?.title
-          ? `${video.metadata.title}${isUnavailable ? ' (unavailable)' : ''}`
+          ? `${video.metadata.title}${isUnavailable ? ' (unavailable)' : ''}${
+              isUnembeddable ? ` (${unembeddableLabel(video.unembeddableReason)})` : ''
+            }`
           : video.videoId
       }
     >
@@ -887,6 +917,29 @@ function VideoPreviewRow({ video, onRemove }: { video: YouTubeImportVideo; onRem
         )}
         {video.status === 'error' && video.error && (
           <p className="text-xs text-destructive truncate">{video.error}</p>
+        )}
+        {isUnembeddable && (
+          <div
+            className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1"
+            data-testid={`unembeddable-row-${video.videoId}`}
+          >
+            <span className="inline-flex items-center gap-1 text-xs text-warning">
+              <AlertTriangle className="size-3.5" aria-hidden="true" />
+              {unembeddableLabel(video.unembeddableReason)}
+            </span>
+            <label
+              className="inline-flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer"
+              htmlFor={`save-link-only-${video.videoId}`}
+            >
+              <Checkbox
+                id={`save-link-only-${video.videoId}`}
+                checked={video.saveAsLinkOnly === true}
+                onCheckedChange={checked => onSaveAsLinkOnly(checked === true)}
+                data-testid={`save-link-only-${video.videoId}`}
+              />
+              Save as link only
+            </label>
+          </div>
         )}
       </div>
 

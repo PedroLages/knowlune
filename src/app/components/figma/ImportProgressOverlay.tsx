@@ -180,7 +180,10 @@ export function ImportProgressOverlay() {
 
   return (
     <div
-      className="fixed bottom-4 right-4 z-50 w-96 sm:w-[28rem]"
+      // WCAG 2.4.11 (E66-S03): on mobile, sit above the fixed BottomNav
+      // (h-14 + safe-area inset) so the overlay does not obscure focus or
+      // overlap nav controls. Non-modal live region — does not trap focus.
+      className="fixed right-4 z-50 w-96 sm:w-[28rem] bottom-[calc(72px+env(safe-area-inset-bottom))] lg:bottom-4"
       role="status"
       aria-live="polite"
       aria-label="Import progress"

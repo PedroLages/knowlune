@@ -1,0 +1,86 @@
+{
+  "reviewer": "testing",
+  "findings": [
+    {
+      "id": "T-001",
+      "severity": "HIGH",
+      "category": "missing-test-behavioral-change",
+      "title": "Play overlay click does not assert navigation — only status change is verified",
+      "file": "src/app/components/figma/__tests__/ImportedCourseCard.test.tsx",
+      "lines": "362-368",
+      "evidence": "The new test 'calls updateCourseStatus with active when Play overlay is clicked' asserts mockUpdateCourseStatus.toHaveBeenCalledWith('c1','active') but never asserts that navigate('/courses/c1/overview') is called. The plan (line 307) explicitly requires: 'clicking the Play overlay calls updateCourseStatus(courseId, \"active\") AND navigates ... Assert both via mocked store and useNavigate.' useNavigate is not mocked anywhere in this test file. Half the new behavior is unverified — a regression that drops the navigate() call would pass the suite.",
+      "confidence": 0.95
+    },
+    {
+      "id": "T-002",
+      "severity": "MEDIUM",
+      "category": "missing-test-error-path",
+      "title": "Plan-required error-path test ('updateCourseStatus throws → toast.error, no nav') was not added",
+      "file": "src/app/components/figma/__tests__/ImportedCourseCard.test.tsx",
+      "lines": "335-382",
+      "evidence": "Plan line 315 enumerates an error path scenario, but no test in the new 'Play overlay (Start Studying)' describe block exercises it. Inspecting ImportedCourseCard.tsx lines 244-248, handleStartStudying does NOT wrap handleStatusChange in try/catch and does not await it, so navigation always fires regardless of store outcome. Either the implementation needs a guard and the test, or the plan scenario should be marked deferred — currently the gap is silent.",
+      "confidence": 0.9
+    },
+    {
+      "id": "T-003",
+      "severity": "MEDIUM",
+      "category": "missing-test-edge-case",
+      "title": "Several plan-enumerated scenarios for ImportedCourseCard not implemented",
+      "file": "src/app/components/figma/__tests__/ImportedCourseCard.test.tsx",
+      "evidence": "Missing vs plan lines 305-318: (a) readOnly hides camera overlay AND edit/delete menu items while preserving status dropdown — only Play hide is tested (line 370); (b) cover-edge progress bar width matches completionPercent; (c) status==='completed' renders CompletionOverlay AND hides Play (mutual exclusion test); (d) keyboard focus/Enter activates the same handler (only data-testid/aria-label asserted, no userEvent.keyboard or focus-visible assertion); (e) hover triggers preview + Play coexist; (f) 44×44 hit target / prefers-reduced-motion on overlay. Most are real gaps, not nice-to-haves — completion-vs-Play mutual exclusion is a UX correctness invariant.",
+      "confidence": 0.85
+    },
+    {
+      "id": "T-004",
+      "severity": "MEDIUM",
+      "category": "missing-test-coverage-cardcourse",
+      "title": "CourseCard refactor (Unit 3) has zero added unit OR E2E test coverage in this diff",
+      "file": "src/app/components/figma/CourseCard.tsx",
+      "evidence": "Plan line 238 acknowledges no unit test exists and defers to E2E (Unit 6). The diff (/tmp/ce-review-diff.patch, 1502 lines) modifies CourseCard.tsx substantially — variant-specific cover-edge progress bar (library/overview/progress), CompletionOverlay, retained Resume/Review buttons on progress variant, removed hover:scale on outer wrapper. No new E2E spec file was added in this diff, and no new component test was added. The behavioral changes (per-variant progress bar placement, completion overlay, hover lift relocation) ship without test verification — a regression in any variant would only be caught by manual review.",
+      "confidence": 0.85
+    },
+    {
+      "id": "T-005",
+      "severity": "MEDIUM",
+      "category": "missing-test-touch-device",
+      "title": "Touch-device overlay visibility (@media(hover:none)) untested",
+      "file": "src/app/components/figma/__tests__/courseCardShell.test.tsx",
+      "evidence": "Plan line 204 explicitly calls out touch behavior: 'On touch: always visible (see Deferred Implementation question for exact strategy).' The PlayOverlay tests assert opacity transitions implicitly through render checks but never verify the [@media(hover:none)] always-visible class is present. On mobile, if the overlay only shows on hover, the Start Studying CTA is unreachable — a real-world UX failure with no regression guard.",
+      "confidence": 0.8
+    },
+    {
+      "id": "T-006",
+      "severity": "MEDIUM",
+      "category": "brittle-implementation-coupled",
+      "title": "Tests assert raw Tailwind class names — brittle to design-token churn",
+      "file": "src/app/components/figma/__tests__/ImportedCourseCard.test.tsx",
+      "lines": "144-175, 211-231",
+      "evidence": "Multiple tests assert against literal Tailwind utility strings: '.rounded-2xl', '.group-hover\\\\:-translate-y-2', '.group-hover\\\\:text-brand', '.motion-reduce\\\\:group-hover\\\\:-translate-y-0', '.bg-brand-soft', '.bg-success\\\\/10'. Renaming a token (e.g., bg-brand-soft → bg-brand-tint) or swapping translate-y-2 for translate-y-1.5 breaks tests without changing user-visible behavior. The same brittleness exists in courseCardShell.test.tsx ('.bg-brand', '.rounded-2xl', '.overflow-hidden'). Prefer behavior assertions (visual snapshot, computed style, role/state) over class introspection.",
+      "confidence": 0.9
+    },
+    {
+      "id": "T-007",
+      "severity": "LOW",
+      "category": "test-quality",
+      "title": "courseCardShell missing CardCover hover-lift class assertion / heightClass passthrough",
+      "file": "src/app/components/figma/__tests__/courseCardShell.test.tsx",
+      "lines": "98-126",
+      "evidence": "Plan Unit 2 (line 217) calls for an integration test 'CardCover + PlayOverlay together — hovering the card surfaces Play; the card's own click handler still fires when clicking outside the Play button.' The shell suite has no CardCover+PlayOverlay integration test and no assertion that heightClass is forwarded to the rendered element. The PlayOverlay stop-propagation test (line 51-64) does cover the click-outside contract in isolation, partially compensating, but the integration scenario is not exercised.",
+      "confidence": 0.7
+    }
+  ],
+  "residual_risks": [
+    "ImportedCourseCard.handleStartStudying does not handle the case where updateCourseStatus fails (no try/catch, not awaited) — navigation always fires. This is both a code bug AND a test gap; the plan called out the error path but neither the implementation nor the test was added.",
+    "All three CourseCard variants ship without unit or new E2E coverage. If the existing E2E suite does not exercise the progress variant's Resume/Review buttons or the per-variant cover-edge progress bar visibility, a regression could ship undetected."
+  ],
+  "testing_gaps": [
+    "Navigate-on-Play-click assertion missing (T-001)",
+    "Error-path test missing (T-002)",
+    "Completion+Play mutual exclusion not tested (T-003)",
+    "Keyboard activation of Play overlay not exercised (T-003)",
+    "ReadOnly impact on camera overlay + edit/delete not asserted (T-003)",
+    "Cover-edge progress bar width/visibility not tested for either component (T-003, T-004)",
+    "CourseCard variant behaviors entirely untested in this diff (T-004)",
+    "Touch device (hover:none) always-visible behavior not tested (T-005)"
+  ]
+}

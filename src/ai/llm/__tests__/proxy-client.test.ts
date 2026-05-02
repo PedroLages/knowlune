@@ -9,6 +9,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { ProxyLLMClient } from '../proxy-client'
 import { LLMError } from '../types'
 import type { LLMMessage } from '../types'
+import { apiUrl } from '@/lib/apiBaseUrl'
 
 // Mock useAuthStore to provide access_token for Authorization header
 vi.mock('@/stores/useAuthStore', () => ({
@@ -110,7 +111,7 @@ describe('ProxyLLMClient', () => {
       await collectChunks(client.streamCompletion(defaultMessages))
 
       expect(global.fetch).toHaveBeenCalledWith(
-        '/api/ai/stream',
+        apiUrl('ai-stream'),
         expect.objectContaining({
           method: 'POST',
           headers: {

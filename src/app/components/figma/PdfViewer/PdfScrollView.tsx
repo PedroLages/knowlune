@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { Document, Page } from 'react-pdf'
 import { scrollIntoViewReducedMotion } from '@/lib/scroll'
-import type { PDFDocumentProxy } from 'pdfjs-dist'
+import type { DocumentProps } from 'react-pdf'
+type PDFDocumentProxy = Parameters<NonNullable<DocumentProps['onLoadSuccess']>>[0]
 import 'react-pdf/dist/Page/TextLayer.css'
 import 'react-pdf/dist/Page/AnnotationLayer.css'
 import '@/lib/pdfWorker'

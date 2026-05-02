@@ -1,11 +1,63 @@
-import React, { Suspense } from 'react'
-import { createBrowserRouter, Navigate, useParams, useLocation } from 'react-router'
+import React, { Suspense, useEffect } from 'react'
+import {
+  createBrowserRouter,
+  Navigate,
+  Outlet,
+  useNavigate,
+  useParams,
+  useLocation,
+} from 'react-router'
 import { Layout } from './components/Layout'
 import { DelayedFallback } from './components/DelayedFallback'
 import { Skeleton } from './components/ui/skeleton'
 import { RouteErrorBoundary } from './components/RouteErrorBoundary'
 import { PremiumFeaturePage, PREMIUM_FEATURES } from './components/PremiumFeaturePage'
 import { MessageSquare, Sparkles, Brain, RotateCcw, Shuffle, BarChart3, Layers } from 'lucide-react'
+import { useAuthStore, selectAuthState } from '@/stores/useAuthStore'
+import { useBookStore } from '@/stores/useBookStore'
+import { Landing } from '@/app/pages/Landing'
+
+const RETURN_TO_KEY = 'knowlune-auth-return-to'
+
+/** Detects OAuth/magic-link callbacks in the URL hash (before Supabase processes them). */
+function isOAuthInFlight(): boolean {
+  const hash = window.location.hash
+  return hash.includes('access_token') || hash.includes('code=') || hash.includes('type=recovery')
+}
+
+function SplashLoader() {
+  return (
+    <DelayedFallback>
+      <div role="status" aria-busy="true" aria-label="Loading" className="space-y-6 p-6">
+        <Skeleton className="h-8 w-48" />
+        <Skeleton className="h-10 w-full" />
+      </div>
+    </DelayedFallback>
+  )
+}
+
+/**
+ * Three-state route guard: redirects anonymous users to /, shows splash while
+ * loading or during OAuth callbacks, passes through authenticated and guest users.
+ */
+function RouteGuard() {
+  const authState = useAuthStore(selectAuthState)
+  const navigate = useNavigate()
+
+  useEffect(() => {
+    if (authState === 'authenticated') {
+      const raw = sessionStorage.getItem(RETURN_TO_KEY)
+      sessionStorage.removeItem(RETURN_TO_KEY)
+      if (raw && raw.startsWith('/') && !raw.startsWith('//')) {
+        navigate(raw, { replace: true })
+      }
+    }
+  }, [authState, navigate])
+
+  if (authState === 'loading' || isOAuthInFlight()) return <SplashLoader />
+  if (authState === 'anonymous') return <Landing />
+  return <Outlet />
+}
 
 // Lazy-loaded page components (code-splitting)
 // Named exports need .then(m => ({ default: m.ExportName }))
@@ -63,7 +115,6 @@ const QuizResults = React.lazy(() =>
 const QuizReview = React.lazy(() =>
   import('./pages/QuizReview').then(m => ({ default: m.QuizReview }))
 )
-const Login = React.lazy(() => import('./pages/Login').then(m => ({ default: m.Login })))
 const Notifications = React.lazy(() =>
   import('./pages/Notifications').then(m => ({ default: m.Notifications }))
 )
@@ -72,6 +123,12 @@ const CollectionDetail = React.lazy(() =>
   import('./pages/CollectionDetail').then(m => ({ default: m.CollectionDetail }))
 )
 const NotFound = React.lazy(() => import('./pages/NotFound').then(m => ({ default: m.NotFound })))
+const AuthCallback = React.lazy(() =>
+  import('./pages/AuthCallback').then(m => ({ default: m.AuthCallback }))
+)
+const GuestEntryPage = React.lazy(() =>
+  import('./pages/GuestEntry').then(m => ({ default: m.GuestEntry }))
+)
 const LegalLayout = React.lazy(() =>
   import('./pages/legal/LegalLayout').then(m => ({ default: m.LegalLayout }))
 )
@@ -87,7 +144,7 @@ const MyClass = React.lazy(() => import('./pages/MyClass'))
 const Reports = React.lazy(() => import('./pages/Reports'))
 const Settings = React.lazy(() => import('./pages/Settings'))
 
-// E84: EPUB Reader — code-split, outside Layout (full-viewport)
+// E84: Book reader — code-split; mounted via BookReaderRoute inside Layout
 const BookReader = React.lazy(() =>
   import('./pages/BookReader').then(m => ({ default: m.BookReader }))
 )
@@ -168,6 +225,15 @@ function ImportedLessonRedirect() {
   return <Navigate to={`/courses/${courseId}/lessons/${lessonId}${search}${hash}`} replace />
 }
 
+function CourseFlashcardsRoute() {
+  const { courseId } = useParams<{ courseId: string }>()
+  return (
+    <PremiumFeaturePage {...PREMIUM_FEATURES.flashcards} icon={Layers}>
+      <Flashcards courseId={courseId} />
+    </PremiumFeaturePage>
+  )
+}
+
 // TODO: Remove redirect after Epic E91+ — old youtube-courses paths
 /** Redirects /youtube-courses/:courseId → /courses/:courseId */
 function YouTubeCourseRedirect() {
@@ -184,9 +250,33 @@ function YouTubeLessonRedirect() {
   return <Navigate to={`/courses/${courseId}/lessons/${lessonId}${search}${hash}`} replace />
 }
 
+/**
+ * Full-screen book reader with Library mounted underneath for audiobooks so
+ * swipe-down reveals real Library UI (not an empty viewport).
+ */
+function BookReaderRoute() {
+  const { bookId } = useParams<{ bookId: string }>()
+  const book = useBookStore(s => s.books.find(b => b.id === bookId))
+  const showLibraryUnderlay = !book || book.format === 'audiobook'
+
+  return (
+    <>
+      {showLibraryUnderlay && (
+        <Suspense fallback={null}>
+          <LibraryPage />
+        </Suspense>
+      )}
+      <BookReader />
+    </>
+  )
+}
+
 export const router = createBrowserRouter([
-  // Public legal pages — outside Layout (no auth required)
+  // Public legal pages — outside Layout and RouteGuard (no auth required).
+  // Explicit top-level paths avoid pathless-parent ambiguity where the route tree
+  // could match `/` first and render <Landing /> instead of the legal page.
   {
+    path: '/privacy',
     element: (
       <Suspense fallback={<PageLoader />}>
         <LegalLayout />
@@ -194,15 +284,25 @@ export const router = createBrowserRouter([
     ),
     children: [
       {
-        path: 'privacy',
+        index: true,
         element: (
           <SuspensePage>
             <PrivacyPolicy />
           </SuspensePage>
         ),
       },
+    ],
+  },
+  {
+    path: '/terms',
+    element: (
+      <Suspense fallback={<PageLoader />}>
+        <LegalLayout />
+      </Suspense>
+    ),
+    children: [
       {
-        path: 'terms',
+        index: true,
         element: (
           <SuspensePage>
             <TermsOfService />
@@ -211,21 +311,41 @@ export const router = createBrowserRouter([
       },
     ],
   },
-  // Standalone login page — outside Layout (no sidebar/header)
+  // Legacy path compatibility — older links used /legal/privacy, /legal/terms
+  { path: '/legal/privacy', element: <Navigate to="/privacy" replace /> },
+  { path: '/legal/terms', element: <Navigate to="/terms" replace /> },
+  // OAuth / magic-link return URL — outside RouteGuard so Supabase PKCE code exchange
+  // happens before the guard would redirect an anonymous user to /.
   {
-    path: 'login',
+    path: '/auth/callback',
     element: (
       <SuspensePage>
-        <Login />
+        <AuthCallback />
       </SuspensePage>
     ),
   },
-  // E84: EPUB Reader — full-viewport, outside Layout (no sidebar/header)
+  // /login → / redirect (closed app: Landing at / handles all auth entry points)
   {
-    path: 'library/:bookId/read',
+    path: 'login',
+    element: <Navigate to="/" replace />,
+  },
+  // /guest — sets sessionStorage guest flags and redirects into the app
+  {
+    path: 'guest',
+    Component: function GuestEntryRedirect() {
+      sessionStorage.setItem('knowlune-guest', 'true')
+      if (!sessionStorage.getItem('knowlune-guest-id')) {
+        sessionStorage.setItem('knowlune-guest-id', crypto.randomUUID())
+      }
+      return <Navigate to="/courses" replace />
+    },
+  },
+  // /try — guest vs account comparison page; landing CTA before committing to /guest
+  {
+    path: 'try',
     element: (
       <SuspensePage>
-        <BookReader />
+        <GuestEntryPage />
       </SuspensePage>
     ),
   },
@@ -246,364 +366,390 @@ export const router = createBrowserRouter([
   },
   {
     path: '/',
-    Component: Layout,
+    element: <RouteGuard />,
     children: [
       {
-        index: true,
-        element: (
-          <SuspensePage>
-            <Overview />
-          </SuspensePage>
-        ),
-      },
-      {
-        path: 'my-class',
-        element: (
-          <SuspensePage>
-            <MyClass />
-          </SuspensePage>
-        ),
-      },
-      {
-        path: 'courses',
-        element: (
-          <SuspensePage>
-            <Courses />
-          </SuspensePage>
-        ),
-      },
-      // Dead regular course routes removed (E89-S01)
-      // Quiz sub-routes kept alive — re-wired in E89-S09
-      {
-        path: 'courses/:courseId/lessons/:lessonId/quiz',
-        element: (
-          <SuspensePage>
-            <Quiz />
-          </SuspensePage>
-        ),
-      },
-      {
-        path: 'courses/:courseId/lessons/:lessonId/quiz/results',
-        element: (
-          <SuspensePage>
-            <QuizResults />
-          </SuspensePage>
-        ),
-      },
-      {
-        path: 'courses/:courseId/lessons/:lessonId/quiz/review/:attemptId',
-        element: (
-          <SuspensePage>
-            <QuizReview />
-          </SuspensePage>
-        ),
-      },
-      // Course overview page (E91-S10)
-      {
-        path: 'courses/:courseId/overview',
-        element: (
-          <SuspensePage>
-            <CourseOverview />
-          </SuspensePage>
-        ),
-      },
-      // Course detail — rich overview with cinematic hero (replaces flat UnifiedCourseDetail)
-      {
-        path: 'courses/:courseId',
-        element: (
-          <SuspensePage>
-            <CourseOverview />
-          </SuspensePage>
-        ),
-      },
-      {
-        path: 'courses/:courseId/lessons/:lessonId',
-        element: (
-          <SuspensePage>
-            <UnifiedLessonPlayer />
-          </SuspensePage>
-        ),
-      },
-      // TODO: Remove redirect after Epic E91+ — old imported-courses paths
-      {
-        path: 'imported-courses/:courseId',
-        element: <ImportedCourseRedirect />,
-      },
-      // TODO: Remove redirect after Epic E91+ — old imported-courses lesson paths
-      {
-        path: 'imported-courses/:courseId/lessons/:lessonId',
-        element: <ImportedLessonRedirect />,
-      },
-      // TODO: Remove redirect after Epic E91+ — old youtube-courses paths
-      {
-        path: 'youtube-courses/:courseId',
-        element: <YouTubeCourseRedirect />,
-      },
-      // TODO: Remove redirect after Epic E91+ — old youtube-courses lesson paths
-      {
-        path: 'youtube-courses/:courseId/lessons/:lessonId',
-        element: <YouTubeLessonRedirect />,
-      },
-      {
-        path: 'library',
-        element: (
-          <SuspensePage>
-            <LibraryPage />
-          </SuspensePage>
-        ),
-      },
-      {
-        path: 'library/collection/:collectionId',
-        element: (
-          <SuspensePage>
-            <CollectionDetail />
-          </SuspensePage>
-        ),
-      },
-      {
-        path: 'library/:bookId',
-        element: (
-          <SuspensePage>
-            <LibraryPage />
-          </SuspensePage>
-        ),
-      },
-      {
-        path: 'library/:bookId/annotations',
-        element: (
-          <SuspensePage>
-            <AnnotationSummary />
-          </SuspensePage>
-        ),
-      },
-      {
-        path: 'notes',
-        element: (
-          <SuspensePage>
-            <Notes />
-          </SuspensePage>
-        ),
-      },
-      {
-        path: 'notes/chat',
-        element: (
-          <SuspensePage>
-            <PremiumFeaturePage {...PREMIUM_FEATURES.chatQA} icon={MessageSquare}>
-              <ChatQA />
-            </PremiumFeaturePage>
-          </SuspensePage>
-        ),
-      },
-      {
-        path: 'authors',
-        element: (
-          <SuspensePage>
-            <Authors />
-          </SuspensePage>
-        ),
-      },
-      {
-        path: 'authors/:authorId',
-        element: (
-          <SuspensePage>
-            <AuthorProfile />
-          </SuspensePage>
-        ),
-      },
-      // Legacy redirects: /instructors → /authors (E23-S03 rename)
-      {
-        path: 'instructors',
-        element: <Navigate to="/authors" replace />,
-      },
-      {
-        path: 'instructors/:authorId',
-        element: <InstructorProfileRedirect />,
-      },
-      {
-        path: 'challenges',
-        element: (
-          <SuspensePage>
-            <Challenges />
-          </SuspensePage>
-        ),
-      },
-      {
-        path: 'session-history',
-        element: (
-          <SuspensePage>
-            <SessionHistory />
-          </SuspensePage>
-        ),
-      },
-      {
-        path: 'reports',
-        element: (
-          <SuspensePage>
-            <Reports />
-          </SuspensePage>
-        ),
-      },
-      // Legacy path-based redirects → query-param tabs (E27-S02)
-      {
-        path: 'reports/study',
-        element: <Navigate to="/reports?tab=study" replace />,
-      },
-      {
-        path: 'reports/quizzes',
-        element: <Navigate to="/reports?tab=quizzes" replace />,
-      },
-      {
-        path: 'reports/ai',
-        element: <Navigate to="/reports?tab=ai" replace />,
-      },
-      {
-        path: 'notifications',
-        element: (
-          <SuspensePage>
-            <Notifications />
-          </SuspensePage>
-        ),
-      },
-      {
-        path: 'settings',
-        element: (
-          <SuspensePage>
-            <Settings />
-          </SuspensePage>
-        ),
-      },
-      {
-        path: 'learning-paths',
-        element: (
-          <SuspensePage>
-            <LearningPaths />
-          </SuspensePage>
-        ),
-      },
-      {
-        path: 'learning-paths/:pathId',
-        element: (
-          <SuspensePage>
-            <LearningPathDetail />
-          </SuspensePage>
-        ),
-      },
-      {
-        path: 'ai-learning-path',
-        element: (
-          <SuspensePage>
-            <PremiumFeaturePage {...PREMIUM_FEATURES.aiLearningPath} icon={Sparkles}>
-              <AILearningPath />
-            </PremiumFeaturePage>
-          </SuspensePage>
-        ),
-      },
-      {
-        path: 'knowledge-map',
-        element: (
-          <SuspensePage>
-            <KnowledgeMap />
-          </SuspensePage>
-        ),
-      },
-      {
-        path: 'tutor',
-        element: (
-          <SuspensePage>
-            <Tutor />
-          </SuspensePage>
-        ),
-      },
-      {
-        path: 'knowledge-gaps',
-        element: (
-          <SuspensePage>
-            <PremiumFeaturePage {...PREMIUM_FEATURES.knowledgeGaps} icon={Brain}>
-              <KnowledgeGaps />
-            </PremiumFeaturePage>
-          </SuspensePage>
-        ),
-      },
-      {
-        path: 'review',
-        element: (
-          <SuspensePage>
-            <PremiumFeaturePage {...PREMIUM_FEATURES.reviewQueue} icon={RotateCcw}>
-              <ReviewQueue />
-            </PremiumFeaturePage>
-          </SuspensePage>
-        ),
-      },
-      {
-        path: 'review/interleaved',
-        element: (
-          <SuspensePage>
-            <PremiumFeaturePage {...PREMIUM_FEATURES.interleavedReview} icon={Shuffle}>
-              <InterleavedReview />
-            </PremiumFeaturePage>
-          </SuspensePage>
-        ),
-      },
-      {
-        path: 'retention',
-        element: (
-          <SuspensePage>
-            <PremiumFeaturePage {...PREMIUM_FEATURES.retentionDashboard} icon={BarChart3}>
-              <RetentionDashboard />
-            </PremiumFeaturePage>
-          </SuspensePage>
-        ),
-      },
-      {
-        path: 'flashcards',
-        element: (
-          <SuspensePage>
-            <PremiumFeaturePage {...PREMIUM_FEATURES.flashcards} icon={Layers}>
-              <Flashcards />
-            </PremiumFeaturePage>
-          </SuspensePage>
-        ),
-      },
-      {
-        path: 'search-annotations',
-        element: (
-          <SuspensePage>
-            <SearchAnnotations />
-          </SuspensePage>
-        ),
-      },
-      {
-        path: 'vocabulary',
-        element: (
-          <SuspensePage>
-            <Vocabulary />
-          </SuspensePage>
-        ),
-      },
-      {
-        path: 'webllm-test',
-        element: (
-          <SuspensePage>
-            <WebLLMTest />
-          </SuspensePage>
-        ),
-      },
-      // Temporarily commented out - WebLLMPerformanceTest causing Mobile Safari failures
-      // {
-      //   path: 'webllm-perf',
-      //   element: (
-      //     <SuspensePage>
-      //       <WebLLMPerformanceTest />
-      //     </SuspensePage>
-      //   ),
-      // },
-      {
-        path: '*',
-        element: (
-          <SuspensePage>
-            <NotFound />
-          </SuspensePage>
-        ),
+        Component: Layout,
+        children: [
+          {
+            index: true,
+            element: <Navigate to="/courses" replace />,
+          },
+          {
+            path: 'overview',
+            element: (
+              <SuspensePage>
+                <Overview />
+              </SuspensePage>
+            ),
+          },
+          {
+            path: 'my-class',
+            element: (
+              <SuspensePage>
+                <MyClass />
+              </SuspensePage>
+            ),
+          },
+          {
+            path: 'courses',
+            element: (
+              <SuspensePage>
+                <Courses />
+              </SuspensePage>
+            ),
+          },
+          // Dead regular course routes removed (E89-S01)
+          // Quiz sub-routes kept alive — re-wired in E89-S09
+          {
+            path: 'courses/:courseId/lessons/:lessonId/quiz',
+            element: (
+              <SuspensePage>
+                <Quiz />
+              </SuspensePage>
+            ),
+          },
+          {
+            path: 'courses/:courseId/lessons/:lessonId/quiz/results',
+            element: (
+              <SuspensePage>
+                <QuizResults />
+              </SuspensePage>
+            ),
+          },
+          {
+            path: 'courses/:courseId/lessons/:lessonId/quiz/review/:attemptId',
+            element: (
+              <SuspensePage>
+                <QuizReview />
+              </SuspensePage>
+            ),
+          },
+          // Course overview page (E91-S10)
+          {
+            path: 'courses/:courseId/overview',
+            element: (
+              <SuspensePage>
+                <CourseOverview />
+              </SuspensePage>
+            ),
+          },
+          {
+            path: 'courses/:courseId/flashcards',
+            element: (
+              <SuspensePage>
+                <CourseFlashcardsRoute />
+              </SuspensePage>
+            ),
+          },
+          // Course detail — rich overview with cinematic hero (replaces flat UnifiedCourseDetail)
+          {
+            path: 'courses/:courseId',
+            element: (
+              <SuspensePage>
+                <CourseOverview />
+              </SuspensePage>
+            ),
+          },
+          {
+            path: 'courses/:courseId/lessons/:lessonId',
+            element: (
+              <SuspensePage>
+                <UnifiedLessonPlayer />
+              </SuspensePage>
+            ),
+          },
+          // TODO: Remove redirect after Epic E91+ — old imported-courses paths
+          {
+            path: 'imported-courses/:courseId',
+            element: <ImportedCourseRedirect />,
+          },
+          // TODO: Remove redirect after Epic E91+ — old imported-courses lesson paths
+          {
+            path: 'imported-courses/:courseId/lessons/:lessonId',
+            element: <ImportedLessonRedirect />,
+          },
+          // TODO: Remove redirect after Epic E91+ — old youtube-courses paths
+          {
+            path: 'youtube-courses/:courseId',
+            element: <YouTubeCourseRedirect />,
+          },
+          // TODO: Remove redirect after Epic E91+ — old youtube-courses lesson paths
+          {
+            path: 'youtube-courses/:courseId/lessons/:lessonId',
+            element: <YouTubeLessonRedirect />,
+          },
+          {
+            path: 'library',
+            element: (
+              <SuspensePage>
+                <LibraryPage />
+              </SuspensePage>
+            ),
+          },
+          {
+            path: 'library/collection/:collectionId',
+            element: (
+              <SuspensePage>
+                <CollectionDetail />
+              </SuspensePage>
+            ),
+          },
+          {
+            path: 'library/:bookId',
+            element: (
+              <SuspensePage>
+                <LibraryPage />
+              </SuspensePage>
+            ),
+          },
+          {
+            path: 'library/:bookId/annotations',
+            element: (
+              <SuspensePage>
+                <AnnotationSummary />
+              </SuspensePage>
+            ),
+          },
+          // E84: Book reader — inside Layout so Library can sit under the fixed player (audiobook swipe-down)
+          {
+            path: 'library/:bookId/read',
+            element: (
+              <SuspensePage>
+                <BookReaderRoute />
+              </SuspensePage>
+            ),
+          },
+          {
+            path: 'notes',
+            element: (
+              <SuspensePage>
+                <Notes />
+              </SuspensePage>
+            ),
+          },
+          {
+            path: 'notes/chat',
+            element: (
+              <SuspensePage>
+                <PremiumFeaturePage {...PREMIUM_FEATURES.chatQA} icon={MessageSquare}>
+                  <ChatQA />
+                </PremiumFeaturePage>
+              </SuspensePage>
+            ),
+          },
+          {
+            path: 'authors',
+            element: (
+              <SuspensePage>
+                <Authors />
+              </SuspensePage>
+            ),
+          },
+          {
+            path: 'authors/:authorId',
+            element: (
+              <SuspensePage>
+                <AuthorProfile />
+              </SuspensePage>
+            ),
+          },
+          // Legacy redirects: /instructors → /authors (E23-S03 rename)
+          {
+            path: 'instructors',
+            element: <Navigate to="/authors" replace />,
+          },
+          {
+            path: 'instructors/:authorId',
+            element: <InstructorProfileRedirect />,
+          },
+          {
+            path: 'challenges',
+            element: (
+              <SuspensePage>
+                <Challenges />
+              </SuspensePage>
+            ),
+          },
+          {
+            path: 'session-history',
+            element: (
+              <SuspensePage>
+                <SessionHistory />
+              </SuspensePage>
+            ),
+          },
+          {
+            path: 'reports',
+            element: (
+              <SuspensePage>
+                <Reports />
+              </SuspensePage>
+            ),
+          },
+          // Legacy path-based redirects → query-param tabs (E27-S02)
+          {
+            path: 'reports/study',
+            element: <Navigate to="/reports?tab=study" replace />,
+          },
+          {
+            path: 'reports/quizzes',
+            element: <Navigate to="/reports?tab=quizzes" replace />,
+          },
+          {
+            path: 'reports/ai',
+            element: <Navigate to="/reports?tab=ai" replace />,
+          },
+          {
+            path: 'notifications',
+            element: (
+              <SuspensePage>
+                <Notifications />
+              </SuspensePage>
+            ),
+          },
+          {
+            path: 'settings',
+            element: (
+              <SuspensePage>
+                <Settings />
+              </SuspensePage>
+            ),
+          },
+          {
+            path: 'learning-paths',
+            element: (
+              <SuspensePage>
+                <LearningPaths />
+              </SuspensePage>
+            ),
+          },
+          {
+            path: 'learning-paths/:pathId',
+            element: (
+              <SuspensePage>
+                <LearningPathDetail />
+              </SuspensePage>
+            ),
+          },
+          {
+            path: 'ai-learning-path',
+            element: (
+              <SuspensePage>
+                <PremiumFeaturePage {...PREMIUM_FEATURES.aiLearningPath} icon={Sparkles}>
+                  <AILearningPath />
+                </PremiumFeaturePage>
+              </SuspensePage>
+            ),
+          },
+          {
+            path: 'knowledge-map',
+            element: (
+              <SuspensePage>
+                <KnowledgeMap />
+              </SuspensePage>
+            ),
+          },
+          {
+            path: 'tutor',
+            element: (
+              <SuspensePage>
+                <Tutor />
+              </SuspensePage>
+            ),
+          },
+          {
+            path: 'knowledge-gaps',
+            element: (
+              <SuspensePage>
+                <PremiumFeaturePage {...PREMIUM_FEATURES.knowledgeGaps} icon={Brain}>
+                  <KnowledgeGaps />
+                </PremiumFeaturePage>
+              </SuspensePage>
+            ),
+          },
+          {
+            path: 'review',
+            element: (
+              <SuspensePage>
+                <PremiumFeaturePage {...PREMIUM_FEATURES.reviewQueue} icon={RotateCcw}>
+                  <ReviewQueue />
+                </PremiumFeaturePage>
+              </SuspensePage>
+            ),
+          },
+          {
+            path: 'review/interleaved',
+            element: (
+              <SuspensePage>
+                <PremiumFeaturePage {...PREMIUM_FEATURES.interleavedReview} icon={Shuffle}>
+                  <InterleavedReview />
+                </PremiumFeaturePage>
+              </SuspensePage>
+            ),
+          },
+          {
+            path: 'retention',
+            element: (
+              <SuspensePage>
+                <PremiumFeaturePage {...PREMIUM_FEATURES.retentionDashboard} icon={BarChart3}>
+                  <RetentionDashboard />
+                </PremiumFeaturePage>
+              </SuspensePage>
+            ),
+          },
+          {
+            path: 'flashcards',
+            element: (
+              <SuspensePage>
+                <PremiumFeaturePage {...PREMIUM_FEATURES.flashcards} icon={Layers}>
+                  <Flashcards />
+                </PremiumFeaturePage>
+              </SuspensePage>
+            ),
+          },
+          {
+            path: 'search-annotations',
+            element: (
+              <SuspensePage>
+                <SearchAnnotations />
+              </SuspensePage>
+            ),
+          },
+          {
+            path: 'vocabulary',
+            element: (
+              <SuspensePage>
+                <Vocabulary />
+              </SuspensePage>
+            ),
+          },
+          {
+            path: 'webllm-test',
+            element: (
+              <SuspensePage>
+                <WebLLMTest />
+              </SuspensePage>
+            ),
+          },
+          // Temporarily commented out - WebLLMPerformanceTest causing Mobile Safari failures
+          // {
+          //   path: 'webllm-perf',
+          //   element: (
+          //     <SuspensePage>
+          //       <WebLLMPerformanceTest />
+          //     </SuspensePage>
+          //   ),
+          // },
+          {
+            path: '*',
+            element: (
+              <SuspensePage>
+                <NotFound />
+              </SuspensePage>
+            ),
+          },
+        ],
       },
     ],
   },

@@ -130,10 +130,7 @@ describe('ITunesSearchService.searchITunes', () => {
   // Error paths ─────────────────────────────────────────────────────
 
   it('returns empty array when fetch rejects (network error)', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn().mockRejectedValue(new Error('Network failure'))
-    )
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('Network failure')))
 
     const results = await searchITunes({ title: 'Some Book', author: 'Someone' })
 

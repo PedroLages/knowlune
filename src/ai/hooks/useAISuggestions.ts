@@ -14,6 +14,7 @@ import {
   isOllamaTaggingAvailable,
 } from '@/ai/courseTagger'
 import type { ScannedCourse } from '@/lib/courseImport'
+import { registerAIRequest, unregisterAIRequest } from '@/ai/lib/inFlightRegistry'
 
 /** State returned by the useAISuggestions hook */
 export interface AISuggestionsState {
@@ -63,9 +64,13 @@ export function useAISuggestions(scannedCourse: ScannedCourse | null): AISuggest
     }
 
     // Cancel any previous in-flight request
-    abortControllerRef.current?.abort()
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort()
+      unregisterAIRequest(abortControllerRef.current)
+    }
     const controller = new AbortController()
     abortControllerRef.current = controller
+    registerAIRequest(controller)
 
     let cancelled = false
     setIsLoading(true)
@@ -104,6 +109,7 @@ export function useAISuggestions(scannedCourse: ScannedCourse | null): AISuggest
     return () => {
       cancelled = true
       controller.abort()
+      unregisterAIRequest(controller)
     }
   }, [scannedCourse, isAvailable, reset])
 

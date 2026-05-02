@@ -87,6 +87,8 @@ interface KnowledgeMapState {
   error: string | null
   /** Timestamp of last computation */
   lastComputedAt: string | null
+  /** Most recent engagement timestamp across ALL session types (incl. book/audio) */
+  globalLastEngagement: string | null
 
   /** Compute/recompute all knowledge scores */
   computeScores: (now?: Date) => Promise<void>
@@ -120,6 +122,7 @@ export const useKnowledgeMapStore = create<KnowledgeMapState>((set, get) => ({
   isLoading: false,
   error: null,
   lastComputedAt: null,
+  globalLastEngagement: null,
 
   computeScores: async (now?: Date) => {
     const currentTime = now ?? new Date()
@@ -242,28 +245,40 @@ export const useKnowledgeMapStore = create<KnowledgeMapState>((set, get) => ({
       // 3d. Most recent engagement timestamps
       // Build: courseId → most recent ISO timestamp
       const lastEngagementByCourse = new Map<string, string>()
+      let globalLastEngagement: string | null = null
       for (const session of allSessions) {
         const existing = lastEngagementByCourse.get(session.courseId)
         const sessionTime = session.endTime ?? session.startTime
         if (!existing || sessionTime > existing) {
           lastEngagementByCourse.set(session.courseId, sessionTime)
         }
+        if (!globalLastEngagement || sessionTime > globalLastEngagement) {
+          globalLastEngagement = sessionTime
+        }
       }
       // Also consider quiz attempt timestamps
       for (const attempt of allAttempts) {
         const courseId = quizToCourseId.get(attempt.quizId)
-        if (!courseId) continue
-        const existing = lastEngagementByCourse.get(courseId)
-        if (!existing || attempt.completedAt > existing) {
-          lastEngagementByCourse.set(courseId, attempt.completedAt)
+        if (courseId) {
+          const existing = lastEngagementByCourse.get(courseId)
+          if (!existing || attempt.completedAt > existing) {
+            lastEngagementByCourse.set(courseId, attempt.completedAt)
+          }
+        }
+        if (!globalLastEngagement || attempt.completedAt > globalLastEngagement) {
+          globalLastEngagement = attempt.completedAt
         }
       }
       // Also consider flashcard last_review timestamps
       for (const card of allFlashcards) {
-        if (!card.courseId || !card.last_review) continue
-        const existing = lastEngagementByCourse.get(card.courseId)
-        if (!existing || card.last_review > existing) {
-          lastEngagementByCourse.set(card.courseId, card.last_review)
+        if (card.courseId && card.last_review) {
+          const existing = lastEngagementByCourse.get(card.courseId)
+          if (!existing || card.last_review > existing) {
+            lastEngagementByCourse.set(card.courseId, card.last_review)
+          }
+        }
+        if (card.last_review && (!globalLastEngagement || card.last_review > globalLastEngagement)) {
+          globalLastEngagement = card.last_review
         }
       }
 
@@ -410,13 +425,15 @@ export const useKnowledgeMapStore = create<KnowledgeMapState>((set, get) => ({
         suggestions,
         isLoading: false,
         lastComputedAt: currentTime.toISOString(),
+        globalLastEngagement,
       })
     } catch (error) {
       console.error('[KnowledgeMapStore] Failed to compute scores:', error)
-      set({
+      set(state => ({
         isLoading: false,
         error: error instanceof Error ? error.message : 'Failed to compute knowledge scores',
-      })
+        globalLastEngagement: state.globalLastEngagement,
+      }))
     }
   },
 

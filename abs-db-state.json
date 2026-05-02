@@ -1,0 +1,21 @@
+{
+  "audiobookshelfServers": [
+    {
+      "id": "f4999f2f-400b-4fc1-afb4-0c1cc484a34f",
+      "name": "Home ABS",
+      "url": "http://192.168.2.200:13378",
+      "apiKey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJrZXlJZCI6ImRjZmFjN2ZjLTM0M2YtNDJkNS1hZjk5LTE4OTlkNjE0MDhjZCIsIm5hbWUiOiJ0ZXN0aW5nIiwidHlwZSI6ImFwaSIsImlhdCI6MTc3NTkwODc3OX0.BkCcZBfyWXrqjcgixfgiyP_x97Lh-WVC9NW0O2KEYuA",
+      "libraryIds": [
+        "4f3e6660-61a5-469f-8f68-d730ffed2ead"
+      ],
+      "status": "auth-failed",
+      "lastSyncedAt": "2026-04-14T17:43:18.944Z",
+      "createdAt": "2026-04-06T21:24:52.314Z",
+      "updatedAt": "2026-04-24T01:21:19.712Z",
+      "userId": null
+    }
+  ],
+  "syncQueue": [],
+  "syncMetadata": [],
+  "booksCount": 239
+}

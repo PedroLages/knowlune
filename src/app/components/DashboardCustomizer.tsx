@@ -7,7 +7,7 @@
  * - Reset to default order
  * - Visual indicator of current arrangement
  */
-import { useCallback, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import {
   DndContext,
   DragOverlay,
@@ -29,6 +29,7 @@ import {
 import { CSS } from '@dnd-kit/utilities'
 import { GripVertical, Pin, PinOff, RotateCcw, Settings2, X } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
+import { MoveUpDownButtons } from '@/app/components/figma/MoveUpDownButtons'
 import { type DashboardSectionId, SECTION_LABELS } from '@/lib/dashboardOrder'
 import { cn } from '@/app/components/ui/utils'
 
@@ -50,11 +51,23 @@ function SortableSectionRow({
   isPinned,
   onPin,
   onUnpin,
+  index,
+  total,
+  onMoveUp,
+  onMoveDown,
+  registerMoveUpRef,
+  registerMoveDownRef,
 }: {
   sectionId: DashboardSectionId
   isPinned: boolean
   onPin: () => void
   onUnpin: () => void
+  index: number
+  total: number
+  onMoveUp: (index: number) => void
+  onMoveDown: (index: number) => void
+  registerMoveUpRef: (id: DashboardSectionId, el: HTMLButtonElement | null) => void
+  registerMoveDownRef: (id: DashboardSectionId, el: HTMLButtonElement | null) => void
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: sectionId,
@@ -86,6 +99,20 @@ function SortableSectionRow({
       </button>
 
       <span className="flex-1 text-sm font-medium">{SECTION_LABELS[sectionId]}</span>
+
+      {/* Single-pointer reorder alternative (WCAG 2.5.7) */}
+      <MoveUpDownButtons
+        index={index}
+        total={total}
+        itemLabel={SECTION_LABELS[sectionId]}
+        onMoveUp={() => onMoveUp(index)}
+        onMoveDown={() => onMoveDown(index)}
+        orientation="horizontal"
+        size="sm"
+        upRef={el => registerMoveUpRef(sectionId, el)}
+        downRef={el => registerMoveDownRef(sectionId, el)}
+        testIdPrefix={`section-row-${sectionId}-move`}
+      />
 
       {isPinned && (
         <span className="rounded-full bg-brand-soft px-2 py-0.5 text-xs font-medium text-brand-soft-foreground">
@@ -153,6 +180,42 @@ export function DashboardCustomizer({
     [sectionOrder, onReorder]
   )
 
+  // E66-S01: Move Up/Down focus refs and handlers (WCAG 2.5.7)
+  const moveUpRefs = useRef<Map<DashboardSectionId, HTMLButtonElement | null>>(new Map())
+  const moveDownRefs = useRef<Map<DashboardSectionId, HTMLButtonElement | null>>(new Map())
+  const registerMoveUpRef = useCallback(
+    (id: DashboardSectionId, el: HTMLButtonElement | null) => {
+      if (el) moveUpRefs.current.set(id, el)
+      else moveUpRefs.current.delete(id)
+    },
+    []
+  )
+  const registerMoveDownRef = useCallback(
+    (id: DashboardSectionId, el: HTMLButtonElement | null) => {
+      if (el) moveDownRefs.current.set(id, el)
+      else moveDownRefs.current.delete(id)
+    },
+    []
+  )
+  const handleMoveUp = useCallback(
+    (index: number) => {
+      if (index <= 0) return
+      const id = sectionOrder[index]
+      onReorder(arrayMove(sectionOrder, index, index - 1))
+      if (id) requestAnimationFrame(() => moveUpRefs.current.get(id)?.focus())
+    },
+    [sectionOrder, onReorder]
+  )
+  const handleMoveDown = useCallback(
+    (index: number) => {
+      if (index >= sectionOrder.length - 1) return
+      const id = sectionOrder[index]
+      onReorder(arrayMove(sectionOrder, index, index + 1))
+      if (id) requestAnimationFrame(() => moveDownRefs.current.get(id)?.focus())
+    },
+    [sectionOrder, onReorder]
+  )
+
   return (
     <div className="mb-6" data-testid="dashboard-customizer">
       {/* Toggle Button */}
@@ -213,13 +276,19 @@ export function DashboardCustomizer({
           >
             <SortableContext items={sectionOrder} strategy={verticalListSortingStrategy}>
               <div className="space-y-1.5" role="list" aria-label="Dashboard sections">
-                {sectionOrder.map(sectionId => (
+                {sectionOrder.map((sectionId, idx) => (
                   <div key={sectionId} role="listitem">
                     <SortableSectionRow
                       sectionId={sectionId}
                       isPinned={pinnedSections.has(sectionId)}
                       onPin={() => onPin(sectionId)}
                       onUnpin={() => onUnpin(sectionId)}
+                      index={idx}
+                      total={sectionOrder.length}
+                      onMoveUp={handleMoveUp}
+                      onMoveDown={handleMoveDown}
+                      registerMoveUpRef={registerMoveUpRef}
+                      registerMoveDownRef={registerMoveDownRef}
                     />
                   </div>
                 ))}

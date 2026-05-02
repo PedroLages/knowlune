@@ -41,7 +41,9 @@ function makeAudioBookmark(overrides?: Partial<AudioBookmark>): AudioBookmark {
   }
 }
 
-function makeAudioClip(overrides?: Partial<AudioClip>): Omit<AudioClip, 'id' | 'sortOrder' | 'createdAt'> {
+function makeAudioClip(
+  overrides?: Partial<AudioClip>
+): Omit<AudioClip, 'id' | 'sortOrder' | 'createdAt'> {
   return {
     bookId: TEST_BOOK_ID,
     chapterId: 'chapter-1',
@@ -146,7 +148,9 @@ describe('E93-S07 sync wiring — audioClips', () => {
 
   it('updateClipTitle authenticated → syncQueue has put entry; payload contains updated title', async () => {
     // Seed a clip
-    const clipId = await useAudioClipStore.getState().addClip(makeAudioClip({ title: 'Original Title' }))
+    const clipId = await useAudioClipStore
+      .getState()
+      .addClip(makeAudioClip({ title: 'Original Title' }))
 
     // Clear queue to isolate updateClipTitle entry
     await db.syncQueue.clear()

@@ -16,7 +16,7 @@
 
 import { toast } from 'sonner'
 
-import type { YouTubeVideoCache, Chapter } from '@/data/types'
+import type { YouTubeVideoCache, Chapter, UnembeddableReason } from '@/data/types'
 import { db } from '@/db/schema'
 import { getDecryptedYouTubeApiKey, getCacheTtlMs } from '@/lib/youtubeConfiguration'
 import { getYouTubeRateLimiter } from '@/lib/youtubeRateLimiter'
@@ -87,6 +87,15 @@ interface YouTubeApiVideoResource {
   }
   contentDetails: {
     duration: string // ISO 8601 duration (PT1H2M3S)
+  }
+  status?: {
+    embeddable: boolean
+    privacyStatus: string
+    uploadStatus: string
+    regionRestriction?: {
+      allowed?: string[]
+      blocked?: string[]
+    }
   }
 }
 
@@ -253,7 +262,7 @@ function toVideoCache(resource: YouTubeApiVideoResource): YouTubeVideoCache {
   const ttlMs = getCacheTtlMs()
   const expiresAt = new Date(Date.now() + ttlMs).toISOString()
 
-  return {
+  const base: YouTubeVideoCache = {
     videoId: resource.id,
     title: resource.snippet.title,
     description: resource.snippet.description,
@@ -266,6 +275,33 @@ function toVideoCache(resource: YouTubeApiVideoResource): YouTubeVideoCache {
     fetchedAt: now,
     expiresAt,
   }
+
+  // Forward-compat: if the API response omits `status` entirely, leave
+  // embeddable/unembeddableReason/privacyStatus undefined.
+  const status = resource.status
+  if (!status) return base
+
+  const unembeddableReason = deriveUnembeddableReason(status)
+  return {
+    ...base,
+    embeddable: status.embeddable,
+    unembeddableReason,
+    privacyStatus: status.privacyStatus,
+  }
+}
+
+/**
+ * Derive a single reason string from YouTube Data API `status` fields,
+ * following priority order: private > deleted > embedding-disabled > region-restricted.
+ */
+function deriveUnembeddableReason(
+  status: NonNullable<YouTubeApiVideoResource['status']>
+): UnembeddableReason | undefined {
+  if (status.privacyStatus === 'private') return 'private'
+  if (status.uploadStatus === 'deleted') return 'deleted'
+  if (status.embeddable === false) return 'embedding-disabled'
+  if (status.regionRestriction?.blocked?.length) return 'region-restricted'
+  return undefined
 }
 
 /**
@@ -347,7 +383,7 @@ export async function getVideoMetadata(
   }
 
   // Fetch from YouTube Data API v3
-  const url = `${API_BASE}/videos?part=snippet,contentDetails&id=${encodeURIComponent(videoId)}&key=${encodeURIComponent(apiKey)}`
+  const url = `${API_BASE}/videos?part=snippet,contentDetails,status&id=${encodeURIComponent(videoId)}&key=${encodeURIComponent(apiKey)}`
 
   try {
     const response = await apiFetch(url)
@@ -458,7 +494,7 @@ async function fetchVideoBatch(
 ): Promise<Map<string, YouTubeApiResult<YouTubeVideoCache>>> {
   const results = new Map<string, YouTubeApiResult<YouTubeVideoCache>>()
   const idsParam = videoIds.join(',')
-  const url = `${API_BASE}/videos?part=snippet,contentDetails&id=${encodeURIComponent(idsParam)}&key=${encodeURIComponent(apiKey)}`
+  const url = `${API_BASE}/videos?part=snippet,contentDetails,status&id=${encodeURIComponent(idsParam)}&key=${encodeURIComponent(apiKey)}`
 
   try {
     const response = await apiFetch(url)

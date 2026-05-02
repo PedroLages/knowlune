@@ -1,0 +1,52 @@
+{
+  "reviewer": "kieran-typescript",
+  "findings": [
+    {
+      "id": "KT-001",
+      "severity": "P2",
+      "title": "embeddings[0] unsound without length guard — noUncheckedIndexedAccess not enabled",
+      "description": "generateEmbeddings returns Promise<Float32Array[]>. The compiler (strict: true, no noUncheckedIndexedAccess) types embeddings[0] as Float32Array, but nothing enforces length >= 1. If the coordinator returns an empty array the assignment silently produces undefined, which bypasses the catch block and crashes at Array.from(queryEmbedding) on the downstream line — unhandled, since execution is past the try-catch. A one-line guard before the assignment closes the hole.",
+      "location": "src/lib/noteQA.ts:58",
+      "evidence": [
+        "generateEmbeddings signature: export async function generateEmbeddings(texts: string[]): Promise<Float32Array[]> — no lower-bound on return length (coordinator.ts:431)",
+        "Assignment: queryEmbedding = embeddings[0] — typed Float32Array but runtime value could be undefined",
+        "tsconfig.json has strict:true but no noUncheckedIndexedAccess, so compiler does not surface this hole",
+        "First consumer after the try-catch: vectorStore.search(Array.from(queryEmbedding), 5) — would throw TypeError on undefined"
+      ],
+      "suggestion": "Add a guard immediately after the await: if (embeddings.length === 0) throw new Error('generateEmbeddings returned no vectors'); queryEmbedding = embeddings[0]",
+      "autofix_class": "safe_auto",
+      "owner": "review-fixer",
+      "confidence": 75,
+      "pre_existing": false
+    }
+  ],
+  "residual_risks": [
+    {
+      "id": "KT-RR-001",
+      "description": "let queryEmbedding: Float32Array without initializer is safe here — TypeScript's definite-assignment analysis correctly identifies that the catch block always returns, so the variable is guaranteed assigned on every path that reaches the downstream code. No compiler suppression or workaround is needed.",
+      "verdict": "not a defect"
+    },
+    {
+      "id": "KT-RR-002",
+      "description": "note.courseId and note.videoId are both typed string (non-optional) in the Note interface, so joining them into searchableText cannot produce literal 'null' or 'undefined' strings. No risk.",
+      "verdict": "not a defect"
+    },
+    {
+      "id": "KT-RR-003",
+      "description": "retrieved.similarity is computed as number / number + number — fully typed as number throughout the map/filter/sort chain. No unsoundness.",
+      "verdict": "not a defect"
+    }
+  ],
+  "testing_gaps": [
+    {
+      "id": "KT-TG-001",
+      "description": "No test covering the path where generateEmbeddings resolves to an empty array. The fallback catch handles rejection, but a silent empty-array return would bypass it and crash downstream. A unit test mocking generateEmbeddings to return [] would have caught KT-001.",
+      "severity": "P2"
+    },
+    {
+      "id": "KT-TG-002",
+      "description": "retrieveRelevantNotesByText has no direct unit tests visible in the diff. The phraseBoost branch (queryTerms.length > 1 && substring match) and the zero-score filter path are untested paths worth covering given the fallback is now user-visible.",
+      "severity": "P3"
+    }
+  ]
+}

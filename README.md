@@ -244,11 +244,8 @@ make format
 ### Further Reading
 
 - [Testing Guide](TESTING.md) - Comprehensive guide to running and interpreting all test suites
-- [Docker Setup Guide](docs/docker/docker-setup-guide.md) - Running the app in Docker containers
-- [Docker Quickstart](docs/docker/quickstart.md) - Quick Docker setup instructions
 - [API Quickstart](docs/api/quickstart.md) - API documentation and testing
 - [GitHub Actions Documentation](.github/workflows/ci.yml)
-- [Docker Compose CI Configuration](docker-compose.ci.yml)
 - [Playwright Configuration](playwright.config.ts)
 - [ESLint Configuration](eslint.config.js)
 - [TypeScript Configuration](tsconfig.json)

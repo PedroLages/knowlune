@@ -184,9 +184,7 @@ export const useNoteStore = create<NoteState>((set, get) => ({
       })
       // Optimistic state update applied after successful persist
       set(state => ({
-        notes: state.notes.map(n =>
-          n.id === noteId ? { ...n, deleted: true, deletedAt } : n
-        ),
+        notes: state.notes.map(n => (n.id === noteId ? { ...n, deleted: true, deletedAt } : n)),
         error: null,
       }))
     } catch (error) {
@@ -205,7 +203,9 @@ export const useNoteStore = create<NoteState>((set, get) => ({
       })
       // Optimistic state update applied after successful persist
       set(state => ({
-        notes: state.notes.map(n => (n.id === noteId ? { ...n, deleted: false, deletedAt: undefined } : n)),
+        notes: state.notes.map(n =>
+          n.id === noteId ? { ...n, deleted: false, deletedAt: undefined } : n
+        ),
         error: null,
       }))
     } catch (error) {

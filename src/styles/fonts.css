@@ -1,7 +1,10 @@
 @import '@fontsource-variable/inter';
+@import '@fontsource-variable/literata';
 @import '@fontsource-variable/dm-sans';
 @import '@fontsource-variable/dm-sans/wght-italic.css';
 @import '@fontsource-variable/space-grotesk';
+@import '@fontsource/atkinson-hyperlegible';
+@import '@fontsource/atkinson-hyperlegible/700.css';
 
 /*
  * Dyslexia-Friendly font for reading mode (.reading-dyslexia class).

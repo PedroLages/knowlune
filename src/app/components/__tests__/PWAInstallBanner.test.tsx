@@ -7,15 +7,20 @@
  * - Dismissal persists in localStorage
  * - Banner does not show in standalone mode
  * - Clicking install triggers the deferred prompt
+ * - iOS instruction card shows on iPhone Safari after 10s delay
+ * - iOS card does not show on Android
+ * - iOS card does not show in standalone mode
+ * - iOS card dismissal persists in localStorage
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { render, screen, act } from '@testing-library/react'
+import { render, screen, act, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { PWAInstallBanner } from '../PWAInstallBanner'
 
-// Key used by the component to persist dismissal state
+// Keys used by the component to persist dismissal state
 const DISMISSED_KEY = 'pwa-install-dismissed'
+const IOS_DISMISSED_KEY = 'pwa-ios-install-instructions-dismissed'
 
 /**
  * Helper to fire a synthetic `beforeinstallprompt` event on the window.
@@ -34,6 +39,31 @@ function fireBeforeInstallPrompt() {
   return { promptMock, preventDefaultSpy }
 }
 
+/**
+ * Helper to mock navigator.userAgent for iOS Safari detection
+ */
+function mockUserAgent(ua: string) {
+  Object.defineProperty(navigator, 'userAgent', {
+    value: ua,
+    configurable: true,
+    writable: true,
+  })
+}
+
+function restoreUserAgent() {
+  Object.defineProperty(navigator, 'userAgent', {
+    value: window.navigator.userAgent,
+    configurable: true,
+    writable: true,
+  })
+}
+
+const IOS_SAFARI_UA =
+  'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1'
+
+const ANDROID_CHROME_UA =
+  'Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36'
+
 describe('PWAInstallBanner', () => {
   beforeEach(() => {
     localStorage.clear()
@@ -42,6 +72,7 @@ describe('PWAInstallBanner', () => {
 
   afterEach(() => {
     localStorage.clear()
+    restoreUserAgent()
   })
 
   it('does not render before beforeinstallprompt fires', () => {
@@ -186,5 +217,103 @@ describe('PWAInstallBanner', () => {
     unmount()
 
     expect(removeEventListenerSpy).toHaveBeenCalledWith('beforeinstallprompt', expect.any(Function))
+  })
+
+  describe('iOS install instructions card', () => {
+    beforeEach(() => {
+      vi.useFakeTimers()
+    })
+
+    afterEach(() => {
+      vi.useRealTimers()
+    })
+
+    it('shows iOS card on iPhone Safari after 10s delay', () => {
+      mockUserAgent(IOS_SAFARI_UA)
+
+      render(<PWAInstallBanner />)
+
+      // Should not show immediately
+      expect(screen.queryByText(/add to home screen/i)).not.toBeInTheDocument()
+
+      // Advance timer by 10 seconds
+      act(() => {
+        vi.advanceTimersByTime(10_000)
+      })
+
+      expect(screen.getByText(/add to home screen/i)).toBeInTheDocument()
+    })
+
+    it('does not show iOS card on Android Chrome', () => {
+      mockUserAgent(ANDROID_CHROME_UA)
+
+      render(<PWAInstallBanner />)
+
+      act(() => {
+        vi.advanceTimersByTime(10_000)
+      })
+
+      expect(screen.queryByText(/add to home screen/i)).not.toBeInTheDocument()
+    })
+
+    it('does not show iOS card in standalone mode', () => {
+      mockUserAgent(IOS_SAFARI_UA)
+
+      const originalMatchMedia = window.matchMedia
+      Object.defineProperty(window, 'matchMedia', {
+        writable: true,
+        value: (query: string) => ({
+          matches: query === '(display-mode: standalone)',
+          media: query,
+          onchange: null,
+          addListener: vi.fn(),
+          removeListener: vi.fn(),
+          addEventListener: vi.fn(),
+          removeEventListener: vi.fn(),
+          dispatchEvent: vi.fn(),
+        }),
+      })
+
+      render(<PWAInstallBanner />)
+
+      act(() => {
+        vi.advanceTimersByTime(10_000)
+      })
+
+      expect(screen.queryByText(/add to home screen/i)).not.toBeInTheDocument()
+
+      Object.defineProperty(window, 'matchMedia', { writable: true, value: originalMatchMedia })
+    })
+
+    it('dismissing iOS card writes to localStorage and hides the card', () => {
+      mockUserAgent(IOS_SAFARI_UA)
+
+      render(<PWAInstallBanner />)
+
+      act(() => {
+        vi.advanceTimersByTime(10_000)
+      })
+
+      const dismissButton = screen.getByRole('button', { name: /dismiss/i })
+      act(() => {
+        fireEvent.click(dismissButton)
+      })
+
+      expect(localStorage.getItem(IOS_DISMISSED_KEY)).toBe('true')
+      expect(screen.queryByText(/add to home screen/i)).not.toBeInTheDocument()
+    })
+
+    it('does not show iOS card if previously dismissed', () => {
+      mockUserAgent(IOS_SAFARI_UA)
+      localStorage.setItem(IOS_DISMISSED_KEY, 'true')
+
+      render(<PWAInstallBanner />)
+
+      act(() => {
+        vi.advanceTimersByTime(10_000)
+      })
+
+      expect(screen.queryByText(/add to home screen/i)).not.toBeInTheDocument()
+    })
   })
 })

@@ -10,6 +10,7 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from 'vitest'
 import { FIXED_DATE, FIXED_TIMESTAMP } from '../../../tests/utils/test-time'
+import { apiUrl } from '@/lib/apiBaseUrl'
 import type { ImportedCourse } from '@/data/types'
 
 // --- Mocks (before imports) ---
@@ -336,7 +337,7 @@ describe('autoAnalysis.ts', () => {
         setupProvider(provider)
         triggerAutoAnalysis(mockCourse)
         await vi.runAllTimersAsync()
-        expect(global.fetch).toHaveBeenCalledWith('/api/ai/generate', expect.any(Object))
+        expect(global.fetch).toHaveBeenCalledWith(apiUrl('ai-generate'), expect.any(Object))
       }
     })
 

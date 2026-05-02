@@ -1,5 +1,6 @@
 import { db } from '@/db'
 import { getAIConfiguration, getDecryptedApiKey } from '@/lib/aiConfiguration'
+import { apiUrl } from '@/lib/apiBaseUrl'
 import type { GapDetectionResult, GapItem, GapSeverity } from './types'
 import './types' // Import window type declaration
 
@@ -179,7 +180,7 @@ Output format:
 
 IMPORTANT: Return ONLY the JSON, no markdown, no extra text.`
 
-    const response = await fetch('/api/ai/generate', {
+    const response = await fetch(apiUrl('ai-generate'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

@@ -232,8 +232,7 @@ export class LocalCourseAdapter implements CourseAdapter {
         const file = await this.course.coverImageHandle.getFile()
         return URL.createObjectURL(file)
       } catch {
-        // silent-catch-ok — thumbnail is non-critical
-        return null
+        // silent-catch-ok — handle may be invalid on a different device; fall through to blob
       }
     }
 

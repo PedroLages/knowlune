@@ -1,0 +1,25 @@
+{
+  "reviewer": "kieran-typescript",
+  "findings": [
+    {
+      "title": "Type cast instead of discriminated union narrowing",
+      "severity": "P3",
+      "file": "supabase/functions/delete-account/index.ts",
+      "line": 168,
+      "why_it_matters": "The as-casts bypass TypeScript safety. SendEmailResult is a well-defined discriminated union and should be narrowed properly.",
+      "autofix_class": "safe_auto",
+      "owner": "review-fixer",
+      "requires_verification": false,
+      "confidence": 0.78,
+      "suggested_fix": "Check `'skipped' in result` and `'error' in result` for proper narrowing without type casts.",
+      "evidence": [
+        "Line 168: `!(result as { skipped?: boolean }).skipped`",
+        "Line 169: `(result as { error?: string }).error`",
+        "Same pattern repeated in retention-tick/index.ts"
+      ],
+      "pre_existing": false
+    }
+  ],
+  "residual_risks": [],
+  "testing_gaps": []
+}

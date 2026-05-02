@@ -79,7 +79,7 @@ export function ClipButton({
       <Button
         variant="ghost"
         size="sm"
-        className="min-h-[44px] min-w-[44px] px-3 text-muted-foreground hover:text-foreground relative"
+        className="relative min-h-[44px] min-w-10 px-2 text-muted-foreground hover:text-foreground sm:min-w-[44px] sm:px-3"
         onClick={handleClick}
         aria-label={isRecording ? 'End Clip' : 'Start Clip'}
         data-testid={isRecording ? 'end-clip-button' : 'start-clip-button'}

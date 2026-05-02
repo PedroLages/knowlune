@@ -5,7 +5,6 @@ import { AccountDeletion } from '@/app/components/settings/AccountDeletion'
 import { ChangePassword } from '@/app/components/settings/ChangePassword'
 import { ChangeEmail } from '@/app/components/settings/ChangeEmail'
 import { MyDataSummary } from '@/app/components/settings/MyDataSummary'
-import { AuthDialog } from '@/app/components/auth/AuthDialog'
 import { useSettingsPage } from '@/app/components/settings/SettingsPageContext'
 import { toastSuccess, toastError } from '@/lib/toastHelpers'
 
@@ -13,59 +12,11 @@ export function AccountSection() {
   const {
     user,
     authSignOut,
-    authDialogOpen,
-    setAuthDialogOpen,
-    authDialogMode,
-    setAuthDialogMode,
     checkoutStatus,
   } = useSettingsPage()
 
   return (
     <div className="space-y-8">
-      {/* Sign In / Sign Up (when not logged in) */}
-      {!user && (
-        <section>
-          <h4 className="px-1 text-xs font-bold text-muted-foreground uppercase tracking-widest mb-3">
-            Get Started
-          </h4>
-          <div className="bg-card rounded-xl shadow-sm overflow-hidden p-6">
-            <div className="flex items-center gap-4 mb-4">
-              <div className="flex items-center justify-center size-10 rounded-lg bg-brand-soft">
-                <Shield className="size-5 text-brand" aria-hidden="true" />
-              </div>
-              <div>
-                <p className="text-sm font-semibold">Sign in to access premium features</p>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  Sync your progress, unlock achievements, and more
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <Button
-                variant="brand"
-                className="min-h-[44px]"
-                onClick={() => {
-                  setAuthDialogMode('sign-up')
-                  setAuthDialogOpen(true)
-                }}
-              >
-                Sign Up
-              </Button>
-              <Button
-                variant="brand-outline"
-                className="min-h-[44px]"
-                onClick={() => {
-                  setAuthDialogMode('sign-in')
-                  setAuthDialogOpen(true)
-                }}
-              >
-                Sign In
-              </Button>
-            </div>
-          </div>
-        </section>
-      )}
-
       {/* Account Info (when logged in) */}
       {user && (
         <section>
@@ -175,11 +126,6 @@ export function AccountSection() {
         </section>
       )}
 
-      <AuthDialog
-        open={authDialogOpen}
-        onOpenChange={setAuthDialogOpen}
-        defaultMode={authDialogMode}
-      />
     </div>
   )
 }

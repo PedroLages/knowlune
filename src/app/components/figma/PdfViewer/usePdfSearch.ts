@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
-import type { PDFDocumentProxy } from 'pdfjs-dist'
+import type { DocumentProps } from 'react-pdf'
+type PDFDocumentProxy = Parameters<NonNullable<DocumentProps['onLoadSuccess']>>[0]
 
 export interface SearchMatch {
   pageNumber: number

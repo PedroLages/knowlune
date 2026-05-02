@@ -1,7 +1,7 @@
 ---
 story_id: E66-S05
 story_name: "Focus Indicator Enhancement and Compliance Audit"
-status: draft
+status: ready-for-dev
 started:
 completed:
 reviewed: false

@@ -190,9 +190,7 @@ describe('hydrateP3P4FromSupabase', () => {
     expect(reminder).toBeDefined()
 
     // notifications landed.
-    expect(
-      useNotificationStore.getState().notifications.find(n => n.id === 'n1')
-    ).toBeDefined()
+    expect(useNotificationStore.getState().notifications.find(n => n.id === 'n1')).toBeDefined()
   })
 
   it('does NOT query insert-only tables (quizAttempts, aiUsageEvents)', async () => {
@@ -227,9 +225,7 @@ describe('hydrateP3P4FromSupabase', () => {
     await hydrateP3P4FromSupabase(TEST_USER_ID)
 
     // Challenge fetch rejected, but notifications still landed.
-    expect(
-      useNotificationStore.getState().notifications.find(n => n.id === 'n1')
-    ).toBeDefined()
+    expect(useNotificationStore.getState().notifications.find(n => n.id === 'n1')).toBeDefined()
   })
 
   it('critical — zero syncableWrite calls during a full hydration pass (echo-loop guard)', async () => {

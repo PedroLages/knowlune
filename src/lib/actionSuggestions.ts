@@ -78,7 +78,8 @@ const QUIZ_DURATION = 10
  * Formula: urgencyScore = (100 - score) * 0.6 + decayFactor * 0.4
  */
 export function calculateUrgencyScore(score: number, decayFactor: number): number {
-  const raw = (100 - score) * URGENCY_WEIGHTS.scoreFactor + decayFactor * URGENCY_WEIGHTS.decayFactor
+  const raw =
+    (100 - score) * URGENCY_WEIGHTS.scoreFactor + decayFactor * URGENCY_WEIGHTS.decayFactor
   return Math.max(0, Math.min(100, raw))
 }
 
@@ -228,6 +229,8 @@ export function generateActionSuggestions(
 
   // Sort by urgency descending, limit to maxSuggestions
   return Array.from(bestPerTopic.values())
-    .sort((a, b) => b.urgencyScore - a.urgencyScore || a.canonicalName.localeCompare(b.canonicalName))
+    .sort(
+      (a, b) => b.urgencyScore - a.urgencyScore || a.canonicalName.localeCompare(b.canonicalName)
+    )
     .slice(0, maxSuggestions)
 }

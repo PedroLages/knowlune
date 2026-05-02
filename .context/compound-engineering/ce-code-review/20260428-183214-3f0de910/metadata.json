@@ -1,0 +1,7 @@
+{
+  "run_id": "20260428-183214-3f0de910",
+  "branch": "cursor/fix-note-qa-text-fallback",
+  "head_sha": "e7c569554343bfa8e21adf4d923fa0092e41b6a8",
+  "verdict": "Ready with fixes",
+  "completed_at": "2026-04-28T16:35:00Z"
+}

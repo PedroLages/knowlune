@@ -1,0 +1,7 @@
+{
+  "reviewer": "schema-drift-detector",
+  "analysis": "New migration: 20260501000001_retention_audit_log.sql creates public.retention_audit_log with columns id, run_id, artefact, rows_affected, started_at, completed_at, error, skipped. Two indexes: idx_retention_audit_log_completed_at (DESC) and idx_retention_audit_log_run_id. RLS enabled with deny-all policies for authenticated and anon. No changes to existing tables. No drift detected — this is an additive migration only.",
+  "findings": [],
+  "residual_risks": [],
+  "testing_gaps": []
+}

@@ -1,0 +1,29 @@
+{
+  "reviewer": "correctness",
+  "findings": [
+    {
+      "title": "purgeChatConversations count/delete TOCTOU over-reports rows_affected",
+      "severity": "P3",
+      "file": "supabase/functions/retention-tick/index.ts",
+      "line": 237,
+      "why_it_matters": "If rows are deleted between the COUNT query and the DELETE query by a concurrent operation (e.g., hardDeleteUser running in another invocation), rows_affected will over-report. The audit log will show N deletions when fewer actually occurred. This is cosmetic inaccuracy only — no data is corrupted and the GDPR goal (deletion) is still achieved.",
+      "autofix_class": "advisory",
+      "owner": "human",
+      "requires_verification": false,
+      "suggested_fix": null,
+      "confidence": 0.65,
+      "evidence": [
+        "Line 237-246: const { count: eligibleCount } = await SELECT count WHERE updated_at < cutoff",
+        "Line 256-260: DELETE WHERE updated_at < cutoff (separate query - different instant in time)",
+        "rowsToDelete = eligibleCount ?? 0 — used as rows_affected but delete may have matched fewer rows"
+      ],
+      "pre_existing": false
+    }
+  ],
+  "residual_risks": [
+    "chat_conversations has no is_pinned distinction — all conversations older than 365d are deleted including any user-pinned ones. Documented and accepted for S11 scope."
+  ],
+  "testing_gaps": [
+    "No test exercises the TOCTOU scenario (concurrent deletion between count and delete)"
+  ]
+}

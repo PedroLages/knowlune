@@ -1,0 +1,93 @@
+{
+  "reviewer": "adversarial",
+  "findings": [
+    {
+      "id": "ADV-01",
+      "title": "Assumption violation: empty generateEmbeddings return bypasses fallback catch, crashes on Array.from(undefined)",
+      "severity": "P1",
+      "confidence": 75,
+      "autofix_class": "manual",
+      "owner": "human",
+      "pre_existing": false,
+      "evidence": [
+        "generateEmbeddings is typed as Promise<Float32Array[]> — a valid return of [] throws no exception.",
+        "When generateEmbeddings([cleanQuery]) returns [] without throwing, the try/catch block at lines 56-62 exits cleanly with queryEmbedding assigned as embeddings[0] = undefined.",
+        "TypeScript does not flag this: the element type of Float32Array[] is Float32Array, not Float32Array | undefined, so the compiler sees no error.",
+        "Execution continues outside the try/catch to line 79: vectorStore.search(Array.from(queryEmbedding), 5). Array.from(undefined) throws TypeError: undefined is not iterable.",
+        "This TypeError propagates uncaught to the caller. The fallback branch is never reached. The user sees a cryptic runtime error instead of a graceful fallback or empty result.",
+        "The old code had the same gap (const [queryEmbedding] = await generateEmbeddings(...)) but the new try/catch creates a false impression of safety that makes this gap harder to notice."
+      ]
+    },
+    {
+      "id": "ADV-02",
+      "title": "Cascade: embedding error context lost when text-search DB path also fails",
+      "severity": "P2",
+      "confidence": 75,
+      "autofix_class": "advisory",
+      "owner": "human",
+      "pre_existing": false,
+      "evidence": [
+        "When generateEmbeddings throws, the catch block at line 59 logs the embedding error at warn level only, then calls return retrieveRelevantNotesByText(cleanQuery).",
+        "If db.notes.toArray() subsequently throws (IndexedDB quota exceeded, storage policy in private browsing, or Dexie transaction failure), that exception propagates from retrieveRelevantNotesByText through the catch block and up to the original caller.",
+        "The caller receives an IndexedDB error. The original embedding error — the actual root cause of the code path being taken — is invisible except in console.warn, which may be suppressed in production.",
+        "Diagnostics and error reporting at the UI layer will surface the wrong error type, masking the AI coordinator failure."
+      ]
+    },
+    {
+      "id": "ADV-03",
+      "title": "Abuse case: unbounded db.notes.toArray() scan causes main-thread freeze for large note collections",
+      "severity": "P2",
+      "confidence": 75,
+      "autofix_class": "advisory",
+      "owner": "human",
+      "pre_existing": false,
+      "evidence": [
+        "retrieveRelevantNotesByText calls db.notes.toArray() with no pagination or filter — all notes are loaded into memory before any processing.",
+        "The subsequent .filter().map().sort() chain runs synchronously on the main thread. For a user with thousands of notes, this involves: stripHtml(note.content) per note, tokenize(searchableText) per note, Set construction per note, includes() phrase scan per note.",
+        "Only slice(0, limit) is applied after the full sort — the limit does not reduce the work done.",
+        "The semantic path avoids this: it loads compact Float32Array embeddings (384 floats = ~1.5 KB each) and uses BruteForceVectorStore which is O(n*d) but operates on typed arrays with no string parsing.",
+        "A user whose embedding worker crashes (the triggering scenario for this fallback) likely has a resource-constrained environment, making the main-thread impact worse."
+      ]
+    },
+    {
+      "id": "ADV-04",
+      "title": "Silent failure: non-ASCII/non-Latin queries return empty results via text fallback with no explanation",
+      "severity": "P2",
+      "confidence": 100,
+      "autofix_class": "advisory",
+      "owner": "human",
+      "pre_existing": false,
+      "evidence": [
+        "tokenize(value) matches /[a-z0-9]+/g — only ASCII letters and digits. Characters outside this range (accented Latin, CJK, Arabic, Cyrillic, emoji) produce no tokens.",
+        "For a query entirely in non-ASCII script (e.g. Japanese '日本語', Arabic 'تعلم'), tokenize returns []. The guard at line 104 — if (queryTerms.length === 0) return [] — silently returns an empty array.",
+        "This failure is compounded by context: the user is already in the degraded fallback path because embedding generation failed. They now receive empty results with no message distinguishing 'no relevant notes found' from 'your query cannot be processed by the fallback.'",
+        "Multilingual users are disproportionately affected because non-Latin scripts are entirely excluded from the text search path, while their notes (whose content tokenizes the same way) would also score zero similarity."
+      ]
+    },
+    {
+      "id": "ADV-05",
+      "title": "Composition mismatch: text-path similarity can exceed 1.0, diverging from semantic-path contract",
+      "severity": "P3",
+      "confidence": 100,
+      "autofix_class": "advisory",
+      "owner": "human",
+      "pre_existing": false,
+      "evidence": [
+        "For a multi-word query where all tokens match AND the phrase is found verbatim, similarity = matchedTerms.length / queryTerms.length + phraseBoost = 1.0 + 0.25 = 1.25.",
+        "Concrete construction: query 'machine learning', note content 'machine learning fundamentals'. queryTerms=['machine','learning'], tokens includes both → ratio=1.0. queryTerms.length>1 AND searchableText.includes('machine learning') → phraseBoost=0.25. Resulting similarity=1.25.",
+        "The semantic path (BruteForceVectorStore.search) produces cosine similarities in [-1, 1], typically [0, 1] for unit-normalized embeddings. The RetrievedNote.similarity interface carries no documented bounds contract.",
+        "generateQAAnswer does not use similarity, so this is not immediately breaking. However, any downstream consumer that normalizes, displays, or threshold-gates on RetrievedNote.similarity — including future ranking UI or analytics — receives an out-of-contract value when the text fallback is active."
+      ]
+    }
+  ],
+  "residual_risks": [
+    "The fallback is invoked on any exception from generateEmbeddings — including transient network errors that may self-resolve. Repeated retries are not attempted; a single transient failure permanently downgrades the session to text search until page reload.",
+    "The text-path similarity score is not comparable to semantic similarity, so mixed-path calls (e.g., one request succeeds semantically, the next falls back) return RetrievedNote arrays with incommensurable similarity scales to the same consumer."
+  ],
+  "testing_gaps": [
+    "No test covers the scenario where generateEmbeddings returns an empty array without throwing (ADV-01 trigger condition).",
+    "No test exercises the cascading failure path: generateEmbeddings throws AND db.notes.toArray() also throws (ADV-02).",
+    "No test verifies behaviour for non-ASCII queries in the text fallback path (ADV-04).",
+    "No test asserts an upper bound on the similarity score returned by the text path (ADV-05)."
+  ]
+}

@@ -9,6 +9,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { OllamaLLMClient } from '../ollama-client'
 import { LLMError } from '../types'
 import type { LLMMessage } from '../types'
+import { apiUrl } from '@/lib/apiBaseUrl'
 
 // Mock useAuthStore to provide access_token for Authorization header
 vi.mock('@/stores/useAuthStore', () => ({
@@ -81,7 +82,7 @@ describe('OllamaLLMClient', () => {
 
       const callArgs = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0]
       // In proxy mode, URL is /api/ai/ollama
-      expect(callArgs[0]).toBe('/api/ai/ollama')
+      expect(callArgs[0]).toBe(apiUrl('ai-ollama'))
       // Body should have the clean URL
       const body = JSON.parse(callArgs[1].body)
       expect(body.ollamaServerUrl).toBe('http://localhost:11434')
@@ -102,7 +103,7 @@ describe('OllamaLLMClient', () => {
       await collectChunks(client.streamCompletion(defaultMessages))
 
       expect(global.fetch).toHaveBeenCalledWith(
-        '/api/ai/ollama',
+        apiUrl('ai-ollama'),
         expect.objectContaining({
           method: 'POST',
           headers: {

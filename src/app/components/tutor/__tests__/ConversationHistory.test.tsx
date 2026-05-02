@@ -111,7 +111,11 @@ describe('ConversationHistorySheet', () => {
 
   it('shows both sections when conversations span current and other lessons', () => {
     const thisConv = makeConversation({ id: 'conv-this', courseId: 'course-1', videoId: 'video-1' })
-    const otherConv = makeConversation({ id: 'conv-other', courseId: 'course-1', videoId: 'video-2' })
+    const otherConv = makeConversation({
+      id: 'conv-other',
+      courseId: 'course-1',
+      videoId: 'video-2',
+    })
     render(<ConversationHistorySheet {...defaultProps} conversations={[thisConv, otherConv]} />)
     expect(screen.getByText(/this lesson/i)).toBeInTheDocument()
     expect(screen.getByText(/other lessons in course/i)).toBeInTheDocument()
@@ -169,7 +173,11 @@ describe('useTutorKeyboardShortcuts', () => {
     onSwitchMode = vi.fn()
     // Stub window.innerWidth to desktop so touch-device guard doesn't fire
     Object.defineProperty(window, 'innerWidth', { writable: true, configurable: true, value: 1024 })
-    Object.defineProperty(window, 'ontouchstart', { writable: true, configurable: true, value: undefined })
+    Object.defineProperty(window, 'ontouchstart', {
+      writable: true,
+      configurable: true,
+      value: undefined,
+    })
   })
 
   afterEach(() => {
@@ -242,16 +250,21 @@ describe('History button badge count', () => {
    * The badge renders when conversationCount > 1 (per TutorChat.tsx L151).
    */
 
-  function HistoryBadge({ conversations, courseId }: { conversations: ChatConversation[]; courseId: string }) {
+  function HistoryBadge({
+    conversations,
+    courseId,
+  }: {
+    conversations: ChatConversation[]
+    courseId: string
+  }) {
     const conversationCount = conversations.filter(c => c.courseId === courseId).length
     return (
       <div data-testid="badge-wrapper" style={{ position: 'relative', display: 'inline-block' }}>
-        <button aria-label="Conversation history" data-testid="history-btn">H</button>
+        <button aria-label="Conversation history" data-testid="history-btn">
+          H
+        </button>
         {conversationCount > 1 && (
-          <span
-            data-testid="history-badge"
-            aria-label={`${conversationCount} conversations`}
-          >
+          <span data-testid="history-badge" aria-label={`${conversationCount} conversations`}>
             {conversationCount}
           </span>
         )}
@@ -273,9 +286,7 @@ describe('History button badge count', () => {
   })
 
   it('does not show badge when only 1 conversation exists', () => {
-    const conversations = [
-      makeConversation({ id: 'c1', courseId: 'course-1', videoId: 'video-1' }),
-    ]
+    const conversations = [makeConversation({ id: 'c1', courseId: 'course-1', videoId: 'video-1' })]
     render(<HistoryBadge conversations={conversations} courseId="course-1" />)
     expect(screen.queryByTestId('history-badge')).not.toBeInTheDocument()
   })
@@ -343,11 +354,7 @@ describe('ConversationHistorySheet — delete conversation', () => {
     // Assert argument shape of the syncableWrite call so a contract
     // regression (e.g., passing the conversation object instead of the id)
     // fails the test even though the module is mocked. (ADV-05 from R1.)
-    expect(vi.mocked(syncableWrite)).toHaveBeenCalledWith(
-      'chatConversations',
-      'delete',
-      'conv-del',
-    )
+    expect(vi.mocked(syncableWrite)).toHaveBeenCalledWith('chatConversations', 'delete', 'conv-del')
   })
 
   it('canceling AlertDialog does NOT call the delete handler', () => {

@@ -233,6 +233,23 @@ if run_check "build" "${LOG_DIR:+${LOG_DIR}/build.log}" npm run build; then
     GATES[bundle-analysis]="passed"
     log_success "Performance baseline created"
   fi
+
+  # E64-S03: Initial-load bundle baseline check (warning-only, never blocks)
+  log_section "Bundle Baseline Check (initial-load gzipped)"
+
+  if [ -f "${BASE_PATH}/scripts/bundle-check.js" ]; then
+    if node "${BASE_PATH}/scripts/bundle-check.js" >&2; then
+      GATES[bundle-baseline]="passed"
+      log_success "Initial-load bundle within 10% baseline threshold"
+    else
+      # Exit 1 == regression. Story AC mandates WARNING (not blocker).
+      GATES[bundle-baseline]="warning"
+      log_warning "Initial-load bundle exceeded 10% baseline threshold (warning only — not blocking review)"
+    fi
+  else
+    GATES[bundle-baseline]="skipped"
+    log_warning "scripts/bundle-check.js not found — skipping baseline check"
+  fi
 else
   GATES[build]="failed"
   log_error "Build failed"

@@ -193,6 +193,65 @@ describe('scanDirectory', () => {
     expect(results).toHaveLength(1)
     expect(results[0].handle.name).toBe('video.mp4')
   })
+
+  describe('maxDepth', () => {
+    it('maxDepth: 0 yields root files but skips subdirectory recursion', async () => {
+      const rootImage = createMockFileHandle('cover.jpg')
+      const subImage = createMockFileHandle('icon.png')
+      const subDir = createMockDirectoryHandle('sub', [subImage])
+      const rootDir = createMockDirectoryHandle('root', [rootImage, subDir])
+
+      const results: { handle: FileSystemFileHandle; path: string }[] = []
+      for await (const entry of scanDirectory(rootDir, '', { includeImages: true, maxDepth: 0 })) {
+        results.push(entry)
+      }
+
+      expect(results).toHaveLength(1)
+      expect(results[0].path).toBe('cover.jpg')
+    })
+
+    it('maxDepth: 1 yields files from root and one level of subdirectories', async () => {
+      const rootFile = createMockFileHandle('cover.jpg')
+      const level1File = createMockFileHandle('icon.png')
+      const level2File = createMockFileHandle('deep.png')
+      const level2Dir = createMockDirectoryHandle('deep', [level2File])
+      const level1Dir = createMockDirectoryHandle('sub', [level1File, level2Dir])
+      const rootDir = createMockDirectoryHandle('root', [rootFile, level1Dir])
+
+      const results: { handle: FileSystemFileHandle; path: string }[] = []
+      for await (const entry of scanDirectory(rootDir, '', { includeImages: true, maxDepth: 1 })) {
+        results.push(entry)
+      }
+
+      expect(results.map(r => r.path)).toEqual(['cover.jpg', 'sub/icon.png'])
+    })
+
+    it('maxDepth: undefined preserves full recursion', async () => {
+      const rootFile = createMockFileHandle('cover.jpg')
+      const subFile = createMockFileHandle('icon.png')
+      const subDir = createMockDirectoryHandle('sub', [subFile])
+      const rootDir = createMockDirectoryHandle('root', [rootFile, subDir])
+
+      const results: { handle: FileSystemFileHandle; path: string }[] = []
+      for await (const entry of scanDirectory(rootDir, '', { includeImages: true })) {
+        results.push(entry)
+      }
+
+      expect(results).toHaveLength(2)
+      expect(results.map(r => r.path)).toEqual(['cover.jpg', 'sub/icon.png'])
+    })
+
+    it('maxDepth: 0 with empty root yields nothing', async () => {
+      const dirHandle = createMockDirectoryHandle('empty', [])
+
+      const results: { handle: FileSystemFileHandle; path: string }[] = []
+      for await (const entry of scanDirectory(dirHandle, '', { includeImages: true, maxDepth: 0 })) {
+        results.push(entry)
+      }
+
+      expect(results).toHaveLength(0)
+    })
+  })
 })
 
 describe('extractVideoMetadata', () => {

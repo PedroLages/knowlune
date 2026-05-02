@@ -24,7 +24,10 @@ vi.mock('react-router', () => ({
   ),
 }))
 
-function makeSuggestion(index: number, actionType: ActionSuggestion['actionType'] = 'quiz-refresh'): ActionSuggestion {
+function makeSuggestion(
+  index: number,
+  actionType: ActionSuggestion['actionType'] = 'quiz-refresh'
+): ActionSuggestion {
   return {
     topicName: `Topic ${index}`,
     canonicalName: `topic-${index}`,

@@ -24,6 +24,7 @@ export type DashboardSectionId =
   | 'knowledge-map'
   | 'todays-study-plan'
   | 'insight-action'
+  | 'reading-overview'
   | 'course-gallery'
 
 /** Human-readable labels for dashboard sections */
@@ -38,6 +39,7 @@ export const SECTION_LABELS: Record<DashboardSectionId, string> = {
   'knowledge-map': 'Knowledge Map',
   'todays-study-plan': "Today's Study Plan",
   'insight-action': 'Progress & Quick Actions',
+  'reading-overview': 'Reading Overview',
   'course-gallery': 'Your Library',
 }
 
@@ -53,6 +55,7 @@ export const DEFAULT_ORDER: DashboardSectionId[] = [
   'skill-proficiency',
   'knowledge-map',
   'insight-action',
+  'reading-overview',
   'course-gallery',
 ]
 

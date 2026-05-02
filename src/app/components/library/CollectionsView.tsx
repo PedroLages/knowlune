@@ -23,8 +23,8 @@ export function CollectionsView() {
   // Load collections on mount when a connected server exists
   useEffect(() => {
     const connectedServer = servers.find(s => s.status === 'connected')
-    if (connectedServer) {
-      loadCollections(connectedServer.id)
+    if (connectedServer && connectedServer.libraryIds.length > 0) {
+      loadCollections(connectedServer.id, connectedServer.libraryIds[0])
     }
   }, [servers, loadCollections])
 

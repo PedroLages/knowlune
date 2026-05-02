@@ -1,0 +1,95 @@
+{
+  "runId": "20260423-161109-08a70cdd",
+  "scope": "feature/e119-s08-consent-ui vs main (875f1ea5)",
+  "plan": "docs/plans/2026-04-23-008-feat-e119-s08-consent-ui-withdrawal-effects-plan.md",
+  "planSource": "explicit",
+  "verdict": "Ready with fixes",
+  "reviewers": ["correctness","testing","maintainability","project-standards","security","reliability","data-migrations","kieran-typescript","adversarial","learnings-researcher","agent-native-reviewer"],
+  "findings": [
+    {
+      "id": "F1",
+      "severity": "P2",
+      "autofix_class": "safe_auto",
+      "owner": "review-fixer",
+      "file": "src/ai/hooks/useTutor.ts",
+      "line": 121,
+      "title": "Unmount useEffect does not unregister AbortController from inFlightRegistry",
+      "confidence": 0.92,
+      "pre_existing": false,
+      "requires_verification": false,
+      "suggested_fix": "Add unregisterAIRequest(abortRef.current) before or after abort() in the unmount cleanup return function"
+    },
+    {
+      "id": "F2",
+      "severity": "P2",
+      "autofix_class": "safe_auto",
+      "owner": "review-fixer",
+      "file": "src/ai/llm/factory.ts",
+      "line": 24,
+      "title": "Duplicate import: CONSENT_PURPOSES imported twice from same module",
+      "confidence": 0.98,
+      "pre_existing": false,
+      "requires_verification": false,
+      "suggested_fix": "Merge the two imports from @/lib/compliance/consentService into one statement"
+    },
+    {
+      "id": "F3",
+      "severity": "P2",
+      "autofix_class": "manual",
+      "owner": "downstream-resolver",
+      "file": "src/ai/tutor/learnerModelService.ts",
+      "line": 110,
+      "title": "frozenReason persists after re-granting ai_embeddings consent (updateLearnerModel spreads existing without clearing)",
+      "confidence": 0.85,
+      "pre_existing": false,
+      "requires_verification": false,
+      "suggested_fix": "When writing a session update in updateLearnerModel, clear frozenReason (set to undefined) if the caller's update does not explicitly set it. Or implement a grantConsent post-effect that clears frozenReason on all learnerModels for the user."
+    },
+    {
+      "id": "F4",
+      "severity": "P2",
+      "autofix_class": "advisory",
+      "owner": "human",
+      "file": "src/lib/compliance/consentEffects.ts",
+      "line": 85,
+      "title": "Race condition: re-loading consents after grant/withdraw in PrivacySection loses in-flight updates",
+      "confidence": 0.75,
+      "pre_existing": false,
+      "requires_verification": false,
+      "suggested_fix": "Instead of re-fetching from Dexie after each operation, update local state optimistically and only re-fetch on error. Current code calls listForUser() after every operation which is a network-free Dexie read — low risk, but redundant and slightly brittle."
+    },
+    {
+      "id": "F5",
+      "severity": "P3",
+      "autofix_class": "advisory",
+      "owner": "human",
+      "file": "src/lib/compliance/consentEffects.ts",
+      "line": 255,
+      "title": "db.embeddings.clear() deletes ALL embeddings including TranscriptEmbeddings — scope may be too broad",
+      "confidence": 0.72,
+      "pre_existing": false,
+      "requires_verification": false,
+      "suggested_fix": "If the db.embeddings table only contains note embeddings, this is correct. Verify whether transcript embeddings (TranscriptEmbedding) live in a separate Dexie table or the same one. If same table, note embeddings and transcript embeddings should be deleted separately or the clear() remains correct (both are AI-generated from user content)."
+    }
+  ],
+  "requirementsTrace": {
+    "R1": "met",
+    "R2": "met",
+    "R3": "met",
+    "R4": "met",
+    "R5": "partially - ai_tutor/ai_embeddings/analytics_telemetry/marketing_email met; voice_transcription no-op documented",
+    "R6": "met",
+    "R7": "met",
+    "R8": "met - LWW sync from E119-S07",
+    "R9": "met",
+    "R10": "met"
+  },
+  "residualRisks": [
+    "frozenReason not cleared on re-grant — learner model stays frozen until explicitly unset",
+    "inFlightRegistry stale entries on component unmount (non-functional but memory concern)"
+  ],
+  "testingGaps": [
+    "No unit test for EmbeddingPipeline.indexNotesBatch() guard behavior",
+    "No unit test for courseEmbeddingService consent guard"
+  ]
+}

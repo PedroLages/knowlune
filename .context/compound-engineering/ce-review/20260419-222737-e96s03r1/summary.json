@@ -1,0 +1,20 @@
+{
+  "runId": "20260419-222737-e96s03r1",
+  "mode": "headless",
+  "scope": {
+    "base": "670c5c5f2b2eb0042f2eb86bbe7655a6bc148d18",
+    "branch": "feature/e96-s03-ai-events-reminders-notifications",
+    "files": [
+      "src/ai/__tests__/quizGenerationService.test.ts",
+      "src/ai/courseTagger.ts",
+      "src/ai/quizGenerationService.ts",
+      "src/lib/sync/__tests__/e96-s03-ai-usage-events-sync.test.ts",
+      "src/lib/sync/__tests__/e96-s03-course-reminders-sync.test.ts",
+      "src/lib/sync/__tests__/e96-s03-notifications-sync.test.ts"
+    ]
+  },
+  "plan": "docs/plans/2026-04-19-019-feat-e96-s03-ai-events-reminders-notifications-sync-plan.md",
+  "plan_source": "explicit",
+  "counts": {"blockers": 0, "high": 2, "medium": 3, "low": 2, "nit": 0},
+  "appliedFixes": 0
+}

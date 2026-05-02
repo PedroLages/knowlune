@@ -33,6 +33,8 @@ interface LinkDataDialogProps {
   open: boolean
   userId: string
   onResolved: () => void
+  /** Guest session id — when provided, only guest-session rows are migrated. */
+  guestSessionId?: string | null
 }
 
 interface CategoryRow {
@@ -51,33 +53,36 @@ const CATEGORY_ROWS: CategoryRow[] = [
 
 const LINKED_FLAG_PREFIX = 'sync:linked:'
 
-export function LinkDataDialog({ open, userId, onResolved }: LinkDataDialogProps) {
+export function LinkDataDialog({ open, userId, onResolved, guestSessionId }: LinkDataDialogProps) {
   const [loading, setLoading] = useState(false)
   const [counts, setCounts] = useState<UnlinkedCounts | null>(null)
+  const isGuestMigration = Boolean(guestSessionId)
 
   // Fetch counts when dialog opens
   useEffect(() => {
     if (!open || !userId) return
     let ignore = false
     setCounts(null)
-    countUnlinkedRecords(userId)
-      .then((result) => {
+    countUnlinkedRecords(userId, guestSessionId)
+      .then(result => {
         if (!ignore) setCounts(result)
       })
-      .catch((err) => {
+      .catch(err => {
         // silent-catch-ok: counts are best-effort display data; dialog still
         // shows resolution choices even with empty counts.
         console.error('[LinkDataDialog] countUnlinkedRecords failed:', err)
       })
-    return () => { ignore = true }
-  }, [open, userId])
+    return () => {
+      ignore = true
+    }
+  }, [open, userId, guestSessionId])
 
   async function handleLink() {
     setLoading(true)
     try {
-      await backfillUserId(userId)
+      await backfillUserId(userId, guestSessionId)
       // start() triggers fullSync internally — uploads the newly-stamped records.
-      syncEngine.start(userId).catch((err) => {
+      syncEngine.start(userId).catch(err => {
         console.error('[LinkDataDialog] syncEngine.start failed:', err)
       })
       localStorage.setItem(`${LINKED_FLAG_PREFIX}${userId}`, 'true')
@@ -94,7 +99,7 @@ export function LinkDataDialog({ open, userId, onResolved }: LinkDataDialogProps
 
   async function handleStartFresh() {
     const confirmed = window.confirm(
-      'This will delete all local data on this device and download your account data from the server. Are you sure?',
+      'This will delete all local data on this device and download your account data from the server. Are you sure?'
     )
     if (!confirmed) return
 
@@ -113,7 +118,7 @@ export function LinkDataDialog({ open, userId, onResolved }: LinkDataDialogProps
       // Wipe upload queue and download cursors
       await clearSyncState()
       // start() triggers fullSync internally — downloads fresh server state.
-      syncEngine.start(userId).catch((err) => {
+      syncEngine.start(userId).catch(err => {
         console.error('[LinkDataDialog] syncEngine.start (fresh) failed:', err)
       })
       localStorage.setItem(`${LINKED_FLAG_PREFIX}${userId}`, 'true')
@@ -128,26 +133,29 @@ export function LinkDataDialog({ open, userId, onResolved }: LinkDataDialogProps
     }
   }
 
-  const totalCount = counts
-    ? Object.values(counts).reduce((sum, n) => sum + n, 0)
-    : null
+  const totalCount = counts ? Object.values(counts).reduce((sum, n) => sum + n, 0) : null
 
   return (
-    <DialogPrimitive.Root open={open} onOpenChange={() => { /* intentional no-op: dialog is non-dismissible */ }}>
+    <DialogPrimitive.Root
+      open={open}
+      onOpenChange={() => {
+        /* intentional no-op: dialog is non-dismissible */
+      }}
+    >
       <DialogPortal>
         <DialogOverlay />
         <DialogPrimitive.Content
           role="alertdialog"
           aria-labelledby="link-dialog-title"
           aria-describedby="link-dialog-description"
-          onPointerDownOutside={(e) => e.preventDefault()}
-          onEscapeKeyDown={(e) => e.preventDefault()}
+          onPointerDownOutside={e => e.preventDefault()}
+          onEscapeKeyDown={e => e.preventDefault()}
           className={cn(
             'bg-background fixed top-[50%] left-[50%] z-50 grid w-full max-w-sm translate-x-[-50%] translate-y-[-50%] gap-4 rounded-lg border p-6 shadow-lg',
             'data-[state=open]:animate-in data-[state=closed]:animate-out',
             'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
             'data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95',
-            'duration-200',
+            'duration-200'
           )}
         >
           {/* Header */}
@@ -155,11 +163,13 @@ export function LinkDataDialog({ open, userId, onResolved }: LinkDataDialogProps
             <div className="flex items-center gap-2">
               <Link2 className="text-brand size-5" />
               <h2 id="link-dialog-title" className="text-foreground text-lg font-semibold">
-                You have local data
+                {isGuestMigration ? 'Keep your guest progress?' : 'You have local data'}
               </h2>
             </div>
             <p id="link-dialog-description" className="text-muted-foreground text-sm">
-              We found data saved on this device. What would you like to do with it?
+              {isGuestMigration
+                ? 'You explored Knowlune as a guest. Would you like to bring your progress to your new account?'
+                : 'We found data saved on this device. What would you like to do with it?'}
             </p>
           </div>
 
@@ -175,15 +185,13 @@ export function LinkDataDialog({ open, userId, onResolved }: LinkDataDialogProps
                     </span>
                     <span className="text-foreground font-medium tabular-nums">{counts[key]}</span>
                   </div>
-                ) : null,
+                ) : null
               )}
             </div>
           )}
 
           {/* Loading skeleton for counts */}
-          {counts === null && (
-            <div className="bg-muted h-16 animate-pulse rounded-md" />
-          )}
+          {counts === null && <div className="bg-muted h-16 animate-pulse rounded-md" />}
 
           {/* Action buttons */}
           <div className="flex flex-col gap-2 sm:flex-row">
@@ -197,10 +205,10 @@ export function LinkDataDialog({ open, userId, onResolved }: LinkDataDialogProps
               {loading ? (
                 <span className="flex items-center gap-2">
                   <span className="border-brand-foreground size-4 animate-spin rounded-full border-2 border-t-transparent" />
-                  Linking…
+                  {isGuestMigration ? 'Saving…' : 'Linking…'}
                 </span>
               ) : (
-                'Link to my account'
+                isGuestMigration ? 'Keep my progress' : 'Link to my account'
               )}
             </Button>
             <Button

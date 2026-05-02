@@ -1,0 +1,106 @@
+{
+  "runId": "20260425-154722-f8d4c7f7",
+  "branch": "feature/ce-2026-04-25-audiobook-cover-fix",
+  "base": "73fa0633d3364b962073918ebc2dc32d47850051",
+  "plan": "/Users/pedro/.claude/plans/can-you-tell-me-streamed-badger.md",
+  "plan_source": "explicit",
+  "scope": {
+    "files": [
+      "src/app/components/audiobook/AudiobookRenderer.tsx",
+      "src/styles/tailwind.css",
+      "tests/e2e/audiobook-cover-letterbox.spec.ts",
+      "tests/fixtures/covers/non-square-600x800.png"
+    ]
+  },
+  "intent": "Fix audiobook player cover letterbox regression by adding shrink-0 to the square cover container, defensively safelisting Tailwind v4 utilities via @source inline(), and adding an E2E regression test with a non-square fixture asserting the img rect equals the container rect.",
+  "applied_safe_auto_fixes": [],
+  "findings": [
+    {
+      "id": "F1",
+      "severity": "MEDIUM",
+      "autofix_class": "manual",
+      "owner": "downstream-resolver",
+      "reviewer": "maintainability",
+      "confidence": 0.7,
+      "file": "src/styles/tailwind.css",
+      "line": 4,
+      "title": "@source inline() safelist hides root cause and accumulates dead weight",
+      "summary": "The defensive safelist for aspect-square, object-cover, h-full, w-full, rounded-[24px], shrink-0, max-w-80, overflow-hidden, bg-muted is paired with a comment claiming Tailwind v4's source scanner 'silently drops' these. None of these utilities are used dynamically — they are all literal class strings in AudiobookRenderer.tsx and would be picked up by @source '../**/*.{js,ts,jsx,tsx}'. If a regression ever occurred, the real cause was almost certainly something else (e.g., an HMR/build cache or a stale dev server, see Worktree E2E warning in CLAUDE.md). Keeping the safelist as a permanent fixture papers over the unknown and ships extra bytes in every build.",
+      "suggestedFix": "Either (a) reproduce the original regression deterministically and document the actual Tailwind v4 cause in a docs/solutions/ note, then keep only the specific class that needed safelisting; or (b) drop the @source inline() entirely now that the regression test exists — the E2E spec is the durable safety net, the safelist is not."
+    },
+    {
+      "id": "F2",
+      "severity": "LOW",
+      "autofix_class": "manual",
+      "owner": "downstream-resolver",
+      "reviewer": "correctness",
+      "confidence": 0.75,
+      "file": "src/app/components/audiobook/AudiobookRenderer.tsx",
+      "line": 470,
+      "title": "shrink-0 is the load-bearing fix but is not called out in the comment",
+      "summary": "The added `shrink-0` class on the cover frame is the actual behavioral change (preventing the flex parent at line 463 from shrinking the square frame and letting the img reveal bg-muted bars). The block comment above the div explains the testids and the safelist motivation but does not mention shrink-0. A future reader doing 'git blame' on this line will see a multi-purpose change without knowing which class fixes which symptom. Without that context the safelist is the obvious 'fix' and shrink-0 looks incidental — exactly backwards.",
+      "suggestedFix": "Add a one-line note in the comment: 'shrink-0 prevents the parent flex column from shrinking the aspect-square frame on short viewports, which was the root cause of the letterbox.' Or move shrink-0 to its own line with an end-of-line comment."
+    },
+    {
+      "id": "F3",
+      "severity": "LOW",
+      "autofix_class": "manual",
+      "owner": "downstream-resolver",
+      "reviewer": "testing",
+      "confidence": 0.8,
+      "file": "tests/e2e/audiobook-cover-letterbox.spec.ts",
+      "line": 96,
+      "title": "Inline-duplicated mockAudioElement instead of shared helper",
+      "summary": "The spec inlines mockAudioElement with a comment saying 'Inline-duplicated (not imported) to keep this regression spec independently runnable.' Independence is a value, but the project already has shared support helpers (tests/support/helpers/seed-helpers.ts is imported here), so the file is not standalone in any meaningful sense. Inline duplication of a non-trivial HTMLMediaElement prototype mock means future fixes (e.g., to handle pause/seek) need to be applied in two places, and one will silently drift. The streaming spec referenced in the JSDoc is the original; the duplication will rot.",
+      "suggestedFix": "Extract mockAudioElement into tests/support/helpers/audio-mock.ts (or similar) and import from both streaming.spec.ts and this spec. The 'independently runnable' goal is preserved — the helper lives under tests/support/, which every spec already depends on."
+    },
+    {
+      "id": "F4",
+      "severity": "LOW",
+      "autofix_class": "advisory",
+      "owner": "human",
+      "reviewer": "testing",
+      "confidence": 0.65,
+      "file": "tests/e2e/audiobook-cover-letterbox.spec.ts",
+      "line": 220,
+      "title": "Aspect-ratio computed-style assertion may flake across browsers",
+      "summary": "expect(measurements.containerComputed.aspectRatio).toBe('1 / 1') asserts the exact serialized form. Some Chromium/Firefox/Safari versions normalize aspect-ratio differently ('1', '1 / 1', 'auto 1 / 1'). If the project ever runs this spec in non-Chromium projects (test:e2e currently runs Chromium per CLAUDE.md, but Playwright config can change), the test will fail for a styling reason that has nothing to do with letterbox. The geometric assertion (Math.abs(width - height) < 0.5) already covers 'is square' — the computed-style assertion is redundant.",
+      "suggestedFix": "Drop the aspectRatio === '1 / 1' check, or relax to /^1(\\s*\\/\\s*1)?$/. The width-equals-height geometric check is the meaningful assertion."
+    },
+    {
+      "id": "F5",
+      "severity": "LOW",
+      "autofix_class": "advisory",
+      "owner": "human",
+      "reviewer": "project-standards",
+      "confidence": 0.7,
+      "file": "tests/e2e/audiobook-cover-letterbox.spec.ts",
+      "line": 1,
+      "title": "Plan Phase 3 verification scope is partially covered",
+      "summary": "Plan Phase 3 explicitly lists 'Locations to check: main player, mini-player thumbnail (AudioMiniPlayer.tsx), Library card grid, blurred backdrop at AudiobookRenderer.tsx:398.' The fix and the regression test only cover the main player. AudioMiniPlayer.tsx already uses flex-shrink-0 + fixed w-14 h-14 (so the same shrink-0 root cause does not apply there), and the blurred backdrop uses background-image: cover (different mechanism), so the fix is correctly scoped. But the plan asked for a verification pass at the other two locations; the diff and spec do not document that those were verified and intentionally not regressed. Risk is low (different rendering paths) but the plan's explicit ask is unaddressed in writing.",
+      "suggestedFix": "Add a one-line note to the spec's JSDoc or a brief comment in the Phase-3 section of the plan stating that AudioMiniPlayer (fixed-size flex item) and the blurred backdrop (background-image) use different rendering paths and were not affected. Optional: extend the spec to also assert the mini-player cover rect equals its 56x56 container."
+    },
+    {
+      "id": "F6",
+      "severity": "NIT",
+      "autofix_class": "advisory",
+      "owner": "human",
+      "reviewer": "maintainability",
+      "confidence": 0.6,
+      "file": "src/styles/tailwind.css",
+      "line": 13,
+      "title": "Safelist enumerates classes already statically present in JSX",
+      "summary": "Every class in the @source inline() list (aspect-square, shrink-0, object-cover, h-full, w-full, rounded-[24px], max-w-80, overflow-hidden, bg-muted) appears literally in AudiobookRenderer.tsx and is therefore already discovered by the @source '../**/*.{js,ts,jsx,tsx}' scan. The safelist is a no-op under normal Tailwind v4 behavior. If it ever becomes load-bearing, the project has a different bug — and the comment will mislead the next person debugging it.",
+      "suggestedFix": "Either delete the safelist (E2E test catches regressions) or narrow it to a single class with a documented past failure. Do not keep all nine classes 'just in case.'"
+    }
+  ],
+  "residual_risks": [
+    "Regression test depends on Tailwind v4 source-scan picking up classes from a static JSX file; the very mechanism the safelist purports to defend against would invalidate the test's premise.",
+    "If a future ABS server returns covers wider than tall (landscape), object-cover crops the top/bottom — visual parity with the iOS app needs spot-check for landscape sources, not just portrait."
+  ],
+  "testing_gaps": [
+    "No assertion that the blurred background at AudiobookRenderer.tsx:449-461 still renders correctly with the new shrink-0 sibling.",
+    "No assertion that the mini-player cover (AudioMiniPlayer.tsx) still fills its 56x56 frame — separate code path but same plan section."
+  ],
+  "verdict": "Ready with fixes (LOW priority — none block merge)"
+}

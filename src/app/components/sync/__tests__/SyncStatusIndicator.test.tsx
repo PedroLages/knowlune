@@ -36,7 +36,16 @@ vi.mock('sonner', () => ({
   },
 }))
 
+// Shared announce spy — replaced per-test in announcement tests.
+const mockAnnounceDefault = vi.fn()
+
+vi.mock('@/app/hooks/useLiveRegion', () => ({
+  LiveRegionProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  useLiveRegion: vi.fn(() => ({ announce: mockAnnounceDefault })),
+}))
+
 import { useSyncStatusStore } from '@/app/stores/useSyncStatusStore'
+import { useLiveRegion } from '@/app/hooks/useLiveRegion'
 import { SyncStatusIndicator } from '../SyncStatusIndicator'
 
 function resetStore(partial: Partial<ReturnType<typeof useSyncStatusStore.getState>> = {}) {
@@ -55,6 +64,7 @@ describe('<SyncStatusIndicator />', () => {
     mockCount.mockReset().mockResolvedValue(0)
     mockFullSync.mockReset().mockResolvedValue(undefined)
     mockToastError.mockClear()
+    mockAnnounceDefault.mockClear()
     // Default matchMedia — reduced motion NOT set.
     Object.defineProperty(window, 'matchMedia', {
       writable: true,
@@ -76,7 +86,7 @@ describe('<SyncStatusIndicator />', () => {
     cleanup()
   })
 
-  it('renders trigger with the synced aria-label and live region with role=status', () => {
+  it('renders trigger with the synced aria-label', () => {
     resetStore({ status: 'synced' })
     render(<SyncStatusIndicator />)
     // Button carries the accessible name via aria-label (no role override).
@@ -84,9 +94,11 @@ describe('<SyncStatusIndicator />', () => {
     expect(trigger).toBeInTheDocument()
     expect(trigger).toHaveAttribute('aria-label', expect.stringMatching(/sync status: synced/i))
     expect(trigger).toHaveAttribute('data-sync-status', 'synced')
-    // Sibling live region carries role=status (not the button).
-    const liveRegion = document.querySelector('[role="status"][aria-live="polite"]')
-    expect(liveRegion).toBeInTheDocument()
+    // No inline aria-live span — announcements route through SyncUXShell's
+    // canonical live region (useLiveRegion context). The inline span was removed
+    // as part of refactor/consolidate-aria-live-useliveregion.
+    const inlineLiveRegion = document.querySelector('[aria-live="polite"][role="status"]')
+    expect(inlineLiveRegion).toBeNull()
   })
 
   it('renders offline label and icon when status is offline', () => {
@@ -244,6 +256,70 @@ describe('<SyncStatusIndicator />', () => {
 
     // Race guard early-returned — fullSync should not have been invoked by Retry.
     expect(mockFullSync).not.toHaveBeenCalled()
+  })
+
+  it('announces "Sync recovered. All changes saved." when transitioning error → synced', async () => {
+    const mockAnnounce = vi.fn()
+    vi.mocked(useLiveRegion).mockImplementation(() => ({ announce: mockAnnounce }))
+
+    resetStore({ status: 'error', lastError: 'Network error' })
+    const { rerender } = render(<SyncStatusIndicator />)
+
+    // Transition to synced
+    act(() => {
+      useSyncStatusStore.setState({ status: 'synced', lastError: null })
+    })
+    rerender(<SyncStatusIndicator />)
+
+    await waitFor(() => {
+      expect(mockAnnounce).toHaveBeenCalledWith('Sync recovered. All changes saved.')
+    })
+
+    // Restore default mock for subsequent tests
+    vi.mocked(useLiveRegion).mockImplementation(() => ({ announce: mockAnnounceDefault }))
+  })
+
+  it('announces "Retrying sync…" when transitioning error → syncing', async () => {
+    const mockAnnounce = vi.fn()
+    vi.mocked(useLiveRegion).mockImplementation(() => ({ announce: mockAnnounce }))
+
+    resetStore({ status: 'error', lastError: 'Network error' })
+    const { rerender } = render(<SyncStatusIndicator />)
+
+    // Transition to syncing
+    act(() => {
+      useSyncStatusStore.setState({ status: 'syncing' })
+    })
+    rerender(<SyncStatusIndicator />)
+
+    await waitFor(() => {
+      expect(mockAnnounce).toHaveBeenCalledWith('Retrying sync\u2026')
+    })
+
+    // Restore default mock for subsequent tests
+    vi.mocked(useLiveRegion).mockImplementation(() => ({ announce: mockAnnounceDefault }))
+  })
+
+  it('synced → syncing transition does NOT announce (normal 30s nudge is silent)', async () => {
+    resetStore({ status: 'synced' })
+    const { rerender } = render(<SyncStatusIndicator />)
+
+    // Transition from synced → syncing (periodic background sync — should be silent)
+    act(() => {
+      useSyncStatusStore.setState({ status: 'syncing' })
+    })
+    rerender(<SyncStatusIndicator />)
+
+    // Give any pending effects a chance to run
+    await waitFor(() => {
+      expect(screen.getByTestId('sync-status-indicator')).toHaveAttribute(
+        'data-sync-status',
+        'syncing'
+      )
+    })
+
+    // The default announce spy must NOT have been called for a routine synced→syncing transition.
+    expect(mockAnnounceDefault).not.toHaveBeenCalled()
   })
 
   it('uses static Cloud icon (no animate-spin) when prefers-reduced-motion is set', () => {

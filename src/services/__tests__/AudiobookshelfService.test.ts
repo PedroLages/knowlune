@@ -12,6 +12,7 @@ import {
   getCoverUrl,
   searchLibrary,
   fetchProgress,
+  fetchAllProgress,
   updateProgress,
   fetchCollections,
   fetchSeriesForLibrary,
@@ -19,12 +20,13 @@ import {
   onProgressUpdate,
   pushProgressViaSocket,
   isInsecureUrl,
+  isMixedContentBlocked,
   type AbsSocketConnection,
 } from '@/services/AudiobookshelfService'
 
 // ── Constants ──────────────────────────────────────────────────────
 
-const TEST_URL = 'http://abs.local:13378'
+const TEST_URL = 'https://abs.example.com:13378'
 const TEST_API_KEY = 'test-api-key-123'
 
 // ── Helpers ────────────────────────────────────────────────────────
@@ -75,16 +77,27 @@ describe('AudiobookshelfService.testConnection', () => {
     }
   })
 
-  it('sends ABS URL and token via proxy headers', async () => {
+  it('calls ABS directly with Bearer auth header', async () => {
     const fetchMock = mockFetchJson({ user: { id: 'u1' }, serverSettings: { version: '2.27.0' } })
     vi.stubGlobal('fetch', fetchMock)
 
     await testConnection(TEST_URL, TEST_API_KEY)
 
     const [url, options] = fetchMock.mock.calls[0]
-    expect(url).toBe('/api/abs/proxy/api/authorize')
-    expect(options.headers['X-ABS-URL']).toBe(TEST_URL)
-    expect(options.headers['X-ABS-Token']).toBe(TEST_API_KEY)
+    expect(url).toBe(`${TEST_URL}/api/authorize`)
+    expect(options.headers.Authorization).toBe(`Bearer ${TEST_API_KEY}`)
+    expect(options.headers['X-ABS-URL']).toBeUndefined()
+    expect(options.headers['X-ABS-Token']).toBeUndefined()
+  })
+
+  it('strips trailing slash from base URL', async () => {
+    const fetchMock = mockFetchJson({ user: { id: 'u1' }, serverSettings: { version: '2.27.0' } })
+    vi.stubGlobal('fetch', fetchMock)
+
+    await testConnection(`${TEST_URL}/`, TEST_API_KEY)
+
+    const [url] = fetchMock.mock.calls[0]
+    expect(url).toBe(`${TEST_URL}/api/authorize`)
   })
 
   it('returns auth error for 401 response', async () => {
@@ -98,14 +111,14 @@ describe('AudiobookshelfService.testConnection', () => {
     }
   })
 
-  it('returns connection error for TypeError from fetch', async () => {
+  it('returns CORS guidance for TypeError from fetch', async () => {
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('Failed to fetch')))
 
     const result = await testConnection(TEST_URL, TEST_API_KEY)
 
     expect(result.ok).toBe(false)
     if (!result.ok) {
-      expect(result.error).toBe('Could not connect to server. Check the URL and try again.')
+      expect(result.error).toContain('Allowed Origins')
     }
   })
 
@@ -268,7 +281,7 @@ describe('AudiobookshelfService.fetchLibraryItems', () => {
 
     expect(result.ok).toBe(false)
     if (!result.ok) {
-      expect(result.error).toBe('Could not connect to server. Check the URL and try again.')
+      expect(result.error).toContain('Allowed Origins')
     }
   })
 })
@@ -305,13 +318,13 @@ describe('AudiobookshelfService.fetchItem', () => {
 // ── getStreamUrl ───────────────────────────────────────────────────
 
 describe('AudiobookshelfService.getStreamUrl', () => {
-  it('returns proxy-based stream URL with token and ABS params', () => {
+  it('returns direct stream URL with token query param', () => {
     const url = getStreamUrl(TEST_URL, 'item-1', TEST_API_KEY)
 
-    expect(url).toContain('/api/abs/proxy/api/items/item-1/play')
-    expect(url).toContain(`token=${encodeURIComponent(TEST_API_KEY)}`)
-    expect(url).toContain(`_absUrl=${encodeURIComponent(TEST_URL)}`)
-    expect(url).toContain(`_absToken=${encodeURIComponent(TEST_API_KEY)}`)
+    expect(url).toBe(
+      `${TEST_URL}/api/items/item-1/play?token=${encodeURIComponent(TEST_API_KEY)}`
+    )
+    expect(url).not.toContain('/api/abs/proxy')
   })
 
   it('encodes special characters in API key', () => {
@@ -339,8 +352,9 @@ describe('AudiobookshelfService.createPlaybackSession', () => {
 
     expect(globalThis.fetch).toHaveBeenCalledOnce()
     const [url, options] = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0]
-    expect(url).toBe('/api/abs/proxy/api/items/item-1/play')
+    expect(url).toBe(`${TEST_URL}/api/items/item-1/play`)
     expect(options.method).toBe('POST')
+    expect(options.headers.Authorization).toBe(`Bearer ${TEST_API_KEY}`)
     const body = JSON.parse(options.body)
     expect(body.forceDirectPlay).toBe(true)
     expect(body.deviceInfo.clientName).toBe('Knowlune')
@@ -354,23 +368,31 @@ describe('AudiobookshelfService.createPlaybackSession', () => {
 // ── getStreamUrlFromSession ───────────────────────────────────────
 
 describe('AudiobookshelfService.getStreamUrlFromSession', () => {
-  it('constructs proxied URL from relative contentUrl', () => {
+  it('constructs direct URL from relative contentUrl with token query param', () => {
     const url = getStreamUrlFromSession(TEST_URL, TEST_API_KEY, '/s/item/item-1/book.m4b')
 
-    expect(url).toContain('/api/abs/proxy/s/item/item-1/book.m4b')
-    expect(url).toContain(`_absUrl=${encodeURIComponent(TEST_URL)}`)
-    expect(url).toContain(`_absToken=${encodeURIComponent(TEST_API_KEY)}`)
+    expect(url).toBe(
+      `${TEST_URL}/s/item/item-1/book.m4b?token=${encodeURIComponent(TEST_API_KEY)}`
+    )
+    expect(url).not.toContain('/api/abs/proxy')
   })
 
   it('extracts pathname from absolute contentUrl', () => {
     const url = getStreamUrlFromSession(
       TEST_URL,
       TEST_API_KEY,
-      'http://abs.local:13378/s/item/item-1/book.m4b'
+      'https://abs.example.com:13378/s/item/item-1/book.m4b'
     )
 
-    expect(url).toContain('/api/abs/proxy/s/item/item-1/book.m4b')
-    expect(url).not.toContain('http://abs.local')
+    expect(url).toBe(
+      `${TEST_URL}/s/item/item-1/book.m4b?token=${encodeURIComponent(TEST_API_KEY)}`
+    )
+    expect(url).not.toContain('/api/abs/proxy')
+  })
+
+  it('strips trailing slash from base URL', () => {
+    const url = getStreamUrlFromSession(`${TEST_URL}/`, TEST_API_KEY, '/s/item/x/book.m4b')
+    expect(url).toBe(`${TEST_URL}/s/item/x/book.m4b?token=${encodeURIComponent(TEST_API_KEY)}`)
   })
 })
 
@@ -384,7 +406,7 @@ describe('AudiobookshelfService.closePlaybackSession', () => {
 
     expect(globalThis.fetch).toHaveBeenCalledOnce()
     const [url, options] = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0]
-    expect(url).toBe('/api/abs/proxy/api/session/session-1/close')
+    expect(url).toBe(`${TEST_URL}/api/session/session-1/close`)
     expect(options.method).toBe('POST')
   })
 })
@@ -392,12 +414,32 @@ describe('AudiobookshelfService.closePlaybackSession', () => {
 // ── getCoverUrl ────────────────────────────────────────────────────
 
 describe('AudiobookshelfService.getCoverUrl', () => {
-  it('returns proxy-based cover URL with ABS params', () => {
+  it('returns direct cover URL with token query param', () => {
     const url = getCoverUrl(TEST_URL, 'item-1', TEST_API_KEY)
 
-    expect(url).toContain('/api/abs/proxy/api/items/item-1/cover')
-    expect(url).toContain(`_absUrl=${encodeURIComponent(TEST_URL)}`)
-    expect(url).toContain(`_absToken=${encodeURIComponent(TEST_API_KEY)}`)
+    expect(url).toBe(
+      `${TEST_URL}/api/items/item-1/cover?token=${encodeURIComponent(TEST_API_KEY)}`
+    )
+    expect(url).not.toContain('/api/abs/proxy')
+  })
+
+  it('strips trailing slash from base URL', () => {
+    const url = getCoverUrl(`${TEST_URL}/`, 'item-1', TEST_API_KEY)
+    expect(url).toBe(
+      `${TEST_URL}/api/items/item-1/cover?token=${encodeURIComponent(TEST_API_KEY)}`
+    )
+  })
+
+  it('omits token query param when apiKey is undefined', () => {
+    const url = getCoverUrl(TEST_URL, 'item-1')
+    expect(url).toBe(`${TEST_URL}/api/items/item-1/cover`)
+    expect(url).not.toContain('token=')
+  })
+
+  it('encodes special characters in apiKey', () => {
+    const specialKey = 'key/with+special=chars'
+    const url = getCoverUrl(TEST_URL, 'item-1', specialKey)
+    expect(url).toContain(`token=${encodeURIComponent(specialKey)}`)
   })
 })
 
@@ -497,7 +539,7 @@ describe('AudiobookshelfService.fetchProgress', () => {
 
     expect(result.ok).toBe(false)
     if (!result.ok) {
-      expect(result.error).toContain('Could not connect')
+      expect(result.error).toContain('Allowed Origins')
     }
   })
 
@@ -520,6 +562,194 @@ describe('AudiobookshelfService.fetchProgress', () => {
     expect(result.ok).toBe(false)
     if (!result.ok) {
       expect(result.error).toBe('Connection timed out. Check the URL and try again.')
+    }
+  })
+})
+
+// ── fetchAllProgress ───────────────────────────────────────────────
+
+describe('AudiobookshelfService.fetchAllProgress', () => {
+  it('parses mediaProgress entries from GET /api/me', async () => {
+    vi.stubGlobal(
+      'fetch',
+      mockFetchJson({
+        id: 'user-1',
+        mediaProgress: [
+          {
+            id: 'mp-1',
+            libraryItemId: 'item-a',
+            currentTime: 120,
+            duration: 3600,
+            progress: 0.033,
+            isFinished: false,
+            lastUpdate: 1712345678000,
+          },
+        ],
+      })
+    )
+
+    const result = await fetchAllProgress(TEST_URL, TEST_API_KEY)
+
+    expect(result.ok).toBe(true)
+    if (result.ok) {
+      expect(result.data).toHaveLength(1)
+      expect(result.data[0].libraryItemId).toBe('item-a')
+      expect(result.data[0].currentTime).toBe(120)
+      expect(result.data[0].lastUpdate).toBe(1712345678000)
+    }
+  })
+
+  it('returns empty array when mediaProgress is missing', async () => {
+    vi.stubGlobal('fetch', mockFetchJson({ id: 'user-1', username: 'u' }))
+
+    const result = await fetchAllProgress(TEST_URL, TEST_API_KEY)
+
+    expect(result.ok).toBe(true)
+    if (result.ok) {
+      expect(result.data).toEqual([])
+    }
+  })
+
+  it('skips podcast episode progress rows', async () => {
+    vi.stubGlobal(
+      'fetch',
+      mockFetchJson({
+        mediaProgress: [
+          {
+            id: 'mp-pod',
+            libraryItemId: 'pod-item',
+            episodeId: 'ep-1',
+            currentTime: 60,
+            duration: 600,
+            progress: 0.1,
+            isFinished: false,
+            lastUpdate: 1712345678000,
+          },
+          {
+            id: 'mp-book',
+            libraryItemId: 'book-item',
+            currentTime: 30,
+            duration: 3000,
+            progress: 0.01,
+            isFinished: false,
+            lastUpdate: 1712345678001,
+          },
+        ],
+      })
+    )
+
+    const result = await fetchAllProgress(TEST_URL, TEST_API_KEY)
+
+    expect(result.ok).toBe(true)
+    if (result.ok) {
+      expect(result.data).toHaveLength(1)
+      expect(result.data[0].libraryItemId).toBe('book-item')
+    }
+  })
+
+  it('propagates 401 from absApiFetch', async () => {
+    vi.stubGlobal('fetch', mockFetchStatus(401))
+
+    const result = await fetchAllProgress(TEST_URL, TEST_API_KEY)
+
+    expect(result.ok).toBe(false)
+    if (!result.ok) {
+      expect(result.status).toBe(401)
+    }
+  })
+
+  it('returns empty array for 404 (best-effort, same spirit as per-item progress)', async () => {
+    vi.stubGlobal('fetch', mockFetchStatus(404))
+
+    const result = await fetchAllProgress(TEST_URL, TEST_API_KEY)
+
+    expect(result.ok).toBe(true)
+    if (result.ok) {
+      expect(result.data).toEqual([])
+    }
+  })
+
+  it('propagates 500 from absApiFetch', async () => {
+    vi.stubGlobal('fetch', mockFetchStatus(500))
+
+    const result = await fetchAllProgress(TEST_URL, TEST_API_KEY)
+
+    expect(result.ok).toBe(false)
+    if (!result.ok) {
+      expect(result.status).toBe(500)
+    }
+  })
+
+  it('returns empty array when JSON body is not a plain object', async () => {
+    vi.stubGlobal('fetch', mockFetchJson(['not', 'an', 'object']))
+
+    const result = await fetchAllProgress(TEST_URL, TEST_API_KEY)
+
+    expect(result.ok).toBe(true)
+    if (result.ok) {
+      expect(result.data).toEqual([])
+    }
+  })
+
+  it('skips mediaProgress rows with invalid lastUpdate', async () => {
+    vi.stubGlobal(
+      'fetch',
+      mockFetchJson({
+        mediaProgress: [
+          {
+            id: 'mp-bad',
+            libraryItemId: 'item-bad',
+            currentTime: 10,
+            duration: 100,
+            progress: 0.1,
+            isFinished: false,
+            lastUpdate: 'not-a-date',
+          },
+          {
+            id: 'mp-good',
+            libraryItemId: 'item-good',
+            currentTime: 20,
+            duration: 200,
+            progress: 0.1,
+            isFinished: false,
+            lastUpdate: 1712345678000,
+          },
+        ],
+      })
+    )
+
+    const result = await fetchAllProgress(TEST_URL, TEST_API_KEY)
+
+    expect(result.ok).toBe(true)
+    if (result.ok) {
+      expect(result.data).toHaveLength(1)
+      expect(result.data[0].libraryItemId).toBe('item-good')
+    }
+  })
+
+  it('clamps progress to 0–1 for absurd values', async () => {
+    vi.stubGlobal(
+      'fetch',
+      mockFetchJson({
+        mediaProgress: [
+          {
+            id: 'mp-x',
+            libraryItemId: 'item-x',
+            currentTime: 1,
+            duration: 10,
+            progress: 9.99,
+            isFinished: false,
+            lastUpdate: 1712345678000,
+          },
+        ],
+      })
+    )
+
+    const result = await fetchAllProgress(TEST_URL, TEST_API_KEY)
+
+    expect(result.ok).toBe(true)
+    if (result.ok) {
+      expect(result.data[0].progress).toBe(1)
     }
   })
 })
@@ -567,7 +797,7 @@ describe('AudiobookshelfService.updateProgress', () => {
 
     expect(result.ok).toBe(false)
     if (!result.ok) {
-      expect(result.error).toContain('Could not connect')
+      expect(result.error).toContain('Allowed Origins')
     }
   })
 })
@@ -576,9 +806,9 @@ describe('AudiobookshelfService.updateProgress', () => {
 
 describe('AudiobookshelfService.fetchCollections', () => {
   it('returns array of collections on success', async () => {
-    // ABS GET /api/collections returns { collections: [...] }, not paginated
+    // ABS GET /api/libraries/{id}/collections returns { results: [...], total: N }
     const mockResponse = {
-      collections: [
+      results: [
         {
           id: 'c1',
           libraryId: 'lib-1',
@@ -596,10 +826,11 @@ describe('AudiobookshelfService.fetchCollections', () => {
           books: [{ id: 'b3', media: { metadata: { title: 'Sapiens' } } }],
         },
       ],
+      total: 2,
     }
     vi.stubGlobal('fetch', mockFetchJson(mockResponse))
 
-    const result = await fetchCollections(TEST_URL, TEST_API_KEY)
+    const result = await fetchCollections(TEST_URL, TEST_API_KEY, 'lib-1')
 
     expect(result.ok).toBe(true)
     if (result.ok) {
@@ -613,7 +844,7 @@ describe('AudiobookshelfService.fetchCollections', () => {
   it('returns auth error for 401 response', async () => {
     vi.stubGlobal('fetch', mockFetchStatus(401))
 
-    const result = await fetchCollections(TEST_URL, TEST_API_KEY)
+    const result = await fetchCollections(TEST_URL, TEST_API_KEY, 'lib-1')
 
     expect(result.ok).toBe(false)
     if (!result.ok) {
@@ -624,11 +855,11 @@ describe('AudiobookshelfService.fetchCollections', () => {
   it('returns CORS error for network failure', async () => {
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('Failed to fetch')))
 
-    const result = await fetchCollections(TEST_URL, TEST_API_KEY)
+    const result = await fetchCollections(TEST_URL, TEST_API_KEY, 'lib-1')
 
     expect(result.ok).toBe(false)
     if (!result.ok) {
-      expect(result.error).toBe('Could not connect to server. Check the URL and try again.')
+      expect(result.error).toContain('Allowed Origins')
     }
   })
 })
@@ -646,6 +877,26 @@ describe('AudiobookshelfService.isInsecureUrl', () => {
 
   it('returns false for invalid URLs', () => {
     expect(isInsecureUrl('not-a-url')).toBe(false)
+  })
+})
+
+// ── isMixedContentBlocked ─────────────────────────────────────────────
+
+describe('AudiobookshelfService.isMixedContentBlocked', () => {
+  it('blocks http ABS URL when app is served over https', () => {
+    expect(isMixedContentBlocked('http://192.168.1.50:13378', 'https:')).toBe(true)
+  })
+
+  it('allows https ABS URL when app is served over https', () => {
+    expect(isMixedContentBlocked('https://abs.example.com', 'https:')).toBe(false)
+  })
+
+  it('allows http ABS URL in dev (app served over http)', () => {
+    expect(isMixedContentBlocked('http://192.168.1.50:13378', 'http:')).toBe(false)
+  })
+
+  it('returns false for invalid URLs (falls through to other validation)', () => {
+    expect(isMixedContentBlocked('not a url', 'https:')).toBe(false)
   })
 })
 
@@ -786,7 +1037,7 @@ describe('AudiobookshelfService.connectSocket', () => {
   it('creates WebSocket with correct URL format', () => {
     connectSocket(TEST_URL, TEST_API_KEY)
     expect(WebSocket).toHaveBeenCalledWith(
-      expect.stringContaining('ws://abs.local:13378/socket.io/')
+      expect.stringContaining('wss://abs.example.com:13378/socket.io/')
     )
   })
 

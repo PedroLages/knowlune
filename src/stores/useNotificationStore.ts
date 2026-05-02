@@ -105,11 +105,7 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
 
     try {
       await persistWithRetry(async () => {
-        await syncableWrite(
-          'notifications',
-          'add',
-          notification as unknown as SyncableRecord,
-        )
+        await syncableWrite('notifications', 'add', notification as unknown as SyncableRecord)
       })
 
       // Update store state after successful persistence
@@ -135,11 +131,7 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
         // syncableWrite requires a full record for 'put' — merge the patch
         // over the existing in-memory row.
         const next: Notification = { ...target, readAt: now }
-        await syncableWrite(
-          'notifications',
-          'put',
-          next as unknown as SyncableRecord,
-        )
+        await syncableWrite('notifications', 'put', next as unknown as SyncableRecord)
       })
 
       // Update store state after successful persistence
@@ -165,11 +157,7 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
         // Enqueue one put per unread row so each change syncs individually.
         for (const n of unread) {
           const next: Notification = { ...n, readAt: now }
-          await syncableWrite(
-            'notifications',
-            'put',
-            next as unknown as SyncableRecord,
-          )
+          await syncableWrite('notifications', 'put', next as unknown as SyncableRecord)
         }
       })
 
@@ -196,11 +184,7 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
     try {
       await persistWithRetry(async () => {
         const next: Notification = { ...target, dismissedAt: now }
-        await syncableWrite(
-          'notifications',
-          'put',
-          next as unknown as SyncableRecord,
-        )
+        await syncableWrite('notifications', 'put', next as unknown as SyncableRecord)
       })
 
       // Remove from visible list after successful persistence

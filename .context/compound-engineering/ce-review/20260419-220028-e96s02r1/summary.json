@@ -1,0 +1,145 @@
+{
+  "runId": "20260419-220028-e96s02r1",
+  "scope": "feature/e96-s02-wire-p3-p4-stores vs origin/main (base f7aa2e58)",
+  "plan": "docs/plans/2026-04-19-018-feat-e96-s02-wire-p3-p4-stores-plan.md",
+  "planSource": "explicit",
+  "mode": "headless",
+  "reviewers": ["correctness", "maintainability", "testing", "project-standards", "reliability"],
+  "verdict": "Ready with fixes",
+  "appliedSafeAutoFixes": 0,
+  "findings": [
+    {
+      "id": "F1",
+      "severity": "P1",
+      "autofixClass": "gated_auto",
+      "owner": "downstream-resolver",
+      "requiresVerification": true,
+      "preExisting": false,
+      "confidence": 0.82,
+      "file": "src/stores/useChallengeStore.ts",
+      "line": 205,
+      "reviewer": "correctness",
+      "title": "hydrateFromRemote bulkPut can regress monotonic currentProgress",
+      "whyItMatters": "challenges is registered with conflictStrategy: 'monotonic' on currentProgress — progress must only move forward. hydrateFromRemote calls db.challenges.bulkPut(rows) unconditionally, which will overwrite a local row whose currentProgress is higher than the remote snapshot. This happens on every sign-in hydrate when the local device has made progress that has not yet uploaded (e.g. offline mutation, queued but undrained syncQueue, or queue still replaying). The monotonic guarantee is only enforced by the upload engine; the download/hydrate side must mirror that guarantee or users will see their streak/challenge progress go backwards on sign-in.",
+      "evidence": [
+        "useChallengeStore.ts:205 — await db.challenges.bulkPut(rows) has no per-row monotonic merge",
+        "tableRegistry.ts:463-470 — conflictStrategy: 'monotonic', monotonicFields: ['currentProgress']",
+        "Plan §'Key Technical Decisions' claims 'upload engine handles LWW during push; download engine trusts remote on pull because it applies after a cursor' — but this claim does not hold when the cursor-based download races with an undrained outbound queue, which is the exact state after a cold sign-in before syncEngine.start finishes its first upload pass."
+      ],
+      "suggestedFix": "For monotonic tables, hydrate via a per-row merge: for each remote row read the existing Dexie row and only apply the remote when remote.currentProgress >= local.currentProgress (and similarly for celebratedMilestones union). Alternatively, delay the P3/P4 hydrate fan-out until after syncEngine.start has drained the outbound queue for challenges — but that reintroduces the startup-gating the plan explicitly avoided."
+    },
+    {
+      "id": "F2",
+      "severity": "P1",
+      "autofixClass": "manual",
+      "owner": "downstream-resolver",
+      "requiresVerification": false,
+      "preExisting": false,
+      "confidence": 0.88,
+      "file": "docs/plans/2026-04-19-018-feat-e96-s02-wire-p3-p4-stores-plan.md",
+      "line": 149,
+      "reviewer": "project-standards",
+      "title": "Plan Unit 2 (R6 — regenerate src/lib/supabase/types.ts) is unaddressed; target file does not exist",
+      "whyItMatters": "R6 is an explicit requirement in the plan's Requirements Trace and Unit 2 is a full implementation unit gated on it ('Land as a standalone commit'). The diff contains zero changes to src/lib/supabase/types.ts and that path does not exist anywhere in the repo (no src/lib/supabase directory at all). This is a plan-assumption defect rather than a code defect — the plan was written against a codebase shape that does not match this repo — but it still leaves R6/AC7 unaddressed per the plan's own checklist. Either the requirement should be retired with a note, or the missing types file should be generated and checked in.",
+      "evidence": [
+        "Plan line 30: 'R6 (G4/AC7) — Regenerated src/lib/supabase/types.ts compiles; no new any leaks.'",
+        "Plan lines 149-174: Unit 2 details including 'Run the project's existing type-gen command' and 'Git diff shows only src/lib/supabase/types.ts changes.'",
+        "find src/lib/supabase → no such directory",
+        "git log --all -- src/lib/supabase/types.ts → no history"
+      ],
+      "suggestedFix": "Retire R6/Unit 2 from the plan with a note explaining that the project does not maintain a generated Supabase types file (all sync code uses @/data/types directly), OR introduce the types file now and keep it regenerated going forward."
+    },
+    {
+      "id": "F3",
+      "severity": "P2",
+      "autofixClass": "gated_auto",
+      "owner": "downstream-resolver",
+      "requiresVerification": true,
+      "preExisting": false,
+      "confidence": 0.7,
+      "file": "src/lib/sync/hydrateP3P4.ts",
+      "line": 66,
+      "reviewer": "reliability",
+      "title": "Fire-and-forget hydrate races with syncEngine.start and with ongoing local mutations",
+      "whyItMatters": "useAuthLifecycle.ts line 66 launches hydrateP3P4FromSupabase(userId) with .catch() and immediately proceeds to syncEngine.start(userId) in the fast-path branch. Both sides do concurrent bulkPut-shaped writes against the same Dexie tables (hydrate calls bulkPut; the download phase in syncEngine also bulkPuts). Indexed transactions serialize them, but the ordering is non-deterministic — a locally-mutated row that has already been uploaded-then-round-tripped may be overwritten by an older pre-round-trip hydrate snapshot. In practice this shows up as brief UI flicker on slow networks and (combined with F1) can surface as challenge progress regressing.",
+      "evidence": [
+        "src/app/hooks/useAuthLifecycle.ts:62-68 — hydrateP3P4FromSupabase(userId).catch(...) with no await",
+        "src/app/hooks/useAuthLifecycle.ts:86-88 — syncEngine.start(userId) kicks off immediately after",
+        "Plan §'Risks & Dependencies' ack'd 'hydrateP3P4FromSupabase ordering collides with in-flight local writes' → mitigation is 'Promise.allSettled + bulkPut is idempotent; local writes stamp newer updatedAt' — but download-side writes carry REMOTE updatedAt which may be newer-than-local after a queued local write has shipped."
+      ],
+      "suggestedFix": "Either (a) await hydrateP3P4FromSupabase in handleSignIn before calling syncEngine.start (the same pattern already used for hydrateSettingsFromSupabase); or (b) inside each hydrateFromRemote, compare remote.updatedAt against local.updatedAt and skip rows where local is newer. Option (a) is simpler and matches the existing settings-hydrate ordering."
+    },
+    {
+      "id": "F4",
+      "severity": "P2",
+      "autofixClass": "manual",
+      "owner": "downstream-resolver",
+      "requiresVerification": false,
+      "preExisting": false,
+      "confidence": 0.78,
+      "file": "src/stores/useLearningPathStore.ts",
+      "line": 220,
+      "reviewer": "correctness",
+      "title": "deletePath persists to Dexie+queue before optimistic state update and lacks rollback",
+      "whyItMatters": "Unlike every other mutation in this store (createPath, renamePath, updateDescription, etc.), deletePath calls syncableWrite first and updates the in-memory state afterward, with no try/catch and no rollback. If persistWithRetry exhausts retries (e.g. Dexie quota exceeded mid-sequence), the state still flips because the set() call always runs after persistWithRetry resolves — but if persistWithRetry throws, the thrown exception propagates to the caller and the UI never reflects the delete attempt. Worse, partial failure mid-loop (entry deleted from Dexie + queued, next entry throws) leaves the learningPath undeleted and half the entries orphaned. All other mutations in the file follow the optimistic-with-rollback pattern; deletePath should too.",
+      "evidence": [
+        "useLearningPathStore.ts:211-236 — no try/catch, set() runs after persistWithRetry with no snapshot captured",
+        "Compare useLearningPathStore.ts:93-135 (createPath) — captures prevPaths/prevActivePath, rolls back on catch"
+      ],
+      "suggestedFix": "Mirror the createPath pattern: snapshot previous state, apply optimistic set(), wrap persistWithRetry in try/catch, restore snapshot on failure and surface a toast.error."
+    },
+    {
+      "id": "F5",
+      "severity": "P3",
+      "autofixClass": "manual",
+      "owner": "downstream-resolver",
+      "requiresVerification": false,
+      "preExisting": false,
+      "confidence": 0.75,
+      "file": "src/stores/useNotificationStore.ts",
+      "line": 159,
+      "reviewer": "maintainability",
+      "title": "markAllRead computes unreadIds but never uses it; re-derives unread inside closure",
+      "whyItMatters": "unreadIds is computed on line 159 and never referenced. The actual unread set is re-derived inside the persistWithRetry callback on line 166 as 'const unread = notifications.filter(n => n.readAt === null)'. Aside from the dead variable, the closure captures the outer 'notifications' reference — if a concurrent create() or hydrate() updates the store between the outer read and the inner re-filter, the set of rows that get marked in Dexie can differ from the set that gets optimistically updated in state. Low probability in practice but a latent consistency bug.",
+      "evidence": [
+        "useNotificationStore.ts:159 — const unreadIds = notifications.filter(...).map(n => n.id)  // unused",
+        "useNotificationStore.ts:166-167 — const unread = notifications.filter(n => n.readAt === null)"
+      ],
+      "suggestedFix": "Delete the dead unreadIds declaration. Pass the already-filtered unread array into persistWithRetry via closure so the same snapshot is used for the writes and for the optimistic set() update."
+    },
+    {
+      "id": "F6",
+      "severity": "P3",
+      "autofixClass": "advisory",
+      "owner": "human",
+      "requiresVerification": false,
+      "preExisting": false,
+      "confidence": 0.8,
+      "file": "src/lib/sync/hydrateP3P4.ts",
+      "line": 132,
+      "reviewer": "correctness",
+      "title": "Quizzes LWW table is not hydrated despite being listed as LWW in the registry",
+      "whyItMatters": "The orchestrator comment at lines 132-138 explains that useQuizStore has no hydrateFromRemote and that careerPaths/pathEnrollments have no stores. This is a deliberate, documented scope cut — but it leaves the plan's 9-LWW-table promise (plan §'High-Level Technical Design': 'Promise.allSettled([ ... 9 LWW tables ... ])') unmet on the client side. On a fresh sign-in from a second device the user will not see quizzes they authored on device 1 until they manually regenerate or until the Supabase download cursor catches up through syncEngine.start (which does also seed Dexie — verify this is the case so the gap is benign). Worth surfacing because the plan explicitly counted 9 tables in the hydrate fan-out.",
+      "evidence": [
+        "src/lib/sync/hydrateP3P4.ts:132-138 — 'skip quizzes so the orchestrator only touches tables with a defined hydrate contract'",
+        "Plan line 107: 'Promise.allSettled([ ... 9 more LWW tables ... ])' — actual implementation hydrates 5 call sites covering 6 tables"
+      ],
+      "suggestedFix": "Either add a minimal useQuizStore.hydrateFromRemote that bulkPuts quizzes and refreshes any cached list (matches the pattern in the other stores), or document in the plan that syncEngine.start's download phase is the intentional hydrate path for quizzes. The current comment in hydrateP3P4.ts only covers the former option."
+    }
+  ],
+  "residualRisks": [
+    "F1 and F3 interact: even if the monotonic regression in F1 is fixed by comparing per-row, concurrent writes from syncEngine.start (F3) can still reorder which snapshot wins.",
+    "careerPaths / pathEnrollments have registry entries with no writers and no hydrate — dead sync surface until the future story lands; acceptable per plan but worth remembering during E97+."
+  ],
+  "testingGaps": [
+    "No test asserts that challenges hydrateFromRemote preserves a locally-higher currentProgress value (F1).",
+    "No test asserts the ordering of hydrateP3P4FromSupabase vs syncEngine.start (F3).",
+    "deletePath has no failure-path test verifying rollback behavior — tests exercise the happy path only (F4)."
+  ],
+  "preExistingIssues": [],
+  "coverage": {
+    "suppressed": 0,
+    "untrackedExcluded": [],
+    "failedReviewers": []
+  }
+}

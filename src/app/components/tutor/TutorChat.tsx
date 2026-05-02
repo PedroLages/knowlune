@@ -88,9 +88,7 @@ export function TutorChat({
   } = useConversationHistory({ courseId, videoId: lessonId, messages })
 
   // Conversation count for badge
-  const conversationCount = allConversations.filter(
-    c => c.courseId === courseId
-  ).length
+  const conversationCount = allConversations.filter(c => c.courseId === courseId).length
 
   // Determine badge status — use hook's transcriptStatus or fallback
   const badgeStatus: TranscriptStatus = transcriptStatus ?? {

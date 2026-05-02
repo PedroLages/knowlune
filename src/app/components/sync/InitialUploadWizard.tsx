@@ -16,17 +16,21 @@
  * @since E97-S03
  */
 import { useEffect, useRef, useState } from 'react'
+import { useLiveRegion } from '@/app/hooks/useLiveRegion'
 import { CloudUpload, CheckCircle2, AlertTriangle } from 'lucide-react'
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/app/components/ui/dialog'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/app/components/ui/dialog'
 import { Button } from '@/app/components/ui/button'
 import { Progress } from '@/app/components/ui/progress'
 import { syncEngine } from '@/lib/sync/syncEngine'
 import { useSyncStatusStore } from '@/app/stores/useSyncStatusStore'
 import { useInitialUploadProgress } from '@/app/hooks/useInitialUploadProgress'
-import {
-  wizardCompleteKey,
-  wizardDismissedKey,
-} from '@/lib/sync/shouldShowInitialUploadWizard'
+import { wizardCompleteKey, wizardDismissedKey } from '@/lib/sync/shouldShowInitialUploadWizard'
 import { toastSuccess } from '@/lib/toastHelpers'
 
 type Phase = 'intro' | 'uploading' | 'success' | 'error'
@@ -56,8 +60,9 @@ export interface InitialUploadWizardProps {
 
 export function InitialUploadWizard({ open, userId, onClose }: InitialUploadWizardProps) {
   const [phase, setPhase] = useState<Phase>('intro')
-  const status = useSyncStatusStore((s) => s.status)
-  const lastError = useSyncStatusStore((s) => s.lastError)
+  const status = useSyncStatusStore(s => s.status)
+  const lastError = useSyncStatusStore(s => s.lastError)
+  const { announce } = useLiveRegion()
 
   // Only poll syncQueue while we are actually in the uploading phase.
   const progress = useInitialUploadProgress(userId, open && phase === 'uploading')
@@ -90,11 +95,8 @@ export function InitialUploadWizard({ open, userId, onClose }: InitialUploadWiza
     if (status === 'syncing') {
       suppressErrorUntilSyncingRef.current = false
     }
-    if (
-      status === 'error' &&
-      phase === 'uploading' &&
-      !suppressErrorUntilSyncingRef.current
-    ) {
+    if (status === 'error' && phase === 'uploading' && !suppressErrorUntilSyncingRef.current) {
+      announce(`Upload failed. ${lastError ?? 'Please try again.'}`)
       setPhase('error')
     }
     if (
@@ -114,9 +116,10 @@ export function InitialUploadWizard({ open, userId, onClose }: InitialUploadWiza
         console.error('[InitialUploadWizard] localStorage write failed:', err)
       }
       toastSuccess.saved('Initial upload complete')
+      announce('Upload complete. Your data is safely backed up.')
       setPhase('success')
     }
-  }, [status, phase, progress.done, progress.total, open, userId])
+  }, [status, phase, progress.done, progress.total, open, userId, announce, lastError])
 
   // Edge case (AC5 belt-and-suspenders): if mounted with total === 0, close silently.
   // Plan critic note 2: the completion flag was already written by
@@ -132,10 +135,11 @@ export function InitialUploadWizard({ open, userId, onClose }: InitialUploadWiza
   if (!open || !userId) return null
 
   function handleStart() {
+    announce('Uploading your data. Please wait.')
     setPhase('uploading')
     // silent-catch-ok — errors surface via useSyncStatusStore.lastError,
     // which drives the error phase transition above.
-    syncEngine.fullSync().catch((err) => {
+    syncEngine.fullSync().catch(err => {
       console.error('[InitialUploadWizard] fullSync failed:', err)
     })
   }
@@ -153,9 +157,10 @@ export function InitialUploadWizard({ open, userId, onClose }: InitialUploadWiza
 
   function handleRetry() {
     suppressErrorUntilSyncingRef.current = true
+    announce('Uploading your data. Please wait.')
     setPhase('uploading')
     // silent-catch-ok — errors surface via useSyncStatusStore.lastError.
-    syncEngine.fullSync().catch((err) => {
+    syncEngine.fullSync().catch(err => {
       console.error('[InitialUploadWizard] retry fullSync failed:', err)
     })
   }
@@ -166,18 +171,14 @@ export function InitialUploadWizard({ open, userId, onClose }: InitialUploadWiza
   return (
     <Dialog
       open={open}
-      onOpenChange={(isOpen) => {
+      onOpenChange={isOpen => {
         // Prevent radix auto-close on escape/overlay click during upload —
         // user must explicitly Skip or Close.
         if (!isOpen && phase === 'uploading') return
         if (!isOpen) onClose()
       }}
     >
-      <DialogContent
-        className="sm:max-w-md"
-        data-testid="initial-upload-wizard"
-        data-phase={phase}
-      >
+      <DialogContent className="sm:max-w-md" data-testid="initial-upload-wizard" data-phase={phase}>
         {phase === 'intro' && (
           <>
             <DialogHeader>
@@ -186,8 +187,8 @@ export function InitialUploadWizard({ open, userId, onClose }: InitialUploadWiza
                 <DialogTitle>Back up your learning data</DialogTitle>
               </div>
               <DialogDescription>
-                We'll upload your notes, progress, and other data to your Knowlune
-                account so it's safe and available across your devices.
+                We'll upload your notes, progress, and other data to your Knowlune account so it's
+                safe and available across your devices.
               </DialogDescription>
             </DialogHeader>
 
@@ -221,14 +222,14 @@ export function InitialUploadWizard({ open, userId, onClose }: InitialUploadWiza
                 <DialogTitle>Uploading your data…</DialogTitle>
               </div>
               <DialogDescription>
-                This can take a moment depending on how much data you have. You can
-                keep using Knowlune while it runs.
+                This can take a moment depending on how much data you have. You can keep using
+                Knowlune while it runs.
               </DialogDescription>
             </DialogHeader>
 
             <div className="space-y-2">
               <Progress value={percent} />
-              <p className="text-muted-foreground text-sm" aria-live="polite">
+              <p className="text-muted-foreground text-sm" aria-hidden="true">
                 Uploading {progress.processed} of {progress.total}
                 {tableHint ? ` · ${tableHint}` : ''}
               </p>
@@ -259,12 +260,7 @@ export function InitialUploadWizard({ open, userId, onClose }: InitialUploadWiza
                 automatically.
               </DialogDescription>
             </DialogHeader>
-            <Button
-              variant="brand"
-              onClick={onClose}
-              data-testid="initial-upload-done"
-              autoFocus
-            >
+            <Button variant="brand" onClick={onClose} data-testid="initial-upload-done" autoFocus>
               Done
             </Button>
           </>

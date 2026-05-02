@@ -1,5 +1,6 @@
 // eslint-disable-next-line component-size/max-lines -- page orchestrator: manages flashcard review phases (loading, dashboard, reviewing, summary) and book back-navigation
 import { useEffect, useState, useCallback, useRef, useMemo } from 'react'
+import { Link } from 'react-router'
 import { motion } from 'motion/react'
 import {
   Layers,
@@ -38,6 +39,10 @@ import { dispatchFocusRequest, dispatchFocusRelease } from '@/lib/focusModeEvent
 import { getSettings } from '@/lib/settings'
 
 type FlashcardPhase = 'loading' | 'dashboard' | 'reviewing' | 'summary'
+
+interface FlashcardsProps {
+  courseId?: string
+}
 
 function formatNextReviewDate(dateStr: string | null): string {
   if (!dateStr) return '—'
@@ -81,7 +86,7 @@ function getUpcomingSchedule(
     }))
 }
 
-export function Flashcards() {
+export function Flashcards({ courseId }: FlashcardsProps = {}) {
   const [phase, setPhase] = useState<FlashcardPhase>('loading')
   const [isFlipped, setIsFlipped] = useState(false)
   const [isRating, setIsRating] = useState(false)
@@ -116,6 +121,38 @@ export function Flashcards() {
     for (const c of importedCourses) map.set(c.id, c.name)
     return map
   }, [allCourses, importedCourses])
+
+  const isCourseScoped = courseId !== undefined
+  const courseName = courseId ? (courseNameMap.get(courseId) ?? 'Unknown Course') : null
+  const visibleFlashcards = useMemo(
+    () =>
+      courseId === undefined ? flashcards : flashcards.filter(card => card.courseId === courseId),
+    [flashcards, courseId]
+  )
+  const courseDecks = useMemo(() => {
+    if (isCourseScoped) return []
+
+    const grouped = new Map<string, { courseId: string; total: number }>()
+    for (const card of flashcards) {
+      const key = card.courseId ?? ''
+      const existing = grouped.get(key)
+      if (existing) {
+        existing.total += 1
+      } else {
+        grouped.set(key, { courseId: key, total: 1 })
+      }
+    }
+
+    return [...grouped.values()]
+      .map(deck => ({
+        ...deck,
+        name: deck.courseId
+          ? (courseNameMap.get(deck.courseId) ?? 'Unknown Course')
+          : 'Unknown Course',
+        due: getDueFlashcards(now, deck.courseId).length,
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name))
+  }, [isCourseScoped, flashcards, courseNameMap, getDueFlashcards, now])
 
   // Initial data load
   const handleLoadFlashcards = useCallback(async () => {
@@ -159,7 +196,7 @@ export function Flashcards() {
   }, [])
 
   const handleStartReview = useCallback(() => {
-    startReviewSession(now)
+    startReviewSession(now, courseId)
     setIsFlipped(false)
     setPhase('reviewing')
 
@@ -170,7 +207,7 @@ export function Flashcards() {
         dispatchFocusRequest('flashcard-review', 'flashcard')
       })
     }
-  }, [startReviewSession, now])
+  }, [startReviewSession, now, courseId])
 
   const handleFlip = useCallback(() => {
     setIsFlipped(true)
@@ -186,7 +223,7 @@ export function Flashcards() {
         // Check if session is complete
         const { reviewIndex: nextIndex, reviewQueue: queue } = useFlashcardStore.getState()
         if (nextIndex >= queue.length) {
-          const sessionSummary = getSessionSummary()
+          const sessionSummary = getSessionSummary(courseId)
           setSummary(sessionSummary)
           setPhase('summary')
           dispatchFocusRelease()
@@ -202,7 +239,7 @@ export function Flashcards() {
         setIsRating(false)
       }
     },
-    [rateFlashcard, getSessionSummary, now]
+    [rateFlashcard, getSessionSummary, now, courseId]
   )
 
   const handleBackToDashboard = useCallback(() => {
@@ -213,13 +250,13 @@ export function Flashcards() {
   }, [resetReviewSession])
 
   const handleReviewMore = useCallback(() => {
-    const due = getDueFlashcards(now)
+    const due = getDueFlashcards(now, courseId)
     if (due.length > 0) {
       handleStartReview()
     } else {
       handleBackToDashboard()
     }
-  }, [getDueFlashcards, now, handleStartReview, handleBackToDashboard])
+  }, [getDueFlashcards, now, courseId, handleStartReview, handleBackToDashboard])
 
   // Keyboard shortcuts during review
   useEffect(() => {
@@ -296,7 +333,7 @@ export function Flashcards() {
     )
   }
 
-  const stats = getStats(now)
+  const stats = getStats(now, courseId)
   const currentCard = reviewQueue[reviewIndex]
   const currentCourseName =
     (currentCard && courseNameMap.get(currentCard.courseId)) ?? 'Unknown Course'
@@ -317,9 +354,9 @@ export function Flashcards() {
 
   // ── Dashboard phase ──
   if (phase === 'dashboard') {
-    const upcomingSchedule = getUpcomingSchedule(flashcards, now)
+    const upcomingSchedule = getUpcomingSchedule(visibleFlashcards, now)
 
-    if (flashcards.length === 0) {
+    if (visibleFlashcards.length === 0) {
       return (
         <div className="flex min-h-[60vh] items-center justify-center px-6">
           <Empty>
@@ -327,13 +364,26 @@ export function Flashcards() {
               <Layers className="size-8 text-muted-foreground" />
             </EmptyMedia>
             <EmptyHeader>
-              <EmptyTitle>No flashcards yet</EmptyTitle>
+              <EmptyTitle>
+                {isCourseScoped
+                  ? `No flashcards for ${courseName ?? 'this course'} yet`
+                  : 'No flashcards yet'}
+              </EmptyTitle>
               <EmptyDescription>
-                Select text in your notes and click the{' '}
-                <span className="inline-flex items-center gap-1 font-medium">
-                  <Layers className="size-3.5" /> flashcard
-                </span>{' '}
-                icon to create your first card.
+                {isCourseScoped ? (
+                  <>
+                    Create flashcards from notes in this course, then return here to review this
+                    deck.
+                  </>
+                ) : (
+                  <>
+                    Select text in your notes and click the{' '}
+                    <span className="inline-flex items-center gap-1 font-medium">
+                      <Layers className="size-3.5" /> flashcard
+                    </span>{' '}
+                    icon to create your first card.
+                  </>
+                )}
               </EmptyDescription>
             </EmptyHeader>
           </Empty>
@@ -355,7 +405,9 @@ export function Flashcards() {
           </div>
           <div>
             <h1 className="font-display text-2xl font-semibold tracking-tight">Flashcards</h1>
-            <p className="text-sm text-muted-foreground">Spaced repetition review</p>
+            <p className="text-sm text-muted-foreground">
+              {courseName ? `${courseName} deck` : 'Spaced repetition review'}
+            </p>
           </div>
         </motion.div>
 
@@ -410,6 +462,50 @@ export function Flashcards() {
                       <Badge variant="secondary" className="tabular-nums">
                         {count} card{count !== 1 ? 's' : ''}
                       </Badge>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
+
+        {!isCourseScoped && courseDecks.length > 0 && (
+          <motion.div variants={fadeUp}>
+            <Card className="rounded-[20px]" data-testid="course-decks-section">
+              <CardContent className="p-5">
+                <div className="mb-4 flex items-center gap-2">
+                  <Layers className="size-4 text-muted-foreground" />
+                  <h2 className="text-sm font-medium">Course Decks</h2>
+                </div>
+                <div className="space-y-2">
+                  {courseDecks.map(deck => (
+                    <div
+                      key={deck.courseId || 'unknown-course'}
+                      data-testid={`course-deck-card-${deck.courseId || 'unknown-course'}`}
+                      className="flex items-center justify-between gap-3 rounded-xl border border-border/50 p-3"
+                    >
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium">{deck.name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {deck.total} card{deck.total !== 1 ? 's' : ''} - {deck.due} due
+                        </p>
+                      </div>
+                      {deck.courseId ? (
+                        <Button asChild variant="ghost" size="sm" className="shrink-0">
+                          <Link
+                            to={`/courses/${deck.courseId}/flashcards`}
+                            data-testid={`course-deck-link-${deck.courseId}`}
+                          >
+                            Open
+                            <ChevronRight className="size-4" />
+                          </Link>
+                        </Button>
+                      ) : (
+                        <Badge variant="secondary" className="shrink-0">
+                          Unassigned
+                        </Badge>
+                      )}
                     </div>
                   ))}
                 </div>

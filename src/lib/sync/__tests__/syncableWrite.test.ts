@@ -25,7 +25,7 @@ const { mockPut, mockAdd, mockDelete, mockSyncQueueAdd, mockGetState, mockNudge 
     mockSyncQueueAdd: vi.fn().mockResolvedValue(1),
     mockGetState: vi.fn().mockReturnValue({ user: { id: 'user-123' } }),
     mockNudge: vi.fn(),
-  }),
+  })
 )
 
 // ---------------------------------------------------------------------------
@@ -102,7 +102,7 @@ describe('syncableWrite', () => {
           someField: 'value',
           userId: 'user-123',
           updatedAt: expect.any(String),
-        }),
+        })
       )
     })
 
@@ -119,7 +119,7 @@ describe('syncableWrite', () => {
           status: 'pending',
           createdAt: expect.any(String),
           updatedAt: expect.any(String),
-        }),
+        })
       )
     })
 
@@ -143,7 +143,7 @@ describe('syncableWrite', () => {
         expect.objectContaining({
           id: 'rec-2',
           userId: 'user-123',
-        }),
+        })
       )
     })
 
@@ -154,7 +154,7 @@ describe('syncableWrite', () => {
         expect.objectContaining({
           operation: 'add',
           recordId: 'rec-2',
-        }),
+        })
       )
     })
   })
@@ -179,7 +179,7 @@ describe('syncableWrite', () => {
           operation: 'delete',
           recordId: 'note-abc',
           payload: { id: 'note-abc' },
-        }),
+        })
       )
     })
 
@@ -212,9 +212,7 @@ describe('syncableWrite', () => {
     })
 
     it('does not throw', async () => {
-      await expect(
-        syncableWrite('notes', 'put', { id: 'rec-3' }),
-      ).resolves.toBeUndefined()
+      await expect(syncableWrite('notes', 'put', { id: 'rec-3' })).resolves.toBeUndefined()
     })
   })
 
@@ -311,15 +309,13 @@ describe('syncableWrite', () => {
 
   describe('unknown table', () => {
     it('throws a developer-friendly error for unregistered table names', async () => {
-      await expect(
-        syncableWrite('nonExistentTable', 'put', { id: 'x' }),
-      ).rejects.toThrow('[syncableWrite] Unknown table: "nonExistentTable"')
+      await expect(syncableWrite('nonExistentTable', 'put', { id: 'x' })).rejects.toThrow(
+        '[syncableWrite] Unknown table: "nonExistentTable"'
+      )
     })
 
     it('does not call db.table() when the registry lookup fails', async () => {
-      await expect(
-        syncableWrite('nonExistentTable', 'put', { id: 'x' }),
-      ).rejects.toThrow()
+      await expect(syncableWrite('nonExistentTable', 'put', { id: 'x' })).rejects.toThrow()
       expect(db.table).not.toHaveBeenCalled()
     })
   })
@@ -330,65 +326,49 @@ describe('syncableWrite', () => {
 
   describe('empty recordId guard', () => {
     it('throws when put record has id: ""', async () => {
-      await expect(
-        syncableWrite('notes', 'put', { id: '' }),
-      ).rejects.toThrow(
-        '[syncableWrite] Empty recordId for table "notes" (operation "put")',
+      await expect(syncableWrite('notes', 'put', { id: '' })).rejects.toThrow(
+        '[syncableWrite] Empty recordId for table "notes" (operation "put")'
       )
     })
 
     it('throws when put record has id: "   " (whitespace)', async () => {
-      await expect(
-        syncableWrite('notes', 'put', { id: '   ' }),
-      ).rejects.toThrow(
-        '[syncableWrite] Empty recordId for table "notes" (operation "put")',
+      await expect(syncableWrite('notes', 'put', { id: '   ' })).rejects.toThrow(
+        '[syncableWrite] Empty recordId for table "notes" (operation "put")'
       )
     })
 
     it('throws when put record id is only a tab character', async () => {
-      await expect(
-        syncableWrite('notes', 'put', { id: '\t' }),
-      ).rejects.toThrow(
-        '[syncableWrite] Empty recordId for table "notes" (operation "put")',
+      await expect(syncableWrite('notes', 'put', { id: '\t' })).rejects.toThrow(
+        '[syncableWrite] Empty recordId for table "notes" (operation "put")'
       )
     })
 
     it('throws when put record id is only a non-breaking space (\\u00A0)', async () => {
-      await expect(
-        syncableWrite('notes', 'put', { id: '\u00a0' }),
-      ).rejects.toThrow(
-        '[syncableWrite] Empty recordId for table "notes" (operation "put")',
+      await expect(syncableWrite('notes', 'put', { id: '\u00a0' })).rejects.toThrow(
+        '[syncableWrite] Empty recordId for table "notes" (operation "put")'
       )
     })
 
     it('throws when add record is missing id', async () => {
-      await expect(
-        syncableWrite('studySessions', 'add', { field: 'x' }),
-      ).rejects.toThrow(
-        '[syncableWrite] Empty recordId for table "studySessions" (operation "add")',
+      await expect(syncableWrite('studySessions', 'add', { field: 'x' })).rejects.toThrow(
+        '[syncableWrite] Empty recordId for table "studySessions" (operation "add")'
       )
     })
 
     it('throws when delete record is the empty string', async () => {
-      await expect(
-        syncableWrite('notes', 'delete', ''),
-      ).rejects.toThrow(
-        '[syncableWrite] Empty recordId for table "notes" (operation "delete")',
+      await expect(syncableWrite('notes', 'delete', '')).rejects.toThrow(
+        '[syncableWrite] Empty recordId for table "notes" (operation "delete")'
       )
     })
 
     it('does NOT touch Dexie or syncQueue when guard throws on put', async () => {
-      await expect(
-        syncableWrite('notes', 'put', { id: '' }),
-      ).rejects.toThrow()
+      await expect(syncableWrite('notes', 'put', { id: '' })).rejects.toThrow()
       expect(mockPut).not.toHaveBeenCalled()
       expect(mockSyncQueueAdd).not.toHaveBeenCalled()
     })
 
     it('does NOT touch Dexie or syncQueue when guard throws on delete', async () => {
-      await expect(
-        syncableWrite('notes', 'delete', '   '),
-      ).rejects.toThrow()
+      await expect(syncableWrite('notes', 'delete', '   ')).rejects.toThrow()
       expect(mockDelete).not.toHaveBeenCalled()
       expect(mockSyncQueueAdd).not.toHaveBeenCalled()
     })
@@ -413,7 +393,7 @@ describe('syncableWrite', () => {
         expect.objectContaining({
           tableName: 'contentProgress',
           recordId: 'course-1\u001fitem-1',
-        }),
+        })
       )
     })
 
@@ -423,9 +403,9 @@ describe('syncableWrite', () => {
           courseId: 'course-1',
           // itemId missing
           status: 'completed',
-        }),
+        })
       ).rejects.toThrow(
-        '[syncableWrite] Empty recordId for table "contentProgress" (operation "put")',
+        '[syncableWrite] Empty recordId for table "contentProgress" (operation "put")'
       )
       expect(mockPut).not.toHaveBeenCalled()
     })
@@ -436,9 +416,9 @@ describe('syncableWrite', () => {
           courseId: '',
           itemId: 'item-1',
           status: 'completed',
-        }),
+        })
       ).rejects.toThrow(
-        '[syncableWrite] Empty recordId for table "contentProgress" (operation "put")',
+        '[syncableWrite] Empty recordId for table "contentProgress" (operation "put")'
       )
     })
 
@@ -456,9 +436,7 @@ describe('syncableWrite', () => {
         audioBookId: 'isbn:123:abs-1',
       })
       await Promise.all([writeA, writeB])
-      const calls = mockSyncQueueAdd.mock.calls.map(
-        (c) => (c[0] as { recordId: string }).recordId,
-      )
+      const calls = mockSyncQueueAdd.mock.calls.map(c => (c[0] as { recordId: string }).recordId)
       expect(new Set(calls).size).toBe(2)
     })
   })
@@ -472,17 +450,15 @@ describe('syncableWrite', () => {
       const dexieError = new Error('IndexedDB write failed')
       mockPut.mockRejectedValueOnce(dexieError)
 
-      await expect(
-        syncableWrite('notes', 'put', { id: 'rec-5' }),
-      ).rejects.toThrow('IndexedDB write failed')
+      await expect(syncableWrite('notes', 'put', { id: 'rec-5' })).rejects.toThrow(
+        'IndexedDB write failed'
+      )
     })
 
     it('does NOT create a queue entry when Dexie write throws', async () => {
       mockPut.mockRejectedValueOnce(new Error('Dexie error'))
 
-      await expect(
-        syncableWrite('notes', 'put', { id: 'rec-5' }),
-      ).rejects.toThrow()
+      await expect(syncableWrite('notes', 'put', { id: 'rec-5' })).rejects.toThrow()
       expect(mockSyncQueueAdd).not.toHaveBeenCalled()
     })
   })
@@ -495,9 +471,7 @@ describe('syncableWrite', () => {
     it('does NOT propagate the error when syncQueue.add() throws', async () => {
       mockSyncQueueAdd.mockRejectedValueOnce(new Error('Queue full'))
 
-      await expect(
-        syncableWrite('notes', 'put', { id: 'rec-6' }),
-      ).resolves.toBeUndefined()
+      await expect(syncableWrite('notes', 'put', { id: 'rec-6' })).resolves.toBeUndefined()
     })
 
     it('still completes the Dexie write before the queue failure', async () => {
@@ -547,7 +521,7 @@ describe('syncableWrite', () => {
           tableName: 'chapterMappings',
           recordId: 'epub-1\u001faudio-1',
           operation: 'put',
-        }),
+        })
       )
     })
 
@@ -565,7 +539,7 @@ describe('syncableWrite', () => {
           userId: 'user-123',
           epubBookId: 'epub-1',
           audioBookId: 'audio-1',
-        }),
+        })
       )
     })
 
@@ -579,7 +553,10 @@ describe('syncableWrite', () => {
         deleted: true,
       })
 
-      const call = mockSyncQueueAdd.mock.calls[0][0] as { operation: string; payload: Record<string, unknown> }
+      const call = mockSyncQueueAdd.mock.calls[0][0] as {
+        operation: string
+        payload: Record<string, unknown>
+      }
       expect(call.operation).toBe('put')
       expect(call.payload.deleted).toBe(true)
       // db.table().put is called (not delete) — Dexie still persists the record

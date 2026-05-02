@@ -90,44 +90,36 @@ export function useConversationHistory({
   // Find the most recent stale conversation for the continue prompt
   const staleConversation =
     conversationsLoaded && !continuePromptDismissed && messages.length === 0
-      ? allConversations
+      ? (allConversations
           .filter(
             c =>
-              c.videoId === videoId &&
-              c.courseId === courseId &&
-              isConversationStale(c.updatedAt)
+              c.videoId === videoId && c.courseId === courseId && isConversationStale(c.updatedAt)
           )
-          .sort((a, b) => toEpochMs(b.updatedAt) - toEpochMs(a.updatedAt))[0] ?? null
+          .sort((a, b) => toEpochMs(b.updatedAt) - toEpochMs(a.updatedAt))[0] ?? null)
       : null
 
-  const handleContinueConversation = useCallback(
-    (conv: ChatConversation) => {
-      // Load conversation messages into the store, preserving original IDs
-      const chatMessages = conv.messages.map(msg => ({
-        id: crypto.randomUUID(),
-        role: msg.role,
-        content: msg.content,
-        timestamp: msg.timestamp,
-        mode: msg.mode ?? ('socratic' as const),
-        debugAssessment: msg.debugAssessment,
-      }))
-      useTutorStore.setState({
-        messages: chatMessages,
-        conversationId: conv.id,
-        mode: conv.mode as TutorMode,
-        hintLevel: 0, // Reset hint ladder per AC
-      })
-      setContinuePromptDismissed(true)
-    },
-    []
-  )
+  const handleContinueConversation = useCallback((conv: ChatConversation) => {
+    // Load conversation messages into the store, preserving original IDs
+    const chatMessages = conv.messages.map(msg => ({
+      id: crypto.randomUUID(),
+      role: msg.role,
+      content: msg.content,
+      timestamp: msg.timestamp,
+      mode: msg.mode ?? ('socratic' as const),
+      debugAssessment: msg.debugAssessment,
+    }))
+    useTutorStore.setState({
+      messages: chatMessages,
+      conversationId: conv.id,
+      mode: conv.mode as TutorMode,
+      hintLevel: 0, // Reset hint ladder per AC
+    })
+    setContinuePromptDismissed(true)
+  }, [])
 
-  const handleDeleteConversation = useCallback(
-    (conversationId: string) => {
-      setAllConversations(prev => prev.filter(c => c.id !== conversationId))
-    },
-    []
-  )
+  const handleDeleteConversation = useCallback((conversationId: string) => {
+    setAllConversations(prev => prev.filter(c => c.id !== conversationId))
+  }, [])
 
   const dismissStalePrompt = useCallback(() => setContinuePromptDismissed(true), [])
 

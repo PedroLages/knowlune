@@ -1,6 +1,15 @@
 import { useRef, useState } from 'react'
 import { Link } from 'react-router'
-import { ChevronDown, ChevronUp, Pencil, Trash2, X, Clock, Download, AlertTriangle } from 'lucide-react'
+import {
+  ChevronDown,
+  ChevronUp,
+  Pencil,
+  Trash2,
+  X,
+  Clock,
+  Download,
+  AlertTriangle,
+} from 'lucide-react'
 import { Badge } from '@/app/components/ui/badge'
 import { Button } from '@/app/components/ui/button'
 import { NoteEditor } from './NoteEditor'

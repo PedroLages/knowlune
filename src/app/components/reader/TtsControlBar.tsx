@@ -17,8 +17,9 @@ import {
   SelectValue,
 } from '@/app/components/ui/select'
 import { cn } from '@/app/components/ui/utils'
+import type { TtsVoice } from '@/services/TtsService'
 import type { ReaderTheme } from '@/stores/useReaderStore'
-import { getReaderChromeClasses, useAppColorScheme } from './readerThemeConfig'
+import { getReaderChromeClasses } from './readerThemeConfig'
 
 const SPEED_OPTIONS = [
   { value: '0.5', label: '0.5×' },
@@ -29,15 +30,20 @@ const SPEED_OPTIONS = [
   { value: '2', label: '2×' },
 ]
 
+const DEFAULT_VOICE_VALUE = '__system-default__'
+
 interface TtsControlBarProps {
   isPlaying: boolean
   currentChunk: number
   totalChunks: number
   rate: number
+  voiceURI: string | null
+  voices: TtsVoice[]
   theme: ReaderTheme
   onPlayPause: () => void
   onStop: () => void
   onRateChange: (rate: number) => void
+  onVoiceChange: (voiceURI: string | null) => void
 }
 
 export function TtsControlBar({
@@ -45,18 +51,20 @@ export function TtsControlBar({
   currentChunk,
   totalChunks,
   rate,
+  voiceURI,
+  voices,
   theme,
   onPlayPause,
   onStop,
   onRateChange,
+  onVoiceChange,
 }: TtsControlBarProps) {
-  const colorScheme = useAppColorScheme()
-  const chrome = getReaderChromeClasses(theme, colorScheme)
+  const chrome = getReaderChromeClasses(theme)
 
   return (
     <div
       className={cn(
-        'fixed bottom-12 left-0 right-0 z-40 px-4 py-2.5',
+        'fixed bottom-0 left-0 right-0 z-[120] px-4 pb-[calc(0.625rem+env(safe-area-inset-bottom))] pt-2.5',
         'border-t border-black/10 backdrop-blur-sm shadow-lg',
         'flex items-center gap-3',
         chrome.bgBar,
@@ -104,23 +112,48 @@ export function TtsControlBar({
         </span>
       )}
 
-      {/* Speed selector */}
-      <Select value={String(rate)} onValueChange={val => onRateChange(Number(val))}>
-        <SelectTrigger
-          className="w-20 h-8 text-xs"
-          aria-label="Reading speed"
-          data-testid="tts-speed-select"
+      <div className="ml-auto flex shrink-0 items-center gap-2">
+        {/* Voice selector */}
+        <Select
+          value={voiceURI ?? DEFAULT_VOICE_VALUE}
+          onValueChange={val => onVoiceChange(val === DEFAULT_VOICE_VALUE ? null : val)}
+          disabled={voices.length === 0}
         >
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          {SPEED_OPTIONS.map(opt => (
-            <SelectItem key={opt.value} value={opt.value}>
-              {opt.label}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+          <SelectTrigger
+            className="h-8 w-36 cursor-pointer text-xs sm:w-48"
+            aria-label="Reading voice"
+            data-testid="tts-voice-select"
+          >
+            <SelectValue placeholder="Voice" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={DEFAULT_VOICE_VALUE}>System voice</SelectItem>
+            {voices.map(voice => (
+              <SelectItem key={voice.voiceURI} value={voice.voiceURI}>
+                {voice.name} ({voice.lang})
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        {/* Speed selector */}
+        <Select value={String(rate)} onValueChange={val => onRateChange(Number(val))}>
+          <SelectTrigger
+            className="h-8 w-20 cursor-pointer text-xs"
+            aria-label="Reading speed"
+            data-testid="tts-speed-select"
+          >
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {SPEED_OPTIONS.map(opt => (
+              <SelectItem key={opt.value} value={opt.value}>
+                {opt.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
     </div>
   )
 }

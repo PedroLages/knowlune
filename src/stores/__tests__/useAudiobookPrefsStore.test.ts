@@ -20,6 +20,9 @@ beforeEach(() => {
     skipSilence: false,
     defaultSleepTimer: 'off',
     autoBookmarkOnStop: false,
+    showRemainingTime: false,
+    skipBackSeconds: 15,
+    skipForwardSeconds: 30,
   })
 })
 
@@ -30,6 +33,9 @@ describe('useAudiobookPrefsStore initial state', () => {
     expect(state.skipSilence).toBe(false)
     expect(state.defaultSleepTimer).toBe('off')
     expect(state.autoBookmarkOnStop).toBe(false)
+    expect(state.showRemainingTime).toBe(false)
+    expect(state.skipBackSeconds).toBe(15)
+    expect(state.skipForwardSeconds).toBe(30)
   })
 })
 
@@ -208,5 +214,131 @@ describe('Supabase dual-write (E95-S01)', () => {
   it('toggleAutoBookmark calls saveSettingsToSupabase with toggled value', () => {
     useAudiobookPrefsStore.getState().toggleAutoBookmark()
     expect(mockSaveSettingsToSupabase).toHaveBeenCalledWith({ autoBookmarkOnStop: true })
+  })
+})
+
+// ── 2026-04-25 audiobook player polish: showRemainingTime + skip intervals ──
+
+describe('setShowRemainingTime', () => {
+  it('updates state to true', () => {
+    useAudiobookPrefsStore.getState().setShowRemainingTime(true)
+    expect(useAudiobookPrefsStore.getState().showRemainingTime).toBe(true)
+  })
+
+  it('round-trips back to false', () => {
+    useAudiobookPrefsStore.getState().setShowRemainingTime(true)
+    useAudiobookPrefsStore.getState().setShowRemainingTime(false)
+    expect(useAudiobookPrefsStore.getState().showRemainingTime).toBe(false)
+  })
+
+  it('persists to localStorage', () => {
+    useAudiobookPrefsStore.getState().setShowRemainingTime(true)
+    const stored = JSON.parse(localStorage.getItem(STORAGE_KEY)!)
+    expect(stored.showRemainingTime).toBe(true)
+  })
+
+  it('calls saveSettingsToSupabase with the new value', () => {
+    useAudiobookPrefsStore.getState().setShowRemainingTime(true)
+    expect(mockSaveSettingsToSupabase).toHaveBeenCalledWith({ showRemainingTime: true })
+  })
+})
+
+describe('setSkipBackSeconds', () => {
+  it('accepts an allow-listed value', () => {
+    useAudiobookPrefsStore.getState().setSkipBackSeconds(45)
+    expect(useAudiobookPrefsStore.getState().skipBackSeconds).toBe(45)
+  })
+
+  it('falls back to default 15 for an out-of-list value', () => {
+    useAudiobookPrefsStore.getState().setSkipBackSeconds(7)
+    expect(useAudiobookPrefsStore.getState().skipBackSeconds).toBe(15)
+  })
+
+  it('persists to localStorage and Supabase', () => {
+    useAudiobookPrefsStore.getState().setSkipBackSeconds(60)
+    const stored = JSON.parse(localStorage.getItem(STORAGE_KEY)!)
+    expect(stored.skipBackSeconds).toBe(60)
+    expect(mockSaveSettingsToSupabase).toHaveBeenCalledWith({ skipBackSeconds: 60 })
+  })
+})
+
+describe('setSkipForwardSeconds', () => {
+  it('accepts an allow-listed value', () => {
+    useAudiobookPrefsStore.getState().setSkipForwardSeconds(90)
+    expect(useAudiobookPrefsStore.getState().skipForwardSeconds).toBe(90)
+  })
+
+  it('falls back to default 30 for an out-of-list value', () => {
+    useAudiobookPrefsStore.getState().setSkipForwardSeconds(120)
+    expect(useAudiobookPrefsStore.getState().skipForwardSeconds).toBe(30)
+  })
+
+  it('persists to localStorage and Supabase', () => {
+    useAudiobookPrefsStore.getState().setSkipForwardSeconds(60)
+    const stored = JSON.parse(localStorage.getItem(STORAGE_KEY)!)
+    expect(stored.skipForwardSeconds).toBe(60)
+    expect(mockSaveSettingsToSupabase).toHaveBeenCalledWith({ skipForwardSeconds: 60 })
+  })
+})
+
+describe('localStorage persistence — new fields', () => {
+  it('hydrates showRemainingTime, skip-back/forward from localStorage', async () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        defaultSpeed: 1.0,
+        skipSilence: false,
+        defaultSleepTimer: 'off',
+        autoBookmarkOnStop: false,
+        showRemainingTime: true,
+        skipBackSeconds: 30,
+        skipForwardSeconds: 60,
+      })
+    )
+    vi.resetModules()
+    const { useAudiobookPrefsStore: fresh } = await import('@/stores/useAudiobookPrefsStore')
+    const state = fresh.getState()
+    expect(state.showRemainingTime).toBe(true)
+    expect(state.skipBackSeconds).toBe(30)
+    expect(state.skipForwardSeconds).toBe(60)
+  })
+
+  it('falls through to defaults when persisted skip values are corrupted', async () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        showRemainingTime: 'yes', // wrong type
+        skipBackSeconds: 7, // not in allow-list
+        skipForwardSeconds: NaN, // not in allow-list
+      })
+    )
+    vi.resetModules()
+    const { useAudiobookPrefsStore: fresh } = await import('@/stores/useAudiobookPrefsStore')
+    const state = fresh.getState()
+    expect(state.showRemainingTime).toBe(false)
+    expect(state.skipBackSeconds).toBe(15)
+    expect(state.skipForwardSeconds).toBe(30)
+  })
+
+  it('accepts SleepTimerDefault values 5 and 10 (new presets)', async () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        defaultSleepTimer: 5,
+      })
+    )
+    vi.resetModules()
+    const { useAudiobookPrefsStore: fresh } = await import('@/stores/useAudiobookPrefsStore')
+    expect(fresh.getState().defaultSleepTimer).toBe(5)
+
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        defaultSleepTimer: 10,
+      })
+    )
+    vi.resetModules()
+    const { useAudiobookPrefsStore: fresh2 } = await import('@/stores/useAudiobookPrefsStore')
+    expect(fresh2.getState().defaultSleepTimer).toBe(10)
   })
 })

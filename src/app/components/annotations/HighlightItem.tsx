@@ -53,7 +53,7 @@ export function HighlightItem({ highlight, bookId }: HighlightItemProps) {
         <p className="text-xs text-muted-foreground mt-1.5">{date}</p>
       </div>
       <Link
-        to={`/library/${bookId}/read${highlight.cfiRange ? `?cfi=${encodeURIComponent(highlight.cfiRange)}` : ''}`}
+        to={`/library/${bookId}/read?sourceHighlightId=${encodeURIComponent(highlight.id)}`}
         className="shrink-0 rounded-md p-1.5 hover:bg-muted/60 transition-colors text-muted-foreground hover:text-foreground"
         aria-label={`Open in reader: ${highlight.textAnchor.substring(0, 40)}`}
         data-testid="annotation-goto-reader"

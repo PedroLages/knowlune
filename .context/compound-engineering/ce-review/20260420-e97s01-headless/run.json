@@ -1,0 +1,25 @@
+{
+  "runId": "20260420-e97s01-headless",
+  "mode": "headless",
+  "branch": "feature/e97-s01-sync-status-indicator",
+  "base": "e3c2a3693544dbdef6707197a15ee28bfc54157e",
+  "head": "ce891bf3",
+  "plan": "docs/plans/2026-04-19-021-feat-e97-s01-sync-status-indicator-header-plan.md",
+  "plan_source": "explicit",
+  "scope_note": "Reviewed committed diff ($BASE..HEAD). Working tree has uncommitted reverts of Layout.tsx header mount + useSyncLifecycle wiring/classifyError import; those reverts were intentionally excluded from review scope because they would invalidate committed story work. Flagged separately as P1.",
+  "files_reviewed": [
+    "src/app/components/sync/SyncStatusIndicator.tsx",
+    "src/app/components/sync/__tests__/SyncStatusIndicator.test.tsx",
+    "src/app/stores/useSyncStatusStore.ts",
+    "src/app/stores/__tests__/useSyncStatusStore.test.ts",
+    "src/lib/sync/classifyError.ts",
+    "src/lib/sync/__tests__/classifyError.test.ts",
+    "src/app/components/Layout.tsx",
+    "src/app/hooks/useSyncLifecycle.ts",
+    "src/app/hooks/__tests__/useSyncLifecycle.test.ts",
+    "tests/e2e/story-97-01-sync-status-indicator.spec.ts"
+  ],
+  "applied_fixes": [],
+  "verdict": "Ready with fixes",
+  "counts": {"blockers": 0, "high": 1, "medium": 5, "low": 2, "nit": 0}
+}

@@ -14,7 +14,7 @@
  * @since E101-S02
  */
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   Dialog,
   DialogContent,
@@ -22,7 +22,11 @@ import {
   DialogTitle,
   DialogDescription,
 } from '@/app/components/ui/dialog'
-import { useAudiobookshelfStore } from '@/stores/useAudiobookshelfStore'
+import {
+  useAudiobookshelfStore,
+  VaultUnauthenticatedError,
+} from '@/stores/useAudiobookshelfStore'
+import { toast } from 'sonner'
 import { testConnection, fetchLibraries } from '@/services/AudiobookshelfService'
 import { toastSuccess } from '@/lib/toastHelpers'
 import type { AudiobookshelfServer } from '@/data/types'
@@ -31,6 +35,8 @@ import { getAbsApiKey } from '@/lib/credentials/absApiKeyResolver'
 import { AudiobookshelfServerListView } from './AudiobookshelfServerListView'
 import { AudiobookshelfServerForm, type AbsFormTestResult } from './AudiobookshelfServerForm'
 import { DeleteServerDialog } from './DeleteServerDialog'
+import { useMissingCredentials } from '@/app/hooks/useMissingCredentials'
+import { useDeepLinkFocus } from '@/app/hooks/useDeepLinkFocus'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -49,6 +55,12 @@ export function AudiobookshelfSettings({ open, onOpenChange }: AudiobookshelfSet
   const addServer = useAudiobookshelfStore(s => s.addServer)
   const updateServer = useAudiobookshelfStore(s => s.updateServer)
   const removeServer = useAudiobookshelfStore(s => s.removeServer)
+
+  // E97-S05 AC4: credential status for badge rendering
+  const { statusByKey } = useMissingCredentials()
+
+  // E97-S05 AC2: API key input ref for deep-link focus
+  const apiKeyInputRef = useRef<HTMLInputElement>(null)
 
   const [mode, setMode] = useState<FormMode>('list')
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -88,6 +100,21 @@ export function AudiobookshelfSettings({ open, onOpenChange }: AudiobookshelfSet
     }
   }, [open, loadServers])
 
+  // Stable ref so useDeepLinkFocus's onFocus closure always calls the latest handleOpenEdit
+  const handleOpenEditRef = useRef<(server: AudiobookshelfServer) => void>(() => {})
+
+  // E97-S05 AC2: deep-link focus — opens edit form for the focused server and
+  // focuses the API key input field.
+  // Intentional: RAF hop required for dialog-mounted inputs.
+  useDeepLinkFocus('abs', (id: string) => {
+    const server = servers.find(s => s.id === id)
+    if (!server) return
+    handleOpenEditRef.current(server)
+    requestAnimationFrame(() => {
+      apiKeyInputRef.current?.focus()
+    })
+  })
+
   const resetForm = useCallback(() => {
     setName('')
     setUrl('')
@@ -122,6 +149,11 @@ export function AudiobookshelfSettings({ open, onOpenChange }: AudiobookshelfSet
     },
     [resetForm]
   )
+
+  // Keep the ref in sync with the latest handleOpenEdit (used by deep-link focus callback)
+  useEffect(() => {
+    handleOpenEditRef.current = handleOpenEdit
+  }, [handleOpenEdit])
 
   const handleBack = useCallback(() => {
     resetForm()
@@ -229,22 +261,26 @@ export function AudiobookshelfSettings({ open, onOpenChange }: AudiobookshelfSet
 
       resetForm()
       setMode('list')
-    } catch {
-      // silent-catch-ok — store already shows toast.error; stay on form so user can retry
+    } catch (err) {
+      // silent-catch-ok — store already shows a generic toast.error for non-
+      // auth failures; we only add a targeted toast when the Vault write
+      // failed because the user is not signed into Supabase (common root
+      // cause of the misleading "API key missing" sync error).
+      if (err instanceof VaultUnauthenticatedError) {
+        setTestResult({
+          ok: false,
+          message: 'Sign in to save credentials. Audiobookshelf keys are stored in your account.',
+        })
+        toast.error('Sign in required to save credentials', {
+          description:
+            'Audiobookshelf API keys are stored in your Knowlune account. Sign in (top right) and try again.',
+          duration: 8000,
+        })
+      }
     } finally {
       setIsSaving(false)
     }
-  }, [
-    name,
-    url,
-    apiKey,
-    selectedLibraryIds,
-    mode,
-    editingId,
-    addServer,
-    updateServer,
-    resetForm,
-  ])
+  }, [name, url, apiKey, selectedLibraryIds, mode, editingId, addServer, updateServer, resetForm])
 
   const handleConfirmDelete = useCallback(async () => {
     if (!deleteTarget) return
@@ -300,6 +336,7 @@ export function AudiobookshelfSettings({ open, onOpenChange }: AudiobookshelfSet
                 onTest={handleTestConnection}
                 onSave={handleSave}
                 onBack={handleBack}
+                apiKeyInputRef={apiKeyInputRef}
               />
             ) : (
               <AudiobookshelfServerListView
@@ -308,6 +345,7 @@ export function AudiobookshelfSettings({ open, onOpenChange }: AudiobookshelfSet
                 onEdit={handleOpenEdit}
                 onDelete={setDeleteTarget}
                 onReauthenticate={handleOpenEdit}
+                statusByKey={statusByKey}
               />
             )}
           </div>

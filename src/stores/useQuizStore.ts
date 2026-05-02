@@ -158,11 +158,7 @@ export const useQuizStore = create<QuizState>()(
             // `insertOnly: true`; the upload engine enforces
             // INSERT ... ON CONFLICT DO NOTHING. No update/delete paths exist
             // for this table — attempts are immutable once created.
-            await syncableWrite(
-              'quizAttempts',
-              'add',
-              attempt as unknown as SyncableRecord,
-            )
+            await syncableWrite('quizAttempts', 'add', attempt as unknown as SyncableRecord)
           })
 
           // Cross-store: mark lesson complete only after successful DB write.

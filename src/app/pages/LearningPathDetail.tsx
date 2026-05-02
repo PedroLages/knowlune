@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { useParams, Link } from 'react-router'
 import { motion } from 'motion/react'
 import {
@@ -21,8 +21,6 @@ import {
   ArrowLeft,
   ArrowRight,
   GripVertical,
-  ChevronUp,
-  ChevronDown,
   X,
   Plus,
   Search,
@@ -59,6 +57,7 @@ import { cn } from '@/app/components/ui/utils'
 import { EmptyState } from '@/app/components/EmptyState'
 import { DelayedFallback } from '@/app/components/DelayedFallback'
 import { TrailMap } from '@/app/components/figma/TrailMap'
+import { MoveUpDownButtons } from '@/app/components/figma/MoveUpDownButtons'
 import { useLearningPathStore } from '@/stores/useLearningPathStore'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
 import { useAuthorStore } from '@/stores/useAuthorStore'
@@ -87,6 +86,8 @@ function SortableCourseRow({
   onMoveUp,
   onMoveDown,
   onRemove,
+  registerMoveUpRef,
+  registerMoveDownRef,
 }: {
   entry: LearningPathEntry
   course: { name: string; type: 'imported' | 'catalog' } | undefined
@@ -99,6 +100,8 @@ function SortableCourseRow({
   onMoveUp: (index: number) => void
   onMoveDown: (index: number) => void
   onRemove: (courseId: string) => void
+  registerMoveUpRef: (courseId: string, el: HTMLButtonElement | null) => void
+  registerMoveDownRef: (courseId: string, el: HTMLButtonElement | null) => void
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: entry.courseId,
@@ -196,29 +199,18 @@ function SortableCourseRow({
               </div>
             </div>
 
-            {/* Keyboard move buttons */}
-            <div className="flex flex-col gap-0.5 shrink-0">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="size-7"
-                onClick={() => onMoveUp(index)}
-                disabled={index === 0}
-                aria-label={`Move ${course?.name || 'course'} up`}
-              >
-                <ChevronUp className="size-4" aria-hidden="true" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="size-7"
-                onClick={() => onMoveDown(index)}
-                disabled={index === totalCount - 1}
-                aria-label={`Move ${course?.name || 'course'} down`}
-              >
-                <ChevronDown className="size-4" aria-hidden="true" />
-              </Button>
-            </div>
+            {/* Keyboard / single-pointer reorder buttons (WCAG 2.5.7) */}
+            <MoveUpDownButtons
+              index={index}
+              total={totalCount}
+              itemLabel={course?.name || 'course'}
+              onMoveUp={() => onMoveUp(index)}
+              onMoveDown={() => onMoveDown(index)}
+              size="sm"
+              upRef={el => registerMoveUpRef(entry.courseId, el)}
+              downRef={el => registerMoveDownRef(entry.courseId, el)}
+              testIdPrefix={`path-course-row-${index}-move`}
+            />
 
             {/* Remove button */}
             <Button
@@ -571,22 +563,47 @@ export function LearningPathDetail() {
     [courseEntries, pathId, reorderCourse]
   )
 
+  // Focus restoration after Move Up/Down (E66-S01, WCAG 2.5.7)
+  // Refs keyed by courseId so they survive index changes during re-render.
+  const moveUpRefs = useRef<Map<string, HTMLButtonElement | null>>(new Map())
+  const moveDownRefs = useRef<Map<string, HTMLButtonElement | null>>(new Map())
+  const registerMoveUpRef = useCallback((courseId: string, el: HTMLButtonElement | null) => {
+    if (el) moveUpRefs.current.set(courseId, el)
+    else moveUpRefs.current.delete(courseId)
+  }, [])
+  const registerMoveDownRef = useCallback((courseId: string, el: HTMLButtonElement | null) => {
+    if (el) moveDownRefs.current.set(courseId, el)
+    else moveDownRefs.current.delete(courseId)
+  }, [])
+
   const handleMoveUp = useCallback(
     (index: number) => {
       if (index > 0 && pathId) {
+        const courseId = courseEntries[index]?.courseId
         reorderCourse(pathId, index, index - 1)
+        if (courseId) {
+          requestAnimationFrame(() => {
+            moveUpRefs.current.get(courseId)?.focus()
+          })
+        }
       }
     },
-    [pathId, reorderCourse]
+    [courseEntries, pathId, reorderCourse]
   )
 
   const handleMoveDown = useCallback(
     (index: number) => {
       if (index < courseEntries.length - 1 && pathId) {
+        const courseId = courseEntries[index]?.courseId
         reorderCourse(pathId, index, index + 1)
+        if (courseId) {
+          requestAnimationFrame(() => {
+            moveDownRefs.current.get(courseId)?.focus()
+          })
+        }
       }
     },
-    [courseEntries.length, pathId, reorderCourse]
+    [courseEntries, pathId, reorderCourse]
   )
 
   const handleRemove = useCallback(
@@ -943,6 +960,8 @@ export function LearningPathDetail() {
                               onMoveUp={handleMoveUp}
                               onMoveDown={handleMoveDown}
                               onRemove={handleRemove}
+                              registerMoveUpRef={registerMoveUpRef}
+                              registerMoveDownRef={registerMoveDownRef}
                             />
                           )
                         })}

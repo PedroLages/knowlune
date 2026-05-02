@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import { Card } from '@/app/components/ui/card'
-import { VirtualizedGrid } from '@/app/components/VirtualizedGrid'
+import { VirtualizedCoursesList } from '@/app/components/courses/VirtualizedCoursesList'
 import { Button } from '@/app/components/ui/button'
 import {
   Select,
@@ -10,6 +10,8 @@ import {
   SelectValue,
 } from '@/app/components/ui/select'
 import { ImportedCourseCard } from '@/app/components/figma/ImportedCourseCard'
+import { ImportedCourseCompactCard } from '@/app/components/figma/ImportedCourseCompactCard'
+import { ImportedCourseListRow } from '@/app/components/figma/ImportedCourseListRow'
 import { StatusFilter } from '@/app/components/figma/StatusFilter'
 import { FolderOpen, BookOpen, Youtube } from 'lucide-react'
 import { getImportedCourseCompletionPercent } from '@/lib/progress'
@@ -21,6 +23,10 @@ import { YouTubeImportDialog } from '@/app/components/figma/YouTubeImportDialog'
 import { db } from '@/db'
 import { calculateMomentumScore } from '@/lib/momentum'
 import { HeaderSearchButton } from '@/app/components/figma/HeaderSearchButton'
+import { ViewModeToggle } from '@/app/components/courses/ViewModeToggle'
+import { GridColumnControl } from '@/app/components/courses/GridColumnControl'
+import { getGridClassName } from '@/app/components/courses/gridClassName'
+import { useEngagementPrefsStore } from '@/stores/useEngagementPrefsStore'
 
 import type { LearnerCourseStatus } from '@/data/types'
 import type { MomentumScore } from '@/lib/momentum'
@@ -39,6 +45,9 @@ export function Courses() {
   const importedCourses = useCourseImportStore(state => state.importedCourses)
   const loadImportedCourses = useCourseImportStore(state => state.loadImportedCourses)
   const getAllTags = useCourseImportStore(state => state.getAllTags)
+  const courseViewMode = useEngagementPrefsStore(state => state.courseViewMode)
+  const courseGridColumns = useEngagementPrefsStore(state => state.courseGridColumns)
+  const setEngagementPref = useEngagementPrefsStore(state => state.setPreference)
 
   // Lazy-load imported courses on mount (deferred — not critical for initial app load)
   useLazyStore(loadImportedCourses)
@@ -143,8 +152,11 @@ export function Courses() {
 
   return (
     <div>
-      <div data-testid="courses-header" className="mb-6 flex items-start justify-between gap-4">
-        <div>
+      <div
+        data-testid="courses-header"
+        className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4"
+      >
+        <div className="min-w-0">
           <h1 className="text-2xl font-bold mb-2">All Courses</h1>
           {totalCourses > 0 && (
             <p className="text-muted-foreground">
@@ -152,7 +164,7 @@ export function Courses() {
             </p>
           )}
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <HeaderSearchButton scope="course" />
           {totalCourses > 0 && (
             <Button
@@ -161,8 +173,9 @@ export function Courses() {
               className="hover:scale-[1.02] hover:shadow-md rounded-xl transition-[transform,box-shadow] duration-200"
               data-testid="import-course-btn"
             >
-              <FolderOpen className="size-4 mr-2" />
-              Import Course
+              <FolderOpen className="size-4 sm:mr-2" aria-hidden="true" />
+              <span className="hidden sm:inline">Import Course</span>
+              <span className="sr-only sm:hidden">Import Course</span>
             </Button>
           )}
         </div>
@@ -232,52 +245,84 @@ export function Courses() {
                 <SelectItem value="momentum">Sort by Momentum</SelectItem>
               </SelectContent>
             </Select>
+            {/* E99-S01: view mode toggle. All three branches render the existing
+                grid until the list/compact renderers ship in S03/S04. */}
+            <ViewModeToggle
+              value={courseViewMode}
+              onChange={mode => setEngagementPref('courseViewMode', mode)}
+            />
+            {/* E99-S02: grid column control. Visible only in grid view. */}
+            {courseViewMode === 'grid' && (
+              <GridColumnControl
+                value={courseGridColumns}
+                onChange={cols => setEngagementPref('courseGridColumns', cols)}
+              />
+            )}
           </div>
 
           {/* Imported Courses Section */}
           <div className="mb-8">
-              <h2 className="text-xl font-semibold mb-4">Imported Courses</h2>
-              {importedCourses.length === 0 ? (
-                <div
-                  data-testid="imported-courses-empty-state"
-                  className="flex items-center gap-3 rounded-xl bg-muted/50 px-4 py-3 text-sm text-muted-foreground"
-                  role="region"
-                  aria-label="Import courses"
+            <h2 className="text-xl font-semibold mb-4">Imported Courses</h2>
+            {importedCourses.length === 0 ? (
+              <div
+                data-testid="imported-courses-empty-state"
+                className="flex items-center gap-3 rounded-xl bg-muted/50 px-4 py-3 text-sm text-muted-foreground"
+                role="region"
+                aria-label="Import courses"
+              >
+                <FolderOpen className="size-5 shrink-0" aria-hidden="true" />
+                <span>No imported courses yet.</span>
+                <Button
+                  variant="link"
+                  size="sm"
+                  data-testid="import-first-course-cta"
+                  aria-label="Import your first course"
+                  onClick={handleOpenBulkImport}
+                  className="text-brand-soft-foreground h-auto p-0"
                 >
-                  <FolderOpen className="size-5 shrink-0" aria-hidden="true" />
-                  <span>No imported courses yet.</span>
-                  <Button
-                    variant="link"
-                    size="sm"
-                    data-testid="import-first-course-cta"
-                    aria-label="Import your first course"
-                    onClick={handleOpenBulkImport}
-                    className="text-brand-soft-foreground h-auto p-0"
-                  >
-                    Import a course &rarr;
-                  </Button>
-                </div>
-              ) : filteredImportedCourses.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  No imported courses match your filters
-                </div>
-              ) : (
-                <VirtualizedGrid
-                  items={sortedImportedCourses}
-                  getItemKey={course => course.id}
-                  renderItem={course => (
+                  Import a course &rarr;
+                </Button>
+              </div>
+            ) : filteredImportedCourses.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                No imported courses match your filters
+              </div>
+            ) : (
+              <VirtualizedCoursesList
+                courses={sortedImportedCourses}
+                viewMode={courseViewMode}
+                gridClassName={getGridClassName(
+                  courseGridColumns,
+                  courseViewMode === 'compact' ? 'compact' : 'grid'
+                )}
+                data-testid={
+                  courseViewMode === 'list' ? 'imported-courses-list' : 'imported-courses-grid'
+                }
+                renderItem={course =>
+                  courseViewMode === 'list' ? (
+                    <ImportedCourseListRow
+                      course={course}
+                      allTags={allTags}
+                      completionPercent={importedCompletionMap.get(course.id) ?? 0}
+                    />
+                  ) : courseViewMode === 'compact' ? (
+                    <ImportedCourseCompactCard
+                      course={course}
+                      allTags={allTags}
+                      completionPercent={importedCompletionMap.get(course.id) ?? 0}
+                    />
+                  ) : (
                     <ImportedCourseCard
                       course={course}
                       allTags={allTags}
                       completionPercent={importedCompletionMap.get(course.id) ?? 0}
                       momentumScore={momentumMap.get(course.id)}
                     />
-                  )}
-                  data-testid="imported-courses-grid"
-                  gridClassName="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-[var(--content-gap)]"
-                />
-              )}
-            </div>
+                  )
+                }
+              />
+            )}
+          </div>
         </>
       )}
     </div>

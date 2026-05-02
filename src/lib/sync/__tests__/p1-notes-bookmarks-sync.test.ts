@@ -194,7 +194,9 @@ describe('E93-S02 P1 sync wiring — bookmarks', () => {
   })
 
   it('updateBookmarkLabel: queue put entry contains full bookmark record fields plus new label', async () => {
-    await useBookmarkStore.getState().addBookmark(TEST_COURSE_ID, TEST_LESSON_ID, 60, 'Original label')
+    await useBookmarkStore
+      .getState()
+      .addBookmark(TEST_COURSE_ID, TEST_LESSON_ID, 60, 'Original label')
     const bookmarks = await db.bookmarks.toArray()
     const bookmarkId = bookmarks[0].id
 

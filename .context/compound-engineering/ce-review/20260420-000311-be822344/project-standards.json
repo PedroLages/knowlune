@@ -1,0 +1,109 @@
+{
+  "reviewer": "project-standards",
+  "findings": [
+    {
+      "id": "PS-001",
+      "severity": "HIGH",
+      "confidence": 0.92,
+      "title": "PlayOverlay introduces hardcoded bg-black/50 in newly extracted shell",
+      "file": "/Volumes/SSD/Dev/Apps/Knowlune/.worktrees/dev-server/src/app/components/figma/courseCardShell.tsx",
+      "line": 84,
+      "rule": ".claude/rules/styling.md, Design Token System: 'CRITICAL: Never use hardcoded Tailwind colors. Always use design tokens from src/styles/theme.css.' Enforced by ESLint rule 'design-tokens/no-hardcoded-colors' (ERROR severity).",
+      "evidence": "courseCardShell.tsx:84 — `<span className=\"bg-black/50 backdrop-blur-sm rounded-full p-4 ...\">`. Refactor plan called for design-token-only; this is the new shared primitive that all variants inherit, so the token violation is now propagated to every card.",
+      "recommendation": "Replace `bg-black/50` with a token (e.g. add `--overlay-scrim` to theme.css, or use `bg-foreground/50` if light/dark inversion is acceptable).",
+      "status": "introduced"
+    },
+    {
+      "id": "PS-002",
+      "severity": "HIGH",
+      "confidence": 0.95,
+      "title": "categoryColors map uses hardcoded Tailwind palette colors",
+      "file": "/Volumes/SSD/Dev/Apps/Knowlune/.worktrees/dev-server/src/app/components/figma/CourseCard.tsx",
+      "line": "35-41",
+      "rule": ".claude/rules/styling.md: 'Never use hardcoded Tailwind colors. Always use design tokens.' Cheat-sheet shows `bg-blue-600` -> `bg-brand`, `text-green-600` -> `text-success`, `text-red-500` -> `text-destructive`.",
+      "evidence": "Lines 36,38,39,40 use `bg-emerald-100 text-emerald-700`, `bg-amber-100 text-amber-700`, `bg-red-100 text-red-700`, `bg-purple-100 text-purple-700`. Only the influence-authority entry on line 37 correctly uses `bg-brand-soft text-brand-soft-foreground`.",
+      "recommendation": "Map each category to token pairs (e.g. `bg-success-soft text-success`, `bg-warning-soft text-warning`, `bg-destructive/10 text-destructive`, `bg-brand-soft text-brand-soft-foreground`). The plan called for unified design tokens across the visual language.",
+      "status": "pre_existing_but_in_scope (lines unchanged but file is being refactored as part of unification effort)"
+    },
+    {
+      "id": "PS-003",
+      "severity": "HIGH",
+      "confidence": 0.90,
+      "title": "Difficulty badge classNames in progress variant use hardcoded green/amber palette",
+      "file": "/Volumes/SSD/Dev/Apps/Knowlune/.worktrees/dev-server/src/app/components/figma/CourseCard.tsx",
+      "line": "631-635",
+      "rule": ".claude/rules/styling.md: 'Never use hardcoded Tailwind colors.'",
+      "evidence": "Lines 632-634: `bg-green-100 text-green-900 dark:bg-green-900 dark:text-green-100 hover:bg-green-100 dark:hover:bg-green-900` and the amber equivalent. Note that earlier in the same file (lines 198-200) the popover difficulty badge correctly uses `bg-success-soft text-success` / `bg-warning-soft text-warning` — so the tokens exist and the inline progress-variant block is inconsistent.",
+      "recommendation": "Replace with the same `bg-success-soft text-success` / `bg-warning-soft text-warning` tokens used at lines 198-200.",
+      "status": "pre_existing"
+    },
+    {
+      "id": "PS-004",
+      "severity": "MEDIUM",
+      "confidence": 0.88,
+      "title": "Empty-state cover uses hardcoded blue/indigo gradient",
+      "file": "/Volumes/SSD/Dev/Apps/Knowlune/.worktrees/dev-server/src/app/components/figma/CourseCard.tsx",
+      "line": "424, 433",
+      "rule": ".claude/rules/styling.md: 'Never use hardcoded Tailwind colors.'",
+      "evidence": "Both branches render `bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-blue-950/50 dark:to-indigo-950/50` as the empty cover. These are raw palette colors, not tokens.",
+      "recommendation": "Use `from-brand-soft to-brand-soft` or introduce a `--cover-placeholder` gradient token in theme.css.",
+      "status": "pre_existing"
+    },
+    {
+      "id": "PS-005",
+      "severity": "MEDIUM",
+      "confidence": 0.88,
+      "title": "Info-button overlay uses hardcoded bg-black/50 and bg-black/70",
+      "file": "/Volumes/SSD/Dev/Apps/Knowlune/.worktrees/dev-server/src/app/components/figma/CourseCard.tsx",
+      "line": "360, 384",
+      "rule": ".claude/rules/styling.md: 'Never use hardcoded Tailwind colors.'",
+      "evidence": "Both info-button branches use `bg-black/50 backdrop-blur-sm ... hover:bg-black/70`. ImportedCourseCard.tsx:408 has the same violation.",
+      "recommendation": "Promote a single overlay scrim token (`--overlay-scrim`, `--overlay-scrim-hover`) — same fix as PS-001.",
+      "status": "pre_existing"
+    },
+    {
+      "id": "PS-006",
+      "severity": "MEDIUM",
+      "confidence": 0.86,
+      "title": "Progress variant gradient overlay uses hardcoded black",
+      "file": "/Volumes/SSD/Dev/Apps/Knowlune/.worktrees/dev-server/src/app/components/figma/CourseCard.tsx",
+      "line": 329,
+      "rule": ".claude/rules/styling.md: 'Never use hardcoded Tailwind colors.'",
+      "evidence": "`bg-gradient-to-t from-black/30 via-transparent to-transparent`",
+      "recommendation": "Use `from-foreground/30` or a dedicated scrim token.",
+      "status": "pre_existing"
+    },
+    {
+      "id": "PS-007",
+      "severity": "MEDIUM",
+      "confidence": 0.90,
+      "title": "ImportedCourseCard placeholder + camera overlay use hardcoded emerald/teal/black",
+      "file": "/Volumes/SSD/Dev/Apps/Knowlune/.worktrees/dev-server/src/app/components/figma/ImportedCourseCard.tsx",
+      "line": "270, 273, 408, 487",
+      "rule": ".claude/rules/styling.md: 'Never use hardcoded Tailwind colors.'",
+      "evidence": "Line 270: `bg-gradient-to-br from-emerald-50 to-teal-100 dark:from-emerald-950/50 dark:to-teal-950/50`. Line 273: `text-emerald-300 dark:text-emerald-600`. Line 408: `bg-black/50 ... hover:bg-black/70`. Line 487: `bg-black/40`.",
+      "recommendation": "Replace with tokens: `bg-success-soft` for the placeholder, `text-muted-foreground` for the empty icon, scrim token for the camera/info overlays.",
+      "status": "pre_existing"
+    },
+    {
+      "id": "PS-008",
+      "severity": "LOW",
+      "confidence": 0.70,
+      "title": "Mixed brand/text-on-soft-bg potentially inconsistent",
+      "file": "/Volumes/SSD/Dev/Apps/Knowlune/.worktrees/dev-server/src/app/components/figma/CourseCard.tsx",
+      "line": 313,
+      "rule": ".claude/rules/styling.md: 'Soft badges/labels: Use text-brand-soft-foreground (not text-brand) on bg-brand-soft backgrounds.'",
+      "evidence": "Line 313 uses `bg-card/95 ... text-brand` — not strictly a `bg-brand-soft` background, so this is borderline. Flagging as LOW because `bg-card` is a token and the contrast pairing isn't exactly the documented anti-pattern.",
+      "recommendation": "Verify WCAG AA contrast of `text-brand` on `bg-card/95` in dark mode; if it fails, switch to `text-brand-soft-foreground` or strengthen the surface.",
+      "status": "pre_existing"
+    }
+  ],
+  "residual_risks": [
+    "The new shared shell (courseCardShell.tsx) is the unification point for all course cards but ships with a hardcoded `bg-black/50` in PlayOverlay (PS-001). Future cards reusing this primitive will inherit the violation, defeating the plan's design-token-only goal.",
+    "ESLint rule `design-tokens/no-hardcoded-colors` is configured as ERROR. If lint is currently passing on these files, either the rule has gaps for `bg-black/50`, palette names like `emerald-100`, or these files are excluded — worth verifying."
+  ],
+  "testing_gaps": [
+    "courseCardShell.test.tsx asserts presence of `bg-brand` (line 11,17,22,28) but does not assert *absence* of hardcoded palette classes. A regression test like `expect(html).not.toMatch(/bg-(black|red|blue|green|emerald|amber|purple|teal|indigo)-/)` would prevent reintroduction.",
+    "No test covers the `[@media(hover:none)]:opacity-100` touch-device behavior of PlayOverlay — only hover-via-click is tested."
+  ]
+}

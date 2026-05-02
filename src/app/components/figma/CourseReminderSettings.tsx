@@ -344,7 +344,7 @@ export function CourseReminderSettings() {
                 data-testid="course-reminder-time-input"
                 value={selectedTime}
                 onChange={e => setSelectedTime(e.target.value)}
-                className="block w-full max-w-40 h-11 rounded-md border border-input bg-background px-3 py-1.5 text-sm shadow-sm focus-visible:border-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="block w-full max-w-40 h-11 rounded-md border border-input bg-background px-3 py-1.5 text-sm shadow-sm focus-visible:border-focus-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
               />
             </div>
 

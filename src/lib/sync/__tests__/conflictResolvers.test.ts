@@ -29,7 +29,11 @@ describe('applyConflictCopy', () => {
 
   it('returns remote as winner: id and content come from remote', () => {
     const local = makeNote({ id: 'note-local', content: 'Local content' })
-    const remote = makeNote({ id: 'note-remote', content: 'Remote content', updatedAt: '2026-01-01T11:00:00.000Z' })
+    const remote = makeNote({
+      id: 'note-remote',
+      content: 'Remote content',
+      updatedAt: '2026-01-01T11:00:00.000Z',
+    })
 
     const result = applyConflictCopy(local, remote)
 

@@ -124,12 +124,9 @@ describe('Settings page', () => {
     )
     // Navigate to the Profile category — may be a tab (mobile pills) or button (desktop nav)
     // Both use aria-label="Profile" or aria-label="Profile (modified)"
-    const allInteractives = [
-      ...screen.queryAllByRole('button'),
-      ...screen.queryAllByRole('tab'),
-    ]
-    const profileBtn = allInteractives.find(
-      el => el.getAttribute('aria-label')?.startsWith('Profile')
+    const allInteractives = [...screen.queryAllByRole('button'), ...screen.queryAllByRole('tab')]
+    const profileBtn = allInteractives.find(el =>
+      el.getAttribute('aria-label')?.startsWith('Profile')
     )
     expect(profileBtn).toBeDefined()
     await user.click(profileBtn!)

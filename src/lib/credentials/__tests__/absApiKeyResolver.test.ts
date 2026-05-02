@@ -81,7 +81,7 @@ describe('getAbsApiKey — error / retry paths', () => {
     expect(refreshMock).toHaveBeenCalledTimes(1)
     expect(infoSpy).toHaveBeenCalledWith(
       '[telemetry] sync.credential.auth_failed',
-      expect.objectContaining({ kind: 'abs-server', id: 'srv-4' }),
+      expect.objectContaining({ kind: 'abs-server', id: 'srv-4' })
     )
     // Next call retries (no cached null entry).
     readMock.mockResolvedValueOnce({ ok: true, value: 'now-ok' })

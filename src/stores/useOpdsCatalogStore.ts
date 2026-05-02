@@ -35,9 +35,7 @@ import { syncEngine } from '@/lib/sync/syncEngine'
 import { tableRegistry } from '@/lib/sync/tableRegistry'
 import { toSnakeCase } from '@/lib/sync/fieldMapper'
 import { useAuthStore } from '@/stores/useAuthStore'
-import {
-  invalidateOpdsPassword,
-} from '@/lib/credentials/opdsPasswordResolver'
+import { invalidateOpdsPassword } from '@/lib/credentials/opdsPasswordResolver'
 import { emitTelemetry } from '@/lib/credentials/telemetry'
 
 interface OpdsCatalogStoreState {
@@ -57,7 +55,7 @@ interface OpdsCatalogStoreState {
   updateCatalog: (
     id: string,
     updates: Partial<Omit<OpdsCatalog, 'id'>>,
-    password?: string,
+    password?: string
   ) => Promise<void>
   removeCatalog: (id: string) => Promise<void>
   getCatalogById: (id: string) => OpdsCatalog | undefined
@@ -108,7 +106,7 @@ export const useOpdsCatalogStore = create<OpdsCatalogStoreState>((set, get) => (
   updateCatalog: async (
     id: string,
     updates: Partial<Omit<OpdsCatalog, 'id'>>,
-    password?: string,
+    password?: string
   ) => {
     try {
       if (password && password.length > 0) {
@@ -170,10 +168,7 @@ export const useOpdsCatalogStore = create<OpdsCatalogStoreState>((set, get) => (
  * - Engine nudge is explicit because we bypassed the queue insert inside
  *   syncableWrite.
  */
-async function writeOpdsRowAndEnqueue(
-  operation: 'put',
-  record: OpdsCatalog,
-): Promise<void> {
+async function writeOpdsRowAndEnqueue(operation: 'put', record: OpdsCatalog): Promise<void> {
   // [1] Write nested shape to Dexie; syncableWrite stamps userId + updatedAt.
   //     skipQueue:true because we'll build the queue entry with the flat
   //     shape (Supabase schema) manually below.
@@ -181,7 +176,7 @@ async function writeOpdsRowAndEnqueue(
     'opdsCatalogs',
     operation,
     record as unknown as Record<string, unknown> & { id: string },
-    { skipQueue: true },
+    { skipQueue: true }
   )
 
   // [2] Guard: no queue entry if unauthenticated. Matches syncableWrite's
@@ -209,9 +204,7 @@ async function writeOpdsRowAndEnqueue(
   //     but if a caller slips one in via cast, toSnakeCase drops it).
   const entry = tableRegistry.find(e => e.dexieTable === 'opdsCatalogs')
   if (!entry) {
-    console.error(
-      '[useOpdsCatalogStore] Missing tableRegistry entry for opdsCatalogs',
-    )
+    console.error('[useOpdsCatalogStore] Missing tableRegistry entry for opdsCatalogs')
     return
   }
   const payload = toSnakeCase(entry, flatRecord)
@@ -234,7 +227,7 @@ async function writeOpdsRowAndEnqueue(
     // already succeeded. The sync engine's next scan will reconcile.
     console.error(
       '[useOpdsCatalogStore] Queue insert failed — write succeeded, sync deferred:',
-      err,
+      err
     )
   }
 }
@@ -242,3 +235,11 @@ async function writeOpdsRowAndEnqueue(
 // Exported for the unit test — kept out of the default export to avoid
 // leaking the helper into the public API.
 export const __TEST_ONLY = { writeOpdsRowAndEnqueue }
+
+// Expose the store on window in development / test builds so E2E tests can
+// seed OPDS catalog rows without spinning up a real Supabase session. Mirrors
+// the `__authStore` / `__syncStatusStore` shim pattern. Tree-shaken in prod.
+if (typeof window !== 'undefined' && !import.meta.env.PROD) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ;(window as any).__opdsCatalogStore = useOpdsCatalogStore
+}

@@ -20,9 +20,7 @@ export const DEFAULT_STALE_THRESHOLD_MS = 24 * 60 * 60 * 1000
  * Returns the cached streak row for a user, or `undefined` if none exists
  * / the read fails. Never throws — callers treat absence as "no cache".
  */
-export async function getCachedStreak(
-  userId: string
-): Promise<ReadingStreakCacheRow | undefined> {
+export async function getCachedStreak(userId: string): Promise<ReadingStreakCacheRow | undefined> {
   try {
     return await db.readingStreakCache.get(userId)
   } catch (err) {

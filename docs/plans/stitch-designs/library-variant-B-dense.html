@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Knowlune - Library</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "outline": "#767b83",
+                        "on-tertiary-fixed": "#352c53",
+                        "tertiary": "#625983",
+                        "surface-container-high": "#e5e8f0",
+                        "on-tertiary": "#fdf7ff",
+                        "on-primary-fixed": "#002b50",
+                        "on-tertiary-container": "#494068",
+                        "surface-bright": "#f9f9fe",
+                        "on-tertiary-fixed-variant": "#524972",
+                        "on-secondary-fixed-variant": "#515c6d",
+                        "surface-tint": "#416189",
+                        "error-dim": "#67040d",
+                        "inverse-surface": "#0c0e12",
+                        "primary-container": "#a6c6f4",
+                        "surface-container-low": "#f2f3fa",
+                        "on-secondary": "#f8f8ff",
+                        "primary-fixed": "#a6c6f4",
+                        "on-surface": "#2e333a",
+                        "on-primary-fixed-variant": "#274970",
+                        "on-primary-container": "#1d4066",
+                        "primary-dim": "#34557c",
+                        "surface": "#f9f9fe",
+                        "on-primary": "#f8f8ff",
+                        "background": "#f9f9fe",
+                        "on-error-container": "#6e0a12",
+                        "tertiary-dim": "#564d76",
+                        "error": "#a83836",
+                        "on-secondary-fixed": "#354050",
+                        "on-surface-variant": "#5b5f67",
+                        "secondary": "#546071",
+                        "secondary-container": "#d7e3f8",
+                        "primary-fixed-dim": "#98b8e5",
+                        "surface-variant": "#dfe2ec",
+                        "surface-container": "#eceef5",
+                        "inverse-primary": "#a6c6f4",
+                        "secondary-dim": "#485465",
+                        "on-error": "#fff7f6",
+                        "tertiary-fixed": "#d4c8f9",
+                        "outline-variant": "#aeb2bb",
+                        "secondary-fixed": "#d7e3f8",
+                        "on-background": "#2e333a",
+                        "inverse-on-surface": "#9c9da1",
+                        "tertiary-fixed-dim": "#c6baea",
+                        "surface-dim": "#d6dae4",
+                        "surface-container-highest": "#dfe2ec",
+                        "tertiary-container": "#d4c8f9",
+                        "secondary-fixed-dim": "#c9d5e9",
+                        "surface-container-lowest": "#ffffff",
+                        "primary": "#416189",
+                        "on-secondary-container": "#475263",
+                        "error-container": "#fa746f"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "xs": "4px",
+                        "sm": "8px",
+                        "md": "16px",
+                        "lg": "24px"
+                    },
+                    "fontFamily": {
+                        "headline": ["Manrope", "sans-serif"],
+                        "display": ["Manrope", "sans-serif"],
+                        "body": ["Inter", "sans-serif"],
+                        "label": ["Inter", "sans-serif"]
+                    },
+                    "boxShadow": {
+                        "ambient": "0 12px 32px -4px rgba(46, 51, 58, 0.06)",
+                        "lifted": "0 4px 12px -2px rgba(46, 51, 58, 0.04)"
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .icon-fill {
+            font-variation-settings: 'FILL' 1;
+        }
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-surface font-body h-screen flex overflow-hidden antialiased">
+<!-- SideNavBar (Shared Component) -->
+<nav class="bg-[#f2f3fa] dark:bg-slate-900 text-[#416189] dark:text-blue-400 font-['Inter'] text-sm font-medium h-screen w-64 fixed left-0 top-0 no-border tonal-layering shadow-none flex flex-col h-full p-4 gap-2 z-20 transition-all duration-300 hidden md:flex">
+<!-- Header -->
+<div class="mb-lg px-2 pt-4">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-full bg-secondary-container flex items-center justify-center overflow-hidden">
+<img alt="Knowlune Curator" class="w-full h-full object-cover" data-alt="Portrait of a young woman with a calm expression, professional soft lighting, wearing a simple collared shirt" src="https://lh3.googleusercontent.com/aida-public/AB6AXuApEKdVeLuKxYrpNU2lqLK5qGX66N0rh0tGyM9M6KIzTK-qgtCdP4m2ucmcmIa_KcOESf3kZwOtjo4ULQosC15_tnMd4y7-qp86XQulqkQTcCF9NvFHWxfRXui0-FivzE0RTe2051pRIADWZf_l_EQ3-ibPXpIbvWcldKtIAptBXIDwnfCaZibjVXqqaeJekKX2SAD7GxG99NTuNcjT43KTOSuyb_qR8d_FTeUzS92pJdks6TVePnxqDVw9ZDINEom7pQQUR2Xmy2c"/>
+</div>
+<div>
+<h2 class="font-headline font-bold text-on-surface tracking-tight">My Library</h2>
+<p class="text-xs text-on-surface-variant font-label">Digital Curator</p>
+</div>
+</div>
+</div>
+<!-- Navigation Tabs -->
+<div class="flex flex-col gap-1 flex-grow">
+<!-- Active: Audiobooks -->
+<a class="bg-[#ffffff] dark:bg-slate-800 text-[#416189] dark:text-blue-300 rounded-md shadow-sm flex items-center gap-3 px-3 py-2.5 transition-all duration-300 hover:bg-[#dfe2ec] dark:hover:bg-slate-800" href="#">
+<span class="material-symbols-outlined icon-fill">headset</span>
+<span class="font-medium">Audiobooks</span>
+</a>
+<a class="text-[#5b5f67] dark:text-slate-400 flex items-center gap-3 px-3 py-2.5 rounded-md transition-all duration-300 hover:bg-[#dfe2ec] dark:hover:bg-slate-800" href="#">
+<span class="material-symbols-outlined">book</span>
+<span>Ebooks</span>
+</a>
+<a class="text-[#5b5f67] dark:text-slate-400 flex items-center gap-3 px-3 py-2.5 rounded-md transition-all duration-300 hover:bg-[#dfe2ec] dark:hover:bg-slate-800" href="#">
+<span class="material-symbols-outlined">library_books</span>
+<span>Collections</span>
+</a>
+<a class="text-[#5b5f67] dark:text-slate-400 flex items-center gap-3 px-3 py-2.5 rounded-md transition-all duration-300 hover:bg-[#dfe2ec] dark:hover:bg-slate-800" href="#">
+<span class="material-symbols-outlined">inventory_2</span>
+<span>Archive</span>
+</a>
+</div>
+<!-- CTA -->
+<div class="mt-auto pt-4">
+<button class="w-full bg-gradient-to-br from-primary to-primary-dim text-on-primary rounded-md py-2 px-4 font-medium flex items-center justify-center gap-2 hover:opacity-90 transition-opacity">
+<span class="material-symbols-outlined text-sm">add</span>
+                Add New
+            </button>
+</div>
+</nav>
+<!-- Main Workspace Area -->
+<main class="flex-1 flex flex-col relative md:ml-64 w-full bg-surface-container-lowest md:bg-surface md:rounded-tl-xl md:shadow-ambient overflow-hidden z-10 transition-all duration-300">
+<!-- TopNavBar (Shared Component) -->
+<header class="bg-[#f9f9fe] dark:bg-slate-950 text-[#416189] dark:text-blue-400 font-['Manrope'] tracking-tight font-bold docked full-width top-0 shadow-none flex justify-between items-center w-full px-6 py-3 max-w-full z-30 md:hidden bg-surface-container-low border-b-0 pb-0">
+<div class="text-xl font-black text-[#416189] dark:text-blue-400">Knowlune</div>
+<div class="flex items-center gap-4">
+<div class="flex gap-2">
+<a class="text-[#416189] dark:text-blue-300 font-bold border-b-2 border-[#416189] pb-1 px-1" href="#">Library</a>
+<a class="text-[#5b5f67] dark:text-slate-400 font-medium pb-1 px-1" href="#">Import</a>
+<a class="text-[#5b5f67] dark:text-slate-400 font-medium pb-1 px-1" href="#">Sync</a>
+</div>
+<button class="w-8 h-8 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center hover:bg-[#dfe2ec] transition-colors">
+<span class="material-symbols-outlined text-sm">settings</span>
+</button>
+<img alt="User profile" class="w-8 h-8 rounded-full object-cover" data-alt="Portrait of a young woman with a calm expression, professional soft lighting, wearing a simple collared shirt" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB_KgIDwyNn90NpMe1Pc3-cWoxiStnoAGOcXYBWlGRWiPid6oEWBJ_lnfNUJeqilYLz6nVmAfw3scGbLxmVHbau4OtZD2BnVy2GSOVucdHSAO3KhFFyl_mI6Bx7AhD3cndFUbUwMW90kfb-y85cp8SaEzaw0Cemf7gbSb7dGloc8ejdzQWFpj2JgjvsaaGhLlZ0qRWVjGn8I3kfUeNpV-ej0MyN47BbU1Sut6vygPM3eB4izNNoGsAzNw899MUuXHW2r80KJGVI1KI"/>
+</div>
+</header>
+<!-- Tool Bar / Action Area (Desktop & Mobile) -->
+<div class="bg-surface-container-low px-lg py-md flex flex-col md:flex-row gap-md items-start md:items-center justify-between z-20 sticky top-0 md:top-auto border-b md:border-none border-outline-variant/15">
+<!-- Context & Search -->
+<div class="flex items-center gap-md w-full md:w-auto">
+<h1 class="font-headline font-extrabold text-2xl text-on-surface hidden md:block">Library</h1>
+<!-- Search Input -->
+<div class="relative flex-grow md:w-64 lg:w-80 group">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-sm z-10 group-focus-within:text-primary transition-colors">search</span>
+<input class="w-full bg-surface-container-high rounded-md pl-10 pr-4 py-2 text-sm font-body text-on-surface placeholder:text-on-surface-variant focus:bg-surface-container-lowest focus:ring-0 focus:outline-none focus:border-primary/50 border border-transparent transition-all duration-200" placeholder="Search authors, titles, series..." type="text"/>
+</div>
+</div>
+<!-- Utilities & Toggles -->
+<div class="flex items-center gap-sm w-full md:w-auto overflow-x-auto hide-scrollbar pb-1 md:pb-0">
+<!-- Filter -->
+<button class="flex items-center gap-2 bg-surface-container-highest hover:bg-surface-variant text-on-surface px-3 py-1.5 rounded-full text-sm font-medium transition-colors whitespace-nowrap">
+<span class="material-symbols-outlined text-[18px]">filter_list</span>
+                    Filter
+                    <span class="bg-tertiary-container text-on-tertiary-container text-[10px] font-bold px-1.5 rounded-full min-w-[20px] text-center">3</span>
+</button>
+<!-- Format Toggle (Mobile primarily, or quick switch) -->
+<div class="flex items-center bg-surface-container-high rounded-md p-0.5 md:hidden">
+<button class="bg-surface-container-lowest text-primary shadow-sm rounded px-3 py-1 text-xs font-semibold whitespace-nowrap">Audio</button>
+<button class="text-on-surface-variant hover:bg-surface-variant/50 rounded px-3 py-1 text-xs font-medium whitespace-nowrap transition-colors">Ebook</button>
+</div>
+<div class="w-px h-6 bg-outline-variant/30 hidden md:block mx-2"></div>
+<!-- View Toggles -->
+<div class="flex items-center bg-surface-container-high rounded-md p-0.5">
+<button class="bg-surface-container-lowest text-primary shadow-sm rounded w-8 h-7 flex items-center justify-center transition-all">
+<span class="material-symbols-outlined text-[18px] icon-fill">grid_view</span>
+</button>
+<button class="text-on-surface-variant hover:bg-surface-variant/50 rounded w-8 h-7 flex items-center justify-center transition-all">
+<span class="material-symbols-outlined text-[18px]">view_list</span>
+</button>
+</div>
+<!-- Quick Actions (Desktop) -->
+<div class="hidden md:flex items-center gap-2 ml-2">
+<button class="w-8 h-8 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center hover:bg-[#dfe2ec] transition-colors" title="Sync">
+<span class="material-symbols-outlined text-[18px]">sync</span>
+</button>
+<button class="w-8 h-8 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center hover:bg-[#dfe2ec] transition-colors" title="Import">
+<span class="material-symbols-outlined text-[18px]">upload_file</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Scrollable Canvas -->
+<div class="flex-1 overflow-y-auto px-lg py-lg space-y-xl bg-surface">
+<!-- Shelf: Continue Listening -->
+<section class="relative group">
+<div class="flex items-center justify-between mb-sm px-1">
+<div class="flex items-center gap-3">
+<h3 class="font-headline font-bold text-on-surface tracking-tight">CONTINUE LISTENING</h3>
+<span class="bg-surface-container-high text-on-surface-variant text-[10px] font-bold px-2 py-0.5 rounded-full">3 Items</span>
+</div>
+<button class="text-xs font-semibold text-primary hover:text-primary-dim transition-colors">View All</button>
+</div>
+<div class="relative">
+<!-- Carousel Navigation (Left) -->
+<button class="absolute left-0 top-1/2 -translate-y-1/2 -ml-4 w-10 h-10 rounded-full bg-surface-container-lowest shadow-ambient text-on-surface flex items-center justify-center z-10 opacity-0 group-hover:opacity-100 transition-opacity disabled:opacity-0 hidden md:flex">
+<span class="material-symbols-outlined text-sm">chevron_left</span>
+</button>
+<div class="flex gap-md overflow-x-auto hide-scrollbar snap-x pb-4 pt-1 px-1">
+<!-- Item 1 -->
+<div class="min-w-[140px] md:min-w-[160px] snap-start group/card cursor-pointer">
+<div class="relative rounded-lg overflow-hidden mb-sm aspect-square bg-surface-container-high shadow-lifted group-hover/card:shadow-ambient transition-all duration-300">
+<img alt="The Martian Cover" class="w-full h-full object-cover" data-alt="Abstract minimalist landscape with deep red and orange hues, reminiscent of Mars surface" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBmvBd4-t3OhH10C5D83aAq2-5OYrjJpU2fJSwIzOO_GCYsy_dCGfidBDl0vxmvl6lrPCP8ec4avIWnHVASB7wwAIkuLgP7BK7JnfqD4p-WNMYXTAAv17wMCAk0HGcxND0P2Enc7xvfu2qxSth86MS9FSZJ5cahbN-4wFIg_LbnbPUU843kR7nODdiHJgs7vhK3eQlUmvi8mwir3lBlILe2t6QvWS-al3Z_NvSyZBRvnIVA1ZFheK9BREtnNSoMK674qeE3Q_C9NDg"/>
+<!-- Status Pill Overlay -->
+<div class="absolute top-2 right-2 bg-surface-container-lowest/85 backdrop-blur-[24px] text-on-surface text-[10px] font-bold px-2 py-1 rounded-full shadow-sm">
+                                    75%
+                                </div>
+<!-- Play Overlay -->
+<div class="absolute inset-0 bg-black/20 flex items-center justify-center opacity-0 group-hover/card:opacity-100 transition-opacity">
+<button class="w-12 h-12 rounded-full bg-surface-container-lowest shadow-ambient flex items-center justify-center text-primary transform scale-90 group-hover/card:scale-100 transition-all">
+<span class="material-symbols-outlined icon-fill text-xl">play_arrow</span>
+</button>
+</div>
+</div>
+<h4 class="font-headline font-semibold text-sm text-on-surface truncate">The Martian</h4>
+<p class="font-body text-xs text-on-surface-variant truncate">Andy Weir</p>
+<!-- Progress Bar -->
+<div class="w-full h-1 bg-surface-container-highest rounded-full mt-2 overflow-hidden">
+<div class="h-full bg-gradient-to-r from-primary to-primary-dim rounded-full" style="width: 75%;"></div>
+</div>
+</div>
+<!-- Item 2 -->
+<div class="min-w-[140px] md:min-w-[160px] snap-start group/card cursor-pointer">
+<div class="relative rounded-lg overflow-hidden mb-sm aspect-square bg-surface-container-high shadow-lifted group-hover/card:shadow-ambient transition-all duration-300">
+<img alt="Dune Cover" class="w-full h-full object-cover" data-alt="Vast desert landscape with rolling dunes under a bright stark sun, minimalist style" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDTnczN5OJMtPwLUIzEqe5IrGc22rjPhATf1Fuk0ig8LADk5iaO4DrQFaN_QFBEK4JugbORMozlsEJQ-7F1C4hjaXdFn3S3dKxx8b8IHYjqxMwIkWe7fIup02AEOZ8OYkRb9QGTTyPOlWB092UnuGJxXharWnmPnmiAeTVo3wzKbAGkISMIWpz3zdSk0WXw7WTJzXkGdUII6k_OdUDfCAF-iE7LAWQCLNc19DOf8348eJtJBuszNyG7G1m7meeN9LQ3Y11YSSkvfBk"/>
+<div class="absolute top-2 right-2 bg-surface-container-lowest/85 backdrop-blur-[24px] text-on-surface text-[10px] font-bold px-2 py-1 rounded-full shadow-sm">
+                                    12%
+                                </div>
+<div class="absolute inset-0 bg-black/20 flex items-center justify-center opacity-0 group-hover/card:opacity-100 transition-opacity">
+<button class="w-12 h-12 rounded-full bg-surface-container-lowest shadow-ambient flex items-center justify-center text-primary transform scale-90 group-hover/card:scale-100 transition-all">
+<span class="material-symbols-outlined icon-fill text-xl">play_arrow</span>
+</button>
+</div>
+</div>
+<h4 class="font-headline font-semibold text-sm text-on-surface truncate">Dune</h4>
+<p class="font-body text-xs text-on-surface-variant truncate">Frank Herbert</p>
+<div class="w-full h-1 bg-surface-container-highest rounded-full mt-2 overflow-hidden">
+<div class="h-full bg-gradient-to-r from-primary to-primary-dim rounded-full" style="width: 12%;"></div>
+</div>
+</div>
+</div>
+<!-- Carousel Navigation (Right) -->
+<button class="absolute right-0 top-1/2 -translate-y-1/2 -mr-4 w-10 h-10 rounded-full bg-surface-container-lowest shadow-ambient text-on-surface flex items-center justify-center z-10 opacity-0 group-hover:opacity-100 transition-opacity hidden md:flex">
+<span class="material-symbols-outlined text-sm">chevron_right</span>
+</button>
+</div>
+</section>
+<!-- Divider -->
+<div class="w-full h-px bg-gradient-to-r from-transparent via-outline-variant/15 to-transparent my-lg"></div>
+<!-- Shelf: Recently Added -->
+<section class="relative group">
+<div class="flex items-center justify-between mb-sm px-1">
+<div class="flex items-center gap-3">
+<h3 class="font-headline font-bold text-on-surface tracking-tight">RECENTLY ADDED</h3>
+<span class="bg-surface-container-high text-on-surface-variant text-[10px] font-bold px-2 py-0.5 rounded-full">12 Items</span>
+</div>
+</div>
+<div class="relative">
+<div class="flex gap-md overflow-x-auto hide-scrollbar snap-x pb-4 pt-1 px-1">
+<!-- Item 1 -->
+<div class="min-w-[140px] md:min-w-[160px] snap-start group/card cursor-pointer">
+<div class="relative rounded-lg overflow-hidden mb-sm aspect-square bg-surface-container-high shadow-lifted group-hover/card:shadow-ambient transition-all duration-300">
+<img alt="Foundation Cover" class="w-full h-full object-cover" data-alt="Abstract geometric shapes floating in a dark starry void, minimalist sci-fi aesthetic" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC3-NSzICOlwstE3FHqa6HmXAhGUwYlmooUS7ZXyCPZA3wsnIyDoOB03bVu5StGXXzuL5-fd7AfB2DV0AqUE5OCPslvdgKYguE7kkFiEh4KAtGS0hz9xfqRs21J9Mze_GbTuCYNgRXXOhNG9HcZf5YA-ajdcv_hmKG4gfPfuxfo6AG7bMUOrqTORep9LN1LxiJ8UC8_7WTNItZHDc2WAPsIimKJq6PXw_XtLyCPoGdAz3ZJuaAm6ylFtLcWRsBS9k961LIl6DrtiBY"/>
+<div class="absolute top-2 left-2 bg-tertiary-container text-on-tertiary-container text-[10px] font-bold px-2 py-1 rounded-full shadow-sm">
+                                    NEW
+                                </div>
+</div>
+<h4 class="font-headline font-semibold text-sm text-on-surface truncate">Foundation</h4>
+<p class="font-body text-xs text-on-surface-variant truncate">Isaac Asimov</p>
+</div>
+<!-- Item 2 -->
+<div class="min-w-[140px] md:min-w-[160px] snap-start group/card cursor-pointer">
+<div class="relative rounded-lg overflow-hidden mb-sm aspect-square bg-surface-container-high shadow-lifted group-hover/card:shadow-ambient transition-all duration-300">
+<img alt="Neuromancer Cover" class="w-full h-full object-cover" data-alt="Neon grid lines fading into a dark cyan digital abyss, cyberpunk aesthetic" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC2WUZ1nuYG918rK_MCSLf6Kiaqc2c-fwAEVPAaZklMbjTEj6m3FwTdSN-XEd1XjiX9G8xh6CyV_DrkWlytZW8SnXOTG-4XkVWOvd77omgUJXm5s0yS-qdzuByCzlNFfYVWRE3lHNDrGEPj6sdsfYFi9BYZfxlqMR3fXoO4M4C1tNLJkEHD_Mfz7f1SBbOm4NyZvI2Ilm9umh9g_84avVMk42oFM0BpPSW8c5cK-horP0EeIGIvBJzJ9xZwOHB-EEh1tgYVesGh53Y"/>
+</div>
+<h4 class="font-headline font-semibold text-sm text-on-surface truncate">Neuromancer</h4>
+<p class="font-body text-xs text-on-surface-variant truncate">William Gibson</p>
+</div>
+<!-- Item 3 -->
+<div class="min-w-[140px] md:min-w-[160px] snap-start group/card cursor-pointer">
+<div class="relative rounded-lg overflow-hidden mb-sm aspect-square bg-surface-container-high shadow-lifted group-hover/card:shadow-ambient transition-all duration-300">
+<img alt="Hyperion Cover" class="w-full h-full object-cover" data-alt="View of a planet from space with a glowing atmospheric rim, dark background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBun2HNJnaEZB9fFW4SeLEiv7jTv4aD_0BXSRCWGeGzA32lpVNAdY1XNLhFQIlF0gemMpWZKXws7CjxlubVzUFWBHiCvV1DQ5gjD-tHZACb0jO8TW9y77jY9t8ufBEvUNXrBXcOuAZAnZQ2dkvDYKZAoYRvwSgUMEWXvN6hsnDaeVWS3uppVofd2CCyykVJRWAQXTb598lAw7fHvYU6Hw81nMG--tIifccAUhlLm5sCMsFcHFPbonUd9coh51ltjn1oS2HO8LdQROU"/>
+</div>
+<h4 class="font-headline font-semibold text-sm text-on-surface truncate">Hyperion</h4>
+<p class="font-body text-xs text-on-surface-variant truncate">Dan Simmons</p>
+</div>
+</div>
+</div>
+</section>
+<!-- Empty State Variant (Hidden by default, structure provided) -->
+<!-- 
+            <div class="flex flex-col items-center justify-center py-20 text-center">
+                <div class="w-24 h-24 bg-surface-container-high rounded-full flex items-center justify-center mb-4 shadow-lifted">
+                    <span class="material-symbols-outlined text-4xl text-on-surface-variant">library_music</span>
+                </div>
+                <h3 class="font-headline font-bold text-lg text-on-surface mb-2">Your library is empty</h3>
+                <p class="text-sm text-on-surface-variant max-w-sm mb-6">No audiobooks found in this view. Try importing new titles or adjusting your filters.</p>
+                <button class="bg-gradient-to-br from-primary to-primary-dim text-on-primary rounded-md py-2 px-6 font-medium shadow-sm hover:opacity-90 transition-opacity">
+                    Import Audiobooks
+                </button>
+            </div>
+            -->
+</div>
+</main>
+</body></html>

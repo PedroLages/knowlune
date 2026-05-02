@@ -73,7 +73,7 @@ export function FrameCaptureView({ node, editor }: NodeViewProps) {
           {canSeek ? (
             <button
               type="button"
-              className="text-xs text-muted-foreground hover:text-brand cursor-pointer transition-colors bg-transparent border-none p-0 focus-visible:ring-2 focus-visible:ring-ring focus-visible:rounded-sm"
+              className="text-xs text-muted-foreground hover:text-brand cursor-pointer transition-colors bg-transparent border-none p-0 focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:rounded-sm"
               onClick={handleTimestampClick}
               aria-label={`Seek to ${caption}`}
             >

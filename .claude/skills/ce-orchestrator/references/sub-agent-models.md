@@ -70,6 +70,7 @@ Three effort levels, distinct from model choice:
 | 27 | `testarch-trace-dispatcher` | closeout (full) | Sonnet | medium | off | Generates requirements-to-tests traceability matrix |
 | 28 | `testarch-nfr-dispatcher` | closeout (full) | Sonnet | medium | off | Non-functional requirements validation |
 | 29 | `review-adversarial-dispatcher` | closeout (full) | Opus | **high** | **on** | Cynical critique of epic scope + implementation |
+| 30 | `report-generator` (v4) | 0.7 closeout | Sonnet | medium | off | Mechanical synthesis from structured inputs (tracking file, sprint-status, review artifacts); not deep reasoning |
 
 ## Cost sanity check
 

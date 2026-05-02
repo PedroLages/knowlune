@@ -9,23 +9,23 @@ const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 
 // ---------------------------------------------------------------------------
-// AC2 / 3.12 — All 38 tables registered
+// AC2 / 3.12 — All 39 tables registered (38 + userConsents added in E119-S07)
 // ---------------------------------------------------------------------------
 
 describe('tableRegistry — completeness', () => {
-  it('has exactly 38 entries', () => {
-    expect(tableRegistry).toHaveLength(38)
+  it('has exactly 39 entries', () => {
+    expect(tableRegistry).toHaveLength(39)
   })
 
   it('does not include flashcard_reviews (Supabase-only table)', () => {
-    const entry = tableRegistry.find((e) => e.dexieTable === 'flashcard_reviews')
+    const entry = tableRegistry.find(e => e.dexieTable === 'flashcard_reviews')
     expect(entry).toBeUndefined()
-    const entry2 = tableRegistry.find((e) => e.supabaseTable === 'flashcard_reviews')
+    const entry2 = tableRegistry.find(e => e.supabaseTable === 'flashcard_reviews')
     expect(entry2).toBeUndefined()
   })
 
   it('all entries have unique dexieTable names', () => {
-    const names = tableRegistry.map((e) => e.dexieTable)
+    const names = tableRegistry.map(e => e.dexieTable)
     const unique = new Set(names)
     expect(unique.size).toBe(tableRegistry.length)
   })
@@ -77,23 +77,23 @@ describe('tableRegistry — priority tiers', () => {
   ]
   const p4Tables = ['quizzes', 'quizAttempts', 'aiUsageEvents']
 
-  it.each(p0Tables)('%s has priority 0', (table) => {
+  it.each(p0Tables)('%s has priority 0', table => {
     expect(getTableEntry(table)?.priority).toBe(0)
   })
 
-  it.each(p1Tables)('%s has priority 1', (table) => {
+  it.each(p1Tables)('%s has priority 1', table => {
     expect(getTableEntry(table)?.priority).toBe(1)
   })
 
-  it.each(p2Tables)('%s has priority 2', (table) => {
+  it.each(p2Tables)('%s has priority 2', table => {
     expect(getTableEntry(table)?.priority).toBe(2)
   })
 
-  it.each(p3Tables)('%s has priority 3', (table) => {
+  it.each(p3Tables)('%s has priority 3', table => {
     expect(getTableEntry(table)?.priority).toBe(3)
   })
 
-  it.each(p4Tables)('%s has priority 4', (table) => {
+  it.each(p4Tables)('%s has priority 4', table => {
     expect(getTableEntry(table)?.priority).toBe(4)
   })
 })
@@ -233,9 +233,9 @@ describe('tableRegistry — monotonic fields', () => {
     expect(entry?.monotonicFields).toContain('masteryLevel')
   })
 
-  it('progress.monotonicFields contains watchedSeconds', () => {
+  it('progress.monotonicFields contains currentTime', () => {
     const entry = getTableEntry('progress')
-    expect(entry?.monotonicFields).toContain('watchedSeconds')
+    expect(entry?.monotonicFields).toContain('currentTime')
   })
 
   it('books.monotonicFields contains progress', () => {
@@ -290,6 +290,107 @@ describe('tableRegistry — audioBookmarks append-only (E93-S07)', () => {
 
     expect(snaked).not.toHaveProperty('updated_at')
     expect(snaked).toHaveProperty('created_at', '2026-04-18T10:00:00Z')
+  })
+})
+
+// ---------------------------------------------------------------------------
+// feat/bridge-books — studySessions append-only with field mappings
+// ---------------------------------------------------------------------------
+
+describe('tableRegistry — studySessions append-only (bridge-books)', () => {
+  it('studySessions has conflictStrategy: insert-only', () => {
+    expect(getTableEntry('studySessions')?.conflictStrategy).toBe('insert-only')
+  })
+
+  it('studySessions has insertOnly: true', () => {
+    expect(getTableEntry('studySessions')?.insertOnly).toBe(true)
+  })
+
+  it('studySessions has cursorField: created_at', () => {
+    expect(getTableEntry('studySessions')?.cursorField).toBe('created_at')
+  })
+
+  it('studySessions.stripFields contains updatedAt', () => {
+    expect(getTableEntry('studySessions')?.stripFields).toContain('updatedAt')
+  })
+
+  it('studySessions.stripFields contains all 9 Dexie-only fields', () => {
+    const stripFields = getTableEntry('studySessions')?.stripFields
+    expect(stripFields).toContain('courseId')
+    expect(stripFields).toContain('contentItemId')
+    expect(stripFields).toContain('endTime')
+    expect(stripFields).toContain('videosWatched')
+    expect(stripFields).toContain('lastActivity')
+    expect(stripFields).toContain('sessionType')
+    expect(stripFields).toContain('qualityScore')
+    expect(stripFields).toContain('qualityFactors')
+    expect(stripFields).toContain('updatedAt')
+  })
+
+  it('studySessions toSnakeCase converts startTime to started_at', () => {
+    const entry = getTableEntry('studySessions')!
+    const sample = {
+      id: 'ss-1',
+      courseId: 'course-1',
+      startTime: '2026-04-28T10:00:00Z',
+      endTime: '2026-04-28T10:30:00Z',
+      duration: 1800,
+      idleTime: 60,
+      interactionCount: 120,
+      breakCount: 2,
+      sessionType: 'mixed',
+      qualityScore: 85,
+      qualityFactors: { focus: 90 },
+      videosWatched: [],
+      contentItemId: 'lesson-1',
+      lastActivity: '2026-04-28T10:30:00Z',
+      updatedAt: '2026-04-28T10:30:00Z',
+      createdAt: '2026-04-28T10:00:00Z',
+      userId: 'user-1',
+    }
+    const snaked = toSnakeCase(entry, sample)
+
+    // Explicit fieldMap mappings
+    expect(snaked).toHaveProperty('started_at', '2026-04-28T10:00:00Z')
+    expect(snaked).not.toHaveProperty('startTime')
+
+    expect(snaked).toHaveProperty('duration_seconds', 1800)
+    expect(snaked).not.toHaveProperty('duration')
+
+    expect(snaked).toHaveProperty('idle_seconds', 60)
+    expect(snaked).not.toHaveProperty('idleTime')
+
+    expect(snaked).toHaveProperty('breaks', 2)
+    expect(snaked).not.toHaveProperty('breakCount')
+
+    // Auto camelCase→snake_case
+    expect(snaked).toHaveProperty('interaction_count', 120)
+    expect(snaked).not.toHaveProperty('interactionCount')
+
+    // Pass-through fields
+    expect(snaked).toHaveProperty('id', 'ss-1')
+    expect(snaked).toHaveProperty('user_id', 'user-1')
+    expect(snaked).toHaveProperty('created_at', '2026-04-28T10:00:00Z')
+
+    // Stripped fields (Dexie-only + updatedAt)
+    expect(snaked).not.toHaveProperty('courseId')
+    expect(snaked).not.toHaveProperty('course_id')
+    expect(snaked).not.toHaveProperty('contentItemId')
+    expect(snaked).not.toHaveProperty('content_item_id')
+    expect(snaked).not.toHaveProperty('endTime')
+    expect(snaked).not.toHaveProperty('end_time')
+    expect(snaked).not.toHaveProperty('videosWatched')
+    expect(snaked).not.toHaveProperty('videos_watched')
+    expect(snaked).not.toHaveProperty('lastActivity')
+    expect(snaked).not.toHaveProperty('last_activity')
+    expect(snaked).not.toHaveProperty('sessionType')
+    expect(snaked).not.toHaveProperty('session_type')
+    expect(snaked).not.toHaveProperty('qualityScore')
+    expect(snaked).not.toHaveProperty('quality_score')
+    expect(snaked).not.toHaveProperty('qualityFactors')
+    expect(snaked).not.toHaveProperty('quality_factors')
+    expect(snaked).not.toHaveProperty('updatedAt')
+    expect(snaked).not.toHaveProperty('updated_at')
   })
 })
 
@@ -392,7 +493,12 @@ describe('fieldMapper — round-trip conversion', () => {
 
   it('chatConversations: round-trip restores original record', () => {
     const entry = getTableEntry('chatConversations')!
-    const sample = { id: 'abc', courseId: '123', createdAt: 1700000000000, updatedAt: '2024-01-01T00:00:00Z' }
+    const sample = {
+      id: 'abc',
+      courseId: '123',
+      createdAt: 1700000000000,
+      updatedAt: '2024-01-01T00:00:00Z',
+    }
     const snaked = toSnakeCase(entry, sample)
     const camelized = toCamelCase(entry, snaked)
 
@@ -451,7 +557,7 @@ describe('fieldMapper — stripFields are removed', () => {
       id: 'ic1',
       title: 'My Course',
       directoryHandle: { kind: 'directory' }, // non-serializable mock
-      coverImageHandle: { kind: 'file' },      // non-serializable mock
+      coverImageHandle: { kind: 'file' }, // non-serializable mock
       updatedAt: '2024-01-01T00:00:00Z',
     }
     const snaked = toSnakeCase(entry, sample)
@@ -559,6 +665,38 @@ describe('tableRegistry — notificationPreferences (E95-S06)', () => {
 })
 
 // ---------------------------------------------------------------------------
+// E97-S04 R2 — F2: user-scoped column invariant
+// Every non-skipSync, non-uploadOnly table must use 'user_id' as its effective
+// user FK column (either by default or via fieldMap.userId). This assertion
+// catches future schema drift where a new table introduces a non-standard user
+// FK column without updating resolveUserColumn / fieldMap.
+// ---------------------------------------------------------------------------
+
+describe('tableRegistry — user-scoped column invariant (E97-S04 R2)', () => {
+  it('every !skipSync && !uploadOnly table resolves to user_id as its user FK column', () => {
+    const syncable = tableRegistry.filter(e => !e.skipSync && !e.uploadOnly)
+    const violations: string[] = []
+    for (const entry of syncable) {
+      // resolveUserColumn logic: fieldMap['userId'] ?? 'user_id'
+      const resolvedUserCol = entry.fieldMap['userId'] ?? 'user_id'
+      if (resolvedUserCol !== 'user_id') {
+        violations.push(
+          `${entry.dexieTable}: fieldMap.userId resolves to '${resolvedUserCol}' instead of 'user_id'`
+        )
+      }
+    }
+    // Report all violations at once for actionable output.
+    expect(violations).toEqual([])
+  })
+
+  it('only notificationPreferences uses fieldMap.id → user_id (singleton pattern)', () => {
+    const singletons = tableRegistry.filter(e => e.fieldMap['id'] === 'user_id')
+    const singletonNames = singletons.map(e => e.dexieTable)
+    expect(singletonNames).toEqual(['notificationPreferences'])
+  })
+})
+
+// ---------------------------------------------------------------------------
 // getTableEntry helper
 // ---------------------------------------------------------------------------
 
@@ -571,6 +709,23 @@ describe('getTableEntry', () => {
   it('returns undefined for an unknown table', () => {
     expect(getTableEntry('flashcard_reviews')).toBeUndefined()
     expect(getTableEntry('nonExistentTable')).toBeUndefined()
+  })
+})
+
+// ---------------------------------------------------------------------------
+// E119-S04 — CI probe-constants parity guardrail
+//
+// probe-constants.ts is a manual Node-compatible copy of TABLE_NAMES from
+// hardDeleteUser.ts (Deno). This test asserts parity so that adding a table
+// to the registry without updating probe-constants does not silently create
+// a GDPR erasure gap in the CI probe.
+// ---------------------------------------------------------------------------
+
+describe('tableRegistry — CI probe-constants parity (E119-S04)', () => {
+  it('probe-constants TABLE_NAMES matches ERASURE_TABLE_NAMES', async () => {
+    const { TABLE_NAMES: PROBE_TABLE_NAMES } = await import('../../../../scripts/ci/probe-constants.js')
+    const { ERASURE_TABLE_NAMES } = await import('../tableRegistry')
+    expect([...PROBE_TABLE_NAMES].sort()).toEqual([...ERASURE_TABLE_NAMES].sort())
   })
 })
 
@@ -598,7 +753,7 @@ describe('tableRegistry — P3/P4 Supabase migrations (E96-S01)', () => {
     // Guardrail 1: each dexieTable has a registry entry with a supabaseTable.
     // If someone removes one of these from the registry, this fails with a
     // clear message naming the missing table.
-    const missingFromRegistry = p3p4DexieTables.filter((t) => !getTableEntry(t)?.supabaseTable)
+    const missingFromRegistry = p3p4DexieTables.filter(t => !getTableEntry(t)?.supabaseTable)
     expect(missingFromRegistry).toEqual([])
 
     // Guardrail 2: concatenate both migration files and assert every
@@ -611,7 +766,7 @@ describe('tableRegistry — P3/P4 Supabase migrations (E96-S01)', () => {
     const combined = p3Sql + '\n' + p4Sql
 
     const missingTables = p3p4DexieTables
-      .map((dexieTable) => ({
+      .map(dexieTable => ({
         dexieTable,
         supabaseTable: getTableEntry(dexieTable)!.supabaseTable,
       }))

@@ -22,17 +22,31 @@ interface SleepTimerProps {
   chapterProgressPercent?: number | null
 }
 
+/**
+ * Preset options in descending duration. Rendered AFTER Custom + End of chapter
+ * so high-intent items lead the list (mirrors Apple Books' ordering rationale —
+ * power-users surface custom; sleep-now users surface short presets near Off).
+ */
 const PRESET_OPTIONS: { value: SleepTimerOption; label: string }[] = [
-  { value: 15, label: '15 minutes' },
-  { value: 30, label: '30 minutes' },
-  { value: 45, label: '45 minutes' },
   { value: 60, label: '60 minutes' },
+  { value: 45, label: '45 minutes' },
+  { value: 30, label: '30 minutes' },
+  { value: 15, label: '15 minutes' },
+  { value: 10, label: '10 minutes' },
+  { value: 5, label: '5 minutes' },
 ]
 
-const SUFFIX_OPTIONS: { value: SleepTimerOption; label: string }[] = [
-  { value: 'end-of-chapter', label: 'End of chapter' },
-  { value: 'off', label: 'Off' },
-]
+const PRESET_VALUES = PRESET_OPTIONS.map(o => o.value as number)
+
+const EOC_OPTION: { value: SleepTimerOption; label: string } = {
+  value: 'end-of-chapter',
+  label: 'End of chapter',
+}
+
+const OFF_OPTION: { value: SleepTimerOption; label: string } = {
+  value: 'off',
+  label: 'Off',
+}
 
 export function SleepTimer({
   activeOption,
@@ -44,8 +58,7 @@ export function SleepTimer({
   const [customValue, setCustomValue] = useState('')
   const customInputRef = useRef<HTMLInputElement>(null)
 
-  const isCustomActive =
-    typeof activeOption === 'number' && ![15, 30, 45, 60].includes(activeOption)
+  const isCustomActive = typeof activeOption === 'number' && !PRESET_VALUES.includes(activeOption)
 
   const handleCustomSubmit = () => {
     const minutes = parseInt(customValue, 10)
@@ -88,7 +101,7 @@ export function SleepTimer({
         <Button
           variant="ghost"
           size="sm"
-          className="relative min-h-[44px] min-w-[44px] px-3 text-muted-foreground hover:text-foreground"
+          className="relative min-h-[44px] min-w-10 px-2 text-muted-foreground hover:text-foreground sm:min-w-[44px] sm:px-3"
           aria-label={activeOption ? `Sleep timer: ${badgeText ?? 'active'}` : 'Sleep timer'}
           data-testid="sleep-timer-button"
         >
@@ -103,7 +116,7 @@ export function SleepTimer({
           )}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-52 p-1" align="center">
+      <PopoverContent className="z-[130] w-52 p-1" align="center">
         {activeOption === 'end-of-chapter' && chapterProgressPercent != null && (
           <div className="px-3 pb-1.5 pt-2" data-testid="chapter-progress-bar">
             <span className="text-xs text-muted-foreground">Current chapter progress</span>
@@ -123,9 +136,7 @@ export function SleepTimer({
           </div>
         )}
         <ul role="listbox" aria-label="Sleep timer">
-          {PRESET_OPTIONS.map(renderOption)}
-
-          {/* Custom option */}
+          {/* Custom option — leads the list as the power-user entry point */}
           <li role="option" aria-selected={isCustomActive}>
             {showCustom ? (
               <div className="flex items-center gap-1.5 px-3 py-2">
@@ -167,7 +178,14 @@ export function SleepTimer({
             )}
           </li>
 
-          {SUFFIX_OPTIONS.map(renderOption)}
+          {/* End of chapter — second to surface Knowlune's distinctive feature */}
+          {renderOption(EOC_OPTION)}
+
+          {/* Duration presets in descending order: 60 → 5 */}
+          {PRESET_OPTIONS.map(renderOption)}
+
+          {/* Off — terminal item */}
+          {renderOption(OFF_OPTION)}
         </ul>
       </PopoverContent>
     </Popover>

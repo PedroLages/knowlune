@@ -72,9 +72,7 @@ describe('getScopedTopResults', () => {
   })
 
   it('respects the limit cap', async () => {
-    const docs = Array.from({ length: 10 }, (_, i) =>
-      makeCourseDoc(`c${i}`, `Course ${i}`)
-    )
+    const docs = Array.from({ length: 10 }, (_, i) => makeCourseDoc(`c${i}`, `Course ${i}`))
     initializeUnifiedSearch(docs)
     const results = await getScopedTopResults('course', 3)
     expect(results.length).toBe(3)

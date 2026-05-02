@@ -1,0 +1,45 @@
+{
+  "reviewer": "adversarial",
+  "findings": [
+    {
+      "title": "Email confirmation not sent on idempotent re-deletion (422 path)",
+      "severity": "P2",
+      "file": "supabase/functions/delete-account/index.ts",
+      "line": 148,
+      "why_it_matters": "When a user calls delete-account a second time and gets the 422 early-return path (alreadyScheduled: true), the pending_deletions row was already upserted (good) but the deletion-scheduled email is not sent again. If the first attempt failed to send the email (e.g., EMAIL_API_KEY not set at that time, now it is), the user never receives the email. This is a corner case but could cause GDPR notice gaps.",
+      "autofix_class": "advisory",
+      "owner": "human",
+      "requires_verification": false,
+      "confidence": 0.65,
+      "suggested_fix": null,
+      "evidence": [
+        "Lines 143-150: early return `json({ success: true, scheduledDeletionAt, alreadyScheduled: true })` is reached before the sendEmail call at line 163",
+        "The email send is only attempted after the soft-delete succeeds, not on the 422 idempotent path"
+      ],
+      "pre_existing": false
+    },
+    {
+      "title": "Deletion probe silently skips tables with missing user_id column",
+      "severity": "P2",
+      "file": "scripts/ci/deletion-probe.ts",
+      "line": 79,
+      "why_it_matters": "If a table in TABLE_NAMES does not have a user_id column (schema mismatch or table renamed), the probe logs a WARN and continues — it does not fail. An attacker who can rename a column could prevent the probe from detecting surviving data. More practically, a legitimate schema refactor could silently break the probe.",
+      "autofix_class": "safe_auto",
+      "owner": "review-fixer",
+      "requires_verification": false,
+      "confidence": 0.70,
+      "suggested_fix": "Track tables that returned errors separately from tables that are clean. Report both in the summary. Consider: if 3+ tables error, exit 1 as a signal that the probe configuration may be broken.",
+      "evidence": [
+        "Line 79-81: `if (error) { console.warn(...); continue }` — error silently skips the table",
+        "A probe that passes because it errored on all tables is indistinguishable from a probe that passed because all tables were clean"
+      ],
+      "pre_existing": false
+    }
+  ],
+  "residual_risks": [
+    "cancel link in email routes to /settings which requires the user to be logged in — if the soft-delete made the account inaccessible, the user cannot cancel via the email link"
+  ],
+  "testing_gaps": [
+    "No test for the adversarial case where probe-constants diverges from hardDeleteUser — would catch GDPR gap silently"
+  ]
+}

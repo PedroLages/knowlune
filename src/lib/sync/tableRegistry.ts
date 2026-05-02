@@ -111,8 +111,14 @@ const contentProgress: TableRegistryEntry = {
   supabaseTable: 'content_progress',
   conflictStrategy: 'monotonic',
   priority: 0,
-  fieldMap: {},
+  fieldMap: {
+    // Dexie uses itemId; Supabase uses content_id.
+    itemId: 'content_id',
+    contentType: 'content_type',
+    progressPct: 'progress_pct',
+  },
   compoundPkFields: ['courseId', 'itemId'],
+  monotonicFields: ['progressPct'],
 }
 
 const studySessions: TableRegistryEntry = {
@@ -120,8 +126,25 @@ const studySessions: TableRegistryEntry = {
   supabaseTable: 'study_sessions',
   conflictStrategy: 'insert-only',
   priority: 0,
-  fieldMap: {},
+  fieldMap: {
+    startTime: 'started_at',
+    duration: 'duration_seconds',
+    idleTime: 'idle_seconds',
+    breakCount: 'breaks',
+  },
   insertOnly: true,
+  cursorField: 'created_at',
+  stripFields: [
+    'courseId',
+    'contentItemId',
+    'endTime',
+    'videosWatched',
+    'lastActivity',
+    'sessionType',
+    'qualityScore',
+    'qualityFactors',
+    'updatedAt',
+  ],
 }
 
 /**
@@ -138,8 +161,15 @@ const progress: TableRegistryEntry = {
   supabaseTable: 'video_progress',
   conflictStrategy: 'monotonic',
   priority: 0,
-  fieldMap: {},
-  monotonicFields: ['watchedSeconds'],
+  fieldMap: {
+    // Dexie uses VideoProgress fields; Supabase uses video_progress columns.
+    // Map local canonical fields to the RPC/DB column names so uploads don't silently drop.
+    currentTime: 'watched_seconds',
+    completionPercentage: 'watched_percent',
+    durationSeconds: 'duration_seconds',
+  },
+  // Monotonic position: watched_seconds (mapped from currentTime) should only increase.
+  monotonicFields: ['currentTime'],
   compoundPkFields: ['courseId', 'videoId'],
 }
 
@@ -612,13 +642,35 @@ const aiUsageEvents: TableRegistryEntry = {
 }
 
 // ---------------------------------------------------------------------------
+// P1 — Consent records (E119-S07)
+// ---------------------------------------------------------------------------
+
+/**
+ * `userConsents` stores per-user per-purpose consent grants and withdrawals.
+ * LWW conflict resolution: the record with the most recent updated_at wins.
+ * Compound PK is (user_id, purpose) — the sync engine uses upsertConflictColumns
+ * to target the correct unique constraint.
+ *
+ * Priority P1: consent state affects AI feature routing (fail-closed guard), so
+ * it must be available before AI calls are issued but after core progress (P0).
+ */
+const userConsents: TableRegistryEntry = {
+  dexieTable: 'userConsents',
+  supabaseTable: 'user_consents',
+  conflictStrategy: 'lww',
+  priority: 1,
+  fieldMap: {},
+  upsertConflictColumns: 'user_id, purpose',
+}
+
+// ---------------------------------------------------------------------------
 // Registry export — ordered by priority (P0 first, P4 last)
 // E92-S05 iterates this array in order for priority-based upload.
 // ---------------------------------------------------------------------------
 
 /**
- * Array of all 38 syncable tables, ordered by priority tier then by
- * registration order within each tier.
+ * Array of all 39 syncable tables, ordered by priority tier then by
+ * registration order within each tier. (E119-S07 added userConsents: 38 → 39)
  *
  * NOTE: `flashcard_reviews` is intentionally absent — it is a Supabase-only
  * INSERT-only table (no Dexie equivalent), created in E93-S01.
@@ -640,6 +692,7 @@ export const tableRegistry: TableRegistryEntry[] = [
   audioClips,
   chatConversations,
   learnerModels,
+  userConsents,
   // P2
   importedCourses,
   importedVideos,
@@ -674,5 +727,22 @@ export const tableRegistry: TableRegistryEntry[] = [
  * Returns undefined if the table is not registered (e.g. flashcard_reviews).
  */
 export function getTableEntry(dexieTable: string): TableRegistryEntry | undefined {
-  return tableRegistry.find((e) => e.dexieTable === dexieTable)
+  return tableRegistry.find(e => e.dexieTable === dexieTable)
 }
+
+/**
+ * Ordered list of Supabase table names that must be hard-deleted when a user
+ * exercises their GDPR Article 17 right to erasure.
+ *
+ * E119-S03: Derived from `tableRegistry` at module load time so this list
+ * automatically stays in sync with the registry. The `hardDeleteUser` helper
+ * in `supabase/functions/_shared/hardDeleteUser.ts` targets the same set of
+ * tables (by name) at runtime. The probe test in
+ * `src/lib/__tests__/deleteAccount.test.ts` asserts that the cascade covers
+ * exactly `ERASURE_TABLE_NAMES.length` tables — adding a new `tableRegistry`
+ * entry without updating the cascade causes that assertion to fail CI.
+ *
+ * Lawful-basis exceptions (billing / breach-register rows) are handled in
+ * `hardDeleteUser.ts` per `docs/compliance/retention.md`.
+ */
+export const ERASURE_TABLE_NAMES: string[] = tableRegistry.map(e => e.supabaseTable)

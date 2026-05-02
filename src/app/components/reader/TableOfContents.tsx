@@ -94,7 +94,13 @@ export function TableOfContents({
 
   return (
     <Sheet open={open} onOpenChange={open => !open && onClose()}>
-      <SheetContent side="left" className="w-80 p-0 flex flex-col" data-testid="toc-panel">
+      <SheetContent
+        side="left"
+        overlayClassName="z-[130]"
+        className="z-[130] w-80 p-0 flex flex-col"
+        data-testid="toc-panel"
+        showCloseButton={false}
+      >
         <SheetHeader className="flex-row items-center justify-between px-4 py-3 border-b border-border/50">
           <div className="flex items-center gap-2">
             <BookOpen className="size-4 text-muted-foreground" aria-hidden="true" />

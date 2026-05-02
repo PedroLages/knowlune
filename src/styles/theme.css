@@ -41,6 +41,11 @@
   --shadow-warm: oklch(0.5 0.05 60 / 0.06);
   --shadow-gold: oklch(0.6 0.1 85 / 0.1);
   --ring: oklch(0.708 0 0);
+  /* WCAG 2.4.13 (AAA) focus indicator color.
+     Intentionally separate from --ring so we can tune focus contrast (>=3:1 vs
+     all reference backgrounds: --background, --card, --muted, --accent,
+     --brand-soft) without affecting other ring usages. */
+  --focus-ring: oklch(0.45 0.18 265);
   --chart-1: oklch(0.55 0.15 270);
   --chart-2: oklch(0.58 0.1 160);
   --chart-3: oklch(0.5 0.08 40);
@@ -115,6 +120,34 @@
   --content-gap: 1.5rem;
   --content-line-height: 1.6;
   --table-cell-padding: 0.75rem;
+
+  /* Audiobook player tokens */
+  --surface-glass: oklch(1 0 0 / 0.55);
+  --surface-glass-border: oklch(0 0 0 / 0.08);
+  --surface-player-panel: oklch(1 0 0 / 0.42);
+  --surface-player-panel-border: oklch(0 0 0 / 0.06);
+  --player-header-glass: oklch(1 0 0 / 0.72);
+  --player-header-glass-border: oklch(0 0 0 / 0.1);
+  --player-cover-shadow: 0 20px 50px rgb(0 0 0 / 0.18);
+  --player-cover-halo: 0 0 0 1px oklch(1 0 0 / 0.35), 0 0 80px oklch(0.55 0.12 270 / 0.12);
+  --player-fab: var(--brand);
+  --player-fab-foreground: var(--brand-foreground);
+  --player-fab-shadow: 0 8px 24px rgb(0 0 0 / 0.18);
+  /* Living cover atmosphere (AudiobookRenderer) */
+  --player-atmosphere-blur-opacity: 0.52;
+  --player-atmosphere-bloom-opacity: 0.38;
+  --player-atmosphere-scrim: linear-gradient(
+    180deg,
+    oklch(0.99 0.015 85 / 0.88) 0%,
+    oklch(0.99 0.02 90 / 0.45) 32%,
+    oklch(0.98 0.02 90 / 0.2) 52%,
+    oklch(0.96 0.025 85 / 0.72) 100%
+  );
+  --player-atmosphere-vignette: radial-gradient(
+    ellipse 115% 95% at 50% 48%,
+    transparent 38%,
+    oklch(0.35 0.04 270 / 0.14) 100%
+  );
 }
 
 .dark {
@@ -140,6 +173,9 @@
   --input-background: #1e1f30;
   --switch-background: #44456a;
   --ring: oklch(0.45 0.05 270);
+  /* WCAG 2.4.13 focus indicator color (dark). Light blue picked for >=3:1
+     contrast against --background (#1a1b26) and --card (#242536). */
+  --focus-ring: oklch(0.78 0.16 265);
   --font-weight-medium: 500;
   --font-weight-normal: 400;
 
@@ -220,6 +256,33 @@
   --heatmap-level-2: color-mix(in oklch, var(--success) 50%, transparent);
   --heatmap-level-3: color-mix(in oklch, var(--success) 70%, transparent);
   --heatmap-level-4: var(--success);
+
+  /* Audiobook player tokens (dark) */
+  --surface-glass: oklch(0.18 0.01 270 / 0.6);
+  --surface-glass-border: oklch(1 0 0 / 0.18);
+  --surface-player-panel: oklch(0.16 0.02 270 / 0.55);
+  --surface-player-panel-border: oklch(1 0 0 / 0.12);
+  --player-header-glass: oklch(0.14 0.02 270 / 0.78);
+  --player-header-glass-border: oklch(1 0 0 / 0.14);
+  --player-cover-shadow: 0 24px 60px rgb(0 0 0 / 0.55), 0 0 0 1px rgb(255 255 255 / 0.15);
+  --player-cover-halo: 0 0 0 1px oklch(1 0 0 / 0.2), 0 0 100px oklch(0.55 0.14 270 / 0.22);
+  --player-fab: oklch(1 0 0);
+  --player-fab-foreground: oklch(0.15 0 0);
+  --player-fab-shadow: 0 8px 24px rgb(0 0 0 / 0.45);
+  --player-atmosphere-blur-opacity: 0.58;
+  --player-atmosphere-bloom-opacity: 0.42;
+  --player-atmosphere-scrim: linear-gradient(
+    180deg,
+    oklch(0.16 0.03 270 / 0.82) 0%,
+    oklch(0.14 0.025 270 / 0.35) 42%,
+    oklch(0.12 0.03 270 / 0.25) 58%,
+    oklch(0.1 0.03 270 / 0.88) 100%
+  );
+  --player-atmosphere-vignette: radial-gradient(
+    ellipse 115% 95% at 50% 45%,
+    transparent 32%,
+    oklch(0.05 0.03 270 / 0.65) 100%
+  );
 }
 
 /* --------------------------------------------------------------------------
@@ -374,6 +437,9 @@
   --input-background: #ebeef7;
   --switch-background: #acb2bf;
   --ring: #005bc1;
+  /* WCAG 2.4.13 focus indicator color (clean light). Apple blue already
+     passes >=3:1 against the cool blue-white surfaces. */
+  --focus-ring: #005bc1;
   --surface-elevated: #ffffff;
   --surface-sunken: #f2f3fa;
 
@@ -418,6 +484,25 @@
   /* Font override — Inter for Clean theme */
   --font-body: 'Inter Variable', 'Inter', system-ui, -apple-system, sans-serif;
   --font-heading: 'Inter Variable', 'Inter', system-ui, -apple-system, sans-serif;
+
+  /* Audiobook atmosphere — cool light scrim */
+  --surface-player-panel: oklch(1 0 0 / 0.48);
+  --surface-player-panel-border: oklch(0.45 0.06 250 / 0.1);
+  --player-header-glass: oklch(0.99 0.01 250 / 0.78);
+  --player-header-glass-border: oklch(0.45 0.06 250 / 0.12);
+  --player-cover-halo: 0 0 0 1px oklch(1 0 0 / 0.5), 0 0 72px oklch(0.55 0.1 250 / 0.14);
+  --player-atmosphere-scrim: linear-gradient(
+    180deg,
+    oklch(0.99 0.01 250 / 0.9) 0%,
+    oklch(0.98 0.015 250 / 0.42) 34%,
+    oklch(0.97 0.02 250 / 0.18) 54%,
+    oklch(0.95 0.02 250 / 0.75) 100%
+  );
+  --player-atmosphere-vignette: radial-gradient(
+    ellipse 115% 95% at 50% 48%,
+    transparent 40%,
+    oklch(0.4 0.06 250 / 0.12) 100%
+  );
 }
 
 .dark.clean {
@@ -441,6 +526,9 @@
   --input-background: #1a2230;
   --switch-background: #3a4858;
   --ring: #4da3ff;
+  /* WCAG 2.4.13 focus indicator color (clean dark). Light Apple blue
+     passes >=3:1 against cool dark surfaces. */
+  --focus-ring: #4da3ff;
 
   /* Surface depth tokens */
   --brand-soft: #1a2740;
@@ -523,6 +611,25 @@
   /* Font override — Inter for Clean theme */
   --font-body: 'Inter Variable', 'Inter', system-ui, -apple-system, sans-serif;
   --font-heading: 'Inter Variable', 'Inter', system-ui, -apple-system, sans-serif;
+
+  /* Audiobook atmosphere — cool dark scrim */
+  --surface-player-panel: oklch(0.15 0.03 250 / 0.58);
+  --surface-player-panel-border: oklch(0.75 0.08 250 / 0.14);
+  --player-header-glass: oklch(0.12 0.03 250 / 0.82);
+  --player-header-glass-border: oklch(0.75 0.08 250 / 0.12);
+  --player-cover-halo: 0 0 0 1px oklch(0.75 0.1 250 / 0.22), 0 0 96px oklch(0.55 0.12 250 / 0.2);
+  --player-atmosphere-scrim: linear-gradient(
+    180deg,
+    oklch(0.14 0.04 250 / 0.85) 0%,
+    oklch(0.12 0.035 250 / 0.38) 44%,
+    oklch(0.1 0.04 250 / 0.28) 58%,
+    oklch(0.08 0.04 250 / 0.9) 100%
+  );
+  --player-atmosphere-vignette: radial-gradient(
+    ellipse 115% 95% at 50% 45%,
+    transparent 34%,
+    oklch(0.04 0.04 250 / 0.68) 100%
+  );
 }
 
 /* --------------------------------------------------------------------------
@@ -563,6 +670,7 @@ html.spacious {
   --color-input-background: var(--input-background);
   --color-switch-background: var(--switch-background);
   --color-ring: var(--ring);
+  --color-focus-ring: var(--focus-ring);
   --color-chart-1: var(--chart-1);
   --color-chart-2: var(--chart-2);
   --color-chart-3: var(--chart-3);
@@ -654,11 +762,12 @@ html.spacious {
   }
 
   /**
-   * Global focus indicators for WCAG 2.1 AA+ compliance
-   * Ensures visible keyboard navigation with 3:1 contrast ratio
+   * Global focus indicators for WCAG 2.4.13 Focus Appearance (AAA)
+   * - Outline width >= 2px (perimeter requirement)
+   * - 3:1 contrast vs adjacent backgrounds (--focus-ring is tuned per theme)
    */
   *:focus-visible {
-    outline: 2px solid var(--brand);
+    outline: 2px solid var(--focus-ring);
     outline-offset: 2px;
     border-radius: 4px;
   }
@@ -667,7 +776,7 @@ html.spacious {
   button:focus-visible,
   a:focus-visible,
   [role='button']:focus-visible {
-    outline: 2px solid var(--brand);
+    outline: 2px solid var(--focus-ring);
     outline-offset: 2px;
   }
 

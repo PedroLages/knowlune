@@ -1,0 +1,49 @@
+{
+  "reviewer": "testing",
+  "findings": [
+    {
+      "title": "No parity test between probe-constants.ts and hardDeleteUser.ts TABLE_NAMES",
+      "severity": "P2",
+      "file": "scripts/ci/probe-constants.ts",
+      "line": 17,
+      "why_it_matters": "probe-constants.ts TABLE_NAMES is a manual copy of hardDeleteUser.ts TABLE_NAMES. Drift causes the CI probe to pass while silently missing tables with surviving user data — a GDPR compliance gap that would only be caught at audit time.",
+      "autofix_class": "safe_auto",
+      "owner": "review-fixer",
+      "requires_verification": false,
+      "confidence": 0.90,
+      "suggested_fix": "Add to src/lib/sync/__tests__/tableRegistry.test.ts (or a new probe-constants.test.ts): `import { TABLE_NAMES as PROBE_TABLE_NAMES } from '../../../../scripts/ci/probe-constants'; import { ERASURE_TABLE_NAMES } from '../tableRegistry'; it('probe-constants TABLE_NAMES matches ERASURE_TABLE_NAMES', () => { expect([...PROBE_TABLE_NAMES].sort()).toEqual([...ERASURE_TABLE_NAMES].sort()) })`",
+      "evidence": [
+        "probe-constants.ts: 38-element string array (manual copy)",
+        "hardDeleteUser.ts TABLE_NAMES: same 38 elements",
+        "tableRegistry.test.ts already asserts parity between tableRegistry and hardDeleteUser, but probe-constants is not included"
+      ],
+      "pre_existing": false
+    },
+    {
+      "title": "sendEmail Deno tests may have module caching issue",
+      "severity": "P2",
+      "file": "supabase/functions/_shared/__tests__/sendEmail.test.ts",
+      "line": 65,
+      "why_it_matters": "Tests use `await import('../sendEmail.ts')` inside each test body. Deno caches modules after the first import, so subsequent test runs within the same process always get the same module instance. If sendEmail captures env vars at module load time (it doesn't currently — it reads from Deno.env at call time), tests would interfere. Currently safe, but fragile if sendEmail is refactored to cache env vars.",
+      "autofix_class": "advisory",
+      "owner": "human",
+      "requires_verification": false,
+      "confidence": 0.65,
+      "suggested_fix": "Add a comment in sendEmail.ts: '// Env vars are read at call time (not module load time) to support test isolation'",
+      "evidence": [
+        "sendEmail.ts line 22-30: env vars read inside the function body (correct for testability)",
+        "sendEmail.test.ts: multiple tests import the same module — safe as long as env vars are read lazily"
+      ],
+      "pre_existing": false
+    }
+  ],
+  "residual_risks": [
+    "Deno tests are run with `deno test --allow-env` — no CI job currently executes these Deno tests in the GitHub Actions workflow"
+  ],
+  "testing_gaps": [
+    "No test for delete-account writing pending_deletions row",
+    "No test for retention-tick reading pending_deletions and cleaning up after hard-delete",
+    "Deno sendEmail tests are not wired into any CI step",
+    "No test verifying probe-constants.ts parity with hardDeleteUser.ts TABLE_NAMES"
+  ]
+}

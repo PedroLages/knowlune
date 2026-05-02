@@ -26,7 +26,7 @@ export function HybridCourseCard({ course, completionPercent }: HybridCourseCard
   return (
     <Link
       to={lessonLink}
-      className="rounded-xl focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 outline-none block h-full"
+      className="rounded-xl focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 outline-none block h-full"
     >
       <div className="bg-white rounded-xl border border-neutral-100 shadow-xs hover:shadow-md transition-shadow duration-200 overflow-hidden h-full flex flex-col group">
         {/* Cover image */}

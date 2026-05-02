@@ -217,6 +217,7 @@ export function PdfContent({ courseId, lessonId }: PdfContentProps) {
                 currentTime: 0,
                 completionPercentage: 0,
               }),
+              durationSeconds: existing?.durationSeconds ?? 0,
               courseId,
               videoId: lessonId,
               currentPage: page,

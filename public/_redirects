@@ -1,0 +1,6 @@
+# Cloudflare Pages SPA fallback.
+# Without this, direct navigation to client-side routes (e.g. /courses) 404s
+# because the static host tries to resolve them as files before React Router
+# can handle them. The `200` status is critical — using 301/302 breaks deep
+# links by changing the URL.
+/*    /index.html   200

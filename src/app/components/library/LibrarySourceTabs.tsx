@@ -47,7 +47,7 @@ export function LibrarySourceTabs() {
             aria-selected={isActive}
             onClick={() => setFilter('source', tab.value === 'all' ? 'all' : tab.value)}
             className={cn(
-              'whitespace-nowrap rounded-full px-4 py-1.5 text-sm font-medium transition-colors min-h-[36px] flex-shrink-0 inline-flex items-center gap-1.5',
+              'whitespace-nowrap rounded-full px-3 py-1 text-xs font-medium transition-colors min-h-[28px] flex-shrink-0 inline-flex items-center gap-1 outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-1',
               isActive
                 ? 'bg-brand text-brand-foreground'
                 : 'bg-muted text-muted-foreground hover:bg-muted/80'

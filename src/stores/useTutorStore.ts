@@ -374,11 +374,13 @@ export const useTutorStore = create<TutorState>((set, get) => ({
         // Update existing conversation — fetch-then-put pattern (syncableWrite requires full record)
         const existing = await db.chatConversations.get(conversationId)
         if (!existing) return // Guard: conversation deleted externally — return early
-        await syncableWrite(
-          'chatConversations',
-          'put',
-          { ...existing, messages: tutorMessages, mode, hintLevel, updatedAt: now } as unknown as SyncableRecord,
-        )
+        await syncableWrite('chatConversations', 'put', {
+          ...existing,
+          messages: tutorMessages,
+          mode,
+          hintLevel,
+          updatedAt: now,
+        } as unknown as SyncableRecord)
       } else {
         // Create new conversation
         const id = crypto.randomUUID()

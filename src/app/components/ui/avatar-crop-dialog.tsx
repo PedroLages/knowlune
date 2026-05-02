@@ -10,6 +10,7 @@ import {
   DialogFooter,
 } from '@/app/components/ui/dialog'
 import { Button } from '@/app/components/ui/button'
+import { ArrowLeft, ArrowRight, ArrowUp, ArrowDown, Plus, Minus } from 'lucide-react'
 
 // ============================================================================
 // Constants
@@ -288,6 +289,48 @@ export function AvatarCropDialog({
     setInitialCrop(null)
   }
 
+  // E66-S01: Single-pointer nudge alternative (WCAG 2.5.7)
+  type NudgeAction = 'left' | 'right' | 'up' | 'down' | 'zoom-in' | 'zoom-out'
+  const nudgeCrop = React.useCallback(
+    (action: NudgeAction) => {
+      const canvas = previewCanvasRef.current
+      if (!canvas || !cropRegion) return
+      const newCrop = { ...cropRegion }
+      switch (action) {
+        case 'left':
+          newCrop.x = Math.max(0, cropRegion.x - MOVE_STEP)
+          break
+        case 'right':
+          newCrop.x = Math.min(canvas.width - cropRegion.width, cropRegion.x + MOVE_STEP)
+          break
+        case 'up':
+          newCrop.y = Math.max(0, cropRegion.y - MOVE_STEP)
+          break
+        case 'down':
+          newCrop.y = Math.min(canvas.height - cropRegion.height, cropRegion.y + MOVE_STEP)
+          break
+        case 'zoom-in': {
+          const newSize = Math.min(
+            cropRegion.width + RESIZE_STEP,
+            canvas.width - cropRegion.x,
+            canvas.height - cropRegion.y
+          )
+          newCrop.width = newSize
+          newCrop.height = newSize
+          break
+        }
+        case 'zoom-out': {
+          const newSize = Math.max(MIN_CROP_SIZE, cropRegion.width - RESIZE_STEP)
+          newCrop.width = newSize
+          newCrop.height = newSize
+          break
+        }
+      }
+      setCropRegion(newCrop)
+    },
+    [cropRegion]
+  )
+
   // Keyboard handler
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (!cropRegion) return
@@ -409,7 +452,85 @@ export function AvatarCropDialog({
 
           {/* Instructions */}
           <div className="text-sm text-muted-foreground text-center">
-            Drag to move • Resize with corners • Arrow keys to adjust
+            Drag to move • Resize with corners • Arrow keys or buttons below to adjust
+          </div>
+
+          {/* Single-pointer nudge controls (WCAG 2.5.7) */}
+          <div
+            className="flex flex-wrap items-center justify-center gap-2"
+            role="group"
+            aria-label="Crop position and zoom controls"
+          >
+            <div className="flex items-center gap-1">
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="size-11"
+                onClick={() => nudgeCrop('left')}
+                aria-label="Move crop left"
+                data-testid="avatar-crop-nudge-left"
+              >
+                <ArrowLeft className="size-4" aria-hidden="true" />
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="size-11"
+                onClick={() => nudgeCrop('right')}
+                aria-label="Move crop right"
+                data-testid="avatar-crop-nudge-right"
+              >
+                <ArrowRight className="size-4" aria-hidden="true" />
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="size-11"
+                onClick={() => nudgeCrop('up')}
+                aria-label="Move crop up"
+                data-testid="avatar-crop-nudge-up"
+              >
+                <ArrowUp className="size-4" aria-hidden="true" />
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="size-11"
+                onClick={() => nudgeCrop('down')}
+                aria-label="Move crop down"
+                data-testid="avatar-crop-nudge-down"
+              >
+                <ArrowDown className="size-4" aria-hidden="true" />
+              </Button>
+            </div>
+            <div className="flex items-center gap-1">
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="size-11"
+                onClick={() => nudgeCrop('zoom-out')}
+                aria-label="Zoom crop out (smaller)"
+                data-testid="avatar-crop-zoom-out"
+              >
+                <Minus className="size-4" aria-hidden="true" />
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="size-11"
+                onClick={() => nudgeCrop('zoom-in')}
+                aria-label="Zoom crop in (larger)"
+                data-testid="avatar-crop-zoom-in"
+              >
+                <Plus className="size-4" aria-hidden="true" />
+              </Button>
+            </div>
           </div>
         </div>
 

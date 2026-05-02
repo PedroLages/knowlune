@@ -69,6 +69,11 @@ vi.mock('@/lib/sync/classifyError', () => ({
   classifyError: (err: unknown) => String(err),
 }))
 
+// SettingsPageContext mock — SyncSection reads user from useAuthStore, not context
+vi.mock('@/app/components/settings/SettingsPageContext', () => ({
+  useSettingsPage: () => ({}),
+}))
+
 // date-fns mock — avoid relative-time drift in CI
 vi.mock('date-fns', () => ({
   formatDistanceToNow: vi.fn().mockReturnValue('2 minutes ago'),
@@ -158,13 +163,14 @@ describe('<SyncSection />', () => {
   })
 
   // -------------------------------------------------------------------------
-  // 1. Renders null when user is null (AC5)
+  // 1. Renders null when user is null (closed app — route guard prevents this)
   // -------------------------------------------------------------------------
 
-  it('renders null when user is null (AC5)', () => {
+  it('renders nothing when user is null', () => {
     mockUser = null
     const { container } = renderSection()
     expect(container.innerHTML).toBe('')
+    expect(screen.queryByTestId('sync-section')).not.toBeInTheDocument()
   })
 
   // -------------------------------------------------------------------------
@@ -252,9 +258,7 @@ describe('<SyncSection />', () => {
     await user.click(screen.getByTestId('sync-reset-confirm'))
     await waitFor(() => expect(mockResetLocalData).toHaveBeenCalledTimes(1))
     // Dialog should close after completion
-    await waitFor(() =>
-      expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
-    )
+    await waitFor(() => expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument())
   })
 
   // -------------------------------------------------------------------------
@@ -297,8 +301,6 @@ describe('<SyncSection />', () => {
     renderSection()
     const user = userEvent.setup()
     await user.click(screen.getByTestId('sync-now-button'))
-    await waitFor(() =>
-      expect(useSyncStatusStore.getState().status).toBe('error')
-    )
+    await waitFor(() => expect(useSyncStatusStore.getState().status).toBe('error'))
   })
 })

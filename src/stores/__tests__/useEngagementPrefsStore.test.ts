@@ -25,6 +25,8 @@ beforeEach(() => {
     badges: true,
     animations: true,
     colorScheme: 'professional',
+    courseViewMode: 'grid',
+    courseGridColumns: 'auto',
   })
 })
 
@@ -36,6 +38,7 @@ describe('useEngagementPrefsStore initial state', () => {
     expect(state.badges).toBe(true)
     expect(state.animations).toBe(true)
     expect(state.colorScheme).toBe('professional')
+    expect(state.courseViewMode).toBe('grid')
   })
 })
 
@@ -59,9 +62,18 @@ describe('setPreference', () => {
     expect(dispatchSpy).toHaveBeenCalledWith(expect.any(Event))
   })
 
-  it('should not call saveSettings for non-colorScheme preferences', () => {
+  it('should not call saveSettings for non-bridged preferences', () => {
     useEngagementPrefsStore.getState().setPreference('badges', false)
     expect(mockSaveSettings).not.toHaveBeenCalled()
+  })
+
+  it('should bridge courseViewMode to AppSettings (E99-S01)', () => {
+    const dispatchSpy = vi.spyOn(window, 'dispatchEvent')
+    useEngagementPrefsStore.getState().setPreference('courseViewMode', 'list')
+
+    expect(useEngagementPrefsStore.getState().courseViewMode).toBe('list')
+    expect(mockSaveSettings).toHaveBeenCalledWith({ courseViewMode: 'list' })
+    expect(dispatchSpy).toHaveBeenCalledWith(expect.any(Event))
   })
 })
 
@@ -87,9 +99,74 @@ describe('resetToDefaults', () => {
     expect(stored.badges).toBe(true)
   })
 
-  it('should bridge colorScheme reset to AppSettings', () => {
+  it('should bridge colorScheme + courseViewMode reset to AppSettings', () => {
     useEngagementPrefsStore.getState().resetToDefaults()
-    expect(mockSaveSettings).toHaveBeenCalledWith({ colorScheme: 'professional' })
+    expect(mockSaveSettings).toHaveBeenCalledWith({
+      colorScheme: 'professional',
+      courseViewMode: 'grid',
+      courseGridColumns: 'auto',
+    })
+  })
+})
+
+describe('courseGridColumns (E99-S02)', () => {
+  it('should default to "auto"', () => {
+    expect(useEngagementPrefsStore.getState().courseGridColumns).toBe('auto')
+  })
+
+  it('setPreference updates courseGridColumns and persists to localStorage', () => {
+    useEngagementPrefsStore.getState().setPreference('courseGridColumns', 3)
+    expect(useEngagementPrefsStore.getState().courseGridColumns).toBe(3)
+    const stored = JSON.parse(localStorage.getItem('levelup-engagement-prefs-v1')!)
+    expect(stored.courseGridColumns).toBe(3)
+  })
+
+  it('setPreference bridges courseGridColumns to AppSettings', () => {
+    const dispatchSpy = vi.spyOn(window, 'dispatchEvent')
+    useEngagementPrefsStore.getState().setPreference('courseGridColumns', 5)
+    expect(mockSaveSettings).toHaveBeenCalledWith({ courseGridColumns: 5 })
+    expect(dispatchSpy).toHaveBeenCalledWith(expect.objectContaining({ type: 'settingsUpdated' }))
+  })
+
+  it('setPreference("courseGridColumns") calls saveSettingsToSupabase', () => {
+    useEngagementPrefsStore.getState().setPreference('courseGridColumns', 4)
+    expect(mockSaveSettingsToSupabase).toHaveBeenCalledWith({ courseGridColumns: 4 })
+  })
+
+  it('coerces invalid persisted courseGridColumns to "auto"', async () => {
+    localStorage.setItem(
+      'levelup-engagement-prefs-v1',
+      JSON.stringify({
+        achievements: true,
+        streaks: true,
+        badges: true,
+        animations: true,
+        colorScheme: 'professional',
+        courseViewMode: 'grid',
+        courseGridColumns: 7, // invalid
+      })
+    )
+    vi.resetModules()
+    const { useEngagementPrefsStore: fresh } = await import('@/stores/useEngagementPrefsStore')
+    expect(fresh.getState().courseGridColumns).toBe('auto')
+  })
+
+  it('restores a valid courseGridColumns from localStorage', async () => {
+    localStorage.setItem(
+      'levelup-engagement-prefs-v1',
+      JSON.stringify({
+        achievements: true,
+        streaks: true,
+        badges: true,
+        animations: true,
+        colorScheme: 'professional',
+        courseViewMode: 'grid',
+        courseGridColumns: 5,
+      })
+    )
+    vi.resetModules()
+    const { useEngagementPrefsStore: fresh } = await import('@/stores/useEngagementPrefsStore')
+    expect(fresh.getState().courseGridColumns).toBe(5)
   })
 })
 
@@ -130,6 +207,7 @@ describe('loadPersistedPrefs', () => {
         achievements: 'yes', // not boolean
         streaks: 42, // not boolean
         colorScheme: 'invalid', // not vibrant
+        courseViewMode: 'foo', // not in enum
       })
     )
 
@@ -139,6 +217,25 @@ describe('loadPersistedPrefs', () => {
     expect(state.achievements).toBe(true) // default
     expect(state.streaks).toBe(true) // default
     expect(state.colorScheme).toBe('professional') // default
+    expect(state.courseViewMode).toBe('grid') // default (E99-S01)
+  })
+
+  it('should restore a valid courseViewMode from localStorage (E99-S01)', async () => {
+    localStorage.setItem(
+      'levelup-engagement-prefs-v1',
+      JSON.stringify({
+        achievements: true,
+        streaks: true,
+        badges: true,
+        animations: true,
+        colorScheme: 'professional',
+        courseViewMode: 'list',
+      })
+    )
+
+    vi.resetModules()
+    const { useEngagementPrefsStore: fresh } = await import('@/stores/useEngagementPrefsStore')
+    expect(fresh.getState().courseViewMode).toBe('list')
   })
 
   it('should use defaults when localStorage is empty', async () => {
@@ -174,6 +271,11 @@ describe('setPreference — Supabase dual-write (E95-S01)', () => {
   it('setPreference("animations") does NOT call saveSettingsToSupabase (localStorage-only)', () => {
     useEngagementPrefsStore.getState().setPreference('animations', false)
     expect(mockSaveSettingsToSupabase).not.toHaveBeenCalled()
+  })
+
+  it('setPreference("courseViewMode") calls saveSettingsToSupabase with courseViewMode key (E99-S01)', () => {
+    useEngagementPrefsStore.getState().setPreference('courseViewMode', 'compact')
+    expect(mockSaveSettingsToSupabase).toHaveBeenCalledWith({ courseViewMode: 'compact' })
   })
 
   it('resetToDefaults does NOT call saveSettingsToSupabase', () => {

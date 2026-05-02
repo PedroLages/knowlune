@@ -1,0 +1,8 @@
+{
+  "reviewer": "project-standards",
+  "findings": [],
+  "residual_risks": [
+    "docs/brainstorms and docs/plans files are correctly created and should not be deleted"
+  ],
+  "testing_gaps": []
+}

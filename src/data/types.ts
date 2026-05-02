@@ -193,6 +193,9 @@ export interface ImportedCourse {
   youtubeThumbnailUrl?: string // Playlist/channel thumbnail URL
   youtubePublishedAt?: string // ISO 8601 — playlist publish date
   lastRefreshedAt?: string // ISO 8601 — last metadata refresh timestamp (E28-S12)
+  // Sync metadata — stamped by syncableWrite
+  userId?: string | null
+  guestSessionId?: string | null
 }
 
 export interface ImportedVideo {
@@ -214,6 +217,15 @@ export interface ImportedVideo {
   description?: string // YouTube video description
   chapters?: Chapter[] // YouTube auto-detected chapters
   removedFromYouTube?: boolean // True if video was removed from YouTube (E28-S12)
+  /**
+   * Whether this video can be embedded in an iframe.
+   * - `true` — confirmed embeddable (Data API or oEmbed probe succeeded)
+   * - `false` — confirmed non-embeddable; lesson renders fallback UI directly (no iframe)
+   * - `undefined` — legacy record (pre-fix); treated as embeddable for backward compat
+   */
+  embeddable?: boolean
+  /** Reason this video is not embeddable (set only when `embeddable === false`) */
+  unembeddableReason?: UnembeddableReason
 }
 
 export interface ImportedPdf {
@@ -233,7 +245,11 @@ export type CompletionStatus = 'not-started' | 'in-progress' | 'completed'
 export interface ContentProgress {
   courseId: string
   itemId: string // lesson or module ID
+  /** Canonical content type expected by Supabase content_progress.content_type */
+  contentType?: string
   status: CompletionStatus
+  /** 0-100 integer percentage expected by Supabase content_progress.progress_pct */
+  progressPct?: number
   updatedAt: string // ISO 8601
 }
 
@@ -244,6 +260,8 @@ export interface VideoProgress {
   videoId: string
   currentTime: number
   completionPercentage: number
+  /** Total duration in seconds. Used for Supabase video_progress.duration_seconds sync. */
+  durationSeconds?: number
   completedAt?: string // ISO 8601
   /** Last-viewed PDF page (1-based). Used by PdfContent to restore position. */
   currentPage?: number
@@ -655,6 +673,18 @@ export interface CachedEntitlement {
 
 // --- YouTube Types (E28-S01) ---
 
+/**
+ * Reason a YouTube video cannot be embedded in an iframe.
+ * Surfaced at import time (via Data API status) and at runtime (via oEmbed probe).
+ */
+export type UnembeddableReason =
+  | 'embedding-disabled'
+  | 'deleted-or-private'
+  | 'private'
+  | 'deleted'
+  | 'region-restricted'
+  | 'unknown'
+
 export interface YouTubeVideoCache {
   videoId: string // PK — YouTube video ID
   title: string
@@ -667,6 +697,12 @@ export interface YouTubeVideoCache {
   chapters: Chapter[]
   fetchedAt: string // ISO 8601
   expiresAt: string // ISO 8601 — cache TTL expiry
+  /** Whether the video can be embedded in an iframe (from Data API status.embeddable) */
+  embeddable?: boolean
+  /** If not embeddable, why — used to render reason-aware fallback copy */
+  unembeddableReason?: UnembeddableReason
+  /** Raw YouTube privacyStatus (public/unlisted/private) */
+  privacyStatus?: string
 }
 
 export interface YouTubeTranscriptRecord {
@@ -797,6 +833,9 @@ export interface Book {
   sourceUrl?: string | null // remote URL for 'remote' sources; null for local/fileHandle
   // E94-S07: Storage URL for primary book file; null until first sync upload
   fileUrl?: string | null
+  // Sync metadata — stamped by syncableWrite
+  userId?: string | null
+  guestSessionId?: string | null
 }
 
 // --- Book Review Types (E113) ---
@@ -1161,6 +1200,12 @@ export interface LearnerModel {
     correctAnswers: number
     weakTopics: string[]
   }
+  /**
+   * Set to a non-null string when embedding consent has been withdrawn and the
+   * model should be frozen (E119-S08). Value: 'consent_withdrawn'.
+   * Undefined / null means the model is active.
+   */
+  frozenReason?: string
   /** ISO timestamp — when model was created */
   createdAt: string
   /** ISO timestamp — last update */
@@ -1176,3 +1221,35 @@ export interface YouTubeCourseChapter {
   endTime?: number // seconds (derived from next chapter or video duration)
   order: number // Display order within the course
 }
+
+/**
+ * User consent record — E119-S07
+ *
+ * One row per (userId, purpose) pair. Synced bidirectionally with Supabase
+ * `user_consents` table via LWW conflict resolution.
+ *
+ * State encoding:
+ *   grantedAt != null && withdrawnAt == null  → currently consented
+ *   withdrawnAt != null                        → withdrawn (regardless of grantedAt)
+ *   both null                                  → never granted
+ */
+export interface UserConsent {
+  id: string
+  /** Supabase auth user UUID */
+  userId: string
+  /** Processing purpose key (matches CONSENT_PURPOSES in consentService.ts) */
+  purpose: string
+  /** ISO timestamp of most recent consent grant; null if never granted */
+  grantedAt: string | null
+  /** ISO timestamp of most recent withdrawal; null if currently granted */
+  withdrawnAt: string | null
+  /** Privacy notice version in force at time of grant (YYYY-MM-DD.N format) */
+  noticeVersion: string
+  /** Audit metadata: provider_id, IP hash, user-agent (no raw PII) */
+  evidence: Record<string, unknown>
+  /** ISO timestamp — record creation */
+  createdAt: string
+  /** ISO timestamp — last update (LWW sync cursor) */
+  updatedAt: string
+}
+

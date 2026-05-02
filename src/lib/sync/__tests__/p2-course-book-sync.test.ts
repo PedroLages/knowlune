@@ -47,7 +47,6 @@ function makeCourse(overrides?: Partial<ImportedCourse>): ImportedCourse {
   }
 }
 
-
 function makeBook(overrides?: Partial<Book>): Book {
   return {
     id: crypto.randomUUID(),
@@ -258,11 +257,7 @@ describe('E94-S02 P2 sync wiring — books', () => {
     await useBookStore.getState().importBook(book)
     await db.syncQueue.clear()
 
-    await useBookStore.getState().updateBookPosition(
-      book.id,
-      { type: 'time', seconds: 120 },
-      42
-    )
+    await useBookStore.getState().updateBookPosition(book.id, { type: 'time', seconds: 120 }, 42)
 
     const entries = await getQueueEntries('books')
     const putEntry = entries.find(e => e.operation === 'put')

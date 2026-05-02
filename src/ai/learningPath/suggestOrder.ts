@@ -9,6 +9,7 @@
 
 import type { LearningPathEntry } from '@/data/types'
 import { getAIConfiguration, getDecryptedApiKey, isAIAvailable } from '@/lib/aiConfiguration'
+import { apiUrl } from '@/lib/apiBaseUrl'
 
 /** Suggested order entry with justification */
 export interface OrderSuggestionEntry {
@@ -110,7 +111,7 @@ IMPORTANT: Return ONLY the JSON object. Include ALL courses.`
   }
 
   try {
-    const response = await fetch('/api/ai/generate', {
+    const response = await fetch(apiUrl('ai-generate'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

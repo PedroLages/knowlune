@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 
 // Mock supabase module
 const mockSignUp = vi.fn()
@@ -19,7 +19,7 @@ vi.mock('@/lib/auth/supabase', () => ({
   },
 }))
 
-import { useAuthStore, mapSupabaseError, NETWORK_ERROR_MESSAGE } from '@/stores/useAuthStore'
+import { useAuthStore, mapSupabaseError, NETWORK_ERROR_MESSAGE, selectIsGuestMode, selectAuthState } from '@/stores/useAuthStore'
 
 beforeEach(() => {
   vi.clearAllMocks()
@@ -74,6 +74,21 @@ describe('mapSupabaseError', () => {
   it('returns original message for unknown errors', () => {
     expect(mapSupabaseError('Something else went wrong')).toBe('Something else went wrong')
   })
+
+  it('maps rate-limit errors to a friendly retry message', () => {
+    expect(mapSupabaseError('Too many requests')).toBe(
+      'Too many attempts. Please wait a minute and try again.'
+    )
+    expect(mapSupabaseError('email rate limit exceeded')).toBe(
+      'Too many attempts. Please wait a minute and try again.'
+    )
+  })
+
+  it('maps "Signups not allowed" to a clear message', () => {
+    expect(mapSupabaseError('Signups not allowed for this instance')).toBe(
+      'New sign-ups are currently disabled. Please contact support.'
+    )
+  })
 })
 
 describe('setSession', () => {
@@ -118,10 +133,16 @@ describe('signUp', () => {
     expect(result.error).toBe('This email is already registered. Try signing in instead.')
   })
 
-  it('returns network error on exception', async () => {
-    mockSignUp.mockRejectedValue(new Error('fetch failed'))
+  it('returns network error when exception is a real fetch failure', async () => {
+    mockSignUp.mockRejectedValue(new TypeError('Failed to fetch'))
     const result = await useAuthStore.getState().signUp('test@test.com', 'pw')
     expect(result.error).toBe(NETWORK_ERROR_MESSAGE)
+  })
+
+  it('surfaces real error message when exception is not a network failure', async () => {
+    mockSignUp.mockRejectedValue(new Error('Password too weak'))
+    const result = await useAuthStore.getState().signUp('test@test.com', 'pw')
+    expect(result.error).toBe('Password too weak')
   })
 })
 
@@ -138,10 +159,16 @@ describe('signIn', () => {
     expect(result.error).toBe('Invalid email or password. Please try again.')
   })
 
-  it('returns network error on exception', async () => {
-    mockSignInWithPassword.mockRejectedValue(new Error('network'))
+  it('returns network error when exception is a real fetch failure', async () => {
+    mockSignInWithPassword.mockRejectedValue(new TypeError('Failed to fetch'))
     const result = await useAuthStore.getState().signIn('test@test.com', 'pw')
     expect(result.error).toBe(NETWORK_ERROR_MESSAGE)
+  })
+
+  it('surfaces real error message when exception is not a network failure', async () => {
+    mockSignInWithPassword.mockRejectedValue(new Error('Unexpected server response'))
+    const result = await useAuthStore.getState().signIn('test@test.com', 'pw')
+    expect(result.error).toBe('Unexpected server response')
   })
 })
 
@@ -158,10 +185,31 @@ describe('signInWithMagicLink', () => {
     expect(result.error).toContain('expired')
   })
 
-  it('returns network error on exception', async () => {
-    mockSignInWithOtp.mockRejectedValue(new Error('net'))
+  it('returns network error when exception is a real fetch failure', async () => {
+    mockSignInWithOtp.mockRejectedValue(new TypeError('Failed to fetch'))
     const result = await useAuthStore.getState().signInWithMagicLink('test@test.com')
     expect(result.error).toBe(NETWORK_ERROR_MESSAGE)
+  })
+
+  it('surfaces real supabase error instead of masking as network error', async () => {
+    mockSignInWithOtp.mockResolvedValue({
+      error: { message: 'Too many requests, please try again later' },
+    })
+    const result = await useAuthStore.getState().signInWithMagicLink('test@test.com')
+    expect(result.error).toBe('Too many attempts. Please wait a minute and try again.')
+  })
+
+  it('passes redirectTo callback URL to signInWithOtp', async () => {
+    mockSignInWithOtp.mockResolvedValue({ error: null })
+    await useAuthStore.getState().signInWithMagicLink('test@test.com')
+    expect(mockSignInWithOtp).toHaveBeenCalledWith(
+      expect.objectContaining({
+        email: 'test@test.com',
+        options: expect.objectContaining({
+          emailRedirectTo: expect.stringContaining('/auth/callback'),
+        }),
+      })
+    )
   })
 })
 
@@ -178,10 +226,23 @@ describe('signInWithGoogle', () => {
     expect(result.error).toBe('Some OAuth error')
   })
 
-  it('returns network error on exception', async () => {
-    mockSignInWithOAuth.mockRejectedValue(new Error('net'))
+  it('returns network error when exception is a real fetch failure', async () => {
+    mockSignInWithOAuth.mockRejectedValue(new TypeError('Failed to fetch'))
     const result = await useAuthStore.getState().signInWithGoogle()
     expect(result.error).toBe(NETWORK_ERROR_MESSAGE)
+  })
+
+  it('passes /auth/callback as redirectTo to Supabase', async () => {
+    mockSignInWithOAuth.mockResolvedValue({ error: null })
+    await useAuthStore.getState().signInWithGoogle()
+    expect(mockSignInWithOAuth).toHaveBeenCalledWith(
+      expect.objectContaining({
+        provider: 'google',
+        options: expect.objectContaining({
+          redirectTo: expect.stringContaining('/auth/callback'),
+        }),
+      })
+    )
   })
 })
 
@@ -206,10 +267,58 @@ describe('signOut', () => {
     expect(result.error).toBe('Session expired')
   })
 
-  it('returns network error on exception', async () => {
-    mockSignOut.mockRejectedValue(new Error('net'))
+  it('returns network error when exception is a real fetch failure', async () => {
+    mockSignOut.mockRejectedValue(new TypeError('Failed to fetch'))
     const result = await useAuthStore.getState().signOut()
     expect(result.error).toBe(NETWORK_ERROR_MESSAGE)
+  })
+})
+
+describe('selectIsGuestMode', () => {
+  afterEach(() => {
+    sessionStorage.clear()
+  })
+
+  it('returns true when initialized, no user, and sessionStorage flag set', () => {
+    sessionStorage.setItem('knowlune-guest', 'true')
+    expect(selectIsGuestMode({ initialized: true, user: null })).toBe(true)
+  })
+
+  it('returns false when not initialized (prevents flash on reload)', () => {
+    sessionStorage.setItem('knowlune-guest', 'true')
+    expect(selectIsGuestMode({ initialized: false, user: null })).toBe(false)
+  })
+
+  it('returns false when user is present (even if sessionStorage flag exists)', () => {
+    sessionStorage.setItem('knowlune-guest', 'true')
+    expect(selectIsGuestMode({ initialized: true, user: { id: 'user-1' } as never })).toBe(false)
+  })
+
+  it('returns false when sessionStorage flag is absent', () => {
+    expect(selectIsGuestMode({ initialized: true, user: null })).toBe(false)
+  })
+})
+
+describe('selectAuthState', () => {
+  afterEach(() => {
+    sessionStorage.clear()
+  })
+
+  it('returns "loading" when not initialized', () => {
+    expect(selectAuthState({ initialized: false, user: null })).toBe('loading')
+  })
+
+  it('returns "authenticated" when user is present', () => {
+    expect(selectAuthState({ initialized: true, user: { id: 'user-1' } as never })).toBe('authenticated')
+  })
+
+  it('returns "guest" when initialized, no user, and guest flag set', () => {
+    sessionStorage.setItem('knowlune-guest', 'true')
+    expect(selectAuthState({ initialized: true, user: null })).toBe('guest')
+  })
+
+  it('returns "anonymous" when initialized, no user, and no guest flag', () => {
+    expect(selectAuthState({ initialized: true, user: null })).toBe('anonymous')
   })
 })
 

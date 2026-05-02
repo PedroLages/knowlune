@@ -19,13 +19,14 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/app/components/ui/collapsible'
-import { Sparkles, Loader2, AlertCircle, RotateCcw, ChevronDown, ChevronUp } from 'lucide-react'
+import { Sparkles, Loader2, AlertCircle, RotateCcw, ChevronDown, ChevronUp, Lock } from 'lucide-react'
 import { AIUnavailableBadge } from './AIUnavailableBadge'
 import { isFeatureEnabled, isAIAvailable } from '@/lib/aiConfiguration'
 import { fetchAndParseTranscript, generateVideoSummary } from '@/lib/aiSummary'
 import { trackAIUsage } from '@/lib/aiEventTracking'
+import { ConsentError } from '@/ai/lib/ConsentError'
 
-type PanelState = 'idle' | 'generating' | 'completed' | 'error'
+type PanelState = 'idle' | 'generating' | 'completed' | 'error' | 'consent-required'
 
 interface AISummaryPanelProps {
   /** URL to VTT transcript file */
@@ -117,6 +118,12 @@ export function AISummaryPanel({ transcriptSrc }: AISummaryPanelProps) {
         return
       }
 
+      // Consent not granted — show informational state, not an error
+      if (error instanceof ConsentError) {
+        setState('consent-required')
+        return
+      }
+
       console.error('Failed to generate video summary:', error)
       trackAIUsage('summary', {
         status: 'error',
@@ -197,6 +204,30 @@ export function AISummaryPanel({ transcriptSrc }: AISummaryPanelProps) {
             {summaryText}
           </div>
         )}
+      </div>
+    )
+  }
+
+  // Consent-required state: Show informational message pointing to Settings → Privacy
+  if (state === 'consent-required') {
+    return (
+      <div
+        className="flex items-start gap-3 p-4 rounded-xl bg-muted/50 border border-border"
+        role="status"
+        data-testid="summary-consent-required"
+      >
+        <Lock className="size-4 flex-shrink-0 mt-0.5 text-muted-foreground" aria-hidden="true" />
+        <p className="text-sm text-muted-foreground">
+          AI features require your consent. Enable{' '}
+          <strong>AI Tutor</strong> in{' '}
+          <a
+            href="/settings?section=privacy"
+            className="text-brand underline underline-offset-2 hover:text-brand-hover"
+          >
+            Settings → Privacy &amp; Consent
+          </a>
+          .
+        </p>
       </div>
     )
   }

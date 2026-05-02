@@ -1440,6 +1440,127 @@ syncEngine.start()
 
 **Case study:** E96-S02 post-login bootstrap in `src/lib/sync/bootstrap.ts`. Reference: `docs/solutions/sync/e96-closeout-sync-patterns-2026-04-19.md`.
 
+## Visibility-Gated Polling Hook
+
+Hooks that poll for updates (credential status, sync counts, notification badge) must not hammer the server/DB when the component is hidden. Pair Page Visibility API with a longer fallback interval so polling pauses when the tab is in the background and resumes when it returns to focus.
+
+```typescript
+// useMissingCredentials.ts (reference pattern)
+const POLL_INTERVAL_MS = 120_000 // 2 min — visibility-gated, so this is safe
+
+useEffect(() => {
+  let timerId: ReturnType<typeof setInterval> | null = null
+
+  const schedule = () => {
+    if (document.visibilityState !== 'visible') return // skip when hidden
+    refresh()
+    timerId = setInterval(() => {
+      if (document.visibilityState === 'visible') refresh()
+    }, POLL_INTERVAL_MS)
+  }
+
+  const handleVisibilityChange = () => {
+    if (document.visibilityState === 'visible') {
+      schedule()
+    } else {
+      if (timerId != null) { clearInterval(timerId); timerId = null }
+    }
+  }
+
+  document.addEventListener('visibilitychange', handleVisibilityChange)
+  schedule() // start immediately if visible
+
+  return () => {
+    document.removeEventListener('visibilitychange', handleVisibilityChange)
+    if (timerId != null) clearInterval(timerId)
+  }
+}, [refresh])
+```
+
+**Rules:**
+
+- Gate every poll tick on `document.visibilityState === 'visible'` — no DB/network calls when hidden.
+- Resume immediately on `visibilitychange` → `visible` to ensure fresh data on tab refocus.
+- Supplement interval-based polling with event-driven refreshes (Zustand subscriptions, custom DOM events) to avoid stale reads between ticks.
+- A 120s fallback interval is safe when gated; without gating the same interval would cause 30+ unnecessary calls per minute across open tabs.
+
+**Case study:** E97-S05 — `useMissingCredentials` polls credential status with 120s interval + visibility gate + event-driven refreshes on `ai-configuration-updated` and store deltas. Reference: `src/app/hooks/useMissingCredentials.ts`.
+
+## Window Test Bridge for E2E Sync State Injection
+
+E2E tests that exercise sync UX (status indicators, upload wizards, download overlays) cannot call the sync engine directly via Playwright — the engine lives in the page's JavaScript runtime. Expose a minimal typed bridge on `window` in non-production builds so E2E specs can inject state deterministically.
+
+```typescript
+// In the component that owns the sync engine (e.g., App.tsx or SyncProvider)
+if (import.meta.env.MODE !== 'production') {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ;(window as any).__syncEngine__ = {
+    setSyncStatus: (status: SyncStatus) => useSyncStatusStore.getState().setStatus(status),
+    setHeadCounts: (counts: Record<string, number>) => { /* inject for E2E */ },
+    triggerFullSync: () => syncEngine.nudge(),
+  }
+}
+```
+
+```typescript
+// In the E2E spec
+await page.evaluate(() => {
+  (window as any).__syncEngine__.setSyncStatus({ phase: 'error', lastError: 'Network timeout' })
+})
+await expect(page.locator('[data-testid="sync-error-banner"]')).toBeVisible()
+```
+
+**Rules:**
+
+- Guard with `import.meta.env.MODE !== 'production'` — the bridge must tree-shake in production builds.
+- Keep the bridge surface minimal (3–5 methods) and typed. Don't expose the entire engine object.
+- Document each bridge method with its E2E purpose so the API stays intentional.
+- Note the KI when bridge injection may silently no-op (see KI-E97-S02-L02) and add a guard assertion: `if (!(window as any).__syncEngine__) throw new Error('Bridge not exposed')`
+
+**Why a dedicated bridge, not just Zustand devtools:** Playwright's `page.evaluate()` has access to `window` but not to Zustand's internal store map without a bridge. The bridge is the minimal surface that avoids installing full devtools overhead in test builds.
+
+**Case study:** E97-S02, E97-S03, E97-S04 — all three stories used `window.__syncEngine__` shims to drive sync phase transitions in E2E specs. Reference: `tests/e2e/story-97-*.spec.ts`.
+
+## Ref-Gated Error Suppression During Phase Transitions
+
+When an async flow has multiple sequential phases (e.g., pre-flight → uploading → syncing → done), UI errors that surface during the pre-flight phase may become stale before the later phases complete. A `useRef` flag suppresses error display until the flow has advanced past the point where the error was relevant.
+
+```typescript
+// Suppress premature error banner until the sync engine confirms 'syncing' phase
+const suppressErrorUntilSyncingRef = useRef(false)
+
+async function handleRetry() {
+  suppressErrorUntilSyncingRef.current = true // start suppressing
+  try {
+    await fullSync()
+  } catch (err) {
+    suppressErrorUntilSyncingRef.current = false // allow error display now
+    setPhase('error')
+    return
+  }
+}
+
+// In the render / effect that reads sync status:
+useEffect(() => {
+  if (syncStatus.phase === 'syncing') {
+    suppressErrorUntilSyncingRef.current = false // arrived at target — release suppress
+  }
+  if (syncStatus.phase === 'error' && !suppressErrorUntilSyncingRef.current) {
+    showErrorBanner()
+  }
+}, [syncStatus.phase])
+```
+
+**Rules:**
+
+- Reset the suppression flag on both success (arrived at target phase) and failure (exception caught). A flag stuck at `true` is the KI-E97-S03-L01 hang pattern.
+- Use `useRef`, not `useState` — suppression state must not trigger a re-render cycle.
+- The flag's lifetime is bounded to one retry attempt; clear it before the next attempt begins.
+
+**Limitation:** If `fullSync` rejects before the engine status advances to `'syncing'`, the ref stays `true` and future errors are permanently suppressed (KI-E97-S03-L01). Fix by adding a `finally { suppressErrorUntilSyncingRef.current = false }` block when no explicit arrival phase is guaranteed.
+
+**Case study:** E97-S03 — `InitialUploadWizard` suppresses the error banner during the upload pre-flight/setup phase so users don't see a transient error that resolves when the engine reaches `'syncing'`. Reference: `src/app/components/sync/InitialUploadWizard.tsx`.
+
 ## Local-Only Exclusion Pattern for Derivable Data
 
 Not every Dexie table belongs in the sync registry. Create-once, zero-mutation, deterministically-derivable stores (`youtubeChapters`, transcripts, TTS cache, video metadata cache) should be **explicitly** documented as local-only with a "re-open trigger" that explains how the data is regenerated after a DB wipe or device change. Silent omission from `tableRegistry.ts` leaves the next auditor asking the same question a year later.

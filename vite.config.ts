@@ -3,6 +3,10 @@
 import { defineConfig, type Plugin } from 'vite';
 import path from 'path';
 import fs from 'fs';
+import { createRequire } from 'node:module';
+
+const _require = createRequire(import.meta.url);
+const pkg = _require('./package.json') as { version: string };
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
@@ -475,6 +479,9 @@ function testModeCspPlugin(): Plugin {
 }
 
 export default defineConfig({
+  define: {
+    __APP_VERSION__: JSON.stringify(pkg.version),
+  },
   plugins: [
   // The React and Tailwind plugins are both required for Make, even if
   // Tailwind is not being actively used – do not remove them
@@ -504,10 +511,33 @@ export default defineConfig({
       display: 'standalone',
       scope: '/',
       start_url: '/',
+      categories: ['education', 'productivity'],
+      dir: 'ltr',
+      lang: 'en',
       icons: [
         { src: 'pwa-192x192.png', sizes: '192x192', type: 'image/png' },
         { src: 'pwa-512x512.png', sizes: '512x512', type: 'image/png' },
         { src: 'pwa-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+      ],
+      shortcuts: [
+        {
+          name: 'Continue Learning',
+          short_name: 'Continue',
+          url: '/library',
+          icons: [{ src: 'shortcuts/continue.png', sizes: '96x96' }]
+        },
+        {
+          name: 'New Note',
+          short_name: 'New Note',
+          url: '/notes',
+          icons: [{ src: 'shortcuts/new-note.png', sizes: '96x96' }]
+        },
+        {
+          name: 'Sync Now',
+          short_name: 'Sync',
+          url: '/settings',
+          icons: [{ src: 'shortcuts/sync.png', sizes: '96x96' }]
+        }
       ],
     },
     workbox: {
@@ -544,6 +574,10 @@ export default defineConfig({
         },
         {
           urlPattern: /^\/api\/ai\/.*/i,
+          handler: 'NetworkOnly',
+        },
+        {
+          urlPattern: /\/api\/abs\/proxy\//,
           handler: 'NetworkOnly',
         },
       ],
@@ -649,6 +683,26 @@ export default defineConfig({
     }]
   },
   build: {
+    // E64-S01: Exclude AI SDK chunks from initial modulepreload hints.
+    // The AI SDKs are dynamically imported on-demand (Notes Q&A flow), but
+    // Vite's static analysis traces transitive references and would otherwise
+    // emit <link rel="modulepreload"> tags that defeat the lazy loading.
+    // Filtering them here trims ~100 KB gzipped from the initial page load.
+    modulePreload: {
+      resolveDependencies: (_filename, deps) => {
+        const excludePatterns = [
+          'ai-anthropic',
+          'ai-sdk-core',
+          'ai-openai',
+          'ai-google',
+          'ai-groq',
+          'ai-zhipu',
+        ]
+        return deps.filter(
+          (dep) => !excludePatterns.some((pattern) => dep.includes(pattern))
+        )
+      },
+    },
     rollupOptions: {
       // Exclude WebLLM from the bundle — it's a 6MB ML runtime used only in
       // the experimental /webllm-test route. Load it from CDN at runtime instead.

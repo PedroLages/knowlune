@@ -213,6 +213,18 @@ export async function deleteAccount(
       }
     }
 
+    // Guard: Edge Function boot-crash or router error returns HTTP 200 with error in body.
+    // - data.error: Deno runtime crash before the function returns a real response
+    // - data.msg: main router error envelope (missing function name, worker creation failure)
+    // - data.success === false: explicit application-level failure
+    if (data?.error || data?.msg || data?.success === false) {
+      console.error('delete-account body error:', data)
+      return {
+        success: false,
+        error: 'Account deletion failed. Please try again or contact support.',
+      }
+    }
+
     // Track progress through the steps the Edge Function completed
     if (data?.step === 'subscription_cancelled') {
       onStep?.('deleting-customer')
@@ -266,12 +278,19 @@ export async function cancelAccountDeletion(): Promise<{ error?: string }> {
   if (!session) return { error: 'You must be signed in to cancel deletion.' }
 
   try {
-    const { error } = await supabase.functions.invoke('cancel-account-deletion', {
+    const { data, error } = await supabase.functions.invoke('cancel-account-deletion', {
       body: {},
     })
 
     if (error) {
       console.error('cancel-account-deletion error:', error)
+      return { error: 'Unable to cancel deletion. Please contact support.' }
+    }
+
+    // Symmetric body-error guard: Edge Function boot-crash or router error
+    // returns HTTP 200 with error details in the body.
+    if (data?.error || data?.msg || data?.success === false) {
+      console.error('cancel-account-deletion body error:', data)
       return { error: 'Unable to cancel deletion. Please contact support.' }
     }
 

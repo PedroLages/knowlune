@@ -301,10 +301,7 @@ describe('useSyncLifecycle', () => {
       renderHook(() => useSyncLifecycle())
     })
 
-    expect(mockRegisterStoreRefresh).toHaveBeenCalledWith(
-      'studySessions',
-      expect.any(Function)
-    )
+    expect(mockRegisterStoreRefresh).toHaveBeenCalledWith('studySessions', expect.any(Function))
   })
 
   it('registers notes and bookmarks store refreshes before calling fullSync', async () => {

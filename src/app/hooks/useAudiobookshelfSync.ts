@@ -9,13 +9,79 @@
  * @since E101-S03
  */
 
-import { useCallback, useRef, useState, type MutableRefObject } from 'react'
+import { useCallback, useEffect, useRef, useState, type MutableRefObject } from 'react'
 import { toast } from 'sonner'
-import type { AudiobookshelfServer, AbsLibraryItem, Book, BookChapter } from '@/data/types'
+import type { AbsProgress, AudiobookshelfServer, AbsLibraryItem, Book, BookChapter } from '@/data/types'
 import * as AudiobookshelfService from '@/services/AudiobookshelfService'
 import { useBookStore } from '@/stores/useBookStore'
 import { useAudiobookshelfStore } from '@/stores/useAudiobookshelfStore'
-import { getAbsApiKey } from '@/lib/credentials/absApiKeyResolver'
+import { getAbsApiKey, getAbsApiKeyReason } from '@/lib/credentials/absApiKeyResolver'
+import { resolveConflict } from '@/app/hooks/useAudiobookshelfProgressSync'
+
+const VISIBILITY_PROGRESS_MIN_INTERVAL_MS = 30_000
+
+const absInboundWriteOpts = { suppressErrorToast: true } as const
+
+/** Valid ISO string for `lastOpenedAt`, or null if `ms` is not a usable instant. */
+function safeAbsLastOpenedIso(ms: number): string | null {
+  if (!Number.isFinite(ms)) return null
+  const d = new Date(ms)
+  if (!Number.isFinite(d.getTime())) return null
+  return d.toISOString()
+}
+
+/**
+ * Overlay ABS user progress onto local books for one server (after catalog sync
+ * or throttled tab focus). Best-effort — logs errors, never throws to callers.
+ */
+export async function applyAbsProgressToBooks(
+  server: AudiobookshelfServer,
+  apiKey: string
+): Promise<void> {
+  const result = await AudiobookshelfService.fetchAllProgress(server.url, apiKey)
+  if (!result.ok) {
+    console.error('[useAudiobookshelfSync] fetchAllProgress failed:', result.error)
+    return
+  }
+
+  const byItemId = new Map<string, AbsProgress>()
+  for (const p of result.data) {
+    const id = p.libraryItemId
+    if (id) byItemId.set(id, p)
+  }
+  if (byItemId.size === 0) return
+
+  const { books, updateBookPosition, updateBookLastOpenedAt } = useBookStore.getState()
+
+  for (const book of books) {
+    if (book.source.type !== 'remote' || book.absServerId !== server.id || !book.absItemId) continue
+    const absProg = byItemId.get(book.absItemId)
+    if (!absProg) continue
+
+    const localSeconds = book.currentPosition?.type === 'time' ? book.currentPosition.seconds : 0
+    const resolution = resolveConflict(absProg.lastUpdate, book.lastOpenedAt, localSeconds)
+    if (resolution !== 'use-abs') continue
+
+    const position = { type: 'time' as const, seconds: absProg.currentTime }
+    const progressPct =
+      book.totalDuration && book.totalDuration > 0
+        ? Math.min(100, Math.round((absProg.currentTime / book.totalDuration) * 100))
+        : Math.round((absProg.progress ?? 0) * 100)
+
+    const absIso = safeAbsLastOpenedIso(absProg.lastUpdate)
+    if (!absIso) {
+      console.warn('[useAudiobookshelfSync] skip progress row: invalid lastUpdate', book.id)
+      continue
+    }
+    try {
+      await updateBookPosition(book.id, position, progressPct, absInboundWriteOpts)
+      await updateBookLastOpenedAt(book.id, absIso)
+    } catch (err) {
+      // silent-catch-ok: bulk overlay is best-effort; one bad row must not abort the rest
+      console.error('[useAudiobookshelfSync] apply progress row failed', book.id, err)
+    }
+  }
+}
 
 interface SyncState {
   isSyncing: boolean
@@ -40,6 +106,9 @@ export function useAudiobookshelfSync() {
   // Ref to hold latest pagination state — avoids stale closure in loadNextPage
   const paginationRef: MutableRefObject<SyncState['pagination']> = useRef(state.pagination)
   paginationRef.current = state.pagination
+
+  /** Last `applyAbsProgressToBooks` run per server (throttled visibility refresh) */
+  const lastProgressPullRef = useRef<Record<string, number>>({})
 
   /**
    * Map an ABS library item to a Book record.
@@ -145,11 +214,39 @@ export function useAudiobookshelfSync() {
       try {
         const apiKey = await getAbsApiKey(server.id)
         if (!apiKey) {
-          console.warn(
-            '[useAudiobookshelfSync] syncCatalog: apiKey unavailable — sync skipped',
-          )
+          // Credential store returned null. Disambiguate: the resolver tracks
+          // whether the lookup failed because the user is unauthenticated
+          // (Vault requires a Supabase JWT) vs. the key truly being absent
+          // or the broker returning 401/403. A single "API key missing"
+          // message for all three was the source of confused bug reports
+          // after E95-S05 — we now surface each case with actionable text.
+          const reason = getAbsApiKeyReason(server.id)
           syncingServers.current.delete(server.id)
-          setState(prev => ({ ...prev, isSyncing: false }))
+
+          if (reason === 'unauthenticated') {
+            setState(prev => ({
+              ...prev,
+              isSyncing: false,
+              syncError: 'Sign in to Knowlune to load your Audiobookshelf credentials.',
+            }))
+            toast.error('Sign in required', {
+              description:
+                'Audiobookshelf credentials live in your Knowlune account. Sign in (top right) to load them.',
+              duration: 8000,
+            })
+            return
+          }
+
+          setState(prev => ({
+            ...prev,
+            isSyncing: false,
+            syncError: 'Audiobookshelf API key missing. Re-enter it in Settings.',
+          }))
+          await updateServer(server.id, { status: 'auth-failed' })
+          toast.error('Audiobookshelf API key missing', {
+            description: `Open Settings → Audiobookshelf → Edit "${server.name}" and re-enter your API key.`,
+            duration: 8000,
+          })
           return
         }
 
@@ -204,6 +301,13 @@ export function useAudiobookshelfSync() {
         // Single bulk upsert: 1 IDB write + 1 state update instead of N
         const { removedCount } = await bulkUpsertAbsBooks(allMappedBooks)
 
+        try {
+          await applyAbsProgressToBooks(server, apiKey)
+          lastProgressPullRef.current[server.id] = Date.now()
+        } catch (err) {
+          console.error('[useAudiobookshelfSync] applyAbsProgressToBooks failed:', err)
+        }
+
         // Update pagination state
         setState(prev => ({
           ...prev,
@@ -238,7 +342,9 @@ export function useAudiobookshelfSync() {
         // Collections fetched separately with longer delay
         setTimeout(() => {
           const { loadCollections } = useAudiobookshelfStore.getState()
-          loadCollections(server.id)
+          for (const libId of server.libraryIds) {
+            loadCollections(server.id, libId)
+          }
         }, 6000)
       } catch (err) {
         console.error('[useAudiobookshelfSync] Unexpected sync error:', err)
@@ -254,6 +360,32 @@ export function useAudiobookshelfSync() {
     },
     [mapAbsItemToBook, bulkUpsertAbsBooks, updateServer]
   )
+
+  // Throttled ABS progress pull when the tab becomes visible (no full catalog refetch)
+  useEffect(() => {
+    const onVisibility = () => {
+      if (document.visibilityState !== 'visible') return
+      void (async () => {
+        const servers = useAudiobookshelfStore.getState().servers
+        const now = Date.now()
+        for (const s of servers) {
+          if (s.status !== 'connected') continue
+          const last = lastProgressPullRef.current[s.id] ?? 0
+          if (now - last < VISIBILITY_PROGRESS_MIN_INTERVAL_MS) continue
+          const key = await getAbsApiKey(s.id)
+          if (!key) continue
+          lastProgressPullRef.current[s.id] = now
+          try {
+            await applyAbsProgressToBooks(s, key)
+          } catch (err) {
+            console.error('[useAudiobookshelfSync] visibility applyAbsProgressToBooks failed:', err)
+          }
+        }
+      })()
+    }
+    document.addEventListener('visibilitychange', onVisibility)
+    return () => document.removeEventListener('visibilitychange', onVisibility)
+  }, [])
 
   /**
    * Load the next page of items for a server (infinite scroll pagination).

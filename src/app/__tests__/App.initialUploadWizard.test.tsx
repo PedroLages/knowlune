@@ -50,7 +50,7 @@ vi.mock('@/app/components/sync/LinkDataDialog', () => ({
 }))
 
 // Stub out heavy dependencies not under test
-vi.mock('react-router', async (importOriginal) => {
+vi.mock('react-router', async importOriginal => {
   const actual = await importOriginal<typeof import('react-router')>()
   return {
     ...actual,
@@ -155,16 +155,23 @@ beforeEach(() => {
   mockAuthUser = null
   capturedCallbacks = {}
 
-  vi.mocked(useAuthLifecycle).mockImplementation((opts) => {
-    capturedCallbacks.onUnlinkedDetected = opts.onUnlinkedDetected
+  vi.mocked(useAuthLifecycle).mockImplementation(opts => {
+    capturedCallbacks.onUnlinkedDetected = opts?.onUnlinkedDetected
   })
 
   // Re-wire the useAuthStore mock each test because mockAuthUser is reassigned
   vi.mocked(useAuthStore).mockImplementation(
-    (selector?: (s: { user: typeof mockAuthUser }) => unknown) => {
-      const state = { user: mockAuthUser }
-      return selector ? selector(state) : (state as unknown as ReturnType<typeof useAuthStore>)
-    },
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ((selector?: (s: unknown) => unknown) => {
+      const state = {
+        user: mockAuthUser,
+        session: null,
+        initialized: true,
+        sessionExpired: false,
+        _userInitiatedSignOut: false,
+      }
+      return selector ? selector(state) : state
+    }) as unknown as typeof useAuthStore
   )
 })
 
@@ -242,7 +249,7 @@ describe('App — InitialUploadWizard / LinkDataDialog composition invariant', (
 
     // Wait long enough for the effect + async evaluation to settle
     await act(async () => {
-      await new Promise((r) => setTimeout(r, 50))
+      await new Promise(r => setTimeout(r, 50))
     })
 
     expect(screen.queryByTestId('initial-upload-wizard-mock')).toBeNull()

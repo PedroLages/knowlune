@@ -8,7 +8,7 @@
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { act } from 'react'
-import { useReaderStore } from '../useReaderStore'
+import { useReaderStore, normalizeReaderTheme } from '../useReaderStore'
 
 // ── Mock saveSettingsToSupabase for dual-write tests (E95-S01) ────────────────
 // vi.hoisted() ensures the variable is initialized before vi.mock factory runs.
@@ -31,6 +31,22 @@ describe('useReaderStore — Supabase dual-write (E95-S01)', () => {
   it('setTheme calls saveSettingsToSupabase with readingTheme key', () => {
     act(() => useReaderStore.getState().setTheme('sepia'))
     expect(mockSaveSettingsToSupabase).toHaveBeenCalledWith({ readingTheme: 'sepia' })
+  })
+
+  it('setTheme(white) maps to cloud readingTheme auto', () => {
+    act(() => useReaderStore.getState().setTheme('white'))
+    expect(mockSaveSettingsToSupabase).toHaveBeenCalledWith({ readingTheme: 'auto' })
+  })
+
+  it('setTheme(black) maps to cloud readingTheme high-contrast', () => {
+    act(() => useReaderStore.getState().setTheme('black'))
+    expect(mockSaveSettingsToSupabase).toHaveBeenCalledWith({ readingTheme: 'high-contrast' })
+  })
+
+  it('persists black Page Tone locally as reader theme black', () => {
+    act(() => useReaderStore.getState().setTheme('black'))
+    const stored = JSON.parse(localStorage.getItem('knowlune-reader-settings-v1')!)
+    expect(stored.theme).toBe('black')
   })
 
   it('setFontSize calls saveSettingsToSupabase with readingFontSize key', () => {
@@ -58,9 +74,29 @@ describe('useReaderStore — Supabase dual-write (E95-S01)', () => {
     expect(mockSaveSettingsToSupabase).not.toHaveBeenCalled()
   })
 
+  it('setFontFamily supports Atkinson Hyperlegible locally', () => {
+    act(() => useReaderStore.getState().setFontFamily('atkinson'))
+
+    expect(useReaderStore.getState().fontFamily).toBe('atkinson')
+    const stored = JSON.parse(localStorage.getItem('knowlune-reader-settings-v1')!)
+    expect(stored.fontFamily).toBe('atkinson')
+    expect(mockSaveSettingsToSupabase).not.toHaveBeenCalled()
+  })
+
   it('resetSettings does NOT call saveSettingsToSupabase', () => {
     act(() => useReaderStore.getState().resetSettings())
     expect(mockSaveSettingsToSupabase).not.toHaveBeenCalled()
+  })
+})
+
+describe('normalizeReaderTheme', () => {
+  it('maps legacy light and settings auto to white', () => {
+    expect(normalizeReaderTheme('light')).toBe('white')
+    expect(normalizeReaderTheme('auto')).toBe('white')
+  })
+
+  it('maps high-contrast to black', () => {
+    expect(normalizeReaderTheme('high-contrast')).toBe('black')
   })
 })
 
@@ -184,5 +220,17 @@ describe('useReaderStore — accessibility settings (E114-S01)', () => {
       expect(state.readingRulerEnabled).toBe(false)
       expect(state.scrollMode).toBe(false)
     })
+  })
+})
+
+describe('useReaderStore — persisted theme compatibility', () => {
+  it('loads legacy light from localStorage as white', async () => {
+    vi.resetModules()
+    localStorage.clear()
+    localStorage.setItem('knowlune-reader-settings-v1', JSON.stringify({ theme: 'light' }))
+
+    const { useReaderStore: freshReaderStore } = await import('../useReaderStore')
+
+    expect(freshReaderStore.getState().theme).toBe('white')
   })
 })

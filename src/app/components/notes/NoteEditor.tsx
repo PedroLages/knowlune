@@ -765,7 +765,7 @@ export function NoteEditor({
                     className={cn(
                       'inline-flex items-center justify-center size-11 rounded-md text-sm transition-colors cursor-pointer',
                       'hover:bg-accent hover:text-accent-foreground',
-                      'focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1'
+                      'focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-1'
                     )}
                     aria-label="Insert table"
                   >
@@ -805,7 +805,7 @@ export function NoteEditor({
                     className={cn(
                       'inline-flex items-center justify-center size-11 rounded-md text-sm transition-colors cursor-pointer',
                       'hover:bg-accent hover:text-accent-foreground',
-                      'focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1'
+                      'focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-1'
                     )}
                     aria-label="Table of contents"
                   >
@@ -828,7 +828,7 @@ export function NoteEditor({
                   className={cn(
                     'inline-flex items-center justify-center size-11 rounded-md text-sm transition-colors cursor-pointer',
                     'hover:bg-accent hover:text-accent-foreground',
-                    'focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1'
+                    'focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-1'
                   )}
                   aria-label="More formatting options"
                 >
@@ -929,7 +929,7 @@ export function NoteEditor({
                   className={cn(
                     'inline-flex items-center justify-center size-11 rounded-md text-sm transition-colors cursor-pointer ml-auto',
                     'hover:bg-accent hover:text-accent-foreground',
-                    'focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1'
+                    'focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-1'
                   )}
                   aria-label="Capture video frame"
                 >

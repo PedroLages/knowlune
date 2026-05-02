@@ -115,9 +115,7 @@ describe('E96-S03 — aiUsageEvents sync contract', () => {
     }))
     const trackMod2 = await import('@/lib/aiEventTracking')
 
-    await expect(
-      trackMod2.trackAIUsage('summary', { durationMs: 1 })
-    ).resolves.toBeUndefined()
+    await expect(trackMod2.trackAIUsage('summary', { durationMs: 1 })).resolves.toBeUndefined()
 
     vi.doUnmock('@/lib/sync/syncableWrite')
   })

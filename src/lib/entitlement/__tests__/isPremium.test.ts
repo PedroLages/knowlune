@@ -168,26 +168,29 @@ describe('validateEntitlementOnServer', () => {
 
     const result = await validateEntitlementOnServer('user-123')
     expect(result).toEqual({
-      userId: 'user-123',
-      tier: 'premium',
-      stripeCustomerId: 'cus_123',
-      stripeSubscriptionId: 'sub_123',
-      planId: 'plan_monthly',
-      expiresAt: '2026-04-25T00:00:00.000Z',
-      cachedAt: '2026-03-25T12:00:00.000Z',
+      entitlement: {
+        userId: 'user-123',
+        tier: 'premium',
+        stripeCustomerId: 'cus_123',
+        stripeSubscriptionId: 'sub_123',
+        planId: 'plan_monthly',
+        expiresAt: '2026-04-25T00:00:00.000Z',
+        cachedAt: '2026-03-25T12:00:00.000Z',
+      },
+      error: null,
     })
   })
 
-  it('returns null when server returns error', async () => {
+  it('returns {entitlement:null, error} when server returns error', async () => {
     mockServerResponse(null, { message: 'Not found' })
     const result = await validateEntitlementOnServer('user-123')
-    expect(result).toBeNull()
+    expect(result).toEqual({ entitlement: null, error: 'Not found' })
   })
 
-  it('returns null when server returns no data', async () => {
+  it('returns {entitlement:null, error:null} when server returns no data', async () => {
     mockServerResponse(null)
     const result = await validateEntitlementOnServer('user-123')
-    expect(result).toBeNull()
+    expect(result).toEqual({ entitlement: null, error: null })
   })
 
   it('handles null optional fields gracefully', async () => {
@@ -201,10 +204,10 @@ describe('validateEntitlementOnServer', () => {
     })
 
     const result = await validateEntitlementOnServer('user-123')
-    expect(result?.stripeCustomerId).toBeUndefined()
-    expect(result?.stripeSubscriptionId).toBeUndefined()
-    expect(result?.planId).toBeUndefined()
-    expect(result?.expiresAt).toBeUndefined()
+    expect(result.entitlement?.stripeCustomerId).toBeUndefined()
+    expect(result.entitlement?.stripeSubscriptionId).toBeUndefined()
+    expect(result.entitlement?.planId).toBeUndefined()
+    expect(result.entitlement?.expiresAt).toBeUndefined()
   })
 })
 

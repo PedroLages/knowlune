@@ -224,7 +224,7 @@ export function NotificationPreferencesPanel() {
                     id="quiet-start"
                     value={prefs.quietHoursStart}
                     onChange={e => setQuietHours({ quietHoursStart: e.target.value })}
-                    className="block w-full h-11 rounded-md border border-input bg-background px-3 py-1.5 text-sm shadow-sm focus-visible:border-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    className="block w-full h-11 rounded-md border border-input bg-background px-3 py-1.5 text-sm shadow-sm focus-visible:border-focus-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
                   />
                 </div>
                 <div className="space-y-1.5">
@@ -236,7 +236,7 @@ export function NotificationPreferencesPanel() {
                     id="quiet-end"
                     value={prefs.quietHoursEnd}
                     onChange={e => setQuietHours({ quietHoursEnd: e.target.value })}
-                    className="block w-full h-11 rounded-md border border-input bg-background px-3 py-1.5 text-sm shadow-sm focus-visible:border-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    className="block w-full h-11 rounded-md border border-input bg-background px-3 py-1.5 text-sm shadow-sm focus-visible:border-focus-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
                   />
                 </div>
               </div>

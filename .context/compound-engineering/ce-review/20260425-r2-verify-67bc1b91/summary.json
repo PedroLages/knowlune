@@ -1,0 +1,36 @@
+{
+  "runId": "20260425-r2-verify-67bc1b91",
+  "round": 2,
+  "mode": "headless",
+  "base": "c2406ca924d4f8bbb543f55b3bcb1c378272b455",
+  "branch": "feature/ce-2026-04-25-link-formats-really-merry-eich",
+  "plan_source": "explicit",
+  "plan_path": "/Users/pedro/.claude/plans/the-link-formats-really-merry-eich.md",
+  "files_reviewed": 9,
+  "previous_run": "20260425-142821-headless-ce-review",
+  "r1_findings_status": {
+    "F1": "fixed — INTRA_CHAPTER_CONFIDENCE_FLOOR imported in useFormatSwitch.ts:27 and used at :185",
+    "F2": "fixed — handleBookmarkDeleted deps now [onBookmarkChange] in AudiobookRenderer.tsx:176",
+    "F3": "fixed — explicit findIndex + idx>=0 guard at BookReader.tsx:738-739, undefined-bail wired",
+    "F4": "fixed — JSDoc invariant added on resolveTargetChapterIndex documenting array-position assumption",
+    "F5": "fixed — db import and `void db` removed from rescanBookChapters.ts",
+    "F6": "fixed — params now captured via refs (offsetCfiParamRef, seekSecondsParamRef, chapterPctParamRef) before the empty-deps effect runs; comment updated. react-hooks/exhaustive-deps not configured in eslint.config.js so no disable-comment needed.",
+    "F7": "fixed — setTimeout id captured (seekTimerId) and cleared via effect cleanup in AudiobookRenderer.tsx:232-235",
+    "F8": "skipped intentionally — comment at useFormatSwitch.ts:206 documents invariant; finding accepted as advisory",
+    "F9": "fixed — unmount cleanup useEffect added in LinkFormatsDialog.tsx clearing resetTimerRef"
+  },
+  "verification": {
+    "lint": "clean (0 errors; 3 pre-existing component-size warnings unrelated to this branch)",
+    "unit_tests": "chapterSwitchResolver.test.ts 14/14 pass",
+    "uncommitted_changes": "BookImportDialog.tsx adds silent-catch-ok marker — consistent with R1 silent-catch fix policy",
+    "r1_fix_commit": "51f0e181 — small, focused, targets only the listed findings"
+  },
+  "applied_fixes": [],
+  "blockers": 0,
+  "high": 0,
+  "medium": 0,
+  "low": 0,
+  "nit": 0,
+  "findings": [],
+  "verdict": "Ready to merge"
+}

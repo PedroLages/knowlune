@@ -142,9 +142,7 @@ describe('searchFrecency — Dexie counters', () => {
 
   it('logs and does NOT throw when Dexie put rejects', async () => {
     const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
-    const putSpy = vi
-      .spyOn(db.searchFrecency, 'put')
-      .mockRejectedValueOnce(new Error('boom'))
+    const putSpy = vi.spyOn(db.searchFrecency, 'put').mockRejectedValueOnce(new Error('boom'))
     await expect(recordVisit('course', 'c-fail')).resolves.toBeUndefined()
     expect(errSpy).toHaveBeenCalled()
     putSpy.mockRestore()

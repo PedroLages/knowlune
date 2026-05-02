@@ -12,6 +12,7 @@ import {
   LogIn,
   LogOut,
   User,
+  MessageSquarePlus,
 } from 'lucide-react'
 import { KnowluneLogo, KnowluneIcon } from './figma/KnowluneLogo'
 import { Button } from './ui/button'
@@ -31,6 +32,7 @@ import { SearchCommandPalette } from './figma/SearchCommandPalette'
 import { PaletteControllerProvider } from './figma/PaletteControllerContext'
 import type { EntityType } from '@/lib/unifiedSearch'
 import { KeyboardShortcutsDialog } from './figma/KeyboardShortcutsDialog'
+import { FeedbackModal } from './figma/FeedbackModal'
 import { BottomNav } from './navigation/BottomNav'
 import { useStudyReminders } from '@/app/hooks/useStudyReminders'
 import { useCourseReminders } from '@/app/hooks/useCourseReminders'
@@ -46,11 +48,11 @@ import { useOnlineStatus } from '@/app/hooks/useOnlineStatus'
 import { NotificationCenter } from './figma/NotificationCenter'
 import { SyncStatusIndicator } from './sync/SyncStatusIndicator'
 import { useCourseStore } from '@/stores/useCourseStore'
-import { useAuthStore } from '@/stores/useAuthStore'
+import { useAuthStore, selectIsGuestMode } from '@/stores/useAuthStore'
+import { GuestBanner } from './auth/GuestBanner'
 import { toast } from 'sonner'
 import { QualityScoreDialog } from './session/QualityScoreDialog'
 import type { QualityScoreResult } from '@/lib/qualityScore'
-import { OnboardingOverlay } from './onboarding/OnboardingOverlay'
 import { useFocusMode } from '@/hooks/useFocusMode'
 import { FocusOverlay } from './figma/FocusOverlay'
 import { TrialIndicator } from './trial/TrialIndicator'
@@ -59,6 +61,16 @@ import { ImportProgressOverlay } from './figma/ImportProgressOverlay'
 import { SessionExpiredBanner } from './figma/SessionExpiredBanner'
 import { AudioMiniPlayer } from './audiobook/AudioMiniPlayer'
 import { useAudioPlayerStore } from '@/stores/useAudioPlayerStore'
+import { useNoticeAcknowledgement } from '@/hooks/useNoticeAcknowledgement'
+import { LegalUpdateBanner } from '@/app/pages/legal/LegalUpdateBanner'
+import { SoftBlockGate } from './SoftBlockGate'
+import {
+  NOTICE_DOCUMENT_ID,
+  formatNoticeEffectiveDate,
+  CURRENT_NOTICE_VERSION,
+} from '@/lib/compliance/noticeVersion'
+import { PWAInstallBanner } from './PWAInstallBanner'
+import { PWAUpdatePrompt } from './PWAUpdatePrompt'
 
 // Individual nav link — wraps in Tooltip when collapsed
 function NavLink({
@@ -125,10 +137,12 @@ function SidebarContent({
   onNavigate,
   iconOnly,
   visibleGroups,
+  onFeedbackClick,
 }: {
   onNavigate?: () => void
   iconOnly?: boolean
   visibleGroups: NavigationGroup[]
+  onFeedbackClick?: () => void
 }) {
   return (
     <>
@@ -190,8 +204,38 @@ function SidebarContent({
         </div>
       </nav>
 
-      {/* Bottom section: Settings */}
+      {/* Bottom section: Feedback + Settings */}
       <div className="mt-4 pt-3 border-t border-border">
+        {/* Feedback trigger — above Settings */}
+        {iconOnly ? (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                onClick={onFeedbackClick}
+                aria-label="Send Feedback"
+                className="flex items-center justify-center rounded-xl transition-colors duration-150 min-h-[44px] py-2.5 mx-2 w-[calc(100%-1rem)] text-muted-foreground hover:bg-accent hover:text-foreground"
+                data-testid="feedback-trigger"
+              >
+                <MessageSquarePlus className="size-5 shrink-0" aria-hidden="true" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="right" sideOffset={8}>
+              Send Feedback
+            </TooltipContent>
+          </Tooltip>
+        ) : (
+          <button
+            type="button"
+            onClick={onFeedbackClick}
+            aria-label="Send Feedback"
+            className="flex items-center gap-3 px-4 py-2.5 rounded-xl transition-colors duration-150 min-h-[44px] w-full text-muted-foreground hover:bg-accent hover:text-foreground"
+            data-testid="feedback-trigger"
+          >
+            <MessageSquarePlus className="size-5 shrink-0" aria-hidden="true" />
+            <span className="text-sm">Send Feedback</span>
+          </button>
+        )}
         <ul>
           <NavLink item={settingsItem} iconOnly={iconOnly} onNavigate={onNavigate} />
         </ul>
@@ -213,7 +257,11 @@ export function Layout() {
 
   // Progressive sidebar disclosure
   const { filterGroups } = useProgressiveDisclosure()
-  const visibleGroups = filterGroups(navigationGroups)
+  const isGuest = useAuthStore(selectIsGuestMode)
+  const visibleGroups = filterGroups(navigationGroups).map(group => ({
+    ...group,
+    items: group.items.filter(item => !(isGuest && item.guestHidden)),
+  }))
 
   // Ensure courses are loaded from IndexedDB (backup for deferInit race)
   const loadCourses = useCourseStore(s => s.loadCourses)
@@ -244,6 +292,7 @@ export function Layout() {
   const [searchOpen, setSearchOpen] = useState(false)
   const [paletteInitialScope, setPaletteInitialScope] = useState<EntityType | null>(null)
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
+  const [feedbackOpen, setFeedbackOpen] = useState(false)
   const [settings, setSettings] = useState(getSettings())
 
   // Sync settings when storage changes (e.g., updated in Settings page)
@@ -406,8 +455,15 @@ export function Layout() {
     : false
   const hasMiniPlayer = !!audiobookCurrentBookId && !isAudiobookPlayerPage
 
+  /** Mobile non-lesson: scroll the column so the top header scrolls with page content */
+  const nonLessonMobileScroll = !isLessonPlayerRoute && isMobile
+
   // Focus mode (E65-S03) — overlay, focus trap, and exit
   const focusMode = useFocusMode(navigate)
+
+  // Notice acknowledgement (E119-S02) — re-ack banner and soft-block gate
+  const { stale, staleDays, refetch: refetchNoticeAck } = useNoticeAcknowledgement()
+  const noticeEffectiveDate = formatNoticeEffectiveDate(CURRENT_NOTICE_VERSION)
 
   // Quality score dialog state (E11-S03)
   const [qualityDialogOpen, setQualityDialogOpen] = useState(false)
@@ -459,7 +515,11 @@ export function Layout() {
             className={`${sidebarCollapsed ? 'w-[72px] px-0 py-6' : 'w-[220px] p-6'} bg-card flex flex-col overflow-hidden transition-[width] duration-200 ease-out h-full`}
             aria-label="Sidebar"
           >
-            <SidebarContent iconOnly={sidebarCollapsed} visibleGroups={visibleGroups} />
+            <SidebarContent
+              iconOnly={sidebarCollapsed}
+              visibleGroups={visibleGroups}
+              onFeedbackClick={() => setFeedbackOpen(true)}
+            />
           </aside>
 
           {/* Edge notch toggle */}
@@ -488,6 +548,7 @@ export function Layout() {
             <SidebarContent
               onNavigate={() => setSidebarOpen(false)}
               visibleGroups={visibleGroups}
+              onFeedbackClick={() => setFeedbackOpen(true)}
             />
           </SheetContent>
         </Sheet>
@@ -495,7 +556,10 @@ export function Layout() {
 
       {/* Main Content */}
       <div
-        className={`flex-1 flex flex-col min-w-0 ${isLessonPlayerRoute ? 'overflow-auto' : 'overflow-hidden'}`}
+        data-testid={nonLessonMobileScroll ? 'main-scroll-container' : undefined}
+        className={`flex-1 flex flex-col min-h-0 min-w-0 ${
+          isLessonPlayerRoute ? 'overflow-auto' : nonLessonMobileScroll ? 'overflow-auto md:overflow-hidden' : 'overflow-hidden'
+        }`}
       >
         {/* Header */}
         <header
@@ -576,7 +640,7 @@ export function Layout() {
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <button
-                    className="flex items-center gap-3 pl-4 border-l border-border cursor-pointer rounded-lg p-1 -m-1 min-h-[44px] transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    className="flex items-center gap-3 pl-4 border-l border-border cursor-pointer rounded-lg p-1 -m-1 min-h-[44px] transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
                     aria-label="User menu"
                   >
                     <div className="relative">
@@ -662,20 +726,40 @@ export function Layout() {
         {/* Page Content - Extra bottom padding on mobile for bottom nav */}
         <main
           id="main-content"
-          data-testid="main-scroll-container"
-          className={`flex-1 px-6 pt-6 leading-[var(--content-line-height)] ${isLessonPlayerRoute ? 'pb-6' : `overflow-auto ${hasMiniPlayer ? 'pb-36 sm:pb-20' : 'pb-20 sm:pb-6'}`}`}
+          data-testid={
+            isLessonPlayerRoute || !nonLessonMobileScroll ? 'main-scroll-container' : undefined
+          }
+          className={`${isLessonPlayerRoute ? 'flex-1' : 'flex-none md:flex-1 md:min-h-0'} px-4 pt-4 sm:px-6 sm:pt-6 leading-[var(--content-line-height)] overflow-x-hidden ${
+            isLessonPlayerRoute
+              ? 'pb-6'
+              : `md:overflow-auto ${hasMiniPlayer ? 'pb-[calc(theme(spacing.36)+env(safe-area-inset-bottom))] sm:pb-20' : 'pb-[calc(theme(spacing.20)+env(safe-area-inset-bottom))] sm:pb-6'}`
+          }`}
         >
           {!isOnline && (
             <div
               role="status"
               aria-live="polite"
-              className="bg-warning/10 text-warning-foreground border-b border-warning/20 px-4 py-2 text-center text-sm -mx-6 -mt-6 mb-4"
+              className="bg-warning/10 text-warning-foreground border-b border-warning/20 px-4 py-2 text-center text-sm -mx-4 -mt-4 mb-4 sm:-mx-6 sm:-mt-6"
             >
               You are offline. Some features may be limited.
             </div>
           )}
           <SessionExpiredBanner isOffline={!isOnline} />
+          <GuestBanner />
           <TrialReminderBanner />
+          {/* Notice re-acknowledgement — AC-5 (banner, 30-day grace) / AC-6 (soft-block) */}
+          {stale && staleDays <= 30 && (
+            <LegalUpdateBanner
+              mode="reack"
+              documentId={NOTICE_DOCUMENT_ID}
+              effectiveDate={noticeEffectiveDate}
+              documentName="Privacy Notice"
+              onAcknowledged={refetchNoticeAck}
+            />
+          )}
+          {stale && staleDays > 30 && (
+            <SoftBlockGate onAcknowledged={refetchNoticeAck} />
+          )}
           <PaletteControllerProvider
             value={{
               open: (scope?: EntityType) => {
@@ -702,10 +786,21 @@ export function Layout() {
       {/* Keyboard Shortcuts Dialog */}
       <KeyboardShortcutsDialog open={shortcutsOpen} onOpenChange={setShortcutsOpen} />
 
+      {/* Feedback / Bug Report Modal (E118) */}
+      <FeedbackModal
+        open={feedbackOpen}
+        onOpenChange={setFeedbackOpen}
+        onSuccess={() => {
+          // Modal closes itself via onOpenChange(false) in its success effect.
+          // Parent only needs to fire the toast.
+          toast.success('Thanks — your feedback was sent.')
+        }}
+      />
+
       {/* Mobile Bottom Navigation - Only visible on mobile (<640px) */}
       {isMobile && (
         <div data-theater-hide>
-          <BottomNav />
+          <BottomNav onFeedbackClick={() => setFeedbackOpen(true)} />
         </div>
       )}
 
@@ -718,9 +813,6 @@ export function Layout() {
           factors={qualityResult.factors}
         />
       )}
-
-      {/* First-use onboarding overlay (E25-S07) */}
-      <OnboardingOverlay />
 
       {/* Import progress indicator (E1B-S03) — non-blocking overlay */}
       <ImportProgressOverlay />
@@ -741,6 +833,10 @@ export function Layout() {
 
       {/* Audiobook Mini-Player — persistent bar across all pages when audiobook is active (E87-S05) */}
       <AudioMiniPlayer />
+
+      {/* PWA banners (E120) */}
+      <PWAInstallBanner />
+      <PWAUpdatePrompt />
     </div>
   )
 }

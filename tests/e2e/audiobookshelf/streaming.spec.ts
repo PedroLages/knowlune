@@ -158,7 +158,7 @@ async function mockAudioElement(page: import('@playwright/test').Page): Promise<
 
 /** Mock the POST /api/items/{id}/play endpoint to return a playback session */
 async function mockPlaybackSession(page: import('@playwright/test').Page): Promise<void> {
-  await page.route('**/api/abs/proxy/api/items/*/play', async route => {
+  await page.route('**/api/items/*/play', async route => {
     if (route.request().method() === 'POST') {
       await route.fulfill({
         status: 200,
@@ -207,11 +207,11 @@ async function seedStreamingData(page: import('@playwright/test').Page): Promise
   // Mock ABS playback session endpoints (must be set before navigating to book reader)
   await mockPlaybackSession(page)
   // Mock session close (fire-and-forget from player cleanup)
-  await page.route('**/api/abs/proxy/api/session/*/close', async route => {
+  await page.route('**/api/session/*/close', async route => {
     await route.fulfill({ status: 200, contentType: 'application/json', body: '{}' })
   })
   // Mock the actual stream URL (audio element mock handles canplay, but prevent network errors)
-  await page.route('**/api/abs/proxy/s/item/**', async route => {
+  await page.route('**/s/item/**', async route => {
     await route.fulfill({ status: 200, contentType: 'audio/mp4', body: '' })
   })
 }
@@ -240,9 +240,9 @@ test.describe('E101-S04: Streaming Playback', () => {
       )
       .then(handle => handle.jsonValue())
 
-    // The audio src should contain the proxied stream URL from the playback session
-    expect(audioSrc).toContain('/api/abs/proxy/s/item/abs-item-1/book.m4b')
-    expect(audioSrc).toContain('_absUrl=')
+    // The audio src should be a direct ABS URL with token query param
+    expect(audioSrc).toContain('/s/item/abs-item-1/book.m4b')
+    expect(audioSrc).not.toContain('/api/abs/proxy')
     expect(audioSrc).toContain('token=')
   })
 
@@ -258,6 +258,22 @@ test.describe('E101-S04: Streaming Playback', () => {
     // containing "play" or "pause" when including skip controls).
     const playPauseButton = page.getByRole('button', { name: /^Play$|^Pause$/i })
     await expect(playPauseButton).toBeVisible()
+  })
+
+  test('AC4: remote audiobook resumes from saved position on open', async ({ page }) => {
+    await seedStreamingData(page)
+    await seedIndexedDBStore(page, DB_NAME, 'books', [
+      {
+        ...ABS_AUDIOBOOK,
+        progress: 28,
+        currentPosition: { type: 'time', seconds: 504 },
+        lastOpenedAt: FIXED_DATE,
+      },
+    ] as unknown as Record<string, unknown>[])
+    await page.goto(`/library/${ABS_AUDIOBOOK.id}/read`)
+
+    await expect(page.getByTestId('audiobook-reader')).toBeVisible({ timeout: 10000 })
+    await expect(page.getByTestId('current-time-display')).toHaveText('8:24', { timeout: 10000 })
   })
 
   test('AC7: chapter list displays ABS chapter metadata', async ({ page }) => {

@@ -55,7 +55,7 @@
 # - All new epics start at backlog status
 
 generated: 2026-03-15
-last_updated: 2026-04-19  # E96 complete — all 4 stories shipped (PRs #376-#379)
+last_updated: 2026-04-25  # E99 complete (S05 merged via PR #452 — virtualized courses list with ARIA, focus rescue, reduced-motion). All 5 stories shipped.
 project: Elearningplatformwireframes
 project_key: NOKEY  # deliberate: file-system tracking only, no external tool integration planned
 tracking_system: file-system
@@ -715,9 +715,9 @@ development_status:
   # Target: LCP < 2.5s, FCP < 1.8s, initial load < 435 KB gz
   # ──────────────────────────────────────────────────
   epic-64: backlog
-  64-1-remove-ai-sdk-modulepreload-and-verify-lazy-loading-boundaries: backlog
-  64-2-conditional-seed-data-loading: backlog
-  64-3-bundle-size-baseline-and-regression-detection: backlog
+  64-1-remove-ai-sdk-modulepreload-and-verify-lazy-loading-boundaries: done
+  64-2-conditional-seed-data-loading: done  # obsolete: superseded by E89-S01 (static courses table dropped in v30)
+  64-3-bundle-size-baseline-and-regression-detection: done
   64-4-indexeddb-compound-indexes-for-high-volume-tables: backlog
   64-5-settings-page-lazy-loaded-tab-splitting: backlog
   64-6-overview-dashboard-progressive-loading-and-data-batching: backlog
@@ -745,13 +745,13 @@ development_status:
   # Source: epics-accessibility-phase4-5.md
   # Upgrade from WCAG 2.1 AA to WCAG 2.2 AA + select AAA
   # ──────────────────────────────────────────────────
-  epic-66: backlog
-  66-1-dragging-movement-alternatives: backlog
-  66-2-target-size-audit-and-fixes: backlog
-  66-3-focus-not-obscured: backlog
-  66-4-authentication-and-redundant-entry-audit: backlog
-  66-5-focus-indicator-enhancement-and-compliance-audit: backlog
-  66-6-wcag-2-2-compliance-report-and-automated-testing: backlog
+  epic-66: done
+  66-1-dragging-movement-alternatives: done
+  66-2-target-size-audit-and-fixes: done
+  66-3-focus-not-obscured: done
+  66-4-authentication-and-redundant-entry-audit: done
+  66-5-focus-indicator-enhancement-and-compliance-audit: done
+  66-6-wcag-2-2-compliance-report-and-automated-testing: done
   epic-66-retrospective: optional
 
   # ──────────────────────────────────────────────────
@@ -771,18 +771,20 @@ development_status:
   epic-67-retrospective: optional
 
   # ──────────────────────────────────────────────────
-  # Epic 68: On-Device Embedding Optimization & Provider Abstraction
-  # Source: epics-on-device-embeddings.md
-  # Download progress UI, cache management, warm-up, provider abstraction
+  # Epic 68: On-Device Embedding Hardening (gap-fill only)
+  # Source: epics-on-device-embeddings.md → revised 2026-04-24
+  # Plan: docs/plans/2026-04-24-001-feat-e68-e77-embeddings-and-archive-plan.md
+  # Revised scope: ~60% already shipped organically in E9/E57/E62.
+  # Original 7 stories replaced with 3 targeted gap-fill stories.
+  # Original stories 68-4..68-7 (EmbeddingProvider abstraction, reEmbedAll,
+  #   full refactor) are DROPPED — working code stays in src/ai/workers/.
+  #   @huggingface/transformers v3 migration deferred to a post-beta epic.
+  # Depends on: E9 (AI infra — already done, code exists)
   # ──────────────────────────────────────────────────
-  epic-68: backlog  # reset 2026-03-30: story specs created but no code implemented
-  68-1-model-download-progress-ui: ready-for-dev
-  68-2-cache-api-validation-and-storage-management: ready-for-dev
-  68-3-embedding-worker-warm-up-strategy: ready-for-dev
-  68-4-embeddingprovider-abstraction-and-transformersjs-provider: ready-for-dev
-  68-5-openai-embedding-provider: ready-for-dev
-  68-6-fallback-chain-and-graceful-degradation: ready-for-dev
-  68-7-edge-case-hardening-and-cross-browser-resilience: ready-for-dev
+  epic-68: backlog
+  68-1-model-download-progress-and-warmup: backlog  # replaces 68-1 + 68-3: progress toast + idle warm-up
+  68-2-cache-api-validation-and-openai-fallback: backlog  # replaces 68-2 + 68-4 + 68-5 + 68-6: minimal EmbeddingProvider seam + OpenAI fallback
+  68-3-worker-crash-telemetry-and-safari-fallback: backlog  # replaces 68-7: structured crash payloads + module-worker fallback
   epic-68-retrospective: optional
 
   # ──────────────────────────────────────────────────
@@ -894,20 +896,40 @@ development_status:
   epic-76-retrospective: optional
 
   # ──────────────────────────────────────────────────
-  # Epic 77: Google Drive Backup & Restore
-  # Source: epics-google-drive-backup.md
-  # Premium feature: backup IndexedDB to Google Drive, restore from backup
-  # Depends on: E35 (Premium Entitlement), E19 (Supabase Auth)
+  # Epic 77A: Export & Archive (disaster recovery)
+  # Source: epics-google-drive-backup.md → split + reframed 2026-04-24
+  # Plan: docs/plans/2026-04-24-001-feat-e68-e77-embeddings-and-archive-plan.md
+  # Reframed: E92-E97 Supabase sync handles multi-device; E77A covers the gap
+  #   sync can't fill — Supabase account loss, outage, user-initiated migration.
+  # Original 7 stories replaced with 4 focused stories.
+  # Auth: Supabase-brokered Google OAuth (provider_token) — no parallel GIS flow.
+  # Depends on: E19 (Supabase Auth), E35 (Premium gate for Drive destination)
   # ──────────────────────────────────────────────────
-  epic-77: backlog
-  77-1-google-oauth-connection-and-premium-gate: backlog
-  77-2-google-drive-service-layer: backlog
-  77-3-manual-backup-to-google-drive: backlog
-  77-4-import-service-with-schema-migration: backlog
-  77-5-restore-flow-with-backup-history: backlog
-  77-6-scheduled-automatic-backups: backlog
-  77-7-storage-management-and-backup-cleanup: backlog
-  epic-77-retrospective: optional
+  epic-77a: backlog
+  77a-1-local-backup-download-and-restore: backlog  # local .knowlune.json download + restore + safety backup
+  77a-2-supabase-google-oauth-drive-scope: backlog  # add drive.file scope to Supabase Google provider; token helper
+  77a-3-drive-upload-destination-and-reconnect: backlog  # optional "Send to Drive" button + reconnect flow
+  77a-4-backup-metadata-tracking-and-status: backlog  # lastBackupAt, stale warning in Settings > Data & Backup
+  epic-77a-retrospective: optional
+
+  # ──────────────────────────────────────────────────
+  # Epic 77B: Google Drive as Remote Course Source
+  # Source: new — emerged from user intent 2026-04-24
+  # Plan: docs/plans/2026-04-24-001-feat-e68-e77-embeddings-and-archive-plan.md
+  # Fills the file-access gap left by E92-E97: sync restores metadata but not
+  #   actual course files (video/PDF/EPUB). Drive-sourced courses stream when
+  #   online and cache to OPFS for offline — same pattern as ABS (E101-E102).
+  # ⚠️  CRITICAL: drive.readonly scope requires Google OAuth app verification
+  #   if >100 users. Start verification on 77b-1 completion (~4-6 weeks lead).
+  # ⚠️  CORS: Drive media endpoint needs Edge Function proxy for video streaming.
+  # Depends on: E77A-S02 (token helper), E35 (Premium), E94 (sync for file refs)
+  # ──────────────────────────────────────────────────
+  epic-77b: backlog
+  77b-1-drive-auth-readonly-scope-and-folder-browser: backlog  # drive.readonly scope + Drive folder picker in import wizard (premium gated)
+  77b-2-drive-course-import-metadata-and-schema: backlog  # store Drive file refs in IndexedDB; Dexie v59 migration
+  77b-3-drive-file-streaming-and-opfs-cache: backlog  # stream from Drive + transparent OPFS cache on first play
+  77b-4-drive-source-management-ui-and-sync-validation: backlog  # source badge, reconnect flow, E94 sync round-trip test
+  epic-77b-retrospective: optional
 
   # ──────────────────────────────────────────────────
   # Epic 78: Plugin Foundation (MVP)
@@ -1203,12 +1225,12 @@ development_status:
   # Epic 97: Sync UX Polish — "Sync That Just Works"
   # Status indicator, settings panel, upload wizard, new device experience, credential UX
   # Depends on: E92 (sync engine), benefits from E93-E96 being complete
-  epic-97: backlog
-  97-1-sync-status-indicator-in-header: backlog
-  97-2-sync-settings-panel: backlog
-  97-3-initial-upload-wizard: backlog
-  97-4-new-device-download-experience: backlog
-  97-5-credential-sync-ux-for-external-services: backlog
+  epic-97: done
+  97-1-sync-status-indicator-in-header: done
+  97-2-sync-settings-panel: done
+  97-3-initial-upload-wizard: done
+  97-4-new-device-download-experience: done
+  97-5-credential-sync-ux-for-external-services: done
   epic-97-retrospective: optional
 
   # ──────────────────────────────────────────────────
@@ -1224,12 +1246,12 @@ development_status:
   # ──────────────────────────────────────────────────
   # Epic 99: Course Display View Modes
   # ───────────��──────────────────────────────────────
-  epic-99: backlog
-  99-1-view-mode-toggle-and-settings-infrastructure: backlog
-  99-2-grid-column-control: backlog
-  99-3-list-view: backlog
-  99-4-compact-grid-view: backlog
-  99-5-virtualized-grid-integration-and-polish: backlog
+  epic-99: done
+  99-1-view-mode-toggle-and-settings-infrastructure: done
+  99-2-grid-column-control: done
+  99-3-list-view: done
+  99-4-compact-grid-view: done
+  99-5-virtualized-grid-integration-and-polish: done
 
   # ──────────────────────────────────────────────────
   # Epic 100: Clean Color Theme — Apple-Inspired White Aesthetic
@@ -1443,3 +1465,48 @@ development_status:
   117-2-ranking-frecency-empty-state: done  # plan: docs/plans/2026-04-18-010-feat-unified-search-ranking-empty-state-story-2-plan.md (PR #351 merged)
   117-3-prefix-filters-and-per-page-input-removal: done  # branch: feature/e117-s02-search-ranking-empty-state
   epic-117-retrospective: optional
+
+  # ──────────────────────────────────────────────────
+  # Epic 118: In-App Feedback
+  # Source: docs/plans/2026-04-21-002-feat-e118-in-app-feedback-plan.md
+  # Floating feedback widget, NPS pulse survey, Supabase backend
+  # ──────────────────────────────────────────────────
+  epic-118: done
+  118-1-feedback-widget-and-backend: done  # PR #400 merged 2026-04-21
+
+  # ──────────────────────────────────────────────────
+  # Epic 119: GDPR Full Compliance (Umbrella)
+  # Source: docs/plans/2026-04-22-003-feat-e119-gdpr-full-compliance-plan.md
+  # Privacy notice, notice ack, registry-driven erasure + export, consent,
+  # retention enforcement, operator artifacts, annual review
+  # Articles: 5, 6, 7, 12, 13/14, 15, 17, 20, 28, 30, 32, 33/34
+  # ──────────────────────────────────────────────────
+  epic-119: done  # all 13 stories completed 2026-04-23, E119 GDPR compliance epic closed
+  119-1-privacy-notice-source-of-truth-versioning: done
+  119-2-notice-acknowledgement-signup-material-change-reack: done
+  119-3-registry-driven-erasure-cascade: done
+  119-4-deletion-verification-confirmation-email: done
+  119-5-registry-driven-export-zip: done
+  119-6-large-export-async-path-signed-url: done
+  119-7-consent-schema-inventory: done
+  119-8-consent-ui-withdrawal-effects: done
+  119-9-ai-provider-change-re-consent: done
+  119-10-retention-policy-matrix: done
+  119-11-retention-ttl-enforcement-job: done
+  119-12-operator-artifacts-ropa-dpa-breach-runbook: done
+  119-13-annual-review-ico-checklist-beta-user-reack: done
+  epic-119-retrospective: optional
+
+  # ──────────────────────────────────────────────────
+  # Epic 120: PWA Polish
+  # Source: docs/plans/2026-04-24-005-feat-e120-pwa-polish-plan.md
+  # Analysis: docs/analysis/mobile-strategy-comparison-2026-04-24.md
+  # iOS splash + viewport-fit, SW update prompt, MediaSession API (lock-screen audio),
+  # iOS install instruction card, manifest shortcuts, branded offline page, Lighthouse 100
+  # Stories to be created by /ce-orchestrator
+  # ──────────────────────────────────────────────────
+  epic-120: done
+  epic-120-s01: done  # iOS splash screens + viewport-fit=cover (PR #437)
+  epic-120-s02: done  # SW update prompt + MediaSession API (PR #437)
+  epic-120-s03: done  # iOS install banner + manifest shortcuts (PR #437)
+  epic-120-s04: done  # Branded offline page + NetworkOnly ABS streams (PR #437)

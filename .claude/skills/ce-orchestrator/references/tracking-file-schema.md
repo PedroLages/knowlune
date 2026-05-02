@@ -40,6 +40,8 @@ artifacts:
   prUrl: null                  # set at Phase 2.5
   demoUrl: null                # set at Phase 2.4 if captured
   solutionPath: null           # set at Phase 3.1 if Run-now chosen
+  reportPath: null             # set at Phase 0.7 closeout by report-generator (epic-loop only)
+closeoutStatus: null           # epic-loop only — see §Closeout status values
 review:
   rounds: 0
   lastGreenSha: a1b2c3d4        # captured at Phase 0.2
@@ -93,6 +95,22 @@ Progression is one-way for successful runs: `active → plan-approved → review
 | `reverted` | R3 escalation, user picked Revert to last-green | No — start fresh, tree was reset |
 | `pr-created-escalated` | R3 escalation, user picked Escalate-to-PR with banner | Terminal like `pr-created` |
 | `halted-at-<stage>` | Sub-agent error at named stage | Investigate, then resume or abort |
+
+## Closeout status values (epic-loop only)
+
+Set in the epic tracking file's `closeoutStatus` field — separate from the run-level `status`. Tracks progress through the Phase 0.7 step 6 closeout sequence so the coordinator can skip already-done work on resume and so the `report-generator` sub-agent is idempotent.
+
+| closeoutStatus | Meaning | Set by |
+|---|---|---|
+| `null` | Closeout has not started (or epic-loop not applicable for this run) | — |
+| `report-in-progress` | `report-generator` dispatched, awaiting return | Coordinator before dispatching report-generator |
+| `report-committed` | Report file written and committed to `main`; retrospective pending | Coordinator after `report-generator` returns `committed: true` |
+| `report-failed` | `report-generator` errored or returned `committed: false`; retrospective still proceeds | Coordinator on error or `committed: false` |
+| `complete` | Report landed AND `retrospective-dispatcher` returned successfully | Coordinator after retrospective completes |
+
+**Idempotency rule:** before dispatching `report-generator`, the coordinator checks `closeoutStatus`. If it is `report-committed` or `complete`, skip the dispatch — the report already exists on `main`. This allows re-running closeout without duplicate reports.
+
+**Ordering invariant:** `complete` is set only after the retrospective-dispatcher returns. The retrospective remains the last step of closeout so it can reference the already-committed report file.
 
 ## Lifecycle
 

@@ -1,14 +1,11 @@
-import {
-  GraduationCap,
-  BookOpen,
-  FileText,
-  StickyNote,
-  Highlighter,
-  User,
-} from 'lucide-react'
+import { GraduationCap, BookOpen, FileText, StickyNote, Highlighter, User } from 'lucide-react'
 import type { EntityType } from '@/lib/unifiedSearch'
 
-export const SECTION_ORDER: Array<{ type: EntityType; heading: string; icon: typeof GraduationCap }> = [
+export const SECTION_ORDER: Array<{
+  type: EntityType
+  heading: string
+  icon: typeof GraduationCap
+}> = [
   { type: 'course', heading: 'Courses', icon: GraduationCap },
   { type: 'book', heading: 'Books', icon: BookOpen },
   { type: 'lesson', heading: 'Lessons', icon: FileText },

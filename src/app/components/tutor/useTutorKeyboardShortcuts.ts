@@ -45,11 +45,7 @@ export function useTutorKeyboardShortcuts({
 
       // Avoid conflicts when typing in inputs
       const target = e.target as HTMLElement
-      if (
-        target.tagName === 'INPUT' ||
-        target.tagName === 'TEXTAREA' ||
-        target.isContentEditable
-      ) {
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
         // Allow Cmd+H even in inputs (browser doesn't use it in inputs)
         if (e.key !== 'h') return
       }

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, useLocation } from 'react-router'
-import { MoreHorizontal } from 'lucide-react'
+import { MoreHorizontal, MessageSquarePlus } from 'lucide-react'
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/app/components/ui/drawer'
 import { cn } from '@/app/components/ui/utils'
 import {
@@ -13,7 +13,11 @@ import {
 } from '@/app/config/navigation'
 import { useProgressiveDisclosure } from '@/app/hooks/useProgressiveDisclosure'
 
-export function BottomNav() {
+interface BottomNavProps {
+  onFeedbackClick?: () => void
+}
+
+export function BottomNav({ onFeedbackClick }: BottomNavProps = {}) {
   const location = useLocation()
   const [moreOpen, setMoreOpen] = useState(false)
   const { isVisible } = useProgressiveDisclosure()
@@ -80,72 +84,93 @@ export function BottomNav() {
             <div className="mx-auto w-12 h-1.5 rounded-full bg-muted mb-4" aria-hidden="true" />
             <DrawerTitle>More Options</DrawerTitle>
           </DrawerHeader>
-          <nav className="px-4 pb-6" aria-label="Additional navigation">
-            {/* Render overflow items grouped by navigationGroups for consistency with the sidebar */}
-            {navigationGroups.map(group => {
-              const items = group.items.filter(item => !primaryNavPaths.includes(item.path))
-              if (items.length === 0) return null
-              return (
-                <section key={group.label} className="mb-4">
-                  <p className="px-4 mb-2 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-                    {group.label}
-                  </p>
-                  <ul className="space-y-1">
-                    {items.map(item => {
-                      const Icon = item.icon
-                      const active = getIsActive(item, location.pathname, location.search)
-                      const href = item.tab ? `${item.path}?tab=${item.tab}` : item.path
-                      return (
-                        <li key={item.tab ? `${item.path}?tab=${item.tab}` : item.path}>
-                          <Link
-                            to={href}
-                            onClick={() => setMoreOpen(false)}
-                            aria-current={active ? 'page' : undefined}
-                            className={cn(
-                              'flex items-center gap-3 px-4 py-3 rounded-xl transition-colors duration-150',
-                              active
-                                ? 'bg-brand text-brand-foreground'
-                                : 'text-foreground hover:bg-accent active:bg-accent'
-                            )}
-                          >
-                            <Icon className="size-5" aria-hidden="true" />
-                            <span className="text-sm font-medium">{item.name}</span>
-                          </Link>
-                        </li>
-                      )
-                    })}
-                  </ul>
-                </section>
-              )
-            })}
-            {/* Settings always appears at the bottom of the drawer */}
-            <div className="border-t border-border pt-2">
-              <ul>
-                {(() => {
-                  const item = settingsItem
-                  const Icon = item.icon
-                  const active = getIsActive(item, location.pathname, location.search)
-                  const href = item.path
-                  return (
-                    <li key={href}>
-                      <Link
-                        to={href}
-                        onClick={() => setMoreOpen(false)}
-                        aria-current={active ? 'page' : undefined}
-                        className={cn(
-                          'flex items-center gap-3 px-4 py-3 rounded-xl transition-colors duration-150',
-                          active
-                            ? 'bg-brand text-brand-foreground'
-                            : 'text-foreground hover:bg-accent active:bg-accent'
-                        )}
-                      >
-                        <Icon className="size-5" aria-hidden="true" />
-                        <span className="text-sm font-medium">{item.name}</span>
-                      </Link>
-                    </li>
-                  )
-                })()}
-              </ul>
+          <nav className="flex flex-col max-h-[60vh]" aria-label="Additional navigation">
+            {/* Scrollable nav links area */}
+            <div className="overflow-y-auto flex-1 px-4 pt-2 pb-2">
+              {/* Render overflow items grouped by navigationGroups for consistency with the sidebar */}
+              {navigationGroups.map(group => {
+                const items = group.items.filter(item => !primaryNavPaths.includes(item.path))
+                if (items.length === 0) return null
+                return (
+                  <section key={group.label} className="mb-4">
+                    <p className="px-4 mb-2 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+                      {group.label}
+                    </p>
+                    <ul className="space-y-1">
+                      {items.map(item => {
+                        const Icon = item.icon
+                        const active = getIsActive(item, location.pathname, location.search)
+                        const href = item.tab ? `${item.path}?tab=${item.tab}` : item.path
+                        return (
+                          <li key={item.tab ? `${item.path}?tab=${item.tab}` : item.path}>
+                            <Link
+                              to={href}
+                              onClick={() => setMoreOpen(false)}
+                              aria-current={active ? 'page' : undefined}
+                              className={cn(
+                                'flex items-center gap-3 px-4 py-3 rounded-xl transition-colors duration-150',
+                                active
+                                  ? 'bg-brand text-brand-foreground'
+                                  : 'text-foreground hover:bg-accent active:bg-accent'
+                              )}
+                            >
+                              <Icon className="size-5" aria-hidden="true" />
+                              <span className="text-sm font-medium">{item.name}</span>
+                            </Link>
+                          </li>
+                        )
+                      })}
+                    </ul>
+                  </section>
+                )
+              })}
+              {/* Settings always appears at the bottom of the scrollable section */}
+              <div className="border-t border-border pt-2 mb-2">
+                <ul>
+                  {(() => {
+                    const item = settingsItem
+                    const Icon = item.icon
+                    const active = getIsActive(item, location.pathname, location.search)
+                    const href = item.path
+                    return (
+                      <li key={href}>
+                        <Link
+                          to={href}
+                          onClick={() => setMoreOpen(false)}
+                          aria-current={active ? 'page' : undefined}
+                          className={cn(
+                            'flex items-center gap-3 px-4 py-3 rounded-xl transition-colors duration-150',
+                            active
+                              ? 'bg-brand text-brand-foreground'
+                              : 'text-foreground hover:bg-accent active:bg-accent'
+                          )}
+                        >
+                          <Icon className="size-5" aria-hidden="true" />
+                          <span className="text-sm font-medium">{item.name}</span>
+                        </Link>
+                      </li>
+                    )
+                  })()}
+                </ul>
+              </div>
+            </div>
+            {/* Send Feedback pinned to bottom — always visible regardless of scroll position */}
+            <div className="sticky bottom-0 bg-background border-t border-border px-4 pb-6 pt-2">
+              <button
+                type="button"
+                data-testid="feedback-trigger-mobile"
+                onClick={() => {
+                  setMoreOpen(false)
+                  onFeedbackClick?.()
+                }}
+                className={cn(
+                  'flex items-center gap-3 px-4 py-3 rounded-xl transition-colors duration-150 w-full',
+                  'text-foreground hover:bg-accent active:bg-accent'
+                )}
+              >
+                <MessageSquarePlus className="size-5" aria-hidden="true" />
+                <span className="text-sm font-medium">Send Feedback</span>
+              </button>
             </div>
           </nav>
         </DrawerContent>

@@ -19,12 +19,22 @@ import type { AudiobookshelfServer, AbsSeries, AbsCollection } from '@/data/type
 import { db } from '@/db/schema'
 import * as AudiobookshelfService from '@/services/AudiobookshelfService'
 import { useBookStore } from '@/stores/useBookStore'
-import { storeCredential, deleteCredential } from '@/lib/vaultCredentials'
+import { storeCredentialWithStatus, deleteCredential } from '@/lib/vaultCredentials'
+
+/**
+ * Thrown by `addServer` / `updateServer` when the Vault write fails because
+ * the user is not signed into Supabase. Callers (the Save handler) catch
+ * this specifically to render an actionable "Sign in to save" toast without
+ * writing an orphan Dexie row.
+ */
+export class VaultUnauthenticatedError extends Error {
+  constructor(message = 'Sign in to save credentials') {
+    super(message)
+    this.name = 'VaultUnauthenticatedError'
+  }
+}
 import { syncableWrite } from '@/lib/sync/syncableWrite'
-import {
-  getAbsApiKey,
-  invalidateAbsApiKey,
-} from '@/lib/credentials/absApiKeyResolver'
+import { getAbsApiKey, invalidateAbsApiKey } from '@/lib/credentials/absApiKeyResolver'
 import { emitTelemetry } from '@/lib/credentials/telemetry'
 
 /** TTL for supplementary data (collections, series) — 5 minutes */
@@ -69,14 +79,14 @@ interface AudiobookshelfStoreState {
   updateServer: (
     id: string,
     updates: Partial<Omit<AudiobookshelfServer, 'id'>>,
-    apiKey?: string,
+    apiKey?: string
   ) => Promise<void>
   removeServer: (id: string) => Promise<void>
   getServerById: (id: string) => AudiobookshelfServer | undefined
   enqueueSyncItem: (item: Omit<SyncQueueItem, 'enqueuedAt'>) => void
   flushSyncQueue: () => Promise<void>
   loadSeries: (serverId: string, libraryId: string) => Promise<void>
-  loadCollections: (serverId: string) => Promise<void>
+  loadCollections: (serverId: string, libraryId: string) => Promise<void>
 }
 
 export const useAudiobookshelfStore = create<AudiobookshelfStoreState>((set, get) => ({
@@ -95,6 +105,26 @@ export const useAudiobookshelfStore = create<AudiobookshelfStoreState>((set, get
     try {
       const servers = await db.audiobookshelfServers.toArray()
       set({ servers, isLoaded: true })
+
+      // Hydrate Series and Collections from Dexie (v60 cache) so the tabs
+      // render instantly on cold page reload before any network fetch
+      // completes. TTL cache in `loadSeries` / `loadCollections` still gates
+      // refetches independently. Fire-and-forget: hydration failure is silent.
+      try {
+        const [cachedSeries, cachedCollections] = await Promise.all([
+          db.absSeries.toArray(),
+          db.absCollections.toArray(),
+        ])
+        if (cachedSeries.length > 0 || cachedCollections.length > 0) {
+          set({
+            series: cachedSeries,
+            collections: cachedCollections,
+          })
+        }
+      } catch (err) {
+        // silent-catch-ok — Dexie cache is an optimization; network will refill.
+        console.warn('[AudiobookshelfStore] Dexie hydration for series/collections failed:', err)
+      }
     } catch (err) {
       console.error('[AudiobookshelfStore] Failed to load servers:', err)
       toast.error('Failed to load Audiobookshelf servers.')
@@ -103,17 +133,28 @@ export const useAudiobookshelfStore = create<AudiobookshelfStoreState>((set, get
 
   addServer: async (server: AudiobookshelfServer, apiKey: string) => {
     // Vault-first: if the vault write fails, we must not write the metadata
-    // row (no partial state). We do not try/catch the storeCredential call
-    // because `storeCredential` is non-throwing and swallows errors — callers
-    // still get the toast via the metadata write failure path below.
-    await storeCredential('abs-server', server.id, apiKey)
+    // row (no partial state). Previously the legacy `storeCredential` was
+    // non-throwing, so an unauthenticated save silently dropped the key and
+    // the downstream sync surfaced a misleading "API key missing" toast. We
+    // now branch on the discriminated result and throw a typed error so the
+    // UI can render actionable messaging before writing Dexie.
+    const vaultResult = await storeCredentialWithStatus('abs-server', server.id, apiKey)
+    if (!vaultResult.ok) {
+      if (vaultResult.reason === 'unauthenticated') {
+        throw new VaultUnauthenticatedError()
+      }
+      toast.error('Could not save Audiobookshelf API key', {
+        description: vaultResult.message ?? 'Vault write failed. Try again.',
+      })
+      throw new Error(vaultResult.message ?? 'Vault write failed')
+    }
     // Invalidate the resolver cache so the first consumer reads the fresh key.
     invalidateAbsApiKey(server.id)
     try {
       await syncableWrite(
         'audiobookshelfServers',
         'add',
-        server as unknown as Record<string, unknown> & { id: string },
+        server as unknown as Record<string, unknown> & { id: string }
       )
       set(state => ({ servers: [...state.servers, server] }))
     } catch (err) {
@@ -134,11 +175,17 @@ export const useAudiobookshelfStore = create<AudiobookshelfStoreState>((set, get
   updateServer: async (
     id: string,
     updates: Partial<Omit<AudiobookshelfServer, 'id'>>,
-    apiKey?: string,
+    apiKey?: string
   ) => {
     try {
       if (apiKey && apiKey.length > 0) {
-        await storeCredential('abs-server', id, apiKey)
+        const vaultResult = await storeCredentialWithStatus('abs-server', id, apiKey)
+        if (!vaultResult.ok) {
+          if (vaultResult.reason === 'unauthenticated') {
+            throw new VaultUnauthenticatedError()
+          }
+          throw new Error(vaultResult.message ?? 'Vault write failed')
+        }
         invalidateAbsApiKey(id)
       }
       const existing = get().servers.find(s => s.id === id)
@@ -153,7 +200,7 @@ export const useAudiobookshelfStore = create<AudiobookshelfStoreState>((set, get
       await syncableWrite(
         'audiobookshelfServers',
         'put',
-        nextRecord as unknown as Record<string, unknown> & { id: string },
+        nextRecord as unknown as Record<string, unknown> & { id: string }
       )
       set(state => ({
         servers: state.servers.map(s => (s.id === id ? { ...s, ...safeUpdates } : s)),
@@ -168,7 +215,12 @@ export const useAudiobookshelfStore = create<AudiobookshelfStoreState>((set, get
       }
     } catch (err) {
       console.error('[AudiobookshelfStore] Failed to update server:', err)
-      toast.error('Failed to update Audiobookshelf server.')
+      // VaultUnauthenticatedError is surfaced by the Save handler with a
+      // specific "Sign in to save" toast — suppress the generic one so the
+      // user does not see two toasts for the same failure.
+      if (!(err instanceof VaultUnauthenticatedError)) {
+        toast.error('Failed to update Audiobookshelf server.')
+      }
       throw err
     }
   },
@@ -186,14 +238,27 @@ export const useAudiobookshelfStore = create<AudiobookshelfStoreState>((set, get
       } catch {
         // silent-catch-ok: fall back to full-table filter. Rare; only affects
         // tests against strict IndexedDB polyfills.
-        absBooks = (
-          await db.books
-            .filter(b => (b as unknown as { absServerId?: string }).absServerId === id)
-            .toArray()
-        ) as Array<{ id: string }>
+        absBooks = (await db.books
+          .filter(b => (b as unknown as { absServerId?: string }).absServerId === id)
+          .toArray()) as Array<{ id: string }>
       }
       if (absBooks.length > 0) {
         await db.books.bulkDelete(absBooks.map(b => b.id))
+      }
+      // Drop cached series/collections for this server (v60 cache).
+      try {
+        const staleSeries = await db.absSeries
+          .filter(s => (s as unknown as { serverId?: string }).serverId === id)
+          .toArray()
+        const staleCollections = await db.absCollections
+          .filter(c => (c as unknown as { serverId?: string }).serverId === id)
+          .toArray()
+        if (staleSeries.length > 0) await db.absSeries.bulkDelete(staleSeries.map(s => s.id))
+        if (staleCollections.length > 0)
+          await db.absCollections.bulkDelete(staleCollections.map(c => c.id))
+      } catch (err) {
+        // silent-catch-ok — cleanup is best-effort; orphaned cache rows are harmless.
+        console.warn('[AudiobookshelfStore] Failed to drop cached series/collections:', err)
       }
       await syncableWrite('audiobookshelfServers', 'delete', id)
       set(state => ({
@@ -256,7 +321,7 @@ export const useAudiobookshelfStore = create<AudiobookshelfStoreState>((set, get
         server.url,
         apiKey,
         item.itemId,
-        item.payload,
+        item.payload
       )
 
       if (!result.ok) {
@@ -290,7 +355,7 @@ export const useAudiobookshelfStore = create<AudiobookshelfStoreState>((set, get
         server.url,
         apiKey,
         libraryId,
-        { page, limit },
+        { page, limit }
       )
       if (!firstResult.ok) {
         // silent-catch-ok — series is supplementary, don't toast on rate-limit or transient errors
@@ -313,10 +378,23 @@ export const useAudiobookshelfStore = create<AudiobookshelfStoreState>((set, get
           server.url,
           apiKey,
           libraryId,
-          { page, limit },
+          { page, limit }
         )
         if (!nextResult.ok) break
         allSeries.push(...nextResult.data.results)
+      }
+
+      // Persist to Dexie (v60) — local-only cache. Stamp serverId + libraryId
+      // so the Series tab can source-filter on reload. Fire-and-forget: a
+      // Dexie failure must not break the in-memory render.
+      try {
+        const stamped = allSeries.map(s => ({ ...s, serverId, libraryId }))
+        await db.absSeries.bulkPut(
+          stamped as unknown as import('@/data/types').AbsSeries[]
+        )
+      } catch (err) {
+        // silent-catch-ok — Dexie persistence is an optimization; network is authoritative.
+        console.warn('[AudiobookshelfStore] Failed to persist series to Dexie:', err)
       }
 
       set({
@@ -334,7 +412,7 @@ export const useAudiobookshelfStore = create<AudiobookshelfStoreState>((set, get
     }
   },
 
-  loadCollections: async (serverId: string) => {
+  loadCollections: async (serverId: string, libraryId: string) => {
     // TTL cache guard — skip if loaded within last 5 minutes
     const loadedAt = get().collectionsLoadedAt[serverId]
     if (loadedAt && Date.now() - loadedAt < SUPPLEMENTARY_CACHE_TTL) return
@@ -347,8 +425,7 @@ export const useAudiobookshelfStore = create<AudiobookshelfStoreState>((set, get
 
     set({ isLoadingCollections: true })
     try {
-      // GET /api/collections returns all collections in a single response (no pagination)
-      const result = await AudiobookshelfService.fetchCollections(server.url, apiKey)
+      const result = await AudiobookshelfService.fetchCollections(server.url, apiKey, libraryId)
       if (!result.ok) {
         // silent-catch-ok — collections are supplementary, don't toast on rate-limit or transient errors
         console.warn('[AudiobookshelfStore] Failed to load collections:', result.error)
@@ -357,6 +434,19 @@ export const useAudiobookshelfStore = create<AudiobookshelfStoreState>((set, get
           collectionsLoadedAt: { ...get().collectionsLoadedAt, [serverId]: Date.now() },
         })
         return
+      }
+
+      // Persist to Dexie (v60) — local-only cache. Stamp serverId so the
+      // Collections tab can source-filter on reload. AbsCollection already
+      // carries its own libraryId. Fire-and-forget.
+      try {
+        const stamped = result.data.results.map(c => ({ ...c, serverId }))
+        await db.absCollections.bulkPut(
+          stamped as unknown as import('@/data/types').AbsCollection[]
+        )
+      } catch (err) {
+        // silent-catch-ok — Dexie persistence is an optimization; network is authoritative.
+        console.warn('[AudiobookshelfStore] Failed to persist collections to Dexie:', err)
       }
 
       set({

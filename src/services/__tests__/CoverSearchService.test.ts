@@ -95,8 +95,8 @@ describe('searchCovers', () => {
     await vi.waitFor(() => expect(onResults).toHaveBeenCalledTimes(4))
 
     // Each provider reported independently (not batched)
-    const allCalls = onResults.mock.calls.map((call) => call[0] as MetadataSearchResult[])
-    const providers = allCalls.flatMap((results) => results.map((r) => r.provider))
+    const allCalls = onResults.mock.calls.map(call => call[0] as MetadataSearchResult[])
+    const providers = allCalls.flatMap(results => results.map(r => r.provider))
     expect(providers).toContain('audnexus')
     expect(providers).toContain('itunes')
     expect(providers).toContain('google-books')
@@ -175,12 +175,32 @@ describe('searchCovers', () => {
     let resolveAudnexus!: (v: MetadataSearchResult[]) => void
     let resolveITunes!: (v: MetadataSearchResult[]) => void
     let resolveGoogle!: (v: MetadataSearchResult[]) => void
-    let resolveOpenLib!: (v: { coverUrl?: string; description?: string; subjects?: string[] }) => void
+    let resolveOpenLib!: (v: {
+      coverUrl?: string
+      description?: string
+      subjects?: string[]
+    }) => void
 
-    mockSearchAudnexus.mockReturnValue(new Promise((res) => { resolveAudnexus = res }))
-    mockSearchITunes.mockReturnValue(new Promise((res) => { resolveITunes = res }))
-    mockSearchGoogleBooks.mockReturnValue(new Promise((res) => { resolveGoogle = res }))
-    mockFetchOpenLibraryMetadata.mockReturnValue(new Promise((res) => { resolveOpenLib = res }))
+    mockSearchAudnexus.mockReturnValue(
+      new Promise(res => {
+        resolveAudnexus = res
+      })
+    )
+    mockSearchITunes.mockReturnValue(
+      new Promise(res => {
+        resolveITunes = res
+      })
+    )
+    mockSearchGoogleBooks.mockReturnValue(
+      new Promise(res => {
+        resolveGoogle = res
+      })
+    )
+    mockFetchOpenLibraryMetadata.mockReturnValue(
+      new Promise(res => {
+        resolveOpenLib = res
+      })
+    )
 
     const onResults = vi.fn()
     searchCovers({ title: 'Dune', author: 'Frank Herbert' }, 'audiobook', onResults)
@@ -217,13 +237,26 @@ describe('searchCovers', () => {
     let resolveAudnexus!: (v: MetadataSearchResult[]) => void
     let resolveITunes!: (v: MetadataSearchResult[]) => void
 
-    mockSearchAudnexus.mockReturnValue(new Promise((res) => { resolveAudnexus = res }))
-    mockSearchITunes.mockReturnValue(new Promise((res) => { resolveITunes = res }))
+    mockSearchAudnexus.mockReturnValue(
+      new Promise(res => {
+        resolveAudnexus = res
+      })
+    )
+    mockSearchITunes.mockReturnValue(
+      new Promise(res => {
+        resolveITunes = res
+      })
+    )
     mockSearchGoogleBooks.mockResolvedValue([GOOGLE_RESULT])
     mockFetchOpenLibraryMetadata.mockResolvedValue({})
 
     const onResults = vi.fn()
-    searchCovers({ title: 'Dune', author: 'Frank Herbert' }, 'audiobook', onResults, controller.signal)
+    searchCovers(
+      { title: 'Dune', author: 'Frank Herbert' },
+      'audiobook',
+      onResults,
+      controller.signal
+    )
 
     // Let Google Books and Open Library resolve first
     await vi.waitFor(() => expect(onResults).toHaveBeenCalledTimes(2))
@@ -236,7 +269,7 @@ describe('searchCovers', () => {
     resolveITunes([ITUNES_RESULT])
 
     // Give microtasks a chance to run
-    await new Promise((r) => setTimeout(r, 0))
+    await new Promise(r => setTimeout(r, 0))
 
     // onResults should still only have been called twice (Google + Open Library)
     expect(onResults).toHaveBeenCalledTimes(2)
@@ -256,9 +289,9 @@ describe('searchCovers', () => {
     // 3 providers succeed (Audnexus fails → empty callback), 4 calls total
     await vi.waitFor(() => expect(onResults).toHaveBeenCalledTimes(4))
 
-    const allResults = onResults.mock.calls.flatMap((call) => call[0] as MetadataSearchResult[])
-    expect(allResults.some((r) => r.provider === 'itunes')).toBe(true)
-    expect(allResults.some((r) => r.provider === 'google-books')).toBe(true)
+    const allResults = onResults.mock.calls.flatMap(call => call[0] as MetadataSearchResult[])
+    expect(allResults.some(r => r.provider === 'itunes')).toBe(true)
+    expect(allResults.some(r => r.provider === 'google-books')).toBe(true)
   })
 
   it('does not throw when all providers reject', async () => {
@@ -323,7 +356,7 @@ describe('searchCovers', () => {
 
     // Find the Open Library call
     const olCall = onResults.mock.calls.find(
-      (call) => (call[0] as MetadataSearchResult[])[0]?.provider === 'open-library'
+      call => (call[0] as MetadataSearchResult[])[0]?.provider === 'open-library'
     )
     expect(olCall).toBeDefined()
 
@@ -346,7 +379,7 @@ describe('searchCovers', () => {
     await vi.waitFor(() => expect(onResults).toHaveBeenCalledTimes(2))
 
     // Open Library call should deliver empty array
-    const olCall = onResults.mock.calls.find((call) => {
+    const olCall = onResults.mock.calls.find(call => {
       const results = call[0] as MetadataSearchResult[]
       return results.length === 0
     })
@@ -394,8 +427,8 @@ describe('searchCovers', () => {
 
     await vi.waitFor(() => expect(onResults).toHaveBeenCalledTimes(2))
 
-    const googleCall = onResults.mock.calls.find(
-      (call) => (call[0] as MetadataSearchResult[]).some((r) => r.provider === 'google-books')
+    const googleCall = onResults.mock.calls.find(call =>
+      (call[0] as MetadataSearchResult[]).some(r => r.provider === 'google-books')
     )
     expect(googleCall).toBeDefined()
     // Only the first occurrence of the duplicate ISBN should survive
@@ -428,8 +461,8 @@ describe('searchCovers', () => {
 
     await vi.waitFor(() => expect(onResults).toHaveBeenCalledTimes(4))
 
-    const audnexusCall = onResults.mock.calls.find(
-      (call) => (call[0] as MetadataSearchResult[]).some((r) => r.provider === 'audnexus')
+    const audnexusCall = onResults.mock.calls.find(call =>
+      (call[0] as MetadataSearchResult[]).some(r => r.provider === 'audnexus')
     )
     expect(audnexusCall).toBeDefined()
     expect(audnexusCall![0]).toHaveLength(1)
@@ -451,8 +484,8 @@ describe('searchCovers', () => {
 
     await vi.waitFor(() => expect(onResults).toHaveBeenCalledTimes(2))
 
-    const googleCall = onResults.mock.calls.find(
-      (call) => (call[0] as MetadataSearchResult[]).some((r) => r.provider === 'google-books')
+    const googleCall = onResults.mock.calls.find(call =>
+      (call[0] as MetadataSearchResult[]).some(r => r.provider === 'google-books')
     )
     expect(googleCall).toBeDefined()
     expect(googleCall![0]).toHaveLength(5)

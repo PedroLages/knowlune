@@ -1,0 +1,75 @@
+{
+  "run_id": "20260423-162910-7825f8ea",
+  "story": "E119-S09",
+  "verdict": "Ready with fixes",
+  "findings": [
+    {
+      "title": "Silent consent-write failure triggers immediate re-consent loop",
+      "severity": "P2",
+      "file": "src/ai/hooks/useProviderReconsent.ts",
+      "line": 108,
+      "confidence": 0.82,
+      "autofix_class": "safe_auto",
+      "owner": "review-fixer",
+      "requires_verification": false,
+      "pre_existing": false,
+      "suggested_fix": "When grantConsent fails, do not call options.onRetry(). Show an inline error state instead, or let the modal stay open with an error message."
+    },
+    {
+      "title": "E2E IndexedDB seed missing await on onsuccess — race condition",
+      "severity": "P2",
+      "file": "tests/e2e/compliance/provider-change.spec.ts",
+      "line": 64,
+      "confidence": 0.78,
+      "autofix_class": "safe_auto",
+      "owner": "review-fixer",
+      "requires_verification": false,
+      "pre_existing": false,
+      "suggested_fix": "Use the shared indexeddb-seed helpers or wrap the IDB write in a Promise and await it before navigating, consistent with test-patterns.md guidance."
+    },
+    {
+      "title": "_purpose destructured but unused in ProviderReconsentModal",
+      "severity": "P3",
+      "file": "src/app/components/compliance/ProviderReconsentModal.tsx",
+      "line": 62,
+      "confidence": 0.90,
+      "autofix_class": "safe_auto",
+      "owner": "review-fixer",
+      "requires_verification": false,
+      "pre_existing": false,
+      "suggested_fix": "Remove the _purpose parameter from destructuring or document why purpose is accepted in the interface but intentionally unused in the component body."
+    },
+    {
+      "title": "No test for grantConsent write failure path in useProviderReconsent",
+      "severity": "P2",
+      "file": "src/ai/hooks/__tests__/useProviderReconsent.test.ts",
+      "line": 1,
+      "confidence": 0.80,
+      "autofix_class": "safe_auto",
+      "owner": "review-fixer",
+      "requires_verification": false,
+      "pre_existing": false,
+      "suggested_fix": "Add a test: when grantConsent resolves { success: false }, verify that onRetry is NOT called and the modal remains closed."
+    },
+    {
+      "title": "providerMeta.ts parity with consent-inventory.md not enforced by any test",
+      "severity": "P2",
+      "file": "src/lib/compliance/__tests__/providerMeta.test.ts",
+      "line": 1,
+      "confidence": 0.75,
+      "autofix_class": "safe_auto",
+      "owner": "review-fixer",
+      "requires_verification": false,
+      "pre_existing": false,
+      "suggested_fix": "Add a parity test that parses the provider IDs from consent-inventory.md and asserts every one has an entry in PROVIDER_META (mirroring the consentParity.test.ts pattern)."
+    }
+  ],
+  "residual_risks": [
+    "embeddingPipeline.ts has isGranted guard but no isGrantedForProvider guard — plan noted this as required but it was deferred to implementation",
+    "Existing AI hooks (useChatQA, useTutor, useAISuggestions) have no ProviderReconsentError catch blocks — errors will propagate to generic error handlers"
+  ],
+  "testing_gaps": [
+    "No test for concurrent ProviderReconsentError handling (two AI calls, two errors)",
+    "No test verifying that embeddingPipeline correctly blocks on provider mismatch"
+  ]
+}

@@ -1,0 +1,28 @@
+{
+  "reviewer": "data-migrations",
+  "findings": [
+    {
+      "title": "Migration missing rollback script",
+      "severity": "P2",
+      "file": "supabase/migrations/20260429000001_pending_deletions.sql",
+      "line": 1,
+      "why_it_matters": "The existing pattern in this repo includes rollback scripts for every migration (e.g. supabase/migrations/rollback/20260426000001_notification_preferences_rollback.sql). Without a rollback, reverting the schema change after a bad deploy requires manual SQL in production.",
+      "autofix_class": "safe_auto",
+      "owner": "review-fixer",
+      "requires_verification": false,
+      "confidence": 0.90,
+      "suggested_fix": "Create supabase/migrations/rollback/20260429000001_pending_deletions_rollback.sql containing: `BEGIN; DROP TABLE IF EXISTS public.pending_deletions; COMMIT;`",
+      "evidence": [
+        "supabase/migrations/rollback/ directory contains rollback scripts for each migration",
+        "No rollback script exists for 20260429000001_pending_deletions.sql"
+      ],
+      "pre_existing": false
+    }
+  ],
+  "residual_risks": [
+    "pending_deletions has no TTL/expiry — relies on S11 for cleanup. If S11 is delayed, rows with deleted user emails accumulate indefinitely."
+  ],
+  "testing_gaps": [
+    "No migration test verifying RLS blocks authenticated users from reading pending_deletions"
+  ]
+}

@@ -56,7 +56,7 @@ type SupabaseRow = Record<string, unknown>
 async function fetchTableRows(
   client: SupabaseClient,
   dexieTable: string,
-  userId: string,
+  userId: string
 ): Promise<SupabaseRow[]> {
   const entry = tableRegistry.find(e => e.dexieTable === dexieTable) as
     | TableRegistryEntry
@@ -65,22 +65,14 @@ async function fetchTableRows(
     console.error(`[hydrateP3P4] Unknown dexieTable: ${dexieTable}`)
     return []
   }
-  const { data, error } = await client
-    .from(entry.supabaseTable)
-    .select('*')
-    .eq('user_id', userId)
+  const { data, error } = await client.from(entry.supabaseTable).select('*').eq('user_id', userId)
 
   if (error) {
-    console.error(
-      `[hydrateP3P4] Supabase query failed for ${entry.supabaseTable}:`,
-      error,
-    )
+    console.error(`[hydrateP3P4] Supabase query failed for ${entry.supabaseTable}:`, error)
     return []
   }
 
-  return (data ?? []).map(row =>
-    toCamelCase(entry, row as Record<string, unknown>),
-  )
+  return (data ?? []).map(row => toCamelCase(entry, row as Record<string, unknown>))
 }
 
 /**
@@ -113,9 +105,7 @@ export async function hydrateP3P4FromSupabase(userId: string | null | undefined)
     })(),
     (async () => {
       const rows = await fetchTableRows(client, 'studySchedules', userId)
-      await useStudyScheduleStore
-        .getState()
-        .hydrateFromRemote(rows as unknown as StudySchedule[])
+      await useStudyScheduleStore.getState().hydrateFromRemote(rows as unknown as StudySchedule[])
     })(),
     (async () => {
       const rows = await fetchTableRows(client, 'challenges', userId)

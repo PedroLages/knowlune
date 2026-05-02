@@ -7,7 +7,7 @@
  * - AC-3: TOC timeout falls back to empty state
  */
 import { describe, it, expect, vi } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, within } from '@testing-library/react'
 import { TableOfContents } from '../TableOfContents'
 import type { NavItem } from 'epubjs'
 import type { Rendition } from 'epubjs'
@@ -189,6 +189,14 @@ describe('TableOfContents', () => {
       expect(mockOnClose).toHaveBeenCalledTimes(1)
     })
 
+    it('renders a single close control (header only; no duplicate sheet default X)', () => {
+      render(<TableOfContents {...defaultProps} isLoading={false} toc={mockToc} />)
+
+      const panel = screen.getByTestId('toc-panel')
+      const closeButtons = within(panel).getAllByRole('button', { name: /close/i })
+      expect(closeButtons).toHaveLength(1)
+    })
+
     it('renders panel with correct ARIA attributes', () => {
       render(<TableOfContents {...defaultProps} isLoading={false} toc={mockToc} />)
 
@@ -201,6 +209,17 @@ describe('TableOfContents', () => {
       render(<TableOfContents {...defaultProps} isLoading={false} toc={mockToc} />)
 
       expect(screen.getByText('Table of Contents')).toBeInTheDocument()
+    })
+
+    it('renders TOC sheet above full-screen reader (z-[130] on panel and overlay)', () => {
+      render(<TableOfContents {...defaultProps} isLoading={false} toc={mockToc} />)
+
+      const panel = screen.getByTestId('toc-panel')
+      expect(panel).toHaveClass('z-[130]')
+
+      const overlay = document.querySelector('[data-slot="sheet-overlay"]')
+      expect(overlay).toBeTruthy()
+      expect(overlay).toHaveClass('z-[130]')
     })
   })
 })

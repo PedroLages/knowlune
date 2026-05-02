@@ -110,7 +110,13 @@ describe('E93-S08 sync wiring — chatConversations', () => {
     const store = useTutorStore.getState()
     store.setLessonContext(TEST_COURSE_ID, TEST_VIDEO_ID)
     // Add a message so persistConversation doesn't early-return on empty messages
-    store.addMessage({ id: 'msg-1', role: 'user', content: 'Hello', timestamp: Date.now(), mode: 'socratic' })
+    store.addMessage({
+      id: 'msg-1',
+      role: 'user',
+      content: 'Hello',
+      timestamp: Date.now(),
+      mode: 'socratic',
+    })
 
     await useTutorStore.getState().persistConversation()
 
@@ -124,7 +130,13 @@ describe('E93-S08 sync wiring — chatConversations', () => {
   it('persistConversation (update path, existing conversation) authenticated → syncQueue has put entry', async () => {
     const store = useTutorStore.getState()
     store.setLessonContext(TEST_COURSE_ID, TEST_VIDEO_ID)
-    store.addMessage({ id: 'msg-1', role: 'user', content: 'Hello', timestamp: Date.now(), mode: 'socratic' })
+    store.addMessage({
+      id: 'msg-1',
+      role: 'user',
+      content: 'Hello',
+      timestamp: Date.now(),
+      mode: 'socratic',
+    })
 
     // First persist creates the conversation (add path)
     await useTutorStore.getState().persistConversation()
@@ -133,7 +145,13 @@ describe('E93-S08 sync wiring — chatConversations', () => {
     await db.syncQueue.clear()
 
     // Add another message so update path has something new
-    useTutorStore.getState().addMessage({ id: 'msg-2', role: 'assistant', content: 'Hi there', timestamp: Date.now(), mode: 'socratic' })
+    useTutorStore.getState().addMessage({
+      id: 'msg-2',
+      role: 'assistant',
+      content: 'Hi there',
+      timestamp: Date.now(),
+      mode: 'socratic',
+    })
 
     // Second persist — conversationId is now set, so this is the update path
     await useTutorStore.getState().persistConversation()
@@ -165,7 +183,13 @@ describe('E93-S08 sync wiring — chatConversations', () => {
   it('persistConversation — early return when _courseId or _videoId is null → no syncQueue entries', async () => {
     const store = useTutorStore.getState()
     // Do NOT call setLessonContext — _courseId and _videoId remain null
-    store.addMessage({ id: 'msg-1', role: 'user', content: 'Hello', timestamp: Date.now(), mode: 'socratic' })
+    store.addMessage({
+      id: 'msg-1',
+      role: 'user',
+      content: 'Hello',
+      timestamp: Date.now(),
+      mode: 'socratic',
+    })
 
     await useTutorStore.getState().persistConversation()
 
@@ -176,7 +200,13 @@ describe('E93-S08 sync wiring — chatConversations', () => {
   it('persistConversation update path — get returns undefined → early return, no syncQueue entry', async () => {
     const store = useTutorStore.getState()
     store.setLessonContext(TEST_COURSE_ID, TEST_VIDEO_ID)
-    store.addMessage({ id: 'msg-1', role: 'user', content: 'Hello', timestamp: Date.now(), mode: 'socratic' })
+    store.addMessage({
+      id: 'msg-1',
+      role: 'user',
+      content: 'Hello',
+      timestamp: Date.now(),
+      mode: 'socratic',
+    })
 
     // Set a conversationId that does NOT exist in Dexie
     useTutorStore.setState({ conversationId: 'nonexistent-id' })
@@ -198,7 +228,13 @@ describe('E93-S08 sync wiring — chatConversations unauthenticated', () => {
 
     const store = useTutorStore.getState()
     store.setLessonContext(TEST_COURSE_ID, TEST_VIDEO_ID)
-    store.addMessage({ id: 'msg-1', role: 'user', content: 'Hello', timestamp: Date.now(), mode: 'socratic' })
+    store.addMessage({
+      id: 'msg-1',
+      role: 'user',
+      content: 'Hello',
+      timestamp: Date.now(),
+      mode: 'socratic',
+    })
 
     await useTutorStore.getState().persistConversation()
 

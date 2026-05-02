@@ -15,4 +15,4 @@ export type {
 export { LibraryShelfRow } from './LibraryShelfRow'
 export type { LibraryShelfRowProps } from './LibraryShelfRow'
 
-export { LibraryShelves } from './LibraryShelves'
+export { LibraryContinueShelves, LibraryDiscoveryShelves } from './LibraryShelves'

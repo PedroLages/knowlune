@@ -54,7 +54,7 @@ export async function searchAudnexus(params: {
     if (asins.length === 0) return []
 
     // Step 2: enrich each ASIN with Audnexus metadata (up to 5).
-    const results = await Promise.all(asins.slice(0, 5).map((asin) => fetchAudnexusMetadata(asin)))
+    const results = await Promise.all(asins.slice(0, 5).map(asin => fetchAudnexusMetadata(asin)))
 
     return results.filter(Boolean) as MetadataSearchResult[]
   } catch {
@@ -80,8 +80,8 @@ async function searchAudibleCatalog(title: string, author: string): Promise<stri
     if (!response.ok) return []
 
     const data = await response.json()
-    const products = Array.isArray(data?.products) ? data.products as AudibleProduct[] : []
-    return products.map((p) => p.asin).filter(Boolean)
+    const products = Array.isArray(data?.products) ? (data.products as AudibleProduct[]) : []
+    return products.map(p => p.asin).filter(Boolean)
   } catch {
     // silent-catch-ok: Audible catalog search is best-effort
     return []
@@ -131,8 +131,7 @@ interface AudnexusBook {
 // ── Mapper ────────────────────────────────────────────────────────────────────
 
 function mapAudnexusBook(book: AudnexusBook): MetadataSearchResult {
-  const genres =
-    book.genres && book.genres.length > 0 ? book.genres.map((g) => g.name) : undefined
+  const genres = book.genres && book.genres.length > 0 ? book.genres.map(g => g.name) : undefined
 
   return {
     provider: 'audnexus',

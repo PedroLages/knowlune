@@ -5,6 +5,7 @@
  */
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { ReaderHeader } from '../ReaderHeader'
 import type { ReaderTheme } from '@/stores/useReaderStore'
 
@@ -15,7 +16,6 @@ vi.mock('react-router', () => ({
   useNavigate: () => mockNavigate,
 }))
 
-// Mock useAppColorScheme — default to 'professional'
 vi.mock('../readerThemeConfig', async () => {
   const actual =
     await vi.importActual<typeof import('../readerThemeConfig')>('../readerThemeConfig')
@@ -28,7 +28,7 @@ vi.mock('../readerThemeConfig', async () => {
 const defaultProps = {
   title: 'Test Book',
   currentChapter: 'Chapter 1',
-  theme: 'light' as ReaderTheme,
+  theme: 'white' as ReaderTheme,
   visible: true,
   onTocOpen: vi.fn(),
   onSettingsOpen: vi.fn(),
@@ -99,11 +99,11 @@ describe('ReaderHeader', () => {
   })
 
   describe('Theme application', () => {
-    it('applies light theme colors (professional)', () => {
-      render(<ReaderHeader {...defaultProps} theme="light" />)
+    it('applies white theme colors', () => {
+      render(<ReaderHeader {...defaultProps} theme="white" />)
 
       const header = screen.getByTestId('reader-header')
-      expect(header).toHaveClass('bg-[#faf5ee]/60', 'text-[#1c1d2b]')
+      expect(header).toHaveClass('bg-[#ffffff]/60', 'text-[#1c1d2b]')
     })
 
     it('applies sepia theme colors', () => {
@@ -117,7 +117,7 @@ describe('ReaderHeader', () => {
       render(<ReaderHeader {...defaultProps} theme="dark" />)
 
       const header = screen.getByTestId('reader-header')
-      expect(header).toHaveClass('bg-[#1a1b26]/60', 'text-[#e8e9f0]')
+      expect(header).toHaveClass('bg-[#383a56]/60', 'text-[#f7f7fb]')
     })
   })
 
@@ -174,6 +174,64 @@ describe('ReaderHeader', () => {
       const menuButton = screen.getByTestId('reader-menu-button')
       expect(menuButton).toBeInTheDocument()
       expect(menuButton).toHaveAttribute('aria-label', 'Reader menu')
+    })
+
+    it('renders reader menu content above the full-screen reader layer', async () => {
+      const user = userEvent.setup()
+      render(<ReaderHeader {...defaultProps} />)
+
+      await user.click(screen.getByTestId('reader-menu-button'))
+
+      const highlightsItem = screen.getByTestId('reader-menu-highlights')
+      const menuContent = highlightsItem.closest('[data-slot="dropdown-menu-content"]')
+      expect(menuContent).toHaveClass('z-[130]')
+      expect(highlightsItem).toHaveTextContent('Highlights & Notes')
+    })
+
+    it('calls menu handlers when items are clicked', async () => {
+      const user = userEvent.setup()
+      const onTocOpen = vi.fn()
+      const onSettingsOpen = vi.fn()
+      const onHighlightsOpen = vi.fn()
+      render(
+        <ReaderHeader
+          {...defaultProps}
+          onTocOpen={onTocOpen}
+          onSettingsOpen={onSettingsOpen}
+          onHighlightsOpen={onHighlightsOpen}
+        />
+      )
+
+      await user.click(screen.getByTestId('reader-menu-button'))
+      await user.click(screen.getByTestId('reader-menu-toc'))
+      await user.click(screen.getByTestId('reader-menu-button'))
+      await user.click(screen.getByTestId('reader-menu-settings'))
+      await user.click(screen.getByTestId('reader-menu-button'))
+      await user.click(screen.getByTestId('reader-menu-highlights'))
+
+      expect(onTocOpen).toHaveBeenCalledTimes(1)
+      expect(onSettingsOpen).toHaveBeenCalledTimes(1)
+      expect(onHighlightsOpen).toHaveBeenCalledTimes(1)
+    })
+
+    it('calls onReadAloud when Read Aloud is shown and clicked', async () => {
+      const user = userEvent.setup()
+      const onReadAloud = vi.fn()
+      render(<ReaderHeader {...defaultProps} onReadAloud={onReadAloud} />)
+
+      await user.click(screen.getByTestId('reader-menu-button'))
+      await user.click(screen.getByTestId('reader-menu-read-aloud'))
+
+      expect(onReadAloud).toHaveBeenCalledTimes(1)
+    })
+
+    it('does not render unwired About Book menu item', async () => {
+      const user = userEvent.setup()
+      render(<ReaderHeader {...defaultProps} />)
+
+      await user.click(screen.getByTestId('reader-menu-button'))
+
+      expect(screen.queryByText('About Book')).not.toBeInTheDocument()
     })
   })
 

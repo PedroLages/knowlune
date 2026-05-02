@@ -160,7 +160,11 @@ describe('buildTutorSystemPrompt', () => {
     })
 
     it('does not add learner section when learnerProfile is empty (default)', () => {
-      const prompt = buildTutorSystemPrompt({ context: makeContext(), mode: 'socratic', tokenBudget: 2048 })
+      const prompt = buildTutorSystemPrompt({
+        context: makeContext(),
+        mode: 'socratic',
+        tokenBudget: 2048,
+      })
 
       expect(prompt).not.toContain('Learner profile:')
     })

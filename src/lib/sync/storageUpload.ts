@@ -40,17 +40,19 @@ export async function uploadBlob(
   bucket: string,
   path: string,
   blob: Blob,
-  options?: UploadBlobOptions,
+  options?: UploadBlobOptions
 ): Promise<UploadBlobResult> {
   // Guard: Supabase singleton null when env vars missing.
   if (!supabase) {
-    throw new Error('[storageUpload] Supabase client is not initialised — check VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.')
+    throw new Error(
+      '[storageUpload] Supabase client is not initialised — check VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.'
+    )
   }
 
   // Size enforcement — checked before any network call (exclusive: > not >=).
   if (options?.maxSizeBytes !== undefined && blob.size > options.maxSizeBytes) {
     throw new RangeError(
-      `[storageUpload] Blob size ${blob.size} bytes exceeds limit of ${options.maxSizeBytes} bytes for bucket "${bucket}" at path "${path}".`,
+      `[storageUpload] Blob size ${blob.size} bytes exceeds limit of ${options.maxSizeBytes} bytes for bucket "${bucket}" at path "${path}".`
     )
   }
 

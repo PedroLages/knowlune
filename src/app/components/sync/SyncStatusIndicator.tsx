@@ -11,6 +11,7 @@
  */
 
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { useLiveRegion } from '@/app/hooks/useLiveRegion'
 import {
   CheckCircle2,
   Cloud,
@@ -98,15 +99,15 @@ function usePrefersReducedMotion(): boolean {
 }
 
 export function SyncStatusIndicator(): React.ReactElement {
-  const status = useSyncStatusStore((s) => s.status)
-  const pendingCount = useSyncStatusStore((s) => s.pendingCount)
-  const lastSyncAt = useSyncStatusStore((s) => s.lastSyncAt)
-  const lastError = useSyncStatusStore((s) => s.lastError)
+  const status = useSyncStatusStore(s => s.status)
+  const pendingCount = useSyncStatusStore(s => s.pendingCount)
+  const lastSyncAt = useSyncStatusStore(s => s.lastSyncAt)
+  const lastError = useSyncStatusStore(s => s.lastError)
 
   const [open, setOpen] = useState(false)
   const reducedMotion = usePrefersReducedMotion()
   const prevStatusRef = useRef<SyncStatus>(status)
-  const [liveMessage, setLiveMessage] = useState('')
+  const { announce } = useLiveRegion()
 
   const config = STATUS_CONFIG[status] ?? STATUS_CONFIG.synced
 
@@ -121,18 +122,25 @@ export function SyncStatusIndicator(): React.ReactElement {
     return `Sync status: ${config.label}.${countSuffix}`
   }, [config.label, pendingCount])
 
-  // Announce only on transitions INTO error or offline (R4 chatty-SR mitigation).
+  // Announce on transitions INTO error/offline (R4 chatty-SR mitigation) and
+  // on recovery transitions (error → synced / error → syncing) — KI-E97-S01-L01.
   useEffect(() => {
     const prev = prevStatusRef.current
-    if (prev !== status && (status === 'error' || status === 'offline')) {
-      setLiveMessage(
-        status === 'error'
-          ? `Sync error: ${lastError ?? 'Sync failed'}.`
-          : "You're offline. Changes will sync when you reconnect."
-      )
+    if (prev !== status) {
+      if (status === 'error') {
+        announce(`Sync error: ${lastError ?? 'Sync failed'}.`)
+      } else if (status === 'offline') {
+        announce("You're offline. Changes will sync when you reconnect.")
+      } else if (prev === 'error' && status === 'synced') {
+        announce('Sync recovered. All changes saved.')
+      } else if (prev === 'error' && status === 'syncing') {
+        announce('Retrying sync\u2026')
+      }
+      // synced → syncing (normal 30s nudge) and syncing → synced (normal completion)
+      // remain intentionally silent to avoid chatty announcements.
     }
     prevStatusRef.current = status
-  }, [status, lastError])
+  }, [status, lastError, announce])
 
   // Refresh pending count when the Popover opens so the displayed number is fresh.
   useEffect(() => {
@@ -176,19 +184,16 @@ export function SyncStatusIndicator(): React.ReactElement {
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      {/* Polite live region: announces only on transitions into error/offline.
-          Placed OUTSIDE the button so it doesn't override the native button
-          role or produce chatty SR announcements on every 30s nudge cycle. */}
-      <span className="sr-only" aria-live="polite" role="status">
-        {liveMessage}
-      </span>
+      {/* Live region announcements now route through useLiveRegion → SyncUXShell's
+          canonical span (role="status"). The inline span has been removed to
+          eliminate duplicate live regions (refactor/consolidate-aria-live-useliveregion). */}
       <PopoverTrigger asChild>
         <button
           type="button"
           aria-label={ariaLabel}
           data-testid="sync-status-indicator"
           data-sync-status={status}
-          className="relative inline-flex items-center justify-center size-11 min-h-[44px] min-w-[44px] rounded-md hover:bg-muted/50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer"
+          className="relative inline-flex items-center justify-center size-11 min-h-[44px] min-w-[44px] rounded-md hover:bg-muted/50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring cursor-pointer"
         >
           <TriggerIcon
             className={`size-5 ${config.colorClass} ${

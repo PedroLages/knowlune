@@ -1,13 +1,44 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { renderHook, waitFor } from '@testing-library/react'
+import { renderHook, waitFor, act } from '@testing-library/react'
 import { useChatQA } from '../useChatQA'
 import { RAGCoordinator } from '@/ai/rag/ragCoordinator'
 import { PromptBuilder } from '@/ai/rag/promptBuilder'
 import { CitationExtractor } from '@/ai/rag/citationExtractor'
-import { getLLMClient } from '@/ai/llm/factory'
+import { assertAIFeatureConsent, getLLMClient } from '@/ai/llm/factory'
 import { LLMError } from '@/ai/llm/types'
 import type { LLMClient } from '@/ai/llm/client'
 import type { RetrievedContext } from '@/ai/rag/types'
+import { ConsentError } from '@/ai/lib/ConsentError'
+import { ProviderReconsentError } from '@/ai/lib/ProviderReconsentError'
+import { CONSENT_PURPOSES } from '@/lib/compliance/consentService'
+import { grantConsent } from '@/lib/compliance/consentEffects'
+
+vi.mock('@/stores/useAuthStore', () => ({
+  useAuthStore: (selector: (s: { user?: { id: string } }) => unknown) =>
+    selector({ user: { id: 'user-1' } }),
+}))
+
+vi.mock('@/lib/compliance/consentEffects', () => ({
+  grantConsent: vi.fn().mockResolvedValue({ success: true }),
+}))
+
+vi.mock('@/lib/compliance/noticeAck', () => ({
+  writeNoticeAck: vi.fn().mockResolvedValue(undefined),
+}))
+
+vi.mock('@/lib/compliance/noticeVersion', () => ({
+  CURRENT_NOTICE_VERSION: '2026-04-23.1',
+}))
+
+vi.mock('@/lib/compliance/consentService', async () => {
+  const actual = await vi.importActual<typeof import('@/lib/compliance/consentService')>(
+    '@/lib/compliance/consentService',
+  )
+  return {
+    ...actual,
+    listForUser: vi.fn().mockResolvedValue([]),
+  }
+})
 
 // Mock dependencies
 vi.mock('@/ai/rag/ragCoordinator')
@@ -77,6 +108,10 @@ describe('useChatQA', () => {
     vi.mocked(PromptBuilder.prototype.buildMessages).mockImplementation(mockBuildMessages as any)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     vi.mocked(CitationExtractor.prototype.extract).mockImplementation(mockExtract as any)
+    vi.mocked(assertAIFeatureConsent).mockResolvedValue({
+      provider: 'openai',
+      model: 'gpt-4o-mini',
+    })
     vi.mocked(getLLMClient).mockResolvedValue({
       streamCompletion: mockStreamCompletion,
       getProviderId: () => 'openai',
@@ -85,6 +120,7 @@ describe('useChatQA', () => {
 
   afterEach(() => {
     vi.clearAllMocks()
+    vi.mocked(grantConsent).mockResolvedValue({ success: true })
   })
 
   describe('sendMessage', () => {
@@ -97,6 +133,60 @@ describe('useChatQA', () => {
         expect(result.current.messages).toHaveLength(2) // user + AI
         expect(result.current.messages[0].role).toBe('user')
         expect(result.current.messages[0].content).toBe('What are React hooks?')
+        expect(result.current.messages[1].role).toBe('assistant')
+        expect(result.current.messages[1].content).toBe('React hooks are useful')
+      })
+      expect(getLLMClient).toHaveBeenCalledWith('noteQA', {
+        resolved: { provider: 'openai', model: 'gpt-4o-mini' },
+      })
+    })
+
+    it('checks AI consent before retrieving note context', async () => {
+      vi.mocked(assertAIFeatureConsent).mockRejectedValue(new ConsentError(CONSENT_PURPOSES.AI_TUTOR))
+
+      const { result } = renderHook(() => useChatQA())
+
+      await result.current.sendMessage('What are React hooks?')
+
+      await waitFor(() => {
+        expect(result.current.error).toContain('AI Q&A requires your consent')
+      })
+      expect(mockRetrieveContext).not.toHaveBeenCalled()
+      expect(getLLMClient).not.toHaveBeenCalled()
+    })
+
+    it('opens provider re-consent on ProviderReconsentError, writes provider_id on Accept, and retries', async () => {
+      vi.mocked(assertAIFeatureConsent)
+        .mockRejectedValueOnce(
+          new ProviderReconsentError(CONSENT_PURPOSES.AI_TUTOR, 'gemini'),
+        )
+        .mockResolvedValue({
+          provider: 'gemini',
+          model: 'gemini-2.0-flash',
+        })
+
+      const { result } = renderHook(() => useChatQA())
+
+      await result.current.sendMessage('What are React hooks?')
+
+      await waitFor(() => {
+        expect(result.current.providerReconsentModalProps.open).toBe(true)
+        expect(result.current.providerReconsentModalProps.providerId).toBe('gemini')
+      })
+      expect(result.current.error).toBeNull()
+      expect(result.current.messages).toHaveLength(1)
+
+      await act(async () => {
+        await result.current.providerReconsentModalProps.onAccept()
+      })
+
+      expect(grantConsent).toHaveBeenCalledWith('user-1', CONSENT_PURPOSES.AI_TUTOR, {
+        provider_id: 'gemini',
+      })
+
+      await waitFor(() => {
+        expect(result.current.providerReconsentModalProps.open).toBe(false)
+        expect(result.current.messages).toHaveLength(2)
         expect(result.current.messages[1].role).toBe('assistant')
         expect(result.current.messages[1].content).toBe('React hooks are useful')
       })

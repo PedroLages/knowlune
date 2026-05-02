@@ -10,7 +10,9 @@ import { renderHook } from '@testing-library/react'
 function wrapper(openFn: (scope?: string) => void) {
   return function Provider({ children }: { children: React.ReactNode }) {
     return (
-      <PaletteControllerProvider value={{ open: openFn as ReturnType<typeof usePaletteController>['open'] }}>
+      <PaletteControllerProvider
+        value={{ open: openFn as ReturnType<typeof usePaletteController>['open'] }}
+      >
         {children}
       </PaletteControllerProvider>
     )

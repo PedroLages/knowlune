@@ -17,12 +17,22 @@ import { SYNCABLE_TABLES } from './backfill'
  * @returns `true` if unlinked records exist across any syncable table,
  *          `false` otherwise (including when all tables are empty).
  */
-export async function hasUnlinkedRecords(newUserId: string): Promise<boolean> {
+/**
+ * @param newUserId      The userId being signed in.
+ * @param guestSessionId When provided, only rows from this specific guest session
+ *                       are counted as unlinked. Prevents zombie-session orphan rows
+ *                       (from prior anonymous sessions on the same device) from
+ *                       incorrectly triggering the LinkDataDialog.
+ */
+export async function hasUnlinkedRecords(
+  newUserId: string,
+  guestSessionId?: string | null
+): Promise<boolean> {
   // P0 first, then all others in SYNCABLE_TABLES order.
   // Checking frequently-populated tables first maximises the chance of an
   // early flag-set, skipping subsequent async work.
   const P0_TABLES = ['contentProgress', 'studySessions', 'progress']
-  const remaining = SYNCABLE_TABLES.filter((t) => !P0_TABLES.includes(t))
+  const remaining = SYNCABLE_TABLES.filter(t => !P0_TABLES.includes(t))
   const orderedTables = [...P0_TABLES, ...remaining]
 
   // Shared flag: set to true as soon as any table has unlinked records.
@@ -30,16 +40,19 @@ export async function hasUnlinkedRecords(newUserId: string): Promise<boolean> {
   let found = false
 
   await Promise.all(
-    orderedTables.map(async (tableName) => {
+    orderedTables.map(async tableName => {
       // Skip remaining async work once we know the answer.
       if (found) return
       try {
         const count = await db
           .table(tableName)
-          .filter(
-            (r: Record<string, unknown>) =>
-              r.userId === null || r.userId === undefined || r.userId !== newUserId,
-          )
+          .filter((r: Record<string, unknown>) => {
+            if (guestSessionId) {
+              // Guest session: only count rows from this specific guest session
+              return r.userId === null && r.guestSessionId === guestSessionId
+            }
+            return r.userId === null || r.userId === undefined || r.userId !== newUserId
+          })
           .count()
         if (count > 0) {
           found = true
@@ -50,7 +63,7 @@ export async function hasUnlinkedRecords(newUserId: string): Promise<boolean> {
         // that creates it may not have run yet on this device.
         console.warn(`[hasUnlinkedRecords] Table "${tableName}" check failed:`, err)
       }
-    }),
+    })
   )
 
   return found

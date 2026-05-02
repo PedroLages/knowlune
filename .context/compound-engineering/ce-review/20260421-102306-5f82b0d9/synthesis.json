@@ -1,0 +1,124 @@
+{
+  "runId": "20260421-102306-5f82b0d9",
+  "scope": "feature/post-e97-cleanup-test-gaps-quality vs e5d9b913",
+  "plan": "docs/plans/2026-04-21-001-fix-post-e97-cleanup-plan.md",
+  "mode": "headless",
+  "verdict": "Ready with fixes (none blocking)",
+  "summary": {
+    "blockers": 0,
+    "high": 0,
+    "medium": 1,
+    "low": 3,
+    "nit": 2
+  },
+  "requirements_trace": {
+    "R1": "met (Unit 1 — CredentialSetupBanner.test.tsx adds 3 transition tests)",
+    "R2": "met (Unit 2 — both hard-waits replaced with waitForFunction/expect.toBeVisible)",
+    "R3": "met (Unit 3 — three edge-flow tests A/B/C added)",
+    "R4": "met (Unit 4 — internalPasswordRef removed)",
+    "R5": "met (Unit 5 — role={showLabel ? undefined : 'img'})",
+    "R6": "met (Unit 6 — user?.id added to deps with justification comment)",
+    "R7": "met (Unit 7 — onCloseRef latch + deps lint exception)",
+    "R8": "met (Unit 8 — watchdogMs?: number prop with ?? default)",
+    "R9": "pending (no-regression sweep not verified in this review)"
+  },
+  "findings": [
+    {
+      "id": "F1",
+      "severity": "P2",
+      "autofixClass": "manual",
+      "owner": "downstream-resolver",
+      "reviewer": "testing",
+      "confidence": 0.72,
+      "file": "tests/e2e/story-e97-s05-credential-sync-ux.spec.ts:80-84",
+      "title": "Post-hydration proxy via sync-status-indicator is indirect — does not prove credential-banner evaluation completed in the same tick",
+      "why": "The replacement for waitForTimeout(500) waits for sync-status-indicator visibility as a hydration signal. This is an indirect proxy: the indicator rendering only proves the header shell mounted, not that useMissingCredentials has finished its async evaluation. Under a slow-hook scenario the banner could still materialize after the assertion window, producing a false-negative 'absent' assertion. The plan (R2) accepts this as 'deterministic or justified', and a justification comment is present, so this is not blocking.",
+      "suggestedFix": "Consider waiting directly on a banner-evaluation signal (e.g., a data-testid='credential-banner-evaluated' marker set after the hook settles) or increase to a scoped expect.poll against the banner locator with explicit timeout.",
+      "requires_verification": false,
+      "pre_existing": false
+    },
+    {
+      "id": "F2",
+      "severity": "P3",
+      "autofixClass": "advisory",
+      "owner": "human",
+      "reviewer": "maintainability",
+      "confidence": 0.80,
+      "file": "src/app/components/sync/NewDeviceDownloadOverlay.tsx:144-161",
+      "title": "Auto-close effect intentionally omits onClose from deps — eslint-react-hooks/exhaustive-deps may flag without a disable comment",
+      "why": "The effect body uses onCloseRef.current() while dependencies are [open, storeStatus, progress.done, progress.total, progress.processed]. There is a comment explaining why onClose is omitted, but no // eslint-disable-next-line react-hooks/exhaustive-deps directive. If that lint rule is enabled at error severity this will break CI. Confirmed the onCloseRef latch pattern is correct; this is purely a lint hygiene concern.",
+      "suggestedFix": "Add `// eslint-disable-next-line react-hooks/exhaustive-deps` immediately above the closing `}, [open, storeStatus, progress.done, progress.total, progress.processed])` line, or verify the project's eslint config does not enforce the rule.",
+      "requires_verification": true,
+      "pre_existing": false
+    },
+    {
+      "id": "F3",
+      "severity": "P3",
+      "autofixClass": "advisory",
+      "owner": "human",
+      "reviewer": "correctness",
+      "confidence": 0.65,
+      "file": "src/app/components/sync/CredentialSyncStatusBadge.tsx:99-104",
+      "title": "Wrapper remains focusable (tabIndex=0) after role removal — SR may announce as generic",
+      "why": "With showLabel=true the wrapper span drops role='img' but retains tabIndex={0}. Screen readers will announce the focusable span using the visible text label (correct), but some ATs may announce it as a generic focusable group rather than an image/status. aria-label is still present as fallback. This is consistent with R5's intent ('drops redundant role when labeled') but there's a minor semantic question about whether the tabIndex=0 makes sense on a status indicator at all.",
+      "suggestedFix": "Consider whether the badge should be focusable when it is purely decorative status. If keyboard users need to reach the Tooltip, keep tabIndex; otherwise drop it when showLabel=true.",
+      "requires_verification": false,
+      "pre_existing": true
+    },
+    {
+      "id": "F4",
+      "severity": "P3",
+      "autofixClass": "advisory",
+      "owner": "human",
+      "reviewer": "testing",
+      "confidence": 0.70,
+      "file": "src/app/components/sync/__tests__/NewDeviceDownloadOverlay.test.tsx:307-322",
+      "title": "watchdogMs={50} real-timer test has mild flakiness risk under CI load",
+      "why": "The test uses real timers with watchdogMs=50 and waitFor timeout=500ms. Under heavy CI load or when the render path does any microtask work, the 10x margin may occasionally compress. Low probability but non-zero. The fake-timer tests (watchdogMs={0} and default) already cover the ?? vs || regression; the real-timer test is somewhat redundant.",
+      "suggestedFix": "Either (a) drop the real-timer 50ms test since fake-timer coverage suffices, or (b) bump waitFor timeout to 2000ms for CI headroom.",
+      "requires_verification": false,
+      "pre_existing": false
+    },
+    {
+      "id": "F5",
+      "severity": "P3",
+      "autofixClass": "advisory",
+      "owner": "human",
+      "reviewer": "testing",
+      "confidence": 0.60,
+      "file": "tests/e2e/story-e97-s05-credential-sync-ux.spec.ts:171-193",
+      "title": "Flow B popover test branches on banner presence — effectively a conditional no-op when banner is absent",
+      "why": "Flow B's assertion body is inside `if (bannerCount > 0)`. In practice the test environment's seeded missing-credentials state determines which branch runs; if the test always hits the else-branch it exercises only the banner-absence assertion, never the popover content itself. The plan's R3-(b) intent ('Why? popover content rendered') is only validated in the if-branch.",
+      "suggestedFix": "Either seed a missing-credential entry explicitly in beforeEach (so the if-branch always runs), or split into two tests gated on explicit state.",
+      "requires_verification": false,
+      "pre_existing": false
+    },
+    {
+      "id": "F6",
+      "severity": "P2",
+      "autofixClass": "manual",
+      "owner": "downstream-resolver",
+      "reviewer": "correctness",
+      "confidence": 0.66,
+      "file": "src/app/components/settings/sections/SyncSection.tsx:217-222",
+      "title": "Adding user?.id to deps churns handleSyncNow on any user-object re-reference if selector isn't shallow-stable",
+      "why": "The comment claims `user?.id` is added because 'user' itself would churn on every render due to the selector returning a new reference. However, Zustand's default selector behavior returns the same reference for primitive-valued selectors, and for object selectors uses Object.is. If the store actually returns a new user object each render (e.g., via `s => ({ ...s.user })`), then `user?.id` stays stable because id is a primitive. This is fine. The concern would only arise if some mutation path replaces the user object with a same-id-but-new-reference, which would NOT trigger the dep change for `user?.id`. So the optimization is correct, but the comment's reasoning could mislead future readers.",
+      "suggestedFix": "No code change required. Optionally refine the comment to say 'user?.id is a primitive and stable across selector re-references' rather than implying 'user' is inherently unstable.",
+      "requires_verification": false,
+      "pre_existing": false
+    }
+  ],
+  "pre_existing": [
+    {
+      "id": "F3",
+      "note": "tabIndex=0 on CredentialSyncStatusBadge wrapper pre-dates this PR"
+    }
+  ],
+  "coverage": {
+    "reviewers_run": ["correctness", "testing", "maintainability", "security", "project-standards"],
+    "reviewers_skipped": ["api-contract (no API/type signature changes)", "data-migrations (no schema)", "reliability (no retry/timeout changes beyond watchdog prop exposure)", "performance (no perf-sensitive paths)", "adversarial (diff is cleanup, not behavior-changing)"],
+    "untracked_excluded": [".context/compound-engineering/ce-runs/2026-04-21-001-fix-post-e97-cleanup-plan-2026-04-21.md"],
+    "suppressed_count": 0
+  },
+  "applied_fixes": []
+}

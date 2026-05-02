@@ -572,7 +572,6 @@ The GitHub Actions workflow (`.github/workflows/ci.yml`) automatically runs:
 ## Further Reading
 
 - [CI/CD Pipeline Documentation](README.md#cicd-pipeline)
-- [Docker Setup Guide](docs/docker/docker-setup-guide.md)
 - [GitHub Actions Workflow](.github/workflows/ci.yml)
 - [Playwright Documentation](https://playwright.dev/)
 - [Lighthouse CI Documentation](https://github.com/GoogleChrome/lighthouse-ci)

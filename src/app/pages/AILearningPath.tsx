@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState, useMemo, useCallback, useRef } from 'react'
 import { Link } from 'react-router'
 import { motion } from 'motion/react'
 import {
@@ -32,6 +32,7 @@ import {
   AlertDialogTitle,
 } from '@/app/components/ui/alert-dialog'
 import { Sparkles, RotateCw, Loader2, AlertCircle, BookOpen, GripVertical } from 'lucide-react'
+import { MoveUpDownButtons } from '@/app/components/figma/MoveUpDownButtons'
 import { staggerContainer, fadeUp } from '@/lib/motion'
 import type { LearningPathEntry, ImportedCourse } from '@/data/types'
 
@@ -40,10 +41,20 @@ function SortableCourseCard({
   course,
   courseData,
   index,
+  total,
+  onMoveUp,
+  onMoveDown,
+  registerMoveUpRef,
+  registerMoveDownRef,
 }: {
   course: LearningPathEntry
   courseData: ImportedCourse | undefined
   index: number
+  total: number
+  onMoveUp: (index: number) => void
+  onMoveDown: (index: number) => void
+  registerMoveUpRef: (id: string, el: HTMLButtonElement | null) => void
+  registerMoveDownRef: (id: string, el: HTMLButtonElement | null) => void
 }) {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({
     id: course.courseId,
@@ -73,11 +84,27 @@ function SortableCourseCard({
         {/* Drag Handle */}
         <button
           className="absolute top-4 right-4 p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted cursor-grab active:cursor-grabbing touch-manipulation"
-          aria-label="Drag to reorder"
+          aria-label={`Drag to reorder ${courseData?.name || 'course'}`}
           {...listeners}
         >
           <GripVertical className="size-5" />
         </button>
+
+        {/* Single-pointer reorder alternative (WCAG 2.5.7) */}
+        <div className="absolute top-4 right-16">
+          <MoveUpDownButtons
+            index={index}
+            total={total}
+            itemLabel={courseData?.name || 'course'}
+            onMoveUp={() => onMoveUp(index)}
+            onMoveDown={() => onMoveDown(index)}
+            orientation="horizontal"
+            size="sm"
+            upRef={el => registerMoveUpRef(course.courseId, el)}
+            downRef={el => registerMoveDownRef(course.courseId, el)}
+            testIdPrefix={`ai-path-course-${index}-move`}
+          />
+        </div>
 
         {/* Manual Override Badge */}
         {course.isManuallyOrdered && (
@@ -156,6 +183,36 @@ export function AILearningPath() {
       }
     }
   }
+
+  // E66-S01: Move Up/Down focus refs and handlers (WCAG 2.5.7)
+  const moveUpRefs = useRef<Map<string, HTMLButtonElement | null>>(new Map())
+  const moveDownRefs = useRef<Map<string, HTMLButtonElement | null>>(new Map())
+  const registerMoveUpRef = useCallback((id: string, el: HTMLButtonElement | null) => {
+    if (el) moveUpRefs.current.set(id, el)
+    else moveUpRefs.current.delete(id)
+  }, [])
+  const registerMoveDownRef = useCallback((id: string, el: HTMLButtonElement | null) => {
+    if (el) moveDownRefs.current.set(id, el)
+    else moveDownRefs.current.delete(id)
+  }, [])
+  const handleMoveUp = useCallback(
+    (index: number) => {
+      if (!activePath || index <= 0) return
+      const id = courses[index]?.courseId
+      reorderCourse(activePath.id, index, index - 1)
+      if (id) requestAnimationFrame(() => moveUpRefs.current.get(id)?.focus())
+    },
+    [activePath, courses, reorderCourse]
+  )
+  const handleMoveDown = useCallback(
+    (index: number) => {
+      if (!activePath || index >= courses.length - 1) return
+      const id = courses[index]?.courseId
+      reorderCourse(activePath.id, index, index + 1)
+      if (id) requestAnimationFrame(() => moveDownRefs.current.get(id)?.focus())
+    },
+    [activePath, courses, reorderCourse]
+  )
 
   const handleGenerate = async () => {
     await generatePath()
@@ -304,6 +361,11 @@ export function AILearningPath() {
                     course={course}
                     courseData={courseData}
                     index={index}
+                    total={courses.length}
+                    onMoveUp={handleMoveUp}
+                    onMoveDown={handleMoveDown}
+                    registerMoveUpRef={registerMoveUpRef}
+                    registerMoveDownRef={registerMoveDownRef}
                   />
                 )
               })}

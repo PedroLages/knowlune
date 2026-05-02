@@ -1,0 +1,75 @@
+{
+  "reviewer": "correctness",
+  "findings": [
+    {
+      "id": "COR-01",
+      "title": "queryEmbedding is undefined at runtime if generateEmbeddings returns an empty array",
+      "severity": "P1",
+      "file": "src/lib/noteQA.ts",
+      "line": 58,
+      "confidence": 50,
+      "pre_existing": true,
+      "requires_verification": true,
+      "autofix_class": "manual",
+      "owner": "human",
+      "why_it_matters": "If generateEmbeddings resolves (no throw) but returns an empty array [], embeddings[0] is undefined at runtime. TypeScript types queryEmbedding as Float32Array without noUncheckedIndexedAccess and does not flag the assignment. Execution then falls through to line 79: vectorStore.search(Array.from(queryEmbedding), 5). Array.from(undefined) throws TypeError: undefined is not iterable — past the try-catch boundary, so the new fallback cannot intercept it. The caller sees a crash, not a graceful degradation. EmbedResult.embeddings is typed as Float32Array[] (unconstrained array, not a tuple), so the worker could legally return [] in a success response without triggering the catch. Pre-existing because the original code const [queryEmbedding] = await generateEmbeddings([query.trim()]) had identical undefined behavior on an empty array response.",
+      "evidence": [
+        "src/lib/noteQA.ts line 55: let queryEmbedding: Float32Array — uninitialized declaration, no default value",
+        "src/lib/noteQA.ts line 58: queryEmbedding = embeddings[0] — no array-bounds guard before indexing",
+        "src/ai/workers/types.ts line 70: embeddings: Float32Array[] — not a non-empty tuple type",
+        "src/lib/noteQA.ts line 79: vectorStore.search(Array.from(queryEmbedding), 5) — called unconditionally after the try-catch exits",
+        "coordinator.ts terminate() rejects in-flight requests when tab is hidden — confirms the throw path is covered; the silent-empty-array success path is not"
+      ],
+      "suggested_fix": "After the try-catch block, guard against an empty embedding response before proceeding to the vector store:\n\nif (!queryEmbedding) {\n  console.warn('[noteQA] generateEmbeddings returned empty array; falling back to text search')\n  return retrieveRelevantNotesByText(cleanQuery)\n}\n\nAlternatively, validate inside the try block: if (!embeddings[0]) throw new Error('Empty embeddings response'). This converts the undefined path into a caught error and routes it through the existing fallback."
+    },
+    {
+      "id": "COR-02",
+      "title": "tokenize regex is ASCII-only; non-ASCII queries silently return no results in the fallback path",
+      "severity": "P2",
+      "file": "src/lib/noteQA.ts",
+      "line": 133,
+      "confidence": 75,
+      "pre_existing": false,
+      "requires_verification": false,
+      "autofix_class": "manual",
+      "owner": "review-fixer",
+      "why_it_matters": "tokenize('/[a-z0-9]+/g') silently drops every non-ASCII character. For a query such as 'réaction' (French with accent), 'проект' (Russian), or '反応' (Japanese), queryTerms.length === 0 after tokenization. retrieveRelevantNotesByText then immediately returns [] via the early-exit guard. The user receives zero results with no error — they cannot distinguish 'no matching notes' from 'fallback is broken for their language'. The semantic path (embedding-based) handles all of these correctly; only the new fallback is broken for non-ASCII input.",
+      "evidence": [
+        "src/lib/noteQA.ts line 133: value.toLowerCase().match(/[a-z0-9]+/g) ?? [] — character class restricted to ASCII [a-z0-9]",
+        "src/lib/noteQA.ts line 105: if (queryTerms.length === 0) return [] — silent empty return with no warning logged",
+        "Test coverage (noteQA.test.ts lines 248-261) only exercises ASCII queries ('react hooks', 'hi') — no non-ASCII fallback test exists"
+      ],
+      "suggested_fix": "Use a Unicode-aware pattern that includes accented letters, CJK, and other scripts:\n\nfunction tokenize(value: string): string[] {\n  return value.toLowerCase().match(/[\\p{L}\\p{N}]+/gu) ?? []\n}\n\nIf ASCII-only is a deliberate scope decision (e.g., app only supports English), log a warning when queryTerms is empty so the silent degradation is visible: console.warn('[noteQA] Text fallback skipped: no tokenizable terms in query'). Also document the limitation in the JSDoc."
+    },
+    {
+      "id": "COR-03",
+      "title": "phraseBoost can push fallback similarity above 1.0, producing out-of-range scores relative to the semantic path",
+      "severity": "P3",
+      "file": "src/lib/noteQA.ts",
+      "line": 120,
+      "confidence": 75,
+      "pre_existing": false,
+      "requires_verification": true,
+      "autofix_class": "advisory",
+      "owner": "human",
+      "why_it_matters": "matchedTerms.length / queryTerms.length is bounded to [0, 1]. Adding phraseBoost (0.25 when the phrase appears verbatim) raises the ceiling to 1.25. The semantic path returns cosine similarity; src/ai/workers/types.ts line 80 explicitly documents score as 'Cosine similarity 0-1'. RetrievedNote.similarity is typed as number without documented bounds, so callers that mix results from both paths may sort or display incorrectly if they assume [0,1] scale. This does not break ranking within the fallback alone but could be confusing if a future caller displays percentage-style similarity or gates on a threshold near 1.0.",
+      "evidence": [
+        "src/lib/noteQA.ts line 124: const similarity = matchedTerms.length / queryTerms.length + phraseBoost — additive with no clamping",
+        "src/lib/noteQA.ts line 122: 0.25 — phraseBoost constant, uncapped",
+        "src/ai/workers/types.ts line 80: score: number // Cosine similarity 0-1 — documents the semantic path as bounded"
+      ],
+      "suggested_fix": "Clamp the final score to maintain consistent scale:\n\nconst similarity = Math.min(1, matchedTerms.length / queryTerms.length + phraseBoost)\n\nAlternatively, document on RetrievedNote.similarity that text-fallback results may exceed 1.0 so callers are aware."
+    }
+  ],
+  "residual_risks": [
+    "If generateEmbeddings can resolve with an empty array without throwing (e.g., embedding worker returns a structurally valid but content-empty EmbedResult), the undefined-queryEmbedding path is not covered by the new catch block and will still surface as a TypeError crash to the caller.",
+    "The catch block swallows all errors from generateEmbeddings, including transient failures (network, worker OOM, 5 s timeout) that might succeed on retry. There is no retry logic before the fallback is triggered; users with intermittent worker failures will always get downgraded text search results without knowing a retry was possible.",
+    "DB errors inside retrieveRelevantNotesByText (db.notes.toArray() rejection) propagate correctly and are not swallowed, but they surface after the embedding failure has already been logged as a warning — a second error appearing in the console after a warning may confuse diagnostics."
+  ],
+  "testing_gaps": [
+    "No test for generateEmbeddings resolving with [] (empty array without throwing) — the new catch only covers rejected promises; the silent-empty-success path is unexercised.",
+    "No test for a non-ASCII query in the text fallback (tokenize returns [] silently, function returns [] with no error).",
+    "No test verifying db.notes.toArray() rejection during the fallback path propagates as a thrown error rather than being swallowed.",
+    "No test verifying that similarity values from the text fallback are in [0, 1] — would catch the phraseBoost overflow without clamping."
+  ]
+}

@@ -101,11 +101,7 @@ export const useChallengeStore = create<ChallengeState>((set, get) => ({
       // `conflictStrategy: 'monotonic'` with `monotonicFields: ['currentProgress']`;
       // monotonicity is enforced by the upload engine, not the call site.
       for (const row of updated) {
-        await syncableWrite(
-          'challenges',
-          'put',
-          row as unknown as SyncableRecord,
-        )
+        await syncableWrite('challenges', 'put', row as unknown as SyncableRecord)
       }
       set({ challenges: updated })
     } catch (error) {
@@ -141,11 +137,7 @@ export const useChallengeStore = create<ChallengeState>((set, get) => ({
 
     try {
       await persistWithRetry(async () => {
-        await syncableWrite(
-          'challenges',
-          'add',
-          challenge as unknown as SyncableRecord,
-        )
+        await syncableWrite('challenges', 'add', challenge as unknown as SyncableRecord)
       })
     } catch (error) {
       // Rollback on failure
@@ -177,11 +169,7 @@ export const useChallengeStore = create<ChallengeState>((set, get) => ({
       toastWithUndo({
         message: `Challenge "${deletedChallenge.name}" deleted`,
         onUndo: async () => {
-          await syncableWrite(
-            'challenges',
-            'add',
-            deletedChallenge as unknown as SyncableRecord,
-          )
+          await syncableWrite('challenges', 'add', deletedChallenge as unknown as SyncableRecord)
           set({ challenges: [...get().challenges, deletedChallenge] })
           toast.success('Challenge restored')
         },

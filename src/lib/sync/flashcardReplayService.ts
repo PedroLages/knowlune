@@ -73,7 +73,7 @@ export async function replayFlashcardReviews(flashcardId: string): Promise<void>
   if (error) {
     console.warn(
       `[flashcardReplayService] Supabase fetch failed for card "${flashcardId}" — keeping LWW state:`,
-      error.message,
+      error.message
     )
     return
   }
@@ -93,7 +93,7 @@ export async function replayFlashcardReviews(flashcardId: string): Promise<void>
       accState,
       review.rating as ReviewRating,
       new Date(review.reviewed_at as string),
-      fsrsTest,
+      fsrsTest
     )
   }
 
@@ -106,7 +106,7 @@ export async function replayFlashcardReviews(flashcardId: string): Promise<void>
   const existingCard = await db.flashcards.get(flashcardId)
   if (!existingCard) {
     console.warn(
-      `[flashcardReplayService] Card "${flashcardId}" not found in Dexie — skipping replay write.`,
+      `[flashcardReplayService] Card "${flashcardId}" not found in Dexie — skipping replay write.`
     )
     return
   }
@@ -122,5 +122,7 @@ export async function replayFlashcardReviews(flashcardId: string): Promise<void>
   // Write replayed state back to Dexie without enqueueing for upload.
   // skipQueue: true — the card was just downloaded; re-enqueueing would cause
   // an upload cycle that overwrites the server copy with the same data.
-  await syncableWrite('flashcards', 'put', mergedCard as unknown as SyncableRecord, { skipQueue: true })
+  await syncableWrite('flashcards', 'put', mergedCard as unknown as SyncableRecord, {
+    skipQueue: true,
+  })
 }

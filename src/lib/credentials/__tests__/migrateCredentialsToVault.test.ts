@@ -28,12 +28,8 @@ vi.mock('sonner', () => ({
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let db: any
-let runCredentialsToVaultMigration: typeof import(
-  '@/lib/credentials/migrateCredentialsToVault'
-)['runCredentialsToVaultMigration']
-let _resetMigrationStateForTests: typeof import(
-  '@/lib/credentials/migrateCredentialsToVault'
-)['_resetMigrationStateForTests']
+let runCredentialsToVaultMigration: (typeof import('@/lib/credentials/migrateCredentialsToVault'))['runCredentialsToVaultMigration']
+let _resetMigrationStateForTests: (typeof import('@/lib/credentials/migrateCredentialsToVault'))['_resetMigrationStateForTests']
 
 beforeEach(async () => {
   await Dexie.delete('ElearningDB')

@@ -34,7 +34,7 @@ describe('testOllamaConnection', () => {
     await testOllamaConnection('http://192.168.2.200:11434', false)
 
     expect(mockFetch).toHaveBeenCalledWith(
-      expect.stringContaining('/api/ai/ollama/health?serverUrl='),
+      expect.stringContaining('ai-ollama/health?serverUrl='),
       expect.any(Object)
     )
   })

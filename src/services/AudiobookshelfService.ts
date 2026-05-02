@@ -28,15 +28,23 @@ const FETCH_TIMEOUT_MS = 10_000
 
 export type AbsResult<T> = { ok: true; data: T } | { ok: false; error: string; status?: number }
 
+// ─── URL Helper ─────────────────────────────────────────────────────────────
+
+/** Strip trailing slashes so path concatenation produces a single `/` join. */
+function normalizeBaseUrl(baseUrl: string): string {
+  return baseUrl.replace(/\/+$/, '')
+}
+
 // ─── Internal Helper ────────────────────────────────────────────────────────
 
 /**
  * Shared fetch wrapper for all ABS API calls.
  *
- * Routes through the Express backend proxy (`/api/abs/proxy/...`) to avoid
- * browser CORS restrictions. The real ABS server URL and API key are sent
- * via X-ABS-URL and X-ABS-Token headers — the proxy forwards them to the
- * user's ABS server and relays the response.
+ * Calls the user's ABS server directly from the browser with
+ * `Authorization: Bearer <apiKey>`. Requires the ABS server to (a) be
+ * reachable from the app's origin (HTTPS when the app is served from HTTPS)
+ * and (b) allowlist the app origin via ABS Settings → Security → Allowed
+ * Origins. See docs/solutions/integration-issues/2026-04-24-abs-browser-direct-bearer-auth.md.
  */
 async function absApiFetch<T>(
   baseUrl: string,
@@ -50,8 +58,7 @@ async function absApiFetch<T>(
   try {
     const hasBody = options?.body !== undefined
     const headers: Record<string, string> = {
-      'X-ABS-URL': baseUrl.replace(/\/+$/, ''),
-      'X-ABS-Token': apiKey,
+      Authorization: `Bearer ${apiKey}`,
       ...(hasBody ? { 'Content-Type': 'application/json' } : {}),
     }
 
@@ -65,7 +72,7 @@ async function absApiFetch<T>(
       fetchOptions.body = JSON.stringify(options!.body)
     }
 
-    const response = await fetch(`/api/abs/proxy${path}`, fetchOptions)
+    const response = await fetch(`${normalizeBaseUrl(baseUrl)}${path}`, fetchOptions)
     clearTimeout(timeoutId)
 
     if (response.status === 401) {
@@ -96,10 +103,15 @@ async function absApiFetch<T>(
     if (err instanceof SyntaxError) {
       return { ok: false, error: 'Server returned an invalid response. Check the URL.' }
     }
+    // TypeError from fetch in a browser means the request never reached the
+    // server (CORS rejection, DNS failure, connection refused, mixed content
+    // block). For HTTPS origins with well-formed URLs, CORS is the most
+    // common cause — surface actionable guidance.
     if (err instanceof TypeError) {
       return {
         ok: false,
-        error: 'Could not connect to server. Check the URL and try again.',
+        error:
+          "Could not reach your Audiobookshelf server. If the URL is correct, add this app's origin to your ABS Settings → Security → Allowed Origins.",
       }
     }
     return { ok: false, error: 'Could not connect to server. Check the URL and try again.' }
@@ -242,8 +254,11 @@ export async function createPlaybackSession(
 }
 
 /**
- * Construct a proxied streaming URL from a playback session's contentUrl.
+ * Construct a direct streaming URL from a playback session's contentUrl.
  * The contentUrl from ABS is a relative path like `/s/item/{id}/book.m4b`.
+ *
+ * `<audio>` elements can't set headers, so the API key rides along as a
+ * `?token=` query param (ABS natively supports this for stream endpoints).
  *
  * Pure function — no fetch call.
  */
@@ -253,12 +268,7 @@ export function getStreamUrlFromSession(
   contentUrl: string
 ): string {
   const path = contentUrl.startsWith('http') ? new URL(contentUrl).pathname : contentUrl
-  const params = new URLSearchParams({
-    token: apiKey,
-    _absUrl: baseUrl.replace(/\/+$/, ''),
-    _absToken: apiKey,
-  })
-  return `/api/abs/proxy${path}?${params}`
+  return `${normalizeBaseUrl(baseUrl)}${path}?token=${encodeURIComponent(apiKey)}`
 }
 
 /**
@@ -280,19 +290,22 @@ export async function closePlaybackSession(
  * Kept for backward compatibility during migration.
  */
 export function getStreamUrl(baseUrl: string, itemId: string, apiKey: string): string {
-  return `/api/abs/proxy/api/items/${encodeURIComponent(itemId)}/play?token=${encodeURIComponent(apiKey)}&_absUrl=${encodeURIComponent(baseUrl)}&_absToken=${encodeURIComponent(apiKey)}`
+  return `${normalizeBaseUrl(baseUrl)}/api/items/${encodeURIComponent(itemId)}/play?token=${encodeURIComponent(apiKey)}`
 }
 
 /**
- * Get the cover image URL for a library item via the backend proxy.
- * Routes through Express to avoid CORS.
+ * Get the direct cover image URL for a library item.
+ *
+ * `<img>` elements can't set headers, so the API key rides along as a
+ * `?token=` query param (ABS natively supports this for GET endpoints
+ * returning binary content). When apiKey is omitted, the caller is assumed
+ * to want a public/unauthenticated cover URL.
  *
  * Pure function — no fetch call.
  */
 export function getCoverUrl(baseUrl: string, itemId: string, apiKey?: string): string {
-  const params = new URLSearchParams({ _absUrl: baseUrl })
-  if (apiKey) params.set('_absToken', apiKey)
-  return `/api/abs/proxy/api/items/${encodeURIComponent(itemId)}/cover?${params}`
+  const base = `${normalizeBaseUrl(baseUrl)}/api/items/${encodeURIComponent(itemId)}/cover`
+  return apiKey ? `${base}?token=${encodeURIComponent(apiKey)}` : base
 }
 
 /**
@@ -334,6 +347,103 @@ export async function fetchProgress(
     return { ok: true, data: null }
   }
   return result
+}
+
+function clampNonNegativeFinite(n: number): number {
+  if (!Number.isFinite(n) || n < 0) return 0
+  return n
+}
+
+function clamp01(n: number): number {
+  if (!Number.isFinite(n)) return 0
+  return Math.min(1, Math.max(0, n))
+}
+
+/** Raw shape from GET /api/me `mediaProgress[]` (Audiobookshelf `getOldMediaProgress`) */
+function normalizeMeProgressEntry(entry: unknown): AbsProgress | null {
+  if (!entry || typeof entry !== 'object') return null
+  const e = entry as Record<string, unknown>
+  // Podcast episode progress — skip (Knowlune ABS catalog maps books only)
+  if (e.episodeId) return null
+  const libraryItemId =
+    typeof e.libraryItemId === 'string'
+      ? e.libraryItemId
+      : typeof e.libraryItemId === 'number'
+        ? String(e.libraryItemId)
+        : undefined
+  if (!libraryItemId) return null
+
+  const currentTimeRaw =
+    typeof e.currentTime === 'number' ? e.currentTime : Number(e.currentTime) || 0
+  const durationRaw = typeof e.duration === 'number' ? e.duration : Number(e.duration) || 0
+  const currentTime = clampNonNegativeFinite(currentTimeRaw)
+  const duration = clampNonNegativeFinite(durationRaw)
+  const progressRaw = e.progress
+  let progress =
+    typeof progressRaw === 'number'
+      ? progressRaw
+      : typeof progressRaw === 'string'
+        ? Number(progressRaw)
+        : duration > 0
+          ? Math.min(1, Math.max(0, currentTime / duration))
+          : 0
+  progress = clamp01(progress)
+  const isFinished = Boolean(e.isFinished)
+  const lastUpdate =
+    typeof e.lastUpdate === 'number'
+      ? e.lastUpdate
+      : typeof e.lastUpdate === 'string'
+        ? new Date(e.lastUpdate).getTime()
+        : 0
+  if (!Number.isFinite(lastUpdate)) return null
+  const id = typeof e.id === 'string' ? e.id : libraryItemId
+
+  return {
+    id,
+    libraryItemId,
+    currentTime,
+    duration,
+    progress,
+    isFinished,
+    lastUpdate,
+  }
+}
+
+/**
+ * Fetch all media progress entries for the authenticated user.
+ * Calls GET /api/me and parses `mediaProgress` (Audiobookshelf browser JSON).
+ * On missing/empty arrays returns `{ ok: true, data: [] }` — never treats as fatal.
+ *
+ * @since CE 2026-04-27 — ABS inbound progress sync
+ */
+export async function fetchAllProgress(
+  url: string,
+  apiKey: string
+): Promise<AbsResult<AbsProgress[]>> {
+  const result = await absApiFetch<Record<string, unknown>>(url, apiKey, '/api/me')
+  if (!result.ok) {
+    // Treat missing /api/me like empty progress — catalog overlay stays best-effort (plan R5)
+    if (result.status === 404) {
+      return { ok: true, data: [] }
+    }
+    return result
+  }
+
+  const body = result.data
+  if (body === null || body === undefined || typeof body !== 'object' || Array.isArray(body)) {
+    return { ok: true, data: [] }
+  }
+  const rawList = body.mediaProgress
+  if (!Array.isArray(rawList)) {
+    return { ok: true, data: [] }
+  }
+
+  const out: AbsProgress[] = []
+  for (const entry of rawList) {
+    const normalized = normalizeMeProgressEntry(entry)
+    if (normalized) out.push(normalized)
+  }
+  return { ok: true, data: out }
 }
 
 /**
@@ -380,25 +490,25 @@ export async function fetchSeriesForLibrary(
 }
 
 /**
- * Fetch all collections from the server.
- * Calls GET /api/collections.
+ * Fetch all collections for a library.
+ * Calls GET /api/libraries/{libraryId}/collections (works for all users, not just admin).
  *
  * @since E102-S03
  */
 export async function fetchCollections(
   url: string,
   apiKey: string,
+  libraryId: string,
   _options?: { page?: number; limit?: number }
 ): Promise<AbsResult<{ results: AbsCollection[]; total: number }>> {
-  // GET /api/collections returns { collections: [...] } (no pagination).
-  // We normalize to { results, total } for consistency with other paginated endpoints.
-  const result = await absApiFetch<{ collections: AbsCollection[] }>(
+  // ABS v2: /api/libraries/{id}/collections returns { results: [...], total: N }
+  const result = await absApiFetch<{ results: AbsCollection[]; total: number }>(
     url,
     apiKey,
-    '/api/collections'
+    `/api/libraries/${encodeURIComponent(libraryId)}/collections`
   )
   if (!result.ok) return result
-  const collections = result.data.collections ?? []
+  const collections = result.data.results ?? []
   return { ok: true, data: { results: collections, total: collections.length } }
 }
 
@@ -639,6 +749,99 @@ export function pushProgressViaSocket(
   connection.ws.send(`42${packet}`)
 }
 
+// ─── MediaSession API ──────────────────────────────────────────────────────
+//
+// Populates the OS lock-screen / notification media card with audiobook
+// metadata and wires hardware/software media key handlers back to the
+// AudiobookshelfService playback model.
+//
+// MediaSession is only available in secure contexts (HTTPS / localhost) and
+// is not universally supported (e.g., Safari ≤14, some older Androids).
+// A feature-detect guard wraps every call.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Track metadata consumed by setMediaSession. */
+export interface MediaTrack {
+  title: string
+  author: string
+  bookTitle: string
+  coverUrl: string
+}
+
+/** Action handlers wired to the OS media card. All are optional. */
+export interface MediaSessionHandlers {
+  play?: () => void
+  pause?: () => void
+  seekBackward?: (details: MediaSessionActionDetails) => void
+  seekForward?: (details: MediaSessionActionDetails) => void
+  previousTrack?: () => void
+  nextTrack?: () => void
+  seekTo?: (details: MediaSessionActionDetails) => void
+}
+
+/**
+ * Set OS lock-screen / notification media card metadata and register action
+ * handlers for the given track.
+ *
+ * Feature-detects navigator.mediaSession — safe to call in all environments.
+ * Call clearMediaSession() when playback stops.
+ *
+ * @since E120-S02
+ */
+export function setMediaSession(track: MediaTrack, handlers: MediaSessionHandlers = {}): void {
+  if (!('mediaSession' in navigator) || !navigator.mediaSession) return
+
+  navigator.mediaSession.metadata = new MediaMetadata({
+    title: track.title,
+    artist: track.author,
+    album: track.bookTitle,
+    artwork: /^https?:\/\//i.test(track.coverUrl)
+      ? [{ src: track.coverUrl, sizes: '512x512', type: 'image/png' }]
+      : [],
+  })
+
+  const trySet = (
+    action: MediaSessionAction,
+    handler: MediaSessionActionHandler | null
+  ) => {
+    try {
+      navigator.mediaSession!.setActionHandler(action, handler)
+    } catch {
+      // action not supported by this browser — silent-catch-ok
+    }
+  }
+
+  trySet('play', handlers.play ?? null)
+  trySet('pause', handlers.pause ?? null)
+  trySet('seekbackward', handlers.seekBackward ?? null)
+  trySet('seekforward', handlers.seekForward ?? null)
+  trySet('previoustrack', handlers.previousTrack ?? null)
+  trySet('nexttrack', handlers.nextTrack ?? null)
+  trySet('seekto', handlers.seekTo ?? null)
+}
+
+/**
+ * Clear the OS media card metadata and unregister all action handlers.
+ * Call when playback stops or the player unmounts.
+ *
+ * @since E120-S02
+ */
+export function clearMediaSession(): void {
+  if (!('mediaSession' in navigator) || !navigator.mediaSession) return
+
+  navigator.mediaSession.metadata = null
+  const actions: MediaSessionAction[] = [
+    'play', 'pause', 'seekbackward', 'seekforward', 'previoustrack', 'nexttrack', 'seekto',
+  ]
+  for (const action of actions) {
+    try {
+      navigator.mediaSession.setActionHandler(action, null)
+    } catch {
+      // action not supported by this browser — silent-catch-ok
+    }
+  }
+}
+
 /**
  * Returns true if the given URL uses HTTP (not HTTPS).
  * Used to warn users when API keys may be sent unencrypted.
@@ -650,4 +853,22 @@ export function isInsecureUrl(url: string): boolean {
     // silent-catch-ok — invalid URL simply means not insecure
     return false
   }
+}
+
+/**
+ * Returns true if an HTTP ABS URL cannot be reached from the current app
+ * origin due to browser mixed-content rules — i.e. the app is served over
+ * HTTPS and the target is plain HTTP.
+ *
+ * `appProtocol` is injected for testability; defaults to
+ * `window.location.protocol` at call time.
+ *
+ * Dev (`http://localhost:5173`) is unaffected: `appProtocol === 'http:'`
+ * returns false for every target.
+ */
+export function isMixedContentBlocked(
+  absUrl: string,
+  appProtocol: string = typeof window !== 'undefined' ? window.location.protocol : 'http:'
+): boolean {
+  return appProtocol === 'https:' && isInsecureUrl(absUrl)
 }

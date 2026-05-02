@@ -72,7 +72,7 @@ export function RelatedConceptsPanel({ note, allNotes, courseNames }: RelatedCon
         <CollapsibleTrigger asChild>
           <button
             type="button"
-            className="flex items-center gap-2 text-sm font-medium text-foreground hover:text-brand transition-colors w-full text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
+            className="flex items-center gap-2 text-sm font-medium text-foreground hover:text-brand transition-colors w-full text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring rounded"
           >
             {isOpen ? (
               <ChevronDown className="size-4" aria-hidden="true" />
@@ -110,7 +110,7 @@ export function RelatedConceptsPanel({ note, allNotes, courseNames }: RelatedCon
                   className={cn(
                     'flex flex-col gap-1 w-full text-left p-2 rounded-lg',
                     'hover:bg-accent transition-colors',
-                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring'
+                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring'
                   )}
                   aria-label={`Related note: ${related.title} from ${related.courseName}`}
                 >

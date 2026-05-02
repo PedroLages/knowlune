@@ -22,6 +22,7 @@ import { CourseCard } from '@/app/components/figma/CourseCard'
 import { ProgressChart } from '@/app/components/charts/ProgressChart'
 import { DashboardCustomizer } from '@/app/components/DashboardCustomizer'
 import { SkillProficiencyRadar } from '@/app/components/overview/SkillProficiencyRadar'
+import { ReadingOverviewSection } from '@/app/components/overview/ReadingOverviewSection'
 import { KnowledgeMapWidget } from '@/app/components/knowledge/KnowledgeMapWidget'
 import { TodaysStudyPlan } from '@/app/components/figma/TodaysStudyPlan'
 import { useCourseStore } from '@/stores/useCourseStore'
@@ -293,6 +294,16 @@ export function Overview() {
             lastWatchedCourse={lastWatchedCourse}
             lastWatchedLesson={lastWatchedLesson}
           />
+        </motion.section>
+      ),
+      'reading-overview': () => (
+        <motion.section
+          key="reading-overview"
+          ref={createSectionRef('reading-overview')}
+          variants={fadeUp}
+          data-testid="section-reading-overview"
+        >
+          <ReadingOverviewSection />
         </motion.section>
       ),
       'todays-study-plan': () => (

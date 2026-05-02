@@ -1,165 +1,260 @@
 /**
- * Pure utility functions for resolving position when switching between
- * EPUB and audiobook formats of the same book.
+ * Pure utility functions for resolving the user's position when switching
+ * between EPUB and audiobook formats of the same book.
  *
- * No React hooks, no side effects — just data transformation.
+ * Two modes:
+ *  - Chapter-only (legacy callers): given the current chapter, return the start
+ *    of the mapped chapter on the other side.
+ *  - Intra-chapter (E103 — Link Formats Story B): given the user's progress
+ *    *within* the current chapter, apply the same time-percentage proportion
+ *    to the mapped chapter on the other side, so format switching lands within
+ *    ±1–2 paragraphs of where the user was, not just at the chapter start.
+ *
+ * Time-percentage proportional math is the documented industry baseline for
+ * non-aligned dual-format products (KOReader, Plato, ABS-side integrations).
+ * It uses data already live in both renderers — no schema changes, no
+ * per-chapter text extraction.
+ *
+ * No React hooks, no side effects — pure data transformation. Easy to unit-test.
  *
  * @module chapterSwitchResolver
- * @since E103-S03
+ * @since E103
  */
 
-import type { Book, ChapterMappingRecord, ContentPosition } from '@/data/types'
+import type { Book, ChapterMapping, ChapterMappingRecord } from '@/data/types'
+
+/** Confidence threshold below which intra-chapter math is skipped (jump to chapter start instead). */
+export const INTRA_CHAPTER_CONFIDENCE_FLOOR = 0.7
+
+/** Default lead-in seconds when switching EPUB → Audio (re-hear one sentence). */
+export const DEFAULT_AUDIO_LEAD_IN_SECONDS = 3
+
+/** Minimal subset of epub.js Locations API we depend on. */
+export interface EpubLocations {
+  percentageFromCfi(cfi: string): number
+  cfiFromPercentage(percentage: number): string
+}
+
+/** Compute audiobook chapter start time in seconds. */
+function audioChapterStartSeconds(book: Book, chapterIndex: number): number | null {
+  const ch = book.chapters[chapterIndex]
+  if (!ch || ch.position.type !== 'time') return null
+  return ch.position.seconds
+}
 
 /**
- * Given the current EPUB position, find the corresponding audiobook position
- * using the chapter mapping.
- *
- * Strategy:
- * 1. Determine which EPUB chapter the user is currently in (from CFI or chapters list)
- * 2. Look up the matching audioChapterIndex in the mapping
- * 3. Return the start time of that audio chapter
+ * Compute audiobook chapter end time in seconds. Falls back through
+ * chapters[idx+1].seconds → book.totalDuration → audioElementDuration → null.
  */
-export function resolveAudioPositionFromEpub(
-  epubBook: Book,
-  audioBook: Book,
+function audioChapterEndSeconds(
+  book: Book,
+  chapterIndex: number,
+  audioElementDuration?: number
+): number | null {
+  const next = book.chapters[chapterIndex + 1]
+  if (next && next.position.type === 'time') return next.position.seconds
+  if (typeof book.totalDuration === 'number' && book.totalDuration > 0) return book.totalDuration
+  if (typeof audioElementDuration === 'number' && audioElementDuration > 0)
+    return audioElementDuration
+  return null
+}
+
+/**
+ * Locate the mapping entry for a given audio chapter index, returning both
+ * the entry and whether confidence clears the intra-chapter floor.
+ */
+function findMappingByAudioIndex(
+  mapping: ChapterMappingRecord,
+  audioChapterIndex: number
+): ChapterMapping | null {
+  return mapping.mappings.find(m => m.audioChapterIndex === audioChapterIndex) ?? null
+}
+
+function findMappingByEpubHref(
+  mapping: ChapterMappingRecord,
+  epubChapterHref: string
+): ChapterMapping | null {
+  return mapping.mappings.find(m => m.epubChapterHref === epubChapterHref) ?? null
+}
+
+/** Clamp `n` into [min, max]. */
+function clamp(n: number, min: number, max: number): number {
+  if (n < min) return min
+  if (n > max) return max
+  return n
+}
+
+// ─── Audio → EPUB ────────────────────────────────────────────────────────────
+
+export interface ResolveEpubFromAudioArgs {
+  audioCurrentTime: number
+  audioBook: Book
+  audioChapterIndex: number
+  epubBook: Book
   mapping: ChapterMappingRecord
-): ContentPosition | null {
-  if (epubBook.format !== 'epub' || audioBook.format !== 'audiobook') return null
-  if (!mapping.mappings.length) return null
+  /** epub.js `book.locations`, required for intra-chapter percentage math. */
+  epubLocations: EpubLocations | null
+  /** Optional fallback for last-chapter end time. */
+  audioElementDuration?: number
+}
 
-  // Determine which EPUB chapter the user is in
-  const currentChapterHref = findCurrentEpubChapterHref(epubBook)
-  if (!currentChapterHref) {
-    // Fallback: return first mapped audio chapter
-    const first = mapping.mappings[0]
-    return resolveAudioChapterPosition(audioBook, first.audioChapterIndex)
-  }
+/**
+ * Given the user's audio position, compute target EPUB CFI.
+ *
+ * Returns null when:
+ *  - No mapping exists for the current audio chapter
+ *  - Mapping confidence is below INTRA_CHAPTER_CONFIDENCE_FLOOR
+ *  - epub.js locations are not yet generated
+ *  - Audio chapter end is indeterminate (last chapter, no totalDuration, no element duration)
+ *  - Mapped EPUB chapter is not present on the EPUB side
+ *
+ * Caller convention: a null return means "fall back to chapter-start jump."
+ */
+export function resolveEpubPositionFromAudio(
+  args: ResolveEpubFromAudioArgs
+): { targetCfi: string } | null {
+  const {
+    audioCurrentTime,
+    audioBook,
+    audioChapterIndex,
+    epubBook,
+    mapping,
+    epubLocations,
+    audioElementDuration,
+  } = args
 
-  // Find the matching entry
-  const match = mapping.mappings.find(m => m.epubChapterHref === currentChapterHref)
-  if (!match) {
-    // No match — try closest by order
+  if (!epubLocations) return null
+
+  const entry = findMappingByAudioIndex(mapping, audioChapterIndex)
+  if (!entry) return null
+  if (entry.confidence < INTRA_CHAPTER_CONFIDENCE_FLOOR) return null
+
+  const audioStart = audioChapterStartSeconds(audioBook, audioChapterIndex)
+  const audioEnd = audioChapterEndSeconds(audioBook, audioChapterIndex, audioElementDuration)
+  if (audioStart === null || audioEnd === null || audioEnd <= audioStart) return null
+
+  const chapterPct = clamp((audioCurrentTime - audioStart) / (audioEnd - audioStart), 0, 1)
+
+  // Map to EPUB chapter range
+  const epubChapter = epubBook.chapters.find(ch => ch.id === entry.epubChapterHref)
+  if (!epubChapter || epubChapter.position.type !== 'cfi') return null
+
+  // Find the next EPUB chapter (by spine order) for end percentage
+  const sorted = [...epubBook.chapters].sort((a, b) => a.order - b.order)
+  const idxInSorted = sorted.findIndex(ch => ch.id === epubChapter.id)
+  const nextEpubChapter = idxInSorted >= 0 ? sorted[idxInSorted + 1] : undefined
+
+  let startPct: number
+  let endPct: number
+  try {
+    startPct = epubLocations.percentageFromCfi(epubChapter.position.value)
+    endPct =
+      nextEpubChapter && nextEpubChapter.position.type === 'cfi'
+        ? epubLocations.percentageFromCfi(nextEpubChapter.position.value)
+        : 1
+  } catch {
     return null
   }
 
-  return resolveAudioChapterPosition(audioBook, match.audioChapterIndex)
+  if (!Number.isFinite(startPct) || !Number.isFinite(endPct) || endPct <= startPct) return null
+
+  const targetPct = clamp(startPct + chapterPct * (endPct - startPct), 0, 1)
+
+  let targetCfi: string
+  try {
+    targetCfi = epubLocations.cfiFromPercentage(targetPct)
+  } catch {
+    return null
+  }
+  if (!targetCfi) return null
+
+  return { targetCfi }
 }
 
-/**
- * Given the current audiobook position, find the corresponding EPUB position
- * using the chapter mapping.
- *
- * Strategy:
- * 1. Determine current audio chapter index from playback seconds
- * 2. Look up the matching epubChapterHref in the mapping
- * 3. Return the EPUB chapter's CFI position
- */
-export function resolveEpubPositionFromAudio(
-  audioBook: Book,
-  epubBook: Book,
+// ─── EPUB → Audio ────────────────────────────────────────────────────────────
+
+export interface ResolveAudioFromEpubArgs {
+  epubCurrentCfi: string
+  epubBook: Book
+  epubChapterHref: string
+  audioBook: Book
   mapping: ChapterMappingRecord
-): ContentPosition | null {
-  if (audioBook.format !== 'audiobook' || epubBook.format !== 'epub') return null
-  if (!mapping.mappings.length) return null
-
-  const currentAudioChapterIndex = findCurrentAudioChapterIndex(audioBook)
-  if (currentAudioChapterIndex === null) {
-    // Fallback: return first mapped EPUB chapter
-    const first = mapping.mappings[0]
-    return resolveEpubChapterPosition(epubBook, first.epubChapterHref)
-  }
-
-  const match = mapping.mappings.find(m => m.audioChapterIndex === currentAudioChapterIndex)
-  if (!match) return null
-
-  return resolveEpubChapterPosition(epubBook, match.epubChapterHref)
+  epubLocations: EpubLocations | null
+  /** Lead-in subtracted from target seconds (clamped to chapter start). */
+  leadInSeconds?: number
+  /** Optional fallback for last-chapter end time. */
+  audioElementDuration?: number
 }
 
 /**
- * Determine the current EPUB chapter href from the book's position and chapters.
+ * Given the user's EPUB CFI, compute target audio seconds (with EPUB→Audio
+ * lead-in bias so the listener re-hears one sentence rather than missing words).
  *
- * Uses chapter `order` (index) for reliable comparison. We find the chapter with
- * the highest order whose start CFI matches the current CFI prefix, falling back
- * to the chapter whose start CFI appears as a prefix of the current position CFI.
- *
- * CFI string comparison is NOT used — EPUBs do not guarantee lexicographic CFI order.
+ * Returns null under the same conditions as the EPUB-target variant.
  */
-function findCurrentEpubChapterHref(book: Book): string | null {
-  if (!book.currentPosition || book.currentPosition.type !== 'cfi') return null
-  if (!book.chapters.length) return null
+export function resolveAudioPositionFromEpub(
+  args: ResolveAudioFromEpubArgs
+): { targetSeconds: number } | null {
+  const {
+    epubCurrentCfi,
+    epubBook,
+    epubChapterHref,
+    audioBook,
+    mapping,
+    epubLocations,
+    leadInSeconds = DEFAULT_AUDIO_LEAD_IN_SECONDS,
+    audioElementDuration,
+  } = args
 
-  const currentCfi = book.currentPosition.value
+  if (!epubLocations) return null
 
-  // Sort chapters by order ascending to process in spine order
-  const sorted = [...book.chapters].sort((a, b) => a.order - b.order)
+  const entry = findMappingByEpubHref(mapping, epubChapterHref)
+  if (!entry) return null
+  if (entry.confidence < INTRA_CHAPTER_CONFIDENCE_FLOOR) return null
 
-  // Find the last chapter (by order) whose start CFI appears in the current CFI prefix.
-  // A chapter is "active" when the current CFI starts with or equals the chapter's CFI.
-  let bestChapter = sorted[0]
-  for (const ch of sorted) {
-    if (ch.position.type === 'cfi' && currentCfi.startsWith(ch.position.value)) {
-      bestChapter = ch
-    }
+  const epubChapter = epubBook.chapters.find(ch => ch.id === epubChapterHref)
+  if (!epubChapter || epubChapter.position.type !== 'cfi') return null
+
+  const sorted = [...epubBook.chapters].sort((a, b) => a.order - b.order)
+  const idxInSorted = sorted.findIndex(ch => ch.id === epubChapter.id)
+  const nextEpubChapter = idxInSorted >= 0 ? sorted[idxInSorted + 1] : undefined
+
+  let chapterStartPct: number
+  let chapterEndPct: number
+  let currentPct: number
+  try {
+    chapterStartPct = epubLocations.percentageFromCfi(epubChapter.position.value)
+    chapterEndPct =
+      nextEpubChapter && nextEpubChapter.position.type === 'cfi'
+        ? epubLocations.percentageFromCfi(nextEpubChapter.position.value)
+        : 1
+    currentPct = epubLocations.percentageFromCfi(epubCurrentCfi)
+  } catch {
+    return null
   }
 
-  // Fallback: if no chapter CFI is a prefix, pick the chapter with the highest order
-  // that is still <= current chapter by exact CFI match
-  if (bestChapter === sorted[0]) {
-    for (const ch of sorted) {
-      if (ch.position.type === 'cfi' && ch.position.value === currentCfi) {
-        bestChapter = ch
-        break
-      }
-    }
+  if (
+    !Number.isFinite(chapterStartPct) ||
+    !Number.isFinite(chapterEndPct) ||
+    !Number.isFinite(currentPct) ||
+    chapterEndPct <= chapterStartPct
+  ) {
+    return null
   }
 
-  // The chapter ID is the href identifier
-  return bestChapter.id
-}
+  const chapterPct = clamp(
+    (currentPct - chapterStartPct) / (chapterEndPct - chapterStartPct),
+    0,
+    1
+  )
 
-/**
- * Determine which audio chapter the user is currently listening to
- * based on playback position in seconds.
- */
-function findCurrentAudioChapterIndex(book: Book): number | null {
-  if (!book.currentPosition || book.currentPosition.type !== 'time') return null
-  if (!book.chapters.length) return null
+  const audioStart = audioChapterStartSeconds(audioBook, entry.audioChapterIndex)
+  const audioEnd = audioChapterEndSeconds(audioBook, entry.audioChapterIndex, audioElementDuration)
+  if (audioStart === null || audioEnd === null || audioEnd <= audioStart) return null
 
-  const currentSeconds = book.currentPosition.seconds
+  const rawTarget = audioStart + chapterPct * (audioEnd - audioStart)
+  const biased = rawTarget - leadInSeconds
+  const targetSeconds = clamp(biased, audioStart, audioEnd)
 
-  for (let i = book.chapters.length - 1; i >= 0; i--) {
-    const ch = book.chapters[i]
-    if (ch.position.type === 'time' && currentSeconds >= ch.position.seconds) {
-      return i
-    }
-  }
-
-  return null // No time-based chapter contains the current position
-}
-
-/**
- * Get the start position for a given audio chapter index.
- */
-function resolveAudioChapterPosition(
-  audioBook: Book,
-  chapterIndex: number
-): ContentPosition | null {
-  if (chapterIndex < 0 || chapterIndex >= audioBook.chapters.length) return null
-  const chapter = audioBook.chapters[chapterIndex]
-  if (chapter.position.type === 'time') {
-    return { type: 'time', seconds: chapter.position.seconds }
-  }
-  return null
-}
-
-/**
- * Get the start position for a given EPUB chapter href.
- */
-function resolveEpubChapterPosition(epubBook: Book, chapterHref: string): ContentPosition | null {
-  const chapter = epubBook.chapters.find(ch => ch.id === chapterHref)
-  if (!chapter) return null
-  if (chapter.position.type === 'cfi') {
-    return { type: 'cfi', value: chapter.position.value }
-  }
-  return null
+  return { targetSeconds }
 }

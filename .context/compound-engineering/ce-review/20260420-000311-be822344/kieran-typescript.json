@@ -1,0 +1,100 @@
+{
+  "reviewer": "kieran-typescript",
+  "findings": [
+    {
+      "id": "kt-001",
+      "severity": "medium",
+      "confidence": 0.82,
+      "category": "type-safety",
+      "title": "PlayOverlay onClick is typed as React.MouseEvent without element generic",
+      "file": "src/app/components/figma/courseCardShell.tsx",
+      "lines": "54-59",
+      "evidence": "interface PlayOverlayProps { show: boolean; onClick: (e: React.MouseEvent) => void; ... }",
+      "explanation": "`React.MouseEvent` defaults to `Element` for the target generic. Since the overlay is a `<button>`, the handler should be typed `React.MouseEvent<HTMLButtonElement>` (or `MouseEventHandler<HTMLButtonElement>`). Callers (`handleStartStudying` in ImportedCourseCard.tsx:244) also use `React.MouseEvent` with no element, propagating the looseness. This silently allows event handlers from any element and prevents `e.currentTarget` from being typed as the button.",
+      "suggestion": "Change to `onClick: React.MouseEventHandler<HTMLButtonElement>` and update `handleStartStudying(e: React.MouseEvent<HTMLButtonElement>)` accordingly."
+    },
+    {
+      "id": "kt-002",
+      "severity": "medium",
+      "confidence": 0.85,
+      "category": "type-safety",
+      "title": "CardCover allows both/neither aspectClass and heightClass with no compile-time guard",
+      "file": "src/app/components/figma/courseCardShell.tsx",
+      "lines": "7-32",
+      "evidence": "interface CardCoverProps { aspectClass?: string; heightClass?: string; children: React.ReactNode }",
+      "explanation": "The JSDoc says `Use aspectClass for square/portrait covers, heightClass for fixed-height` — implying they are mutually exclusive — but the type allows passing both, neither, or either. Passing neither produces an unsized container (silent UI bug); passing both yields cn merging both classes. A discriminated union (`{ aspectClass: string } | { heightClass: string }`) would enforce the documented contract at compile time. This is exactly the kind of new primitive where strict typing is cheap and pays off later.",
+      "suggestion": "type CardCoverProps = { children: React.ReactNode } & ({ aspectClass: string; heightClass?: never } | { heightClass: string; aspectClass?: never })"
+    },
+    {
+      "id": "kt-003",
+      "severity": "medium",
+      "confidence": 0.78,
+      "category": "type-safety",
+      "title": "PlayOverlay typed with arbitrary string-key props instead of extending ButtonHTMLAttributes",
+      "file": "src/app/components/figma/courseCardShell.tsx",
+      "lines": "54-89",
+      "evidence": "interface PlayOverlayProps { show: boolean; onClick: ...; 'data-testid'?: string; 'aria-label'?: string }",
+      "explanation": "Hand-listing `data-testid` and `aria-label` as string-key props is brittle: any future consumer needing `aria-labelledby`, `aria-describedby`, `id`, `disabled`, or `type` has to re-extend the interface. A cleaner pattern is `interface PlayOverlayProps extends Pick<React.ButtonHTMLAttributes<HTMLButtonElement>, 'aria-label' | 'aria-labelledby' | 'data-testid' | ...>` or simply `extends React.ButtonHTMLAttributes<HTMLButtonElement>` with `show` added. Also note the button has no explicit `type=\"button\"`, so it would default to `submit` if ever placed inside a form — a real foot-gun.",
+      "suggestion": "Extend ButtonHTMLAttributes<HTMLButtonElement> and add `type=\"button\"` to the rendered button to prevent accidental form submission."
+    },
+    {
+      "id": "kt-004",
+      "severity": "low",
+      "confidence": 0.9,
+      "category": "imports",
+      "title": "React.ReactNode / React.MouseEvent referenced without importing React types",
+      "file": "src/app/components/figma/courseCardShell.tsx",
+      "lines": "1-2, 10, 56",
+      "evidence": "import { Play, CheckCircle2 } from 'lucide-react'  // no React import; uses React.ReactNode and React.MouseEvent in types",
+      "explanation": "Under React 19 + TS modern jsx-runtime, `React.ReactNode` typically resolves only if the global React namespace is available (via tsconfig `jsx: 'react-jsx'` plus `@types/react` providing the global). It works in this project today, but the convention used elsewhere in the codebase is `import type { ReactNode, MouseEvent } from 'react'` which is more explicit and survives a tsconfig change to `jsxImportSource` or stricter isolatedModules settings. Recommend `import type { ReactNode, MouseEventHandler } from 'react'`.",
+      "suggestion": "Add an explicit `import type { ReactNode, MouseEventHandler } from 'react'` and use the bare names."
+    },
+    {
+      "id": "kt-005",
+      "severity": "medium",
+      "confidence": 0.72,
+      "category": "behavior-regression",
+      "title": "handleStartStudying fires async status mutation then navigates without awaiting",
+      "file": "src/app/components/figma/ImportedCourseCard.tsx",
+      "lines": "244-248",
+      "evidence": "function handleStartStudying(e: React.MouseEvent) { e.stopPropagation(); handleStatusChange('active'); navigate(`/courses/${course.id}/overview`) }",
+      "explanation": "`handleStatusChange` calls `updateCourseStatus(...)` which is a Zustand action that may be async (writes to IndexedDB via the sync engine). Navigating immediately means the destination page may render before the status flip is persisted. If the Overview page reads `status` from the store and gates UI on `'active'`, the user can briefly see not-started UI or a flash. This is not strictly a TypeScript hole but the new behavior is introduced in this diff and the typing of `handleStatusChange` returning `void` masks the race. Worth either awaiting (and typing the handler async with proper return) or confirming the store update is synchronous in-memory before the IDB write.",
+      "suggestion": "If updateCourseStatus is sync in-memory: add a comment documenting that. If async: `await handleStatusChange('active')` and type handler as async, or rely on the destination page to tolerate the transient state."
+    },
+    {
+      "id": "kt-006",
+      "severity": "low",
+      "confidence": 0.7,
+      "category": "type-safety",
+      "title": "CompletionOverlay show:boolean is required but is the only prop — pattern leaks ternaries to every caller",
+      "file": "src/app/components/figma/courseCardShell.tsx",
+      "lines": "91-108",
+      "evidence": "interface CompletionOverlayProps { show: boolean }  // returns null when !show",
+      "explanation": "Required `show: boolean` is fine, but since the component returns null on false, every caller writes `<CompletionOverlay show={cond} />`. This is acceptable, however passing a non-boolean truthy expression (e.g., `show={completionPercent === 100}`) is fine while `show={completionPercent}` (number) would not be a type error if `show` were `unknown`. Verified `show: boolean` is strict — no issue here. Suppress unless team prefers conditional rendering at the call site.",
+      "suggestion": "No change required; flagged as acceptable. Confidence below threshold — consider this informational only."
+    },
+    {
+      "id": "kt-007",
+      "severity": "low",
+      "confidence": 0.85,
+      "category": "type-safety",
+      "title": "Test files cast querySelector results with `as HTMLElement` rather than asserting non-null",
+      "file": "src/app/components/figma/__tests__/courseCardShell.test.tsx",
+      "lines": "10, 16, 22, 28, 90, 95",
+      "evidence": "const bar = container.querySelector('.bg-brand') as HTMLElement",
+      "explanation": "`as HTMLElement` silences the `Element | null` return type. If the selector ever stops matching (e.g., class renamed to a token alias), the test crashes with `Cannot read properties of null` instead of a clean `expect(bar).not.toBeNull()` assertion. Prefer `const bar = container.querySelector<HTMLElement>('.bg-brand'); expect(bar).not.toBeNull()` then `bar!.style.width`. This is a small but consistent test-code anti-pattern across the new file.",
+      "suggestion": "Use the generic form of querySelector and assert non-null before accessing properties; avoid `as` casts in tests."
+    }
+  ],
+  "residual_risks": [
+    "PlayOverlay does not set type=\"button\" — if ever nested in a form ancestor it will submit it. Not a problem today (no ancestor form) but easy to regress.",
+    "handleStartStudying performs a status mutation + navigation pair without an await or transaction — if the sync engine ever moves status writes off the main thread, the destination route may briefly render with stale status.",
+    "CardCover with both aspectClass and heightClass undefined silently produces a zero-height container; only the convention of always passing one keeps this safe."
+  ],
+  "testing_gaps": [
+    "No test asserts that PlayOverlay is hidden (opacity-0) by default and only revealed by group-hover / focus-visible / hover:none media query — current tests only check that it renders when show=true.",
+    "No test for handleStartStudying ordering: status update happens BEFORE navigate. If a future refactor swaps the order, tests still pass.",
+    "courseCardShell.test.tsx does not exercise CardCover with the discriminated aspectClass case, only heightClass — coverage would catch a regression if aspectClass branch were dropped.",
+    "No type-level test (e.g., expectError) ensuring PlayOverlay rejects malformed event handlers — relevant if onClick is later tightened."
+  ]
+}

@@ -72,27 +72,45 @@ export async function searchCovers(
     // Priority order: Audnexus → iTunes → Google Books → Open Library
     promises.push(
       searchAudnexus({ title: query.title, author: query.author, asin: query.asin })
-        .then((raw) => deliver('audnexus', normalizeAndDedup(toArray(raw))))
-        .catch((e) => { console.warn('[CoverSearch] audnexus error:', e); deliver('audnexus', []) }),
+        .then(raw => deliver('audnexus', normalizeAndDedup(toArray(raw))))
+        .catch(e => {
+          console.warn('[CoverSearch] audnexus error:', e)
+          deliver('audnexus', [])
+        }),
       searchITunes({ title: query.title, author: query.author })
-        .then((raw) => deliver('itunes', normalizeAndDedup(toArray(raw))))
-        .catch((e) => { console.warn('[CoverSearch] itunes error:', e); deliver('itunes', []) }),
+        .then(raw => deliver('itunes', normalizeAndDedup(toArray(raw))))
+        .catch(e => {
+          console.warn('[CoverSearch] itunes error:', e)
+          deliver('itunes', [])
+        }),
       searchGoogleBooks({ title: query.title, author: query.author, isbn: query.isbn })
-        .then((raw) => deliver('google-books', normalizeAndDedup(toArray(raw))))
-        .catch((e) => { console.warn('[CoverSearch] google-books error:', e); deliver('google-books', []) }),
+        .then(raw => deliver('google-books', normalizeAndDedup(toArray(raw))))
+        .catch(e => {
+          console.warn('[CoverSearch] google-books error:', e)
+          deliver('google-books', [])
+        }),
       searchOpenLibrary({ title: query.title, author: query.author, isbn: query.isbn })
-        .then((results) => deliver('open-library', normalizeAndDedup(results)))
-        .catch((e) => { console.warn('[CoverSearch] open-library error:', e); deliver('open-library', []) })
+        .then(results => deliver('open-library', normalizeAndDedup(results)))
+        .catch(e => {
+          console.warn('[CoverSearch] open-library error:', e)
+          deliver('open-library', [])
+        })
     )
   } else {
     // epub / pdf / mobi: Google Books first, then Open Library
     promises.push(
       searchGoogleBooks({ title: query.title, author: query.author, isbn: query.isbn })
-        .then((raw) => deliver('google-books', normalizeAndDedup(toArray(raw))))
-        .catch((e) => { console.warn('[CoverSearch] google-books error:', e); deliver('google-books', []) }),
+        .then(raw => deliver('google-books', normalizeAndDedup(toArray(raw))))
+        .catch(e => {
+          console.warn('[CoverSearch] google-books error:', e)
+          deliver('google-books', [])
+        }),
       searchOpenLibrary({ title: query.title, author: query.author, isbn: query.isbn })
-        .then((results) => deliver('open-library', normalizeAndDedup(results)))
-        .catch((e) => { console.warn('[CoverSearch] open-library error:', e); deliver('open-library', []) })
+        .then(results => deliver('open-library', normalizeAndDedup(results)))
+        .catch(e => {
+          console.warn('[CoverSearch] open-library error:', e)
+          deliver('open-library', [])
+        })
     )
   }
 
@@ -137,9 +155,7 @@ async function searchOpenLibrary(params: {
  * Skipped-offline sentinels are treated as empty — callers still get a
  * callback invocation so they can update loading state.
  */
-function toArray(
-  raw: MetadataSearchResult[] | { skippedOffline: true }
-): MetadataSearchResult[] {
+function toArray(raw: MetadataSearchResult[] | { skippedOffline: true }): MetadataSearchResult[] {
   if (!Array.isArray(raw)) return []
   return raw
 }

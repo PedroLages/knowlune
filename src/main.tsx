@@ -111,9 +111,7 @@ deferInit(async () => {
         ...mergedAuthors.map(a => unifiedSearch.toSearchableAuthor(a)),
         ...books.map(b => unifiedSearch.toSearchableBook(b)),
         ...notes.map(n => unifiedSearch.toSearchableNote(n)),
-        ...highlights.map(h =>
-          unifiedSearch.toSearchableHighlight(h, bookTitleById.get(h.bookId))
-        ),
+        ...highlights.map(h => unifiedSearch.toSearchableHighlight(h, bookTitleById.get(h.bookId))),
       ]
 
       unifiedSearch.initializeUnifiedSearch(docs)

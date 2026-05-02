@@ -124,8 +124,10 @@ describe('E92-S09 P0 sync wiring — studySessions (INSERT-only)', () => {
     expect(sessionEntries).toHaveLength(1)
     expect(sessionEntries[0].operation).toBe('put')
     expect(sessionEntries[0].payload).toMatchObject({ id: started!.id })
-    // End-time set by endSession → serialized into the payload.
-    expect(sessionEntries[0].payload).toHaveProperty('end_time')
+    // endTime is a Dexie-only field, stripped from Supabase payload (study_sessions
+    // has no end_time column). started_at is correctly mapped via fieldMap.
+    expect(sessionEntries[0].payload).toHaveProperty('started_at')
+    expect(sessionEntries[0].payload).not.toHaveProperty('end_time')
   })
 })
 
@@ -140,6 +142,7 @@ describe('E92-S09 P0 sync wiring — progress (monotonic)', () => {
       videoId: 'pdf-1',
       currentTime: 0,
       completionPercentage: 0,
+      durationSeconds: 0,
       currentPage: 5,
     })
 
@@ -148,6 +151,7 @@ describe('E92-S09 P0 sync wiring — progress (monotonic)', () => {
       videoId: 'pdf-1',
       currentTime: 0,
       completionPercentage: 0,
+      durationSeconds: 0,
       currentPage: 12,
     })
 
@@ -162,6 +166,8 @@ describe('E92-S09 P0 sync wiring — progress (monotonic)', () => {
     expect(progressEntries[0].payload).toMatchObject({
       course_id: 'course-1',
       video_id: 'pdf-1',
+      watched_seconds: 0,
+      duration_seconds: 0,
     })
   })
 })

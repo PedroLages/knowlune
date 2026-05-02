@@ -1,7 +1,7 @@
 /**
- * Dexie Migration Checkpoint — v52
+ * Dexie Migration Checkpoint — v61
  *
- * This file provides a frozen snapshot of the complete IndexedDB schema at version 52.
+ * This file provides a frozen snapshot of the complete IndexedDB schema at version 58.
  * Fresh installs skip the incremental version declarations and create the full
  * schema in a single step. Existing users at lower versions still run incremental
  * migrations through the legacy version chain in schema.ts.
@@ -20,7 +20,7 @@
  * a single `db.version(CHECKPOINT_VERSION).stores(CHECKPOINT_SCHEMA)` call
  * for fresh installs.
  */
-export const CHECKPOINT_VERSION = 57
+export const CHECKPOINT_VERSION = 61
 
 /**
  * Shared `searchFrecency` index string. Used by both the v53 `.stores()` call
@@ -31,7 +31,7 @@ export const SEARCH_FRECENCY_INDEXES = '[entityType+entityId], entityType, lastO
 
 /**
  * Complete schema snapshot at CHECKPOINT_VERSION.
- * This is the result of applying all migrations v1–v52 on a fresh database.
+ * This is the result of applying all migrations v1–v61 on a fresh database.
  *
  * IMPORTANT: This must exactly match the schema produced by running all
  * incremental migrations. The unit test `schema-checkpoint.test.ts`
@@ -67,9 +67,13 @@ export const SEARCH_FRECENCY_INDEXES = '[entityType+entityId], entityType, lastO
  *                No schema/index change — the TypeScript types drop `auth.password` / `apiKey`,
  *                and the post-boot `migrateCredentialsToVault()` clears legacy values from Dexie
  *                once the user authenticates.
+ *
+ * Versions beyond this checkpoint (applied incrementally in schema.ts):
+ *   (none)
  */
 export const CHECKPOINT_SCHEMA: Record<string, string> = {
-  importedCourses: 'id, name, importedAt, status, *tags, source, userId, [userId+updatedAt]',
+  importedCourses:
+    'id, name, importedAt, status, *tags, source, userId, [userId+updatedAt], guestSessionId',
   importedVideos: 'id, courseId, filename, youtubeVideoId, userId, [userId+updatedAt]',
   importedPdfs: 'id, courseId, filename, userId, [userId+updatedAt]',
   progress: '[courseId+videoId], courseId, videoId, userId, [userId+updatedAt]',
@@ -104,7 +108,7 @@ export const CHECKPOINT_SCHEMA: Record<string, string> = {
   courseEmbeddings: 'courseId',
   studySchedules: 'id, courseId, learningPathId, enabled, userId, [userId+updatedAt]',
   books:
-    'id, title, author, format, status, createdAt, lastOpenedAt, series, userId, [userId+updatedAt]',
+    'id, title, author, format, status, createdAt, lastOpenedAt, series, userId, [userId+updatedAt], guestSessionId',
   bookHighlights:
     'id, bookId, color, flashcardId, createdAt, lastReviewedAt, reviewRating, userId, [userId+updatedAt]',
   bookFiles: '[bookId+filename], bookId',
@@ -128,6 +132,11 @@ export const CHECKPOINT_SCHEMA: Record<string, string> = {
   searchFrecency: SEARCH_FRECENCY_INDEXES,
   // v56 (E95-S04): local cache of server-computed reading streak (local-only, per-user).
   readingStreakCache: 'userId, cachedAt',
+  // v58 (E119-S07): GDPR consent ledger — one row per (userId, purpose) pair.
+  userConsents: 'id, userId, purpose, [userId+purpose], [userId+updatedAt], updatedAt',
+  // v60 (fix E-ABS-QA): ABS library caches (local-only; not synced).
+  absSeries: 'id, serverId, libraryId, name',
+  absCollections: 'id, serverId, libraryId, name',
 }
 
 // v42 (E109-S01): vocabularyItems table added
@@ -149,3 +158,4 @@ export const CHECKPOINT_SCHEMA: Record<string, string> = {
 // v56 (E95-S04): readingStreakCache table for locally-cached server streak results.
 //                Local-only (keyed by userId but per-device-cache; not synced).
 // v57 (E95-S05): Credential-off-the-row marker. No schema/index change — see schema.ts comment.
+// v58 (E119-S07): userConsents table for GDPR consent ledger (Art. 6(1)(a)).

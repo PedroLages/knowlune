@@ -15,8 +15,8 @@ import { FIXED_DATE } from '../utils/test-time'
 
 test.describe('E107-S04: About Book Dialog', () => {
   test.beforeEach(async ({ page }) => {
-    // Set localStorage to skip onboarding dialog BEFORE page load
-    // Key format matches useOnboardingStore.ts STORAGE_KEY
+    // Set localStorage to skip legacy onboarding dialog BEFORE page load
+    // OnboardingOverlay removed in fix/login-modal-overload; key kept for backwards compat
     await page.addInitScript(() => {
       const onboardingData = {
         completedAt: new Date('2025-01-01').toISOString(),

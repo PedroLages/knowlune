@@ -4,6 +4,11 @@ import { saveSettings, saveSettingsToSupabase } from '@/lib/settings'
 const STORAGE_KEY = 'levelup-engagement-prefs-v1'
 
 export type ColorScheme = 'professional' | 'vibrant' | 'clean'
+export type CourseViewMode = 'grid' | 'list' | 'compact'
+export type CourseGridColumns = 'auto' | 2 | 3 | 4 | 5
+
+const VALID_COURSE_VIEW_MODES: CourseViewMode[] = ['grid', 'list', 'compact']
+const VALID_COURSE_GRID_COLUMNS: CourseGridColumns[] = ['auto', 2, 3, 4, 5]
 
 export interface EngagementPrefs {
   /** Show achievement banners and completion celebrations */
@@ -16,6 +21,18 @@ export interface EngagementPrefs {
   animations: boolean
   /** Color scheme: professional (default) or vibrant */
   colorScheme: ColorScheme
+  /**
+   * Courses page view mode (E99-S01).
+   * Default 'grid'. List/compact renderers ship in S03/S04 — until then
+   * all three values render the existing grid container.
+   */
+  courseViewMode: CourseViewMode
+  /**
+   * Courses grid column count (E99-S02).
+   * Default 'auto' preserves the responsive grid; concrete values cap the
+   * column count at lg+ breakpoints. Mobile (< 640px) is always 1 column.
+   */
+  courseGridColumns: CourseGridColumns
 }
 
 interface EngagementPrefsStore extends EngagementPrefs {
@@ -29,6 +46,8 @@ const defaults: EngagementPrefs = {
   badges: true,
   animations: true,
   colorScheme: 'professional',
+  courseViewMode: 'grid',
+  courseGridColumns: 'auto',
 }
 
 function loadPersistedPrefs(): EngagementPrefs {
@@ -46,6 +65,12 @@ function loadPersistedPrefs(): EngagementPrefs {
         colorScheme: ['professional', 'vibrant', 'clean'].includes(parsed.colorScheme)
           ? parsed.colorScheme
           : 'professional',
+        courseViewMode: VALID_COURSE_VIEW_MODES.includes(parsed.courseViewMode)
+          ? parsed.courseViewMode
+          : 'grid',
+        courseGridColumns: VALID_COURSE_GRID_COLUMNS.includes(parsed.courseGridColumns)
+          ? parsed.courseGridColumns
+          : 'auto',
       }
     }
   } catch {
@@ -74,6 +99,8 @@ export const useEngagementPrefsStore = create<EngagementPrefsStore>((set, get) =
       badges: state.badges,
       animations: state.animations,
       colorScheme: state.colorScheme,
+      courseViewMode: state.courseViewMode,
+      courseGridColumns: state.courseGridColumns,
     }
     persistPrefs(prefs)
     // Bridge colorScheme to AppSettings so useColorScheme hook picks it up
@@ -81,7 +108,17 @@ export const useEngagementPrefsStore = create<EngagementPrefsStore>((set, get) =
       saveSettings({ colorScheme: value as ColorScheme })
       window.dispatchEvent(new Event('settingsUpdated'))
     }
-    // Supabase sync — only for the three keys in the JSONB field map.
+    // Bridge courseViewMode to AppSettings so non-React consumers can read it.
+    if (key === 'courseViewMode') {
+      saveSettings({ courseViewMode: value as CourseViewMode })
+      window.dispatchEvent(new Event('settingsUpdated'))
+    }
+    // Bridge courseGridColumns to AppSettings (E99-S02).
+    if (key === 'courseGridColumns') {
+      saveSettings({ courseGridColumns: value as CourseGridColumns })
+      window.dispatchEvent(new Event('settingsUpdated'))
+    }
+    // Supabase sync — only for keys in the JSONB field map.
     // badges and animations remain localStorage-only.
     if (key === 'achievements') {
       void saveSettingsToSupabase({ achievementsEnabled: value as boolean })
@@ -89,6 +126,10 @@ export const useEngagementPrefsStore = create<EngagementPrefsStore>((set, get) =
       void saveSettingsToSupabase({ streaksEnabled: value as boolean })
     } else if (key === 'colorScheme') {
       void saveSettingsToSupabase({ colorScheme: value as ColorScheme })
+    } else if (key === 'courseViewMode') {
+      void saveSettingsToSupabase({ courseViewMode: value as CourseViewMode })
+    } else if (key === 'courseGridColumns') {
+      void saveSettingsToSupabase({ courseGridColumns: value as CourseGridColumns })
     }
   },
 
@@ -96,7 +137,11 @@ export const useEngagementPrefsStore = create<EngagementPrefsStore>((set, get) =
     set({ ...defaults })
     persistPrefs({ ...defaults })
     // Bridge reset to AppSettings
-    saveSettings({ colorScheme: defaults.colorScheme })
+    saveSettings({
+      colorScheme: defaults.colorScheme,
+      courseViewMode: defaults.courseViewMode,
+      courseGridColumns: defaults.courseGridColumns,
+    })
     window.dispatchEvent(new Event('settingsUpdated'))
   },
 }))

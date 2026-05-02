@@ -1,10 +1,9 @@
 /**
  * Shared reader theme configuration — single source of truth for EPUB reader colors.
  *
- * Bridges the app's color scheme (Professional/Vibrant/Clean) with the reader's
- * independent theme selector (Light/Sepia/Dark). Colors are resolved hex values
- * because epub.js renders in an isolated iframe where CSS custom properties
- * from the host document don't cascade.
+ * Defines the reader's independent Page Tone palette. Colors are resolved hex
+ * values because epub.js renders in an isolated iframe where CSS custom
+ * properties from the host document don't cascade.
  *
  * @module readerThemeConfig
  */
@@ -30,37 +29,25 @@ export interface ReaderColors {
 }
 
 /**
- * Static color map: reader theme x color scheme -> resolved hex values.
- * Values sourced from CSS custom properties in theme.css.
- *
- * - Vibrant only overrides brand/accent colors, not background/foreground
- * - Clean has a distinct light bg (#f9f9fe) but shares dark mode with default
- * - Sepia is reader-only and ignores the app color scheme entirely
+ * Static Page Tone map. The reader palette is intentionally independent from
+ * the app-wide Professional/Vibrant/Clean color scheme.
  */
-const THEME_COLORS: Record<ReaderTheme, Record<ColorScheme, ReaderColors>> = {
-  light: {
-    professional: { background: '#faf5ee', foreground: '#1c1d2b' },
-    vibrant: { background: '#faf5ee', foreground: '#1c1d2b' },
-    clean: { background: '#f9f9fe', foreground: '#2c333d' },
-  },
-  dark: {
-    professional: { background: '#1a1b26', foreground: '#e8e9f0' },
-    vibrant: { background: '#1a1b26', foreground: '#e8e9f0' },
-    clean: { background: '#1a1b26', foreground: '#e8e9f0' },
-  },
-  sepia: {
-    professional: { background: '#f4ecd8', foreground: '#2d241e' },
-    vibrant: { background: '#f4ecd8', foreground: '#2d241e' },
-    clean: { background: '#f4ecd8', foreground: '#2d241e' },
-  },
+const THEME_COLORS: Record<ReaderTheme, ReaderColors> = {
+  white: { background: '#ffffff', foreground: '#1c1d2b' },
+  sepia: { background: '#f4ecd8', foreground: '#2d241e' },
+  gray: { background: '#e5e5e5', foreground: '#1f2937' },
+  dark: { background: '#383a56', foreground: '#f7f7fb' },
+  black: { background: '#000000', foreground: '#f8fafc' },
 }
 
 /**
- * Returns resolved hex colors for a reader theme + app color scheme combination.
+ * Returns resolved hex colors for a reader Page Tone.
+ *
+ * The optional colorScheme parameter is accepted for compatibility with older
+ * call sites, but reader tones no longer vary by app color scheme.
  */
-export function getReaderThemeColors(theme: ReaderTheme, colorScheme: ColorScheme): ReaderColors {
-  const safe = resolveColorScheme(colorScheme)
-  return THEME_COLORS[theme][safe]
+export function getReaderThemeColors(theme: ReaderTheme, _colorScheme?: ColorScheme): ReaderColors {
+  return THEME_COLORS[theme] ?? THEME_COLORS.sepia
 }
 
 /**
@@ -80,17 +67,19 @@ export interface ReaderChromeClasses {
 
 // Map from hex background to Tailwind classes — literal strings for Tailwind scanning
 const BG_CLASSES: Record<string, { bg: string; bgOverlay: string; bgBar: string }> = {
-  '#faf5ee': { bg: 'bg-[#faf5ee]', bgOverlay: 'bg-[#faf5ee]/60', bgBar: 'bg-[#faf5ee]/98' },
-  '#f9f9fe': { bg: 'bg-[#f9f9fe]', bgOverlay: 'bg-[#f9f9fe]/60', bgBar: 'bg-[#f9f9fe]/98' },
-  '#1a1b26': { bg: 'bg-[#1a1b26]', bgOverlay: 'bg-[#1a1b26]/60', bgBar: 'bg-[#1a1b26]/98' },
+  '#ffffff': { bg: 'bg-[#ffffff]', bgOverlay: 'bg-[#ffffff]/60', bgBar: 'bg-[#ffffff]/98' },
   '#f4ecd8': { bg: 'bg-[#f4ecd8]', bgOverlay: 'bg-[#f4ecd8]/60', bgBar: 'bg-[#f4ecd8]/98' },
+  '#e5e5e5': { bg: 'bg-[#e5e5e5]', bgOverlay: 'bg-[#e5e5e5]/60', bgBar: 'bg-[#e5e5e5]/98' },
+  '#383a56': { bg: 'bg-[#383a56]', bgOverlay: 'bg-[#383a56]/60', bgBar: 'bg-[#383a56]/98' },
+  '#000000': { bg: 'bg-[#000000]', bgOverlay: 'bg-[#000000]/60', bgBar: 'bg-[#000000]/98' },
 }
 
 const TEXT_CLASSES: Record<string, string> = {
   '#1c1d2b': 'text-[#1c1d2b]',
-  '#2c333d': 'text-[#2c333d]',
-  '#e8e9f0': 'text-[#e8e9f0]',
   '#2d241e': 'text-[#2d241e]',
+  '#1f2937': 'text-[#1f2937]',
+  '#f7f7fb': 'text-[#f7f7fb]',
+  '#f8fafc': 'text-[#f8fafc]',
 }
 
 /**
@@ -98,22 +87,22 @@ const TEXT_CLASSES: Record<string, string> = {
  */
 export function getReaderChromeClasses(
   theme: ReaderTheme,
-  colorScheme: ColorScheme
+  colorScheme?: ColorScheme
 ): ReaderChromeClasses {
   const colors = getReaderThemeColors(theme, colorScheme)
   let bgClasses = BG_CLASSES[colors.background]
   if (!bgClasses) {
     console.warn(
-      `Unknown background hex "${colors.background}", falling back to Professional default (#faf5ee)`
+      `Unknown background hex "${colors.background}", falling back to reader sepia (#f4ecd8)`
     )
-    bgClasses = BG_CLASSES['#faf5ee']
+    bgClasses = BG_CLASSES['#f4ecd8']
   }
   let textClass = TEXT_CLASSES[colors.foreground]
   if (!textClass) {
     console.warn(
-      `Unknown foreground hex "${colors.foreground}", falling back to Professional default (#1c1d2b)`
+      `Unknown foreground hex "${colors.foreground}", falling back to reader sepia (#2d241e)`
     )
-    textClass = TEXT_CLASSES['#1c1d2b']
+    textClass = TEXT_CLASSES['#2d241e']
   }
   return { ...bgClasses, text: textClass }
 }

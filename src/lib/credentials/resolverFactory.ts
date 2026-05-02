@@ -47,7 +47,7 @@ export function createCredentialResolver(kind: CachedCredentialKind) {
    * This separates "auth-failed" from "transient error / unauthenticated"
    * so `useValue` can set `authFailed` without racing the cache.
    */
-  const lastReason = new Map<string, 'ok' | 'auth-failed' | 'error'>()
+  const lastReason = new Map<string, 'ok' | 'auth-failed' | 'unauthenticated' | 'error'>()
 
   async function get(id: string | undefined | null): Promise<string | null> {
     if (!id) return null
@@ -86,8 +86,20 @@ export function createCredentialResolver(kind: CachedCredentialKind) {
     }
 
     // network/unknown error or unauthenticated — do not cache; let next call retry.
-    lastReason.set(reasonKey, 'error')
+    lastReason.set(reasonKey, result.reason === 'unauthenticated' ? 'unauthenticated' : 'error')
     return null
+  }
+
+  /**
+   * Last-known outcome for `(kind, id)`. Callers that need to distinguish
+   * "not signed in" from "auth-failed" / "network error" (e.g. the sync hook
+   * that surfaces user-facing messaging) read this after `get()` returns null.
+   */
+  function getLastReason(
+    id: string | undefined | null
+  ): 'ok' | 'auth-failed' | 'unauthenticated' | 'error' | undefined {
+    if (!id) return undefined
+    return lastReason.get(`${kind}:${id}`)
   }
 
   function useValue(id: string | undefined | null): ResolverHookResult {
@@ -137,5 +149,6 @@ export function createCredentialResolver(kind: CachedCredentialKind) {
     get,
     useValue,
     invalidate: (id: string) => credentialCache.invalidate(kind, id),
+    getLastReason,
   }
 }

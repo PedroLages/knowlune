@@ -113,11 +113,7 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
 
     try {
       await persistWithRetry(async () => {
-        await syncableWrite(
-          'learningPaths',
-          'add',
-          path as unknown as SyncableRecord,
-        )
+        await syncableWrite('learningPaths', 'add', path as unknown as SyncableRecord)
       })
     } catch (error) {
       console.error('[LearningPathStore] Failed to create path:', error)
@@ -155,11 +151,10 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
       await persistWithRetry(async () => {
         // syncableWrite needs the full record — read-merge-put so the
         // registry-driven LWW comparison works against a complete row.
-        await syncableWrite(
-          'learningPaths',
-          'put',
-          { ...existing, name } as unknown as SyncableRecord,
-        )
+        await syncableWrite('learningPaths', 'put', {
+          ...existing,
+          name,
+        } as unknown as SyncableRecord)
       })
     } catch (error) {
       console.error('[LearningPathStore] Failed to rename path:', error)
@@ -191,11 +186,10 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
 
     try {
       await persistWithRetry(async () => {
-        await syncableWrite(
-          'learningPaths',
-          'put',
-          { ...existing, description } as unknown as SyncableRecord,
-        )
+        await syncableWrite('learningPaths', 'put', {
+          ...existing,
+          description,
+        } as unknown as SyncableRecord)
       })
     } catch (error) {
       console.error('[LearningPathStore] Failed to update description:', error)
@@ -219,9 +213,10 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
     // can enqueue each one. We cannot use a Dexie transaction here because
     // syncableWrite spans Dexie + syncQueue; enqueueing happens outside the
     // table-scoped transaction.
-    const entryIds = (
-      await db.learningPathEntries.where('pathId').equals(pathId).primaryKeys()
-    ) as string[]
+    const entryIds = (await db.learningPathEntries
+      .where('pathId')
+      .equals(pathId)
+      .primaryKeys()) as string[]
 
     // Optimistic update
     set(state => {
@@ -300,18 +295,10 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
 
     try {
       await persistWithRetry(async () => {
-        await syncableWrite(
-          'learningPathEntries',
-          'add',
-          entry as unknown as SyncableRecord,
-        )
+        await syncableWrite('learningPathEntries', 'add', entry as unknown as SyncableRecord)
         const existingPath = await db.learningPaths.get(pathId)
         if (existingPath) {
-          await syncableWrite(
-            'learningPaths',
-            'put',
-            existingPath as unknown as SyncableRecord,
-          )
+          await syncableWrite('learningPaths', 'put', existingPath as unknown as SyncableRecord)
         }
       })
     } catch (error) {
@@ -355,19 +342,11 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
         await syncableWrite('learningPathEntries', 'delete', entryToRemove.id)
         // Update positions of remaining entries — one put per row.
         for (const entry of remaining) {
-          await syncableWrite(
-            'learningPathEntries',
-            'put',
-            entry as unknown as SyncableRecord,
-          )
+          await syncableWrite('learningPathEntries', 'put', entry as unknown as SyncableRecord)
         }
         const existingPath = await db.learningPaths.get(pathId)
         if (existingPath) {
-          await syncableWrite(
-            'learningPaths',
-            'put',
-            existingPath as unknown as SyncableRecord,
-          )
+          await syncableWrite('learningPaths', 'put', existingPath as unknown as SyncableRecord)
         }
       })
     } catch (error) {
@@ -406,19 +385,11 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
 
     await persistWithRetry(async () => {
       for (const entry of updated) {
-        await syncableWrite(
-          'learningPathEntries',
-          'put',
-          entry as unknown as SyncableRecord,
-        )
+        await syncableWrite('learningPathEntries', 'put', entry as unknown as SyncableRecord)
       }
       const existingPath = await db.learningPaths.get(pathId)
       if (existingPath) {
-        await syncableWrite(
-          'learningPaths',
-          'put',
-          existingPath as unknown as SyncableRecord,
-        )
+        await syncableWrite('learningPaths', 'put', existingPath as unknown as SyncableRecord)
       }
     }).catch(error => {
       console.error('[LearningPathStore] Failed to persist reordering:', error)
@@ -453,9 +424,10 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
       const pathId = targetPath!.id
 
       // Clear existing entries for this path — enqueue deletes one-at-a-time.
-      const existingEntryIds = (
-        await db.learningPathEntries.where('pathId').equals(pathId).primaryKeys()
-      ) as string[]
+      const existingEntryIds = (await db.learningPathEntries
+        .where('pathId')
+        .equals(pathId)
+        .primaryKeys()) as string[]
       await persistWithRetry(async () => {
         for (const entryId of existingEntryIds) {
           await syncableWrite('learningPathEntries', 'delete', entryId)
@@ -498,26 +470,22 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
 
       await persistWithRetry(async () => {
         // Clear any partial streaming entries.
-        const partialIds = (
-          await db.learningPathEntries.where('pathId').equals(pathId).primaryKeys()
-        ) as string[]
+        const partialIds = (await db.learningPathEntries
+          .where('pathId')
+          .equals(pathId)
+          .primaryKeys()) as string[]
         for (const entryId of partialIds) {
           await syncableWrite('learningPathEntries', 'delete', entryId)
         }
         for (const entry of finalEntries) {
-          await syncableWrite(
-            'learningPathEntries',
-            'add',
-            entry as unknown as SyncableRecord,
-          )
+          await syncableWrite('learningPathEntries', 'add', entry as unknown as SyncableRecord)
         }
         const existingPath = await db.learningPaths.get(pathId)
         if (existingPath) {
-          await syncableWrite(
-            'learningPaths',
-            'put',
-            { ...existingPath, isAIGenerated: true } as unknown as SyncableRecord,
-          )
+          await syncableWrite('learningPaths', 'put', {
+            ...existingPath,
+            isAIGenerated: true,
+          } as unknown as SyncableRecord)
         }
       })
 
@@ -563,9 +531,10 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
     }))
 
     try {
-      const entryIds = (
-        await db.learningPathEntries.where('pathId').equals(pathId).primaryKeys()
-      ) as string[]
+      const entryIds = (await db.learningPathEntries
+        .where('pathId')
+        .equals(pathId)
+        .primaryKeys()) as string[]
       await persistWithRetry(async () => {
         for (const entryId of entryIds) {
           await syncableWrite('learningPathEntries', 'delete', entryId)
@@ -613,19 +582,14 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
 
     await persistWithRetry(async () => {
       for (const entry of updated) {
-        await syncableWrite(
-          'learningPathEntries',
-          'put',
-          entry as unknown as SyncableRecord,
-        )
+        await syncableWrite('learningPathEntries', 'put', entry as unknown as SyncableRecord)
       }
       const existingPath = await db.learningPaths.get(pathId)
       if (existingPath) {
-        await syncableWrite(
-          'learningPaths',
-          'put',
-          { ...existingPath, isAIGenerated: true } as unknown as SyncableRecord,
-        )
+        await syncableWrite('learningPaths', 'put', {
+          ...existingPath,
+          isAIGenerated: true,
+        } as unknown as SyncableRecord)
       }
     }).catch(error => {
       console.error('[LearningPathStore] Failed to apply AI order:', error)

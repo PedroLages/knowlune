@@ -14,7 +14,6 @@
 import { useEffect, useCallback, useRef } from 'react'
 import { useBookStore } from '@/stores/useBookStore'
 import { useAudioPlayerStore } from '@/stores/useAudioPlayerStore'
-import { db } from '@/db/schema'
 import { sharedAudioRef } from '@/app/hooks/useAudioPlayer'
 import type { Book } from '@/data/types'
 
@@ -23,6 +22,10 @@ interface UseAudiobookPositionSyncParams {
   isPlaying: boolean
   isLoading: boolean
   seekTo: (seconds: number) => void
+  /** True when the player is being expanded from the mini-player singleton state. */
+  resumeFromMiniPlayer?: boolean
+  /** True when route-driven chapter/seek params should win over stored resume state. */
+  skipSessionResumeRestore?: boolean
   /** Ref that the caller uses to detect deliberate stops (e.g. to gate post-session review) */
   deliberateStopRef: React.MutableRefObject<boolean>
 }
@@ -32,6 +35,8 @@ export function useAudiobookPositionSync({
   isPlaying,
   isLoading,
   seekTo,
+  resumeFromMiniPlayer = false,
+  skipSessionResumeRestore = false,
   deliberateStopRef,
 }: UseAudiobookPositionSyncParams): { savePosition: () => void } {
   /** Persist current playback position and progress to Dexie (E101-S04, E101-S06) */
@@ -40,34 +45,17 @@ export function useAudiobookPositionSync({
     if (!audio || !isFinite(audio.currentTime) || audio.currentTime === 0) return
 
     const position = { type: 'time' as const, seconds: audio.currentTime }
-    const now = new Date().toISOString()
 
     // Calculate progress percentage from totalDuration (E101-S06: FR31/FR32)
     const totalDur = book.totalDuration ?? 0
     const progress =
       totalDur > 0 ? Math.min(100, Math.round((audio.currentTime / totalDur) * 100)) : undefined
 
-    // Optimistic store update
-    useBookStore.setState(state => ({
-      books: state.books.map(b =>
-        b.id === book.id
-          ? {
-              ...b,
-              currentPosition: position,
-              lastOpenedAt: now,
-              ...(progress !== undefined && { progress }),
-            }
-          : b
-      ),
-    }))
-
-    // Persist to Dexie — non-critical, never disrupt playback UX
-    type DexiePositionUpdate = Partial<Pick<Book, 'currentPosition' | 'lastOpenedAt' | 'progress'>>
-    const dexieUpdate: DexiePositionUpdate = { currentPosition: position, lastOpenedAt: now }
-    if (progress !== undefined) dexieUpdate.progress = progress
-    // silent-catch-ok: Dexie persist is non-critical, position re-saved on next pause
-    db.books
-      .update(book.id, dexieUpdate as Parameters<typeof db.books.update>[1])
+    // Route through the store write-path so it reaches the sync queue/Supabase.
+    // Progress is optional when totalDuration is unknown (we keep the existing value).
+    useBookStore
+      .getState()
+      .updateBookPosition(book.id, position, progress)
       .catch(err => console.error('[useAudiobookPositionSync] Failed to save position:', err))
   }, [book.id, book.totalDuration])
 
@@ -121,10 +109,19 @@ export function useAudiobookPositionSync({
     if (book.source.type !== 'remote' || savedSeconds === null || savedSeconds <= 0) {
       return
     }
-    // Skip seek if this book is already active (e.g. returning from mini-player) —
-    // the singleton audio element already has the correct position
-    const alreadyActive = useAudioPlayerStore.getState().currentBookId === book.id
-    if (alreadyActive) {
+    if (skipSessionResumeRestore) {
+      sessionResumeSeekDoneRef.current = true
+      return
+    }
+    const audio = sharedAudioRef.current
+    // Skip seek when resuming from mini-player OR when this exact book already has
+    // a live singleton playback position (direct re-entry into an active session).
+    const hasLivePositionForBook =
+      useAudioPlayerStore.getState().currentBookId === book.id &&
+      !!audio &&
+      Number.isFinite(audio.currentTime) &&
+      audio.currentTime > 0
+    if (resumeFromMiniPlayer || hasLivePositionForBook) {
       sessionResumeSeekDoneRef.current = true
       return
     }
@@ -132,7 +129,7 @@ export function useAudiobookPositionSync({
       sessionResumeSeekDoneRef.current = true
       seekTo(savedSeconds)
     }
-  }, [isLoading, book.id, seekTo])
+  }, [isLoading, book.id, seekTo, resumeFromMiniPlayer, skipSessionResumeRestore])
 
   return { savePosition }
 }

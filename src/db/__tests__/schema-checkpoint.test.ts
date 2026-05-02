@@ -28,8 +28,8 @@ function extractSchema(db: Dexie): Record<string, string> {
 }
 
 describe('Dexie migration checkpoint', () => {
-  it('CHECKPOINT_VERSION should be 57', () => {
-    expect(CHECKPOINT_VERSION).toBe(57)
+  it('CHECKPOINT_VERSION should be 61', () => {
+    expect(CHECKPOINT_VERSION).toBe(61)
   })
 
   it('CHECKPOINT_SCHEMA should define all expected tables', () => {
@@ -47,7 +47,11 @@ describe('Dexie migration checkpoint', () => {
     // syncQueue, syncMetadata added in v52 (E92-S02)
     // searchFrecency added in v53 (E117-S02)
     // readingStreakCache added in v56 (E95-S04)
+    // userConsents added in v58 (E119-S07)
+    // absSeries/absCollections added in v60 (fix E-ABS-QA)
     const expectedTables = [
+      'absCollections',
+      'absSeries',
       'aiUsageEvents',
       'audioBookmarks',
       'audioClips',
@@ -95,6 +99,7 @@ describe('Dexie migration checkpoint', () => {
       'syncMetadata',
       'syncQueue',
       'transcriptEmbeddings',
+      'userConsents',
       'videoCaptions',
       'vocabularyItems',
       'youtubeChapters',

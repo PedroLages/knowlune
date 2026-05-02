@@ -4,6 +4,9 @@ dist/
 .env
 *.local
 
+# Wrangler local state (Cloudflare Workers deployment cache)
+.wrangler/
+
 # Python bytecode
 __pycache__/
 *.py[cod]
@@ -33,6 +36,8 @@ coverage/
 # PWA icons (exceptions)
 !public/pwa-*.png
 !public/apple-touch-icon-*.png
+!public/splash/*.png
+!public/shortcuts/*.png
 
 # Lighthouse
 .lighthouseci/
@@ -44,6 +49,9 @@ supabase/*
 !supabase/functions/
 !supabase/tests/
 !supabase/storage-setup.sql
+
+# Vault wrappers migration (already deployed, untracked per request)
+supabase/migrations/20260502000002_vault_credentials_public_wrappers.sql
 StudyGy-Dashboard/
 
 # Git worktrees
@@ -85,3 +93,5 @@ library-snapshot.yml
 
 # Compound Engineering local config (machine-specific)
 .compound-engineering/
+.worktrees
+.claude/settings.local.json

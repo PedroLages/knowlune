@@ -271,13 +271,17 @@ describe('unifiedSearch', () => {
     })
 
     it('"michel" matches author "Michael Stonebraker"', () => {
-      initializeUnifiedSearch([toSearchableAuthor(makeAuthor({ id: 'a1', name: 'Michael Stonebraker' }))])
+      initializeUnifiedSearch([
+        toSearchableAuthor(makeAuthor({ id: 'a1', name: 'Michael Stonebraker' })),
+      ])
       const results = search('michel')
       expect(results.some(r => r.id === 'a1')).toBe(true)
     })
 
     it('"introdction" matches lesson "Introduction"', () => {
-      initializeUnifiedSearch([toSearchableLesson(makeVideo({ id: 'v1', filename: 'Introduction' }))])
+      initializeUnifiedSearch([
+        toSearchableLesson(makeVideo({ id: 'v1', filename: 'Introduction' })),
+      ])
       const results = search('introdction')
       expect(results.some(r => r.id === 'v1')).toBe(true)
     })

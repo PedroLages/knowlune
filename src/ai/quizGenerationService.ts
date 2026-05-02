@@ -23,6 +23,7 @@ import {
   isOllamaDirectConnection,
   isFeatureEnabled,
 } from '@/lib/aiConfiguration'
+import { apiUrl } from '@/lib/apiBaseUrl'
 import { syncableWrite, type SyncableRecord } from '@/lib/sync/syncableWrite'
 import { trackAIUsage } from '@/lib/aiEventTracking'
 import { chunkTranscript, type TranscriptChunk } from './quizChunker'
@@ -107,10 +108,7 @@ export async function generateQuizForLesson(
   // and we intentionally do not extend the enum in this story (would require
   // a Supabase schema change). Using the closest-fit feature ('knowledge_gaps')
   // and tagging granularity via `metadata.subFeature` per plan M1.
-  const emitTracking = (
-    status: 'success' | 'error',
-    extra: Record<string, unknown> = {}
-  ): void => {
+  const emitTracking = (status: 'success' | 'error', extra: Record<string, unknown> = {}): void => {
     trackAIUsage('knowledge_gaps', {
       courseId,
       durationMs: Date.now() - startTime,
@@ -269,7 +267,7 @@ async function callOllamaChat(
 
   try {
     const useDirectConnection = isOllamaDirectConnection()
-    const fetchUrl = useDirectConnection ? `${ollamaConfig.url}/api/chat` : '/api/ai/ollama/chat'
+    const fetchUrl = useDirectConnection ? `${ollamaConfig.url}/api/chat` : apiUrl('ai-ollama/chat')
 
     const requestBody: Record<string, unknown> = {
       model: ollamaConfig.model,

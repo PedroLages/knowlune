@@ -304,7 +304,7 @@ export function TranscriptPanel({ cues, currentTime, onSeek, loadingState }: Tra
               data-testid={isActive ? 'transcript-cue-active' : 'transcript-cue'}
               className={cn(
                 'w-full text-left px-3 py-2 rounded-lg text-sm transition-colors',
-                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1',
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-1',
                 isActive
                   ? 'bg-brand-soft border-l-2 border-brand text-foreground font-medium'
                   : 'hover:bg-accent text-muted-foreground',

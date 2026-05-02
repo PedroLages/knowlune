@@ -51,7 +51,10 @@ describe('uploadBlob', () => {
     vi.clearAllMocks()
     mockUpload.mockResolvedValue({ error: null })
     mockGetPublicUrl.mockReturnValue({
-      data: { publicUrl: 'https://cdn.supabase.co/storage/v1/object/public/course-thumbnails/user1/course1/thumbnail.jpg' },
+      data: {
+        publicUrl:
+          'https://cdn.supabase.co/storage/v1/object/public/course-thumbnails/user1/course1/thumbnail.jpg',
+      },
     })
     mockStorageFrom.mockReturnValue({
       upload: mockUpload,
@@ -75,7 +78,7 @@ describe('uploadBlob', () => {
     expect(mockUpload).toHaveBeenCalledWith(
       'user1/course1/thumbnail.jpg',
       blob,
-      expect.objectContaining({ upsert: true }),
+      expect.objectContaining({ upsert: true })
     )
   })
 
@@ -95,7 +98,7 @@ describe('uploadBlob', () => {
     await expect(
       uploadBlob('course-thumbnails', 'user1/course1/thumbnail.jpg', blob, {
         maxSizeBytes: 500_000,
-      }),
+      })
     ).resolves.toBeDefined()
     expect(mockUpload).toHaveBeenCalled()
   })
@@ -105,7 +108,7 @@ describe('uploadBlob', () => {
     await expect(
       uploadBlob('course-thumbnails', 'user1/course1/thumbnail.jpg', blob, {
         maxSizeBytes: 500_000,
-      }),
+      })
     ).rejects.toThrow(RangeError)
     expect(mockUpload).not.toHaveBeenCalled()
   })
@@ -113,7 +116,7 @@ describe('uploadBlob', () => {
   it('error path: blob.size exceeds maxSizeBytes — storage.from is never called', async () => {
     const blob = makeBlob(1_000_001)
     await expect(
-      uploadBlob('avatars', 'user1/author1/photo.jpg', blob, { maxSizeBytes: 1_000_000 }),
+      uploadBlob('avatars', 'user1/author1/photo.jpg', blob, { maxSizeBytes: 1_000_000 })
     ).rejects.toThrow()
     expect(mockStorageFrom).not.toHaveBeenCalled()
   })
@@ -122,7 +125,7 @@ describe('uploadBlob', () => {
     mockUpload.mockResolvedValue({ error: { message: 'storage quota exceeded' } })
     const blob = makeBlob(100)
     await expect(
-      uploadBlob('course-thumbnails', 'user1/course1/thumbnail.jpg', blob),
+      uploadBlob('course-thumbnails', 'user1/course1/thumbnail.jpg', blob)
     ).rejects.toThrow('storage quota exceeded')
   })
 

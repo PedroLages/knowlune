@@ -69,6 +69,26 @@ let _activeSessionId: string | null = null
 let _activeSessionBaseUrl: string | null = null
 let _activeSessionApiKey: string | null = null
 
+/**
+ * Explicitly close the active Audiobookshelf playback session (remote streaming).
+ *
+ * Important: we intentionally do NOT close remote sessions on normal React unmount
+ * (route changes / mini-player transitions) because the singleton audio element
+ * keeps playing across pages. Sessions are cleaned up on book-switch and when the
+ * user explicitly dismisses playback.
+ */
+export function cleanupActiveAbsPlaybackSession(): void {
+  if (_activeSessionId && _activeSessionBaseUrl && _activeSessionApiKey) {
+    // silent-catch-ok — fire-and-forget: ABS auto-expires idle sessions after 30min
+    closePlaybackSession(_activeSessionBaseUrl, _activeSessionApiKey, _activeSessionId).catch(
+      () => {}
+    )
+  }
+  _activeSessionId = null
+  _activeSessionBaseUrl = null
+  _activeSessionApiKey = null
+}
+
 function getSharedAudio(): HTMLAudioElement {
   if (!_sharedAudio) {
     _sharedAudio = new Audio()
@@ -228,14 +248,6 @@ export function useAudioPlayer(book: Book | null): UseAudioPlayerReturn {
       audio.removeEventListener('error', handleError)
       // Do NOT pause or destroy — singleton must survive route changes
       stopRafLoop()
-      // Close active ABS playback session on unmount
-      if (_activeSessionId && _activeSessionBaseUrl && _activeSessionApiKey) {
-        // silent-catch-ok — fire-and-forget: ABS auto-expires idle sessions after 30min
-        closePlaybackSession(_activeSessionBaseUrl, _activeSessionApiKey, _activeSessionId).catch(
-          () => {}
-        )
-        _activeSessionId = null
-      }
     }
   }, []) // intentionally run once on mount — event listener lifecycle
 
@@ -612,7 +624,18 @@ export function useAudioPlayer(book: Book | null): UseAudioPlayerReturn {
     (seconds: number) => {
       const audio = _sharedAudio
       if (!audio) return
-      audio.currentTime = Math.max(0, Math.min(seconds, localDuration))
+      const elementDuration = audio.duration
+      const hasElementDuration = Number.isFinite(elementDuration) && elementDuration > 0
+      const hasLocalDuration = Number.isFinite(localDuration) && localDuration > 0
+      const upperBound = hasElementDuration
+        ? elementDuration
+        : hasLocalDuration
+          ? localDuration
+          : null
+      // During initial remote stream bootstrap, duration can temporarily be unknown.
+      // Avoid clamping valid resume seeks to 0 while metadata is still settling.
+      audio.currentTime =
+        upperBound === null ? Math.max(0, seconds) : Math.max(0, Math.min(seconds, upperBound))
       setLocalCurrentTime(audio.currentTime)
       setCurrentTime(audio.currentTime)
     },

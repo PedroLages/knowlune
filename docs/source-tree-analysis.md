@@ -47,12 +47,7 @@ levelup/
 ├── components.json             # shadcn/ui configuration
 ├── Dockerfile                  # Production Docker image
 ├── Dockerfile.dev              # Development Docker image
-├── Dockerfile.preview          # Preview Docker image
-├── docker-compose.dev.yml      # Dev compose stack
-├── docker-compose.ci.yml       # CI compose stack
-├── docker-compose.test.yml     # Test compose stack
 ├── Makefile                    # Build automation shortcuts
-├── nginx.conf                  # Production Nginx configuration
 ├── mockoon-data.json           # Mock API data (Mockoon)
 ├── lighthouserc.cjs            # Lighthouse CI configuration
 ├── CLAUDE.md                   # Claude Code instructions

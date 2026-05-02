@@ -36,11 +36,9 @@ vi.mock('@/lib/auth/supabase', () => {
     select: () => ({
       eq: () => ({
         // single() for user_settings
-        single: async () =>
-          mockState.userSettings ?? { data: null, error: { code: 'PGRST116' } },
+        single: async () => mockState.userSettings ?? { data: null, error: { code: 'PGRST116' } },
         // maybeSingle() for notification_preferences
-        maybeSingle: async () =>
-          mockState.notificationPreferences ?? { data: null, error: null },
+        maybeSingle: async () => mockState.notificationPreferences ?? { data: null, error: null },
       }),
     }),
   })
@@ -65,7 +63,7 @@ vi.mock('sonner', () => ({
 
 let hydrateSettingsFromSupabase: (
   userMetadata: Record<string, unknown> | undefined,
-  userId?: string,
+  userId?: string
 ) => Promise<void>
 let useNotificationPrefsStore: (typeof import('@/stores/useNotificationPrefsStore'))['useNotificationPrefsStore']
 let useAuthStore: (typeof import('@/stores/useAuthStore'))['useAuthStore']
@@ -111,10 +109,8 @@ beforeEach(async () => {
     const makeQuery = () => ({
       select: () => ({
         eq: () => ({
-          single: async () =>
-            mockState.userSettings ?? { data: null, error: { code: 'PGRST116' } },
-          maybeSingle: async () =>
-            mockState.notificationPreferences ?? { data: null, error: null },
+          single: async () => mockState.userSettings ?? { data: null, error: { code: 'PGRST116' } },
+          maybeSingle: async () => mockState.notificationPreferences ?? { data: null, error: null },
         }),
       }),
     })
@@ -134,7 +130,9 @@ beforeEach(async () => {
   useAuthStore = authMod.useAuthStore
   const dbMod = await import('@/db/schema')
   db = dbMod.db
-  useAuthStore.setState({ user: { id: USER_ID, email: 't@x.y' } as unknown as import('@supabase/supabase-js').User })
+  useAuthStore.setState({
+    user: { id: USER_ID, email: 't@x.y' } as unknown as import('@supabase/supabase-js').User,
+  })
 })
 
 describe('hydrateSettingsFromSupabase — notification_preferences', () => {

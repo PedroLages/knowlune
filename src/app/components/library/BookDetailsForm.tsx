@@ -77,9 +77,9 @@ export function BookDetailsForm({
   onImport,
 }: BookDetailsFormProps) {
   return (
-    <div className="space-y-4" data-testid="book-details-form">
+    <div className="min-w-0 max-w-full space-y-4 overflow-hidden" data-testid="book-details-form">
       {/* Cover preview + title/author */}
-      <div className="flex gap-4">
+      <div className="flex min-w-0 gap-4">
         {coverPreviewUrl ? (
           <img
             src={coverPreviewUrl}
@@ -93,7 +93,7 @@ export function BookDetailsForm({
           </div>
         )}
         <div className="flex min-w-0 flex-1 flex-col gap-2">
-          <div>
+          <div className="min-w-0">
             <Label htmlFor="book-title">Title</Label>
             <Input
               id="book-title"
@@ -104,7 +104,7 @@ export function BookDetailsForm({
               data-testid="book-title-input"
             />
           </div>
-          <div>
+          <div className="min-w-0">
             <Label htmlFor="book-author">Author</Label>
             <Input
               id="book-author"
@@ -119,8 +119,8 @@ export function BookDetailsForm({
       </div>
 
       {/* Genre + Status selects */}
-      <div className="grid grid-cols-2 gap-4">
-        <div>
+      <div className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2">
+        <div className="min-w-0">
           <Label htmlFor="book-genre">Genre</Label>
           <Select value={genre} onValueChange={onGenreChange} disabled={isImporting}>
             <SelectTrigger id="book-genre" data-testid="book-genre-select">
@@ -135,7 +135,7 @@ export function BookDetailsForm({
             </SelectContent>
           </Select>
         </div>
-        <div>
+        <div className="min-w-0">
           <Label htmlFor="book-status">Status</Label>
           <Select
             value={status}
@@ -157,8 +157,10 @@ export function BookDetailsForm({
       </div>
 
       {/* File info */}
-      <div className="flex items-center gap-2 rounded-lg bg-muted/50 px-3 py-2 text-xs text-muted-foreground">
-        <span className="truncate">{file.name}</span>
+      <div className="flex min-w-0 max-w-full items-center gap-2 overflow-hidden rounded-lg bg-muted/50 px-3 py-2 text-xs text-muted-foreground">
+        <span className="block min-w-0 flex-1 truncate" title={file.name}>
+          {file.name}
+        </span>
         <span className="shrink-0">({(file.size / (1024 * 1024)).toFixed(1)} MB)</span>
         {!isImporting && phase !== 'done' && (
           <button

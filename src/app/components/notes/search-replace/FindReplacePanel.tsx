@@ -124,7 +124,7 @@ export function FindReplacePanel({ editor, onClose }: FindReplacePanelProps) {
           className={cn(
             'inline-flex items-center justify-center h-11 px-3 rounded-md text-xs font-medium transition-colors cursor-pointer whitespace-nowrap',
             'hover:bg-accent hover:text-accent-foreground',
-            'focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1'
+            'focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-1'
           )}
           aria-label="Replace all"
         >
@@ -150,7 +150,7 @@ function PanelButton({
       className={cn(
         'inline-flex items-center justify-center size-11 rounded-md text-sm transition-colors cursor-pointer shrink-0',
         'hover:bg-accent hover:text-accent-foreground',
-        'focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1'
+        'focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-1'
       )}
       {...props}
     >

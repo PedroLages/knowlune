@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { db } from '@/db'
 import type { ImportedCourse, LearnerCourseStatus } from '@/data/types'
+import { useAuthStore, selectIsGuestMode } from '@/stores/useAuthStore'
 import { persistWithRetry } from '@/lib/persistWithRetry'
 import { syncableWrite } from '@/lib/sync/syncableWrite'
 import type { SyncableRecord } from '@/lib/sync/syncableWrite'
@@ -37,7 +38,7 @@ interface CourseImportState {
   thumbnailUrls: Record<string, string> // courseId → object URL
   autoAnalysisStatus: Record<string, AutoAnalysisStatus> // courseId → status
 
-  addImportedCourse: (course: ImportedCourse) => Promise<void>
+  addImportedCourse: (course: ImportedCourse) => Promise<{ error?: { code: string; modality: string } }>
   removeImportedCourse: (courseId: string) => Promise<void>
   updateCourseTags: (courseId: string, tags: string[]) => Promise<void>
   updateCourseStatus: (courseId: string, status: LearnerCourseStatus) => Promise<void>
@@ -64,6 +65,15 @@ export const useCourseImportStore = create<CourseImportState>((set, get) => ({
   autoAnalysisStatus: {},
 
   addImportedCourse: async (course: ImportedCourse) => {
+    // Guest cap: 1 course per guest session
+    if (selectIsGuestMode(useAuthStore.getState())) {
+      const guestSessionId = sessionStorage.getItem('knowlune-guest-id')
+      const existing = await db.importedCourses
+        .filter(r => r.userId === null && r.guestSessionId === guestSessionId)
+        .count()
+      if (existing >= 1) return { error: { code: 'GUEST_CAP_EXCEEDED', modality: 'course' } }
+    }
+
     // Optimistic update
     set(state => ({
       importedCourses: [...state.importedCourses, course],
@@ -91,6 +101,7 @@ export const useCourseImportStore = create<CourseImportState>((set, get) => ({
       }))
       console.error('[Database] Failed to persist course:', error)
     }
+    return {}
   },
 
   removeImportedCourse: async (courseId: string) => {
@@ -172,7 +183,10 @@ export const useCourseImportStore = create<CourseImportState>((set, get) => ({
       await persistWithRetry(async () => {
         const current = await db.importedCourses.get(courseId)
         if (!current) return
-        await syncableWrite('importedCourses', 'put', { ...current, tags: normalized } as unknown as SyncableRecord)
+        await syncableWrite('importedCourses', 'put', {
+          ...current,
+          tags: normalized,
+        } as unknown as SyncableRecord)
       })
       // Refresh embedding after successful tag update (fire-and-forget, E52-S04)
       const updated = get().importedCourses.find(c => c.id === courseId)
@@ -210,7 +224,10 @@ export const useCourseImportStore = create<CourseImportState>((set, get) => ({
       await persistWithRetry(async () => {
         const current = await db.importedCourses.get(courseId)
         if (!current) return
-        await syncableWrite('importedCourses', 'put', { ...current, status } as unknown as SyncableRecord)
+        await syncableWrite('importedCourses', 'put', {
+          ...current,
+          status,
+        } as unknown as SyncableRecord)
       })
     } catch (error) {
       // Rollback on failure
@@ -249,7 +266,10 @@ export const useCourseImportStore = create<CourseImportState>((set, get) => ({
       await persistWithRetry(async () => {
         const current = await db.importedCourses.get(courseId)
         if (!current) return
-        await syncableWrite('importedCourses', 'put', { ...current, ...patch } as unknown as SyncableRecord)
+        await syncableWrite('importedCourses', 'put', {
+          ...current,
+          ...patch,
+        } as unknown as SyncableRecord)
       })
       // Refresh embedding after successful metadata update (fire-and-forget, E52-S04)
       const updated = get().importedCourses.find(c => c.id === courseId)

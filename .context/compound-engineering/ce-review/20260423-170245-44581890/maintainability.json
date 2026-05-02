@@ -1,0 +1,26 @@
+{
+  "reviewer": "maintainability",
+  "findings": [
+    {
+      "title": ".wrangler/ directory not gitignored",
+      "severity": "P3",
+      "file": ".gitignore",
+      "line": 1,
+      "why_it_matters": "Wrangler creates a .wrangler/ directory containing local state (cache, credentials, deployment IDs) when deployed or run with `wrangler dev`. Without a gitignore entry, this directory will appear as untracked files and could accidentally be committed. Other Cloudflare projects universally gitignore .wrangler/.",
+      "autofix_class": "safe_auto",
+      "owner": "review-fixer",
+      "requires_verification": false,
+      "suggested_fix": "Add '.wrangler/' to .gitignore",
+      "confidence": 0.92,
+      "evidence": [
+        ".gitignore has no entry for .wrangler/",
+        "wrangler.toml was just introduced — .wrangler/ directory will be created on first wrangler deploy or wrangler dev"
+      ],
+      "pre_existing": false
+    }
+  ],
+  "residual_risks": [
+    "The shared retentionPolicy.ts must be manually kept in sync with the browser module. The existing parity test only checks the browser module's self-consistency, not the Deno copy."
+  ],
+  "testing_gaps": []
+}

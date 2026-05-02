@@ -1,0 +1,27 @@
+{
+  "reviewer": "data-migrations",
+  "findings": [
+    {
+      "title": "Migration missing rollback file — breaks project pattern",
+      "severity": "P2",
+      "file": "supabase/migrations/20260501000001_retention_audit_log.sql",
+      "line": 1,
+      "why_it_matters": "Every other migration in the project has a corresponding rollback file in supabase/migrations/rollback/. The retention_audit_log migration has none. In the event of a failed deployment or needing to revert, the operator has no rollback script. The migration creates a non-trivial table with indexes and RLS policies that would need to be carefully dropped in the right order.",
+      "autofix_class": "safe_auto",
+      "owner": "review-fixer",
+      "requires_verification": false,
+      "suggested_fix": "Create supabase/migrations/rollback/20260501000001_retention_audit_log_rollback.sql with: BEGIN; DROP INDEX IF EXISTS idx_retention_audit_log_run_id; DROP INDEX IF EXISTS idx_retention_audit_log_completed_at; DROP TABLE IF EXISTS public.retention_audit_log; COMMIT;",
+      "confidence": 0.95,
+      "evidence": [
+        "ls supabase/migrations/rollback/ shows every migration from 20260413 through 20260429 has a _rollback.sql file",
+        "20260429000001_pending_deletions.sql → 20260429000001_pending_deletions_rollback.sql exists",
+        "20260501000001_retention_audit_log.sql → no rollback file exists"
+      ],
+      "pre_existing": false
+    }
+  ],
+  "residual_risks": [
+    "The retention_audit_log table accumulates rows indefinitely. A 1-year rolling purge is deferred to a future story. For now, monitoring table size is advisable."
+  ],
+  "testing_gaps": []
+}

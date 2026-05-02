@@ -1,8 +1,7 @@
 /**
  * Unit tests for readerThemeConfig — E107-S05 Sync Reader Themes
  *
- * Tests the static color map and Tailwind class resolution for all
- * reader theme × color scheme combinations.
+ * Tests the static Page Tone map and Tailwind class resolution.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
@@ -19,14 +18,14 @@ vi.mock('@/lib/settings', () => ({
 }))
 
 describe('getReaderThemeColors', () => {
-  it('returns professional light colors matching theme.css', () => {
-    const colors = getReaderThemeColors('light', 'professional')
-    expect(colors).toEqual({ background: '#faf5ee', foreground: '#1c1d2b' })
+  it('returns white page tone colors', () => {
+    const colors = getReaderThemeColors('white', 'professional')
+    expect(colors).toEqual({ background: '#ffffff', foreground: '#1c1d2b' })
   })
 
-  it('returns professional dark colors matching theme.css', () => {
+  it('returns dark page tone colors', () => {
     const colors = getReaderThemeColors('dark', 'professional')
-    expect(colors).toEqual({ background: '#1a1b26', foreground: '#e8e9f0' })
+    expect(colors).toEqual({ background: '#383a56', foreground: '#f7f7fb' })
   })
 
   it('returns sepia colors regardless of color scheme', () => {
@@ -37,25 +36,26 @@ describe('getReaderThemeColors', () => {
     }
   })
 
-  it('vibrant light matches professional light (vibrant only changes brand/accent)', () => {
-    const professional = getReaderThemeColors('light', 'professional')
-    const vibrant = getReaderThemeColors('light', 'vibrant')
+  it('returns gray page tone colors', () => {
+    const colors = getReaderThemeColors('gray', 'clean')
+    expect(colors).toEqual({ background: '#e5e5e5', foreground: '#1f2937' })
+  })
+
+  it('returns black page tone colors', () => {
+    const colors = getReaderThemeColors('black', 'vibrant')
+    expect(colors).toEqual({ background: '#000000', foreground: '#f8fafc' })
+  })
+
+  it('does not vary page tone colors by app color scheme', () => {
+    const professional = getReaderThemeColors('white', 'professional')
+    const clean = getReaderThemeColors('white', 'clean')
+    const vibrant = getReaderThemeColors('white', 'vibrant')
+    expect(clean).toEqual(professional)
     expect(vibrant).toEqual(professional)
   })
 
-  it('clean light has distinct cool blue-white background', () => {
-    const colors = getReaderThemeColors('light', 'clean')
-    expect(colors).toEqual({ background: '#f9f9fe', foreground: '#2c333d' })
-  })
-
-  it('clean dark falls back to default dark (clean is light-only)', () => {
-    const cleanDark = getReaderThemeColors('dark', 'clean')
-    const professionalDark = getReaderThemeColors('dark', 'professional')
-    expect(cleanDark).toEqual(professionalDark)
-  })
-
-  it('returns ReaderColors type for all combinations', () => {
-    const themes = ['light', 'sepia', 'dark'] as const
+  it('returns ReaderColors type for all page tones', () => {
+    const themes = ['white', 'sepia', 'gray', 'dark', 'black'] as const
     const schemes: ColorScheme[] = ['professional', 'vibrant', 'clean']
     for (const theme of themes) {
       for (const scheme of schemes) {
@@ -68,24 +68,24 @@ describe('getReaderThemeColors', () => {
 })
 
 describe('getReaderChromeClasses', () => {
-  it('returns Tailwind classes with correct bg hex for professional light', () => {
-    const classes = getReaderChromeClasses('light', 'professional')
-    expect(classes.bg).toBe('bg-[#faf5ee]')
-    expect(classes.bgOverlay).toBe('bg-[#faf5ee]/60')
-    expect(classes.bgBar).toBe('bg-[#faf5ee]/98')
+  it('returns Tailwind classes with correct bg hex for white', () => {
+    const classes = getReaderChromeClasses('white', 'professional')
+    expect(classes.bg).toBe('bg-[#ffffff]')
+    expect(classes.bgOverlay).toBe('bg-[#ffffff]/60')
+    expect(classes.bgBar).toBe('bg-[#ffffff]/98')
     expect(classes.text).toBe('text-[#1c1d2b]')
   })
 
-  it('returns Tailwind classes with correct bg hex for clean light', () => {
-    const classes = getReaderChromeClasses('light', 'clean')
-    expect(classes.bg).toBe('bg-[#f9f9fe]')
-    expect(classes.text).toBe('text-[#2c333d]')
+  it('returns Tailwind classes for gray theme', () => {
+    const classes = getReaderChromeClasses('gray', 'clean')
+    expect(classes.bg).toBe('bg-[#e5e5e5]')
+    expect(classes.text).toBe('text-[#1f2937]')
   })
 
   it('returns Tailwind classes for dark theme', () => {
     const classes = getReaderChromeClasses('dark', 'professional')
-    expect(classes.bg).toBe('bg-[#1a1b26]')
-    expect(classes.text).toBe('text-[#e8e9f0]')
+    expect(classes.bg).toBe('bg-[#383a56]')
+    expect(classes.text).toBe('text-[#f7f7fb]')
   })
 
   it('returns Tailwind classes for sepia theme', () => {
@@ -94,8 +94,14 @@ describe('getReaderChromeClasses', () => {
     expect(classes.text).toBe('text-[#2d241e]')
   })
 
-  it('returns ReaderChromeClasses type for all combinations', () => {
-    const themes = ['light', 'sepia', 'dark'] as const
+  it('returns Tailwind classes for black theme', () => {
+    const classes = getReaderChromeClasses('black', 'professional')
+    expect(classes.bg).toBe('bg-[#000000]')
+    expect(classes.text).toBe('text-[#f8fafc]')
+  })
+
+  it('returns ReaderChromeClasses type for all page tones', () => {
+    const themes = ['white', 'sepia', 'gray', 'dark', 'black'] as const
     const schemes: ColorScheme[] = ['professional', 'vibrant', 'clean']
     for (const theme of themes) {
       for (const scheme of schemes) {
@@ -111,8 +117,8 @@ describe('getReaderChromeClasses', () => {
   it('falls back to Professional defaults and warns when hex is unknown', () => {
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
     // All valid inputs produce known hex values, so fallback should NOT fire
-    const classes = getReaderChromeClasses('light', 'professional')
-    expect(classes.bg).toBe('bg-[#faf5ee]')
+    const classes = getReaderChromeClasses('white', 'professional')
+    expect(classes.bg).toBe('bg-[#ffffff]')
     expect(warnSpy).not.toHaveBeenCalled()
     warnSpy.mockRestore()
   })
@@ -121,13 +127,13 @@ describe('getReaderChromeClasses', () => {
 describe('getReaderThemeColors — runtime guard', () => {
   it('falls back to professional for unknown colorScheme', () => {
     // Force an invalid scheme through the type system
-    const colors = getReaderThemeColors('light', 'nonexistent' as ColorScheme)
-    expect(colors).toEqual({ background: '#faf5ee', foreground: '#1c1d2b' })
+    const colors = getReaderThemeColors('white', 'nonexistent' as ColorScheme)
+    expect(colors).toEqual({ background: '#ffffff', foreground: '#1c1d2b' })
   })
 
   it('falls back to professional for undefined colorScheme', () => {
-    const colors = getReaderThemeColors('light', undefined as unknown as ColorScheme)
-    expect(colors).toEqual({ background: '#faf5ee', foreground: '#1c1d2b' })
+    const colors = getReaderThemeColors('white', undefined as unknown as ColorScheme)
+    expect(colors).toEqual({ background: '#ffffff', foreground: '#1c1d2b' })
   })
 })
 
@@ -155,7 +161,7 @@ describe('WCAG AA contrast ratios', () => {
     return (lighter + 0.05) / (darker + 0.05)
   }
 
-  const themes = ['light', 'sepia', 'dark'] as const
+  const themes = ['white', 'sepia', 'gray', 'dark', 'black'] as const
   const schemes: ColorScheme[] = ['professional', 'vibrant', 'clean']
 
   for (const theme of themes) {

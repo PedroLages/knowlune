@@ -14,8 +14,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams, useParams, useLocation } from 'react-router'
 import { recordVisit } from '@/lib/searchFrecency'
-import { FormatTabs } from '@/app/components/library/FormatTabs'
-// LibraryShelves is available at '@/app/components/library/LibraryShelves' — mount once real shelf data is wired
 import { SmartGroupedView } from '@/app/components/library/SmartGroupedView'
 import {
   BookOpen,
@@ -28,6 +26,7 @@ import {
   Library as LibraryIcon,
   List,
   Loader2,
+  MoreVertical,
   Plus,
   RefreshCw,
   WifiOff,
@@ -35,12 +34,20 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/app/components/ui/button'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/app/components/ui/tooltip'
+import { formatDistanceToNow } from 'date-fns'
 import { BookImportDialog } from '@/app/components/library/BookImportDialog'
 import { SeriesCard } from '@/app/components/library/SeriesCard'
 import { CollectionsView } from '@/app/components/library/CollectionsView'
 import { StorageIndicator } from '@/app/components/library/StorageIndicator'
 import { BookCard } from '@/app/components/library/BookCard'
 import { BookListItem } from '@/app/components/library/BookListItem'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/app/components/ui/dropdown-menu'
 import { BookContextMenu } from '@/app/components/library/BookContextMenu'
 import { BookMetadataEditor } from '@/app/components/library/BookMetadataEditor'
 import { LibraryFilters } from '@/app/components/library/LibraryFilters'
@@ -53,9 +60,14 @@ import { AudiobookshelfSettings } from '@/app/components/library/AudiobookshelfS
 import { OpdsBrowser } from '@/app/components/library/OpdsBrowser'
 import { DailyGoalRing } from '@/app/components/library/DailyGoalRing'
 import { YearlyGoalProgress } from '@/app/components/library/YearlyGoalProgress'
+import { DailyHighlightsStrip } from '@/app/components/library/DailyHighlightsStrip'
+import { LibraryFormatModeTabs } from '@/app/components/library/LibraryFormatModeTabs'
+import { LibraryMediaHero } from '@/app/components/library/LibraryMediaHero'
+import { LibraryMediaShelfColumn } from '@/app/components/library/LibraryMediaShelfColumn'
 import { useBookStore } from '@/stores/useBookStore'
 import { useOpdsCatalogStore } from '@/stores/useOpdsCatalogStore'
 import { useAudiobookshelfStore } from '@/stores/useAudiobookshelfStore'
+import { useAuthStore } from '@/stores/useAuthStore'
 import { useReadingGoalStore } from '@/stores/useReadingGoalStore'
 import { useShelfStore } from '@/stores/useShelfStore'
 import { useReadingQueueStore } from '@/stores/useReadingQueueStore'
@@ -79,6 +91,12 @@ export function Library() {
     if (state?.__viaPalette === true) return
     void recordVisit('book', libraryBookId)
   }, [libraryBookId, libraryLocation.state])
+  useEffect(() => {
+    document.title = 'Library · Knowlune'
+    return () => {
+      document.title = 'Knowlune'
+    }
+  }, [])
   const [importOpen, setImportOpen] = useState(false)
   const [droppedFile, setDroppedFile] = useState<File | null>(null)
   const [editingBook, setEditingBook] = useState<Book | null>(null)
@@ -94,6 +112,7 @@ export function Library() {
   const setLocalSeriesView = useBookStore(s => s.setLocalSeriesView)
   const filters = useBookStore(s => s.filters)
   const setFilters = useBookStore(s => s.setFilters)
+  const setFilter = useBookStore(s => s.setFilter)
   const loadBooks = useBookStore(s => s.loadBooks)
 
   const opdsCatalogs = useOpdsCatalogStore(s => s.catalogs)
@@ -101,7 +120,9 @@ export function Library() {
 
   // Audiobookshelf sync (E101-S03)
   const absServers = useAudiobookshelfStore(s => s.servers)
+  const absServersLoaded = useAudiobookshelfStore(s => s.isLoaded)
   const loadAbsServers = useAudiobookshelfStore(s => s.loadServers)
+  const authedUser = useAuthStore(s => s.user)
   const { isSyncing: isAbsSyncing, syncCatalog, loadNextPage, pagination } = useAudiobookshelfSync()
 
   // Series & Collections browsing (E102-S02, E102-S03)
@@ -196,6 +217,48 @@ export function Library() {
     loadAbsServers()
   }, [loadAbsServers])
 
+  // E97-S05: Listen for banner "Re-enter" button events that open settings dialogs
+  // with deep-link focus. The banner dispatches these CustomEvents; Library.tsx
+  // listens and opens the dialog + sets ?focus=<kind>:<id> for useDeepLinkFocus
+  // inside the dialog to drive credential input focus.
+  const [, setSearchParams] = useSearchParams()
+  useEffect(() => {
+    function onOpenOpdsSettings(e: Event) {
+      const { focusId } = (e as CustomEvent<{ focusId: string }>).detail
+      setCatalogsOpen(true)
+      // Set the deep-link focus param so useDeepLinkFocus inside OpdsCatalogSettings
+      // will open the edit form for this catalog and focus the password input.
+      setSearchParams(
+        prev => {
+          const next = new URLSearchParams(prev)
+          next.set('focus', `opds:${focusId}`)
+          return next
+        },
+        { replace: true }
+      )
+    }
+
+    function onOpenAbsSettings(e: Event) {
+      const { focusId } = (e as CustomEvent<{ focusId: string }>).detail
+      setAbsSettingsOpen(true)
+      setSearchParams(
+        prev => {
+          const next = new URLSearchParams(prev)
+          next.set('focus', `abs:${focusId}`)
+          return next
+        },
+        { replace: true }
+      )
+    }
+
+    window.addEventListener('open-opds-settings', onOpenOpdsSettings)
+    window.addEventListener('open-abs-settings', onOpenAbsSettings)
+    return () => {
+      window.removeEventListener('open-opds-settings', onOpenOpdsSettings)
+      window.removeEventListener('open-abs-settings', onOpenAbsSettings)
+    }
+  }, [setCatalogsOpen, setAbsSettingsOpen, setSearchParams])
+
   // Trigger ABS catalog sync when servers are loaded (E101-S03)
   // Background sync — does NOT block Library render
   // Track server IDs so adding a new server triggers re-sync without requiring remount
@@ -210,9 +273,30 @@ export function Library() {
     }
   }, [absServers, syncCatalog])
 
-  // Manual sync — clears TTL cache and re-triggers full catalog sync
+  // Manual sync — clears TTL cache and re-triggers full catalog sync.
+  // Guards against silently calling `syncCatalog` when any server is in
+  // `auth-failed` state: fires a destructive toast and opens the ABS
+  // settings dialog so the user can re-enter the credential. The server's
+  // `updatedAt` is NOT mutated — `syncCatalog` is the only code path that
+  // updates it, and we skip that call for auth-failed servers.
   const handleManualSync = useCallback(() => {
     const store = useAudiobookshelfStore.getState()
+
+    // If any server is auth-failed, short-circuit to the settings dialog and
+    // never issue the ABS API call. Mixed state (some connected, some
+    // auth-failed) still syncs the connected ones below.
+    const authFailedServers = store.servers.filter(s => s.status === 'auth-failed')
+    if (authFailedServers.length > 0) {
+      toast.error('Audiobookshelf authentication expired', {
+        description:
+          authFailedServers.length === 1
+            ? `Reconnect "${authFailedServers[0].name}" to resume syncing.`
+            : `Reconnect ${authFailedServers.length} servers to resume syncing.`,
+        duration: 6000,
+      })
+      setAbsSettingsOpen(true)
+    }
+
     // Clear TTL caches so series/collections re-fetch
     useAudiobookshelfStore.setState({
       seriesLoadedAt: {},
@@ -220,8 +304,10 @@ export function Library() {
     })
     // Clear synced tracking so syncCatalog runs again
     syncedServerIds.current.clear()
-    // Trigger sync for all connected servers
+    // Trigger sync ONLY for servers that are not auth-failed. Auth-failed
+    // servers are left untouched (no API call, no updatedAt change).
     for (const server of store.servers) {
+      if (server.status === 'auth-failed') continue
       syncedServerIds.current.add(server.id)
       syncCatalog(server)
     }
@@ -244,10 +330,44 @@ export function Library() {
     return 'all' as const
   }, [filters.format])
 
+  const activeModeLabel = useMemo(() => {
+    const f = filters.format
+    if (!f || f.length === 0) return 'Audiobooks' as const
+    if (f.length === 1 && f[0] === 'audiobook') return 'Audiobooks' as const
+    if (f.every(v => v === 'epub' || v === 'pdf')) return 'Ebooks' as const
+    return 'Audiobooks' as const
+  }, [filters.format])
+
+  const modeBooksForMedia = useMemo(() => {
+    const sourceFiltered =
+      filters.source && filters.source !== 'all'
+        ? books.filter(b => (filters.source === 'audiobookshelf' ? b.absServerId : !b.absServerId))
+        : books
+
+    const f = filters.format
+    // Default to audiobooks when format is unset or mixed.
+    if (!f || f.length === 0 || (f.length === 1 && f[0] === 'audiobook')) {
+      return sourceFiltered.filter(b => b.format === 'audiobook')
+    }
+    if (f.every(v => v === 'epub' || v === 'pdf')) {
+      return sourceFiltered.filter(b => b.format === 'epub' || b.format === 'pdf')
+    }
+    return sourceFiltered.filter(b => b.format === 'audiobook')
+  }, [books, filters.format, filters.source])
+
   // Load books on mount
   useEffect(() => {
     loadBooks()
   }, [loadBooks])
+
+  // Media-first default: when books exist and no format is chosen,
+  // make Audiobooks the active top-level mode.
+  useEffect(() => {
+    if (books.length === 0) return
+    if (!filters.format || filters.format.length === 0) {
+      setFilter('format', ['audiobook'])
+    }
+  }, [books.length, filters.format, setFilter])
 
   // Yearly goal celebration — fires when a book is marked finished (E86-S05)
   useEffect(() => {
@@ -290,7 +410,7 @@ export function Library() {
   }, [])
 
   return (
-    <div className="flex flex-col gap-6 p-6">
+    <div className="flex flex-col gap-6 py-6" data-testid="library-page">
       {/* Header */}
       <div className="flex flex-col gap-3">
         <div className="flex items-center justify-between">
@@ -315,97 +435,170 @@ export function Library() {
               <Button
                 variant="brand-outline"
                 onClick={() => setBrowserOpen(true)}
-                className="min-h-[44px]"
+                className="min-h-[44px] hidden sm:inline-flex"
                 data-testid="browse-catalog-trigger"
               >
                 <Globe className="mr-2 h-4 w-4" />
                 Browse Catalog
               </Button>
             )}
-            {absServers.length > 0 &&
-              (() => {
-                const connectedServer = absServers.find(s => s.status === 'connected')
-                const isOffline = absServers.some(s => s.status === 'offline')
-                const isAuthFailed = absServers.some(s => s.status === 'auth-failed')
-                return (
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={handleManualSync}
-                    disabled={isAbsSyncing}
-                    className="size-11 rounded-xl relative"
-                    aria-label="Sync Audiobookshelf library"
-                    title={
-                      isAbsSyncing
-                        ? 'Syncing...'
-                        : connectedServer
-                          ? `Connected — last synced ${connectedServer.lastSyncedAt ? new Date(connectedServer.lastSyncedAt).toLocaleTimeString() : 'never'}`
-                          : 'Sync Library'
+            <div className="hidden sm:contents">
+              {absServers.length > 0 &&
+                (() => {
+                  const connectedServer = absServers.find(s => s.status === 'connected')
+                  const isOffline = absServers.some(s => s.status === 'offline')
+                  const isAuthFailed = absServers.some(s => s.status === 'auth-failed')
+                  // fix/E-ABS-QA: compute tooltip copy from server state. Auth-
+                  // failed takes priority over connected because the user needs
+                  // to reconnect before the sync will do anything useful.
+                  const lastSyncIso = connectedServer?.lastSyncedAt
+                  let tooltipText: string
+                  if (isAbsSyncing) {
+                    tooltipText = 'Syncing…'
+                  } else if (isAuthFailed) {
+                    tooltipText = 'Auth failed — click to reconnect'
+                  } else if (lastSyncIso) {
+                    try {
+                      tooltipText = `Last synced ${formatDistanceToNow(new Date(lastSyncIso), { addSuffix: true })}`
+                    } catch {
+                      // silent-catch-ok: malformed timestamp falls back to a plain label.
+                      tooltipText = 'Sync library'
                     }
-                    data-testid="abs-sync-trigger"
+                  } else if (connectedServer) {
+                    tooltipText = 'Never synced — click to sync'
+                  } else if (isOffline) {
+                    tooltipText = 'Offline — sync will retry when online'
+                  } else {
+                    tooltipText = 'Sync library'
+                  }
+                  return (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={handleManualSync}
+                          disabled={isAbsSyncing}
+                          className="size-11 rounded-xl relative"
+                          aria-label={`Sync Audiobookshelf library — ${tooltipText}`}
+                          data-testid="abs-sync-trigger"
+                        >
+                          <RefreshCw className={cn('size-5', isAbsSyncing && 'animate-spin')} />
+                          {/* Status dot */}
+                          <span
+                            className={cn(
+                              'absolute top-1 right-1 size-2.5 rounded-full border-2 border-background',
+                              isAbsSyncing
+                                ? 'bg-brand animate-pulse'
+                                : isAuthFailed
+                                  ? 'bg-destructive'
+                                  : isOffline
+                                    ? 'bg-warning'
+                                    : connectedServer
+                                      ? 'bg-success'
+                                      : 'bg-muted'
+                            )}
+                          />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent side="bottom" data-testid="abs-sync-tooltip">
+                        {tooltipText}
+                      </TooltipContent>
+                    </Tooltip>
+                  )
+                })()}
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setAbsSettingsOpen(true)}
+                className="size-11 rounded-xl"
+                aria-label="Audiobookshelf settings"
+                title="Audiobookshelf"
+                data-testid="abs-settings-trigger"
+              >
+                <Headphones className="size-5" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setCatalogsOpen(true)}
+                className="size-11 rounded-xl"
+                aria-label="OPDS catalog settings"
+                title="OPDS Catalogs"
+                data-testid="opds-catalog-settings-trigger"
+              >
+                <Globe className="size-5" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setShelvesOpen(true)}
+                className="size-11 rounded-xl"
+                aria-label="Manage shelves"
+                title="Manage Shelves"
+                data-testid="manage-shelves-trigger"
+              >
+                <LibraryIcon className="size-5" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setGoalsOpen(true)}
+                className="size-11 rounded-xl"
+                aria-label="Reading goals"
+                title="Reading Goals"
+              >
+                <Target className="size-5" />
+              </Button>
+            </div>
+            {/* Mobile-only overflow menu: collapses secondary icon buttons */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild className="sm:hidden">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="size-11 rounded-xl"
+                  aria-label="More library actions"
+                  data-testid="library-overflow-trigger"
+                >
+                  <MoreVertical className="size-5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                {opdsCatalogs.length > 0 && (
+                  <DropdownMenuItem onSelect={() => setBrowserOpen(true)}>
+                    <Globe className="mr-2 size-4" />
+                    Browse Catalog
+                  </DropdownMenuItem>
+                )}
+                {absServers.length > 0 && (
+                  <DropdownMenuItem
+                    onSelect={() => handleManualSync()}
+                    disabled={isAbsSyncing}
+                    data-testid="abs-sync-trigger-mobile"
                   >
-                    <RefreshCw className={cn('size-5', isAbsSyncing && 'animate-spin')} />
-                    {/* Status dot */}
-                    <span
-                      className={cn(
-                        'absolute top-1 right-1 size-2.5 rounded-full border-2 border-background',
-                        isAbsSyncing
-                          ? 'bg-brand animate-pulse'
-                          : isAuthFailed
-                            ? 'bg-destructive'
-                            : isOffline
-                              ? 'bg-warning'
-                              : connectedServer
-                                ? 'bg-success'
-                                : 'bg-muted'
-                      )}
-                    />
-                  </Button>
-                )
-              })()}
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setAbsSettingsOpen(true)}
-              className="size-11 rounded-xl"
-              aria-label="Audiobookshelf settings"
-              title="Audiobookshelf"
-              data-testid="abs-settings-trigger"
-            >
-              <Headphones className="size-5" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setCatalogsOpen(true)}
-              className="size-11 rounded-xl"
-              aria-label="OPDS catalog settings"
-              title="OPDS Catalogs"
-              data-testid="opds-catalog-settings-trigger"
-            >
-              <Globe className="size-5" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setShelvesOpen(true)}
-              className="size-11 rounded-xl"
-              aria-label="Manage shelves"
-              title="Manage Shelves"
-              data-testid="manage-shelves-trigger"
-            >
-              <LibraryIcon className="size-5" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setGoalsOpen(true)}
-              className="size-11 rounded-xl"
-              aria-label="Reading goals"
-              title="Reading Goals"
-            >
-              <Target className="size-5" />
-            </Button>
+                    <RefreshCw className={cn('mr-2 size-4', isAbsSyncing && 'animate-spin')} />
+                    {isAbsSyncing ? 'Syncing…' : 'Sync library'}
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuItem onSelect={() => setAbsSettingsOpen(true)}>
+                  <Headphones className="mr-2 size-4" />
+                  Audiobookshelf
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => setCatalogsOpen(true)}>
+                  <Globe className="mr-2 size-4" />
+                  OPDS Catalogs
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => setShelvesOpen(true)}>
+                  <LibraryIcon className="mr-2 size-4" />
+                  Manage Shelves
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => setGoalsOpen(true)}>
+                  <Target className="mr-2 size-4" />
+                  Reading Goals
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
             <Button
               variant="brand"
               onClick={() => setImportOpen(true)}
@@ -413,7 +606,8 @@ export function Library() {
               data-testid="import-book-trigger"
             >
               <Plus className="mr-2 h-4 w-4" />
-              Import Book
+              <span className="hidden sm:inline">Import Book</span>
+              <span className="sm:hidden">Import</span>
             </Button>
           </div>
         </div>
@@ -421,9 +615,73 @@ export function Library() {
         <YearlyGoalProgress />
       </div>
 
-      {/* E116-S03: LibraryShelves component is ready; not mounted here until real data
-          is wired (real shelf items from useShelfStore). Import and mount once data
-          integration is complete. */}
+      {/* Top-level format mode tabs (media-first) */}
+      {books.length > 0 && <LibraryFormatModeTabs />}
+
+      {/* Media-first hero + shelves */}
+      {books.length > 0 && (
+        <div className="flex flex-col gap-8" data-testid="library-media-first">
+          {modeBooksForMedia.length === 0 ? (
+            <section
+              className="rounded-[28px] border border-border/50 bg-card p-6 sm:p-8 shadow-card-ambient"
+              data-testid="library-format-empty-state"
+            >
+              <div className="flex flex-col gap-2">
+                <h2 className="text-xl font-semibold tracking-tight text-foreground">
+                  No {activeModeLabel.toLowerCase()} yet.
+                </h2>
+                <p className="text-sm text-muted-foreground">
+                  Your library has books in the other format. Switch modes, or add your first{' '}
+                  {activeModeLabel.toLowerCase()}.
+                </p>
+              </div>
+
+              <div className="mt-5 flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                <Button
+                  variant="outline"
+                  onClick={() =>
+                    setFilter(
+                      'format',
+                      activeModeLabel === 'Audiobooks' ? (['epub', 'pdf'] as string[]) : (['audiobook'] as string[])
+                    )
+                  }
+                  className="min-h-[44px]"
+                  data-testid="library-format-empty-switch"
+                >
+                  Switch to {activeModeLabel === 'Audiobooks' ? 'Ebooks' : 'Audiobooks'}
+                </Button>
+
+                <Button
+                  variant="brand"
+                  onClick={() => setImportOpen(true)}
+                  className="min-h-[44px]"
+                  data-testid="library-format-empty-import"
+                >
+                  <Plus className="mr-2 h-4 w-4" />
+                  Import Book
+                </Button>
+
+                {activeModeLabel === 'Audiobooks' && (
+                  <Button
+                    variant="outline"
+                    onClick={() => setAbsSettingsOpen(true)}
+                    className="min-h-[44px]"
+                    data-testid="library-format-empty-connect-abs"
+                  >
+                    <Headphones className="mr-2 h-4 w-4" />
+                    Connect Audiobookshelf
+                  </Button>
+                )}
+              </div>
+            </section>
+          ) : (
+            <>
+              <LibraryMediaHero books={modeBooksForMedia} modeLabel={activeModeLabel} />
+              <LibraryMediaShelfColumn />
+            </>
+          )}
+        </div>
+      )}
 
       {/* Empty state */}
       {books.length === 0 && (
@@ -458,8 +716,9 @@ export function Library() {
           {/* Two CTAs */}
           <div className="flex flex-col sm:flex-row items-center gap-3">
             <Button
+              variant="brand"
               onClick={() => setImportOpen(true)}
-              className="min-h-[44px] bg-gradient-to-br from-brand to-brand-hover text-brand-foreground px-6"
+              className="min-h-[44px] px-6"
               data-testid="import-first-book-cta"
             >
               <Plus className="mr-2 h-4 w-4" />
@@ -490,152 +749,39 @@ export function Library() {
               </p>
             </div>
           </div>
+
+          {/* Cross-device sync hint — only shown to authed users with zero ABS
+              servers after the store has finished loading. The audiobookshelf
+              server config syncs from Supabase (P3 priority) and may take
+              30-60s on a fresh device login, so the empty state alone reads
+              as "you have nothing" when the user actually has a server
+              configured elsewhere. */}
+          {authedUser && absServersLoaded && absServers.length === 0 && (
+            <p
+              className="max-w-md text-center text-sm text-muted-foreground"
+              data-testid="abs-cross-device-sync-hint"
+            >
+              If you've connected an audiobook server on another device, it should sync here in a
+              moment. Or{' '}
+              <Button
+                variant="link"
+                onClick={() => setAbsSettingsOpen(true)}
+                className="h-auto p-0 text-sm align-baseline"
+                data-testid="abs-cross-device-sync-hint-open-settings"
+              >
+                open settings
+              </Button>{' '}
+              to add one now.
+            </p>
+          )}
         </section>
       )}
 
       {/* Reading Queue — always visible when books exist (E110-S03 AC-1) */}
       {books.length > 0 && <ReadingQueue />}
 
-      {/* Source filter tabs — only show when ABS servers configured (E101-S03) */}
-      {books.length > 0 && <LibrarySourceTabs />}
-
-      {/* Format tabs — hidden for ABS Series/Collections views (server-driven, not filterable) */}
-      {books.length > 0 &&
-        !(filters.source === 'audiobookshelf' && absViewMode !== 'grid') && (
-        <FormatTabs />
-      )}
-
-      {/* ABS view mode toggle: Grid / Series — only when ABS source is selected (E102-S02) */}
-      {books.length > 0 && filters.source === 'audiobookshelf' && absServers.length > 0 && (
-        <div
-          className="flex gap-1 rounded-lg bg-muted p-1 w-fit"
-          role="tablist"
-          aria-label="Audiobookshelf view mode"
-          data-testid="abs-view-toggle"
-        >
-          <button
-            role="tab"
-            aria-selected={absViewMode === 'grid'}
-            onClick={() => setAbsViewMode('grid')}
-            className={cn(
-              'flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors min-h-[32px]',
-              absViewMode === 'grid'
-                ? 'bg-background text-foreground shadow-sm'
-                : 'text-muted-foreground hover:text-foreground'
-            )}
-            data-testid="abs-view-grid"
-          >
-            <Grid3X3 className="size-3.5" aria-hidden="true" />
-            Grid
-          </button>
-          <button
-            role="tab"
-            aria-selected={absViewMode === 'series'}
-            onClick={() => {
-              setAbsViewMode('series')
-              // Lazy-load series on first selection
-              const connectedServer = absServers.find(s => s.status === 'connected')
-              if (connectedServer && connectedServer.libraryIds.length > 0) {
-                loadSeries(connectedServer.id, connectedServer.libraryIds[0])
-              }
-            }}
-            className={cn(
-              'flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors min-h-[32px]',
-              absViewMode === 'series'
-                ? 'bg-background text-foreground shadow-sm'
-                : 'text-muted-foreground hover:text-foreground'
-            )}
-            data-testid="abs-view-series"
-          >
-            <List className="size-3.5" aria-hidden="true" />
-            Series
-          </button>
-          <button
-            role="tab"
-            aria-selected={absViewMode === 'collections'}
-            onClick={() => {
-              setAbsViewMode('collections')
-              // Lazy-load collections on first selection
-              const connectedServer = absServers.find(s => s.status === 'connected')
-              if (connectedServer) {
-                loadCollections(connectedServer.id)
-              }
-            }}
-            className={cn(
-              'flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors min-h-[32px]',
-              absViewMode === 'collections'
-                ? 'bg-background text-foreground shadow-sm'
-                : 'text-muted-foreground hover:text-foreground'
-            )}
-            data-testid="abs-view-collections"
-          >
-            <FolderOpen className="size-3.5" aria-hidden="true" />
-            Collections
-          </button>
-        </div>
-      )}
-
-      {/* Local/All series toggle (E110-S02) — when NOT in ABS source view */}
-      {books.length > 0 && filters.source !== 'audiobookshelf' && (
-        <div
-          className="flex gap-1 rounded-lg bg-muted p-1 w-fit"
-          role="tablist"
-          aria-label="Library view mode"
-          data-testid="local-view-toggle"
-        >
-          <button
-            role="tab"
-            aria-selected={!localSeriesView && libraryView === 'grid'}
-            onClick={() => {
-              setLocalSeriesView(false)
-              useBookStore.getState().setLibraryView('grid')
-            }}
-            className={cn(
-              'flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors min-h-[32px]',
-              !localSeriesView && libraryView === 'grid'
-                ? 'bg-background text-foreground shadow-sm'
-                : 'text-muted-foreground hover:text-foreground'
-            )}
-            data-testid="local-view-grid"
-          >
-            <Grid3X3 className="size-3.5" aria-hidden="true" />
-            Grid
-          </button>
-          <button
-            role="tab"
-            aria-selected={!localSeriesView && libraryView === 'list'}
-            onClick={() => {
-              setLocalSeriesView(false)
-              useBookStore.getState().setLibraryView('list')
-            }}
-            className={cn(
-              'flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors min-h-[32px]',
-              !localSeriesView && libraryView === 'list'
-                ? 'bg-background text-foreground shadow-sm'
-                : 'text-muted-foreground hover:text-foreground'
-            )}
-            data-testid="local-view-list"
-          >
-            <List className="size-3.5" aria-hidden="true" />
-            List
-          </button>
-          <button
-            role="tab"
-            aria-selected={localSeriesView}
-            onClick={() => setLocalSeriesView(true)}
-            className={cn(
-              'flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors min-h-[32px]',
-              localSeriesView
-                ? 'bg-background text-foreground shadow-sm'
-                : 'text-muted-foreground hover:text-foreground'
-            )}
-            data-testid="local-view-series"
-          >
-            <Layers className="size-3.5" aria-hidden="true" />
-            Series
-          </button>
-        </div>
-      )}
+      {/* Daily Highlights — cinematic highlight strip from annotated books */}
+      {books.length > 0 && <DailyHighlightsStrip />}
 
       {/* Syncing indicator (E101-S03) */}
       {isAbsSyncing && (
@@ -648,8 +794,134 @@ export function Library() {
         </div>
       )}
 
-      {/* Filters — only show when books exist */}
-      {books.length > 0 && <LibraryFilters />}
+      {/* PRIMARY row: status pills + view toggle + search + filter */}
+      {books.length > 0 && (
+        <LibraryFilters
+          viewToggle={
+            filters.source === 'audiobookshelf' && absServers.length > 0 ? (
+              <div
+                className="flex gap-0.5 rounded-lg bg-muted p-0.5 flex-shrink-0"
+                role="tablist"
+                aria-label="Audiobookshelf view mode"
+                data-testid="abs-view-toggle"
+              >
+                {(
+                  [
+                    { mode: 'grid', Icon: Grid3X3, label: 'Grid', testId: 'abs-view-grid' },
+                    { mode: 'series', Icon: List, label: 'Series', testId: 'abs-view-series' },
+                    {
+                      mode: 'collections',
+                      Icon: FolderOpen,
+                      label: 'Collections',
+                      testId: 'abs-view-collections',
+                    },
+                  ] as const
+                ).map(({ mode, Icon, label, testId }) => (
+                  <button
+                    key={mode}
+                    role="tab"
+                    aria-selected={absViewMode === mode}
+                    aria-label={label}
+                    onClick={() => {
+                      setAbsViewMode(mode)
+                      if (mode !== 'grid') {
+                        const s = absServers.find(sv => sv.status === 'connected')
+                        if (s?.libraryIds.length) {
+                          if (mode === 'series') {
+                            loadSeries(s.id, s.libraryIds[0])
+                          } else {
+                            loadCollections(s.id, s.libraryIds[0])
+                          }
+                        }
+                      }
+                    }}
+                    className={cn(
+                      'rounded-md p-1.5 transition-colors min-h-[32px] min-w-[32px] flex items-center justify-center',
+                      absViewMode === mode
+                        ? 'bg-brand text-brand-foreground'
+                        : 'text-muted-foreground hover:text-foreground'
+                    )}
+                    data-testid={testId}
+                  >
+                    <Icon className="size-3.5" aria-hidden="true" />
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <div
+                className="flex gap-0.5 rounded-lg bg-muted p-0.5 flex-shrink-0"
+                role="tablist"
+                aria-label="Library view mode"
+                data-testid="local-view-toggle"
+              >
+                {[
+                  {
+                    mode: 'grid' as const,
+                    series: false,
+                    Icon: Grid3X3,
+                    label: 'Grid',
+                    testId: 'local-view-grid',
+                  },
+                  {
+                    mode: 'list' as const,
+                    series: false,
+                    Icon: List,
+                    label: 'List',
+                    testId: 'local-view-list',
+                  },
+                  {
+                    mode: 'grid' as const,
+                    series: true,
+                    Icon: Layers,
+                    label: 'Series',
+                    testId: 'local-view-series',
+                  },
+                ].map(({ mode, series, Icon, label, testId }) => {
+                  const isActive = series
+                    ? localSeriesView
+                    : !localSeriesView && libraryView === mode
+                  return (
+                    <button
+                      key={testId}
+                      role="tab"
+                      aria-selected={isActive}
+                      aria-label={label}
+                      onClick={() => {
+                        if (series) {
+                          setLocalSeriesView(true)
+                        } else {
+                          setLocalSeriesView(false)
+                          useBookStore.getState().setLibraryView(mode)
+                        }
+                      }}
+                      className={cn(
+                        'rounded-md p-1.5 transition-colors min-h-[32px] min-w-[32px] flex items-center justify-center',
+                        isActive
+                          ? 'bg-brand text-brand-foreground'
+                          : 'text-muted-foreground hover:text-foreground'
+                      )}
+                      data-testid={testId}
+                    >
+                      <Icon className="size-3.5" aria-hidden="true" />
+                    </button>
+                  )
+                })}
+              </div>
+            )
+          }
+        />
+      )}
+
+      {/* SECONDARY row: source — smaller pills, lower visual weight */}
+      {books.length > 0 && (
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {absServers.length > 0 && (
+            <>
+              <LibrarySourceTabs />
+            </>
+          )}
+        </div>
+      )}
 
       {/* Series view (E102-S02) — replaces grid when active */}
       {books.length > 0 && filters.source === 'audiobookshelf' && absViewMode === 'series' && (
@@ -687,14 +959,14 @@ export function Library() {
       {books.length > 0 &&
         filters.source !== 'audiobookshelf' &&
         (localSeriesView || activeFormatTab === 'all') && (
-        <SmartGroupedView
-          getBooksBySeries={getBooksBySeries}
-          onEdit={setEditingBook}
-          filteredBookIds={filteredBookIds}
-          formatTab={activeFormatTab}
-          viewMode={libraryView}
-        />
-      )}
+          <SmartGroupedView
+            getBooksBySeries={getBooksBySeries}
+            onEdit={setEditingBook}
+            filteredBookIds={filteredBookIds}
+            formatTab={activeFormatTab}
+            viewMode={libraryView}
+          />
+        )}
 
       {/* Grid view — specific format tabs OR ABS grid (SmartGroupedView handles local "All" tab) */}
       {books.length > 0 &&
@@ -757,8 +1029,17 @@ export function Library() {
         </div>
       )}
 
-      {/* Storage indicator — only when books exist */}
-      {books.length > 0 && <StorageIndicator bookCount={books.length} refreshKey={books.length} />}
+      {/* Storage indicator — only when books exist.
+          fix/E-ABS-QA: scope `bookCount` to the active source filter so the
+          footer matches what the user sees; show the global total as
+          secondary text when a filter is active. */}
+      {books.length > 0 && (
+        <StorageIndicator
+          bookCount={filters.source ? filteredBooks.length : books.length}
+          totalBookCount={filters.source ? books.length : undefined}
+          refreshKey={books.length}
+        />
+      )}
 
       <BookImportDialog
         open={importOpen}

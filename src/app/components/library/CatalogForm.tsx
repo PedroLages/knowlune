@@ -37,6 +37,8 @@ interface CatalogFormProps {
   onTest: () => void
   onSave: () => void
   onBack: () => void
+  /** E97-S05: Forward ref for the password input — used by deep-link focus to focus the field */
+  passwordInputRef?: React.RefObject<HTMLInputElement | null>
 }
 
 export function CatalogForm({
@@ -54,6 +56,7 @@ export function CatalogForm({
   onTest,
   onSave,
   onBack,
+  passwordInputRef,
 }: CatalogFormProps) {
   const [showPassword, setShowPassword] = useState(false)
 
@@ -115,6 +118,7 @@ export function CatalogForm({
             <div className="relative">
               <Input
                 id="opds-password"
+                ref={passwordInputRef}
                 type={showPassword ? 'text' : 'password'}
                 placeholder="Password"
                 value={password}

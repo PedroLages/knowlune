@@ -27,8 +27,7 @@ import { classifyError } from '@/lib/sync/classifyError'
  * @throws {string} Human-readable error message (already sent to useSyncStatusStore).
  */
 export async function runFullSync(): Promise<void> {
-  const { setStatus, markSyncComplete, refreshPendingCount } =
-    useSyncStatusStore.getState()
+  const { setStatus, markSyncComplete, refreshPendingCount } = useSyncStatusStore.getState()
 
   setStatus('syncing')
   try {

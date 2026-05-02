@@ -43,6 +43,9 @@ import type {
   ChatConversation,
   TranscriptEmbedding,
   LearnerModel,
+  UserConsent,
+  AbsSeries,
+  AbsCollection,
 } from '@/data/types'
 import type { Quiz, QuizAttempt } from '@/types/quiz'
 import { CHECKPOINT_VERSION, CHECKPOINT_SCHEMA, SEARCH_FRECENCY_INDEXES } from './checkpoint'
@@ -156,6 +159,11 @@ export type ElearningDatabase = Dexie & {
   searchFrecency: Table<FrecencyRow, [string, string]>
   // v56 (E95-S04): Last-known server-computed reading streak, keyed by userId.
   readingStreakCache: EntityTable<ReadingStreakCacheRow, 'userId'>
+  // v58 (E119-S07): Per-user per-purpose consent ledger (GDPR Art. 6(1)(a)).
+  userConsents: EntityTable<UserConsent, 'id'>
+  // v60 (fix E-ABS-QA): Cached ABS series and collections (local-only, not synced).
+  absSeries: EntityTable<AbsSeries, 'id'>
+  absCollections: EntityTable<AbsCollection, 'id'>
 }
 
 /**
@@ -1638,6 +1646,49 @@ function _declareLegacyMigrations(database: Dexie): void {
       // migrateCredentialsToVault() after the user authenticates — Dexie
       // upgrade callbacks cannot read auth state (see reference_dexie_4_quirks).
     })
+
+  // v58 (E119-S07): Add `userConsents` table for GDPR consent ledger.
+  // One row per (userId, purpose) pair; synced bidirectionally with Supabase
+  // `user_consents` table via LWW conflict resolution (E119-S07 AC-7).
+  // Compound index [userId+purpose] supports the unique-per-user-purpose query
+  // used by consentService.isGranted().
+  database
+    .version(58)
+    .stores({
+      userConsents: 'id, userId, purpose, [userId+purpose], [userId+updatedAt], updatedAt',
+    })
+    .upgrade(async _tx => {
+      // No backfill. New table; populated on first consent grant/withdrawal.
+    })
+
+  // v59 (E119-S08): Add optional `frozenReason` field to `learnerModels`.
+  // This field is set to 'consent_withdrawn' when the user withdraws ai_embeddings
+  // consent, freezing the model from further updates. Existing rows are unaffected
+  // (Dexie treats missing fields as undefined). No index needed — filtered via JS.
+  database.version(59).stores({})
+
+  // v60 (fix E-ABS-QA — ABS Sync QA Fixes):
+  // Add local-only caches for ABS Series and Collections so the Series and
+  // Collections tabs in the Library survive page refresh and hydrate from
+  // Dexie before the network fetch completes.
+  //
+  // Local-only: NOT added to SYNCABLE_TABLES (no userId, not mirrored to
+  // Supabase in this batch — deferred per plan scope boundaries). The Zustand
+  // TTL cache in `useAudiobookshelfStore` continues to gate refetches; Dexie
+  // hydration happens on mount independently of the TTL.
+  database.version(60).stores({
+    absSeries: 'id, serverId, libraryId, name',
+    absCollections: 'id, serverId, libraryId, name',
+  })
+
+  // v61 (guest gate): Add optional `guestSessionId` indexed column to `importedCourses`
+  // and `books`. Used by cap checks and backfill to filter guest-session rows without
+  // accidentally counting zombie-session orphans from prior anonymous sessions.
+  // Existing rows are unaffected — Dexie treats missing fields as undefined.
+  database.version(61).stores({
+    importedCourses: 'id, name, importedAt, status, *tags, source, userId, [userId+updatedAt], guestSessionId',
+    books: 'id, title, author, format, status, createdAt, lastOpenedAt, series, userId, [userId+updatedAt], guestSessionId',
+  })
 } // end _declareLegacyMigrations
 
 export { db, CHECKPOINT_VERSION, CHECKPOINT_SCHEMA }
