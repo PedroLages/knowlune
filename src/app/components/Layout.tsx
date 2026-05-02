@@ -431,21 +431,6 @@ export function Layout() {
     localStorage.setItem('knowlune-sidebar-collapsed-v1', JSON.stringify(sidebarCollapsed))
   }, [sidebarCollapsed])
 
-  // Reading mode: global keyboard shortcut for non-lesson pages shows info toast (E65-S01)
-  useEffect(() => {
-    const isLessonRoute = /\/courses\/[^/]+\/lessons\/[^/]+$/.test(location.pathname)
-    if (isLessonRoute) return // Handled by useReadingMode in UnifiedLessonPlayer
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.altKey && e.key.toLowerCase() === 'r') {
-        e.preventDefault()
-        toast.info('Reading mode is available on lesson pages')
-      }
-    }
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [location.pathname])
-
   const isLessonPlayerRoute = /\/courses\/[^/]+\/lessons\/[^/]+$/.test(location.pathname)
 
   // Show mini-player padding when audiobook is active and not on the player page (E87-S05)
