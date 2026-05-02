@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 
 const STORAGE_KEY = 'lesson-theater-mode'
+const AUTO_PLAY_KEY = 'lesson-auto-play'
 
 function readStoredTheater(): boolean {
   try {
@@ -17,6 +18,25 @@ function persistTheater(value: boolean): void {
     localStorage.setItem(STORAGE_KEY, String(value))
   } catch {
     // silent-catch-ok — storage full or blocked; degrade gracefully
+  }
+}
+
+function readStoredAutoPlay(): boolean {
+  try {
+    const raw = localStorage.getItem(AUTO_PLAY_KEY)
+    // Default to true (enabled) when no stored preference exists
+    if (raw === null) return true
+    return raw === 'true'
+  } catch {
+    return true
+  }
+}
+
+function persistAutoPlay(value: boolean): void {
+  try {
+    localStorage.setItem(AUTO_PLAY_KEY, String(value))
+  } catch {
+    // silent-catch-ok
   }
 }
 
@@ -52,6 +72,18 @@ export interface LessonChromeState {
   hasNotes: boolean
   /** Set whether the current lesson has notes content. */
   setHasNotes: (value: boolean) => void
+
+  /** Whether auto-play after auto-advance is enabled. Persisted to localStorage. */
+  autoPlay: boolean
+  /** Toggle auto-play preference. Updates localStorage. */
+  toggleAutoPlay: () => void
+
+  /** Whether the QA chat panel is open. */
+  qaPanelOpen: boolean
+  /** Toggle the QA chat panel open/closed. */
+  toggleQAPanel: () => void
+  /** Set the QA panel open/closed to a specific value (matches Radix onOpenChange contract). */
+  setQAPanelOpen: (open: boolean) => void
 
   /** Reset all state to defaults. Called on route change when leaving a lesson page. */
   reset: () => void
@@ -103,6 +135,24 @@ export const useLessonChromeStore = create<LessonChromeState>((set, get) => ({
     set({ hasNotes: value })
   },
 
+  autoPlay: readStoredAutoPlay(),
+
+  toggleAutoPlay: () => {
+    const next = !get().autoPlay
+    persistAutoPlay(next)
+    set({ autoPlay: next })
+  },
+
+  qaPanelOpen: false,
+
+  toggleQAPanel: () => {
+    set(s => ({ qaPanelOpen: !s.qaPanelOpen }))
+  },
+
+  setQAPanelOpen: (open: boolean) => {
+    set({ qaPanelOpen: open })
+  },
+
   reset: () => {
     readingModeToggleFn = null
     document.documentElement.removeAttribute('data-theater-mode')
@@ -111,6 +161,7 @@ export const useLessonChromeStore = create<LessonChromeState>((set, get) => ({
       isReadingMode: false,
       notesOpen: false,
       hasNotes: false,
+      qaPanelOpen: false,
     })
   },
 }))

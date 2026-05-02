@@ -10,7 +10,7 @@
 
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { Link } from 'react-router'
-import { Video, PlayCircle, FileText, Search, X, FolderOpen, ChevronDown } from 'lucide-react'
+import { Video, PlayCircle, FileText, Search, X, FolderOpen, ChevronDown, CheckCircle2 } from 'lucide-react'
 import { Input } from '@/app/components/ui/input'
 import { Badge } from '@/app/components/ui/badge'
 import { Skeleton } from '@/app/components/ui/skeleton'
@@ -22,6 +22,7 @@ import {
 import { cn } from '@/app/components/ui/utils'
 import { EmptyState } from '@/app/components/EmptyState'
 import type { CourseAdapter, LessonItem, MaterialGroup } from '@/lib/courseAdapter'
+import { useContentProgressStore } from '@/stores/useContentProgressStore'
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -176,6 +177,11 @@ function LessonLink({
   searchQuery: string
   onFocusMaterials?: () => void
 }) {
+  const completionStatus = useContentProgressStore(
+    state => state.statusMap[`${courseId}:${lesson.id}`] ?? 'not-started'
+  )
+  const isCompleted = completionStatus === 'completed'
+
   return (
     <Link
       ref={activeRef}
@@ -186,15 +192,26 @@ function LessonLink({
       )}
       aria-current={isActive ? 'page' : undefined}
     >
-      <span className="flex-shrink-0 size-7 rounded-lg bg-brand-soft/50 flex items-center justify-center">
+      <span
+        className={cn(
+          'flex-shrink-0 size-7 rounded-lg flex items-center justify-center',
+          isCompleted && !isActive ? 'bg-success/10' : 'bg-brand-soft/50'
+        )}
+      >
         {isActive ? (
           <PlayCircle className="size-3.5 text-brand" aria-hidden="true" />
+        ) : isCompleted ? (
+          <CheckCircle2
+            className="size-3.5 text-success"
+            aria-hidden="true"
+            data-testid={`completion-check-${lesson.id}`}
+          />
         ) : (
           <span className="text-xs font-semibold text-brand-soft-foreground">{index + 1}</span>
         )}
       </span>
       <div className="flex-1 min-w-0">
-        <p className="text-sm truncate">
+        <p className={cn('text-sm truncate', isCompleted && 'line-through text-muted-foreground')}>
           <HighlightedLessonTitle text={lesson.title} query={searchQuery} />
         </p>
         <div
@@ -241,7 +258,82 @@ function LessonLink({
 }
 
 // ---------------------------------------------------------------------------
-// MaterialGroupRow — primary lesson with material count badge
+// MaterialRow — a single companion PDF sub-row (extracted from .map() to satisfy
+// Rules of Hooks — useContentProgressStore must be called at component top level)
+// ---------------------------------------------------------------------------
+
+function MaterialRow({
+  material,
+  courseId,
+  lessonId,
+  searchQuery,
+}: {
+  material: LessonItem
+  courseId: string
+  lessonId: string
+  searchQuery: string
+}) {
+  const completionStatus = useContentProgressStore(
+    state => state.statusMap[`${courseId}:${material.id}`] ?? 'not-started'
+  )
+  const isCompleted = completionStatus === 'completed'
+
+  return (
+    <Link
+      to={`/courses/${courseId}/lessons/${material.id}`}
+      className={cn(
+        'flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors',
+        material.id === lessonId
+          ? 'bg-brand-soft text-brand-soft-foreground font-medium'
+          : 'hover:bg-accent'
+      )}
+      aria-current={material.id === lessonId ? 'page' : undefined}
+      data-testid={`material-link-${material.id}`}
+    >
+      <span
+        className={cn(
+          'flex-shrink-0 size-7 rounded-lg flex items-center justify-center',
+          isCompleted && material.id !== lessonId ? 'bg-success/10' : 'bg-resource-pdf-bg'
+        )}
+      >
+        {isCompleted && material.id !== lessonId ? (
+          <CheckCircle2
+            className="size-3.5 text-success"
+            aria-hidden="true"
+            data-testid={`completion-check-${material.id}`}
+          />
+        ) : (
+          <FileText
+            className={cn(
+              'size-3.5',
+              material.id === lessonId ? 'text-brand' : 'text-resource-pdf'
+            )}
+            aria-hidden="true"
+          />
+        )}
+      </span>
+      <div className="flex-1 min-w-0">
+        <p
+          className={cn(
+            'text-sm truncate',
+            isCompleted && 'line-through text-muted-foreground'
+          )}
+        >
+          <HighlightedLessonTitle text={material.title} query={searchQuery} />
+        </p>
+        {material.sourceMetadata?.pageCount ? (
+          <div className="flex items-center gap-1 mt-0.5 text-xs text-muted-foreground">
+            <FileText className="size-3" aria-hidden="true" />
+            <span>{String(material.sourceMetadata.pageCount)} pgs</span>
+          </div>
+        ) : null}
+      </div>
+    </Link>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// MaterialGroupRow — primary lesson with collapsible companion PDF sub-rows
 // ---------------------------------------------------------------------------
 
 function MaterialGroupRow({
@@ -252,6 +344,8 @@ function MaterialGroupRow({
   activeRef,
   searchQuery,
   onFocusMaterials,
+  isExpanded,
+  onToggleExpand,
 }: {
   group: MaterialGroup
   courseId: string
@@ -260,20 +354,74 @@ function MaterialGroupRow({
   activeRef?: React.Ref<HTMLAnchorElement>
   searchQuery: string
   onFocusMaterials?: () => void
+  isExpanded: boolean
+  onToggleExpand: () => void
 }) {
   const isActive = group.primary.id === lessonId
+  const hasMaterials = group.materials.length > 0
+
+  // Don't show collapse toggle for groups without materials
+  if (!hasMaterials) {
+    return (
+      <LessonLink
+        lesson={group.primary}
+        courseId={courseId}
+        isActive={isActive}
+        index={index}
+        materialCount={0}
+        activeRef={isActive ? activeRef : undefined}
+        searchQuery={searchQuery}
+        onFocusMaterials={onFocusMaterials}
+      />
+    )
+  }
 
   return (
-    <LessonLink
-      lesson={group.primary}
-      courseId={courseId}
-      isActive={isActive}
-      index={index}
-      materialCount={group.materials.length}
-      activeRef={isActive ? activeRef : undefined}
-      searchQuery={searchQuery}
-      onFocusMaterials={onFocusMaterials}
-    />
+    <Collapsible open={isExpanded} onOpenChange={onToggleExpand}>
+      <div className="flex items-center gap-1">
+        <div className="flex-1 min-w-0">
+          <LessonLink
+            lesson={group.primary}
+            courseId={courseId}
+            isActive={isActive}
+            index={index}
+            materialCount={0}
+            activeRef={isActive ? activeRef : undefined}
+            searchQuery={searchQuery}
+            onFocusMaterials={onFocusMaterials}
+          />
+        </div>
+        <CollapsibleTrigger asChild>
+          <button
+            type="button"
+            className="flex-shrink-0 size-6 flex items-center justify-center rounded-md hover:bg-accent transition-colors"
+            aria-label={isExpanded ? 'Collapse materials' : 'Expand materials'}
+            data-testid={`materials-collapse-${group.primary.id}`}
+          >
+            <ChevronDown
+              className={cn(
+                'size-3.5 text-muted-foreground transition-transform',
+                isExpanded && 'rotate-180'
+              )}
+              aria-hidden="true"
+            />
+          </button>
+        </CollapsibleTrigger>
+      </div>
+      <CollapsibleContent>
+        <div className="ml-6 pl-2 border-l border-border/50 space-y-0.5">
+          {group.materials.map((material) => (
+            <MaterialRow
+              key={material.id}
+              material={material}
+              courseId={courseId}
+              lessonId={lessonId}
+              searchQuery={searchQuery}
+            />
+          ))}
+        </div>
+      </CollapsibleContent>
+    </Collapsible>
   )
 }
 
@@ -287,6 +435,8 @@ function FolderTreeNode({
   lessonId,
   expandedFolders,
   toggleFolder,
+  expandedMaterialGroups,
+  toggleMaterialGroup,
   activeRef,
   searchQuery,
   onFocusMaterials,
@@ -297,6 +447,8 @@ function FolderTreeNode({
   lessonId: string
   expandedFolders: Set<string>
   toggleFolder: (path: string) => void
+  expandedMaterialGroups: Set<string>
+  toggleMaterialGroup: (groupId: string) => void
   activeRef: React.RefObject<HTMLAnchorElement | null>
   searchQuery: string
   onFocusMaterials?: () => void
@@ -337,6 +489,8 @@ function FolderTreeNode({
               activeRef={group.primary.id === lessonId ? activeRef : undefined}
               searchQuery={searchQuery}
               onFocusMaterials={onFocusMaterials}
+              isExpanded={expandedMaterialGroups.has(group.primary.id)}
+              onToggleExpand={() => toggleMaterialGroup(group.primary.id)}
             />
           ))}
           {/* Nested subfolders */}
@@ -348,6 +502,8 @@ function FolderTreeNode({
               lessonId={lessonId}
               expandedFolders={expandedFolders}
               toggleFolder={toggleFolder}
+              expandedMaterialGroups={expandedMaterialGroups}
+              toggleMaterialGroup={toggleMaterialGroup}
               activeRef={activeRef}
               searchQuery={searchQuery}
               onFocusMaterials={onFocusMaterials}
@@ -470,6 +626,39 @@ export function LessonsTab({ courseId, lessonId, adapter, onFocusMaterials }: Le
     })
   }, [])
 
+  // Controlled expanded state for material groups (PDF sub-rows)
+  // Auto-expand when active lesson is a material of this parent
+  const [expandedMaterialGroups, setExpandedMaterialGroups] = useState<Set<string>>(() => {
+    const initial = new Set<string>()
+    for (const g of filteredGroups) {
+      if (g.materials.some(m => m.id === lessonId)) {
+        initial.add(g.primary.id)
+      }
+    }
+    return initial
+  })
+
+  useEffect(() => {
+    setExpandedMaterialGroups(prev => {
+      const next = new Set(prev)
+      for (const g of filteredGroups) {
+        if (g.materials.some(m => m.id === lessonId)) {
+          next.add(g.primary.id)
+        }
+      }
+      return next
+    })
+  }, [lessonId, filteredGroups])
+
+  const toggleMaterialGroup = useCallback((groupId: string) => {
+    setExpandedMaterialGroups(prev => {
+      const next = new Set(prev)
+      if (next.has(groupId)) next.delete(groupId)
+      else next.add(groupId)
+      return next
+    })
+  }, [])
+
   // Pre-compute O(1) lookup for original group indices (must be before early returns)
   const groupIndexMap = useMemo(
     () => new Map(displayGroups.map((g, i) => [g.primary.id, i])),
@@ -556,6 +745,8 @@ export function LessonsTab({ courseId, lessonId, adapter, onFocusMaterials }: Le
                 activeRef={group.primary.id === lessonId ? activeRef : undefined}
                 searchQuery={searchQuery}
                 onFocusMaterials={onFocusMaterials}
+                isExpanded={expandedMaterialGroups.has(group.primary.id)}
+                onToggleExpand={() => toggleMaterialGroup(group.primary.id)}
               />
             )
           })}
@@ -568,6 +759,8 @@ export function LessonsTab({ courseId, lessonId, adapter, onFocusMaterials }: Le
               lessonId={lessonId}
               expandedFolders={expandedFolders}
               toggleFolder={toggleFolder}
+              expandedMaterialGroups={expandedMaterialGroups}
+              toggleMaterialGroup={toggleMaterialGroup}
               activeRef={activeRef}
               searchQuery={searchQuery}
               onFocusMaterials={onFocusMaterials}
@@ -588,6 +781,8 @@ export function LessonsTab({ courseId, lessonId, adapter, onFocusMaterials }: Le
               activeRef={group.primary.id === lessonId ? activeRef : undefined}
               searchQuery={searchQuery}
               onFocusMaterials={onFocusMaterials}
+              isExpanded={expandedMaterialGroups.has(group.primary.id)}
+              onToggleExpand={() => toggleMaterialGroup(group.primary.id)}
             />
           )
         })

@@ -42,6 +42,8 @@ export interface LessonContentRendererProps {
   onTheaterModeToggle?: () => void
   /** Called when a bookmark marker on the timeline is clicked */
   onBookmarkSeek?: (timestamp: number) => void
+  /** When true, the video player attempts auto-play on mount */
+  autoplay?: boolean
 }
 
 export const LessonContentRenderer = forwardRef<VideoPlayerHandle, LessonContentRendererProps>(
@@ -64,6 +66,7 @@ export const LessonContentRenderer = forwardRef<VideoPlayerHandle, LessonContent
       theaterMode,
       onTheaterModeToggle,
       onBookmarkSeek,
+      autoplay,
     } = props
 
     // While lessonType is still resolving, show a skeleton instead of
@@ -124,6 +127,7 @@ export const LessonContentRenderer = forwardRef<VideoPlayerHandle, LessonContent
         theaterMode={theaterMode}
         onTheaterModeToggle={onTheaterModeToggle}
         onBookmarkSeek={onBookmarkSeek}
+        autoplay={autoplay}
       />
     )
   }

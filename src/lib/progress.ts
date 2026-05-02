@@ -7,7 +7,6 @@ import {
   removeFromIndex as removeDocFromIndex,
   toSearchableNote,
 } from '@/lib/unifiedSearch'
-import { triggerNoteLinkSuggestions } from '@/ai/knowledgeGaps/noteLinkSuggestions'
 import { unlockSidebarItem } from '@/app/hooks/useProgressiveDisclosure'
 
 const STORAGE_KEY = 'course-progress'
@@ -344,13 +343,10 @@ export async function saveNote(
 
     logStudyAction({ type: 'note_saved', courseId, lessonId, timestamp: new Date().toISOString() })
 
-    // Trigger cross-course note link suggestions (AC4–AC6)
-    // Re-read from Dexie to get the authoritative state (avoids stale linkedNoteIds)
-    const savedNote = await db.notes.where({ courseId, videoId: lessonId }).first()
-    if (savedNote) {
-      const allNotes = await db.notes.toArray()
-      triggerNoteLinkSuggestions(savedNote, allNotes)
-    }
+    // Note: Cross-course note link suggestions are intentionally skipped from
+    // this path. The progress.ts saveNote is a utility function with no React
+    // UI context to display an inline badge. The primary save path
+    // (useNoteStore.saveNote → NotesTab) handles the UI.
   } catch (error) {
     console.error('[Progress] Failed to save note to Dexie:', error)
   }

@@ -21,9 +21,11 @@ import {
   Circle,
   Clock,
   Maximize2,
+  MessageCircle,
   Minimize2,
   MoreHorizontal,
   PencilLine,
+  SkipForward,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/app/components/ui/utils'
@@ -81,6 +83,11 @@ export function LessonHeaderTools() {
   const notesOpen = useLessonChromeStore(s => s.notesOpen)
   const toggleNotes = useLessonChromeStore(s => s.toggleNotes)
   const hasNotes = useLessonChromeStore(s => s.hasNotes)
+  const autoPlay = useLessonChromeStore(s => s.autoPlay)
+  const toggleAutoPlay = useLessonChromeStore(s => s.toggleAutoPlay)
+  const qaPanelOpen = useLessonChromeStore(s => s.qaPanelOpen)
+  const toggleQAPanel = useLessonChromeStore(s => s.toggleQAPanel)
+  const setQAPanelOpen = useLessonChromeStore(s => s.setQAPanelOpen)
 
   // Completion state
   const getItemStatus = useContentProgressStore(s => s.getItemStatus)
@@ -123,7 +130,7 @@ export function LessonHeaderTools() {
         <PomodoroTimer />
 
         <Suspense fallback={null}>
-          <QAChatPanel />
+          <QAChatPanel open={qaPanelOpen} onOpenChange={setQAPanelOpen} />
         </Suspense>
 
         {/* Reading mode toggle */}
@@ -157,6 +164,25 @@ export function LessonHeaderTools() {
             <Maximize2 className="size-5" aria-hidden="true" />
           )}
         </Button>
+
+        {/* Auto-play toggle */}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={toggleAutoPlay}
+              aria-label={autoPlay ? 'Auto-play is on' : 'Auto-play is off'}
+              data-testid="autoplay-toggle"
+            >
+              <SkipForward
+                className={cn('size-5', !autoPlay && 'text-muted-foreground')}
+                aria-hidden="true"
+              />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Auto-play: {autoPlay ? 'On' : 'Off'}</TooltipContent>
+        </Tooltip>
       </span>
 
       {/* Tablet kebab menu — secondary tools */}
@@ -190,6 +216,20 @@ export function LessonHeaderTools() {
               <Maximize2 className="size-5 mr-2" aria-hidden="true" />
             )}
             {isTheater ? 'Exit Theater' : 'Theater Mode'}
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onSelect={toggleAutoPlay}
+            data-testid="kebab-autoplay"
+          >
+            <SkipForward className="size-5 mr-2" aria-hidden="true" />
+            Auto-play: {autoPlay ? 'On' : 'Off'}
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onSelect={toggleQAPanel}
+            data-testid="kebab-qa-panel"
+          >
+            <MessageCircle className="size-5 mr-2" aria-hidden="true" />
+            Ask AI
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

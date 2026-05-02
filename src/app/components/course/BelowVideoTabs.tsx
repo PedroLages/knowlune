@@ -9,7 +9,7 @@
  * @see Plan: Merge Classic Features into Modern UnifiedLessonPlayer
  */
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import {
   PencilLine,
   Bookmark,
@@ -83,6 +83,13 @@ export function BelowVideoTabs({
   const defaultTab = isPdf ? 'materials' : 'notes'
   const [activeTab, setActiveTab] = useState(defaultTab)
 
+  // Transcript version counter — incremented when TranscriptTab generates a new
+  // transcript. Forces BelowVideoTabs to rebuild the blob URL for AISummaryPanel.
+  const [transcriptVersion, setTranscriptVersion] = useState(0)
+  const handleTranscriptGenerated = useCallback(() => {
+    setTranscriptVersion(v => v + 1)
+  }, [])
+
   // Reset tab when lesson changes
   useEffect(() => {
     setActiveTab(isPdf ? 'materials' : 'notes')
@@ -146,7 +153,7 @@ export function BelowVideoTabs({
         transcriptBlobUrlRef.current = null
       }
     }
-  }, [adapter, lessonId])
+  }, [adapter, lessonId, transcriptVersion])
 
   // Fullscreen notes overlay (mobile)
   const [isNotesFullscreen, setIsNotesFullscreen] = useState(false)
@@ -303,6 +310,8 @@ export function BelowVideoTabs({
                 adapter={adapter}
                 currentTime={currentTime}
                 onSeek={onSeek}
+                isPdf={isPdf}
+                onTranscriptGenerated={handleTranscriptGenerated}
               />
             </div>
           </TabsContent>

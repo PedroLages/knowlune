@@ -957,3 +957,19 @@ html.spacious {
     opacity: 0.7;
   }
 }
+
+/* --------------------------------------------------------------------------
+ * Theater mode: ensure celebration modals render above GPU-composited video.
+ *
+ * When a full-height <video> plays in theater mode, Chromium promotes it to
+ * its own GPU compositor layer which can paint above CSS z-index ordering.
+ * Escalating z-index to 60 and applying translateZ(0) forces the dialog
+ * overlay and content onto their own GPU compositor layers above the video.
+ * The standalone `translate` property (Tailwind v4) handles XY centering, so
+ * `transform: translateZ(0)` composes without conflict.
+ * -------------------------------------------------------------------------- */
+html[data-theater-mode='true'] [data-slot='dialog-overlay'],
+html[data-theater-mode='true'] [data-slot='dialog-content'] {
+  z-index: 60;
+  transform: translateZ(0);
+}

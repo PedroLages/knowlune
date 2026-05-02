@@ -36,8 +36,15 @@ import { useProviderReconsent } from '@/ai/hooks/useProviderReconsent'
 import { ProviderReconsentModal } from '@/app/components/compliance/ProviderReconsentModal'
 import { AIConsentDeclinedBanner } from '@/app/components/compliance/AIConsentDeclinedBanner'
 
-export function QAChatPanel() {
-  const [isOpen, setIsOpen] = useState(false)
+export interface QAChatPanelProps {
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
+}
+
+export function QAChatPanel({ open: controlledOpen, onOpenChange: controlledOnOpenChange }: QAChatPanelProps = {}) {
+  const [internalOpen, setInternalOpen] = useState(false)
+  const isOpen = controlledOpen ?? internalOpen
+  const setIsOpen = controlledOnOpenChange ?? setInternalOpen
   const [inputValue, setInputValue] = useState('')
   const [hasNotes, setHasNotes] = useState(false)
   const [notesLoaded, setNotesLoaded] = useState(false)
@@ -351,12 +358,16 @@ export function QAChatPanel() {
             }
             disabled={aiChecking || !aiAvailable || !hasNotes || isGenerating}
             aria-busy={aiChecking}
+            aria-label="Ask a question about your notes"
+            data-testid="qa-panel-input"
             className="flex-1"
           />
           <Button
             onClick={handleSendMessage}
             disabled={!inputValue.trim() || aiChecking || !aiAvailable || !hasNotes || isGenerating}
             size="icon"
+            aria-label="Send question"
+            data-testid="qa-panel-send"
           >
             <Send className="size-4" />
           </Button>
@@ -370,7 +381,12 @@ export function QAChatPanel() {
 
   // Trigger button (shared)
   const triggerButton = (
-    <Button variant="ghost" size="icon" title="Ask AI about your notes">
+    <Button
+      variant="ghost"
+      size="icon"
+      aria-label={isOpen ? 'Close Ask AI panel' : 'Open Ask AI panel'}
+      data-testid="qa-panel-trigger"
+    >
       <MessageCircle className="size-5" />
     </Button>
   )
@@ -394,7 +410,14 @@ export function QAChatPanel() {
             <div className="flex h-full flex-col">
               <div className="flex items-center justify-between border-b px-4 py-3">
                 <h3 className="font-semibold">Ask AI</h3>
-                <Button variant="ghost" size="icon" className="size-6" onClick={() => setIsOpen(false)}>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="size-6"
+                  onClick={() => setIsOpen(false)}
+                  aria-label="Close Ask AI panel"
+                  data-testid="qa-panel-close"
+                >
                   <X className="size-4" />
                 </Button>
               </div>

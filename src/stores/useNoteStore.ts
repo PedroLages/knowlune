@@ -10,13 +10,18 @@ import {
 } from '@/lib/unifiedSearch'
 import { embeddingPipeline } from '@/ai/embeddingPipeline'
 import { supportsWorkers } from '@/ai/lib/workerCapabilities'
-import { triggerNoteLinkSuggestions } from '@/ai/knowledgeGaps/noteLinkSuggestions'
+import {
+  findAndReturnNoteLinkSuggestions,
+} from '@/ai/knowledgeGaps/noteLinkSuggestions'
+import type { NoteLinkSuggestion } from '@/ai/knowledgeGaps/types'
 import { syncableWrite, type SyncableRecord } from '@/lib/sync/syncableWrite'
 
 interface NoteState {
   notes: Note[]
   isLoading: boolean
   error: string | null
+  pendingNoteLinkSuggestions: { courseId: string; videoId: string; suggestions: NoteLinkSuggestion[] } | null
+  suggestionGeneration: number
 
   loadNotes: () => Promise<void>
   loadNotesByLesson: (courseId: string, videoId: string) => Promise<void>
@@ -27,12 +32,20 @@ interface NoteState {
   softDelete: (noteId: string) => Promise<void>
   restoreNote: (noteId: string) => Promise<void>
   getNoteForLesson: (courseId: string, videoId: string) => Note | undefined
+  setPendingNoteLinkSuggestions: (data: {
+    courseId: string
+    videoId: string
+    suggestions: NoteLinkSuggestion[]
+  }) => void
+  clearPendingNoteLinkSuggestions: () => void
 }
 
 export const useNoteStore = create<NoteState>((set, get) => ({
   notes: [],
   isLoading: false,
   error: null,
+  pendingNoteLinkSuggestions: null,
+  suggestionGeneration: 0,
 
   loadNotes: async () => {
     set({ isLoading: true, error: null })
@@ -97,15 +110,23 @@ export const useNoteStore = create<NoteState>((set, get) => ({
           .catch(err => console.error('[NoteStore] Embedding failed:', err))
       }
       // Suggest cross-course note links after successful save (AC4–AC6)
-      triggerNoteLinkSuggestions(note, get().notes, (source, target) => {
-        // Update Zustand store to reflect linked notes
-        useNoteStore.setState(state => ({
-          notes: state.notes.map(n => {
-            if (n.id === source.id) return source
-            if (n.id === target.id) return target
-            return n
-          }),
-        }))
+      // Scoped by lesson to prevent stale suggestions leaking across navigations.
+      // Generation counter prevents concurrent saves from silently overwriting.
+      const currentCourseId = note.courseId
+      const currentVideoId = note.videoId
+      const gen = get().suggestionGeneration + 1
+      set({ suggestionGeneration: gen })
+      findAndReturnNoteLinkSuggestions(note, get().notes).then(suggestions => {
+        if (get().suggestionGeneration !== gen) return // stale, discard
+        if (suggestions.length > 0) {
+          set({
+            pendingNoteLinkSuggestions: {
+              courseId: currentCourseId,
+              videoId: currentVideoId,
+              suggestions,
+            },
+          })
+        }
       })
     } catch (error) {
       // Rollback on failure
@@ -217,5 +238,17 @@ export const useNoteStore = create<NoteState>((set, get) => ({
   getNoteForLesson: (courseId: string, videoId: string) => {
     const { notes } = get()
     return notes.find(n => n.courseId === courseId && n.videoId === videoId)
+  },
+
+  setPendingNoteLinkSuggestions: (data: {
+    courseId: string
+    videoId: string
+    suggestions: NoteLinkSuggestion[]
+  }) => {
+    set({ pendingNoteLinkSuggestions: data })
+  },
+
+  clearPendingNoteLinkSuggestions: () => {
+    set({ pendingNoteLinkSuggestions: null })
   },
 }))

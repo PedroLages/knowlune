@@ -81,17 +81,33 @@ import { MiniPlayer } from '@/app/components/course/MiniPlayer'
 import { NextCourseSuggestion } from '@/app/components/NextCourseSuggestion'
 import { suggestNextCourse } from '@/lib/courseSuggestion'
 
+/** Type-safe accessor for boolean flags in React Router location.state. */
+function parseLocationFlag(state: unknown, flag: string): boolean {
+  if (typeof state !== 'object' || state === null) return false
+  return (state as Record<string, unknown>)[flag] === true
+}
+
 export function UnifiedLessonPlayer() {
   const { courseId, lessonId } = useParams<{ courseId: string; lessonId: string }>()
   const navigate = useNavigate()
   const location = useLocation()
 
+  // Read auto-play intent from navigation state (set by auto-advance).
+  // Cleared after first render so manual refreshes don't re-autoplay.
+  const shouldAutoPlay = parseLocationFlag(location.state, 'autoPlay')
+
+  // Clear autoPlay state after consuming it (prevents re-trigger on refresh)
+  useEffect(() => {
+    if (shouldAutoPlay && location.state) {
+      navigate(location.pathname, { replace: true, state: {} })
+    }
+  }, [shouldAutoPlay, location.pathname, location.state, navigate])
+
   // R19: record visit on direct navigation. Skipped for palette-initiated
   // navigations to avoid openCount double-counting.
   useEffect(() => {
     if (!lessonId || lessonId === 'undefined') return
-    const state = location.state as { __viaPalette?: boolean } | null
-    if (state?.__viaPalette === true) return
+    if (parseLocationFlag(location.state, '__viaPalette')) return
     void recordVisit('lesson', lessonId)
   }, [lessonId, location.state])
   const { adapter, loading, error } = useCourseAdapter(courseId)
@@ -156,6 +172,13 @@ export function UnifiedLessonPlayer() {
 
   // All local state: auto-advance, celebration, video time, mini-player, metadata, notes, etc.
   const state = useLessonPlayerState(adapter, lessonId)
+
+  // Track celebration modal open state in a ref for the ESC key handler.
+  // Using a ref avoids re-registering the document-level keydown listener
+  // every time the modal opens/closes, which would change its ordering
+  // relative to Radix Dialog's own ESC listener.
+  const celebrationOpenRef = useRef(state.celebrationOpen)
+  celebrationOpenRef.current = state.celebrationOpen
 
   // Completion flow: celebrations, auto-advance, manual status toggle
   const completion = useCompletionFlow({
@@ -247,8 +270,9 @@ export function UnifiedLessonPlayer() {
         e.preventDefault()
         toggleTheater()
       }
-      // ESC exits theater mode for all content types
-      if (e.key === 'Escape' && isTheater) {
+      // ESC exits theater mode (but not when celebration modal is open; the
+      // Radix Dialog's own ESC handler closes the dialog first)
+      if (e.key === 'Escape' && isTheater && !celebrationOpenRef.current) {
         e.preventDefault()
         toggleTheater()
       }
@@ -358,6 +382,7 @@ export function UnifiedLessonPlayer() {
           theaterMode={isTheater}
           onTheaterModeToggle={toggleTheater}
           onBookmarkSeek={state.handleTranscriptSeek}
+          autoplay={shouldAutoPlay}
         />
       </div>
 

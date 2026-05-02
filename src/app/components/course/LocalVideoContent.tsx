@@ -46,6 +46,8 @@ interface LocalVideoContentProps {
   onTheaterModeToggle?: () => void
   /** Called when a bookmark marker on the timeline is clicked */
   onBookmarkSeek?: (timestamp: number) => void
+  /** When true, the video player attempts auto-play on mount */
+  autoplay?: boolean
 }
 
 export const LocalVideoContent = forwardRef<VideoPlayerHandle, LocalVideoContentProps>(
@@ -64,6 +66,7 @@ export const LocalVideoContent = forwardRef<VideoPlayerHandle, LocalVideoContent
       theaterMode,
       onTheaterModeToggle,
       onBookmarkSeek,
+      autoplay,
     },
     ref
   ) {
@@ -162,7 +165,7 @@ export const LocalVideoContent = forwardRef<VideoPlayerHandle, LocalVideoContent
 
     // Show resume toast once when position is restored
     useEffect(() => {
-      if (savedPosition && savedPosition > 5 && !hasShownResumeToast.current) {
+      if (savedPosition && savedPosition > 5 && !hasShownResumeToast.current && !autoplay) {
         hasShownResumeToast.current = true
         toast(`Resuming from ${formatBookmarkTimestamp(Math.floor(savedPosition))}`, {
           duration: 2000,
@@ -399,7 +402,7 @@ export const LocalVideoContent = forwardRef<VideoPlayerHandle, LocalVideoContent
           title={video.filename}
           courseId={courseId}
           lessonId={lessonId}
-          initialPosition={savedPosition}
+          initialPosition={autoplay ? undefined : savedPosition}
           captions={userCaptions ? [userCaptions] : undefined}
           chapters={video.chapters}
           onLoadCaptions={handleLoadCaptions}
@@ -414,6 +417,7 @@ export const LocalVideoContent = forwardRef<VideoPlayerHandle, LocalVideoContent
           onPlayStateChange={onPlayStateChange}
           theaterMode={theaterMode}
           onTheaterModeToggle={onTheaterModeToggle}
+          autoplay={autoplay}
         />
       </div>
     )
