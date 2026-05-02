@@ -49,7 +49,11 @@ function getCutoffISOString(todayStr: string): string {
   return d.toISOString()
 }
 
-export function ActivityHeatmap() {
+interface ActivityHeatmapProps {
+  compact?: boolean
+}
+
+export function ActivityHeatmap({ compact = false }: ActivityHeatmapProps) {
   const [dayMap, setDayMap] = useState<Map<string, number>>(new Map())
   const [isLoading, setIsLoading] = useState(true)
   const [showTable, setShowTable] = useState(false)
@@ -132,11 +136,17 @@ export function ActivityHeatmap() {
 
   // HIGH #2: Memoize grid style object keyed on `totalWeeks`.
   const gridStyle = useMemo(
-    () => ({
-      gridTemplateColumns: `auto repeat(${totalWeeks}, minmax(8px, 1fr))`,
-      gridTemplateRows: 'auto repeat(7, 1fr)',
-    }),
-    [totalWeeks]
+    () =>
+      compact
+        ? {
+            gridTemplateColumns: `auto repeat(${totalWeeks}, 12px)`,
+            gridTemplateRows: 'auto repeat(7, 12px)',
+          }
+        : {
+            gridTemplateColumns: `auto repeat(${totalWeeks}, minmax(8px, 1fr))`,
+            gridTemplateRows: 'auto repeat(7, 1fr)',
+          },
+    [totalWeeks, compact]
   )
 
   // HIGH #3: Pre-compute formatted dates for all cells to avoid Intl calls in the render loop.
@@ -198,7 +208,7 @@ export function ActivityHeatmap() {
     return (
       <div
         data-testid="activity-heatmap-skeleton"
-        className="h-32 bg-muted/50 rounded-xl animate-pulse"
+        className={compact ? 'h-10 bg-muted/50 rounded-lg animate-pulse' : 'h-32 bg-muted/50 rounded-xl animate-pulse'}
         aria-busy="true"
         aria-label="Loading activity heatmap"
       />
@@ -210,7 +220,8 @@ export function ActivityHeatmap() {
 
   return (
     <div data-testid="activity-heatmap">
-      {/* Header */}
+      {/* Header — hidden in compact mode */}
+      {!compact && (
       <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
         <div>
           <p className="text-xs text-muted-foreground mt-0.5">
@@ -227,10 +238,21 @@ export function ActivityHeatmap() {
           {showTable ? 'View as grid' : 'View as table'}
         </Button>
       </div>
+      )}
 
       {showTable ? (
         /* ── Accessible table view ── */
         <div className="overflow-x-auto">
+          {compact && (
+            <div className="mb-2 text-right">
+              <button
+                onClick={() => setShowTable(false)}
+                className="text-[9px] text-muted-foreground hover:text-foreground underline min-h-[44px] min-w-[44px]"
+              >
+                Back to grid
+              </button>
+            </div>
+          )}
           <table
             className="w-full text-sm border-collapse"
             aria-label="Monthly study activity summary"
@@ -276,9 +298,9 @@ export function ActivityHeatmap() {
           <TooltipProvider>
             <div
               ref={gridRef}
-              role="group"
+              role="img"
               aria-label={`Study activity heatmap — ${totalActiveDays} active day${totalActiveDays !== 1 ? 's' : ''} in the past year`}
-              className="grid gap-[3px]"
+              className={compact ? 'grid gap-[2px]' : 'grid gap-[3px]'}
               // eslint-disable-next-line react-best-practices/no-inline-styles -- dynamic value requires inline style
               style={gridStyle}
               onKeyDown={handleGridKeyDown}
@@ -291,7 +313,7 @@ export function ActivityHeatmap() {
                   <div
                     key={`month-${colIdx}`}
                     aria-hidden="true"
-                    className="text-[10px] text-muted-foreground h-4 flex items-end px-0.5 leading-none"
+                    className={compact ? 'text-[8px] text-muted-foreground h-3 flex items-end px-0.5 leading-none' : 'text-[10px] text-muted-foreground h-4 flex items-end px-0.5 leading-none'}
                   >
                     {label?.label ?? ''}
                   </div>
@@ -303,7 +325,7 @@ export function ActivityHeatmap() {
                   {/* Day label (show Mon, Wed, Fri only — odd rows) */}
                   <div
                     aria-hidden="true"
-                    className="text-[10px] text-muted-foreground pr-2 h-[14px] flex items-center justify-end leading-none"
+                    className={compact ? 'text-[8px] text-muted-foreground pr-1 h-[12px] flex items-center justify-end leading-none' : 'text-[10px] text-muted-foreground pr-2 h-[14px] flex items-center justify-end leading-none'}
                   >
                     {dayIdx % 2 === 1 ? DAY_LABELS[dayIdx] : ''}
                   </div>
@@ -335,7 +357,7 @@ export function ActivityHeatmap() {
                             role="img"
                             aria-label={ariaLabel}
                             className={cn(
-                              'aspect-square w-full rounded-[3px]',
+                              compact ? 'w-3 h-3 rounded-[2px]' : 'aspect-square w-full rounded-[3px]',
                               'motion-safe:transition-[transform,box-shadow] motion-safe:duration-150',
                               'motion-safe:hover:scale-110 motion-safe:hover:shadow-md',
                               'focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring',
@@ -361,14 +383,17 @@ export function ActivityHeatmap() {
           </TooltipProvider>
 
           {/* Legend */}
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-3 text-[10px] text-muted-foreground">
+          <div className={cn(
+            'flex flex-wrap items-center gap-x-4 gap-y-1 mt-3 text-muted-foreground',
+            compact ? 'text-[8px]' : 'text-[10px]'
+          )}>
             <span>Less</span>
             <div className="flex items-center gap-1">
               {([0, 1, 2, 3, 4] as HeatmapLevel[]).map(level => (
                 <Tooltip key={level}>
                   <TooltipTrigger asChild>
                     <div
-                      className={cn('size-3 rounded-[3px] cursor-help', LEVEL_CLASSES[level])}
+                      className={cn('rounded-[3px] cursor-help', compact ? 'size-2' : 'size-3', LEVEL_CLASSES[level])}
                       aria-label={LEGEND_LABELS[level]}
                     />
                   </TooltipTrigger>
@@ -379,11 +404,25 @@ export function ActivityHeatmap() {
               ))}
             </div>
             <span>More</span>
+            {!compact && (
             <span className="ml-auto flex items-center gap-1.5">
               <div className="size-3 rounded-[3px] ring-2 ring-brand ring-offset-1 ring-offset-card" />
               Today
             </span>
+            )}
           </div>
+
+          {/* Compact mode: provide a way to reach the accessible table view */}
+          {compact && (
+            <div className="mt-1 text-right">
+              <button
+                onClick={() => setShowTable(true)}
+                className="text-[9px] text-muted-foreground hover:text-foreground underline min-h-[44px] min-w-[44px]"
+              >
+                View monthly summary
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>

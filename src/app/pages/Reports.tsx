@@ -1,7 +1,8 @@
 // eslint-disable-next-line component-size/max-lines -- page orchestrator: study/quiz/ai tabs with multiple chart sections and per-section error handling
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useSearchParams } from 'react-router'
-import { BookOpen, CheckCircle, FileText, TrendingUp, Clock, Target, WifiOff } from 'lucide-react'
+import { BookOpen, CheckCircle, Target, WifiOff, Flame } from 'lucide-react'
+import { HeroStat } from '@/app/components/reports/HeroStat'
 import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/card'
 import {
   ChartContainer,
@@ -18,14 +19,12 @@ import { db } from '@/db'
 import { useCourseStore } from '@/stores/useCourseStore'
 import {
   getCoursesInProgress,
-  getCompletedCourses,
   getTotalCompletedLessons,
   getTotalStudyNotes,
-  getLast7DaysLessonCompletions,
   getWeeklyChange,
 } from '@/lib/progress'
-import { getActionsPerDay } from '@/lib/studyLog'
-import { calculateCompletionRate, type CompletionRateResult } from '@/lib/analytics'
+import { getActionsPerDay, getCurrentStreak, getLongestStreak } from '@/lib/studyLog'
+import { calculateCompletionRate, calculateQuizAnalytics, type CompletionRateResult, type QuizAnalyticsSummary } from '@/lib/analytics'
 import {
   getCourseCompletionData,
   getCategoryColorMap,
@@ -33,25 +32,19 @@ import {
   computeSkillsDimensions,
 } from '@/lib/reportStats'
 import { Button } from '@/app/components/ui/button'
-import { StatsCard } from '@/app/components/StatsCard'
-import { EmptyState } from '@/app/components/EmptyState'
 import { useOnlineStatus } from '@/app/hooks/useOnlineStatus'
-import StudyTimeAnalytics from '@/app/components/StudyTimeAnalytics'
 import { AIAnalyticsTab } from '@/app/components/reports/AIAnalyticsTab'
 import { QuizAnalyticsDashboard } from '@/app/components/reports/QuizAnalyticsDashboard'
 import { CategoryRadar } from '@/app/components/reports/CategoryRadar'
 import { SkillsRadar } from '@/app/components/reports/SkillsRadar'
-import { WeeklyGoalRing } from '@/app/components/reports/WeeklyGoalRing'
 import { RecentActivityTimeline } from '@/app/components/reports/RecentActivityTimeline'
 import { ActivityHeatmap } from '@/app/components/reports/ActivityHeatmap'
 import { QuizExportCard } from '@/app/components/reports/QuizExportCard'
-import { ReadingStatsSection } from '@/app/components/reports/ReadingStatsSection'
-import { ReadingPatternsCard } from '@/app/components/reports/ReadingPatternsCard'
-import { ReadingGoalsCard } from '@/app/components/reports/ReadingGoalsCard'
-import { GenreDistributionCard } from '@/app/components/reports/GenreDistributionCard'
-import { ReadingSummaryCard } from '@/app/components/reports/ReadingSummaryCard'
+import { ReadingSection } from '@/app/components/reports/ReadingSection'
+import { ThisWeekSection } from '@/app/components/reports/ThisWeekSection'
 import { toast } from 'sonner'
 import { staggerContainer, fadeUp } from '@/lib/motion'
+import { generateStudyInsight } from '@/lib/insights'
 
 /* ------------------------------------------------------------------ */
 /*  Chart configs                                                      */
@@ -116,6 +109,7 @@ export default function Reports() {
     startedCount: 0,
   })
   const [quizAttemptCount, setQuizAttemptCount] = useState(0)
+  const [quizAnalytics, setQuizAnalytics] = useState<QuizAnalyticsSummary | null>(null)
 
   // Per-section error states
   const [notesError, setNotesError] = useState<string | null>(null)
@@ -160,16 +154,25 @@ export default function Reports() {
     }
   }, [isOnline])
 
+  const loadQuizAnalytics = useCallback(async () => {
+    try {
+      const summary = await calculateQuizAnalytics()
+      setQuizAnalytics(summary)
+    } catch (err) {
+      console.error('Failed to load quiz analytics:', err)
+      toast.error('Failed to load quiz analytics')
+    }
+  }, [])
+
   useEffect(() => {
     void loadStudyNotes()
     void loadCompletionRate()
     void loadQuizAttemptCount()
-  }, [loadStudyNotes, loadCompletionRate, loadQuizAttemptCount])
+    void loadQuizAnalytics()
+  }, [loadStudyNotes, loadCompletionRate, loadQuizAttemptCount, loadQuizAnalytics])
 
   // ── Memoized data ──
   const lessonsChange = useMemo(() => getWeeklyChange('lessons'), [])
-  const notesChange = useMemo(() => getWeeklyChange('notes'), [])
-  const sparkline = useMemo(() => getLast7DaysLessonCompletions(), [])
   const courseCompletionData = useMemo(() => getCourseCompletionData(), [])
   const categoryColorMap = useMemo(() => getCategoryColorMap(), [])
   const categoryRadarData = useMemo(() => getCategoryCompletionForRadar(), [])
@@ -186,46 +189,32 @@ export default function Reports() {
 
   const completedLessons = useMemo(() => getTotalCompletedLessons(), [])
   const inProgressCount = useMemo(() => getCoursesInProgress(allCourses).length, [allCourses])
-  const completedCount = useMemo(() => getCompletedCourses(allCourses).length, [allCourses])
 
-  // ── Stats cards (reuse StatsCard component from Overview) ──
-  const statsCards = useMemo(
-    () => [
-      {
-        label: 'Lessons Completed',
-        value: completedLessons,
-        icon: CheckCircle,
-        trend: lessonsChange >= 0 ? ('up' as const) : ('down' as const),
-        trendValue: `${Math.abs(lessonsChange)} this week`,
-        sparkline,
-      },
-      {
-        label: 'Courses In Progress',
-        value: inProgressCount,
-        icon: BookOpen,
-      },
-      {
-        label: 'Courses Completed',
-        value: completedCount,
-        icon: TrendingUp,
-      },
-      {
-        label: 'Study Notes',
-        value: studyNotes,
-        icon: FileText,
-        trend: notesChange >= 0 ? ('up' as const) : ('down' as const),
-        trendValue: `${Math.abs(notesChange)} this week`,
-      },
-    ],
-    [
-      completedLessons,
-      lessonsChange,
-      sparkline,
-      inProgressCount,
-      completedCount,
-      studyNotes,
-      notesChange,
-    ]
+  const currentStreak = useMemo(() => getCurrentStreak(), [])
+  const longestStreak = useMemo(() => getLongestStreak(), [])
+  const activeDaysThisMonth = useMemo(() => {
+    const now = new Date()
+    const month = now.getMonth()
+    const year = now.getFullYear()
+    const calendarMonthActive = activityData.filter(d => {
+      const dDate = new Date(d.fullDate + 'T12:00:00')
+      return dDate.getMonth() === month && dDate.getFullYear() === year && d.activities > 0
+    }).length
+    const thirtyDayActive = activityData.filter(d => d.activities > 0).length
+    // Use the larger count so early-month views (1st-2nd) aren't severely undercounted
+    return Math.max(calendarMonthActive, thirtyDayActive)
+  }, [activityData])
+
+  const insightText = useMemo(
+    () =>
+      generateStudyInsight({
+        activeDaysThisMonth,
+        currentStreak,
+        previousBestStreak: longestStreak,
+        weeklyChange: lessonsChange,
+        totalCompletedLessons: completedLessons,
+      }),
+    [activeDaysThisMonth, currentStreak, longestStreak, lessonsChange, completedLessons]
   )
 
   // ── Dynamic height for horizontal bar chart ──
@@ -242,47 +231,52 @@ export default function Reports() {
 
   return (
     <motion.div variants={staggerContainer} initial="hidden" animate="visible">
-      <motion.h1 variants={fadeUp} className="text-2xl font-bold mb-6">
-        Reports
-      </motion.h1>
+      {/* ── Hero block ── */}
+      <motion.div variants={fadeUp} className="rounded-2xl border border-border/50 bg-card p-6 mb-6">
+        <h1 className="text-2xl font-bold mb-3">Reports</h1>
+        <p className="text-lg font-semibold mb-4">{insightText}</p>
+        <div className="flex justify-center mb-4">
+          <ActivityHeatmap compact />
+        </div>
+        {!hasActivity ? (
+          <p className="text-sm text-muted-foreground text-center mb-4">
+            Study sessions will appear here once you start learning.
+          </p>
+        ) : null}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <HeroStat label="Lessons" value={String(completedLessons)} icon={CheckCircle} />
+          <HeroStat label="Courses" value={`${inProgressCount}/${allCourses.length}`} icon={BookOpen} />
+          <HeroStat label="Streak" value={`${currentStreak}d`} icon={Flame} />
+          <HeroStat label="Quiz Avg" value={quizAnalytics ? `${Math.round(quizAnalytics.averageScore)}%` : '—'} icon={Target} />
+        </div>
+      </motion.div>
 
-      {!hasActivity ? (
-        <EmptyState
-          data-testid="empty-state-sessions"
-          icon={Clock}
-          title="Start studying to see your analytics"
-          description="Your study time, completion rates, and insights will appear here"
-          actionLabel="Browse Courses"
-          actionHref="/courses"
-        />
-      ) : (
-        <>
-          {/* Live region for tab/filter change announcements */}
-          <span role="status" aria-live="polite" className="sr-only">
-            {hasInteracted
-              ? activeTab === 'study'
-                ? `Study Analytics: ${completedLessons} lessons completed, ${inProgressCount} in progress`
-                : activeTab === 'quizzes'
-                  ? 'Quiz Analytics displayed'
-                  : 'AI Analytics displayed'
-              : ''}
-          </span>
+      {/* Live region for tab/filter change announcements */}
+      <span role="status" aria-live="polite" className="sr-only">
+        {hasInteracted
+          ? activeTab === 'study'
+            ? `Study Analytics: ${completedLessons} lessons completed, ${inProgressCount} in progress`
+            : activeTab === 'quizzes'
+              ? 'Quiz Analytics displayed'
+              : 'AI Analytics displayed'
+          : ''}
+      </span>
 
-          <Tabs
-            value={activeTab}
-            onValueChange={value => {
-              setHasInteracted(true)
-              setSearchParams({ tab: value }, { replace: true })
-            }}
-            className="mb-6"
-          >
-            <motion.div variants={fadeUp}>
-              <TabsList className="min-h-[44px]" aria-label="Reports navigation">
-                <TabsTrigger value="study">Study Analytics</TabsTrigger>
-                <TabsTrigger value="quizzes">Quiz Analytics</TabsTrigger>
-                <TabsTrigger value="ai">AI Analytics</TabsTrigger>
-              </TabsList>
-            </motion.div>
+      <Tabs
+        value={activeTab}
+        onValueChange={value => {
+          setHasInteracted(true)
+          setSearchParams({ tab: value }, { replace: true })
+        }}
+        className="mb-6"
+      >
+        <motion.div variants={fadeUp}>
+          <TabsList className="min-h-[44px]" aria-label="Reports navigation">
+            <TabsTrigger value="study">Study Analytics</TabsTrigger>
+            <TabsTrigger value="quizzes">Quiz Analytics</TabsTrigger>
+            <TabsTrigger value="ai">AI Analytics</TabsTrigger>
+          </TabsList>
+        </motion.div>
 
             <TabsContent value="quizzes" className="mt-6">
               <QuizAnalyticsDashboard />
@@ -292,17 +286,8 @@ export default function Reports() {
               <AIAnalyticsTab />
             </TabsContent>
 
-            <TabsContent value="study" className="mt-6 space-y-[var(--content-gap)]">
+            <TabsContent value="study" className="mt-6">
               <h2 className="sr-only">Study Analytics</h2>
-              {/* ── Row 1: Hero Stat Cards ── */}
-              <motion.div
-                variants={fadeUp}
-                className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"
-              >
-                {statsCards.map(stat => (
-                  <StatsCard key={stat.label} {...stat} />
-                ))}
-              </motion.div>
 
               {notesError && (
                 <motion.div variants={fadeUp}>
@@ -314,54 +299,15 @@ export default function Reports() {
                 </motion.div>
               )}
 
-              {/* ── Reading Stats Section (E86-S01) — shown when book data exists ── */}
-              <motion.div variants={fadeUp}>
-                <ReadingStatsSection />
+              {/* ── Section 1: This Week ── */}
+              <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-1">This Week</h2>
+              <motion.div variants={fadeUp} className="mt-3">
+                <ThisWeekSection />
               </motion.div>
 
-              {/* ── Reading Patterns Card (E112-S01) — shown when 7+ sessions exist ── */}
-              <motion.div variants={fadeUp}>
-                <ReadingPatternsCard />
-              </motion.div>
-
-              {/* ── Reading Goals Card (E86-S05) — shown when reading goal is set ── */}
-              <motion.div variants={fadeUp}>
-                <ReadingGoalsCard />
-              </motion.div>
-
-              {/* ── Genre Distribution Card (E112-S02) — shown when 2+ books have genres ── */}
-              <motion.div variants={fadeUp}>
-                <GenreDistributionCard />
-              </motion.div>
-
-              {/* ── Reading Summary Card (E112-S02) — shown when 1+ books finished ── */}
-              <motion.div variants={fadeUp}>
-                <ReadingSummaryCard />
-              </motion.div>
-
-              {/* ── Row 2: Weekly Goal Ring + Study Time ── */}
-              <motion.div variants={fadeUp} className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-base flex items-center gap-2">
-                      <Clock className="size-4 text-muted-foreground" aria-hidden="true" />
-                      Weekly Study Goal
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <WeeklyGoalRing />
-                  </CardContent>
-                </Card>
-
-                <Card className="lg:col-span-2">
-                  <CardContent className="p-0">
-                    <StudyTimeAnalytics />
-                  </CardContent>
-                </Card>
-              </motion.div>
-
-              {/* ── Row 3: Course Completion (horizontal bars) + Category Radar ── */}
-              <motion.div variants={fadeUp} className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+              {/* ── Section 2: Courses ── */}
+              <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-1 mt-6">Courses</h2>
+              <motion.div variants={fadeUp} className="grid grid-cols-1 lg:grid-cols-3 gap-4 mt-3">
                 <Card className="lg:col-span-2">
                   <CardHeader>
                     <CardTitle className="text-base">Course Completion</CardTitle>
@@ -374,7 +320,7 @@ export default function Reports() {
                       <ChartContainer
                         data-testid="bar-chart-inner"
                         config={barChartConfig}
-                        className={`min-w-[480px] w-full min-h-[1px]`}
+                        className="min-w-[480px] w-full min-h-[1px]"
                         style={{ height: barChartHeight }}
                       >
                         <BarChart
@@ -455,8 +401,9 @@ export default function Reports() {
                 </Card>
               </motion.div>
 
-              {/* ── Row 4: Study Activity (gradient area) + Skills Radar ── */}
-              <motion.div variants={fadeUp} className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+              {/* ── Section 3: Learning Behavior ── */}
+              <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-1 mt-6">Learning Behavior</h2>
+              <motion.div variants={fadeUp} className="grid grid-cols-1 lg:grid-cols-3 gap-4 mt-3">
                 <Card className="lg:col-span-2">
                   <CardHeader>
                     <CardTitle className="text-base">Study Activity (Last 30 Days)</CardTitle>
@@ -524,8 +471,16 @@ export default function Reports() {
                 </Card>
               </motion.div>
 
-              {/* ── Row 5: Quiz Completion Rate ── */}
-              <motion.div variants={fadeUp}>
+              {/* ── Section 4: Reading ── */}
+              <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-1 mt-6">Reading</h2>
+              <motion.div variants={fadeUp} className="mt-3">
+                <ReadingSection />
+              </motion.div>
+
+              {/* ── Section 5: Activity ── */}
+              <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-1 mt-6">Activity</h2>
+              <motion.div variants={fadeUp} className="mt-3 space-y-4">
+
                 <Card data-testid="quiz-completion-rate-card">
                   <CardHeader>
                     <CardTitle className="text-base flex items-center gap-2">
@@ -553,7 +508,6 @@ export default function Reports() {
                           <Progress
                             value={completionData.completionRate}
                             className="flex-1"
-                            // Explicit labelFormat overrides the default; avoids relying on {...props} spread order for aria-label
                             labelFormat={() => `Quiz completion rate: ${roundedCompletionRate}%`}
                           />
                           <span
@@ -574,25 +528,17 @@ export default function Reports() {
                     )}
                   </CardContent>
                 </Card>
-              </motion.div>
 
-              {quizCountError && (
-                <motion.div variants={fadeUp}>
+                {quizCountError && (
                   <InlineSectionError
                     error={quizCountError}
                     isOnline={isOnline}
                     onRetry={loadQuizAttemptCount}
                   />
-                </motion.div>
-              )}
+                )}
 
-              {/* ── Row 5b: Quiz Export ── */}
-              <motion.div variants={fadeUp}>
                 <QuizExportCard />
-              </motion.div>
 
-              {/* ── Row 6: Recent Activity Timeline ── */}
-              <motion.div variants={fadeUp}>
                 <Card>
                   <CardHeader>
                     <CardTitle className="text-base">Recent Activity</CardTitle>
@@ -603,21 +549,8 @@ export default function Reports() {
                 </Card>
               </motion.div>
 
-              {/* ── Row 7: 365-Day Activity Heatmap ── */}
-              <motion.div variants={fadeUp}>
-                <Card data-testid="activity-heatmap-card">
-                  <CardHeader>
-                    <CardTitle className="text-base">365-Day Study Activity</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <ActivityHeatmap />
-                  </CardContent>
-                </Card>
-              </motion.div>
             </TabsContent>
           </Tabs>
-        </>
-      )}
     </motion.div>
   )
 }

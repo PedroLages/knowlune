@@ -64,7 +64,7 @@ interface BookETA {
   eta: string | null
 }
 
-export function ReadingStatsSection() {
+export function ReadingStatsSection({ showHeader = true }: { showHeader?: boolean }) {
   const [stats, setStats] = useState<ReadingStats | null>(null)
   const [bookETAs, setBookETAs] = useState<BookETA[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -124,10 +124,12 @@ export function ReadingStatsSection() {
 
   return (
     <div className="space-y-4" data-testid="reading-stats-section">
-      <h2 className="text-base font-semibold flex items-center gap-2">
-        <BookOpen className="size-4 text-muted-foreground" aria-hidden="true" />
-        Reading
-      </h2>
+      {showHeader !== false && (
+        <h2 className="text-base font-semibold flex items-center gap-2">
+          <BookOpen className="size-4 text-muted-foreground" aria-hidden="true" />
+          Reading
+        </h2>
+      )}
 
       {/* Stat pills row — 4 columns: Read Today, In Progress, Finished, Avg Speed */}
       {isLoading ? (
