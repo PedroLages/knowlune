@@ -69,6 +69,8 @@ import { useQuizGeneration } from '@/hooks/useQuizGeneration'
 import { GenerateQuizButton } from '@/app/components/figma/GenerateQuizButton'
 import { QuizBadge } from '@/app/components/figma/QuizBadge'
 import { useTheaterMode } from '@/app/hooks/useTheaterMode'
+import { useLessonChromeStore } from '@/stores/useLessonChromeStore'
+import { useNoteStore } from '@/stores/useNoteStore'
 import { useReadingMode } from '@/hooks/useReadingMode'
 import { ReadingModeStatusBar } from '@/app/components/figma/ReadingModeStatusBar'
 import { ReadingToolbar } from '@/app/components/figma/ReadingToolbar'
@@ -108,6 +110,24 @@ export function UnifiedLessonPlayer() {
     exitReadingMode,
     announcement: readingModeAnnouncement,
   } = useReadingMode(isLesson)
+
+  // B2: Use store-based notesOpen so LessonHeaderTools / BottomNav toggles actually
+  // control the notes panel. pendingNoteFocus stays local since the store does not
+  // manage focus grooming.
+  const notesOpen = useLessonChromeStore(s => s.notesOpen)
+  const toggleNotes = useLessonChromeStore(s => s.toggleNotes)
+  const setNotesOpenStore = useLessonChromeStore(s => s.setNotesOpen)
+
+  // B3: Sync hasNotes to the store so indicator dots in LessonHeaderTools / BottomNav work.
+  // useNoteStore.notes is replaced by NotesTab's loadNotesByLesson() on lesson change.
+  const noteStoreNotes = useNoteStore(s => s.notes)
+  useEffect(() => {
+    if (!courseId || !lessonId) return
+    const hasContent = noteStoreNotes.some(
+      n => n.courseId === courseId && n.videoId === lessonId
+    )
+    useLessonChromeStore.getState().setHasNotes(hasContent)
+  }, [noteStoreNotes, courseId, lessonId])
   const notesPanelRef = usePanelRef()
   const videoPlayerRef = useRef<VideoPlayerHandle>(null)
   const titleRef = useRef<HTMLHeadingElement>(null)
@@ -176,7 +196,7 @@ export function UnifiedLessonPlayer() {
   // Deep-linking: ?t=<seconds> and ?panel=notes
   useDeepLinkEffects({
     setSeekToTime: state.setSeekToTime,
-    setNotesOpen: state.setNotesOpen,
+    setNotesOpen: setNotesOpenStore,
     setFocusTab: state.setFocusTab,
   })
 
@@ -193,22 +213,15 @@ export function UnifiedLessonPlayer() {
   // Notes panel: imperatively collapse/expand via usePanelRef API
   useEffect(() => {
     if (!isDesktop) return
-    if (state.notesOpen) {
+    if (notesOpen) {
       notesPanelRef.current?.resize('40%')
     } else {
       notesPanelRef.current?.collapse()
     }
-  }, [state.notesOpen, isDesktop, notesPanelRef])
+  }, [notesOpen, isDesktop, notesPanelRef])
 
-  // Theater mode: sync to <html> data attribute so Layout can hide the left sidebar
-  useEffect(() => {
-    if (isTheater) {
-      document.documentElement.setAttribute('data-theater-mode', 'true')
-    } else {
-      document.documentElement.removeAttribute('data-theater-mode')
-    }
-    return () => document.documentElement.removeAttribute('data-theater-mode')
-  }, [isTheater])
+  // Theater mode: DOM attribute managed by useLessonChromeStore (single source of truth).
+  // Initialization from localStorage handled after store creation.
 
   // Theater mode: scroll to top so full video is visible
   useEffect(() => {
@@ -220,9 +233,9 @@ export function UnifiedLessonPlayer() {
   // Theater mode: close notes panel when entering theater
   useEffect(() => {
     if (isTheater) {
-      state.setNotesOpen(false)
+      useLessonChromeStore.getState().setNotesOpen(false)
     }
-  }, [isTheater, state.setNotesOpen])
+  }, [isTheater])
 
   // Keyboard shortcut: T toggles theater mode (only when not in input/textarea)
   useEffect(() => {
@@ -234,15 +247,15 @@ export function UnifiedLessonPlayer() {
         e.preventDefault()
         toggleTheater()
       }
-      // ESC exits theater mode for PDFs (VideoPlayer handles its own ESC for videos)
-      if (e.key === 'Escape' && isTheater && state.isPdf) {
+      // ESC exits theater mode for all content types
+      if (e.key === 'Escape' && isTheater) {
         e.preventDefault()
         toggleTheater()
       }
     }
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [toggleTheater, isTheater, state.isPdf])
+  }, [toggleTheater, isTheater])
 
   // Next course suggestion (E91-S08) — computed via useMemo
   const courseSuggestion = useMemo(() => {
@@ -422,7 +435,7 @@ export function UnifiedLessonPlayer() {
         focusTab={state.focusTab}
         focusTabKey={state.focusTabCounter.current}
         isPdf={state.isPdf}
-        hideNotesTab={isDesktop && state.notesOpen}
+        hideNotesTab={isDesktop && notesOpen}
         onCaptureFrame={handleCaptureFrame}
         courseName={courseName}
         lessonTitle={state.lessonTitle}
@@ -500,14 +513,14 @@ export function UnifiedLessonPlayer() {
             // eslint-disable-next-line react-best-practices/no-inline-styles -- overflow:visible needed for sticky sidebar
             style={{ overflow: 'visible' }}
           >
-            <ResizablePanel defaultSize={state.notesOpen ? '60%' : '100%'} minSize="40%">
+            <ResizablePanel defaultSize={notesOpen ? '60%' : '100%'} minSize="40%">
               <div data-testid="lesson-content-scroll">{mainContent}</div>
             </ResizablePanel>
 
             <ResizableHandle
-              withHandle={state.notesOpen}
-              disabled={!state.notesOpen}
-              className={cn(state.notesOpen ? 'mx-2' : 'invisible w-0')}
+              withHandle={notesOpen}
+              disabled={!notesOpen}
+              className={cn(notesOpen ? 'mx-2' : 'invisible w-0')}
               onDoubleClick={() => notesPanelRef.current?.resize('40%')}
             />
 
@@ -515,16 +528,16 @@ export function UnifiedLessonPlayer() {
               panelRef={notesPanelRef}
               collapsible
               collapsedSize="0%"
-              defaultSize={state.notesOpen ? '40%' : '0%'}
+              defaultSize={notesOpen ? '40%' : '0%'}
               minSize="25%"
             >
-              {state.notesOpen && (
+              {notesOpen && (
                 <NotesPanel
                   courseId={courseId!}
                   lessonId={lessonId!}
                   currentTime={state.currentTime}
                   onSeek={state.handleTranscriptSeek}
-                  onClose={state.handleNotesToggle}
+                  onClose={toggleNotes}
                   onCaptureFrame={handleCaptureFrame}
                   pendingFocus={state.pendingNoteFocus}
                   onFocusComplete={() => state.setPendingNoteFocus(false)}
@@ -539,7 +552,7 @@ export function UnifiedLessonPlayer() {
             data-testid="desktop-sidebar"
             className={cn(
               'sticky top-0 self-start flex-shrink-0 w-96 bg-card rounded-2xl shadow-sm overflow-hidden flex flex-col max-h-[calc(100svh-3rem)]',
-              isTheater || state.notesOpen ? 'hidden' : 'hidden lg:flex'
+              isTheater || notesOpen ? 'hidden' : 'hidden lg:flex'
             )}
           >
             <div className="px-4 py-3 border-b border-border flex-shrink-0">

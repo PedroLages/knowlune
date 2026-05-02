@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { toast } from 'sonner'
 import { useAriaLiveAnnouncer } from '@/hooks/useAriaLiveAnnouncer'
+import { useLessonChromeStore } from '@/stores/useLessonChromeStore'
 
 /**
  * Manages reading mode — a distraction-free view that hides chrome (sidebar,
@@ -91,6 +92,22 @@ export function useReadingMode(isLessonPage: boolean) {
     window.addEventListener('exit-reading-mode', handleExitReadingMode)
     return () => window.removeEventListener('exit-reading-mode', handleExitReadingMode)
   }, [exitReadingMode])
+
+  // B1: Register the actual toggle function with useLessonChromeStore so that
+  // LessonHeaderTools / BottomNav calls to store.toggleReadingMode() actually work.
+  // Re-register whenever the callback changes (e.g. isReadingMode toggles).
+  useEffect(() => {
+    useLessonChromeStore.getState().registerReadingModeToggle(toggleReadingMode)
+    return () => {
+      useLessonChromeStore.getState().registerReadingModeToggle(null)
+    }
+  }, [toggleReadingMode])
+
+  // B1: Sync local isReadingMode state to the store so the header button
+  // shows correct aria-pressed / active state.
+  useEffect(() => {
+    useLessonChromeStore.getState().syncReadingMode(isReadingMode)
+  }, [isReadingMode])
 
   return { isReadingMode, toggleReadingMode, exitReadingMode, announcement }
 }

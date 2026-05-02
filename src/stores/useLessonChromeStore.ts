@@ -39,13 +39,15 @@ export interface LessonChromeState {
   toggleReadingMode: () => void
   /** Sync isReadingMode without side effects (DOM managed by useReadingMode hook). */
   syncReadingMode: (value: boolean) => void
-  /** Register the toggle callback from useReadingMode. */
-  registerReadingModeToggle: (fn: () => void) => void
+  /** Register the toggle callback from useReadingMode. Pass null to unregister. */
+  registerReadingModeToggle: (fn: (() => void) | null) => void
 
   /** Whether the notes panel is open. */
   notesOpen: boolean
   /** Toggle the notes panel open/closed. */
   toggleNotes: () => void
+  /** Set the notes panel open/closed to a specific value (used for deep-linking, theater mode close). */
+  setNotesOpen: (open: boolean) => void
   /** Whether the current lesson has notes content. */
   hasNotes: boolean
   /** Set whether the current lesson has notes content. */
@@ -81,7 +83,7 @@ export const useLessonChromeStore = create<LessonChromeState>((set, get) => ({
     set({ isReadingMode: value })
   },
 
-  registerReadingModeToggle: (fn: () => void) => {
+  registerReadingModeToggle: (fn: (() => void) | null) => {
     readingModeToggleFn = fn
   },
 
@@ -89,6 +91,10 @@ export const useLessonChromeStore = create<LessonChromeState>((set, get) => ({
 
   toggleNotes: () => {
     set(s => ({ notesOpen: !s.notesOpen }))
+  },
+
+  setNotesOpen: (open: boolean) => {
+    set({ notesOpen: open })
   },
 
   hasNotes: false,
@@ -108,3 +114,10 @@ export const useLessonChromeStore = create<LessonChromeState>((set, get) => ({
     })
   },
 }))
+
+// H2: Initialize DOM data-theater-mode attribute from persisted state on page load.
+// The toggleTheater() handler manages the attribute during toggles, but the initial
+// value from localStorage must also be reflected in the DOM.
+if (useLessonChromeStore.getState().isTheater) {
+  document.documentElement.setAttribute('data-theater-mode', 'true')
+}
