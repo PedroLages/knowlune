@@ -49,6 +49,27 @@ import { useImportProgressStore } from '@/stores/useImportProgressStore'
 
 type WizardStep = 'select' | 'details' | 'path'
 
+// --- Singleton guard: module-level counter for wizard open state ---
+
+let wizardOpenCount = 0
+
+/** Returns true if any ImportWizardDialog is currently open. */
+export function isImportWizardOpen(): boolean {
+  return wizardOpenCount > 0
+}
+
+/** @internal Resets the wizard open counter (for test use only). */
+export function __resetWizardOpenCount(): void {
+  wizardOpenCount = 0
+}
+
+/** Custom event name for cross-component target path updates (R10). */
+export const IMPORT_WIZARD_SET_TARGET = 'import-wizard-set-target' as const
+
+export interface ImportWizardSetTargetEvent extends CustomEvent {
+  detail: { pathId: string | null }
+}
+
 /** Live scan progress shown inside the wizard during folder scanning. */
 function ScanProgressIndicator() {
   const courses = useImportProgressStore(s => s.courses)
@@ -89,9 +110,11 @@ function ScanProgressIndicator() {
 interface ImportWizardDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
+  /** Pre-fill step 3 with this path ID when the dialog opens (R3, R4). */
+  targetPathId?: string
 }
 
-export function ImportWizardDialog({ open, onOpenChange }: ImportWizardDialogProps) {
+export function ImportWizardDialog({ open, onOpenChange, targetPathId }: ImportWizardDialogProps) {
   const [step, setStep] = useState<WizardStep>('select')
   const [scannedCourse, setScannedCourse] = useState<ScannedCourse | null>(null)
   const [courseName, setCourseName] = useState('')
@@ -115,6 +138,42 @@ export function ImportWizardDialog({ open, onOpenChange }: ImportWizardDialogPro
 
   // Learning path store
   const { paths: learningPaths, loadPaths, addCourseToPath, createPath } = useLearningPathStore()
+
+  // Refs for singleton guard and target path tracking
+  const targetPathIdRef = useRef(targetPathId)
+  const prevOpenRef = useRef(false)
+
+  // Keep targetPathIdRef in sync with prop
+  useEffect(() => {
+    targetPathIdRef.current = targetPathId
+  }, [targetPathId])
+
+  // Singleton guard: track open state transitions for wizardOpenCount (R10)
+  useEffect(() => {
+    if (open && !prevOpenRef.current) {
+      wizardOpenCount++
+    } else if (!open && prevOpenRef.current) {
+      wizardOpenCount = Math.max(0, wizardOpenCount - 1)
+    }
+    prevOpenRef.current = open
+  }, [open])
+
+  // Listen for cross-component target path updates (R10)
+  useEffect(() => {
+    function handleSetTarget(e: Event) {
+      const event = e as ImportWizardSetTargetEvent
+      const newTarget = event.detail?.pathId ?? undefined
+      targetPathIdRef.current = newTarget
+      // When target is updated while wizard is open, navigate to step 3
+      if (newTarget && scannedCourse) {
+        setStep('path')
+      }
+    }
+    window.addEventListener(IMPORT_WIZARD_SET_TARGET, handleSetTarget)
+    return () => {
+      window.removeEventListener(IMPORT_WIZARD_SET_TARGET, handleSetTarget)
+    }
+  }, [scannedCourse])
 
   // Load paths when dialog opens
   useEffect(() => {
@@ -141,12 +200,13 @@ export function ImportWizardDialog({ open, onOpenChange }: ImportWizardDialogPro
   // AI suggestions hook — fires automatically when Ollama is configured
   const aiSuggestions = useAISuggestions(scannedCourse)
 
-  // Path placement AI suggestion
+  // Path placement AI suggestion — pass targetPathId for constrained context (R3)
   const pathPlacement = usePathPlacementSuggestion(
     courseName,
     tags,
     description,
-    step === 'path' && showPathStep
+    step === 'path' && showPathStep,
+    targetPathIdRef.current ?? undefined
   )
 
   // Apply AI suggestion when it arrives
@@ -158,6 +218,18 @@ export function ImportWizardDialog({ open, onOpenChange }: ImportWizardDialogPro
       }
     }
   }, [pathPlacement.hasFetched, pathPlacement.suggestion, pathChoice])
+
+  // Pre-fill step 3 when targetPathId is provided (R3, R4)
+  useEffect(() => {
+    if (step === 'path' && targetPathIdRef.current && learningPaths.length > 0) {
+      const targetPathExists = learningPaths.some(p => p.id === targetPathIdRef.current)
+      if (targetPathExists && !selectedPathId) {
+        setSelectedPathId(targetPathIdRef.current)
+        setPathChoice('choose')
+        setSelectedPosition(1)
+      }
+    }
+  }, [step, learningPaths, selectedPathId])
 
   const resetWizard = useCallback(() => {
     setStep('select')

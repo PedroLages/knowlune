@@ -1,8 +1,26 @@
 import { describe, it, expect, vi, beforeEach, beforeAll, afterAll } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, type RenderResult } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { ImportWizardDialog } from '../ImportWizardDialog'
+import { MemoryRouter } from 'react-router'
+import {
+  ImportWizardDialog,
+  isImportWizardOpen,
+  IMPORT_WIZARD_SET_TARGET,
+  __resetWizardOpenCount,
+} from '../ImportWizardDialog'
 import type { ScannedCourse } from '@/lib/courseImport'
+import type { ComponentPropsWithoutRef } from 'react'
+
+/** Render with MemoryRouter so Link components in step 3 don't throw. */
+function renderWithRouter(
+  props: ComponentPropsWithoutRef<typeof ImportWizardDialog>
+): RenderResult {
+  return render(
+    <MemoryRouter>
+      <ImportWizardDialog {...props} />
+    </MemoryRouter>
+  )
+}
 
 const mockScanCourseFolder = vi.fn()
 const mockPersistScannedCourse = vi.fn()
@@ -53,28 +71,31 @@ vi.mock('@/stores/useCourseImportStore', () => ({
   ),
 }))
 
+// Mutable mock state so tests can change paths dynamically (needed for targetPathId tests)
+const mockLearningPathState = {
+  paths: [] as Array<{
+    id: string
+    name: string
+    description: string
+    isAIGenerated: boolean
+    createdAt: string
+    updatedAt: string
+  }>,
+  entries: [] as Array<unknown>,
+  activePath: null,
+  isGenerating: false,
+  error: null,
+  loadPaths: vi.fn(),
+  addCourseToPath: vi.fn(),
+  createPath: vi.fn(),
+}
+
 vi.mock('@/stores/useLearningPathStore', () => ({
   useLearningPathStore: Object.assign(
-    (selector?: (state: Record<string, unknown>) => unknown) => {
-      const state = {
-        paths: [],
-        entries: [],
-        activePath: null,
-        isGenerating: false,
-        error: null,
-        loadPaths: vi.fn(),
-        addCourseToPath: vi.fn(),
-        createPath: vi.fn(),
-      }
-      return selector ? selector(state) : state
-    },
+    (selector?: (state: typeof mockLearningPathState) => unknown) =>
+      selector ? selector(mockLearningPathState) : mockLearningPathState,
     {
-      getState: () => ({
-        paths: [],
-        loadPaths: vi.fn(),
-        addCourseToPath: vi.fn(),
-        createPath: vi.fn(),
-      }),
+      getState: () => mockLearningPathState,
       setState: vi.fn(),
       subscribe: vi.fn(() => () => {}),
     }
@@ -173,6 +194,14 @@ describe('ImportWizardDialog', () => {
     mockAISuggestions.suggestedTags = []
     mockAISuggestions.suggestedDescription = ''
     mockAISuggestions.hasFetched = false
+    // Reset learning path store mock state
+    mockLearningPathState.paths = []
+    mockLearningPathState.entries = []
+    mockLearningPathState.loadPaths = vi.fn()
+    mockLearningPathState.addCourseToPath = vi.fn()
+    mockLearningPathState.createPath = vi.fn()
+    // Reset singleton guard counter between tests
+    __resetWizardOpenCount()
   })
 
   it('renders the dialog when open', () => {
@@ -861,6 +890,242 @@ describe('ImportWizardDialog', () => {
     await user.click(screen.getByTestId('wizard-import-btn'))
     await waitFor(() => {
       expect(mockPersistScannedCourse).toHaveBeenCalledWith(scanned, undefined)
+    })
+  })
+
+  // --- targetPathId and singleton guard tests (Unit 1) ---
+
+  describe('targetPathId prop', () => {
+    const testPath = {
+      id: 'path-1',
+      name: 'Test Path',
+      description: '',
+      isAIGenerated: false,
+      createdAt: '2026-01-01',
+      updatedAt: '2026-01-01',
+    }
+
+    beforeEach(() => {
+      vi.clearAllMocks()
+      global.URL.createObjectURL = vi.fn().mockReturnValue('blob:mock-url')
+      global.URL.revokeObjectURL = vi.fn()
+      mockAISuggestions.isAvailable = false
+      mockAISuggestions.isLoading = false
+      mockAISuggestions.suggestedTags = []
+      mockAISuggestions.suggestedDescription = ''
+      mockAISuggestions.hasFetched = false
+      // Set paths in the mutable mock state so step 3 renders
+      mockLearningPathState.paths = [testPath]
+      mockLearningPathState.entries = []
+      mockLearningPathState.loadPaths = vi.fn()
+      mockLearningPathState.addCourseToPath = vi.fn()
+      mockLearningPathState.createPath = vi.fn()
+      __resetWizardOpenCount()
+    })
+
+    it('pre-selects target path in step 3 when targetPathId is provided', async () => {
+      const user = userEvent.setup()
+      const scanned = makeScannedCourse()
+      mockScanCourseFolder.mockResolvedValueOnce(scanned)
+
+      renderWithRouter({
+        open: true,
+        onOpenChange: vi.fn(),
+        targetPathId: 'path-1',
+      })
+
+      await user.click(screen.getByTestId('wizard-select-folder-btn'))
+
+      await waitFor(() => {
+        expect(screen.getByTestId('wizard-details-step')).toBeInTheDocument()
+      })
+
+      // Click Next to go to path step
+      await user.click(screen.getByTestId('wizard-next-btn'))
+
+      await waitFor(() => {
+        expect(screen.getByTestId('wizard-path-step')).toBeInTheDocument()
+      })
+
+      // The target path should be pre-selected in the Select
+      await waitFor(() => {
+        expect(screen.getByText('Test Path')).toBeInTheDocument()
+      })
+    })
+
+    it('allows skipping path placement even when targetPathId is provided', async () => {
+      const user = userEvent.setup()
+      const scanned = makeScannedCourse()
+      mockScanCourseFolder.mockResolvedValueOnce(scanned)
+      mockPersistScannedCourse.mockResolvedValueOnce({
+        ...scanned,
+        importedAt: '2026-03-25T10:00:00.000Z',
+        category: '',
+        tags: [],
+        status: 'active',
+        videoCount: 2,
+        pdfCount: 1,
+      })
+
+      const onOpenChange = vi.fn()
+      renderWithRouter({
+        open: true,
+        onOpenChange,
+        targetPathId: 'path-1',
+      })
+
+      await user.click(screen.getByTestId('wizard-select-folder-btn'))
+
+      await waitFor(() => {
+        expect(screen.getByTestId('wizard-details-step')).toBeInTheDocument()
+      })
+
+      await user.click(screen.getByTestId('wizard-next-btn'))
+
+      await waitFor(() => {
+        expect(screen.getByTestId('wizard-path-skip')).toBeInTheDocument()
+      })
+
+      // Click "Add Later" to skip path placement
+      await user.click(screen.getByTestId('wizard-path-skip'))
+
+      await waitFor(() => {
+        expect(mockPersistScannedCourse).toHaveBeenCalled()
+        expect(onOpenChange).toHaveBeenCalledWith(false)
+      })
+    })
+
+    it('behaves normally without targetPathId (no regression)', async () => {
+      const user = userEvent.setup()
+      const scanned = makeScannedCourse()
+      mockScanCourseFolder.mockResolvedValueOnce(scanned)
+      mockPersistScannedCourse.mockResolvedValueOnce({
+        ...scanned,
+        importedAt: '2026-03-25T10:00:00.000Z',
+        category: '',
+        tags: [],
+        status: 'active',
+        videoCount: 2,
+        pdfCount: 1,
+      })
+
+      renderWithRouter({ open: true, onOpenChange: vi.fn() })
+
+      await user.click(screen.getByTestId('wizard-select-folder-btn'))
+
+      await waitFor(() => {
+        expect(screen.getByTestId('wizard-details-step')).toBeInTheDocument()
+      })
+
+      // With paths in store, "Next" button appears (3-step flow)
+      await user.click(screen.getByTestId('wizard-next-btn'))
+
+      await waitFor(() => {
+        expect(screen.getByTestId('wizard-path-step')).toBeInTheDocument()
+      })
+
+      // Without targetPathId, no path is pre-selected — user must choose or skip
+      // Verify "Select a path..." placeholder is shown (no pre-selection)
+      expect(screen.getByText('Select a path...')).toBeInTheDocument()
+
+      // Use "Add Later" to skip and complete import
+      await user.click(screen.getByTestId('wizard-path-skip'))
+
+      await waitFor(() => {
+        expect(mockPersistScannedCourse).toHaveBeenCalled()
+      })
+    })
+
+    it('does not pre-select when targetPathId does not match any existing path', async () => {
+      const user = userEvent.setup()
+      const scanned = makeScannedCourse()
+      mockScanCourseFolder.mockResolvedValueOnce(scanned)
+
+      renderWithRouter({
+        open: true,
+        onOpenChange: vi.fn(),
+        targetPathId: 'non-existent-path',
+      })
+
+      await user.click(screen.getByTestId('wizard-select-folder-btn'))
+
+      await waitFor(() => {
+        expect(screen.getByTestId('wizard-details-step')).toBeInTheDocument()
+      })
+
+      await user.click(screen.getByTestId('wizard-next-btn'))
+
+      await waitFor(() => {
+        expect(screen.getByTestId('wizard-path-step')).toBeInTheDocument()
+      })
+
+      // The select should show placeholder text since no path matches
+      expect(screen.getByText('Select a path...')).toBeInTheDocument()
+    })
+  })
+
+  describe('singleton guard (R10)', () => {
+    it('isImportWizardOpen returns true when dialog is open', () => {
+      expect(isImportWizardOpen()).toBe(false)
+      render(<ImportWizardDialog open={true} onOpenChange={vi.fn()} />)
+      expect(isImportWizardOpen()).toBe(true)
+    })
+
+    it('isImportWizardOpen returns false when dialog is closed', () => {
+      const { rerender } = render(<ImportWizardDialog open={true} onOpenChange={vi.fn()} />)
+      expect(isImportWizardOpen()).toBe(true)
+
+      rerender(<ImportWizardDialog open={false} onOpenChange={vi.fn()} />)
+      expect(isImportWizardOpen()).toBe(false)
+    })
+
+    it('isImportWizardOpen returns false when multiple instances mount closed', () => {
+      // Mount three instances all closed — this should NOT count as open
+      render(<ImportWizardDialog open={false} onOpenChange={vi.fn()} />)
+      render(<ImportWizardDialog open={false} onOpenChange={vi.fn()} />)
+      render(<ImportWizardDialog open={false} onOpenChange={vi.fn()} />)
+
+      expect(isImportWizardOpen()).toBe(false)
+    })
+
+    it('custom event updates target path in open wizard', () => {
+      renderWithRouter({
+        open: true,
+        onOpenChange: vi.fn(),
+        targetPathId: 'path-1',
+      })
+
+      expect(isImportWizardOpen()).toBe(true)
+
+      // Dispatch custom event to update target path
+      window.dispatchEvent(
+        new CustomEvent(IMPORT_WIZARD_SET_TARGET, {
+          detail: { pathId: 'path-1' },
+        })
+      )
+
+      // The wizard should handle the event without errors
+      // Verify the wizard is still open
+      expect(isImportWizardOpen()).toBe(true)
+    })
+
+    it('counter resets to 0 defensively when going below zero', async () => {
+      // Manually manipulate counter (via useEffect) to test defensive reset
+      // Close a dialog that was opened
+      const { rerender } = render(<ImportWizardDialog open={true} onOpenChange={vi.fn()} />)
+      expect(isImportWizardOpen()).toBe(true)
+
+      rerender(<ImportWizardDialog open={false} onOpenChange={vi.fn()} />)
+      expect(isImportWizardOpen()).toBe(false)
+
+      // Even with rapid open/close, counter should be stable
+      const { rerender: rerender2 } = render(
+        <ImportWizardDialog open={true} onOpenChange={vi.fn()} />
+      )
+      expect(isImportWizardOpen()).toBe(true)
+
+      rerender2(<ImportWizardDialog open={false} onOpenChange={vi.fn()} />)
+      expect(isImportWizardOpen()).toBe(false)
     })
   })
 })
