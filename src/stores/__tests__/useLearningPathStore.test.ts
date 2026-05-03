@@ -613,6 +613,147 @@ describe('applyAIOrder error handling', () => {
   })
 })
 
+describe('createPathWithCourses', () => {
+  it('should create path and add all courses', async () => {
+    const path = await act(async () => {
+      return useLearningPathStore.getState().createPathWithCourses('My Path', 'Desc', [
+        { courseId: 'c1', courseType: 'imported' },
+        { courseId: 'c2', courseType: 'imported' },
+      ])
+    })
+
+    expect(path.name).toBe('My Path')
+    expect(path.description).toBe('Desc')
+
+    const state = useLearningPathStore.getState()
+    expect(state.paths).toHaveLength(1)
+    expect(state.entries).toHaveLength(2)
+    expect(state.entries[0].courseId).toBe('c1')
+    expect(state.entries[0].position).toBe(1)
+    expect(state.entries[1].courseId).toBe('c2')
+    expect(state.entries[1].position).toBe(2)
+  })
+
+  it('should skip duplicate course IDs', async () => {
+    await act(async () => {
+      return useLearningPathStore.getState().createPathWithCourses('Path', undefined, [
+        { courseId: 'c1', courseType: 'imported' },
+        { courseId: 'c1', courseType: 'imported' },
+        { courseId: 'c2', courseType: 'imported' },
+      ])
+    })
+
+    expect(useLearningPathStore.getState().entries).toHaveLength(2)
+  })
+
+  it('should create path even with empty courses array', async () => {
+    const path = await act(async () => {
+      return useLearningPathStore.getState().createPathWithCourses('Empty Path', undefined, [])
+    })
+
+    expect(path.name).toBe('Empty Path')
+    const state = useLearningPathStore.getState()
+    expect(state.paths).toHaveLength(1)
+    expect(state.entries).toHaveLength(0)
+  })
+
+  it('should rollback on syncableWrite failure', async () => {
+    vi.spyOn(syncableWriteModule, 'syncableWrite').mockRejectedValue(new Error('Write fail'))
+
+    try {
+      await act(async () => {
+        await useLearningPathStore.getState().createPathWithCourses('Fail', undefined, [
+          { courseId: 'c1', courseType: 'imported' },
+        ])
+      })
+    } catch {
+      // Expected to throw
+    }
+
+    const state = useLearningPathStore.getState()
+    expect(state.paths).toHaveLength(0)
+    expect(state.entries).toHaveLength(0)
+    expect(state.error).toBe('Failed to create learning path with courses')
+  })
+})
+
+describe('batchAddCoursesToPath', () => {
+  it('should add courses to an existing path', async () => {
+    await act(async () => {
+      await useLearningPathStore.getState().createPath('Path')
+    })
+    const pathId = useLearningPathStore.getState().paths[0].id
+
+    await act(async () => {
+      await useLearningPathStore.getState().batchAddCoursesToPath(pathId, [
+        { courseId: 'c1', courseType: 'imported' },
+        { courseId: 'c2', courseType: 'imported' },
+      ])
+    })
+
+    const entries = useLearningPathStore.getState().entries
+    expect(entries).toHaveLength(2)
+    expect(entries[0].courseId).toBe('c1')
+    expect(entries[0].position).toBe(1)
+    expect(entries[1].courseId).toBe('c2')
+    expect(entries[1].position).toBe(2)
+  })
+
+  it('should skip duplicates with existing entries', async () => {
+    await act(async () => {
+      await useLearningPathStore.getState().createPath('Path')
+    })
+    const pathId = useLearningPathStore.getState().paths[0].id
+
+    // Add c1 first
+    await act(async () => {
+      await useLearningPathStore.getState().addCourseToPath(pathId, 'c1', 'imported')
+    })
+
+    // Try batch-adding c1 (duplicate) and c2
+    await act(async () => {
+      await useLearningPathStore.getState().batchAddCoursesToPath(pathId, [
+        { courseId: 'c1', courseType: 'imported' },
+        { courseId: 'c2', courseType: 'imported' },
+      ])
+    })
+
+    const entries = useLearningPathStore.getState().entries
+    expect(entries).toHaveLength(2)
+    expect(entries[1].courseId).toBe('c2')
+  })
+
+  it('should do nothing for empty courses', async () => {
+    await act(async () => {
+      await useLearningPathStore.getState().createPath('Path')
+    })
+    const pathId = useLearningPathStore.getState().paths[0].id
+
+    await act(async () => {
+      await useLearningPathStore.getState().batchAddCoursesToPath(pathId, [])
+    })
+
+    expect(useLearningPathStore.getState().entries).toHaveLength(0)
+  })
+
+  it('should rollback on DB error', async () => {
+    await act(async () => {
+      await useLearningPathStore.getState().createPath('Path')
+    })
+    const pathId = useLearningPathStore.getState().paths[0].id
+
+    vi.spyOn(syncableWriteModule, 'syncableWrite').mockRejectedValue(new Error('fail'))
+
+    await act(async () => {
+      await useLearningPathStore.getState().batchAddCoursesToPath(pathId, [
+        { courseId: 'c1', courseType: 'imported' },
+      ])
+    })
+
+    expect(useLearningPathStore.getState().error).toBe('Failed to add courses to learning path')
+  })
+})
+
 describe('getEntriesForPath', () => {
   it('should return sorted entries for a path', async () => {
     await act(async () => {
