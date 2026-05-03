@@ -120,7 +120,7 @@ export function CompletionModal({
   const getDescription = () => {
     switch (type) {
       case 'course':
-        return `Congratulations! You've completed "${title}". Your dedication is paying off!`
+        return `You completed all lessons in "${title}". Great work staying committed!`
       case 'module':
         return `Great job! You've finished the "${title}" module. Keep up the momentum!`
       case 'lesson':
