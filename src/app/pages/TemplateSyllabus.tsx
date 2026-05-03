@@ -13,7 +13,6 @@ import { useLearningPathStore } from '@/stores/useLearningPathStore'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
 import { db } from '@/db'
 import { fadeUp, staggerContainer } from '@/lib/motion'
-import { toast } from 'sonner'
 import type { LearningPath, LearningPathEntry } from '@/data/types'
 
 const difficultyLevels: Record<string, number> = {
