@@ -64,6 +64,7 @@ The primary motivation is the template gap import flow (Idea #3), where a user f
 
 - No directly relevant `docs/solutions/` entries found for wizard parameterization or dialog composition patterns.
 - Design token enforcement is active — all new UI must use theme tokens from `theme.css` (brand, brand-soft, etc.), not hardcoded Tailwind colors.
+- WCAG 2.1 AA+ accessibility applies to all new interactive elements — "Import Course" buttons must have accessible labels (via visible text or `aria-label`), dropdown menu items must be keyboard-navigable, and focus management within the wizard dialog must follow the existing shadcn/ui Dialog pattern.
 - ESLint rule `error-handling/no-silent-catch` requires visible feedback in catch blocks — use `toast.error()` for user-facing operations.
 
 ### External References
@@ -113,7 +114,7 @@ The primary motivation is the template gap import flow (Idea #3), where a user f
 - When the user reaches step 3 with a `targetPathId`, pre-set `selectedPathId` to the target and `pathChoice` to `'choose'`
 - If the AI suggestion arrives and the user accepts it, the AI suggestion overrides the pre-filled path (consistent with existing behavior where AI suggestion -> accept sets `selectedPathId`)
 - Add a module-level `let wizardOpenCount = 0` counter incremented and decremented inside the dialog's `onOpenChange` handler, only when the `open` prop transitions to/from `true`. Export an `isImportWizardOpen()` function that returns `wizardOpenCount > 0` — this is the public API consumed by path pages to check for an existing wizard instance. Tracking `onOpenChange` transitions (not mount/unmount) is essential because three page components each render their own `<ImportWizardDialog>` instance, so a mount-based counter would reach 3 even when no wizard is visible
-- Add a custom event listener pattern: the wizard listens for `'import-wizard-set-target'` events on `window`; when received, updates its internal `targetPathId` ref and navigates to step 3 with the new target pre-selected
+- Add a custom event listener pattern: the wizard listens for `'import-wizard-set-target'` events on `window` via `useEffect` with proper cleanup (`removeEventListener` on unmount); the event `detail` carries `{ pathId: string | null }`. When received, updates its internal `targetPathId` ref and navigates to step 3 with the new target pre-selected
 - After import completes from a path context, the wizard closes normally (same as existing behavior)
 
 **Patterns to follow:**
@@ -266,7 +267,7 @@ The primary motivation is the template gap import flow (Idea #3), where a user f
 
 **Requirements:** R1, R2, R3, R6, R9, R10 (via test coverage of the feature)
 
-**Dependencies:** Units 2, 3 (test the implemented features)
+**Dependencies:** Units 2, 3 (test the implemented features; tests can be written alongside implementation since they mock `ImportWizardDialog` and stores)
 
 **Files:**
 - Create: `src/app/pages/__tests__/LearningPaths.test.tsx`
