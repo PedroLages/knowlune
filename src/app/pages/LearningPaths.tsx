@@ -73,7 +73,6 @@ function PathCard({
       <Card
         className={cn(
           'group relative transition-all duration-300 hover:shadow-xl overflow-hidden rounded-2xl',
-          'focus-within:ring-2 focus-within:ring-brand focus-within:ring-offset-2 focus-within:ring-offset-background',
           isNotStarted && 'opacity-70'
         )}
       >
@@ -134,6 +133,7 @@ function PathCard({
             to={`/learning-paths/${path.id}`}
             className="block focus:outline-none mt-10"
             aria-label={`${path.name} — ${courseCount} courses, ${completionPct}% completed`}
+            tabIndex={-1}
           >
             {/* Course count badge */}
             <div className="flex items-center gap-2 mb-2">

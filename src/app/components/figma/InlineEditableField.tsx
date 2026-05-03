@@ -32,6 +32,8 @@ export function InlineEditableField({
   const [showSuccess, setShowSuccess] = useState(false)
   const originalValue = useRef(value)
   const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement>(null)
+  const focusTimerRef = useRef<ReturnType<typeof setTimeout>>(null)
+  const successTimerRef = useRef<ReturnType<typeof setTimeout>>(null)
 
   // Sync if external value changes while not editing
   useEffect(() => {
@@ -41,11 +43,19 @@ export function InlineEditableField({
     }
   }, [value, isEditing])
 
+  // Cleanup timers on unmount to avoid stale state updates
+  useEffect(() => {
+    return () => {
+      if (focusTimerRef.current) clearTimeout(focusTimerRef.current)
+      if (successTimerRef.current) clearTimeout(successTimerRef.current)
+    }
+  }, [])
+
   const enterEdit = useCallback(() => {
     originalValue.current = draftValue
     setIsEditing(true)
     // Auto-focus after render
-    setTimeout(() => {
+    focusTimerRef.current = setTimeout(() => {
       inputRef.current?.focus()
       // Select all text for easy replacement
       if (inputRef.current instanceof HTMLInputElement) {
@@ -59,9 +69,10 @@ export function InlineEditableField({
     setShowSuccess(true)
     onSave(draftValue)
     // Brief visual confirmation
-    setTimeout(() => setShowSuccess(false), 1000)
+    successTimerRef.current = setTimeout(() => setShowSuccess(false), 1800)
   }, [draftValue, onSave])
 
+  // Keyboard handler for input mode: Enter saves, Escape cancels
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
       if (e.key === 'Enter' && !e.shiftKey) {
@@ -76,6 +87,21 @@ export function InlineEditableField({
     [commitSave]
   )
 
+  // Keyboard handler for textarea mode: Enter inserts newline, Ctrl/Cmd+Enter saves, Escape cancels
+  const handleTextareaKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault()
+        commitSave()
+      } else if (e.key === 'Escape') {
+        setDraftValue(originalValue.current)
+        setIsEditing(false)
+      }
+      // Plain Enter passes through to insert newline
+    },
+    [commitSave]
+  )
+
   const handleBlur = useCallback(() => {
     // Blur saves (matches Notion/Linear behavior)
     if (isEditing) {
@@ -83,10 +109,11 @@ export function InlineEditableField({
     }
   }, [isEditing, commitSave])
 
-  // Stop click propagation to prevent Link navigation on cards
+  // Stop click propagation and prevent default to avoid Link navigation on cards
   const handleClick = useCallback(
     (e: React.MouseEvent) => {
       e.stopPropagation()
+      e.preventDefault()
       if (!isEditing) {
         enterEdit()
       }
@@ -96,7 +123,7 @@ export function InlineEditableField({
 
   const commonClasses = cn(
     'w-full min-w-0 rounded-md border px-3 py-1',
-    'ring-2 ring-brand ring-offset-2',
+    'focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2',
     'bg-input-background border-input',
     'transition-[border-color,box-shadow]',
     showSuccess && 'border-success ring-success/50 ring-2',
@@ -138,7 +165,7 @@ export function InlineEditableField({
         ref={inputRef as React.Ref<HTMLTextAreaElement>}
         value={draftValue}
         onChange={e => setDraftValue(e.target.value)}
-        onKeyDown={handleKeyDown}
+        onKeyDown={handleTextareaKeyDown}
         onBlur={handleBlur}
         onClick={e => e.stopPropagation()}
         maxLength={maxLength}

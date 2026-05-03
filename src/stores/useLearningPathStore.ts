@@ -351,21 +351,27 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
       error: null,
     }))
 
-    // Persist the re-inserted path and entries via syncableWrite
+    // Persist the re-inserted path and entries via syncableWrite.
+    // Await the result — only clear pendingDeletes on success so the user can
+    // retry Undo if persistence fails. On failure, keep the pendingDeletes
+    // entry and show an error toast with a retry hint.
     persistWithRetry(async () => {
       await syncableWrite('learningPaths', 'put', pending.path as unknown as SyncableRecord)
       for (const entry of pending.entries) {
         await syncableWrite('learningPathEntries', 'put', entry as unknown as SyncableRecord)
       }
-    }).catch(error => {
-      console.error('[LearningPathStore] Failed to persist restored path:', error)
-      toast.error('Failed to restore path')
     })
-
-    // Remove from pendingDeletes using immutable replacement
-    const pendingDeletes = { ...state.pendingDeletes }
-    delete pendingDeletes[pathId]
-    set({ pendingDeletes })
+      .then(() => {
+        // Success — remove from pendingDeletes
+        const current = get().pendingDeletes
+        const pendingDeletes = { ...current }
+        delete pendingDeletes[pathId]
+        set({ pendingDeletes })
+      })
+      .catch(error => {
+        console.error('[LearningPathStore] Failed to persist restored path:', error)
+        toast.error('Failed to restore path — retry Undo')
+      })
   },
 
   // Private: finalize the deletion by persisting to Dexie.
