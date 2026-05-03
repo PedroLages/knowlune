@@ -14,6 +14,7 @@ import { memo, type KeyboardEvent } from 'react'
 import { useNavigate } from 'react-router'
 import { Cloud, Headphones, BookOpen, ArrowRightLeft, Clock, CheckCircle2 } from 'lucide-react'
 import type { Book } from '@/data/types'
+import { getBookDestinationPath } from '@/lib/bookNavigation'
 import { BookStatusBadge } from './BookStatusBadge'
 import { BookCoverImage } from './BookCoverImage'
 import { FormatBadge } from './FormatBadge'
@@ -59,10 +60,7 @@ export const BookCard = memo(function BookCard({ book }: BookCardProps) {
   const resolvedCoverUrl = useBookCoverUrl({ bookId: book.id, coverUrl: book.coverUrl })
   const review = useBookReviewStore(s => s.getReviewForBook(book.id))
 
-  const readerPath =
-    book.format === 'epub' || book.format === 'audiobook'
-      ? `/library/${book.id}/read`
-      : `/library/${book.id}`
+  const readerPath = getBookDestinationPath(book)
 
   const handleClick = () => navigate(readerPath)
   const handleKeyDown = (e: KeyboardEvent) => {

@@ -40,6 +40,7 @@ import type { EntityType, UnifiedSearchResult } from '@/lib/unifiedSearch'
 import { recordVisit, getRecentHits, RECENT_LIST_KEY, type RecentHit } from '@/lib/searchFrecency'
 import { readHintDismissed, writeHintDismissed } from '@/lib/searchHintDismiss'
 import { getMergedAuthors } from '@/lib/authors'
+import { getBookDestinationPath } from '@/lib/bookNavigation'
 import type { ImportedAuthor } from '@/data/types'
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -570,7 +571,7 @@ export function SearchCommandPalette({
         case 'book': {
           const row = await db.books.get(result.id)
           if (!row) exists = false
-          else path = `/library/${result.id}`
+          else path = getBookDestinationPath(row)
           break
         }
         case 'note': {
@@ -640,8 +641,14 @@ export function SearchCommandPalette({
    * Continue Learning row select — always valid (we just queried Dexie).
    * Records a visit, then navigates with the `__viaPalette` flag.
    */
-  const handleContinueLearningSelect = (item: ContinueLearningItem) => {
-    const path = item.type === 'course' ? `/courses/${item.id}` : `/library/${item.id}`
+  const handleContinueLearningSelect = async (item: ContinueLearningItem) => {
+    let path: string
+    if (item.type === 'course') {
+      path = `/courses/${item.id}`
+    } else {
+      const row = await db.books.get(item.id)
+      path = row ? getBookDestinationPath(row) : `/library/${item.id}`
+    }
     void recordVisit(item.type, item.id).then(() => {
       setRecentHits(getRecentHits())
     })
@@ -674,7 +681,7 @@ export function SearchCommandPalette({
         case 'book': {
           const row = await db.books.get(hit.id)
           if (!row) exists = false
-          else path = `/library/${hit.id}`
+          else path = getBookDestinationPath(row)
           break
         }
         case 'note': {
@@ -904,7 +911,7 @@ export function SearchCommandPalette({
                 <CommandItem
                   key={`cl:${item.type}:${item.id}`}
                   value={`cl:${item.type}:${item.id}`}
-                  onSelect={() => handleContinueLearningSelect(item)}
+                  onSelect={() => void handleContinueLearningSelect(item)}
                   aria-label={`${item.title}, ${TYPE_BADGE_LABEL[item.type]}`}
                   className="min-h-[44px]"
                   data-testid={`search-continue-${item.type}-${item.id}`}
