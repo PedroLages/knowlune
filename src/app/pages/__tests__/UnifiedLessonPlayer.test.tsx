@@ -76,12 +76,12 @@ vi.mock('@/hooks/useCourseAdapter', () => ({
 }))
 
 const mockUseLessonNavigation = vi.fn(() => ({
-  prevLesson: null,
-  nextLesson: MOCK_LESSONS[1],
+  prevLesson: null as (typeof MOCK_LESSONS)[number] | null,
+  nextLesson: MOCK_LESSONS[1] as (typeof MOCK_LESSONS)[number] | null,
   currentIndex: 0,
   totalLessons: 3,
-  lessons: MOCK_LESSONS,
-  loading: false,
+  lessons: MOCK_LESSONS as (typeof MOCK_LESSONS)[number][],
+  loading: false as boolean,
 }))
 
 vi.mock('@/app/hooks/useLessonNavigation', () => ({
