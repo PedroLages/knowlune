@@ -86,14 +86,15 @@ export function useCompletionFlow(params: CompletionFlowParams): CompletionFlowR
   )
 
   /**
-   * Show the appropriate celebration modal.
-   * Checks if all course lessons are now complete for course-level celebration.
+   * Show the celebration modal ONLY when the entire course is completed.
+   * Individual lesson completions no longer trigger the modal.
    */
   const showCelebration = useCallback(
-    (title: string) => {
+    (_title: string) => {
       const isCourseComplete = lessons.length > 0 && checkCourseCompletion(lessons)
-      setCelebrationType(isCourseComplete ? 'course' : 'lesson')
-      setCelebrationTitle(isCourseComplete ? (courseName ?? 'Course') : title)
+      if (!isCourseComplete) return
+      setCelebrationType('course')
+      setCelebrationTitle(courseName ?? 'Course')
       setCelebrationOpen(true)
     },
     [

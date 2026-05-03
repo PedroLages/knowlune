@@ -1,10 +1,11 @@
 /**
- * UnifiedLessonPlayer — Unit tests for E54-S01 callback logic
+ * UnifiedLessonPlayer — Unit tests for completion flow callbacks
  *
  * Tests:
  * - handleVideoEnded stops celebration/auto-advance on persistence failure
+ * - Celebration modal only appears on course completion (not individual lesson)
  * - showCelebration uses lessons from hook (no extra getLessons call)
- * - Course-level vs lesson-level celebration type selection
+ * - Course-level celebration type selection
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
@@ -209,7 +210,7 @@ describe('UnifiedLessonPlayer — E54-S01 callbacks', () => {
     expect(await screen.findByTestId('lesson-player-content')).toBeInTheDocument()
   })
 
-  it('shows celebration modal when video ends', async () => {
+  it('does NOT show celebration when a single lesson completes (course not fully done)', async () => {
     renderPlayer()
     const endButton = await screen.findByTestId('trigger-ended')
 
@@ -217,9 +218,16 @@ describe('UnifiedLessonPlayer — E54-S01 callbacks', () => {
       endButton.click()
     })
 
+    // Wait for the completion to process (setItemStatus resolves, showCelebration runs)
     await waitFor(() => {
-      expect(screen.getByTestId('celebration-modal')).toBeInTheDocument()
+      expect(mockSetItemStatus).toHaveBeenCalled()
     })
+
+    // Celebration modal should NOT appear for individual lesson completion
+    expect(screen.queryByTestId('celebration-modal')).not.toBeInTheDocument()
+
+    // Auto-advance countdown SHOULD still appear
+    expect(screen.getByTestId('auto-advance-countdown')).toBeInTheDocument()
   })
 
   it('does NOT show celebration when setItemStatus throws (persistence failure)', async () => {
@@ -244,7 +252,7 @@ describe('UnifiedLessonPlayer — E54-S01 callbacks', () => {
     expect(screen.queryByTestId('auto-advance-countdown')).not.toBeInTheDocument()
   })
 
-  it('shows lesson-level celebration when not all lessons are complete', async () => {
+  it('does NOT show celebration when not all lessons are complete', async () => {
     mockGetItemStatus.mockReturnValue('not-started')
 
     renderPlayer()
@@ -255,9 +263,14 @@ describe('UnifiedLessonPlayer — E54-S01 callbacks', () => {
     })
 
     await waitFor(() => {
-      const modal = screen.getByTestId('celebration-modal')
-      expect(modal).toHaveAttribute('data-type', 'lesson')
+      expect(mockSetItemStatus).toHaveBeenCalled()
     })
+
+    // Celebration modal should NOT appear — only course-level completions trigger it
+    expect(screen.queryByTestId('celebration-modal')).not.toBeInTheDocument()
+
+    // Auto-advance countdown SHOULD still appear (has next lesson)
+    expect(screen.getByTestId('auto-advance-countdown')).toBeInTheDocument()
   })
 
   it('shows course-level celebration when all lessons are complete', async () => {
@@ -278,6 +291,9 @@ describe('UnifiedLessonPlayer — E54-S01 callbacks', () => {
   })
 
   it('does not call adapter.getLessons() in showCelebration (uses hook data)', async () => {
+    // All other lessons must be completed for the course-level celebration to open
+    mockGetItemStatus.mockReturnValue('completed')
+
     renderPlayer()
     const endButton = await screen.findByTestId('trigger-ended')
 
