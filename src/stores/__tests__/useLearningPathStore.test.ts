@@ -745,11 +745,13 @@ describe('batchAddCoursesToPath', () => {
     vi.spyOn(syncableWriteModule, 'syncableWrite').mockRejectedValue(new Error('fail'))
 
     await act(async () => {
-      await useLearningPathStore.getState().batchAddCoursesToPath(pathId, [
-        { courseId: 'c1', courseType: 'imported' },
-      ])
-    })
+      await expect(
+        useLearningPathStore.getState().batchAddCoursesToPath(pathId, [
+          { courseId: 'c1', courseType: 'imported' },
+        ])
+      ).rejects.toThrow('fail')
 
+    })
     expect(useLearningPathStore.getState().error).toBe('Failed to add courses to learning path')
   })
 })

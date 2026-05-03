@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useRef, useMemo, type KeyboardEvent } from 'react'
+import { COURSE_IMPORTED } from './CurriculumComposer'
 import { Link } from 'react-router'
 import {
   Dialog,
@@ -410,7 +411,7 @@ export function ImportWizardDialog({ open, onOpenChange, targetPathId }: ImportW
       // can react to the new course and add it to the selection.
       if (importedCourse) {
         window.dispatchEvent(
-          new CustomEvent('course-imported', {
+          new CustomEvent(COURSE_IMPORTED, {
             detail: { courseId: importedCourse.id },
           })
         )

@@ -731,9 +731,9 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
         for (const entry of pathEntries) {
           await syncableWrite('learningPathEntries', 'add', entry as unknown as SyncableRecord)
         }
-        const existingPath = await db.learningPaths.get(pathId)
-        if (existingPath) {
-          await syncableWrite('learningPaths', 'put', existingPath as unknown as SyncableRecord)
+        const updatedPath = get().paths.find(p => p.id === pathId)
+        if (updatedPath) {
+          await syncableWrite('learningPaths', 'put', updatedPath as unknown as SyncableRecord)
         }
       })
     } catch (error) {
@@ -744,6 +744,7 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
         error: 'Failed to add courses to learning path',
       })
       toast.error('Failed to add courses to learning path')
+      throw error
     }
   },
 
