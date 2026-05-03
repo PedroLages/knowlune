@@ -813,12 +813,17 @@ describe('deletePathWithUndo / restorePath', () => {
       useLearningPathStore.getState().restorePath(pathId)
     })
 
+    // restorePath clears pendingDeletes asynchronously via persistWithRetry().then().
+    // persistWithRetry is mocked to run immediately, so a microtask flush is sufficient.
+    await vi.waitFor(() => {
+      const state = useLearningPathStore.getState()
+      expect(state.pendingDeletes[pathId]).toBeUndefined()
+    })
+
     const state = useLearningPathStore.getState()
     // Path restored
     expect(state.paths).toHaveLength(1)
     expect(state.paths[0].name).toBe('To Restore')
-    // pendingDeletes cleared
-    expect(state.pendingDeletes[pathId]).toBeUndefined()
   })
 
   it('should capture and restore entries alongside path', async () => {
