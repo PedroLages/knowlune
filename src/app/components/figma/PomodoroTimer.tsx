@@ -11,6 +11,7 @@ import {
 } from 'lucide-react'
 import { Button } from '../ui/button'
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover'
+import { Tooltip, TooltipTrigger, TooltipContent } from '../ui/tooltip'
 import { Slider } from '../ui/slider'
 import { Switch } from '../ui/switch'
 import { Label } from '../ui/label'
@@ -24,6 +25,10 @@ import {
   type PomodoroPreferences,
 } from '@/lib/pomodoroPreferences'
 
+interface PomodoroTimerProps {
+  tooltipLabel?: string
+}
+
 /**
  * Pomodoro Focus Timer — popover UI with countdown, controls, and preferences.
  *
@@ -31,7 +36,7 @@ import {
  * shows the remaining time. Clicking opens a popover with full controls,
  * session counter, and configurable preferences (persisted in localStorage).
  */
-export function PomodoroTimer() {
+export function PomodoroTimer({ tooltipLabel }: PomodoroTimerProps) {
   const [prefs, setPrefs] = useState<PomodoroPreferences>(getPomodoroPreferences)
   const [showPrefs, setShowPrefs] = useState(false)
   const [popoverOpen, setPopoverOpen] = useState(false)
@@ -73,32 +78,43 @@ export function PomodoroTimer() {
 
   const sessionLabel = completedSessions === 1 ? '1 session' : `${completedSessions} sessions`
 
+  const triggerButton = (
+    <PopoverTrigger asChild>
+      <Button
+        variant="ghost"
+        size={isActive ? 'sm' : 'icon'}
+        className={cn(
+          'gap-1.5',
+          isRunning && phase === 'focus' && 'border-brand text-brand-soft-foreground',
+          isRunning && phase === 'break' && 'border-success text-success'
+        )}
+        aria-label={
+          isActive
+            ? `Pomodoro timer: ${phaseLabel} ${formatTime(timeRemaining)} remaining`
+            : 'Pomodoro focus timer'
+        }
+        data-testid="pomodoro-trigger"
+      >
+        <Timer className="size-5" />
+        {isActive && (
+          <span className="font-mono text-xs" data-testid="pomodoro-trigger-time">
+            {formatTime(timeRemaining)}
+          </span>
+        )}
+      </Button>
+    </PopoverTrigger>
+  )
+
   return (
     <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
-      <PopoverTrigger asChild>
-        <Button
-          variant="ghost"
-          size={isActive ? 'sm' : 'icon'}
-          className={cn(
-            'gap-1.5',
-            isRunning && phase === 'focus' && 'border-brand text-brand-soft-foreground',
-            isRunning && phase === 'break' && 'border-success text-success'
-          )}
-          aria-label={
-            isActive
-              ? `Pomodoro timer: ${phaseLabel} ${formatTime(timeRemaining)} remaining`
-              : 'Pomodoro focus timer'
-          }
-          data-testid="pomodoro-trigger"
-        >
-          <Timer className="size-5" />
-          {isActive && (
-            <span className="font-mono text-xs" data-testid="pomodoro-trigger-time">
-              {formatTime(timeRemaining)}
-            </span>
-          )}
-        </Button>
-      </PopoverTrigger>
+      {tooltipLabel ? (
+        <Tooltip>
+          <TooltipTrigger asChild>{triggerButton}</TooltipTrigger>
+          <TooltipContent>{tooltipLabel}</TooltipContent>
+        </Tooltip>
+      ) : (
+        triggerButton
+      )}
 
       <PopoverContent className="w-72" align="end" data-testid="pomodoro-popover">
         {/* Phase indicator */}
