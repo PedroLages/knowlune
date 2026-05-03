@@ -34,6 +34,9 @@ import {
   Check,
   Lock,
   Flame,
+  Import,
+  AlertCircle,
+  LayoutTemplate,
 } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
 import { Badge } from '@/app/components/ui/badge'
@@ -498,9 +501,19 @@ export function LearningPathDetail() {
     [pathId, entries, getEntriesForPath]
   )
 
-  // Set of course IDs already in path
+  // Gap entry detection
+  const gapCount = useMemo(
+    () => courseEntries.filter(e => e.courseId === '').length,
+    [courseEntries]
+  )
+  const matchedCount = useMemo(
+    () => courseEntries.length - gapCount,
+    [courseEntries, gapCount]
+  )
+
+  // Set of course IDs already in path (excludes gap entries)
   const existingCourseIds = useMemo(
-    () => new Set(courseEntries.map(e => e.courseId)),
+    () => new Set(courseEntries.map(e => e.courseId).filter(id => id !== '')),
     [courseEntries]
   )
 
@@ -747,6 +760,40 @@ export function LearningPathDetail() {
           </Link>
         </motion.div>
 
+        {/* Template banner — for paths forked from a template */}
+        {path.forkedFrom && (
+          <motion.div variants={fadeUp}>
+            <div className="flex items-center gap-3 p-4 rounded-xl bg-brand-soft/50 border border-brand-soft mb-4">
+              <LayoutTemplate className="w-5 h-5 text-brand-soft-foreground flex-shrink-0" />
+              <div className="flex-1">
+                <p className="text-sm font-medium text-brand-soft-foreground">
+                  This path was created from a template
+                </p>
+              </div>
+              <Button variant="brand-outline" size="sm" asChild>
+                <Link to={`/learning-paths/templates/${path.forkedFrom}`}>View template</Link>
+              </Button>
+            </div>
+          </motion.div>
+        )}
+
+        {/* Gap entry summary — for paths with unmatched entries */}
+        {gapCount > 0 && (
+          <motion.div variants={fadeUp}>
+            <div className="flex items-center gap-3 p-4 rounded-xl bg-warning/10 border border-warning/30 mb-4">
+              <AlertCircle className="w-5 h-5 text-warning flex-shrink-0" />
+              <div className="flex-1">
+                <p className="text-sm font-medium">
+                  {matchedCount} of {courseEntries.length} courses matched from your library
+                </p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Import the remaining {gapCount} {gapCount === 1 ? 'course' : 'courses'} to complete this path.
+                </p>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
         {/* Header */}
         <motion.div
           variants={fadeUp}
@@ -945,6 +992,52 @@ export function LearningPathDetail() {
                         data-testid="path-course-list"
                       >
                         {courseEntries.map((entry, index) => {
+                          // Gap entry: courseId is empty — render as non-sortable gap card
+                          if (entry.courseId === '') {
+                            const matchTitleMatch = entry.justification?.match(/\[Search for: (.+)\]$/)
+                            const searchTerm = matchTitleMatch ? matchTitleMatch[1] : undefined
+                            const justification = entry.justification?.replace(/\s*\[Search for: .+\]$/, '') || undefined
+                            return (
+                              <div
+                                key={entry.id}
+                                className="flex items-start gap-4 p-4 rounded-xl border-2 border-dashed border-warning/40 bg-warning/5"
+                                role="listitem"
+                              >
+                                <div className="flex-shrink-0 w-9 h-9 rounded-full bg-warning/20 flex items-center justify-center text-sm font-semibold text-warning">
+                                  {index + 1}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <h4 className="font-medium text-sm">
+                                    {justification || searchTerm || `Course ${index + 1}`}
+                                  </h4>
+                                  {justification && justification !== searchTerm && (
+                                    <p className="text-xs text-muted-foreground mt-0.5">{justification}</p>
+                                  )}
+                                  <div className="flex items-center gap-2 mt-2">
+                                    <Badge variant="outline" className="text-xs border-warning/60 text-warning">
+                                      <AlertCircle className="w-3 h-3 mr-1" />
+                                      Not in your library
+                                    </Badge>
+                                  </div>
+                                </div>
+                                <div className="flex-shrink-0 flex items-center gap-1.5">
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="text-xs"
+                                    onClick={() => {
+                                      // Open the add-course picker dialog
+                                      setPickerOpen(true)
+                                    }}
+                                  >
+                                    <Import className="w-3.5 h-3.5 mr-1" />
+                                    Find this course
+                                  </Button>
+                                </div>
+                              </div>
+                            )
+                          }
+
                           const info = courseInfo.get(entry.courseId)
                           return (
                             <SortableCourseRow
