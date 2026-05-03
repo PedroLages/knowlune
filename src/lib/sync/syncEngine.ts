@@ -501,7 +501,54 @@ async function _uploadBatch(
   // Intentional: supabase null-guard — will be null when env vars missing.
   if (!supabase) return false
 
-  const payloads = entries.map(e => e.payload)
+  // Split by operation: deletes issue SQL DELETE, writes follow existing path.
+  const deleteEntries = entries.filter(e => e.operation === 'delete')
+  const writeEntries = entries.filter(e => e.operation !== 'delete')
+
+  let allSucceeded = true
+
+  // Process delete entries first — removes server rows before any upsert.
+  if (deleteEntries.length > 0) {
+    if (tableEntry.compoundPkFields && tableEntry.compoundPkFields.length > 0) {
+      throw new Error(
+        `[syncEngine] Delete operations are not supported for compound-PK table "${tableEntry.supabaseTable}". Remove the entry or implement compound-PK delete support.`
+      )
+    }
+
+    try {
+      const ids = deleteEntries.map(e => e.payload.id)
+      const { error } = await supabase.from(tableEntry.supabaseTable).delete().in('id', ids)
+      if (error) {
+        const isNetworkError = false
+        await _handleBatchError(deleteEntries, error, isNetworkError, async () => {
+          const { error: retryError } = await supabase!
+            .from(tableEntry.supabaseTable)
+            .delete()
+            .in('id', ids)
+          if (!retryError) {
+            await db.syncQueue.bulkDelete(deleteEntries.map(e => e.id!))
+            return true
+          }
+          return false
+        })
+        allSucceeded = false
+      } else {
+        await db.syncQueue.bulkDelete(deleteEntries.map(e => e.id!))
+      }
+    } catch (err: unknown) {
+      const isNetworkError = true
+      await _handleBatchError(deleteEntries, null, isNetworkError, async () => false)
+      console.error('[syncEngine] Network error during delete batch upload:', err)
+      allSucceeded = false
+    }
+  }
+
+  // If no write entries remain, return delete-only result.
+  if (writeEntries.length === 0) {
+    return allSucceeded
+  }
+
+  const payloads = writeEntries.map(e => e.payload)
 
   try {
     if (tableEntry.insertOnly || tableEntry.conflictStrategy === 'insert-only') {
@@ -509,12 +556,12 @@ async function _uploadBatch(
       const { error } = await supabase.from(tableEntry.supabaseTable).insert(payloads)
       if (error) {
         const isNetworkError = false
-        await _handleBatchError(entries, error, isNetworkError, async () => {
+        await _handleBatchError(writeEntries, error, isNetworkError, async () => {
           const { error: retryError } = await supabase!
             .from(tableEntry.supabaseTable)
             .insert(payloads)
           if (!retryError) {
-            await db.syncQueue.bulkDelete(entries.map(e => e.id!))
+            await db.syncQueue.bulkDelete(writeEntries.map(e => e.id!))
             return true
           }
           return false
@@ -525,8 +572,8 @@ async function _uploadBatch(
       const rpc = MONOTONIC_RPC[tableEntry.supabaseTable]
       if (rpc) {
         // P0 monotonic table with dedicated RPC — call per record.
-        for (let i = 0; i < entries.length; i++) {
-          const entry = entries[i]
+        for (let i = 0; i < writeEntries.length; i++) {
+          const entry = writeEntries[i]
           const payload = payloads[i] as Record<string, unknown>
           // Map snake_case payload keys to RPC parameter names.
           const params: Record<string, unknown> = {}
@@ -551,7 +598,7 @@ async function _uploadBatch(
           }
           await db.syncQueue.bulkDelete([entry.id!])
         }
-        return true
+        return allSucceeded
       } else {
         // P2+ monotonic table without dedicated RPC — warn and fall back to upsert.
         // Intentional: correct behavior deferred to dedicated migration stories (E93–E96).
@@ -564,12 +611,12 @@ async function _uploadBatch(
           .upsert(payloads, { onConflict: conflictColMono })
         if (error) {
           const isNetworkError = false
-          await _handleBatchError(entries, error, isNetworkError, async () => {
+          await _handleBatchError(writeEntries, error, isNetworkError, async () => {
             const { error: retryError } = await supabase!
               .from(tableEntry.supabaseTable)
               .upsert(payloads, { onConflict: conflictColMono })
             if (!retryError) {
-              await db.syncQueue.bulkDelete(entries.map(e => e.id!))
+              await db.syncQueue.bulkDelete(writeEntries.map(e => e.id!))
               return true
             }
             return false
@@ -587,12 +634,12 @@ async function _uploadBatch(
         .upsert(payloads, { onConflict: conflictCol })
       if (error) {
         const isNetworkError = false
-        await _handleBatchError(entries, error, isNetworkError, async () => {
+        await _handleBatchError(writeEntries, error, isNetworkError, async () => {
           const { error: retryError } = await supabase!
             .from(tableEntry.supabaseTable)
             .upsert(payloads, { onConflict: conflictCol })
           if (!retryError) {
-            await db.syncQueue.bulkDelete(entries.map(e => e.id!))
+            await db.syncQueue.bulkDelete(writeEntries.map(e => e.id!))
             return true
           }
           return false
@@ -601,13 +648,13 @@ async function _uploadBatch(
       }
     }
 
-    // Success — delete uploaded entries from the queue.
-    await db.syncQueue.bulkDelete(entries.map(e => e.id!))
-    return true
+    // Success — delete uploaded write entries from the queue.
+    await db.syncQueue.bulkDelete(writeEntries.map(e => e.id!))
+    return allSucceeded
   } catch (err: unknown) {
     // Network error (TypeError from fetch) — no HTTP status.
     const isNetworkError = true
-    await _handleBatchError(entries, null, isNetworkError, async () => false)
+    await _handleBatchError(writeEntries, null, isNetworkError, async () => false)
     console.error('[syncEngine] Network error during batch upload:', err)
     return false
   }
