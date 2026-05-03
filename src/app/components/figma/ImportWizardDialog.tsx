@@ -406,6 +406,16 @@ export function ImportWizardDialog({ open, onOpenChange, targetPathId }: ImportW
 
       const importedCourse = await persistScannedCourse(scannedCourse, overrides)
 
+      // Dispatch course-imported event so the InlineCoursePicker (or CurriculumComposer)
+      // can react to the new course and add it to the selection.
+      if (importedCourse) {
+        window.dispatchEvent(
+          new CustomEvent('course-imported', {
+            detail: { courseId: importedCourse.id },
+          })
+        )
+      }
+
       // Add to learning path if one was selected (E26-S04)
       if (pathChoice !== 'skip' && importedCourse) {
         const courseId = importedCourse.id
