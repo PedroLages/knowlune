@@ -75,15 +75,17 @@ vi.mock('@/hooks/useCourseAdapter', () => ({
   useCourseAdapter: () => ({ adapter: mockAdapter, loading: false, error: null }),
 }))
 
+const mockUseLessonNavigation = vi.fn(() => ({
+  prevLesson: null,
+  nextLesson: MOCK_LESSONS[1],
+  currentIndex: 0,
+  totalLessons: 3,
+  lessons: MOCK_LESSONS,
+  loading: false,
+}))
+
 vi.mock('@/app/hooks/useLessonNavigation', () => ({
-  useLessonNavigation: () => ({
-    prevLesson: null,
-    nextLesson: MOCK_LESSONS[1],
-    currentIndex: 0,
-    totalLessons: 3,
-    lessons: MOCK_LESSONS,
-    loading: false,
-  }),
+  useLessonNavigation: () => mockUseLessonNavigation(),
 }))
 
 vi.mock('@/app/hooks/useMediaQuery', () => ({
@@ -252,8 +254,16 @@ describe('UnifiedLessonPlayer — E54-S01 callbacks', () => {
     expect(screen.queryByTestId('auto-advance-countdown')).not.toBeInTheDocument()
   })
 
-  it('does NOT show celebration when not all lessons are complete', async () => {
-    mockGetItemStatus.mockReturnValue('not-started')
+  it('does NOT show auto-advance when lesson is last in course and course not complete', async () => {
+    // Override useLessonNavigation to simulate the last lesson (no next lesson)
+    mockUseLessonNavigation.mockReturnValue({
+      prevLesson: MOCK_LESSONS[1],
+      nextLesson: null,
+      currentIndex: 2,
+      totalLessons: 3,
+      lessons: MOCK_LESSONS,
+      loading: false,
+    })
 
     renderPlayer()
     const endButton = await screen.findByTestId('trigger-ended')
@@ -266,11 +276,8 @@ describe('UnifiedLessonPlayer — E54-S01 callbacks', () => {
       expect(mockSetItemStatus).toHaveBeenCalled()
     })
 
-    // Celebration modal should NOT appear — only course-level completions trigger it
-    expect(screen.queryByTestId('celebration-modal')).not.toBeInTheDocument()
-
-    // Auto-advance countdown SHOULD still appear (has next lesson)
-    expect(screen.getByTestId('auto-advance-countdown')).toBeInTheDocument()
+    // Auto-advance countdown should NOT appear when there's no next lesson
+    expect(screen.queryByTestId('auto-advance-countdown')).not.toBeInTheDocument()
   })
 
   it('shows course-level celebration when all lessons are complete', async () => {
