@@ -19,7 +19,6 @@ export interface CompletionFlowParams {
   courseId: string | undefined
   lessonId: string | undefined
   courseName: string | undefined
-  lessonTitle: string
   lessons: LessonItem[]
   nextLesson: LessonItem | null
   navigate: NavigateFunction
@@ -40,7 +39,7 @@ export interface CompletionFlowParams {
 
 export interface CompletionFlowResult {
   checkCourseCompletion: (lessonsArr: LessonItem[]) => boolean
-  showCelebration: (title: string) => void
+  showCelebration: () => void
   handleVideoEnded: () => Promise<void>
   handleYouTubeAutoComplete: () => void
   handleAutoAdvance: () => void
@@ -55,7 +54,6 @@ export function useCompletionFlow(params: CompletionFlowParams): CompletionFlowR
     courseId,
     lessonId,
     courseName,
-    lessonTitle,
     lessons,
     nextLesson,
     navigate,
@@ -86,14 +84,15 @@ export function useCompletionFlow(params: CompletionFlowParams): CompletionFlowR
   )
 
   /**
-   * Show the appropriate celebration modal.
-   * Checks if all course lessons are now complete for course-level celebration.
+   * Show the celebration modal ONLY when the entire course is completed.
+   * Individual lesson completions no longer trigger the modal.
    */
   const showCelebration = useCallback(
-    (title: string) => {
+    () => {
       const isCourseComplete = lessons.length > 0 && checkCourseCompletion(lessons)
-      setCelebrationType(isCourseComplete ? 'course' : 'lesson')
-      setCelebrationTitle(isCourseComplete ? (courseName ?? 'Course') : title)
+      if (!isCourseComplete) return
+      setCelebrationType('course')
+      setCelebrationTitle(courseName ?? 'Course')
       setCelebrationOpen(true)
     },
     [
@@ -118,8 +117,8 @@ export function useCompletionFlow(params: CompletionFlowParams): CompletionFlowR
       return // Don't show celebration or auto-advance if persistence failed
     }
 
-    // Show celebration modal
-    showCelebration(lessonTitle)
+    // Show celebration modal (only on full course completion)
+    showCelebration()
 
     // Trigger auto-advance countdown if next lesson exists
     if (nextLesson) {
@@ -130,7 +129,6 @@ export function useCompletionFlow(params: CompletionFlowParams): CompletionFlowR
     lessonId,
     setItemStatus,
     showCelebration,
-    lessonTitle,
     nextLesson,
     setShowAutoAdvance,
   ])
@@ -138,11 +136,11 @@ export function useCompletionFlow(params: CompletionFlowParams): CompletionFlowR
   // Handle YouTube auto-complete (>90% watched) — status already persisted by YouTubeVideoContent,
   // so we only need to show celebration and trigger auto-advance countdown.
   const handleYouTubeAutoComplete = useCallback(() => {
-    showCelebration(lessonTitle)
+    showCelebration()
     if (nextLesson) {
       setShowAutoAdvance(true)
     }
-  }, [showCelebration, lessonTitle, nextLesson, setShowAutoAdvance])
+  }, [showCelebration, nextLesson, setShowAutoAdvance])
 
   const handleAutoAdvance = useCallback(() => {
     if (nextLesson && courseId) {
@@ -161,14 +159,13 @@ export function useCompletionFlow(params: CompletionFlowParams): CompletionFlowR
   const handleManualStatusChange = useCallback(
     (status: CompletionStatus) => {
       if (status === 'completed') {
-        showCelebration(lessonTitle)
-        // Trigger auto-advance countdown if next lesson exists (same as video end)
+        showCelebration()
         if (nextLesson) {
           setShowAutoAdvance(true)
         }
       }
     },
-    [showCelebration, lessonTitle, nextLesson, setShowAutoAdvance]
+    [showCelebration, nextLesson, setShowAutoAdvance]
   )
 
   // Handle "Continue Learning" from celebration modal
@@ -187,6 +184,7 @@ export function useCompletionFlow(params: CompletionFlowParams): CompletionFlowR
     (open: boolean) => {
       setCelebrationOpen(open)
       // When course-level celebration closes, show next course suggestion (AC1)
+      // celebrationType is always 'course' here since showCelebration only opens course-level modals
       if (!open && celebrationType === 'course') {
         setShowCourseSuggestion(true)
       }

@@ -225,9 +225,11 @@ function LessonLink({
           ) : (
             <Video className="size-3" aria-hidden="true" />
           )}
-          {lesson.duration != null && lesson.duration > 0 && (
+          {lesson.type === 'pdf' && lesson.sourceMetadata?.pageCount ? (
+            <span className="text-xs">{String(lesson.sourceMetadata.pageCount)} pgs</span>
+          ) : lesson.duration != null && lesson.duration > 0 ? (
             <span className="text-xs">{formatLessonDuration(lesson.duration)}</span>
-          )}
+          ) : null}
           {materialCount > 0 && onFocusMaterials && (
             <button
               type="button"
@@ -385,7 +387,7 @@ function MaterialGroupRow({
             courseId={courseId}
             isActive={isActive}
             index={index}
-            materialCount={0}
+            materialCount={group.materials.length}
             activeRef={isActive ? activeRef : undefined}
             searchQuery={searchQuery}
             onFocusMaterials={onFocusMaterials}
@@ -562,29 +564,18 @@ export function LessonsTab({ courseId, lessonId, adapter, onFocusMaterials }: Le
     }
   }, [isLoading, lessonId])
 
-  // Filter out root-level PDFs (course-level books/manuals) — accessible via Materials tab
-  const displayGroups = useMemo(
-    () =>
-      materialGroups.filter(g => {
-        if (g.primary.type !== 'pdf') return true
-        const path = (g.primary.sourceMetadata?.path as string) ?? ''
-        return getDirPath(path) !== ''
-      }),
-    [materialGroups]
-  )
-
-  const showSearch = displayGroups.length > LESSON_SEARCH_THRESHOLD
+  const showSearch = materialGroups.length > LESSON_SEARCH_THRESHOLD
 
   // Filter groups by search query (match primary title or material titles)
   const filteredGroups = useMemo(() => {
-    if (!searchQuery) return displayGroups
+    if (!searchQuery) return materialGroups
     const q = searchQuery.toLowerCase()
-    return displayGroups.filter(
+    return materialGroups.filter(
       g =>
         g.primary.title.toLowerCase().includes(q) ||
         g.materials.some(m => m.title.toLowerCase().includes(q))
     )
-  }, [displayGroups, searchQuery])
+  }, [materialGroups, searchQuery])
 
   // Build nested folder tree
   const folderTree = useMemo(() => buildFolderTree(filteredGroups), [filteredGroups])
@@ -626,8 +617,62 @@ export function LessonsTab({ courseId, lessonId, adapter, onFocusMaterials }: Le
     })
   }, [])
 
-  // Controlled expanded state for material groups (PDF sub-rows)
-  // Auto-expand when active lesson is a material of this parent
+  // Track whether initial companion-PDF auto-expand has run for this course.
+  // Reset when courseId changes so each course gets its own initial expansion.
+  const initialExpandDoneRef = useRef(false)
+  const lastCourseIdRef = useRef(courseId)
+  useEffect(() => {
+    if (lastCourseIdRef.current !== courseId) {
+      initialExpandDoneRef.current = false
+      lastCourseIdRef.current = courseId
+    }
+  }, [courseId])
+
+  // Track previously seen group IDs that have materials, so we can merge
+  // newly discovered groups on adapter reload without nuking user toggles.
+  const prevMaterialGroupIdsRef = useRef<Set<string>>(new Set())
+
+  // Auto-expand groups with companion PDFs on first load.
+  // On subsequent loads (adapter change for same course), merge only new groups
+  // into the expanded set, preserving user's manual collapse choices.
+  useEffect(() => {
+    if (isLoading || materialGroups.length === 0) return
+
+    const groupsWithMaterials = new Set(
+      materialGroups.filter(g => g.materials.length > 0).map(g => g.primary.id)
+    )
+
+    if (!initialExpandDoneRef.current) {
+      // First load: expand all groups that have companion materials.
+      if (groupsWithMaterials.size > 0) {
+        setExpandedMaterialGroups(prev => {
+          const next = new Set(prev)
+          for (const id of groupsWithMaterials) next.add(id)
+          return next
+        })
+      }
+      initialExpandDoneRef.current = true
+      prevMaterialGroupIdsRef.current = groupsWithMaterials
+    } else {
+      // Subsequent loads (adapter reloaded): merge only new group IDs that
+      // weren't present in the previous load. Never collapse groups the user
+      // may have manually expanded.
+      const newIds = [...groupsWithMaterials].filter(
+        id => !prevMaterialGroupIdsRef.current.has(id)
+      )
+      if (newIds.length > 0) {
+        setExpandedMaterialGroups(prev => {
+          const next = new Set(prev)
+          for (const id of newIds) next.add(id)
+          return next
+        })
+      }
+      prevMaterialGroupIdsRef.current = groupsWithMaterials
+    }
+  }, [isLoading, materialGroups])
+
+  // Controlled expanded state for material groups (PDF sub-rows).
+  // Seed initial expansion for groups where the active lesson IS a material.
   const [expandedMaterialGroups, setExpandedMaterialGroups] = useState<Set<string>>(() => {
     const initial = new Set<string>()
     for (const g of filteredGroups) {
@@ -638,6 +683,7 @@ export function LessonsTab({ courseId, lessonId, adapter, onFocusMaterials }: Le
     return initial
   })
 
+  // Auto-expand parent group when navigating directly to a companion PDF URL.
   useEffect(() => {
     setExpandedMaterialGroups(prev => {
       const next = new Set(prev)
@@ -661,11 +707,11 @@ export function LessonsTab({ courseId, lessonId, adapter, onFocusMaterials }: Le
 
   // Pre-compute O(1) lookup for original group indices (must be before early returns)
   const groupIndexMap = useMemo(
-    () => new Map(displayGroups.map((g, i) => [g.primary.id, i])),
-    [displayGroups]
+    () => new Map(materialGroups.map((g, i) => [g.primary.id, i])),
+    [materialGroups]
   )
 
-  const currentIndex = displayGroups.findIndex(g => g.primary.id === lessonId)
+  const currentIndex = materialGroups.findIndex(g => g.primary.id === lessonId)
 
   if (isLoading) {
     return (
@@ -677,7 +723,7 @@ export function LessonsTab({ courseId, lessonId, adapter, onFocusMaterials }: Le
     )
   }
 
-  if (displayGroups.length === 0) {
+  if (materialGroups.length === 0) {
     return (
       <EmptyState icon={Video} title="No lessons" description="This course has no lessons yet" />
     )
@@ -716,11 +762,11 @@ export function LessonsTab({ courseId, lessonId, adapter, onFocusMaterials }: Le
         </div>
       )}
       <div className="px-2 pb-2 text-xs text-muted-foreground">
-        {searchQuery && filteredGroups.length !== displayGroups.length
-          ? `Showing ${filteredGroups.length} of ${displayGroups.length} lessons`
+        {searchQuery && filteredGroups.length !== materialGroups.length
+          ? `Showing ${filteredGroups.length} of ${materialGroups.length} lessons`
           : currentIndex >= 0
-            ? `Lesson ${currentIndex + 1} of ${displayGroups.length}`
-            : `${displayGroups.length} lessons`}
+            ? `Lesson ${currentIndex + 1} of ${materialGroups.length}`
+            : `${materialGroups.length} lessons`}
       </div>
       {filteredGroups.length === 0 && searchQuery ? (
         <div

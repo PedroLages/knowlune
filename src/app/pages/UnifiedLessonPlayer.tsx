@@ -92,16 +92,20 @@ export function UnifiedLessonPlayer() {
   const navigate = useNavigate()
   const location = useLocation()
 
-  // Read auto-play intent from navigation state (set by auto-advance).
-  // Cleared after first render so manual refreshes don't re-autoplay.
-  const shouldAutoPlay = parseLocationFlag(location.state, 'autoPlay')
+  // Read auto-play intent from navigation state (set by auto-advance),
+  // OR-combined with the user's persistent store preference so manual
+  // navigation and initial page load also respect the auto-play toggle.
+  const storeAutoPlay = useLessonChromeStore(s => s.autoPlay)
+  const shouldAutoPlay = parseLocationFlag(location.state, 'autoPlay') || storeAutoPlay
 
-  // Clear autoPlay state after consuming it (prevents re-trigger on refresh)
+  // Clear autoPlay state after consuming it (prevents re-trigger on refresh).
+  // Scoped to parseLocationFlag only — using shouldAutoPlay (the OR-combined
+  // value) would loop forever when storeAutoPlay is true since {} is truthy.
   useEffect(() => {
-    if (shouldAutoPlay && location.state) {
+    if (parseLocationFlag(location.state, 'autoPlay') && location.state) {
       navigate(location.pathname, { replace: true, state: {} })
     }
-  }, [shouldAutoPlay, location.pathname, location.state, navigate])
+  }, [location.pathname, location.state, navigate])
 
   // R19: record visit on direct navigation. Skipped for palette-initiated
   // navigations to avoid openCount double-counting.
@@ -185,7 +189,6 @@ export function UnifiedLessonPlayer() {
     courseId,
     lessonId,
     courseName: course?.name,
-    lessonTitle: state.lessonTitle,
     lessons,
     nextLesson,
     navigate,

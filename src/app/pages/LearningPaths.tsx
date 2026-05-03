@@ -13,6 +13,8 @@ import {
   ArrowRight,
   CheckCircle2,
   Download,
+  LayoutTemplate,
+  ChevronDown,
 } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
 import { Card, CardContent } from '@/app/components/ui/card'
@@ -45,8 +47,14 @@ import {
 import { Input } from '@/app/components/ui/input'
 import { Textarea } from '@/app/components/ui/textarea'
 import { Label } from '@/app/components/ui/label'
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/app/components/ui/collapsible'
 import { EmptyState } from '@/app/components/EmptyState'
 import { DelayedFallback } from '@/app/components/DelayedFallback'
+import { TemplateCard } from '@/app/components/course/TemplateCard'
 import { cn } from '@/app/components/ui/utils'
 import { PathProgressRing } from '@/app/components/figma/PathProgressRing'
 import { PathCardHeader } from '@/app/components/figma/PathCardHeader'
@@ -541,6 +549,7 @@ export function LearningPaths() {
   const [isLoaded, setIsLoaded] = useState(false)
   const [search, setSearch] = useState('')
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
+  const [discoverOpen, setDiscoverOpen] = useState(false)
 
   // Dialog states
   const [renamePath, setRenamePath] = useState<LearningPath | null>(null)
@@ -649,15 +658,36 @@ export function LearningPaths() {
     return map
   }, [paths, entries, thumbnailUrls])
 
+  // Separate user paths from templates
+  const userPaths = useMemo(() => paths.filter(p => !p.isTemplate), [paths])
+  const templates = useMemo(() => paths.filter(p => p.isTemplate), [paths])
+
+  // Compute match count per template (for card display)
+  const templateMatchCounts = useMemo(() => {
+    const normalize = (s: string) =>
+      s.toLowerCase().replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, ' ').trim()
+    const importedNames = new Set(importedCourses.map(c => normalize(c.name)))
+    const counts = new Map<string, number>()
+    for (const tpl of templates) {
+      const tplEntries = entries.filter(e => e.pathId === tpl.id)
+      const matched = tplEntries.filter(e => {
+        const matchTitleMatch = e.justification?.match(/\[Search for: (.+)\]$/)
+        return matchTitleMatch && importedNames.has(normalize(matchTitleMatch[1]))
+      }).length
+      counts.set(tpl.id, matched)
+    }
+    return counts
+  }, [templates, entries, importedCourses])
+
   const filteredPaths = useMemo(() => {
-    if (!search.trim()) return paths
+    if (!search.trim()) return userPaths
     const q = search.toLowerCase()
-    return paths.filter(
+    return userPaths.filter(
       p =>
         p.name.toLowerCase().includes(q) ||
         (p.description && p.description.toLowerCase().includes(q))
     )
-  }, [paths, search])
+  }, [userPaths, search])
 
   if (!isLoaded) {
     return (
@@ -697,7 +727,7 @@ export function LearningPaths() {
             </p>
           </div>
           <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
-            {paths.length > 0 && (
+            {userPaths.length > 0 && (
               <div className="relative flex-grow">
                 <Search
                   className="absolute left-4 top-1/2 -translate-y-1/2 size-4 text-muted-foreground"
@@ -736,8 +766,44 @@ export function LearningPaths() {
         </span>
 
         {/* Content */}
-        {paths.length === 0 ? (
-          /* Empty state — no paths at all */
+        {userPaths.length === 0 && templates.length > 0 ? (
+          /* Empty user paths — templates as primary CTA */
+          <>
+            <motion.div variants={fadeUp} className="mb-8">
+              <div className="flex items-center gap-2 mb-4">
+                <LayoutTemplate className="w-5 h-5 text-brand-soft-foreground" />
+                <h2 className="text-xl font-semibold">Start with a template</h2>
+              </div>
+              <p className="text-muted-foreground mb-6">
+                Browse curated learning paths to discover how paths work. Fork one to get started instantly.
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                {templates.map(tpl => {
+                  const tplEntries = entries.filter(e => e.pathId === tpl.id)
+                  return (
+                    <TemplateCard
+                      key={tpl.id}
+                      template={tpl}
+                      courseCount={tplEntries.length}
+                      matchCount={templateMatchCounts.get(tpl.id) ?? 0}
+                    />
+                  )
+                })}
+              </div>
+            </motion.div>
+
+            <motion.div variants={fadeUp}>
+              <EmptyState
+                icon={Route}
+                title="Or create your own path"
+                description="Prefer to build from scratch? Create a custom learning path with your own course sequence."
+                actionLabel="Create Path"
+                onAction={() => setCreateDialogOpen(true)}
+              />
+            </motion.div>
+          </>
+        ) : userPaths.length === 0 && templates.length === 0 ? (
+          /* No templates, no paths — original empty state */
           <motion.div variants={fadeUp}>
             <EmptyState
               icon={Route}
@@ -757,33 +823,66 @@ export function LearningPaths() {
             />
           </motion.div>
         ) : (
-          /* Path cards grid */
-          <motion.div
-            variants={staggerContainer}
-            initial="hidden"
-            animate="visible"
-            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
-            role="list"
-            aria-label="Learning paths"
-          >
-            {filteredPaths.map(path => {
-              const stats = pathStats.get(path.id) || { courseCount: 0, completionPct: 0 }
-              return (
-                <div key={path.id} role="listitem">
-                  <PathCard
-                    path={path}
-                    courseCount={stats.courseCount}
-                    completionPct={stats.completionPct}
-                    courseThumbnails={pathThumbnails.get(path.id) || []}
-                    onRename={setRenamePath}
-                    onEditDescription={setEditDescPath}
-                    onDelete={setDeletePath}
-                    onImport={handlePathImport}
-                  />
-                </div>
-              )
-            })}
-          </motion.div>
+          /* User path cards grid */
+          <>
+            <motion.div
+              variants={staggerContainer}
+              initial="hidden"
+              animate="visible"
+              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
+              role="list"
+              aria-label="Learning paths"
+            >
+              {filteredPaths.map(path => {
+                const stats = pathStats.get(path.id) || { courseCount: 0, completionPct: 0 }
+                return (
+                  <div key={path.id} role="listitem">
+                    <PathCard
+                      path={path}
+                      courseCount={stats.courseCount}
+                      completionPct={stats.completionPct}
+                      courseThumbnails={pathThumbnails.get(path.id) || []}
+                      onRename={setRenamePath}
+                      onEditDescription={setEditDescPath}
+                      onDelete={setDeletePath}
+                      onImport={handlePathImport}
+                    />
+                  </div>
+                )
+              })}
+            </motion.div>
+
+            {/* Collapsible "Discover more paths" section */}
+            {templates.length > 0 && (
+              <motion.div variants={fadeUp} className="mt-12">
+                <Collapsible open={discoverOpen} onOpenChange={setDiscoverOpen}>
+                  <CollapsibleTrigger className="flex items-center gap-2 w-full text-left py-2 group">
+                    <LayoutTemplate className="w-5 h-5 text-muted-foreground" />
+                    <span className="text-lg font-semibold flex-1">Discover more paths</span>
+                    <Badge variant="secondary" className="text-xs mr-2">
+                      {templates.length}
+                    </Badge>
+                    <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${discoverOpen ? 'rotate-180' : ''}`} />
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="pt-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                      {templates.map(tpl => {
+                        const tplEntries = entries.filter(e => e.pathId === tpl.id)
+                        return (
+                          <TemplateCard
+                            key={tpl.id}
+                            template={tpl}
+                            courseCount={tplEntries.length}
+                            matchCount={templateMatchCounts.get(tpl.id) ?? 0}
+                          />
+                        )
+                      })}
+                    </div>
+                  </CollapsibleContent>
+                </Collapsible>
+              </motion.div>
+            )}
+          </>
         )}
       </motion.div>
 
