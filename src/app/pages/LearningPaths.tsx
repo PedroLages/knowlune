@@ -150,7 +150,6 @@ function CreatePathDialog({
     </Dialog>
   )
 }
-
 // --- Rename Dialog ---
 
 function RenameDialog({

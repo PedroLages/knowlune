@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router'
 import { LearningPaths } from '../LearningPaths'
@@ -156,7 +156,6 @@ describe('LearningPaths', () => {
 
   it('renders the page title', async () => {
     renderPage()
-    const { waitFor } = await import('@testing-library/react')
     await waitFor(() => {
       expect(screen.getByText('Learning Paths')).toBeInTheDocument()
     })
@@ -164,7 +163,6 @@ describe('LearningPaths', () => {
 
   it('renders "Create Path" button in header', async () => {
     renderPage()
-    const { waitFor } = await import('@testing-library/react')
     await waitFor(() => {
       expect(screen.getByText('Create Path')).toBeInTheDocument()
     })
@@ -172,7 +170,6 @@ describe('LearningPaths', () => {
 
   it('renders "Import Course" button in header', async () => {
     renderPage()
-    const { waitFor } = await import('@testing-library/react')
     await waitFor(() => {
       const buttons = screen.getAllByText('Import Course')
       // At least the header button should be present
@@ -183,7 +180,6 @@ describe('LearningPaths', () => {
   it('opens import wizard when header "Import Course" is clicked', async () => {
     const user = userEvent.setup()
     renderPage()
-    const { waitFor } = await import('@testing-library/react')
     await waitFor(() => {
       expect(screen.getByText('Create Path')).toBeInTheDocument()
     })
@@ -200,7 +196,6 @@ describe('LearningPaths', () => {
   it('header "Import Course" opens wizard without targetPathId', async () => {
     const user = userEvent.setup()
     renderPage()
-    const { waitFor } = await import('@testing-library/react')
     await waitFor(() => {
       expect(screen.getByText('Create Path')).toBeInTheDocument()
     })
@@ -219,7 +214,6 @@ describe('LearningPaths', () => {
   it('path card dropdown has "Import Course" action', async () => {
     const user = userEvent.setup()
     renderPage()
-    const { waitFor } = await import('@testing-library/react')
     await waitFor(() => {
       expect(screen.getByText('Web Development')).toBeInTheDocument()
     })

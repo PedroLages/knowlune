@@ -164,8 +164,11 @@ export function ImportWizardDialog({ open, onOpenChange, targetPathId }: ImportW
       const event = e as ImportWizardSetTargetEvent
       const newTarget = event.detail?.pathId ?? undefined
       targetPathIdRef.current = newTarget
-      // When target is updated while wizard is open, navigate to step 3
+      // When target is updated while wizard is open, update step 3 UI
       if (newTarget && scannedCourse) {
+        setSelectedPathId(newTarget)
+        setPathChoice('choose')
+        setSelectedPosition(1)
         setStep('path')
       }
     }

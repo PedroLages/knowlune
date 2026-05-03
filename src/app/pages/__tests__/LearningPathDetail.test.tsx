@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router'
 import { LearningPathDetail } from '../LearningPathDetail'
@@ -211,7 +211,6 @@ describe('LearningPathDetail', () => {
     renderPage()
     // The page shows skeleton initially, then renders the path name
     // Wait for load to complete — the path name should appear
-    const { waitFor } = await import('@testing-library/react')
     await waitFor(() => {
       expect(screen.getByText('Test Learning Path')).toBeInTheDocument()
     })
@@ -219,7 +218,6 @@ describe('LearningPathDetail', () => {
 
   it('renders "Add Course" button in sidebar', async () => {
     renderPage()
-    const { waitFor } = await import('@testing-library/react')
     await waitFor(() => {
       expect(screen.getByTestId('add-course-button')).toBeInTheDocument()
     })
@@ -227,7 +225,6 @@ describe('LearningPathDetail', () => {
 
   it('renders "Import Course" button in sidebar', async () => {
     renderPage()
-    const { waitFor } = await import('@testing-library/react')
     await waitFor(() => {
       expect(screen.getByTestId('import-course-button')).toBeInTheDocument()
     })
@@ -235,7 +232,6 @@ describe('LearningPathDetail', () => {
 
   it('"Import Course" button uses brand-outline variant and has Download icon', async () => {
     renderPage()
-    const { waitFor } = await import('@testing-library/react')
     await waitFor(() => {
       const btn = screen.getByTestId('import-course-button')
       expect(btn).toBeInTheDocument()
@@ -246,7 +242,6 @@ describe('LearningPathDetail', () => {
   it('opens import wizard when "Import Course" is clicked', async () => {
     const user = userEvent.setup()
     renderPage()
-    const { waitFor } = await import('@testing-library/react')
     await waitFor(() => {
       expect(screen.getByTestId('import-course-button')).toBeInTheDocument()
     })
@@ -261,7 +256,6 @@ describe('LearningPathDetail', () => {
   it('passes targetPathId to ImportWizardDialog', async () => {
     const user = userEvent.setup()
     renderPage()
-    const { waitFor } = await import('@testing-library/react')
     await waitFor(() => {
       expect(screen.getByTestId('import-course-button')).toBeInTheDocument()
     })
@@ -279,7 +273,6 @@ describe('LearningPathDetail', () => {
   it('closes wizard when close button is clicked', async () => {
     const user = userEvent.setup()
     renderPage()
-    const { waitFor } = await import('@testing-library/react')
     await waitFor(() => {
       expect(screen.getByTestId('import-course-button')).toBeInTheDocument()
     })

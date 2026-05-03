@@ -830,6 +830,16 @@ export function LearningPathDetail() {
               actionLabel="Add Course"
               onAction={() => setPickerOpen(true)}
             />
+            <div className="flex justify-center mt-4">
+              <Button
+                variant="brand-outline"
+                onClick={handleImportClick}
+                data-testid="import-course-button"
+              >
+                <Download className="size-4 mr-2" aria-hidden="true" />
+                Import Course
+              </Button>
+            </div>
           </motion.div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
@@ -1130,7 +1140,7 @@ export function LearningPathDetail() {
       <ImportWizardDialog
         open={importWizardOpen}
         onOpenChange={setImportWizardOpen}
-        targetPathId={pathId!}
+        targetPathId={pathId}
       />
 
       {/* AI Order Suggestion Confirmation Dialog (E26-S04) */}
