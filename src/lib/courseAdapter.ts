@@ -70,6 +70,7 @@ export interface CourseAdapter {
   getCourse(): ImportedCourse
   getSource(): CourseSource
   getLessons(): Promise<LessonItem[]>
+  getLesson(lessonId: string): Promise<LessonItem | null>
   getGroupedLessons(): Promise<MaterialGroup[]>
   getMediaUrl(lessonId: string): Promise<string | null>
   getTranscript(lessonId: string): Promise<string | null>
@@ -158,6 +159,21 @@ export class LocalCourseAdapter implements CourseAdapter {
         if (a.order !== b.order) return a.order - b.order
         return a.title.localeCompare(b.title)
       })
+  }
+
+  /**
+   * Point-lookup by lesson ID. Searches videos first, then ALL PDFs
+   * (including companion PDFs that are excluded from `getLessons()`).
+   * Returns the matching LessonItem or null if not found.
+   */
+  async getLesson(lessonId: string): Promise<LessonItem | null> {
+    // Search videos first
+    const videoMatch = this.buildVideoLessons().find(v => v.id === lessonId)
+    if (videoMatch) return videoMatch
+
+    // Search ALL PDFs (no companion filter — this is a point query)
+    const pdfMatch = this.buildPdfLessons().find(p => p.id === lessonId)
+    return pdfMatch ?? null
   }
 
   /**
@@ -305,6 +321,27 @@ export class YouTubeCourseAdapter implements CourseAdapter {
         },
       }))
       .sort((a, b) => a.order - b.order)
+  }
+
+  async getLesson(lessonId: string): Promise<LessonItem | null> {
+    // YouTube courses only have videos — no PDFs
+    const match = this.videos.find(v => v.id === lessonId)
+    if (!match) return null
+    return {
+      id: match.id,
+      title: humanizeFilename(match.filename),
+      type: 'video' as const,
+      duration: match.duration,
+      order: match.order,
+      sourceMetadata: {
+        youtubeVideoId: match.youtubeVideoId,
+        youtubeUrl: match.youtubeUrl,
+        thumbnailUrl: match.thumbnailUrl,
+        description: match.description,
+        chapters: match.chapters,
+        removedFromYouTube: match.removedFromYouTube,
+      },
+    }
   }
 
   async getGroupedLessons(): Promise<MaterialGroup[]> {

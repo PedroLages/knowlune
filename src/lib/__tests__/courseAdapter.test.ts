@@ -120,6 +120,7 @@ describe('CourseAdapter interface', () => {
     expect(typeof adapter.getCourse).toBe('function')
     expect(typeof adapter.getSource).toBe('function')
     expect(typeof adapter.getLessons).toBe('function')
+    expect(typeof adapter.getLesson).toBe('function')
     expect(typeof adapter.getMediaUrl).toBe('function')
     expect(typeof adapter.getTranscript).toBe('function')
     expect(typeof adapter.getThumbnailUrl).toBe('function')
@@ -132,6 +133,7 @@ describe('CourseAdapter interface', () => {
     expect(typeof adapter.getCourse).toBe('function')
     expect(typeof adapter.getSource).toBe('function')
     expect(typeof adapter.getLessons).toBe('function')
+    expect(typeof adapter.getLesson).toBe('function')
     expect(typeof adapter.getMediaUrl).toBe('function')
     expect(typeof adapter.getTranscript).toBe('function')
     expect(typeof adapter.getThumbnailUrl).toBe('function')
@@ -423,6 +425,79 @@ describe('LocalCourseAdapter.getLessons() companion exclusion', () => {
     expect(ids).toContain('v1')
     expect(ids).not.toContain('p1') // companion — excluded
     expect(ids).toContain('p2') // standalone — included
+  })
+})
+
+// ---------------------------------------------------------------------------
+// LocalCourseAdapter.getLesson() — point-lookup by ID (R1, R2, R4)
+// ---------------------------------------------------------------------------
+
+describe('LocalCourseAdapter.getLesson()', () => {
+  it('returns a companion PDF by ID (unlike getLessons which excludes it)', async () => {
+    const videos = [makeVideo({ id: 'v1', order: 1, filename: '01-Intro.mp4' })]
+    const pdfs = [
+      makePdf({ id: 'p1', filename: '01-Intro.pdf', pageCount: 5 }),
+      makePdf({ id: 'p2', filename: 'Resources.pdf', pageCount: 20 }),
+    ]
+
+    const adapter = new adapterLib.LocalCourseAdapter(makeLocalCourse(), videos, pdfs)
+    const lesson = await adapter.getLesson('p1')
+    expect(lesson).not.toBeNull()
+    expect(lesson!.id).toBe('p1')
+    expect(lesson!.type).toBe('pdf')
+    expect(lesson!.title).toBe('Intro') // humanizeFilename strips extension + numeric prefix
+  })
+
+  it('returns a video by ID', async () => {
+    const adapter = new adapterLib.LocalCourseAdapter(
+      makeLocalCourse(),
+      [makeVideo({ id: 'v1' })],
+      []
+    )
+    const lesson = await adapter.getLesson('v1')
+    expect(lesson).not.toBeNull()
+    expect(lesson!.id).toBe('v1')
+    expect(lesson!.type).toBe('video')
+  })
+
+  it('returns a standalone PDF by ID', async () => {
+    const adapter = new adapterLib.LocalCourseAdapter(
+      makeLocalCourse(),
+      [],
+      [makePdf({ id: 'p-standalone', filename: 'Reference.pdf' })]
+    )
+    const lesson = await adapter.getLesson('p-standalone')
+    expect(lesson).not.toBeNull()
+    expect(lesson!.id).toBe('p-standalone')
+    expect(lesson!.type).toBe('pdf')
+  })
+
+  it('returns null for a non-existent lesson ID', async () => {
+    const adapter = new adapterLib.LocalCourseAdapter(makeLocalCourse(), [], [])
+    const lesson = await adapter.getLesson('nonexistent')
+    expect(lesson).toBeNull()
+  })
+})
+
+// ---------------------------------------------------------------------------
+// YouTubeCourseAdapter.getLesson() — video-only point lookup
+// ---------------------------------------------------------------------------
+
+describe('YouTubeCourseAdapter.getLesson()', () => {
+  it('returns a video by ID', async () => {
+    const adapter = new adapterLib.YouTubeCourseAdapter(makeYouTubeCourse(), [
+      makeYouTubeVideo({ id: 'yt-vid-1', youtubeVideoId: 'abc123' }),
+    ])
+    const lesson = await adapter.getLesson('yt-vid-1')
+    expect(lesson).not.toBeNull()
+    expect(lesson!.id).toBe('yt-vid-1')
+    expect(lesson!.type).toBe('video')
+  })
+
+  it('returns null for a non-existent ID', async () => {
+    const adapter = new adapterLib.YouTubeCourseAdapter(makeYouTubeCourse(), [makeYouTubeVideo()])
+    const lesson = await adapter.getLesson('nonexistent')
+    expect(lesson).toBeNull()
   })
 })
 
