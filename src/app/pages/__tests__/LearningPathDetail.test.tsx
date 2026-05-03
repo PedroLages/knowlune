@@ -110,10 +110,12 @@ const testPath: LearningPath = {
 }
 
 const testEntry: LearningPathEntry = {
+  id: 'entry-1',
   courseId: 'course-1',
   pathId: 'path-1',
   position: 1,
   courseType: 'imported',
+  isManuallyOrdered: false,
 }
 
 const testCourse: ImportedCourse = {
