@@ -46,6 +46,8 @@ export interface InlineCoursePickerProps {
   maxHeight?: string
   /** External loading state (e.g., while stores are being initialized) */
   loading?: boolean
+  /** Hide the confirm "Add N Courses" button in multi-select mode footer */
+  hideConfirmButton?: boolean
   /** Additional class names */
   className?: string
 }
@@ -140,21 +142,14 @@ function CourseRow({
       role="listitem"
       className={cn(
         'flex items-center gap-3 p-3 rounded-lg border transition-colors',
-        isSelected
-          ? 'border-brand bg-brand-soft/30'
-          : 'border-border hover:bg-muted/50'
+        isSelected ? 'border-brand bg-brand-soft/30' : 'border-border hover:bg-muted/50'
       )}
       data-testid={`course-row-${course.id}`}
     >
       {/* Thumbnail */}
       <div className="size-10 shrink-0 rounded-md bg-muted overflow-hidden">
         {course.thumbnailUrl ? (
-          <img
-            src={course.thumbnailUrl}
-            alt=""
-            className="size-full object-cover"
-            loading="lazy"
-          />
+          <img src={course.thumbnailUrl} alt="" className="size-full object-cover" loading="lazy" />
         ) : (
           <div className="size-full flex items-center justify-center">
             <BookOpen className="size-4 text-muted-foreground" aria-hidden="true" />
@@ -190,16 +185,16 @@ function CourseRow({
       {/* Action button */}
       {mode === 'multiSelect' ? (
         <label
+          htmlFor={`picker-checkbox-${course.id}`}
           className={cn(
             'flex items-center gap-2 cursor-pointer shrink-0',
             'size-6 rounded border-2 transition-colors',
-            isSelected
-              ? 'bg-brand border-brand'
-              : 'border-muted-foreground/30 hover:border-brand'
+            isSelected ? 'bg-brand border-brand' : 'border-muted-foreground/30 hover:border-brand'
           )}
           data-testid={`checkbox-${course.id}`}
         >
           <input
+            id={`picker-checkbox-${course.id}`}
             type="checkbox"
             checked={isSelected}
             onChange={() => onToggle(course.id)}
@@ -267,6 +262,7 @@ export function InlineCoursePicker({
   onImportCourse,
   maxHeight = '400px',
   loading = false,
+  hideConfirmButton = false,
   className,
 }: InlineCoursePickerProps) {
   const { importedCourses, thumbnailUrls } = useCourseImportStore()
@@ -309,8 +305,7 @@ export function InlineCoursePicker({
     const q = search.toLowerCase()
     return allCourses.filter(
       c =>
-        c.name.toLowerCase().includes(q) ||
-        (c.authorName && c.authorName.toLowerCase().includes(q))
+        c.name.toLowerCase().includes(q) || (c.authorName && c.authorName.toLowerCase().includes(q))
     )
   }, [allCourses, search])
 
@@ -454,7 +449,10 @@ export function InlineCoursePicker({
         data-testid="course-list"
       >
         {!hasCourses && !search.trim() ? (
-          <div className="py-8 text-center text-sm text-muted-foreground" data-testid="all-excluded">
+          <div
+            className="py-8 text-center text-sm text-muted-foreground"
+            data-testid="all-excluded"
+          >
             All courses are already in this path.
           </div>
         ) : filteredCourses.length === 0 && search.trim() ? (
@@ -513,18 +511,20 @@ export function InlineCoursePicker({
             )}
 
             {/* If all filtered courses are in Recently Imported */}
-            {recentlyImportedFiltered.length > 0 && otherFiltered.length === 0 && !search.trim() && (
-              <div className="py-4 text-center text-sm text-muted-foreground">
-                All imported courses are shown above.
-              </div>
-            )}
+            {recentlyImportedFiltered.length > 0 &&
+              otherFiltered.length === 0 &&
+              !search.trim() && (
+                <div className="py-4 text-center text-sm text-muted-foreground">
+                  All imported courses are shown above.
+                </div>
+              )}
           </>
         )}
       </div>
 
       {/* Footer actions */}
       <div className="flex items-center gap-2 pt-1">
-        {mode === 'multiSelect' && selectedCourseIds.length > 0 && (
+        {mode === 'multiSelect' && selectedCourseIds.length > 0 && !hideConfirmButton && (
           <Button
             variant="brand"
             size="sm"

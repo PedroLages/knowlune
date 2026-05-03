@@ -298,11 +298,18 @@ describe('CurriculumComposer', () => {
   })
 
   it('should render mobile sheet when viewport is < 640px', () => {
-    Object.defineProperty(window, 'innerWidth', {
-      writable: true,
-      configurable: true,
-      value: 375,
-    })
+    // useIsMobile relies on matchMedia, not innerWidth. Mock matchMedia directly.
+    const originalMatchMedia = window.matchMedia
+    window.matchMedia = vi.fn().mockImplementation((query: string) => ({
+      matches: query === '(max-width: 639px)',
+      media: query,
+      onchange: null,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    }))
 
     render(
       <BrowserRouter>
@@ -312,6 +319,8 @@ describe('CurriculumComposer', () => {
 
     // Mobile sheet should be rendered
     expect(screen.getByTestId('mobile-sheet')).toBeInTheDocument()
+
+    window.matchMedia = originalMatchMedia
   })
 
   it('should load imported courses when course-imported event fires', async () => {

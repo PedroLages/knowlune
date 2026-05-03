@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from 'react'
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import { useNavigate } from 'react-router'
 import {
   Dialog,
@@ -104,6 +104,7 @@ export function CurriculumComposer({ open, onOpenChange }: CurriculumComposerPro
           return [...prev, event.detail.courseId]
         })
         // Refresh imported courses to include the new one
+        // silent-catch-ok: store refresh failure is non-critical; courses are already in state
         loadImportedCourses().catch(() => {})
       }
     }
@@ -114,8 +115,8 @@ export function CurriculumComposer({ open, onOpenChange }: CurriculumComposerPro
   // Handle import course action
   const handleImportCourse = useCallback(() => handleImportTrigger(null), [handleImportTrigger])
 
-  // Build the list of all course IDs that are available (not excluded by anything yet)
-  const excludeCourseIds = new Set<string>()
+  // Stable empty set (no courses excluded in composer; stable ref avoids re-renders)
+  const excludeCourseIds = useMemo(() => new Set<string>(), [])
 
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
@@ -131,7 +132,11 @@ export function CurriculumComposer({ open, onOpenChange }: CurriculumComposerPro
           courseType: 'imported' as const,
         }))
 
-        const path = await createPathWithCourses(finalName, description.trim() || undefined, courses)
+        const path = await createPathWithCourses(
+          finalName,
+          description.trim() || undefined,
+          courses
+        )
         await loadPaths()
         toast.success(`Created "${finalName}"`)
         onOpenChange(false)
@@ -162,59 +167,61 @@ export function CurriculumComposer({ open, onOpenChange }: CurriculumComposerPro
       showImportAction
       onImportCourse={handleImportCourse}
       loading={importedCourses.length === 0}
+      hideConfirmButton
     />
   )
 
-  const formContent = (
+  // Shared form fields extracted for both mobile Sheet and desktop Dialog (BLOCKER 1)
+  const formFieldsContent = (
     <>
-      <div className="space-y-4 py-4">
-        <div className="space-y-2">
-          <Label htmlFor="composer-name">Name</Label>
-          <Input
-            id="composer-name"
-            value={name}
-            onChange={e => setName(e.target.value)}
-            placeholder="e.g., Web Development Fundamentals"
-            autoFocus
-            maxLength={100}
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="composer-description">
-            Description{' '}
-            <span className="text-muted-foreground font-normal">(optional)</span>
-          </Label>
-          <Textarea
-            id="composer-description"
-            value={description}
-            onChange={e => setDescription(e.target.value)}
-            placeholder="A brief description of what this path covers..."
-            rows={3}
-            maxLength={500}
-          />
-        </div>
-        <div className="space-y-2">
-          <Label>Courses</Label>
-          {pickerContent}
-        </div>
+      <div className="space-y-2">
+        <Label htmlFor="composer-name">Name</Label>
+        <Input
+          id="composer-name"
+          value={name}
+          onChange={e => setName(e.target.value)}
+          placeholder="e.g., Web Development Fundamentals"
+          autoFocus
+          maxLength={100}
+        />
       </div>
-
-      <DialogFooter className="gap-2">
-        <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-          Cancel
-        </Button>
-        <Button type="submit" variant="brand" disabled={!canSubmit}>
-          {isSubmitting ? (
-            <>
-              <Loader2 className="size-4 mr-2 animate-spin" aria-hidden="true" />
-              Creating...
-            </>
-          ) : (
-            'Create Path'
-          )}
-        </Button>
-      </DialogFooter>
+      <div className="space-y-2">
+        <Label htmlFor="composer-description">
+          Description <span className="text-muted-foreground font-normal">(optional)</span>
+        </Label>
+        <Textarea
+          id="composer-description"
+          value={description}
+          onChange={e => setDescription(e.target.value)}
+          placeholder="A brief description of what this path covers..."
+          rows={3}
+          maxLength={500}
+        />
+      </div>
+      <div className="space-y-2">
+        <Label>Courses</Label>
+        {pickerContent}
+      </div>
     </>
+  )
+
+  const createPathButton = (
+    <Button type="submit" variant="brand" disabled={!canSubmit}>
+      {isSubmitting ? (
+        <>
+          <Loader2 className="size-4 mr-2 animate-spin" aria-hidden="true" />
+          Creating...
+        </>
+      ) : (
+        'Create Path'
+      )}
+    </Button>
+  )
+
+  const cancelButton = (
+    <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+      Cancel
+    </Button>
   )
 
   return (
@@ -229,34 +236,13 @@ export function CurriculumComposer({ open, onOpenChange }: CurriculumComposerPro
                   Build a learning path by selecting courses from your library.
                 </SheetDescription>
               </SheetHeader>
-              <div className="flex-1 overflow-y-auto px-6">
-                {pickerContent}
+              <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+                {formFieldsContent}
               </div>
               <SheetFooter className="p-6 border-t border-border">
-                <div className="flex gap-2 w-full">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => onOpenChange(false)}
-                    className="flex-1"
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    type="submit"
-                    variant="brand"
-                    disabled={!canSubmit}
-                    className="flex-1"
-                  >
-                    {isSubmitting ? (
-                      <>
-                        <Loader2 className="size-4 mr-2 animate-spin" aria-hidden="true" />
-                        Creating...
-                      </>
-                    ) : (
-                      'Create Path'
-                    )}
-                  </Button>
+                <div className="flex gap-2 w-full [&>button]:flex-1">
+                  {cancelButton}
+                  {createPathButton}
                 </div>
               </SheetFooter>
             </form>
@@ -264,25 +250,28 @@ export function CurriculumComposer({ open, onOpenChange }: CurriculumComposerPro
         </Sheet>
       ) : (
         <Dialog open={open} onOpenChange={onOpenChange}>
-          <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
-            <form onSubmit={handleSubmit}>
+          <DialogContent className="sm:max-w-2xl max-h-[90vh] flex flex-col">
+            <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0 overflow-hidden">
               <DialogHeader>
                 <DialogTitle>Create Learning Path</DialogTitle>
                 <DialogDescription>
                   Build a learning path by selecting courses from your library.
                 </DialogDescription>
               </DialogHeader>
-              {formContent}
+              <div className="flex-1 overflow-y-auto min-h-0 py-4 space-y-4">
+                {formFieldsContent}
+              </div>
+              <DialogFooter className="gap-2 pt-4 border-t border-border">
+                {cancelButton}
+                {createPathButton}
+              </DialogFooter>
             </form>
           </DialogContent>
         </Dialog>
       )}
 
       {/* Import Wizard */}
-      <ImportWizardDialog
-        open={importWizardOpen}
-        onOpenChange={setImportWizardOpen}
-      />
+      <ImportWizardDialog open={importWizardOpen} onOpenChange={setImportWizardOpen} />
     </>
   )
 }

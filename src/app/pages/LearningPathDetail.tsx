@@ -357,10 +357,7 @@ export function LearningPathDetail() {
     () => courseEntries.filter(e => e.courseId === '').length,
     [courseEntries]
   )
-  const matchedCount = useMemo(
-    () => courseEntries.length - gapCount,
-    [courseEntries, gapCount]
-  )
+  const matchedCount = useMemo(() => courseEntries.length - gapCount, [courseEntries, gapCount])
 
   // Set of course IDs already in path (excludes gap entries)
   const existingCourseIds = useMemo(
@@ -653,7 +650,8 @@ export function LearningPathDetail() {
                   {matchedCount} of {courseEntries.length} courses matched from your library
                 </p>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  Import the remaining {gapCount} {gapCount === 1 ? 'course' : 'courses'} to complete this path.
+                  Import the remaining {gapCount} {gapCount === 1 ? 'course' : 'courses'} to
+                  complete this path.
                 </p>
               </div>
             </div>
@@ -715,7 +713,7 @@ export function LearningPathDetail() {
 
         {/* Empty state */}
         {courseEntries.length === 0 ? (
-          <motion.div variants={fadeUp}>
+          <motion.div variants={fadeUp} className="space-y-6">
             <EmptyState
               icon={BookOpen}
               title="No courses yet"
@@ -723,11 +721,33 @@ export function LearningPathDetail() {
               actionLabel="Add Course"
               onAction={() => setPickerOpen(true)}
             />
+            {/* Collapsible course picker — rendered here so it mounts even in empty state (BLOCKER 2) */}
+            <Collapsible open={pickerOpen} onOpenChange={setPickerOpen} className="space-y-3">
+              <CollapsibleContent id="inline-course-picker-panel" className="space-y-3">
+                {/* Keep panel open toggle */}
+                <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={keepPanelOpen}
+                    onChange={e => setKeepPanelOpen(e.target.checked)}
+                    className="rounded border-muted-foreground/30"
+                    data-testid="keep-panel-open-toggle"
+                  />
+                  Keep panel open
+                </label>
+                <InlineCoursePicker
+                  mode="singleSelect"
+                  excludeCourseIds={existingCourseIds}
+                  onAdd={handlePickerAddCourse}
+                />
+              </CollapsibleContent>
+            </Collapsible>
             <div className="flex justify-center mt-4">
               <Button
                 variant="brand-outline"
                 onClick={handleImportClick}
                 data-testid="import-course-button"
+                className={pickerOpen ? 'hidden' : ''}
               >
                 <Download className="size-4 mr-2" aria-hidden="true" />
                 Import Course
@@ -870,9 +890,12 @@ export function LearningPathDetail() {
                         {courseEntries.map((entry, index) => {
                           // Gap entry: courseId is empty — render as non-sortable gap card
                           if (entry.courseId === '') {
-                            const matchTitleMatch = entry.justification?.match(/\[Search for: (.+)\]$/)
+                            const matchTitleMatch =
+                              entry.justification?.match(/\[Search for: (.+)\]$/)
                             const searchTerm = matchTitleMatch ? matchTitleMatch[1] : undefined
-                            const justification = entry.justification?.replace(/\s*\[Search for: .+\]$/, '') || undefined
+                            const justification =
+                              entry.justification?.replace(/\s*\[Search for: .+\]$/, '') ||
+                              undefined
                             return (
                               <div
                                 key={entry.id}
@@ -887,10 +910,15 @@ export function LearningPathDetail() {
                                     {justification || searchTerm || `Course ${index + 1}`}
                                   </h4>
                                   {justification && justification !== searchTerm && (
-                                    <p className="text-xs text-muted-foreground mt-0.5">{justification}</p>
+                                    <p className="text-xs text-muted-foreground mt-0.5">
+                                      {justification}
+                                    </p>
                                   )}
                                   <div className="flex items-center gap-2 mt-2">
-                                    <Badge variant="outline" className="text-xs border-warning/60 text-warning">
+                                    <Badge
+                                      variant="outline"
+                                      className="text-xs border-warning/60 text-warning"
+                                    >
                                       <AlertCircle className="w-3 h-3 mr-1" />
                                       Not in your library
                                     </Badge>
@@ -944,11 +972,7 @@ export function LearningPathDetail() {
             {/* Right Column: Sidebar */}
             <aside className="lg:col-span-4 space-y-8">
               {/* Add Course collapsible panel */}
-              <Collapsible
-                open={pickerOpen}
-                onOpenChange={setPickerOpen}
-                className="space-y-3"
-              >
+              <Collapsible open={pickerOpen} onOpenChange={setPickerOpen} className="space-y-3">
                 <CollapsibleTrigger asChild>
                   <Button
                     variant="brand"
@@ -961,10 +985,7 @@ export function LearningPathDetail() {
                     {pickerOpen ? 'Cancel' : 'Add Course'}
                   </Button>
                 </CollapsibleTrigger>
-                <CollapsibleContent
-                  id="inline-course-picker-panel"
-                  className="space-y-3"
-                >
+                <CollapsibleContent id="inline-course-picker-panel" className="space-y-3">
                   {/* Keep panel open toggle */}
                   <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer select-none">
                     <input
@@ -988,7 +1009,7 @@ export function LearningPathDetail() {
                 variant="brand-outline"
                 onClick={handleImportClick}
                 data-testid="import-course-button"
-                className="w-full"
+                className={pickerOpen ? 'hidden' : 'w-full'}
               >
                 <Download className="size-4 mr-2" aria-hidden="true" />
                 Import Course

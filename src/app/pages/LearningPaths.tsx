@@ -554,7 +554,11 @@ export function LearningPaths() {
   // Compute match count per template (for card display)
   const templateMatchCounts = useMemo(() => {
     const normalize = (s: string) =>
-      s.toLowerCase().replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, ' ').trim()
+      s
+        .toLowerCase()
+        .replace(/[^a-z0-9\s]/g, '')
+        .replace(/\s+/g, ' ')
+        .trim()
     const importedNames = new Set(importedCourses.map(c => normalize(c.name)))
     const counts = new Map<string, number>()
     for (const tpl of templates) {
@@ -664,7 +668,8 @@ export function LearningPaths() {
                 <h2 className="text-xl font-semibold">Start with a template</h2>
               </div>
               <p className="text-muted-foreground mb-6">
-                Browse curated learning paths to discover how paths work. Fork one to get started instantly.
+                Browse curated learning paths to discover how paths work. Fork one to get started
+                instantly.
               </p>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                 {templates.map(tpl => {
@@ -751,7 +756,9 @@ export function LearningPaths() {
                     <Badge variant="secondary" className="text-xs mr-2">
                       {templates.length}
                     </Badge>
-                    <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${discoverOpen ? 'rotate-180' : ''}`} />
+                    <ChevronDown
+                      className={`w-4 h-4 text-muted-foreground transition-transform ${discoverOpen ? 'rotate-180' : ''}`}
+                    />
                   </CollapsibleTrigger>
                   <CollapsibleContent className="pt-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
