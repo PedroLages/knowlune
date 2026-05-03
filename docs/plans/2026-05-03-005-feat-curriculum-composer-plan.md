@@ -10,7 +10,7 @@ origin: docs/brainstorms/2026-05-03-learning-paths-01-curriculum-composer-requir
 
 ## Overview
 
-Replace the two-dialog path-creation flow (`CreatePathDialog` then `CoursePickerDialog`) with a single `CurriculumComposer` dialog that includes name, description, and an inline multi-select course picker. Extract the inline picker as a shared component used by both the composer and the detail page (replacing the modal `CoursePickerDialog`). Add batch-add, multi-select reorder, "Recently Imported", and AI "Suggested Next" sections.
+Replace the two-dialog path-creation flow (`CreatePathDialog` then `CoursePickerDialog`) with a single `CurriculumComposer` dialog that includes name, description, and an inline multi-select course picker. Extract the inline picker as a shared component used by both the composer and the detail page (replacing the modal `CoursePickerDialog`). Add batch-add, multi-select reorder, and "Recently Imported" section (AI "Suggested Next" is deferred to a future phase).
 
 ## Problem Frame
 
@@ -21,25 +21,27 @@ Creating a learning path currently requires: (1) open `CreatePathDialog` for nam
 ## Requirements Trace
 
 - **R1.** Replace `CreatePathDialog` with a `CurriculumComposer` dialog that includes name, description, and an inline multi-select course picker in a single view. "Create Path" disabled until at least one course is selected.
-- **R2.** Inline course picker supports: (a) full-text search by title/author, (b) multi-select via checkboxes with selected count, (c) AI-ranked "Suggested Next" section.
+- **R2.** Inline course picker supports: (a) full-text search by title/author, (b) multi-select via checkboxes with selected count, (c) "Suggested Next" section showing a static placeholder ("Upgrade to unlock AI suggestions"); the full AI-ranked implementation is deferred to a future phase.
 - **R3.** Courses not yet assigned to any path appear in a "Recently Imported" section at the top of the picker.
 - **R4.** After creation, redirect to `LearningPathDetail` with courses already populated.
 - **R5.** Inline course picker is a shared component used by both `CurriculumComposer` and `LearningPathDetail`.
 - **R6.** On the detail page, the inline picker renders as a collapsible panel (not a modal).
 - **R7.** Selected courses support accessible reorder via `MoveUpDownButtons` before creation.
 - **R8.** Batch-add: selecting N courses adds all N as sequential entries in one operation.
-- **R9.** Inline picker includes an "Import new course" action that opens the import wizard.
+- **R9.** Inline picker includes an "Import new course" action that opens the import wizard. The wizard accepts a `returnTo` query parameter for navigation context. On successful import, the wizard dispatches a custom DOM event (`course-imported`) with the new course ID, and the picker listens for this event to select the newly imported course.
 
 ## Scope Boundaries
 
-- No changes to the `useLearningPathStore` data model — `addCourseToPath` remains the underlying per-entry operation, but a new `batchAddCoursesToPath` method is added for atomic batch creation.
+- No breaking changes to the `useLearningPathStore` data model — existing method signatures (`addCourseToPath`, `createPath`, `removeCourseFromPath`, `reorderCourse`) remain unchanged, but new `batchAddCoursesToPath` and `createPathWithCourses` methods are added for atomic batch creation.
 - No changes to how courses are rendered inside a path (entry cards, progress rings) — only how they are selected and added.
 - The `CoursePickerDialog`'s `availableCourses` computation logic is preserved and moved into the shared `InlineCoursePicker`.
 - No redesign of `LearningPathDetail` layout beyond replacing the modal course picker with the collapsible inline variant.
 - The auto-name-suggestion feature (deferred to planning) is implemented as a lightweight enhancement: the name field auto-populates from the first selected course's tags if left empty.
+- AI "Suggested Next" (originally Unit 6 in the brainstorm) is explicitly deferred to a future phase. The inline picker renders a static placeholder for this section rather than the full AI implementation.
 
 ### Deferred to Separate Tasks
 
+- **AI "Suggested Next"** (AI-ranked suggestions with `suggestNextCourses` AI function, debounce, caching, premium gating, and skeleton states): The inline picker shows a static placeholder ("Upgrade to unlock AI suggestions") for this section until the AI implementation is built in a future phase.
 - Persistent sidebar variant (`lg:` breakpoint) for the detail page inline picker — could be explored in a future iteration. Collapsible panel is the initial implementation.
 
 ## Context & Research
@@ -66,11 +68,11 @@ Creating a learning path currently requires: (1) open `CreatePathDialog` for nam
 
 ## Key Technical Decisions
 
-- **New `suggestNextCourses` AI function** (not reusing `suggestPlacement`): Calling `suggestPlacement` N times (once per unselected course) would be expensive and race-condition-prone. A single AI call that takes the partial selection context + all unselected courses and returns a ranked list is more efficient. The requirements doc's assumption about `suggestPlacement` working with partial lists needs this adaptation.
+- **AI "Suggested Next" is deferred** (moved to a future phase): The concept of a `suggestNextCourses` AI function is sound but represents ~40% of implementation complexity. It will be built in a separate story. The inline picker renders a static placeholder for this section.
 - **Collapsible panel over sidebar** for the detail page inline picker: Less layout disruption, consistent with the detail page's existing single-column content area. A persistent sidebar can be explored separately.
 - **Batch-add via new `batchAddCoursesToPath` store method**: Creating a path + adding N courses should be atomic. The new method creates the path first, then bulk-adds all entries in sequence, with a full rollback on failure.
 - **Multi-select mode toggle**: The shared `InlineCoursePicker` supports two modes — `multiSelect` (for composer, with checkboxes + selected count + reorder) and `singleSelect` (for detail page, replacing the current single-click-add pattern).
-- **Auto-name suggestion**: If the name field is empty when courses are selected, auto-populate by scanning the first selected course's `tags` for a topic-like tag (a single word with semantic weight, not a format tag like "video" or "pdf") and appending " Development" or " Fundamentals". Falls back to the course name without its first word. This is a lightweight heuristic, not AI-driven.
+- **Auto-name suggestion**: If the name field is empty when courses are selected, auto-populate by scanning the first selected course's `tags` for a topic-like tag and appending " Development" or " Fundamentals". The tag scanner uses a format/type blocklist: `["video", "book", "article", "course", "tutorial", "guide", "podcast", "interactive", "assessment"]`. Priority: tags that appear to be topics/subjects (nouns, programming languages, frameworks) are preferred over format/type tags; only tags not in the blocklist are candidate topic tags. Fallback: "Untitled Path" if no topic-like tags remain after filtering. This is a lightweight heuristic, not AI-driven.
 - **"Recently Imported" detection**: Courses in `useCourseImportStore.importedCourses` where `course.id` does not appear in any `useLearningPathStore.entries[i].courseId`. Computed via `useMemo` in the picker component.
 
 ## Implementation Units
@@ -88,14 +90,15 @@ Creating a learning path currently requires: (1) open `CreatePathDialog` for nam
 - Test: `src/stores/__tests__/useLearningPathStore.test.ts`
 
 **Approach:**
-- Add `batchAddCoursesToPath(pathId: string, courses: Array<{courseId: string, courseType: 'imported' | 'catalog'}>)`: calls `addCourseToPath` for each course sequentially using `persistWithRetry`, with a single rollback scope that removes all entries on any failure.
-- Also add `createPathWithCourses(name: string, description: string | undefined, courses: Array<{courseId: string, courseType: 'imported' | 'catalog'}>)`: creates the path, then batch-adds all courses, returns the new path ID. Full rollback on failure (delete path + all added entries).
+- Add `createPathWithCourses(name: string, description: string | undefined, courses: Array<{courseId: string, courseType: 'imported' | 'catalog'}>)`: directly creates all entries in a single `persistWithRetry` call (not delegating to individual `addCourseToPath` calls, which each have their own persist/rollback). Creates the path first, then bulk-adds all entries in sequence within the same `persistWithRetry`. Full rollback on failure (delete path + all added entries). This is the primary API used by `CurriculumComposer`.
+- Also add `batchAddCoursesToPath(pathId: string, courses: Array<...>)`: adds courses to an existing path within a single `persistWithRetry` scope, with rollback that removes all added entries on failure. Used by the detail page inline picker for potential future multi-select.
 - Follow the optimistic update + rollback pattern used by existing methods in the store.
 - The `createPathWithCourses` method is the primary API used by `CurriculumComposer`.
 
 **Patterns to follow:**
 - `createPath` (lines 99-137): optimistic update, `syncableWrite`, rollback
-- `addCourseToPath` (lines 266-319): position calculation, duplicate prevention, `syncableWrite`
+- `addCourseToPath` (lines 266-319): entry creation pattern, position calculation, duplicate prevention
+- `deletePath` (lines 211-257): rollback scope with full state snapshot restoration
 
 **Test scenarios:**
 - Happy path: `createPathWithCourses` creates path, adds all courses, returns path ID
@@ -131,7 +134,7 @@ Creating a learning path currently requires: (1) open `CreatePathDialog` for nam
   - `onAdd: (courses: Array<{courseId: string, courseType: 'imported' | 'catalog'}>) => void` — called on confirm
   - `selectedCourseIds: string[]` / `onSelectionChange: (ids: string[]) => void` — controlled multi-select state
   - `showRecentlyImported?: boolean` — show the Recently Imported section
-  - `showSuggestedNext?: boolean` — show the AI Suggested Next section
+  - `showSuggestedNext?: boolean` — show the "Suggested Next" section; renders a static placeholder ("Upgrade to unlock AI suggestions") rather than the full AI implementation. Full AI ranking is deferred to a future phase.
   - `showImportAction?: boolean` — show the "Import new course" button
   - `onImportCourse?: () => void` — handler for import action
 - Multi-select mode:
@@ -143,9 +146,10 @@ Creating a learning path currently requires: (1) open `CreatePathDialog` for nam
 - Single-select mode:
   - Click/Add button per course row (current behavior)
   - Immediate add on click
+- Loading state: if courses from stores are not yet loaded, show a skeletal placeholder (3-4 shimmer rows) instead of an empty list
 - Sections within the picker list:
   1. "Recently Imported" (top) — courses not assigned to any path
-  2. "Suggested Next" (optional, premium-gated) — AI-ranked suggestions
+  2. "Suggested Next" (optional, shown as a static placeholder for now) — full AI-ranked suggestions are deferred to a future phase
   3. All available courses (filtered by search)
 - Search bar at top: filters all sections by course name/author
 - "Import new course" action button in the footer
@@ -186,6 +190,7 @@ Creating a learning path currently requires: (1) open `CreatePathDialog` for nam
 **Files:**
 - Create: `src/app/components/figma/CurriculumComposer.tsx`
 - Create: `src/app/components/figma/__tests__/CurriculumComposer.test.tsx`
+- Modify: `src/app/components/figma/ImportWizardDialog.tsx` — add `course-imported` CustomEvent dispatch after successful import
 
 **Approach:**
 - Dialog size: `max-w-2xl` (672px), full-screen sheet on mobile (<640px)
@@ -195,13 +200,13 @@ Creating a learning path currently requires: (1) open `CreatePathDialog` for nam
   - Below description: `InlineCoursePicker` in `multiSelect` mode
   - Footer: Cancel + "Create Path" button
 - "Create Path" button is disabled until at least one course is selected
-- Name auto-suggestion: if name is empty when courses are selected, populate from the first selected course's tags (e.g., selecting a course tagged "React" suggests "React Fundamentals"). Scans `tags` for a topic-like tag and appends " Development" or " Fundamentals". Falls back to the course name without its first word. This is a heuristic — not AI-driven.
+- Name auto-suggestion: if name is empty when courses are selected, populate from the first selected course's tags (e.g., selecting a course tagged "React" suggests "React Fundamentals"). Scans `tags` using a format/type blocklist: `["video", "book", "article", "course", "tutorial", "guide", "podcast", "interactive", "assessment"]`. Prefers tags that appear to be topics/subjects (nouns, programming languages, frameworks) over format/type tags. Falls back to "Untitled Path" if no topic-like tags remain. This is a heuristic — not AI-driven.
 - On submit:
   1. Call `useLearningPathStore.createPathWithCourses(name, description, selectedCourses)`
   2. On success: close dialog, navigate to `/learning-paths/{newPathId}`
   3. On failure: show toast error, keep dialog open
 - After creation, courses are already in the path — user never sees empty state
-- ImportWizardDialog coordination: InlineCoursePicker's "Import new course" action opens the import wizard; on completion, refresh the imported courses list and select the newly imported course
+- ImportWizardDialog coordination: InlineCoursePicker's "Import new course" action opens the import wizard with a `returnTo` query parameter set to the current path (`/learning-paths` or `/learning-paths/{pathId}`). On successful import, the wizard dispatches a custom DOM event (`course-imported`) with detail `{ courseId: string }`. The InlineCoursePicker listens for this event via a `useEffect` hook, refreshes the imported courses list, and adds the new course ID to its selected set. This follows the existing `IMPORT_WIZARD_SET_TARGET` singleton pattern.
 
 **Patterns to follow:**
 - `CreatePathDialog` for the form layout pattern (lines 75-160 of `LearningPaths.tsx`)
@@ -212,7 +217,7 @@ Creating a learning path currently requires: (1) open `CreatePathDialog` for nam
 - Happy path: Create Path button is disabled when no courses selected
 - Happy path: auto-name suggestion populates from first selected course's topic
 - Edge case: creating with 1 course creates a single-entry path
-- Edge case: creating with 20+ courses works without layout shift
+- Edge case: creating with 20+ courses works without layout shift — the course list section has a max-height of 400px with `overflow-y-auto`, and a summary line ("Showing N of M courses") is displayed below the search bar. Virtualization is deferred (not needed at current scale; users typically have <100 imported courses).
 - Edge case: form validation prevents empty name submission (use auto-suggested name as fallback)
 - Error path: store failure shows toast, dialog stays open
 - Accessibility: Tab through name -> description -> search -> course list -> confirm with visible focus rings
@@ -238,16 +243,17 @@ Creating a learning path currently requires: (1) open `CreatePathDialog` for nam
 - Modify: `src/app/pages/__tests__/LearningPathDetail.test.tsx`
 
 **Approach:**
-- Replace the `<CoursePickerDialog>` element at line 1225 with an inline `Collapsible` section containing the `InlineCoursePicker` in `singleSelect` mode.
-- The collapsible panel is positioned in the right sidebar (`aside`, line 1099), replacing the current "Add Course" button's action.
-- "Add Course" button (line 1102) toggles the collapsible panel open.
+- Replace the `<CoursePickerDialog>` element with an inline `Collapsible` section containing the `InlineCoursePicker` in `singleSelect` mode.
+- The collapsible panel is positioned in the detail page's sidebar area, replacing the current "Add Course" button's action area.
+- "Add Course" button toggles the collapsible panel open.
+- A "Keep panel open" toggle (small switch or checkbox) is rendered inside the panel header. Its state is persisted in `localStorage` under the key `keepCoursePanelOpen`. When enabled, the panel remains open after adding a course; when disabled, the panel auto-collapses after each add. Re-clicking "Add Course" always re-opens the panel regardless of toggle state.
 - On course add: call `addCourseToPath` directly (single-select immediate add).
 - Remove the inline `CoursePickerDialog` function definition (lines 273-444).
 - Remove the `CoursePickerDialog` import and usage.
 
 **Patterns to follow:**
-- Existing `Collapsible` usage in the detail page (line 239, gap entries section)
-- The sidebar "Coming Up Next" card layout for the collapsible panel
+- Existing `Collapsible` usage in the detail page (gap entries section)
+- The sidebar "Coming Up Next" card layout for the collapsible panel area
 
 **Test scenarios:**
 - Happy path: clicking "Add Course" opens the collapsible panel, showing the InlineCoursePicker
@@ -276,8 +282,8 @@ Creating a learning path currently requires: (1) open `CreatePathDialog` for nam
 - Modify: `src/app/pages/__tests__/LearningPaths.test.tsx`
 
 **Approach:**
-- Import and replace `<CreatePathDialog>` with `<CurriculumComposer>` at line 890.
-- Remove the inline `CreatePathDialog` function definition (lines 75-160).
+- Import and replace `<CreatePathDialog>` with `<CurriculumComposer>`, removing the CreatePathDialog function definition.
+- Remove the inline `CreatePathDialog` function definition.
 - The "Create Path" button (line 747) remains the trigger for the composer dialog.
 - `CurriculumComposer` handles the full flow including navigation to the new detail page.
 
@@ -297,13 +303,13 @@ Creating a learning path currently requires: (1) open `CreatePathDialog` for nam
 
 ---
 
-- [ ] **Unit 6: AI "Suggested Next" section implementation**
+## Future / Phase 2: AI "Suggested Next" Section (Deferred)
 
-**Goal:** Add the AI-ranked "Suggested Next" section to the `InlineCoursePicker`.
+**Goal:** Add the AI-ranked "Suggested Next" section to the `InlineCoursePicker`. (Deferred from this phase.)
 
-**Requirements:** R2(c)
+**Requirements:** R2(c) — placeholder shown in current implementation
 
-**Dependencies:** Unit 2 (`InlineCoursePicker`)
+**Dependencies:** Unit 2 (`InlineCoursePicker`; only the placeholder integration is needed now)
 
 **Files:**
 - Create: `src/ai/learningPath/suggestNextCourses.ts`
@@ -323,7 +329,7 @@ Creating a learning path currently requires: (1) open `CreatePathDialog` for nam
   - Cache the result per selection set to avoid redundant calls
   - Results show course name + thumbnail + brief justification
   - Checkboxes on suggestions (they're part of the main selection set)
-- Mock injection: follow the same `window.__mockPathPlacementResponse` pattern from `suggestPathPlacement` for testability
+- Mock injection: follow the same `window.__mockPathPlacementResponse` pattern from `suggestPathPlacement` for testability, adapted to return an array of suggestions instead of a single object
 
 **Patterns to follow:**
 - `suggestPathPlacement` (`src/ai/learningPath/suggestPlacement.ts`) for the AI call pattern (provider config, API key, timeout, JSON parsing)
@@ -350,9 +356,9 @@ Creating a learning path currently requires: (1) open `CreatePathDialog` for nam
 
 **Goal:** Remove all dead code, verify test suites pass, and finalize.
 
-**Requirements:** (meta — cleanup after Units 1-6)
+**Requirements:** (meta — cleanup after Units 1-5)
 
-**Dependencies:** Units 1-6
+**Dependencies:** Units 1-5
 
 **Files:**
 - Cleanup in: `src/app/pages/LearningPaths.tsx` (verify all code referring to deleted `CreatePathDialog` is removed)
@@ -388,7 +394,7 @@ Creating a learning path currently requires: (1) open `CreatePathDialog` for nam
 
 - **Interaction graph:** The "Import new course" action in `InlineCoursePicker` dispatches custom events that `ImportWizardDialog` listens for. The singleton guard (`isImportWizardOpen`) is already in place.
 - **Error propagation:** `CurriculumComposer` create failures should keep the dialog open with an error toast. `createPathWithCourses` has full rollback — the user never sees a half-created path.
-- **State lifecycle risks:** `RecentImported` computation is a `useMemo` derived from store state — it updates reactively as courses are imported or assigned.
+- **State lifecycle risks:** `RecentlyImported` computation is a `useMemo` derived from store state — it updates reactively as courses are imported or assigned.
 - **API surface parity:** The `CoursePickerDialog` was an internal component (not exported), so no external API impact. The store's new `batchAddCoursesToPath` and `createPathWithCourses` are public methods.
 - **Unchanged invariants:** `useLearningPathStore` data model, course rendering inside paths, `addCourseToPath` signature, `MoveUpDownButtons` API.
 
@@ -396,7 +402,6 @@ Creating a learning path currently requires: (1) open `CreatePathDialog` for nam
 
 | Risk | Mitigation |
 |------|------------|
-| AI "Suggested Next" may have latency issues with debounce | Debounce 500ms, cache per selection, show skeleton during loading |
 | `createPathWithCourses` rollback may leave partial state on browser close/crash | Acceptable risk — same pattern as existing optimistic updates; full rollback on caught errors |
 | ImportWizardDialog coordination may have timing issues | Follow existing `isImportWizardOpen` / `IMPORT_WIZARD_SET_TARGET` pattern already proven in LearningPaths and LearningPathDetail |
 | Multi-select reorder state can drift from course list selection | Keep selected IDs in parent state, reorder only reorders the selected list, not the filtered results |
