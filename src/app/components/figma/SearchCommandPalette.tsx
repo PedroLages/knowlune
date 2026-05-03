@@ -208,6 +208,12 @@ export function SearchCommandPalette({
   // Prefix-hint dismissal — lazy LS read once at mount.
   const [hintDismissed, setHintDismissed] = useState<boolean>(() => readHintDismissed())
 
+  // Resolved human-readable labels for "Recently opened" rows.
+  // Populated async on palette open / recentHits change. Key = `${type}:${id}`.
+  const [resolvedRecentLabels, setResolvedRecentLabels] = useState<
+    Map<string, { title: string; subtitle?: string }>
+  >(new Map())
+
   const highlightPatterns = useMemo(() => buildHighlightPatterns(debouncedQuery), [debouncedQuery])
 
   // Capture focus and reset state on open/close
@@ -771,6 +777,12 @@ export function SearchCommandPalette({
   const hasContinueLearning = (continueLearning?.length ?? 0) > 0
   const displayedRecentHits = recentHits.slice(0, RECENT_OPENED_MAX)
   const hasRecentOpened = displayedRecentHits.length > 0
+  // Stable key of the displayed recent-hit list so the label-resolution effect
+  // only re-fires when the hit list actually changes, not on unrelated renders.
+  const recentHitKeys = useMemo(
+    () => displayedRecentHits.map(h => `${h.type}:${h.id}`).join(','),
+    [displayedRecentHits]
+  )
   // Fresh-install welcome: both empty-state rows are definitively empty.
   // Guard !scope: a HeaderSearchButton open on an empty index should not show
   // "nothing here yet" while the Courses chip is visible.
@@ -779,6 +791,85 @@ export function SearchCommandPalette({
   // Suppress Pages when welcome copy is visible — a 9-item nav list
   // contradicts the "nothing here yet" message.
   const showPages = !showWelcomeCopy && !scope
+
+  // ─── Recently Opened label resolution — one-shot per open + hit list ─────
+  //
+  // Resolves human-readable titles/subtitles from Dexie (and merged authors
+  // for author hits) so the palette renders e.g. "Introduction to Calculus"
+  // instead of a raw UUID. Keyed on the stable `recentHitKeys` so identical
+  // hit lists don't re-fetch after unrelated re-renders.
+  useEffect(() => {
+    if (!open) return
+    if (displayedRecentHits.length === 0) {
+      setResolvedRecentLabels(new Map())
+      return
+    }
+    let ignore = false
+    void (async () => {
+      const labelMap = new Map<string, { title: string; subtitle?: string }>()
+      try {
+        const results = await Promise.all(
+          displayedRecentHits.map(async hit => {
+            const key = `${hit.type}:${hit.id}`
+            try {
+              switch (hit.type) {
+                case 'course': {
+                  const row = await db.importedCourses.get(hit.id)
+                  return { key, label: row ? { title: row.name } : null }
+                }
+                case 'lesson': {
+                  const row = await db.importedVideos.get(hit.id)
+                  return { key, label: row ? { title: row.filename || row.id } : null }
+                }
+                case 'book': {
+                  const row = await db.books.get(hit.id)
+                  return {
+                    key,
+                    label: row ? { title: row.title, subtitle: row.author || undefined } : null,
+                  }
+                }
+                case 'note': {
+                  const row = await db.notes.get(hit.id)
+                  return {
+                    key,
+                    label: row ? { title: row.content.slice(0, 80) } : null,
+                  }
+                }
+                case 'highlight': {
+                  const row = await db.bookHighlights.get(hit.id)
+                  return {
+                    key,
+                    label: row ? { title: row.textAnchor.slice(0, 80) } : null,
+                  }
+                }
+                case 'author': {
+                  const storeAuthors = (await db.authors.toArray()) as ImportedAuthor[]
+                  const merged = getMergedAuthors(storeAuthors)
+                  const author = merged.find(a => a.id === hit.id)
+                  return { key, label: author ? { title: author.name } : null }
+                }
+                default:
+                  return { key, label: null }
+              }
+            } catch {
+              // silent-catch-ok: individual row lookup failures shouldn't block the batch
+              return { key, label: null }
+            }
+          })
+        )
+        for (const { key, label } of results) {
+          if (label) labelMap.set(key, label)
+        }
+      } catch (err) {
+        // silent-catch-ok: label resolution is best-effort; raw ID is a safe fallback
+        console.error('[search-palette] recent-label resolution failed:', err)
+      }
+      if (!ignore) setResolvedRecentLabels(labelMap)
+    })()
+    return () => {
+      ignore = true
+    }
+  }, [open, recentHitKeys, displayedRecentHits.length])
 
   return (
     <CommandDialog
@@ -942,18 +1033,26 @@ export function SearchCommandPalette({
             {displayedRecentHits.map(hit => {
               const sectionConfig = SECTION_ORDER.find(s => s.type === hit.type)
               const Icon = sectionConfig?.icon ?? Clock
+              const resolved = resolvedRecentLabels.get(`${hit.type}:${hit.id}`)
+              const displayTitle = resolved?.title ?? hit.id
+              const displaySubtitle = resolved?.subtitle
               return (
                 <CommandItem
                   key={`recent:${hit.type}:${hit.id}`}
                   value={`recent:${hit.type}:${hit.id}`}
                   onSelect={() => void handleRecentSelect(hit)}
-                  aria-label={`${hit.id}, ${TYPE_BADGE_LABEL[hit.type]}`}
+                  aria-label={`${displayTitle}, ${TYPE_BADGE_LABEL[hit.type]}`}
                   className="min-h-[44px]"
                   data-testid={`search-recent-${hit.type}-${hit.id}`}
                 >
                   <Icon className="mr-2 size-4 shrink-0" />
                   <div className="flex flex-col gap-0.5 min-w-0 flex-1">
-                    <span className="text-sm truncate">{hit.id}</span>
+                    <span className="text-sm truncate">{displayTitle}</span>
+                    {displaySubtitle && (
+                      <span className="text-[11px] text-muted-foreground truncate">
+                        {displaySubtitle}
+                      </span>
+                    )}
                   </div>
                   <Badge
                     className={`ml-2 shrink-0 text-[10px] px-1.5 py-0 h-4 ${TYPE_BADGE_CLASS[hit.type]}`}
