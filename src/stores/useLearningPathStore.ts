@@ -16,12 +16,23 @@ interface LearningPathState {
   forkGeneration: number
   error: string | null
 
+  // Pending deletes (undo support)
+  // Uses a plain Record for Zustand immutability tracking. Each entry holds the
+  // captured snapshot and a timer handle so the store can cancel and finalize.
+  pendingDeletes: Record<
+    string,
+    { path: LearningPath; entries: LearningPathEntry[]; timer: ReturnType<typeof setTimeout> }
+  >
+
   // Path CRUD
   loadPaths: () => Promise<void>
   createPath: (name: string, description?: string) => Promise<LearningPath>
   renamePath: (pathId: string, name: string) => Promise<void>
   updateDescription: (pathId: string, description: string) => Promise<void>
   deletePath: (pathId: string) => Promise<void>
+  deletePathWithUndo: (pathId: string) => void
+  restorePath: (pathId: string) => void
+  _finalizeDelete: (pathId: string) => Promise<void>
   setActivePath: (pathId: string) => void
 
   // Entry operations
@@ -87,6 +98,7 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
   isGenerating: false,
   forkGeneration: 0,
   error: null,
+  pendingDeletes: {},
 
   loadPaths: async () => {
     try {
@@ -265,6 +277,129 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
       toast.error('Failed to delete learning path')
       throw error
     }
+  },
+
+  deletePathWithUndo: (pathId: string) => {
+    const state = get()
+
+    // Guard: path must exist in state
+    const path = state.paths.find(p => p.id === pathId)
+    if (!path) return
+
+    // Guard: already pending deletion — no-op to prevent double-delete
+    if (state.pendingDeletes[pathId]) return
+
+    // Capture snapshot of the path and its entries before removal
+    const pathEntries = state.entries.filter(e => e.pathId === pathId)
+
+    // Optimistic removal from in-memory state (same logic as deletePath)
+    set(state => {
+      const remaining = state.paths.filter(p => p.id !== pathId)
+      return {
+        paths: remaining,
+        entries: state.entries.filter(e => e.pathId !== pathId),
+        activePath: state.activePath?.id === pathId ? remaining[0] || null : state.activePath,
+        error: null,
+      }
+    })
+
+    // Store in pendingDeletes for undo window (5 seconds)
+    const timer = setTimeout(() => {
+      get()._finalizeDelete(pathId)
+    }, 5000)
+
+    // Use immutable Record replacement for Zustand tracking
+    const pendingDeletes = { ...state.pendingDeletes }
+    pendingDeletes[pathId] = { path, entries: pathEntries, timer }
+    set({ pendingDeletes })
+
+    // Show undo toast
+    toast('Path deleted', {
+      duration: 5000,
+      action: {
+        label: 'Undo',
+        onClick: () => {
+          // Use getState() to avoid stale closure issues
+          useLearningPathStore.getState().restorePath(pathId)
+        },
+      },
+      onDismiss: () => {
+        // If the toast auto-dismisses (timer expired), finalize
+        // This is a safety net for the setTimeout above
+        const current = useLearningPathStore.getState().pendingDeletes
+        if (current[pathId]) {
+          useLearningPathStore.getState()._finalizeDelete(pathId)
+        }
+      },
+    })
+  },
+
+  restorePath: (pathId: string) => {
+    const state = get()
+    const pending = state.pendingDeletes[pathId]
+
+    // Guard: nothing to restore (already finalized or never deleted)
+    if (!pending) return
+
+    // Cancel the expiry timer
+    clearTimeout(pending.timer)
+
+    // Re-insert path and entries into state
+    set(state => ({
+      paths: [...state.paths, pending.path],
+      entries: [...state.entries, ...pending.entries],
+      error: null,
+    }))
+
+    // Persist the re-inserted path and entries via syncableWrite
+    persistWithRetry(async () => {
+      await syncableWrite('learningPaths', 'put', pending.path as unknown as SyncableRecord)
+      for (const entry of pending.entries) {
+        await syncableWrite('learningPathEntries', 'put', entry as unknown as SyncableRecord)
+      }
+    }).catch(error => {
+      console.error('[LearningPathStore] Failed to persist restored path:', error)
+      toast.error('Failed to restore path')
+    })
+
+    // Remove from pendingDeletes using immutable replacement
+    const pendingDeletes = { ...state.pendingDeletes }
+    delete pendingDeletes[pathId]
+    set({ pendingDeletes })
+  },
+
+  // Private: finalize the deletion by persisting to Dexie.
+  // Called by setTimeout or onDismiss when the undo window expires.
+  _finalizeDelete: async (pathId: string) => {
+    const state = get()
+    const pending = state.pendingDeletes[pathId]
+
+    // Guard: entry already cleared (e.g., by restorePath)
+    if (!pending) return
+
+    // Collect entry IDs from the snapshot (not current state, which already
+    // has them removed) — exact duplicate of deletePath's persist logic.
+    const entryIds = pending.entries.map(e => e.id)
+
+    try {
+      await persistWithRetry(async () => {
+        for (const entryId of entryIds) {
+          await syncableWrite('learningPathEntries', 'delete', entryId)
+        }
+        await syncableWrite('learningPaths', 'delete', pathId)
+      })
+    } catch (error) {
+      console.error('[LearningPathStore] Failed to finalize delete:', error)
+      // Path is already removed from state; Dexie still has it. On next
+      // loadPaths() it will reappear. Log and leave pendingDeletes entry
+      // to prevent re-finalization attempts.
+      return
+    }
+
+    // Remove from pendingDeletes using immutable replacement
+    const pendingDeletes = { ...state.pendingDeletes }
+    delete pendingDeletes[pathId]
+    set({ pendingDeletes })
   },
 
   setActivePath: (pathId: string) => {
