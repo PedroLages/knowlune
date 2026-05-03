@@ -4,6 +4,7 @@ type: feat
 status: active
 date: 2026-05-03
 origin: docs/brainstorms/2026-05-03-learning-paths-07-import-from-path-requirements.md
+deepened: 2026-05-03
 ---
 
 # feat: Add Import-from-Path — Close the Import-Path Loop
@@ -43,8 +44,8 @@ The primary motivation is the template gap import flow (Idea #3), where a user f
 
 ### Deferred to Separate Tasks
 
-- R7/R8 template gap import UI: Scaffolding for the `Import` action on gap entries will be implemented in the template syllabus view (Idea #3), not here. This plan ensures the wizard accepts `targetPathId` and is callable from any context, so the template gap flow can consume it without changes to the wizard.
-- `usePathPlacementSuggestion` with a constrained path context: The current hook suggests the best path among all paths. When a target path is pre-selected, the hook should suggest a position within that specific path. This enhancement is called out in Unit 2 but if it requires changes to the AI provider or prompt structure, it should be deferred to implementation-time discovery.
+- R7/R8 template gap import UI: R7's "scaffolding only" refers to the work this plan delivers — the wizard accepting `targetPathId` (Unit 1) and the singleton guard — which are the infrastructure pieces the template gap flow needs. The actual template gap rendering (gap entries showing an "Import" action, UI for the gap card, transition to linked course after import) is deferred to the template syllabus view (Idea #3). That feature will call the wizard with `targetPathId` using the same pattern established in Units 2-3, requiring no wizard changes.
+- `usePathPlacementSuggestion` with a constrained path context: The current hook suggests the best path among all paths. When a target path is pre-selected, the hook should suggest a position within that specific path. This enhancement is called out in Unit 4 but if it requires changes to the AI provider or prompt structure, it should be deferred to implementation-time discovery.
 
 ## Context & Research
 
@@ -72,7 +73,7 @@ The primary motivation is the template gap import flow (Idea #3), where a user f
 ## Key Technical Decisions
 
 - **Add `targetPathId` prop to ImportWizardDialog**: The wizard already manages `selectedPathId` internally. The new prop pre-fills that state when the dialog opens. When `targetPathId` is provided, the path step shows the target path pre-selected and the `pathChoice` defaults to `'choose'` (not `'accept'` since AI hasn't run yet). (see origin: Key Decisions - "Pre-fill, not lock-in")
-- **Module-level singleton counter for wizard instance**: Detecting "already open" state (R10) uses a module-level `let wizardInstanceCount = 0` counter that the `ImportWizardDialog` increments on mount and decrements on unmount. An exported `isImportWizardOpen()` function returns `wizardInstanceCount > 0`. When a path page triggers import, the click handler checks this function — if true, it dispatches a custom `'import-wizard-set-target'` event to update the target path instead of setting local state to open another wizard. This avoids React concurrent feature issues since the check is synchronous in the click handler.
+- **Module-level singleton guard tracking dialog open state**: Detecting "already open" state (R10) uses a module-level `let wizardOpenCount = 0` counter that the `ImportWizardDialog` increments and decrements inside its `onOpenChange` handler — only when the `open` prop transitions to/from `true`. This is critical because `Courses.tsx`, `LearningPaths.tsx`, and `LearningPathDetail.tsx` each render their own `<ImportWizardDialog>` instance, so a mount-based counter would reach 3 even with no wizard visible. An exported `isImportWizardOpen()` function returns `wizardOpenCount > 0`. When a path page triggers import, the click handler checks this function — if true, it dispatches a custom `'import-wizard-set-target'` event to update the target path instead of setting local state to open another wizard. This avoids React concurrent feature issues since the check is synchronous in the click handler.
 - **"Import Course" button placement**: On the list page: one in the page header alongside "Create Path", one in each path card's dropdown menu (the latter passes that card's path ID). On the detail page: one in the header action bar area next to the existing "Add Course" button. (see origin: Deferred to Planning Q1, Q2)
 - **Return-to-sender navigation**: After import completes, the wizard closes (calls `onOpenChange(false)`) and the user sees the path page they were already on. The course appears via store reactivity — `useCourseImportStore` triggers a re-render, and `LearningPathDetail` re-filters entries. No explicit navigation is needed since the wizard is a dialog overlay. (see origin: Key Decisions - "Return-to-sender navigation")
 - **Step 3 UI when target path is pre-filled**: Show the full step 3 with the target path highlighted and pre-selected. This maintains consistency (R9) and allows the user to change their mind. The AI suggestion card still appears and can override the pre-selection. (see origin: Deferred to Planning Q2)
@@ -84,7 +85,7 @@ The primary motivation is the template gap import flow (Idea #3), where a user f
 - R1 button placement: Page header (alongside "Create Path") + each card's dropdown menu. Both are useful — header for general import, card-specific for context.
 - R4 step 3 UI: Full step 3 with target path pre-selected/highlighted. Consistent and allows override.
 - R9 invocation context tracking: Add `targetPathId` prop to `ImportWizardDialog` (simplest approach). The path page passes the prop when it has context.
-- R10 singleton detection: Module-level `useRef` flag + custom event for cross-component communication.
+- R10 singleton detection: Module-level `let wizardOpenCount = 0` counter tracking dialog open state transitions (incremented/decremented inside the `onOpenChange` handler, not on mount/unmount) + custom event for cross-component communication.
 
 ### Deferred to Implementation
 
@@ -111,7 +112,7 @@ The primary motivation is the template gap import flow (Idea #3), where a user f
 - When `targetPathId` is provided and the dialog opens (step 1), store it in a ref for later use in step 3
 - When the user reaches step 3 with a `targetPathId`, pre-set `selectedPathId` to the target and `pathChoice` to `'choose'`
 - If the AI suggestion arrives and the user accepts it, the AI suggestion overrides the pre-filled path (consistent with existing behavior where AI suggestion -> accept sets `selectedPathId`)
-- Add a module-level `let wizardInstanceCount = 0` counter incremented on mount, decremented on unmount. Export an `isImportWizardOpen()` function that returns `wizardInstanceCount > 0` — this is the public API consumed by path pages to check for an existing wizard instance
+- Add a module-level `let wizardOpenCount = 0` counter incremented and decremented inside the dialog's `onOpenChange` handler, only when the `open` prop transitions to/from `true`. Export an `isImportWizardOpen()` function that returns `wizardOpenCount > 0` — this is the public API consumed by path pages to check for an existing wizard instance. Tracking `onOpenChange` transitions (not mount/unmount) is essential because three page components each render their own `<ImportWizardDialog>` instance, so a mount-based counter would reach 3 even when no wizard is visible
 - Add a custom event listener pattern: the wizard listens for `'import-wizard-set-target'` events on `window`; when received, updates its internal `targetPathId` ref and navigates to step 3 with the new target pre-selected
 - After import completes from a path context, the wizard closes normally (same as existing behavior)
 
@@ -128,11 +129,12 @@ The primary motivation is the template gap import flow (Idea #3), where a user f
 - Edge case: `targetPathId` is provided but `learningPaths` is empty -> path step is hidden (existing behavior: `showPathStep` is false), wizard falls through to direct import
 - Error path: AI suggestion changes the pre-selected path -> accept overrides, reject/choose reverts to pre-filled target
 - Integration: Wizard is open, `import-wizard-set-target` event fires with new `targetPathId` -> wizard updates target and navigates to step 3
+- Edge case: Two page components mount with `<ImportWizardDialog>` but neither is open -> `isImportWizardOpen()` returns `false` (counter tracks open state, not mount count)
 
 **Verification:**
 - Wizard with `targetPathId` pre-fills step 3 correctly
 - Wizard without `targetPathId` has no behavior change (existing tests pass)
-- `isImportWizardOpen()` returns true only when a wizard instance is mounted
+- `isImportWizardOpen()` returns true only when a wizard dialog is actually open (tracked via `onOpenChange` transitions, not mount state)
 - Custom event handling updates target path for an already-open wizard
 
 ---
@@ -300,7 +302,7 @@ The primary motivation is the template gap import flow (Idea #3), where a user f
 
 - **Interaction graph:** The import wizard (`ImportWizardDialog`) now has a bidirectional relationship with path pages. Previously, only `Courses.tsx` rendered the wizard. Now `LearningPaths.tsx` and `LearningPathDetail.tsx` also render it. The singleton guard (`isImportWizardOpen()`) and custom event (`'import-wizard-set-target'`) create a cross-component communication channel.
 - **Error propagation:** Import failures are already handled in the wizard via toast notifications. No new error paths are introduced — the wizard's existing error handling covers all entry points equally.
-- **State lifecycle risks:** The module-level `wizardInstanceCount` counter must be correctly decremented on unmount. If the wizard component unmounts without cleanup (e.g., due to a React error boundary), the counter would remain > 0 and block future wizard openings. Mitigation: the counter is reset to 0 if it ever becomes negative (defensive programming).
+- **State lifecycle risks:** The module-level `wizardOpenCount` counter tracks `onOpenChange` transitions (open-to-close) rather than mount/unmount. This avoids the mount-counting bug where three page components each rendering a `<ImportWizardDialog>` would drive the counter to 3 on page load. The remaining risk is that the counter could drift if `onOpenChange` fires in an unexpected order (e.g., the event handler updates `wizardOpenCount` before a synchronous state update in a parent). Mitigation: increment only when transitioning from closed to open (`prevOpen=false -> open=true`), decrement only when transitioning from open to closed (`prevOpen=true -> open=false`). Additionally, reset the counter to 0 if it ever becomes negative (defensive programming).
 - **API surface parity:** The `ImportWizardDialog` prop interface expands from 2 props to 3. This is backward-compatible — all existing callers (`Courses.tsx`) work without changes.
 - **Integration coverage:** The cross-layer scenario where import -> store update -> path page re-render -> new course appears cannot be fully tested in unit tests alone. It requires an integration test or manual verification. The unit tests in Unit 5 mock the store, so they verify the wiring is correct but not the actual store reactivity.
 - **Unchanged invariants:** The wizard's 3-step flow, validation, error handling, and AI suggestion behavior are unchanged when no `targetPathId` is passed. The existing import pipeline (`scanCourseFolder`, `persistScannedCourse`) is not modified. The `CoursePickerDialog` (existing "Add Course" from already-imported courses) is not modified.
@@ -309,7 +311,7 @@ The primary motivation is the template gap import flow (Idea #3), where a user f
 
 | Risk | Mitigation |
 |------|------------|
-| Singleton wizard counter leaks if React error boundary catches wizard unmount | Add defensive reset: if `wizardInstanceCount` becomes negative, set to 0 |
+| Singleton wizard counter drifts if `onOpenChange` fires in unexpected order (e.g., rapid double-click) | Increment only on closed-to-open transition, decrement only on open-to-closed transition. Reset to 0 if counter becomes negative (defensive programming) |
 | `usePathPlacementSuggestion` AI prompt doesn't handle single-path context well | Fall back to manual path selection if AI fails with constrained context |
 | Path pages don't have existing test files (greenfield tests) | Unit 5 creates test files with mock patterns proven in `ImportWizardDialog.test.tsx` |
 | Store reactivity after import may have a delay (async IndexedDB) | Existing behavior — the path pages already handle async store updates via `useEffect` + `loadPaths`/`loadImportedCourses`. The wizard calls `addCourseToPath` which triggers store updates; the path page re-renders via Zustand subscription |
