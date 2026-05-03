@@ -449,6 +449,10 @@ export interface LearningPath {
   createdAt: string // ISO 8601
   updatedAt: string // ISO 8601
   isAIGenerated: boolean // true if created by AI path generation
+  isTemplate?: boolean // true if this is a template path (hydrated from learning_path_templates)
+  forkedFrom?: string // template ID this path was forked from (null for original/user-created paths)
+  estimatedHours?: number // total estimated hours (copied from template on fork)
+  difficultyLabel?: string // e.g. "Beginner → Intermediate" (copied from template on fork)
 }
 
 export interface LearningPathEntry {
@@ -459,6 +463,29 @@ export interface LearningPathEntry {
   position: number // 1-indexed sequence position
   justification?: string // AI-provided reasoning for placement
   isManuallyOrdered: boolean // User manually reordered it
+}
+
+export interface TemplatePath {
+  id: string // Primary key: "template_<slug>"
+  name: string
+  description?: string
+  courseCount: number
+  estimatedHours?: number
+  difficultyLabel?: string
+  topicTags: string[]
+  createdAt: string
+}
+
+export interface TemplatePathEntry {
+  id: string // Primary key
+  templateId: string // FK → TemplatePath.id
+  courseId?: string // nullable — set for exact catalog course matches
+  matchTitle?: string // canonical title for matching against imported courses at fork time
+  position: number // 1-indexed sequence position
+  title: string
+  justification?: string
+  estimatedHours?: number
+  topicTags: string[]
 }
 
 // --- Spaced Review System (Story 11.1) ---

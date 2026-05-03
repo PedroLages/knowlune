@@ -5,6 +5,7 @@ import type { LearningPath, LearningPathEntry } from '@/data/types'
 import { persistWithRetry } from '@/lib/persistWithRetry'
 import { trackAIUsage } from '@/lib/aiEventTracking'
 import { syncableWrite, type SyncableRecord } from '@/lib/sync/syncableWrite'
+import { useCourseImportStore } from '@/stores/useCourseImportStore'
 
 interface LearningPathState {
   // Multi-path state (E26-S01/S02)
@@ -12,6 +13,7 @@ interface LearningPathState {
   entries: LearningPathEntry[] // All entries across all paths
   activePath: LearningPath | null
   isGenerating: boolean
+  forkGeneration: number
   error: string | null
 
   // Path CRUD
@@ -43,6 +45,9 @@ interface LearningPathState {
     orderedEntries: Array<{ courseId: string; position: number; justification: string }>
   ) => Promise<void>
 
+  // Template operations
+  forkTemplate: (templateId: string) => Promise<string | null> // returns new path ID or null on failure
+
   // Helpers
   getEntriesForPath: (pathId: string) => LearningPathEntry[]
 
@@ -69,6 +74,7 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
   entries: [],
   activePath: null,
   isGenerating: false,
+  forkGeneration: 0,
   error: null,
 
   loadPaths: async () => {
@@ -601,6 +607,136 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
     return get()
       .entries.filter(e => e.pathId === pathId)
       .sort((a, b) => a.position - b.position)
+  },
+
+  forkTemplate: async (templateId: string) => {
+    const generation = get().forkGeneration + 1
+    set({ forkGeneration: generation })
+
+    const template = await db.learningPaths.get(templateId)
+    if (!template || !template.isTemplate) {
+      toast.error('Template not found')
+      return null
+    }
+
+    if (get().forkGeneration !== generation) return null
+
+    const templateEntries = await db.learningPathEntries
+      .where('pathId')
+      .equals(templateId)
+      .sortBy('position')
+
+    if (get().forkGeneration !== generation) return null
+
+    const importedCourses = useCourseImportStore.getState().importedCourses
+
+    const normalize = (s: string) =>
+      s.toLowerCase().replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, ' ').trim()
+
+    const importedNames = new Map<string, string>()
+    for (const course of importedCourses) {
+      importedNames.set(normalize(course.name), course.id)
+    }
+
+    const now = new Date().toISOString()
+    const newPathId = crypto.randomUUID()
+
+    const newPath: LearningPath = {
+      id: newPathId,
+      name: template.name,
+      description: template.description,
+      createdAt: now,
+      updatedAt: now,
+      isAIGenerated: false,
+      isTemplate: false,
+      forkedFrom: templateId,
+      estimatedHours: template.estimatedHours,
+      difficultyLabel: template.difficultyLabel,
+    }
+
+    const prevPaths = get().paths
+    const prevEntries = get().entries
+    const prevActivePath = get().activePath
+
+    set(state => ({
+      paths: [...state.paths, newPath],
+      activePath: state.activePath || newPath,
+    }))
+
+    try {
+      await persistWithRetry(async () => {
+        await syncableWrite('learningPaths', 'add', newPath as unknown as SyncableRecord)
+      })
+
+      if (get().forkGeneration !== generation) {
+        db.learningPaths.delete(newPathId).catch(() => {})
+        set({ paths: prevPaths, activePath: prevActivePath })
+        return null
+      }
+
+      const newEntries: LearningPathEntry[] = []
+      for (const entry of templateEntries) {
+        const matchTitleMatch = entry.justification?.match(/\[Search for: (.+)\]$/)
+        const matchTitle = matchTitleMatch ? matchTitleMatch[1] : undefined
+
+        let courseId = ''
+        let courseType: 'imported' | 'catalog' = 'catalog'
+
+        if (entry.courseId && importedCourses.some(c => c.id === entry.courseId)) {
+          courseId = entry.courseId
+          courseType = 'imported'
+        } else if (matchTitle) {
+          const normalizedMatch = normalize(matchTitle)
+          const matchedId = importedNames.get(normalizedMatch)
+          if (matchedId) {
+            courseId = matchedId
+            courseType = 'imported'
+          }
+        }
+
+        const newEntry: LearningPathEntry = {
+          id: crypto.randomUUID(),
+          pathId: newPathId,
+          courseId,
+          courseType,
+          position: entry.position,
+          justification: entry.justification,
+          isManuallyOrdered: false,
+        }
+        newEntries.push(newEntry)
+      }
+
+      set(state => ({ entries: [...state.entries, ...newEntries] }))
+
+      for (const newEntry of newEntries) {
+        await persistWithRetry(async () => {
+          await syncableWrite('learningPathEntries', 'add', newEntry as unknown as SyncableRecord)
+        })
+      }
+
+      const freshPaths = await db.learningPaths.toArray()
+      const freshEntries = await db.learningPathEntries.toArray()
+      const sorted = freshPaths.sort(
+        (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+      )
+      set(state => ({
+        paths: sorted,
+        entries: freshEntries,
+        activePath: sorted.find(p => p.id === newPathId) ?? state.activePath,
+      }))
+
+      toast.success(`Created "${newPath.name}" from template`)
+      return newPathId
+    } catch (error) {
+      console.error('[LearningPathStore] Failed to fork template:', error)
+      set({
+        paths: prevPaths,
+        entries: prevEntries,
+        activePath: prevActivePath,
+      })
+      toast.error('Failed to create path from template')
+      return null
+    }
   },
 
   hydrateFromRemote: async ({ paths, entries } = {}) => {

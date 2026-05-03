@@ -1689,6 +1689,15 @@ function _declareLegacyMigrations(database: Dexie): void {
     importedCourses: 'id, name, importedAt, status, *tags, source, userId, [userId+updatedAt], guestSessionId',
     books: 'id, title, author, format, status, createdAt, lastOpenedAt, series, userId, [userId+updatedAt], guestSessionId',
   })
+
+  // v62 (template paths): Add `isTemplate` and `forkedFrom` indexed columns to
+  // `learningPaths`. Templates merge into the same Dexie table as user paths
+  // with `isTemplate: true`. `forkedFrom` supports the "already forked" check (R11)
+  // via `db.learningPaths.where('forkedFrom').equals(templateId)`.
+  // Existing rows are unaffected — Dexie treats missing optional fields as undefined.
+  database.version(62).stores({
+    learningPaths: 'id, createdAt, userId, isTemplate, forkedFrom, [userId+updatedAt]',
+  })
 } // end _declareLegacyMigrations
 
 export { db, CHECKPOINT_VERSION, CHECKPOINT_SCHEMA }
