@@ -225,9 +225,11 @@ function LessonLink({
           ) : (
             <Video className="size-3" aria-hidden="true" />
           )}
-          {lesson.duration != null && lesson.duration > 0 && (
+          {lesson.type === 'pdf' && lesson.sourceMetadata?.pageCount ? (
+            <span className="text-xs">{String(lesson.sourceMetadata.pageCount)} pgs</span>
+          ) : lesson.duration != null && lesson.duration > 0 ? (
             <span className="text-xs">{formatLessonDuration(lesson.duration)}</span>
-          )}
+          ) : null}
           {materialCount > 0 && onFocusMaterials && (
             <button
               type="button"
@@ -562,29 +564,18 @@ export function LessonsTab({ courseId, lessonId, adapter, onFocusMaterials }: Le
     }
   }, [isLoading, lessonId])
 
-  // Filter out root-level PDFs (course-level books/manuals) — accessible via Materials tab
-  const displayGroups = useMemo(
-    () =>
-      materialGroups.filter(g => {
-        if (g.primary.type !== 'pdf') return true
-        const path = (g.primary.sourceMetadata?.path as string) ?? ''
-        return getDirPath(path) !== ''
-      }),
-    [materialGroups]
-  )
-
-  const showSearch = displayGroups.length > LESSON_SEARCH_THRESHOLD
+  const showSearch = materialGroups.length > LESSON_SEARCH_THRESHOLD
 
   // Filter groups by search query (match primary title or material titles)
   const filteredGroups = useMemo(() => {
-    if (!searchQuery) return displayGroups
+    if (!searchQuery) return materialGroups
     const q = searchQuery.toLowerCase()
-    return displayGroups.filter(
+    return materialGroups.filter(
       g =>
         g.primary.title.toLowerCase().includes(q) ||
         g.materials.some(m => m.title.toLowerCase().includes(q))
     )
-  }, [displayGroups, searchQuery])
+  }, [materialGroups, searchQuery])
 
   // Build nested folder tree
   const folderTree = useMemo(() => buildFolderTree(filteredGroups), [filteredGroups])
@@ -661,11 +652,11 @@ export function LessonsTab({ courseId, lessonId, adapter, onFocusMaterials }: Le
 
   // Pre-compute O(1) lookup for original group indices (must be before early returns)
   const groupIndexMap = useMemo(
-    () => new Map(displayGroups.map((g, i) => [g.primary.id, i])),
-    [displayGroups]
+    () => new Map(materialGroups.map((g, i) => [g.primary.id, i])),
+    [materialGroups]
   )
 
-  const currentIndex = displayGroups.findIndex(g => g.primary.id === lessonId)
+  const currentIndex = materialGroups.findIndex(g => g.primary.id === lessonId)
 
   if (isLoading) {
     return (
@@ -677,7 +668,7 @@ export function LessonsTab({ courseId, lessonId, adapter, onFocusMaterials }: Le
     )
   }
 
-  if (displayGroups.length === 0) {
+  if (materialGroups.length === 0) {
     return (
       <EmptyState icon={Video} title="No lessons" description="This course has no lessons yet" />
     )
@@ -716,11 +707,11 @@ export function LessonsTab({ courseId, lessonId, adapter, onFocusMaterials }: Le
         </div>
       )}
       <div className="px-2 pb-2 text-xs text-muted-foreground">
-        {searchQuery && filteredGroups.length !== displayGroups.length
-          ? `Showing ${filteredGroups.length} of ${displayGroups.length} lessons`
+        {searchQuery && filteredGroups.length !== materialGroups.length
+          ? `Showing ${filteredGroups.length} of ${materialGroups.length} lessons`
           : currentIndex >= 0
-            ? `Lesson ${currentIndex + 1} of ${displayGroups.length}`
-            : `${displayGroups.length} lessons`}
+            ? `Lesson ${currentIndex + 1} of ${materialGroups.length}`
+            : `${materialGroups.length} lessons`}
       </div>
       {filteredGroups.length === 0 && searchQuery ? (
         <div
