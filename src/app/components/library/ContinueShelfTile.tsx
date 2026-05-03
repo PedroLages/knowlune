@@ -4,6 +4,7 @@ import { BookOpen, Headphones } from 'lucide-react'
 import type { Book } from '@/data/types'
 import { useBookCoverUrl } from '@/app/hooks/useBookCoverUrl'
 import { LIBRARY_SHELF_CARD_WIDTH_CLASS } from '@/app/components/library/shelfCardSizing'
+import { getBookDestinationPath } from '@/lib/bookNavigation'
 
 interface ContinueShelfTileProps {
   book: Book
@@ -48,10 +49,7 @@ export const ContinueShelfTile = memo(function ContinueShelfTile({ book }: Conti
   const isAudiobook = book.format === 'audiobook'
   const FallbackIcon = isAudiobook ? Headphones : BookOpen
   const FormatIcon = isAudiobook ? Headphones : BookOpen
-  const readerPath =
-    book.format === 'epub' || book.format === 'audiobook'
-      ? `/library/${book.id}/read`
-      : `/library/${book.id}`
+  const readerPath = getBookDestinationPath(book)
 
   const handleClick = () => navigate(readerPath)
   const handleKeyDown = (e: KeyboardEvent) => {

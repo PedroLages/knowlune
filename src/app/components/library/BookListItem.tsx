@@ -22,6 +22,7 @@ import {
 } from '@/app/components/ui/select'
 import { useBookStore } from '@/stores/useBookStore'
 import { useBookCoverUrl } from '@/app/hooks/useBookCoverUrl'
+import { getBookDestinationPath } from '@/lib/bookNavigation'
 
 interface BookListItemProps {
   book: Book
@@ -53,11 +54,7 @@ export const BookListItem = memo(function BookListItem({ book }: BookListItemPro
   const updateBookStatus = useBookStore(s => s.updateBookStatus)
   const resolvedCoverUrl = useBookCoverUrl({ bookId: book.id, coverUrl: book.coverUrl })
 
-  // E84/E87: EPUB and audiobook books open the reader; other formats stay on library detail (future)
-  const readerPath =
-    book.format === 'epub' || book.format === 'audiobook'
-      ? `/library/${book.id}/read`
-      : `/library/${book.id}`
+  const readerPath = getBookDestinationPath(book)
 
   const handleClick = () => navigate(readerPath)
   const handleKeyDown = (e: KeyboardEvent) => {

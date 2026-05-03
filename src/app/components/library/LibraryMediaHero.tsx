@@ -6,6 +6,7 @@ import { Button } from '@/app/components/ui/button'
 import { useBookCoverUrl } from '@/app/hooks/useBookCoverUrl'
 import { cn } from '@/app/components/ui/utils'
 import { sanitizeDescriptionHtml } from '@/lib/textUtils'
+import { getBookDestinationPath } from '@/lib/bookNavigation'
 
 function toTimestamp(value: string | undefined): number {
   if (!value) return 0
@@ -49,10 +50,7 @@ export function LibraryMediaHero({
   if (!heroBook) return null
 
   const isAudio = heroBook.format === 'audiobook'
-  const readerPath =
-    heroBook.format === 'epub' || heroBook.format === 'audiobook'
-      ? `/library/${heroBook.id}/read`
-      : `/library/${heroBook.id}`
+  const readerPath = getBookDestinationPath(heroBook)
 
   const primaryLabel = isInProgress(heroBook)
     ? isAudio

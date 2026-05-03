@@ -14,6 +14,7 @@ import { BookOpen, Headphones } from 'lucide-react'
 import type { Book } from '@/data/types'
 import { useBookCoverUrl } from '@/app/hooks/useBookCoverUrl'
 import { LIBRARY_SHELF_CARD_WIDTH_CLASS } from '@/app/components/library/shelfCardSizing'
+import { getBookDestinationPath } from '@/lib/bookNavigation'
 
 interface RecentBookCardProps {
   book: Book
@@ -23,10 +24,7 @@ export const RecentBookCard = memo(function RecentBookCard({ book }: RecentBookC
   const navigate = useNavigate()
   const resolvedCoverUrl = useBookCoverUrl({ bookId: book.id, coverUrl: book.coverUrl })
 
-  const readerPath =
-    book.format === 'epub' || book.format === 'audiobook'
-      ? `/library/${book.id}/read`
-      : `/library/${book.id}`
+  const readerPath = getBookDestinationPath(book)
 
   const handleClick = () => navigate(readerPath)
   const handleKeyDown = (e: KeyboardEvent) => {

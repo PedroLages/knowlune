@@ -14,6 +14,7 @@ import { useReadingQueueStore } from '@/stores/useReadingQueueStore'
 import { useBookCoverUrl } from '@/app/hooks/useBookCoverUrl'
 import { Button } from '@/app/components/ui/button'
 import { cn } from '@/app/components/ui/utils'
+import { getBookDestinationPath } from '@/lib/bookNavigation'
 
 interface ReadingQueueViewProps {
   books: Book[]
@@ -39,10 +40,7 @@ function QueueBookRow({
   const navigate = useNavigate()
   const resolvedCoverUrl = useBookCoverUrl({ bookId: book.id, coverUrl: book.coverUrl })
 
-  const readerPath =
-    book.format === 'epub' || book.format === 'audiobook'
-      ? `/library/${book.id}/read`
-      : `/library/${book.id}`
+  const readerPath = getBookDestinationPath(book)
 
   return (
     <div

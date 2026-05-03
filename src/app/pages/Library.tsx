@@ -386,15 +386,54 @@ export function Library() {
 
   // Media-first default: when books exist and no format is chosen,
   // prefer audiobooks if present, otherwise fall back to ebooks.
+  //
+  // Gate: runs at most once per mount (ref) and never in a session where the
+  // user has already cleared the format chip (sessionStorage flag). When the
+  // user clears the chip, the flag persists across remounts so returning to
+  // the page does not re-apply the default. Resets only when the library is
+  // empty (all books removed).
+  const initialMediaFormatDefaultAppliedRef = useRef(false)
   useEffect(() => {
-    if (books.length === 0) return
+    // Library emptied — reset both gates so a fresh default fires when books reappear.
+    if (books.length === 0) {
+      initialMediaFormatDefaultAppliedRef.current = false
+      try {
+        sessionStorage.removeItem('libraryFormatCleared')
+      } catch {
+        // silent-catch-ok: sessionStorage may be unavailable in locked-down contexts
+      }
+      return
+    }
+
+    // User explicitly cleared the format chip earlier in this session — do not re-apply.
+    let formatCleared = false
+    try {
+      formatCleared = sessionStorage.getItem('libraryFormatCleared') === '1'
+    } catch {
+      // silent-catch-ok
+    }
+    if (formatCleared) return
+
     if (!filters.format || filters.format.length === 0) {
+      // Ref already fired — this is a user-initiated clear (chip ×). Persist the
+      // intent so it survives page remounts within this session.
+      if (initialMediaFormatDefaultAppliedRef.current) {
+        try {
+          sessionStorage.setItem('libraryFormatCleared', '1')
+        } catch {
+          // silent-catch-ok
+        }
+        return
+      }
+
+      // First time: apply the one-shot media-first default.
       const hasAudiobooks = books.some(b => b.format === 'audiobook')
       if (hasAudiobooks) {
         setFilter('format', ['audiobook'])
       } else if (books.some(b => b.format === 'epub' || b.format === 'pdf')) {
         setFilter('format', ['epub', 'pdf'])
       }
+      initialMediaFormatDefaultAppliedRef.current = true
     }
   }, [books.length, filters.format, setFilter, books])
 
