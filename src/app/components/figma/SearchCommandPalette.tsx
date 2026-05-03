@@ -652,8 +652,13 @@ export function SearchCommandPalette({
     if (item.type === 'course') {
       path = `/courses/${item.id}`
     } else {
-      const row = await db.books.get(item.id)
-      path = row ? getBookDestinationPath(row) : `/library/${item.id}`
+      try {
+        const row = await db.books.get(item.id)
+        path = row ? getBookDestinationPath(row) : `/library/${item.id}`
+      } catch {
+        // Dexie read failed — fall back to library detail path
+        path = `/library/${item.id}`
+      }
     }
     void recordVisit(item.type, item.id).then(() => {
       setRecentHits(getRecentHits())
