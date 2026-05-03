@@ -1,0 +1,59 @@
+{
+  "reviewer": "project-standards",
+  "findings": [
+    {
+      "severity": "MEDIUM",
+      "confidence": 0.87,
+      "rule_source": ".claude/workflows/design-review/design-principles.md, 'Animation Principles' section: 'Reducible: Respect prefers-reduced-motion for accessibility' (line 140); 'Motion & Cognitive Accessibility' checklist: 'Respect prefers-reduced-motion preference' (line 205); .claude/rules/workflows/design-review.md, 'Quick Checklist / Interaction Quality': 'Animations smooth (150-500ms) and respect prefers-reduced-motion' (line 55)",
+      "violation": "src/app/components/library/LibraryTabBar.tsx, line 33: The className string includes 'transition-all duration-200' without a 'motion-safe:' prefix. Users who have set prefers-reduced-motion: reduce will still receive the 200ms transition animation, violating the project's explicit rule that all animations must respect reduced-motion preferences.",
+      "fix": "Change 'transition-all duration-200' to 'motion-safe:transition-all motion-safe:duration-200' on line 33 of LibraryTabBar.tsx."
+    },
+    {
+      "severity": "LOW",
+      "confidence": 0.72,
+      "rule_source": ".claude/workflows/design-review/design-principles.md, 'Touch Targets' section: 'Minimum 44x44px for all interactive elements on touch devices' (line 172); .claude/rules/styling.md: 'Touch targets >=44x44px on mobile'; .claude/rules/workflows/design-review.md, 'Responsive Design' checklist: 'Touch targets >=44x44px' (line 67)",
+      "violation": "src/app/components/library/LibraryTabBar.tsx, lines 32-37: Tab buttons use 'py-1.5' (6px vertical padding each side) with 'text-sm' font (~14px font, ~21px line-height), yielding approximately 33px total touch height. No 'min-h-[44px]' class or equivalent is applied. This falls below the project's 44px touch-target minimum.",
+      "fix": "Consider either (a) adding 'min-h-[44px]' and adjusting vertical padding to each tab button, or (b) documenting why the segmented-control pattern qualifies for the WCAG 'inline' exception (SC 2.5.5) since the four tabs form a single compound control where precise tap targeting is expected within a constrained horizontal bar. Option (b) is common for iOS-style segmented controls."
+    }
+  ],
+  "residual_risks": [
+    {
+      "risk": "LibraryTabBar.tsx uses 'outline-focus-ring' (a CSS variable-based design token from theme.css). Verified valid. Not a violation.",
+      "severity": "NONE"
+    },
+    {
+      "risk": "Library.tsx 'gold' color class usage (line 919: 'text-gold' for star ratings). Verified as a design token defined in theme.css (--color-gold: var(--gold)). Not a violation.",
+      "severity": "NONE"
+    },
+    {
+      "risk": "story-116-03.spec.ts test marked as test.fixme. It navigates to '/library' without '?tab=browse' and does not seed any books. If un-fixme'd, the test would need both IndexedDB seeding and URL parameter updates. Not a current violation since the test is disabled.",
+      "severity": "INFO"
+    },
+    {
+      "risk": "Library.tsx new useEffect dependency array now includes 'books' (line 158). This could cause additional re-render cycles if the books array reference changes frequently. Not a standards violation but could impact performance.",
+      "severity": "INFO"
+    },
+    {
+      "risk": "story-e83-s06.spec.ts assertion text changed from 'remove the book and all its highlights' to 'permanently remove the book'. Verified against BookContextMenu.tsx line 409 which reads 'This will permanently remove the book, its highlights, and all locally stored files'. The new assertion uses toContainText substring matching and the old text was a mismatch. This is a correct fix, not a regression.",
+      "severity": "NONE"
+    }
+  ],
+  "testing_gaps": [
+    {
+      "gap": "No E2E test explicitly verifies the LibraryTabBar tab-switching behavior (clicking each tab, verifying URL param sync, localStorage persistence). The component has data-testid attributes but no dedicated spec exercises the tab bar in isolation.",
+      "severity": "MEDIUM"
+    },
+    {
+      "gap": "No test verifies the History tab's 'Recently Finished' list or stats cards (books finished, pages read, hours listened). These are new UI surfaced by the tab restructure without corresponding E2E coverage.",
+      "severity": "MEDIUM"
+    },
+    {
+      "gap": "No test verifies the Collections tab's 'Manage Shelves' button or the 'Browse ABS Collections' integration from within the Collections tab context.",
+      "severity": "LOW"
+    },
+    {
+      "gap": "No test verifies localStorage tab persistence across page reloads or session restores. The localStorage.setItem('knowlune-library-tab', tab) logic in handleTabChange has no E2E coverage.",
+      "severity": "LOW"
+    }
+  ]
+}

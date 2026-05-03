@@ -1,0 +1,78 @@
+{
+  "reviewer": "correctness",
+  "findings": [
+    {
+      "title": "QAChatPanel: PopoverTrigger/SheetTrigger onClick handler silently lost via Tooltip Root wrapping",
+      "severity": "P0",
+      "file": "src/app/components/figma/QAChatPanel.tsx",
+      "line": 654,
+      "confidence": 0.95,
+      "autofix_class": "manual",
+      "owner": "review-fixer",
+      "requires_verification": true,
+      "pre_existing": false,
+      "suggested_fix": "Restructure tooltip wrapping to place Tooltip INSIDE Popover/Sheet, wrapping the PopoverTrigger/SheetTrigger via asChild chain — matching the PomodoroTimer pattern. Current code does PopoverTrigger/SheetTrigger asChild > Tooltip Root, which causes Slot to merge the toggle onClick onto Tooltip Root. TooltipPrimitive.Root (in @radix-ui/react-tooltip 1.x) destructures only __scopeTooltip, children, open, defaultOpen, onOpenChange, disableHoverableContent, delayDuration — it does NOT forward unknown props (onClick, data-state, aria-expanded) to any DOM element. The toggle handler is silently discarded. Both desktop (Popover) and mobile (Sheet) paths are affected. Fix: create trigger variants with PopoverTrigger/SheetTrigger asChild wrapping the Button FIRST, then optionally wrap the result in Tooltip+TooltipTrigger asChild — i.e. Popover > Tooltip > TooltipTrigger(asChild) > PopoverTrigger(asChild) > Button (consistent with PomodoroTimer's working pattern)."
+    },
+    {
+      "title": "QAChatPanel: Same Tooltip Root prop-swallowing bug applies to SheetTrigger (mobile path)",
+      "severity": "P0",
+      "file": "src/app/components/figma/QAChatPanel.tsx",
+      "line": 665,
+      "confidence": 0.95,
+      "autofix_class": "manual",
+      "owner": "review-fixer",
+      "requires_verification": true,
+      "pre_existing": false,
+      "suggested_fix": "Same restructure as above. The Sheet mobile path (line 665: SheetTrigger asChild wrapping triggerWithTooltip) has identical bug — DialogTrigger (used as SheetTrigger) renders Primitive.button with asChild, Slot clones Tooltip Root, onClick toggle lost. Fix by applying same Tooltip-inside-Sheet pattern."
+    },
+    {
+      "title": "Test asserts aria-label instead of tooltip content, mislabelled as 'tooltip' test",
+      "severity": "P3",
+      "file": "src/app/components/course/__tests__/LessonHeaderTools.test.tsx",
+      "line": 262,
+      "confidence": 0.90,
+      "autofix_class": "safe_auto",
+      "owner": "review-fixer",
+      "requires_verification": false,
+      "pre_existing": false,
+      "suggested_fix": "Rename tests at lines 262 and 270 to describe what they actually test (e.g. 'shows aria-label \"Auto-play is on\" when autoPlay is ON') rather than 'shows \"Auto-play: On\" tooltip'. Or add actual tooltip content assertions via Radix TooltipContent portal queries, though those require user-event hover simulation."
+    },
+    {
+      "title": "No test coverage for variant-based visual state of auto-play toggle button",
+      "severity": "P3",
+      "file": "src/app/components/course/__tests__/LessonHeaderTools.test.tsx",
+      "line": 238,
+      "confidence": 0.85,
+      "autofix_class": "safe_auto",
+      "owner": "downstream-resolver",
+      "requires_verification": false,
+      "pre_existing": false,
+      "suggested_fix": "Add test assertions verifying the auto-play toggle button has class/attribute reflecting 'brand-ghost' variant when ON and 'ghost' variant when OFF. The plan's Unit 1 test scenarios list 'Toggle button uses variant=\"brand-ghost\" when ON' and 'Toggle button uses variant=\"ghost\" when OFF' but these are not implemented."
+    },
+    {
+      "title": "No tests for PomodoroTimer/QAChatPanel internal tooltip rendering",
+      "severity": "P3",
+      "file": "src/app/components/figma/PomodoroTimer.tsx",
+      "line": 110,
+      "confidence": 0.80,
+      "autofix_class": "advisory",
+      "owner": "downstream-resolver",
+      "requires_verification": false,
+      "pre_existing": false,
+      "suggested_fix": "LessonHeaderTools tests mock PomodoroTimer and QAChatPanel as static divs, so internal tooltip wrapping is never exercised. PomodoroTimer and QAChatPanel tests should verify that tooltipLabel prop triggers Tooltip rendering with correct content. Current coverage gap means the P0 bug above could silently regress."
+    }
+  ],
+  "residual_risks": [
+    "Tooltip layer on top of open Popover/Sheet: PomodoroTimer's tooltip renders via Portal alongside the PopoverContent portal. When the popover is open and user hovers the trigger button, the tooltip may overlap with popover content. Radix portals both at fixed z-indices (tooltip at z-50 per theme.css). Visual testing needed to confirm no z-fighting.",
+    "Rapid autoplay toggle (OFF->ON->OFF->ON): VideoPlayer's autoplay effect has no cleanup for pending play() promises. If a prior play() fails (browser blocks unmuted) and its catch handler sets setIsMuted(true) after a subsequent successful play, the muted indicator could briefly flash wrong. Pre-existing issue in VideoPlayer, not introduced by this PR, but more likely to trigger now that shouldAutoPlay toggles via store interaction.",
+    "Dependency array includes shouldAutoPlay in clearing effect: Line 108 uses shouldAutoPlay in deps but the effect condition uses parseLocationFlag directly. If parseLocationFlag returns true (router state has flag) and storeAutoPlay flips from true to false mid-render, shouldAutoPlay changes but the condition stays true until the clearing effect fires. This is correct behavior (no bug) but the dep/computation split is subtle and could confuse future maintainers."
+  ],
+  "testing_gaps": [
+    "UnifiedLessonPlayer: No unit test exists for shouldAutoPlay OR-combine logic. The plan Section Unit 2 lists 6 test scenarios (store ON without router state, store OFF without router state, router state with autoPlay, store OFF + no flag, page refresh no re-trigger, no infinite loop when storeAutoPlay is ON). None appear to be implemented in the diff.",
+    "UnifiedLessonPlayer: No test for autoplay=true prop propagation to LessonContentRenderer under different store+router combinations.",
+    "E2E: Auto-advance -> next lesson -> auto-play integration path described in plan Unit 2 (lines 145-146) is not implemented in this diff.",
+    "QAChatPanel: No test for tooltipLabel prop triggering internal Tooltip rendering with correct content.",
+    "PomodoroTimer: No test for tooltipLabel prop triggering internal Tooltip rendering with correct content.",
+    "LessonHeaderTools: No test verifying that tooltipLabel='Focus Timer' and tooltipLabel='Ask AI' are passed to mocked PomodoroTimer/QAChatPanel."
+  ]
+}

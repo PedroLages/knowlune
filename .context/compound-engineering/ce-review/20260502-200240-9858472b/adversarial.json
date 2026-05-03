@@ -1,0 +1,139 @@
+{
+  "reviewer": "adversarial",
+  "findings": [
+    {
+      "title": "Cascade: activityData frozen at mount creates inconsistent data within Reports page",
+      "severity": "MEDIUM",
+      "file": "src/app/pages/Reports.tsx",
+      "line": 191,
+      "confidence": 0.90,
+      "autofix_class": "advisory",
+      "owner": "human",
+      "requires_verification": false,
+      "pre_existing": false,
+      "suggested_fix": "Add the `study-log-updated` custom event listener in Reports to invalidate a counter/version ref that `activityData` uses as a useMemo dependency. Alternatively, convert activityData from useMemo to useState + useEffect with a dependency on a version counter that increments on the event, so the area chart, activeDaysThisMonth, and insight text all refresh when new study actions are logged.",
+      "evidence": [
+        "Trigger: User loads Reports page, then completes a lesson (or quiz, or reading session) while staying on the Reports page, e.g., via a modal overlay or same-tab action that dispatches `study-log-updated` without causing a route change.",
+        "Step 1: `activityData` is computed via `useMemo(() => { const raw = getActionsPerDay(30); ... }, [])` — the empty dependency array means it is calculated once on mount and never recomputed.",
+        "Step 2: The `ActivityHeatmap` component independently listens for `study-log-updated` events and refreshes itself. The `ThisWeekSection` listens for `study-session-recorded`/`study-session-updated` and refreshes.",
+        "Step 3: But `activeDaysThisMonth` (line 205-213), the insight text (line 215-225), the area chart data (line 430-467), and `hasActivity` (line 232-237) all depend on `activityData` which remains frozen at mount-time values.",
+        "Step 4: User sees updated heatmap data but stale area chart (Study Activity Last 30 Days), stale insight headline, and stale activeDaysThisMonth value. The page presents inconsistent information from different points in time.",
+        "The same pattern applies to `completedLessons` (line 200, also `useMemo` with empty deps) and `lessonsChange` (line 185)."
+      ]
+    },
+    {
+      "title": "Composition: loadQuizAnalytics breaks established error feedback pattern — silent failure",
+      "severity": "MEDIUM",
+      "file": "src/app/pages/Reports.tsx",
+      "line": 168,
+      "confidence": 0.95,
+      "autofix_class": "advisory",
+      "owner": "human",
+      "requires_verification": false,
+      "pre_existing": false,
+      "suggested_fix": "Add a `quizAnalyticsError` state and a toast call in the catch block, matching the pattern used by `loadStudyNotes` (line 132-142), `loadCompletionRate` (line 144-154), and `loadQuizAttemptCount` (line 156-166). Also add an `InlineSectionError` or retry affordance so the user can recover when the '—' placeholder indicates a failure rather than just loading.",
+      "evidence": [
+        "Trigger: Dexie/IndexedDB fails to read quizAttempts or quizzes (quota exceeded, database blocked by another tab, corrupted store, or browser private mode restriction).",
+        "Step 1: `loadQuizAnalytics` calls `calculateQuizAnalytics()` which does `db.quizAttempts.toArray()` and `db.quizzes.toArray()` (analytics.ts lines 46-49).",
+        "Step 2: The Dexie call throws. The catch block at Reports.tsx line 172-174 executes: `console.error('Failed to load quiz analytics:', err)` — and nothing else.",
+        "Step 3: The other three load functions in the same component (`loadStudyNotes`, `loadCompletionRate`, `loadQuizAttemptCount`) all follow a consistent pattern: `toast.error(...)` for user notification + `setXxxError(...)` for inline error display + retry via `onRetry` callback.",
+        "Step 4: `loadQuizAnalytics` has none of these. `quizAnalytics` stays `null`, the hero stat shows '—' permanently, and the user has no indication that anything went wrong or how to recover. The only trace is a console.error the user never sees.",
+        "The pattern divergence is visible at lines 168-175 vs lines 132-166 in the same file."
+      ]
+    },
+    {
+      "title": "Assumption violation: Consistent insight template never fires for users with zero previous streak history",
+      "severity": "LOW",
+      "file": "src/lib/insights.ts",
+      "line": 19,
+      "confidence": 0.88,
+      "autofix_class": "advisory",
+      "owner": "human",
+      "requires_verification": true,
+      "pre_existing": false,
+      "suggested_fix": "Consider splitting the 'consistent' template into two: one for 'new record streak' (currentStreak > previousBestStreak, no previousBestStreak > 0 gate) and one for 'best streak yet' (previousBestStreak > 0). The test suite should add a case for `inputs({ activeDaysThisMonth: 18, currentStreak: 5, previousBestStreak: 0, totalCompletedLessons: 30 })` to document the expected behavior.",
+      "evidence": [
+        "Trigger: A new user with no prior streak history builds consistent habits — 20 active days this month, current streak of 7 days.",
+        "Step 1: `getLongestStreak()` returns 0 (no previous streak persisted to localStorage). This is passed as `previousBestStreak: 0` to `generateStudyInsight()`.",
+        "Step 2: Template 2 (the 'consistent' template at line 19) is evaluated: `i.activeDaysThisMonth > 15 && i.currentStreak > i.previousBestStreak && i.previousBestStreak > 0`. The first two conditions are true (20 > 15, 7 > 0) but the third gate `i.previousBestStreak > 0` is false.",
+        "Step 3: The template returns null. Evaluation continues to template 5 ('on fire' at line 37): `i.activeDaysThisMonth > 15` — true. Returns '20 active days this month. Your consistency is paying off.'",
+        "Step 4: The user sees the 'on fire' message instead of the 'consistent — best streak yet' message. This is technically correct (there is no previous record to beat) but deviates from what the condition name suggests. The test at insights.test.ts line 1221-1232 uses `previousBestStreak: 5, currentStreak: 8` and `previousBestStreak: 12, currentStreak: 3` — neither tests the zero-previous-streak edge case.",
+        "The template name 'best streak yet' implies the `previousBestStreak > 0` gate is intentional — you can't have a 'yet' without a previous value. However, the dual condition creates a gap where highly consistent new users are categorized differently than returning users with the same behavior."
+      ]
+    },
+    {
+      "title": "Data shape race: Quiz Avg hero stat flashes empty placeholder then resolves",
+      "severity": "LOW",
+      "file": "src/app/pages/Reports.tsx",
+      "line": 257,
+      "confidence": 0.88,
+      "autofix_class": "advisory",
+      "owner": "human",
+      "requires_verification": false,
+      "pre_existing": false,
+      "suggested_fix": "Either show a Skeleton/animated placeholder for the Quiz Avg stat while quizAnalytics is null (distinguishable from the '—' failure state), or preload quizAnalytics earlier in the data loading phase so it resolves before the first paint. The existing three synchronous hero stats (Lessons, Courses, Streak) render immediately with real values, making the Quiz Avg placeholder conspicuous.",
+      "evidence": [
+        "Trigger: User loads the Reports page. The hero block renders synchronously with three stats (Lessons, Courses, Streak) showing real values from localStorage/useMemo, plus Quiz Avg.",
+        "Step 1: `quizAnalytics` is initialized to `null` (line 123). It is loaded asynchronously via `loadQuizAnalytics()` in the useEffect at line 181.",
+        "Step 2: On first render, the hero renders `quizAnalytics ? ... : '—'` (line 257), producing '—'.",
+        "Step 3: After `calculateQuizAnalytics()` resolves (Dexie queries complete), `setQuizAnalytics(summary)` triggers a re-render and the stat updates to e.g., '78%'.",
+        "Step 4: The user sees a two-phase render: three real stats + one em-dash, then all four showing real data. The em-dash is not visually distinguishable from an error state (a permanent failure would also show '—').",
+        "Confirmed by the E2E test (reports-redesign.spec.ts line 27-33) which asserts only three of the four hero stats are visible, implicitly acknowledging the fourth may not be ready at assertion time."
+      ]
+    },
+    {
+      "title": "Testing gap: Empty state E2E test weakened — only checks h1 visibility, not empty state content",
+      "severity": "MEDIUM",
+      "file": "tests/e2e/reports-redesign.spec.ts",
+      "line": 90,
+      "confidence": 0.95,
+      "autofix_class": "advisory",
+      "owner": "human",
+      "requires_verification": false,
+      "pre_existing": false,
+      "suggested_fix": "Restore specific empty state assertions: check that the insight text shows the welcome/fingerprint message, that the compact heatmap renders (even if all-empty), that all four hero stats show zero/dash values, and that the section headers ('This Week', 'Courses', etc.) are visible. The test description says 'should show empty state message when no activity' but no empty state message is checked.",
+      "evidence": [
+        "Trigger: A CI run where the Reports page has a regression that breaks all content rendering below the h1.",
+        "Step 1: The old test asserted `page.getByText('No activity yet. Start studying to see your progress here.')` — a specific empty state message that verified the empty state component rendered correctly.",
+        "Step 2: The new test at line 92-95 only asserts `page.getByRole('heading', { name: 'Reports', level: 1 }).toBeVisible()` — checking that the h1 heading exists.",
+        "Step 3: This assertion would pass even if: the insight text is missing or wrong, the hero stats show NaN, the tabs fail to render, all sections crash silently, or the page is a blank white screen with just an h1.",
+        "Step 4: The test description still says 'should show empty state message when no activity' (line 90) but no empty state message is checked. The test name is now misleading about what it actually verifies.",
+        "The E2E spec also drops the assertion for 'Courses' hero stat label (the test at line 27-33 checks Lessons, Streak, and Quiz Avg but not Courses), leaving one hero stat unverified."
+      ]
+    },
+    {
+      "title": "Abuse case: Compact heatmap overflows hero card on tablet viewports producing inline scrollbar",
+      "severity": "LOW",
+      "file": "src/app/components/reports/ActivityHeatmap.tsx",
+      "line": 141,
+      "confidence": 0.75,
+      "autofix_class": "advisory",
+      "owner": "human",
+      "requires_verification": true,
+      "pre_existing": false,
+      "suggested_fix": "Reduce `totalWeeks` cap in compact mode or shrink cell size further (e.g., 10px + 1px gap = ~583px for 53 weeks). Alternatively, allow the compact heatmap's `overflow-x-auto` wrapper to handle overflow gracefully and verify visually that the scrollbar appearance inside the hero card is acceptable on a 768px viewport.",
+      "evidence": [
+        "Trigger: Full data (53 weeks of activity) viewed on a 768px tablet viewport.",
+        "Step 1: Compact grid style: `gridTemplateColumns: 'auto repeat(53, 12px)'` with `gap: 2px` = day-label-column (auto, ~28px with `text-[8px] pr-1`) + 53*12 + 52*2 = 28 + 636 + 104 = 768px minimum.",
+        "Step 2: The hero card has `rounded-[24px] border border-border/50 bg-card p-6` — with 24px padding on each side and the page having its own padding, the available content width inside the card is roughly `768 - (page-padding*2) - (card-padding*2)` = ~620px depending on the Layout sidebar state.",
+        "Step 3: 768px min-content > 620px available width. The heatmap's `overflow-x-auto -mx-1 px-1` wrapper enables horizontal scrolling, so the card does not break layout — but an inline horizontal scrollbar appears inside the hero card.",
+        "Step 4: The 'Today' indicator ring is hidden in compact mode (line 397-402 of the diff removes it), but the legend remains. On tablet, the compact heatmap+legend may feel cramped with a scrollbar in the middle of the page's hero identity zone.",
+        "Requires visual verification: the `overflow-x-auto` wrapper should contain the overflow, but the aesthetic of a scrollbar inside the hero card needs design review."
+      ]
+    }
+  ],
+  "residual_risks": [
+    "ThisWeekSection listens to 'study-session-recorded' and 'study-session-updated' events but not 'study-log-updated'. If lesson completions (which dispatch 'study-log-updated') are expected to update the weekly ring, they will not. This is probably by design (ThisWeekSection tracks timed sessions, not lesson completions) but worth explicit confirmation.",
+    "The Reports page's `loadQuizAnalytics` and `QuizAnalyticsDashboard`'s internal `calculateQuizAnalytics()` both query the same Dexie tables independently. On a slow device, the Quiz Analytics tab's own data fetch could lag behind the hero stat, showing different values briefly. The redundancy is minor but represents two Dexie table scans for the same data on page load.",
+    "Static `activeDaysThisMonth` computation from last-30-days activityData means that on the 1st-2nd of a month, activeDaysThisMonth will show 0-2 for almost all users because only 1-2 days of the current month fall within the 30-day window. The insight text (which uses activeDaysThisMonth in multiple templates) will understate recent activity at month boundaries.",
+    "The AIAnalyticsTab hero strip loads `monthlyStats` in a separate useEffect with `.catch(() => {})` — identical silent-failure pattern to the Reports page's loadQuizAnalytics. If `getAIUsageStats('monthly')` fails, the 'This Month' stat permanently shows '—'."
+  ],
+  "testing_gaps": [
+    "No test for insight template selection when `previousBestStreak === 0` with high active days and positive currentStreak (the 'consistent' template gate edge case).",
+    "The empty state E2E test no longer verifies any empty-state-specific content — only verifies the page heading exists.",
+    "No E2E or unit test for the `loadQuizAnalytics` error path — the silent catch is untested.",
+    "No test verifies that `activityData` refreshes (or intentionally does not refresh) when `study-log-updated` fires while the Reports page is mounted.",
+    "No visual regression test for the compact heatmap at 768px viewport with 53 weeks of data.",
+    "The unit test for `QuizAnalyticsDashboard` does not appear to test the new hero stat strip rendering (the existing test may mock the entire component away in the Reports page test)."
+  ]
+}

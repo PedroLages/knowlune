@@ -1,0 +1,227 @@
+{
+  "reviewer": "testing",
+  "findings": [
+    {
+      "title": "Pre-existing test FAILS after two-pass behavioral change — mock ignores scan options",
+      "severity": "BLOCKER",
+      "file": "src/lib/__tests__/scanAndPersist.test.ts",
+      "line": 249,
+      "confidence": 0.95,
+      "autofix_class": "manual",
+      "owner": "review-fixer",
+      "requires_verification": true,
+      "pre_existing": false,
+      "why_it_matters": "The 'should discover image files during scan' test (line 238) now fails with 'expected pdfs.length of 1 but got 3'. The two-pass scan calls scanDirectory twice: first with {includeImages:false} for content and second with {includeImages:true, maxDepth:0} for root-only images. But the mock implementation yields ALL declared files (including images) regardless of the options parameter. In pass 1, images leak into pdfFiles; in pass 2, all file types leak into imageFiles. The test was not updated for the two-pass split. Running `npx vitest run src/lib/__tests__/scanAndPersist.test.ts` confirms this failure.",
+      "evidence": [
+        {
+          "type": "test-failure-output",
+          "description": "Vitest output showing the failing assertion at line 249: expected pdfs.length of 1 but got 3, because the mock yields cover.jpg, banner.png, and notes.pdf all in pass 1 (includeImages:false is ignored by the mock)"
+        },
+        {
+          "type": "code-snippet",
+          "description": "The mock in setupScanMocks (line 86) uses a single mockImplementation that yields all files for every call, ignoring the options parameter (includeImages, maxDepth)",
+          "location": "src/lib/__tests__/scanAndPersist.test.ts:86-90"
+        },
+        {
+          "type": "code-reference",
+          "description": "After the diff, scanCourseFolder calls scanDirectory twice (lines 155 and 173) with different options, but the mock treats both calls identically",
+          "location": "src/lib/courseImport.ts:155,173"
+        }
+      ],
+      "suggested_fix": "Update setupScanMocks to use vi.fn().mockImplementationOnce() to return different results per call: first call yields only video+PDF files, second call yields only root-level image files. Alternatively, check scanDirectory.mock.calls to verify the first call included {includeImages:false} and the second call included {includeImages:true, maxDepth:0}."
+    },
+    {
+      "title": "Two-pass scan behavior completely untested — no call-parameter verification in any course import test",
+      "severity": "HIGH",
+      "file": "src/lib/__tests__/scanAndPersist.test.ts",
+      "line": 86,
+      "confidence": 0.92,
+      "autofix_class": "manual",
+      "owner": "review-fixer",
+      "requires_verification": true,
+      "pre_existing": false,
+      "why_it_matters": "All three course import test files (courseImport.test.ts, courseImport.integration.test.ts, scanAndPersist.test.ts) mock scanDirectory with a single mockImplementation that yields the same entries regardless of call parameters. After the diff, scanCourseFolder and scanCourseFolderFromHandle now call scanDirectory twice with different options. No test verifies: (1) that the first call receives {includeImages:false}, (2) that the second call receives {includeImages:true, maxDepth:0}, (3) that scanDirectory is called exactly twice. If someone accidentally reverted to a single scanDirectory call, or swapped the options, no existing test would catch it. This is the highest-risk gap because the two-pass split is the core behavioral change of this diff.",
+      "evidence": [
+        {
+          "type": "code-snippet",
+          "description": "The mock in setupScanMocks ignores call parameters — all scanDirectory calls yield the same files",
+          "location": "src/lib/__tests__/scanAndPersist.test.ts:86-90"
+        },
+        {
+          "type": "code-snippet",
+          "description": "Same pattern in setupSuccessfulImport",
+          "location": "src/lib/__tests__/courseImport.integration.test.ts:51-54"
+        },
+        {
+          "type": "code-snippet",
+          "description": "Same pattern in courseImport.test.ts — scanDirectory mock is a simple async generator yielding all files",
+          "location": "src/lib/__tests__/courseImport.test.ts:85-89"
+        },
+        {
+          "type": "code-reference",
+          "description": "The two-pass calls in scanCourseFolder — first pass with {includeImages:false}, second with {includeImages:true, maxDepth:0}",
+          "location": "src/lib/courseImport.ts:155,173"
+        }
+      ],
+      "suggested_fix": "In each test helper (setupScanMocks, setupSuccessfulImport, and inline mocks), use vi.fn().mockImplementationOnce() for two sequential calls: first yields only video+PDF files, second yields only root-level image files. Alternatively, use vi.fn().mockImplementation((...args) => { if (args[2]?.includeImages === false) yield videosAndPDFs; else yield rootImages; }) — a parameter-aware mock."
+    },
+    {
+      "title": "Core behavioral fix (subdirectory image exclusion) has zero test coverage in course import context",
+      "severity": "HIGH",
+      "file": "src/lib/courseImport.ts",
+      "line": 173,
+      "confidence": 0.90,
+      "autofix_class": "manual",
+      "owner": "review-fixer",
+      "requires_verification": true,
+      "pre_existing": false,
+      "why_it_matters": "The declared intent of the diff is to 'filter cover image selection to root-folder images only.' The maxDepth:0 parameter on the second scan pass is the mechanism. While fileSystem.test.ts has 4 tests for the maxDepth feature in isolation, no course-import-level test validates the end-to-end behavior: that when a course folder has images in both root and subdirectory, only root images appear in scanned.images. Without this test, a regression removing maxDepth:0 from the second pass would not be caught by any course import test. The new maxDepth tests in fileSystem.test.ts verify the mechanism works but don't verify it's correctly applied in the course import pipeline.",
+      "evidence": [
+        {
+          "type": "code-snippet",
+          "description": "The maxDepth feature was added specifically for the two-pass image filtering in course import, but the maxDepth tests only test scanDirectory in isolation with simple mock structures",
+          "location": "src/lib/__tests__/fileSystem.test.ts:197-289"
+        },
+        {
+          "type": "code-reference",
+          "description": "The second pass (line 173) is where maxDepth:0 is applied — no course import test verifies this parameter is passed",
+          "location": "src/lib/courseImport.ts:173"
+        },
+        {
+          "type": "missing-test",
+          "description": "No test anywhere creates a scenario with root-level images + subdirectory images and verifies only root images are collected for cover selection"
+        }
+      ],
+      "suggested_fix": "Add a test to scanAndPersist.test.ts (or courseImport.test.ts) that: (1) sets up scanDirectory to return a subdirectory image on the first call and a root image on the second call (via mockImplementationOnce), (2) calls scanCourseFolder or importCourseFromFolder, (3) asserts scanned.images contains only the root image and NOT the subdirectory image."
+    },
+    {
+      "title": "scanCourseFolderFromHandle two-pass changes have zero test coverage",
+      "severity": "MEDIUM",
+      "file": "src/lib/courseImport.ts",
+      "line": 607,
+      "confidence": 0.80,
+      "autofix_class": "manual",
+      "owner": "review-fixer",
+      "requires_verification": true,
+      "pre_existing": true,
+      "why_it_matters": "scanCourseFolderFromHandle (used by BulkImportDialog for batch import) received the same two-pass split as scanCourseFolder, but has zero unit or integration tests. No test file in the repo references it. While the pre-existing lack of tests predates this diff, the diff adds new behavioral logic (two passes with different options, cancellation checks in the second pass) to an already-untested function. The bulk import path is now doubly risky: all the same gaps as scanCourseFolder (two-pass verification, subdirectory image exclusion) plus no test infrastructure at all.",
+      "evidence": [
+        {
+          "type": "grep-result",
+          "description": "No test file references scanCourseFolderFromHandle — only BulkImportDialog.tsx and courseImport.ts itself",
+          "location": "grep -rl scanCourseFolderFromHandle src/ --include='*.ts' --include='*.tsx'"
+        },
+        {
+          "type": "code-reference",
+          "description": "The second scan pass (line 621) with {includeImages:true, maxDepth:0} and cancellation check is completely untested",
+          "location": "src/lib/courseImport.ts:620-627"
+        }
+      ],
+      "suggested_fix": "Add tests for scanCourseFolderFromHandle in a new or existing test file. At minimum: (1) verify it calls scanDirectory with {includeImages:false} then {includeImages:true, maxDepth:0}, (2) verify root-only image collection, (3) verify cancellation during second pass. Mark as pre-existing tech debt filed for a follow-up story if the fix is too large for this diff."
+    },
+    {
+      "title": "Tests pass silently with spurious imageFiles content (false confidence)",
+      "severity": "MEDIUM",
+      "file": "src/lib/__tests__/courseImport.test.ts",
+      "line": 85,
+      "confidence": 0.75,
+      "autofix_class": "manual",
+      "owner": "review-fixer",
+      "requires_verification": true,
+      "pre_existing": false,
+      "why_it_matters": "Tests in courseImport.test.ts and courseImport.integration.test.ts only set up video and PDF files (no images). With the two-pass change, the second pass yields these same files into imageFiles (because the mock ignores includeImages:true). Since no test asserts on imageFiles or scanned.images, this corruption goes undetected. In production, non-image files leaking into imageFiles would appear as invalid cover options in the import wizard. The tests provide false confidence by passing despite silently incorrect behavior.",
+      "evidence": [
+        {
+          "type": "code-snippet",
+          "description": "The first test in courseImport.test.ts yields [videoHandle, pdfHandle] — these leak into imageFiles in pass 2 but the test only checks videoCount and pdfCount",
+          "location": "src/lib/__tests__/courseImport.test.ts:85-108"
+        },
+        {
+          "type": "code-snippet",
+          "description": "setupSuccessfulImport in the integration test yields only video+PDF — no image files are set up, so imageFiles silently fills with non-image handles",
+          "location": "src/lib/__tests__/courseImport.integration.test.ts:48-55"
+        },
+        {
+          "type": "code-reference",
+          "description": "imageFiles are used downstream in persistScannedCourse for author photo detection (line 476) and cover image selection — non-image handles would cause silent failures",
+          "location": "src/lib/courseImport.ts:476"
+        }
+      ],
+      "suggested_fix": "For tests that don't involve images, assert that scanned.images or imageFiles is empty after the scan. This ensures the second pass doesn't silently populate imageFiles with non-image entries when there are no images in the folder."
+    },
+    {
+      "title": "Cancellation during second scan pass is untested",
+      "severity": "MEDIUM",
+      "file": "src/lib/courseImport.ts",
+      "line": 174,
+      "confidence": 0.70,
+      "autofix_class": "manual",
+      "owner": "review-fixer",
+      "requires_verification": true,
+      "pre_existing": false,
+      "why_it_matters": "Both scanCourseFolder (line 174) and scanCourseFolderFromHandle (line 622) have cancellation checks inside the second (image-only) scan pass. The existing cancellation tests only exercise the directory picker cancellation or cancellation before scanning. No test simulates cancelRequested being set between pass 1 and pass 2, or during the second pass. Without a test, a bug in the second-pass cancellation check (wrong store access, missing confirmCancellation call) would go undetected until triggered by a user in production.",
+      "evidence": [
+        {
+          "type": "code-snippet",
+          "description": "Cancellation check in the second scan pass of scanCourseFolder",
+          "location": "src/lib/courseImport.ts:174-177"
+        },
+        {
+          "type": "code-snippet",
+          "description": "Cancellation check in the second scan pass of scanCourseFolderFromHandle",
+          "location": "src/lib/courseImport.ts:622-624"
+        },
+        {
+          "type": "code-reference",
+          "description": "Existing cancellation test only triggers cancelRequested before the picker call (handler picks up before scanning begins)",
+          "location": "src/lib/__tests__/courseImport.test.ts:153-162"
+        }
+      ],
+      "suggested_fix": "Add a test that: (1) calls scanCourseFolder with a mock that yields files in the first pass, (2) sets cancelRequested in the store between pass 1 and pass 2, (3) verifies the cancellation is handled (ImportError thrown or error status returned). Similarly for scanCourseFolderFromHandle."
+    }
+  ],
+  "residual_risks": [
+    {
+      "risk": "Bulk import path (scanCourseFolderFromHandle) has zero test coverage pre-existing and now has new untested two-pass behavior — the BulkImportDialog UI calls this function directly and may show incorrect cover image candidates if the two-pass logic is wrong",
+      "severity": "MEDIUM",
+      "mitigation": "Add a test suite for scanCourseFolderFromHandle covering at minimum: two-pass parameter verification, root-only image collection, cancellation in second pass, and duplicate detection"
+    },
+    {
+      "risk": "The extractPdfMetadata mock in course import tests returns {pageCount:10} for any file handle — if non-PDF files leak into pdfFiles (as happens when the mock yields images in pass 1), the test still passes because extractPdfMetadata doesn't actually read the file. This masks the image-to-PDF misclassification.",
+      "severity": "LOW",
+      "mitigation": "Consider mocking extractPdfMetadata to throw for non-PDF files, or use a type-aware mock that validates the handle's name extension"
+    },
+    {
+      "risk": "The maxDepth tests in fileSystem.test.ts redefine createMockFileHandle/createMockDirectoryHandle locally within the describe block, duplicating the top-level helpers — if the top-level helpers get a bug fix or new method, the local copies won't benefit",
+      "severity": "LOW",
+      "mitigation": "Refactor the maxDepth tests to use the shared helper functions defined at the top of fileSystem.test.ts (lines 100-134)"
+    }
+  ],
+  "testing_gaps": [
+    {
+      "area": "courseImport single-import path",
+      "gap": "Two-pass scan parameter verification",
+      "impact": "Cannot detect regression if two-pass split is accidentally reverted or options are swapped"
+    },
+    {
+      "area": "courseImport single-import path",
+      "gap": "Subdirectory image exclusion (end-to-end)",
+      "impact": "Core behavioral fix has no integration-level test coverage"
+    },
+    {
+      "area": "courseImport single-import path",
+      "gap": "Cancellation during second scan pass",
+      "impact": "Edge-case error path is untested"
+    },
+    {
+      "area": "courseImport bulk-import path (scanCourseFolderFromHandle)",
+      "gap": "All test coverage — function is completely untested",
+      "impact": "Two-pass changes, cancellation, duplicate detection, and error handling are all unverified"
+    },
+    {
+      "area": "courseImport single-import path",
+      "gap": "imageFiles emptiness assertion for non-image imports",
+      "impact": "Silent corruption of imageFiles when no images exist in the folder"
+    }
+  ]
+}

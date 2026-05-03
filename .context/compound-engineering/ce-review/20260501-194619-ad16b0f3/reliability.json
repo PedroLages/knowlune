@@ -1,0 +1,81 @@
+{
+  "reviewer": "reliability",
+  "findings": [
+    {
+      "severity": "HIGH",
+      "confidence": 0.85,
+      "file": "/Volumes/SSD/Dev/Apps/Knowlune/src/lib/vaultCredentials.ts",
+      "line": 166,
+      "title": "Supabase Edge Function invoke has no timeout — will hang indefinitely on slow dependency",
+      "description": "The `readCredentialWithStatus` function calls `supabase.functions.invoke(...)` without passing the `timeout` or `signal` options that `@supabase/functions-js` 2.104.0 (installed) supports. Browsers do not apply a default fetch timeout, so a slow or hanging Edge Function (cold start, network stall, backend deadlock) will block the calling thread indefinitely. Since `getDecryptedApiKeyForProvider` is called from React components during mount (e.g., `ProviderKeyAccordion.tsx:90`, `AIConfigurationSettings.tsx:172`), this can freeze the UI until the browser eventually times out the underlying TCP connection (often 30-300s, browser-dependent).",
+      "recommendation": "Pass `timeout: 10_000` (or an AbortSignal from the caller) to `supabase.functions.invoke()` in all four Vault operations (`readCredentialWithStatus`, `storeCredentialWithStatus`, `checkCredential`, `deleteCredential`). 10s is generous for a function that reads a single row from Vault.",
+      "fix_sketch": "// In vaultCredentials.ts readCredentialWithStatus: const { data, error } = await supabase.functions.invoke( `${FUNCTION_NAME}/read-credential${buildQuery(credentialType, credentialId)}`, { method: 'GET', timeout: 10_000 } )"
+    },
+    {
+      "severity": "MEDIUM",
+      "confidence": 0.80,
+      "file": "/Volumes/SSD/Dev/Apps/Knowlune/src/lib/aiConfiguration.ts",
+      "line": 531,
+      "title": "Vault fallback has no retry — transient network error returns null, forcing key re-entry",
+      "description": "When `readCredential` fails due to a transient network error (DNS blip, load balancer hiccup, Edge Function cold start timeout), the Vault fallback returns null immediately with no retry. The caller receives null, interprets it as 'no key configured', and the user sees an error message prompting them to re-enter their API key. A single retry with a short delay (e.g., 1s backoff) would handle the vast majority of transient failures in the most latency-sensitive code path in the app (AI API key resolution).",
+      "recommendation": "Wrap the `readCredential` call in a lightweight retry helper: max 2 attempts, 1s delay between attempts. Do not retry on 401/403 (use the `readCredentialWithStatus` discriminated result to skip retries on `auth-failed`).",
+      "fix_sketch": "// Instead of const vaultSecret = await readCredential('ai-provider', provider) // Use: const vaultSecret = await readCredentialWithRetry('ai-provider', provider, { maxAttempts: 2, delayMs: 1000 })"
+    },
+    {
+      "severity": "MEDIUM",
+      "confidence": 0.78,
+      "file": "/Volumes/SSD/Dev/Apps/Knowlune/src/app/components/figma/ProviderKeyAccordion.tsx",
+      "line": 80,
+      "title": "Concurrent Vault reads for all providers on status refresh create request burst",
+      "description": "`ProviderKeyAccordion` calls `getDecryptedApiKeyForProvider()` for every AI provider via `Promise.all` (line 80-98). If local decryption fails for multiple providers (e.g., CryptoKey rotation), each triggers the Vault fallback path, which calls `readCredential` (an Edge Function invoke). For 8+ providers, this creates 8 concurrent HTTP requests to a single Edge Function. Additionally, each successful Vault read triggers a fire-and-forget `saveProviderApiKey` → `storeCredential` write. There is no in-flight deduplication, request coalescing, or concurrency limit. During an Edge Function cold start, this burst could cause some requests to time out while others succeed, leading to inconsistent provider statuses.",
+      "recommendation": "Add a short-lived (e.g., 30s TTL) in-memory promise cache for `readCredential` calls keyed by `(credentialType, credentialId)`. Alternatively, limit concurrency to 3 with a semaphore or use `Promise.allSettled` with staggered start delays."
+    },
+    {
+      "severity": "LOW",
+      "confidence": 0.72,
+      "file": "/Volumes/SSD/Dev/Apps/Knowlune/src/lib/aiConfiguration.ts",
+      "line": 576,
+      "title": "Fire-and-forget storeCredential in saveProviderApiKey hides Vault write failures",
+      "description": "`saveProviderApiKey` (line 576) calls `storeCredential` as fire-and-forget (`.catch()` only logs). The function returns before confirming the Vault write succeeded. In the Vault fallback path (line 536), `saveProviderApiKey` is called after reading from Vault — making the Vault write a no-op re-write of data already present. The critical work (local re-encryption + localStorage write) is awaited. However, the fire-and-forget pattern means: (1) there is no way for callers to await the full write cycle, and (2) if this pattern is used elsewhere for new-secret writes (not re-writes), a failed Vault write would mean the secret exists only in localStorage with no cross-device backup — with no user-visible error.",
+      "recommendation": "For the Vault fallback re-write path specifically, this is acceptable since the data originated from Vault. For new-secret paths, prefer `storeCredentialWithStatus` and surface the `ok: false` result to the user via a toast."
+    },
+    {
+      "severity": "LOW",
+      "confidence": 0.65,
+      "file": "/Volumes/SSD/Dev/Apps/Knowlune/src/lib/aiConfiguration.ts",
+      "line": 507,
+      "title": "decryptData failure modes are not differentiated — all caught as generic 'failed to decrypt'",
+      "description": "`decryptData` (crypto.ts) can throw for several distinct reasons: invalid hex format (`hexToBytes`), wrong CryptoKey (`crypto.subtle.decrypt`), IndexedDB unavailable during key load (`getSessionKey`), or Web Crypto API unavailable (`crypto.subtle.generateKey`). All are caught by the same `catch` block and logged as 'Failed to decrypt provider key'. The Vault fallback is a reasonable next step regardless, so this is not a functional bug — but a persistent failure from 'Web Crypto API unavailable' will silently retry the Vault path on every call with no circuit breaker, adding unnecessary Edge Function traffic.",
+      "recommendation": "Consider adding a short-lived (5 minute) in-memory flag when `crypto.subtle` is detected as unavailable, to skip the Vault fallback on subsequent calls. This is a low-priority optimization."
+    }
+  ],
+  "residual_risks": [
+    {
+      "risk": "Session refresh during Vault read adds latency to already-blocking call",
+      "detail": "`readCredentialWithStatus` calls `supabase.auth.getUser()` which, with `autoRefreshToken: true`, may trigger a session refresh (network call to Supabase Auth) before the Vault broker call. If the refresh token is expired, the function correctly returns `unauthenticated`. The nested try/catch in `getDecryptedApiKeyForProvider` handles this correctly. Risk: the added auth refresh latency compounds with the missing Vault timeout, making the UI freeze longer."
+    },
+    {
+      "risk": "No circuit breaker on repeated Vault failures",
+      "detail": "If the Vault Edge Function is persistently down (500s, timeouts), every call to `getDecryptedApiKeyForProvider` will attempt the Vault fallback (if hasEncryptedData is true) and fail. There is no circuit breaker or failure cache. On a settings page that polls provider statuses on config change events, this could generate redundant failing requests. Mitigated by: the function is typically called once per provider per page mount, not in a polling loop."
+    },
+    {
+      "risk": "Vault re-encrypt is redundant for keys originated from Vault",
+      "detail": "In the Vault fallback path, `saveProviderApiKey` calls both `encryptData` (local storage) and `storeCredential` (Vault write). The Vault write is a no-op since the secret just came from Vault. This doubles the Vault traffic for the same outcome. Minor, but worth noting for cost/performance awareness."
+    }
+  ],
+  "testing_gaps": [
+    {
+      "gap": "No test coverage for Vault Edge Function timeout or slow responses",
+      "detail": "The Vault fallback path (lines 525-548) is not tested for the case where `readCredential` hangs (no timeout) or takes 10+ seconds. Unit tests should mock `readCredential` to simulate slow responses and verify the function degrades gracefully (returns null within a bounded time)."
+    },
+    {
+      "gap": "No test for concurrent Vault fallback calls",
+      "detail": "The `ProviderKeyAccordion` `Promise.all` call on mount is not tested for the case where multiple providers simultaneously trigger Vault fallback. A unit or integration test should verify that concurrent `readCredential` calls don't cause a request storm and that results are correctly associated with their respective providers."
+    },
+    {
+      "gap": "No test for Vault 500 error in the fallback path",
+      "detail": "The `getDecryptedApiKeyForProvider` tests should include a case where `readCredential` returns null (simulating a 500 error) and verify that the function returns null without throwing, and that the correct warning is logged.",
+      "location": "src/lib/__tests__/aiConfiguration.test.ts"
+    }
+  ]
+}

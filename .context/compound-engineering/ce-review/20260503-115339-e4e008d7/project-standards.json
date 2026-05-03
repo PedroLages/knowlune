@@ -1,0 +1,89 @@
+{
+  "reviewer": "project-standards",
+  "findings": [
+    {
+      "severity": "MEDIUM",
+      "id": "PS-001",
+      "title": "Missing useLessonChromeStore mock in UnifiedLessonPlayer tests (new subscription unexercised)",
+      "file": "src/app/pages/__tests__/UnifiedLessonPlayer.test.tsx",
+      "standard": "Test coverage for new logic",
+      "detail": "The new `const storeAutoPlay = useLessonChromeStore(s => s.autoPlay)` subscription (line 98 of UnifiedLessonPlayer.tsx) has zero unit test coverage. The existing test file has no mock for `useLessonChromeStore` (the store auto-initializes with defaults in jsdom, so tests don't crash, but the new OR-combine logic is never exercised). The plan's Unit 2 explicitly lists test scenarios for `shouldAutoPlay` under both store ON/OFF and router state combinations — none are implemented.",
+      "suggestion": "Add tests for `shouldAutoPlay` computation: store ON + no router state, store OFF + no router state, store OFF + router state with autoPlay flag, store ON + router state with autoPlay flag. Also test the router state clearing effect scoped to parseLocationFlag to prevent infinite loops."
+    },
+    {
+      "severity": "MEDIUM",
+      "id": "PS-002",
+      "title": "No tests verifying tooltips for theater mode, pomodoro, QA chat buttons",
+      "file": "src/app/components/course/__tests__/LessonHeaderTools.test.tsx",
+      "standard": "Test coverage for new UI behavior",
+      "detail": "The plan's Unit 3 lists test scenarios for tooltips on theater mode ('Enter theater mode' / 'Exit theater mode'), pomodoro ('Focus Timer'), and QA chat ('Ask AI'). None of these tooltip-verification tests were added. The test file mocks PomodoroTimer and QAChatPanel as simple divs, so tooltip rendering inside those components is invisible to the test, but the plan's approach of prop-passing tooltipLabel means the prop should at least be verified as passed.",
+      "suggestion": "Add tests verifying: (1) tooltipLabel='Focus Timer' is passed to PomodoroTimer, (2) tooltipLabel='Ask AI' is passed to QAChatPanel, (3) the theater mode toggle is wrapped in a Tooltip with correct dynamic text."
+    },
+    {
+      "severity": "LOW",
+      "id": "PS-003",
+      "title": "Theater mode toggle missing aria-pressed for state indication",
+      "file": "src/app/components/course/LessonHeaderTools.tsx",
+      "standard": "WCAG 2.1 AA+ — ARIA state attributes on toggle buttons",
+      "detail": "The theater mode toggle (lines 154-173) uses icon swapping (Maximize2/Minimize2) and a dynamic aria-label to convey state, but lacks aria-pressed. The reading mode and auto-play toggles both have aria-pressed. Without aria-pressed, screen readers must infer toggle state from the label text alone, which is less robust.",
+      "suggestion": "Add `aria-pressed={isTheater}` to the theater mode toggle Button for consistency with the reading mode and auto-play toggles."
+    },
+    {
+      "severity": "LOW",
+      "id": "PS-004",
+      "title": "No E2E test for auto-advance integration with auto-play",
+      "file": "tests/e2e/lesson-header-toolbar-merge.spec.ts (or similar)",
+      "standard": "E2E coverage for integration paths",
+      "detail": "The plan's Unit 2 describes E2E coverage for the auto-advance to next-lesson to auto-play integration path as a Chromium test. The plan says 'the implementer should add it to the existing tests/e2e/lesson-header-toolbar-merge.spec.ts or create tests/e2e/lesson-player.spec.ts as appropriate.' No such E2E test was added.",
+      "suggestion": "Add an E2E test that seeds a course with autoPlay ON in localStorage, completes a lesson, waits for auto-advance, and verifies the next lesson's video element starts playing."
+    },
+    {
+      "severity": "LOW",
+      "id": "PS-005",
+      "title": "shouldAutoPlay included in useEffect dependency array despite not used in condition body",
+      "file": "src/app/pages/UnifiedLessonPlayer.tsx",
+      "standard": "React best practices — clean dependency arrays",
+      "detail": "The clearing effect (line 104) has `shouldAutoPlay` in its dependency array, but the condition body only uses `parseLocationFlag(location.state, 'autoPlay')`. The plan acknowledges this is 'harmless' since shouldAutoPlay is stable when storeAutoPlay is ON, but the dependency is misleading — it suggests the effect needs shouldAutoPlay to function correctly when it doesn't.",
+      "suggestion": "Remove `shouldAutoPlay` from the dependency array. The effect only needs `location.pathname`, `location.state`, and `navigate` in practice. If eslint-plugin-react-hooks demands shouldAutoPlay, replace it with a comment explaining the exclusion."
+    }
+  ],
+  "residual_risks": [
+    {
+      "risk": "Nested Radix asChild composition fragility",
+      "detail": "PomodoroTimer wraps PopoverTrigger and TooltipTrigger via nested `asChild`, and QAChatPanel wraps SheetTrigger/PopoverTrigger and TooltipTrigger similarly. While the plan investigated this and deemed it acceptable (TooltipTrigger asChild over PopoverTrigger asChild over Button works when all in the same render tree), nested asChild chains are fragile with Radix primitives and can break on library upgrades.",
+      "mitigation": "The prop-based approach (tooltipLabel) keeps the tooltip rendering internal to each component, which is the better pattern. Monitor Radix changelogs for breaking changes in TooltipTrigger/PopoverTrigger composition."
+    },
+    {
+      "risk": "storeAutoPlay = true causes shouldAutoPlay = true for ALL lesson types including PDF",
+      "detail": "When autoPlay is ON in the store, shouldAutoPlay is always true. The autoplay prop is passed to LessonContentRenderer which only forwards it to LocalVideoContent (not YouTube, not PDF). This is safe for now, but if future content types consume the autoplay prop, PDF lessons would incorrectly receive autoplay=true.",
+      "mitigation": "No action needed currently (per plan scope: 'No changes to PDF content'). Future plan should add content-type guard if autoplay semantics expand beyond local video."
+    },
+    {
+      "risk": "Browser autoplay policy on initial page load (no user gesture)",
+      "detail": "When storeAutoPlay is ON and user navigates directly to a lesson URL (not via auto-advance), there is no user gesture. VideoPlayer's existing useEffect tries unmuted first, then falls back to muted. On Chromium, this will result in muted autoplay on first load — acceptable but differs from the UX expectation of unmuted autoplay.",
+      "mitigation": "VideoPlayer's existing mute-fallback behavior handles this gracefully. Users can unmute via the volume control. Noted in the plan's risks table."
+    }
+  ],
+  "testing_gaps": [
+    {
+      "gap": "No unit tests for shouldAutoPlay OR-combine logic in UnifiedLessonPlayer",
+      "severity": "MEDIUM",
+      "detail": "The plan's Unit 2 lists 7 test scenarios for shouldAutoPlay computation. Zero were implemented. The existing test file has no useLessonChromeStore mock."
+    },
+    {
+      "gap": "No unit tests for new tooltips (theater mode, pomodoro, QA chat) in LessonHeaderTools tests",
+      "severity": "MEDIUM",
+      "detail": "The plan's Unit 3 lists 6 test scenarios for tooltip verification. Only auto-play toggle tests were added (for aria-pressed and aria-label). Theater mode tooltip, PomodoroTimer tooltipLabel prop, and QAChatPanel tooltipLabel prop have no test coverage."
+    },
+    {
+      "gap": "No E2E test for auto-advance → auto-play integration path",
+      "severity": "LOW",
+      "detail": "The plan explicitly calls for a Chromium E2E test covering the auto-advance-to-next-lesson-to-auto-play flow. No E2E spec was added or modified."
+    },
+    {
+      "gap": "No test for infinite loop guard in router state clearing effect",
+      "severity": "LOW",
+      "detail": "The plan's Unit 2 lists 'Edge case: Page refresh with autoPlay ON doesn't re-trigger playback' and 'Edge case: Router state clearing effect does NOT infinite-loop when storeAutoPlay is ON' as test scenarios. Neither is implemented."
+    }
+  ]
+}

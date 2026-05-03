@@ -1,0 +1,171 @@
+{
+  "reviewer": "testing",
+  "findings": [
+    {
+      "severity": "HIGH",
+      "confidence": 0.95,
+      "category": "missing_tests",
+      "title": "New LibraryTabBar component has no unit or integration tests",
+      "why_it_matters": "LibraryTabBar is the primary IA control for the entire Library page overhaul. It has 4 conditional branches (active vs inactive tab styling per tab), click handlers with callbacks, aria-selected state, focus-visible accessibility outlines, and a role='tablist' ARIA contract. None of these behaviors are verified by any test. The component is 46 lines of pure presentational logic with map-rendered buttons -- it is trivially unit-testable with React Testing Library or even plain DOM assertions, but no test file exists for it.",
+      "evidence": [
+        "src/app/components/library/LibraryTabBar.tsx (NEW file, 46 lines, zero test coverage)",
+        "No LibraryTabBar.test.tsx, LibraryTabBar.spec.ts, or LibraryTabBar.test.ts exists anywhere in the repo",
+        "No E2E test clicks a tab button to verify switching -- all tests navigate with ?tab=browse URL param instead"
+      ],
+      "suggested_fix": "Add a libreact component test for LibraryTabBar that verifies: (1) all 4 tabs render with correct labels, (2) active tab has aria-selected='true' with bg-card class, (3) inactive tabs have aria-selected='false' with text-muted-foreground class, (4) clicking a tab fires onChange with the correct tab id, (5) tablist has aria-label='Library sections', (6) focus-visible outline renders on keyboard focus"
+    },
+    {
+      "severity": "HIGH",
+      "confidence": 0.90,
+      "category": "missing_tests",
+      "title": "Tab state persistence logic (URL param priority, localStorage fallback, default) has zero tests",
+      "why_it_matters": "The tab initialization in Library.tsx (lines 138-150) implements a 3-tier fallback: URL param `?tab=` overrides localStorage key `knowlune-library-tab`, which overrides the hardcoded default `'continue'`. This is a state machine with multiple branches. No test exercises any of the non-browse paths. `handleTabChange` writes to localStorage on every tab switch, and this write side-effect is also untested. A regression that breaks URL param parsing, localStorage reading, or the default fallback would go undetected. The localStorage key `knowlune-library-tab` appears nowhere in the test suite.",
+      "evidence": [
+        "src/app/pages/Library.tsx lines 138-145: useState initializer with urlTab, localStorage.getItem, and default 'continue'",
+        "src/app/pages/Library.tsx lines 146-149: useCallback handleTabChange writing to localStorage.setItem",
+        "Zero test files reference 'knowlune-library-tab' localStorage key",
+        "All 16 test files exclusively use ?tab=browse; no test navigates to ?tab=continue, ?tab=collections, or ?tab=history",
+        "No test seeds localStorage key 'knowlune-library-tab' to test the fallback path"
+      ],
+      "suggested_fix": "Add E2E tests for: (1) ?tab=collections sets Collections as active tab on load, (2) localStorage fallback works when no URL param present (seed 'knowlune-library-tab': 'collections', navigate to /library, assert collections tab panel is visible), (3) invalid URL param falls through to localStorage then default, (4) clicking a tab writes to localStorage with correct key and value"
+    },
+    {
+      "severity": "HIGH",
+      "confidence": 0.85,
+      "category": "missing_tests",
+      "title": "test.fixme in story-116-03.spec.ts eliminates all shelf integration verification",
+      "why_it_matters": "The only E2E spec written to validate E116-S03 acceptance criteria (shelf headings as h2, shelf-row scrollers, cards per row, 'See all' links, no console errors) was changed from `test(...)` to `test.fixme(...)` meaning it is now skipped during test runs. E116-S03 is marked 'done' in sprint-status.yaml despite having zero running tests that prove shelves render correctly on the Library page. The shelves were relocated inside the `libraryTab === 'continue'` conditional panel, and the test that proved they render at all is now silently skipped.",
+      "evidence": [
+        "tests/e2e/story-116-03.spec.ts line 17: test.fixme('renders two shelves with headings, scrollers, and cards', ...)",
+        "docs/implementation-artifacts/sprint-status.yaml: '116-3-library-page-shelf-integration: done'",
+        "No other test file verifies shelf headings, shelf scrollers, shelf cards, or 'See all' links render on the Library page"
+      ],
+      "suggested_fix": "Either (1) fix the shelf rendering issue that caused the test to be marked fixme and re-enable it, updating it to navigate to /library?tab=continue, or (2) write a new spec that proves AC-2, AC-3, AC-4, AC-8, and AC-9 for the shelf integration. mark E116-S03 as 'done/pending-test-repair' until coverage is restored."
+    },
+    {
+      "severity": "HIGH",
+      "confidence": 0.85,
+      "category": "missing_tests",
+      "title": "Continue, Collections, and History tabs have zero direct E2E test coverage",
+      "why_it_matters": "The Library page refactor moved content from unconditional rendering into 4 conditional tab panels. Only the Browse tab has any coverage via existing tests (all navigating with ?tab=browse). The Continue, Collections, and History tabs have NO tests at all. Their data-testid wrappers (library-tab-continue, library-tab-collections, library-tab-history) appear zero times in the entire test suite. This means the following features are only proven to work when they were monolithic -- there is no proof they still work inside their new tab context: the media hero and shelves (Continue), shelf management and ABS collections (Collections), yearly stats and recently finished list (History).",
+      "evidence": [
+        "src/app/pages/Library.tsx: data-testid='library-tab-continue' (line 744), data-testid='library-tab-collections' (line 1057), data-testid='library-tab-history' (line 1124)",
+        "grep for these data-testids in tests/ returns 0 results",
+        "All 16 test files use ?tab=browse; zero test files exercise ?tab=continue, ?tab=collections, or ?tab=history",
+        "History tab (lines 1123-1221): stats cards + recently finished list + empty state -- completely untested",
+        "Collections tab (lines 1056-1118): Manage Shelves button, Browse ABS Collections button, SmartGroupedView, empty state -- completely untested",
+        "Continue tab content (LibraryFormatModeTabs, LibraryMediaHero, ReadingQueue, DailyHighlightsStrip) is only tested indirectly via old monolithic tests that predate the tab refactor"
+      ],
+      "suggested_fix": "Add smoke tests for each tab: (1) /library?tab=continue: assert library-tab-continue is visible, format tabs render, hero or empty state renders, (2) /library?tab=collections: assert manage-shelves-inline button is visible, SmartGroupedView or empty state renders, (3) /library?tab=history: assert 3 stats cards render, recently finished section renders or shows empty state"
+    },
+    {
+      "severity": "MEDIUM",
+      "confidence": 0.75,
+      "category": "missing_tests",
+      "title": "New ebooks-only fallback in media-first format default logic is untested",
+      "why_it_matters": "Library.tsx lines 380-391 changed the format default from always setting ['audiobook'] to a two-path fallback: prefer audiobooks if present, else fall back to ebooks. The ebooks-only path (user has only epub/pdf books, no audiobooks) is not tested. A bug in the ebooks filter assignment (setting wrong format array, missing the format filter entirely, or crashing on empty books array) would go undetected.",
+      "evidence": [
+        "src/app/pages/Library.tsx lines 380-391: useEffect with hasAudiobooks check and ebook fallback",
+        "The useEffect dependency array changed from [books.length, filters.format, setFilter] to [books.length, filters.format, setFilter, books]",
+        "No test seeds only ebook books (no audiobooks) and verifies the format filter defaults to ['epub', 'pdf']"
+      ],
+      "suggested_fix": "Add test that seeds only ebook-format books (no audiobooks), navigates to /library, and asserts that the format filter is set to ['epub', 'pdf'] or that ebook book cards are visible (while audiobook-only content is not)"
+    },
+    {
+      "severity": "MEDIUM",
+      "confidence": 0.70,
+      "category": "brittle_test",
+      "title": "No test verifies content scoping between tabs -- browse content could leak to continue tab",
+      "why_it_matters": "With conditional rendering per tab (libraryTab === 'continue', libraryTab === 'browse', etc.), the rendering guards are purely logical but untested in any cross-tab scoping scenario. If a condition regression causes browse content (filters, grid, series view) to render on the Continue tab, no test would catch it because all tests navigate to ?tab=browse where browse content IS expected to render. Conversely, if Continue tab content (hero, shelves) renders on Browse tab, no test verifies it shouldn't be there.",
+      "evidence": [
+        "src/app/pages/Library.tsx: all 4 tab panels are conditionally rendered with `books.length > 0 && libraryTab === '<tab>'`",
+        "No test: navigates to ?tab=continue, then asserts that browse-specific data-testids (e.g., local-view-toggle, series-view) are NOT present",
+        "No test: navigates to ?tab=browse, then asserts that continue-specific data-testids (e.g., library-tab-continue child content) is NOT present"
+      ],
+      "suggested_fix": "Add a scoping test: navigate to /library?tab=continue, assert library-tab-continue is visible and library-tab-browse is not. Then navigate to /library?tab=collections, assert library-tab-collections is visible and the other tab wrappers are absent."
+    },
+    {
+      "severity": "MEDIUM",
+      "confidence": 0.70,
+      "category": "missing_tests",
+      "title": "No accessibility test for tab bar keyboard navigation or ARIA attributes",
+      "why_it_matters": "LibraryTabBar uses role='tablist', role='tab', aria-selected, and aria-label, but no test verifies these attributes render correctly or that keyboard navigation (Tab to focus, Arrow keys to switch, Enter/Space to activate) works. ARIA compliance is especially important for a primary navigation control like the tab bar.",
+      "evidence": [
+        "src/app/components/library/LibraryTabBar.tsx: role='tablist', role='tab', aria-selected, aria-label",
+        "No test for keyboard navigation between tabs",
+        "No test for aria-selected attribute correctness",
+        "No test for focus-visible outline style on keyboard interaction"
+      ],
+      "suggested_fix": "Add E2E test: press Tab to focus active tab, press ArrowRight to move focus to next tab, press Enter to activate, verify the correct tab panel appears. Or add a unit test that renders LibraryTabBar and verifies ARIA attributes on the rendered DOM."
+    }
+  ],
+  "residual_risks": [
+    {
+      "risk": "Tab switching via UI click could be entirely broken -- all tests bypass the tab bar by navigating with URL params",
+      "severity": "HIGH",
+      "mitigation": "Add at least one E2E test that clicks a tab button (library-tab-collections) and verifies the correct panel renders"
+    },
+    {
+      "risk": "localStorage corruption or schema mismatch for knowlune-library-tab could silently break tab persistence for all users",
+      "severity": "MEDIUM",
+      "mitigation": "Add a test that writes to localStorage, reloads the page, and verifies the correct tab is active"
+    },
+    {
+      "risk": "E116-S03 shelf rendering may be broken after tab refactor -- the only test was disabled via test.fixme",
+      "severity": "HIGH",
+      "mitigation": "Re-enable or rewrite the shelf integration spec with correct ?tab=continue navigation and verify shelves render"
+    },
+    {
+      "risk": "History tab content (yearly stats computation) is entirely unverified -- wrong year filter, missing null-safety on finishedAt, or incorrect sorting could produce wrong results",
+      "severity": "MEDIUM",
+      "mitigation": "Add a test that seeds books with specific finishedAt dates and verifies the stats cards show correct counts"
+    },
+    {
+      "risk": "Deletion confirmation dialog text changed from mentioning 'highlights' to generic 'permanently remove' -- tests were updated to match, but no test verifies that highlights ARE actually still deleted alongside the book",
+      "severity": "MEDIUM",
+      "mitigation": "This is a behavioral regression risk separate from testing quality: verify the deletion implementation still cleans up highlights"
+    }
+  ],
+  "testing_gaps": [
+    {
+      "gap": "No unit or integration tests for LibraryTabBar component",
+      "component": "src/app/components/library/LibraryTabBar.tsx",
+      "lines": "1-46 (entire component)"
+    },
+    {
+      "gap": "No tests for tab state initialization: URL param priority, localStorage fallback, default 'continue'",
+      "component": "src/app/pages/Library.tsx",
+      "lines": "138-150"
+    },
+    {
+      "gap": "No E2E tests for Continue tab panel content (LibraryMediaHero, LibraryMediaShelfColumn, ReadingQueue, DailyHighlightsStrip)",
+      "component": "src/app/pages/Library.tsx",
+      "lines": "743-809"
+    },
+    {
+      "gap": "No E2E tests for Collections tab panel content (Manage Shelves inline, Browse ABS Collections, SmartGroupedView, empty state)",
+      "component": "src/app/pages/Library.tsx",
+      "lines": "1056-1118"
+    },
+    {
+      "gap": "No E2E tests for History tab panel content (yearly stats cards, recently finished list, empty state)",
+      "component": "src/app/pages/Library.tsx",
+      "lines": "1123-1221"
+    },
+    {
+      "gap": "No test for format default when only ebooks exist (no audiobooks in library)",
+      "component": "src/app/pages/Library.tsx",
+      "lines": "380-391"
+    },
+    {
+      "gap": "No test for content scoping -- verifying browse content doesn't render on continue tab and vice versa",
+      "component": "src/app/pages/Library.tsx",
+      "lines": "743-1221 (all tab panels)"
+    },
+    {
+      "gap": "Shelf integration test (E116-S03 AC coverage) disabled via test.fixme -- all 5 acceptance criteria untested",
+      "component": "tests/e2e/story-116-03.spec.ts",
+      "lines": "17-44"
+    }
+  ]
+}

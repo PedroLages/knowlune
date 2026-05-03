@@ -1,0 +1,66 @@
+{
+  "reviewer": "project-standards",
+  "review_id": "20260429-193854-89414313",
+  "confidence": 0.92,
+  "summary": "No project standards violations found. All three changed files (package.json, src/test/setup.ts, PdfViewer.smoke.test.tsx) comply with the rules in CLAUDE.md, automation.md (universal), and the applicable path-specific test rules.",
+  "standards_audited": [
+    {
+      "path": "CLAUDE.md",
+      "role": "root — governs all files",
+      "sections_checked": [
+        "File Structure (lines 30-73)",
+        "Import Alias (lines 76-81)",
+        "Key Conventions (lines 92-99)"
+      ]
+    },
+    {
+      "path": ".claude/rules/automation.md",
+      "role": "universal — always loaded",
+      "sections_checked": [
+        "Save-Time ESLint Rules (lines 9-24)",
+        "Commit-Time Git Hooks (lines 38-47)"
+      ]
+    },
+    {
+      "path": ".claude/rules/testing/test-patterns.md",
+      "role": "path-specific — did NOT load (file paths do not match globs: tests/**/*.spec.ts, tests/**/*.test.ts, playwright.config.ts, tests/support/**/*.ts, tests/utils/**/*.ts)",
+      "note": "Smoke test is at src/app/components/figma/PdfViewer/__tests__/ — outside the tests/ directory globs. Rules in this file do not govern the changed files."
+    },
+    {
+      "path": ".claude/rules/testing/test-cleanup.md",
+      "role": "path-specific — did NOT load (same glob mismatch as test-patterns.md)"
+    }
+  ],
+  "findings": [],
+  "file_assessments": [
+    {
+      "file": "package.json",
+      "change": "Pinned pdfjs-dist from ^5.4.296 to 5.4.296 (exact version)",
+      "rules_checked": ["CLAUDE.md: Development Commands (no dependency pinning rules)"],
+      "result": "No violation. CLAUDE.md does not prescribe dependency pinning strategy."
+    },
+    {
+      "file": "src/test/setup.ts",
+      "change": "Added DOMMatrix polyfill (~40 lines) with identity matrix, CSS parsing, and stub methods",
+      "rules_checked": [
+        "CLAUDE.md: File Structure, Key Conventions",
+        "automation.md: design-tokens/no-hardcoded-colors, test-patterns/deterministic-time, error-handling/no-silent-catch"
+      ],
+      "result": "No violation. Follows existing polyfill pattern (ResizeObserver, IntersectionObserver, localStorage, matchMedia). Well-documented with explanatory comments. No hardcoded colors, no Date.now() usage."
+    },
+    {
+      "file": "src/app/components/figma/PdfViewer/__tests__/PdfViewer.smoke.test.tsx",
+      "change": "New 26-line smoke test verifying pdf.js worker setup and error fallback rendering",
+      "rules_checked": [
+        "CLAUDE.md: File Structure (valid location under src/app/components/figma/), Key Conventions",
+        "automation.md: All 8 ESLint rules — no hardcoded colors, no Date.now(), no waitForTimeout, no manual IndexedDB seeding, no inline styles, no silent catches"
+      ],
+      "result": "No violation. Test file is in project-standard location. Uses vitest + @testing-library/react pattern consistent with existing component tests. Deep relative import (../../../../../lib/pdfWorker) is valid but could use @/lib/pdfWorker — however CLAUDE.md does not mandate @ alias usage, so this is not a standards violation."
+    }
+  ],
+  "notes": [
+    "The smoke test file location (src/app/components/figma/PdfViewer/__tests__/) is consistent with the project's existing pattern for multi-file component directories (cf. src/stores/__tests__/).",
+    "Path-specific test rules (test-patterns.md, test-cleanup.md) apply only to files under tests/** — they do not govern co-located unit tests in src/. This is by design per the path frontmatter in those rule files.",
+    "The deep relative import '../../../../../lib/pdfWorker' in the smoke test resolves correctly to src/lib/pdfWorker.ts. Using @/lib/pdfWorker would be more robust against file moves, but CLAUDE.md does not mandate alias usage."
+  ]
+}

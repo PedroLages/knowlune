@@ -1,0 +1,84 @@
+{
+  "reviewer": "kieran-typescript",
+  "findings": [
+    {
+      "title": "HeroStat icon prop uses typeof CheckCircle instead of LucideIcon",
+      "severity": "MEDIUM",
+      "file": "/Volumes/SSD/Dev/Apps/Knowlune/src/app/pages/Reports.tsx",
+      "line": 72,
+      "confidence": 0.72,
+      "autofix_class": "semantic_type_fix",
+      "owner": "Pedro Lages",
+      "requires_verification": false,
+      "pre_existing": false,
+      "suggested_fix": "import type { LucideIcon } from 'lucide-react'; then change the prop type from `icon: typeof CheckCircle` to `icon: LucideIcon`. The type `LucideIcon` is a public export (verified at node_modules/lucide-react/dist/lucide-react.d.ts:17) and expresses intent clearly: this prop accepts any Lucide icon component, not just CheckCircle. The current annotation structurally works because all Lucide icons share the same component signature, but it semantically misleads a reader into thinking only CheckCircle is accepted."
+    },
+    {
+      "title": "AIAnalyticsTab monthlyStats effect: missing unmount guard and silent error swallow",
+      "severity": "MEDIUM",
+      "file": "/Volumes/SSD/Dev/Apps/Knowlune/src/app/components/reports/AIAnalyticsTab.tsx",
+      "line": 156,
+      "confidence": 0.78,
+      "autofix_class": "async_safety_fix",
+      "owner": "Pedro Lages",
+      "requires_verification": false,
+      "pre_existing": false,
+      "suggested_fix": "Add an `ignore` flag pattern matching every other effect in this file:\n\n```typescript\nuseEffect(() => {\n  let ignore = false\n  getAIUsageStats('monthly')\n    .then(stats => { if (!ignore) setMonthlyStats(stats) })\n    .catch(err => { console.error('[AIAnalytics] Failed to load monthly stats:', err) })\n  return () => { ignore = true }\n}, [])\n```\n\nTwo issues fixed: (1) the missing `ignore` guard prevents a React state-update-on-unmounted-component edge case; (2) the empty `.catch(() => {})` now logs the error, consistent with the component's own pattern of `console.error('[AIAnalytics] Failed to load stats:', err)` at line 141."
+    },
+    {
+      "title": "E2E test uses DOM-walking locator that is fragile against restructuring",
+      "severity": "LOW",
+      "file": "/Volumes/SSD/Dev/Apps/Knowlune/tests/e2e/reports-redesign.spec.ts",
+      "line": 46,
+      "confidence": 0.65,
+      "autofix_class": "test_robustness_fix",
+      "owner": "Pedro Lages",
+      "requires_verification": true,
+      "pre_existing": false,
+      "suggested_fix": "Replace `page.locator('text=Course Completion').locator('..').locator('..')` with a `data-testid` selector (e.g., `page.getByTestId('course-completion-card')`). The `locator('..')` pattern walks up the parent chain and breaks if a wrapper `<div>` is added or removed around the chart. The card-level container already has a stable semantic anchor (the `Card` wrapping the chart); adding a testid makes it selector-safe."
+    },
+    {
+      "title": "AI 'This Month' stat never refreshes after initial fetch",
+      "severity": "LOW",
+      "file": "/Volumes/SSD/Dev/Apps/Knowlune/src/app/components/reports/AIAnalyticsTab.tsx",
+      "line": 156,
+      "confidence": 0.62,
+      "autofix_class": "stale_data_pattern",
+      "owner": "Pedro Lages",
+      "requires_verification": false,
+      "pre_existing": false,
+      "suggested_fix": "The `monthlyStats` fetch runs once with `[]` dependencies. If the user generates AI usage during the session, the 'This Month' count stays frozen. Consider either: (a) adding `retryCount` as a dependency so it re-fetches when the user retries any other tab data, or (b) accepting this as intentional (non-critical vanity stat) with an explicit comment explaining the once-per-mount behavior. The UX risk is low because the count is below the fold and the stats cards above it update on period change."
+    }
+  ],
+  "residual_risks": [
+    {
+      "area": "Report data staleness after mount",
+      "description": "Several useMemo hooks in Reports.tsx (activityData:191, completedLessons:200, currentStreak:203, longestStreak:204, courseCompletionData:185) use empty `[]` dependency arrays. This means all report data is computed once when the component mounts and never updates -- even after the user returns from completing a lesson. The page must be navigated away from and back to for data to refresh. This is a pre-existing architectural pattern, not introduced in this diff.",
+      "severity": "INFO",
+      "pre_existing": true
+    },
+    {
+      "area": "ThisWeekSection ISO date cutoff vs local-time grouping",
+      "description": "The WHERE clause uses `monday.toISOString()` (UTC) while day-of-week categorization uses `new Date(s.startTime).getDay()` (local time). This is consistent because both derive from the same local-time assumption, but it means a session started at 11 PM Sunday UTC-5 (which is Monday 4 AM UTC) is correctly included AND correctly categorized as Monday. A reader unfamiliar with Date/ISO behavior in IndexedDB may find this surprising. This is pre-existing across the codebase (same pattern in ActivityHeatmap, studyLog, etc.).",
+      "severity": "INFO",
+      "pre_existing": true
+    }
+  ],
+  "testing_gaps": [
+    {
+      "gap": "ThisWeekSection has no unit tests",
+      "description": "ThisWeekSection contains complex date math (Monday computation, day-of-week indexing), session aggregation across a Dexie where() query, and event listener registration ('study-session-recorded', 'study-session-updated'). None of these behaviors are unit-tested. The component is only covered indirectly through E2E tests and through the Reports.test.tsx mock which replaces the entire component with a stub.",
+      "recommendation": "Add unit tests covering: (a) correct Monday cutoff computation across week boundaries; (b) day-of-week mapping for sessions at midnight; (c) correct percentage/progress calculation; (d) event listener registration and cleanup."
+    },
+    {
+      "gap": "ReadingSection integration tests only verify wrapper rendering",
+      "description": "ReadingSection.test.tsx mocks all five child cards. This validates the layout structure but does not verify data flow or prop passing to real child components. The child cards (ReadingStatsSection, ReadingPatternsCard, etc.) manage their own data loading, so the wrapper test is adequate for unit coverage, but there is no integration test verifying the full reading section renders correctly with all real children mounted.",
+      "recommendation": "Consider an integration-level E2E test that validates the Reading section renders with real child components and displays stats when reading data exists."
+    },
+    {
+      "gap": "StudyInsightInputs type has excellent unit coverage but no integration coverage",
+      "description": "insights.test.ts covers all template branches with 10 test cases including edge cases (negative weeklyChange, large numbers, singular/plural). However, there is no test verifying that Reports.tsx passes the correct real values from useMemo computations into generateStudyInsight(). A mismatch between the input shape and the data sources would not be caught.",
+      "recommendation": "Add a single test in Reports.test.tsx that verifies the insight text prop is constructed from the correct memo values (mock generateStudyInsight to capture arguments)."
+    }
+  ]
+}

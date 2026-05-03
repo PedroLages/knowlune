@@ -1,0 +1,126 @@
+{
+  "reviewer": "kieran-typescript",
+  "findings": [
+    {
+      "severity": "HIGH",
+      "confidence": 0.82,
+      "category": "type_safety",
+      "title": "LibraryTab validation scattered across 4 manual equality checks — fragile to future tab additions",
+      "file": "/Volumes/SSD/Dev/Apps/Knowlune/src/app/pages/Library.tsx",
+      "lines": "139-145",
+      "explanation": "The valid-tab check `urlTab === 'continue' || urlTab === 'browse' || urlTab === 'collections' || urlTab === 'history'` appears twice (URL param and localStorage fallback) and the same four literals form the TABS array in LibraryTabBar.tsx. If a fifth tab is added, the maintainer must update every inline guard by hand — TypeScript cannot flag a missed branch because `searchParams.get()` and `localStorage.getItem()` both return `string | null`, not `LibraryTab`. A type-predicate function (`function isLibraryTab(v: string | null): v is LibraryTab`) or a Set-based membership check (`VALID_TABS.has(urlTab)`) would centralize validation and make it impossible to forget a new value.",
+      "recommendation": "Extract a `isLibraryTab(value: unknown): value is LibraryTab` type guard in LibraryTabBar.tsx (alongside the type definition) and reuse it in both the URL and localStorage branches. Optionally export the TABS array's `id` values as a const array so validation can derive valid values from it."
+    },
+    {
+      "severity": "MEDIUM",
+      "confidence": 0.72,
+      "category": "maintainability",
+      "title": "Tab panel rendering uses four independent `if` blocks — no exhaustiveness guarantee",
+      "file": "/Volumes/SSD/Dev/Apps/Knowlune/src/app/pages/Library.tsx",
+      "lines": "743-1221",
+      "explanation": "Each tab panel (Continue, Browse, Collections, History) is rendered via a standalone conditional block: `books.length > 0 && libraryTab === 'continue' && (...)` repeated four times. If a new tab value is added to the LibraryTab union type, TypeScript will not warn about a missing panel — you could compile and ship with a tab that the user can select but that renders nothing. A switch statement with a `default: never` exhaustiveness check (or a tab-to-panel map lookup) would make this a compile-time error.",
+      "recommendation": "Consider a `switch (libraryTab)` statement with a `default:` arm that assigns to `never`, or a record map keyed by `LibraryTab`. Either approach lets TypeScript enforce that every union member has a corresponding panel at compile time."
+    },
+    {
+      "severity": "MEDIUM",
+      "confidence": 0.68,
+      "category": "architecture",
+      "title": "Collections tab `Browse ABS Collections` button couples to Browse tab side effects on navigation",
+      "file": "/Volumes/SSD/Dev/Apps/Knowlune/src/app/pages/Library.tsx",
+      "lines": "1070-1083",
+      "explanation": "The button in the Collections tab calls `setFilters({ source: 'audiobookshelf' }); setAbsViewMode('collections'); handleTabChange('browse')` — it mutates shared filter/view state then switches tabs, relying on the Browse tab's render logic (line 976: `filters.source === 'audiobookshelf' && absViewMode === 'collections'`) to pick up the side effects and show the right content. This is a dependency carried outside the tab, not declared in the Browse tab's own guard. If the Browse tab's rendering conditions change, this button breaks silently. The same state-mutate-then-navigate pattern creates a hidden coupling between tabs.",
+      "recommendation": "Either: (a) lift `absViewMode` and `filters.source` into the URL as search params (so navigation carries its own state explicitly), or (b) make the Browse tab accept an optional `initialAbsViewMode` prop so the coupling is explicit rather than through shared mutable state."
+    },
+    {
+      "severity": "MEDIUM",
+      "confidence": 0.65,
+      "category": "performance",
+      "title": "HISTORY tab stats recompute on every render with redundant filter passes over `books`",
+      "file": "/Volumes/SSD/Dev/Apps/Knowlune/src/app/pages/Library.tsx",
+      "lines": "1127-1161",
+      "explanation": "The stats IIFE in the HISTORY tab runs three separate `.filter().reduce()` chains over the full `books` array on every render (finished count, total pages, total seconds), and the `.filter(b => b.status === 'finished' && b.finishedAt?.startsWith(currentYear))` predicate is duplicated verbatim across them. For large libraries, this is wasted work — all three stats can be computed in a single pass. Additionally, `new Date().getFullYear()` is called inside render (causing a new string every render), and none of this is memoized.",
+      "recommendation": "Extract a single `useMemo` that walks `books` once, computing count, totalPages, and totalHours in one loop. This also removes the inline IIFE from JSX, improving readability."
+    },
+    {
+      "severity": "LOW",
+      "confidence": 0.63,
+      "category": "type_safety",
+      "title": "`setFilter('format', ...)` in Continue tab carries `as string[]` type assertions on format values",
+      "file": "/Volumes/SSD/Dev/Apps/Knowlune/src/app/pages/Library.tsx",
+      "lines": "767-770",
+      "explanation": "The empty-state switch button casts `['epub', 'pdf'] as string[]` and `['audiobook'] as string[]` to satisfy `setFilter`. These are pre-existing (not introduced by this diff), so flagged as LOW. But now that the code is being restructured into tabs, it is worth noting: the `setFilter` signature likely expects a broader type, and these casts widen away the literal information. If the store's format filter type is ever tightened, these casts would conceal the breakage.",
+      "recommendation": "If `setFilter` accepts `string[]` legitimately, the cast is unnecessary noise. If it expects a narrower union, the cast is hiding a type mismatch. Audit the store's type signature and remove the casts or tighten the type."
+    },
+    {
+      "severity": "LOW",
+      "confidence": 0.60,
+      "category": "clarity",
+      "title": "`localStorage` key `knowlune-library-tab` is hardcoded as a string literal in the setter and getter but not in a shared constant",
+      "file": "/Volumes/SSD/Dev/Apps/Knowlune/src/app/pages/Library.tsx",
+      "lines": "143,149",
+      "explanation": "The key `'knowlune-library-tab'` appears on line 143 (get) and line 149 (set). If it is ever renamed or read from elsewhere (e.g., a different page or hook), a typo in one location would go undetected. For now the key is only used in this single file, so risk is minimal, but extracting it into a named constant (e.g., `LIBRARY_TAB_STORAGE_KEY`) would follow the existing project convention of named storage keys and make future grep operations trivial.",
+      "recommendation": "Extract `const LIBRARY_TAB_STORAGE_KEY = 'knowlune-library-tab'` at the top of the file or in a shared constants module. Use it in both `getItem` and `setItem` calls."
+    }
+  ],
+  "residual_risks": [
+    {
+      "risk": "SSR/hydration mismatch on `libraryTab` initializer",
+      "file": "/Volumes/SSD/Dev/Apps/Knowlune/src/app/pages/Library.tsx",
+      "lines": "139-145",
+      "assessment": "Verified this is a pure client-side SPA (Vite + `createRoot`). `localStorage` and `useSearchParams` are always available in the browser. No SSR, so this is a non-issue for the current architecture. If the project ever adds SSR, the lazy initializer reading `localStorage` would need a guard.",
+      "confidence": 0.90
+    },
+    {
+      "risk": "Tab state lost on `localStorage` quota exceeded or private browsing restrictions",
+      "file": "/Volumes/SSD/Dev/Apps/Knowlune/src/app/pages/Library.tsx",
+      "lines": "149",
+      "assessment": "`handleTabChange` calls `localStorage.setItem` after every tab switch. If localStorage is full or unavailable (private browsing on some older browsers), the `setItem` call throws. The tab state still updates in-memory via `setLibraryTab`, so the UI is functional in-session, but the preference is silently lost on reload. The implicit `catch` is acceptable for a non-critical preference, but it is a silent failure path.",
+      "confidence": 0.55
+    },
+    {
+      "risk": "`Promise.all` in `AbsPaginationSentinel` has no rejection handler for individual `loadNextPage` failures",
+      "file": "/Volumes/SSD/Dev/Apps/Knowlune/src/app/pages/Library.tsx",
+      "lines": "1312",
+      "assessment": "Pre-existing code (not part of this diff). Inside the IntersectionObserver callback, if any `loadNextPage(server)` promise rejects, `Promise.all(promises)` rejects and the `.finally()` block clears `isLoadingRef.current` — but no toast or retry logic fires. The sentinel becomes permanently stuck if a single page load fails, because `isLoadingRef` resets but the pagination state doesn't advance. Low severity for this review because it predates the changes.",
+      "confidence": 0.60
+    },
+    {
+      "risk": "Library page is a 1300+ line file with no extraction of tab panels into child components",
+      "file": "/Volumes/SSD/Dev/Apps/Knowlune/src/app/pages/Library.tsx",
+      "assessment": "The restructuring into conditional tabs adds ~200 lines of JSX (HISTORY tab is entirely new inline markup). Each panel is now ~80-200 lines of JSX mixed with inline maps, filters, and conditional chains. The file is harder to test in isolation because tab logic is entangled with book loading, sync, event bus subscriptions, and drag-drop. A follow-up extraction of each panel into a named sub-component (e.g., `<ContinueTab />`, `<BrowseTab />`) would shrink Library.tsx by ~60% and make tab-specific logic testable independently. Not blocking because the current code is correct and commented.",
+      "confidence": 0.75
+    }
+  ],
+  "testing_gaps": [
+    {
+      "gap": "No E2E test exercises tab persistence via localStorage on reload",
+      "description": "The tab state writes to localStorage on every change, but no test validates that navigating away and back (or reloading the page) restores the last-selected tab. The existing E2E specs all hardcode `?tab=browse` in their `goto` calls, which skips localStorage fallback entirely.",
+      "file": "/Volumes/SSD/Dev/Apps/Knowlune/tests/e2e/story-116-03.spec.ts",
+      "lines": "1422"
+    },
+    {
+      "gap": "No E2E test validates the Continue, Collections, or History tabs render content",
+      "description": "All updated E2E specs navigate to `?tab=browse`. The Continue tab (which shows the hero, shelves, reading queue, and highlights strip) and the new History tab (stats + recently finished list) have no E2E coverage. Only the Browse tab is tested.",
+      "file": "/Volumes/SSD/Dev/Apps/Knowlune/tests/e2e/story-116-03.spec.ts",
+      "lines": "1422"
+    },
+    {
+      "gap": "No E2E test validates the `Collections > Browse ABS Collections` cross-tab navigation flow",
+      "description": "The Collections tab button that navigates to the Browse tab with ABS filters pre-set (line 1073) has no test. If a regression breaks the filter/state pre-conditioning, the button appears to work (the tab switches) but shows wrong/empty content.",
+      "file": "/Volumes/SSD/Dev/Apps/Knowlune/src/app/pages/Library.tsx",
+      "lines": "1070-1083"
+    },
+    {
+      "gap": "The `story-116-03.spec.ts` test was marked `test.fixme` without explanation of what broke or a tracking issue",
+      "description": "The shelf integration test that validated two shelves with headings is now skipped via `test.fixme`. No comment explains why, and no ticket reference shows when it will be re-enabled. This is a regression in coverage — the shelf rendering verification is no longer running.",
+      "file": "/Volumes/SSD/Dev/Apps/Knowlune/tests/e2e/story-116-03.spec.ts",
+      "lines": "1422"
+    },
+    {
+      "gap": "`library-series.spec.ts` changed testid assertions from `local-series-view` to `smart-grouped-view` without a comment explaining the rename",
+      "description": "The test previously checked for `[data-testid=\"local-series-view\"]` and now checks `[data-testid=\"smart-grouped-view\"]`. The SmartGroupedView component now renders under both the Browse and Collections tabs, so the component rename is plausible. But without a comment, a future reader cannot tell whether this was a deliberate rename or a side effect of the tab restructuring.",
+      "file": "/Volumes/SSD/Dev/Apps/Knowlune/tests/e2e/library-series.spec.ts",
+      "lines": "1379-1403"
+    }
+  ]
+}

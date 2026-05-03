@@ -1,0 +1,128 @@
+{
+  "reviewer": "maintainability",
+  "findings": [
+    {
+      "title": "Dead code: `triggerNoteLinkSuggestions` wrapper with zero callers",
+      "severity": "P2",
+      "file": "src/ai/knowledgeGaps/noteLinkSuggestions.ts",
+      "line": 192,
+      "confidence": 0.92,
+      "autofix_class": "remove_dead_code",
+      "owner": "ai",
+      "requires_verification": false,
+      "pre_existing": false,
+      "suggested_fix": "Remove the `triggerNoteLinkSuggestions` function. It is marked `@deprecated`, delegates entirely to `findAndReturnNoteLinkSuggestions`, ignores its `_onLinked` parameter, and has zero callers across the entire codebase (confirmed via ripgrep). The deprecation shim adds indirection without value since the only caller (`lib/progress.ts`) was already removed in this PR."
+    },
+    {
+      "title": "Completion checkmark pattern duplicated between LessonLink and MaterialGroupRow sub-rows",
+      "severity": "P2",
+      "file": "src/app/components/course/tabs/LessonsTab.tsx",
+      "line": 195,
+      "confidence": 0.72,
+      "autofix_class": "extract_component",
+      "owner": "frontend",
+      "requires_verification": true,
+      "pre_existing": false,
+      "suggested_fix": "Extract the checkmark rendering logic into a shared helper component (e.g. `<CompletionIcon status={status} isActive={isActive} lessonId={id} />`). Both LessonLink (lines 195-212) and MaterialGroupRow sub-rows (lines 502-525) render the same pattern: `size-7 rounded-lg` container with `bg-success/10` or `bg-brand-soft/50`, `CheckCircle2` icon with `text-success`, and `data-testid=\"completion-check-{id}\"`. The sub-row variant differs only by adding `material.id !== lessonId` guard and `bg-resource-pdf-bg` fallback background. A single parameterized component would eliminate ~25 lines of duplicated JSX and ensure both locations stay in sync when completion styling evolves."
+    },
+    {
+      "title": "NotesTab calls `useNoteStore.setState()` directly, bypassing store API",
+      "severity": "P3",
+      "file": "src/app/components/course/tabs/NotesTab.tsx",
+      "line": 109,
+      "confidence": 0.67,
+      "autofix_class": "refactor_api",
+      "owner": "frontend",
+      "requires_verification": true,
+      "pre_existing": false,
+      "suggested_fix": "Add dedicated store actions `applyLinkSuggestion(suggestion)` and `removePendingSuggestion(suggestion)` to `useNoteStore` instead of having NotesTab call `useNoteStore.setState()` directly. The current code at lines 109-125 calls `.setState()` to both update notes (from the `onLinked` callback) and filter `pendingNoteLinkSuggestions` in two separate calls. Bundling these into store actions would: (a) keep the store as the single source of truth for note mutations, (b) make the operations atomic (a single setState instead of two), and (c) reduce coupling between the UI component and store internals."
+    },
+    {
+      "title": "`transcriptVersion` counter obscures intent in BelowVideoTabs",
+      "severity": "P3",
+      "file": "src/app/components/course/BelowVideoTabs.tsx",
+      "line": 89,
+      "confidence": 0.64,
+      "autofix_class": "rename_or_restructure",
+      "owner": "frontend",
+      "requires_verification": false,
+      "pre_existing": false,
+      "suggested_fix": "Rename `transcriptVersion` to `transcriptGeneratedToken` and add a comment explaining that it forces the transcript blob URL to be rebuilt. The current name `transcriptVersion` suggests this is a version number of the transcript itself, but it is actually a React re-render trigger (a counter that increments on each generation). A developer reading this code must trace through `BelowVideoTabs -> TranscriptTab -> onTranscriptGenerated -> handleTranscriptGenerated` to understand that the counter forces a `useEffect` re-run. A more descriptive name and comment would make the signal pattern self-documenting."
+    },
+    {
+      "title": "TranscriptTab component grown to ~450 lines mixing load, generation, and rendering",
+      "severity": "P3",
+      "file": "src/app/components/course/tabs/TranscriptTab.tsx",
+      "line": 86,
+      "confidence": 0.65,
+      "autofix_class": "extract_hook",
+      "owner": "frontend",
+      "requires_verification": false,
+      "pre_existing": false,
+      "suggested_fix": "Consider extracting the Whisper generation logic (lines 194-283: consent checks, abort controller, DB writes, progress tracking) into a custom hook `useTranscriptGeneration({ courseId, lessonId, onGenerated })`. The hook would encapsulate the 5-state machine (idle/generating/completed/error/consent-required), the `handleGenerate` callback, and the abort-on-unmount cleanup. The TranscriptTab component would then only handle transcript loading and rendering. While the domain complexity (consent gates, FileHandle API, two Dexie writes, abort signals) justifies the code volume, the single component now mixes three concerns: initial transcript loading, on-demand generation orchestration, and rendering 5+ distinct UI states. A hook extraction would reduce the component to ~200 lines."
+    },
+    {
+      "title": "Race condition: pending note link suggestions can arrive after lesson change",
+      "severity": "P3",
+      "file": "src/stores/useNoteStore.ts",
+      "line": 107,
+      "confidence": 0.68,
+      "autofix_class": "add_guard",
+      "owner": "frontend",
+      "requires_verification": true,
+      "pre_existing": false,
+      "suggested_fix": "Add an abort/guard to prevent stale `pendingNoteLinkSuggestions` from being set after navigation. The current flow: (1) `saveNote()` fires `findAndReturnNoteLinkSuggestions(...)` as a fire-and-forget Promise, (2) if the user navigates to another lesson before the Promise resolves, NotesTab's `useEffect` calls `clearPendingNoteLinkSuggestions()`, (3) the Promise resolves and sets suggestions into the store for the now-wrong lesson. The user would see suggestions in the wrong lesson context. Fix: store a per-save token in the promise chain and check it before calling `set()`, or cancel the suggestions lookup when `clearPendingNoteLinkSuggestions` is called."
+    },
+    {
+      "title": "Naming inconsistency: `qaPanelOpen` vs `notesOpen` for parallel panel visibility fields",
+      "severity": "P3",
+      "file": "src/stores/useLessonChromeStore.ts",
+      "line": 82,
+      "confidence": 0.61,
+      "autofix_class": "rename",
+      "owner": "frontend",
+      "requires_verification": false,
+      "pre_existing": false,
+      "suggested_fix": "These two fields represent the same concept (panel open/closed state) but use different naming conventions: `notesOpen` and `qaPanelOpen`. For consistency, either rename `notesOpen` to `notesPanelOpen` or rename `qaPanelOpen` to `qaOpen`. The current names are understandable but create a subtle mental model inconsistency for developers reading the store interface."
+    }
+  ],
+  "residual_risks": [
+    {
+      "description": "Deprecated `triggerNoteLinkSuggestions` continues to accept `onLinked` parameter despite never using it. A developer ignoring the @deprecated JSDoc could pass a callback expecting it to fire, leading to a silent failure.",
+      "severity": "LOW",
+      "mitigation": "Removing the function entirely (per finding #1) eliminates this risk."
+    },
+    {
+      "description": "The `celebrationOpenRef` pattern in UnifiedLessonPlayer keeps a ref synced to render-time state for a document-level keydown handler. This works correctly today but is fragile to future expansion of the keydown handler logic.",
+      "severity": "LOW",
+      "mitigation": "Monitor during code reviews. If the keydown handler grows beyond 2-3 refs, switch to a useEffect-managed listener that re-registers (accepting the listener ordering tradeoff with Radix Dialog)."
+    },
+    {
+      "description": "The `autoPlay` navigation state flow has no automated test coverage: store -> useCompletionFlow -> navigate state -> UnifiedLessonPlayer -> LessonContentRenderer autoplay prop. A regression in any step would silently break auto-play.",
+      "severity": "MEDIUM",
+      "mitigation": "Add unit tests for useCompletionFlow verifying navigate calls include autoPlay state. Add integration test for UnifiedLessonPlayer verifying the autoplay prop reaches LessonContentRenderer."
+    },
+    {
+      "description": "Five new TranscriptTab generation states (idle/generating/completed/error/consent-required) have zero test coverage. The entire on-demand Whisper flow is untested.",
+      "severity": "MEDIUM",
+      "mitigation": "Add unit tests for the generate flow using mocked useWhisperTranscription, consentService, and db. Cover the 5 state transitions and abort-on-unmount cleanup."
+    },
+    {
+      "description": "MaterialGroupRow expansion/collapse and PDF sub-row page count display are untested.",
+      "severity": "LOW",
+      "mitigation": "Add tests for Collapsible toggle behavior and sourceMetadata.pageCount rendering."
+    },
+    {
+      "description": "The NotesTab inline note link suggestion badge (Popover with Link/Dismiss) is untested.",
+      "severity": "LOW",
+      "mitigation": "Add tests for badge rendering, Link/Dismiss handlers, and suggestion removal from store."
+    }
+  ],
+  "testing_gaps": [
+    "TranscriptTab generation flow: No tests for the 5-state machine (idle/generating/completed/error/consent-required), consent checks, FileHandle access, transcribe() call, dual Dexie writes, or abort-on-unmount cleanup.",
+    "AutoPlay end-to-end flow: No tests verifying that the autoPlay navigation state flows from store -> useCompletionFlow -> navigate state -> UnifiedLessonPlayer -> LessonContentRenderer autoplay prop.",
+    "MaterialGroupRow collapse/expand: No tests for Collapsible toggle, sub-row rendering with page counts, or expandedMaterialGroups state in FolderTreeNode.",
+    "NotesTab inline note link badge: No tests for Popover rendering, Link/Dismiss button handlers, or pendingNoteLinkSuggestions state management.",
+    "QAChatPanel controlled mode: No tests verifying that the new controlled open/onOpenChange props integrate with useLessonChromeStore toggle and that internal uncontrolled fallback works."
+  ]
+}

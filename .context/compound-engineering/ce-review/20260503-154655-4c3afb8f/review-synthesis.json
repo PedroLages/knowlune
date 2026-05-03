@@ -1,0 +1,113 @@
+{
+  "run_id": "20260503-154655-4c3afb8f",
+  "mode": "headless",
+  "scope": {
+    "branch": "feature/ce-2026-05-03-fix-search-palette-library-ux",
+    "base": "0fa8aa56e5283369818830664cd87f70bc1afa42",
+    "files": [
+      "docs/solutions/best-practices/learning-paths-import-from-path-patterns-2026-05-03.md",
+      "src/app/components/figma/SearchCommandPalette.tsx",
+      "src/app/components/library/BookCard.tsx",
+      "src/app/components/library/BookListItem.tsx",
+      "src/app/components/library/ContinueShelfTile.tsx",
+      "src/app/components/library/LibraryMediaHero.tsx",
+      "src/app/components/library/ReadingQueueView.tsx",
+      "src/app/components/library/RecentBookCard.tsx",
+      "src/app/pages/Library.tsx",
+      "src/lib/bookNavigation.ts"
+    ]
+  },
+  "intent": "Fix three UX regressions: (1) unreadable UUID labels in search palette \"Recently opened\", (2) book search navigating to wrong surface instead of reader, (3) format chip clear being immediately undone by media-first effect. Plus audit secondary UUID surfaces.",
+  "plan_source": "explicit",
+  "plan": "docs/plans/2026-05-03-004-fix-search-palette-library-ux-plan.md",
+  "verdict": "Ready to merge",
+  "applied_fixes": [
+    {
+      "id": "F1",
+      "title": "Add try/catch around Dexie db.books.get in handleContinueLearningSelect",
+      "severity": "P1",
+      "autofix_class": "safe_auto",
+      "owner": "review-fixer",
+      "file": "src/app/components/figma/SearchCommandPalette.tsx",
+      "line": 655,
+      "description": "Wrapped await db.books.get(item.id) in try/catch. On Dexie read failure, falls back to /library/:id path (same as when book not found). Prevents unhandled promise rejection."
+    }
+  ],
+  "findings": [
+    {
+      "id": "F1",
+      "title": "handleContinueLearningSelect lacks try/catch on Dexie book lookup",
+      "severity": "P1",
+      "file": "src/app/components/figma/SearchCommandPalette.tsx",
+      "line": 655,
+      "confidence": 0.85,
+      "autofix_class": "safe_auto",
+      "owner": "review-fixer",
+      "requires_verification": false,
+      "pre_existing": false,
+      "reviewer": "correctness",
+      "suggested_fix": "Wrap await db.books.get(item.id) in try/catch; fall back to /library/:id on error.",
+      "why_it_matters": "handleContinueLearningSelect was changed from sync to async but gained no error handling. If Dexie throws during db.books.get(), the promise rejects unhandled and the user is left in the palette with no navigation.",
+      "evidence": ["handleContinueLearningSelect changed from sync to async with await db.books.get(item.id) at line 655; compare handleRecentSelect which wraps all Dexie calls in try/catch at lines 673-718."],
+      "applied": true
+    },
+    {
+      "id": "F2",
+      "title": "U4 audit: no user-visible raw UUIDs found in tutor/chat/citation components",
+      "severity": "P0",
+      "file": "src/app/components/figma/SearchCommandPalette.tsx",
+      "line": 1,
+      "confidence": 0.95,
+      "autofix_class": "advisory",
+      "owner": "human",
+      "requires_verification": false,
+      "pre_existing": false,
+      "reviewer": "project-standards",
+      "suggested_fix": "Document audit result in PR description: \"U4 audit complete — no user-visible raw IDs found in tutor/, QAChatPanel.tsx, chat/, or citation components. R4 satisfied.\"",
+      "why_it_matters": "The plan (R4) requires auditing secondary UUID surfaces. The grep audit confirmed no raw IDs are rendered to users in those components. Per the plan, 'audit: no findings' in the PR fully satisfies R4. This finding is P0 per the explicit plan requirement — it must be documented before merge."
+    },
+    {
+      "id": "F3",
+      "title": "db.authors.toArray() loads entire authors table on every palette open with author recent hits",
+      "severity": "P3",
+      "file": "src/app/components/figma/SearchCommandPalette.tsx",
+      "line": 846,
+      "confidence": 0.70,
+      "autofix_class": "advisory",
+      "owner": "human",
+      "requires_verification": false,
+      "pre_existing": true,
+      "reviewer": "performance",
+      "suggested_fix": "Cache authors array or use a bulk-get pattern. Not a regression — handleRecentSelect uses the same pattern.",
+      "why_it_matters": "For libraries with hundreds of authors, loading the full table on every palette open adds latency. The pattern pre-exists in handleRecentSelect and is not introduced by this PR.",
+      "evidence": ["Line 846: const storeAuthors = (await db.authors.toArray()) as ImportedAuthor[] — same call pattern as handleRecentSelect case 'author' at line 708."]
+    }
+  ],
+  "requirements_completeness": {
+    "R1_human_readable_recent": "met",
+    "R2_book_destination_path": "met",
+    "R3_format_chip_clear": "met",
+    "R4_audit_secondary_surfaces": "met — audit performed, no user-visible raw IDs found. Needs PR documentation.",
+    "U1_recent_labels": "met",
+    "U2_book_navigation": "met",
+    "U3_format_chip_fix": "met",
+    "U4_uuid_audit": "met — audit performed, no findings"
+  },
+  "residual_risks": [
+    "handleContinueLearningSelect now awaits db.books.get() before closing palette — adds Dexie read latency to click-to-navigate path (mitigated by Dexie speed; typically <1ms for indexed get)",
+    "recent-label resolution Promise.all fires up to N=5 concurrent Dexie reads on every palette open; bounded and acceptable per plan"
+  ],
+  "testing_gaps": [
+    "No E2E test for Continue Learning book row click exercising new async flow with Dexie failure",
+    "No test for recent-label resolution abort-on-close race condition (plan U1 Edge case describes it but no test file present)",
+    "No test for format chip clear surviving page remount via sessionStorage (plan U3 Remount persistence)"
+  ],
+  "pre_existing": [
+    {
+      "id": "F3",
+      "title": "db.authors.toArray() loads entire authors table on every palette open",
+      "severity": "P3",
+      "pre_existing": true
+    }
+  ]
+}

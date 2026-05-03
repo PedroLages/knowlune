@@ -1,0 +1,118 @@
+{
+  "reviewer": "adversarial",
+  "findings": [
+    {
+      "severity": "HIGH",
+      "confidence": 0.87,
+      "category": "cascade",
+      "title": "Cascade: localStorage quota exceeded creates perpetual Vault network round-trip for every AI call",
+      "description": "When localStorage is full (QuotaExceededError), the Vault self-healing re-encrypt step fails on every invocation. The decrypted key is still returned to the caller, so AI calls succeed, but the local re-encrypt never persists. On every subsequent call to getDecryptedApiKeyForProvider, the local decrypt fails again (old CryptoKey ciphertext), triggering another Vault read, which gets the key, tries to re-encrypt, hits quota again, and so on. Each AI API request now incurs an additional Supabase Edge Function network round-trip (~100-500ms) that will never heal until the user manually frees localStorage space.",
+      "evidence": [
+        "Step 1: User clears IndexedDB (e.g., browser privacy cleanup). A new CryptoKey is generated on next use.",
+        "Step 2: providerKeys[provider] still exists in localStorage with old encrypted data encrypted under the deleted CryptoKey.",
+        "Step 3: getDecryptedApiKeyForProvider is called. decryptData throws (wrong key). hasEncryptedData is true (old providerKeys entry exists).",
+        "Step 4: Vault fallback runs. readCredential returns the plaintext key from Supabase Vault.",
+        "Step 5: saveProviderApiKey is called to re-encrypt. encryptData succeeds (Web Crypto in memory).",
+        "Step 6: getAIConfiguration() reads localStorage successfully (reading from full storage works).",
+        "Step 7: localStorage.setItem(STORAGE_KEY, JSON.stringify(updated)) throws QuotaExceededError.",
+        "Step 8: saveProviderApiKey propagates the error. The reEncryptError catch at line 537 logs a warning but decryptedResult is already set.",
+        "Step 9: Caller receives the plaintext key. AI call succeeds.",
+        "Step 10: On the next invocation, repeat from Step 3. The old providerKeys entry was never overwritten (quota blocked the write), so decryptData fails again, triggering the whole sequence again.",
+        "This creates a silent degradation: every AI request now pays a Supabase Edge Function latency penalty with no path to self-healing until the user clears localStorage."
+      ],
+      "autofix_class": "manual",
+      "owner": "human"
+    },
+    {
+      "severity": "HIGH",
+      "confidence": 0.82,
+      "category": "assumption_violation",
+      "title": "Assumption: hasEncryptedData gate from localStorage silently disables Vault fallback when localStorage is unavailable",
+      "description": "The Vault fallback is gated by hasEncryptedData, which reads config.providerKeys[provider] from localStorage. If localStorage is unavailable (throws on getItem, or the browser blocks storage APIs), getAIConfiguration() catches the error and returns DEFAULTS with no providerKeys and no apiKeyEncrypted. hasEncryptedData evaluates to false, and the Vault fallback is never attempted. The function returns null even though the API key is safely stored in Supabase Vault. This is not just a theoretical edge case — Safari ITP in some configurations, enterprise policy-controlled browsers, and browsers with storage partitioning can all cause localStorage access to fail. The user sees 'Please configure an API key' with no indication that the key exists in Vault.",
+      "evidence": [
+        "Step 1: Browser environment where localStorage.getItem() throws (enterprise policy, storage partitioning, or browser bug).",
+        "Step 2: getDecryptedApiKeyForProvider calls getAIConfiguration().",
+        "Step 3: getAIConfiguration() at line 312: localStorage.getItem(STORAGE_KEY) throws.",
+        "Step 4: The catch at lines 328-331 returns { ...DEFAULTS } with no providerKeys, no apiKeyEncrypted.",
+        "Step 5: Back in getDecryptedApiKeyForProvider: providerKeyData is undefined, so no decrypt attempt.",
+        "Step 6: provider === config.provider check: config.provider is 'openai' (from DEFAULTS). If the caller requested 'anthropic', this fails.",
+        "Step 7: hasEncryptedData at line 526: config.providerKeys?.[provider] is undefined, (provider === config.provider && config.apiKeyEncrypted) is false. hasEncryptedData = false.",
+        "Step 8: Vault fallback is entirely skipped. Function returns null.",
+        "Step 9: The API key exists in Supabase Vault but the function never attempts to read it."
+      ],
+      "autofix_class": "manual",
+      "owner": "human"
+    },
+    {
+      "severity": "MEDIUM",
+      "confidence": 0.70,
+      "category": "composition",
+      "title": "Race: cross-tab credential delete silently undone by Vault fallback re-encrypt in another tab",
+      "description": "When a user deletes an API key credential in Tab B (removing it from Vault and localStorage), a concurrent getDecryptedApiKeyForProvider call in Tab A can resurrect the key. Tab A reads the pre-delete config from localStorage, fails to decrypt (different CryptoKey), hits Vault before the delete propagates, retrieves the plaintext, re-encrypts it, and writes it back to localStorage. Tab A then dispatches 'ai-configuration-updated', which Tab B's listener may pick up and re-render, showing the key as configured again. The user believes they deleted the key but it reappears.",
+      "evidence": [
+        "Step 1: Tab A begins executing getDecryptedApiKeyForProvider('anthropic'). It reads the config from localStorage where providerKeys.anthropic exists with old encrypted data.",
+        "Step 2: The local decrypt fails (IndexedDB CryptoKey was rotated).",
+        "Step 3: Tab B user clicks 'Delete API Key' for anthropic. Tab B calls deleteCredential('ai-provider', 'anthropic') and removes the providerKeys entry from localStorage.",
+        "Step 4: Tab A reaches the Vault fallback: readCredential('ai-provider', 'anthropic'). At this moment, Tab B's deleteCredential call may not have completed yet (it invokes a Supabase Edge Function), so Vault still returns the key.",
+        "Step 5: Tab A sets decryptedResult = vaultSecret and calls saveProviderApiKey('anthropic', secret).",
+        "Step 6: saveProviderApiKey writes providerKeys.anthropic back to localStorage with the re-encrypted key.",
+        "Step 7: saveProviderApiKey dispatches the 'ai-configuration-updated' custom event.",
+        "Step 8: Tab B receives the event, reads the new config, sees the anthropic key is back.",
+        "Step 9: Tab B's credential list now shows the key as present again. The user's delete was silently undone.",
+        "Step 10: However, Tab B's deleteCredential call also completes, deleting the key from Vault. Now we have a mismatch: the key is in localStorage but not in Vault. If the user later clears IndexedDB, the key becomes unrecoverable because Vault has been deleted."
+      ],
+      "autofix_class": "advisory",
+      "owner": "human"
+    },
+    {
+      "severity": "MEDIUM",
+      "confidence": 0.68,
+      "category": "abuse_case",
+      "title": "Boundary: falsy vaultSecret (empty string from Vault) silently bypasses re-encrypt and returns null",
+      "description": "If Vault somehow contains an empty-string credential for a provider (e.g., a past bug, manual Supabase manipulation, or a migration edge case), readCredential returns ''. The check at line 533 — if (vaultSecret) — treats empty string as falsy, so decryptedResult remains null. The function returns null. No warning is logged for this specific case (the outer catch only triggers on throws, not on falsy returns). The user sees 'No API key configured' with no indication that Vault has a credential for this provider — it just happens to be empty. Meanwhile, hasEncryptedData was true, so the user had a key configured at some point.",
+      "evidence": [
+        "Step 1: An empty-string API key was somehow stored in Vault (e.g., Supabase dashboard manual edit, or a bug in an earlier migration path).",
+        "Step 2: IndexedDB CryptoKey is cleared. New CryptoKey generated.",
+        "Step 3: getDecryptedApiKeyForProvider runs. providerKeys[provider] exists with old encrypted data.",
+        "Step 4: decryptData fails (wrong key). hasEncryptedData is true.",
+        "Step 5: readCredential('ai-provider', provider) returns '' (empty string — Vault has it but it's empty).",
+        "Step 6: if (vaultSecret) is false — '' is falsy. decryptedResult remains null.",
+        "Step 7: No error is thrown, so the outer catch at line 544 does not fire. No warning is emitted.",
+        "Step 8: Function returns null. The caller and user see 'key not configured' with no clue that Vault has an empty credential.",
+        "Contrast with the local decrypt path: if decryptData returned '', decryptedResult would be '' (not null), and the function would return '', which the AI provider would reject with a clear error."
+      ],
+      "autofix_class": "advisory",
+      "owner": "human"
+    },
+    {
+      "severity": "LOW",
+      "confidence": 0.62,
+      "category": "abuse_case",
+      "title": "Abuse: repeated IndexedDB clearing by privacy tools triggers unbounded Vault Edge Function calls",
+      "description": "If a browser privacy extension or automated cleanup tool repeatedly clears IndexedDB, each clearing triggers one Vault read per provider key per AI feature activation. There is no rate limiting, no caching of the Vault result, and no backoff. A browser extension that clears IndexedDB hourly would cause every AI-enabled feature to hit the Supabase Edge Function on first use after each clearing. With multiple AI features and multiple configured providers, this multiplies Vault invocations.",
+      "evidence": [
+        "Step 1: User has a privacy browser extension that automatically clears IndexedDB periodically (e.g., every hour).",
+        "Step 2: Each clearing deletes the CryptoKey from IndexedDB. A new one is generated on next Crypto API use.",
+        "Step 3: All providerKeys entries in localStorage are now undecryptable (encrypted with old key).",
+        "Step 4: The next time any AI feature is used, getDecryptedApiKeyForProvider runs. Local decrypt fails. Vault is hit.",
+        "Step 5: There is no caching or rate limiting on Vault reads. Every call hits the Supabase Edge Function.",
+        "Step 6: With multiple features requesting keys for multiple providers, this multiplies the Vault calls.",
+        "Step 7: On a paid Supabase plan with Edge Function invocation limits, this could unexpectedly consume quota or incur cost."
+      ],
+      "autofix_class": "advisory",
+      "owner": "human"
+    }
+  ],
+  "residual_risks": [
+    "The hasEncryptedData gate is the right performance optimization (avoiding Vault calls when no key was ever configured), but it creates a hard dependency on localStorage being functional. A composite approach — attempt Vault fallback when localStorage is completely empty but the user is authenticated — could bridge the cold-start gap for users migrating to new devices, without adding overhead to the common case.",
+    "The current design intentionally restricts Vault fallback to scenarios where local encrypted data proves a key was configured. This means the Vault cannot serve as a cross-device sync mechanism — a fresh device with no prior localStorage state will never self-heal from Vault. If cross-device key sync is a future goal, the hasEncryptedData gate will need to be relaxed.",
+    "If decryptData throws for reasons other than 'wrong CryptoKey' (e.g., corrupted ciphertext due to a storage layer bug), the Vault fallback recovers correctly. However, the corrupted data remains in localStorage until the re-encrypt write succeeds, creating a window where every call hits the Vault."
+  ],
+  "testing_gaps": [
+    "No test for localStorage quota exceeded during re-encrypt (QuotaExceededError from setItem in saveProviderApiKey). The existing 're-encrypt fails' test mocks encryptData rejection, not localStorage.setItem throwing.",
+    "No test for localStorage being completely unavailable (getItem throwing). Existing tests always set localStorage successfully in beforeEach.",
+    "No test for concurrent getDecryptedApiKeyForProvider and deleteCredential races across tabs.",
+    "No test verifying behavior when decryptData returns an empty string ('' vs null distinction and its effect on skipping Vault fallback).",
+    "No test for the case where readCredential returns a non-null but empty string (falsy vaultSecret at line 533)."
+  ]
+}

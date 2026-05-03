@@ -1,0 +1,52 @@
+{
+  "search_context": {
+    "feature": "Skip celebration modal for individual lesson completions; only show CompletionModal for course-level completion",
+    "keywords_used": [
+      "completion",
+      "celebration",
+      "modal",
+      "reward",
+      "confetti",
+      "lesson",
+      "course",
+      "player",
+      "CompletionModal",
+      "useCompletionFlow"
+    ],
+    "total_solution_files": 52,
+    "files_scanned_frontmatter": 8,
+    "critical_patterns_file_exists": false
+  },
+  "direct_matches": [],
+  "tangential_matches": [
+    {
+      "file": "/Volumes/SSD/Dev/Apps/Knowlune/docs/solutions/integration-issues/lesson-chrome-store-consumer-integration-gaps-2026-05-02.md",
+      "module": "lesson-player",
+      "problem_type": "integration_issue",
+      "severity": "critical",
+      "relevance": "Documents four BLOCKER-level store-consumer wiring gaps in the same lesson player subsystem. Mentions the Completion button's guest-visibility inconsistency (desktop vs mobile BottomNav). The current PR's completion flow changes touch the same `useLessonChromeStore` and `UnifiedLessonPlayer` components, so the bridge-wiring checklist and pointer-events isolation patterns in this document may be relevant if the completion modal wiring needs to be re-verified.",
+      "key_insight": "Store methods are inert until wired via useEffect in React consumers. After modifying how the completion modal is triggered, verify that `showCelebration` / `handleCelebrationContinue` / `checkCourseCompletion` are still connected correctly at each consumer call site.",
+      "tags": ["zustand", "store-consumer-bridge", "parallel-development", "integration", "lesson-player"]
+    },
+    {
+      "file": "/Volumes/SSD/Dev/Apps/Knowlune/docs/solutions/best-practices/zustand-stale-async-results-generation-counter-2026-05-03.md",
+      "module": "lesson_player",
+      "problem_type": "best_practice",
+      "severity": "medium",
+      "relevance": "The completion flow in `useCompletionFlow.ts` performs async operations (setting item status via `setItemStatus`, then checking course completion). If the user rapidly navigates between lessons during the completion flow, the generation-counter / ref-tracking pattern could prevent stale state from overwriting the current lesson's completion state.",
+      "key_insight": "Async completion status writes can race with navigation. The generation-counter pattern (incrementing a ref on each new operation and aborting if stale) is the recommended defense if the completion flow introduces race conditions.",
+      "tags": ["zustand", "async-state", "race-condition", "generation-counter", "ref-tracking", "stale-closure"]
+    },
+    {
+      "file": "/Volumes/SSD/Dev/Apps/Knowlune/docs/solutions/best-practices/unified-course-card-shared-shell-pattern-2026-04-20.md",
+      "module": "courses",
+      "problem_type": "best_practice",
+      "severity": "medium",
+      "relevance": "Contains a pattern for deriving exclusive visual states (play vs completion) using named booleans rather than chained condition checks. The pattern of collapsing a truth table into derived booleans (`isCompleted`, `isNotStarted`) is analogous to the current PR's decision logic: is this a course-level completion or just a lesson-level completion?",
+      "key_insight": "Use derived booleans (`isCourseComplete` vs `isLessonFinished`) rather than ad-hoc condition chains at every call site. The course-card pattern shows how `status === 'completed' || completionPercent === 100` becomes a single `isCompleted` boolean used uniformly.",
+      "tags": ["course-card", "completion-overlay", "derived-state", "exclusive-visual-states"]
+    }
+  ],
+  "no_relevant_solutions_summary": "No documented solution in docs/solutions/ directly covers the completion celebration modal behavior, the decision to suppress per-lesson celebrations, or modal fatigue patterns in the lesson player. The three tangential matches above cover adjacent concerns (store wiring, async state safety, and boolean derivation patterns) that may inform implementation quality but do not encode prior art on the modal suppression decision itself.",
+  "critical_patterns_status": "No critical-patterns.md file exists at docs/solutions/patterns/."
+}

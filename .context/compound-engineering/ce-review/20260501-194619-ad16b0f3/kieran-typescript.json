@@ -1,0 +1,12 @@
+{
+  "reviewer": "kieran-typescript",
+  "findings": [],
+  "residual_risks": [
+    {
+      "confidence": 0.62,
+      "location": "/Volumes/SSD/Dev/Apps/Knowlune/src/lib/aiConfiguration.ts:535-537 (saveProviderApiKey call inside getDecryptedApiKeyForProvider Vault fallback)",
+      "description": "When the Vault fallback recovers a plaintext secret, `saveProviderApiKey` re-writes that same secret back to Vault via `storeCredential` (line 576 of `saveProviderApiKey`'s body) before re-encrypting locally. Since the secret was just read from Vault, this is an idempotent but unnecessary network call on every self-heal. Not a type-safety issue, but worth noting as an architectural wart — a narrower re-encrypt-only helper that skips the Vault write would avoid the redundant round-trip."
+    }
+  ],
+  "testing_gaps": []
+}

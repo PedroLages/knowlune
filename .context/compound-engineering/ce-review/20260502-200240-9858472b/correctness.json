@@ -1,0 +1,114 @@
+{
+  "reviewer": "correctness",
+  "findings": [
+    {
+      "title": "AIAnalyticsTab monthlyStats useEffect missing cleanup/ignore flag",
+      "severity": "MEDIUM",
+      "file": "src/app/components/reports/AIAnalyticsTab.tsx",
+      "line": 156,
+      "confidence": 0.78,
+      "autofix_class": "ADD_IGNORE_FLAG",
+      "owner": "code",
+      "requires_verification": false,
+      "pre_existing": false,
+      "suggested_fix": "Add an `let ignore = false` / `return () => { ignore = true }` cleanup pattern matching the existing useEffect at line 123 in the same component. This prevents setState-on-unmounted-component warnings when navigating away while the fetch is in flight, and avoids stale-data races in React 18 strict-mode double-mounting."
+    },
+    {
+      "title": "AIAnalyticsTab monthlyStats error silently swallowed",
+      "severity": "LOW",
+      "file": "src/app/components/reports/AIAnalyticsTab.tsx",
+      "line": 157,
+      "confidence": 0.82,
+      "autofix_class": "ADD_ERROR_LOGGING",
+      "owner": "code",
+      "requires_verification": false,
+      "pre_existing": false,
+      "suggested_fix": "The `.catch(() => {})` silently discards all errors from `getAIUsageStats('monthly')`. Add `console.error('[AIAnalytics] Failed to load monthly stats:', err)` matching the pattern at line 141, so failures are traceable in devtools."
+    },
+    {
+      "title": "ActivityHeatmap grid container role='img' makes interactive cell children presentational",
+      "severity": "MEDIUM",
+      "file": "src/app/components/reports/ActivityHeatmap.tsx",
+      "line": 291,
+      "confidence": 0.80,
+      "autofix_class": "CHANGE_ARIA_ROLE",
+      "owner": "accessibility",
+      "requires_verification": false,
+      "pre_existing": false,
+      "suggested_fix": "Per ARIA spec, `role='img'` on the grid parent makes all child elements presentational in the accessibility tree. The individual cells have `role='img'`, `tabIndex`, and keyboard navigation handlers. With the parent `role='img'`, screen readers would not expose individual cells or their aria-labels, and keyboard-only assistive-tech users would lose cell-level navigation semantics. Consider reverting to `role='group'` (previous value) or using `role='grid'` with explicit `gridcell` roles on children."
+    },
+    {
+      "title": "Reports.tsx loadQuizAnalytics re-runs when isOnline toggles (unnecessary fetches)",
+      "severity": "LOW",
+      "file": "src/app/pages/Reports.tsx",
+      "line": 181,
+      "confidence": 0.72,
+      "autofix_class": "STABILIZE_DEPENDENCY",
+      "owner": "code",
+      "requires_verification": false,
+      "pre_existing": false,
+      "suggested_fix": "`loadQuizAnalytics` is called from the main useEffect whose dependency array includes `loadCompletionRate` (which depends on `[isOnline]`). When `isOnline` changes, the entire effect re-fires, re-calling `loadQuizAnalytics` unnecessarily since it reads from local IndexedDB and doesn't depend on online status. Move `loadQuizAnalytics` to its own `useEffect(() => { void loadQuizAnalytics() }, [loadQuizAnalytics])` to decouple it from the isOnline-triggered effect cycle. This avoids redundant Dexie queries on every online/offline transition."
+    },
+    {
+      "title": "generateStudyInsight has unreachable defensive fallback return",
+      "severity": "LOW",
+      "file": "src/lib/insights.ts",
+      "line": 52,
+      "confidence": 0.85,
+      "autofix_class": "REMOVE_DEAD_CODE",
+      "owner": "code",
+      "requires_verification": false,
+      "pre_existing": false,
+      "suggested_fix": "The final template in the priority chain (line 43-44) unconditionally returns a string, so the outer `return 'Steady progress. Keep going.'` at line 52 is never reached. This is defensive and harmless, but the dead string diverges from the template's message ('Steady progress. N lessons completed and counting.' vs 'Steady progress. Keep going.') which could cause confusion if someone moves/removes the last template without updating the fallback. Either remove the dead code or change the last template to `(): string | null` so the fallback serves as the actual catch-all."
+    }
+  ],
+  "residual_risks": [
+    {
+      "risk": "In React 18 strict mode, the AIAnalyticsTab monthly stats useEffect fires twice, creating two parallel `getAIUsageStats('monthly')` calls. The first to resolve may be overwritten by the second. Since both fetch identical data, this is benign in practice, but the pattern is fragile — if `getAIUsageStats` ever changes to return time-sensitive results, stale data could win.",
+      "severity": "LOW",
+      "likelihood": "low"
+    },
+    {
+      "risk": "The `ReadingSection` container wraps `ReadingStatsSection`, `ReadingPatternsCard`, `ReadingGoalsCard`, `GenreDistributionCard`, and `ReadingSummaryCard` — each of which loads its own data independently from Dexie. These five components all fire concurrent `useEffect` data fetches on mount. If Dexie has contention or the user has a very large library, five parallel queries could briefly saturate the main thread. This is the same risk that existed when these cards were individually rendered in Reports.tsx; the new `ReadingSection` wrapper does not change the number of concurrent queries.",
+      "severity": "LOW",
+      "likelihood": "low"
+    },
+    {
+      "risk": "The old `EmptyState` component previously prevented `TabsContent` from mounting when there was no activity. Now `TabsContent` mounts immediately on page load even with zero data, so `QuizAnalyticsDashboard` and `AIAnalyticsTab` will fire their data fetches on tab activation even for brand-new users. Each handles its own empty state correctly (verified), but the UX now shows tabs/skeletons briefly rather than a single empty-state page. This is an intentional design change, not a regression.",
+      "severity": "INFO",
+      "likelihood": "certain"
+    }
+  ],
+  "testing_gaps": [
+    {
+      "gap": "No test for `ThisWeekSection` component. This is a 196-line self-contained component with its own Dexie query, date math, event listeners, and chart rendering. There is no `ThisWeekSection.test.tsx` file. The mondayOffset calculation, edge cases (Sunday session handling, empty-sessions state, mid-week boundary), event listener cleanup, and loading/error states are all untested.",
+      "severity": "HIGH",
+      "file": "src/app/components/reports/ThisWeekSection.tsx"
+    },
+    {
+      "gap": "No test for `AIAnalyticsTab` monthly stats behavior. The new hero strip (total AI used, most used feature, this month stat) and the new monthlyStats useEffect have no test coverage. The mostUsedLabel edge cases (empty features array, all-zero counts, missing featureType label) are untested.",
+      "severity": "MEDIUM",
+      "file": "src/app/components/reports/AIAnalyticsTab.tsx"
+    },
+    {
+      "gap": "No test for `ActivityHeatmap` compact mode. The new `compact` prop changes grid sizing (12px cells), gap (2px), label sizes (8px), hides the header/toggle, and hides the 'Today' legend indicator. None of these variations are tested. The existing `ActivityHeatmap.test.tsx` was not updated.",
+      "severity": "MEDIUM",
+      "file": "src/app/components/reports/ActivityHeatmap.tsx"
+    },
+    {
+      "gap": "No test for `QuizAnalyticsDashboard` hero strip. The three new stat pills (Total Quizzes, Avg Score, Completion Rate) are rendered but no test validates their presence or correctness.",
+      "severity": "MEDIUM",
+      "file": "src/app/components/reports/QuizAnalyticsDashboard.tsx"
+    },
+    {
+      "gap": "The `generateStudyInsight` tests cover the priority chain well (zero data, singular/plural, negative weeklyChange, large numbers, streak-record scenarios), but there is no test for the edge case where `activeDaysThisMonth > 15` AND `currentStreak > previousBestStreak` but `previousBestStreak === 0` (first-ever streak). The Template 2 guard requires `previousBestStreak > 0` so this correctly falls through to Template 3 or Template 5, but that fallthrough behavior is not explicitly tested — the test at line 31-44 sets `previousBestStreak: 5` which is non-zero.",
+      "severity": "LOW",
+      "file": "src/lib/__tests__/insights.test.ts"
+    },
+    {
+      "gap": "E2E test (`tests/e2e/reports-redesign.spec.ts`) was updated to match new selectors but only checks structural presence (hero stats visible, section headers present). It does not verify that the compact ActivityHeatmap renders in the hero, that ThisWeekSection loads and displays ring+bar data, or that ReadingSection renders all five child cards.",
+      "severity": "MEDIUM",
+      "file": "tests/e2e/reports-redesign.spec.ts"
+    }
+  ]
+}

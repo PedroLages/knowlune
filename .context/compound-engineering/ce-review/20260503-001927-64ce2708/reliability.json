@@ -1,0 +1,90 @@
+{
+  "reviewer": "reliability",
+  "findings": [
+    {
+      "id": "REL-1",
+      "severity": "HIGH",
+      "confidence": 0.88,
+      "title": "Dual Dexie writes without transaction safety in TranscriptTab.handleGenerate",
+      "location": "src/app/components/course/tabs/TranscriptTab.tsx:254-272",
+      "description": "After successful transcription, two Dexie tables are written sequentially: db.videoCaptions.put() then db.youtubeTranscripts.put(). If the first write succeeds and the second fails (e.g., storage quota exceeded, schema mismatch), the database enters an inconsistent state — a videoCaptions record exists without a corresponding youtubeTranscripts record. The user sees an error state with a 'Retry' button; clicking Retry runs the full transcription again and creates a duplicate videoCaptions entry, compounding the inconsistency.",
+      "fix": "Wrap both .put() calls in a Dexie transaction: db.transaction('rw', db.videoCaptions, db.youtubeTranscripts, async () => { ... }). This ensures both writes succeed or both roll back atomically.",
+      "code": "await db.videoCaptions.put({ courseId, videoId: lessonId, ... })\nawait db.youtubeTranscripts.put({ courseId, videoId: lessonId, ... })"
+    },
+    {
+      "id": "REL-2",
+      "severity": "HIGH",
+      "confidence": 0.85,
+      "title": "AbortController created but transcription cannot be aborted mid-flight",
+      "location": "src/app/components/course/tabs/TranscriptTab.tsx:220-248 and src/lib/whisper/useWhisperTranscription.ts:33-62",
+      "description": "TranscriptTab creates an AbortController (line 220) and checks controller.signal.aborted before/after calling transcribe() (lines 228, 245, 248). However, transcribe() in useWhisperTranscription does not accept an AbortSignal parameter. The hook's internal abortRef (line 30) is set to false at line 43 but is only checked in the progress callback (line 48) to suppress UI updates — it never interrupts the actual provider.transcribe() call. Result: navigating away during transcription calls abortControllerRef.current.abort() (cleanup on line 185), which sets signal.aborted to true, but the Whisper model continues running in its Web Worker until completion, wasting CPU and battery.",
+      "fix": "Pass the AbortController's signal to useWhisperTranscription. The transcribe() function should accept an AbortSignal and pass it to the Whisper provider. The provider should check signal.aborted periodically and stop processing if aborted.",
+      "code": "const result = await transcribe(file)  // No AbortSignal accepted"
+    },
+    {
+      "id": "REL-3",
+      "severity": "MEDIUM",
+      "confidence": 0.75,
+      "title": "No timeout for Whisper transcription — indefinite hang risk",
+      "location": "src/app/components/course/tabs/TranscriptTab.tsx:247 and src/lib/whisper/useWhisperTranscription.ts:47",
+      "description": "The transcribe(file) call has no timeout. Browser-based Whisper transcription (xenova/transformers WASM) can take several minutes. If model download hangs, the Web Worker gets stuck, or the self-hosted endpoint never responds, this call blocks indefinitely. The user cannot cancel (REL-2) and has no visual feedback beyond a progress bar. The component renders no cancel button during generation — the user's only option is to navigate away, which does not actually stop the transcription work.",
+      "fix": "Add a timeout to the transcription operation. For the browser provider, implement a maximum duration (e.g., 10 minutes for a typical 30-minute video). For API-based providers, set a fetch timeout on the HTTP call."
+    },
+    {
+      "id": "REL-4",
+      "severity": "LOW",
+      "confidence": 0.65,
+      "title": "Fire-and-forget promise chain without error handler in saveNote",
+      "location": "src/stores/useNoteStore.ts:108-112",
+      "description": "findAndReturnNoteLinkSuggestions(note, get().notes).then(suggestions => { ... }) has no .catch() handler. While findAndReturnNoteLinkSuggestions wraps its internal errors in try/catch and always returns [], an unexpected rejection (e.g., from the set() call inside .then()) would become an unhandled promise rejection.",
+      "fix": "Add a .catch() handler: .then(suggestions => { ... }).catch(err => console.error('[NoteStore] Note link suggestion handler failed:', err))"
+    }
+  ],
+  "residual_risks": [
+    {
+      "id": "RR-1",
+      "title": "Consent check is point-in-time only — consent could be withdrawn mid-generation",
+      "detail": "handleGenerate checks consent at lines 200-214, then proceeds with the long-running transcription. If the user withdraws consent via Settings during transcription, the already-in-progress transcription continues and stores results. The consent check is a point-in-time gate, not a continuous guard.",
+      "accepted_reason": "Consent withdrawal during active processing is an edge case. Adding continuous consent re-validation mid-stream would add significant complexity for minimal practical benefit. The stored transcript can be deleted if needed."
+    },
+    {
+      "id": "RR-2",
+      "title": "No deduplication check before expensive transcription",
+      "detail": "handleGenerate does not check if a transcript already exists for this lesson before starting the Whisper process. The generationState guards prevent re-generation during normal flow, but if state is reset (e.g., via Retry from error state), the full transcription runs again with no existing-transcript check.",
+      "accepted_reason": "The generationState state machine prevents accidental re-generation. The Retry flow is intentional and re-running transcription from scratch is the desired behavior for error recovery."
+    },
+    {
+      "id": "RR-3",
+      "title": "Autoplay may fail silently when video blob URL is not yet available",
+      "detail": "When auto-advance navigates to the next lesson with autoPlay: true, the VideoPlayer's autoplay useEffect fires. If the blob URL is still being generated (useVideoFromHandle is still loading), the video element exists but its src may be empty. VideoPlayer.play() on a video without a src will reject. The catch handler retries muted, which also fails. The video appears paused. When the src eventually loads (via a separate useEffect), autoplay does not retrigger because the [autoplay, src] dependencies haven't changed.",
+      "accepted_reason": "This is a timing edge case. Most blob URL generation completes faster than the React render/mount cycle. When it doesn't, the user sees a paused video (with big play button overlay) and can click to start playback. The failure is silent but non-destructive."
+    }
+  ],
+  "testing_gaps": [
+    {
+      "id": "TG-1",
+      "title": "No test for dual Dexie write partial failure",
+      "detail": "Tests should verify that when db.youtubeTranscripts.put() throws after db.videoCaptions.put() succeeds, the component shows an error state and no orphan videoCaptions record remains (or the transaction rolls back both)."
+    },
+    {
+      "id": "TG-2",
+      "title": "No test for transcription abort during active processing",
+      "detail": "Tests should verify that unmounting TranscriptTab during an active transcription properly cleans up: no state updates on unmounted component, and the abort signal is propagated to the Whisper provider."
+    },
+    {
+      "id": "TG-3",
+      "title": "No test for localStorage unavailability on auto-play preference",
+      "detail": "Tests should verify that when localStorage.setItem() throws (simulated via mock), the auto-play toggle still functions (in-memory state updates correctly) and the store initializes with the fallback default (true)."
+    },
+    {
+      "id": "TG-4",
+      "title": "No test for consent service DB error during transcription generation",
+      "detail": "Tests should verify that when consentService.isGranted() or isGrantedForProvider() throws a Dexie error, the component shows the consent-required state rather than crashing or hanging."
+    },
+    {
+      "id": "TG-5",
+      "title": "No test for fileHandle.getFile() rejection during generation",
+      "detail": "Tests should verify that when video.fileHandle.getFile() throws (simulating file moved/deleted), the component shows the appropriate error message and transitions to error state."
+    }
+  ]
+}

@@ -1,0 +1,61 @@
+{
+  "runId": "20260503-195348-3af51c16",
+  "mode": "headless",
+  "round": "R3 (final)",
+  "branch": "feature/ce-2026-05-03-curriculum-composer",
+  "plan": "docs/plans/2026-05-03-005-feat-curriculum-composer-plan.md",
+  "base": "da0a65d0600ec94b5b98a91f0d6adfa14a1b8c52",
+  "verdict": "Ready to merge",
+  "blockers": 0,
+  "high": 0,
+  "medium": 0,
+  "low": 1,
+  "nit": 1,
+  "findings": [
+    {
+      "id": "R3-001",
+      "severity": "P3",
+      "autofixClass": "manual",
+      "owner": "downstream-resolver",
+      "confidence": 0.65,
+      "pre_existing": false,
+      "requires_verification": false,
+      "title": "Circular import between CurriculumComposer and ImportWizardDialog",
+      "file": "src/app/components/figma/ImportWizardDialog.tsx",
+      "line": 2,
+      "why_it_matters": "ImportWizardDialog imports COURSE_IMPORTED from ./CurriculumComposer, while CurriculumComposer imports ImportWizardDialog from ./ImportWizardDialog. This creates a circular dependency. The exported value is a top-level const string ('course-imported'), so ES module hoisting handles this correctly at runtime — there is no actual breakage. However, the dependency direction is backwards: the event dispatcher (ImportWizardDialog) should own the event name constant, or it should live in a shared constants file.",
+      "suggestedFix": "Move COURSE_IMPORTED constant to ImportWizardDialog (as the event dispatcher) or to a shared constants module, and have CurriculumComposer import it from there instead. This eliminates the circular dependency and follows the existing pattern where ImportWizardDialog owns IMPORT_WIZARD_SET_TARGET."
+    },
+    {
+      "id": "R3-002",
+      "severity": "P3",
+      "autofixClass": "advisory",
+      "owner": "human",
+      "confidence": 0.55,
+      "pre_existing": false,
+      "requires_verification": false,
+      "title": "batchAddCoursesToPath rollback test does not verify existing entries survive",
+      "file": "src/stores/__tests__/useLearningPathStore.test.ts",
+      "line": 739,
+      "why_it_matters": "The rollback test creates a path with 0 entries before attempting batchAdd. If rollback were buggy and clobbered pre-existing entries, this test would not catch it. A stronger test would seed the path with existing entries, then verify they remain after rollback.",
+      "suggestedFix": "Add pre-existing entries to the path before the rollback test, then assert they remain after the error is caught."
+    }
+  ],
+  "appliedFixes": [],
+  "residualRisks": [
+    "Orphaned IndexedDB entries possible if syncableWrite partially succeeds before failure (same pattern as existing store methods — not new)"
+  ],
+  "testingGaps": [
+    "No integration test verifying ImportWizard -> course-imported event -> CurriculumComposer selection flow end-to-end"
+  ],
+  "coverage": {
+    "suppressed": 0,
+    "untrackedExcluded": ["--full-page=false (accidental file artifact)", ".context/** (prior review artifacts)", "docs/** (brainstorms/plans)"],
+    "failedReviewers": []
+  },
+  "r3FixesVerified": [
+    "batchAddCoursesToPath persists optimistically-updated path (line 734: get().paths.find) — VERIFIED",
+    "batchAddCoursesToPath re-throws errors after rollback (line 747: throw error) — VERIFIED",
+    "ImportWizardDialog.tsx uses exported COURSE_IMPORTED constant (line 2 import, line 414 usage) — VERIFIED"
+  ]
+}

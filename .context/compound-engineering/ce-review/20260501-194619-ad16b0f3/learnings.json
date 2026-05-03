@@ -1,0 +1,222 @@
+{
+  "reviewer": "learnings",
+  "search_context": {
+    "feature": "Fix API key persistence after IndexedDB clearing by adding a Vault fallback to getDecryptedApiKeyForProvider()",
+    "keywords_searched": [
+      "api key", "apikey", "api_key", "vault", "credential", "CryptoKey",
+      "decrypt", "readCredential", "saveProviderApiKey", "getDecryptedApiKey",
+      "aiConfiguration", "ai-configuration", "indexeddb", "clearing",
+      "key persist", "key loss", "key recover", "dexie", "storage clear",
+      "encryptData", "decryptData", "providerKeys", "localStorage",
+      "event cycle", "ai-configuration-updated"
+    ],
+    "directories_searched": ["docs/solutions/", "docs/solutions/logic-errors/", "docs/solutions/best-practices/", "docs/solutions/sync/"],
+    "files_analyzed": 6,
+    "relevant_matches": 2
+  },
+
+  "critical_patterns": {
+    "status": "NOT_CHECKED",
+    "note": "No docs/solutions/patterns/critical-patterns.md file exists in this repository. This directory is not yet created."
+  },
+
+  "relevant_learnings": [
+    {
+      "title": "Course reader Ask AI falsely unavailable when noteQA provider was configured",
+      "file": "/Volumes/SSD/Dev/Apps/Knowlune/docs/solutions/logic-errors/note-qa-course-reader-legacy-ai-availability-mismatch-2026-04-27.md",
+      "module": "AI Q&A from Notes (Courses lesson player + standalone chat)",
+      "problem_type": "logic_error",
+      "severity": "high",
+      "relevance": "DIRECT. This solution documents the exact function being modified (getDecryptedApiKeyForProvider), the ai-configuration-updated event cycle, the providerKeys vs legacy apiKeyEncrypted fallback chain, and the async-decrypt-with-sync-config-snapshot pattern. It defines the feature-specific availability pattern that the Vault fallback integrates into.",
+      "key_insights": [
+        "SNAPSHOT BEFORE DECRYPT: When mixing sync config reads with async decrypt, snapshot getAIConfiguration() for 'is there key material?' decisions that must align with the subsequent decrypt. The Vault fallback must follow this same pattern.",
+        "TOCTOU GUARD: After asserting consent for a feature, pass the same resolved config into getLLMClient/streaming so provider identity cannot flip mid-flow. Adding a Vault read (network call) into the decrypt path increases the TOCTOU window.",
+        "NEUTRAL ERROR REASONS: For hooks that map failures to UX reasons, use a neutral reason (e.g. availability-check-failed) rather than a misleading provider-specific default. The Vault fallback returning null should not leak raw error messages.",
+        "AI-CONFIGURATION-UPDATED LISTENERS: Six components listen to this event (AIConfigurationSettings, ProviderKeyAccordion, FeatureModelOverridePanel, AISummaryPanel, AIUnavailableBadge, useMissingCredentials). Any write that dispatches this event during a read operation (Vault fallback re-encrypt) will trigger all listeners."
+      ]
+    },
+    {
+      "title": "Note QA: AI Tutor on but stale provider consent (E119-S09)",
+      "file": "/Volumes/SSD/Dev/Apps/Knowlune/docs/solutions/logic-errors/note-qa-provider-reconsent-modal-2026-04-27.md",
+      "module": "AI Q&A from Notes (lesson player + standalone chat)",
+      "problem_type": "logic_error",
+      "severity": "medium",
+      "relevance": "INDIRECT. Documents the provider re-consent flow which is a parallel concern: when credentials exist but consent is stale. The re-consent modal pattern (ProviderReconsentModal) is the UX counterpart to the Vault fallback — both restore functionality without requiring manual key re-entry.",
+      "key_insights": [
+        "MULTI-LAYER RECOVERY: The re-consent modal shows that credential recovery isn't just about decrypting keys — consent alignment is a separate recovery dimension. Vault fallback + re-consent are complementary.",
+        "PROVIDER_ID ALIGNMENT: Consent rows require provider_id to match the resolved provider. When Vault fallback recovers a key, the consent check in assertAIFeatureConsent must still pass for the recovered provider. If consent is stale even after Vault recovery, the ProviderReconsentModal flow handles it."
+      ]
+    }
+  ],
+
+  "existing_codebase_patterns": [
+    {
+      "pattern": "Vault fallback already partly implemented in getDecryptedApiKeyForProvider",
+      "source": "/Volumes/SSD/Dev/Apps/Knowlune/src/lib/aiConfiguration.ts",
+      "lines": "522-548",
+      "details": "The code already has a Vault fallback that: (1) checks hasEncryptedData to prove a key was configured, (2) calls readCredential('ai-provider', provider), (3) re-encrypts via saveProviderApiKey on success. The current task may be completing or fixing this existing path.",
+      "known_pitfalls": [
+        "The hasEncryptedData gate (lines 526-529) requires localStorage encrypted data to survive IndexedDB clearing. Full 'Clear site data' operations wipe both, so this gate prevents recovery in the most common browser-clearing scenario.",
+        "Empty-string decryption (decryptedResult === '' from decryptData) bypasses the null-check guards at lines 514 and 525, skipping both legacy and Vault fallback.",
+        "saveProviderApiKey during Vault fallback dispatches ai-configuration-updated event and fires a redundant storeCredential call — a read operation with write side effects."
+      ]
+    },
+    {
+      "pattern": "Credential resolver with retry ladder and auth refresh",
+      "source": "/Volumes/SSD/Dev/Apps/Knowlune/src/lib/credentials/resolverFactory.ts",
+      "lines": "1-80",
+      "details": "The resolverFactory implements a more sophisticated Vault read: cache hit → broker read → on 401/403 invalidate cache, refresh session, retry once → still fails: emit telemetry, return null, do not cache. This pattern exists for ABS/OPDS credentials but is NOT used by aiConfiguration's getDecryptedApiKeyForProvider.",
+      "known_pitfalls": [
+        "The getDecryptedApiKeyForProvider Vault read does NOT implement the retry ladder (auth refresh on 401). If the user's session expires between IndexedDB clearing and the Vault fallback, the key is simply returned as null.",
+        "The resolverFactory caches successful reads (credentialCache) and invalidates on failure. getDecryptedApiKeyForProvider has no equivalent caching — every call is a fresh decrypt + potential Vault network call."
+      ]
+    },
+    {
+      "pattern": "Fire-and-forget Vault writes with localStorage fallback",
+      "source": "/Volumes/SSD/Dev/Apps/Knowlune/src/lib/aiConfiguration.ts",
+      "lines": "570-599",
+      "details": "saveProviderApiKey stores to Vault via storeCredential('ai-provider', provider, apiKey).catch(...) — NOT awaited. If the page closes before the Edge Function completes, or the function is unreachable at save time, the plaintext never reaches Vault. localStorage encrypted copy serves as the fallback.",
+      "known_pitfalls": [
+        "This is the root cause of the 'Vault fallback returns null' edge case: the Vault was never populated in the first place.",
+        "During Vault fallback re-encrypt, saveProviderApiKey is called again, which fires another fire-and-forget storeCredential. This is a redundant Vault write (the value was just read from Vault)."
+      ]
+    },
+    {
+      "pattern": "CryptoKey persistence via IndexedDB (CryptoKeyStore)",
+      "source": "/Volumes/SSD/Dev/Apps/Knowlune/src/lib/cryptoKeyStore.ts",
+      "details": "The AES-256-GCM CryptoKey used for encryptData/decryptData is stored in IndexedDB (database: 'CryptoKeyStore'). When IndexedDB is cleared (SW update, browser data clearing, storage pressure), a new CryptoKey is generated that cannot decrypt existing localStorage ciphertext.",
+      "known_pitfalls": [
+        "Plain page reloads (F5/Cmd+R) preserve IndexedDB — they do NOT trigger this issue.",
+        "SW lifecycle events (triggered by codebase deploys) can clear IndexedDB if the SW migration changes the storage schema.",
+        "The integration test at src/lib/__tests__/cryptoKeyPersistence.integration.test.ts explicitly documents and tests this exact failure mode."
+      ]
+    }
+  ],
+
+  "patterns_that_worked": [
+    {
+      "pattern": "Integration test with real crypto + fake-indexeddb validates full chain",
+      "source": "/Volumes/SSD/Dev/Apps/Knowlune/src/lib/__tests__/cryptoKeyPersistence.integration.test.ts",
+      "why_it_worked": "Using real Web Crypto API (not mocked) ensures the actual AES-256-GCM encrypt/decrypt contract is tested. fake-indexeddb simulates the CryptoKeyStore IDB layer. Together they validate the end-to-end flow: saveProviderApiKey → IDB key → page refresh → decrypt → Vault fallback → self-heal. This pattern should be extended for any new recovery paths."
+    },
+    {
+      "pattern": "Module-level in-memory key cache with explicit reset for testing",
+      "source": "/Volumes/SSD/Dev/Apps/Knowlune/src/lib/crypto.ts",
+      "why_it_worked": "The _resetKeyCache() export allows tests to simulate key loss without actually clearing IndexedDB. This is the correct approach for test isolation."
+    },
+    {
+      "pattern": "Discriminated result types for Vault operations",
+      "source": "/Volumes/SSD/Dev/Apps/Knowlune/src/lib/vaultCredentials.ts",
+      "lines": "35-38, 150-153",
+      "why_it_worked": "readCredentialWithStatus returns { ok: true, value } | { ok: false, reason: 'unauthenticated'|'auth-failed'|'error' }. This allows callers to distinguish transient auth failures from genuinely missing credentials. The simpler readCredential wrapper hides this distinction, which is acceptable for fire-and-forget read sites but limits diagnostic quality."
+    }
+  ],
+
+  "patterns_that_failed_or_are_risky": [
+    {
+      "pattern": "hasEncryptedData gate blocks Vault recovery after full browser data clearing",
+      "source": "/Volumes/SSD/Dev/Apps/Knowlune/src/lib/aiConfiguration.ts",
+      "lines": "526-529",
+      "why_it_fails": "The intent is to only consult Vault when encrypted data proves a key was configured. But when Chrome's 'Clear site data' or browser wipe operations clear both IndexedDB AND localStorage, hasEncryptedData is false and Vault is never consulted. The common user case ('clear all browsing data') is the exact case this gate blocks.",
+      "fix_suggestion": "Two-phase approach: (1) current logic when encrypted data survives; (2) when no encrypted data at all, use checkCredential to see if Vault has the key. If yes, read and re-populate localStorage. This adds a network call on cold start for unconfigured providers."
+    },
+    {
+      "pattern": "Empty-string decryption bypasses null-checks in Vault guard",
+      "source": "/Volumes/SSD/Dev/Apps/Knowlune/src/lib/aiConfiguration.ts",
+      "lines": "514, 525",
+      "why_it_fails": "The guards check decryptedResult === null, but decryptData() returns Promise<string> and can return ''. Since '' !== null, both the legacy fallback and Vault fallback are skipped. The function returns '' which callers treat as a valid key.",
+      "fix_suggestion": "Change guards to !decryptedResult or decryptedResult === null || decryptedResult === ''."
+    },
+    {
+      "pattern": "saveProviderApiKey fire-and-forget Vault write can silently fail",
+      "source": "/Volumes/SSD/Dev/Apps/Knowlune/src/lib/aiConfiguration.ts",
+      "lines": "576",
+      "why_it_fails": "storeCredential('ai-provider', provider, apiKey).catch(err => console.warn(...)) means Vault write failures are logged but never surfaced to the user. If the user saves a key and the Edge Function is unreachable, the key exists only in localStorage. If localStorage is later cleared, recovery is impossible because Vault was never populated. This makes the Vault fallback's effectiveness dependent on the Vault write having succeeded in a previous session.",
+      "fix_suggestion": "Consider awaiting the Vault write with a timeout, and surfacing a non-blocking toast if it fails. Alternatively, at minimum, document this limitation clearly in the plan/commit message."
+    }
+  ],
+
+  "ai_configuration_updated_event_consumers": [
+    {
+      "component": "AIUnavailableBadge",
+      "file": "/Volumes/SSD/Dev/Apps/Knowlune/src/app/components/figma/AIUnavailableBadge.tsx",
+      "concern": "Will re-check availability on Vault fallback re-encrypt, potentially showing a brief 'unavailable' flash before the key is recovered."
+    },
+    {
+      "component": "AISummaryPanel",
+      "file": "/Volumes/SSD/Dev/Apps/Knowlune/src/app/components/figma/AISummaryPanel.tsx",
+      "concern": "Same as above — re-checks configuration on event."
+    },
+    {
+      "component": "ProviderKeyAccordion",
+      "file": "/Volumes/SSD/Dev/Apps/Knowlune/src/app/components/figma/ProviderKeyAccordion.tsx",
+      "concern": "Reloads decrypted key list on event. If the Vault fallback triggers during a read, this component will re-render with the newly re-encrypted key."
+    },
+    {
+      "component": "FeatureModelOverridePanel",
+      "file": "/Volumes/SSD/Dev/Apps/Knowlune/src/app/components/figma/FeatureModelOverridePanel.tsx",
+      "concern": "Refreshes provider availability on event."
+    },
+    {
+      "component": "AIConfigurationSettings",
+      "file": "/Volumes/SSD/Dev/Apps/Knowlune/src/app/components/figma/AIConfigurationSettings.tsx",
+      "concern": "Handles custom update logic on event."
+    },
+    {
+      "component": "useMissingCredentials",
+      "file": "/Volumes/SSD/Dev/Apps/Knowlune/src/app/hooks/useMissingCredentials.tsx",
+      "concern": "Re-aggregates missing credentials on event. If the Vault fallback recovers multiple keys in quick succession, this could trigger repeated re-aggregation."
+    },
+    {
+      "component": "useNoteQAAvailability",
+      "file": "/Volumes/SSD/Dev/Apps/Knowlune/src/app/hooks/useNoteQAAvailability.ts",
+      "concern": "Refreshes noteQA availability on event — same concern as AIUnavailableBadge."
+    }
+  ],
+
+  "recommendations": [
+    {
+      "recommendation": "Extract re-encrypt to a private helper that does NOT dispatch ai-configuration-updated",
+      "priority": "HIGH",
+      "rationale": "The Vault fallback path in getDecryptedApiKeyForProvider calls saveProviderApiKey(), which dispatches the ai-configuration-updated event and fires a redundant storeCredential. A read operation should not have these side effects. Extract a private _reEncryptLocally(provider, plaintext) that writes providerKeys[provider] to localStorage without event dispatch and without Vault store.",
+      "source": "correctness.json finding #3"
+    },
+    {
+      "recommendation": "Fix empty-string decryption bypassing null-checks",
+      "priority": "HIGH",
+      "rationale": "Change decryptedResult === null to !decryptedResult at lines 514 and 525 so that empty-string decryption also triggers the legacy and Vault fallback cascades.",
+      "source": "correctness.json finding #1"
+    },
+    {
+      "recommendation": "Consider adding readCredentialWithStatus with auth-failed retry (like resolverFactory)",
+      "priority": "MEDIUM",
+      "rationale": "The existing Vault read in getDecryptedApiKeyForProvider uses the simple readCredential() which returns null for both auth-failed and not-configured cases. The resolverFactory pattern (auth refresh on 401 → retry) would improve recovery robustness. If the user's session expired between IndexedDB clearing and the next page load, a single session refresh could recover the key.",
+      "source": "resolverFactory.ts pattern analysis"
+    },
+    {
+      "recommendation": "Add concurrent-call deduplication for Vault recovery",
+      "priority": "MEDIUM",
+      "rationale": "If getDecryptedApiKeyForProvider is called rapidly by multiple components (e.g., React concurrent render), each call independently hits Vault. A module-level in-flight promise cache keyed by provider would prevent redundant network requests.",
+      "source": "correctness.json finding #4"
+    },
+    {
+      "recommendation": "Document that Vault fallback requires localStorage survival",
+      "priority": "LOW",
+      "rationale": "The hasEncryptedData gate means the Vault fallback only works when localStorage (encrypted data) survives IndexedDB clearing. Full 'Clear site data' operations will still require key re-entry. If this is acceptable for now, document the limitation in the plan and code comments. If not, implement a checkCredential-based fallback for the no-encrypted-data case.",
+      "source": "correctness.json finding #2"
+    },
+    {
+      "recommendation": "Add integration test for legacy apiKeyEncrypted Vault fallback with real crypto",
+      "priority": "LOW",
+      "rationale": "The existing integration test only covers the providerKeys path. The legacy apiKeyEncrypted path (for users who stored their key in the older single-key format) lacks real-crypto integration coverage for Vault fallback.",
+      "source": "testing.json TEST-001 and testing gaps"
+    }
+  ],
+
+  "no_matches_for": [
+    "CryptoKey loss specifically from service worker updates (no documented solution exists — the plan document is the first formal treatment of this issue)",
+    "IndexedDB database clearing and its interaction with Web Crypto key rotation (no prior solution)",
+    "Vault fallback in the getDecryptedApiKeyForProvider function specifically (the existing Vault code in the function is apparently new/being added — no prior solution exists)",
+    "ai-configuration-updated event cycle bugs (no prior documented solution — the event dispatch during re-encrypt is a novel concern raised by this diff)"
+  ]
+}

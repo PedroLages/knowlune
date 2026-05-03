@@ -1,0 +1,105 @@
+{
+  "reviewer": "maintainability",
+  "findings": [
+    {
+      "severity": "HIGH",
+      "category": "COMPLEXITY",
+      "title": "Vestigial `shouldAutoPlay` in useEffect deps causes unnecessary re-runs",
+      "file": "src/app/pages/UnifiedLessonPlayer.tsx",
+      "lines": "104-108",
+      "detail": "The effect body uses `parseLocationFlag(location.state, 'autoPlay')` (not `shouldAutoPlay`) as the clearing gate. But the dep array still carries `shouldAutoPlay` from the pre-OR-combine code. This causes the effect to re-fire every time the user toggles the auto-play button (because `storeAutoPlay` flips, changing `shouldAutoPlay`), even though there is no router state to clear. The re-run is a no-op (parsing an empty location.state returns false) but the dependency is conceptually wrong and wastes renders. The dep array should be `[location.pathname, location.state, navigate]` — `location.state` already covers the only real trigger.",
+      "recommendation": "Remove `shouldAutoPlay` from the dep array since the body no longer references it. The comment on line 101-103 acknowledges this is 'harmless' but it should be corrected rather than documenting around the vestige."
+    },
+    {
+      "severity": "HIGH",
+      "category": "COMPLEXITY",
+      "title": "QAChatPanel tooltip wrapping places Tooltip outside SheetTrigger/PopoverTrigger, potentially dropping click handlers",
+      "file": "src/app/components/figma/QAChatPanel.tsx",
+      "lines": "396-403, 407-409, 418-419",
+      "detail": "QAChatPanel wraps the trigger Button in `<Tooltip>` to produce `triggerWithTooltip`, then passes this to `<SheetTrigger asChild>` or `<PopoverTrigger asChild>`. The outer `asChild` Slot uses React.cloneElement to merge `onClick`/`ref` onto `<Tooltip>`, but the Radix `Tooltip` component (node_modules/@radix-ui/react-tooltip/dist/index.mjs:71-80) destructures only `__scopeTooltip`, `children`, `open`, `defaultOpen`, `onOpenChange`, `disableHoverableContent`, and `delayDuration` — it does NOT spread unknown props to any DOM element. The SheetTrigger/PopoverTrigger click handler (used to toggle `isOpen`) is silently dropped. Contrast with PomodoroTimer.tsx where the PopoverTrigger is placed INSIDE the Tooltip wrapping (line 82: `<PopoverTrigger asChild>` is inside `triggerButton`, then line 110-111: `<TooltipTrigger asChild>` clones PopoverTrigger — both are Radix primitives that forward via Slot). The Pomodoro pattern works; the QAChatPanel pattern does not.",
+      "recommendation": "Restructure QAChatPanel to match the PomodoroTimer pattern: move `<SheetTrigger asChild>` / `<PopoverTrigger asChild>` inside the Tooltip wrapper so the composition chain is `TooltipTrigger(asChild) → SheetTrigger(asChild) → Button` (all Slot-aware primitives). This is a functional bug that would prevent opening the QA panel via the toolbar button on desktop (lg+ screens where the kebab menu is hidden)."
+    },
+    {
+      "severity": "MEDIUM",
+      "category": "DUPLICATION",
+      "title": "`parseLocationFlag(location.state, 'autoPlay')` called twice in same scope",
+      "file": "src/app/pages/UnifiedLessonPlayer.tsx",
+      "lines": "99, 105",
+      "detail": "The same expression `parseLocationFlag(location.state, 'autoPlay')` appears on line 99 (for `shouldAutoPlay` derivation) and line 105 (for the clearing gate). A local const (e.g., `const routerAutoPlayFlag = parseLocationFlag(...)`) would DRY the computation and make the relationship between the two usages self-documenting.",
+      "recommendation": "Extract to `const routerAutoPlayFlag = parseLocationFlag(location.state, 'autoPlay')`, then `const shouldAutoPlay = routerAutoPlayFlag || storeAutoPlay`, and use `routerAutoPlayFlag` in the clearing condition."
+    },
+    {
+      "severity": "MEDIUM",
+      "category": "ABSTRACTION_DEBT",
+      "title": "Inconsistent tooltip-wrapping patterns across compound components",
+      "file": "src/app/components/figma/PomodoroTimer.tsx, src/app/components/figma/QAChatPanel.tsx",
+      "lines": "PomodoroTimer:82,110-117; QAChatPanel:396-403",
+      "detail": "Both components accept an optional `tooltipLabel` prop to self-wrap their trigger button in a Tooltip, but they use different structural patterns. PomodoroTimer embeds `<PopoverTrigger asChild>` inside `triggerButton`, then wraps with `<TooltipTrigger asChild>{triggerButton}</TooltipTrigger>` — creating a valid `TooltipTrigger → PopoverTrigger → Button` chain. QAChatPanel keeps the Button bare in `triggerButton`, wraps it in `<Tooltip>` to make `triggerWithTooltip`, then passes that to an outer `<SheetTrigger asChild>`. These are semantically different: PomodoroTimer has the tooltip INSIDE the Popover trigger (tooltip appears on hover, popover on click), while QAChatPanel has the tooltip OUTSIDE the Sheet/Popover trigger (questionable behavior). Any future developer adding a tooltipLabel prop to another compound component would not know which pattern to follow.",
+      "recommendation": "Standardize on the PomodoroTimer pattern (trigger primitive inside Tooltip wrapping). Alternatively, extract a `withTooltip(triggerElement, label)` helper if this pattern repeats."
+    },
+    {
+      "severity": "LOW",
+      "category": "NAMING",
+      "title": "`parseLocationFlag` is a module-scope function serving only one component",
+      "file": "src/app/pages/UnifiedLessonPlayer.tsx",
+      "lines": "85-88",
+      "detail": "`parseLocationFlag` is defined at module scope but is only used inside `UnifiedLessonPlayer`. It is a general-purpose utility by signature but is tightly coupled to React Router `location.state` patterns. If it is truly reusable, it belongs in a shared utilities module (e.g., `src/lib/routerUtils.ts`). If not, it should be inside the component or a local helper.",
+      "recommendation": "Either move to a shared router utilities module if reusable, or co-locate inside the component to reduce the module's public API surface."
+    },
+    {
+      "severity": "LOW",
+      "category": "DEAD_CODE",
+      "title": "`MessageCircle` and `SkipForward` imported in LessonHeaderTools but one only used in kebab",
+      "file": "src/app/components/course/LessonHeaderTools.tsx",
+      "lines": "24, 28",
+      "detail": "`MessageCircle` is imported (line 24) and used only in the kebab menu (line 236). `SkipForward` is imported (line 28) and used in both the inline toggle (line 186) and the kebab menu (line 229). No dead imports, but the import list is growing (28 icons imported including unused ones from the general lucide barrel). Not a current problem — a future cleanup task.",
+      "recommendation": "No immediate action. Consider a follow-up PR to tree-shake the icon imports, though lucide-react treeshakes at the bundler level."
+    }
+  ],
+  "residual_risks": [
+    {
+      "risk": "QAChatPanel desktop trigger button may be non-functional after this PR",
+      "probability": "HIGH",
+      "impact": "Users on desktop (lg+ screens) cannot open the QA Chat panel via the toolbar icon because the SheetTrigger/PopoverTrigger click handler is dropped by the Tooltip wrapper. The kebab menu ('Ask AI' item) works but is hidden on lg+ screens.",
+      "verification": "Manually test at desktop viewport: click the QA chat icon in the lesson header toolbar. If the panel does not open, this is confirmed."
+    },
+    {
+      "risk": "Theater mode toggle tooltip may not reflect live state in kebab menu",
+      "probability": "LOW",
+      "impact": "The theater tooltip text is derived from `isTheater` state via `<TooltipContent>{isTheater ? 'Exit theater mode' : 'Enter theater mode'}</TooltipContent>`. If `isTheater` changes while the tooltip is open, the text may be stale. This is a pre-existing pattern (same as reading mode) and not introduced by this PR.",
+      "verification": "Hover the theater toggle, press 'T' to toggle theater mode — verify the open tooltip text updates."
+    }
+  ],
+  "testing_gaps": [
+    {
+      "gap": "No tests for `shouldAutoPlay` OR-combine logic in UnifiedLessonPlayer",
+      "severity": "HIGH",
+      "detail": "The test file at `src/app/pages/__tests__/UnifiedLessonPlayer.test.tsx` (300 lines) has zero references to `autoPlay`, `shouldAutoPlay`, `storeAutoPlay`, or `parseLocationFlag`. The new `useLessonChromeStore(s => s.autoPlay)` subscription and the OR-combine derivation are untested. The plan itself acknowledged this would need a new store mock ('The UnifiedLessonPlayer test file has no existing useLessonChromeStore mock. A new mock must be created from scratch').",
+      "recommendation": "Add test cases covering: (1) `shouldAutoPlay` is true when store autoPlay is ON and no router state, (2) `shouldAutoPlay` is false when store is OFF and no router state, (3) `shouldAutoPlay` is true when router state has autoPlay:true (auto-advance)."
+    },
+    {
+      "gap": "No test for the clearing-effect infinite-loop guard",
+      "severity": "HIGH",
+      "detail": "The fix that scopes the clearing condition to `parseLocationFlag(location.state, 'autoPlay')` (instead of `shouldAutoPlay`) has no regression test. Without a test, a future refactor could revert this guard and re-introduce the infinite loop when `storeAutoPlay` is ON.",
+      "recommendation": "Add a test that verifies the clearing effect does NOT call navigate when storeAutoPlay is true but location.state has no autoPlay flag (simulating a page refresh with auto-play preference ON)."
+    },
+    {
+      "gap": "PomodoroTimer and QAChatPanel are mocked as simple divs — tooltipLabel prop untested",
+      "severity": "MEDIUM",
+      "detail": "In `LessonHeaderTools.test.tsx`, both components are mocked as `<div data-testid='...'>`. The test verifies they render but does not verify that `tooltipLabel` props are passed correctly (`tooltipLabel='Focus Timer'` and `tooltipLabel='Ask AI'`).",
+      "recommendation": "Update the mocks to capture and assert on the `tooltipLabel` prop, or add integration-level tests that render the real components."
+    },
+    {
+      "gap": "No test for `variant='brand-ghost'` when autoPlay is ON",
+      "severity": "MEDIUM",
+      "detail": "The auto-play toggle tests check `aria-pressed` and `aria-label` but do not verify that the button variant changes between `brand-ghost` (ON) and `ghost` (OFF). The shadcn Button renders variant as a CSS class; the test could check for class presence.",
+      "recommendation": "Add a test assertion like `expect(screen.getByTestId('autoplay-toggle').className).toContain('brand-ghost')` when `mockAutoPlay` is true."
+    },
+    {
+      "gap": "No E2E test for auto-advance → next-lesson → auto-play integration",
+      "severity": "LOW",
+      "detail": "The plan mentions E2E coverage for the auto-advance → auto-play path but no spec was added in this PR. The plan listed this as 'described here for traceability' rather than a hard requirement.",
+      "recommendation": "Add an E2E test that seeds a course with autoPlay ON, completes a lesson, waits for auto-advance, and verifies the next lesson's video element starts playing."
+    }
+  ]
+}

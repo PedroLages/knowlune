@@ -1,0 +1,118 @@
+{
+  "reviewer": "testing",
+  "findings": [
+    {
+      "severity": "HIGH",
+      "category": "missing_coverage",
+      "location": "src/app/pages/UnifiedLessonPlayer.tsx:95-108",
+      "title": "Auto-play OR-combine logic and infinite-loop guard completely untested",
+      "detail": "The diff changes shouldAutoPlay from parseLocationFlag-only to parseLocationFlag || storeAutoPlay, and scopes the cleanup useEffect to parseLocationFlag-only (not shouldAutoPlay) to prevent an infinite loop when storeAutoPlay is true. Neither the new OR-combine behavior nor the infinite-loop guard fix is tested. Existing UnifiedLessonPlayer tests (src/app/pages/__tests__/UnifiedLessonPlayer.test.tsx) have zero references to autoPlay. This is the core logic change for bug fix #2 (toggling auto-play ON has no immediate effect on current video) and is completely unvalidated.",
+      "suggestion": "Add tests covering: (a) shouldAutoPlay is true when both parseLocationFlag and storeAutoPlay are false (regression), (b) shouldAutoPlay is true when only storeAutoPlay is true, (c) shouldAutoPlay is true when only parseLocationFlag is true, (d) the cleanup useEffect does NOT clear state when storeAutoPlay=true (infinite-loop guard), (e) the cleanup useEffect DOES clear state when parseLocationFlag=true and storeAutoPlay=false."
+    },
+    {
+      "severity": "HIGH",
+      "category": "missing_coverage",
+      "location": "src/stores/useLessonChromeStore.ts:138-143",
+      "title": "autoPlay and toggleAutoPlay store actions untested",
+      "detail": "useLessonChromeStore has autoPlay state and toggleAutoPlay action but src/stores/__tests__/useLessonChromeStore.test.ts has zero references to either. The toggle is now critical since LessonHeaderTools and UnifiedLessonPlayer both depend on it.",
+      "suggestion": "Add store unit tests: (a) autoPlay defaults to correct initial value, (b) toggleAutoPlay toggles autoPlay from true to false, (c) toggleAutoPlay toggles from false to true, (d) toggleAutoPlay persists to localStorage if applicable."
+    },
+    {
+      "severity": "MEDIUM",
+      "category": "missing_coverage",
+      "location": "src/app/components/figma/PomodoroTimer.tsx:109-117",
+      "title": "PomodoroTimer tooltipLabel prop untested",
+      "detail": "New tooltipLabel prop with conditional Tooltip wrapper has no test coverage. The component is fully mocked in LessonHeaderTools tests (mock renders a plain <div>), and no dedicated PomodoroTimer component test exists (only usePomodoroTimer hook test at src/hooks/__tests__/usePomodoroTimer.test.ts).",
+      "suggestion": "Either: (a) create a PomodoroTimer component test validating tooltipLabel renders Tooltip when provided and renders bare trigger when absent, or (b) add an integration-level test in LessonHeaderTools that does not mock PomodoroTimer."
+    },
+    {
+      "severity": "MEDIUM",
+      "category": "missing_coverage",
+      "location": "src/app/components/figma/QAChatPanel.tsx:396-403",
+      "title": "QAChatPanel tooltipLabel prop untested",
+      "detail": "New tooltipLabel prop with conditional Tooltip wrapper has no test coverage. The component is fully mocked in LessonHeaderTools tests, and src/app/components/figma/__tests__/QAChatPanel.test.tsx has zero mentions of tooltipLabel or tooltip.",
+      "suggestion": "Add test in QAChatPanel.test.tsx: (a) verify Tooltip renders when tooltipLabel is provided, (b) verify TooltipContent displays the tooltipLabel text, (c) verify no Tooltip renders when tooltipLabel is undefined/absent."
+    },
+    {
+      "severity": "MEDIUM",
+      "category": "missing_coverage",
+      "location": "src/app/components/course/LessonHeaderTools.tsx:226-231",
+      "title": "Kebab menu auto-play item untested",
+      "detail": "LessonHeaderTools renders an auto-play toggle in both the desktop inline tools (data-testid=autoplay-toggle) and the tablet kebab dropdown (data-testid=kebab-autoplay). Tests only cover the inline toggle. The kebab menu path (tablet breakpoint) for auto-play has no test coverage.",
+      "suggestion": "Add test: clicking kebab-autoplay calls toggleAutoPlay."
+    },
+    {
+      "severity": "LOW",
+      "category": "weak_assertion",
+      "location": "src/app/components/course/__tests__/LessonHeaderTools.test.tsx:177-178",
+      "title": "Variant change (visual feedback fix) not asserted",
+      "detail": "Bug fix #1 was about imperceptible visual feedback. The fix changes button variant from 'ghost' to 'brand-ghost' when autoPlay is on. No test validates this className or variant change. Tests only check aria-pressed and aria-label.",
+      "suggestion": "Add assertion: when autoPlay=true, the button has class or attribute reflecting brand-ghost variant; when autoPlay=false, it uses ghost variant."
+    },
+    {
+      "severity": "LOW",
+      "category": "brittle_test",
+      "location": "src/app/components/course/__tests__/LessonHeaderTools.test.tsx:240-245",
+      "title": "Redundant mockAutoPlay=true in test when it is already the beforeEach default",
+      "detail": "The test 'renders auto-play toggle with aria-pressed=true when autoPlay is ON' sets mockAutoPlay = true, but mockAutoPlay is already initialized to true in beforeEach. The test passes regardless, masking that the assertion depends on the beforeEach default rather than an explicit test setup. If someone changes beforeEach to default to false, this test will fail silently (not obvious why).",
+      "suggestion": "Either remove the redundant assignment (making reliance on beforeEach explicit) or change beforeEach default to false so all tests are self-documenting about their preconditions."
+    },
+    {
+      "severity": "LOW",
+      "category": "weak_assertion",
+      "location": "src/app/components/course/__tests__/LessonHeaderTools.test.tsx:262-275",
+      "title": "TooltipContent text never verified in any tooltip test",
+      "detail": "Tests verify aria-label attributes on buttons but never verify the actual TooltipContent portal text (e.g. 'Auto-play: On', 'Focus Timer', 'Ask AI'). aria-label is a fallback screen-reader mechanism, but TooltipContent is the visible user feedback for sighted users. While testing portal content is harder, the tooltip content is the primary user-facing improvement for bug fix #3.",
+      "suggestion": "Consider adding assertions that TooltipContent portal text is rendered on hover (using userEvent.hover + waitFor on portal-root queries), or accept that this gap is covered by the design review's visual inspection."
+    }
+  ],
+  "residual_risks": [
+    {
+      "risk": "OR-combine auto-play may surprise users",
+      "detail": "When storeAutoPlay is true, every lesson navigation (including manual) will auto-play. If a user leaves auto-play on in a prior session and returns, they may find videos auto-playing unexpectedly. This behavior change is intentional per the PR but has no test to validate it or document it as expected behavior.",
+      "mitigation": "Accepted UX decision per feature intent. Add test to encode this expectation."
+    },
+    {
+      "risk": "Infinite-loop guard fragile to future refactors",
+      "detail": "The fix uses parseLocationFlag(location.state, 'autoPlay') in the cleanup useEffect condition instead of shouldAutoPlay to avoid an infinite loop. This is a subtle distinction documented only in a code comment. A future developer could refactor the condition back to shouldAutoPlay (which reads cleaner) without understanding why it would loop. No test fails if this happens.",
+      "mitigation": "Add a test that asserts the cleanup effect does NOT clear state when storeAutoPlay=true (verifying the infinite-loop guard)."
+    }
+  ],
+  "testing_gaps": [
+    {
+      "gap": "No test for UnifiedLessonPlayer auto-play OR-combine logic",
+      "severity": "HIGH",
+      "file": "src/app/pages/__tests__/UnifiedLessonPlayer.test.tsx"
+    },
+    {
+      "gap": "No test for useLessonChromeStore autoPlay/toggleAutoPlay",
+      "severity": "HIGH",
+      "file": "src/stores/__tests__/useLessonChromeStore.test.ts"
+    },
+    {
+      "gap": "No component test for PomodoroTimer tooltipLabel prop",
+      "severity": "MEDIUM",
+      "file": "src/app/components/figma/__tests__/ (no PomodoroTimer component test exists)"
+    },
+    {
+      "gap": "No test for QAChatPanel tooltipLabel prop",
+      "severity": "MEDIUM",
+      "file": "src/app/components/figma/__tests__/QAChatPanel.test.tsx"
+    },
+    {
+      "gap": "No test for LessonHeaderTools kebab-autoplay menu item",
+      "severity": "MEDIUM",
+      "file": "src/app/components/course/__tests__/LessonHeaderTools.test.tsx"
+    },
+    {
+      "gap": "No test for LessonHeaderTools auto-play variant change (brand-ghost vs ghost)",
+      "severity": "LOW",
+      "file": "src/app/components/course/__tests__/LessonHeaderTools.test.tsx"
+    },
+    {
+      "gap": "No test for UnifiedLessonPlayer cleanup useEffect infinite-loop guard",
+      "severity": "HIGH",
+      "file": "src/app/pages/__tests__/UnifiedLessonPlayer.test.tsx"
+    }
+  ]
+}

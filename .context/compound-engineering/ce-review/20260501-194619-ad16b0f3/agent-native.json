@@ -1,0 +1,57 @@
+{
+  "run_id": "20260501-194619-ad16b0f3",
+  "reviewer": "agent-native",
+  "timestamp": "2026-05-01T19:46:19Z",
+  "verdict": "PASS",
+  "score": {
+    "description": "All existing high-priority agent-accessible capabilities remain intact with no new gaps. The change is a strictly additive internal fallback that preserves the existing function contract."
+  },
+  "summary": "The diff adds a Vault fallback to getDecryptedApiKeyForProvider() in src/lib/aiConfiguration.ts. The function's public contract (signature, return type, async behavior) is unchanged. The Vault fallback only activates when local decryption would have previously returned null — it is a recovery path, not a replacement. The readCredential dependency uses non-interactive Supabase Edge Function calls that degrade gracefully when unauthenticated. No new auth requirements, no browser-only APIs, no changes to agent tool implementations.",
+  "findings": {
+    "critical": [],
+    "warnings": [],
+    "observations": [
+      {
+        "title": "Vault fallback may prolong resolution time in edge cases",
+        "confidence": "low",
+        "details": "When local decryption fails, the Vault fallback adds one Supabase Edge Function round trip (~50-200ms) before returning null. This only affects the null-returning code path and is a strict improvement over the previous behavior of returning null immediately. The latency is negligible relative to the LLM API call that follows.",
+        "location": "src/lib/aiConfiguration.ts:531-542"
+      }
+    ]
+  },
+  "analysis": {
+    "function_contract": {
+      "signature": "unchanged — getDecryptedApiKeyForProvider(provider: AIProviderId): Promise<string | null>",
+      "return_semantics": "unchanged — returns decrypted key string or null",
+      "async_behavior": "unchanged — already async; Vault fallback adds one more await in the null-returning branch only"
+    },
+    "auth_requirements": {
+      "new_requirements": "none",
+      "degradation": "When no Supabase user is present, readCredential returns null immediately — the fallback is a no-op and the function returns null (same as before)"
+    },
+    "interactive_behavior": {
+      "readCredential": "non-interactive — calls supabase.auth.getUser() (in-memory JWT check) + supabase.functions.invoke() (HTTP fetch). No DOM prompts, no window.confirm, no user interaction required."
+    },
+    "caller_compatibility": {
+      "factory.ts:124": "already await-ed; no change needed",
+      "factory.ts:273": "already await-ed; no change needed",
+      "all_other_callers": "all use await; no change needed"
+    },
+    "test_compatibility": {
+      "providerKeyStorage.test.ts:195-209": "test expects null on bad encrypted data — still passes because vaultCredentials readCredential returns null without an authenticated Supabase user",
+      "all_other_tests": "unaffected — mock setup is unchanged"
+    },
+    "agent_integration": {
+      "mcp_tools": "none defined at app level — this codebase uses LLM features (noteQA, tutor, quiz gen) via Vercel AI SDK streaming, not MCP tool definitions",
+      "ai_features": "all AI features go through factory.ts -> getDecryptedApiKeyForProvider(); the change is transparent to them",
+      "system_prompt": "static system prompts in noteQA.ts:208-215 and other AI features; not affected by this change"
+    }
+  },
+  "what_works_well": [
+    "The self-healing re-encrypt pattern (lines 535-536) improves future reads without changing the function contract",
+    "All error paths are logged with console.warn and degrade to null (non-throwing)",
+    "The Vault fallback is gated behind hasEncryptedData check, avoiding unnecessary network calls when no key was ever configured",
+    "readCredential is designed for non-interactive use — returns null on any failure, never throws",
+    "The change is fully backward compatible — existing tests should pass without modification"
+  ]
+}

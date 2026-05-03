@@ -1,0 +1,88 @@
+{
+  "reviewer": "correctness",
+  "findings": [
+    {
+      "severity": "HIGH",
+      "confidence": 0.88,
+      "category": "logic",
+      "title": "Empty string from decryptData bypasses Vault recovery envelope",
+      "description": "The guard conditions at lines 514 and 525 use `decryptedResult === null`, but `decryptData()` (crypto.ts:126-147) returns `Promise<string>` — it can validly return `\"\"` (empty string) when the encrypted payload was an empty plaintext. Since `\"\" !== null`, all three paths are skipped: legacy fallback, Vault fallback, and the function returns `\"\"`. The real key in Vault is never recovered. Callers treat the empty string as a valid API key (e.g., ProviderKeyAccordion.tsx:91 checks `decrypted !== null`, which passes for `\"\"`), but it will fail at connection/request time.",
+      "filePath": "/Volumes/SSD/Dev/Apps/Knowlune/src/lib/aiConfiguration.ts",
+      "lineNumbers": [514, 525],
+      "fix": "Change both null-checks to `!decryptedResult` or `decryptedResult === null || decryptedResult === ''` so that an empty-string decryption also triggers the fallback cascade. Alternatively, add a `decryptedResult` validity check before returning."
+    },
+    {
+      "severity": "HIGH",
+      "confidence": 0.82,
+      "category": "logic",
+      "title": "Vault fallback gate requires localStorage encrypted-data proof; silently fails after full site-data clear",
+      "description": "The `hasEncryptedData` check (lines 526-529) gates Vault recovery on the presence of encrypted data (`providerKeys[provider]` or `apiKeyEncrypted`) in localStorage. The stated intent is to survive 'browser data clear' — but Chrome's 'Clear site data' and most browser wipe operations clear both IndexedDB (CryptoKey) and localStorage (encrypted data) together. When localStorage is wiped, `hasEncryptedData` is `false`, the Vault read is skipped, and the function returns `null`. The key in Supabase Vault is never recovered. This means the recovery path only works when CryptoKey is lost but localStorage survives (e.g., SW update that migrates IndexedDB, or Firefox private browsing IndexedDB quirks), not the more common full-clear scenario.",
+      "filePath": "/Volumes/SSD/Dev/Apps/Knowlune/src/lib/aiConfiguration.ts",
+      "lineNumbers": [526, 527, 528, 529],
+      "fix": "Consider a two-phase approach: (1) if decryption fails and `hasEncryptedData` is true, attempt Vault recovery and re-encrypt (current logic); (2) if local decryption data is absent entirely (`hasEncryptedData` is false, the provider is not Ollama), optionally perform a lightweight Vault check (`checkCredential`) to see if a key exists — if so, read and populate. This adds a network call on cold start for unconfigured providers but fulfills the self-healing intent. Alternatively, narrow the intent documentation to say recovery works only when localStorage survives."
+    },
+    {
+      "severity": "HIGH",
+      "confidence": 0.92,
+      "category": "behavior",
+      "title": "getDecryptedApiKeyForProvider acquires write side effects that dispatch ai-configuration-updated and call storeCredential",
+      "description": "The function is documented as 'Decrypts and retrieves the API key' (a read operation). The Vault fallback path (line 536) calls `saveProviderApiKey(provider, vaultSecret)`, which: (a) writes `providerKeys[provider]` to localStorage, (b) dispatches `CustomEvent('ai-configuration-updated')`, and (c) fires a `storeCredential` call to Vault (redundant — the value was just read from Vault). Six UI components/hooks listen to this event (AIConfigurationSettings, ProviderKeyAccordion, FeatureModelOverridePanel, AISummaryPanel, AIUnavailableBadge, useMissingCredentials). Every caller of `getDecryptedApiKeyForProvider` — including the LLM factory at API-request time — now potentially triggers a configuration-updated cascade. The re-encrypt write (`saveProviderApiKey`) also performs its own redundant Vault store via `storeCredential`. This is not data-corrupting (the re-encrypt is idempotent) but it violates the principle of least surprise — callers expecting a pure async read get an observable state mutation and event broadcast.",
+      "filePath": "/Volumes/SSD/Dev/Apps/Knowlune/src/lib/aiConfiguration.ts",
+      "lineNumbers": [536, 596, 577],
+      "fix": "Extract the re-encrypt to a separate internal function that writes `providerKeys[provider]` without dispatching the event and without calling `storeCredential`. The `getDecryptedApiKeyForProvider` call site would call this internal re-encrypt directly, bypassing the fire-and-forget Vault store and event dispatch. Only user-initiated key saves should broadcast the event."
+    },
+    {
+      "severity": "MEDIUM",
+      "confidence": 0.72,
+      "category": "race",
+      "title": "Concurrent calls during Vault recovery create duplicate network requests and localStorage writes",
+      "description": "If `getDecryptedApiKeyForProvider` is called rapidly (e.g., React concurrent render cycle, or multiple components checking availability simultaneously), each call independently follows the same path: local decryption fails, `hasEncryptedData` is true, `readCredential` fires (network request to Supabase Edge Function), and `saveProviderApiKey` writes back. While the second `saveProviderApiKey` call reads the latest config before writing (preserving the first call's `providerKeys` entry), the net effect is: N redundant Vault reads, N redundant localStorage writes (with different IVs but same plaintext), and N redundant `ai-configuration-updated` dispatches. The operations are idempotent (same key re-encrypted), so no data corruption — but wasteful and could briefly flash UI states as events fire in quick succession.",
+      "filePath": "/Volumes/SSD/Dev/Apps/Knowlune/src/lib/aiConfiguration.ts",
+      "lineNumbers": [532, 536],
+      "fix": "Add a module-level in-flight promise cache keyed by provider: `const vaultRecoveryInFlight: Record<string, Promise<string | null>> = {}`. Before entering the Vault fallback, check if a recovery is already in flight for this provider and return the cached promise. This deduplicates concurrent Vault reads and re-encrypts."
+    }
+  ],
+  "residual_risks": [
+    {
+      "risk": "Vault fallback could restore a key that another tab/browser just deleted",
+      "severity": "LOW",
+      "description": "If a user deletes a provider key from Vault on another tab/device while `getDecryptedApiKeyForProvider` is in its Vault recovery path, and the Edge Function has eventual-consistency lag, the `readCredential` call could return the value that was just deleted. The re-encrypt path would then write it back to Vault via `storeCredential`, effectively undoing the deletion. This requires precise timing of the delete and recovery to overlap, and network latency to be favorable. Given that Vault reads and writes go through the same Edge Function, consistency is likely strong enough to prevent this."
+    },
+    {
+      "risk": "CryptoKey loss without Vault access means permanent undecryptability",
+      "severity": "MEDIUM",
+      "description": "If an unauthenticated user loses their CryptoKey (IndexedDB clear) but has encrypted keys in localStorage, the Vault fallback is the only recovery path. Since `readCredential` returns `null` for unauthenticated users (vaultCredentials.ts:49-53, 99-100), the user would permanently lose access to their locally-encrypted keys. The existing behavior before this diff was the same (no Vault, no recovery), so this is not a regression, but the diff's stated self-healing guarantee doesn't apply to unauthenticated users."
+    },
+    {
+      "risk": "Re-encrypt via saveProviderApiKey spreads current config; other tab changes to providerKeys could be partially overwritten",
+      "severity": "VERY LOW",
+      "description": "`saveProviderApiKey` reads `getAIConfiguration()` (latest localStorage), spreads all fields, and overwrites only `providerKeys[provider]`. If another tab modifies a DIFFERENT provider's entry in `providerKeys` between the `getAIConfiguration()` read and the `localStorage.setItem()`, that change is preserved (it's in the spread). If another tab DELETES the SAME provider's entry, the Vault re-encrypt would restore it. This is a classic localStorage TOCTOU but the window is microseconds (between the read and write in a synchronous function)."
+    }
+  ],
+  "testing_gaps": [
+    {
+      "gap": "No test for empty-string decryption bypassing Vault recovery",
+      "description": "Encrypt an empty string, store it as `providerKeys.testprovider`, simulate CryptoKey loss, and verify that `getDecryptedApiKeyForProvider('testprovider')` returns the Vault-recovered non-empty key, not `\"\"`."
+    },
+    {
+      "gap": "No test for Vault recovery when localStorage encrypted data is present but undecryptable",
+      "description": "This is the core happy path. Need a test that: creates encrypted data with one CryptoKey, simulates key rotation (calls `_resetKeyCache()` + clears IndexedDB), mocks `readCredential` to return a known value, and verifies the function returns the Vault value and persists a re-encrypted entry in localStorage."
+    },
+    {
+      "gap": "No test for Vault recovery with unauthenticated user",
+      "description": "When `supabase.auth.getUser()` returns no user, `readCredential` returns `null`. Verify the function returns `null` (not throwing, not writing to localStorage). This is important because the `saveProviderApiKey` code path should never execute for unauthenticated users."
+    },
+    {
+      "gap": "No test for recovery when Vault is unreachable (network error)",
+      "description": "Mock `readCredential`/`readCredentialWithStatus` to throw or return `ok: false, reason: 'error'`. Verify the Vault fallback outer catch logs a warning and returns `null` without attempting `saveProviderApiKey`."
+    },
+    {
+      "gap": "No test for concurrent Vault recovery deduplication",
+      "description": "Call `getDecryptedApiKeyForProvider` twice in rapid succession while Vault read is slow. Verify only one network call is made (if deduplication is implemented) or that the result is correct despite multiple calls."
+    },
+    {
+      "gap": "No test for Vault recovery when encrypted data exists but Vault has no credential for that provider",
+      "description": "`readCredential` returns `null` because `result.ok && result.value === null` (no credential configured). Verify the function returns `null` without attempting re-encrypt."
+    }
+  ]
+}

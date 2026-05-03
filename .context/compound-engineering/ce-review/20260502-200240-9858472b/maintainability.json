@@ -1,0 +1,90 @@
+{
+  "reviewer": "maintainability",
+  "findings": [
+    {
+      "title": "HeroStat visual pattern duplicated inline in AIAnalyticsTab and QuizAnalyticsDashboard",
+      "severity": "MEDIUM",
+      "file": "src/app/components/reports/AIAnalyticsTab.tsx",
+      "line": 232,
+      "confidence": 0.90,
+      "autofix_class": "EXTRACT_SHARED_COMPONENT",
+      "owner": "component-structure",
+      "requires_verification": false,
+      "pre_existing": false,
+      "suggested_fix": "Extract HeroStat from src/app/pages/Reports.tsx (line 72) to a shared component at src/app/components/reports/HeroStat.tsx. The identical markup — a flex row with icon, label, and value — appears inlined in AIAnalyticsTab.tsx lines 232-254 and QuizAnalyticsDashboard.tsx lines 109-132. Replace all three inline usages with the shared component."
+    },
+    {
+      "title": "getProgressColor and getProgressTextClass functions duplicated between dead WeeklyGoalRing and live ThisWeekSection",
+      "severity": "MEDIUM",
+      "file": "src/app/components/reports/ThisWeekSection.tsx",
+      "line": 10,
+      "confidence": 0.95,
+      "autofix_class": "EXTRACT_SHARED_UTILITY_AND_DELETE_DEAD_CODE",
+      "owner": "duplication",
+      "requires_verification": true,
+      "pre_existing": false,
+      "suggested_fix": "Delete src/app/components/reports/WeeklyGoalRing.tsx entirely (zero importers after this PR removed its last consumer from Reports.tsx). Extract the two shared helper functions (getProgressColor, getProgressTextClass) from either WeeklyGoalRing.tsx or ThisWeekSection.tsx into a shared utility at src/lib/reportStats.ts or a new src/lib/progress-colors.ts. Both files use identical implementations with thresholds at 80% and 40%."
+    },
+    {
+      "title": "Silent catch in AIAnalyticsTab monthlyStats fetch violates project error-handling ESLint rule",
+      "severity": "MEDIUM",
+      "file": "src/app/components/reports/AIAnalyticsTab.tsx",
+      "line": 157,
+      "confidence": 0.85,
+      "autofix_class": "ADD_ERROR_LOGGING",
+      "owner": "error-handling",
+      "requires_verification": false,
+      "pre_existing": false,
+      "suggested_fix": "Add at minimum console.error('[AIAnalyticsTab] Failed to load monthly stats:', err) inside the catch block. This violates the project's own error-handling/no-silent-catch ESLint rule. The empty catch body makes diagnosing monthly stats failures impossible in production."
+    },
+    {
+      "title": "WeeklyGoalRing component is dead code with zero importers",
+      "severity": "LOW",
+      "file": "src/app/components/reports/WeeklyGoalRing.tsx",
+      "line": 27,
+      "confidence": 0.95,
+      "autofix_class": "DELETE_DEAD_CODE",
+      "owner": "dead-code",
+      "requires_verification": true,
+      "pre_existing": true,
+      "suggested_fix": "WeeklyGoalRing.tsx (118 lines) has zero importers after this PR removed its last consumer from Reports.tsx. Its functionality has been replaced by ThisWeekSection.tsx. Delete the file. The getProgressColor/getProgressTextClass helpers should be salvaged into a shared utility first (see finding #2)."
+    },
+    {
+      "title": "ActivityHeatmap compact variant spreads conditional logic across many render locations",
+      "severity": "LOW",
+      "file": "src/app/components/reports/ActivityHeatmap.tsx",
+      "line": 124,
+      "confidence": 0.70,
+      "autofix_class": "REFACTOR_TO_CSS_VARIANT",
+      "owner": "complexity",
+      "requires_verification": false,
+      "pre_existing": false,
+      "suggested_fix": "The compact variant is implemented with inline ternary expressions at 8+ locations (skeleton, grid gap, month label size, day label size, cell size, legend size, 'Today' indicator visibility, etc). Consider a cn()-based approach or a class-map object keyed by variant so adding a third variant does not require touching every conditional. For now it is manageable, but the current pattern does not scale to a third variant."
+    },
+    {
+      "title": "generateStudyInsight final template fallback is unreachable; dead return statement",
+      "severity": "LOW",
+      "file": "src/lib/insights.ts",
+      "line": 58,
+      "confidence": 0.80,
+      "autofix_class": "REMOVE_UNREACHABLE_CODE",
+      "owner": "dead-code",
+      "requires_verification": false,
+      "pre_existing": false,
+      "suggested_fix": "The last element in the templates array (line 58) is an unconditional arrow function that always returns a string. Therefore the final for loop always hits a non-null result, and the return on line 63 (\"return 'Steady progress. Keep going.'\") is unreachable. Remove the dead fallback return or add a comment noting it is defensive."
+    }
+  ],
+  "residual_risks": [
+    "The insight engine in src/lib/insights.ts uses a linear template-array pattern with priority ordering. The templates are not mutually exclusive — e.g., the 'consistent' template (activeDays > 15 + streak record) fires before the 'on fire' template (activeDays > 15 no streak record), and the 'on fire' template is unreachable when activeDays > 15 AND currentStreak > previousBestStreak > 0. This priority-ordering approach is fragile to reordering and may produce surprising insight text when new templates are added. Not a blocker for this PR.",
+    "The section header pattern <h2 className=\"text-xs font-semibold text-muted-foreground uppercase tracking-wider px-1 mt-6\"> is repeated 5 times with identical classes in Reports.tsx lines 309, 315, 411, 481, 487. If the section header styling ever changes, 5 locations need updating. Minor risk at current duplication level.",
+    "HeroStat in Reports.tsx uses icon: typeof CheckCircle as the prop type for all icons, which works in practice but does not enforce that only Lucide icon components are passed. If a non-icon component is passed, it will render incorrectly without a TypeScript error.",
+    "The compact heatmap hides table-view toggle and 'Today' legend indicator. If a user toggles to table view through keyboard navigation in the non-compact variant and then the component remounts in compact mode, there is no explicit reset of showTable state."
+  ],
+  "testing_gaps": [
+    "ThisWeekSection (new 196-line component) has no unit test file. It handles complex state: daily aggregation, best-day calculation, event listeners for study-session-recorded/updated, loading/error/data states, and ring chart rendering.",
+    "AIAnalyticsTab hero stats (monthlyStats fetch, mostUsedLabel computation, the three-stat grid) have no specific unit tests.",
+    "QuizAnalyticsDashboard hero stats (three-stat grid for totalQuizzes, avgScore, completionRate) have no specific unit tests.",
+    "Compact ActivityHeatmap variant has no dedicated test case — no assertion that skeleton height is h-10 vs h-32, that grid dimensions use 12px cells, or that header/today-indicator are hidden.",
+    "The getProgressColor and getProgressTextClass functions in ThisWeekSection have no unit tests for threshold boundaries (40pct exact, 80pct exact, 0pct, 100pct, negative values)."
+  ]
+}

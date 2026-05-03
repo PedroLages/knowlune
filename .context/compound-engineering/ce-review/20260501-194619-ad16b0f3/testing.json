@@ -1,0 +1,113 @@
+{
+  "reviewer": "testing",
+  "findings": [
+    {
+      "id": "TEST-001",
+      "severity": "MEDIUM",
+      "title": "Legacy apiKeyEncrypted Vault fallback lacks integration test coverage",
+      "confidence": 0.78,
+      "description": "The new Vault fallback path for legacy `apiKeyEncrypted` data (when a user has their API key stored in the older single-key format rather than `providerKeys`) is tested only in unit tests with fully mocked crypto. The integration test suite at `src/lib/__tests__/cryptoKeyPersistence.integration.test.ts` uses real crypto and `fake-indexeddb` to validate the full chain for the `providerKeys` path, but does not include a test for the `apiKeyEncrypted` legacy path with Vault fallback. This means the real-crypto behavior of the legacy path — AES-GCM decrypt failure → Vault recovery → re-encrypt with new CryptoKey → subsequent local read — is untested at the integration level.",
+      "location": "src/lib/__tests__/cryptoKeyPersistence.integration.test.ts",
+      "lines": "94-145",
+      "fix": "Add an integration test that: (1) saves a key via `saveAIConfiguration` (which populates `apiKeyEncrypted`), (2) clears IndexedDB to invalidate the CryptoKey, (3) mocks Vault to return the key, (4) asserts the key is recovered, and (5) verifies self-healing on a second call."
+    },
+    {
+      "id": "TEST-002",
+      "severity": "LOW",
+      "title": "Pre-existing getNoteQAAvailability test now silently exercises Vault fallback",
+      "confidence": 0.72,
+      "description": "The test `returns unreadable-provider-key when the resolved provider key cannot be decrypted` (line 370) stores corrupted `providerKeys` data and asserts `reason: 'unreadable-provider-key'`. With the new Vault fallback code, `getDecryptedApiKeyForProvider()` now calls `readCredential('ai-provider', 'gemini')` before returning null, because the corrupted data triggers the `hasEncryptedData` check. The test still passes because the default vault mock (`vi.fn()`) returns `undefined`, which is falsy. However, if the test definition order were ever reorganized or if a lint/format operation moved the new `getDecryptedApiKeyForProvider` tests before the `getNoteQAAvailability` tests, the `mockResolvedValue` leak from `vi.clearAllMocks()` (which does `mockClear`, not `mockReset`) could cause this test to receive a truthy Vault value and produce a false positive (`available: true` instead of `unreadable-provider-key`).",
+      "location": "src/lib/__tests__/aiConfiguration.test.ts",
+      "lines": "370-397",
+      "fix": "In the `getNoteQAAvailability` test at line 370, explicitly reset the vault mock: `vaultMocks.readCredential.mockReset()` inside the test or its beforeEach. Alternatively, change the outer `beforeEach` to use `vi.resetAllMocks()` instead of `vi.clearAllMocks()`."
+    },
+    {
+      "id": "TEST-003",
+      "severity": "LOW",
+      "title": "Re-encrypt test does not verify Vault storeCredential side-effect",
+      "confidence": 0.82,
+      "description": "The unit test `re-encrypts locally when Vault fallback succeeds (self-healing)` (line 760) verifies that `saveProviderApiKey` writes re-encrypted data to localStorage, but does not assert that `storeCredential` (the Vault write inside `saveProviderApiKey`) was called. Since `saveProviderApiKey` fires `storeCredential('ai-provider', provider, apiKey)` during re-encrypt, the test should verify this side-effect to confirm the full self-healing contract (re-encrypt to localStorage AND re-store to Vault for cross-device availability).",
+      "location": "src/lib/__tests__/aiConfiguration.test.ts",
+      "lines": "760-782",
+      "fix": "Add assertion: `expect(vaultMocks.storeCredential).toHaveBeenCalledWith('ai-provider', 'gemini', 'AIza-vault-recovered-key')` after the `getDecryptedApiKeyForProvider` call."
+    },
+    {
+      "id": "TEST-004",
+      "severity": "LOW",
+      "title": "Vault-returns-null test does not assert re-encrypt was skipped",
+      "confidence": 0.80,
+      "description": "The test `returns null when Vault returns null` (line 819) verifies the return value is null but does not verify that re-encrypt was skipped. When Vault returns null, the `if (vaultSecret)` check is falsy and `saveProviderApiKey` should NOT be called. Verifying that `storeCredential` was NOT called would strengthen this test's assertion that the null path correctly short-circuits.",
+      "location": "src/lib/__tests__/aiConfiguration.test.ts",
+      "lines": "819-837",
+      "fix": "Add assertion: `expect(vaultMocks.storeCredential).not.toHaveBeenCalled()`."
+    },
+    {
+      "id": "TEST-005",
+      "severity": "LOW",
+      "title": "Integration self-healing test does not verify localStorage re-encrypt",
+      "confidence": 0.75,
+      "description": "The integration test `self-heals after Vault recovery: second call decrypts locally` (line 125 in integration test) verifies the second call does not hit Vault, but does not explicitly verify that the first Vault recovery call wrote re-encrypted data to localStorage. The second call's success implicitly proves re-encryption, but an explicit assertion on `localStorage.getItem('ai-configuration')` after the first Vault recovery call would make the test's intent clearer and provide a more precise failure message if the self-healing mechanism breaks.",
+      "location": "src/lib/__tests__/cryptoKeyPersistence.integration.test.ts",
+      "lines": "125-145",
+      "fix": "After the first `getDecryptedApiKeyForProvider` call (line 136), read and assert on localStorage: `const stored = JSON.parse(localStorageMock.getItem('ai-configuration')); expect(stored.providerKeys.openai).toBeDefined()`."
+    },
+    {
+      "id": "TEST-006",
+      "severity": "INFO",
+      "title": "Vault mock factory pattern diverges between unit and integration tests",
+      "confidence": 0.85,
+      "description": "The unit test file mocks vaultCredentials with `vi.mock('@/lib/vaultCredentials', () => vaultMocks)` (direct object), while the integration test uses `vi.mock('@/lib/vaultCredentials', () => ({ readCredential: vaultMocks.readCredential, storeCredential: vaultMocks.storeCredential, checkCredential: vi.fn() }))` (explicit named exports). Both work correctly with Vitest, but the divergence in pattern means the unit test's approach is more reliant on Vitest's automatic named-export extraction from returned objects, which is slightly more fragile.",
+      "location": "src/lib/__tests__/aiConfiguration.test.ts:53, src/lib/__tests__/cryptoKeyPersistence.integration.test.ts:22-26",
+      "lines": "53, 22-26",
+      "fix": "Standardize on the explicit exports pattern used in the integration test. Change line 53 to: `vi.mock('@/lib/vaultCredentials', () => ({ checkCredential: vaultMocks.checkCredential, readCredential: vaultMocks.readCredential, storeCredential: vaultMocks.storeCredential }))`"
+    },
+    {
+      "id": "TEST-007",
+      "severity": "INFO",
+      "title": "encryptData mock fix corrects a long-standing mock-vs-reality mismatch",
+      "confidence": 0.90,
+      "description": "The `encryptData` mock was changed from returning a string (`encrypted:${data}`) to returning the `{iv, encryptedData}` shape that matches the real `encrypto.ts` function's `EncryptedData` interface. This was a necessary fix — the old mock was testing mock behavior, not real behavior. The one test assertion affected (`encrypts API key when provided` at line 158) was correctly updated from `expect(parsed.apiKeyEncrypted).toContain('encrypted:...')` to `expect(parsed.apiKeyEncrypted).toEqual({ iv: 'mock-iv', encryptedData: '...' })`. No other tests were affected.",
+      "location": "src/lib/__tests__/aiConfiguration.test.ts",
+      "lines": "33-45, 155-161"
+    }
+  ],
+  "residual_risks": [
+    {
+      "risk": "Vault read throwing a non-Error value (e.g., string) would change the console.warn log signature",
+      "confidence": 0.45,
+      "mitigation": "The `catch` block logs `console.warn('Vault fallback failed for ...', error)` — if `error` is not an Error instance, the logged value may differ from what the test asserts. The test assumes `expect.any(Error)`. This is unlikely in practice since all Supabase errors are Error instances."
+    },
+    {
+      "risk": "saveProviderApiKey fire-and-forget Vault write failure during re-encrypt is silent to the caller",
+      "confidence": 0.55,
+      "mitigation": "`storeCredential(...).catch(err => console.warn(...))` means Vault write failures during re-encrypt are logged but never surfaced. This is by design (the key is still stored locally), but no test verifies the console.warn fires in this scenario. Low risk because localStorage acts as the fallback."
+    },
+    {
+      "risk": "getDecryptedApiKeyForProvider returns null for both 'Vault threw' and 'key not in Vault' cases",
+      "confidence": 0.35,
+      "mitigation": "Callers cannot distinguish between a transient network error and a genuinely missing credential. The self-healing design (re-encrypt on success) means the network error case should self-correct on the next call. Acceptable for now."
+    }
+  ],
+  "testing_gaps": [
+    {
+      "gap": "No test covers the scenario where both providerKeys AND apiKeyEncrypted contain corrupted data for the same provider",
+      "severity": "LOW",
+      "branches_untested": "The `hasEncryptedData` check at line 526-529 uses OR logic: `config.providerKeys?.[provider] || (provider === config.provider && config.apiKeyEncrypted)`. When both are truthy, the Vault fallback fires. The unit tests cover each path independently but not the combined case.",
+      "location": "src/lib/aiConfiguration.ts",
+      "lines": "526-529"
+    },
+    {
+      "gap": "No test verifies that decrypt of legacy apiKeyEncrypted is skipped when providerKeys decryption succeeds",
+      "severity": "LOW",
+      "branches_untested": "Line 514: `if (decryptedResult === null && provider === config.provider && config.apiKeyEncrypted)`. When providerKeys decrypt succeeds (decryptedResult is truthy), the legacy fallback should be skipped. The current legacy test only has apiKeyEncrypted set (no providerKeys).",
+      "location": "src/lib/aiConfiguration.ts",
+      "lines": "513-514"
+    },
+    {
+      "gap": "No integration test for legacy apiKeyEncrypted Vault fallback (duplicate of TEST-001 but broadens to no real-crypto coverage for this path)",
+      "severity": "MEDIUM",
+      "branches_untested": "The `config.apiKeyEncrypted` path in the Vault fallback at line 528 is only exercised with mocked crypto. Real-crypto integration coverage exists only for the `providerKeys` path.",
+      "location": "src/lib/__tests__/cryptoKeyPersistence.integration.test.ts"
+    }
+  ]
+}

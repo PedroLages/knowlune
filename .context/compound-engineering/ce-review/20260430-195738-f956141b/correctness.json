@@ -1,0 +1,57 @@
+{
+  "reviewer": "correctness",
+  "findings": [
+    {
+      "title": "Second-pass image collection lacks isImageFile guard -- non-image root files leak into imageFiles",
+      "severity": "HIGH",
+      "file": "src/lib/courseImport.ts",
+      "line": 179,
+      "why_it_matters": "Both scanCourseFolder() (line 179) and scanCourseFolderFromHandle() (line 626) run a second scanDirectory pass with { includeImages: true, maxDepth: 0 } to collect root-folder images for cover selection. However, scanDirectory's yield condition is additive: `isSupportedFile(entry.name) || (options?.includeImages && isImageFile(entry.name))`. When includeImages is true, the generator yields supported files (videos, PDFs) in addition to images. Both second-pass loops push ALL yielded entries unconditionally to imageFiles, without an isImageFile() guard. This causes root-level .mp4 and .pdf files to appear as cover-image candidates in the import wizard (ImportWizardDialog.tsx lines 708-729), where <img> tags reference blob URLs of non-image files, producing broken images. The auto-select logic at line 240 may also select a video as the initial cover. The original single-pass code had an `else if (isImageFile(...))` branch that prevented this; the two-pass refactor dropped that guard.",
+      "autofix_class": "safe_auto",
+      "owner": "review-fixer",
+      "requires_verification": true,
+      "confidence": 0.95,
+      "evidence": [
+        "scanDirectory (fileSystem.ts line 62): yield condition `if (isSupportedFile(entry.name) || (options?.includeImages && isImageFile(entry.name)))` is OR-based -- supported files always pass regardless of includeImages.",
+        "scanCourseFolder (courseImport.ts lines 173-179): second-pass loop `for await (const entry of scanDirectory(dirHandle, '', { includeImages: true, maxDepth: 0 })) { ... imageFiles.push(entry) }` has no isImageFile guard.",
+        "scanCourseFolderFromHandle (courseImport.ts lines 621-626): same missing guard in the bulk-import path.",
+        "ImportWizardDialog.tsx line 226: `const file = await image.fileHandle.getFile()` succeeds even for non-image files; line 227 creates an object URL; line 708 maps images to <img> tags that would show broken-image placeholders for .mp4/.pdf blob URLs.",
+        "Original single-pass code at the removed location had `else if (isImageFile(entry.handle.name)) { imageFiles.push(entry) }` -- the refactor to two-pass scanning dropped this guard."
+      ],
+      "pre_existing": false,
+      "suggested_fix": "Add `if (isImageFile(entry.handle.name))` guards before `imageFiles.push(entry)` in both second-pass loops (single import at line 179, bulk import at line 626). The `isImageFile` function is already imported at the top of courseImport.ts (line 27)."
+    }
+  ],
+  "residual_risks": [
+    {
+      "description": "The two-pass scanning pattern is duplicated verbatim between scanCourseFolder() and scanCourseFolderFromHandle(). Future changes to one path (e.g., adding a new file type to the image pass) would need to be mirrored in the other. This creates a maintenance hazard for drift.",
+      "severity": "LOW"
+    },
+    {
+      "description": "The scanDirectory API's includeImages option is additive (also yields supported files), not exclusive. This is non-obvious from the parameter name. Future callers who pass includeImages: true and assume they'll only get images would hit the same bug.",
+      "severity": "LOW"
+    },
+    {
+      "description": "scanCount is no longer incremented during the second (image) pass. If a future change adds large recursive image scanning, the progress tracking would silently undercount.",
+      "severity": "LOW"
+    }
+  ],
+  "testing_gaps": [
+    {
+      "description": "No integration test verifies that scanCourseFolder().images contains ONLY image files when the root folder has a mix of images, videos, and PDFs.",
+      "priority": "HIGH"
+    },
+    {
+      "description": "No test for scanCourseFolderFromHandle() that verifies imageFiles excludes non-image supported files.",
+      "priority": "HIGH"
+    },
+    {
+      "description": "The maxDepth unit tests verify recursion depth but do not test the image-collection integration in courseImport.ts.",
+      "priority": "MEDIUM"
+    },
+    {
+      "description": "No test verifies that cancelRequested is correctly detected in the second (image-only) pass of either scanCourseFolder or scanCourseFolderFromHandle.",
+      "priority": "MEDIUM"
+    }
+  ]
+}

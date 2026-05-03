@@ -1,0 +1,79 @@
+{
+  "reviewer": "kieran-typescript",
+  "findings": [
+    {
+      "title": "scanDirectory mock bypasses includeImages filter, causing two-pass test assertion drift",
+      "severity": "HIGH",
+      "file": "/Volumes/SSD/Dev/Apps/Knowlune/src/lib/__tests__/scanAndPersist.test.ts",
+      "line": 86,
+      "confidence": 0.85,
+      "autofix_class": "manual",
+      "owner": "review-fixer",
+      "requires_verification": true,
+      "pre_existing": false,
+      "why_it_matters": "The two-pass refactoring in courseImport.ts now relies on scanDirectory's includeImages option to prevent images from entering the video/PDF pipeline in pass 1. The mock at line 86 ignores all options and yields every file in both passes. This causes the test 'should discover image files during scan' (line 239) to fail: pass 1 leaks images into pdfFiles (3 items instead of 1), and pass 2 leaks non-images into imageFiles (4 items instead of 2). The test was passing before this diff because the old single-pass consumer code performed its own isImageFile dispatch. The mock must be updated to respect the includeImages parameter so it matches the production scanDirectory contract.",
+      "evidence": [
+        {
+          "type": "test-failure",
+          "description": "Test 'should discover image files during scan' fails: expected pdfs.length=1 but received 3 because mock returns images in pass 1 where includeImages:false is passed",
+          "location": "/Volumes/SSD/Dev/Apps/Knowlune/src/lib/__tests__/scanAndPersist.test.ts:249"
+        },
+        {
+          "type": "code-mismatch",
+          "description": "Mock at line 86 uses async function* that yields all files ignoring options; scanDirectory production code at fileSystem.ts:62 checks options?.includeImages before yielding image files",
+          "location": "/Volumes/SSD/Dev/Apps/Knowlune/src/lib/__tests__/scanAndPersist.test.ts:86-90"
+        },
+        {
+          "type": "code-mismatch",
+          "description": "courseImport.ts pass 1 now passes includeImages:false (line 155), relying on scanDirectory to filter images; consumer no longer has isImageFile check",
+          "location": "/Volumes/SSD/Dev/Apps/Knowlune/src/lib/courseImport.ts:155-169"
+        }
+      ],
+      "suggested_fix": "Update the scanDirectory mock in setupScanMocks to inspect the options parameter and filter images when includeImages is false. The mock should also optionally respect maxDepth by tracking call count or using a simple depth filter. Alternatively, use vi.fn() to record each call and return different generators per call, implementing the filtering inline."
+    },
+    {
+      "title": "Duplicated mock helpers in maxDepth describe block shadow parent-scope functions",
+      "severity": "LOW",
+      "file": "/Volumes/SSD/Dev/Apps/Knowlune/src/lib/__tests__/fileSystem.test.ts",
+      "line": 198,
+      "confidence": 0.72,
+      "autofix_class": "safe_auto",
+      "owner": "review-fixer",
+      "requires_verification": false,
+      "pre_existing": false,
+      "why_it_matters": "The inner 'maxDepth' describe block (line 197) redefines createMockFileHandle and createMockDirectoryHandle with identical implementations to the ones already defined in the parent 'scanDirectory' describe block (lines 104-133). JavaScript scoping rules mean the outer functions are already accessible inside the inner block. The duplication adds ~30 lines of maintenance surface with no benefit and creates a risk that someone updates one copy but not the other.",
+      "evidence": [
+        {
+          "type": "code-duplication",
+          "description": "createMockFileHandle at line 198-208 is identical to createMockFileHandle at line 104-114",
+          "location": "/Volumes/SSD/Dev/Apps/Knowlune/src/lib/__tests__/fileSystem.test.ts:198-208"
+        },
+        {
+          "type": "code-duplication",
+          "description": "createMockDirectoryHandle at line 210-228 is identical to createMockDirectoryHandle at line 116-133",
+          "location": "/Volumes/SSD/Dev/Apps/Knowlune/src/lib/__tests__/fileSystem.test.ts:210-228"
+        }
+      ],
+      "suggested_fix": "Remove the duplicate createMockFileHandle and createMockDirectoryHandle definitions from the maxDepth describe block (lines 198-228). The outer functions at lines 104-133 are already in scope and functionally identical."
+    }
+  ],
+  "residual_risks": [
+    {
+      "description": "Two-pass scanning logic is duplicated verbatim between scanCourseFolder (lines 155-180) and scanCourseFolderFromHandle (lines 607-627). The same includeImages:false recursive pass followed by includeImages:true/maxDepth:0 root-only pass appears in both functions. Future changes to scanning strategy (e.g., adding a third pass, changing depth limits) must be applied in two places, risking divergence.",
+      "severity": "LOW",
+      "confidence": 0.65
+    }
+  ],
+  "testing_gaps": [
+    {
+      "description": "No test verifies that subdirectory images are excluded from cover selection at the import level. fileSystem.test.ts covers maxDepth in isolation, and scanAndPersist.test.ts tests image discovery but uses a mock that does not enforce maxDepth. A test with a mock that implements both includeImages and maxDepth filtering would prove the two-pass design works end-to-end.",
+      "severity": "MEDIUM",
+      "confidence": 0.68
+    },
+    {
+      "description": "scanCourseFolderFromHandle (the bulk-import path) has no test coverage at all in the existing test suite. The same two-pass pattern was applied there, but no test validates it.",
+      "severity": "MEDIUM",
+      "confidence": 0.72
+    }
+  ]
+}

@@ -1,0 +1,139 @@
+{
+  "reviewer": "adversarial",
+  "findings": [
+    {
+      "id": "ADV-001",
+      "title": "Race: auto-advance countdown aborts in-progress Whisper transcription",
+      "category": "cascade_construction",
+      "confidence": 0.85,
+      "severity": "HIGH",
+      "description": "When a user starts on-demand Whisper transcription for a local video lesson, the 5-second auto-advance countdown (triggered by marking the lesson complete or video end) fires independently and navigates away, causing the TranscriptTab unmount to abort the in-progress transcription via AbortController. The user loses all transcription progress and must restart when they navigate back.",
+      "evidence": [
+        "TranscriptTab.tsx:194-283 — handleGenerate performs async transcription via Whisper, which can take minutes for long videos. An AbortController (line 220-221) tracks the in-flight request.",
+        "TranscriptTab.tsx:182-188 — cleanup effect on unmount calls abortControllerRef.current.abort(), terminating any in-progress transcription.",
+        "UnifiedLessonPlayer.tsx:394-403 — AutoAdvanceCountdown with 5-second timer renders when showAutoAdvance and nextLesson are truthy.",
+        "useCompletionFlow.ts:110-136 — handleVideoEnded marks lesson complete, shows celebration, and sets showAutoAdvance(true), starting the countdown immediately.",
+        "useCompletionFlow.ts:147-153 — handleAutoAdvance calls navigate() which unmounts the entire player page including TranscriptTab.",
+        "No coordination exists between the auto-advance countdown and the transcription generation state. There is no check for generationState === 'generating' before starting the countdown or executing the advance."
+      ],
+      "autofix_class": "manual",
+      "owner": "human",
+      "suggested_mitigation": "Before executing auto-advance, check if a transcript generation is in progress (could be exposed via the LessonChromeStore or a ref). If generating, either suppress the countdown or prompt the user that transcription will be lost."
+    },
+    {
+      "id": "ADV-002",
+      "title": "Data loss: concurrent note saves cause silent suggestion replacement via last-write-wins set()",
+      "category": "composition_failure",
+      "confidence": 0.82,
+      "severity": "HIGH",
+      "description": "useNoteStore.saveNote fires findAndReturnNoteLinkSuggestions asynchronously and overwrites the entire pendingNoteLinkSuggestions array via set() in the .then() callback. When autosave fires rapidly (common in note editors), two concurrent saveNote calls produce two independent suggestion searches. Whichever .then() resolves last replaces the other's results entirely, silently dropping cross-course link suggestions.",
+      "evidence": [
+        "useNoteStore.ts:108-112 — After persistWithRetry completes, findAndReturnNoteLinkSuggestions fires asynchronously. The .then() callback calls set({ pendingNoteLinkSuggestions: suggestions }), replacing the entire array rather than merging.",
+        "useNoteStore.ts:77-117 — saveNote is called by NotesTab's handleSave on every content change. NoteEditor likely triggers autosave on debounced content changes.",
+        "noteLinkSuggestions.ts:166-178 — findAndReturnNoteLinkSuggestions is async (reads db.importedCourses.toArray()), introducing a timing gap between .then() registration and resolution.",
+        "Two concurrent saveNote calls: save A reads get().notes at t1, starts findAndReturnNoteLinkSuggestions(A). save B reads get().notes at t2, starts findAndReturnNoteLinkSuggestions(B). If B's promise resolves first, set() writes [B-suggestions]. Then A's promise resolves, set() writes [A-suggestions], silently dropping B's results.",
+        "No version counter, merge logic, or compare-and-set guard protects the pendingNoteLinkSuggestions state from concurrent overwrites."
+      ],
+      "autofix_class": "manual",
+      "owner": "human",
+      "suggested_mitigation": "Either (a) use a request sequence number to discard stale results (increment counter on each save, only apply suggestions if the counter matches), or (b) merge new suggestions into existing pendingNoteLinkSuggestions rather than replacing, de-duplicating by sourceNoteId:targetNoteId key."
+    },
+    {
+      "id": "ADV-003",
+      "title": "Partial persistence: transcript writes lack Dexie transaction atomicity risking orphaned data",
+      "category": "assumption_violation",
+      "confidence": 0.80,
+      "severity": "MEDIUM",
+      "description": "TranscriptTab.handleGenerate writes to two Dexie tables (videoCaptions and youtubeTranscripts) in sequence without a Dexie transaction wrapper. If the first put succeeds and the second fails (e.g., IndexedDB quota exceeded mid-operation), an orphaned videoCaptions row persists indefinitely, consuming quota, while youtubeTranscripts remains empty — causing the transcript load effect to show 'empty' on next page visit and requiring regeneration.",
+      "evidence": [
+        "TranscriptTab.tsx:254-272 — db.videoCaptions.put(...) followed by db.youtubeTranscripts.put(...) with no db.transaction() wrapper. Two independent async operations.",
+        "TranscriptTab.tsx:124-137 — The transcript load effect checks youtubeTranscripts (not videoCaptions) as the authoritative source for cached transcript data. If youtubeTranscripts.put fails, the load effect falls through to adapter.getTranscript() which returns null for local videos.",
+        "The error path (line 278-282) catches the failure and sets generationState to 'error', but does NOT clean up the orphaned videoCaptions row written before the failure.",
+        "On next page load, the orphaned videoCaptions row persists but is never read (the load effect queries youtubeTranscripts). The user sees 'empty' state despite partial data existing.",
+        "Dexie provides db.transaction('rw', db.videoCaptions, db.youtubeTranscripts, async () => {...}) for atomic multi-table writes, which is not used here."
+      ],
+      "autofix_class": "manual",
+      "owner": "human",
+      "suggested_mitigation": "Wrap both puts in a Dexie transaction: db.transaction('rw', db.videoCaptions, db.youtubeTranscripts, async () => { await db.videoCaptions.put(...); await db.youtubeTranscripts.put(...); }). This ensures atomicity — either both writes succeed or neither does."
+    },
+    {
+      "id": "ADV-004",
+      "title": "Unbounded DOM: 100+ PDF sub-rows in material group cause rendering stalls",
+      "category": "abuse_case",
+      "confidence": 0.85,
+      "severity": "MEDIUM",
+      "description": "MaterialGroupRow renders all PDF sub-rows from group.materials into the DOM simultaneously via .map(), with no virtualization or pagination. Radix CollapsibleContent renders children into the DOM even when collapsed (required for height measurement animation). Each sub-row independently subscribes to useContentProgressStore (a Zustand selector), creating 100+ subscriptions. A course containing a material group with 100+ companion PDFs would cause the browser tab to freeze when the LessonsTab sidebar renders.",
+      "evidence": [
+        "LessonsTab.tsx:482-546 — CollapsibleContent wraps group.materials.map(), rendering every material as a Link with its own MaterialGroupRow props. No slice/pagination/virtualization.",
+        "LessonsTab.tsx:485-487 — Each material sub-row independently calls useContentProgressStore(state => state.statusMap[...]), creating one Zustand subscription per row.",
+        "Radix CollapsibleContent renders children into the DOM even when collapsed; the `hidden` attribute is toggled after animation completes, but DOM nodes exist from mount.",
+        "No limit exists on group.materials length — it depends entirely on adapter data. A course with many companion PDFs per lesson could produce 100+ array elements."
+      ],
+      "autofix_class": "manual",
+      "owner": "human",
+      "suggested_mitigation": "Add a 'Show more' pagination threshold (e.g., render first 20, then a 'Show all N materials' button), or use a virtualized list (react-window/react-virtuoso) for groups with >20 materials."
+    },
+    {
+      "id": "ADV-005",
+      "title": "Stale closure: auto-advance navigates to potentially invalid nextLesson after sync",
+      "category": "assumption_violation",
+      "confidence": 0.65,
+      "severity": "MEDIUM",
+      "description": "handleAutoAdvance captures nextLesson in its useCallback closure at render time. If external data synchronization (course re-import, content update) removes or reorders lessons during the 5-second auto-advance countdown, the stale nextLesson.id may reference a non-existent lesson. Navigation would land on the 'Lesson not found' error state.",
+      "evidence": [
+        "useCompletionFlow.ts:147-153 — handleAutoAdvance closes over nextLesson from useCallback dependencies. The captured nextLesson is frozen at the time of the last render of useCompletionFlow.",
+        "UnifiedLessonPlayer.tsx:394 — AutoAdvanceCountdown renders for 5 seconds before calling onAdvance (which is completion.handleAutoAdvance).",
+        "useCompletionFlow.ts:148 — The guard `if (nextLesson && courseId)` passes because nextLesson was truthy 5 seconds ago when the countdown started.",
+        "During those 5 seconds, a background sync could update the course adapter's lesson list (removing the lesson that was 'next'), but handleAutoAdvance still holds a reference to the deleted LessonItem.",
+        "Navigation to /courses/:courseId/lessons/:deletedLessonId produces 404-like 'Lesson not found' state in UnifiedLessonPlayer."
+      ],
+      "autofix_class": "advisory",
+      "owner": "human",
+      "suggested_mitigation": "In handleAutoAdvance, validate nextLesson.id against the current adapter state (useLessonNavigation or adapter.getLessons()) before navigating, rather than trusting the captured reference."
+    },
+    {
+      "id": "ADV-006",
+      "title": "Race: abort-then-restart in handleGenerate conflicts with useWhisperTranscription activeRef guard",
+      "category": "composition_failure",
+      "confidence": 0.62,
+      "severity": "MEDIUM",
+      "description": "TranscriptTab.handleGenerate aborts any prior AbortController before calling transcribe(). However, useWhisperTranscription has its own activeRef guard that throws 'A transcription is already in progress' if activeRef.current is still true. When abortControllerRef.abort() fires, the abort signal propagates asynchronously through the Whisper provider, and the finally block that resets activeRef.current may not have executed by the time the new transcribe() call checks the guard. This would throw an error caught by handleGenerate, showing the user an error state instead of starting the new transcription.",
+      "evidence": [
+        "TranscriptTab.tsx:216-218 — 'if (abortControllerRef.current) { abortControllerRef.current.abort() }' runs synchronously, aborting the signal. Then a new AbortController is created and transcribe(file) is called.",
+        "useWhisperTranscription.ts:35-37 — transcribe checks 'if (activeRef.current) { throw new Error('A transcription is already in progress') }' at call time.",
+        "useWhisperTranscription.ts:55-59 — The finally block resets activeRef.current = false AFTER the provider's transcribe() rejects with the abort error.",
+        "If the provider's abort error hasn't yet propagated to the await point when the new transcribe() is called, activeRef.current is still true, causing the throw.",
+        "TranscriptTab.tsx:278-282 — The catch block catches this throw and calls setGenerationState('error'), showing an error alert instead of starting transcription."
+      ],
+      "autofix_class": "advisory",
+      "owner": "human",
+      "suggested_mitigation": "Expose a reset method from useWhisperTranscription that clears activeRef.current, and call it after abortControllerRef.current.abort(). Or have handleGenerate await a brief delay after aborting before calling transcribe()."
+    }
+  ],
+  "residual_risks": [
+    {
+      "risk": "Layout.tsx search bar flex layout on lesson routes may overflow at tablet-width if header has many elements",
+      "confidence": 0.55,
+      "description": "On lesson routes, the search bar container changes from absolute-positioned centered to flex-1 with max-w-sm. At tablet widths (640-1024px), if header elements (back link, breadcrumbs, tools) consume enough space, the search bar could shrink below usable width. No min-width protects it. The impact is a visual glitch, not functional breakage."
+    },
+    {
+      "risk": "reset() does not clear pendingNoteLinkSuggestions; stale suggestions may briefly appear on next lesson page before the NotesTab cleanup effect fires",
+      "confidence": 0.50,
+      "description": "useLessonChromeStore.reset() (called in Layout.tsx:446 when leaving a lesson) does not clear pendingNoteLinkSuggestions in useNoteStore. NotesTab clears them in a useEffect cleanup on courseId/lessonId change. If React re-orders unmount/remount during fast navigation, stale suggestions from the previous lesson could briefly render before the new lesson's useEffect fires."
+    },
+    {
+      "risk": "Whisper model download progress renders raw percentage; browser may present non-integer values causing visual jitter",
+      "confidence": 0.45,
+      "description": "TranscriptTab.tsx:345 renders Math.round(progress.percent) for display. If the Whisper provider sends progress.percent as a float (e.g., 45.6789), the rounding is fine visually but the style width uses the same rounded value, potentially causing minor discrepancies between the displayed percentage and actual width in the progress bar if progress.percent is not an integer."
+    }
+  ],
+  "testing_gaps": [
+    "No test for: user starts transcription, video ends during generation, auto-advance countdown starts and navigates away — verify transcription is aborted cleanly and lesson remains marked complete",
+    "No test for: rapid autosave (two saves within same microtask cycle) triggers concurrent findAndReturnNoteLinkSuggestions calls — verify all suggestions are retained, not dropped by last-write-wins",
+    "No test for: IndexedDB quota exceeded mid-transcript-generation (between videoCaptions.put and youtubeTranscripts.put) — verify no orphaned rows and error state is shown",
+    "No test for: material group with >50 PDF sub-rows — verify LessonsTab renders without frame drops and all sub-rows are keyboard-navigable",
+    "No test for: toggle autoPlay during auto-advance countdown — verify the countdown's navigation uses the toggled (not initial) autoPlay value",
+    "No test for: clicking 'Generate Transcript' while a previous generation's abort is still propagating — verify the error state is not a false positive",
+    "No test for: autoPlay=true in navigation state arriving on a PDF lesson — verify the state clearing logic doesn't interfere with PDF rendering or cause unnecessary re-renders"
+  ]
+}

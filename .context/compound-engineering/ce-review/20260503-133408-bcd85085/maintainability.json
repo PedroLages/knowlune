@@ -1,0 +1,55 @@
+{
+  "reviewer": "maintainability",
+  "findings": [
+    {
+      "severity": "HIGH",
+      "confidence": 0.90,
+      "category": "naming_obscures_intent",
+      "title": "Unused `_title` parameter with misleading interface contract in `showCelebration`",
+      "description": "The function `showCelebration` in `useCompletionFlow.ts` accepts `_title: string` but never uses it -- it was formerly needed for the lesson-level celebration path that set `setCelebrationTitle(title)`. Now the function always uses `courseName ?? 'Course'` and always sets type to `'course'`. The underscore prefix suppresses the compiler warning but does not fix the real problem: the `CompletionFlowResult` interface advertises `showCelebration: (title: string) => void`, three call sites still construct and pass `lessonTitle`, the `lessonTitle` param remains required in `CompletionFlowParams`, and `lessonTitle` still appears in dependency arrays of `handleVideoEnded`, `handleYouTubeAutoComplete`, and `handleManualStatusChange` solely to pass to `showCelebration`. The public interface lies about what data the function actually consumes.",
+      "suggested_action": "Either remove the `title` parameter from `showCelebration` entirely, or restore its use (e.g., use it as the celebration title even for course-level celebrations when `courseName` is undefined). If removing, update the `CompletionFlowResult` interface, drop `lessonTitle` from the three callback dependency arrays, and consider whether `lessonTitle` is still needed in `CompletionFlowParams`.",
+      "location": "src/app/hooks/useCompletionFlow.ts:41-43 (interface), 92-108 (implementation), 123, 142, 165 (call sites)"
+    },
+    {
+      "severity": "MEDIUM",
+      "confidence": 0.85,
+      "category": "dead_code",
+      "title": "`lesson` and `module` branches in `CompletionModal` are now unreachable",
+      "description": "After this change, `setCelebrationType` is only ever called with `'course'` (line 96 of `useCompletionFlow.ts`). `CompletionModal` is rendered in exactly one place (`UnifiedLessonPlayer.tsx:701`) and receives `type={state.celebrationType}`. The initial state `useState<CelebrationType>('lesson')` in `useLessonPlayerState.ts:90` is overwritten to `'course'` by `showCelebration` before the modal ever opens. The switch cases for `'lesson'` and `'module'` in `getIcon()`, `getTitle()`, `getDescription()`, and `triggerConfetti()` (plus the stats conditional at line 149) are ~30+ lines of dead code that will never execute and must still be maintained.",
+      "suggested_action": "Either (a) simplify `CompletionModal` to only support `'course'` and remove the dead branches, or (b) keep the branches but add a comment explaining they are intentionally retained for potential future use / external consumers. If removing, also narrow the `CelebrationType` type union and update `useLessonPlayerState.ts` initial state.",
+      "location": "src/app/components/celebrations/CompletionModal.tsx:15 (type union), 98-129 (switch functions), 149 (stats conditional), 35-74 (triggerConfetti branches)"
+    },
+    {
+      "severity": "LOW",
+      "confidence": 0.70,
+      "category": "dead_code",
+      "title": "Tautological `celebrationType === 'course'` check in `handleCelebrationOpenChange`",
+      "description": "Line 191 of `useCompletionFlow.ts` checks `if (!open && celebrationType === 'course')` before showing the course suggestion. After this change, `celebrationType` can only be `'course'` when the modal was opened via `showCelebration`. The check is always true and suggests a multi-type defense that no longer exists. The code still works correctly, but the conditional is misleading.",
+      "suggested_action": "Remove the `celebrationType === 'course'` check (keeping only `!open`) or add a brief comment explaining it guards against external callers that might set a different type.",
+      "location": "src/app/hooks/useCompletionFlow.ts:191"
+    },
+    {
+      "severity": "LOW",
+      "confidence": 0.60,
+      "category": "coupling_unrelated_modules",
+      "title": "`lessonTitle` captured in callback dependency arrays despite being unused",
+      "description": "`handleVideoEnded`, `handleYouTubeAutoComplete`, and `handleManualStatusChange` all include `lessonTitle` in their `useCallback` dependency arrays because each calls `showCelebration(lessonTitle)`. Since `showCelebration` now ignores its parameter, these callbacks will unnecessarily re-create whenever `lessonTitle` changes. This is a minor correctness issue -- the callbacks depend on a value they transmit but don't actually consume.",
+      "suggested_action": "If `title` parameter is removed from `showCelebration`, drop `lessonTitle` from these three dependency arrays. Also reassess whether `lessonTitle` is still needed as a required field in `CompletionFlowParams`.",
+      "location": "src/app/hooks/useCompletionFlow.ts:129-137, 142-146, 171-173"
+    }
+  ],
+  "residual_risks": [
+    {
+      "risk": "If a product decision later restores per-lesson celebrations, the developer must reconstruct the fallback logic that was deleted. The old ternary pattern (`isCourseComplete ? 'course' : 'lesson'`) was straightforward but its removal is not documented in a way that makes restoration obvious.",
+      "severity": "LOW",
+      "location": "src/app/hooks/useCompletionFlow.ts:92-108"
+    }
+  ],
+  "testing_gaps": [
+    {
+      "gap": "No test changes accompany this behavioral change. `showCelebration` now has an early-return branch (non-course-complete = no modal). Tests should verify: (1) `showCelebration` does NOT open the modal or set celebration type when the course is incomplete, (2) `showCelebration` DOES open the modal with type='course' when all lessons are completed, (3) the celebration title is derived from `courseName` and never from the (now-unused) `title` argument.",
+      "severity": "MEDIUM",
+      "location": "src/app/hooks/useCompletionFlow.ts:92-108"
+    }
+  ]
+}

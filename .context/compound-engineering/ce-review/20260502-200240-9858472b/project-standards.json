@@ -1,0 +1,106 @@
+{
+  "reviewer": "project-standards",
+  "findings": [
+    {
+      "title": "Silent error swallowing via empty `.catch(() => {})` handler",
+      "severity": "MEDIUM",
+      "file": "src/app/components/reports/AIAnalyticsTab.tsx",
+      "line": 28,
+      "confidence": 0.85,
+      "autofix_class": "manual",
+      "owner": "author",
+      "requires_verification": true,
+      "pre_existing": false,
+      "suggested_fix": "Replace `.catch(() => {})` with a handler that provides user-visible feedback (e.g., `toast.error('Could not load monthly AI stats')`) or sets an error state that renders an InlineSectionError. The `error-handling/no-silent-catch` ESLint rule (automation.md line 22) requires catch blocks to include `toast.error()` or visible user feedback — swallowing errors silently masks real data-loading failures.",
+      "rule_citation": "automation.md, Save-Time Enforcement table: `error-handling/no-silent-catch` — 'Catch blocks without toast.error() or visible user feedback' (severity: WARNING)"
+    },
+    {
+      "title": "Card containers use `rounded-[24px]` instead of design system token `rounded-2xl`",
+      "severity": "LOW",
+      "file": "src/app/pages/Reports.tsx",
+      "line": 819,
+      "confidence": 0.65,
+      "autofix_class": "manual",
+      "owner": "author",
+      "requires_verification": true,
+      "pre_existing": false,
+      "suggested_fix": "Replace `rounded-[24px]` with `rounded-2xl` to match the design system convention, or confirm that the 24px radius is a deliberate deviation documented in the plan. The same pattern appears in ThisWeekSection.tsx line 131. Note: `rounded-2xl` resolves to 16px in Tailwind v4 (via `--radius-2xl`), while 24px would require either `rounded-3xl` (24px in default Tailwind scale) or a custom theme token.",
+      "rule_citation": "styling.md line 80: 'Border radius: rounded-2xl for cards, rounded-xl for buttons (tokens in theme.css)' — the hero container and ThisWeekSection container are card-like elements that should follow the card border-radius convention."
+    },
+    {
+      "title": "Inline style for dynamic bar height bypasses design token system",
+      "severity": "LOW",
+      "file": "src/app/components/reports/ThisWeekSection.tsx",
+      "line": 176,
+      "confidence": 0.70,
+      "autofix_class": "manual",
+      "owner": "author",
+      "requires_verification": false,
+      "pre_existing": false,
+      "suggested_fix": "Either add an `eslint-disable-next-line react-best-practices/no-inline-styles` comment with justification (matching the existing pattern in ActivityHeatmap.tsx line 155), or extract the bar rendering into a CSS custom property approach. The inline `style={{ height: ... }}` is functionally necessary for the dynamic bar chart but violates the project's eslint rule.",
+      "rule_citation": "automation.md, Save-Time Enforcement table: `react-best-practices/no-inline-styles` — 'Inline style objects → suggests Tailwind utilities' (severity: WARNING)"
+    }
+  ],
+  "residual_risks": [
+    {
+      "risk": "Weekly goal is hardcoded at 5 hours (300 minutes) with no user-configurable override",
+      "file": "src/app/components/reports/ThisWeekSection.tsx",
+      "line": 8,
+      "severity": "MEDIUM",
+      "detail": "`const DEFAULT_WEEKLY_GOAL_MINUTES = 5 * 60` — the goal is not loaded from user preferences or localStorage. Users who set custom goals elsewhere will see mismatched progress in the radial chart."
+    },
+    {
+      "risk": "ThisWeekSection queries IndexedDB directly via `db.studySessions` instead of using a shared store",
+      "file": "src/app/components/reports/ThisWeekSection.tsx",
+      "line": 49,
+      "severity": "LOW",
+      "detail": "The component creates its own data-fetching effect rather than consuming from a Zustand store (e.g., `useSessionStore`). This duplicates the query logic and means the component will not benefit from store-level caching or cross-component invalidation. Acceptable for now but may cause stale reads if the store and component use different Dexie queries."
+    },
+    {
+      "risk": "HeroStat icon prop uses `typeof CheckCircle` which only accepts icon types with that shape",
+      "file": "src/app/pages/Reports.tsx",
+      "line": 72,
+      "severity": "LOW",
+      "detail": "`icon: typeof CheckCircle` restricts the prop to icons matching CheckCircle's component signature. While all Lucide icons share the same props interface, this tighter type may cause unnecessary TypeScript friction if a different icon family is used later. Using `React.ComponentType<{ className?: string }>` or `typeof LucideIcon` would be more flexible."
+    },
+    {
+      "risk": "AI analytics monthly stats load fires on every Reports mount with no retry or error recovery",
+      "file": "src/app/components/reports/AIAnalyticsTab.tsx",
+      "line": 27,
+      "severity": "MEDIUM",
+      "detail": "The `useEffect` for monthly stats has an empty dependency array and a silent `.catch(() => {})`. If the call fails (e.g., offline, Dexie upgrade in progress), the user sees '—' for 'This Month' permanently until they navigate away and back. The parent component has retry patterns for other data but this stat strip lacks any error/retry UX."
+    }
+  ],
+  "testing_gaps": [
+    {
+      "gap": "ThisWeekSection has no unit tests",
+      "file": "src/app/components/reports/ThisWeekSection.tsx",
+      "detail": "The component contains significant logic (IndexedDB queries, date math, percentage calculations, daily bar aggregation, window event listeners) but has zero unit test coverage. Only an E2E test verifies the h2 heading renders.",
+      "suggested_test": "Add src/app/components/reports/__tests__/ThisWeekSection.test.tsx with mocked db.studySessions to cover: loading skeleton, empty state (0 minutes), partial week, full 7-day activity, event listener re-fetch, and the ignore cleanup flag."
+    },
+    {
+      "gap": "HeroStat component has no isolated tests",
+      "file": "src/app/pages/Reports.tsx",
+      "detail": "HeroStat is a small presentational component defined inside Reports.tsx with no dedicated tests. Its rendering is only verified implicitly through the page-level test assertions on text content.",
+      "suggested_test": "Add a describe block for HeroStat within the Reports test file, or extract it to a separate file and test: label/value rendering, icon presence, empty/placeholder values ('—'), and the tabular-nums CSS class."
+    },
+    {
+      "gap": "generateStudyInsight does not test edge cases for malformed inputs",
+      "file": "src/lib/__tests__/insights.test.ts",
+      "detail": "The test suite covers all priority branches (no lessons, getting started, consistent, momentum, on-fire, steady, negative change, large numbers). However, it does not test NaN/Infinity/negative values for activeDaysThisMonth or null property scenarios. These are unlikely in normal operation but could surface if upstream calculations produce unexpected values.",
+      "suggested_test": "Add test cases for: activeDaysThisMonth = -1, currentStreak = NaN, totalCompletedLessons = Infinity, and an inputs object missing a required property to verify graceful degradation."
+    },
+    {
+      "gap": "ReadingSection test only verifies child mount, not layout structure",
+      "file": "src/app/components/reports/__tests__/ReadingSection.test.tsx",
+      "detail": "The test confirms all 5 children render but does not verify the grid layout (2x2) or the data-testid on the wrapper. The wrapper testid and showHeader propagation are tested correctly.",
+      "suggested_test": "Add a snapshot or structural assertion that the grid rows are split correctly (ReadingStatsSection alone, then two grid rows with 2 children each)."
+    },
+    {
+      "gap": "ActivityHeatmap compact mode has no unit test",
+      "file": "src/app/components/reports/ActivityHeatmap.tsx",
+      "detail": "The new `compact` prop changes rendering (smaller cells, hidden header, different skeleton height, hidden today indicator). No unit test verifies these conditional render paths.",
+      "suggested_test": "Add tests in ActivityHeatmap's existing test file for: skeleton height in compact mode, header absence when compact, legend today indicator absence when compact, and smaller cell sizes."
+    }
+  ]
+}

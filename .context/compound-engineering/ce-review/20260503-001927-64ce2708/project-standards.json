@@ -1,0 +1,24 @@
+{
+  "reviewer": "project-standards",
+  "findings": [],
+  "residual_risks": [
+    {
+      "description": "readStoredAutoPlay in useLessonChromeStore.ts (line 30) lacks a silent-catch-ok comment, unlike the adjacent persistAutoPlay function. However, this matches the pre-existing pattern of readStoredTheater (line 14), which also lacks the comment. No net-new convention inconsistency introduced.",
+      "file": "src/stores/useLessonChromeStore.ts",
+      "line": 30,
+      "severity": "INFO"
+    },
+    {
+      "description": "findAndReturnNoteLinkSuggestions(...).then(...) in useNoteStore.ts (line 108) is fire-and-forget without .catch(). The function is designed to never reject (internal try/catch returns []), but a programming error in findNoteLinkSuggestions could cause an unhandled rejection. The project's documented automation.md rules do not cover no-floating-promises, so this does not violate any written standard.",
+      "file": "src/stores/useNoteStore.ts",
+      "line": 108,
+      "severity": "INFO"
+    }
+  ],
+  "testing_gaps": [
+    {
+      "description": "LessonsTab.test.tsx covers completion checkmark rendering and formatLessonDuration. No tests found for: (a) auto-play toggle button in LessonHeaderTools, (b) auto-play navigation state passthrough in useCompletionFlow, (c) QA panel controlled open/close in QAChatPanel, (d) NotesTab pendingNoteLinkSuggestions inline badge rendering, (e) TranscriptTab Whisper generation flow and onTranscriptGenerated callback.",
+      "severity": "MEDIUM"
+    }
+  ]
+}

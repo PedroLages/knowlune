@@ -1,0 +1,17 @@
+{
+  "reviewer": "project-standards",
+  "findings": [],
+  "residual_risks": [
+    {
+      "risk": "Integration test imports `fake-indexeddb/auto` but its side-effect will apply to all tests in the suite, not just the three in this file. Vitest worker isolation (one worker per file by default) mitigates this; if pool: 'forks' is ever changed to 'threads', fake-indexeddb could interfere with other test files in the same thread.",
+      "severity": "LOW",
+      "confidence": 0.65
+    }
+  ],
+  "testing_gaps": [
+    {
+      "gap": "The `readCredential` import is not directly tested in isolation — dependency is mocked in both test files. There is no test verifying the integration between `getDecryptedApiKeyForProvider` and the real `vaultCredentials.readCredential` function.",
+      "confidence": 0.75
+    }
+  ]
+}

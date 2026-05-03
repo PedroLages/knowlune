@@ -1,0 +1,72 @@
+{
+  "run_id": "20260503-210317-bc5acef3",
+  "mode": "headless",
+  "plan_source": "explicit",
+  "plan": "docs/plans/2026-05-03-006-fix-companion-pdf-preview-resolve-plan.md",
+  "base": "439a8438e00e5941af121d87783e434f4534363f",
+  "scope": "src/lib/courseAdapter.ts, src/app/hooks/useLessonPlayerState.ts, plus test files and mock updates",
+  "intent": "Fix companion PDFs that appear in sidebar but fail to render in lesson player by adding a getLesson() point-lookup to the adapter interface and updating useLessonPlayerState to use it instead of filtering getLessons(). Also add lessonResolved state to properly dismiss skeleton when lesson metadata resolution completes.",
+  "reviewers": [
+    "correctness (always)",
+    "testing (always)",
+    "maintainability (always)",
+    "project-standards (always)",
+    "agent-native-reviewer (always)",
+    "learnings-researcher (always)",
+    "api-contract (interface change to CourseAdapter)",
+    "reliability (error handling changes in useLessonPlayerState)",
+    "adversarial (~45 lines executable code, state transitions, async flows)",
+    "kieran-typescript (TypeScript adapter + hook changes)"
+  ],
+  "verdict": "Ready to merge",
+  "applied_fixes": 0,
+  "safe_auto_count": 0,
+  "gated_auto_count": 0,
+  "manual_count": 0,
+  "advisory_count": 0,
+  "pre_existing_count": 1,
+  "findings": [],
+  "pre_existing": [
+    {
+      "id": "pre-1",
+      "title": "Null lesson metadata renders default video UI, not error state",
+      "severity": "P2",
+      "file": "src/app/pages/UnifiedLessonPlayer.tsx",
+      "line": 321,
+      "autofix_class": "manual",
+      "owner": "downstream-resolver",
+      "requires_verification": false,
+      "confidence": 0.75,
+      "pre_existing": true,
+      "why_it_matters": "When getLesson() returns null for a genuinely missing lesson ID, the hook sets lessonType=null and lessonResolved=true. The UnifiedLessonPlayer error state (line 321) only triggers on `error || !adapter`, not on resolved-but-null lesson metadata. The user sees default video player UI instead of 'Lesson not found'. The old code showed an infinite skeleton (worse); the new code dismisses the skeleton but still shows inappropriate content.",
+      "suggested_fix": "Add a condition in UnifiedLessonPlayer to show the 'Lesson not found' error state when lessonTypeResolved is true and lessonType is null.",
+      "evidence": [
+        "UnifiedLessonPlayer.tsx:321 — error state gated on `error || !adapter`, no check for null lessonType with resolved state",
+        "useLessonPlayerState.ts:152 — sets lessonType to match?.type ?? null, which is null when getLesson returns null",
+        "useLessonPlayerState.ts:158 — sets lessonResolved to true in success path even when match is null",
+        "LessonContentRenderer.tsx:74 — only checks !lessonTypeResolved for skeleton; no error fallback for null lessonType"
+      ]
+    }
+  ],
+  "requirements_completeness": {
+    "R1": "met — getLesson finds companion PDFs, lessonType='pdf', PdfContent renders",
+    "R2": "met — getLesson searches all PDFs, getLessons unchanged",
+    "R3": "met — getLessons companion filter preserved",
+    "R4": "met — getLesson searches videos first, same metadata extraction",
+    "Unit1": "met — interface updated, both adapters implement getLesson",
+    "Unit2": "met — useLessonPlayerState uses getLesson point-lookup, lessonResolved added"
+  },
+  "residual_risks": [
+    "YouTubeCourseAdapter.getLesson() duplicates LessonItem construction from getLessons() — two code paths building the same object shape could diverge over time (pre-existing pattern, not introduced by this diff)",
+    "When getLesson() returns null, LessonContentRenderer falls through to video player rendering — better than infinite skeleton but still not a proper 'not found' UX"
+  ],
+  "testing_gaps": [
+    "No end-to-end integration test verifying sidebar click → lesson player → PDF renders (plan lists this as manual verification)",
+    "No test for the case where getLesson() returns null and the UnifiedLessonPlayer renders (pre-existing gap)"
+  ],
+  "learnings": [
+    "Related solution: docs/solutions/ui-bugs/course-content-sidebar-pdf-discoverability-2026-05-03.md — the sidebar fix that exposed this resolution gap",
+    "Related solution: docs/solutions/integration-issues/lesson-chrome-store-consumer-integration-gaps-2026-05-02.md — precedent for store-consumer wiring gaps"
+  ],
+  "agent_native_gaps": []
+}

@@ -1,0 +1,170 @@
+{
+  "reviewer": "testing",
+  "findings": [
+    {
+      "title": "ThisWeekSection.tsx (196-line component) has zero unit tests",
+      "severity": "BLOCKER",
+      "file": "src/app/components/reports/ThisWeekSection.tsx",
+      "line": 1,
+      "confidence": 0.97,
+      "autofix_class": "missing_tests",
+      "owner": "new_component",
+      "requires_verification": false,
+      "pre_existing": false,
+      "suggested_fix": "Create src/app/components/reports/__tests__/ThisWeekSection.test.tsx covering: (1) loading state renders Skeleton, (2) successful load renders radial bar chart, daily bars, and summary text, (3) getProgressColor boundaries at 40 and 80, (4) empty data (0 minutes) shows 0% with 'No activity yet' text, (5) error path falls back to loading-false with empty state, (6) event listener registration ('study-session-recorded', 'study-session-updated') and cleanup, (7) percentage clamped to 100 via Math.min, (8) singular vs plural for activeDays message, (9) bestDay null branch when all minutes are 0. Mock db.studySessions at the Dexie level. Use @testing-library/react for DOM assertions on loading/loaded states."
+    },
+    {
+      "title": "ActivityHeatmap compact mode (7+ new conditional branches) has zero unit tests",
+      "severity": "HIGH",
+      "file": "src/app/components/reports/ActivityHeatmap.tsx",
+      "line": 52,
+      "confidence": 0.98,
+      "autofix_class": "missing_tests",
+      "owner": "modified_component",
+      "requires_verification": false,
+      "pre_existing": true,
+      "suggested_fix": "Create src/app/components/reports/__tests__/ActivityHeatmap.test.tsx. The compact prop controls at least 7 conditional branches: (1) gridStyle produces fixed 12px cells vs flexible sizing (line 139-149), (2) gap changes between gap-[2px] and gap-[3px] (line 293), (3) loading skeleton changes height/rounded size (line 211), (4) header section hidden entirely when compact (line 224-241), (5) month labels use text-[8px] vs text-[10px] (line 306), (6) day labels switch size classes (line 318), (7) cell styling goes from aspect-square to fixed w-3 h-3 (line 350), (8) legend text size and 'Today' indicator visibility (lines 376-402). Cover both compact=true and compact=false render outputs with DOM structure assertions."
+    },
+    {
+      "title": "E2E empty-state assertion weakened from verifying empty-state message to checking only the Reports heading",
+      "severity": "HIGH",
+      "file": "tests/e2e/reports-redesign.spec.ts",
+      "line": 93,
+      "confidence": 0.95,
+      "autofix_class": "assertion_weakened",
+      "owner": "modified_test",
+      "requires_verification": true,
+      "pre_existing": false,
+      "suggested_fix": "The old assertion verified the no-data user experience: `await expect(page.getByText('No activity yet. Start studying to see your progress here.')).toBeVisible()`. The new assertion only checks `await expect(page.getByRole('heading', { name: 'Reports', level: 1 })).toBeVisible()`, which is identical to the first test in the same file (line 19). The redesigned page should still show an empty-state message for users with no data: `page.getByText('Study sessions will appear here once you start learning.')`. Restore an assertion that verifies the no-data message is visible when localStorage is cleared, and also verify that the hero stats show zero/empty values ('0', '0d', '—') in the empty state."
+    },
+    {
+      "title": "AIAnalyticsTab mostUsedLabel computation (3 branches to return '—') has zero tests",
+      "severity": "HIGH",
+      "file": "src/app/components/reports/AIAnalyticsTab.tsx",
+      "line": 213,
+      "confidence": 0.93,
+      "autofix_class": "missing_tests",
+      "owner": "modified_component",
+      "requires_verification": true,
+      "pre_existing": true,
+      "suggested_fix": "Create a unit test for AIAnalyticsTab or add test cases covering the mostUsedLabel IIFE (lines 213-217): (1) stats is null -> returns '—', (2) stats.features is empty array -> returns '—', (3) all features have count=0 -> returns '—', (4) single feature with count>0 -> returns its label, (5) multiple features, reducer correctly picks highest-count feature's label. Also verify the monthlyStats useEffect renders the 'This Month' card value. Note: AI_FEATURE_LABELS[top.featureType] may be undefined for unknown feature types — a fallback is missing in the source code."
+    },
+    {
+      "title": "Reports.test.tsx: zero tests for error states, !hasActivity branch, quizAnalytics null fallback, or Courses stat rendering",
+      "severity": "MEDIUM",
+      "file": "src/app/pages/__tests__/Reports.test.tsx",
+      "line": 1,
+      "confidence": 0.90,
+      "autofix_class": "missing_tests",
+      "owner": "modified_test",
+      "requires_verification": false,
+      "pre_existing": true,
+      "suggested_fix": "The Reports page test covers only the happy path. Add tests for: (1) hasActivity=false renders the empty-state paragraph 'Study sessions will appear here once you start learning.' (lines 248-252 of Reports.tsx), (2) hasActivity=true omits the empty-state paragraph, (3) notesError state renders InlineSectionError, (4) completionError state renders InlineSectionError inside the quiz completion card, (5) quizAnalytics=null renders '—' for Quiz Avg hero stat, (6) Courses hero stat shows correct 'inProgressCount/allCourses.length' value. Mock calculateQuizAnalytics to reject to test the silent-catch path."
+    },
+    {
+      "title": "QuizAnalyticsDashboard hero stat strip (Total Quizzes, Avg Score, Completion Rate) has zero unit tests",
+      "severity": "MEDIUM",
+      "file": "src/app/components/reports/QuizAnalyticsDashboard.tsx",
+      "line": 110,
+      "confidence": 0.94,
+      "autofix_class": "missing_tests",
+      "owner": "modified_component",
+      "requires_verification": false,
+      "pre_existing": true,
+      "suggested_fix": "Create src/app/components/reports/__tests__/QuizAnalyticsDashboard.test.tsx covering the new hero stat strip plus existing functionality: (1) loading state renders skeletons, (2) error state shows alert with retry, (3) empty state (totalQuizzesCompleted=0) shows EmptyState, (4) populated state renders hero stats with correct values. The component is entirely mocked in Reports.test.tsx, so its real logic has zero test coverage."
+    },
+    {
+      "title": "ReadingSection.test.tsx tests only mock composition rendering — zero real component logic verified",
+      "severity": "MEDIUM",
+      "file": "src/app/components/reports/__tests__/ReadingSection.test.tsx",
+      "line": 1,
+      "confidence": 0.85,
+      "autofix_class": "false_confidence",
+      "owner": "new_test",
+      "requires_verification": true,
+      "pre_existing": false,
+      "suggested_fix": "The ReadingSection component is purely presentational by design (delegates data loading to children), so shallow testing with mocks is acceptable. However, the current tests add near-zero value beyond TypeScript compilation — they only verify 5 mocked component testids appear in the DOM. Replace or augment with layout verification: confirm the stats section is full-width, then 2 grid rows at lg:grid-cols-2. The showHeader={false} prop verification is the single useful assertion. Verify it passes correctly through to the real ReadingStatsSection."
+    },
+    {
+      "title": "insights.test.ts: missing boundary edge cases at the threshold values",
+      "severity": "LOW",
+      "file": "src/lib/__tests__/insights.test.ts",
+      "line": 1,
+      "confidence": 0.80,
+      "autofix_class": "missing_edge_cases",
+      "owner": "new_test",
+      "requires_verification": false,
+      "pre_existing": false,
+      "suggested_fix": "Add boundary test cases: (1) activeDaysThisMonth=16 (exactly at the >15 threshold) triggers the 'On fire' template, (2) totalCompletedLessons=9 (exactly at the <10 threshold) still triggers 'Getting started', (3) totalCompletedLessons=10 does NOT trigger 'Getting started' and falls through, (4) previousBestStreak=0 with currentStreak>0 and activeDaysThisMonth>15 verifies 'consistent' template does NOT fire (because previousBestStreak>0 guard). These boundary values exercise the comparison operators at their edges."
+    },
+    {
+      "title": "loadQuizAnalytics in Reports.tsx has silent error handling with no error state or user-facing feedback",
+      "severity": "LOW",
+      "file": "src/app/pages/Reports.tsx",
+      "line": 168,
+      "confidence": 0.92,
+      "autofix_class": "missing_tests",
+      "owner": "code_logic",
+      "requires_verification": true,
+      "pre_existing": false,
+      "suggested_fix": "The loadQuizAnalytics catch block (line 173) only calls console.error. No error state is set, no toast is shown, and the user sees '—' in the Quiz Avg hero stat with no indication of failure. Either add error handling to the catch block or add a comment documenting the intentional silent catch. Then add a test: mock calculateQuizAnalytics to reject and assert that the Quiz Avg stat shows '—'."
+    },
+    {
+      "title": "AIAnalyticsTab monthlyStats fetch has empty catch handler .catch(() => {})",
+      "severity": "LOW",
+      "file": "src/app/components/reports/AIAnalyticsTab.tsx",
+      "line": 157,
+      "confidence": 0.94,
+      "autofix_class": "missing_tests",
+      "owner": "code_logic",
+      "requires_verification": false,
+      "pre_existing": false,
+      "suggested_fix": "The useEffect at line 156-158 calls `getAIUsageStats('monthly').then(setMonthlyStats).catch(() => {})`. The catch handler is completely empty — it does not log the error, set an error state, or provide user feedback. If the fetch fails, the 'This Month' stat card silently shows '—'. Add at minimum `console.error` in the catch handler for observability. Add a test: mock getAIUsageStats to reject and assert the monthly stat shows '—' (current fallback)."
+    }
+  ],
+  "residual_risks": [
+    "The entire redesigned Reports page always renders (no more EmptyState wrapper gating the whole page). This means every child component that fetches data (ReadingStatsSection, ThisWeekSection, ActivityHeatmap, AIAnalyticsTab, QuizAnalyticsDashboard) mounts and starts loading simultaneously on page render. With zero unit tests for 3 of these 5 data-fetching components, any regression in error handling, loading states, or data display will only be caught at the E2E level or not at all.",
+    "The ActivityHeatmap component is NOT mocked in Reports.test.tsx but IS rendered in compact mode inside the hero block. This provides accidental coverage without any behavioral verification. If the heatmap breaks, the test still passes as long as Reports does not crash on render.",
+    "Both ThisWeekSection and ActivityHeatmap register global window event listeners ('study-session-recorded', 'study-session-updated', 'study-log-updated'). Without tests verifying cleanup (removeEventListener in the useEffect return), memory leaks in production are possible and will only surface as gradual performance degradation over long sessions.",
+    "The QuizAnalyticsDashboard has an error state with a retry mechanism (retryKey incremented on click). The component is fully mocked in Reports.test.tsx, so the error->retry->success flow is untested at all levels. A broken retry would only be caught by manual QA or E2E that triggers it.",
+    "The removal of the EmptyState wrapper means pages with no data now render all section headers and components unconditionally. A user with zero activity sees a fully structured page with empty/zero values rather than a single friendly empty-state message. This UX behavioral change is not verified by any test."
+  ],
+  "testing_gaps": [
+    {
+      "gap": "New component ThisWeekSection.tsx (196 lines with data fetching, date math, progress color computation, daily bar chart, event listeners, error handling) has no test file at all",
+      "file": "src/app/components/reports/ThisWeekSection.tsx"
+    },
+    {
+      "gap": "ActivityHeatmap compact prop introduced 7+ conditional branches (grid sizing, cell size, gap, skeleton, header visibility, legend text, 'Today' indicator) with no unit tests for compact=true",
+      "file": "src/app/components/reports/ActivityHeatmap.tsx"
+    },
+    {
+      "gap": "AIAnalyticsTab new mostUsedLabel computation (null-safe chain with 3 '—' fallback branches) and monthlyStats useEffect have zero direct tests",
+      "file": "src/app/components/reports/AIAnalyticsTab.tsx"
+    },
+    {
+      "gap": "E2E empty-state test weakened from verifying the empty-state message to checking only the Reports heading; the new empty-state paragraph is never verified by any test",
+      "file": "tests/e2e/reports-redesign.spec.ts"
+    },
+    {
+      "gap": "Reports.test.tsx has no tests for error states (notesError, completionError, quizCountError), hasActivity=false branch, quizAnalytics null fallback ('—'), or Courses stat edge cases",
+      "file": "src/app/pages/__tests__/Reports.test.tsx"
+    },
+    {
+      "gap": "QuizAnalyticsDashboard new hero stat strip has zero unit tests; component fully mocked in Reports page test",
+      "file": "src/app/components/reports/QuizAnalyticsDashboard.tsx"
+    },
+    {
+      "gap": "insights.test.ts missing boundary values at activeDaysThisMonth=16 and totalCompletedLessons=9 (threshold boundaries for >15 and <10 comparisons)",
+      "file": "src/lib/__tests__/insights.test.ts"
+    },
+    {
+      "gap": "loadQuizAnalytics silent catch (no error state set, no user feedback) with zero test coverage for the rejection path",
+      "file": "src/app/pages/Reports.tsx"
+    },
+    {
+      "gap": "AIAnalyticsTab monthlyStats .catch(() => {}) empty handler has zero test coverage for the rejection path",
+      "file": "src/app/components/reports/AIAnalyticsTab.tsx"
+    }
+  ]
+}

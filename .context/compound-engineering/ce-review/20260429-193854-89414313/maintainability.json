@@ -1,0 +1,26 @@
+{
+  "run_id": "20260429-193854-89414313",
+  "reviewer": "maintainability",
+  "findings": [
+    {
+      "title": "Deep relative import path in smoke test is fragile to directory restructuring",
+      "severity": "LOW",
+      "file": "src/app/components/figma/PdfViewer/__tests__/PdfViewer.smoke.test.tsx",
+      "line": 8,
+      "confidence": 0.68,
+      "category": "code_clarity",
+      "autofix_class": "none",
+      "owner": "current_author",
+      "requires_verification": false,
+      "pre_existing": false,
+      "suggested_fix": "Replace `import('../../../../../lib/pdfWorker')` with `import('@/lib/pdfWorker')` — the Vite `@` alias (resolves to `./src`) is already configured in vite.config.ts:596 and works in dynamic imports during Vitest runs. The current 5-level `../` chain is hard to verify at a glance and would break if the PdfViewer test directory were moved or restructured.",
+      "why_it_matters": "Deep relative import chains of 5+ segments are fragile to directory restructuring and harder to verify correctly at a glance. The project already has a `@` alias configured in vite.config.ts that resolves to `./src`, making `@/lib/pdfWorker` the idiomatic, self-documenting alternative. Using the alias eliminates the need for the reader to mentally count directory levels and ensures the import survives future filesystem reorganization.",
+      "evidence": "The smoke test file at `src/app/components/figma/PdfViewer/__tests__/PdfViewer.smoke.test.tsx` imports `pdfWorker` via `await import('../../../../../lib/pdfWorker')`. Counting the path segments: `__tests__` → `PdfViewer` → `figma` → `components` → `app` → `src` (5 levels), resolving to `src/lib/pdfWorker.ts`. The `@` alias is defined at vite.config.ts line 596 as `'@': path.resolve(__dirname, './src')`, making `@/lib/pdfWorker` the equivalent path. The dynamic `import()` in Vitest respects Vite resolve aliases, so the substitution is drop-in compatible."
+    }
+  ],
+  "summary": {
+    "total_findings": 1,
+    "severity_counts": { "BLOCKER": 0, "HIGH": 0, "MEDIUM": 0, "LOW": 1 },
+    "pre_existing_count": 0
+  }
+}

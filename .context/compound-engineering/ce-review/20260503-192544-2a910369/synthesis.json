@@ -1,0 +1,151 @@
+{
+  "run_id": "20260503-192544-2a910369",
+  "timestamp": "2026-05-03T19:25:44Z",
+  "mode": "headless",
+  "branch": "feature/ce-2026-05-03-curriculum-composer",
+  "base": "da0a65d0600ec94b5b98a91f0d6adfa14a1b8c52",
+  "plan": "docs/plans/2026-05-03-005-feat-curriculum-composer-plan.md",
+  "plan_source": "explicit",
+  "intent": "Replace two-dialog path-creation flow with unified CurriculumComposer dialog with inline multi-select course picker. Extract shared InlineCoursePicker component. Add batch-add store methods (createPathWithCourses, batchAddCoursesToPath). Integrate into LearningPaths and LearningPathDetail pages.",
+  "verdict": "Ready with fixes",
+  "files": [
+    "src/app/components/figma/CurriculumComposer.tsx",
+    "src/app/components/figma/ImportWizardDialog.tsx",
+    "src/app/components/figma/InlineCoursePicker.tsx",
+    "src/app/components/figma/__tests__/CurriculumComposer.test.tsx",
+    "src/app/components/figma/__tests__/InlineCoursePicker.test.tsx",
+    "src/app/components/shared/CourseTypeBadge.tsx",
+    "src/app/hooks/useImportWizardTrigger.ts",
+    "src/app/hooks/useLoadCourseThumbnails.ts",
+    "src/app/pages/LearningPathDetail.tsx",
+    "src/app/pages/LearningPaths.tsx",
+    "src/app/pages/__tests__/LearningPathDetail.test.tsx",
+    "src/stores/__tests__/useLearningPathStore.test.ts",
+    "src/stores/useLearningPathStore.ts"
+  ],
+  "quality_gates": {
+    "build": "pass",
+    "typecheck": "pass",
+    "unit_tests": "pass"
+  },
+  "findings": [
+    {
+      "id": "F-001",
+      "title": "batchAddCoursesToPath persists stale updatedAt to sync layer",
+      "severity": "P1",
+      "file": "src/stores/useLearningPathStore.ts",
+      "line": 734,
+      "confidence": 0.90,
+      "autofix_class": "safe_auto",
+      "owner": "review-fixer",
+      "requires_verification": true,
+      "pre_existing": false,
+      "suggested_fix": "Replace lines 734-736: instead of reading the stale path from Dexie and writing it back with put, persist the optimistically updated path. Change to: `const updatedPath = get().paths.find(p => p.id === pathId); if (updatedPath) { await syncableWrite('learningPaths', 'put', updatedPath as unknown as SyncableRecord); }`",
+      "why_it_matters": "The optimistic update on line 723-724 correctly sets updatedAt: new Date().toISOString() on the path, but the persist block on lines 734-736 reads the path from Dexie DB (which still has the old updatedAt) and writes that stale version back, discarding the timestamp update from the sync layer. This means the path's updatedAt will not reflect the batch-add in synced state.",
+      "evidence": [
+        "Line 723-724: optimistic update sets paths: state.paths.map(p => p.id === pathId ? { ...p, updatedAt: new Date().toISOString() } : p)",
+        "Line 734: const existingPath = await db.learningPaths.get(pathId) — reads STALE path from Dexie (before optimistic updatedAt change)",
+        "Line 736: await syncableWrite('learningPaths', 'put', existingPath) — writes stale path back, losing the updatedAt change"
+      ]
+    },
+    {
+      "id": "F-002",
+      "title": "batchAddCoursesToPath silently swallows errors — inconsistent with createPathWithCourses",
+      "severity": "P2",
+      "file": "src/stores/useLearningPathStore.ts",
+      "line": 739,
+      "confidence": 0.85,
+      "autofix_class": "safe_auto",
+      "owner": "review-fixer",
+      "requires_verification": false,
+      "pre_existing": false,
+      "suggested_fix": "Add `throw error` after the rollback set() on line 746, matching the pattern in createPathWithCourses (line 684). This lets callers detect failures via await/catch.",
+      "why_it_matters": "createPathWithCourses re-throws errors after rollback (line 684), allowing callers to detect failure. batchAddCoursesToPath catches the error, rolls back, but does NOT re-throw. This creates an inconsistency in the store API: callers of batchAddCoursesToPath cannot detect failure via await or catch. While no current callers use batchAddCoursesToPath's return value, this is a latent bug that will cause silent failures when multi-select mode is added to the detail page.",
+      "evidence": [
+        "Line 684: throw error — createPathWithCourses re-throws after rollback",
+        "Lines 739-747: batchAddCoursesToPath catches and rolls back but does NOT re-throw"
+      ]
+    },
+    {
+      "id": "F-003",
+      "title": "InlineCoursePicker shows misleading message when no courses exist and loading not set",
+      "severity": "P3",
+      "file": "src/app/components/figma/InlineCoursePicker.tsx",
+      "line": 340,
+      "confidence": 0.75,
+      "autofix_class": "gated_auto",
+      "owner": "downstream-resolver",
+      "requires_verification": false,
+      "pre_existing": false,
+      "suggested_fix": "Add a condition: when allCourses.length === 0 and the store's importedCourses is empty (no courses exist at all), show 'No courses in your library — import some first.' instead of 'All courses are already in this path.' The detail page should also pass `loading={importedCourses.length === 0 && importedCoursesFromStore.length === 0}` or a separate isEmpty prop.",
+      "why_it_matters": "When importedCourses is empty and loading is not set (as in the detail page integration), the component falls through to 'All courses are already in this path.' This is misleading — the user hasn't imported any courses yet, not that all are excluded. The CurriculumComposer avoids this via the loading prop, but the detail page integration does not set loading.",
+      "evidence": [
+        "LearningPathDetail.tsx integration of InlineCoursePicker does not pass `loading` prop",
+        "Lines 278-290 in InlineCoursePicker: allCourses computed from importedCourses minus excluded — if importedCourses is empty, allCourses is empty",
+        "Line 340: `!hasCourses && !search.trim()` renders 'All courses are already in this path' regardless of whether courses exist at all"
+      ]
+    },
+    {
+      "id": "F-004",
+      "title": "String literal 'course-imported' in ImportWizardDialog not using exported COURSE_IMPORTED constant",
+      "severity": "P3",
+      "file": "src/app/components/figma/ImportWizardDialog.tsx",
+      "line": 407,
+      "confidence": 0.80,
+      "autofix_class": "safe_auto",
+      "owner": "review-fixer",
+      "requires_verification": false,
+      "pre_existing": false,
+      "suggested_fix": "Import { COURSE_IMPORTED } from './CurriculumComposer' and use it in the CustomEvent constructor: `new CustomEvent(COURSE_IMPORTED, { detail: { courseId: importedCourse.id } })`",
+      "why_it_matters": "The event name string 'course-imported' is duplicated across two files — CurriculumComposer exports COURSE_IMPORTED = 'course-imported' and ImportWizardDialog dispatches with the string literal. If either is changed independently, the coupling silently breaks with no TypeScript error. Using the shared constant eliminates this risk.",
+      "evidence": [
+        "CurriculumComposer.tsx line 31: export const COURSE_IMPORTED = 'course-imported' as const",
+        "ImportWizardDialog.tsx line 407: new CustomEvent('course-imported', ...) — string literal, not constant"
+      ]
+    },
+    {
+      "id": "F-005",
+      "title": "Dead 'catalog' type variant in CoursePickerItem — catalog courses were dropped in E89-S01",
+      "severity": "P3",
+      "file": "src/app/components/figma/InlineCoursePicker.tsx",
+      "line": 22,
+      "confidence": 0.95,
+      "autofix_class": "safe_auto",
+      "owner": "review-fixer",
+      "requires_verification": false,
+      "pre_existing": false,
+      "suggested_fix": "Change `type: 'imported' | 'catalog'` to `type: 'imported'` in CoursePickerItem, InlineCoursePickerProps, and all handler signatures. All construction sites use `type: 'imported' as const` already.",
+      "why_it_matters": "The catalog courses table was dropped in E89-S01. The 'catalog' variant in CoursePickerItem is dead code — it appears in type signatures and prop interfaces but is never used. Removing it simplifies the API surface and eliminates confusion about whether catalog courses are supported.",
+      "evidence": [
+        "Line 22: type: 'imported' | 'catalog' in CoursePickerItem",
+        "Line 286: `type: 'imported' as const` — only 'imported' is ever assigned",
+        "Plan context: 'Catalog courses table was dropped (E89-S01)'"
+      ]
+    }
+  ],
+  "requirements_completeness": {
+    "R1": "met",
+    "R2": "met",
+    "R3": "met",
+    "R4": "met",
+    "R5": "met",
+    "R6": "met",
+    "R7": "met",
+    "R8": "met",
+    "R9": "met"
+  },
+  "applied_fixes": [],
+  "residual_risks": [
+    "Optimistic update rollback in createPathWithCourses reverts all concurrent optimistic changes — consistent with existing store pattern but no interleaving protection",
+    "The 'Recently Imported' section recomputes on every entries change, which could be noisy with many paths and entries"
+  ],
+  "testing_gaps": [
+    "No test for batchAddCoursesToPath error re-throw behavior",
+    "No test for InlineCoursePicker when importedCourses is empty and loading is false",
+    "No test verifying the updatedAt timestamp is persisted after batchAddCoursesToPath",
+    "LearningPaths page tests not included in diff scope (no test file modifications for LearningPaths.tsx)"
+  ],
+  "learnings": [],
+  "agent_native_gaps": [],
+  "suppressed": 0
+}

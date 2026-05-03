@@ -1,0 +1,109 @@
+{
+  "reviewer": "kieran-typescript",
+  "findings": [
+    {
+      "severity": "HIGH",
+      "confidence": 0.82,
+      "title": "Unsafe `as` casts on `location.state` bypass type checking",
+      "file": "/Volumes/SSD/Dev/Apps/Knowlune/src/app/pages/UnifiedLessonPlayer.tsx",
+      "lines": [92, 105],
+      "detail": "Two casts on `location.state` — `(location.state as { autoPlay?: boolean } | null)` (line 92) and `(location.state as { __viaPalette?: boolean } | null)` (line 105). `location.state` is typed as `unknown` by React Router. The optional chaining and truthiness guards prevent runtime crashes, but the assertions silently trust any caller to pass the expected shape. If a navigation from a refactored path passes a differently-shaped state object (e.g. `{ autoPlay: 'yes' }` instead of `{ autoPlay: true }`), the guard `=== true` catches it, but the cast still lies about the type. Consider a type-narrowing helper or a Zod schema to validate `location.state` at the boundary before the rest of the component trusts it.",
+      "suggestion": "Extract a validated accessor: `function parseAutoPlayState(state: unknown): boolean { return typeof state === 'object' && state !== null && (state as Record<string, unknown>).autoPlay === true; }`. This makes the runtime check explicit and colocated with the assertion, rather than scattering `as` casts across the component."
+    },
+    {
+      "severity": "HIGH",
+      "confidence": 0.85,
+      "title": "Dead catch block in `handleLinkNotes` — `acceptNoteLinkSuggestion` never re-throws",
+      "file": "/Volumes/SSD/Dev/Apps/Knowlune/src/app/components/course/tabs/NotesTab.tsx",
+      "lines": [129, 131],
+      "detail": "`acceptNoteLinkSuggestion` (in noteLinkSuggestions.ts) has a `try/catch` that catches all errors and shows a toast, never re-throwing. The caller's `handleLinkNotes` wraps the await in a `try/catch` with an empty catch body and a comment `Error toast already shown by acceptNoteLinkSuggestion`. The comment is correct — the catch block is dead code. This is misleading during maintenance: a future reader might add cleanup logic to this catch block, expecting it to run, but it never will. The second `useNoteStore.setState` call (line 122) also runs unconditionally outside the try block, which is correct for the dismiss-filter path, but the dead catch makes the control flow harder to reason about.",
+      "suggestion": "Remove the `try/catch` wrapper in `handleLinkNotes` and just `await` directly. Or, have `acceptNoteLinkSuggestion` re-throw after toasting so callers can react to failure (e.g., keep the badge visible)."
+    },
+    {
+      "severity": "HIGH",
+      "confidence": 0.78,
+      "title": "Zustand hook `useContentProgressStore` called inside `.map()` callback — Rules of Hooks violation",
+      "file": "/Volumes/SSD/Dev/Apps/Knowlune/src/app/components/course/tabs/LessonsTab.tsx",
+      "lines": [338, 339],
+      "detail": "Inside `MaterialGroupRow`, the `.map()` over `group.materials` calls `useContentProgressStore()` for each material (line 338-340). This is a hook called inside a nested function/loop, which violates React's Rules of Hooks. Zustand hooks are React hooks under the hood (they use `useSyncExternalStore`), and React tracks hook calls by order within a component. If `group.materials` ever changes length between renders of the same `MaterialGroupRow` instance, React will throw 'Rendered fewer/more hooks than expected'. Currently this works because material arrays are stable per course from the adapter, but it is a time bomb for future changes — e.g., if materials are ever loaded asynchronously or dynamically filtered.",
+      "suggestion": "Extract a `MaterialRow` sub-component that calls `useContentProgressStore` at its top level, then use `<MaterialRow key={material.id} ... />` inside the `.map()`."
+    },
+    {
+      "severity": "MEDIUM",
+      "confidence": 0.80,
+      "title": "Missing dependencies in `useEffect` for autoPlay state clearing",
+      "file": "/Volumes/SSD/Dev/Apps/Knowlune/src/app/pages/UnifiedLessonPlayer.tsx",
+      "lines": [95, 99],
+      "detail": "The effect that clears autoPlay navigation state has `[shouldAutoPlay]` as its dependency array, but reads `location.pathname` and `location.state` inside the effect body. React's exhaustive-deps rule would flag both as missing. While functionally correct today (because `shouldAutoPlay` is derived from `location.state` and the effect only fires when it transitions to `true`), if the effect body is later modified to use `location.pathname` in a branch that doesn't gate on `shouldAutoPlay`, stale closures could cause navigation to the wrong path.",
+      "suggestion": "Either add `location.pathname` to the dependency array, or read `location.pathname` via a ref to avoid the dependency while documenting why. The current pattern works but is fragile."
+    },
+    {
+      "severity": "MEDIUM",
+      "confidence": 0.70,
+      "title": "Stale note-link suggestions can persist in Zustand store indefinitely",
+      "file": "/Volumes/SSD/Dev/Apps/Knowlune/src/stores/useNoteStore.ts",
+      "lines": [108, 111],
+      "detail": "`findAndReturnNoteLinkSuggestions` is called as a fire-and-forget `.then()` in `saveNote`. The callback calls `set({ pendingNoteLinkSuggestions: suggestions })` on the Zustand store. Suggestions are only cleared when `NotesTab` mounts with a new `courseId`/`lessonId` (via its `useEffect` calling `clearPendingNoteLinkSuggestions`). If the user saves a note and immediately navigates to a non-lesson page (e.g., `/overview`), the suggestions remain in the store indefinitely — consuming memory and potentially surfacing stale suggestions if the user later returns to a different lesson. The practical risk is low (suggestions are small objects), but it is a memory/discipline leak.",
+      "suggestion": "Clear `pendingNoteLinkSuggestions` in the `.then()` callback after a timeout (e.g., 30 seconds), or tie clearance to route-level navigation in the Layout component rather than relying solely on NotesTab mount/unmount."
+    },
+    {
+      "severity": "MEDIUM",
+      "confidence": 0.65,
+      "title": "`QAChatPanel` partially-controlled state when only one prop is passed",
+      "file": "/Volumes/SSD/Dev/Apps/Knowlune/src/app/components/figma/QAChatPanel.tsx",
+      "lines": [44, 47],
+      "detail": "The controlled/uncontrolled hybrid pattern (`controlledOpen ?? internalOpen`, `controlledOnOpenChange ?? setInternalOpen`) allows a caller to pass `{ open: true }` without `onOpenChange`. This creates a partially-controlled state where the popover opens but cannot be programmatically closed from the outside, and the internal close button calls `setIsOpen(false)` which is `controlledOnOpenChange ?? setInternalOpen` — since `controlledOnOpenChange` is undefined, it falls back to `setInternalOpen(false)`, which works. But `onOpenChange` from Radix's Sheet/Popover calls `setIsOpen`, which dispatches to `setInternalOpen` — *not* to `controlledOnOpenChange`. So the caller's external state drifts. The component works correctly in the current call site (`LessonHeaderTools` passes both props), but the interface invites misuse.",
+      "suggestion": "Either require both props together (make them a discriminated union: `{ open: boolean; onOpenChange: (open: boolean) => void } | {}`) or assert in dev that both are passed when one is. The Radix convention is that both `open` and `onOpenChange` travel together."
+    },
+    {
+      "severity": "LOW",
+      "confidence": 0.75,
+      "title": "Consent-required state in TranscriptTab renders `TranscriptPanel` with always-empty cues",
+      "file": "/Volumes/SSD/Dev/Apps/Knowlune/src/app/components/course/tabs/TranscriptTab.tsx",
+      "lines": [394, 401],
+      "detail": "When `generationState === 'consent-required'`, the component renders `<TranscriptPanel cues={cues} ... loadingState={loadingState} />` alongside the consent banner. But at this point in the state machine, `cues` is always `[]` (because the transcript loading effect sets `setCues([])` on mount, and no transcript has been generated yet). The `TranscriptPanel` will render its empty state. Showing an empty panel next to a consent banner is visually redundant and potentially confusing — the user sees 'no transcript' AND 'you need to consent' simultaneously, when only the consent message matters.",
+      "suggestion": "When `generationState === 'consent-required'`, skip the `TranscriptPanel` and only render the consent banner. Or pass the consent state through to `TranscriptPanel` so it can display a targeted empty state."
+    }
+  ],
+  "residual_risks": [
+    {
+      "risk": "The `useCompletionFlow` callbacks (`handleAutoAdvance`, `handleCelebrationContinue`) read `autoPlay` via `useLessonChromeStore.getState()` at call time rather than subscribing. This is deliberate for callback stability, but means if the autoPlay toggle and auto-advance happen in the same synchronous tick, the stale value could be read. In practice, toggling autoPlay is a user click that cannot race with video-end auto-advance, so this is theoretical.",
+      "confidence": 0.30
+    },
+    {
+      "risk": "`TranscriptTab.handleGenerate` calls `adapter.getCapabilities()` at the render level (line 104) and also implicitly inside the transcript-loading effect (line 172 has `adapter` as a dep). If `getCapabilities()` is impure or expensive, it is called twice per render. Current adapters return static objects, so this is fine.",
+      "confidence": 0.25
+    },
+    {
+      "risk": "The removal of `triggerNoteLinkSuggestions` from `progress.ts saveNote` (line 346-352 of progress.ts) means that callers of the utility `saveNote()` function no longer get suggestions. The comment says the primary save path is via `useNoteStore.saveNote`, but if any code path still calls `progress.ts saveNote` directly, those saves silently skip link detection. The grep showed no remaining callers of `triggerNoteLinkSuggestions` in the codebase, but `progress.ts saveNote` itself may have callers.",
+      "confidence": 0.40
+    }
+  ],
+  "testing_gaps": [
+    {
+      "gap": "No test coverage for the `QAChatPanel` controlled-vs-uncontrolled state hybrid — when `open` is passed without `onOpenChange`, or `onOpenChange` without `open`.",
+      "file": "/Volumes/SSD/Dev/Apps/Knowlune/src/app/components/figma/QAChatPanel.tsx",
+      "suggestion": "Add a unit test rendering `<QAChatPanel open />` (no onOpenChange) and verify the internal close button still works via `setInternalOpen` fallback."
+    },
+    {
+      "gap": "No test for `LessonsTab` with a `MaterialGroup` whose `materials` array changes length between renders — this would catch the Rules of Hooks violation.",
+      "file": "/Volumes/SSD/Dev/Apps/Knowlune/src/app/components/course/tabs/LessonsTab.tsx",
+      "suggestion": "Add a test that renders `LessonsTab` with one set of materials, then re-renders with a different count, validating no 'hook count' errors."
+    },
+    {
+      "gap": "No test for `TranscriptTab` consent states — `consent-required`, purpose consent denied, provider consent denied.",
+      "file": "/Volumes/SSD/Dev/Apps/Knowlune/src/app/components/course/tabs/TranscriptTab.tsx",
+      "suggestion": "Add tests mocking `consentService` to return false for purpose/provider consent, verifying the consent-required banner renders and the generate button is not present/skipped."
+    },
+    {
+      "gap": "No test for `handleLinkNotes` in `NotesTab` when `acceptNoteLinkSuggestion` fails (the dead catch block). While the catch is dead code now, a test that sets up a DB failure and verifies the badge remains visible would validate the UX.",
+      "file": "/Volumes/SSD/Dev/Apps/Knowlune/src/app/components/course/tabs/NotesTab.tsx",
+      "suggestion": "Add a test mocking `acceptNoteLinkSuggestion` to throw, verifying the link badge persists and no unhandled rejection occurs."
+    },
+    {
+      "gap": "No test for the `autoPlay` state consumption/clearing dance in `UnifiedLessonPlayer` — what happens if `navigate` with `{ replace: true, state: {} }` fails or is intercepted?",
+      "file": "/Volumes/SSD/Dev/Apps/Knowlune/src/app/pages/UnifiedLessonPlayer.tsx",
+      "suggestion": "Add a test navigating to a lesson with `state: { autoPlay: true }`, verifying the effect clears state on next render and the `autoplay` prop reaches `LessonContentRenderer`."
+    }
+  ]
+}

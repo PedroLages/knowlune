@@ -1,0 +1,139 @@
+{
+  "reviewer": "testing",
+  "run_id": "20260429-193854-89414313",
+  "findings": [
+    {
+      "title": "No regression test for pdfjs-dist version mismatch",
+      "severity": "P1",
+      "file": "src/app/components/figma/PdfViewer/__tests__/PdfViewer.smoke.test.tsx",
+      "line": 6,
+      "why_it_matters": "The core bug being fixed is that `^5.4.296` resolved to a different minor version for pdfjs-dist vs. the bundled worker module, breaking PDF inline preview. Pinning to exact `5.4.296` fixes this, but there is no automated test that would catch a future version bump (e.g., Dependabot PR, manual upgrade) reintroducing the mismatch. A simple test comparing `pdfjs.version` against the worker's expected version would alert on mismatch before merge.",
+      "autofix_class": "test_needs_writing",
+      "owner": "developer",
+      "requires_verification": true,
+      "confidence": 0.85,
+      "evidence": [
+        "package.json line 125: pdfjs-dist pinned from `^5.4.296` to exact `5.4.296`",
+        "Smoke test file has only 2 tests — workerSrc truthiness and error fallback — neither validates version alignment between pdfjs core and worker modules",
+        "No `npm test` or CI step would fail if someone bumped pdfjs-dist to `5.4.297` or `^5.5.0`"
+      ],
+      "pre_existing": false,
+      "suggested_fix": "Add a test that verifies pdfjs.version matches the expected version string (e.g., '5.4.296') and that the worker module import resolves without throwing. Example: `expect(pdfjs.version).toBe('5.4.296')` after importing both pdfjs core and the worker module in the same test."
+    },
+    {
+      "title": "DOMMatrix polyfill has no verification test",
+      "severity": "P2",
+      "file": "src/test/setup.ts",
+      "line": 53,
+      "why_it_matters": "The DOMMatrix polyfill (~47 lines in setup.ts) is critical infrastructure — pdfjs-dist's canvas module references DOMMatrix at module load time, not just during rendering. Without it, all PdfViewer-related unit tests crash before rendering. However, none of the stub methods (translate, scale, rotate, multiply, invert, transformPoint) produce chainable results that a real DOMMatrix would. If pdfjs-dist starts actively computing with DOMMatrix results in its canvas module (vs. just referencing the class constructor), these identity-returning stubs will silently produce wrong visual output without any test catching it.",
+      "autofix_class": "test_needs_writing",
+      "owner": "developer",
+      "requires_verification": true,
+      "confidence": 0.75,
+      "evidence": [
+        "setup.ts lines 53-86: class DOMMatrixPolyfill with stub methods returning this for chain operations",
+        "setup.ts line 81: transformPoint() returns { x: 0, y: 0, z: 0, w: 1 } — always identity",
+        "setup.ts lines 78-79: multiply() returns this — ignores the other matrix entirely",
+        "No test imports pdfjs-dist after DOMMatrix polyfill to verify: (a) no reference error at module load, (b) toString() produces valid CSS matrix string pdfjs-dist can parse"
+      ],
+      "pre_existing": false,
+      "suggested_fix": "Add a smoke test (or extend the worker test) that: (1) imports pdfjs-dist after the polyfill is registered in setup.ts, (2) verifies DOMMatrix is defined on globalThis, (3) verifies the polyfill's toString() outputs a valid CSS matrix string, and (4) verifies no ReferenceError is thrown when pdfjs-dist accesses DOMMatrix at module load time."
+    },
+    {
+      "title": "Only error path tested; happy path rendering branches untested at unit level",
+      "severity": "P2",
+      "file": "src/app/components/figma/PdfViewer/PdfViewer.tsx",
+      "line": 61,
+      "why_it_matters": "PdfViewer.tsx is ~270 lines with multiple rendering branches: loadError (lines 61-72), collapsible (line 88), scrollMode single/continuous (lines 171-241), thumbnails sidebar (line 164), outline panel (line 244), mobile Sheet panels (lines 252-268), fullscreen (line 101), search bar (lines 148-159). The smoke test only covers the loadError branch — which is just 12 lines. The remaining ~90% of the component (happy path with a valid PDF src, toolbar rendering, page navigation) has zero unit test coverage. E2E tests exist but operate at the integration/UI level and don't validate component state transitions directly.",
+      "autofix_class": "test_needs_writing",
+      "owner": "developer",
+      "requires_verification": false,
+      "confidence": 0.82,
+      "evidence": [
+        "PdfViewer.smoke.test.tsx: only 2 tests — workerSrc setup and error fallback",
+        "PdfViewer.tsx line 61: `if (state.loadError)` error branch is the ONLY branch tested",
+        "PdfViewer.tsx lines 90-270: main render path (toolbar, page renderer, scroll view, side panels, mobile sheets) completely untested at unit level",
+        "E2E tests in tests/e2e/regression/lesson-player-pdf.spec.ts test PDF listing and page count, not PdfViewer rendering logic directly"
+      ],
+      "pre_existing": true,
+      "suggested_fix": "This is primarily pre-existing tech debt (PdfViewer had zero unit tests before this diff). The new smoke test is a reasonable incremental improvement for the version-mismatch fix scope. Consider a follow-up story to add unit tests for: (a) successful PDF load rendering (mock react-pdf), (b) collapsible mode, (c) scroll mode toggle, (d) fullscreen toggle via keyboard."
+    },
+    {
+      "title": "Worker src assertion too loose — passes for any 'pdf.worker' substring",
+      "severity": "P3",
+      "file": "src/app/components/figma/PdfViewer/__tests__/PdfViewer.smoke.test.tsx",
+      "line": 10,
+      "why_it_matters": "The test asserts `toBeTruthy()` (any non-empty string passes) and `/pdf\\.worker/i` (any string containing 'pdf.worker' passes — including wrong versions, invalid paths, blob URLs with 'pdf.worker' in them). A broken import with a wrong hash or version would silently pass as long as the resulting string contains 'pdf.worker'. The pinned version `5.4.296` produces a specific hash in the worker URL; the test doesn't verify it.",
+      "autofix_class": "test_assertion",
+      "owner": "developer",
+      "requires_verification": false,
+      "confidence": 0.88,
+      "evidence": [
+        "Smoke test line 10: `expect(pdfjs.GlobalWorkerOptions.workerSrc).toBeTruthy()` — any non-empty string passes",
+        "Smoke test line 11: `expect(pdfjs.GlobalWorkerOptions.workerSrc).toMatch(/pdf\\.worker/i)` — matches 'pdf.worker' substring, not full path or hash"
+      ],
+      "pre_existing": false,
+      "suggested_fix": "Replace the loose assertions with: `expect(pdfjs.GlobalWorkerOptions.workerSrc).toMatch(/pdf\\.worker\\.min\\.mjs/)` to at least validate the file extension, and add `expect(() => new URL(pdfjs.GlobalWorkerOptions.workerSrc)).not.toThrow()` to verify it's a valid URL/path."
+    },
+    {
+      "title": "No negative assertion: workerSrc state before import not checked",
+      "severity": "P3",
+      "file": "src/app/components/figma/PdfViewer/__tests__/PdfViewer.smoke.test.tsx",
+      "line": 7,
+      "why_it_matters": "Test 1 verifies workerSrc is set after importing pdfWorker.ts, but doesn't verify the starting state. A regression where something else (another module, a global setup, a test side-effect) pre-sets workerSrc before pdfWorker runs would not be detected. The test would pass even if pdfWorker.ts stopped working and workerSrc was already set by a side effect.",
+      "autofix_class": "test_coverage_gap",
+      "owner": "developer",
+      "requires_verification": false,
+      "confidence": 0.62,
+      "evidence": [
+        "Smoke test lines 8-11: imports pdfWorker then checks workerSrc — no before-import check",
+        "pdfWorker.ts line 4: the module has a single side-effect line: `pdfjs.GlobalWorkerOptions.workerSrc = workerSrc` — if something pre-sets this, this line is a no-op but the test still passes"
+      ],
+      "pre_existing": false,
+      "suggested_fix": "Add a beforeEach that verifies pdfjs.GlobalWorkerOptions.workerSrc is NOT set before importing pdfWorker, then import pdfWorker and verify it IS set. Or simplify by checking the workerSrc value matches the expected bundled worker path pattern specifically for the pinned version."
+    }
+  ],
+  "residual_risks": [
+    {
+      "risk": "DOMMatrix polyfill stubs silently produce identity results for computed transforms",
+      "description": "The polyfill's translate(), scale(), rotate(), multiply() all return this (identity). If pdfjs-dist's canvas rendering code in tests starts actively computing with DOMMatrix result values (beyond just referencing the class at module load time), the stubs will silently produce incorrect visual output without crashing. Currently low probability but high impact if pdfjs-dist updates its canvas module internals.",
+      "mitigation": "Monitor pdfjs-dist changelogs. If canvas operations in test environments start using computed DOMMatrix values, upgrade polyfill to return correct transformed values."
+    },
+    {
+      "risk": "blob:invalid-url behavior may differ across test environments",
+      "description": "Smoke test 2 uses `src=\"blob:invalid-url\"` to trigger the error path. jsdom's handling of blob URLs may differ from real browsers (where blob: URLs require createObjectURL()). Test passes in jsdom but the trigger mechanism is fragile.",
+      "mitigation": "Low risk — the test correctly passed. If it becomes flaky, use a mock for react-pdf's Document component or a genuinely unreachable URL."
+    },
+    {
+      "risk": "pdfjs-dist 5.4.296 may have undiscovered Canvas API dependencies beyond DOMMatrix",
+      "description": "The DOMMatrix polyfill fixes the known reference error, but pdfjs-dist 5.4.296 may reference other Canvas/Web APIs (Path2D, CanvasGradient, etc.) that jsdom doesn't implement. Only DOMMatrix was caught so far.",
+      "mitigation": "If future PdfViewer tests crash with new ReferenceErrors for Canvas APIs, add corresponding polyfills to setup.ts following the same pattern as DOMMatrix."
+    }
+  ],
+  "testing_gaps": [
+    {
+      "description": "Version mismatch regression between pdfjs-dist and worker module",
+      "area": "package.json + pdfWorker.ts",
+      "risk": "Future version bumps (human or bot) re-introduce the exact bug this PR fixes",
+      "suggested_test": "Unit test that imports pdfjs from react-pdf and asserts pdfjs.version equals expected pinned version"
+    },
+    {
+      "description": "DOMMatrix polyfill correctness for pdfjs-dist usage",
+      "area": "src/test/setup.ts DOMMatrix polyfill",
+      "risk": "Silent wrong rendering if pdfjs-dist starts computing transforms from DOMMatrix values",
+      "suggested_test": "Smoke test that imports pdfjs-dist after polyfill, calls toString() to verify CSS matrix format, and verifies no ReferenceError"
+    },
+    {
+      "description": "PdfViewer happy path rendering (toolbar, page renderer, scroll modes)",
+      "area": "PdfViewer.tsx main render path (lines 90-270)",
+      "risk": "Pre-existing gap — component has no unit test coverage for successful PDF rendering",
+      "suggested_test": "Mock react-pdf, render PdfViewer with valid src, assert toolbar elements, page navigation buttons"
+    },
+    {
+      "description": "pdfWorker.ts side-effect isolation",
+      "area": "src/lib/pdfWorker.ts",
+      "risk": "Module's single side-effect line could be silently overwritten or pre-set by another module",
+      "suggested_test": "Verify workerSrc is undefined before pdfWorker import, then verify it matches expected bundled path after import"
+    }
+  ]
+}

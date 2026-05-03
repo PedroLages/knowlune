@@ -1,0 +1,73 @@
+{
+  "runId": "20260503-140431-c2082b39",
+  "scope": "feature/ce-2026-05-03-course-content-sidebar-pdf-access (4 files changed)",
+  "intent": "Auto-expand companion PDF groups on first load in LessonsTab sidebar (R1/R2), show material count badges on video rows (U1/U2), and clean up the unused lessonTitle parameter from showCelebration. Standalone PDFs must continue rendering as primary rows with no regression (R4).",
+  "mode": "headless",
+  "base": "b9a0f786e479f1abaf3ddf8bb822b99ce7bfdd8d",
+  "reviewers": [
+    "correctness (always)",
+    "testing (always)",
+    "maintainability (always)",
+    "project-standards (always)",
+    "agent-native-reviewer (always)",
+    "learnings-researcher (always)",
+    "adversarial (diff >=50 executable code lines)",
+    "kieran-typescript (TypeScript components/hooks)"
+  ],
+  "findings": [
+    {
+      "id": "F1",
+      "severity": "P2",
+      "autofixClass": "safe_auto",
+      "owner": "review-fixer",
+      "requiresVerification": false,
+      "file": "src/app/hooks/useCompletionFlow.ts",
+      "line": 22,
+      "title": "lessonTitle field still required in CompletionFlowParams but unused by hook",
+      "confidence": 0.85,
+      "reviewers": ["maintainability", "kieran-typescript"],
+      "pre_existing": false,
+      "suggested_fix": "Remove lessonTitle: string from line 22 of CompletionFlowParams interface and remove lessonTitle: state.lessonTitle, from line 192 of UnifiedLessonPlayer.tsx."
+    },
+    {
+      "id": "F2",
+      "severity": "P2",
+      "autofixClass": "safe_auto",
+      "owner": "review-fixer",
+      "requiresVerification": true,
+      "file": "src/app/pages/__tests__/UnifiedLessonPlayer.test.tsx",
+      "line": 78,
+      "title": "Mock return type too narrow for test overrides causing tsc errors",
+      "confidence": 0.90,
+      "reviewers": ["correctness", "kieran-typescript"],
+      "pre_existing": false,
+      "suggested_fix": "Explicitly type prevLesson, nextLesson, lessons, and loading fields in the mock function return with broader types (T | null for nullable fields) to allow test overrides."
+    }
+  ],
+  "applied_fixes": [
+    "Removed lessonTitle: string from CompletionFlowParams interface (useCompletionFlow.ts:22)",
+    "Removed lessonTitle: state.lessonTitle, from UnifiedLessonPlayer.tsx caller (line 192)",
+    "Broadened mockUseLessonNavigation return types to allow nullable overrides in tests (UnifiedLessonPlayer.test.tsx:78)"
+  ],
+  "residual_risks": [
+    "If the adapter fires getGroupedLessons() rapidly (e.g. on remount), the ignore pattern handles stale materialGroups, but the auto-expand effect could fire for intermediate isLoading states if they briefly flip. In practice, React 18 batching makes this unlikely."
+  ],
+  "testing_gaps": [
+    "No test for the merge behavior when new groups appear on subsequent loads (else branch at lines 656-670 of LessonsTab.tsx)",
+    "No test verifying initialExpandDoneRef resets when courseId changes"
+  ],
+  "requirements_verification": {
+    "plan_source": "explicit",
+    "R1_affordance": "met",
+    "R2_navigate_pdf": "met",
+    "R3_nested_folders": "met",
+    "R4_standalone_pdf_regression": "met",
+    "U1_default_expand": "done",
+    "U2_material_count_badge": "done",
+    "U3_pdf_ordering": "not_addressed (conditional, QA-dependent per plan)"
+  },
+  "learnings": [],
+  "agent_native_gaps": [],
+  "verdict": "Ready with fixes",
+  "fixes_applied_count": 3
+}

@@ -1,0 +1,186 @@
+{
+  "reviewer": "testing",
+  "runId": "20260503-001927-64ce2708",
+  "branch": "feat/lesson-player-polish",
+  "summary": "This diff adds behavioral changes across 7 units (completion checkmarks, PDF sub-rows, auto-play, Whisper transcript generation, AI chat accessibility, note-link inline indicator), plus Layout and store changes. One new unit test file (LessonsTab.test.tsx) was added. The remaining 6 units have zero new or updated tests. Two existing store test files (useLessonChromeStore.test.ts, useNoteStore.test.ts) were NOT updated despite meaningful new state fields and methods. The new LessonsTab test covers completion checkmarks and duration formatting but completely omits the companion PDF sub-rows feature, folder-tree logic, search/filter, and collapsible toggles — all of which are new in this diff. One test is vacuous (asserting a constant is positive).",
+  "findings": [
+    {
+      "title": "TranscriptTab: Entire Whisper generation state machine untested (Unit 5)",
+      "severity": "P0",
+      "file": "src/app/components/course/tabs/TranscriptTab.tsx",
+      "line": 66,
+      "confidence": 0.95,
+      "autofix_class": "missing-tests",
+      "owner": "feat/lesson-player-polish",
+      "requires_verification": false,
+      "pre_existing": false,
+      "suggested_fix": "Add unit tests for TranscriptTab covering: (1) idle state renders 'Generate Transcript' button for local video, (2) generating state shows progress bar and Loader2 spinner, (3) completed state transitions to TranscriptPanel with parsed cues, (4) error state shows error message and retry button, (5) consent-required state shows Lock icon and Settings link, (6) consent checks for unauthenticated user, purpose denied, and provider denied, (7) file handle lost error message, (8) abort controller cancels operation on unmount. Mock useWhisperTranscription, consentService, db, and auth store. The plan lists 8 test scenarios for this unit; none are implemented."
+    },
+    {
+      "title": "useLessonChromeStore: New autoPlay and qaPanelOpen fields have zero test coverage (Unit 4, Unit 6)",
+      "severity": "P0",
+      "file": "src/stores/useLessonChromeStore.ts",
+      "line": 76,
+      "confidence": 0.95,
+      "autofix_class": "missing-tests",
+      "owner": "feat/lesson-player-polish",
+      "requires_verification": false,
+      "pre_existing": false,
+      "suggested_fix": "Add tests in src/stores/__tests__/useLessonChromeStore.test.ts for: (1) autoPlay defaults to true, (2) autoPlay reads from localStorage key 'lesson-auto-play', (3) toggleAutoPlay flips value and persists, (4) toggleAutoPlay handles localStorage.setItem throwing, (5) corrupted localStorage falls back to true (default-on behavior), (6) qaPanelOpen defaults to false, (7) toggleQAPanel flips qaPanelOpen, (8) reset() clears both autoPlay and qaPanelOpen. The plan lists test scenarios for store persistence; none are implemented."
+    },
+    {
+      "title": "useNoteStore: pendingNoteLinkSuggestions flow untested (Unit 7)",
+      "severity": "P0",
+      "file": "src/stores/useNoteStore.ts",
+      "line": 108,
+      "confidence": 0.95,
+      "autofix_class": "missing-tests",
+      "owner": "feat/lesson-player-polish",
+      "requires_verification": false,
+      "pre_existing": false,
+      "suggested_fix": "Add tests in src/stores/__tests__/useNoteStore.test.ts for: (1) saveNote calls findAndReturnNoteLinkSuggestions and populates pendingNoteLinkSuggestions when matches found, (2) saveNote leaves pendingNoteLinkSuggestions empty when no matches, (3) setPendingNoteLinkSuggestions updates the array, (4) clearPendingNoteLinkSuggestions empties the array. Mock findAndReturnNoteLinkSuggestions to return controlled data. The plan lists 9 test scenarios for Unit 7; none are implemented at the store level."
+    },
+    {
+      "title": "LessonsTab.test.tsx: No tests for companion PDF sub-rows feature (Unit 3)",
+      "severity": "P0",
+      "file": "src/app/components/course/__tests__/LessonsTab.test.tsx",
+      "line": 1,
+      "confidence": 0.95,
+      "autofix_class": "missing-tests",
+      "owner": "feat/lesson-player-polish",
+      "requires_verification": false,
+      "pre_existing": false,
+      "suggested_fix": "Add tests for: (1) MaterialGroupRow renders collapsible toggle when materials.length > 0, (2) PDF sub-rows render indented under parent video with FileText icon, (3) clicking a PDF sub-row navigates to that lesson, (4) toggling collapse hides/shows sub-rows, (5) standalone PDFs (unmatched) render as top-level rows without sub-rows, (6) videos without companion PDFs show no collapse toggle, (7) search filtering matches PDF titles in sub-rows, (8) material count badge is absent when sub-rows are directly visible. The plan lists 6 test scenarios for this unit; none are implemented. The existing tests all use materials: [] and never exercise MaterialGroupRow with materials."
+    },
+    {
+      "title": "LessonsTab.test.tsx: No tests for folder tree logic or search/filter",
+      "severity": "P1",
+      "file": "src/app/components/course/__tests__/LessonsTab.test.tsx",
+      "line": 1,
+      "confidence": 0.90,
+      "autofix_class": "missing-tests",
+      "owner": "feat/lesson-player-polish",
+      "requires_verification": false,
+      "pre_existing": false,
+      "suggested_fix": "Add tests for: (1) buildFolderTree correctly groups lessons by directory path, (2) FolderTreeNode renders nested collapsible folders, (3) search input appears when lessons exceed LESSON_SEARCH_THRESHOLD, (4) search filters lessons by title, (5) empty search state shows 'No lessons match your search', (6) counts shown in folder nodes are correct. These are all new behaviors added in this diff with no coverage."
+    },
+    {
+      "title": "Vacuous test: LESSON_SEARCH_THRESHOLD is a positive number",
+      "severity": "P2",
+      "file": "src/app/components/course/__tests__/LessonsTab.test.tsx",
+      "line": 162,
+      "confidence": 0.90,
+      "autofix_class": "false-confidence",
+      "owner": "feat/lesson-player-polish",
+      "requires_verification": false,
+      "pre_existing": false,
+      "suggested_fix": "Replace with a meaningful test: verify that the search input appears when there are exactly LESSON_SEARCH_THRESHOLD lessons (boundary) and does NOT appear when there are LESSON_SEARCH_THRESHOLD - 1 lessons. The current test (asserting a constant is positive) provides false confidence while testing nothing behavioral."
+    },
+    {
+      "title": "No test for auto-play flow through navigation state (Unit 4)",
+      "severity": "P1",
+      "file": "src/app/hooks/useCompletionFlow.ts",
+      "line": 147,
+      "confidence": 0.85,
+      "autofix_class": "missing-tests",
+      "owner": "feat/lesson-player-polish",
+      "requires_verification": false,
+      "pre_existing": false,
+      "suggested_fix": "Add test for useCompletionFlow covering: (1) handleAutoAdvance reads autoPlay from store and passes it via navigate state when true, (2) handleAutoAdvance omits autoPlay from state when toggle is off, (3) handleCelebrationContinue follows same pattern. Also add test in UnifiedLessonPlayer for reading location.state?.autoPlay and forwarding as autoplay prop. The plan lists 6 test scenarios for Unit 4; none are implemented at the unit level."
+    },
+    {
+      "title": "Note link suggestion refactor: no tests for changed function signature (Unit 7)",
+      "severity": "P1",
+      "file": "src/ai/knowledgeGaps/noteLinkSuggestions.ts",
+      "line": 166,
+      "confidence": 0.85,
+      "autofix_class": "missing-tests",
+      "owner": "feat/lesson-player-polish",
+      "requires_verification": false,
+      "pre_existing": false,
+      "suggested_fix": "Add tests for: (1) findAndReturnNoteLinkSuggestions returns suggestions array when courses exist in DB, (2) returns empty array when DB read fails (error swallowed), (3) findNoteLinkSuggestions returns matches on shared tags >= 2, (4) returns matches on shared key terms >= 2, (5) excludes same-course notes, (6) excludes deleted notes, (7) excludes previously dismissed pairs. No test file exists at src/ai/knowledgeGaps/__tests__/noteLinkSuggestions.test.ts despite the plan recommending creation."
+    },
+    {
+      "title": "LessonHeaderTools.test.tsx: Mock does not include autoPlay or qaPanelOpen fields",
+      "severity": "P1",
+      "file": "src/app/components/course/__tests__/LessonHeaderTools.test.tsx",
+      "line": 42,
+      "confidence": 0.85,
+      "autofix_class": "missing-tests",
+      "owner": "feat/lesson-player-polish",
+      "requires_verification": false,
+      "pre_existing": false,
+      "suggested_fix": "Update the useLessonChromeStore mock to include autoPlay and toggleAutoPlay fields. Add tests: (1) auto-play toggle renders SkipForward icon, (2) toggleAutoPlay is called on click, (3) autoPlay=false renders muted icon, (4) aria-label reflects current state, (5) kebab menu includes auto-play item with correct state label, (6) kebab menu includes 'Ask AI' item."
+    },
+    {
+      "title": "NotesTab: Inline note-link suggestion badge UI untested (Unit 7)",
+      "severity": "P1",
+      "file": "src/app/components/course/tabs/NotesTab.tsx",
+      "line": 162,
+      "confidence": 0.85,
+      "autofix_class": "missing-tests",
+      "owner": "feat/lesson-player-polish",
+      "requires_verification": false,
+      "pre_existing": false,
+      "suggested_fix": "Add unit tests for NotesTab covering: (1) suggestion badge appears when pendingNoteLinkSuggestions.length > 0, (2) badge shows correct count, (3) Popover opens on badge click showing suggestion previews, (4) 'Link' button calls acceptNoteLinkSuggestion and removes suggestion, (5) 'Dismiss' button calls dismissNoteLinkPair and removes suggestion, (6) badge does not appear when suggestions array is empty, (7) pendingNoteLinkSuggestions cleared on lesson/course change. Mock useNoteStore with controlled pendingNoteLinkSuggestions. The plan lists 9 test scenarios; none are implemented."
+    },
+    {
+      "title": "useCompletionFlow: No unit tests exist for any completion flow behavior",
+      "severity": "P2",
+      "file": "src/app/hooks/useCompletionFlow.ts",
+      "line": 1,
+      "confidence": 0.80,
+      "autofix_class": "missing-tests",
+      "owner": "feat/lesson-player-polish",
+      "requires_verification": false,
+      "pre_existing": true,
+      "suggested_fix": "Create src/app/hooks/__tests__/useCompletionFlow.test.ts to test: (1) handleVideoEnded marks lesson complete and shows celebration, (2) handleVideoEnded stops on setItemStatus failure, (3) handleAutoAdvance reads autoPlay from store and propagates, (4) handleManualStatusChange triggers celebration and auto-advance for completed status, (5) handleCelebrationOpenChange triggers course suggestion on course-level celebration close. This hook has no test file at all, and this diff modifies it to add autoPlay integration."
+    }
+  ],
+  "residual_risks": [
+    "Whisper transcription consent gating (3 checks: no userId, no purpose consent, no provider consent) is completely untested. A regression in any check would silently allow or block transcription incorrectly.",
+    "Transcript generation abort-on-unmount is untested. If the cleanup useEffect in TranscriptTab (line 182-188) fails to fire, in-flight transcription results could write to Dexie after component unmount, causing stale data or race conditions.",
+    "Auto-play preference cross-session persistence relies on localStorage read/write in useLessonChromeStore which is untested. A regression in the readStoredAutoPlay function (defaulting to true) or persistAutoPlay could silently break user preference.",
+    "Note link suggestion flow through the save → find → suggest chain is untested end-to-end. The findAndReturnNoteLinkSuggestions call in useNoteStore.saveNote (line 108) is a fire-and-forget .then() that could silently fail and leave pendingNoteLinkSuggestions in a stale state.",
+    "Browser autoplay policy may block autoplay after programmatic navigation (React Router navigate) since no user gesture token is present. VideoPlayer handles rejection gracefully, but the UX of 'paused video with play button visible' has not been verified in a real browser test.",
+    "The LessonsTab material sub-row feature uses Collapsible with uncontrolled state that is not persisted. Navigation away and back loses expand/collapse state, which is by design but may surprise users who expended effort expanding folders."
+  ],
+  "testing_gaps": [
+    {
+      "unit": "Unit 2: Completion checkmarks",
+      "plan_scenarios": 6,
+      "implemented": 3,
+      "gap": "Missing: PDF lessons checkmark, real-time status update without reload, skeleton during progress load, mixed completion states across multiple lessons"
+    },
+    {
+      "unit": "Unit 3: Companion PDF sub-rows",
+      "plan_scenarios": 6,
+      "implemented": 0,
+      "gap": "Entirely missing. No tests for sub-row rendering, navigation, collapse toggle, standalone PDFs, search filtering of PDF titles, or absence of collapse toggle for groups without materials."
+    },
+    {
+      "unit": "Unit 4: Auto-play after auto-advance",
+      "plan_scenarios": 6,
+      "implemented": 0,
+      "gap": "No store tests for autoPlay, no hook tests for navigation state propagation, no component tests for toggle UI, no E2E test for auto-advance with autoPlay on/off. Browser autoplay policy edge case untested."
+    },
+    {
+      "unit": "Unit 5: Whisper transcript generation",
+      "plan_scenarios": 8,
+      "implemented": 0,
+      "gap": "Entirely missing. 8 planned test scenarios covering generation flow, progress, completion, consent denial, file handle loss, abort, and source-type gating — none implemented. No test file exists for TranscriptTab."
+    },
+    {
+      "unit": "Unit 6: AI chat accessibility",
+      "plan_scenarios": 9,
+      "implemented": 0,
+      "gap": "No tests for qaPanelOpen controlled state, QAChatPanel in kebab menu, search bar reposition on lesson pages, backward compatibility when QAChatPanel used outside lesson pages. Existing LessonHeaderTools test mock does not include autoPlay or qaPanelOpen."
+    },
+    {
+      "unit": "Unit 7: Note link inline indicator",
+      "plan_scenarios": 9,
+      "implemented": 0,
+      "gap": "Entirely missing. No tests for findAndReturnNoteLinkSuggestions, pendingNoteLinkSuggestions store field, inline badge rendering, Popover interaction (Link/Dismiss), or suggestion clearing on navigation."
+    }
+  ]
+}

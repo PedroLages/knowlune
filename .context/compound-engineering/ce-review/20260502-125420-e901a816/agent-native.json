@@ -1,0 +1,103 @@
+{
+  "run_id": "20260502-125420-e901a816",
+  "branch": "main",
+  "reviewed_diff_base": "afffbde5e4836d2c033dc1a566c097814a237aa8",
+  "files_changed": [
+    "src/app/components/library/LibraryTabBar.tsx (NEW)",
+    "src/app/components/library/index.ts",
+    "src/app/pages/Library.tsx"
+  ],
+  "summary": {
+    "app_type": "React SPA learning platform with LLM features (quiz gen, note QA, embedding) but zero agent/tool infrastructure for end users",
+    "agent_integration_exists": false,
+    "agent_type": "none (QAChatPanel is RAG-based Q&A with no tools; dev-time Claude Code agents exist but are for development, not for end users)",
+    "overall_parity": "AGENT_TOOLS_DO_NOT_EXIST — every UI action is an orphan feature from a tool-based agent perspective. The Library page changes themselves are well-structured for browser-automation agents (Playwright) with consistent testids and URL deep-linking.",
+    "verdict": "NEEDS_WORK"
+  },
+  "specific_questions": {
+    "1_can_agent_navigate_via_url": {
+      "answer": "YES — with a caveat",
+      "detail": "The `?tab=` URL query parameter is read on initial page load and overrides localStorage. Valid values: 'continue', 'browse', 'collections', 'history'. Navigation IN works: `/library?tab=browse`. However, navigation OUT is broken: `handleTabChange` (Library.tsx:146-149) updates localStorage and React state but does NOT call `setSearchParams` to sync the URL. This means the URL is stale after tab changes — an agent reading `window.location.search` cannot discover the current tab.",
+      "confidence": 0.95
+    },
+    "2_interactive_elements_accessible": {
+      "answer": "YES",
+      "detail": "Tab buttons are native `<button>` elements with `role=\"tab\"`, `aria-selected`, keyboard-accessible (Enter/Space via native button behavior), and `focus-visible` outlines. All interactive elements in tab panels (buttons, inputs, filters) use standard web APIs.",
+      "confidence": 0.95
+    },
+    "3_testid_consistency": {
+      "answer": "YES",
+      "detail": "Consistent pattern: `library-tab-bar` (container), `library-tab-{id}` (individual tab buttons), `library-tab-{id}` (content panels). All LibraryTabBar buttons have `data-testid={`library-tab-${tab.id}`}`. Discovering all four tabs requires reading LibraryTabBar.tsx's TABS array or inspecting DOM.",
+      "confidence": 0.90
+    },
+    "4_deep_linking_bidirectional": {
+      "answer": "PARTIAL — inbound works, outbound broken",
+      "detail": "Inbound deep-linking works: `?tab=browse` sets the correct initial tab. But `handleTabChange` does NOT update URL search params (no `setSearchParams` call), so the URL is stale after user interaction. An agent cannot observe the current tab from the URL after the user clicks. It must inspect DOM (`aria-selected=\"true\"`) or localStorage (`knowlune-library-tab`).",
+      "confidence": 0.95
+    }
+  },
+  "findings": [
+    {
+      "severity": "CRITICAL",
+      "title": "No runtime agent tools exist in the codebase",
+      "location": "entire codebase",
+      "description": "The app has LLM features (quiz generation, note Q&A, course tagging, embedding pipeline) but zero tool definitions, zero function calling, and zero agent infrastructure for end users. All LLM calls are text-generation-only (streamCompletion). There are no `streamText` calls with `tools:` arrays, no `tool()` definitions, and no MCP server for the app itself. The QAChatPanel is a pure RAG Q&A system with no action-taking capability.",
+      "fix": "Introduce a tool registry and wire it into the LLM infrastructure. Add tools for library operations (list books, search library, get reading progress, manage shelves, etc.), then inject available resources into system prompts.",
+      "confidence": 0.98
+    },
+    {
+      "severity": "WARNING",
+      "title": "Tab state not synced to URL (unidirectional deep-linking)",
+      "location": "src/app/pages/Library.tsx:146-149",
+      "description": "`handleTabChange` updates React state and localStorage but never calls `setSearchParams`. The URL reflects only the initial tab (from page load), not the current tab. This breaks bidirectional deep-linking: an agent can navigate TO a tab via URL but cannot read the current tab from the URL after state changes.",
+      "fix": "In `handleTabChange`, call `setSearchParams({ tab }, { replace: true })` to sync the URL. This enables bookmarking, shareable links, browser back/forward, and agent URL-based state discovery.",
+      "confidence": 0.95
+    },
+    {
+      "severity": "WARNING",
+      "title": "System prompts are static — no dynamic context injection",
+      "location": "src/lib/noteQA.ts:208-215, src/ai/quizPrompts.ts",
+      "description": "All LLM prompts are hardcoded strings with no runtime context about available app resources (books, shelves, books in the user's library). The AI has no awareness of the user's domain objects.",
+      "fix": "Build a dynamic system prompt constructor that injects available resources (book count, shelf names, recent activity, format breakdown) at request time. This is prerequisite for any agent to make informed suggestions about library content.",
+      "confidence": 0.85
+    },
+    {
+      "severity": "OBSERVATION",
+      "title": "History tab 'Recently Finished' items lack individual testids",
+      "location": "src/app/pages/Library.tsx:1178-1209",
+      "description": "Books in the History tab's 'Recently Finished' list have no `data-testid` attributes, making it harder for E2E tests or browser-automation agents to target specific entries. Grid/list views in the Browse tab use `BookCard`/`BookListItem` which may or may not have individual testids.",
+      "fix": "Consider adding `data-testid={`history-book-${book.id}`}` to each finished book entry for granular targeting.",
+      "confidence": 0.70
+    },
+    {
+      "severity": "OBSERVATION",
+      "title": "No documentation of tab URLs for agent discovery",
+      "location": "src/app/components/library/LibraryTabBar.tsx",
+      "description": "A future agent would need to discover valid tab values from the code. The `TABS` array in LibraryTabBar.tsx is the source of truth but only exported as a type, not as a runtime value. An agent inspecting DOM could find tab labels and infer IDs from testids, but there is no canonical list discoverable at runtime.",
+      "fix": "Export the `TABS` array or add a `<meta>` tag / JSON-LD / data attribute on the page root listing available tabs and their URL param values.",
+      "confidence": 0.60
+    }
+  ],
+  "capability_map": [
+    {"ui_action": "Switch to Browse tab", "ui_location": "LibraryTabBar button click", "agent_equivalent": "Navigate to /library?tab=browse", "in_prompt": false, "priority": "must-have", "status": "AGENT_READY"},
+    {"ui_action": "Switch to Collections tab", "ui_location": "LibraryTabBar button click", "agent_equivalent": "Navigate to /library?tab=collections", "in_prompt": false, "priority": "must-have", "status": "AGENT_READY"},
+    {"ui_action": "Switch to Continue tab", "ui_location": "LibraryTabBar button click", "agent_equivalent": "Navigate to /library?tab=continue", "in_prompt": false, "priority": "must-have", "status": "AGENT_READY"},
+    {"ui_action": "Switch to History tab", "ui_location": "LibraryTabBar button click", "agent_equivalent": "Navigate to /library?tab=history", "in_prompt": false, "priority": "must-have", "status": "AGENT_READY"},
+    {"ui_action": "Import book", "ui_location": "Button click (header + empty state)", "agent_equivalent": "NO TOOL EXISTS", "in_prompt": false, "priority": "must-have", "status": "NO_TOOL"},
+    {"ui_action": "Search books", "ui_location": "LibraryFilters search input", "agent_equivalent": "NO TOOL EXISTS", "in_prompt": false, "priority": "must-have", "status": "NO_TOOL"},
+    {"ui_action": "Filter by status", "ui_location": "LibraryFilters status pills", "agent_equivalent": "NO TOOL EXISTS", "in_prompt": false, "priority": "must-have", "status": "NO_TOOL"},
+    {"ui_action": "Manage shelves", "ui_location": "ShelfManager dialog", "agent_equivalent": "NO TOOL EXISTS", "in_prompt": false, "priority": "should-have", "status": "NO_TOOL"},
+    {"ui_action": "View reading progress", "ui_location": "History tab stats cards", "agent_equivalent": "NO TOOL EXISTS", "in_prompt": false, "priority": "should-have", "status": "NO_TOOL"},
+    {"ui_action": "View recently finished", "ui_location": "History tab list", "agent_equivalent": "NO TOOL EXISTS", "in_prompt": false, "priority": "should-have", "status": "NO_TOOL"}
+  ],
+  "noun_test": {
+    "library_tabs": {"knows": false, "has_tool": false, "in_prompt": false, "notes": "Tabs are navigable via URL but no tool exists. Agent cannot programmatically switch tabs."},
+    "books": {"knows": false, "has_tool": false, "in_prompt": false, "notes": "No tool to list, search, or filter books. The QAChatPanel only answers questions about notes."},
+    "shelves": {"knows": false, "has_tool": false, "in_prompt": false, "notes": "No tool to create, list, or manage shelves from an agent context."},
+    "reading_progress": {"knows": false, "has_tool": false, "in_prompt": false, "notes": "Stats are visible in History tab but not queryable via tool."}
+  },
+  "score": {
+    "high_priority_capabilities_covered": "4/10 (4 URL-navigable tabs have deep-link parity via ?tab=; 6 other capabilities have no tool equivalent)",
+    "verdict": "NEEDS_WORK"
+  }
+}

@@ -1,0 +1,35 @@
+{
+  "reviewer": "security",
+  "findings": [],
+  "residual_risks": [
+    {
+      "description": "Whisper provider identity captured at hook-init time vs resolved at transcription time. The consent check in handleGenerate uses `whisperProvider` from useWhisperTranscription() closure (read once at mount from localStorage), while the actual `transcribe()` call inside the hook re-reads the provider via `getWhisperProvider()` which also reads from localStorage. If localStorage is mutated between consent check and transcription (e.g., from another tab via Settings), the transcript could run with a different provider than the one consented to. In practice, the mutation would have to occur within the same async tick between two synchronous localStorage reads, making exploitation infeasible. The consent check still gates on the purpose (`voice_transcription`), so the risk reduces to provider misalignment, not purpose bypass.",
+      "severity": "LOW",
+      "confidence": 0.45,
+      "mitigation": "Consider reading the provider ID both at consent-check time and transcription time from the same source, or capture the provider at handleGenerate time and pass it explicitly to transcribe()."
+    },
+    {
+      "description": "Console.error in `findAndReturnNoteLinkSuggestions` (noteLinkSuggestions.ts:175) logs the full error object which could include note content or course metadata if the error originates from a processing step involving note data. This is only visible in browser devtools and requires local access, making it a very low-risk information disclosure.",
+      "severity": "INFO",
+      "confidence": 0.35,
+      "mitigation": "Sanitize the error object before logging, or log only the error message string."
+    }
+  ],
+  "testing_gaps": [
+    {
+      "area": "Consent gating integration",
+      "description": "No test verifies that the generate button is disabled or redirected to consent-required state when consent is withdrawn mid-session (e.g., user revokes `voice_transcription` consent in Settings while sitting on a lesson page). The two-layer check (purpose + provider) is well-designed but only tested at the unit level via consentService.test.ts.",
+      "remediation": "Add an E2E or integration test: grant consent, load a local-video lesson, verify Generate button works, then revoke consent in another store action, verify the consent-required state is shown."
+    },
+    {
+      "area": "FileSystemFileHandle failure modes",
+      "description": "The `handleGenerate` function handles the `fileHandle.getFile()` failure gracefully (shows error state), but there is no test covering the path where a user's stored FileSystemFileHandle becomes invalid (e.g., file moved or permission revoked).",
+      "remediation": "Add a unit test mocking db.importedVideos.get() to return a record with an invalid fileHandle, verify the error state renders 'File access lost'."
+    },
+    {
+      "area": "Note link suggestion badge content safety",
+      "description": "Note content preview and tags rendered in the Popover badge are rendered through JSX (auto-escaped by React), which is safe. However, no test verifies that specially-crafted note content (e.g., containing HTML/script tags) renders inert in the Popover. This is a defense-in-depth gap given React's default escaping.",
+      "remediation": "Add a unit test rendering NotesTab with pendingNoteLinkSuggestions containing previewContent with HTML tags, assert the tags are displayed as text, not rendered as HTML."
+    }
+  ]
+}

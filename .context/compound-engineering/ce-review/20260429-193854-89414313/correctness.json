@@ -1,0 +1,73 @@
+{
+  "reviewer": "correctness",
+  "findings": [
+    {
+      "title": "DOMMatrixPolyfill.toFloat32Array and toFloat64Array return incorrect identity matrix",
+      "severity": "P2",
+      "file": "src/test/setup.ts",
+      "line": 82,
+      "why_it_matters": "The arrays [1,0,0,1,0,0,0,0,0,1,0,0,0,0,0,1] do not represent a 4x4 identity matrix in either column-major or row-major order. A correct column-major identity is [1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1]. If pdfjs-dist rendering code calls these methods, the resulting transforms would be corrupted — m22 would be 0 instead of 1, and m41 would be 1 instead of 0, which would shear and translate the output. Dormant in the current smoke test (which exercises the error fallback, not rendering), but would produce silently incorrect results in any future test that renders PDF pages.",
+      "autofix_class": "safe_auto",
+      "owner": "review-fixer",
+      "requires_verification": true,
+      "confidence": 0.95,
+      "evidence": [
+        "toFloat32Array line 82 returns new Float32Array([1,0,0,1,0,0,0,0,0,1,0,0,0,0,0,1])",
+        "toFloat64Array line 83 returns the same incorrect pattern",
+        "Column-major identity matrix should be [1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1] per the DOMMatrix Web API specification",
+        "The actual array decodes to: m11=1, m21=0, m31=0, m41=1 (wrong), m12=0, m22=0 (wrong, should be 1), m32=0, m42=0, m13=0, m23=1 (wrong, should be 0), m33=0, m43=0, m14=0, m24=0, m34=0, m44=1"
+      ],
+      "pre_existing": false,
+      "suggested_fix": "Change both toFloat32Array and toFloat64Array to return new Float32Array([1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1]) and new Float64Array([1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1]) respectively."
+    },
+    {
+      "title": "DOMMatrixPolyfill constructor silently ignores number[] init argument",
+      "severity": "P2",
+      "file": "src/test/setup.ts",
+      "line": 62,
+      "why_it_matters": "The constructor signature accepts `string | number[]` but only handles strings via regex parsing. When pdfjs-dist calls `new DOMMatrix(inverse)` (line 8847 of pdf.mjs), `inverse` is a 6-element number array [a,b,c,d,e,f] from Util.transform. The constructor does nothing with the number array, so the matrix remains identity instead of representing the actual transform. Dormant in the current smoke test but would produce incorrect results in any test that triggers the PDF pattern rendering path.",
+      "autofix_class": "safe_auto",
+      "owner": "review-fixer",
+      "requires_verification": true,
+      "confidence": 0.90,
+      "evidence": [
+        "Constructor declaration: `constructor(init?: string | number[])` at line 62",
+        "Only string case is handled (lines 63-73): `if (typeof init === 'string') { ... }`",
+        "pdfjs-dist build/pdf.mjs line 8847: `const domMatrix = new DOMMatrix(inverse)` where inverse is a number[] from Util.transform",
+        "pdfjs-dist build/pdf.mjs line 9259: `let domMatrix = new DOMMatrix(matrix)` where matrix is also a number[]",
+        "Util.transform returns a 6-element number array: `return [m1[0]*m2[0]+..., m1[1]*m2[0]+..., ...]`"
+      ],
+      "pre_existing": false,
+      "suggested_fix": "Add a number[] branch in the constructor: `if (Array.isArray(init) && init.length >= 6) { this.a = init[0]; this.b = init[1]; this.c = init[2]; this.d = init[3]; this.e = init[4]; this.f = init[5]; this.m11 = init[0]; this.m12 = init[1]; this.m21 = init[2]; this.m22 = init[3]; this.m41 = init[4]; this.m42 = init[5]; this.isIdentity = false; this.is2D = true; }`"
+    },
+    {
+      "title": "DOMMatrixPolyfill.isIdentity not set to false for non-identity constructor args",
+      "severity": "P3",
+      "file": "src/test/setup.ts",
+      "line": 61,
+      "why_it_matters": "When the constructor successfully parses a non-identity CSS matrix string (e.g., 'matrix(2,0,0,2,10,20)'), the `isIdentity` property remains `true` because it's a class field default and is never reassigned. While `isIdentity` is rarely read by consumers, it provides misleading state and could cause unexpected behavior if any code checks it as an optimization. Low practical impact because pdfjs-dist does not appear to read isIdentity.",
+      "autofix_class": "safe_auto",
+      "owner": "review-fixer",
+      "requires_verification": false,
+      "confidence": 0.85,
+      "evidence": [
+        "Class field `isIdentity = true` at line 61 is never reassigned in the constructor",
+        "Constructor lines 67-72 set a-f to non-identity values when parsing a matrix string, but don't touch isIdentity",
+        "The same would apply if a number[] init branch were added"
+      ],
+      "pre_existing": false,
+      "suggested_fix": "Set `this.isIdentity = false` after successfully parsing a non-identity matrix string (e.g., after line 71 in the constructor, or set it to false unconditionally at the start of the non-default constructor path)."
+    }
+  ],
+  "residual_risks": [
+    "The DOMMatrixPolyfill is missing preMultiplySelf, invertSelf, and multiplySelf methods used by pdfjs-dist's rendering code (lines in pdf.mjs: .preMultiplySelf(), .invertSelf().multiplySelf()). These are not exercised by the smoke test (which tests the error fallback only), but would cause 'is not a function' errors in any future unit test that exercises the PDF page rendering path. The author's comment says the polyfill is for import-time support, so this is a known scope limitation.",
+    "The polyfill's translate(), scale(), rotate(), multiply(), and invert() methods mutate `this` and return `this`, behaving like the Self variants. Per the DOMMatrix spec, these non-Self methods should return an immutable DOMMatrixReadOnly copy. This could cause aliasing bugs if pdfjs-dist rendering code expects immutable semantics. Again, dormant for the current smoke test scope.",
+    "The pdfjs-dist version pin (caret removal) guarantees deduplication today with react-pdf 10.4.0 bundling pdfjs-dist 5.4.296, but a future react-pdf upgrade that bundles a different pdfjs-dist version would re-introduce the version mismatch. The root cause is react-pdf's bundling strategy."
+  ],
+  "testing_gaps": [
+    "No unit test verifies the DOMMatrixPolyfill constructor correctly handles number[] arrays. The current smoke test only exercises the error-fallback path which does not call pdfjs-dist's rendering code (where number[] DOMMatrix construction occurs).",
+    "No unit test verifies that toFloat32Array/toFloat64Array return the correct identity matrix (or correct values for non-identity transforms). Direct unit tests on the polyfill itself would catch the array value bug at P2-1.",
+    "The smoke test for error fallback uses waitFor() at default 1s timeout. If react-pdf internally retries or takes longer to fail on an invalid blob URL in future versions, this test could become flaky. An explicit timeout of 5s and an assertion that the error state appears within that window would be more robust.",
+    "No test verifies the pdfWorker module correctly sets pdfjs.GlobalWorkerOptions.workerSrc to an actual reachable URL (as opposed to just checking it's truthy and matches a regex). A more thorough test would attempt to fetch the worker URL to verify it resolves."
+  ]
+}

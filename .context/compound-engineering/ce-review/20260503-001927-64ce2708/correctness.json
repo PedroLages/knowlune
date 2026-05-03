@@ -1,0 +1,147 @@
+{
+  "reviewer": "correctness",
+  "findings": [
+    {
+      "title": "Transcript generation not aborted on lesson change — stale UI state",
+      "severity": "P1",
+      "file": "src/app/components/course/tabs/TranscriptTab.tsx",
+      "line": 183,
+      "confidence": 0.85,
+      "autofix_class": "manual",
+      "owner": "review-fixer",
+      "requires_verification": true,
+      "pre_existing": false,
+      "suggested_fix": "Add a lessonId ref that is checked after each await in handleGenerate, and abort the controller when lessonId changes. Currently the abortControllerRef cleanup effect (line 183) runs only on unmount ([] deps), so navigating between lessons in the same course leaves generation running. The DB write targets the correct lesson (via closure-captured lessonId), but setCues, setLoadingState, and setGenerationState update the UI for the new lesson (the component's current render state). Either track the generation-scoped lessonId in a ref and guard state updates with it, or add a key={lessonId} on TranscriptTab in the parent to force remount on lesson change (which triggers the existing unmount cleanup)."
+    },
+    {
+      "title": "Note link suggestions leak across lessons due to unscoped async set",
+      "severity": "P1",
+      "file": "src/stores/useNoteStore.ts",
+      "line": 108,
+      "confidence": 0.82,
+      "autofix_class": "manual",
+      "owner": "review-fixer",
+      "requires_verification": true,
+      "pre_existing": false,
+      "suggested_fix": "pendingNoteLinkSuggestions is a global array in the Zustand store, not scoped to course/lesson. When saveNote (line 108) fires findAndReturnNoteLinkSuggestions asynchronously, the .then() callback (line 109-111) calls set({ pendingNoteLinkSuggestions: suggestions }) unconditionally. If the user navigates to a different lesson between saveNote() and .then() resolution, the new lesson's NotesTab calls clearPendingNoteLinkSuggestions() on mount, but the .then() fires AFTER that and writes the old lesson's suggestions. Fix: scope suggestions by saving the noteId or lessonId alongside suggestions, and filter display by current lesson. Or store a generation counter and discard results from stale operations."
+    },
+    {
+      "title": "Resume toast fires during auto-play even though video starts from beginning",
+      "severity": "P2",
+      "file": "src/app/components/course/LocalVideoContent.tsx",
+      "line": 168,
+      "confidence": 0.90,
+      "autofix_class": "safe_auto",
+      "owner": "review-fixer",
+      "requires_verification": false,
+      "pre_existing": false,
+      "suggested_fix": "Add !autoplay to the resume toast condition: if (savedPosition && savedPosition > 5 && !autoplay && !hasShownResumeToast.current). When autoplay is true, initialPosition is undefined (line 405), so the video starts from 0:00. But the Dexie query for savedPosition still resolves and fires the 'Resuming from...' toast, misleading the user. The toast should only fire when the video actually resumes (autoplay is false)."
+    },
+    {
+      "title": "Two NotesTab instances on mobile clear each other's suggestions on mount",
+      "severity": "P3",
+      "file": "src/app/components/course/tabs/NotesTab.tsx",
+      "line": 51,
+      "confidence": 0.80,
+      "autofix_class": "manual",
+      "owner": "downstream-resolver",
+      "requires_verification": false,
+      "pre_existing": false,
+      "suggested_fix": "On mobile, both the below-video NotesTab (line 279 of BelowVideoTabs.tsx) and the fullscreen overlay NotesTab (line 389) mount simultaneously. Each fires clearPendingNoteLinkSuggestions() on mount (line 51-53). When the fullscreen overlay opens, it clears suggestions that the below-video instance was displaying. The suggestions are in a shared global store with no ownership tracking, so both instances interfere. Fix options: (a) only clear suggestions when courseId/lessonId actually change (skip on initial mount if suggestions are already populated for this lesson), or (b) use a single rendered NotesTab instance and toggle between inline/fullscreen layout with CSS instead of duplicate mounts."
+    },
+    {
+      "title": "Double recordVisit() call due to autoPlay state clearing side effect",
+      "severity": "P3",
+      "file": "src/app/pages/UnifiedLessonPlayer.tsx",
+      "line": 95,
+      "confidence": 0.80,
+      "autofix_class": "gated_auto",
+      "owner": "review-fixer",
+      "requires_verification": false,
+      "pre_existing": false,
+      "suggested_fix": "The autoPlay clearing useEffect (line 95-99) calls navigate(location.pathname, { replace: true, state: {} }), which changes location.state. The recordVisit effect (line 103-108) depends on [lessonId, location.state], so it re-runs when state changes from {autoPlay: true} to {} and calls recordVisit a second time for the same lesson. Fix: use a ref to track whether a visit has already been recorded for this mount cycle, and skip the second call."
+    },
+    {
+      "title": "ToggleQAPanel passed as onOpenChange mismatches Radix open/close contract",
+      "severity": "P3",
+      "file": "src/app/components/course/LessonHeaderTools.tsx",
+      "line": 132,
+      "confidence": 0.72,
+      "autofix_class": "manual",
+      "owner": "review-fixer",
+      "requires_verification": true,
+      "pre_existing": false,
+      "suggested_fix": "toggleQAPanel (line 132) toggles the state, but Radix's onOpenChange passes a boolean indicating the requested open/close state. The toggle function ignores this parameter. If Radix calls onOpenChange(false) when the user presses ESC and onOpenChange(true) when they click the trigger again, toggleQAPanel would flip the state regardless. This means: if the panel is open and ESC fires, Radix says 'close (false)', but toggleQAPanel flips from true to false (correct by coincidence). But if the user clicks the trigger while the panel is in a transient state, it could flip the wrong way. Use setQAPanelOpen instead of toggleQAPanel for the onOpenChange prop, or derive the correct boolean value from the callback parameter."
+    }
+  ],
+  "residual_risks": [
+    {
+      "description": "Whisper transcription may not respond to AbortController signal during active transcription (depends on useWhisperTranscription internals not in this diff). If transcribe() ignores the abort signal, the controller.signal.aborted checks before/after transcribe() won't actually stop the in-progress work.",
+      "file": "src/app/components/course/tabs/TranscriptTab.tsx",
+      "line": 247,
+      "severity": "P2"
+    },
+    {
+      "description": "Two Dexie put() writes (videoCaptions + youtubeTranscripts) in handleGenerate are not wrapped in a transaction. If the second write fails, the first write persists, leaving partial state. The component shows 'completed' only if both succeed (set after both awaits), but the DB has orphaned videoCaptions data.",
+      "file": "src/app/components/course/tabs/TranscriptTab.tsx",
+      "line": 254,
+      "severity": "P3"
+    },
+    {
+      "description": "handleGenerate rebuilds parseTranscriptText from the VTT string after transcription instead of using parsedCues already computed. The call parseTranscriptText(result.vtt) at line 250 re-parses, and the same function was already called by the hook (if it parses internally). Not a correctness issue but wastes cycles.",
+      "file": "src/app/components/course/tabs/TranscriptTab.tsx",
+      "line": 250,
+      "severity": "P3"
+    },
+    {
+      "description": "The 'Retry' button in the error state (line 378-389) resets generationState to 'idle' and generationError to null via onClick inline function. This local state reset does not abort any in-flight controller. If the error was NOT caused by an abort (e.g., a network error during transcribe), the old abortControllerRef still holds the previous controller. When handleGenerate creates a new controller, it first calls abortControllerRef.current.abort() — this aborts the old controller, which is fine since it already errored. But the retry button doesn't clear the old controller, so the abort call is harmless but semantically confusing.",
+      "file": "src/app/components/course/tabs/TranscriptTab.tsx",
+      "line": 378,
+      "severity": "P3"
+    },
+    {
+      "description": "BelowVideoTabs fallback tab when hideNotesTab removes 'notes': the else branch at line 116 sets activeTab='ai-summary', but the AI summary tab is conditionally rendered (requires capabilities.hasTranscript). If hasTranscript is false and all prior fallbacks also fail, activeTab targets a non-existent tab value, which the Tabs component may handle gracefully (rendering nothing) but is semantically incorrect.",
+      "file": "src/app/components/course/BelowVideoTabs.tsx",
+      "line": 116,
+      "severity": "P3"
+    },
+    {
+      "description": "TriggerNoteLinkSuggestions signature changed from void to Promise<NoteLinkSuggestion[]> and its onLinked callback is now unused (_onLinked). Both callers were updated (progress.ts removed its call, useNoteStore switched to findAndReturnNoteLinkSuggestions). No remaining callers found in codebase. The deprecated function retains backward compatibility.",
+      "file": "src/ai/knowledgeGaps/noteLinkSuggestions.ts",
+      "line": 192,
+      "severity": "P3"
+    }
+  ],
+  "testing_gaps": [
+    {
+      "description": "No test covers the scenario where the user starts transcript generation, then navigates to a different lesson before generation completes. The stale UI state bug (setCues/setGenerationState for wrong lesson) and the missing abort-on-lesson-change would be caught by such a test.",
+      "file": "src/app/components/course/tabs/TranscriptTab.tsx",
+      "suggested_test": "Mount TranscriptTab for lesson A. Click Generate. Before generation resolves, change props to lesson B. Assert that the component's cues/state reflect lesson B, not lesson A's transcript. Assert the abort controller was signaled."
+    },
+    {
+      "description": "No test for pendingNoteLinkSuggestions leaking across lesson boundaries. The sequence: save note in lesson A (async), navigate to lesson B (clearPending on mount), then A's .then() fires and sets suggestions for B's display.",
+      "file": "src/stores/useNoteStore.ts",
+      "suggested_test": "Call saveNote for lesson A's note. Before findAndReturnNoteLinkSuggestions resolves, navigate to lesson B (triggering clearPending). Let the pending promise resolve. Assert pendingNoteLinkSuggestions is empty (the stale result was discarded or scoped correctly)."
+    },
+    {
+      "description": "No test for the resume toast firing during auto-play. The condition at line 168 of LocalVideoContent.tsx doesn't check autoplay.",
+      "file": "src/app/components/course/LocalVideoContent.tsx",
+      "suggested_test": "Mount LocalVideoContent with autoplay=true and a known Dexie progress entry (currentTime > 5). Assert the resume toast does NOT appear."
+    },
+    {
+      "description": "No test for double recordVisit when autoPlay state clearing triggers a location.state change that re-fires the recordVisit effect.",
+      "file": "src/app/pages/UnifiedLessonPlayer.tsx",
+      "suggested_test": "Mount UnifiedLessonPlayer with location.state = { autoPlay: true }. After the clearing useEffect fires (changing location.state), assert recordVisit was called exactly once."
+    },
+    {
+      "description": "LessonsTab completion checkmark tests cover completed/in-progress/not-started states but don't test the completion checkmark on material (PDF) sub-rows inside MaterialGroupRow, which have their own completionStatus check at line 338-341.",
+      "file": "src/app/components/course/tabs/LessonsTab.tsx",
+      "suggested_test": "Add test: set statusMap with completed status for a material sub-row lesson, render LessonsTab with that lesson inside a MaterialGroup, assert the CheckCircle2 element and line-through styling appear on the sub-row."
+    },
+    {
+      "description": "No test for QAChatPanel controlled/uncontrolled mode transition. The component supports both (via open/onOpenChange props), but there are no tests verifying the controlled behavior.",
+      "file": "src/app/components/figma/QAChatPanel.tsx",
+      "suggested_test": "Render QAChatPanel with controlled open=true, assert the panel is open. Change open to false externally, assert the panel closes without calling internal state setter."
+    }
+  ]
+}

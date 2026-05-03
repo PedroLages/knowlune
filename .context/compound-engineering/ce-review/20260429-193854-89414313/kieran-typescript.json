@@ -1,0 +1,43 @@
+{
+  "meta": {
+    "reviewer": "kieran-typescript",
+    "run_id": "20260429-193854-89414313",
+    "timestamp": "2026-04-29T19:38:54Z",
+    "files_reviewed": [
+      "src/test/setup.ts",
+      "src/app/components/figma/PdfViewer/__tests__/PdfViewer.smoke.test.tsx"
+    ]
+  },
+  "findings": [
+    {
+      "id": "kt-001",
+      "title": "DOMMatrix polyfill stub methods return silently incorrect results for all transform and point-projection operations",
+      "severity": "MEDIUM",
+      "file": "src/test/setup.ts",
+      "line": 54,
+      "confidence": 0.75,
+      "autofix_class": "inform_comments_or_descriptive_throws",
+      "owner": "human",
+      "requires_verification": false,
+      "pre_existing": false,
+      "why_it_matters": "The DOMMatrixPolyfill class is registered on globalThis.DOMMatrix (line 86) and therefore affects ALL tests in the suite — not just this smoke test. While the current smoke test only verifies the error-fallback path (it passes blob:invalid-url, triggering onDocumentLoadError before any rendering hits the matrix code), the stub methods would silently corrupt coordinate calculations if any future test triggers real PDF page rendering. Specifically: (a) translate(), scale(), rotate(), multiply(), invert() all return this but perform no actual transformation — the matrix stays as identity no matter what operations are applied; (b) transformPoint() always returns {x:0, y:0, z:0, w:1} regardless of matrix state, which would break hit-testing, text selection, and link annotation positioning in any rendering test. (c) The constructor accepts init?: string | number[] per the DOM spec but only handles strings — passing a number array silently produces identity instead of the requested matrix. Failures would be silent (wrong coordinates) rather than loud (throw/crash), making debugging painful.",
+      "evidence": "Lines 76-81: every transformation method body is a single return this with no matrix math. Line 81: transformPoint() returns a hardcoded identity point {x:0, y:0, z:0, w:1}. Lines 62-74: constructor only branches on typeof init === 'string' — the number[] path from the type signature has no code.",
+      "suggested_fix": "Add a comment block above the class documenting that this is a minimal polyfill for module-load-time checks only, and warn that stub methods produce identity/no-op results. Alternatively, make the stub methods throw descriptive errors (e.g., 'DOMMatrixPolyfill.translate() is a stub; actual PDF rendering is not supported in tests') so that any test accidentally hitting real rendering fails loudly instead of producing silent incorrect results."
+    },
+    {
+      "id": "kt-002",
+      "title": "Smoke test assertion does not isolate pdfWorker side-effect from pdfjs-dist's built-in default",
+      "severity": "LOW",
+      "file": "src/app/components/figma/PdfViewer/__tests__/PdfViewer.smoke.test.tsx",
+      "line": 11,
+      "confidence": 0.60,
+      "autofix_class": "test_assertion_improvement",
+      "owner": "human",
+      "requires_verification": false,
+      "pre_existing": false,
+      "why_it_matters": "The test imports pdfWorker (which sets workerSrc to a local Vite-bundled worker path like /assets/pdf.worker.min-abc123.mjs), then imports react-pdf and asserts workerSrc matches /pdf\\.worker/i. However, pdfjs-dist itself sets a default workerSrc during module initialization — typically a CDN URL like https://unpkg.com/pdfjs-dist@5.4.296/build/pdf.worker.min.mjs — which also matches /pdf\\.worker/i. If the pdfWorker.ts module is deleted, broken, or its import fails silently, the test would still pass against pdfjs-dist's own default. The test name claims it verifies the 'bundled worker module' but the assertion cannot distinguish a local bundled worker from a CDN fallback.",
+      "evidence": "Line 8 triggers the pdfWorker side-effect. Lines 10-11 assert workerSrc is truthy and matches /pdf\\.worker/i. Both a local Vite-bundled path (/assets/pdf.worker.min.mjs) and the pdfjs-dist CDN default (https://unpkg.com/pdfjs-dist@X.Y.Z/build/pdf.worker.min.mjs) satisfy both assertions.",
+      "suggested_fix": "Add a more specific assertion, e.g., expect(pdfjs.GlobalWorkerOptions.workerSrc).toMatch(/^\\//) to verify the worker is a local bundled asset (starts with '/') rather than an external CDN URL (starts with 'https://'). This isolates the pdfWorker configuration from pdfjs-dist's built-in default."
+    }
+  ]
+}

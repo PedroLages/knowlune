@@ -1,0 +1,69 @@
+{
+  "search_context": {
+    "feature": "Fix course import to filter cover image selection to root-folder images only via maxDepth option on scanDirectory() and two-pass scanning in courseImport.ts",
+    "changed_files": [
+      "src/lib/fileSystem.ts",
+      "src/lib/courseImport.ts"
+    ],
+    "searches_performed": [
+      "course import, scanDirectory, maxDepth, directory scanning",
+      "cover image selection, image filtering in import",
+      "File System Access API, FileSystemDirectoryHandle",
+      "async generators, depth-limited traversal, two-pass scanning",
+      "broader scan/file import/FileSystemFileHandle/getFile/values()",
+      "broader cover image/filter/select/root-folder"
+    ],
+    "directories_searched": [
+      "docs/solutions/",
+      "docs/plans/ (relevant subset)",
+      "docs/research/ (relevant subset)"
+    ],
+    "total_solution_files_scanned": 3,
+    "total_candidate_files_evaluated": 5
+  },
+  "critical_patterns": {
+    "file_exists": false,
+    "note": "docs/solutions/patterns/critical-patterns.md does not exist yet"
+  },
+  "matches": [],
+  "conclusion": "No matching past solutions found. The changes to src/lib/fileSystem.ts (adding maxDepth option to scanDirectory) and src/lib/courseImport.ts (two-pass scanning: first pass depth-limited for cover images, second pass recursive for videos/PDFs) represent novel work without prior institutional learnings in the solutions knowledge base. The closest tangentially-related files (audiobook cover search async timing, ABS sync cover fallback, and auto-categorize on import plan) address different modules, different problems, and different technical patterns.",
+  "files_examined": [
+    {
+      "path": "/Volumes/SSD/Dev/Apps/Knowlune/docs/solutions/logic-errors/audiobook-cover-search-async-timing-2026-04-16.md",
+      "relevance": "NONE",
+      "reason": "About audiobook metadata cover search spinner tied to arbitrary timeout. Matched on 'cover' and 'scan' keywords but deals with timer leaks in frontend_stimulus, not filesystem directory traversal or image filtering."
+    },
+    {
+      "path": "/Volumes/SSD/Dev/Apps/Knowlune/docs/solutions/integration-issues/2026-04-24-audiobook-m4b-pipeline-lessons.md",
+      "relevance": "NONE",
+      "reason": "Shell scripting lessons for M4B audiobook conversion pipeline on a remote server. Matched on incidental file-system-related keywords but is about bash, ffmpeg, and m4b-tool, not the File System Access API."
+    },
+    {
+      "path": "/Volumes/SSD/Dev/Apps/Knowlune/docs/solutions/runtime-errors/pdfjs-dist-react-pdf-version-pin-2026-04-29.md",
+      "relevance": "NONE",
+      "reason": "About pdfjs-dist version mismatch between caret dependency and react-pdf bundled version. Matched on 'getFile' in the broader scan but is about npm dependency pinning."
+    },
+    {
+      "path": "/Volumes/SSD/Dev/Apps/Knowlune/docs/solutions/sync/abs-sync-qa-fix-patterns-2026-04-24.md",
+      "relevance": "NONE",
+      "reason": "ABS sync deadlock guard, 429 throttle, auth guard patterns. Matched on 'cover' keyword but the cover fallback section is about Audiobookshelf cover download failures, not local file cover selection."
+    },
+    {
+      "path": "/Volumes/SSD/Dev/Apps/Knowlune/docs/solutions/best-practices/2026-04-25-long-press-card-and-jsdom-pointer-event-test-pattern.md",
+      "relevance": "LOW",
+      "reason": "About course card long-press interaction pattern on ImportedCourseCompactCard. Shares the course import domain tangentially but deals with touch interaction testing patterns, not filesystem scanning or cover image filtering."
+    }
+  ],
+  "search_coverage": {
+    "maxDepth": "NO_MATCHES",
+    "scanDirectory": "NO_MATCHES",
+    "FileSystemDirectoryHandle": "NO_MATCHES",
+    "async generator": "NO_MATCHES",
+    "two-pass scanning": "NO_MATCHES",
+    "depth-limited traversal": "NO_MATCHES",
+    "courseImport": "NO_MATCHES",
+    "fileSystem.ts": "NO_MATCHES",
+    "cover image filter import": "NO_MATCHES",
+    "root folder image selection": "NO_MATCHES"
+  }
+}

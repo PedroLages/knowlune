@@ -1,0 +1,78 @@
+{
+  "reviewer": "adversarial",
+  "findings": [
+    {
+      "severity": "HIGH",
+      "confidence": 0.85,
+      "title": "Composition failure: Collections tab renders a silent content gap when ABS source is active but absViewMode is not 'collections'",
+      "autofix_class": "manual",
+      "owner": "human",
+      "evidence": [
+        "The Collections tab conditionally renders content in three non-mutually-exclusive blocks: (1) CollectionsView when filters.source === 'audiobookshelf' && absViewMode === 'collections', (2) SmartGroupedView when filters.source !== 'audiobookshelf', and (3) an empty-state when filteredBooks.length === 0.",
+        "Scenario: A user with an ABS server connected is on the Browse tab viewing ABS books in grid mode (absViewMode === 'grid', filters.source === 'audiobookshelf'). They click the Collections tab.",
+        "At this point: filters.source === 'audiobookshelf' is true (blocks SmartGroupedView), absViewMode === 'grid' so absViewMode !== 'collections' (blocks CollectionsView), and if filteredBooks.length > 0 (blocks the empty state).",
+        "Result: The Collections tab renders only the header buttons ('Manage Shelves' and 'Browse ABS Collections') with a completely empty content area between the buttons and the StorageIndicator footer. No error is thrown, no fallback is shown — the tab is silently broken.",
+        "This also occurs when a user arrives at /library?tab=collections after navigating from the Browse tab with ABS grid/series mode active."
+      ],
+      "suggested_fix": "Add a fourth case to the Collections tab for filters.source === 'audiobookshelf' && absViewMode !== 'collections' that either resets the view mode to grid and renders the SmartGroupedView (switching source back to local), or renders a targeted empty-state message explaining that ABS collections require switching to the collections view mode."
+    },
+    {
+      "severity": "HIGH",
+      "confidence": 0.85,
+      "title": "State inconsistency: URL ?tab= param overrides localStorage on refresh but is never updated during tab navigation",
+      "autofix_class": "manual",
+      "owner": "human",
+      "evidence": [
+        "The libraryTab useState initializer (line 139-145) prioritizes URL param over localStorage: if searchParams.get('tab') matches a valid tab, it wins; otherwise localStorage is checked; otherwise default 'continue'.",
+        "The handleTabChange callback (line 146-149) calls setLibraryTab and localStorage.setItem but NEVER calls setSearchParams to update the URL.",
+        "Scenario: User navigates to /library?tab=browse from an external notification deep-link. They click the Collections tab. localStorage now says 'collections', libraryTab state is 'collections', but the URL still reads ?tab=browse. User refreshes the page (or uses browser back/forward). The useState initializer fires again, reads ?tab=browse from the URL, and returns 'browse', completely discarding the user's last explicit tab choice from localStorage.",
+        "The URL param acts as a 'sticky default' that silently overrides user intent on every mount. This is particularly dangerous for bookmarking — the user thinks they're bookmarking Collections but the URL records Browse.",
+        "Conversely, if a user lands on /library with no ?tab= param, switches tabs, and later clicks a deep-link to /library?tab=collections, the component does NOT respond to the URL change because the useState initializer only runs on mount. The component has no useEffect that syncs state back from searchParams after mount."
+      ],
+      "suggested_fix": "Either: (a) add a useEffect that synchronizes searchParams.get('tab') into libraryTab state whenever the URL changes, and call setSearchParams in handleTabChange to keep the URL current; or (b) remove URL priority entirely and use localStorage as the sole source of truth, reading the URL param only when localStorage is absent (first-visit deep-link). Option (a) provides full URL<->state bidirectional sync; option (b) is simpler but loses URL shareability."
+    },
+    {
+      "severity": "MEDIUM",
+      "confidence": 0.75,
+      "title": "Cascade: 'Browse ABS Collections' button in Collections tab permanently alters global filter state, changing what the Collections tab shows on return",
+      "autofix_class": "manual",
+      "owner": "human",
+      "evidence": [
+        "The 'Browse ABS Collections' button in the Collections tab (lines 1070-1083) has an onClick that calls: setFilters({ source: 'audiobookshelf' }), setAbsViewMode('collections'), handleTabChange('browse').",
+        "setFilters({ source: 'audiobookshelf' }) performs a full filter replacement on the global useBookStore filters state. This wipes any previously active status, search, format, and author filters.",
+        "setAbsViewMode('collections') sets the local absViewMode state to 'collections'. Neither of these state mutations are scoped to the Browse tab — they persist globally.",
+        "Scenario: User is on the Collections tab viewing local series via SmartGroupedView (filters.source !== 'audiobookshelf'). They click 'Browse ABS Collections'. They are now on the Browse tab looking at ABS collections. Later, they click the Collections tab to return.",
+        "Upon return: filters.source === 'audiobookshelf' (set by the button earlier), so SmartGroupedView is blocked. absViewMode === 'collections', so CollectionsView renders. The Collections tab now shows ABS collections content instead of the local shelves it showed before the button click. The user's local shelf view is displaced by ABS content they didn't choose to see on the Collections tab.",
+        "The only way to restore the original Collections tab content is to go to Browse, switch the source to local, then go back to Collections — a three-step recovery path with no discoverability."
+      ],
+      "suggested_fix": "Scope the filter mutations to the Browse tab navigation. Either: (a) save the pre-navigation filter state and restore it when the user navigates back to Collections via handleTabChange('collections'), or (b) have the Collections tab reset filters.source to undefined on mount via a useEffect, or (c) decouple the Browse tab's source filter from the global filters store so tab-specific filter state doesn't leak across tabs."
+    },
+    {
+      "severity": "MEDIUM",
+      "confidence": 0.80,
+      "title": "Composition failure: Collections tab empty state 'No collections yet' triggers on filtered-book zero, not contextual absence",
+      "autofix_class": "advisory",
+      "owner": "human",
+      "evidence": [
+        "The Collections tab empty state at line 1103 checks filteredBooks.length === 0 to decide whether to show 'No collections yet. Create your first shelf.'",
+        "filteredBooks is computed at the top of render (line 335) via useBookStore.getState().getFilteredBooks(), which applies ALL active global filters: source, status, search, format, and authors.",
+        "Scenario: User has 20 books organized across 3 shelves. They go to the Browse tab, type a search query that matches no books (e.g., 'xyzabc'). filteredBooks.length becomes 0. They switch to the Collections tab.",
+        "In the Collections tab, filteredBooks.length === 0 is still true (the search filter persists across tabs). The 'No collections yet. Create your first shelf.' empty state renders despite the user having shelves and books. The user is told to create their first shelf when they already have shelves.",
+        "The empty state message contradicts the actual data state. While this is not destructive, it creates user confusion — the user may think their shelves were lost. The correct guard for this empty state should check whether the user has any shelves or series, not whether globally filtered books happen to be zero."
+      ],
+      "suggested_fix": "Replace the filteredBooks.length === 0 check with a check on shelf/series availability (e.g., from useShelfStore state). Alternatively, clear search and status filters when entering the Collections tab so filteredBooks accurately reflects what is available for shelf grouping."
+    }
+  ],
+  "residual_risks": [
+    "localStorage.setItem in handleTabChange has no try/catch — if localStorage is unavailable (rare, e.g., some privacy modes), the thrown error would propagate through the click handler uncaught. No React error boundary is evident in the component tree. Impact: tab switching crash on affected browsers.",
+    "The libraryTab useState initializer reads localStorage synchronously. If localStorage is corrupted with a value that's byte-identical to a valid tab but has non-printable characters (e.g., 'collections\\u0000'), the strict string equality check would still fail, causing a silent fallback to 'continue'. This is currently robust by accident — the check uses === which would reject strings with invisible differences — but any future change to use .includes() or .startsWith() would open this surface.",
+    "Rapid tab switching between Continue and Browse causes the Continue tab's LibraryMediaHero/LibraryMediaShelfColumn components to unmount and remount. If these components have internal async data fetching with uncontrolled side effects (timers, observers, fetch-in-progress), repeated mount/unmount cycles could accumulate leaks. Not traceable from this diff alone — depends on those child components' cleanup correctness."
+  ],
+  "testing_gaps": [
+    "No test for URL ?tab= param presence causing localStorage override on page refresh — verify that the user's last tab choice survives a refresh when a ?tab= param exists.",
+    "No test for Collections tab rendering when arriving with ABS source active and absViewMode='grid' — verify a fallback or content is shown, not a blank content area.",
+    "No test for Collections tab empty state firing correctly vs. incorrectly — verify 'No collections yet' does NOT appear when the user has shelves but filteredBooks is empty due to a search filter from another tab.",
+    "No test for 'Browse ABS Collections' button side effects — verify that returning to the Collections tab after clicking the button still shows the same content (local shelves) that was visible before clicking.",
+    "No test for rapid tab switching behavior — verify no DOM duplication, no state corruption, no console errors from unmounted component updates."
+  ]
+}

@@ -1,0 +1,53 @@
+{
+  "reviewer": "correctness",
+  "findings": [
+    {
+      "title": "Collections tab renders no content when ABS source is active but absViewMode is not 'collections'",
+      "severity": "P2",
+      "file": "src/app/pages/Library.tsx",
+      "line": 1087,
+      "confidence": 0.85,
+      "autofix_class": "safe_auto",
+      "owner": "review-fixer",
+      "requires_verification": true,
+      "pre_existing": false,
+      "suggested_fix": "In the Collections tab panel (lines 1086-1089), drop the `absViewMode === 'collections'` guard from the ABS collections condition. The Collections tab should always display `CollectionsView` when `filters.source === 'audiobookshelf'`, regardless of the Browse tab's `absViewMode`. Change line 1087 from: `{filters.source === 'audiobookshelf' && absViewMode === 'collections' && (` to: `{filters.source === 'audiobookshelf' && (`",
+      "why_it_matters": "When a user is browsing with ABS source and grid/series view on the Browse tab, then switches to the Collections tab, the tab renders only the two action buttons with no content below them. The `CollectionsView` is gated on `absViewMode === 'collections'` (a Browse-tab view mode), and `SmartGroupedView` is gated on `filters.source !== 'audiobookshelf'` (which is false). The empty state is gated on `filteredBooks.length === 0` (also false when books exist). Result: a contentless tab. The root cause is that `absViewMode` is a Browse-tab concept smuggled into the Collections tab's rendering logic via a conjunction that makes no sense here — the Collections tab should always show collections content when the source is ABS.",
+      "evidence": [
+        "Line 1087: `filters.source === 'audiobookshelf' && absViewMode === 'collections'` — the `absViewMode` check gatekeeps ABS collections display behind a Browse-tab state variable.",
+        "Line 1092: `filters.source !== 'audiobookshelf'` — local series groups are hidden when ABS source is active.",
+        "Line 1103: `filteredBooks.length === 0` — the fallback empty state requires zero filtered books, which won't be true when ABS books are present.",
+        "Trace: `filters.source='audiobookshelf'`, `absViewMode='grid'`, `filteredBooks.length>0` — CollectionsView hidden (absViewMode guard), SmartGroupedView hidden (source guard), empty state hidden (filteredBooks guard). Only action buttons visible."
+      ]
+    },
+    {
+      "title": "Browse ABS Collections button silently clears all other filters via setFilters replacement",
+      "severity": "P3",
+      "file": "src/app/pages/Library.tsx",
+      "line": 1074,
+      "confidence": 0.75,
+      "autofix_class": "safe_auto",
+      "owner": "review-fixer",
+      "requires_verification": false,
+      "pre_existing": false,
+      "suggested_fix": "Replace `setFilters({ source: 'audiobookshelf' })` with `setFilter('source', 'audiobookshelf')` to set only the source filter while preserving the user's existing search term, status filter, and format selections. The user clicked a button about browsing collections — they didn't ask to clear their other filters.",
+      "why_it_matters": "`setFilters` (plural) at store line 239 does `set({ filters })` — a full replacement. Calling `setFilters({ source: 'audiobookshelf' })` wipes out `filters.search`, `filters.status`, `filters.format`, `filters.sort`, `filters.authors`, `filters.genre`, and `filters.shelfId` — all set to `undefined`. The user's active search term and any status/format filters are silently discarded. If the user had typed a search query and clicked this button expecting to browse ABS collections filtered by that query, their search is lost. Using `setFilter('source', 'audiobookshelf')` (singular) would preserve all other filter state.",
+      "evidence": [
+        "Store line 239: `setFilters: (filters: BookFilters) => set({ filters })` — full replacement, not merge.",
+        "Store line 240: `setFilter: (key, value) => ...` — single-key update that preserves other filter fields.",
+        "Library.tsx line 1074: `setFilters({ source: 'audiobookshelf' })` — replaces entire filters object with single-property object."
+      ]
+    }
+  ],
+  "residual_risks": [
+    "The new `books` dependency in the auto-format useEffect (line 391) causes the effect to re-run on every book array reference change, not just on count change. The early return (`if (!filters.format || filters.format.length === 0) return`) prevents incorrect format changes, but the effect fires more often than before. This is a performance regression (minimal for typical library sizes) rather than a correctness issue.",
+    "The `filteredBooks` at line 335 uses `useBookStore.getState().getFilteredBooks()` which internally reads `useShelfStore.getState().getBooksOnShelf(filters.shelfId)` (store line 299). If the shelf store changes while a shelfId filter is active, `filteredBooks` may be stale because the Library component doesn't subscribe to shelf store changes. This is a pre-existing issue, not introduced by this diff.",
+    "The Story 116-03 shelf integration E2E test was disabled with `test.fixme` (tests/e2e/story-116-03.spec.ts line 21) rather than updated to navigate to `?tab=continue`. Shelves are now only visible in the Continue tab, but the test navigated to `/library` without a tab param. The default tab fallback is 'continue', so the test might have actually worked — worth investigating why it was fixme'd rather than fixed."
+  ],
+  "testing_gaps": [
+    "No E2E test validates that switching tabs preserves the user's scroll position, filter state, or view mode when returning to a previously visited tab.",
+    "No E2E test covers the scenario where ABS source is selected and the user switches from Browse to Collections tab — the empty-content gap described in Finding 1.",
+    "No E2E test validates the localStorage persistence path (the URL param `?tab=` is tested, but no test confirms that closing and reopening the tab restores the last-used tab from localStorage).",
+    "The story-116-03 spec is disabled (`test.fixme`) and no replacement test validates that shelves render in the Continue tab."
+  ]
+}

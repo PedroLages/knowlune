@@ -1,0 +1,153 @@
+{
+  "runId": "20260504-000549-553cc992",
+  "mode": "headless",
+  "scope": "feature/ce-2026-05-03-learning-paths-04-inline-editing-dialog-reduction vs base ddb66fa7",
+  "intent": "Replace dialog-based edit and delete operations on learning-path pages with inline editing (click-to-edit) and immediate-delete-plus-undo-toast pattern. Adds reusable InlineEditableField component, deletePathWithUndo/restorePath store methods with 5-second undo window, and updates both LearningPaths (list) and LearningPathDetail pages.",
+  "reviewers": [
+    "correctness (always)",
+    "testing (always)",
+    "maintainability (always)",
+    "project-standards (always)",
+    "agent-native-reviewer (always)",
+    "learnings-researcher (always)",
+    "reliability -- new store methods with setTimeout/clearTimeout lifecycle, async persist with syncableWrite, error handling for Dexie failures",
+    "adversarial -- 956 insertions of executable TypeScript/React code, data mutation operations (delete with undo/restore)",
+    "kieran-typescript -- TypeScript components, store, hooks, React patterns",
+    "julik-frontend-races -- DOM event handling (click propagation, blur timing, setTimeout for auto-focus), async UI state transitions"
+  ],
+  "appliedFixes": [
+    {
+      "finding": "InlineEditableField setTimeout lacks cleanup",
+      "file": "src/app/components/figma/InlineEditableField.tsx",
+      "fix": "Added focusTimerRef and successTimerRef to store timer IDs; added useEffect cleanup return to clear timers on unmount"
+    }
+  ],
+  "findings": [
+    {
+      "id": "F1",
+      "severity": "P1",
+      "file": "src/stores/useLearningPathStore.ts",
+      "line": 355,
+      "title": "restorePath persist is fire-and-forget; state and Dexie can diverge on write failure",
+      "autofix_class": "gated_auto",
+      "owner": "downstream-resolver",
+      "requires_verification": true,
+      "confidence": 0.85,
+      "pre_existing": false,
+      "reviewers": ["correctness", "reliability"],
+      "why_it_matters": "restorePath calls persistWithRetry() without await, then clears pendingDeletes immediately. If the Dexie write fails, the in-memory state shows the path restored but the persistence layer does not have it. On next loadPaths() the path silently disappears. The user sees a restored path with a 'Failed to restore path' toast, which is contradictory and confusing.",
+      "suggested_fix": "Await persistWithRetry() and only clear pendingDeletes on success. In the catch block, keep pendingDeletes entry so the user can retry Undo (the path remains visible in state). Only show 'Failed to restore path' when persist actually fails.",
+      "evidence": [
+        "Line 355: persistWithRetry(async () => { ... }) -- not awaited",
+        "Line 366-368: delete pendingDeletes[pathId]; set({ pendingDeletes }) -- executes synchronously before persist resolves",
+        "Line 360-362: .catch(error => { console.error(...); toast.error('Failed to restore path') }) -- error handled but state already cleared"
+      ]
+    },
+    {
+      "id": "F2",
+      "severity": "P2",
+      "file": "src/app/components/figma/InlineEditableField.tsx",
+      "line": 77,
+      "title": "Textarea mode has no newline support; Enter always saves",
+      "autofix_class": "manual",
+      "owner": "downstream-resolver",
+      "requires_verification": false,
+      "confidence": 0.72,
+      "pre_existing": false,
+      "reviewers": ["correctness", "kieran-typescript"],
+      "why_it_matters": "The handleKeyDown handler treats Enter as save for both input and textarea modes. For the description textarea (used on path cards and detail page), users may reasonably expect Enter to insert a line break and Ctrl+Enter/Cmd+Enter to save. The current behavior prevents any multi-line descriptions from being created via the inline editor.",
+      "suggested_fix": "For textarea mode, allow Enter to insert newlines and use Ctrl+Enter or Cmd+Enter to save. Alternatively, document in the aria-label that Enter saves.",
+      "evidence": [
+        "Line 77: if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); commitSave() } -- applies to both input and textarea",
+        "Plan R2: 'Path description on path cards becomes click-to-edit' -- no mention of multi-line editing behavior",
+        "The description field on LearningPathDetail uses as='textarea' with maxLength=500 -- long text benefits from paragraph structure"
+      ]
+    },
+    {
+      "id": "F3",
+      "severity": "P3",
+      "file": "src/stores/useLearningPathStore.ts",
+      "line": 180,
+      "title": "_finalizeDelete is public API despite private naming convention",
+      "autofix_class": "advisory",
+      "owner": "human",
+      "requires_verification": false,
+      "confidence": 0.78,
+      "pre_existing": false,
+      "reviewers": ["maintainability"],
+      "why_it_matters": "The _finalizeDelete method is declared in the exported LearningPathState interface (line 180: _finalizeDelete: (pathId: string) => Promise<void>). Any component or test can call it directly. The _ prefix signals intent but provides no enforcement. Tests already call it directly (useLearningPathStore.getState()._finalizeDelete(pathId)).",
+      "suggested_fix": null,
+      "evidence": [
+        "Line 180: _finalizeDelete: (pathId: string) => Promise<void> -- declared in public interface",
+        "Tests at line 1664: useLearningPathStore.getState()._finalizeDelete(pathId) -- external caller"
+      ]
+    },
+    {
+      "id": "F4",
+      "severity": "P3",
+      "file": "src/app/components/figma/InlineEditableField.tsx",
+      "line": 148,
+      "title": "Unsafe ref cast narrows union type for input/textarea",
+      "autofix_class": "advisory",
+      "owner": "human",
+      "requires_verification": false,
+      "confidence": 0.65,
+      "pre_existing": false,
+      "reviewers": ["kieran-typescript"],
+      "why_it_matters": "inputRef is typed as useRef<HTMLInputElement | HTMLTextAreaElement>(null) but cast to narrower types (React.Ref<HTMLTextAreaElement> and React.Ref<HTMLInputElement>) via 'as'. TypeScript cannot verify the cast is correct at compile time. If the component logic ever mismatches as='textarea' with the input branch, the ref type would be wrong and could cause runtime errors.",
+      "suggested_fix": "Use separate refs for input and textarea, or a callback ref pattern. The current approach works correctly but loses type safety.",
+      "evidence": [
+        "Line 148: ref={inputRef as React.Ref<HTMLTextAreaElement>} -- unsafe cast",
+        "Line 175: ref={inputRef as React.Ref<HTMLInputElement>} -- unsafe cast"
+      ]
+    }
+  ],
+  "requirementsCompleteness": {
+    "planSource": "explicit",
+    "planPath": "docs/plans/2026-05-03-008-feat-inline-editing-dialog-reduction-plan.md",
+    "status": {
+      "R1": "met -- path name is click-to-edit with Enter/Escape/Blur",
+      "R2": "met -- path description is click-to-edit",
+      "R3": "met -- focus ring (ring-brand), font matching (className prop), aria-label",
+      "R4": "met -- calls renamePath/updateDescription, green border success flash",
+      "R5": "met -- detail page header uses InlineEditableField",
+      "R6": "met -- inline editing only activates on text click, action buttons (share, AI, delete) remain functional",
+      "R7": "met -- DeleteConfirmDialog replaced with immediate deletion + Sonner undo toast",
+      "R8": "met -- pendingDeletes map holds path+entries in memory",
+      "R9": "met -- Sonner toast is global, survives navigation",
+      "R10": "met -- detail page delete navigates to /learning-paths",
+      "R11": "met -- RenameDialog removed",
+      "R12": "met -- EditDescriptionDialog removed",
+      "R13": "met -- DeleteConfirmDialog removed",
+      "R14": "met -- CreatePathDialog already replaced by CurriculumComposer",
+      "Unit1": "met -- deletePathWithUndo, restorePath, _finalizeDelete added to store",
+      "Unit2": "met -- InlineEditableField component created",
+      "Unit3": "met -- PathCard updated for inline name/description editing",
+      "Unit4": "met -- PathCard delete changed to deletePathWithUndo",
+      "Unit5": "met -- LearningPathDetail header updated with inline editing and delete button",
+      "Unit6": "met -- three dialog components removed; unused imports cleaned",
+      "Unit7": "met -- tests updated for all new behavior"
+    }
+  },
+  "residualRisks": [
+    "Page refresh during undo window: path is removed from state but not finalized in Dexie. On reload, the path reappears. This is intentional per the plan.",
+    "Dexie on('changes') propagation across tabs: if a path is deleted in Tab A, Tab B may still show it until a store reload. This is a pre-existing concern, not introduced by this PR.",
+    "restorePath persist failure (F1): if Dexie write fails, path appears restored but will vanish on reload. See finding F1."
+  ],
+  "learnings": [
+    "None found -- docs/solutions/ search returned no relevant past solutions for inline editing or undo-delete patterns"
+  ],
+  "agentNativeGaps": [
+    "No agent-native gaps found. The InlineEditableField component and deletePathWithUndo are internal UI/store changes that don't introduce new user-facing actions requiring agent tool equivalents."
+  ],
+  "testingGaps": [
+    "No test for Space key activation on read-only text (the keyDown handler supports both Enter and Space but only Enter is tested)",
+    "No test for rapid edit-save-edit sequence (stale state risk mentioned in Unit 2 test scenarios)"
+  ],
+  "coverage": {
+    "suppressed": 0,
+    "failedReviewers": 0,
+    "untrackedFilesExcluded": "Several .context/, docs/plan/, and docs/brainstorm/ files are untracked but are CE pipeline artifacts."
+  },
+  "verdict": "Ready with fixes"
+}

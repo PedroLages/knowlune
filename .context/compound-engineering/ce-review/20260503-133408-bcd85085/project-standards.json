@@ -1,0 +1,11 @@
+{
+  "reviewer": "project-standards",
+  "findings": [],
+  "residual_risks": [
+    "The CelebrationType union still includes 'lesson' in CompletionModal.tsx, but the only caller (useCompletionFlow) now always sets type to 'course'. The 'lesson' variant becomes dead code. No standards rule forbids this, but it is a maintainability observation not rising to a finding."
+  ],
+  "testing_gaps": [
+    "The updated test covers the 'not fully done' case with one lesson completed and two not-started. The edge case where the course has exactly one lesson (and completing it means the course is done) is implicitly covered by the 'shows course-level celebration when all lessons are complete' test after returning 'completed' for all items. No gap requiring action.",
+    "The manual completion path (handleManualStatusChange) and YouTube auto-complete path (handleYouTubeAutoComplete) both call showCelebration and are affected by this change, but the test only exercises the video-ended path. The manual/YouTube paths are not tested in this spec at all -- pre-existing gap, not introduced by this diff."
+  ]
+}

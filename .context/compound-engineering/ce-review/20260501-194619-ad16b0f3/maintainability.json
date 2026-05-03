@@ -1,0 +1,32 @@
+{
+  "reviewer": "maintainability",
+  "findings": [],
+  "residual_risks": [
+    {
+      "risk": "Accumulator-variable pattern (decryptedResult) is atypical for this codebase",
+      "details": "The codebase predominantly uses early-return style. getDecryptedApiKeyForProvider was refactored from early returns to a single let decryptedResult: string | null = null accumulator with a single return at the bottom. Only one other place in src/ uses this pattern (syncEngine.ts:138). The refactor is justified -- the three-tier cascade (providerKeys -> legacy -> Vault) reads clearly with the accumulator guard decryptedResult === null at each tier -- but a developer expecting early-return style may initially misread the missing return in catch blocks as a bug.",
+      "severity": "LOW",
+      "mitigation": "The inline comments ('Check providerKeys map first', 'Fall back to legacy single-key field', 'Vault fallback: ...') document the cascade order. The decryptedResult === null guard on the legacy check makes the accumulator intent explicit. No code change needed -- this is a style adaptation that the existing comments already clarify."
+    },
+    {
+      "risk": "saveProviderApiKey side effect during Vault fallback dispatches ai-configuration-updated event",
+      "details": "When the Vault fallback recovers a key and calls saveProviderApiKey() for self-healing re-encrypt, it dispatches the 'ai-configuration-updated' custom event. This is a write side effect during a read operation. Any listener of that event could trigger re-entrant behavior. In practice this is safe because saveProviderApiKey writes re-encrypted data to localStorage, so a re-entrant getDecryptedApiKeyForProvider call would find decryptable data and return immediately without a second Vault call -- no infinite loop.",
+      "severity": "LOW",
+      "mitigation": "No action needed. The re-entrancy is bounded (decrypt succeeds on re-entry). Documented here for awareness if the event listener landscape changes."
+    },
+    {
+      "risk": "hasEncryptedData guard logic mirrors the two decrypt-guard conditions independently",
+      "details": "The conditions at lines 504 (providerKeyData truthiness), 514 (decryptedResult === null && provider === config.provider && config.apiKeyEncrypted), and 526-529 (!!(... || ...)) all express the same concept: 'does this provider have encrypted data in localStorage?'. They are expressed three independent ways. If a fourth encrypted-data source is added (e.g., an IndexedDB-backed key store), all three sites need updating or they risk divergence.",
+      "severity": "LOW",
+      "mitigation": "Minor. The three sites are co-located within 25 lines of each other and the logic is straightforward. A future developer adding a new encrypted-data source would naturally see all three conditional blocks. No extraction warranted at this time."
+    }
+  ],
+  "testing_gaps": [
+    {
+      "gap": "No test for re-encrypt failure path in Vault fallback",
+      "details": "The nested try/catch at lines 537-542 catches re-encrypt failures (saveProviderApiKey throws) and logs a warning, but still returns the Vault-recovered key. The test suite covers Vault recovery success, Vault returns null, and Vault throws -- but not the intermediate case where Vault succeeds but re-encrypt to localStorage fails. This path is triggered when saveProviderApiKey's internal encryptData() call throws (e.g., CryptoKey generation failure after the Vault read) or localStorage.setItem throws (e.g., quota exceeded).",
+      "severity": "LOW",
+      "recommendation": "Add a test case: mock encryptData to throw in the second call, call getDecryptedApiKeyForProvider, assert the key is still returned, and assert console.warn was called with 'Failed to re-encrypt Vault key'. This verifies the non-critical nature of the re-encrypt failure."
+    }
+  ]
+}

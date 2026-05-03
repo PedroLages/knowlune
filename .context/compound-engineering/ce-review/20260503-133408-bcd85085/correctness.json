@@ -1,0 +1,42 @@
+{
+  "reviewer": "correctness",
+  "findings": [
+    {
+      "title": "handleManualStatusChange lacks status persistence (dead code)",
+      "severity": "P2",
+      "file": "src/app/hooks/useCompletionFlow.ts",
+      "line": 162,
+      "confidence": 0.82,
+      "autofix_class": "manual",
+      "owner": "human",
+      "requires_verification": false,
+      "pre_existing": true,
+      "suggested_fix": "If handleManualStatusChange is ever wired to a UI control, it must call await setItemStatus(courseId, lessonId, 'completed', []) before calling showCelebration — mirroring the handleVideoEnded pattern. Currently it is defined and returned by the hook but never consumed by any component, so the missing persistence has no runtime effect. Consider removing the dead code or documenting why it exists unfired.",
+      "why_it_matters": "The function sets auto-advance state and calls showCelebration without first persisting the completion status. If this dead code were ever connected to a UI toggle, completion would be silently lost. The diff makes this gap more impactful because showCelebration now returns early for individual lessons, removing the modal feedback that previously masked the missing persistence.",
+      "evidence": "handleManualStatusChange at line 162-173 has no setItemStatus call. Grep across all src/*.tsx and src/*.ts confirms zero references outside useCompletionFlow.ts — it is defined, exported, and never consumed."
+    },
+    {
+      "title": "handleYouTubeAutoComplete captures render-time currentStatus (stale closure)",
+      "severity": "P3",
+      "file": "src/app/components/course/YouTubeVideoContent.tsx",
+      "line": 102,
+      "confidence": 0.65,
+      "autofix_class": "manual",
+      "owner": "human",
+      "requires_verification": false,
+      "pre_existing": true,
+      "suggested_fix": "Read currentStatus inside the callback (useContentProgressStore.getState().getItemStatus(...)) instead of capturing it from the render scope. Or use a ref to track the latest value.",
+      "why_it_matters": "currentStatus at line 102 is read during render and captured in handleAutoComplete's closure at line 104. If the component re-renders between calls, the stale value is harmless (it checks 'not completed' before persisting). But if two rapid triggers use the same closure, both would see 'not-started' and attempt double-persistence. Currently mitigated by the idempotent setItemStatus call and the fact that the YouTube player only fires auto-complete once per session. Not introduced by this diff.",
+      "evidence": "YouTubeVideoContent.tsx line 102 captures getItemStatus(courseId, lessonId) at render time; line 105 checks this captured value inside the async callback instead of reading the store at call time."
+    }
+  ],
+  "residual_risks": [
+    "The courseName passed to useCompletionFlow is course?.name (from importedCourses store), not the resolved courseName computed in UnifiedLessonPlayer (which tries adapterCourse?.name first). If the course name only exists in the adapter and not in importedCourses, the celebration title falls back to 'Course'. Pre-existing, not in diff, but the diff makes it more prominent since course-level celebrations now always use courseName."
+  ],
+  "testing_gaps": [
+    "No test for handleYouTubeAutoComplete path — the test only triggers onEnded (via LocalVideoContent mock), never the auto-complete callback. YouTube-specific course-completion celebration not covered.",
+    "No test verifying the celebration title when the course IS complete — does the modal show the correct course name (not the lesson title)?",
+    "No test for the last-lesson edge case (nextLesson is null, course is complete) — celebration should appear, auto-advance should not, Continue button should not render.",
+    "No test for handleCelebrationOpenChange triggering setShowCourseSuggestion on modal dismiss."
+  ]
+}

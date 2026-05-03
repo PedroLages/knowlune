@@ -1,0 +1,109 @@
+{
+  "version": "1.0",
+  "run_id": "20260502-125420-e901a816",
+  "review_branch": "main",
+  "searches_performed": {
+    "total_candidate_files": 60,
+    "frontmatter_reviewed": 12,
+    "deep_read": 8,
+    "critical_patterns_checked": false,
+    "critical_patterns_note": "docs/solutions/patterns/critical-patterns.md does not exist in this repo"
+  },
+  "findings": [
+    {
+      "id": "F1",
+      "severity": "MEDIUM",
+      "title": "Inline tab validation duplicates canonical list -- violates exported-constants pattern",
+      "source_file": "docs/solutions/best-practices/audiobook-prefs-hydration-allow-list-pattern-2026-04-25.md",
+      "category": "localStorage / URL param validation",
+      "relevance": "This diff introduces localStorage + URL param validation for library tabs using inline literal checks in Library.tsx (lines 141-144). The documented solution prescribes exporting a VALID_* constant from the owning store/component so guards cannot drift. Currently, the valid tab list is duplicated in 3 places: LibraryTabBar.TABS (line 5-10), Library.tsx initializer (lines 141-144), and library-page-fixture.ts parameter type (line 16). Adding a 5th tab would need updates in all three.",
+      "in_diff": true,
+      "same_root_cause": false,
+      "reintroduces_pattern": "partially -- uses correct allow-list gating but with inline literals instead of exported constants",
+      "should_learn_from": true,
+      "recommendation": "Export VALID_LIBRARY_TABS const from LibraryTabBar.tsx and consume it in Library.tsx and library-page-fixture.ts. This eliminates the drift risk when tabs are added/renamed."
+    },
+    {
+      "id": "F2",
+      "severity": "MEDIUM",
+      "title": "E2E URL param contamination risk across test blocks",
+      "source_file": "docs/solutions/best-practices/post-e97-cleanup-lessons-2026-04-21.md",
+      "category": "E2E test URL navigation",
+      "relevance": "Documented Lesson 4 warns that Playwright browser-context isolation does NOT reset the in-memory page URL when test blocks share a file-level beforeEach. A test navigating to /library?tab=collections leaks that param into the next test. The Library.tsx now uses three URL params (?tab=, ?view=, ?focus=). The library-page-fixture.ts explicitly navigates with ?tab= which is correct, but other tests that use page.goto('/library') without ?tab= may encounter unexpected default tab behavior depending on localStorage state left by the previous test.",
+      "in_diff": true,
+      "same_root_cause": false,
+      "reintroduces_pattern": "no -- diff has not introduced new E2E specs, but changed specs now navigate with ?tab= params that could leak",
+      "should_learn_from": true,
+      "recommendation": "Audit the 17 changed E2E spec files to verify: (1) each test.beforeEach resets URL to a clean state (page.goto('/library') or page.goto('/library?tab=browse')), and (2) no test relies on URL param inheritance from a prior block. This is especially important for e97-s05-credential-sync-ux.spec.ts which exercises ?focus= deep-links."
+    },
+    {
+      "id": "F3",
+      "severity": "HIGH",
+      "title": "LocalStorage writes lack quota-exceeded error handling",
+      "source_file": "docs/solutions/2026-04-23-zombie-supabase-session.md",
+      "category": "localStorage persistence",
+      "relevance": "handleTabChange calls localStorage.setItem('knowlune-library-tab', tab) without try/catch. While the zombie-session document deals with stale data rather than quota, the broader lesson applies: localStorage is an untrusted boundary that can fail (quota exceeded, private browsing restrictions in some browsers). A failed write here is non-critical (tab state persists in React state), but an uncaught exception would propagate and crash the tab-change handler.",
+      "in_diff": true,
+      "same_root_cause": false,
+      "reintroduces_pattern": "yes -- same unwrapped localStorage write pattern present in many parts of the codebase",
+      "should_learn_from": true,
+      "recommendation": "Wrap localStorage.setItem in a try/catch with a no-op catch (tab persistence failure is non-critical -- the tab state is already in React state and the user won't notice until page reload). Alternatively, defer to a shared persist helper that centralizes this handling."
+    },
+    {
+      "id": "F4",
+      "severity": "LOW",
+      "title": "Tab button touch targets meet WCAG 2.5.8 minimum but may feel cramped on mobile",
+      "source_file": "docs/solutions/best-practices/wcag-target-size-audit-2026-04-25.md",
+      "category": "tab accessibility",
+      "relevance": "LibraryTabBar buttons use py-1.5 (6px) with text-sm (~14px line-height) for ~32px total height. This meets WCAG 2.5.8's 24x24 CSS-pixel minimum. However, WCAG 2.5.5 Target Size (Enhanced, AAA) recommends 44x44px. iOS-style segmented controls are a recognized exception per WCAG understanding docs (equivalent visible control). The implementation uses proper role=tablist, role=tab, aria-selected, and aria-label attributes which is correct.",
+      "in_diff": true,
+      "same_root_cause": false,
+      "reintroduces_pattern": "no -- implementation follows correct ARIA patterns",
+      "should_learn_from": true,
+      "recommendation": "No action required for AA compliance. The iOS segmented control pattern with role=tablist is the correct semantic approach. The existing py-1.5/padding is idiomatic for segmented controls."
+    },
+    {
+      "id": "F5",
+      "severity": "LOW",
+      "title": "Focus ring uses correct additive token pattern",
+      "source_file": "docs/solutions/2026-04-25-focus-ring-token-additive-migration.md",
+      "category": "tab accessibility",
+      "relevance": "LibraryTabBar uses focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-focus-ring. This correctly uses the additively-migrated --focus-ring token (not the old --ring token), matching the documented best practice for focus indicators.",
+      "in_diff": true,
+      "same_root_cause": false,
+      "reintroduces_pattern": "no -- this correctly follows the additive focus-ring token pattern",
+      "should_learn_from": false,
+      "recommendation": "No action required. The focus ring implementation is correct."
+    },
+    {
+      "id": "F6",
+      "severity": "LOW",
+      "title": "Library page remains auth-gated -- E2E tests must use guest mode fixture",
+      "source_file": "docs/solutions/best-practices/2026-04-25-e2e-tests-need-guest-mode-init-script-post-e92-auth-gate.md",
+      "category": "E2E test setup",
+      "relevance": "The library page is auth-gated. All 17 changed E2E spec files navigate to /library. The merged fixture (tests/support/fixtures/local-storage-fixture.ts) uses auto _knowluneE2eBrowserInit to set sessionStorage guest flags. As long as tests import from '../support/fixtures' they should have guest mode automatically. Verify no test imports directly from '@playwright/test' bypassing the fixture.",
+      "in_diff": true,
+      "same_root_cause": false,
+      "reintroduces_pattern": "no",
+      "should_learn_from": true,
+      "recommendation": "Verify all 17 E2E spec files import from the merged fixture (../support/fixtures or ../../support/fixtures) and NOT directly from @playwright/test. The auto _knowluneE2eBrowserInit fixture ensures guest mode is set."
+    }
+  ],
+  "no_relevant_matches_for": [
+    "Library page state management bugs (no prior solutions found for Library.tsx specifically)",
+    "React Router useSearchParams interaction bugs (no prior documented issues with useState initializer reading searchParams)",
+    "Tab/segmented control specific accessibility bugs in this codebase (no prior solutions found)"
+  ],
+  "summary": {
+    "total_relevant_findings": 6,
+    "high_severity": 0,
+    "medium_severity": 2,
+    "low_severity": 4,
+    "blockers": 0,
+    "key_recommendations": [
+      "Export VALID_LIBRARY_TABS from LibraryTabBar.tsx to eliminate 3-way duplication of valid tab list (F1)",
+      "Add try/catch around localStorage.setItem in handleTabChange to guard against quota exceeded (F3)",
+      "Audit E2E test beforeEach blocks for URL param contamination between test cases (F2)"
+    ]
+  }
+}

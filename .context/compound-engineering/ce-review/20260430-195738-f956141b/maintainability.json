@@ -1,0 +1,99 @@
+{
+  "reviewer": "maintainability",
+  "findings": [
+    {
+      "title": "Duplicate mock factory functions in test file (30 lines of copy-paste)",
+      "severity": "MEDIUM",
+      "file": "src/lib/__tests__/fileSystem.test.ts",
+      "line": 198,
+      "confidence": 0.88,
+      "autofix_class": "safe_auto",
+      "owner": "review-fixer",
+      "requires_verification": false,
+      "pre_existing": false,
+      "suggested_fix": "Remove the duplicate createMockFileHandle/createMockDirectoryHandle definitions at lines 198-228 inside the maxDepth describe block and reuse the ones already defined at lines 104-134 in the outer scanDirectory describe block. Since the inner describe is nested inside the outer one, it has lexical access to the outer helpers.",
+      "why_it_matters": "When mock signatures need updating (e.g., FileSystemFileHandle API changes), a developer will update one definition and miss the other. Tests will silently pass against stale mock implementations, masking regressions. The .values() mock function generator is the highest-risk point -- if it diverges, recursive scan tests produce incorrect results.",
+      "evidence": [
+        {
+          "type": "code_duplication",
+          "location": "src/lib/__tests__/fileSystem.test.ts:104-134 vs 198-228",
+          "description": "createMockFileHandle and createMockDirectoryHandle are defined identically in two locations within the same describe block hierarchy. The inner block (maxDepth) duplicates what the outer block (scanDirectory) already defines."
+        }
+      ]
+    },
+    {
+      "title": "Image scan pass does not report progress (stalled progress bar during image collection)",
+      "severity": "LOW",
+      "file": "src/lib/courseImport.ts",
+      "line": 173,
+      "confidence": 0.62,
+      "autofix_class": "safe_auto",
+      "owner": "review-fixer",
+      "requires_verification": false,
+      "pre_existing": false,
+      "suggested_fix": "Add progress reporting to the image scan pass, or add a comment explicitly documenting why progress is intentionally omitted (e.g., '// Image scan is fast and typically <10 files; no progress reporting needed'). Either way, the inconsistency should be intentional and documented.",
+      "why_it_matters": "The first scan pass (videos+PDFs) increments scanCount and reports progress every 10 files. The second image pass has the same structure but omits progress reporting entirely. A future developer adding progress-dependent logic (e.g., a timeout watchdog, or extending the image scan to handle nested image folders) may not notice the gap. Additionally, the scanCount total does not include images, so the eventual 'X of Y' progress count is technically incomplete.",
+      "evidence": [
+        {
+          "type": "code_observation",
+          "location": "src/lib/courseImport.ts:153-180",
+          "description": "First pass (videos+PDFs) has scanCount++, progressStore.updateScanProgress() every 10 files. Second pass (images) has no progress counters or progressStore calls at all."
+        }
+      ]
+    },
+    {
+      "title": "Two-pass scan pattern duplicated between scanCourseFolder and scanCourseFolderFromHandle",
+      "severity": "LOW",
+      "file": "src/lib/courseImport.ts",
+      "line": 154,
+      "confidence": 0.68,
+      "autofix_class": "advisory",
+      "owner": "human",
+      "requires_verification": false,
+      "pre_existing": true,
+      "suggested_fix": "The two-pass scanning logic (comment, for-await scanDirectory with includeImages:false, cancellation check, classification, then second pass with includeImages:true+maxDepth:0, cancellation check, imageFiles.push) is duplicated verbatim between scanCourseFolder() at lines 154-180 and scanCourseFolderFromHandle() at lines 606-627. Consider extracting a shared scanCourseContent() helper that both call to reduce the number of places that need updating when scan rules change. This is pre-existing structural duplication that this diff extends rather than creates.",
+      "why_it_matters": "These two functions already share ~70% of their logic (scan, batch extraction, result mapping). Each time scan rules change -- like the image root-only filter in this diff -- both functions need identical surgery. The duplication makes it easy to fix one path and forget the other, creating divergent behavior between single-import and bulk-import flows.",
+      "evidence": [
+        {
+          "type": "code_duplication",
+          "location": "src/lib/courseImport.ts:154-180 vs 606-627",
+          "description": "The same two-pass for-await+scanDirectory+cancellation+classification pattern appears in both scanCourseFolder() and scanCourseFolderFromHandle(). The only difference is cancellation behavior (throw vs return error status)."
+        }
+      ]
+    }
+  ],
+  "residual_risks": [
+    {
+      "risk": "maxDepth depth calculation uses path segment count as proxy for depth",
+      "details": "currentDepth is computed as basePath.split('/').length, which treats each path segment as one level. This is correct for the current flat-directory-structure use case, but if a directory name ever contains '/' (technically possible on some file systems), the depth calculation would be inflated.",
+      "severity": "LOW",
+      "mitigation": "No action needed -- this is a theoretical edge case that the File System Access API is unlikely to expose. The current implementation is simple and correct for all practical inputs."
+    },
+    {
+      "risk": "includeImages: false in first pass is the default -- could be removed for simplicity",
+      "details": "Passing includeImages: false explicitly in the first scan pass is redundant with omitting the option entirely (the default is falsy). The explicit false serves as documentation of intent, but it adds a tiny maintenance cost if the default ever changes.",
+      "severity": "LOW",
+      "mitigation": "No action needed -- the explicit false is self-documenting and clarifies the two-pass design. Keep as is."
+    }
+  ],
+  "testing_gaps": [
+    {
+      "gap": "No test for two-pass scan integration in courseImport",
+      "details": "fileSystem.test.ts tests maxDepth in isolation, but there are no integration tests verifying that scanCourseFolder() correctly separates videos/PDFs (recursive) from images (root-only) when a real folder structure contains images in subdirectories.",
+      "severity": "MEDIUM",
+      "recommendation": "Add an integration test (or at least a unit test for the classification logic) that feeds a directory structure with root images, subdirectory images, videos, and PDFs through scanCourseFolderFromHandle() and asserts that only root-level images appear in scanned.images."
+    },
+    {
+      "gap": "No test for image-only folders",
+      "details": "If a directory contains only image files (no videos or PDFs), the NO_FILES error fires but the validation message does not mention that images were found. The user might be confused about why a folder full of images is rejected.",
+      "severity": "LOW",
+      "recommendation": "Consider adding a test case or improving the NO_FILES error message when images are present but no content files are found."
+    },
+    {
+      "gap": "No test for cancellation during image scan pass",
+      "details": "Both scanCourseFolder() and scanCourseFolderFromHandle() have cancellation checks in the image scan pass, but the test suite does not cover cancellation in this specific path.",
+      "severity": "LOW",
+      "recommendation": "Add a test that triggers cancellation during the image scan pass to ensure it is handled correctly (throw in scanCourseFolder, return error status in scanCourseFolderFromHandle)."
+    }
+  ]
+}

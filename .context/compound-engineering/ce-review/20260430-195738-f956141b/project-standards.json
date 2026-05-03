@@ -1,0 +1,28 @@
+{
+  "reviewer": "project-standards",
+  "findings": [],
+  "residual_risks": [
+    {
+      "description": "Test helper duplication: createMockFileHandle and createMockDirectoryHandle are defined identically at both the describe('scanDirectory') scope (lines 104-134) and inside the nested describe('maxDepth') scope (lines 198-228). Not a standards violation, but minor maintenance burden if the mock shape changes.",
+      "severity": "LOW",
+      "confidence": 0.55
+    },
+    {
+      "description": "The depth calculation (basePath.split('/').length) treats each path segment as one depth level. This is correct for the File System Access API which always uses '/' separators, but could surprise a future maintainer unfamiliar with the API's path conventions.",
+      "severity": "LOW",
+      "confidence": 0.30
+    }
+  ],
+  "testing_gaps": [
+    {
+      "description": "No test covering the interaction between maxDepth and includeImages: false (e.g., maxDepth:0 with includeImages:false should still yield videos/PDFs at root but skip subdirectory files). Current tests only exercise includeImages: true for maxDepth scenarios.",
+      "severity": "MEDIUM",
+      "confidence": 0.65
+    },
+    {
+      "description": "No test verifying that maxDepth: 0 with recursive pass still finds files in subdirectories when maxDepth is unset (i.e., the two-pass pattern in courseImport.ts is indirectly tested, but the fallback behavior could use explicit coverage).",
+      "severity": "LOW",
+      "confidence": 0.50
+    }
+  ]
+}

@@ -1,0 +1,83 @@
+{
+  "reviewer": "maintainability",
+  "findings": [
+    {
+      "id": "MAINT-001",
+      "severity": "HIGH",
+      "summary": "Mega-component persists at 1343 lines — all four tabs are conditional renders within the same monolithic page component, not separate components.",
+      "detail": "The tabbed IA restructure wraps pre-existing content in `libraryTab === 'X' && (...)` conditionals, but all 7 Zustand stores, all effects, all useMemo computations, and all state live in a single React component. This means: (a) the component subscribes to every store regardless of which tab is active — a filter change in the Browse tab re-renders the entire component including History/Collections tab scaffolding; (b) a developer adding a feature to the History tab must hold the full 1343-line component in their head; (c) there is no clear contract for what data each tab needs — tabs share all state implicitly. Consider extracting each tab into a dedicated sub-component (e.g., `<LibraryContinueTab />`, `<LibraryBrowseTab />`, etc.) that only subscribes to the stores it actually consumes. The `LibraryTabBar` extraction at 46 lines is a good counter-example of how a clean boundary looks.",
+      "file": "/Volumes/SSD/Dev/Apps/Knowlune/src/app/pages/Library.tsx",
+      "confidence": 0.78,
+      "suggestion": "Extract each tab panel into its own component file under src/app/components/library/ (LibraryContinueTab.tsx, LibraryBrowseTab.tsx, LibraryCollectionsTab.tsx, LibraryHistoryTab.tsx). Each would receive only the props it needs rather than reading from the full closure. Library.tsx becomes a coordinator that holds shared state (header, import dialog, settings dialogs, tab state) and delegates tab content to child components."
+    },
+    {
+      "id": "MAINT-002",
+      "severity": "MEDIUM",
+      "summary": "Cross-tab state pollution: the Collections tab renders ABS CollectionsView based on state inherited from the Browse tab, producing non-deterministic content.",
+      "detail": "At line 1087, the Collections tab checks: `filters.source === 'audiobookshelf' && absViewMode === 'collections'` to render `<CollectionsView />`. However, the \"Browse ABS Collections\" button (lines 1073-1076) navigates AWAY from the Collections tab to the Browse tab when clicked. This means the Collections tab can only display ABS CollectionsView when a user: (1) was in Browse tab with ABS collections mode active, then (2) switches to the Collections tab, carrying over `absViewMode` and `filters.source` state. The Collections tab's displayed content is therefore non-deterministic — it depends on whether the user visited the Browse tab first and what mode they left it in. The `?view=collections&tab=collections` URL also triggers this state collision because `?view=` sets `absViewMode` while `?tab=` sets `libraryTab`. Two concepts (user-managed shelves vs. ABS server collections) collide on the same token `'collections'`.",
+      "file": "/Volumes/SSD/Dev/Apps/Knowlune/src/app/pages/Library.tsx",
+      "lines": "1087-1089, 1073-1076, 132-135",
+      "confidence": 0.73,
+      "suggestion": "Remove the `CollectionsView` rendering path from the Collections tab (lines 1087-1089). The Browse tab already handles ABS collections at lines 976-978. The Collections tab should exclusively show user-managed shelves and local series — if ABS servers are present, the \"Browse ABS Collections\" button (line 1069-1082) is the correct navigation path. This eliminates the silent dependency on Browse tab state and makes the Collections tab content determinate."
+    },
+    {
+      "id": "MAINT-003",
+      "severity": "MEDIUM",
+      "summary": "Naming collision: `'collections'` identifies three distinct domain concepts — the LibraryTabBar tab, the ABS view mode, and a URL parameter.",
+      "detail": "The literal `'collections'` maps to: (1) the LibraryTabBar 'Collections' tab (`libraryTab` === `'collections'`), which is about user-managed shelves and series; (2) `absViewMode === 'collections'`, which is about Audiobookshelf server-side curated collections; (3) `?view=collections`, a URL param that populates `absViewMode`. These are three different concepts sharing the same identifier. The LibraryTabBar type `LibraryTab = 'continue' | 'browse' | 'collections' | 'history'` uses `'collections'` to mean \"user's personal shelves,\" but the `absViewMode` state type uses `'collections'` to mean \"Audiobookshelf collections.\" A developer reading `absViewMode === 'collections'` inside the Collections tab conditional (line 1087) must mentally disambiguate which collections concept is being tested. This also blocks future work: if the Collections tab ever needs its own internal view mode state, it cannot reuse the `'collections'` token without further ambiguity.",
+      "file": "/Volumes/SSD/Dev/Apps/Knowlune/src/app/pages/Library.tsx",
+      "lines": "1087, 133-134, 139-144",
+      "confidence": 0.70,
+      "suggestion": "Rename the ABS view mode token from `'collections'` to `'abs-collections'` (i.e., `absViewMode: 'grid' | 'series' | 'abs-collections'`). This makes it lexically distinct from the LibraryTab token `'collections'`. The URL param `?view=collections` should be deprecated in favor of `?view=abs-collections` with a backwards-compatible redirect in the E2E test fixtures."
+    },
+    {
+      "id": "MAINT-004",
+      "severity": "LOW",
+      "summary": "localStorage key `knowlune-library-tab` is consistent with the `knowlune-` dash-convention but no constant is defined for reuse.",
+      "detail": "The localStorage key `'knowlune-library-tab'` follows the dash-separated pattern used by `knowlune-sidebar-v1`, `knowlune-reader-settings-v1`, and `knowlune-welcome-wizard-v1`. This is consistent. However, other features use a colon-separated pattern (`knowlune:reading-goal`, `knowlune:sleep-timer-ended`), and the key string is inlined at two locations (line 141 for `getItem`, line 148 for `setItem`) rather than extracted to a named constant. If the key ever needs to change (e.g., adding a version suffix for a migration), both locations must be updated in sync.",
+      "file": "/Volumes/SSD/Dev/Apps/Knowlune/src/app/pages/Library.tsx",
+      "lines": "141, 148",
+      "confidence": 0.68,
+      "suggestion": "Extract to a named constant within the component scope or a shared constants file: `const STORAGE_KEY_LIBRARY_TAB = 'knowlune-library-tab'`. This follows the pattern used by other components (e.g., `banner-dismiss-key` in ContinueLearning.tsx)."
+    },
+    {
+      "id": "MAINT-005",
+      "severity": "LOW",
+      "summary": "Type union `LibraryTab` is defined in the component file rather than co-located with the store or route types, requiring a type-only import.",
+      "detail": "`LibraryTab = 'continue' | 'browse' | 'collections' | 'history'` is defined in `LibraryTabBar.tsx` (line 3) and imported as `import type { LibraryTab }` in Library.tsx (line 66). The type is library-page domain knowledge — it defines the top-level IA of the Library page, not a UI concern of the tab bar component. The TabBar component should only care about receiving `{ active: string; onChange: (tab: string) => void }` or a generic constrained prop. The `TABS` constant array also couples the component to the specific tab set — if a future page wants an iOS-style segmented control with different tabs (e.g., Overview/Analytics/Settings), it cannot reuse `LibraryTabBar`.",
+      "file": "/Volumes/SSD/Dev/Apps/Knowlune/src/app/components/library/LibraryTabBar.tsx",
+      "lines": "3, 5-10",
+      "confidence": 0.63,
+      "suggestion": "Consider extracting a generic `<SegmentedControl<T extends string>>` component under `src/app/components/ui/` that accepts `{ items: { id: T; label: string }[]; active: T; onChange: (id: T) => void }`. Move the `LibraryTab` type and `TABS` array into Library.tsx or a Library-specific constants file. `LibraryTabBar` becomes a thin wrapper that passes its domain-specific props to the generic control. This would make the segmented control pattern reusable across the app (Settings, Reports, etc.)."
+    }
+  ],
+  "residual_risks": [
+    {
+      "risk": "The `filteredBooks` value at line 335 uses `useBookStore.getState().getFilteredBooks()` (non-reactive read on every render). The component depends on other reactive selectors (`books`, `filters`) to trigger re-renders. With the new tab structure, a user switching tabs triggers a `setLibraryTab` state update which re-renders the entire component, so `filteredBooks` will be fresh. But if a future tab component is extracted and only subscribes to the subset of stores it needs, the `filteredBooks` reactivity chain must be preserved.",
+      "file": "/Volumes/SSD/Dev/Apps/Knowlune/src/app/pages/Library.tsx",
+      "line": 335
+    },
+    {
+      "risk": "The `useEffect` at lines 154-161 fires on mount to auto-select `audiobookshelf` source when `?view=collections` or `?view=series` is present. This only runs once (`[]` deps) and does not account for the new `libraryTab` state. A `?view=collections&tab=collections` URL creates a semantic conflict where the Collections tab (user shelves) shows ABS content. If users bookmark such a URL, the confusion persists across sessions.",
+      "file": "/Volumes/SSD/Dev/Apps/Knowlune/src/app/pages/Library.tsx",
+      "lines": "154-161"
+    }
+  ],
+  "testing_gaps": [
+    {
+      "gap": "No test validates that the Collections tab renders the correct content when `absViewMode === 'collections'` state leaks in from a prior Browse tab interaction. The Collections tab's `CollectionsView` rendering path (line 1087) is effectively untested under the cross-tab state pollution scenario.",
+      "file": "/Volumes/SSD/Dev/Apps/Knowlune/tests/e2e/library.spec.ts",
+      "severity": "MEDIUM"
+    },
+    {
+      "gap": "No test validates that switching tabs preserves the Browse tab's internal state (`absViewMode`, `libraryView`, format filter) when returning to Browse. This is a key UX expectation of the segmented control pattern, but no E2E test covers the round-trip.",
+      "file": "/Volumes/SSD/Dev/Apps/Knowlune/tests/e2e/library.spec.ts",
+      "severity": "LOW"
+    },
+    {
+      "gap": "No test validates the `localStorage` persistence path — that closing and reopening the browser restores the last-active tab via `localStorage.getItem('knowlune-library-tab')`. The `localStorage` write in `handleTabChange` (line 148) and the read in the `useState` initializer (line 141) form a persistence contract that should be verified.",
+      "file": "/Volumes/SSD/Dev/Apps/Knowlune/tests/e2e/library.spec.ts",
+      "severity": "LOW"
+    }
+  ]
+}

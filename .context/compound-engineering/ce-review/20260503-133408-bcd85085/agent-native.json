@@ -1,0 +1,95 @@
+{
+  "runId": "20260503-133408-bcd85085",
+  "branch": "main",
+  "commit": "b9a0f786",
+  "commitMessage": "fix: skip celebration modal for individual lesson completions",
+  "filesChanged": [
+    "src/app/hooks/useCompletionFlow.ts",
+    "src/app/components/celebrations/CompletionModal.tsx",
+    "src/app/pages/__tests__/UnifiedLessonPlayer.test.tsx"
+  ],
+  "triage": {
+    "hasAgentIntegration": false,
+    "aiIntegrationPresent": true,
+    "stack": "React + Vite, Express server, Supabase Edge Functions with npm:ai@^6.0.97",
+    "scope": "incremental",
+    "summary": "The codebase has AI chat capabilities (note-based Q&A via useChatQA, in-lesson tutor via useTutor) and LLM streaming endpoints (ai-stream, ai-generate Supabase Edge Functions). However, there are NO agent tool() definitions anywhere — no function-calling tools that an AI agent can invoke to take actions in the app. The AI is purely generative/chat-based. System prompts are built dynamically (tutorPromptBuilder.ts, promptBuilder.ts) but serve as instructions for text generation, not as agent orchestration with tool access."
+  },
+  "changeSpecificAssessment": {
+    "hasAgentNativeGaps": false,
+    "rationale": "This change modifies when the celebration modal appears (course-level only, not individual lesson). It does not introduce, remove, or modify any agent tool because no agent tools exist for the completion/celebration flow. The auto-advance countdown still fires independently. The change is neutral with respect to agent-native parity."
+  },
+  "capabilityMap": {
+    "note": "Capability map not populated because no agent tools exist to cross-reference. Below are the user-facing actions in the completion flow that lack agent tool equivalents.",
+    "orphanActions": [
+      {
+        "uiAction": "Mark lesson as completed (auto on video end or manual toggle)",
+        "location": "src/app/hooks/useCompletionFlow.ts:handleVideoEnded / src/app/components/course/PlayerHeader.tsx",
+        "agentTool": null,
+        "priority": "must-have",
+        "status": "missing"
+      },
+      {
+        "uiAction": "Trigger auto-advance to next lesson",
+        "location": "src/app/hooks/useCompletionFlow.ts:handleAutoAdvance",
+        "agentTool": null,
+        "priority": "must-have",
+        "status": "missing"
+      },
+      {
+        "uiAction": "Cancel auto-advance countdown",
+        "location": "src/app/hooks/useCompletionFlow.ts:handleCancelAutoAdvance",
+        "agentTool": null,
+        "priority": "must-have",
+        "status": "missing"
+      },
+      {
+        "uiAction": "Dismiss celebration modal and continue learning",
+        "location": "src/app/hooks/useCompletionFlow.ts:handleCelebrationContinue",
+        "agentTool": null,
+        "priority": "must-have",
+        "status": "missing"
+      },
+      {
+        "uiAction": "Check course completion status",
+        "location": "src/app/hooks/useCompletionFlow.ts:checkCourseCompletion",
+        "agentTool": null,
+        "priority": "must-have",
+        "status": "missing"
+      }
+    ]
+  },
+  "findings": {
+    "critical": [],
+    "warnings": [],
+    "observations": [
+      {
+        "type": "orphan-features",
+        "severity": "observation",
+        "description": "The codebase has AI chat capabilities (tutor, note Q&A) but zero agent tool() definitions. Every user-facing action in the lesson player — mark complete, auto-advance, celebration dismiss, navigation — has no equivalent agent tool. An AI tutor that chats about the lesson cannot take action to mark the lesson complete or advance the user. This predates the current change and is a codebase-wide gap.",
+        "recommendation": "Consider adding Vercel AI SDK tool() definitions for core user actions: markLessonComplete, navigateToNextLesson, checkCourseProgress. Wire them into the tutor's system prompt so the tutor agent can help the user not just by explaining, but by acting."
+      },
+      {
+        "type": "context-starving",
+        "severity": "observation",
+        "description": "The tutor system prompt (tutorPromptBuilder.ts) includes course name, lesson title, lesson position, video timestamp, and transcript context. But it does NOT include the current lesson completion status, whether the course is fully complete, or what the next lesson is. The tutor agent is context-starved regarding progress state — it cannot tell the user 'you're 3/10 lessons through' or 'this is the last lesson'.",
+        "recommendation": "Inject completion progress data (lessonsCompleted / totalLessons, course completion percentage) into the tutor system prompt builder so the tutor can give context-aware guidance."
+      },
+      {
+        "type": "dead-code",
+        "severity": "observation",
+        "description": "The CelebrationType type in CompletionModal.tsx still includes 'lesson' and 'module' variants with full rendering logic (icons, titles, descriptions, confetti), but showCelebration() now only ever sets type='course'. The 'lesson' and 'module' branches are unreachable. Not an agent-native issue, but worth noting for code hygiene.",
+        "recommendation": "Remove unused 'lesson' and 'module' handling from CompletionModal, or keep them if module-level celebrations will return in the future."
+      }
+    ]
+  },
+  "whatsWorkingWell": [
+    "The tutor prompt builder dynamically injects runtime context (course name, lesson title, video position, transcript excerpts) — good context injection pattern that avoids static system prompts.",
+    "The completion flow properly guards against persistence failures (early return in handleVideoEnded prevents celebration/auto-advance when setItemStatus throws).",
+    "Auto-advance and celebration are decoupled correctly — auto-advance still fires independently even when the celebration modal is suppressed. This is clean separation of concerns."
+  ],
+  "score": {
+    "highPriorityCapabilitiesAgentAccessible": "0/5",
+    "verdict": "PASS (for this change) — NEEDS WORK (codebase-wide: no agent tools exist)"
+  }
+}

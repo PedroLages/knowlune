@@ -1,0 +1,169 @@
+{
+  "run_id": "20260503-190433-71887a55",
+  "scope": "feature/ce-2026-05-03-curriculum-composer vs base da0a65d0",
+  "intent": "Replace two-dialog path-creation flow with single CurriculumComposer dialog; extract shared InlineCoursePicker; add batch-add store methods; integrate collapsible picker into detail page",
+  "plan": "docs/plans/2026-05-03-005-feat-curriculum-composer-plan.md",
+  "plan_source": "explicit",
+  "verdict": "Ready with fixes",
+  "applied_fixes": [
+    {
+      "finding_id": "find-001",
+      "description": "Added silent-catch-ok comment to loadImportedCourses().catch() in CurriculumComposer to satisfy ESLint error-handling/no-silent-catch",
+      "file": "src/app/components/figma/CurriculumComposer.tsx",
+      "line": 107
+    },
+    {
+      "finding_id": "find-002",
+      "description": "Wrapped excludeCourseIds in useMemo for stable reference to avoid unnecessary InlineCoursePicker re-renders",
+      "file": "src/app/components/figma/CurriculumComposer.tsx",
+      "line": 140
+    }
+  ],
+  "findings": [
+    {
+      "id": "find-003",
+      "title": "Mobile sheet test fails because matchMedia not mocked",
+      "severity": "P2",
+      "file": "src/app/components/figma/__tests__/CurriculumComposer.test.tsx",
+      "line": 211,
+      "confidence": 0.85,
+      "autofix_class": "manual",
+      "owner": "downstream-resolver",
+      "requires_verification": true,
+      "pre_existing": false,
+      "suggested_fix": "Mock useIsMobile from useMediaQuery to return true instead of setting window.innerWidth. The hook uses matchMedia which JSDOM does not update when innerWidth changes. Replace the innerWidth mutation with vi.mock('@/app/hooks/useMediaQuery', () => ({ useIsMobile: () => true, useIsTablet: () => false, useIsDesktop: () => false })).",
+      "why_it_matters": "Failing test blocks CI. The test attempts to trigger mobile rendering by changing window.innerWidth, but useIsMobile relies on window.matchMedia('(max-width: 639px)') which is not reactive to innerWidth changes in JSDOM. The Sheet mock correctly renders the mobile-sheet testid when open is true, but isMobile is false so the Dialog branch renders instead.",
+      "evidence": [
+        "Test output: TestingLibraryElementError: Unable to find an element by: [data-testid=\"mobile-sheet\"]",
+        "useIsMobile calls useMediaQuery('(max-width: 639px)') which uses window.matchMedia - JSDOM does not fire change events on innerWidth mutation"
+      ]
+    },
+    {
+      "id": "find-004",
+      "title": "onAdd no-op renders misleading confirm button in composer's InlineCoursePicker",
+      "severity": "P2",
+      "file": "src/app/components/figma/CurriculumComposer.tsx",
+      "line": 154,
+      "confidence": 0.70,
+      "autofix_class": "gated_auto",
+      "owner": "downstream-resolver",
+      "requires_verification": false,
+      "pre_existing": false,
+      "suggested_fix": "Pass showImportAction=true and hide the multi-select confirm button in the picker footer when the confirm action is handled externally. Option A: add a hideConfirmButton prop to InlineCoursePicker. Option B: make onAdd trigger the form submit in the composer instead of being a no-op.",
+      "why_it_matters": "The InlineCoursePicker footer renders an 'Add N Courses' button when in multiSelect mode with courses selected. In the CurriculumComposer, onAdd is a no-op because submission is handled by the form's Create Path button. Clicking 'Add N Courses' does nothing, which is confusing.",
+      "evidence": [
+        "CurriculumComposer.tsx:154: onAdd={() => { /* no-op */ }}",
+        "InlineCoursePicker.tsx:527: confirm button renders when mode==='multiSelect' && selectedCourseIds.length > 0",
+        "The actual submission path is through handleSubmit at line 142"
+      ]
+    },
+    {
+      "id": "find-005",
+      "title": "nameAutoFilled ref prevents re-auto-suggestion after user clears auto-filled name",
+      "severity": "P3",
+      "file": "src/app/components/figma/CurriculumComposer.tsx",
+      "line": 98,
+      "confidence": 0.65,
+      "autofix_class": "manual",
+      "owner": "downstream-resolver",
+      "requires_verification": false,
+      "pre_existing": false,
+      "suggested_fix": "Reset nameAutoFilled.current = false when the user manually clears the name field (i.e., when name is empty and was previously auto-filled). Alternatively, only prevent re-auto-fill if the user typed something after the auto-fill.",
+      "why_it_matters": "Once auto-suggestion fires once, the nameAutoFilled ref stays true until the dialog reopens. If the user clears the auto-suggested name, selects different courses, and expects a new auto-suggestion, it won't fire. The user must close and reopen the dialog.",
+      "evidence": [
+        "CurriculumComposer.tsx:76-94: auto-name useEffect checks nameAutoFilled.current before suggesting",
+        "CurriculumComposer.tsx:65-73: nameAutoFilled.current is only reset to false when dialog opens (open becomes true)"
+      ]
+    },
+    {
+      "id": "find-006",
+      "title": "_importedCourses parameter in suggestNameFromTags is unused",
+      "severity": "P3",
+      "file": "src/app/components/figma/InlineCoursePicker.tsx",
+      "line": 75,
+      "confidence": 0.80,
+      "autofix_class": "advisory",
+      "owner": "human",
+      "requires_verification": false,
+      "pre_existing": false,
+      "suggested_fix": "Remove the _importedCourses parameter from suggestNameFromTags since it is unused. The underscore prefix indicates awareness of the unused parameter, suggesting it was left for future use that never materialized.",
+      "why_it_matters": "Unused parameters add noise and suggest incomplete implementation. If needed for a future phase (AI suggestions), it can be reintroduced then."
+    },
+    {
+      "id": "find-007",
+      "title": "InlineCoursePicker at 477 lines exceeds recommended component size",
+      "severity": "P3",
+      "file": "src/app/components/figma/InlineCoursePicker.tsx",
+      "line": 1,
+      "confidence": 0.60,
+      "autofix_class": "advisory",
+      "owner": "human",
+      "requires_verification": false,
+      "pre_existing": false,
+      "suggested_fix": "Extract CourseRow, SectionHeader, and PickerSkeleton into a separate file (e.g., InlineCoursePickerParts.tsx) or co-locate as named exports in a subdirectory. The main component logic (hooks, memo computations) would remain in InlineCoursePicker.tsx.",
+      "why_it_matters": "ESLint warns at 300 lines (warns at 477). Splitting makes the component easier to test and maintain, especially when the AI 'Suggested Next' feature adds more complexity."
+    }
+  ],
+  "pre_existing": [
+    {
+      "id": "find-008",
+      "title": "createPathWithCourses rollback doesn't clean Dexie entries (pre-existing pattern)",
+      "severity": "P2",
+      "file": "src/stores/useLearningPathStore.ts",
+      "line": 674,
+      "confidence": 0.75,
+      "autofix_class": "manual",
+      "owner": "downstream-resolver",
+      "requires_verification": true,
+      "pre_existing": true,
+      "suggested_fix": "In the catch block, call db.learningPaths.delete(path.id) and delete any successfully written entries. Same issue exists in createPath, forkTemplate, and addCourseToPath.",
+      "why_it_matters": "If syncableWrite for the path succeeds but an entry write fails, the path record remains in Dexie despite the memory rollback. On next load, loadPaths() reads it back from Dexie, potentially showing a broken path with missing entries."
+    },
+    {
+      "id": "find-009",
+      "title": "batchAddCoursesToPath rollback doesn't clean Dexie entries (pre-existing pattern)",
+      "severity": "P2",
+      "file": "src/stores/useLearningPathStore.ts",
+      "line": 740,
+      "confidence": 0.75,
+      "autofix_class": "manual",
+      "owner": "downstream-resolver",
+      "requires_verification": true,
+      "pre_existing": true,
+      "suggested_fix": "Same as find-008: delete any successfully written entries on failure. Consider a shared rollback helper for the store.",
+      "why_it_matters": "Same partial-write-in-Dexie problem as createPathWithCourses and the rest of the store."
+    }
+  ],
+  "residual_risks": [
+    "If a course is deleted from the library between multi-select and form submission, createPathWithCourses creates entries referencing non-existent courses",
+    "Rapid checkbox toggling could cause briefly stale reorder button indices due to React batching of selectedCourseIds state updates"
+  ],
+  "testing_gaps": [
+    "LearningPathDetail: no test verifying that handlePickerAddCourse calls addCourseToPath with correct params",
+    "LearningPathDetail: no test for 'keep panel open' toggle behavior (localStorage persistence and panel auto-close)",
+    "InlineCoursePicker: no test for reorder move-up on first item (should be a no-op)",
+    "InlineCoursePicker: no test for reorder move-down on last item (should be a no-op)",
+    "CurriculumComposer: mobile sheet test fails (find-003)"
+  ],
+  "requirements_completeness": {
+    "R1": "met",
+    "R2": "met (AI placeholder present)",
+    "R3": "met",
+    "R4": "met",
+    "R5": "met",
+    "R6": "met",
+    "R7": "met",
+    "R8": "met",
+    "R9": "met"
+  },
+  "covered_reviewers": [
+    "correctness",
+    "testing",
+    "maintainability",
+    "project-standards",
+    "reliability",
+    "adversarial",
+    "kieran-typescript",
+    "julik-frontend-races"
+  ]
+}

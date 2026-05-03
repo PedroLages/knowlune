@@ -1,0 +1,49 @@
+{
+  "review_id": "20260430-195738-f956141b",
+  "diff_base": "222f990f",
+  "files_changed": [
+    "src/lib/fileSystem.ts",
+    "src/lib/__tests__/fileSystem.test.ts",
+    "src/lib/courseImport.ts"
+  ],
+  "verdict": "PASS",
+  "score": "All changed operations are agent-callable; no new gaps introduced",
+  "findings": [],
+  "observations": [
+    {
+      "severity": "observation",
+      "title": "No agent-accessible tools for course import operations",
+      "confidence": 0.85,
+      "description": "The codebase has no tool() definitions, MCP tools, or API endpoints that expose scanDirectory, scanCourseFolder, or scanCourseFolderFromHandle for programmatic invocation by an external agent. All AI features (tutor, quiz generation, etc.) are user-facing, not agent-accessible tools. This is a pre-existing architecture gap, not introduced by this diff.",
+      "recommendation": "If agent access to course import is desired, wrap core primitives (scanDirectory, scanCourseFolder) in tool() definitions or expose them via an MCP server so agents can trigger imports programmatically."
+    }
+  ],
+  "positive_notes": [
+    "scanDirectory's new maxDepth option is a clean composable primitive with backward compatibility (undefined preserves full recursion) and no UI dependencies.",
+    "The two-pass scanning refactor in courseImport.ts maintains the same exported interface; callers see no breaking changes.",
+    "No new error states were introduced; cancellation and error handling follow the same patterns as before.",
+    "Extensive test coverage for maxDepth variants (depth 0, depth 1, undefined, empty root)."
+  ],
+  "agent_native_checks": {
+    "primitive_composability": {
+      "status": "good",
+      "detail": "maxDepth is an optional primitive option; the function remains a pure yield-based generator with no UI dependencies."
+    },
+    "backward_compatibility": {
+      "status": "good",
+      "detail": "maxDepth defaults to undefined, preserving full-recursion behavior for all existing callers."
+    },
+    "no_new_ui_dependencies": {
+      "status": "good",
+      "detail": "The change is purely in the library layer; no React hooks, DOM refs, or global state touched."
+    },
+    "programmatic_invocability": {
+      "status": "good",
+      "detail": "Both scanCourseFolder and scanCourseFolderFromHandle maintain their existing signatures and can be called programmatically as before."
+    },
+    "error_surface": {
+      "status": "good",
+      "detail": "No new throw sites or error types. Cancellation handling is preserved identically in the new second pass."
+    }
+  }
+}
