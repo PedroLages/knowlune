@@ -6,8 +6,6 @@ import {
   Search,
   Route,
   MoreHorizontal,
-  Pencil,
-  FileText,
   Trash2,
   BookOpen,
   ArrowRight,
@@ -21,32 +19,12 @@ import { Card, CardContent } from '@/app/components/ui/card'
 import { Badge } from '@/app/components/ui/badge'
 import { Skeleton } from '@/app/components/ui/skeleton'
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/app/components/ui/dialog'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/app/components/ui/alert-dialog'
-import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/app/components/ui/dropdown-menu'
 import { Input } from '@/app/components/ui/input'
-import { Textarea } from '@/app/components/ui/textarea'
-import { Label } from '@/app/components/ui/label'
 import {
   Collapsible,
   CollapsibleContent,
@@ -60,204 +38,14 @@ import { PathProgressRing } from '@/app/components/figma/PathProgressRing'
 import { PathCardHeader } from '@/app/components/figma/PathCardHeader'
 import { ImportWizardDialog } from '@/app/components/figma/ImportWizardDialog'
 import { CurriculumComposer } from '@/app/components/figma/CurriculumComposer'
+import { InlineEditableField } from '@/app/components/figma/InlineEditableField'
 import { useLearningPathStore } from '@/stores/useLearningPathStore'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
 import { useMultiPathProgress } from '@/app/hooks/usePathProgress'
 import { useImportWizardTrigger } from '@/app/hooks/useImportWizardTrigger'
 import { useLoadCourseThumbnails } from '@/app/hooks/useLoadCourseThumbnails'
 import { staggerContainer, fadeUp } from '@/lib/motion'
-import { toast } from 'sonner'
 import type { LearningPath, LearningPathEntry } from '@/data/types'
-
-// --- Rename Dialog ---
-
-function RenameDialog({
-  path,
-  open,
-  onOpenChange,
-}: {
-  path: LearningPath | null
-  open: boolean
-  onOpenChange: (open: boolean) => void
-}) {
-  const [name, setName] = useState('')
-  const renamePath = useLearningPathStore(s => s.renamePath)
-
-  useEffect(() => {
-    if (path && open) {
-      setName(path.name)
-    }
-  }, [path, open])
-
-  const handleSubmit = useCallback(
-    async (e: React.FormEvent) => {
-      e.preventDefault()
-      if (!path || !name.trim()) return
-
-      try {
-        await renamePath(path.id, name.trim())
-        toast.success('Path renamed')
-        onOpenChange(false)
-      } catch {
-        toast.error('Failed to rename path')
-      }
-    },
-    [path, name, renamePath, onOpenChange]
-  )
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        <form onSubmit={handleSubmit}>
-          <DialogHeader>
-            <DialogTitle>Rename Learning Path</DialogTitle>
-            <DialogDescription>Enter a new name for this learning path.</DialogDescription>
-          </DialogHeader>
-          <div className="py-4">
-            <Label htmlFor="rename-input">Name</Label>
-            <Input
-              id="rename-input"
-              value={name}
-              onChange={e => setName(e.target.value)}
-              autoFocus
-              required
-              maxLength={100}
-              className="mt-2"
-            />
-          </div>
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Cancel
-            </Button>
-            <Button type="submit" variant="brand" disabled={!name.trim()}>
-              Save
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
-  )
-}
-
-// --- Edit Description Dialog ---
-
-function EditDescriptionDialog({
-  path,
-  open,
-  onOpenChange,
-}: {
-  path: LearningPath | null
-  open: boolean
-  onOpenChange: (open: boolean) => void
-}) {
-  const [description, setDescription] = useState('')
-  const updateDescription = useLearningPathStore(s => s.updateDescription)
-
-  useEffect(() => {
-    if (path && open) {
-      setDescription(path.description || '')
-    }
-  }, [path, open])
-
-  const handleSubmit = useCallback(
-    async (e: React.FormEvent) => {
-      e.preventDefault()
-      if (!path) return
-
-      try {
-        await updateDescription(path.id, description.trim())
-        toast.success('Description updated')
-        onOpenChange(false)
-      } catch {
-        toast.error('Failed to update description')
-      }
-    },
-    [path, description, updateDescription, onOpenChange]
-  )
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        <form onSubmit={handleSubmit}>
-          <DialogHeader>
-            <DialogTitle>Edit Description</DialogTitle>
-            <DialogDescription>Update the description for this learning path.</DialogDescription>
-          </DialogHeader>
-          <div className="py-4">
-            <Label htmlFor="edit-description">Description</Label>
-            <Textarea
-              id="edit-description"
-              value={description}
-              onChange={e => setDescription(e.target.value)}
-              placeholder="Describe this learning path..."
-              rows={4}
-              maxLength={500}
-              autoFocus
-              className="mt-2"
-            />
-          </div>
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Cancel
-            </Button>
-            <Button type="submit" variant="brand">
-              Save
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
-  )
-}
-
-// --- Delete Confirmation ---
-
-function DeleteConfirmDialog({
-  path,
-  open,
-  onOpenChange,
-}: {
-  path: LearningPath | null
-  open: boolean
-  onOpenChange: (open: boolean) => void
-}) {
-  const deletePath = useLearningPathStore(s => s.deletePath)
-
-  const handleDelete = useCallback(async () => {
-    if (!path) return
-
-    try {
-      await deletePath(path.id)
-      toast.success(`Deleted "${path.name}"`)
-      onOpenChange(false)
-    } catch {
-      toast.error('Failed to delete path')
-    }
-  }, [path, deletePath, onOpenChange])
-
-  return (
-    <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>Delete Learning Path</AlertDialogTitle>
-          <AlertDialogDescription>
-            This will delete &quot;{path?.name}&quot; and remove all course assignments. The courses
-            themselves will not be deleted.
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel>Cancel</AlertDialogCancel>
-          <AlertDialogAction
-            onClick={handleDelete}
-            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-          >
-            Delete Path
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
-  )
-}
 
 // --- Path Card ---
 
@@ -266,20 +54,17 @@ function PathCard({
   courseCount,
   completionPct,
   courseThumbnails,
-  onRename,
-  onEditDescription,
-  onDelete,
   onImport,
 }: {
   path: LearningPath
   courseCount: number
   completionPct: number
   courseThumbnails: string[]
-  onRename: (path: LearningPath) => void
-  onEditDescription: (path: LearningPath) => void
-  onDelete: (path: LearningPath) => void
   onImport: (pathId: string) => void
 }) {
+  const renamePath = useLearningPathStore(s => s.renamePath)
+  const updateDescription = useLearningPathStore(s => s.updateDescription)
+  const deletePathWithUndo = useLearningPathStore(s => s.deletePathWithUndo)
   const isNotStarted = completionPct === 0 && courseCount > 0
   const isCompleted = completionPct >= 100
 
@@ -317,16 +102,8 @@ function PathCard({
                 <Download className="mr-2 size-4" aria-hidden="true" />
                 Import Course
               </DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => onRename(path)}>
-                <Pencil className="mr-2 size-4" aria-hidden="true" />
-                Rename
-              </DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => onEditDescription(path)}>
-                <FileText className="mr-2 size-4" aria-hidden="true" />
-                Edit Description
-              </DropdownMenuItem>
               <DropdownMenuItem
-                onSelect={() => onDelete(path)}
+                onSelect={() => deletePathWithUndo(path.id)}
                 className="text-destructive focus:text-destructive"
               >
                 <Trash2 className="mr-2 size-4" aria-hidden="true" />
@@ -372,15 +149,26 @@ function PathCard({
             </div>
 
             {/* Title + description */}
-            <h3 className="text-xl font-bold leading-tight line-clamp-1 mb-2 group-hover:text-brand transition-colors">
-              {path.name}
-            </h3>
-            {path.description && (
-              <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed mb-6">
-                {path.description}
-              </p>
-            )}
-            {!path.description && <div className="mb-6" />}
+            <div onClick={e => e.stopPropagation()}>
+              <InlineEditableField
+                value={path.name}
+                onSave={name => renamePath(path.id, name)}
+                ariaLabel={`Edit path name: ${path.name}`}
+                maxLength={100}
+                className="text-xl font-bold leading-tight mb-2"
+              />
+            </div>
+            <div onClick={e => e.stopPropagation()} className="mb-6">
+              <InlineEditableField
+                value={path.description || ''}
+                onSave={desc => updateDescription(path.id, desc)}
+                as="textarea"
+                ariaLabel={`Edit path description`}
+                placeholder="Add a description..."
+                maxLength={500}
+                className="text-sm text-muted-foreground leading-relaxed"
+              />
+            </div>
 
             {/* Footer: course thumbnails + arrow */}
             <div className="flex items-center justify-between border-t border-border pt-4">
@@ -461,11 +249,6 @@ export function LearningPaths() {
   const [search, setSearch] = useState('')
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [discoverOpen, setDiscoverOpen] = useState(false)
-
-  // Dialog states
-  const [renamePath, setRenamePath] = useState<LearningPath | null>(null)
-  const [editDescPath, setEditDescPath] = useState<LearningPath | null>(null)
-  const [deletePath, setDeletePath] = useState<LearningPath | null>(null)
 
   // Import wizard trigger (singleton guard pattern)
   const {
@@ -736,9 +519,6 @@ export function LearningPaths() {
                       courseCount={stats.courseCount}
                       completionPct={stats.completionPct}
                       courseThumbnails={pathThumbnails.get(path.id) || []}
-                      onRename={setRenamePath}
-                      onEditDescription={setEditDescPath}
-                      onDelete={setDeletePath}
                       onImport={handlePathImport}
                     />
                   </div>
@@ -784,27 +564,6 @@ export function LearningPaths() {
 
       {/* Dialogs */}
       <CurriculumComposer open={createDialogOpen} onOpenChange={setCreateDialogOpen} />
-      <RenameDialog
-        path={renamePath}
-        open={!!renamePath}
-        onOpenChange={open => {
-          if (!open) setRenamePath(null)
-        }}
-      />
-      <EditDescriptionDialog
-        path={editDescPath}
-        open={!!editDescPath}
-        onOpenChange={open => {
-          if (!open) setEditDescPath(null)
-        }}
-      />
-      <DeleteConfirmDialog
-        path={deletePath}
-        open={!!deletePath}
-        onOpenChange={open => {
-          if (!open) setDeletePath(null)
-        }}
-      />
 
       {/* Import Wizard Dialog (R1) */}
       <ImportWizardDialog
