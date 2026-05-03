@@ -58,106 +58,17 @@ import { TemplateCard } from '@/app/components/course/TemplateCard'
 import { cn } from '@/app/components/ui/utils'
 import { PathProgressRing } from '@/app/components/figma/PathProgressRing'
 import { PathCardHeader } from '@/app/components/figma/PathCardHeader'
-import {
-  ImportWizardDialog,
-  isImportWizardOpen,
-  IMPORT_WIZARD_SET_TARGET,
-} from '@/app/components/figma/ImportWizardDialog'
+import { ImportWizardDialog } from '@/app/components/figma/ImportWizardDialog'
+import { CurriculumComposer } from '@/app/components/figma/CurriculumComposer'
 import { useLearningPathStore } from '@/stores/useLearningPathStore'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
 import { useMultiPathProgress } from '@/app/hooks/usePathProgress'
+import { useImportWizardTrigger } from '@/app/hooks/useImportWizardTrigger'
+import { useLoadCourseThumbnails } from '@/app/hooks/useLoadCourseThumbnails'
 import { staggerContainer, fadeUp } from '@/lib/motion'
 import { toast } from 'sonner'
 import type { LearningPath, LearningPathEntry } from '@/data/types'
 
-// --- Create Path Dialog ---
-
-function CreatePathDialog({
-  open,
-  onOpenChange,
-}: {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-}) {
-  const [name, setName] = useState('')
-  const [description, setDescription] = useState('')
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const createPath = useLearningPathStore(s => s.createPath)
-  const loadPaths = useLearningPathStore(s => s.loadPaths)
-
-  const handleSubmit = useCallback(
-    async (e: React.FormEvent) => {
-      e.preventDefault()
-      const trimmedName = name.trim()
-      if (!trimmedName) return
-
-      setIsSubmitting(true)
-      try {
-        await createPath(trimmedName, description.trim() || undefined)
-        await loadPaths()
-        toast.success(`Created "${trimmedName}"`)
-        setName('')
-        setDescription('')
-        onOpenChange(false)
-      } catch {
-        toast.error('Failed to create learning path')
-      } finally {
-        setIsSubmitting(false)
-      }
-    },
-    [name, description, createPath, loadPaths, onOpenChange]
-  )
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        <form onSubmit={handleSubmit}>
-          <DialogHeader>
-            <DialogTitle>Create Learning Path</DialogTitle>
-            <DialogDescription>
-              Organize courses into a structured learning journey.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="path-name">Name</Label>
-              <Input
-                id="path-name"
-                value={name}
-                onChange={e => setName(e.target.value)}
-                placeholder="e.g., Web Development Fundamentals"
-                autoFocus
-                required
-                maxLength={100}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="path-description">
-                Description <span className="text-muted-foreground font-normal">(optional)</span>
-              </Label>
-              <Textarea
-                id="path-description"
-                value={description}
-                onChange={e => setDescription(e.target.value)}
-                placeholder="A brief description of what this path covers..."
-                rows={3}
-                maxLength={500}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Cancel
-            </Button>
-            <Button type="submit" variant="brand" disabled={!name.trim() || isSubmitting}>
-              {isSubmitting ? 'Creating...' : 'Create Path'}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
-  )
-}
 // --- Rename Dialog ---
 
 function RenameDialog({
@@ -543,7 +454,7 @@ function PathCardSkeleton() {
 // --- Main Page ---
 
 export function LearningPaths() {
-  const { paths, entries, loadPaths } = useLearningPathStore()
+  const { paths, entries, loadPaths, getEntriesForPath } = useLearningPathStore()
   const { importedCourses, loadImportedCourses, thumbnailUrls, loadThumbnailUrls } =
     useCourseImportStore()
   const [isLoaded, setIsLoaded] = useState(false)
@@ -556,37 +467,19 @@ export function LearningPaths() {
   const [editDescPath, setEditDescPath] = useState<LearningPath | null>(null)
   const [deletePath, setDeletePath] = useState<LearningPath | null>(null)
 
-  // Import wizard state (R1, R10)
-  const [importWizardOpen, setImportWizardOpen] = useState(false)
-  const [importTargetPathId, setImportTargetPathId] = useState<string | null>(null)
+  // Import wizard trigger (singleton guard pattern)
+  const {
+    trigger,
+    isOpen: importWizardOpen,
+    setIsOpen: setImportWizardOpen,
+    targetPathId: importTargetPathId,
+  } = useImportWizardTrigger()
 
   // Header "Import Course" handler — opens wizard without a target path
-  const handleHeaderImport = useCallback(() => {
-    if (isImportWizardOpen()) {
-      window.dispatchEvent(
-        new CustomEvent(IMPORT_WIZARD_SET_TARGET, {
-          detail: { pathId: null },
-        })
-      )
-    } else {
-      setImportTargetPathId(null)
-      setImportWizardOpen(true)
-    }
-  }, [])
+  const handleHeaderImport = useCallback(() => trigger(null), [trigger])
 
   // Path card "Import Course" handler — opens wizard with that path's ID
-  const handlePathImport = useCallback((pathId: string) => {
-    if (isImportWizardOpen()) {
-      window.dispatchEvent(
-        new CustomEvent(IMPORT_WIZARD_SET_TARGET, {
-          detail: { pathId },
-        })
-      )
-    } else {
-      setImportTargetPathId(pathId)
-      setImportWizardOpen(true)
-    }
-  }, [])
+  const handlePathImport = useCallback((pathId: string) => trigger(pathId), [trigger])
 
   useEffect(() => {
     let ignore = false
@@ -607,11 +500,7 @@ export function LearningPaths() {
   }, [loadPaths, loadImportedCourses])
 
   // Load thumbnail URLs when imported courses are available
-  useEffect(() => {
-    if (importedCourses.length > 0) {
-      loadThumbnailUrls(importedCourses.map(c => c.id))
-    }
-  }, [importedCourses, loadThumbnailUrls])
+  useLoadCourseThumbnails(importedCourses, loadThumbnailUrls)
 
   // Build a stable map of pathId → entries for useMultiPathProgress
   const pathEntriesMap = useMemo(() => {
@@ -665,7 +554,11 @@ export function LearningPaths() {
   // Compute match count per template (for card display)
   const templateMatchCounts = useMemo(() => {
     const normalize = (s: string) =>
-      s.toLowerCase().replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, ' ').trim()
+      s
+        .toLowerCase()
+        .replace(/[^a-z0-9\s]/g, '')
+        .replace(/\s+/g, ' ')
+        .trim()
     const importedNames = new Set(importedCourses.map(c => normalize(c.name)))
     const counts = new Map<string, number>()
     for (const tpl of templates) {
@@ -775,11 +668,12 @@ export function LearningPaths() {
                 <h2 className="text-xl font-semibold">Start with a template</h2>
               </div>
               <p className="text-muted-foreground mb-6">
-                Browse curated learning paths to discover how paths work. Fork one to get started instantly.
+                Browse curated learning paths to discover how paths work. Fork one to get started
+                instantly.
               </p>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                 {templates.map(tpl => {
-                  const tplEntries = entries.filter(e => e.pathId === tpl.id)
+                  const tplEntries = getEntriesForPath(tpl.id)
                   return (
                     <TemplateCard
                       key={tpl.id}
@@ -862,12 +756,14 @@ export function LearningPaths() {
                     <Badge variant="secondary" className="text-xs mr-2">
                       {templates.length}
                     </Badge>
-                    <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${discoverOpen ? 'rotate-180' : ''}`} />
+                    <ChevronDown
+                      className={`w-4 h-4 text-muted-foreground transition-transform ${discoverOpen ? 'rotate-180' : ''}`}
+                    />
                   </CollapsibleTrigger>
                   <CollapsibleContent className="pt-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                       {templates.map(tpl => {
-                        const tplEntries = entries.filter(e => e.pathId === tpl.id)
+                        const tplEntries = getEntriesForPath(tpl.id)
                         return (
                           <TemplateCard
                             key={tpl.id}
@@ -887,7 +783,7 @@ export function LearningPaths() {
       </motion.div>
 
       {/* Dialogs */}
-      <CreatePathDialog open={createDialogOpen} onOpenChange={setCreateDialogOpen} />
+      <CurriculumComposer open={createDialogOpen} onOpenChange={setCreateDialogOpen} />
       <RenameDialog
         path={renamePath}
         open={!!renamePath}

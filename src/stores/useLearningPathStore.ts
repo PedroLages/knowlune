@@ -45,6 +45,17 @@ interface LearningPathState {
     orderedEntries: Array<{ courseId: string; position: number; justification: string }>
   ) => Promise<void>
 
+  // Batch operations
+  createPathWithCourses: (
+    name: string,
+    description: string | undefined,
+    courses: Array<{ courseId: string; courseType: 'imported' | 'catalog' }>
+  ) => Promise<LearningPath>
+  batchAddCoursesToPath: (
+    pathId: string,
+    courses: Array<{ courseId: string; courseType: 'imported' | 'catalog' }>
+  ) => Promise<void>
+
   // Template operations
   forkTemplate: (templateId: string) => Promise<string | null> // returns new path ID or null on failure
 
@@ -607,6 +618,134 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
     return get()
       .entries.filter(e => e.pathId === pathId)
       .sort((a, b) => a.position - b.position)
+  },
+
+  createPathWithCourses: async (
+    name: string,
+    description: string | undefined,
+    courses: Array<{ courseId: string; courseType: 'imported' | 'catalog' }>
+  ) => {
+    const now = new Date().toISOString()
+    const path: LearningPath = {
+      id: crypto.randomUUID(),
+      name,
+      description,
+      createdAt: now,
+      updatedAt: now,
+      isAIGenerated: false,
+    }
+
+    const prevPaths = get().paths
+    const prevEntries = get().entries
+    const prevActivePath = get().activePath
+
+    // Deduplicate courses
+    const seen = new Set<string>()
+    const uniqueCourses = courses.filter(c => {
+      if (seen.has(c.courseId)) return false
+      seen.add(c.courseId)
+      return true
+    })
+
+    const pathEntries: LearningPathEntry[] = uniqueCourses.map((c, i) => ({
+      id: crypto.randomUUID(),
+      pathId: path.id,
+      courseId: c.courseId,
+      courseType: c.courseType,
+      position: i + 1,
+      isManuallyOrdered: false,
+    }))
+
+    // Optimistic update
+    set(state => ({
+      paths: [...state.paths, path],
+      entries: [...state.entries, ...pathEntries],
+      activePath: state.activePath || path,
+      error: null,
+    }))
+
+    try {
+      await persistWithRetry(async () => {
+        await syncableWrite('learningPaths', 'add', path as unknown as SyncableRecord)
+        for (const entry of pathEntries) {
+          await syncableWrite('learningPathEntries', 'add', entry as unknown as SyncableRecord)
+        }
+      })
+    } catch (error) {
+      // Rollback: remove path and all entries
+      console.error('[LearningPathStore] Failed to create path with courses:', error)
+      set({
+        paths: prevPaths,
+        entries: prevEntries,
+        activePath: prevActivePath,
+        error: 'Failed to create learning path with courses',
+      })
+      toast.error('Failed to create learning path')
+      throw error
+    }
+
+    return path
+  },
+
+  batchAddCoursesToPath: async (
+    pathId: string,
+    courses: Array<{ courseId: string; courseType: 'imported' | 'catalog' }>
+  ) => {
+    const existingEntries = get().entries.filter(e => e.pathId === pathId)
+    const existingCourseIds = new Set(existingEntries.map(e => e.courseId))
+
+    // Deduplicate against existing entries and within the input
+    const seen = new Set<string>()
+    const uniqueCourses = courses.filter(c => {
+      if (existingCourseIds.has(c.courseId) || seen.has(c.courseId)) return false
+      seen.add(c.courseId)
+      return true
+    })
+
+    if (uniqueCourses.length === 0) return
+
+    const nextPosition = existingEntries.length + 1
+    const pathEntries: LearningPathEntry[] = uniqueCourses.map((c, i) => ({
+      id: crypto.randomUUID(),
+      pathId,
+      courseId: c.courseId,
+      courseType: c.courseType,
+      position: nextPosition + i,
+      isManuallyOrdered: false,
+    }))
+
+    const prevEntries = get().entries
+    const prevPaths = get().paths
+
+    // Optimistic update
+    set(state => ({
+      entries: [...state.entries, ...pathEntries],
+      paths: state.paths.map(p =>
+        p.id === pathId ? { ...p, updatedAt: new Date().toISOString() } : p
+      ),
+      error: null,
+    }))
+
+    try {
+      await persistWithRetry(async () => {
+        for (const entry of pathEntries) {
+          await syncableWrite('learningPathEntries', 'add', entry as unknown as SyncableRecord)
+        }
+        const updatedPath = get().paths.find(p => p.id === pathId)
+        if (updatedPath) {
+          await syncableWrite('learningPaths', 'put', updatedPath as unknown as SyncableRecord)
+        }
+      })
+    } catch (error) {
+      console.error('[LearningPathStore] Failed to batch add courses to path:', error)
+      set({
+        entries: prevEntries,
+        paths: prevPaths,
+        error: 'Failed to add courses to learning path',
+      })
+      toast.error('Failed to add courses to learning path')
+      throw error
+    }
   },
 
   forkTemplate: async (templateId: string) => {

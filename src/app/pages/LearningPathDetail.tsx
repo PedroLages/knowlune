@@ -23,7 +23,6 @@ import {
   GripVertical,
   X,
   Plus,
-  Search,
   BookOpen,
   ChevronRight,
   Sparkles,
@@ -42,7 +41,6 @@ import {
 import { Button } from '@/app/components/ui/button'
 import { Badge } from '@/app/components/ui/badge'
 import { Card, CardContent } from '@/app/components/ui/card'
-import { Input } from '@/app/components/ui/input'
 import { Skeleton } from '@/app/components/ui/skeleton'
 import {
   Dialog,
@@ -62,15 +60,15 @@ import { EmptyState } from '@/app/components/EmptyState'
 import { DelayedFallback } from '@/app/components/DelayedFallback'
 import { TrailMap } from '@/app/components/figma/TrailMap'
 import { MoveUpDownButtons } from '@/app/components/figma/MoveUpDownButtons'
-import {
-  ImportWizardDialog,
-  isImportWizardOpen,
-  IMPORT_WIZARD_SET_TARGET,
-} from '@/app/components/figma/ImportWizardDialog'
+import { InlineCoursePicker } from '@/app/components/figma/InlineCoursePicker'
+import { ImportWizardDialog } from '@/app/components/figma/ImportWizardDialog'
+import { CourseTypeBadge } from '@/app/components/shared/CourseTypeBadge'
 import { useLearningPathStore } from '@/stores/useLearningPathStore'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
 import { useAuthorStore } from '@/stores/useAuthorStore'
 import { usePathProgress } from '@/app/hooks/usePathProgress'
+import { useImportWizardTrigger } from '@/app/hooks/useImportWizardTrigger'
+import { useLoadCourseThumbnails } from '@/app/hooks/useLoadCourseThumbnails'
 // db import removed (E89-S01) — catalog courses table dropped
 import { staggerContainer, fadeUp } from '@/lib/motion'
 import { toast } from 'sonner'
@@ -168,12 +166,7 @@ function SortableCourseRow({
                 <h3 className="font-medium text-sm leading-tight truncate">
                   {course?.name || 'Unknown Course'}
                 </h3>
-                <Badge
-                  variant="secondary"
-                  className="shrink-0 text-[10px] uppercase tracking-wider"
-                >
-                  {entry.courseType === 'imported' ? 'Imported' : 'Catalog'}
-                </Badge>
+                <CourseTypeBadge courseType={entry.courseType} />
                 {entry.isManuallyOrdered && (
                   <Badge
                     variant="outline"
@@ -268,181 +261,6 @@ function SortableCourseRow({
   )
 }
 
-// --- Course Picker Dialog ---
-
-function CoursePickerDialog({
-  open,
-  onOpenChange,
-  pathId,
-  existingCourseIds,
-}: {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  pathId: string
-  existingCourseIds: Set<string>
-}) {
-  const { importedCourses, thumbnailUrls } = useCourseImportStore()
-  const { authors } = useAuthorStore()
-  const addCourseToPath = useLearningPathStore(s => s.addCourseToPath)
-  const [search, setSearch] = useState('')
-  const catalogCourses: Course[] = [] // Catalog courses table dropped (E89-S01)
-  const [isAdding, setIsAdding] = useState<string | null>(null)
-
-  // Reset search when dialog opens
-  useEffect(() => {
-    if (open) {
-      setSearch('')
-    }
-  }, [open])
-
-  // Combine imported and catalog courses, excluding those already in the path
-  const availableCourses = useMemo(() => {
-    const q = search.toLowerCase()
-    const imported = importedCourses
-      .filter(c => !existingCourseIds.has(c.id))
-      .map(c => ({
-        id: c.id,
-        name: c.name,
-        type: 'imported' as const,
-        authorName: c.authorId ? authors.find(a => a.id === c.authorId)?.name : undefined,
-        thumbnailUrl: thumbnailUrls[c.id],
-      }))
-
-    const catalog = catalogCourses
-      .filter(c => !existingCourseIds.has(c.id))
-      .map(c => ({
-        id: c.id,
-        name: c.title,
-        type: 'catalog' as const,
-        authorName: authors.find(a => a.id === c.authorId)?.name,
-        thumbnailUrl: c.coverImage,
-      }))
-
-    const all = [...imported, ...catalog]
-
-    if (!q) return all
-    return all.filter(
-      c =>
-        c.name.toLowerCase().includes(q) || (c.authorName && c.authorName.toLowerCase().includes(q))
-    )
-  }, [importedCourses, catalogCourses, existingCourseIds, search, authors, thumbnailUrls])
-
-  const handleAdd = useCallback(
-    async (courseId: string, courseType: 'imported' | 'catalog') => {
-      setIsAdding(courseId)
-      try {
-        await addCourseToPath(pathId, courseId, courseType)
-        toast.success('Course added to path')
-      } catch {
-        toast.error('Failed to add course')
-      } finally {
-        setIsAdding(null)
-      }
-    },
-    [pathId, addCourseToPath]
-  )
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg max-h-[80vh] flex flex-col">
-        <DialogHeader>
-          <DialogTitle>Add Course</DialogTitle>
-          <DialogDescription>Select a course to add to this learning path.</DialogDescription>
-        </DialogHeader>
-
-        <div className="relative">
-          <Search
-            className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground"
-            aria-hidden="true"
-          />
-          <Input
-            type="text"
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            placeholder="Search courses..."
-            aria-label="Search courses to add"
-            className="pl-9"
-            autoFocus
-          />
-        </div>
-
-        <div
-          className="flex-1 overflow-y-auto min-h-0 -mx-6 px-6 space-y-2"
-          role="list"
-          aria-label="Available courses"
-        >
-          {availableCourses.length === 0 ? (
-            <div className="py-8 text-center text-sm text-muted-foreground">
-              {search.trim()
-                ? 'No matching courses found.'
-                : 'All courses are already in this path.'}
-            </div>
-          ) : (
-            availableCourses.map(course => (
-              <div
-                key={course.id}
-                role="listitem"
-                className="flex items-center gap-3 p-3 rounded-lg border border-border hover:bg-muted/50 transition-colors"
-              >
-                {/* Thumbnail */}
-                <div className="size-10 shrink-0 rounded-md bg-muted overflow-hidden">
-                  {course.thumbnailUrl ? (
-                    <img
-                      src={course.thumbnailUrl}
-                      alt=""
-                      className="size-full object-cover"
-                      loading="lazy"
-                    />
-                  ) : (
-                    <div className="size-full flex items-center justify-center">
-                      <BookOpen className="size-4 text-muted-foreground" aria-hidden="true" />
-                    </div>
-                  )}
-                </div>
-
-                {/* Info */}
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium truncate">{course.name}</p>
-                  <div className="flex items-center gap-2 mt-0.5">
-                    {course.authorName && (
-                      <span className="text-xs text-muted-foreground truncate">
-                        {course.authorName}
-                      </span>
-                    )}
-                    <Badge
-                      variant="secondary"
-                      className="text-[10px] uppercase tracking-wider shrink-0"
-                    >
-                      {course.type === 'imported' ? 'Imported' : 'Catalog'}
-                    </Badge>
-                  </div>
-                </div>
-
-                {/* Add button */}
-                <Button
-                  variant="brand-outline"
-                  size="sm"
-                  onClick={() => handleAdd(course.id, course.type)}
-                  disabled={isAdding === course.id}
-                  aria-label={`Add ${course.name}`}
-                >
-                  {isAdding === course.id ? 'Adding...' : 'Add'}
-                </Button>
-              </div>
-            ))
-          )}
-        </div>
-
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Done
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  )
-}
-
 // --- Main Component ---
 
 export function LearningPathDetail() {
@@ -451,6 +269,7 @@ export function LearningPathDetail() {
     paths,
     entries,
     loadPaths,
+    addCourseToPath,
     reorderCourse,
     removeCourseFromPath,
     getEntriesForPath,
@@ -463,20 +282,36 @@ export function LearningPathDetail() {
   const [isLoaded, setIsLoaded] = useState(false)
   const catalogCourses: Course[] = [] // Catalog courses table dropped (E89-S01)
   const [pickerOpen, setPickerOpen] = useState(false)
-  const [importWizardOpen, setImportWizardOpen] = useState(false)
+
+  // Import wizard trigger (singleton guard pattern)
+  const {
+    trigger: importTrigger,
+    isOpen: importWizardOpen,
+    setIsOpen: setImportWizardOpen,
+  } = useImportWizardTrigger()
+
+  // "Keep panel open" toggle persisted in localStorage
+  const [keepPanelOpen, setKeepPanelOpen] = useState(() => {
+    try {
+      return localStorage.getItem('keepCoursePanelOpen') === 'true'
+    } catch {
+      return false
+    }
+  })
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('keepCoursePanelOpen', String(keepPanelOpen))
+    } catch {
+      // silent-catch-ok: localStorage may be unavailable
+    }
+  }, [keepPanelOpen])
 
   // Handle import wizard click with singleton guard (R10)
-  const handleImportClick = useCallback(() => {
-    if (isImportWizardOpen()) {
-      window.dispatchEvent(
-        new CustomEvent(IMPORT_WIZARD_SET_TARGET, {
-          detail: { pathId: pathId ?? null },
-        })
-      )
-    } else {
-      setImportWizardOpen(true)
-    }
-  }, [pathId])
+  const handleImportClick = useCallback(
+    () => importTrigger(pathId ?? null),
+    [importTrigger, pathId]
+  )
 
   // AI Suggest Order state (E26-S04)
   const [isSuggesting, setIsSuggesting] = useState(false)
@@ -506,11 +341,7 @@ export function LearningPathDetail() {
   }, [loadPaths, loadImportedCourses, loadAuthors])
 
   // Load thumbnail URLs when imported courses are available
-  useEffect(() => {
-    if (importedCourses.length > 0) {
-      loadThumbnailUrls(importedCourses.map(c => c.id))
-    }
-  }, [importedCourses, loadThumbnailUrls])
+  useLoadCourseThumbnails(importedCourses, loadThumbnailUrls)
 
   // Find the path
   const path = useMemo(() => paths.find(p => p.id === pathId), [paths, pathId])
@@ -526,10 +357,7 @@ export function LearningPathDetail() {
     () => courseEntries.filter(e => e.courseId === '').length,
     [courseEntries]
   )
-  const matchedCount = useMemo(
-    () => courseEntries.length - gapCount,
-    [courseEntries, gapCount]
-  )
+  const matchedCount = useMemo(() => courseEntries.length - gapCount, [courseEntries, gapCount])
 
   // Set of course IDs already in path (excludes gap entries)
   const existingCourseIds = useMemo(
@@ -647,6 +475,21 @@ export function LearningPathDetail() {
       }
     },
     [pathId, removeCourseFromPath]
+  )
+
+  // Handle course add from the inline course picker (single-select mode)
+  const handlePickerAddCourse = useCallback(
+    (courses: Array<{ courseId: string; courseType: 'imported' | 'catalog' }>) => {
+      if (!pathId || courses.length === 0) return
+      const course = courses[0]
+      addCourseToPath(pathId, course.courseId, course.courseType).catch(() => {
+        toast.error('Failed to add course')
+      })
+      if (!keepPanelOpen) {
+        setPickerOpen(false)
+      }
+    },
+    [pathId, addCourseToPath, keepPanelOpen]
   )
 
   // AI Suggest Order handler (E26-S04)
@@ -807,7 +650,8 @@ export function LearningPathDetail() {
                   {matchedCount} of {courseEntries.length} courses matched from your library
                 </p>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  Import the remaining {gapCount} {gapCount === 1 ? 'course' : 'courses'} to complete this path.
+                  Import the remaining {gapCount} {gapCount === 1 ? 'course' : 'courses'} to
+                  complete this path.
                 </p>
               </div>
             </div>
@@ -869,7 +713,7 @@ export function LearningPathDetail() {
 
         {/* Empty state */}
         {courseEntries.length === 0 ? (
-          <motion.div variants={fadeUp}>
+          <motion.div variants={fadeUp} className="space-y-6">
             <EmptyState
               icon={BookOpen}
               title="No courses yet"
@@ -877,11 +721,33 @@ export function LearningPathDetail() {
               actionLabel="Add Course"
               onAction={() => setPickerOpen(true)}
             />
+            {/* Collapsible course picker — rendered here so it mounts even in empty state (BLOCKER 2) */}
+            <Collapsible open={pickerOpen} onOpenChange={setPickerOpen} className="space-y-3">
+              <CollapsibleContent id="inline-course-picker-panel" className="space-y-3">
+                {/* Keep panel open toggle */}
+                <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={keepPanelOpen}
+                    onChange={e => setKeepPanelOpen(e.target.checked)}
+                    className="rounded border-muted-foreground/30"
+                    data-testid="keep-panel-open-toggle"
+                  />
+                  Keep panel open
+                </label>
+                <InlineCoursePicker
+                  mode="singleSelect"
+                  excludeCourseIds={existingCourseIds}
+                  onAdd={handlePickerAddCourse}
+                />
+              </CollapsibleContent>
+            </Collapsible>
             <div className="flex justify-center mt-4">
               <Button
                 variant="brand-outline"
                 onClick={handleImportClick}
                 data-testid="import-course-button"
+                className={pickerOpen ? 'hidden' : ''}
               >
                 <Download className="size-4 mr-2" aria-hidden="true" />
                 Import Course
@@ -1024,9 +890,12 @@ export function LearningPathDetail() {
                         {courseEntries.map((entry, index) => {
                           // Gap entry: courseId is empty — render as non-sortable gap card
                           if (entry.courseId === '') {
-                            const matchTitleMatch = entry.justification?.match(/\[Search for: (.+)\]$/)
+                            const matchTitleMatch =
+                              entry.justification?.match(/\[Search for: (.+)\]$/)
                             const searchTerm = matchTitleMatch ? matchTitleMatch[1] : undefined
-                            const justification = entry.justification?.replace(/\s*\[Search for: .+\]$/, '') || undefined
+                            const justification =
+                              entry.justification?.replace(/\s*\[Search for: .+\]$/, '') ||
+                              undefined
                             return (
                               <div
                                 key={entry.id}
@@ -1041,10 +910,15 @@ export function LearningPathDetail() {
                                     {justification || searchTerm || `Course ${index + 1}`}
                                   </h4>
                                   {justification && justification !== searchTerm && (
-                                    <p className="text-xs text-muted-foreground mt-0.5">{justification}</p>
+                                    <p className="text-xs text-muted-foreground mt-0.5">
+                                      {justification}
+                                    </p>
                                   )}
                                   <div className="flex items-center gap-2 mt-2">
-                                    <Badge variant="outline" className="text-xs border-warning/60 text-warning">
+                                    <Badge
+                                      variant="outline"
+                                      className="text-xs border-warning/60 text-warning"
+                                    >
                                       <AlertCircle className="w-3 h-3 mr-1" />
                                       Not in your library
                                     </Badge>
@@ -1097,27 +971,49 @@ export function LearningPathDetail() {
 
             {/* Right Column: Sidebar */}
             <aside className="lg:col-span-4 space-y-8">
-              {/* Action buttons */}
-              <div className="flex flex-col gap-3">
-                <Button
-                  variant="brand"
-                  onClick={() => setPickerOpen(true)}
-                  data-testid="add-course-button"
-                  className="w-full"
-                >
-                  <Plus className="size-4 mr-2" aria-hidden="true" />
-                  Add Course
-                </Button>
-                <Button
-                  variant="brand-outline"
-                  onClick={handleImportClick}
-                  data-testid="import-course-button"
-                  className="w-full"
-                >
-                  <Download className="size-4 mr-2" aria-hidden="true" />
-                  Import Course
-                </Button>
-              </div>
+              {/* Add Course collapsible panel */}
+              <Collapsible open={pickerOpen} onOpenChange={setPickerOpen} className="space-y-3">
+                <CollapsibleTrigger asChild>
+                  <Button
+                    variant="brand"
+                    data-testid="add-course-button"
+                    className="w-full"
+                    aria-expanded={pickerOpen}
+                    aria-controls="inline-course-picker-panel"
+                  >
+                    <Plus className="size-4 mr-2" aria-hidden="true" />
+                    {pickerOpen ? 'Cancel' : 'Add Course'}
+                  </Button>
+                </CollapsibleTrigger>
+                <CollapsibleContent id="inline-course-picker-panel" className="space-y-3">
+                  {/* Keep panel open toggle */}
+                  <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={keepPanelOpen}
+                      onChange={e => setKeepPanelOpen(e.target.checked)}
+                      className="rounded border-muted-foreground/30"
+                      data-testid="keep-panel-open-toggle"
+                    />
+                    Keep panel open
+                  </label>
+                  <InlineCoursePicker
+                    mode="singleSelect"
+                    excludeCourseIds={existingCourseIds}
+                    onAdd={handlePickerAddCourse}
+                  />
+                </CollapsibleContent>
+              </Collapsible>
+
+              <Button
+                variant="brand-outline"
+                onClick={handleImportClick}
+                data-testid="import-course-button"
+                className={pickerOpen ? 'hidden' : 'w-full'}
+              >
+                <Download className="size-4 mr-2" aria-hidden="true" />
+                Import Course
+              </Button>
 
               {/* Coming Up Next */}
               {upcomingEntries.length > 0 && (
@@ -1220,14 +1116,6 @@ export function LearningPathDetail() {
           </div>
         )}
       </motion.div>
-
-      {/* Course Picker Dialog */}
-      <CoursePickerDialog
-        open={pickerOpen}
-        onOpenChange={setPickerOpen}
-        pathId={pathId!}
-        existingCourseIds={existingCourseIds}
-      />
 
       {/* Import Wizard Dialog (R2, R3) */}
       <ImportWizardDialog

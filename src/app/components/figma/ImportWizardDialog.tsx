@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useRef, useMemo, type KeyboardEvent } from 'react'
+import { COURSE_IMPORTED } from './CurriculumComposer'
 import { Link } from 'react-router'
 import {
   Dialog,
@@ -405,6 +406,16 @@ export function ImportWizardDialog({ open, onOpenChange, targetPathId }: ImportW
           : undefined
 
       const importedCourse = await persistScannedCourse(scannedCourse, overrides)
+
+      // Dispatch course-imported event so the InlineCoursePicker (or CurriculumComposer)
+      // can react to the new course and add it to the selection.
+      if (importedCourse) {
+        window.dispatchEvent(
+          new CustomEvent(COURSE_IMPORTED, {
+            detail: { courseId: importedCourse.id },
+          })
+        )
+      }
 
       // Add to learning path if one was selected (E26-S04)
       if (pathChoice !== 'skip' && importedCourse) {
