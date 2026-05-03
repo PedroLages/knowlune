@@ -62,6 +62,9 @@ vi.mock('@/stores/useCourseImportStore', () => ({
 
 const mockAdapter = {
   getLessons: vi.fn().mockResolvedValue(MOCK_LESSONS),
+  getLesson: vi.fn().mockImplementation((id: string) =>
+    Promise.resolve(MOCK_LESSONS.find(l => l.id === id) ?? null)
+  ),
   getSource: vi.fn().mockReturnValue('local'),
   getCapabilities: vi.fn().mockReturnValue({
     hasVideo: true,

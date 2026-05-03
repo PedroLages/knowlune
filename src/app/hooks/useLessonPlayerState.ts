@@ -119,6 +119,7 @@ export function useLessonPlayerState(
   const [lessonType, setLessonType] = useState<LessonItem['type'] | null>(null)
   const [lessonDescription, setLessonDescription] = useState<string | undefined>(undefined)
   const [lessonTags, setLessonTags] = useState<string[] | undefined>(undefined)
+  const [lessonResolved, setLessonResolved] = useState(false)
 
   // Reset lifted video state when lesson changes
   useEffect(() => {
@@ -127,6 +128,7 @@ export function useLessonPlayerState(
     setCurrentTime(0)
     setSeekToTime(undefined)
     setFocusTab(null)
+    setLessonResolved(false)
     // Reset mini-player state on lesson change (E91-S04)
     setIsMiniPlayerDismissed(false)
     setIsVideoVisible(true)
@@ -138,15 +140,14 @@ export function useLessonPlayerState(
     setPendingNoteFocus(false)
   }, [lessonId])
 
-  // Resolve lesson metadata (title + type) from adapter's lesson list
+  // Resolve lesson metadata (title + type) from adapter via point-lookup
   useEffect(() => {
     if (!adapter || !lessonId) return
     let ignore = false
     adapter
-      .getLessons()
-      .then(lessons => {
+      .getLesson(lessonId)
+      .then(match => {
         if (ignore) return
-        const match = lessons.find(l => l.id === lessonId)
         setLessonTitle(match?.title ?? 'Lesson')
         setLessonType(match?.type ?? null)
         // Extract description from sourceMetadata (YouTube videos have it)
@@ -154,10 +155,13 @@ export function useLessonPlayerState(
         setLessonDescription(typeof meta?.description === 'string' ? meta.description : undefined)
         // Extract tags if present in sourceMetadata
         setLessonTags(Array.isArray(meta?.tags) ? (meta.tags as string[]) : undefined)
+        setLessonResolved(true)
       })
       .catch(err => {
+        if (ignore) return
         // silent-catch-ok — leave defaults (title='Lesson', type=null); UI degrades gracefully
         console.error('Failed to load lesson metadata:', err)
+        setLessonResolved(true)
       })
     return () => {
       ignore = true
@@ -165,7 +169,7 @@ export function useLessonPlayerState(
   }, [adapter, lessonId])
 
   const isPdf = lessonType === 'pdf'
-  const lessonTypeResolved = lessonType !== null
+  const lessonTypeResolved = lessonResolved
 
   const handleTimeUpdate = useCallback((time: number) => {
     setCurrentTime(time)
