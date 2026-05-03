@@ -127,6 +127,7 @@ The bridge pattern (`useEffect` that registers callbacks on mount and syncs stat
 
 ## Related Issues
 
+- [docs/solutions/best-practices/zustand-stale-async-results-generation-counter-2026-05-03.md](../best-practices/zustand-stale-async-results-generation-counter-2026-05-03.md) — generation counter and ref tracking patterns (relevant to the z-index/compositor fix: `transform: translateZ(0)` promotes dialog layers to their own GPU compositor layer in theater mode)
 - [docs/solutions/best-practices/2026-04-25-engagement-prefs-bridge-checklist.md](../best-practices/2026-04-25-engagement-prefs-bridge-checklist.md) — similar bridge gap pattern for the engagement prefs store (persistence layer wiring vs consumer wiring)
 - [docs/solutions/best-practices/audiobook-prefs-hydration-allow-list-pattern-2026-04-25.md](../best-practices/audiobook-prefs-hydration-allow-list-pattern-2026-04-25.md) — store boundary discipline with allow-list gates
 - [docs/solutions/sync/e93-s02-notes-bookmarks-sync-wiring-2026-04-18.md](../sync/e93-s02-notes-bookmarks-sync-wiring-2026-04-18.md) — Zustand stale closure and wiring discipline

@@ -157,6 +157,7 @@ The original design plan for `CoverSearchService` specified `searchCovers` as re
 
 ## Related Issues
 
+- `docs/solutions/best-practices/zustand-stale-async-results-generation-counter-2026-05-03.md` — generation counter and ref tracking patterns for preventing stale async state updates. The abort check pattern here (`if (!controller.signal.aborted)`) is the AbortController variant of the ref tracking pattern documented there.
 - `docs/engineering-patterns.md` — "Fire-and-Forget Error Boundaries" section: related pattern where fire-and-forget promises lacked `.catch()` handlers; fixed with per-provider error handling (same codebase, different problem)
 - `docs/implementation-artifacts/31-1-add-catch-to-fire-and-forget-indexeddb-reads.md` — fire-and-forget IndexedDB reads causing silent failures and infinite spinners; solved with `.catch()` handlers rather than Promise.allSettled (IndexedDB is single-call, not scatter-gather)
 - `docs/implementation-artifacts/31-5-fix-silent-catch-in-usecourseimportstore.md` — discusses `Promise.all` vs `Promise.allSettled` trade-off in a batch import context; chose per-item `try/catch` + `Promise.all` there because failures were item-level, not provider-level
