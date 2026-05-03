@@ -105,7 +105,7 @@ export function UnifiedLessonPlayer() {
     if (parseLocationFlag(location.state, 'autoPlay') && location.state) {
       navigate(location.pathname, { replace: true, state: {} })
     }
-  }, [shouldAutoPlay, location.pathname, location.state, navigate])
+  }, [location.pathname, location.state, navigate])
 
   // R19: record visit on direct navigation. Skipped for palette-initiated
   // navigations to avoid openCount double-counting.

@@ -393,20 +393,20 @@ export function QAChatPanel({ open: controlledOpen, onOpenChange: controlledOnOp
     </Button>
   )
 
-  const triggerWithTooltip = tooltipLabel ? (
-    <Tooltip>
-      <TooltipTrigger asChild>{triggerButton}</TooltipTrigger>
-      <TooltipContent>{tooltipLabel}</TooltipContent>
-    </Tooltip>
-  ) : (
-    triggerButton
-  )
-
   return (
     <>
       {isMobile ? (
         <Sheet open={isOpen} onOpenChange={setIsOpen}>
-          <SheetTrigger asChild>{triggerWithTooltip}</SheetTrigger>
+          {tooltipLabel ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <SheetTrigger asChild>{triggerButton}</SheetTrigger>
+              </TooltipTrigger>
+              <TooltipContent>{tooltipLabel}</TooltipContent>
+            </Tooltip>
+          ) : (
+            <SheetTrigger asChild>{triggerButton}</SheetTrigger>
+          )}
           <SheetContent side="bottom" className="h-[90vh]">
             <SheetHeader className="mb-4">
               <SheetTitle>Ask AI</SheetTitle>
@@ -416,7 +416,16 @@ export function QAChatPanel({ open: controlledOpen, onOpenChange: controlledOnOp
         </Sheet>
       ) : (
         <Popover open={isOpen} onOpenChange={setIsOpen}>
-          <PopoverTrigger asChild>{triggerWithTooltip}</PopoverTrigger>
+          {tooltipLabel ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <PopoverTrigger asChild>{triggerButton}</PopoverTrigger>
+              </TooltipTrigger>
+              <TooltipContent>{tooltipLabel}</TooltipContent>
+            </Tooltip>
+          ) : (
+            <PopoverTrigger asChild>{triggerButton}</PopoverTrigger>
+          )}
           <PopoverContent className="h-[600px] w-[400px] p-0" align="end">
             <div className="flex h-full flex-col">
               <div className="flex items-center justify-between border-b px-4 py-3">
