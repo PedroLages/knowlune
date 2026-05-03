@@ -58,15 +58,13 @@ import { TemplateCard } from '@/app/components/course/TemplateCard'
 import { cn } from '@/app/components/ui/utils'
 import { PathProgressRing } from '@/app/components/figma/PathProgressRing'
 import { PathCardHeader } from '@/app/components/figma/PathCardHeader'
-import {
-  ImportWizardDialog,
-  isImportWizardOpen,
-  IMPORT_WIZARD_SET_TARGET,
-} from '@/app/components/figma/ImportWizardDialog'
+import { ImportWizardDialog } from '@/app/components/figma/ImportWizardDialog'
 import { CurriculumComposer } from '@/app/components/figma/CurriculumComposer'
 import { useLearningPathStore } from '@/stores/useLearningPathStore'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
 import { useMultiPathProgress } from '@/app/hooks/usePathProgress'
+import { useImportWizardTrigger } from '@/app/hooks/useImportWizardTrigger'
+import { useLoadCourseThumbnails } from '@/app/hooks/useLoadCourseThumbnails'
 import { staggerContainer, fadeUp } from '@/lib/motion'
 import { toast } from 'sonner'
 import type { LearningPath, LearningPathEntry } from '@/data/types'
@@ -456,7 +454,7 @@ function PathCardSkeleton() {
 // --- Main Page ---
 
 export function LearningPaths() {
-  const { paths, entries, loadPaths } = useLearningPathStore()
+  const { paths, entries, loadPaths, getEntriesForPath } = useLearningPathStore()
   const { importedCourses, loadImportedCourses, thumbnailUrls, loadThumbnailUrls } =
     useCourseImportStore()
   const [isLoaded, setIsLoaded] = useState(false)
@@ -469,37 +467,19 @@ export function LearningPaths() {
   const [editDescPath, setEditDescPath] = useState<LearningPath | null>(null)
   const [deletePath, setDeletePath] = useState<LearningPath | null>(null)
 
-  // Import wizard state (R1, R10)
-  const [importWizardOpen, setImportWizardOpen] = useState(false)
-  const [importTargetPathId, setImportTargetPathId] = useState<string | null>(null)
+  // Import wizard trigger (singleton guard pattern)
+  const {
+    trigger,
+    isOpen: importWizardOpen,
+    setIsOpen: setImportWizardOpen,
+    targetPathId: importTargetPathId,
+  } = useImportWizardTrigger()
 
   // Header "Import Course" handler — opens wizard without a target path
-  const handleHeaderImport = useCallback(() => {
-    if (isImportWizardOpen()) {
-      window.dispatchEvent(
-        new CustomEvent(IMPORT_WIZARD_SET_TARGET, {
-          detail: { pathId: null },
-        })
-      )
-    } else {
-      setImportTargetPathId(null)
-      setImportWizardOpen(true)
-    }
-  }, [])
+  const handleHeaderImport = useCallback(() => trigger(null), [trigger])
 
   // Path card "Import Course" handler — opens wizard with that path's ID
-  const handlePathImport = useCallback((pathId: string) => {
-    if (isImportWizardOpen()) {
-      window.dispatchEvent(
-        new CustomEvent(IMPORT_WIZARD_SET_TARGET, {
-          detail: { pathId },
-        })
-      )
-    } else {
-      setImportTargetPathId(pathId)
-      setImportWizardOpen(true)
-    }
-  }, [])
+  const handlePathImport = useCallback((pathId: string) => trigger(pathId), [trigger])
 
   useEffect(() => {
     let ignore = false
@@ -520,11 +500,7 @@ export function LearningPaths() {
   }, [loadPaths, loadImportedCourses])
 
   // Load thumbnail URLs when imported courses are available
-  useEffect(() => {
-    if (importedCourses.length > 0) {
-      loadThumbnailUrls(importedCourses.map(c => c.id))
-    }
-  }, [importedCourses, loadThumbnailUrls])
+  useLoadCourseThumbnails(importedCourses, loadThumbnailUrls)
 
   // Build a stable map of pathId → entries for useMultiPathProgress
   const pathEntriesMap = useMemo(() => {
@@ -692,7 +668,7 @@ export function LearningPaths() {
               </p>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                 {templates.map(tpl => {
-                  const tplEntries = entries.filter(e => e.pathId === tpl.id)
+                  const tplEntries = getEntriesForPath(tpl.id)
                   return (
                     <TemplateCard
                       key={tpl.id}
@@ -780,7 +756,7 @@ export function LearningPaths() {
                   <CollapsibleContent className="pt-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                       {templates.map(tpl => {
-                        const tplEntries = entries.filter(e => e.pathId === tpl.id)
+                        const tplEntries = getEntriesForPath(tpl.id)
                         return (
                           <TemplateCard
                             key={tpl.id}

@@ -23,11 +23,9 @@ import { Label } from '@/app/components/ui/label'
 import { InlineCoursePicker, suggestNameFromTags } from '@/app/components/figma/InlineCoursePicker'
 import { useLearningPathStore } from '@/stores/useLearningPathStore'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
-import {
-  ImportWizardDialog,
-  isImportWizardOpen,
-  IMPORT_WIZARD_SET_TARGET,
-} from '@/app/components/figma/ImportWizardDialog'
+import { ImportWizardDialog } from '@/app/components/figma/ImportWizardDialog'
+import { useIsMobile } from '@/app/hooks/useMediaQuery'
+import { useImportWizardTrigger } from '@/app/hooks/useImportWizardTrigger'
 import { toast } from 'sonner'
 import { Loader2 } from 'lucide-react'
 
@@ -54,17 +52,14 @@ export function CurriculumComposer({ open, onOpenChange }: CurriculumComposerPro
   const [description, setDescription] = useState('')
   const [selectedCourseIds, setSelectedCourseIds] = useState<string[]>([])
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [importWizardOpen, setImportWizardOpen] = useState(false)
-  const [isMobile, setIsMobile] = useState(false)
   const nameAutoFilled = useRef(false)
 
-  // Detect mobile viewport
-  useEffect(() => {
-    const checkMobile = () => setIsMobile(window.innerWidth < 640)
-    checkMobile()
-    window.addEventListener('resize', checkMobile)
-    return () => window.removeEventListener('resize', checkMobile)
-  }, [])
+  const isMobile = useIsMobile()
+  const {
+    trigger: handleImportTrigger,
+    isOpen: importWizardOpen,
+    setIsOpen: setImportWizardOpen,
+  } = useImportWizardTrigger()
 
   // Reset all state when dialog opens/closes
   useEffect(() => {
@@ -117,17 +112,7 @@ export function CurriculumComposer({ open, onOpenChange }: CurriculumComposerPro
   }, [loadImportedCourses])
 
   // Handle import course action
-  const handleImportCourse = useCallback(() => {
-    if (isImportWizardOpen()) {
-      window.dispatchEvent(
-        new CustomEvent(IMPORT_WIZARD_SET_TARGET, {
-          detail: { pathId: null },
-        })
-      )
-    } else {
-      setImportWizardOpen(true)
-    }
-  }, [])
+  const handleImportCourse = useCallback(() => handleImportTrigger(null), [handleImportTrigger])
 
   // Build the list of all course IDs that are available (not excluded by anything yet)
   const excludeCourseIds = new Set<string>()

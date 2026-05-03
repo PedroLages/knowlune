@@ -61,15 +61,14 @@ import { DelayedFallback } from '@/app/components/DelayedFallback'
 import { TrailMap } from '@/app/components/figma/TrailMap'
 import { MoveUpDownButtons } from '@/app/components/figma/MoveUpDownButtons'
 import { InlineCoursePicker } from '@/app/components/figma/InlineCoursePicker'
-import {
-  ImportWizardDialog,
-  isImportWizardOpen,
-  IMPORT_WIZARD_SET_TARGET,
-} from '@/app/components/figma/ImportWizardDialog'
+import { ImportWizardDialog } from '@/app/components/figma/ImportWizardDialog'
+import { CourseTypeBadge } from '@/app/components/shared/CourseTypeBadge'
 import { useLearningPathStore } from '@/stores/useLearningPathStore'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
 import { useAuthorStore } from '@/stores/useAuthorStore'
 import { usePathProgress } from '@/app/hooks/usePathProgress'
+import { useImportWizardTrigger } from '@/app/hooks/useImportWizardTrigger'
+import { useLoadCourseThumbnails } from '@/app/hooks/useLoadCourseThumbnails'
 // db import removed (E89-S01) — catalog courses table dropped
 import { staggerContainer, fadeUp } from '@/lib/motion'
 import { toast } from 'sonner'
@@ -167,12 +166,7 @@ function SortableCourseRow({
                 <h3 className="font-medium text-sm leading-tight truncate">
                   {course?.name || 'Unknown Course'}
                 </h3>
-                <Badge
-                  variant="secondary"
-                  className="shrink-0 text-[10px] uppercase tracking-wider"
-                >
-                  {entry.courseType === 'imported' ? 'Imported' : 'Catalog'}
-                </Badge>
+                <CourseTypeBadge courseType={entry.courseType} />
                 {entry.isManuallyOrdered && (
                   <Badge
                     variant="outline"
@@ -288,7 +282,13 @@ export function LearningPathDetail() {
   const [isLoaded, setIsLoaded] = useState(false)
   const catalogCourses: Course[] = [] // Catalog courses table dropped (E89-S01)
   const [pickerOpen, setPickerOpen] = useState(false)
-  const [importWizardOpen, setImportWizardOpen] = useState(false)
+
+  // Import wizard trigger (singleton guard pattern)
+  const {
+    trigger: importTrigger,
+    isOpen: importWizardOpen,
+    setIsOpen: setImportWizardOpen,
+  } = useImportWizardTrigger()
 
   // "Keep panel open" toggle persisted in localStorage
   const [keepPanelOpen, setKeepPanelOpen] = useState(() => {
@@ -308,17 +308,10 @@ export function LearningPathDetail() {
   }, [keepPanelOpen])
 
   // Handle import wizard click with singleton guard (R10)
-  const handleImportClick = useCallback(() => {
-    if (isImportWizardOpen()) {
-      window.dispatchEvent(
-        new CustomEvent(IMPORT_WIZARD_SET_TARGET, {
-          detail: { pathId: pathId ?? null },
-        })
-      )
-    } else {
-      setImportWizardOpen(true)
-    }
-  }, [pathId])
+  const handleImportClick = useCallback(
+    () => importTrigger(pathId ?? null),
+    [importTrigger, pathId]
+  )
 
   // AI Suggest Order state (E26-S04)
   const [isSuggesting, setIsSuggesting] = useState(false)
@@ -348,11 +341,7 @@ export function LearningPathDetail() {
   }, [loadPaths, loadImportedCourses, loadAuthors])
 
   // Load thumbnail URLs when imported courses are available
-  useEffect(() => {
-    if (importedCourses.length > 0) {
-      loadThumbnailUrls(importedCourses.map(c => c.id))
-    }
-  }, [importedCourses, loadThumbnailUrls])
+  useLoadCourseThumbnails(importedCourses, loadThumbnailUrls)
 
   // Find the path
   const path = useMemo(() => paths.find(p => p.id === pathId), [paths, pathId])

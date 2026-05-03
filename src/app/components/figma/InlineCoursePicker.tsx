@@ -6,6 +6,7 @@ import { Badge } from '@/app/components/ui/badge'
 import { Skeleton } from '@/app/components/ui/skeleton'
 import { cn } from '@/app/components/ui/utils'
 import { MoveUpDownButtons } from '@/app/components/figma/MoveUpDownButtons'
+import { CourseTypeBadge } from '@/app/components/shared/CourseTypeBadge'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
 import { useAuthorStore } from '@/stores/useAuthorStore'
 import { useLearningPathStore } from '@/stores/useLearningPathStore'
@@ -168,9 +169,7 @@ function CourseRow({
           {course.authorName && (
             <span className="text-xs text-muted-foreground truncate">{course.authorName}</span>
           )}
-          <Badge variant="secondary" className="text-[10px] uppercase tracking-wider shrink-0">
-            {course.type === 'imported' ? 'Imported' : 'Catalog'}
-          </Badge>
+          <CourseTypeBadge courseType={course.type} />
         </div>
       </div>
 
