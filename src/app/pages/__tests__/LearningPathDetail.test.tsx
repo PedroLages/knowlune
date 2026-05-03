@@ -62,6 +62,23 @@ vi.mock('@/app/components/figma/MoveUpDownButtons', () => ({
   MoveUpDownButtons: () => <div data-testid="move-buttons">Move</div>,
 }))
 
+vi.mock('@/app/components/figma/InlineCoursePicker', () => ({
+  InlineCoursePicker: (props: Record<string, unknown>) => (
+    <div data-testid="inline-course-picker">
+      <button
+        data-testid="mock-add-course"
+        onClick={() => {
+          const onAdd = props.onAdd as (courses: Array<{ courseId: string; courseType: string }>) => void
+          onAdd([{ courseId: 'course-1', courseType: 'imported' }])
+        }}
+      >
+        Add Course
+      </button>
+    </div>
+  ),
+  suggestNameFromTags: () => 'Test Path',
+}))
+
 vi.mock('sonner', () => ({
   toast: { success: vi.fn(), error: vi.fn() },
 }))

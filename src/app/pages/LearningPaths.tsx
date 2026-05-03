@@ -63,6 +63,7 @@ import {
   isImportWizardOpen,
   IMPORT_WIZARD_SET_TARGET,
 } from '@/app/components/figma/ImportWizardDialog'
+import { CurriculumComposer } from '@/app/components/figma/CurriculumComposer'
 import { useLearningPathStore } from '@/stores/useLearningPathStore'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
 import { useMultiPathProgress } from '@/app/hooks/usePathProgress'
@@ -70,94 +71,6 @@ import { staggerContainer, fadeUp } from '@/lib/motion'
 import { toast } from 'sonner'
 import type { LearningPath, LearningPathEntry } from '@/data/types'
 
-// --- Create Path Dialog ---
-
-function CreatePathDialog({
-  open,
-  onOpenChange,
-}: {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-}) {
-  const [name, setName] = useState('')
-  const [description, setDescription] = useState('')
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const createPath = useLearningPathStore(s => s.createPath)
-  const loadPaths = useLearningPathStore(s => s.loadPaths)
-
-  const handleSubmit = useCallback(
-    async (e: React.FormEvent) => {
-      e.preventDefault()
-      const trimmedName = name.trim()
-      if (!trimmedName) return
-
-      setIsSubmitting(true)
-      try {
-        await createPath(trimmedName, description.trim() || undefined)
-        await loadPaths()
-        toast.success(`Created "${trimmedName}"`)
-        setName('')
-        setDescription('')
-        onOpenChange(false)
-      } catch {
-        toast.error('Failed to create learning path')
-      } finally {
-        setIsSubmitting(false)
-      }
-    },
-    [name, description, createPath, loadPaths, onOpenChange]
-  )
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        <form onSubmit={handleSubmit}>
-          <DialogHeader>
-            <DialogTitle>Create Learning Path</DialogTitle>
-            <DialogDescription>
-              Organize courses into a structured learning journey.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="path-name">Name</Label>
-              <Input
-                id="path-name"
-                value={name}
-                onChange={e => setName(e.target.value)}
-                placeholder="e.g., Web Development Fundamentals"
-                autoFocus
-                required
-                maxLength={100}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="path-description">
-                Description <span className="text-muted-foreground font-normal">(optional)</span>
-              </Label>
-              <Textarea
-                id="path-description"
-                value={description}
-                onChange={e => setDescription(e.target.value)}
-                placeholder="A brief description of what this path covers..."
-                rows={3}
-                maxLength={500}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Cancel
-            </Button>
-            <Button type="submit" variant="brand" disabled={!name.trim() || isSubmitting}>
-              {isSubmitting ? 'Creating...' : 'Create Path'}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
-  )
-}
 // --- Rename Dialog ---
 
 function RenameDialog({
@@ -887,7 +800,7 @@ export function LearningPaths() {
       </motion.div>
 
       {/* Dialogs */}
-      <CreatePathDialog open={createDialogOpen} onOpenChange={setCreateDialogOpen} />
+      <CurriculumComposer open={createDialogOpen} onOpenChange={setCreateDialogOpen} />
       <RenameDialog
         path={renamePath}
         open={!!renamePath}
