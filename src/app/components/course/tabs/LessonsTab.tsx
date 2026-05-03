@@ -387,7 +387,7 @@ function MaterialGroupRow({
             courseId={courseId}
             isActive={isActive}
             index={index}
-            materialCount={0}
+            materialCount={group.materials.length}
             activeRef={isActive ? activeRef : undefined}
             searchQuery={searchQuery}
             onFocusMaterials={onFocusMaterials}
@@ -617,8 +617,62 @@ export function LessonsTab({ courseId, lessonId, adapter, onFocusMaterials }: Le
     })
   }, [])
 
-  // Controlled expanded state for material groups (PDF sub-rows)
-  // Auto-expand when active lesson is a material of this parent
+  // Track whether initial companion-PDF auto-expand has run for this course.
+  // Reset when courseId changes so each course gets its own initial expansion.
+  const initialExpandDoneRef = useRef(false)
+  const lastCourseIdRef = useRef(courseId)
+  useEffect(() => {
+    if (lastCourseIdRef.current !== courseId) {
+      initialExpandDoneRef.current = false
+      lastCourseIdRef.current = courseId
+    }
+  }, [courseId])
+
+  // Track previously seen group IDs that have materials, so we can merge
+  // newly discovered groups on adapter reload without nuking user toggles.
+  const prevMaterialGroupIdsRef = useRef<Set<string>>(new Set())
+
+  // Auto-expand groups with companion PDFs on first load.
+  // On subsequent loads (adapter change for same course), merge only new groups
+  // into the expanded set, preserving user's manual collapse choices.
+  useEffect(() => {
+    if (isLoading || materialGroups.length === 0) return
+
+    const groupsWithMaterials = new Set(
+      materialGroups.filter(g => g.materials.length > 0).map(g => g.primary.id)
+    )
+
+    if (!initialExpandDoneRef.current) {
+      // First load: expand all groups that have companion materials.
+      if (groupsWithMaterials.size > 0) {
+        setExpandedMaterialGroups(prev => {
+          const next = new Set(prev)
+          for (const id of groupsWithMaterials) next.add(id)
+          return next
+        })
+      }
+      initialExpandDoneRef.current = true
+      prevMaterialGroupIdsRef.current = groupsWithMaterials
+    } else {
+      // Subsequent loads (adapter reloaded): merge only new group IDs that
+      // weren't present in the previous load. Never collapse groups the user
+      // may have manually expanded.
+      const newIds = [...groupsWithMaterials].filter(
+        id => !prevMaterialGroupIdsRef.current.has(id)
+      )
+      if (newIds.length > 0) {
+        setExpandedMaterialGroups(prev => {
+          const next = new Set(prev)
+          for (const id of newIds) next.add(id)
+          return next
+        })
+      }
+      prevMaterialGroupIdsRef.current = groupsWithMaterials
+    }
+  }, [isLoading, materialGroups])
+
+  // Controlled expanded state for material groups (PDF sub-rows).
+  // Seed initial expansion for groups where the active lesson IS a material.
   const [expandedMaterialGroups, setExpandedMaterialGroups] = useState<Set<string>>(() => {
     const initial = new Set<string>()
     for (const g of filteredGroups) {
@@ -629,6 +683,7 @@ export function LessonsTab({ courseId, lessonId, adapter, onFocusMaterials }: Le
     return initial
   })
 
+  // Auto-expand parent group when navigating directly to a companion PDF URL.
   useEffect(() => {
     setExpandedMaterialGroups(prev => {
       const next = new Set(prev)

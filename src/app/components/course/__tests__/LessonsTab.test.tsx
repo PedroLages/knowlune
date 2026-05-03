@@ -1,8 +1,18 @@
 import 'fake-indexeddb/auto'
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { describe, it, expect, beforeAll, beforeEach, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
 import Dexie from 'dexie'
+
+// jsdom does not implement scrollIntoView on HTMLAnchorElement.
+// The LessonsTab scroll-into-view effect calls it on the active lesson link.
+beforeAll(() => {
+  if (!HTMLAnchorElement.prototype.scrollIntoView) {
+    HTMLAnchorElement.prototype.scrollIntoView = vi.fn() as unknown as (
+      arg?: boolean | ScrollIntoViewOptions
+    ) => void
+  }
+})
 import { LessonsTab, formatLessonDuration, LESSON_SEARCH_THRESHOLD } from '@/app/components/course/tabs/LessonsTab'
 import { useContentProgressStore } from '@/stores/useContentProgressStore'
 import type { CourseAdapter, LessonItem, MaterialGroup } from '@/lib/courseAdapter'
@@ -85,7 +95,8 @@ describe('LessonsTab', () => {
       </MemoryRouter>
     )
 
-    const skeletons = document.querySelectorAll('.animate-pulse')
+    // Skeleton defaults to shimmer=true which uses animate-shimmer class
+    const skeletons = document.querySelectorAll('.animate-shimmer')
     expect(skeletons.length).toBeGreaterThan(0)
   })
 })
@@ -156,6 +167,144 @@ describe('formatLessonDuration', () => {
 
   it('formats hours', () => {
     expect(formatLessonDuration(3661)).toBe('1:01:01')
+  })
+})
+
+describe('MaterialGroupRow - companion PDFs', () => {
+  it('auto-expands groups with companion materials on first load', async () => {
+    const video = makeLesson({ id: 'vid-1', title: 'Video Lesson', type: 'video' })
+    const pdf = makeLesson({ id: 'pdf-1', title: 'Companion PDF', type: 'pdf', duration: undefined })
+    const adapter = makeAdapter([makeGroup(video, [pdf])])
+
+    render(
+      <MemoryRouter>
+        <LessonsTab courseId="course-1" lessonId="vid-1" adapter={adapter} />
+      </MemoryRouter>
+    )
+
+    // The companion PDF sub-row should be visible (collapsible is open)
+    const pdfLink = await screen.findByTestId('material-link-pdf-1')
+    expect(pdfLink).toBeDefined()
+    expect(screen.getByText('Companion PDF')).toBeDefined()
+  })
+
+  it('shows material count badge on video row with companion PDFs', async () => {
+    const video = makeLesson({ id: 'vid-1', title: 'Video Lesson', type: 'video' })
+    const pdf1 = makeLesson({ id: 'pdf-1', title: 'PDF 1', type: 'pdf', duration: undefined })
+    const pdf2 = makeLesson({ id: 'pdf-2', title: 'PDF 2', type: 'pdf', duration: undefined })
+    const adapter = makeAdapter([makeGroup(video, [pdf1, pdf2])])
+
+    render(
+      <MemoryRouter>
+        <LessonsTab courseId="course-1" lessonId="vid-1" adapter={adapter} />
+      </MemoryRouter>
+    )
+
+    await screen.findByTestId('material-link-pdf-1')
+
+    // The badge should show "2" for the two companion PDFs
+    const badges = screen.getAllByText('2')
+    expect(badges.length).toBeGreaterThan(0)
+  })
+
+  it('does not show material count badge on video row without companion PDFs', async () => {
+    const video = makeLesson({ id: 'vid-1', title: 'Solo Video', type: 'video' })
+    const adapter = makeAdapter([makeGroup(video, [])])
+
+    render(
+      <MemoryRouter>
+        <LessonsTab courseId="course-1" lessonId="vid-1" adapter={adapter} />
+      </MemoryRouter>
+    )
+
+    await screen.findByText('Solo Video')
+
+    // No collapse toggle for groups without materials
+    expect(
+      screen.queryByTestId('materials-collapse-vid-1')
+    ).toBeNull()
+  })
+
+  it('allows manual collapse of an auto-expanded material group', async () => {
+    const video = makeLesson({ id: 'vid-1', title: 'Video Lesson', type: 'video' })
+    const pdf = makeLesson({ id: 'pdf-1', title: 'Companion PDF', type: 'pdf', duration: undefined })
+    const adapter = makeAdapter([makeGroup(video, [pdf])])
+
+    render(
+      <MemoryRouter>
+        <LessonsTab courseId="course-1" lessonId="vid-1" adapter={adapter} />
+      </MemoryRouter>
+    )
+
+    // Collapse toggle should exist
+    const toggle = await screen.findByTestId('materials-collapse-vid-1')
+    expect(toggle).toBeDefined()
+  })
+})
+
+describe('Standalone PDFs (R4 regression)', () => {
+  it('renders standalone PDF as a primary lesson row', async () => {
+    const pdf = makeLesson({
+      id: 'standalone-pdf',
+      title: 'Standalone Document',
+      type: 'pdf',
+      duration: undefined,
+    })
+    const adapter = makeAdapter([makeGroup(pdf, [])])
+
+    render(
+      <MemoryRouter>
+        <LessonsTab courseId="course-1" lessonId="standalone-pdf" adapter={adapter} />
+      </MemoryRouter>
+    )
+
+    const link = await screen.findByText('Standalone Document')
+    expect(link).toBeDefined()
+
+    // Standalone PDF should have a link to its lesson page
+    const parentLink = link.closest('a')
+    expect(parentLink?.getAttribute('href')).toContain('/lessons/standalone-pdf')
+  })
+
+  it('standalone PDF shows page count when available', async () => {
+    const pdf = makeLesson({
+      id: 'standalone-pdf',
+      title: 'Long PDF',
+      type: 'pdf',
+      duration: undefined,
+      sourceMetadata: { path: 'docs/doc.pdf', pageCount: 42 },
+    })
+    const adapter = makeAdapter([makeGroup(pdf, [])])
+
+    render(
+      <MemoryRouter>
+        <LessonsTab courseId="course-1" lessonId="standalone-pdf" adapter={adapter} />
+      </MemoryRouter>
+    )
+
+    expect(await screen.findByText('Long PDF')).toBeDefined()
+    expect(screen.getByText('42 pgs')).toBeDefined()
+  })
+
+  it('standalone PDF does not render a collapse toggle', async () => {
+    const pdf = makeLesson({
+      id: 'standalone-pdf',
+      title: 'Solo PDF',
+      type: 'pdf',
+      duration: undefined,
+    })
+    const adapter = makeAdapter([makeGroup(pdf, [])])
+
+    render(
+      <MemoryRouter>
+        <LessonsTab courseId="course-1" lessonId="standalone-pdf" adapter={adapter} />
+      </MemoryRouter>
+    )
+
+    await screen.findByText('Solo PDF')
+    expect(
+      screen.queryByTestId('materials-collapse-standalone-pdf')
+    ).toBeNull()
   })
 })
 

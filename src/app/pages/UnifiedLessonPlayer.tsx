@@ -189,7 +189,6 @@ export function UnifiedLessonPlayer() {
     courseId,
     lessonId,
     courseName: course?.name,
-    lessonTitle: state.lessonTitle,
     lessons,
     nextLesson,
     navigate,

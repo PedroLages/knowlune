@@ -19,7 +19,6 @@ export interface CompletionFlowParams {
   courseId: string | undefined
   lessonId: string | undefined
   courseName: string | undefined
-  lessonTitle: string
   lessons: LessonItem[]
   nextLesson: LessonItem | null
   navigate: NavigateFunction
