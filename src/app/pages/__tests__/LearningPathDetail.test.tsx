@@ -7,12 +7,14 @@ import type { ImportedCourse, LearningPath, LearningPathEntry } from '@/data/typ
 
 // Mock route params
 const mockPathId = 'path-1'
+const mockNavigate = vi.fn()
 
 vi.mock('react-router', async importOriginal => {
   const actual = await importOriginal<typeof import('react-router')>()
   return {
     ...actual,
     useParams: () => ({ pathId: mockPathId }),
+    useNavigate: () => mockNavigate,
   }
 })
 
@@ -45,6 +47,24 @@ vi.mock('@/app/components/figma/ImportWizardDialog', () => ({
   IMPORT_WIZARD_SET_TARGET: 'import-wizard-set-target',
 }))
 
+// Mock InlineEditableField for detail page
+vi.mock('@/app/components/figma/InlineEditableField', () => ({
+  InlineEditableField: (props: Record<string, unknown>) => (
+    <div data-testid="inline-editable-field" data-value={props.value as string}>
+      <button
+        data-testid={props.as === 'textarea' ? 'edit-description-trigger' : 'edit-name-trigger'}
+        onClick={() => {
+          ;(props.onSave as (v: string) => void)(
+            props.as === 'textarea' ? 'Updated description' : 'Updated name'
+          )
+        }}
+      >
+        {(props.value as string) || 'Click to edit'}
+      </button>
+    </div>
+  ),
+}))
+
 // Mock components that are deep dependencies
 vi.mock('@/app/components/EmptyState', () => ({
   EmptyState: () => <div data-testid="empty-state">Empty State</div>,
@@ -68,7 +88,9 @@ vi.mock('@/app/components/figma/InlineCoursePicker', () => ({
       <button
         data-testid="mock-add-course"
         onClick={() => {
-          const onAdd = props.onAdd as (courses: Array<{ courseId: string; courseType: string }>) => void
+          const onAdd = props.onAdd as (
+            courses: Array<{ courseId: string; courseType: string }>
+          ) => void
           onAdd([{ courseId: 'course-1', courseType: 'imported' }])
         }}
       >
@@ -80,7 +102,7 @@ vi.mock('@/app/components/figma/InlineCoursePicker', () => ({
 }))
 
 vi.mock('sonner', () => ({
-  toast: { success: vi.fn(), error: vi.fn() },
+  toast: Object.assign(vi.fn(), { success: vi.fn(), error: vi.fn() }),
 }))
 
 vi.mock('@/ai/learningPath/suggestOrder', () => ({
@@ -157,6 +179,9 @@ const mockLearningPathState = {
   removeCourseFromPath: vi.fn(),
   getEntriesForPath: vi.fn((_pathId: string) => [testEntry]),
   applyAIOrder: vi.fn(),
+  renamePath: vi.fn().mockResolvedValue(undefined),
+  updateDescription: vi.fn().mockResolvedValue(undefined),
+  deletePathWithUndo: vi.fn(),
 }
 
 vi.mock('@/stores/useLearningPathStore', () => ({
@@ -216,7 +241,7 @@ describe('LearningPathDetail', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     capturedWizardProps = null
-    // Reset store state
+    mockNavigate.mockClear()
     mockLearningPathState.paths = [testPath]
     mockLearningPathState.entries = [testEntry]
     mockLearningPathState.getEntriesForPath = vi.fn(() => [testEntry])
@@ -226,8 +251,6 @@ describe('LearningPathDetail', () => {
 
   it('renders the path name when loaded', async () => {
     renderPage()
-    // The page shows skeleton initially, then renders the path name
-    // Wait for load to complete — the path name should appear
     await waitFor(() => {
       expect(screen.getByText('Test Learning Path')).toBeInTheDocument()
     })
@@ -283,7 +306,6 @@ describe('LearningPathDetail', () => {
       expect(screen.getByTestId('import-wizard-mock')).toBeInTheDocument()
     })
 
-    // Verify targetPathId was passed
     expect(capturedWizardProps?.targetPathId).toBe('path-1')
   })
 
@@ -305,5 +327,52 @@ describe('LearningPathDetail', () => {
     await waitFor(() => {
       expect(screen.queryByTestId('import-wizard-mock')).not.toBeInTheDocument()
     })
+  })
+
+  it('renders delete path button', async () => {
+    renderPage()
+    await waitFor(() => {
+      expect(screen.getByTestId('delete-path-button')).toBeInTheDocument()
+    })
+  })
+
+  it('calls deletePathWithUndo and navigates when delete button is clicked', async () => {
+    const user = userEvent.setup()
+    renderPage()
+    await waitFor(() => {
+      expect(screen.getByTestId('delete-path-button')).toBeInTheDocument()
+    })
+
+    await user.click(screen.getByTestId('delete-path-button'))
+
+    expect(mockLearningPathState.deletePathWithUndo).toHaveBeenCalledWith('path-1')
+    expect(mockNavigate).toHaveBeenCalledWith('/learning-paths')
+  })
+
+  it('inline editable field triggers renamePath on detail page', async () => {
+    const user = userEvent.setup()
+    renderPage()
+    await waitFor(() => {
+      expect(screen.getByTestId('edit-name-trigger')).toBeInTheDocument()
+    })
+
+    await user.click(screen.getByTestId('edit-name-trigger'))
+
+    expect(mockLearningPathState.renamePath).toHaveBeenCalledWith('path-1', 'Updated name')
+  })
+
+  it('inline editable field triggers updateDescription on detail page', async () => {
+    const user = userEvent.setup()
+    renderPage()
+    await waitFor(() => {
+      expect(screen.getByTestId('edit-description-trigger')).toBeInTheDocument()
+    })
+
+    await user.click(screen.getByTestId('edit-description-trigger'))
+
+    expect(mockLearningPathState.updateDescription).toHaveBeenCalledWith(
+      'path-1',
+      'Updated description'
+    )
   })
 })

@@ -34,6 +34,29 @@ vi.mock('@/app/components/figma/ImportWizardDialog', () => ({
   IMPORT_WIZARD_SET_TARGET: 'import-wizard-set-target',
 }))
 
+vi.mock('@/app/components/figma/CurriculumComposer', () => ({
+  CurriculumComposer: (props: Record<string, unknown>) =>
+    props.open ? <div data-testid="curriculum-composer-mock">Composer</div> : null,
+}))
+
+vi.mock('@/app/components/figma/InlineEditableField', () => ({
+  InlineEditableField: (props: Record<string, unknown>) => (
+    <div data-testid="inline-editable-field" data-value={props.value as string}>
+      <button
+        data-testid={props.as === 'textarea' ? 'edit-description-trigger' : 'edit-name-trigger'}
+        onClick={() => {
+          // Simulate edit + save
+          ;(props.onSave as (v: string) => void)(
+            props.as === 'textarea' ? 'Updated description' : 'Updated name'
+          )
+        }}
+      >
+        {(props.value as string) || 'Click to edit'}
+      </button>
+    </div>
+  ),
+}))
+
 vi.mock('@/app/components/EmptyState', () => ({
   EmptyState: () => <div data-testid="empty-state">Empty State</div>,
 }))
@@ -53,7 +76,7 @@ vi.mock('@/app/components/figma/PathCardHeader', () => ({
 }))
 
 vi.mock('sonner', () => ({
-  toast: { success: vi.fn(), error: vi.fn() },
+  toast: Object.assign(vi.fn(), { success: vi.fn(), error: vi.fn() }),
 }))
 
 vi.mock('@/lib/motion', () => ({
@@ -102,9 +125,11 @@ const mockLearningPathState = {
   loadPaths: vi.fn(),
   addCourseToPath: vi.fn(),
   createPath: vi.fn(),
-  renamePath: vi.fn(),
-  updateDescription: vi.fn(),
+  renamePath: vi.fn().mockResolvedValue(undefined),
+  updateDescription: vi.fn().mockResolvedValue(undefined),
   deletePath: vi.fn(),
+  deletePathWithUndo: vi.fn(),
+  restorePath: vi.fn(),
 }
 
 vi.mock('@/stores/useLearningPathStore', () => ({
@@ -172,7 +197,6 @@ describe('LearningPaths', () => {
     renderPage()
     await waitFor(() => {
       const buttons = screen.getAllByText('Import Course')
-      // At least the header button should be present
       expect(buttons.length).toBeGreaterThanOrEqual(1)
     })
   })
@@ -184,7 +208,6 @@ describe('LearningPaths', () => {
       expect(screen.getByText('Create Path')).toBeInTheDocument()
     })
 
-    // Find and click the header "Import Course" button
     const importButtons = screen.getAllByText('Import Course')
     await user.click(importButtons[0])
 
@@ -207,11 +230,10 @@ describe('LearningPaths', () => {
       expect(screen.getByTestId('import-wizard-mock')).toBeInTheDocument()
     })
 
-    // Header button passes no targetPathId
     expect(capturedWizardProps?.targetPathId).toBeUndefined()
   })
 
-  it('path card dropdown has "Import Course" action', async () => {
+  it('path card dropdown has "Import Course" and "Delete" actions', async () => {
     const user = userEvent.setup()
     renderPage()
     await waitFor(() => {
@@ -225,8 +247,57 @@ describe('LearningPaths', () => {
     await waitFor(() => {
       // The dropdown "Import Course" item should be visible
       const importItems = screen.getAllByText('Import Course')
-      // At least 2: header button + dropdown item
       expect(importItems.length).toBeGreaterThanOrEqual(2)
     })
+
+    // Delete item should be present
+    expect(screen.getByText('Delete')).toBeInTheDocument()
+  })
+
+  it('calls deletePathWithUndo when "Delete" is clicked in dropdown', async () => {
+    const user = userEvent.setup()
+    renderPage()
+    await waitFor(() => {
+      expect(screen.getByText('Web Development')).toBeInTheDocument()
+    })
+
+    const menuButtons = screen.getAllByLabelText(/Actions for/)
+    await user.click(menuButtons[0])
+
+    await waitFor(() => {
+      expect(screen.getByText('Delete')).toBeInTheDocument()
+    })
+
+    await user.click(screen.getByText('Delete'))
+
+    expect(mockLearningPathState.deletePathWithUndo).toHaveBeenCalledWith('path-1')
+  })
+
+  it('inline editable field triggers renamePath on save', async () => {
+    const user = userEvent.setup()
+    renderPage()
+    await waitFor(() => {
+      expect(screen.getAllByTestId('edit-name-trigger').length).toBeGreaterThanOrEqual(1)
+    })
+
+    // Click the first path's edit name trigger to simulate inline edit
+    await user.click(screen.getAllByTestId('edit-name-trigger')[0])
+
+    expect(mockLearningPathState.renamePath).toHaveBeenCalledWith('path-1', 'Updated name')
+  })
+
+  it('inline editable field triggers updateDescription on save', async () => {
+    const user = userEvent.setup()
+    renderPage()
+    await waitFor(() => {
+      expect(screen.getAllByTestId('edit-description-trigger').length).toBeGreaterThanOrEqual(1)
+    })
+
+    await user.click(screen.getAllByTestId('edit-description-trigger')[0])
+
+    expect(mockLearningPathState.updateDescription).toHaveBeenCalledWith(
+      'path-1',
+      'Updated description'
+    )
   })
 })
