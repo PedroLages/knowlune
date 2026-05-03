@@ -28,12 +28,14 @@ let mockCourseId: string | null
 let mockLessonId: string | null
 let mockIsGuest: boolean
 let mockItemStatus: string
+let mockAutoPlay: boolean
 
 const toggleTheater = vi.fn()
 const toggleReadingMode = vi.fn()
 const toggleNotes = vi.fn()
 const setHasNotes = vi.fn()
 const setItemStatus = vi.fn()
+const toggleAutoPlay = vi.fn()
 
 // ---------------------------------------------------------------------------
 // Module mocks
@@ -50,6 +52,8 @@ vi.mock('@/stores/useLessonChromeStore', () => ({
       toggleNotes,
       hasNotes: mockHasNotes,
       setHasNotes,
+      autoPlay: mockAutoPlay,
+      toggleAutoPlay,
     }),
 }))
 
@@ -109,12 +113,14 @@ describe('LessonHeaderTools', () => {
     mockLessonId = 'lesson-1'
     mockIsGuest = false
     mockItemStatus = 'not-started'
+    mockAutoPlay = true
 
     toggleTheater.mockClear()
     toggleReadingMode.mockClear()
     toggleNotes.mockClear()
     setHasNotes.mockClear()
     setItemStatus.mockClear()
+    toggleAutoPlay.mockClear()
   })
 
   // -- Happy path: all tools render -------------------------------------------
@@ -227,5 +233,45 @@ describe('LessonHeaderTools', () => {
     render(<LessonHeaderTools />)
     fireEvent.click(screen.getByTestId('reading-mode-toggle'))
     expect(toggleReadingMode).toHaveBeenCalledTimes(1)
+  })
+
+  // -- Auto-play toggle --------------------------------------------------------
+
+  it('renders auto-play toggle with aria-pressed="true" when autoPlay is ON', () => {
+    mockAutoPlay = true
+    render(<LessonHeaderTools />)
+    expect(screen.getByTestId('autoplay-toggle').getAttribute('aria-pressed')).toBe(
+      'true',
+    )
+  })
+
+  it('renders auto-play toggle with aria-pressed="false" when autoPlay is OFF', () => {
+    mockAutoPlay = false
+    render(<LessonHeaderTools />)
+    expect(screen.getByTestId('autoplay-toggle').getAttribute('aria-pressed')).toBe(
+      'false',
+    )
+  })
+
+  it('calls toggleAutoPlay when auto-play button is clicked', () => {
+    render(<LessonHeaderTools />)
+    fireEvent.click(screen.getByTestId('autoplay-toggle'))
+    expect(toggleAutoPlay).toHaveBeenCalledTimes(1)
+  })
+
+  it('shows "Auto-play: On" tooltip when autoPlay is ON', () => {
+    mockAutoPlay = true
+    render(<LessonHeaderTools />)
+    expect(screen.getByTestId('autoplay-toggle').getAttribute('aria-label')).toBe(
+      'Auto-play is on',
+    )
+  })
+
+  it('shows "Auto-play: Off" tooltip when autoPlay is OFF', () => {
+    mockAutoPlay = false
+    render(<LessonHeaderTools />)
+    expect(screen.getByTestId('autoplay-toggle').getAttribute('aria-label')).toBe(
+      'Auto-play is off',
+    )
   })
 })

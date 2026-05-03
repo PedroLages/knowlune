@@ -105,10 +105,11 @@ loadLinkedFlashcard(highlight, id => db.flashcards.get(id))
   .finally(() => setLinkedFlashcardLoading(false))
 ```
 
-Guard async lookups with a request id or equivalent cancellation token. Invalidate pending lookups when the panel closes, the book changes, or the reader unmounts so stale results cannot update the wrong reader state.
+Guard async lookups with a request id or equivalent cancellation token. Invalidate pending lookups when the panel closes, the book changes, or the reader unmounts so stale results cannot update the wrong reader state. See `docs/solutions/best-practices/zustand-stale-async-results-generation-counter-2026-05-03.md` for the generalized **generation counter** pattern that formalizes this approach.
 
 ## Related
 
+- `docs/solutions/best-practices/zustand-stale-async-results-generation-counter-2026-05-03.md` — generation counter and ref tracking patterns for preventing stale async state updates in Zustand stores
 - `docs/solutions/sync/e93-s02-notes-bookmarks-sync-wiring-2026-04-18.md` — async state and stale closure cautions.
 - `docs/solutions/best-practices/wcag-target-size-audit-2026-04-25.md` — target-size expectations for small toolbar controls.
 - `docs/solutions/best-practices/extract-shared-primitive-on-second-consumer-2026-04-18.md` — related caution on when to extract shared UI primitives.

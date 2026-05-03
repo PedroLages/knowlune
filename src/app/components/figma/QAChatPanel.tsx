@@ -21,6 +21,7 @@ import { Button } from '@/app/components/ui/button'
 import { Input } from '@/app/components/ui/input'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/app/components/ui/sheet'
 import { Popover, PopoverContent, PopoverTrigger } from '@/app/components/ui/popover'
+import { Tooltip, TooltipTrigger, TooltipContent } from '@/app/components/ui/tooltip'
 import { ScrollArea } from '@/app/components/ui/scroll-area'
 import { useQAChatStore } from '@/stores/useQAChatStore'
 import { retrieveRelevantNotes, generateQAAnswer, getNoteDisplayName } from '@/lib/noteQA'
@@ -39,9 +40,10 @@ import { AIConsentDeclinedBanner } from '@/app/components/compliance/AIConsentDe
 export interface QAChatPanelProps {
   open?: boolean
   onOpenChange?: (open: boolean) => void
+  tooltipLabel?: string
 }
 
-export function QAChatPanel({ open: controlledOpen, onOpenChange: controlledOnOpenChange }: QAChatPanelProps = {}) {
+export function QAChatPanel({ open: controlledOpen, onOpenChange: controlledOnOpenChange, tooltipLabel }: QAChatPanelProps = {}) {
   const [internalOpen, setInternalOpen] = useState(false)
   const isOpen = controlledOpen ?? internalOpen
   const setIsOpen = controlledOnOpenChange ?? setInternalOpen
@@ -395,7 +397,16 @@ export function QAChatPanel({ open: controlledOpen, onOpenChange: controlledOnOp
     <>
       {isMobile ? (
         <Sheet open={isOpen} onOpenChange={setIsOpen}>
-          <SheetTrigger asChild>{triggerButton}</SheetTrigger>
+          {tooltipLabel ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <SheetTrigger asChild>{triggerButton}</SheetTrigger>
+              </TooltipTrigger>
+              <TooltipContent>{tooltipLabel}</TooltipContent>
+            </Tooltip>
+          ) : (
+            <SheetTrigger asChild>{triggerButton}</SheetTrigger>
+          )}
           <SheetContent side="bottom" className="h-[90vh]">
             <SheetHeader className="mb-4">
               <SheetTitle>Ask AI</SheetTitle>
@@ -405,7 +416,16 @@ export function QAChatPanel({ open: controlledOpen, onOpenChange: controlledOnOp
         </Sheet>
       ) : (
         <Popover open={isOpen} onOpenChange={setIsOpen}>
-          <PopoverTrigger asChild>{triggerButton}</PopoverTrigger>
+          {tooltipLabel ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <PopoverTrigger asChild>{triggerButton}</PopoverTrigger>
+              </TooltipTrigger>
+              <TooltipContent>{tooltipLabel}</TooltipContent>
+            </Tooltip>
+          ) : (
+            <PopoverTrigger asChild>{triggerButton}</PopoverTrigger>
+          )}
           <PopoverContent className="h-[600px] w-[400px] p-0" align="end">
             <div className="flex h-full flex-col">
               <div className="flex items-center justify-between border-b px-4 py-3">

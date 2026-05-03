@@ -127,10 +127,10 @@ export function LessonHeaderTools() {
     >
       {/* Secondary tools group — visible inline on desktop, collapsed into kebab on tablet */}
       <span className="hidden lg:contents">
-        <PomodoroTimer />
+        <PomodoroTimer tooltipLabel="Focus Timer" />
 
         <Suspense fallback={null}>
-          <QAChatPanel open={qaPanelOpen} onOpenChange={setQAPanelOpen} />
+          <QAChatPanel open={qaPanelOpen} onOpenChange={setQAPanelOpen} tooltipLabel="Ask AI" />
         </Suspense>
 
         {/* Reading mode toggle */}
@@ -151,34 +151,39 @@ export function LessonHeaderTools() {
         </Tooltip>
 
         {/* Theater mode toggle */}
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={toggleTheater}
-          aria-label={isTheater ? 'Exit theater mode' : 'Enter theater mode'}
-          data-testid="theater-mode-toggle"
-        >
-          {isTheater ? (
-            <Minimize2 className="size-5" aria-hidden="true" />
-          ) : (
-            <Maximize2 className="size-5" aria-hidden="true" />
-          )}
-        </Button>
-
-        {/* Auto-play toggle */}
         <Tooltip>
           <TooltipTrigger asChild>
             <Button
               variant="ghost"
               size="icon"
+              onClick={toggleTheater}
+              aria-label={isTheater ? 'Exit theater mode' : 'Enter theater mode'}
+              data-testid="theater-mode-toggle"
+            >
+              {isTheater ? (
+                <Minimize2 className="size-5" aria-hidden="true" />
+              ) : (
+                <Maximize2 className="size-5" aria-hidden="true" />
+              )}
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            {isTheater ? 'Exit theater mode' : 'Enter theater mode'}
+          </TooltipContent>
+        </Tooltip>
+
+        {/* Auto-play toggle */}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant={autoPlay ? 'brand-ghost' : 'ghost'}
+              size="icon"
               onClick={toggleAutoPlay}
               aria-label={autoPlay ? 'Auto-play is on' : 'Auto-play is off'}
+              aria-pressed={autoPlay}
               data-testid="autoplay-toggle"
             >
-              <SkipForward
-                className={cn('size-5', !autoPlay && 'text-muted-foreground')}
-                aria-hidden="true"
-              />
+              <SkipForward className="size-5" aria-hidden="true" />
             </Button>
           </TooltipTrigger>
           <TooltipContent>Auto-play: {autoPlay ? 'On' : 'Off'}</TooltipContent>
