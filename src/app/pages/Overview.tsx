@@ -9,6 +9,7 @@ import { Skeleton } from '@/app/components/ui/skeleton'
 import { EmptyState } from '@/app/components/EmptyState'
 import { AchievementBanner } from '@/app/components/AchievementBanner'
 import { ContinueLearning } from '@/app/components/ContinueLearning'
+import { ContinueLearningPathSection } from '@/app/components/ContinueLearningPathSection'
 import { RecentActivity } from '@/app/components/RecentActivity'
 import { StatsCard } from '@/app/components/StatsCard'
 import { QuickActions } from '@/app/components/QuickActions'
@@ -224,6 +225,17 @@ export function Overview() {
             </div>
             {showAchievements && <AchievementBanner completedLessons={completedLessons} />}
           </div>
+        </motion.section>
+      ),
+      'continue-learning-path': () => (
+        <motion.section
+          key="continue-learning-path"
+          ref={createSectionRef('continue-learning-path')}
+          variants={fadeUp}
+          className="rounded-2xl border border-border/50 bg-card p-[var(--content-padding)]"
+          data-testid="section-continue-learning-path"
+        >
+          <ContinueLearningPathSection />
         </motion.section>
       ),
       'quiz-performance': () => (
