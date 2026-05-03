@@ -93,6 +93,9 @@ const LearningPaths = React.lazy(() =>
 const LearningPathDetail = React.lazy(() =>
   import('./pages/LearningPathDetail').then(m => ({ default: m.LearningPathDetail }))
 )
+const TemplateSyllabus = React.lazy(() =>
+  import('./pages/TemplateSyllabus').then(m => ({ default: m.TemplateSyllabus }))
+)
 const KnowledgeGaps = React.lazy(() =>
   import('./pages/KnowledgeGaps').then(m => ({ default: m.KnowledgeGaps }))
 )
@@ -621,6 +624,14 @@ export const router = createBrowserRouter([
             element: (
               <SuspensePage>
                 <LearningPaths />
+              </SuspensePage>
+            ),
+          },
+          {
+            path: 'learning-paths/templates/:templateId',
+            element: (
+              <SuspensePage>
+                <TemplateSyllabus />
               </SuspensePage>
             ),
           },
