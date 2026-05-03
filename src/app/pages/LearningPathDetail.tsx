@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
-import { useParams, Link } from 'react-router'
+import { useParams, Link, useNavigate } from 'react-router'
 import { motion } from 'motion/react'
 import {
   DndContext,
@@ -37,6 +37,7 @@ import {
   Import,
   AlertCircle,
   LayoutTemplate,
+  Trash2,
 } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
 import { Badge } from '@/app/components/ui/badge'
@@ -62,6 +63,7 @@ import { TrailMap } from '@/app/components/figma/TrailMap'
 import { MoveUpDownButtons } from '@/app/components/figma/MoveUpDownButtons'
 import { InlineCoursePicker } from '@/app/components/figma/InlineCoursePicker'
 import { ImportWizardDialog } from '@/app/components/figma/ImportWizardDialog'
+import { InlineEditableField } from '@/app/components/figma/InlineEditableField'
 import { CourseTypeBadge } from '@/app/components/shared/CourseTypeBadge'
 import { useLearningPathStore } from '@/stores/useLearningPathStore'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
@@ -265,6 +267,7 @@ function SortableCourseRow({
 
 export function LearningPathDetail() {
   const { pathId } = useParams<{ pathId: string }>()
+  const navigate = useNavigate()
   const {
     paths,
     entries,
@@ -274,6 +277,9 @@ export function LearningPathDetail() {
     removeCourseFromPath,
     getEntriesForPath,
     applyAIOrder,
+    renamePath,
+    updateDescription,
+    deletePathWithUndo,
   } = useLearningPathStore()
   const { importedCourses, loadImportedCourses, thumbnailUrls, loadThumbnailUrls } =
     useCourseImportStore()
@@ -477,6 +483,13 @@ export function LearningPathDetail() {
     [pathId, removeCourseFromPath]
   )
 
+  const handleDeletePath = useCallback(() => {
+    if (pathId) {
+      deletePathWithUndo(pathId)
+      navigate('/learning-paths')
+    }
+  }, [pathId, deletePathWithUndo, navigate])
+
   // Handle course add from the inline course picker (single-select mode)
   const handlePickerAddCourse = useCallback(
     (courses: Array<{ courseId: string; courseType: 'imported' | 'catalog' }>) => {
@@ -664,12 +677,22 @@ export function LearningPathDetail() {
           className="flex flex-col md:flex-row md:items-end justify-between gap-[var(--content-gap)]"
         >
           <div>
-            <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight font-display mb-4">
-              {path.name}
-            </h1>
-            {path.description && (
-              <p className="text-muted-foreground leading-relaxed mb-4">{path.description}</p>
-            )}
+            <InlineEditableField
+              value={path.name}
+              onSave={name => renamePath(path.id, name)}
+              ariaLabel={`Edit path name`}
+              maxLength={100}
+              className="text-4xl md:text-5xl font-extrabold tracking-tight font-display mb-4"
+            />
+            <InlineEditableField
+              value={path.description || ''}
+              onSave={desc => updateDescription(path.id, desc)}
+              as="textarea"
+              ariaLabel={`Edit path description`}
+              placeholder="Add a description..."
+              maxLength={500}
+              className="text-muted-foreground leading-relaxed mb-4"
+            />
             <div className="flex flex-wrap items-center gap-4 text-muted-foreground font-medium text-sm">
               <span className="flex items-center gap-1.5">
                 <Clock className="size-4 text-brand" aria-hidden="true" />
@@ -687,13 +710,25 @@ export function LearningPathDetail() {
               )}
             </div>
           </div>
-          <div className="text-right shrink-0">
-            <span className="block text-5xl font-black text-brand mb-1">
-              {pathProgress.completionPct}%
-            </span>
-            <span className="text-sm font-bold text-muted-foreground tracking-widest uppercase">
-              Completed
-            </span>
+          <div className="flex items-start gap-3">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-muted-foreground hover:text-destructive"
+              onClick={handleDeletePath}
+              aria-label="Delete learning path"
+              data-testid="delete-path-button"
+            >
+              <Trash2 className="size-4" aria-hidden="true" />
+            </Button>
+            <div className="text-right shrink-0">
+              <span className="block text-5xl font-black text-brand mb-1">
+                {pathProgress.completionPct}%
+              </span>
+              <span className="text-sm font-bold text-muted-foreground tracking-widest uppercase">
+                Completed
+              </span>
+            </div>
           </div>
         </motion.div>
 

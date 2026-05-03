@@ -5,7 +5,7 @@ import Dexie from 'dexie'
 
 // Mock toast
 vi.mock('sonner', () => ({
-  toast: { error: vi.fn() },
+  toast: Object.assign(vi.fn(), { error: vi.fn() }),
 }))
 
 // Mock persistWithRetry to just run the fn
@@ -776,5 +776,247 @@ describe('getEntriesForPath', () => {
   it('should return empty array for unknown pathId', () => {
     const entries = useLearningPathStore.getState().getEntriesForPath('nonexistent')
     expect(entries).toEqual([])
+  })
+})
+
+describe('deletePathWithUndo / restorePath', () => {
+  it('should remove path from state and queue in pendingDeletes', async () => {
+    await act(async () => {
+      await useLearningPathStore.getState().createPath('To Undo', 'desc')
+    })
+    const pathId = useLearningPathStore.getState().paths[0].id
+
+    await act(async () => {
+      useLearningPathStore.getState().deletePathWithUndo(pathId)
+    })
+
+    const state = useLearningPathStore.getState()
+    // Path removed from state
+    expect(state.paths).toHaveLength(0)
+    // Stored in pendingDeletes
+    expect(state.pendingDeletes[pathId]).toBeDefined()
+    expect(state.pendingDeletes[pathId].path.name).toBe('To Undo')
+    expect(state.pendingDeletes[pathId].path.description).toBe('desc')
+  })
+
+  it('should restore path on restorePath and clear pendingDeletes', async () => {
+    await act(async () => {
+      await useLearningPathStore.getState().createPath('To Restore')
+    })
+    const pathId = useLearningPathStore.getState().paths[0].id
+
+    await act(async () => {
+      useLearningPathStore.getState().deletePathWithUndo(pathId)
+    })
+
+    await act(async () => {
+      useLearningPathStore.getState().restorePath(pathId)
+    })
+
+    // restorePath clears pendingDeletes asynchronously via persistWithRetry().then().
+    // persistWithRetry is mocked to run immediately, so a microtask flush is sufficient.
+    await vi.waitFor(() => {
+      const state = useLearningPathStore.getState()
+      expect(state.pendingDeletes[pathId]).toBeUndefined()
+    })
+
+    const state = useLearningPathStore.getState()
+    // Path restored
+    expect(state.paths).toHaveLength(1)
+    expect(state.paths[0].name).toBe('To Restore')
+  })
+
+  it('should capture and restore entries alongside path', async () => {
+    await act(async () => {
+      await useLearningPathStore.getState().createPath('With Entries')
+    })
+    const pathId = useLearningPathStore.getState().paths[0].id
+
+    await act(async () => {
+      await useLearningPathStore.getState().addCourseToPath(pathId, 'c1', 'imported')
+      await useLearningPathStore.getState().addCourseToPath(pathId, 'c2', 'imported')
+    })
+
+    await act(async () => {
+      useLearningPathStore.getState().deletePathWithUndo(pathId)
+    })
+
+    // Entries also removed
+    expect(useLearningPathStore.getState().entries).toHaveLength(0)
+
+    await act(async () => {
+      useLearningPathStore.getState().restorePath(pathId)
+    })
+
+    // Both path and entries restored
+    expect(useLearningPathStore.getState().paths).toHaveLength(1)
+    expect(useLearningPathStore.getState().entries).toHaveLength(2)
+  })
+
+  it('should be a no-op for non-existent path', async () => {
+    await act(async () => {
+      useLearningPathStore.getState().deletePathWithUndo('nonexistent')
+    })
+
+    const state = useLearningPathStore.getState()
+    expect(state.paths).toHaveLength(0)
+    expect(state.pendingDeletes['nonexistent']).toBeUndefined()
+  })
+
+  it('should be a no-op when calling deletePathWithUndo twice before timer expires', async () => {
+    await act(async () => {
+      await useLearningPathStore.getState().createPath('Double Delete')
+    })
+    const pathId = useLearningPathStore.getState().paths[0].id
+
+    await act(async () => {
+      useLearningPathStore.getState().deletePathWithUndo(pathId)
+    })
+
+    // Second call should be no-op
+    await act(async () => {
+      useLearningPathStore.getState().deletePathWithUndo(pathId)
+    })
+
+    const state = useLearningPathStore.getState()
+    expect(state.paths).toHaveLength(0)
+    expect(state.pendingDeletes[pathId]).toBeDefined()
+  })
+
+  it('should be a no-op when restorePath called after finalize', async () => {
+    await act(async () => {
+      await useLearningPathStore.getState().createPath('Expired Undo')
+    })
+    const pathId = useLearningPathStore.getState().paths[0].id
+
+    await act(async () => {
+      useLearningPathStore.getState().deletePathWithUndo(pathId)
+    })
+
+    // Simulate timer expiry by calling finalize directly
+    await act(async () => {
+      await useLearningPathStore.getState()._finalizeDelete(pathId)
+    })
+
+    // restorePath should be no-op — pendingDeletes already cleared
+    await act(async () => {
+      useLearningPathStore.getState().restorePath(pathId)
+    })
+
+    // Path still deleted
+    const state = useLearningPathStore.getState()
+    expect(state.paths).toHaveLength(0)
+    expect(state.pendingDeletes[pathId]).toBeUndefined()
+  })
+
+  it('should finalize delete via _finalizeDelete and persist to Dexie', async () => {
+    await act(async () => {
+      await useLearningPathStore.getState().createPath('Timer Finalize', 'desc')
+    })
+    const pathId = useLearningPathStore.getState().paths[0].id
+
+    // Add entries to the path
+    await db.learningPathEntries.add({
+      id: 'e-timer',
+      pathId,
+      courseId: 'course-1',
+      courseType: 'imported',
+      position: 1,
+      isManuallyOrdered: false,
+    })
+    useLearningPathStore.setState(state => ({
+      entries: [
+        ...state.entries,
+        {
+          id: 'e-timer',
+          pathId,
+          courseId: 'course-1',
+          courseType: 'imported' as const,
+          position: 1,
+          isManuallyOrdered: false,
+        },
+      ],
+    }))
+
+    await act(async () => {
+      useLearningPathStore.getState().deletePathWithUndo(pathId)
+    })
+
+    // Path still in pendingDeletes before finalize
+    expect(useLearningPathStore.getState().pendingDeletes[pathId]).toBeDefined()
+
+    // Call finalize directly (simulates timer expiry)
+    await act(async () => {
+      await useLearningPathStore.getState()._finalizeDelete(pathId)
+    })
+
+    const state = useLearningPathStore.getState()
+    expect(state.paths).toHaveLength(0)
+    expect(state.pendingDeletes[pathId]).toBeUndefined()
+
+    // Verify Dexie deletion
+    const stored = await db.learningPaths.get(pathId)
+    expect(stored).toBeUndefined()
+  })
+
+  it('should keep pendingDeletes entry if finalizeDelete Dexie write fails', async () => {
+    await act(async () => {
+      await useLearningPathStore.getState().createPath('Finalize Fail')
+    })
+    const pathId = useLearningPathStore.getState().paths[0].id
+
+    await act(async () => {
+      useLearningPathStore.getState().deletePathWithUndo(pathId)
+    })
+
+    // Mock syncableWrite to fail on finalize
+    vi.spyOn(syncableWriteModule, 'syncableWrite').mockRejectedValue(new Error('DB fail'))
+
+    await act(async () => {
+      await useLearningPathStore.getState()._finalizeDelete(pathId)
+    })
+
+    // Path still gone from state (optimistic delete)
+    expect(useLearningPathStore.getState().paths).toHaveLength(0)
+    // pendingDeletes entry kept to prevent re-finalization attempts
+    expect(useLearningPathStore.getState().pendingDeletes[pathId]).toBeDefined()
+  })
+
+  it('should not interfere with existing deletePath used by internal callers', async () => {
+    await act(async () => {
+      await useLearningPathStore.getState().createPath('Direct Delete')
+    })
+    const pathId = useLearningPathStore.getState().paths[0].id
+
+    await db.learningPathEntries.add({
+      id: 'e-direct',
+      pathId,
+      courseId: 'c1',
+      courseType: 'imported',
+      position: 1,
+      isManuallyOrdered: false,
+    })
+    useLearningPathStore.setState(state => ({
+      entries: [
+        ...state.entries,
+        {
+          id: 'e-direct',
+          pathId,
+          courseId: 'c1',
+          courseType: 'imported' as const,
+          position: 1,
+          isManuallyOrdered: false,
+        },
+      ],
+    }))
+
+    await act(async () => {
+      await useLearningPathStore.getState().deletePath(pathId)
+    })
+
+    expect(useLearningPathStore.getState().paths).toHaveLength(0)
+    expect(useLearningPathStore.getState().entries).toHaveLength(0)
+    // No undo toast was shown (no pendingDeletes entry)
+    // (Sonner toast mock can't easily distinguish, but the store state proves it)
   })
 })
