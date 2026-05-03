@@ -23,6 +23,8 @@ const {
   mockUpsert,
   mockInsert,
   mockRpc,
+  mockDeleteIn,
+  mockDelete,
   mockRefreshSession,
   mockGetSession,
   mockLockRequest,
@@ -33,10 +35,13 @@ const {
   const mockUpsert = vi.fn().mockResolvedValue({ error: null })
   const mockInsert = vi.fn().mockResolvedValue({ error: null })
   const mockSelect = vi.fn().mockResolvedValue({ data: [], error: null })
+  const mockDeleteIn = vi.fn().mockResolvedValue({ error: null })
+  const mockDelete = vi.fn().mockReturnValue({ in: mockDeleteIn })
   const mockFrom = vi.fn().mockReturnValue({
     upsert: mockUpsert,
     insert: mockInsert,
     select: mockSelect,
+    delete: mockDelete,
   })
   const mockRpc = vi.fn().mockResolvedValue({ error: null })
   const mockRefreshSession = vi.fn().mockResolvedValue({ data: {}, error: null })
@@ -126,6 +131,8 @@ const {
     mockUpsert,
     mockInsert,
     mockRpc,
+    mockDeleteIn,
+    mockDelete,
     mockRefreshSession,
     mockGetSession,
     mockLockRequest,
@@ -229,6 +236,7 @@ beforeEach(() => {
   mockUpsert.mockResolvedValue({ error: null })
   mockInsert.mockResolvedValue({ error: null })
   mockRpc.mockResolvedValue({ error: null })
+  mockDeleteIn.mockResolvedValue({ error: null })
   mockRefreshSession.mockResolvedValue({ data: {}, error: null })
   mockToArray.mockResolvedValue([])
   mockBulkDelete.mockResolvedValue(undefined)
@@ -247,6 +255,7 @@ beforeEach(() => {
     upsert: mockUpsert,
     insert: mockInsert,
     select: mockSelect,
+    delete: mockDelete,
   })
   mockDownloadStorageFilesForTable.mockResolvedValue(undefined)
 
@@ -896,7 +905,7 @@ describe('successful upload', () => {
 // ---------------------------------------------------------------------------
 
 describe('delete operation upload', () => {
-  it('upserts delete payload (id-only) for LWW table — verifies operation type is not special-cased', async () => {
+  it('deletes server row for LWW table via supabase.delete().in()', async () => {
     vi.useFakeTimers()
     const entry = makeEntry({ id: 1, operation: 'delete', payload: { id: 'rec-1' } })
     setQueueEntries([entry])
@@ -904,13 +913,12 @@ describe('delete operation upload', () => {
     syncEngine.nudge()
     await vi.advanceTimersByTimeAsync(201)
 
-    // Delete operations are handled identically to put/add by the upload engine —
-    // the payload { id: 'rec-1' } is upserted/inserted per the table's conflict strategy.
-    expect(mockUpsert).toHaveBeenCalledWith([{ id: 'rec-1' }], { onConflict: 'id' })
+    expect(mockDeleteIn).toHaveBeenCalledWith('id', ['rec-1'])
+    expect(mockUpsert).not.toHaveBeenCalled()
     expect(mockBulkDelete).toHaveBeenCalledWith([1])
   })
 
-  it('inserts delete payload for insert-only table', async () => {
+  it('deletes server row for insert-only table via supabase.delete().in()', async () => {
     vi.useFakeTimers()
     const entry = makeEntry({
       id: 1,
@@ -923,8 +931,128 @@ describe('delete operation upload', () => {
     syncEngine.nudge()
     await vi.advanceTimersByTimeAsync(201)
 
-    expect(mockInsert).toHaveBeenCalledWith([{ id: 'sess-1' }])
+    expect(mockDeleteIn).toHaveBeenCalledWith('id', ['sess-1'])
+    expect(mockInsert).not.toHaveBeenCalled()
+  })
+
+  it('batches 3 deletes for same table into a single delete().in() call', async () => {
+    vi.useFakeTimers()
+    const entries = [
+      makeEntry({ id: 1, recordId: 'rec-1', operation: 'delete', payload: { id: 'rec-1' } }),
+      makeEntry({ id: 2, recordId: 'rec-2', operation: 'delete', payload: { id: 'rec-2' } }),
+      makeEntry({ id: 3, recordId: 'rec-3', operation: 'delete', payload: { id: 'rec-3' } }),
+    ]
+    setQueueEntries(entries)
+
+    syncEngine.nudge()
+    await vi.advanceTimersByTimeAsync(201)
+
+    expect(mockDeleteIn).toHaveBeenCalledWith('id', ['rec-1', 'rec-2', 'rec-3'])
     expect(mockUpsert).not.toHaveBeenCalled()
+    expect(mockBulkDelete).toHaveBeenCalledWith([1, 2, 3])
+  })
+
+  it('handles mixed batch: delete and put entries processed independently', async () => {
+    vi.useFakeTimers()
+    const deleteEntry = makeEntry({ id: 1, recordId: 'rec-1', operation: 'delete', payload: { id: 'rec-1' } })
+    const putEntry = makeEntry({ id: 2, recordId: 'rec-2', operation: 'put', payload: { id: 'rec-2', content: 'hello' } })
+    setQueueEntries([deleteEntry, putEntry])
+
+    syncEngine.nudge()
+    await vi.advanceTimersByTimeAsync(201)
+
+    // Delete runs first, then upsert for the put.
+    expect(mockDeleteIn).toHaveBeenCalledWith('id', ['rec-1'])
+    expect(mockUpsert).toHaveBeenCalledWith([{ id: 'rec-2', content: 'hello' }], { onConflict: 'id' })
+    // Both groups removed from queue.
+    expect(mockBulkDelete).toHaveBeenCalledWith([1])
+    expect(mockBulkDelete).toHaveBeenCalledWith([2])
+  })
+
+  it('only-delete batch: no upsert or insert called', async () => {
+    vi.useFakeTimers()
+    const entry = makeEntry({ id: 1, operation: 'delete', payload: { id: 'rec-1' } })
+    setQueueEntries([entry])
+
+    syncEngine.nudge()
+    await vi.advanceTimersByTimeAsync(201)
+
+    expect(mockDeleteIn).toHaveBeenCalledWith('id', ['rec-1'])
+    expect(mockUpsert).not.toHaveBeenCalled()
+    expect(mockInsert).not.toHaveBeenCalled()
+  })
+
+  it('only-put batch: no delete call, existing upsert path preserved', async () => {
+    vi.useFakeTimers()
+    const entry = makeEntry({ id: 1, operation: 'put', payload: { id: 'rec-1', content: 'hello' } })
+    setQueueEntries([entry])
+
+    syncEngine.nudge()
+    await vi.advanceTimersByTimeAsync(201)
+
+    expect(mockDeleteIn).not.toHaveBeenCalled()
+    expect(mockUpsert).toHaveBeenCalledWith([{ id: 'rec-1', content: 'hello' }], { onConflict: 'id' })
+    expect(mockBulkDelete).toHaveBeenCalledWith([1])
+  })
+
+  it('retries delete on 5xx error instead of dead-lettering immediately', async () => {
+    vi.useFakeTimers()
+    mockDeleteIn.mockResolvedValue({ error: { status: 503, message: 'Service Unavailable' } })
+    const entry = makeEntry({
+      id: 1,
+      operation: 'delete',
+      payload: { id: 'rec-1' },
+      attempts: 0,
+    })
+    setQueueEntries([entry])
+
+    syncEngine.nudge()
+    await vi.advanceTimersByTimeAsync(201)
+
+    // _retryOrDeadLetter increments attempts without setting status (status is only
+    // set when dead-lettering). Verify the entry was retried, not dead-lettered.
+    expect(mockUpdate).toHaveBeenCalled()
+    const updateCall = mockUpdate.mock.calls.find((c: unknown[]) => c[0] === 1)
+    const updatePayload = updateCall?.[1] as Record<string, unknown>
+    expect(updatePayload?.attempts).toBe(1)
+    expect(updatePayload?.status).toBeUndefined()
+  })
+
+  it('dead-letters delete entry on 4xx (non-401) error immediately', async () => {
+    vi.useFakeTimers()
+    mockDeleteIn.mockResolvedValue({ error: { status: 400, message: 'Bad Request' } })
+    const entry = makeEntry({ id: 1, operation: 'delete', payload: { id: 'rec-1' } })
+    setQueueEntries([entry])
+
+    syncEngine.nudge()
+    await vi.advanceTimersByTimeAsync(201)
+
+    expect(mockUpdate).toHaveBeenCalledWith(
+      1,
+      expect.objectContaining({ status: 'dead-letter', lastError: 'Bad Request' })
+    )
+  })
+
+  it('throws when a compound-PK table delete entry is detected', async () => {
+    vi.useFakeTimers()
+    const entry = makeEntry({
+      id: 1,
+      tableName: 'chapterMappings',
+      operation: 'delete',
+      payload: { id: 'map-1' },
+    })
+    setQueueEntries([entry])
+
+    // The throw happens synchronously inside _uploadBatch, before any async supabase call.
+    // Since the throw happens inside the lock callback (not a direct call), it's swallowed
+    // by the lock manager. We verify the entry was never processed as a delete.
+    syncEngine.nudge()
+    await vi.advanceTimersByTimeAsync(201)
+
+    expect(mockDeleteIn).not.toHaveBeenCalled()
+    expect(mockUpsert).not.toHaveBeenCalled()
+    // The entry was never removed from the queue.
+    expect(mockBulkDelete).not.toHaveBeenCalled()
   })
 })
 
