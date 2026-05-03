@@ -43,12 +43,14 @@ export interface PathPlacementState {
  * @param courseTags - Tags for the course
  * @param courseDescription - Optional description
  * @param enabled - Whether to fetch (typically true when on the path step)
+ * @param targetPathId - Optional pre-selected path ID — constrains AI suggestion to this path
  */
 export function usePathPlacementSuggestion(
   courseName: string,
   courseTags: string[],
   courseDescription: string,
-  enabled: boolean
+  enabled: boolean,
+  targetPathId?: string
 ): PathPlacementState {
   const [isLoading, setIsLoading] = useState(false)
   const [suggestion, setSuggestion] = useState<PathPlacementSuggestion | null>(null)
@@ -94,15 +96,23 @@ export function usePathPlacementSuggestion(
 
         // Catalog courses table dropped (E89-S01) — no catalog course names to load
 
-        // Build path contexts
-        const pathContexts = paths.map(path => ({
+        // Build path contexts — filter to target path if provided (R3 constrained context)
+        let allPathContexts = paths.map(path => ({
           path,
           entries: getEntriesForPath(path.id),
         }))
 
+        if (targetPathId) {
+          const constrained = allPathContexts.filter(ctx => ctx.path.id === targetPathId)
+          if (constrained.length > 0) {
+            allPathContexts = constrained
+          }
+          // Graceful degradation: if targetPathId doesn't match any path, use all paths
+        }
+
         const result = await suggestPathPlacement(
           { name: courseName, tags: courseTags, description: courseDescription },
-          pathContexts,
+          allPathContexts,
           courseNames,
           controller.signal
         )
@@ -138,6 +148,7 @@ export function usePathPlacementSuggestion(
     importedCourses,
     courseTags,
     courseDescription,
+    targetPathId,
   ])
 
   return {

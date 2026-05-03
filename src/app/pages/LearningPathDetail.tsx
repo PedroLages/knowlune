@@ -34,6 +34,7 @@ import {
   Check,
   Lock,
   Flame,
+  Download,
   Import,
   AlertCircle,
   LayoutTemplate,
@@ -61,6 +62,11 @@ import { EmptyState } from '@/app/components/EmptyState'
 import { DelayedFallback } from '@/app/components/DelayedFallback'
 import { TrailMap } from '@/app/components/figma/TrailMap'
 import { MoveUpDownButtons } from '@/app/components/figma/MoveUpDownButtons'
+import {
+  ImportWizardDialog,
+  isImportWizardOpen,
+  IMPORT_WIZARD_SET_TARGET,
+} from '@/app/components/figma/ImportWizardDialog'
 import { useLearningPathStore } from '@/stores/useLearningPathStore'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
 import { useAuthorStore } from '@/stores/useAuthorStore'
@@ -457,6 +463,20 @@ export function LearningPathDetail() {
   const [isLoaded, setIsLoaded] = useState(false)
   const catalogCourses: Course[] = [] // Catalog courses table dropped (E89-S01)
   const [pickerOpen, setPickerOpen] = useState(false)
+  const [importWizardOpen, setImportWizardOpen] = useState(false)
+
+  // Handle import wizard click with singleton guard (R10)
+  const handleImportClick = useCallback(() => {
+    if (isImportWizardOpen()) {
+      window.dispatchEvent(
+        new CustomEvent(IMPORT_WIZARD_SET_TARGET, {
+          detail: { pathId: pathId ?? null },
+        })
+      )
+    } else {
+      setImportWizardOpen(true)
+    }
+  }, [pathId])
 
   // AI Suggest Order state (E26-S04)
   const [isSuggesting, setIsSuggesting] = useState(false)
@@ -857,6 +877,16 @@ export function LearningPathDetail() {
               actionLabel="Add Course"
               onAction={() => setPickerOpen(true)}
             />
+            <div className="flex justify-center mt-4">
+              <Button
+                variant="brand-outline"
+                onClick={handleImportClick}
+                data-testid="import-course-button"
+              >
+                <Download className="size-4 mr-2" aria-hidden="true" />
+                Import Course
+              </Button>
+            </div>
           </motion.div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
@@ -1078,6 +1108,15 @@ export function LearningPathDetail() {
                   <Plus className="size-4 mr-2" aria-hidden="true" />
                   Add Course
                 </Button>
+                <Button
+                  variant="brand-outline"
+                  onClick={handleImportClick}
+                  data-testid="import-course-button"
+                  className="w-full"
+                >
+                  <Download className="size-4 mr-2" aria-hidden="true" />
+                  Import Course
+                </Button>
               </div>
 
               {/* Coming Up Next */}
@@ -1188,6 +1227,13 @@ export function LearningPathDetail() {
         onOpenChange={setPickerOpen}
         pathId={pathId!}
         existingCourseIds={existingCourseIds}
+      />
+
+      {/* Import Wizard Dialog (R2, R3) */}
+      <ImportWizardDialog
+        open={importWizardOpen}
+        onOpenChange={setImportWizardOpen}
+        targetPathId={pathId}
       />
 
       {/* AI Order Suggestion Confirmation Dialog (E26-S04) */}

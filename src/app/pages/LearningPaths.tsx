@@ -12,6 +12,7 @@ import {
   BookOpen,
   ArrowRight,
   CheckCircle2,
+  Download,
   LayoutTemplate,
   ChevronDown,
 } from 'lucide-react'
@@ -57,6 +58,11 @@ import { TemplateCard } from '@/app/components/course/TemplateCard'
 import { cn } from '@/app/components/ui/utils'
 import { PathProgressRing } from '@/app/components/figma/PathProgressRing'
 import { PathCardHeader } from '@/app/components/figma/PathCardHeader'
+import {
+  ImportWizardDialog,
+  isImportWizardOpen,
+  IMPORT_WIZARD_SET_TARGET,
+} from '@/app/components/figma/ImportWizardDialog'
 import { useLearningPathStore } from '@/stores/useLearningPathStore'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
 import { useMultiPathProgress } from '@/app/hooks/usePathProgress'
@@ -152,7 +158,6 @@ function CreatePathDialog({
     </Dialog>
   )
 }
-
 // --- Rename Dialog ---
 
 function RenameDialog({
@@ -353,6 +358,7 @@ function PathCard({
   onRename,
   onEditDescription,
   onDelete,
+  onImport,
 }: {
   path: LearningPath
   courseCount: number
@@ -361,6 +367,7 @@ function PathCard({
   onRename: (path: LearningPath) => void
   onEditDescription: (path: LearningPath) => void
   onDelete: (path: LearningPath) => void
+  onImport: (pathId: string) => void
 }) {
   const isNotStarted = completionPct === 0 && courseCount > 0
   const isCompleted = completionPct >= 100
@@ -395,6 +402,10 @@ function PathCard({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
+              <DropdownMenuItem onSelect={() => onImport(path.id)}>
+                <Download className="mr-2 size-4" aria-hidden="true" />
+                Import Course
+              </DropdownMenuItem>
               <DropdownMenuItem onSelect={() => onRename(path)}>
                 <Pencil className="mr-2 size-4" aria-hidden="true" />
                 Rename
@@ -544,6 +555,38 @@ export function LearningPaths() {
   const [renamePath, setRenamePath] = useState<LearningPath | null>(null)
   const [editDescPath, setEditDescPath] = useState<LearningPath | null>(null)
   const [deletePath, setDeletePath] = useState<LearningPath | null>(null)
+
+  // Import wizard state (R1, R10)
+  const [importWizardOpen, setImportWizardOpen] = useState(false)
+  const [importTargetPathId, setImportTargetPathId] = useState<string | null>(null)
+
+  // Header "Import Course" handler — opens wizard without a target path
+  const handleHeaderImport = useCallback(() => {
+    if (isImportWizardOpen()) {
+      window.dispatchEvent(
+        new CustomEvent(IMPORT_WIZARD_SET_TARGET, {
+          detail: { pathId: null },
+        })
+      )
+    } else {
+      setImportTargetPathId(null)
+      setImportWizardOpen(true)
+    }
+  }, [])
+
+  // Path card "Import Course" handler — opens wizard with that path's ID
+  const handlePathImport = useCallback((pathId: string) => {
+    if (isImportWizardOpen()) {
+      window.dispatchEvent(
+        new CustomEvent(IMPORT_WIZARD_SET_TARGET, {
+          detail: { pathId },
+        })
+      )
+    } else {
+      setImportTargetPathId(pathId)
+      setImportWizardOpen(true)
+    }
+  }, [])
 
   useEffect(() => {
     let ignore = false
@@ -708,6 +751,10 @@ export function LearningPaths() {
               <Plus className="size-4 mr-2" aria-hidden="true" />
               Create Path
             </Button>
+            <Button variant="brand-outline" onClick={handleHeaderImport} className="px-6 py-3">
+              <Download className="size-4 mr-2" aria-hidden="true" />
+              Import Course
+            </Button>
           </div>
         </motion.div>
 
@@ -798,6 +845,7 @@ export function LearningPaths() {
                       onRename={setRenamePath}
                       onEditDescription={setEditDescPath}
                       onDelete={setDeletePath}
+                      onImport={handlePathImport}
                     />
                   </div>
                 )
@@ -860,6 +908,13 @@ export function LearningPaths() {
         onOpenChange={open => {
           if (!open) setDeletePath(null)
         }}
+      />
+
+      {/* Import Wizard Dialog (R1) */}
+      <ImportWizardDialog
+        open={importWizardOpen}
+        onOpenChange={setImportWizardOpen}
+        targetPathId={importTargetPathId ?? undefined}
       />
     </>
   )
