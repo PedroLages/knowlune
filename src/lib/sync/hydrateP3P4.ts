@@ -76,6 +76,66 @@ async function fetchTableRows(
 }
 
 /**
+ * Fetch all template paths from the public-read `learning_path_templates` table.
+ * Called independently of user hydration — templates are user-agnostic.
+ * Returns `[]` on any query error (logged and swallowed).
+ */
+async function fetchTemplatePaths(
+  client: SupabaseClient
+): Promise<LearningPath[]> {
+  const { data, error } = await client
+    .from('learning_path_templates')
+    .select('*')
+
+  if (error) {
+    console.error('[hydrateP3P4] Template paths query failed:', error)
+    return []
+  }
+
+  return (data ?? []).map((row: Record<string, unknown>) => ({
+    id: row.id as string,
+    name: row.name as string,
+    description: (row.description as string) || undefined,
+    createdAt: (row.created_at as string) || new Date().toISOString(),
+    updatedAt: (row.created_at as string) || new Date().toISOString(),
+    isAIGenerated: false,
+    isTemplate: true,
+    estimatedHours: (row.estimated_hours as number) || undefined,
+    difficultyLabel: (row.difficulty_label as string) || undefined,
+  }))
+}
+
+/**
+ * Fetch all template entries from the public-read `learning_path_template_entries` table.
+ * Returns `[]` on any query error (logged and swallowed).
+ */
+async function fetchTemplateEntries(
+  client: SupabaseClient
+): Promise<LearningPathEntry[]> {
+  const { data, error } = await client
+    .from('learning_path_template_entries')
+    .select('*')
+    .order('position', { ascending: true })
+
+  if (error) {
+    console.error('[hydrateP3P4] Template entries query failed:', error)
+    return []
+  }
+
+  return (data ?? []).map((row: Record<string, unknown>) => ({
+    id: row.id as string,
+    pathId: `template_${row.template_id as string}`,
+    courseId: (row.course_id as string) || '',
+    courseType: 'catalog' as const,
+    position: (row.position as number) || 0,
+    justification: (row.justification as string)
+      ? `${row.justification as string}${row.match_title ? ` [Search for: ${row.match_title}]` : ''}`
+      : (row.match_title ? `Search for: ${row.match_title as string}` : undefined),
+    isManuallyOrdered: false,
+  }))
+}
+
+/**
  * Hydrate the 9 P3/P4 LWW Dexie stores from Supabase.
  *
  * Runs all 9 queries in parallel via `Promise.allSettled` — a single failure
@@ -118,6 +178,25 @@ export async function hydrateP3P4FromSupabase(userId: string | null | undefined)
     (async () => {
       const rows = await fetchTableRows(client, 'notifications', userId)
       await useNotificationStore.getState().hydrateFromRemote(rows as unknown as Notification[])
+    })(),
+    // Template paths — public-read, user-agnostic. Fetched in parallel with
+    // user data but wrapped in its own try/catch so template fetch failure
+    // never blocks user path hydration.
+    (async () => {
+      try {
+        const [templates, templateEntries] = await Promise.all([
+          fetchTemplatePaths(client),
+          fetchTemplateEntries(client),
+        ])
+        if (templates.length > 0 || templateEntries.length > 0) {
+          await useLearningPathStore.getState().hydrateFromRemote({
+            paths: templates,
+            entries: templateEntries,
+          })
+        }
+      } catch (err) {
+        console.error('[hydrateP3P4] Template hydration failed:', err)
+      }
     })(),
     // `quizzes` — LWW collection. No store-owned hydrate exists today; a
     // future story that introduces a `useQuizStore.hydrateFromRemote` should
