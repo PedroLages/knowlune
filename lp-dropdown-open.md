@@ -1,0 +1,267 @@
+- generic:
+  - generic:
+    - status
+    - alert
+    - generic:
+      - link:
+        - /url: "#main-content"
+        - text: Skip to content
+      - generic:
+        - complementary:
+          - generic:
+            - generic:
+              - img:
+                - generic: Knowlune
+              - paragraph: Illuminate Your Path
+          - navigation:
+            - generic:
+              - generic:
+                - generic: Library
+                - list:
+                  - listitem:
+                    - link:
+                      - /url: /overview
+                      - img
+                      - generic: Overview
+                  - listitem:
+                    - link:
+                      - /url: /courses
+                      - img
+                      - generic: Courses
+                  - listitem:
+                    - link:
+                      - /url: /learning-paths
+                      - img
+                      - generic: Learning Paths
+                  - listitem:
+                    - link:
+                      - /url: /library
+                      - img
+                      - generic: Books
+              - generic:
+                - generic: Study
+                - list:
+                  - listitem:
+                    - link:
+                      - /url: /my-class
+                      - img
+                      - generic: My Courses
+                  - listitem:
+                    - link:
+                      - /url: /flashcards
+                      - img
+                      - generic: Flashcards
+                  - listitem:
+                    - link:
+                      - /url: /vocabulary
+                      - img
+                      - generic: Vocabulary
+                  - listitem:
+                    - link:
+                      - /url: /highlight-review
+                      - img
+                      - generic: Highlight Review
+                  - listitem:
+                    - link:
+                      - /url: /search-annotations
+                      - img
+                      - generic: Cross-Book Search
+              - generic:
+                - generic: Track
+                - list:
+                  - listitem:
+                    - link:
+                      - /url: /knowledge-map
+                      - img
+                      - generic: Knowledge Map
+          - generic:
+            - button:
+              - img
+              - generic: Send Feedback
+            - list:
+              - listitem:
+                - link:
+                  - /url: /settings
+                  - img
+                  - generic: Settings
+        - button:
+          - img
+      - generic:
+        - banner:
+          - generic:
+            - search:
+              - button [ref=e179] [cursor=pointer]:
+                - img [ref=e123]
+                - generic [ref=e126]: Search...
+                - generic:
+                  - generic: ⌘
+                  - text: K
+          - generic:
+            - button:
+              - img
+            - button:
+              - img
+            - button:
+              - img
+            - status
+            - button:
+              - img
+              - text: Sign In
+        - main:
+          - generic:
+            - generic:
+              - generic:
+                - heading [level=1]: Learning Paths
+                - paragraph: Organize courses into structured learning journeys
+              - generic:
+                - generic:
+                  - img
+                  - textbox:
+                    - /placeholder: Search paths...
+                - button:
+                  - img
+                  - text: Create Path
+                - button:
+                  - img
+                  - text: Import Course
+            - status
+            - list:
+              - listitem:
+                - generic:
+                  - generic:
+                    - generic:
+                      - button [expanded]:
+                        - img
+                    - generic:
+                      - generic:
+                        - generic:
+                          - progressbar:
+                            - img
+                            - generic:
+                              - generic: 0%
+                      - link:
+                        - /url: /learning-paths/700d029d-98d2-4ccd-aa48-9a73a597271f
+                        - generic:
+                          - generic: 0 courses
+                        - heading [level=3]: Human Behaviour
+                        - generic:
+                          - generic:
+                            - generic:
+                              - img
+                          - img
+    - region "Notifications alt+T"
+  - button [ref=e180] [cursor=pointer]:
+    - img [ref=e6]
+    - generic:
+      - generic:
+        - button:
+          - img
+      - generic:
+        - button [disabled]:
+          - img
+      - generic:
+        - button [disabled]:
+          - img
+      - button [disabled]:
+        - img
+      - generic:
+        - button [disabled]:
+          - img
+      - generic:
+        - button:
+          - img
+      - generic:
+        - button:
+          - img
+    - generic:
+      - generic:
+        - generic:
+          - generic:
+            - generic: /agentation
+            - generic: v2.3.3
+            - button:
+              - generic:
+                - generic:
+                  - img
+          - generic:
+            - generic:
+              - generic:
+                - text: Output Detail
+                - generic:
+                  - img
+              - button:
+                - generic: Standard
+            - generic:
+              - generic:
+                - text: React Components
+                - generic:
+                  - img
+            - generic:
+              - generic:
+                - text: Hide Until Restart
+                - generic:
+                  - img
+          - generic:
+            - generic: Marker Color
+            - generic:
+              - button
+              - button
+              - button
+              - button
+              - button
+              - button
+              - button
+          - generic:
+            - generic:
+              - generic:
+                - text: Clear on copy/send
+                - generic:
+                  - img
+            - generic:
+              - generic:
+                - img
+              - generic: Block page interactions
+          - generic:
+            - button:
+              - generic: Manage MCP & Webhooks
+              - generic:
+                - img
+        - generic:
+          - button:
+            - img
+            - generic: Manage MCP & Webhooks
+          - generic:
+            - generic:
+              - generic:
+                - text: MCP Connection
+                - generic:
+                  - img
+            - paragraph:
+              - text: MCP connection allows agents to receive and act on annotations.
+              - link:
+                - /url: https://agentation.dev/mcp
+                - text: Learn more
+          - generic:
+            - generic:
+              - generic:
+                - text: Webhooks
+                - generic:
+                  - img
+              - generic:
+                - generic: Auto-Send
+            - paragraph: The webhook URL will receive live annotation changes and annotation data.
+            - textbox:
+              - /placeholder: Webhook URL
+  - menu "Actions for Human Behaviour" [active] [ref=e181]:
+    - menuitem "Import Course" [ref=e182]:
+      - img
+      - text: Import Course
+    - menuitem "Rename" [ref=e183]:
+      - img
+      - text: Rename
+    - menuitem "Edit Description" [ref=e184]:
+      - img
+      - text: Edit Description
+    - menuitem "Delete" [ref=e185]:
+      - img
+      - text: Delete

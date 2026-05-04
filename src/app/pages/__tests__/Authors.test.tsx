@@ -20,23 +20,33 @@ const mockPreseededAuthors = vi.hoisted(() => ({
   }>,
 }))
 
+const mockAuthorsPageCourses = vi.hoisted(() => ({
+  courses: [] as Array<{ id: string; authorId: string }>,
+}))
+
+const mockAuthorsPageImportedCourses = vi.hoisted(() => ({
+  list: [] as Array<{ id: string; authorId?: string }>,
+}))
+
 vi.mock('@/data/authors', () => ({
   get allAuthors() {
     return mockPreseededAuthors.authors
   },
 }))
 
-// Mock useCourseStore for getAuthorStats / getMergedAuthors
+// Mock useCourseStore — mutable `courses` for grid counts + featured layout
 vi.mock('@/stores/useCourseStore', () => ({
   useCourseStore: Object.assign(
-    vi.fn((selector: (state: { courses: unknown[] }) => unknown) => selector({ courses: [] })),
+    vi.fn((selector: (state: { courses: unknown[] }) => unknown) =>
+      selector({ courses: mockAuthorsPageCourses.courses })
+    ),
     {
-      getState: () => ({ courses: [] }),
+      getState: () => ({ courses: mockAuthorsPageCourses.courses }),
     }
   ),
 }))
 
-// Mock useCourseImportStore for FeaturedAuthorProfile
+// Mock useCourseImportStore — mutable `list` for grid + featured course totals
 vi.mock('@/stores/useCourseImportStore', () => ({
   useCourseImportStore: Object.assign(
     vi.fn(
@@ -48,14 +58,14 @@ vi.mock('@/stores/useCourseImportStore', () => ({
         }) => unknown
       ) =>
         selector({
-          importedCourses: [],
+          importedCourses: mockAuthorsPageImportedCourses.list,
           loadImportedCourses: () => {},
           getAllTags: () => [],
         })
     ),
     {
       getState: () => ({
-        importedCourses: [],
+        importedCourses: mockAuthorsPageImportedCourses.list,
         loadImportedCourses: () => {},
         getAllTags: () => [],
       }),
@@ -99,6 +109,8 @@ function renderAuthors() {
 describe('Authors page', () => {
   beforeEach(() => {
     mockPreseededAuthors.authors = []
+    mockAuthorsPageCourses.courses = []
+    mockAuthorsPageImportedCourses.list = []
     useAuthorStore.setState({
       authors: [],
       isLoading: false,
@@ -201,6 +213,60 @@ describe('Authors page', () => {
       const hrefs = cards.map(c => c.getAttribute('href'))
       expect(hrefs).toContain('/authors/a1')
       expect(hrefs).toContain('/authors/a2')
+    })
+
+    it('shows imported course count when author has no canonical courses', () => {
+      mockAuthorsPageImportedCourses.list = [{ id: 'ic1', authorId: 'a1' }]
+      renderAuthors()
+      const aliceLink = screen
+        .getAllByTestId('author-card')
+        .find(el => el.getAttribute('href') === '/authors/a1')
+      expect(aliceLink).toBeTruthy()
+      expect(within(aliceLink!).getByTestId('author-course-count')).toHaveTextContent('1')
+    })
+
+    it('sums canonical and imported courses on each card', () => {
+      mockAuthorsPageCourses.courses = [{ id: 'c1', authorId: 'a2' }]
+      mockAuthorsPageImportedCourses.list = [
+        { id: 'ic1', authorId: 'a2' },
+        { id: 'ic2', authorId: 'a2' },
+      ]
+      renderAuthors()
+      const bobLink = screen
+        .getAllByTestId('author-card')
+        .find(el => el.getAttribute('href') === '/authors/a2')
+      expect(within(bobLink!).getByTestId('author-course-count')).toHaveTextContent('3')
+    })
+
+    it('does not count imported courses without authorId', () => {
+      mockAuthorsPageImportedCourses.list = [{ id: 'ic1', authorId: undefined }]
+      renderAuthors()
+      const aliceLink = screen
+        .getAllByTestId('author-card')
+        .find(el => el.getAttribute('href') === '/authors/a1')
+      expect(within(aliceLink!).getByTestId('author-course-count')).toHaveTextContent('0')
+    })
+
+    it('truncates long single-token specialty badges', () => {
+      useAuthorStore.setState({
+        authors: [
+          makeImportedAuthor({
+            id: 'a1',
+            name: 'Alice',
+            specialties: ['X'.repeat(120)],
+            createdAt: '2026-03-20T10:00:00.000Z',
+          }),
+          makeImportedAuthor({ id: 'a2', name: 'Bob', createdAt: '2026-03-25T10:00:00.000Z' }),
+        ],
+        isLoading: false,
+        isLoaded: true,
+        error: null,
+      })
+      renderAuthors()
+      const aliceLink = screen
+        .getAllByTestId('author-card')
+        .find(el => el.getAttribute('href') === '/authors/a1')
+      expect(aliceLink!.querySelector('.max-w-full.truncate')).not.toBeNull()
     })
   })
 

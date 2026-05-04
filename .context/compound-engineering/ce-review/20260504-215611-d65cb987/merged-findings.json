@@ -1,0 +1,88 @@
+{
+  "run_id": "20260504-215611-d65cb987",
+  "scope": "feature/ce-2026-05-04-fix-imported-course-lesson-ordering vs base 23666797b90dd7702516639bbe65bceddee6b8ad",
+  "mode": "headless",
+  "intent": "Fix imported course lesson ordering by extracting shared toSortedVideos() helper with path-based deterministic sort, applying it to scanCourseFolder and scanCourseFolderFromHandle. Also fix Authors page: count imported courses via totalCoursesForAuthor()/withAuthorCourseCounts(), sanitize specialty badges with flattenSpecialties(), and fix card layout overflow.",
+  "verdict": "Ready to merge",
+  "artifact_path": ".context/compound-engineering/ce-review/20260504-215611-d65cb987/",
+  "applied_fixes": 0,
+  "findings": [
+    {
+      "id": "F1",
+      "severity": "P3",
+      "autofix_class": "advisory",
+      "owner": "human",
+      "requires_verification": false,
+      "confidence": 0.72,
+      "pre_existing": false,
+      "title": "Integration tests don't assert sort order after import",
+      "file": "src/lib/courseImport.ts",
+      "line": 82,
+      "reviewer": "testing",
+      "why_it_matters": "toSortedVideos() is a new module-private helper that determines import ordering. Integration tests in courseImport.test.ts call the full import pipeline but only assert videoCount, not that videos are in path-sorted order. A sort regression wouldn't be caught. Since the function is private, add sort-order assertions to existing integration tests instead of writing separate unit tests.",
+      "evidence": ["toSortedVideos() at src/lib/courseImport.ts:82-104 is module-private (not exported)", "courseImport.test.ts tests importCourseFromFolder but only asserts videoCount (line 103)", "A sort regression would pass all existing tests"],
+      "suggested_fix": "Add order assertion to integration test: after importing a course with videos at paths '01-intro/1.mp4' and '02-advanced/1.mp4', assert stored videos have correct sequential order values."
+    },
+    {
+      "id": "F2",
+      "severity": "P3",
+      "autofix_class": "advisory",
+      "owner": "human",
+      "requires_verification": false,
+      "confidence": 0.65,
+      "pre_existing": false,
+      "title": "flattenSpecialties splits legitimate comma-containing specialty names",
+      "file": "src/lib/authors.ts",
+      "line": 35,
+      "reviewer": "adversarial",
+      "why_it_matters": "flattenSpecialties splits on comma/semicolon/pipe. A specialty like 'Systems Design, Architecture & Planning' would be incorrectly split into two entries. Users importing author data with comma-containing specialties will see them fragmented. No escape mechanism exists for literal commas.",
+      "evidence": ["Regex /[,;|]/ at src/lib/authors.ts:41 splits on comma", "Test confirms split behavior: ['A, B, C'] -> ['A', 'B', 'C']", "No quoting or escaping mechanism in the function"],
+      "suggested_fix": null
+    }
+  ],
+  "pre_existing": [],
+  "gated_auto": [],
+  "manual": [],
+  "requirements_completeness": {
+    "status": "all_met",
+    "details": {
+      "R1": "met — toSortedVideos sorts by path with localeCompare numeric:true",
+      "R2": "met — scanCourseFolderFromHandle uses toSortedVideos",
+      "R3": "met — scanFromDroppedFiles already sorts by file.name (lines 797-800, pre-existing)",
+      "R4": "met — getFirstLessonId uses sortBy('order')/sortBy('filename'); getLastWatchedLesson has tiebreaker (line 130)",
+      "R5": "met — useCourseAdapter.ts uses sortBy(); useNextBestCourse.ts uses sortBy(); progress.ts has tiebreaker (all pre-existing)",
+      "R6": "met — no schema migration, existing courses keep current order"
+    },
+    "implementation_units": {
+      "Unit 1": "implemented in diff — toSortedVideos applied to scanCourseFolderFromHandle",
+      "Unit 2": "pre-existing — scanFromDroppedFiles sort already present (lines 797-800)",
+      "Unit 3": "pre-existing — useCourseAdapter.ts:29 sortBy('order'), :31 sortBy('filename')",
+      "Unit 4": "pre-existing — getLastWatchedLesson tiebreaker at progress.ts:130",
+      "Unit 5": "pre-existing — getFirstLessonId already uses sortBy('filename') for PDFs"
+    }
+  },
+  "residual_risks": [
+    "Existing courses imported before this fix retain scrambled order values — users must re-import or use VideoReorderDialog"
+  ],
+  "learnings": [
+    "Plan references docs/solutions/ui-bugs/lesson-badge-local-global-index-mismatch-2026-05-04.md — sortBy() pattern for ordering",
+    "Plan references docs/solutions/best-practices/smart-resume-implementation-lessons-2026-05-04.md — toArray() anti-pattern awareness"
+  ],
+  "agent_native_gaps": [],
+  "schema_drift": "N/A",
+  "deployment_notes": [],
+  "testing_gaps": [
+    "Integration tests don't assert sort order after import"
+  ],
+  "coverage": {
+    "suppressed": 0,
+    "untracked_excluded": [
+      "docs/plans/2026-05-04-007-fix-imported-course-lesson-ordering-plan.md",
+      "docs/plans/2026-05-04-008-fix-author-edit-modal-viewport-refresh-plan.md",
+      "docs/plans/2026-05-04-009-fix-authors-page-layout-course-count-plan.md",
+      "docs/reviews/design/design-review-2026-05-03-companion-pdf-preview-resolve.md",
+      "lp-dropdown-open.md"
+    ],
+    "failed_reviewers": []
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "reviewer": "adversarial",
+  "findings": [
+    {
+      "title": "flattenSpecialties splits legitimate comma-containing specialty names",
+      "severity": "P3",
+      "file": "src/lib/authors.ts",
+      "line": 35,
+      "confidence": 0.65,
+      "autofix_class": "advisory",
+      "owner": "human",
+      "requires_verification": false,
+      "pre_existing": false,
+      "why_it_matters": "flattenSpecialties splits on comma/semicolon/pipe. A specialty like 'Systems Design, Architecture & Planning' would be incorrectly split into two entries: 'Systems Design' and 'Architecture & Planning'. Users who import author data with comma-containing specialties will see them fragmented. No escape mechanism exists for literal commas.",
+      "evidence": [
+        "Regex /[,;|]/ at src/lib/authors.ts:41 splits on comma",
+        "Test confirms split behavior: ['A, B, C'] → ['A', 'B', 'C']",
+        "No quoting or escaping mechanism in the function"
+      ],
+      "suggested_fix": null
+    }
+  ],
+  "residual_risks": [
+    "flattenSpecialties has O(n*m) where n=input array size, m=max tokens per entry. For adversarial input with 10,000 long specialty entries, this could cause frame drops during render. Mitigated by typical author data having <20 specialties each."
+  ],
+  "testing_gaps": []
+}

@@ -1,0 +1,200 @@
+- generic [active] [ref=e9]:
+  - generic [ref=e10]:
+    - status [ref=e1]
+    - alert [ref=e2]
+    - generic [ref=e11]:
+      - link "Skip to sign-in" [ref=e12] [cursor=pointer]:
+        - /url: "#landing-auth"
+      - generic [ref=e13]:
+        - generic [ref=e15]:
+          - generic [ref=e16]:
+            - link "Knowlune home" [ref=e17] [cursor=pointer]:
+              - /url: /
+              - img "Knowlune" [ref=e18]:
+                - generic [ref=e21]: Knowlune
+            - paragraph [ref=e22]: Illuminate Your Path
+          - generic [ref=e23]:
+            - generic [ref=e24]:
+              - heading "Learn smarter, remember more." [level=1] [ref=e25]:
+                - text: Learn smarter,
+                - text: remember more.
+              - paragraph [ref=e26]: Import, organise, and review everything you learn — courses, books, and videos.
+            - list "Key features" [ref=e27]:
+              - listitem [ref=e28]:
+                - img [ref=e30]
+                - generic [ref=e32]:
+                  - paragraph [ref=e33]: All your learning in one place
+                  - paragraph [ref=e34]: Import YouTube courses, audiobooks, PDFs, and EPUBs. Everything organised, searchable, and in sync.
+              - listitem [ref=e35]:
+                - img [ref=e37]
+                - generic [ref=e45]:
+                  - paragraph [ref=e46]: Remember what you learn
+                  - paragraph [ref=e47]: Spaced-repetition flashcards, quizzes, and AI-generated summaries turn passive watching into lasting knowledge.
+              - listitem [ref=e48]:
+                - img [ref=e50]
+                - generic [ref=e52]:
+                  - paragraph [ref=e53]: Build a real streak
+                  - paragraph [ref=e54]: Daily goals, progress tracking, and achievement milestones keep you consistent week after week.
+            - link "Try without signing up — explore as a guest" [ref=e56] [cursor=pointer]:
+              - /url: /try
+              - text: Try without signing up →
+        - generic [ref=e59]:
+          - heading "Sign in to Knowlune" [level=3] [ref=e61]
+          - generic [ref=e62]:
+            - link "Skip to sign-in form" [ref=e63] [cursor=pointer]:
+              - /url: "#auth-email-input"
+            - button "Continue with Google" [ref=e65] [cursor=pointer]:
+              - img
+              - text: Continue with Google
+            - generic [ref=e68]: or continue with email
+            - generic [ref=e70]:
+              - tablist [ref=e71]:
+                - tab "Email" [selected] [ref=e72]:
+                  - img
+                  - text: Email
+                - tab "Magic Link" [ref=e73]:
+                  - img
+                  - text: Magic Link
+              - tabpanel "Email" [ref=e74]:
+                - generic [ref=e75]:
+                  - generic [ref=e76]:
+                    - generic [ref=e77]: Email
+                    - textbox "Email" [ref=e78]:
+                      - /placeholder: you@example.com
+                  - generic [ref=e79]:
+                    - generic [ref=e80]: Password
+                    - generic [ref=e81]:
+                      - textbox "Password" [ref=e82]:
+                        - /placeholder: At least 8 characters
+                      - button "Show password" [ref=e83]:
+                        - img [ref=e84]
+                    - paragraph [ref=e87]: Must be at least 8 characters
+                    - button "Forgot Password?" [ref=e88]
+                  - button "Sign In" [ref=e89] [cursor=pointer]
+            - generic [ref=e90]:
+              - text: Don't have an account?
+              - button "Sign Up" [ref=e91]
+            - generic [ref=e92]:
+              - text: By continuing you agree to our
+              - link "Privacy Policy" [ref=e93] [cursor=pointer]:
+                - /url: /privacy
+              - text: and
+              - link "Terms of Service" [ref=e94] [cursor=pointer]:
+                - /url: /terms
+    - region "Notifications alt+T"
+  - button "/agentation v2.3.3 Output Detail Standard React Components Hide Until Restart Marker Color Indigo Blue Cyan Green Yellow Orange Red Clear on copy/send Block page interactions Manage MCP & Webhooks Manage MCP & Webhooks MCP Connection MCP connection allows agents to receive and act on annotations. Learn more Webhooks Auto-Send The webhook URL will receive live annotation changes and annotation data." [ref=e4] [cursor=pointer]:
+    - img [ref=e6]
+    - generic:
+      - generic:
+        - button:
+          - img
+      - generic:
+        - button [disabled]:
+          - img
+      - generic:
+        - button [disabled]:
+          - img
+      - generic:
+        - button [disabled]:
+          - img
+      - generic:
+        - button [disabled]:
+          - img
+      - generic:
+        - button:
+          - img
+      - generic:
+        - button:
+          - img
+    - generic:
+      - generic:
+        - generic:
+          - generic:
+            - generic: /agentation
+            - generic: v2.3.3
+            - button "Switch to light mode":
+              - generic:
+                - generic:
+                  - img
+          - generic:
+            - generic:
+              - generic:
+                - text: Output Detail
+                - generic:
+                  - img
+              - button "Standard":
+                - generic: Standard
+            - generic:
+              - generic:
+                - text: React Components
+                - generic:
+                  - img
+              - generic:
+                - checkbox [checked]
+            - generic:
+              - generic:
+                - text: Hide Until Restart
+                - generic:
+                  - img
+              - generic:
+                - checkbox
+          - generic:
+            - generic: Marker Color
+            - generic:
+              - button "Indigo":
+                - generic "Indigo"
+              - button "Blue":
+                - generic "Blue"
+              - button "Cyan":
+                - generic "Cyan"
+              - button "Green":
+                - generic "Green"
+              - button "Yellow":
+                - generic "Yellow"
+              - button "Orange":
+                - generic "Orange"
+              - button "Red":
+                - generic "Red"
+          - generic:
+            - generic:
+              - checkbox "Clear on copy/send"
+              - generic:
+                - text: Clear on copy/send
+                - generic:
+                  - img
+            - generic:
+              - checkbox "Block page interactions" [checked]
+              - generic:
+                - img
+              - generic: Block page interactions
+          - generic:
+            - button "Manage MCP & Webhooks":
+              - generic: Manage MCP & Webhooks
+              - generic:
+                - img
+        - generic:
+          - button "Manage MCP & Webhooks":
+            - img
+            - generic: Manage MCP & Webhooks
+          - generic:
+            - generic:
+              - generic:
+                - text: MCP Connection
+                - generic:
+                  - img
+            - paragraph:
+              - text: MCP connection allows agents to receive and act on annotations.
+              - link "Learn more":
+                - /url: https://agentation.dev/mcp
+          - generic:
+            - generic:
+              - generic:
+                - text: Webhooks
+                - generic:
+                  - img
+              - generic:
+                - generic: Auto-Send
+                - generic:
+                  - checkbox [checked] [disabled]
+            - paragraph: The webhook URL will receive live annotation changes and annotation data.
+            - textbox "Webhook URL"

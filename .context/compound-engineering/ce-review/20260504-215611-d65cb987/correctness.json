@@ -1,0 +1,8 @@
+{
+  "reviewer": "correctness",
+  "findings": [],
+  "residual_risks": [
+    "Existing courses imported before this fix retain potentially scrambled order values — requires re-import or manual VideoReorderDialog usage"
+  ],
+  "testing_gaps": []
+}
