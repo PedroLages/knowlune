@@ -76,8 +76,10 @@ export function usePathMilestones({ pathId, pathName, completionPct }: UsePathMi
 
     // Progress went backward — nothing to fire (already celebrated milestones remain)
     if (currPct < prevPct) {
-      // Update progress to reflect current (lower) state
-      challenge.currentProgress = currPct
+      // Persist lower progress so on next load we don't restore a stale higher value
+      useChallengeStore.getState().updateChallenge(challenge.id, {
+        currentProgress: currPct,
+      })
       return
     }
 
@@ -89,14 +91,15 @@ export function usePathMilestones({ pathId, pathName, completionPct }: UsePathMi
     const crossedThresholds = allNewThresholds.filter(t => t > prevPct)
 
     if (crossedThresholds.length === 0) {
-      // No new milestones, but update progress
-      challenge.currentProgress = currPct
+      // No new milestones, but persist the increased progress
+      useChallengeStore.getState().updateChallenge(challenge.id, {
+        currentProgress: currPct,
+      })
       return
     }
 
-    // Update challenge progress
-    challenge.currentProgress = currPct
-    challenge.celebratedMilestones = [
+    // Compute new celebrated milestones without mutating store state
+    const newCelebratedMilestones = [
       ...challenge.celebratedMilestones,
       ...crossedThresholds,
     ]
@@ -104,7 +107,7 @@ export function usePathMilestones({ pathId, pathName, completionPct }: UsePathMi
     // Persist updated challenge
     useChallengeStore.getState().updateChallenge(challenge.id, {
       currentProgress: currPct,
-      celebratedMilestones: challenge.celebratedMilestones,
+      celebratedMilestones: newCelebratedMilestones,
       completedAt: currPct >= 100 ? new Date().toISOString() : challenge.completedAt,
     })
 
