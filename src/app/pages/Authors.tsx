@@ -16,7 +16,6 @@ import { Card, CardContent } from '@/app/components/ui/card'
 import { Badge } from '@/app/components/ui/badge'
 import { Button } from '@/app/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/app/components/ui/avatar'
-import { Separator } from '@/app/components/ui/separator'
 import { Skeleton } from '@/app/components/ui/skeleton'
 import {
   Select,
@@ -41,6 +40,7 @@ import {
 import { HeaderSearchButton } from '@/app/components/figma/HeaderSearchButton'
 import { getCourseCompletionPercent } from '@/lib/progress'
 import { AuthorFormDialog } from '@/app/components/authors/AuthorFormDialog'
+import { AuthorAboutSection } from '@/app/components/authors/AuthorAboutSection'
 import { AuthorsSyncErrorBanner } from '@/app/components/authors/AuthorsSyncErrorBanner'
 import { DeleteAuthorDialog } from '@/app/components/authors/DeleteAuthorDialog'
 import type { ImportedAuthor } from '@/data/types'
@@ -48,7 +48,10 @@ import type { ImportedAuthor } from '@/data/types'
 type SortMode = 'alphabetical' | 'most-courses' | 'recently-added'
 
 export function Authors() {
-  const { authors: storeAuthors, isLoaded, isLoading, loadAuthors } = useAuthorStore()
+  const storeAuthors = useAuthorStore(s => s.authors)
+  const isLoaded = useAuthorStore(s => s.isLoaded)
+  const isLoading = useAuthorStore(s => s.isLoading)
+  const loadAuthors = useAuthorStore(s => s.loadAuthors)
   const courses = useCourseStore(s => s.courses)
   const importedCourses = useCourseImportStore(s => s.importedCourses)
   const loadImportedCourses = useCourseImportStore(s => s.loadImportedCourses)
@@ -281,7 +284,7 @@ function AuthorCard({
             </Avatar>
 
             {/* Name & Title */}
-            <h2 className="text-lg font-semibold group-hover:text-brand transition-colors">
+            <h2 className="text-lg font-semibold group-hover:text-brand/80 transition-colors">
               {author.name}
             </h2>
             {author.title && (
@@ -521,28 +524,7 @@ function FeaturedAuthorProfile({
       </Card>
 
       {/* Bio Section */}
-      {author.bio && (
-        <Card className="rounded-2xl border-0 shadow-sm mb-6">
-          <CardContent className="p-6 sm:p-8">
-            <h3 className="text-lg font-semibold mb-4">About</h3>
-            <div className="space-y-3 text-muted-foreground leading-relaxed">
-              {author.bio.split('\n\n').map((paragraph, i) => (
-                <p key={i}>{paragraph}</p>
-              ))}
-            </div>
-            {author.education && (
-              <>
-                <Separator className="my-5" />
-                <div className="flex items-center gap-2 text-sm">
-                  <BookOpen className="size-4 text-brand" aria-hidden="true" />
-                  <span className="font-medium">Education:</span>
-                  <span className="text-muted-foreground">{author.education}</span>
-                </div>
-              </>
-            )}
-          </CardContent>
-        </Card>
-      )}
+      <AuthorAboutSection author={author} headingLevel="h3" educationIcon="book" />
 
       {/* Courses Section */}
       {totalCourseCount > 0 && (

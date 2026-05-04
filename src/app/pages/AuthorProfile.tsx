@@ -14,7 +14,6 @@ import {
 import { Button } from '@/app/components/ui/button'
 import { Badge } from '@/app/components/ui/badge'
 import { Card, CardContent } from '@/app/components/ui/card'
-import { Separator } from '@/app/components/ui/separator'
 import { Avatar, AvatarFallback, AvatarImage } from '@/app/components/ui/avatar'
 import { Skeleton } from '@/app/components/ui/skeleton'
 import {
@@ -40,6 +39,7 @@ import {
 } from '@/lib/authors'
 import { getCourseCompletionPercent } from '@/lib/progress'
 import { AuthorFormDialog } from '@/app/components/authors/AuthorFormDialog'
+import { AuthorAboutSection } from '@/app/components/authors/AuthorAboutSection'
 import { AuthorsSyncErrorBanner } from '@/app/components/authors/AuthorsSyncErrorBanner'
 import { DeleteAuthorDialog } from '@/app/components/authors/DeleteAuthorDialog'
 
@@ -56,7 +56,10 @@ export function AuthorProfile() {
     if (state?.__viaPalette === true) return
     void recordVisit('author', authorId)
   }, [authorId, location.state])
-  const { authors: storeAuthors, isLoaded, isLoading, loadAuthors } = useAuthorStore()
+  const storeAuthors = useAuthorStore(s => s.authors)
+  const isLoaded = useAuthorStore(s => s.isLoaded)
+  const isLoading = useAuthorStore(s => s.isLoading)
+  const loadAuthors = useAuthorStore(s => s.loadAuthors)
   const courses = useCourseStore(s => s.courses)
   const importedCourses = useCourseImportStore(state => state.importedCourses)
   const loadImportedCourses = useCourseImportStore(state => state.loadImportedCourses)
@@ -249,28 +252,7 @@ export function AuthorProfile() {
       </div>
 
       {/* Bio Section */}
-      {author.bio && (
-        <Card className="rounded-2xl border-0 shadow-sm mb-6">
-          <CardContent className="p-6 sm:p-8">
-            <h2 className="text-lg font-semibold mb-4">About</h2>
-            <div className="space-y-3 text-muted-foreground leading-relaxed">
-              {author.bio.split('\n\n').map((paragraph, i) => (
-                <p key={i}>{paragraph}</p>
-              ))}
-            </div>
-            {author.education && (
-              <>
-                <Separator className="my-5" />
-                <div className="flex items-center gap-2 text-sm">
-                  <Award className="size-4 text-brand" aria-hidden="true" />
-                  <span className="font-medium">Education:</span>
-                  <span className="text-muted-foreground">{author.education}</span>
-                </div>
-              </>
-            )}
-          </CardContent>
-        </Card>
-      )}
+      <AuthorAboutSection author={author} headingLevel="h2" educationIcon="award" />
 
       {/* Courses Section */}
       {totalCourseCount > 0 && (
