@@ -1,0 +1,151 @@
+{
+  "runId": "20260504-190918-301b359e",
+  "scope": "feature/ce-2026-05-04-course-lesson-notes-top3",
+  "base": "90fad3b260f89314d3b464ce55c9c944b1f8b69a",
+  "intent": "Add Picture-in-Picture floating notes panel on mobile (three states: closed pill, expanded panel, fullscreen overlay) and course notes bulk export (Combined Markdown + ZIP).",
+  "plan": "docs/plans/2026-05-04-005-feat-course-lesson-notes-top3-plan.md",
+  "planSource": "explicit",
+  "reviewers": [
+    "correctness (always)",
+    "testing (always)",
+    "maintainability (always)",
+    "project-standards (always)",
+    "agent-native-reviewer (always)",
+    "learnings-researcher (always)",
+    "reliability (touch events, autosave coordination, portal lifecycle)",
+    "adversarial (diff > 50 executable lines)",
+    "kieran-typescript (TypeScript components, stores, utilities)",
+    "julik-frontend-races (touch/swipe gestures, autosave timers, DOM events)"
+  ],
+  "verdict": "Ready with fixes",
+  "appliedFixes": [
+    "P0: Fixed empty fullscreen block in FloatingNotesPanel.tsx:130 — added missing `return null` to prevent panel rendering during fullscreen state",
+    "P1: Fixed CourseNotesTab.tsx:93,105 — changed `notes` to `exportableNotes` in both export function calls to exclude soft-deleted notes per R9",
+    "P2: Fixed CourseNotesTab.tsx:113 — added `console.error` in export catch block for debugging",
+    "P2: Fixed CourseNotesTab.tsx:119 — updated useCallback dependency array from `[notes, ...]` to `[exportableNotes, ...]`"
+  ],
+  "findings": [
+    {
+      "id": "F1",
+      "title": "FloatingNotesPanel renders expanded panel during fullscreen state (empty if block without return)",
+      "severity": "P0",
+      "file": "src/app/components/course/FloatingNotesPanel.tsx",
+      "line": 130,
+      "confidence": 0.95,
+      "autofix_class": "safe_auto",
+      "owner": "review-fixer",
+      "requires_verification": true,
+      "pre_existing": false,
+      "suggested_fix": "Add `return null` inside the empty if block at line 130-133"
+    },
+    {
+      "id": "F2",
+      "title": "Deleted notes exported in bulk export — CourseNotesTab passes raw `notes` instead of filtered `exportableNotes`",
+      "severity": "P1",
+      "file": "src/app/components/notes/CourseNotesTab.tsx",
+      "line": 93,
+      "confidence": 0.92,
+      "autofix_class": "safe_auto",
+      "owner": "review-fixer",
+      "requires_verification": true,
+      "pre_existing": false,
+      "suggested_fix": "Pass `exportableNotes` (which filters `!n.deleted`) to both `exportCombinedMarkdown` and `exportNotesZip` instead of raw `notes`"
+    },
+    {
+      "id": "F3",
+      "title": "CourseNotesTab test does not verify export functions receive filtered data — the deleted-notes bug was undetected",
+      "severity": "P1",
+      "file": "src/app/components/notes/__tests__/CourseNotesTab.test.tsx",
+      "line": 24,
+      "confidence": 0.85,
+      "autofix_class": "manual",
+      "owner": "downstream-resolver",
+      "requires_verification": true,
+      "pre_existing": false,
+      "suggested_fix": "Add integration-style tests that mock the export functions and verify they receive notes filtered by `!n.deleted` and non-empty content. Test case: soft-deleted note with content should not appear in exported data."
+    },
+    {
+      "id": "F4",
+      "title": "Export error handler silently drops error details — no console.error or telemetry",
+      "severity": "P2",
+      "file": "src/app/components/notes/CourseNotesTab.tsx",
+      "line": 113,
+      "confidence": 0.82,
+      "autofix_class": "safe_auto",
+      "owner": "review-fixer",
+      "requires_verification": false,
+      "pre_existing": false,
+      "suggested_fix": "Add `console.error('Course notes export failed:', err)` in the catch block"
+    },
+    {
+      "id": "F5",
+      "title": "Missing touch/swipe gesture tests for FloatingNotesPanel — swipe-down collapse is untested",
+      "severity": "P2",
+      "file": "src/app/components/course/__tests__/FloatingNotesPanel.test.tsx",
+      "line": 1,
+      "confidence": 0.80,
+      "autofix_class": "manual",
+      "owner": "downstream-resolver",
+      "requires_verification": true,
+      "pre_existing": false,
+      "suggested_fix": "Add tests for touch gesture: swipe down on handle region >= 48px closes panel, swipe outside handle region does nothing, swipe < 48px does not close"
+    },
+    {
+      "id": "F6",
+      "title": "Dynamic JSZip import used instead of static import — deviation from plan recommendation",
+      "severity": "P2",
+      "file": "src/lib/noteExport.ts",
+      "line": 229,
+      "confidence": 0.75,
+      "autofix_class": "advisory",
+      "owner": "human",
+      "requires_verification": false,
+      "pre_existing": false,
+      "suggested_fix": "Replace `const JSZip = (await import('jszip')).default` with static `import JSZip from 'jszip'` at top of file, matching fileDownload.ts pattern. The code-splitting gain is marginal for an already-small module and adds first-call latency."
+    },
+    {
+      "id": "F7",
+      "title": "Double-effect pattern for save status sync in NoteEditor — ref-based forwarding could be simplified",
+      "severity": "P3",
+      "file": "src/app/components/notes/NoteEditor.tsx",
+      "line": 204,
+      "confidence": 0.70,
+      "autofix_class": "advisory",
+      "owner": "human",
+      "requires_verification": false,
+      "pre_existing": false,
+      "suggested_fix": "Consider using a single `useEffect` that depends on `[saveStatus]` and calls `onSaveStatusChange?.(saveStatus)` directly, or memoize the callback with `useCallback` so the ref-forwarding pattern isn't needed"
+    },
+    {
+      "id": "F8",
+      "title": "handleTouchEnd callback recreated on every swipeDelta change during touch move — minor perf concern",
+      "severity": "P3",
+      "file": "src/app/components/course/FloatingNotesPanel.tsx",
+      "line": 310,
+      "confidence": 0.65,
+      "autofix_class": "advisory",
+      "owner": "human",
+      "requires_verification": false,
+      "pre_existing": false,
+      "suggested_fix": "Store swipeDelta in a ref instead of state and only use state for visual transform. This avoids callback recreation on every touchmove frame."
+    }
+  ],
+  "preExisting": [],
+  "residualRisks": [
+    "Portal z-index may conflict with native YouTube/video controls on some mobile browsers (plan risk #1)",
+    "Swipe gesture may conflict with iOS Safari back gesture at screen edges (plan risk #2)",
+    "Large ZIP exports (>100 notes) may still cause brief UI jank despite requestAnimationFrame chunking (plan risk #3)"
+  ],
+  "testingGaps": [
+    "No integration test verifying export functions receive deleted-filtered data",
+    "No touch gesture tests for FloatingNotesPanel swipe-down behavior",
+    "No E2E test for floating panel on real mobile viewport with video content"
+  ],
+  "learnings": [],
+  "coverage": {
+    "suppressed": 0,
+    "failedReviewers": 0,
+    "untrackedExcluded": true,
+    "untrackedNote": "Multiple untracked files in .context/, docs/brainstorms/, docs/ideation/, docs/plans/ — none part of this review's tracked diff scope"
+  }
+}

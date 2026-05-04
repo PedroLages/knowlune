@@ -1,0 +1,178 @@
+{
+  "runId": "20260504-021257-65b42c04",
+  "scope": {
+    "base": "fb526ec007bb5557ce24718d113aed52994607da",
+    "branch": "feature/ce-2026-05-04-smart-resume-learning-paths",
+    "files": [
+      "docs/plans/2026-05-04-001-feat-smart-resume-learning-paths-plan.md",
+      "src/app/components/ContinueLearningPathSection.tsx",
+      "src/app/components/NextInPath.tsx",
+      "src/app/hooks/__tests__/useNextBestCourse.test.tsx",
+      "src/app/hooks/useNextBestCourse.ts",
+      "src/app/pages/LearningPaths.tsx",
+      "src/app/pages/Overview.tsx",
+      "src/app/pages/UnifiedLessonPlayer.tsx",
+      "src/lib/dashboardOrder.ts"
+    ]
+  },
+  "intent": "Add Smart Resume primitive across four surfaces: a useNextBestCourse hook, an Overview dashboard section, path card Continue/Start/Review buttons, and post-completion path continuity in the lesson player. Enables 1-click resume to the exact lesson from any entry point.",
+  "review_mode": "headless",
+  "plan_source": "explicit",
+  "plan_path": "docs/plans/2026-05-04-001-feat-smart-resume-learning-paths-plan.md",
+  "reviewers": [
+    "correctness (always-on)",
+    "testing (always-on)",
+    "maintainability (always-on)",
+    "project-standards (always-on)",
+    "agent-native-reviewer (CE always-on)",
+    "learnings-researcher (CE always-on)",
+    "performance (conditional -- Dexie queries in async hook, unbounded .toArray() call)",
+    "reliability (conditional -- error handling in async operations, ErrorBoundary pattern)",
+    "adversarial (conditional -- 250+ executable code lines changed)",
+    "kieran-typescript (stack-specific -- TypeScript hooks and components)",
+    "julik-frontend-races (stack-specific -- async cancellation patterns, shared ref between effects)"
+  ],
+  "applied_fixes": [],
+  "findings": [
+    {
+      "title": "Navigation falls back to course detail instead of lesson player",
+      "severity": "P1",
+      "file": "src/app/components/ContinueLearningPathSection.tsx",
+      "line": 184,
+      "confidence": 0.75,
+      "autofix_class": "gated_auto",
+      "owner": "downstream-resolver",
+      "requires_verification": true,
+      "pre_existing": false,
+      "suggested_fix": "Replace the custom deriveNextCourse helper with useNextBestCourse to obtain targetLessonId, and navigate to `/courses/${courseId}/lessons/${targetLessonId}` instead of `/courses/${courseId}`. This aligns the dashboard section with the path card's 1-click navigation behavior.",
+      "why_it_matters": "The plan specifies 1-click resume to the exact lesson (R7). The path card successfully navigates to the lesson player via useNextBestCourse, but the dashboard section navigates to the course detail page instead. Users get an inconsistent experience: Continue from dashboard shows course overview, Continue from path list shows the exact lesson.",
+      "evidence": [
+        "ContinueLearningPathSection.tsx:184-188 -- handleNavigate uses `/courses/${courseId}` for resume/start",
+        "LearningPaths.tsx:80-82 -- PathCard uses `/courses/${entry!.courseId}/lessons/${targetLessonId}` via useNextBestCourse",
+        "Code comment at line 186: 'the hook's async targetLessonId resolution is not known without the hook' -- but useNextBestCourse already provides targetLessonId synchronously (it's in the result shape from the hook)"
+      ]
+    },
+    {
+      "title": "Missing integration tests for 3 of 4 implementation units",
+      "severity": "P1",
+      "file": "src/app/hooks/__tests__/useNextBestCourse.test.tsx",
+      "line": 1,
+      "confidence": 0.9,
+      "autofix_class": "manual",
+      "owner": "downstream-resolver",
+      "requires_verification": true,
+      "pre_existing": false,
+      "suggested_fix": "Create tests for: (1) ContinueLearningPathSection rendering and navigation in Overview.test.tsx, (2) PathCard Continue/Start/Review buttons in LearningPaths.test.tsx, (3) NextInPath rendering and path determination in UnifiedLessonPlayer.test.tsx. The plan lists 18 test scenarios across these three units.",
+      "why_it_matters": "The plan specifies test scenarios for all four implementation units. Only Unit 1 (useNextBestCourse) has tests. Units 2 (dashboard section), 3 (path card buttons), and 4 (post-completion) lack any test coverage despite the plan detailing 7, 9, and 6 specific test scenarios respectively. Behavioral changes in LearningPaths, Overview, and UnifiedLessonPlayer have no test protection.",
+      "evidence": [
+        "Plan Unit 2 lists 7 test scenarios for dashboard section (lines 163-168 in plan)",
+        "Plan Unit 3 lists 8 test scenarios for path card buttons (lines 208-217)",
+        "Plan Unit 4 lists 7 test scenarios for post-completion (lines 254-265)",
+        "Diff shows only src/app/hooks/__tests__/useNextBestCourse.test.tsx was created",
+        "No modifications to Overview.test.tsx, LearningPaths.test.tsx, or UnifiedLessonPlayer.test.tsx"
+      ]
+    },
+    {
+      "title": "Race condition in cancelledRef shared between two effects",
+      "severity": "P2",
+      "file": "src/app/hooks/useNextBestCourse.ts",
+      "line": 190,
+      "confidence": 0.7,
+      "autofix_class": "gated_auto",
+      "owner": "downstream-resolver",
+      "requires_verification": true,
+      "pre_existing": false,
+      "suggested_fix": "Use separate cancellation mechanisms. Option A: Replace cancelledRef with a monotonically increasing effect counter. Increment a local ref before each async call and only apply results whose counter matches the current count. Option B: Use AbortController with a per-effect signal. Option C: Give the event listener effect its own dedicated cancelledRef that the main effect's cleanup does not touch.",
+      "why_it_matters": "The shared cancelledRef between the main useEffect and the event listener useEffect allows stale state updates. Sequence: (1) event handler starts async compute, (2) dependencies change triggering main effect cleanup (sets cancelledRef=true), (3) runCompute in main effect re-runs (sets cancelledRef=false), (4) event handler's async compute completes (sees cancelledRef=false, applies stale result). While rare, this creates a phantom navigation target that could briefly flash on screen.",
+      "evidence": [
+        "useNextBestCourse.ts:196-213 -- runCompute cleanup sets cancelledRef.current = true",
+        "useNextBestCourse.ts:215-219 -- main effect runs runCompute which sets cancelledRef.current = false",
+        "useNextBestCourse.ts:222-237 -- event listener effect checks cancelledRef.current but has no local closure protection",
+        "The main effect's runCompute creates a local currentCancelled closure (line 198), but the event listener at line 223+ does not use this pattern"
+      ]
+    },
+    {
+      "title": "Path sorting by createdAt instead of updatedAt",
+      "severity": "P3",
+      "file": "src/app/components/ContinueLearningPathSection.tsx",
+      "line": 438,
+      "confidence": 0.65,
+      "autofix_class": "advisory",
+      "owner": "human",
+      "requires_verification": false,
+      "pre_existing": false,
+      "suggested_fix": "Consider using `path.updatedAt` instead of `path.createdAt` for sorting so that paths the user has recently interacted with appear first.",
+      "why_it_matters": "The plan specifies 'most recently active/updated path as the primary card.' Using createdAt means the newest path always appears first regardless of recent activity. A path created last month that the user just resumed will appear after a path created today that the user never touched.",
+      "evidence": [
+        "ContinueLearningPathSection.tsx:438-440 -- `results.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())`",
+        "Plan Unit 2 approach: 'Shows the most recently active/updated path as the primary card'"
+      ]
+    },
+    {
+      "title": "Duplicated next-course-finding logic in hook and section",
+      "severity": "P3",
+      "file": "src/app/components/ContinueLearningPathSection.tsx",
+      "line": 35,
+      "confidence": 0.75,
+      "autofix_class": "advisory",
+      "owner": "human",
+      "requires_verification": false,
+      "pre_existing": false,
+      "suggested_fix": "Extract the shared 'find first in-progress or unstarted entry' traversal into a shared utility function used by both computeNextBestCourse and deriveNextCourse.",
+      "why_it_matters": "The deriveNextCourse function (ContinueLearningPathSection.tsx:35-63) and computeNextBestCourse (useNextBestCourse.ts:117-153) implement the same two-pass traversal logic (first in-progress, then unstarted). The hook version adds async targetLessonId resolution on top, but the core traversal is identical. Changes to the traversal logic must be made in both places.",
+      "evidence": [
+        "useNextBestCourse.ts:127-153 -- two-pass loop with position order",
+        "ContinueLearningPathSection.tsx:42-64 -- two-pass loop with identical structure",
+        "Both skip entries with no progress data, return first in-progress, then first unstarted"
+      ]
+    },
+    {
+      "title": "Inline class-based ErrorBoundary instead of shared component",
+      "severity": "P3",
+      "file": "src/app/components/ContinueLearningPathSection.tsx",
+      "line": 553,
+      "confidence": 0.7,
+      "autofix_class": "advisory",
+      "owner": "human",
+      "requires_verification": false,
+      "pre_existing": false,
+      "suggested_fix": "Replace the inline ErrorBoundary class with a shared ErrorBoundary component from the project's UI library, or extract it for reuse. If none exists, keep this inline as it is self-contained.",
+      "why_it_matters": "The ErrorBoundary class adds ~30 lines of boilerplate that must be maintained alongside the component. If the project already has an ErrorBoundary or installs react-error-boundary, this is duplicated code.",
+      "evidence": [
+        "ContinueLearningPathSection.tsx:553-582 -- inline ErrorBoundary class component",
+        "Used only by this component (line 543)"
+      ]
+    }
+  ],
+  "residual_risks": [
+    "Course-in-multiple-paths: UnifiedLessonPlayer uses .find() which returns the first match. A course appearing in multiple paths will always show the first path's context, which may confuse users who completed it through a different path.",
+    "Empty pathId string: When no path context is found, `coursePathId` defaults to empty string and `useNextBestCourse('')` runs with an empty pathId. While the hook handles this gracefully (returns INITIAL_RESULT), it still calls useMultiPathProgress with an empty-keyed entry.",
+    "Missing course progress handling: computeNextBestCourse returns INITIAL_RESULT when courseProgress is undefined or empty. While safe, this means the card footer shows no Continue/Start button during loading, which may look broken to users."
+  ],
+  "testing_gaps": [
+    "ContinueLearningPathSection has zero test coverage -- 7 scenarios listed in plan",
+    "PathCard footer button behavior untested -- 8 scenarios listed in plan",
+    "NextInPath component untested -- 7 scenarios listed in plan",
+    "UnifiedLessonPlayer path context resolution untested",
+    "useNextBestCourse reactive re-computation test uses a single PROGRESS_UPDATED_EVENT dispatch but doesn't test the edge case of multiple rapid dispatches"
+  ],
+  "requirements_completeness": {
+    "plan_source": "explicit",
+    "requirements": {
+      "R1": "met",
+      "R2": "met",
+      "R3": "met",
+      "R4": "partially-met -- implements 'N more' expand link but sorts by createdAt instead of updatedAt",
+      "R5": "met",
+      "R6": "met",
+      "R7": "met (path card navigates to lesson player; dashboard section navigates to course detail)",
+      "R8": "met",
+      "R9": "met",
+      "R10": "met",
+      "R11-R12": "deferred"
+    }
+  },
+  "verdict": "Ready with fixes",
+  "build": "passes",
+  "unit_tests": "8 passed (useNextBestCourse.test.tsx only)"
+}

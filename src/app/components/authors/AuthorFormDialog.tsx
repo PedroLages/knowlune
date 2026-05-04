@@ -66,26 +66,31 @@ export function AuthorFormDialog({ open, onOpenChange, author }: AuthorFormDialo
   const [featuredQuote, setFeaturedQuote] = useState('')
   const [errors, setErrors] = useState<FormErrors>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
+  /** Avoid overwriting in-progress edits when `author` refreshes from sync (R5). */
+  const [isDirty, setIsDirty] = useState(false)
 
-  // Populate form when editing
   useEffect(() => {
-    if (open && author) {
-      setName(author.name)
-      setTitle(author.title ?? '')
-      setBio(author.bio ?? '')
-      setShortBio(author.shortBio ?? '')
-      setSpecialties([...(author.specialties ?? [])])
-      setSpecialtyInput('')
-      setYearsExperience(author.yearsExperience ? String(author.yearsExperience) : '')
-      setEducation(author.education ?? '')
-      setAvatar(author.photoUrl ?? '')
-      setWebsite(author.socialLinks?.website ?? '')
-      setLinkedin(author.socialLinks?.linkedin ?? '')
-      setTwitter(author.socialLinks?.twitter ?? '')
-      setFeaturedQuote(author.featuredQuote ?? '')
-      setErrors({})
-    }
-  }, [open, author])
+    if (!open) setIsDirty(false)
+  }, [open])
+
+  // Populate form when editing — skipped while user has typed into the form
+  useEffect(() => {
+    if (!open || !author || isDirty) return
+    setName(author.name)
+    setTitle(author.title ?? '')
+    setBio(author.bio ?? '')
+    setShortBio(author.shortBio ?? '')
+    setSpecialties([...(author.specialties ?? [])])
+    setSpecialtyInput('')
+    setYearsExperience(author.yearsExperience ? String(author.yearsExperience) : '')
+    setEducation(author.education ?? '')
+    setAvatar(author.photoUrl ?? '')
+    setWebsite(author.socialLinks?.website ?? '')
+    setLinkedin(author.socialLinks?.linkedin ?? '')
+    setTwitter(author.socialLinks?.twitter ?? '')
+    setFeaturedQuote(author.featuredQuote ?? '')
+    setErrors({})
+  }, [open, author, isDirty])
 
   function resetForm() {
     setName('')
@@ -135,6 +140,7 @@ export function AuthorFormDialog({ open, onOpenChange, author }: AuthorFormDialo
   function handleAddSpecialty() {
     const trimmed = specialtyInput.trim()
     if (trimmed && !specialties.includes(trimmed)) {
+      setIsDirty(true)
       setSpecialties(prev => [...prev, trimmed])
     }
     setSpecialtyInput('')
@@ -148,6 +154,7 @@ export function AuthorFormDialog({ open, onOpenChange, author }: AuthorFormDialo
   }
 
   function handleRemoveSpecialty(specialty: string) {
+    setIsDirty(true)
     setSpecialties(prev => prev.filter(s => s !== specialty))
   }
 
@@ -205,8 +212,8 @@ export function AuthorFormDialog({ open, onOpenChange, author }: AuthorFormDialo
         onOpenChange(v)
       }}
     >
-      <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-lg">
-        <DialogHeader>
+      <DialogContent className="flex max-h-[min(85vh,calc(100dvh-2rem))] min-h-0 min-w-0 flex-col gap-4 overflow-hidden overflow-x-hidden sm:max-w-lg">
+        <DialogHeader className="shrink-0 pr-12 text-center sm:text-left">
           <DialogTitle>{isEditMode ? 'Edit Author' : 'Create Author'}</DialogTitle>
           <DialogDescription>
             {isEditMode
@@ -215,7 +222,13 @@ export function AuthorFormDialog({ open, onOpenChange, author }: AuthorFormDialo
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+        <form
+          onSubmit={handleSubmit}
+          className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden"
+          onInput={() => setIsDirty(true)}
+          noValidate
+        >
+          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain">
           {/* Name (required) */}
           <div className="space-y-1.5">
             <Label htmlFor="author-name">
@@ -435,8 +448,9 @@ export function AuthorFormDialog({ open, onOpenChange, author }: AuthorFormDialo
               onChange={e => setFeaturedQuote(e.target.value)}
             />
           </div>
+          </div>
 
-          <DialogFooter>
+          <DialogFooter className="shrink-0 border-border border-t pt-4">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>

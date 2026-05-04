@@ -1,0 +1,89 @@
+{
+  "reviewer": "testing",
+  "findings": [
+    {
+      "id": "TEST-GAP-01",
+      "severity": "HIGH",
+      "confidence": 0.88,
+      "title": "FolderTreeNode groupIndexMap prop has zero test coverage",
+      "description": "The diff adds a `groupIndexMap` prop to `FolderTreeNode` and changes lesson numbering from local folder index (`idx`) to global `groupIndexMap.get(group.primary.id) ?? 0`. No test in `LessonsTab.test.tsx` exercises `FolderTreeNode` at all. All 15 tests use flat `makeAdapter` helpers that produce lessons without nested `sourceMetadata.path` values, so `buildFolderTree()` returns an empty tree and `FolderTreeNode` never renders. The `makeLesson` factory does not include `sourceMetadata` by default, and only one test (standalone PDF page count) passes it -- with a path `'docs/doc.pdf'` that still produces a root-level item, not a nested folder.",
+      "file": "/Volumes/SSD/Dev/Apps/Knowlune/src/app/components/course/tabs/LessonsTab.tsx",
+      "lines": "434-525",
+      "test_file": "/Volumes/SSD/Dev/Apps/Knowlune/src/app/components/course/__tests__/LessonsTab.test.tsx",
+      "recommendation": "Add a test that creates MaterialGroups with nested sourceMetadata.path values (e.g., 'section-01/video.mp4', 'section-01/subsection/video2.mp4') so that buildFolderTree produces a nontrivial FolderNode tree. Verify that nested folder items display globally consistent lesson numbers (not resetting to 0 within each folder). Assert via the displayed index text for specific lessons."
+    },
+    {
+      "id": "TEST-GAP-02",
+      "severity": "HIGH",
+      "confidence": 0.85,
+      "title": "useCourseAdapter sortBy('order') has no test file",
+      "description": "The diff changes `db.importedVideos.where('courseId').equals(courseId).toArray()` to `.sortBy('order')` in `useCourseAdapter.ts`. No dedicated test file exists for this hook (`src/hooks/__tests__/useCourseAdapter.test.ts` is absent). The `courseAdapter.test.ts` at `src/lib/__tests__/courseAdapter.test.ts` tests the adapter factory, not the hook's Dexie query layer. While `.sortBy('order')` is consistent with 10+ other call sites in the codebase (CourseOverview, UnifiedCourseDetail, EditCourseDialog, etc.), the change from unordered to sorted results has no behavioral verification.",
+      "file": "/Volumes/SSD/Dev/Apps/Knowlune/src/hooks/useCourseAdapter.ts",
+      "lines": "29",
+      "test_file": null,
+      "recommendation": "Create a test for useCourseAdapter that seeds Dexie with importedVideos in non-order sequence (e.g., order 3, 1, 2) and verifies the adapter receives them sorted as order 1, 2, 3. Alternatively, add a test to courseAdapter.test.ts that verifies the adapter's getGroupedLessons returns lessons in order field sequence when fed out-of-order video arrays."
+    },
+    {
+      "id": "TEST-GAP-03",
+      "severity": "MEDIUM",
+      "confidence": 0.75,
+      "title": "Edge case: lesson ID not in groupIndexMap (fallback to 0) is untested",
+      "description": "Both `FolderTreeNode` (line 487) and the root/flat item render paths (lines 789, 826) use `groupIndexMap.get(group.primary.id) ?? 0`. The `?? 0` fallback fires when a lesson's ID is absent from the global index map -- which should not happen in normal operation but is a defensive guard. No test verifies this fallback behavior. If a render cycle produces a filteredGroups list that differs from the materialGroups used to build `groupIndexMap`, this fallback would silently assign index 0 to out-of-sync items.",
+      "file": "/Volumes/SSD/Dev/Apps/Knowlune/src/app/components/course/tabs/LessonsTab.tsx",
+      "lines": "487, 789, 826",
+      "test_file": "/Volumes/SSD/Dev/Apps/Knowlune/src/app/components/course/__tests__/LessonsTab.test.tsx",
+      "recommendation": "Test scenario: render with a groupIndexMap that excludes one of the rendered group IDs and verify the item displays index 1 (0+1). Alternatively, if this scenario is provably impossible due to the data flow, remove the defensive fallback or replace it with a console.warn so data integrity issues surface."
+    },
+    {
+      "id": "TEST-GAP-04",
+      "severity": "MEDIUM",
+      "confidence": 0.82,
+      "title": "Numbering consistency between nested and root items lacks regression test",
+      "description": "The core bug being fixed -- nested folder items showing local folder indices (1, 2, 3) while root/flat items show global indices -- has no regression test. The existing test 'renders index numbers for not-started lessons' at line 74 only checks that the text '1' appears with a single lesson. A proper regression test would create a mixed layout: root-level items + a folder with multiple items, then verify that folder items display indices continuing from the root items (e.g., root items 1-2, folder items 3-5) rather than resetting to 1, 2, 3 within the folder.",
+      "file": "/Volumes/SSD/Dev/Apps/Knowlune/src/app/components/course/tabs/LessonsTab.tsx",
+      "lines": "486-501",
+      "test_file": "/Volumes/SSD/Dev/Apps/Knowlune/src/app/components/course/__tests__/LessonsTab.test.tsx",
+      "recommendation": "Add a regression test: create root-level items (path='') and folder items (path='section/video.mp4', etc.) with known global order positions. Assert that the displayed index numbers for folder items match their global indices, not folder-local 0, 1, 2."
+    },
+    {
+      "id": "TEST-GAP-05",
+      "severity": "LOW",
+      "confidence": 0.65,
+      "title": "Existing index number test provides false confidence",
+      "description": "The test 'renders index numbers for not-started lessons' (line 74) verifies only `screen.findByText('1')` with a single lesson. A single lesson always displays index 1 regardless of whether the code uses local or global indexing. This test would pass even with the buggy `idx`-based code. It provides false confidence that lesson numbering works correctly. The text '1' could appear from any `<span>` in the component.",
+      "file": "/Volumes/SSD/Dev/Apps/Knowlune/src/app/components/course/__tests__/LessonsTab.test.tsx",
+      "lines": "74-85",
+      "recommendation": "Replace with a multi-item test that creates 3+ lessons with known order positions, then asserts specific index numbers for named lessons using more targeted selectors (e.g., findByTestId or within-scoped queries) rather than raw text matching."
+    }
+  ],
+  "residual_risks": [
+    "The `order` field on `ImportedVideo` is not in the Dexie schema index for `importedVideos` (schema only indexes `id, courseId, filename`). `.sortBy('order')` will perform a full table scan + in-memory sort rather than using an indexed cursor. For courses with hundreds of videos, this could regress load time. The same pattern is used in `CourseOverview.tsx`, `UnifiedCourseDetail.tsx`, and `EditCourseDialog.tsx`, so this is a pre-existing concern, not introduced by this diff.",
+    "PDFs in `useCourseAdapter.ts` line 31 still use `.toArray()` rather than `.sortBy('order')`, creating an ordering asymmetry between videos (sorted) and PDFs (unsorted). If PDFs have an `order` field and the adapter expects ordered inputs, this could cause PDFs to appear in arbitrary order within material groups."
+  ],
+  "testing_gaps": [
+    {
+      "area": "FolderTreeNode component rendering",
+      "gap": "Component never instantiated in tests. All tests use flat data that produces an empty folder tree.",
+      "risk": "The groupIndexMap fix has zero behavioral verification.",
+      "confidence": 0.88
+    },
+    {
+      "area": "useCourseAdapter hook",
+      "gap": "No test file exists for this hook. The .sortBy('order') change has no coverage.",
+      "risk": "Behavior change from unordered to sorted results is unverified.",
+      "confidence": 0.85
+    },
+    {
+      "area": "Global vs local lesson numbering consistency",
+      "gap": "No regression test verifies that nested folder items display globally consistent numbers matching root/flat items.",
+      "risk": "The bug could regress silently -- the existing index test would still pass.",
+      "confidence": 0.82
+    },
+    {
+      "area": "groupIndexMap fallback edge case",
+      "gap": "The ?? 0 fallback when a lesson ID is absent from the groupIndexMap has no test.",
+      "risk": "Silent fallback to index 0 could mask data-flow bugs.",
+      "confidence": 0.75
+    }
+  ]
+}

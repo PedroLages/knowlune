@@ -1,0 +1,126 @@
+{
+  "run_id": "20260504-130436-b22d9385",
+  "scope": "branch feature/ce-2026-05-04-paths-as-study-plan (26 files, base: 3fbefe0)",
+  "intent": "Wire learning path progress data into three existing mature systems -- Study Schedule, Challenges, and Reports -- via the learningPathId FK",
+  "mode": "headless",
+  "verdict": "Ready with fixes",
+  "applied_fixes": [
+    {
+      "finding_id": "F-001",
+      "file": "src/app/hooks/usePathMilestones.ts",
+      "description": "Replaced direct Zustand state mutation (challenge.currentProgress = currPct) with proper updateChallenge() call for progress regression case"
+    },
+    {
+      "finding_id": "F-002",
+      "file": "src/app/hooks/usePathMilestones.ts",
+      "description": "Replaced direct Zustand state mutation with proper updateChallenge() call for progress increase without new milestones case"
+    },
+    {
+      "finding_id": "F-003",
+      "file": "src/app/hooks/usePathMilestones.ts",
+      "description": "Removed direct Zustand mutations (challenge.currentProgress and challenge.celebratedMilestones) before updateChallenge call; used local variable instead to preserve rollback integrity"
+    },
+    {
+      "finding_id": "F-004",
+      "file": "src/app/components/reports/PathAnalyticsTab.tsx",
+      "description": "Converted sequential for-loop Dexie queries to Promise.all for parallel per-path query execution"
+    }
+  ],
+  "findings": [
+    {
+      "id": "F-005",
+      "severity": "P1",
+      "autofix_class": "gated_auto",
+      "owner": "downstream-resolver",
+      "requires_verification": false,
+      "pre_existing": false,
+      "confidence": 0.85,
+      "file": "src/app/components/learning-path/PlanMyWeekPreview.tsx",
+      "line": 82,
+      "title": "courseName assigned to raw courseId UUID instead of human-readable name",
+      "why_it_matters": "The schedule preview dialog shows 'Study: {pathName} -- {courseId}' with a raw UUID instead of the actual course name, making the preview confusing for users.",
+      "suggested_fix": "Look up the course name from the learning path entries or pass a courseNames map prop. Alternatively, use a store lookup (useCourseImportStore or similar) to resolve courseId -> course name within the component."
+    },
+    {
+      "id": "F-006",
+      "severity": "P2",
+      "autofix_class": "manual",
+      "owner": "downstream-resolver",
+      "requires_verification": false,
+      "pre_existing": false,
+      "confidence": 0.80,
+      "file": "src/lib/__tests__/challengePathMilestones.test.ts",
+      "line": 66,
+      "title": "Incomplete test coverage: calculatePathMilestoneProgress never tested with real seeded progress data",
+      "why_it_matters": "All tests only verify the function returns 0 (no entries, no progress, empty data). The happy path with actual progress data (50% completion, 100% completion, mixed catalog/imported) is untested, leaving the core calculator logic unverified.",
+      "suggested_fix": "Add tests that seed db.progress with completedAt timestamps and verify calculatePathMilestoneProgress returns the correct percentage."
+    },
+    {
+      "id": "F-007",
+      "severity": "P2",
+      "autofix_class": "manual",
+      "owner": "downstream-resolver",
+      "requires_verification": false,
+      "pre_existing": false,
+      "confidence": 0.75,
+      "file": "src/app/hooks/usePathProgress.ts",
+      "line": 97,
+      "title": "Dead computation: for-loop totals used for remainingLessons while overallPct uses separate computePathCompletionPct call doing identical work",
+      "why_it_matters": "The old for-loop still computes totalCompletedLessons and totalLessonsCount for remainingLessons/estimatedRemainingHours, but overallPct is separately computed via computePathCompletionPct which duplicates the same logic. This is wasteful and creates a maintenance risk where the two paths could diverge.",
+      "suggested_fix": "Either extend computePathCompletionPct to also return totalCompletedLessons and totalLessonsCount, or have it return an object with both the percentage and component totals."
+    },
+    {
+      "id": "F-008",
+      "severity": "P3",
+      "autofix_class": "gated_auto",
+      "owner": "downstream-resolver",
+      "requires_verification": false,
+      "pre_existing": false,
+      "confidence": 0.70,
+      "file": "src/app/components/figma/FeedPreview.tsx",
+      "line": 5,
+      "title": "DAY_LABELS extraction changes feed preview day names from full ('Monday') to abbreviated ('Mon')",
+      "why_it_matters": "The FeedPreview was designed with full day names for readability. The shared DAY_LABELS constant uses abbreviated names intended for compact displays (StudyScheduleSummary). While the extraction is good for deduplication, it changes the visual contract of the FeedPreview.",
+      "suggested_fix": "Either rename the shared constant to SHORT_DAY_LABELS and keep full DAY_LABELS separate, or verify with design that abbreviated names are acceptable for the feed preview."
+    },
+    {
+      "id": "F-009",
+      "severity": "P3",
+      "autofix_class": "advisory",
+      "owner": "human",
+      "requires_verification": false,
+      "pre_existing": false,
+      "confidence": 0.65,
+      "file": "src/app/hooks/usePathProgress.ts",
+      "line": 85,
+      "title": "Hoisted variables use 'any' types instead of proper TypeScript types",
+      "why_it_matters": "The variables importedMap, videoProgress, and localProgress were hoisted outside the if block and typed as any to share with computePathCompletionPct. This loses type safety. The shared utility uses its own interface types; the hoisted variables should match.",
+      "suggested_fix": "Type the hoisted variables using the shared utility's interfaces (PathCompletionCourse, PathCompletionVideoProgress, etc.) or use a type assertion where they're passed to computePathCompletionPct."
+    }
+  ],
+  "residual_risks": [
+    "Path-membership-based StudySession filtering is lossy for courses added/removed after sessions occurred (documented limitation, no fix planned in this plan)",
+    "Batch schedule creation has no transaction rollback — partial failure leaves already-created entries (accepted design trade-off)"
+  ],
+  "testing_gaps": [
+    "challengePathMilestones.test.ts only tests zero-progress scenarios; missing tests with seeded progress data",
+    "No E2E test covering the full cross-subsystem flow (create path -> complete courses -> milestone fires -> schedule created -> reports show stats)",
+    "No unit tests for PlanMyWeekPreview, PlanMyWeekButton, PathScheduleList, DateRangeFilter, or PathAnalyticsTab components"
+  ],
+  "requirements_completeness": {
+    "plan_source": "explicit",
+    "r1_status": "met",
+    "r2_status": "met",
+    "r3_status": "met",
+    "r4_status": "met",
+    "r5_status": "met",
+    "r6_status": "met",
+    "r7_status": "met",
+    "r8_status": "met",
+    "r9_status": "met",
+    "r10_status": "met",
+    "r11_status": "met",
+    "r12_status": "met",
+    "r13_status": "met"
+  }
+}

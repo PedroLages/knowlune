@@ -1,0 +1,59 @@
+{
+  "reviewer": "testing",
+  "findings": [
+    {
+      "id": "TEST-001",
+      "severity": "HIGH",
+      "confidence": 0.85,
+      "title": "Zustand store state leaks between tests due to real store mutation without reset",
+      "location": "src/app/pages/__tests__/UnifiedLessonPlayer.test.tsx:238-257",
+      "description": "The new test 'does NOT show auto-advance countdown when autoPlay is disabled' dynamically imports the real useLessonChromeStore zustand store (not mocked) and calls toggleAutoPlay(). Zustand stores are singletons -- this mutation persists across tests. The existing test at line 218 implicitly depends on autoPlay defaulting to true to assert the countdown IS shown. Currently works only because tests run in definition order (line 218 before line 238). If tests are reshuffled, run in isolation, or if a new test is inserted between them that also depends on the default autoPlay=true, it would fail silently.",
+      "suggested_fix": "Either: (a) add afterEach to reset the store state (useLessonChromeStore.getState().toggleAutoPlay() again if needed, or call the store's reset() if available), or (b) mock useLessonChromeStore explicitly so tests don't share real state. The minimal fix is to toggle autoPlay back to true in an afterEach block."
+    },
+    {
+      "id": "TEST-002",
+      "severity": "MEDIUM",
+      "confidence": 0.70,
+      "title": "AutoPlay gating only tested for handleVideoEnded; handleYouTubeAutoComplete and handleManualStatusChange are untested for the same gate",
+      "location": "src/app/hooks/useCompletionFlow.ts:109-171",
+      "description": "The diff adds the same autoPlay-gating pattern (check useLessonChromeStore.getState().autoPlay before setShowAutoAdvance(true)) to three separate useCallback functions: handleVideoEnded, handleYouTubeAutoComplete, and handleManualStatusChange. The new unit test only exercises handleVideoEnded (via the trigger-ended button). The other two callbacks have separate dependency arrays and could diverge due to copy-paste errors or merge conflicts. The existing test infrastructure mocks YouTubeVideoContent as a static div and PlayerHeader as a static div, making those paths unreachable in unit tests -- but this is pre-existing tech debt, not introduced by this diff.",
+      "suggested_fix": "Consider extracting the autoPlay gating into a shared helper (e.g., shouldAutoAdvance(nextLesson)) to reduce duplication and centralize testing. If the three callbacks are kept separate, add integration-level E2E tests or refactor the unit test mocks to exercise the YouTube and manual-completion paths."
+    },
+    {
+      "id": "TEST-003",
+      "severity": "LOW",
+      "confidence": 0.60,
+      "title": "Implicit autoPlay=ON coverage relies on store default value, not explicit test setup",
+      "location": "src/app/pages/__tests__/UnifiedLessonPlayer.test.tsx:218-236",
+      "description": "The existing test at line 218 asserts that auto-advance countdown appears, relying on the implicit default of autoPlay=true. The comment acknowledges this ('autoPlay defaults to true in the store'), but the test doesn't explicitly verify that autoPlay is the gating factor. If someone changes the default to false in readStoredAutoPlay(), this test would fail even though the gating logic itself might still be correct. The new test at line 238 explicitly toggles autoPlay, which is better, but together they create a pairing where one test sets up state that the other depends on (see TEST-001).",
+      "suggested_fix": "Make the autoPlay=ON path explicit: import the real store, verify autoPlay is true before the test, or explicitly set it to true. Better yet, mock the store to return a controlled autoPlay value so tests are isolated."
+    }
+  ],
+  "residual_risks": [
+    {
+      "risk": "If a future refactor changes the autoPlay default from true to false in readStoredAutoPlay(), the existing test (line 218) would fail even though the gating logic is correct. The test comment would need updating, but the behavioral change might be intentional.",
+      "severity": "LOW"
+    },
+    {
+      "risk": "The localStorage side effect of toggleAutoPlay() (persistAutoPlay) also leaks between tests. If any test after line 257 reads localStorage.getItem('lesson-auto-play'), it would see 'false' instead of null/absent. No existing test does this, but it's a latent trap for future tests.",
+      "severity": "LOW"
+    }
+  ],
+  "testing_gaps": [
+    {
+      "gap": "No unit or E2E test verifies handleYouTubeAutoComplete with autoPlay=OFF. The YouTube auto-complete path (triggered when >90% of a YouTube video is watched) is mocked to a static div in unit tests, making it untestable at the unit level. The diff adds an autoPlay gate to this callback, so the behavior change has no test coverage.",
+      "affected_code": "src/app/hooks/useCompletionFlow.ts:139-145",
+      "test_type": "E2E"
+    },
+    {
+      "gap": "No unit or E2E test verifies handleManualStatusChange with autoPlay=OFF. The manual completion toggle (PlayerHeader completion checkbox) is mocked to a static div in unit tests. The diff adds an autoPlay gate to this callback.",
+      "affected_code": "src/app/hooks/useCompletionFlow.ts:161-172",
+      "test_type": "E2E"
+    },
+    {
+      "gap": "No test verifies that handleAutoAdvance and handleCelebrationContinue propagate autoPlay state correctly in the navigation state object. These functions already read autoPlay (pre-existing code) but the diff touches the same pattern in three other callbacks, so consistency matters.",
+      "affected_code": "src/app/hooks/useCompletionFlow.ts:147-154, 175-183",
+      "test_type": "unit"
+    }
+  ]
+}

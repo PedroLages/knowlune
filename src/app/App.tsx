@@ -31,7 +31,6 @@ initErrorTracking()
 export default function App() {
   useColorScheme() // Applies .vibrant class on <html> based on settings (E21-S04)
   const { shouldReduceMotion } = useReducedMotion()
-  const { recoverOrphanedSessions } = useSessionStore()
   const { initialize: initWizard } = useWelcomeWizardStore()
 
   // Apply font scaling from persisted settings
@@ -54,10 +53,10 @@ export default function App() {
     return () => root.classList.remove('reduce-motion')
   }, [shouldReduceMotion])
 
-  // AC5: Recover orphaned sessions on app init
+  // AC5: Recover orphaned sessions on app init (getState avoids subscribing App to heartbeat churn)
   useEffect(() => {
-    recoverOrphanedSessions()
-  }, [recoverOrphanedSessions])
+    void useSessionStore.getState().recoverOrphanedSessions()
+  }, [])
 
   // Initialize welcome wizard (shows on first visit only)
   useEffect(() => {

@@ -1,0 +1,34 @@
+{
+  "reviewer": "correctness",
+  "findings": [],
+  "residual_risks": [
+    {
+      "severity": "LOW",
+      "confidence": 0.70,
+      "description": "sortBy('order') falls back to in-memory sort since importedVideos has no Dexie index on 'order' (indexed fields are id, courseId, filename). Functionally correct but scales linearly with video count per course.",
+      "file": "/Volumes/SSD/Dev/Apps/Knowlune/src/hooks/useCourseAdapter.ts",
+      "lines": [29]
+    },
+    {
+      "severity": "LOW",
+      "confidence": 0.65,
+      "description": "groupIndexMap.get(group.primary.id) ?? 0 silently displays 'Lesson 1' for any group whose ID is missing from the map. In normal operation this cannot happen since the folder tree and root items are derived from the same materialGroups array used to build the map, but a data inconsistency would produce confusing (not crashing) output with no warning.",
+      "file": "/Volumes/SSD/Dev/Apps/Knowlune/src/app/components/course/tabs/LessonsTab.tsx",
+      "lines": [487, 789, 826]
+    }
+  ],
+  "testing_gaps": [
+    {
+      "description": "No test exercises FolderTreeNode with a non-trivial groupIndexMap to confirm displayed lesson numbers match global materialGroups positions rather than local folder indices.",
+      "file": "/Volumes/SSD/Dev/Apps/Knowlune/src/app/components/course/tabs/LessonsTab.tsx"
+    },
+    {
+      "description": "No test covers the search-filter + folder-tree combination to verify lesson numbering remains consistent (displays global indices, not filtered positions).",
+      "file": "/Volumes/SSD/Dev/Apps/Knowlune/src/app/components/course/tabs/LessonsTab.tsx"
+    },
+    {
+      "description": "No test verifies that sortBy('order') in useCourseAdapter preserves correct ordering for videos with equal order values (tie-breaking is implementation-defined).",
+      "file": "/Volumes/SSD/Dev/Apps/Knowlune/src/hooks/useCourseAdapter.ts"
+    }
+  ]
+}

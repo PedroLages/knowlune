@@ -1,0 +1,75 @@
+{
+  "reviewer": "adversarial",
+  "findings": [
+    {
+      "title": "Race condition: toggling autoPlay OFF during 5s countdown does not cancel auto-advance",
+      "severity": "P2",
+      "file": "/Volumes/SSD/Dev/Apps/Knowlune/src/app/hooks/useCompletionFlow.ts",
+      "line": 147,
+      "confidence": 0.82,
+      "autofix_class": "manual",
+      "owner": "human",
+      "requires_verification": false,
+      "pre_existing": true,
+      "suggested_fix": "Add a useEffect in UnifiedLessonPlayer that watches storeAutoPlay and calls completion.handleCancelAutoAdvance() when storeAutoPlay becomes false and state.showAutoAdvance is true. Alternatively, pass autoPlay to AutoAdvanceCountdown as a live prop and cancel the interval when autoPlay flips to false. The current code reads autoPlay only at countdown-start time (to decide whether to show it) and at navigation time (to decide the nav state), but never cancels the in-progress countdown when the user changes their preference mid-countdown.",
+      "evidence": [
+        "Trigger: User completes a lesson while autoPlay is ON. handleVideoEnded (line 124) reads autoPlay=true and calls setShowAutoAdvance(true), starting the 5-second countdown.",
+        "Step 1: During the 5-second countdown, the user clicks the auto-play toggle in LessonHeaderTools (LessonHeaderTools.tsx line 181: onClick={toggleAutoPlay}).",
+        "Step 2: toggleAutoPlay (useLessonChromeStore.ts line 151-154) sets autoPlay=false in the store and persists to localStorage.",
+        "Step 3: No code observes the autoPlay store change to cancel the countdown. AutoAdvanceCountdown (AutoAdvanceCountdown.tsx lines 22-33) only has a setInterval that counts down seconds — no store subscription. The onAdvanceRef always points to the latest handleAutoAdvance.",
+        "Step 4: After 5 seconds, remaining<=0 triggers onAdvanceRef.current() which is handleAutoAdvance (line 147).",
+        "Step 5: handleAutoAdvance reads useLessonChromeStore.getState().autoPlay (line 149) — now false — and navigates without the autoPlay flag (line 150-152: state: undefined).",
+        "Failure: User is auto-navigated to the next lesson despite explicitly turning off autoPlay. The countdown's visual promise ('Next: Lesson 2 in Ns') is inconsistent with the user's stated intent. The user expected toggling autoPlay OFF would also cancel the pending auto-advance.",
+        "Note: This race was pre-existing — the countdown always appeared before this PR. The new code reduces the surface area (countdown only shows when autoPlay=ON) but does not address the in-flight toggle scenario."
+      ]
+    },
+    {
+      "title": "Stale showQualityScore field persists indefinitely in localStorage with no cleanup path",
+      "severity": "P3",
+      "file": "/Volumes/SSD/Dev/Apps/Knowlune/src/lib/pomodoroPreferences.ts",
+      "line": 30,
+      "confidence": 0.85,
+      "autofix_class": "advisory",
+      "owner": "human",
+      "requires_verification": false,
+      "pre_existing": false,
+      "suggested_fix": "Either accept the stale field as harmless (no code reads it) or add a one-shot cleanup in getPomodoroPreferences or savePomodoroPreferences that deletes the showQualityScore key from the parsed object before spreading. For example: delete parsed.showQualityScore after JSON.parse but before the spread. The field will then be cleaned on the next savePomodoroPreferences call.",
+      "evidence": [
+        "Trigger: A user has pomodoro-preferences in localStorage from a prior version that includes {\"showQualityScore\": true, ...other fields}.",
+        "Step 1: getPomodoroPreferences() (line 30-38) does JSON.parse(raw) as Partial<PomodoroPreferences> — the parsed object contains showQualityScore: true at runtime even though the TypeScript type no longer declares it.",
+        "Step 2: The function returns { ...defaults, ...parsed } — showQualityScore is spread into the result because TypeScript types are erased at runtime.",
+        "Step 3: When the user changes any other pomodoro setting, savePomodoroPreferences calls getPomodoroPreferences() and spreads it: { ...current, ...prefs }. The stale showQualityScore from current is preserved in the merged result.",
+        "Step 4: JSON.stringify(merged) writes the stale field back to localStorage. The field survives every subsequent save.",
+        "Impact: No functional impact — no code reads showQualityScore after the Layout.tsx listener was removed. The field is purely cosmetic pollution of the localStorage entry. It will persist until the user manually clears localStorage or uses a new browser."
+      ]
+    }
+  ],
+  "residual_risks": [
+    {
+      "risk": "Auto-advance countdown cancellation gap",
+      "description": "The only mechanism to cancel an in-progress auto-advance countdown is the explicit Cancel button in AutoAdvanceCountdown. If the countdown bar renders outside the viewport (e.g., user scrolled down to read PDF content below the video), the user can still be auto-advanced with no visible way to cancel. The autoPlay toggle is also the only indicator that auto-advance might happen, and it doesn't cancel the countdown.",
+      "severity": "P2",
+      "related_finding": 0
+    },
+    {
+      "risk": "No automated migration for removed showQualityScore preference",
+      "description": "Users who had showQualityScore explicitly set to false (opted out of the popup) will not notice any difference since the popup is hard-removed. However, the stale boolean persists in localStorage. If the feature is ever re-introduced in a different form and reuses the same key, old preferences could cause surprising behavior.",
+      "severity": "P3",
+      "related_finding": 1
+    }
+  ],
+  "testing_gaps": [
+    {
+      "gap": "No test for toggling autoPlay during active countdown",
+      "description": "The new unit test (UnifiedLessonPlayer.test.tsx lines 238-257) tests that the countdown does not appear when autoPlay is off BEFORE video ends, but does not test the scenario where autoPlay is toggled off AFTER the countdown has already started. An integration test should: start countdown, toggle autoPlay off, assert the countdown is cancelled or at minimum assert navigation state does not include autoPlay.",
+      "file": "/Volumes/SSD/Dev/Apps/Knowlune/src/app/pages/__tests__/UnifiedLessonPlayer.test.tsx",
+      "severity": "P2"
+    },
+    {
+      "gap": "No E2E test verifying countdown never appears with autoPlay disabled",
+      "description": "The existing E2E tests (story-e54-s01.spec.ts, story-e54-s02.spec.ts, story-2-5.spec.ts) all test the auto-advance countdown with autoPlay implicitly enabled. No test verifies the negative case: with autoPlay disabled, completing a lesson should NOT show the countdown.",
+      "file": "/Volumes/SSD/Dev/Apps/Knowlune/tests/e2e/regression/story-2-5.spec.ts",
+      "severity": "P2"
+    }
+  ]
+}

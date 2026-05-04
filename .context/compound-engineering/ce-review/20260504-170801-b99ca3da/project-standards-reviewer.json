@@ -1,0 +1,13 @@
+{
+  "reviewer": "project-standards",
+  "findings": [],
+  "residual_risks": [],
+  "testing_gaps": [
+    {
+      "severity": "INFO",
+      "confidence": 0.55,
+      "description": "No dedicated unit test validates sidebar lesson numbering consistency across flat, root-folder, and nested-folder cases. The fix relies on the existing groupIndexMap lookup which is already correct, but a regression test covering `FolderTreeNode` with a populated `groupIndexMap` prop would make the numbering contract explicit.",
+      "suggestion": "Consider a render test for FolderTreeNode that passes a known groupIndexMap and asserts that MaterialGroupRow receives the expected index prop for items inside folders and subfolders."
+    }
+  ]
+}

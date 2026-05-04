@@ -1,0 +1,20 @@
+{
+  "reviewer": "project-standards",
+  "findings": [],
+  "residual_risks": [
+    {
+      "risk": "Pre-existing test-patterns.md violation in story-e11-s03.spec.ts: makeSession factory uses new Date() directly (lines 23-24) instead of test-time utilities. Not a regression — those lines are unmodified by this diff.",
+      "severity": "ADVISORY"
+    },
+    {
+      "risk": "Pre-existing silent catch in pomodoroPreferences.ts: getPomodoroPreferences() at line 36 and savePomodoroPreferences() at line 46 both have bare catch blocks without visible user feedback. Not a regression — those catch blocks are unmodified by this diff.",
+      "severity": "ADVISORY"
+    }
+  ],
+  "testing_gaps": [
+    {
+      "gap": "No E2E test validates that the auto-advance countdown is gated on the autoPlay preference in a real browser. The new unit test covers this, but there is no integration/E2E coverage for the full completion flow with autoPlay toggled off.",
+      "severity": "MEDIUM"
+    }
+  ]
+}

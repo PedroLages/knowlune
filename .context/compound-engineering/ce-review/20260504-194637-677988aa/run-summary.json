@@ -1,0 +1,72 @@
+{
+  "runId": "20260504-194637-677988aa",
+  "branch": "feature/ce-2026-05-04-course-lesson-notes-top3",
+  "mode": "headless",
+  "round": 3,
+  "plan": "docs/plans/2026-05-04-005-feat-course-lesson-notes-top3-plan.md",
+  "verdict": "Ready to merge",
+  "findings": {
+    "blockers": 0,
+    "high": 0,
+    "medium": 0,
+    "low": 0,
+    "nit": 0,
+    "applied": [
+      {
+        "id": "R3F01",
+        "severity": "P2",
+        "title": "Note tag YAML injection in generateFrontmatter",
+        "file": "src/lib/noteExport.ts",
+        "line": 97,
+        "fix": "Added double-quote escaping to tag values: tag.replace(/\"/g, '\\\\\"')",
+        "autofix_class": "safe_auto"
+      }
+    ],
+    "verified": [
+      {
+        "id": "R2F01",
+        "severity": "P2",
+        "title": "Duplicate note filenames in ZIP silently overwrite",
+        "status": "FIXED",
+        "evidence": "usedFilenames Map tracks filenames per lesson folder with -N suffix deduplication; test at line 606 verifies both notes preserved"
+      }
+    ],
+    "pre_existing": []
+  },
+  "coverage": {
+    "changed_files": 12,
+    "insertions": 1938,
+    "deletions": 33,
+    "commits": 4,
+    "reviewers": "correctness, testing, maintainability, project-standards, security, performance, reliability, adversarial, kieran-typescript, julik-frontend-races",
+    "reviewer_count": 10,
+    "subagents_dispatch_failed": false,
+    "reason": "No Task/Agent sub-agent tool available; review performed inline by orchestrator applying all 10 reviewer lenses"
+  },
+  "requirements_completeness": {
+    "R1": "met",
+    "R2": "met",
+    "R3": "met",
+    "R4": "met",
+    "R5": "met",
+    "R6": "met",
+    "R7": "met",
+    "R8": "met",
+    "R9": "met",
+    "R10": "met",
+    "R11": "met",
+    "R12": "met",
+    "R13": "met",
+    "R14": "met",
+    "R15": "met",
+    "plan_source": "explicit"
+  },
+  "residual_risks": [
+    "exportCombinedMarkdown is synchronous (plan defers RAF chunking)",
+    "Rapid navigation during ZIP export may cause React state update on unmounted component warning"
+  ],
+  "testing_gaps": [
+    "No E2E test for the full mobile notes flow (pill -> expand -> fullscreen -> close)"
+  ],
+  "loopDone": true
+}

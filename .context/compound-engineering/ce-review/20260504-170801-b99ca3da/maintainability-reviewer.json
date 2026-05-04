@@ -1,0 +1,49 @@
+{
+  "reviewer": "maintainability",
+  "findings": [
+    {
+      "severity": "MEDIUM",
+      "confidence": 0.85,
+      "category": "dead_code",
+      "title": "`loadCourseAdapter` has zero callers and inconsistent sorting",
+      "file": "src/lib/courseAdapter.ts:451-460",
+      "description": "`loadCourseAdapter` is exported but never imported or called anywhere in the codebase. It also still uses `.toArray()` for videos (line 455) while the active equivalent `useCourseAdapter` was updated to `.sortBy('order')`. If someone discovers and uses this function in the future, it will silently return unsorted videos while `useCourseAdapter` returns sorted ones.",
+      "suggestion": "Either delete `loadCourseAdapter` entirely, or if it's intended as a public API entry point for future use, update line 455 to `.sortBy('order')` to match `useCourseAdapter`."
+    },
+    {
+      "severity": "LOW",
+      "confidence": 0.78,
+      "category": "defensive_obscurity",
+      "title": "`groupIndexMap.get(id) ?? 0` pattern repeated 4 times",
+      "file": "src/app/components/course/tabs/LessonsTab.tsx",
+      "description": "The expression `groupIndexMap.get(group.primary.id) ?? 0` appears at lines 487 (inside FolderTreeNode), 789 (rootItems map), and 826 (flat mode map) — three identical copy-pastes. The fourth instance (line 773-774, `Lesson X of Y` counter) echoes the same indexing logic through `materialGroups.findIndex`. If the fallback value or lookup key ever needs to change, four sites must be updated.",
+      "suggestion": "Extract a small closure or inline helper: `const getIndex = (id: string) => groupIndexMap.get(id) ?? 0`. At only 3 call sites this is borderline, but the risk of divergence over time tips it toward extraction."
+    },
+    {
+      "severity": "LOW",
+      "confidence": 0.72,
+      "category": "silent_fallback",
+      "title": "`?? 0` fallback silently defaults missing lessons to position 1",
+      "file": "src/app/components/course/tabs/LessonsTab.tsx:487,789,826",
+      "description": "The Map lookup defaults to 0 when an ID is absent, causing a missing lesson to display as `1` (the `index + 1` in LessonLink). The Map is built from `materialGroups` (all groups) and queried against items from `filteredGroups` (search-filtered subset), so IDs should always be present by invariant. But if the invariant is broken — for example, if a future refactor builds the Map from a different source — the failure is invisible: every missing item silently shows '1'.",
+      "suggestion": "Add a dev-mode guard: `if (!groupIndexMap.has(id)) console.warn('Missing groupIndexMap entry for', id)`. This surfaces the invariant violation without changing runtime behavior."
+    }
+  ],
+  "residual_risks": [
+    {
+      "risk": "The folder tree (`folderTree`) is built from `filteredGroups` (search-filtered) but `groupIndexMap` is built from `materialGroups` (unfiltered). This is intentional — numbers stay stable during search — but the dual-array dependency is undocumented. A future developer might incorrectly switch the Map source to `filteredGroups` and break global numbering.",
+      "severity": "LOW",
+      "mitigation": "Add a brief comment above the `groupIndexMap` useMemo explaining: 'Built from unfiltered materialGroups so lesson numbers remain stable across searches.'"
+    }
+  ],
+  "testing_gaps": [
+    {
+      "gap": "No test validates that `sortBy('order')` in `useCourseAdapter` produces the same deterministic ordering that `loadCourseAdapter` (still using `toArray`) would produce. Since `loadCourseAdapter` has zero callers, this is low-risk; if the function is revived, the inconsistency becomes a real gap.",
+      "test_idea": "Once `loadCourseAdapter` is either deleted or aligned, add a unit test that seeds Dexie with videos in random insertion order and asserts `getGroupedLessons()` returns groups in `order`-ascending order."
+    },
+    {
+      "gap": "No test verifies that `FolderTreeNode` renders lesson numbers matching `groupIndexMap` values when nested folders are collapsed/expanded. The index logic changed from local `idx` to global `groupIndexMap.get()`, but no existing test covers numbering inside folders.",
+      "test_idea": "Add a component test: seed a course with items across multiple folders, verify lesson numbers inside each folder match global 1-based positions rather than restarting at 1 per folder."
+    }
+  ]
+}

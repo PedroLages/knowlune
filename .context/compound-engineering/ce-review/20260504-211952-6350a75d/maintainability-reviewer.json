@@ -1,0 +1,70 @@
+{
+  "reviewer": "maintainability",
+  "findings": [
+    {
+      "id": "M1",
+      "severity": "MEDIUM",
+      "confidence": 0.95,
+      "category": "dead-code",
+      "title": "FactorBreakdown.tsx is orphaned dead code after QualityScoreDialog deletion",
+      "file": "/Volumes/SSD/Dev/Apps/Knowlune/src/app/components/session/FactorBreakdown.tsx",
+      "description": "FactorBreakdown.tsx has zero importers anywhere in the codebase. Its only consumer was QualityScoreDialog.tsx, which was deleted in this commit. The component remains in the tree with no references. This is inconsistent with the rest of the cleanup: QualityScoreDialog.tsx and QualityScoreRing.tsx were deleted, but FactorBreakdown.tsx was left behind. If the intent was to preserve components for future reintroduction (as the plan notes), the dialog and ring components should have been kept too. If the intent was to remove the quality score popup entirely, FactorBreakdown should have been deleted alongside its only consumer.",
+      "suggestion": "Delete FactorBreakdown.tsx, or add a comment explaining why it is retained despite having zero consumers. TrendIndicator.tsx is still used by SessionHistory.tsx and is correctly retained.",
+      "affectedLines": "1-93 (entire file)"
+    },
+    {
+      "id": "M2",
+      "severity": "LOW",
+      "confidence": 0.72,
+      "category": "duplication",
+      "title": "Identical autoPlay getState() call repeated across five callback bodies in useCompletionFlow",
+      "file": "/Volumes/SSD/Dev/Apps/Knowlune/src/app/hooks/useCompletionFlow.ts",
+      "description": "The pattern `const autoPlay = useLessonChromeStore.getState().autoPlay` appears identically in five separate callback functions: handleVideoEnded (line 124), handleYouTubeAutoComplete (line 141), handleAutoAdvance (line 149), handleManualStatusChange (line 165), and handleCelebrationContinue (line 178). If the autoPlay storage mechanism changes (store rename, key rename, extraction to a different module), all five sites must be updated. Using getState() inside callbacks is correct in principle (reads the latest value at invocation time rather than capturing a stale closure), but the duplication is a minor maintenance tax.",
+      "suggestion": "Consider extracting a module-level helper `function readAutoPlay(): boolean { return useLessonChromeStore.getState().autoPlay }` to localize the store coupling to a single point. This avoids adding indirection while reducing the blast radius of store API changes.",
+      "affectedLines": "124, 141, 149, 165, 178"
+    },
+    {
+      "id": "M3",
+      "severity": "LOW",
+      "confidence": 0.78,
+      "category": "naming",
+      "title": "isLongEnoughForQualityScore still worth keeping despite single use",
+      "file": "/Volumes/SSD/Dev/Apps/Knowlune/src/stores/useSessionStore.ts",
+      "description": "The `isLongEnoughForQualityScore` boolean (line 234) is now used exactly once (the ternary on line 237). Prior to this commit it was used in two places (the ternary AND an `if` block for dispatching the `session-quality-calculated` event). Despite the single use, the named variable adds semantic clarity: it documents WHY we gate on 60 seconds rather than what the numeric constant represents (already captured by `MIN_QUALITY_SCORE_DURATION_MS`). Removing the variable and inlining the comparison would make the ternary harder to read at a glance.",
+      "suggestion": "No action required. This is a correctly retained self-documenting variable. Confirming the pattern is sound.",
+      "affectedLines": "234, 237"
+    }
+  ],
+  "residual_risks": [
+    {
+      "id": "R1",
+      "severity": "LOW",
+      "description": "Quality score computation (calculateQualityScore) still executes for every session >= 60 seconds but the only UI consumer is now the session history table. The showQualityScore preference that previously allowed users to opt out of the dialog no longer exists. Users cannot disable quality score computation, only the dialog was removable. This is unchanged behavior, but if the computation were to become expensive, there is no user-facing off-switch."
+    },
+    {
+      "id": "R2",
+      "severity": "INFO",
+      "description": "The plan's stated intent ('may be useful if quality score feedback is reintroduced later') was to keep components for future use, but QualityScoreDialog.tsx and QualityScoreRing.tsx were deleted anyway. A future reintroduction of the quality score popup will need to reconstruct the dialog from git history. This is a process note, not a code defect."
+    }
+  ],
+  "testing_gaps": [
+    {
+      "id": "TG1",
+      "severity": "MEDIUM",
+      "description": "No test assertions verify that qualityScore and qualityFactors fields are correctly attached to closed sessions in useSessionStore. The integration test (session-workflow.test.ts) mocks calculateQualityScore but never asserts that the closed session object contains the expected qualityScore/qualityFactors fields. With the dialog removal, this is the only remaining consumer path for quality score data and it is untested.",
+      "file": "/Volumes/SSD/Dev/Apps/Knowlune/src/stores/__tests__/integration/session-workflow.test.ts"
+    },
+    {
+      "id": "TG2",
+      "severity": "LOW",
+      "description": "handleCelebrationContinue and handleAutoAdvance both gate auto-advance on autoPlay (useLessonChromeStore.getState().autoPlay), but only handleVideoEnded has a unit test for the disabled case. The new test in UnifiedLessonPlayer.test.tsx covers the video-ended path but not the celebration-continue or direct auto-advance paths with autoPlay=false.",
+      "file": "/Volumes/SSD/Dev/Apps/Knowlune/src/app/pages/__tests__/UnifiedLessonPlayer.test.tsx"
+    },
+    {
+      "id": "TG3",
+      "severity": "LOW",
+      "description": "The e2e regression spec (story-e11-s03.spec.ts) removed two tests (AC1 and AC5) that verified the quality score dialog appeared via the session-quality-calculated event. No replacement e2e test verifies that quality scores still appear correctly in the session history view. Session history is now the sole UI consumer of quality score data.",
+      "file": "/Volumes/SSD/Dev/Apps/Knowlune/tests/e2e/regression/story-e11-s03.spec.ts"
+    }
+  ]
+}

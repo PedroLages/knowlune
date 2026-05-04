@@ -34,6 +34,7 @@ import { useLazyStore } from '@/hooks/useLazyStore'
 import { getMergedAuthors, getAvatarSrc, getInitials, type AuthorView } from '@/lib/authors'
 import { getCourseCompletionPercent } from '@/lib/progress'
 import { AuthorFormDialog } from '@/app/components/authors/AuthorFormDialog'
+import { AuthorsSyncErrorBanner } from '@/app/components/authors/AuthorsSyncErrorBanner'
 import { DeleteAuthorDialog } from '@/app/components/authors/DeleteAuthorDialog'
 
 export function AuthorProfile() {
@@ -82,6 +83,7 @@ export function AuthorProfile() {
   if (isLoading && !isLoaded) {
     return (
       <div>
+        <AuthorsSyncErrorBanner />
         <Skeleton className="h-5 w-48 mb-4" />
         <Skeleton className="h-48 rounded-2xl mb-6" />
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
@@ -95,7 +97,8 @@ export function AuthorProfile() {
 
   if (!author) {
     return (
-      <div className="flex flex-col items-center justify-center py-24">
+      <div className="mx-auto flex w-full max-w-lg flex-col items-center px-4 py-24">
+        <AuthorsSyncErrorBanner />
         <Users className="mb-4 size-16 text-muted-foreground/50" />
         <h2 className="text-xl font-semibold mb-2">Author Not Found</h2>
         <p className="text-muted-foreground mb-6">
@@ -112,6 +115,7 @@ export function AuthorProfile() {
 
   return (
     <div>
+      <AuthorsSyncErrorBanner />
       {/* Breadcrumb */}
       <Breadcrumb className="mb-4">
         <BreadcrumbList>

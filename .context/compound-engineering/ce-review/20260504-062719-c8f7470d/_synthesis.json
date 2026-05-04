@@ -1,0 +1,141 @@
+{
+  "run_id": "20260504-062719-c8f7470d",
+  "mode": "headless",
+  "plan": "docs/plans/2026-05-04-002-feat-ai-first-path-building-plan.md",
+  "plan_source": "explicit",
+  "branch": "feature/ce-2026-05-04-ai-first-path-building",
+  "base": "325fa5092753c7ea635a040b15fc6131e015f5ac",
+  "intent": "Build AI-first path building capabilities: free-text goal-to-path generation via generatePathFromGoal, auto-placement of courses via useAutoPlacement hook, reorder history tracking for personalization via Dexie reorderHistory table, user preferences hook for preference vectors, and personalized AI wrappers (personalizedSuggestPlacement, personalizedSuggestOrder). The AILearningPath page becomes a thin wrapper opening CurriculumComposer in AI mode. Premium gate enforced at all entry points.",
+  "files": [
+    "src/ai/hooks/useAutoPlacement.ts",
+    "src/ai/learningPath/__tests__/generatePathFromGoal.test.ts",
+    "src/ai/learningPath/generatePathFromGoal.ts",
+    "src/ai/learningPath/personalizedSuggestOrder.ts",
+    "src/ai/learningPath/personalizedSuggestPlacement.ts",
+    "src/ai/learningPath/types.ts",
+    "src/app/components/figma/CurriculumComposer.tsx",
+    "src/app/pages/AILearningPath.tsx",
+    "src/app/pages/LearningPaths.tsx",
+    "src/data/types.ts",
+    "src/db/checkpoint.ts",
+    "src/db/schema.ts",
+    "src/hooks/useUserPreferences.ts",
+    "src/stores/useLearningPathStore.ts"
+  ],
+  "applied_fixes": [
+    {
+      "finding_id": "F-001",
+      "file": "src/app/components/figma/CurriculumComposer.tsx",
+      "description": "Restored // silent-catch-ok comment removed during refactoring on loadImportedCourses().catch()"
+    },
+    {
+      "finding_id": "F-002",
+      "file": "src/hooks/useUserPreferences.ts",
+      "description": "Added // silent-catch-ok comment to background computation catch block"
+    },
+    {
+      "finding_id": "F-003",
+      "file": "src/ai/hooks/useAutoPlacement.ts",
+      "description": "Removed dead acknowledgedRef variable and its references (always false, guard never activated)"
+    }
+  ],
+  "findings": [
+    {
+      "id": "F-004",
+      "severity": "P3",
+      "file": "src/app/components/figma/CurriculumComposer.tsx",
+      "line": 1,
+      "title": "Component exceeds 500-line threshold (587 lines)",
+      "autofix_class": "advisory",
+      "owner": "human",
+      "requires_verification": false,
+      "confidence": 0.85,
+      "pre_existing": false,
+      "reviewer": "maintainability",
+      "why_it_matters": "Adding AI mode content to CurriculumComposer pushed it past the 500-line threshold. Large components are harder to test and maintain.",
+      "evidence": ["Component grew from ~280 lines to 587 lines with AI mode additions. ESLint component-size/max-lines warning triggered."],
+      "suggested_fix": "Extract AI mode content (goal input, preview rendering, save logic) into a separate AIPathBuilder sub-component within the same directory."
+    },
+    {
+      "id": "F-005",
+      "severity": "P3",
+      "file": "src/app/pages/LearningPaths.tsx",
+      "line": 1,
+      "title": "AIGoalInput defined inline contributes to 640-line component",
+      "autofix_class": "advisory",
+      "owner": "human",
+      "requires_verification": false,
+      "confidence": 0.75,
+      "pre_existing": false,
+      "reviewer": "maintainability",
+      "why_it_matters": "AIGoalInput is defined as a local function component inside LearningPaths.tsx. Extracting it would improve testability and reduce cognitive load.",
+      "evidence": ["AIGoalInput function defined at line 2511 of the diff within LearningPaths.tsx, which is already 640+ lines."],
+      "suggested_fix": "Extract AIGoalInput to a separate file in src/app/components/figma/AIGoalInput.tsx."
+    },
+    {
+      "id": "F-006",
+      "severity": "P2",
+      "file": "src/ai/learningPath/personalizedSuggestPlacement.ts",
+      "line": 1207,
+      "title": "Personalized wrapper duplicates AI fetch logic from original",
+      "autofix_class": "advisory",
+      "owner": "human",
+      "requires_verification": false,
+      "confidence": 0.70,
+      "pre_existing": false,
+      "reviewer": "maintainability",
+      "why_it_matters": "When preferences are ready, the wrapper makes its own API call with duplicate fetch/parse logic from suggestPathPlacement. If the original's API contract changes, the wrapper must be updated separately. The plan acknowledges this trade-off but it is worth flagging.",
+      "evidence": ["personalizedSuggestPlacement.ts lines 1235-1367 contain full fetch/parse/timeout logic duplicating suggestPlacement.ts. Delegates to original only when preferences unavailable (line 1216)."],
+      "suggested_fix": "Consider refactoring suggestPathPlacement to accept an optional personalizationContext parameter, so the wrapper only constructs the prompt augmentation and delegates the API call."
+    },
+    {
+      "id": "F-007",
+      "severity": "P3",
+      "file": "src/ai/learningPath/personalizedSuggestOrder.ts",
+      "line": 999,
+      "title": "Personalized wrapper duplicates AI fetch logic from original",
+      "autofix_class": "advisory",
+      "owner": "human",
+      "requires_verification": false,
+      "confidence": 0.70,
+      "pre_existing": false,
+      "reviewer": "maintainability",
+      "why_it_matters": "Same duplication concern as personalizedSuggestPlacement. The fetch/parse/timeout logic is duplicated from suggestOrder.",
+      "evidence": ["personalizedSuggestOrder.ts lines 1075-1159 contain full fetch/parse logic duplicating suggestOrder.ts."],
+      "suggested_fix": "Same approach: add optional personalizationContext parameter to suggestOrder."
+    }
+  ],
+  "requirements_completeness": {
+    "plan_source": "explicit",
+    "results": [
+      {"req": "R1", "status": "met", "detail": "generatePathFromGoal.ts + CurriculumComposer AI mode + LearningPaths empty state goal input"},
+      {"req": "R2", "status": "met", "detail": "Gap analysis with gapTopic entries in GoalPathEntry, rendered with Search/Import actions in preview"},
+      {"req": "R3", "status": "met", "detail": "AIPreviewState is component-local, not persisted until explicit save via handleSaveAIPath"},
+      {"req": "R4", "status": "met", "detail": "Zero-course case handled - prompt instructs AI to build pure gap analysis; tested in generatePathFromGoal.test.ts"},
+      {"req": "R5", "status": "met", "detail": "useAutoPlacement hook computes placement via personalizedSuggestPlacement; applyPlacementSuggestion store method"},
+      {"req": "R6", "status": "met", "detail": "accept callback applies placement; user can drag to override (dismiss callback)"},
+      {"req": "R7", "status": "met", "detail": "Course appears at end immediately (addCourseToPath places at position N+1); 2s animation window via isWithinAnimationWindow"},
+      {"req": "R8", "status": "met", "detail": "ReorderHistoryEntry type + reorderHistory Dexie table + recording in reorderCourse store method"},
+      {"req": "R9", "status": "met", "detail": "useUserPreferences hook computes preference vectors; personalized wrappers inject into prompts"},
+      {"req": "R10", "status": "met", "detail": "reorderHistory table is local-only (not in SYNCABLE_TABLES); useUserPreferences reads from Dexie"},
+      {"req": "R11", "status": "met", "detail": "PremiumGate wraps goal input in CurriculumComposer AI mode and AIGoalInput in LearningPaths; AILearningPath route uses existing PremiumFeaturePage"}
+    ]
+  },
+  "residual_risks": [
+    "AI prompt for goal-to-path may produce inconsistent JSON structure in production (structured parsing handles this but edge cases exist)",
+    "2-second animation threshold may need tuning after UX testing (deferred to implementation per plan)",
+    "Reorder history grows unbounded -- trimming logic is fire-and-forget with no guaranteed execution",
+    "Personalized prompts increase token usage (mitigated by concise formatting, but not measured)",
+    "Race between user drag and arriving placement suggestion is handled by AbortController, but edge case testing is limited"
+  ],
+  "testing_gaps": [
+    "No E2E tests for the full goal-to-path flow (LearningPaths empty state -> type goal -> generate -> preview -> save)",
+    "No E2E tests for auto-placement animation window and badge fallback",
+    "No E2E tests for personalization feedback loop (import courses, reorder several times, verify AI suggestions adapt)",
+    "No test for reorder history trimming (50-entry cap, 90-day cutoff)",
+    "No test for premium gate at LearningPaths empty state AI goal input",
+    "generatePathFromGoal tests only cover mock injection path, not live API error paths (timeout, provider error, abort)"
+  ],
+  "verdict": "Ready with fixes",
+  "verdict_reasoning": "3 safe_auto fixes applied (silent-catch annotations restored, dead code removed). All 11 requirements are met. Remaining findings are advisory (component extraction, wrapper duplication). No blockers."
+}

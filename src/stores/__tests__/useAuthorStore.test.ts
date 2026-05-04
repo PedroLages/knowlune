@@ -12,21 +12,25 @@ vi.mock('sonner', () => {
   const toastFn = vi.fn() as ReturnType<typeof vi.fn> & {
     error: ReturnType<typeof vi.fn>
     success: ReturnType<typeof vi.fn>
+    warning: ReturnType<typeof vi.fn>
     custom: ReturnType<typeof vi.fn>
     promise: ReturnType<typeof vi.fn>
   }
   toastFn.error = vi.fn()
   toastFn.success = vi.fn()
+  toastFn.warning = vi.fn()
   toastFn.custom = vi.fn()
   toastFn.promise = vi.fn()
   return { toast: toastFn }
 })
 
 // Import store AFTER mock is set up
-const { useAuthorStore } = await import('@/stores/useAuthorStore')
+const { useAuthorStore, AUTHORS_REFRESH_FAILED_MESSAGE, resetSilentAuthorsRefreshThrottleForTests } =
+  await import('@/stores/useAuthorStore')
 
 beforeEach(async () => {
   vi.restoreAllMocks()
+  vi.clearAllMocks()
   useAuthorStore.setState({ authors: [], isLoading: false, isLoaded: false, error: null })
   const { db } = await import('@/db')
   await db.authors.clear()
@@ -281,6 +285,10 @@ describe('deleteAuthor', () => {
 })
 
 describe('loadAuthors', () => {
+  beforeEach(() => {
+    resetSilentAuthorsRefreshThrottleForTests()
+  })
+
   it('should load authors from IndexedDB', async () => {
     const { db } = await import('@/db')
     const now = new Date().toISOString()
@@ -318,6 +326,104 @@ describe('loadAuthors', () => {
     const state = useAuthorStore.getState()
     expect(state.error).toBe('Failed to load authors')
     expect(state.isLoading).toBe(false)
+  })
+
+  it('silent reload refreshes authors without toggling cold-load loading state', async () => {
+    const { db } = await import('@/db')
+    const now = new Date().toISOString()
+    await db.authors.add({
+      id: crypto.randomUUID(),
+      name: 'Author A',
+      bio: '',
+      photoUrl: '',
+      courseIds: [],
+      isPreseeded: false,
+      createdAt: now,
+      updatedAt: now,
+    })
+
+    await act(async () => {
+      await useAuthorStore.getState().loadAuthors()
+    })
+
+    expect(useAuthorStore.getState().isLoaded).toBe(true)
+
+    await db.authors.add({
+      id: crypto.randomUUID(),
+      name: 'Author B',
+      bio: '',
+      photoUrl: '',
+      courseIds: [],
+      isPreseeded: false,
+      createdAt: now,
+      updatedAt: now,
+    })
+
+    await act(async () => {
+      await useAuthorStore.getState().loadAuthors({ silent: true })
+    })
+
+    const state = useAuthorStore.getState()
+    expect(state.authors.map(a => a.name).sort()).toEqual(['Author A', 'Author B'])
+    expect(state.isLoaded).toBe(true)
+    expect(state.isLoading).toBe(false)
+    expect(state.error).toBeNull()
+  })
+
+  it('silent reload failure when loaded surfaces throttled warning and error', async () => {
+    const { toast } = await import('sonner')
+    const { db } = await import('@/db')
+    const now = new Date().toISOString()
+    await db.authors.add({
+      id: crypto.randomUUID(),
+      name: 'Author A',
+      bio: '',
+      photoUrl: '',
+      courseIds: [],
+      isPreseeded: false,
+      createdAt: now,
+      updatedAt: now,
+    })
+
+    await act(async () => {
+      await useAuthorStore.getState().loadAuthors()
+    })
+
+    const spy = vi.spyOn(db.authors, 'orderBy').mockImplementation(() => {
+      throw new Error('DB read failed')
+    })
+
+    await act(async () => {
+      await useAuthorStore.getState().loadAuthors({ silent: true })
+    })
+
+    spy.mockRestore()
+
+    expect(useAuthorStore.getState().error).toBe(AUTHORS_REFRESH_FAILED_MESSAGE)
+    expect(toast.warning).toHaveBeenCalledWith(AUTHORS_REFRESH_FAILED_MESSAGE)
+
+    await act(async () => {
+      useAuthorStore.getState().clearAuthorsLoadError()
+    })
+    expect(useAuthorStore.getState().error).toBeNull()
+  })
+
+  it('silent reload failure before initial load completes does not set author error', async () => {
+    const { toast } = await import('sonner')
+    const { db } = await import('@/db')
+    const spy = vi.spyOn(db.authors, 'orderBy').mockImplementation(() => {
+      throw new Error('DB read failed')
+    })
+
+    await act(async () => {
+      await useAuthorStore.getState().loadAuthors({ silent: true })
+    })
+
+    spy.mockRestore()
+
+    expect(useAuthorStore.getState().error).toBeNull()
+    expect(useAuthorStore.getState().isLoaded).toBe(false)
+    expect(toast.warning).not.toHaveBeenCalled()
   })
 })
 

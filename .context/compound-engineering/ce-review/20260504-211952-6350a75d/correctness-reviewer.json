@@ -1,0 +1,85 @@
+{
+  "reviewer": "correctness",
+  "findings": [
+    {
+      "title": "Orphaned dead component FactorBreakdown.tsx after QualityScoreDialog removal",
+      "severity": "P3",
+      "file": "/Volumes/SSD/Dev/Apps/Knowlune/src/app/components/session/FactorBreakdown.tsx",
+      "line": 1,
+      "confidence": 0.95,
+      "autofix_class": "safe_auto",
+      "owner": "review-fixer",
+      "requires_verification": false,
+      "pre_existing": false,
+      "suggested_fix": "Delete src/app/components/session/FactorBreakdown.tsx. It was only imported by QualityScoreDialog.tsx (now deleted) — no other file in the codebase imports it. The component is unreachable dead code."
+    },
+    {
+      "title": "Stale showQualityScore key persists in user localStorage indefinitely",
+      "severity": "P3",
+      "file": "/Volumes/SSD/Dev/Apps/Knowlune/src/lib/pomodoroPreferences.ts",
+      "line": 30,
+      "confidence": 0.85,
+      "autofix_class": "gated_auto",
+      "owner": "human",
+      "requires_verification": false,
+      "pre_existing": false,
+      "suggested_fix": "getPomodoroPreferences() uses a spread merge (`{ ...defaults, ...parsed }`) where parsed comes from localStorage. Users who previously had `showQualityScore` in their stored preferences will retain that key forever because savePomodoroPreferences also merges with the current (stale) state. Consider adding a migration step that strips removed keys: `delete parsed.showQualityScore` before merging, or write a one-time migration similar to the existing storage migration patterns."
+    },
+    {
+      "title": "Test isolation gap: Zustand store module state not reset between tests — new test toggles autoPlay making existing tests order-dependent",
+      "severity": "P2",
+      "file": "/Volumes/SSD/Dev/Apps/Knowlune/src/app/pages/__tests__/UnifiedLessonPlayer.test.tsx",
+      "line": 238,
+      "confidence": 0.75,
+      "autofix_class": "gated_auto",
+      "owner": "human",
+      "requires_verification": false,
+      "pre_existing": true,
+      "suggested_fix": "The new test at line 238 calls `useLessonChromeStore.getState().toggleAutoPlay()` which sets autoPlay to false globally for the module. No beforeEach hook resets the store. If tests are reordered or Vitest random ordering is enabled, the test at line 218 ('does NOT show celebration when a single lesson completes') would fail because it expects autoPlay to still be true. Add a beforeEach that resets the store: `useLessonChromeStore.setState({ autoPlay: true })`, or use `vi.hoisted` factory to create a fresh store per describe block. This is pre-existing fragility (the store was never reset) but the new test makes it more likely to manifest."
+    }
+  ],
+  "residual_risks": [
+    {
+      "description": "handleVideoEnded early-return on persistence failure correctly prevents celebration AND auto-advance. Verified: the early return guards all downstream side effects. No silent error swallow — toast.error is called before the return.",
+      "severity": "LOW",
+      "confidence": 0.90
+    },
+    {
+      "description": "handleYouTubeAutoComplete does not call setItemStatus (status already persisted by YouTubeVideoContent per the docstring). If YouTubeVideoContent's persistence were to silently fail, the callback would still show celebration/auto-advance. This is pre-existing behavior unchanged by this diff — the docstring explicitly documents this contract.",
+      "severity": "LOW",
+      "confidence": 0.85
+    },
+    {
+      "description": "The endSession() comment at useSessionStore.ts line 259 states 'Events fire after persistence succeeds (async), so listeners can safely read from the store if needed before state is cleared.' This is incorrect — state IS cleared synchronously before the .then() fires. Any listener for 'study-log-updated' that reads activeSession from the store would see null. This mis-comment is pre-existing (unchanged by this diff) and current listeners (e.g., momentum scores) do not appear to read activeSession from the event handler.",
+      "severity": "INFO",
+      "confidence": 0.90
+    },
+    {
+      "description": "The Zustand getState() pattern used in all three handlers (handleVideoEnded, handleYouTubeAutoComplete, handleManualStatusChange) reads autoPlay at call time rather than capturing it in the useCallback dependency array. This is correct — it ensures the latest preference is used even if toggled after the callback was created. Verified against Zustand documentation.",
+      "severity": "INFO",
+      "confidence": 0.95
+    }
+  ],
+  "testing_gaps": [
+    {
+      "description": "No unit test for handleYouTubeAutoComplete with autoPlay=false. The new test only covers handleVideoEnded. The YouTube auto-complete path (>90% watched) has the same autoPlay gate but isn't tested.",
+      "file": "/Volumes/SSD/Dev/Apps/Knowlune/src/app/pages/__tests__/UnifiedLessonPlayer.test.tsx",
+      "gap_type": "missing_test_case"
+    },
+    {
+      "description": "No unit test for handleManualStatusChange with autoPlay=false. The manual completion toggle (PlayerHeader AC7) has the same autoPlay gate but isn't tested.",
+      "file": "/Volumes/SSD/Dev/Apps/Knowlune/src/app/pages/__tests__/UnifiedLessonPlayer.test.tsx",
+      "gap_type": "missing_test_case"
+    },
+    {
+      "description": "No E2E regression test verifying that auto-advance countdown is absent when autoPlay is disabled. The removed E2E tests validated QualityScoreDialog behavior; a replacement E2E test for the autoPlay gate would provide end-to-end confidence.",
+      "file": "/Volumes/SSD/Dev/Apps/Knowlune/tests/e2e/regression/story-e11-s03.spec.ts",
+      "gap_type": "missing_test_case"
+    },
+    {
+      "description": "No E2E test verifying toggling autoPlay mid-session correctly suppresses the auto-advance countdown when the video ends after the toggle.",
+      "file": "/Volumes/SSD/Dev/Apps/Knowlune/tests/e2e/regression/story-e11-s03.spec.ts",
+      "gap_type": "missing_edge_case"
+    }
+  ]
+}

@@ -1,0 +1,68 @@
+{
+  "reviewer": "maintainability",
+  "findings": [
+    {
+      "title": "Component exceeds 500-line threshold (587 lines)",
+      "severity": "P3",
+      "file": "src/app/components/figma/CurriculumComposer.tsx",
+      "line": 1,
+      "why_it_matters": "Adding AI mode content to CurriculumComposer pushed it past the 500-line threshold. Large components are harder to test, review, and maintain.",
+      "autofix_class": "advisory",
+      "owner": "human",
+      "requires_verification": false,
+      "confidence": 0.85,
+      "evidence": ["Component grew from ~280 to 587 lines with AI mode additions. ESLint component-size/max-lines triggered. AI mode content (goal input, preview, save logic) is colocated with manual mode form fields."],
+      "pre_existing": false,
+      "suggested_fix": "Extract AI mode content (goal input, preview rendering, save logic) into a separate AIPathBuilder sub-component."
+    },
+    {
+      "title": "AIGoalInput defined inline contributes to 640-line LearningPaths",
+      "severity": "P3",
+      "file": "src/app/pages/LearningPaths.tsx",
+      "line": 1,
+      "why_it_matters": "AIGoalInput is defined as a local function component inside LearningPaths.tsx. Extracting it would improve testability and reduce the host component's cognitive load.",
+      "autofix_class": "advisory",
+      "owner": "human",
+      "requires_verification": false,
+      "confidence": 0.75,
+      "evidence": ["AIGoalInput is defined within LearningPaths.tsx. The file is now 640+ lines (ESLint warning). Extracting AIGoalInput would reduce by ~30 lines and improve isolation."],
+      "pre_existing": false,
+      "suggested_fix": "Extract AIGoalInput to src/app/components/figma/AIGoalInput.tsx."
+    },
+    {
+      "title": "Personalized wrapper duplicates AI fetch logic from original suggestPlacement",
+      "severity": "P2",
+      "file": "src/ai/learningPath/personalizedSuggestPlacement.ts",
+      "line": 1207,
+      "why_it_matters": "When preferences are ready, the wrapper makes its own API call with duplicated fetch/parse/timeout logic. If the original's API contract changes, the wrapper must be updated separately, creating a maintenance burden.",
+      "autofix_class": "advisory",
+      "owner": "human",
+      "requires_verification": false,
+      "confidence": 0.70,
+      "evidence": ["personalizedSuggestPlacement.ts lines 1235-1367 contain full fetch/post/parse/timeout logic duplicating suggestPlacement.ts. Delegates to original only when preferences unavailable."],
+      "pre_existing": false,
+      "suggested_fix": "Refactor suggestPathPlacement to accept an optional personalizationContext string parameter, so the wrapper only constructs the prompt augmentation."
+    },
+    {
+      "title": "Personalized wrapper duplicates AI fetch logic from original suggestOrder",
+      "severity": "P3",
+      "file": "src/ai/learningPath/personalizedSuggestOrder.ts",
+      "line": 999,
+      "why_it_matters": "Same duplication concern as placement wrapper. The fetch/parse/timeout logic is duplicated from suggestOrder.ts.",
+      "autofix_class": "advisory",
+      "owner": "human",
+      "requires_verification": false,
+      "confidence": 0.70,
+      "evidence": ["personalizedSuggestOrder.ts lines 1075-1159 contain full fetch/post/parse/logic duplicating suggestOrder.ts."],
+      "pre_existing": false,
+      "suggested_fix": "Same approach: add optional personalizationContext parameter to suggestOrder."
+    }
+  ],
+  "residual_risks": [
+    "If personalized wrapper API patterns diverge from originals, bugs may only appear in personalized mode"
+  ],
+  "testing_gaps": [
+    "No test verifying that personalized wrappers delegate correctly when preferences unavailable",
+    "No test verifying personalized wrapper API call structure matches original"
+  ]
+}

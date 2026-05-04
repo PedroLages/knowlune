@@ -1,0 +1,147 @@
+{
+  "runId": "20260504-193042-eaf31422",
+  "round": 2,
+  "scope": "feature/ce-2026-05-04-course-lesson-notes-top3",
+  "base": "90fad3b260f89314d3b464ce55c9c944b1f8b69a",
+  "intent": "Add Picture-in-Picture floating notes panel on mobile (three states: closed pill, expanded panel, fullscreen overlay) and course notes bulk export (Combined Markdown + ZIP).",
+  "plan": "docs/plans/2026-05-04-005-feat-course-lesson-notes-top3-plan.md",
+  "planSource": "explicit",
+  "verdict": "Ready with fixes",
+  "round1FixesVerified": [
+    "F1 (P0): Fixed — FloatingNotesPanel.tsx:130 now has `return null` in fullscreen guard",
+    "F2 (P1): Fixed — CourseNotesTab.tsx passes `exportableNotes` to both export functions",
+    "F3 (P1): Fixed — CourseNotesTab.test.tsx has deleted-note filtering tests (soft-deleted with content scenario)",
+    "F4 (P2): Fixed — catch block has `console.error('Course notes export failed:', err)`",
+    "F5 (P2): Fixed — FloatingNotesPanel.test.tsx has touch gesture tests (swipe >= 48px, outside handle, < 48px)",
+    "F6 (P2): Fixed — JSZip import is now static `import JSZip from 'jszip'` at top of noteExport.ts"
+  ],
+  "findings": [
+    {
+      "id": "F1-R2",
+      "title": "Stale swipeDelta closure in handleTouchEnd breaks swipe-to-close gesture on fast swipes",
+      "severity": "P1",
+      "file": "src/app/components/course/FloatingNotesPanel.tsx",
+      "line": 118,
+      "confidence": 0.88,
+      "autofix_class": "safe_auto",
+      "owner": "review-fixer",
+      "requires_verification": true,
+      "pre_existing": false,
+      "suggested_fix": "Replace `useState(0)` for swipeDelta with `useRef(0)`. Track delta in `swipeDeltaRef.current` during touchMove, and read `swipeDeltaRef.current` in handleTouchEnd. Use a separate state variable (set via touchMove) only for the visual transform CSS to avoid the stale closure problem.",
+      "why": "handleTouchEnd reads `swipeDelta` from its useCallback closure. Since `swipeDelta` is React state, and React 18 batches state updates across rapid event handlers, the touchend handler may read the value from before the last touchmove's setSwipeDelta was committed. The unit tests pass because `act()` forces synchronous re-renders between events, masking the real-browser behavior.",
+      "evidence": [
+        "FloatingNotesPanel.tsx:88 — `const [swipeDelta, setSwipeDelta] = useState(0)` — uses React state for gesture tracking",
+        "FloatingNotesPanel.tsx:112 — `setSwipeDelta(delta)` in handleTouchMove — queues state update",
+        "FloatingNotesPanel.tsx:119 — `if (swipeDelta >= 48)` in handleTouchEnd — reads potentially stale closure value",
+        "FloatingNotesPanel.tsx:123 — `useCallback(..., [swipeDelta, closeMobileNotesPanel])` — dep on state causes callback recreation but doesn't solve staleness during rapid events"
+      ]
+    },
+    {
+      "id": "F2-R2",
+      "title": "Portland target ref passed as null on initial render — FloatingNotesPanel may not render until unrelated re-render",
+      "severity": "P1",
+      "file": "src/app/pages/UnifiedLessonPlayer.tsx",
+      "line": 419,
+      "confidence": 0.85,
+      "autofix_class": "safe_auto",
+      "owner": "review-fixer",
+      "requires_verification": true,
+      "pre_existing": false,
+      "suggested_fix": "Use `useState<HTMLDivElement | null>(null)` for `portalTarget` and a `useCallback` ref on the portal target div: `<div ref={useCallback((node: HTMLDivElement | null) => { if (node) setPortalTarget(node) }, [])}>`. Pass `portalTarget` state to FloatingNotesPanel instead of `floatingPanelPortalRef.current`.",
+      "why": "React refs are populated during the commit phase, which occurs AFTER the render phase. On the first render, `floatingPanelPortalRef.current` is null (its initial value). The FloatingNotesPanel receives `portalTarget={null}` and returns null. No automatic re-render is triggered when the ref is populated during commit. The component only renders correctly when an unrelated state change causes a subsequent re-render — which is not guaranteed (e.g., cached data with no async loads).",
+      "evidence": [
+        "UnifiedLessonPlayer.tsx:168 — `const floatingPanelPortalRef = useRef<HTMLDivElement>(null)` — initialized to null",
+        "UnifiedLessonPlayer.tsx:419 — `portalTarget={floatingPanelPortalRef.current}` — passes null on first render",
+        "UnifiedLessonPlayer.tsx:415-420 — portal target div and FloatingNotesPanel render in same pass, ref not populated yet",
+        "useMediaQuery.ts:5-7 — useState initializer sets correct value synchronously, no guaranteed re-render from useEffect change"
+      ]
+    },
+    {
+      "id": "F3-R2",
+      "title": "Duplicate note filenames silently overwrite in ZIP export",
+      "severity": "P2",
+      "file": "src/lib/noteExport.ts",
+      "line": 326,
+      "confidence": 0.82,
+      "autofix_class": "gated_auto",
+      "owner": "downstream-resolver",
+      "requires_verification": true,
+      "pre_existing": false,
+      "suggested_fix": "Track used filenames per lesson folder path. When a duplicate is detected, append `-2`, `-3` etc. to the filename before the `.md` extension. For example: two notes with first line 'Chapter Review' in the same lesson would produce `Chapter-Review.md` and `Chapter-Review-2.md`.",
+      "why": "`zip.file(filePath, fileContent)` uses the path as a key in JSZip's internal map. If two notes in the same lesson produce the same `noteFilename` (e.g., both with first line 'Untitled Note' or 'Chapter Review'), the second call silently overwrites the first. This causes data loss in the exported ZIP without any warning. The overwrite is invisible to the user who sees a toast reporting all notes exported.",
+      "evidence": [
+        "noteExport.ts:326 — `const noteFilename = sanitizeFilename(firstLine.slice(0, 50)) || 'note'` — no dedup",
+        "noteExport.ts:336 — `zip.file(filePath, fileContent)` — JSZip overwrites on duplicate paths",
+        "noteExport.ts:333 — `const filePath = ...` — path is `courseFolder/moduleFolder/lessonFolder/noteFilename.md`"
+      ]
+    },
+    {
+      "id": "F4-R2",
+      "title": "Fullscreen header button in BelowVideoTabs does not sync store state on mobile",
+      "severity": "P2",
+      "file": "src/app/components/course/BelowVideoTabs.tsx",
+      "line": 302,
+      "confidence": 0.78,
+      "autofix_class": "safe_auto",
+      "owner": "review-fixer",
+      "requires_verification": false,
+      "pre_existing": false,
+      "suggested_fix": "On mobile, change the header button's onClick from just `setIsNotesFullscreen(true)` to also call `setMobileNotesPanel('fullscreen')` so the store stays in sync. The close path (closeFullscreenNotes) already assumes the store was 'fullscreen' when it sets it back to 'expanded'.",
+      "why": "The header Maximize2 button at line 302 opens fullscreen directly via `setIsNotesFullscreen(true)` without updating `mobileNotesPanel` in the store. When the fullscreen closes via `closeFullscreenNotes` (ESC or close button), it always calls `setMobileNotesPanel('expanded')`. This creates inconsistent transitions: if the panel was 'closed' before the header button was clicked, closing fullscreen unexpectedly opens the floating panel to 'expanded'. The store state should be the source of truth for whether fullscreen is active.",
+      "evidence": [
+        "BelowVideoTabs.tsx:302 — `onClick={() => setIsNotesFullscreen(true)}` — no store sync",
+        "BelowVideoTabs.tsx:176-180 — `closeFullscreenNotes` always sets store to 'expanded'",
+        "BelowVideoTabs.tsx:168-173 — useEffect syncs store->local but not local->store"
+      ]
+    },
+    {
+      "id": "F5-R2",
+      "title": "Double-effect ref pattern for onSaveStatusChange adds unnecessary effect per render",
+      "severity": "P3",
+      "file": "src/app/components/notes/NoteEditor.tsx",
+      "line": 217,
+      "confidence": 0.72,
+      "autofix_class": "advisory",
+      "owner": "human",
+      "requires_verification": false,
+      "pre_existing": false,
+      "suggested_fix": "Replace the two-effect pattern (lines 217-223) with a single assign-in-render approach: `onSaveStatusChangeRef.current = onSaveStatusChange` directly in the render body (supported in React 19), plus one useEffect: `useEffect(() => { onSaveStatusChangeRef.current?.(saveStatus) }, [saveStatus])`. This removes the no-deps effect that runs on every render.",
+      "why": "The no-deps `useEffect` at line 218-220 runs on every render to update the ref. This triggers an additional passive effect commit step per render. While this follows the existing pattern in the same component (lines 186-197 for onSaveRef), it's unnecessary — directly assigning `.current` during render is supported in React 19 and avoids the extra effect lifecycle work."
+    },
+    {
+      "id": "F6-R2",
+      "title": "Combined Markdown `---` separator between notes creates YAML ambiguity",
+      "severity": "P3",
+      "file": "src/lib/noteExport.ts",
+      "line": 271,
+      "confidence": 0.68,
+      "autofix_class": "advisory",
+      "owner": "human",
+      "requires_verification": false,
+      "pre_existing": false,
+      "suggested_fix": "Use `---` (underscore-based horizontal rule) instead of `---` for the note separator, or add an extra blank line before the separator: `parts.push('\\n\\n---\\n\\n')`. This prevents the end of one note's YAML separator from visually merging with the start of the next note's YAML frontmatter.",
+      "why": "Each note's content ends with `\\n---\\n` (separator), and the next note's YAML frontmatter begins with `---`. In the joined output, this produces `---\\n\\n---\\n` which YAML multi-document parsers interpret as an empty document. While most frontmatter parsers (Obsidian, gray-matter) only process the first YAML block in a file, some Markdown-to-HTML renderers may misinterpret these sequences."
+    }
+  ],
+  "preExisting": [],
+  "residualRisks": [
+    "Portal z-index may conflict with native YouTube/video controls on some mobile browsers (plan risk #1)",
+    "Swipe gesture may conflict with iOS Safari back gesture at screen edges (plan risk #2)",
+    "Large ZIP exports (>100 notes) may still cause brief UI jank despite rAF chunking (plan risk #3)",
+    "Floating panel on initial load depends on unrelated re-render to populate portal target (F2-R2)",
+    "Swipe-to-close gesture may fail on very fast swipes due to stale closure (F1-R2)"
+  ],
+  "testingGaps": [
+    "No test for swipeDelta stale closure — uses act() which masks the real-browser timing issue",
+    "No integration test for portal target ref lifecycle — no test verifies FloatingNotesPanel renders after ref attachment",
+    "No test for duplicate note filenames in ZIP causing silent overwrites",
+    "No E2E test for floating panel on real mobile viewport with video content (carried from R1)"
+  ],
+  "learnings": [],
+  "coverage": {
+    "suppressed": 0,
+    "failedReviewers": 0,
+    "round1FixesAllVerified": true,
+    "untrackedExcluded": true
+  }
+}

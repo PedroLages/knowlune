@@ -74,9 +74,14 @@ vi.mock('@/app/components/PWAUpdatePrompt', () => ({ PWAUpdatePrompt: () => null
 vi.mock('@/app/components/PWAInstallBanner', () => ({ PWAInstallBanner: () => null }))
 vi.mock('@/app/hooks/useAuthLifecycle', () => ({ useAuthLifecycle: vi.fn() }))
 vi.mock('@/app/hooks/useSyncLifecycle', () => ({ useSyncLifecycle: vi.fn() }))
-vi.mock('@/stores/useSessionStore', () => ({
-  useSessionStore: () => ({ recoverOrphanedSessions: vi.fn() }),
-}))
+vi.mock('@/stores/useSessionStore', () => {
+  const recoverOrphanedSessions = vi.fn()
+  function useSessionStore() {
+    return {}
+  }
+  useSessionStore.getState = () => ({ recoverOrphanedSessions })
+  return { useSessionStore }
+})
 vi.mock('@/stores/useWelcomeWizardStore', () => ({
   useWelcomeWizardStore: () => ({ initialize: vi.fn() }),
 }))

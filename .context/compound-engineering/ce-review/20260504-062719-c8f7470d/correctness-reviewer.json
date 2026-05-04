@@ -1,0 +1,54 @@
+{
+  "reviewer": "correctness",
+  "findings": [
+    {
+      "title": "Dead acknowledgedRef variable never set to true",
+      "severity": "P2",
+      "file": "src/ai/hooks/useAutoPlacement.ts",
+      "line": 84,
+      "why_it_matters": "The acknowledgedRef ref was always false, making its guard condition in the accept callback dead code. This was likely an unfinished feature meant to prevent double-accept but was never wired to be set to true.",
+      "autofix_class": "safe_auto",
+      "owner": "review-fixer",
+      "requires_verification": true,
+      "confidence": 0.92,
+      "evidence": ["acknowledgedRef is declared at line 97 with useRef(false), set to false at line 110 in useEffect, but never set to true. The guard `if (!suggestion || acknowledgedRef.current) return` at line 84 never activates from acknowledgedRef. acceptedRef already handles double-accept prevention (set to true at line 85)."],
+      "pre_existing": false,
+      "suggested_fix": "Remove acknowledgedRef and its references. The acceptedRef and suggestion null-check already prevent double-accept."
+    },
+    {
+      "title": "Removed silent-catch-ok comment triggers ESLint warning",
+      "severity": "P2",
+      "file": "src/app/components/figma/CurriculumComposer.tsx",
+      "line": 150,
+      "why_it_matters": "The original code had a // silent-catch-ok comment justifying the silent catch on loadImportedCourses(). The comment was accidentally removed during refactoring, triggering a project ESLint rule violation.",
+      "autofix_class": "safe_auto",
+      "owner": "review-fixer",
+      "requires_verification": false,
+      "confidence": 0.95,
+      "evidence": ["Original code at diff line 1521 had comment: '// silent-catch-ok: store refresh failure is non-critical; courses are already in state'. New code at line 150 has no comment. ESLint error-handling/no-silent-catch triggered."],
+      "pre_existing": false,
+      "suggested_fix": "Restore the // silent-catch-ok comment before the .catch() call."
+    },
+    {
+      "title": "Missing silent-catch-ok comment on background computation catch",
+      "severity": "P3",
+      "file": "src/hooks/useUserPreferences.ts",
+      "line": 130,
+      "why_it_matters": "The compute() catch block silently handles failures, which is correct for a background computation. But it lacks the project-required // silent-catch-ok annotation.",
+      "autofix_class": "safe_auto",
+      "owner": "review-fixer",
+      "requires_verification": false,
+      "confidence": 0.90,
+      "evidence": ["Catch at line 130 has console.warn but no // silent-catch-ok comment. ESLint error-handling/no-silent-catch warning triggered."],
+      "pre_existing": false,
+      "suggested_fix": "Add // silent-catch-ok: background preference computation failure is non-critical comment."
+    }
+  ],
+  "residual_risks": [
+    "The accept callback references acknowledgedRef which was declared later in the file -- while not a runtime bug (closure semantics), the ordering violates React hook conventions"
+  ],
+  "testing_gaps": [
+    "No test verifying useAutoPlacement accept callback prevents double-accept",
+    "No test verifying useAutoPlacement dismiss callback prevents stale suggestions"
+  ]
+}

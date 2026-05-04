@@ -106,6 +106,14 @@ describe('AuthorFormDialog', () => {
     expect(screen.getByLabelText('Title')).toHaveValue('Software Engineer')
   })
 
+  it('keeps footer actions outside the scroll body', () => {
+    render(<AuthorFormDialog open={true} onOpenChange={vi.fn()} author={sampleAuthor} />)
+
+    const saveButton = screen.getByRole('button', { name: /save changes/i })
+    expect(saveButton.closest('[data-slot="dialog-footer"]')).toBeTruthy()
+    expect(saveButton.closest('.overflow-y-auto')).toBeNull()
+  })
+
   it('clears validation errors when correcting input', async () => {
     const user = userEvent.setup()
     render(<AuthorFormDialog open={true} onOpenChange={vi.fn()} />)

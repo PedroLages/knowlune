@@ -35,6 +35,7 @@ import { getMergedAuthors, getAvatarSrc, getInitials, type AuthorView } from '@/
 import { HeaderSearchButton } from '@/app/components/figma/HeaderSearchButton'
 import { getCourseCompletionPercent } from '@/lib/progress'
 import { AuthorFormDialog } from '@/app/components/authors/AuthorFormDialog'
+import { AuthorsSyncErrorBanner } from '@/app/components/authors/AuthorsSyncErrorBanner'
 import { DeleteAuthorDialog } from '@/app/components/authors/DeleteAuthorDialog'
 import type { ImportedAuthor } from '@/data/types'
 
@@ -91,6 +92,7 @@ export function Authors() {
 
   return (
     <div>
+      <AuthorsSyncErrorBanner />
       {/* Page Header */}
       <div className="mb-6 flex items-start justify-between gap-4">
         <div>

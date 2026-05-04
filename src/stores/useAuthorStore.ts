@@ -8,6 +8,18 @@ import type { SyncableRecord } from '@/lib/sync/syncableWrite'
 import { toastWithUndo, toastError } from '@/lib/toastHelpers'
 import { resolvePhotoHandle, revokePhotoUrl } from '@/lib/authorPhotoResolver'
 
+const SILENT_AUTHORS_REFRESH_TOAST_COOLDOWN_MS = 60_000
+let lastSilentAuthorsRefreshWarnAt = 0
+
+/** Shown when a background (sync) authors reload fails; matches toast copy. */
+export const AUTHORS_REFRESH_FAILED_MESSAGE =
+  'Could not refresh authors. Showing saved data.'
+
+/** Resets toast throttle between Vitest cases (production noop concern: unused outside tests). */
+export function resetSilentAuthorsRefreshThrottleForTests(): void {
+  lastSilentAuthorsRefreshWarnAt = 0
+}
+
 interface NewAuthorData {
   name: string
   title?: string
@@ -39,13 +51,19 @@ interface UpdateAuthorData {
   featuredQuote?: string
 }
 
+interface LoadAuthorsOptions {
+  /** Reload from Dexie without clearing `isLoaded` or showing the cold-load skeleton. Used after sync downloads. */
+  silent?: boolean
+}
+
 interface AuthorStoreState {
   authors: ImportedAuthor[]
   isLoading: boolean
   isLoaded: boolean
   error: string | null
 
-  loadAuthors: () => Promise<void>
+  loadAuthors: (options?: LoadAuthorsOptions) => Promise<void>
+  clearAuthorsLoadError: () => void
   addAuthor: (data: NewAuthorData) => Promise<ImportedAuthor>
   updateAuthor: (id: string, data: UpdateAuthorData) => Promise<void>
   deleteAuthor: (id: string, options?: { silent?: boolean }) => Promise<void>
@@ -60,9 +78,17 @@ export const useAuthorStore = create<AuthorStoreState>((set, get) => ({
   isLoaded: false,
   error: null,
 
-  loadAuthors: async () => {
-    if (get().isLoaded) return
-    set({ isLoading: true, error: null })
+  clearAuthorsLoadError: () => set({ error: null }),
+
+  loadAuthors: async (options?: LoadAuthorsOptions) => {
+    const silent = options?.silent === true
+
+    if (!silent && get().isLoaded) return
+
+    if (!silent) {
+      set({ isLoading: true, error: null })
+    }
+
     try {
       const authors = await db.authors.orderBy('createdAt').reverse().toArray()
 
@@ -79,8 +105,20 @@ export const useAuthorStore = create<AuthorStoreState>((set, get) => ({
         })
       )
 
-      set({ authors: resolved, isLoading: false, isLoaded: true })
+      set({ authors: resolved, isLoading: false, isLoaded: true, error: null })
     } catch (error) {
+      if (silent) {
+        console.warn('[AuthorStore] Silent authors reload failed:', error)
+        if (get().isLoaded) {
+          const now = Date.now()
+          if (now - lastSilentAuthorsRefreshWarnAt >= SILENT_AUTHORS_REFRESH_TOAST_COOLDOWN_MS) {
+            lastSilentAuthorsRefreshWarnAt = now
+            toast.warning(AUTHORS_REFRESH_FAILED_MESSAGE)
+          }
+          set({ error: AUTHORS_REFRESH_FAILED_MESSAGE })
+        }
+        return
+      }
       set({ isLoading: false, isLoaded: true, error: 'Failed to load authors' })
       console.error('[AuthorStore] Failed to load authors:', error)
       toast.error('Failed to load authors. Please try refreshing the page.')

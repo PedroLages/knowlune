@@ -1,0 +1,17 @@
+{
+  "reviewer": "testing",
+  "findings": [],
+  "residual_risks": [],
+  "testing_gaps": [
+    "No E2E tests for goal-to-path flow (empty state -> type goal -> generate -> preview -> edit -> save)",
+    "No E2E tests for auto-placement animation window (<2s) and badge fallback (>2s)",
+    "No E2E tests for personalization feedback loop (reorder 3+ times, verify next AI suggestion reflects preferences)",
+    "No test for reorder history trimming (50-entry cap, 90-day cutoff)",
+    "No test for premium gate at LearningPaths empty state AI goal input (non-premium user sees UpgradeCTA)",
+    "generatePathFromGoal tests only cover mock injection path; live API error paths (network timeout, provider error, abort) are untested",
+    "No test for personalized wrapper delegation (when preferences unavailable, wrapper calls original function)",
+    "No test for CurriculumComposer AI mode edge cases (whitespace-only goal, rapid double-click Generate, dismiss preview without saving)",
+    "No test for AILearningPath wrapper page (opens dialog in AI mode, close navigates to /learning-paths)",
+    "No unit test for useAutoPlacement hook (accept, dismiss, trigger, elapsed timer, AbortController lifecycle)"
+  ]
+}

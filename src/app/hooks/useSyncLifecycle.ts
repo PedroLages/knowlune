@@ -132,10 +132,11 @@ export function useSyncLifecycle(): void {
       useCourseImportStore.getState().loadImportedCourses()
     )
 
-    // Reset isLoaded to force reload past the early-return guard before calling load.
+    // UX note (authors refresh): sync used to clear `isLoaded` before reload, which swapped
+    // author routes into cold-loading skeletons. `loadAuthors({ silent: true })` refreshes Dexie
+    // without that. No 10s timer in app src; churn correlates with sync (see NUDGE_INTERVAL_MS).
     syncEngine.registerStoreRefresh('authors', async () => {
-      useAuthorStore.setState({ isLoaded: false })
-      await useAuthorStore.getState().loadAuthors()
+      await useAuthorStore.getState().loadAuthors({ silent: true })
     })
 
     syncEngine.registerStoreRefresh('books', async () => {
