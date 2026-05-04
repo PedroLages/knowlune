@@ -74,6 +74,8 @@ import { cn } from '@/app/components/ui/utils'
 import { useCourseRoute } from '@/app/hooks/useCourseRoute'
 import { useLessonChromeStore } from '@/stores/useLessonChromeStore'
 import { LessonHeaderTools } from '@/app/components/course/LessonHeaderTools'
+import type { QualityFactors } from '@/data/types'
+import { QualityScoreDialog } from '@/app/components/session/QualityScoreDialog'
 
 // Individual nav link — wraps in Tooltip when collapsed
 function NavLink({
@@ -285,6 +287,10 @@ export function Layout() {
   const [paletteInitialScope, setPaletteInitialScope] = useState<EntityType | null>(null)
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
   const [feedbackOpen, setFeedbackOpen] = useState(false)
+  const [qualitySessionDialog, setQualitySessionDialog] = useState<{
+    score: number
+    factors: QualityFactors
+  } | null>(null)
   const [settings, setSettings] = useState(getSettings())
 
   // Sync settings when storage changes (e.g., updated in Settings page)
@@ -299,6 +305,18 @@ export function Layout() {
       window.removeEventListener('storage', handleStorageChange)
       window.removeEventListener('settingsUpdated', handleStorageChange)
     }
+  }, [])
+
+  // Post-session quality breakdown (E11-S03) — store dispatches only when course is complete
+  useEffect(() => {
+    const handler = (event: Event) => {
+      const e = event as CustomEvent<{ score: number; factors: QualityFactors }>
+      const { score, factors } = e.detail ?? {}
+      if (typeof score !== 'number' || !factors) return
+      setQualitySessionDialog({ score, factors })
+    }
+    window.addEventListener('session-quality-calculated', handler)
+    return () => window.removeEventListener('session-quality-calculated', handler)
   }, [])
 
   // Tablet sidebar sheet state with localStorage persistence
@@ -803,6 +821,17 @@ export function Layout() {
           toast.success('Thanks — your feedback was sent.')
         }}
       />
+
+      {qualitySessionDialog && (
+        <QualityScoreDialog
+          open
+          onOpenChange={open => {
+            if (!open) setQualitySessionDialog(null)
+          }}
+          score={qualitySessionDialog.score}
+          factors={qualitySessionDialog.factors}
+        />
+      )}
 
       {/* Mobile Bottom Navigation - Only visible on mobile (<640px) */}
       {isMobile && (
