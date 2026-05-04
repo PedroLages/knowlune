@@ -147,6 +147,7 @@ export function CurriculumComposer({
           return [...prev, event.detail.courseId]
         })
         // Refresh imported courses to include the new one
+        // silent-catch-ok: store refresh failure is non-critical; courses are already in state
         loadImportedCourses().catch(() => {})
       }
     }

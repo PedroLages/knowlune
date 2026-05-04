@@ -128,6 +128,8 @@ export function useUserPreferences(): UserPreferencesResult {
         const prefs = computePreferences(recent)
         setPreferences(prefs)
       } catch (err) {
+        // silent-catch-ok: background preference computation failure is non-critical;
+        // preferences degrade gracefully to null (no personalization)
         console.warn('[useUserPreferences] Failed to compute:', err)
         if (mountedRef.current) {
           setPreferences(null)

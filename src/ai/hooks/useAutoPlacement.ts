@@ -81,7 +81,7 @@ export function useAutoPlacement(
   }, [])
 
   const accept = useCallback(() => {
-    if (!suggestion || acknowledgedRef.current) return
+    if (!suggestion) return
     acceptedRef.current = true
     const store = useLearningPathStore.getState()
     store.applyPlacementSuggestion(
@@ -94,8 +94,6 @@ export function useAutoPlacement(
     setElapsedMs(0)
   }, [suggestion, pathId, courseId])
 
-  const acknowledgedRef = useRef(false)
-
   const dismiss = useCallback(() => {
     dismissedRef.current = true
     setSuggestion(null)
@@ -106,8 +104,6 @@ export function useAutoPlacement(
     if (!enabled || !isPathPlacementAvailable() || !courseName.trim()) {
       return
     }
-
-    acknowledgedRef.current = false
 
     // Cancel previous request
     abortRef.current?.abort()
