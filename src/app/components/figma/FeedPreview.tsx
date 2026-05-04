@@ -2,16 +2,7 @@ import { useMemo } from 'react'
 import { Clock } from 'lucide-react'
 import { ScrollArea } from '@/app/components/ui/scroll-area'
 import type { DayOfWeek, StudySchedule } from '@/data/types'
-
-const DAY_LABELS: Record<DayOfWeek, string> = {
-  monday: 'Monday',
-  tuesday: 'Tuesday',
-  wednesday: 'Wednesday',
-  thursday: 'Thursday',
-  friday: 'Friday',
-  saturday: 'Saturday',
-  sunday: 'Sunday',
-}
+import { DAY_LABELS } from '@/lib/dateTime'
 
 const DAY_INDEX: Record<DayOfWeek, number> = {
   sunday: 0,

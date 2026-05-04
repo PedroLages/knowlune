@@ -9,17 +9,8 @@ import {
   CollapsibleContent,
 } from '@/app/components/ui/collapsible'
 import { useStudyScheduleStore } from '@/stores/useStudyScheduleStore'
-import type { DayOfWeek, StudySchedule } from '@/data/types'
-
-const DAY_LABELS: Record<DayOfWeek, string> = {
-  monday: 'Mon',
-  tuesday: 'Tue',
-  wednesday: 'Wed',
-  thursday: 'Thu',
-  friday: 'Fri',
-  saturday: 'Sat',
-  sunday: 'Sun',
-}
+import type { StudySchedule } from '@/data/types'
+import { DAY_LABELS } from '@/lib/dateTime'
 
 interface PathScheduleListProps {
   pathId: string
