@@ -66,6 +66,7 @@ import { ImportWizardDialog } from '@/app/components/figma/ImportWizardDialog'
 import { InlineEditableField } from '@/app/components/figma/InlineEditableField'
 import { CourseTypeBadge } from '@/app/components/shared/CourseTypeBadge'
 import { PlanMyWeekButton } from '@/app/components/learning-path/PlanMyWeekButton'
+import { PathScheduleList } from '@/app/components/learning-path/PathScheduleList'
 import { useLearningPathStore } from '@/stores/useLearningPathStore'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
 import { useAuthorStore } from '@/stores/useAuthorStore'
@@ -1145,12 +1146,15 @@ export function LearningPathDetail() {
 
               {/* Plan My Week */}
               {path && (
-                <PlanMyWeekButton
-                  pathId={pathId!}
-                  pathName={path.name}
-                  entries={courseEntries}
-                  progress={pathProgress}
-                />
+                <>
+                  <PlanMyWeekButton
+                    pathId={pathId!}
+                    pathName={path.name}
+                    entries={courseEntries}
+                    progress={pathProgress}
+                  />
+                  <PathScheduleList pathId={pathId!} />
+                </>
               )}
 
               {/* Daily Tip Card */}
