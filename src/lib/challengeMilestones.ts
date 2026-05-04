@@ -66,12 +66,23 @@ export const CHALLENGE_TIER_CONFIG: Record<25 | 50 | 75 | 100, ChallengeTierConf
   },
 }
 
-export function getChallengeTierConfig(percent: number): ChallengeTierConfig {
-  const config = CHALLENGE_TIER_CONFIG[percent as 25 | 50 | 75 | 100]
+/**
+ * Generic tier config lookup shared by challenge and path milestone systems.
+ * Falls back to the 25% config for unknown thresholds.
+ */
+export function getTierConfig<T extends Record<number, ChallengeTierConfig>>(
+  tierConfigMap: T,
+  percent: number,
+): ChallengeTierConfig {
+  const config = tierConfigMap[percent as 25 | 50 | 75 | 100]
   if (!config) {
     console.warn(`[challengeMilestones] Unknown threshold ${percent}, falling back to 25%`)
   }
-  return config ?? CHALLENGE_TIER_CONFIG[25]
+  return config ?? tierConfigMap[25]
+}
+
+export function getChallengeTierConfig(percent: number): ChallengeTierConfig {
+  return getTierConfig(CHALLENGE_TIER_CONFIG, percent)
 }
 
 // ── Detection ───────────────────────────────────────────────

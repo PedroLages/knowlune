@@ -2,7 +2,7 @@ import { Sprout, Star, Rocket, Trophy } from 'lucide-react'
 import { db } from '@/db'
 import { getAllProgress } from '@/lib/progress'
 import type { ChallengeTierConfig } from '@/lib/challengeMilestones'
-import { CHALLENGE_MILESTONES } from '@/lib/challengeMilestones'
+import { CHALLENGE_MILESTONES, getTierConfig } from '@/lib/challengeMilestones'
 import { computePathCompletionPct } from '@/lib/pathCompletion'
 
 // ── Path-specific tier configuration ──────────────────────────
@@ -59,11 +59,7 @@ export const PATH_MILESTONE_TIER_CONFIG: Record<25 | 50 | 75 | 100, ChallengeTie
  * Falls back to the 25% config for unknown thresholds.
  */
 export function getPathMilestoneTierConfig(percent: number): ChallengeTierConfig {
-  const config = PATH_MILESTONE_TIER_CONFIG[percent as 25 | 50 | 75 | 100]
-  if (!config) {
-    console.warn(`[challengePathMilestones] Unknown threshold ${percent}, falling back to 25%`)
-  }
-  return config ?? PATH_MILESTONE_TIER_CONFIG[25]
+  return getTierConfig(PATH_MILESTONE_TIER_CONFIG, percent)
 }
 
 // ── Path progress calculator ──────────────────────────────────
