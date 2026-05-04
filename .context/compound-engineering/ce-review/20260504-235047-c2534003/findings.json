@@ -1,0 +1,113 @@
+{
+  "runId": "20260504-235047-c2534003",
+  "scope": "37f9fd1b → HEAD (main)",
+  "intent": "Polish author dialog and card UI: section groupings, backdrop dim+blur, card name color consistency, short field widths, monospace URLs, specialty paste handler, granular store selectors, extract shared AuthorAboutSection",
+  "mode": "headless",
+  "planSource": "explicit",
+  "verdict": "Ready with minor advisory items",
+  "findings": [
+    {
+      "title": "border-2 className on Input overrides base border width but may interact unexpectedly with Tailwind v4 cascade",
+      "severity": "P3",
+      "file": "src/app/components/authors/AuthorFormDialog.tsx",
+      "line": 292,
+      "confidence": 0.65,
+      "autofixClass": "advisory",
+      "owner": "human",
+      "requires_verification": false,
+      "pre_existing": false,
+      "suggested_fix": "Verify that border-2 correctly overrides the base 1px border and does not strip border-input color. If needed, use border-2 border-input explicitly.",
+      "why_it_matters": "The Input component's base className includes 'border border-input' (1px solid). Adding only 'border-2' sets width to 2px but the color still comes from border-input in the base class, which is correct. However, if Tailwind v4 treats border-2 as a standalone border shorthand, it could reset the color to currentColor. Visual verification is recommended.",
+      "evidence": [
+        "Input base class: 'border-input ... border ...'",
+        "Dialog override: className=\"border-2\"",
+        "border-2 in Tailwind sets border-width: 2px but does not set a border-color, so border-input from the base should persist"
+      ]
+    },
+    {
+      "title": "AuthorAboutSection component name starts with 'Author' which may read redundantly in an authors directory",
+      "severity": "P3",
+      "file": "src/app/components/authors/AuthorAboutSection.tsx",
+      "line": 1,
+      "confidence": 0.60,
+      "autofixClass": "advisory",
+      "owner": "human",
+      "requires_verification": false,
+      "pre_existing": false,
+      "suggested_fix": "Rename to AboutSection if the directory context is sufficient, or keep AuthorAboutSection for explicit import clarity. Current name is acceptable.",
+      "why_it_matters": "Inside src/app/components/authors/, 'Author' prefix on every component adds noise. But outside the directory (e.g., AuthorProfile.tsx imports it), the prefix helps clarity. This is a style preference.",
+      "evidence": [
+        "File is at src/app/components/authors/AuthorAboutSection.tsx",
+        "Imported in Authors.tsx and AuthorProfile.tsx",
+        "Existing pattern: AuthorFormDialog, DeleteAuthorDialog, AuthorsSyncErrorBanner all use Author prefix"
+      ]
+    },
+    {
+      "title": "No automated test for backdrop overlayClassName or dialog section headings in AuthorFormDialog",
+      "severity": "P3",
+      "file": "src/app/components/authors/__tests__/AuthorFormDialog.test.tsx",
+      "line": 64,
+      "confidence": 0.70,
+      "autofixClass": "advisory",
+      "owner": "human",
+      "requires_verification": false,
+      "pre_existing": false,
+      "suggested_fix": "Consider adding a test that verifies the dialog renders section headings (Profile, Media, Links, Quote). This would catch accidental removal during refactoring.",
+      "why_it_matters": "The section grouping is a key UX improvement (R4). Without a test, a future refactor could flatten the form fields back into a single list without detection.",
+      "evidence": [
+        "Existing tests cover specialty paste, validation, edit mode",
+        "No assertion for section heading text like 'Profile', 'Media', 'Links', 'Quote'",
+        "Section headings are structured as <h3> elements with aria/text content that can be targeted via screen.getByRole('heading', {name: 'Profile'})"
+      ]
+    },
+    {
+      "title": "mergeSpecialtiesFromInput is a module-level function but closely coupled to AuthorFormDialog internals",
+      "severity": "P3",
+      "file": "src/app/components/authors/AuthorFormDialog.tsx",
+      "line": 40,
+      "confidence": 0.65,
+      "autofixClass": "advisory",
+      "owner": "human",
+      "requires_verification": false,
+      "pre_existing": false,
+      "suggested_fix": "No action needed — the function is small, tested through integration tests, and colocation with its only consumer is appropriate.",
+      "why_it_matters": "Minor maintainability note: the function is used exclusively by handleAddSpecialty and handleSpecialtyPaste within AuthorFormDialog. Keeping it as a file-scoped helper is appropriate.",
+      "evidence": [
+        "mergeSpecialtiesFromInput is only called in handleAddSpecialty (line 166) and handleSpecialtyPaste (line 179)",
+        "It uses flattenSpecialties from @/lib/authors for tokenization",
+        "Private helper pattern keeps the component focused"
+      ]
+    },
+    {
+      "title": "handleSpecialtyPaste does not handle paste of already-present specialties in the specialtyInput field content",
+      "severity": "P3",
+      "file": "src/app/components/authors/AuthorFormDialog.tsx",
+      "line": 170,
+      "confidence": 0.75,
+      "autofixClass": "manual",
+      "owner": "human",
+      "requires_verification": false,
+      "pre_existing": false,
+      "suggested_fix": "The current behavior handles the paste correctly: mergeSpecialtiesFromInput deduplicates via case-insensitive Set, and the leftover content in specialtyInput is cleared on paste. No bug here — the handler correctly replaces the input content after extracting paste tokens.",
+      "why_it_matters": "Edge case consideration: if the user selects text in the input before pasting, the handler correctly replaces the selection (via slice(0,start)+text+slice(end)). This is correct behavior.",
+      "evidence": [
+        "Line 175-177: const combined = specialtyInput.slice(0, start) + text + specialtyInput.slice(end)",
+        "mergeSpecialtiesFromInput (line 151-164) deduplicates against existing specialties"
+      ]
+    }
+  ],
+  "residual_risks": [
+    "backdrop-blur-sm on the Radix overlay may have variable performance on low-end mobile devices; the blur is cosmetic and should be acceptable for a dialog backdrop"
+  ],
+  "testing_gaps": [
+    "No test for section heading rendering (Profile/Media/Links/Quote)",
+    "No test verifying backdrop overlayClassName is applied",
+    "Granular store selector mock pattern test coverage is implicit (integration tests pass, validating the mock works)"
+  ],
+  "learnings": [
+    "Past solutions doc: docs/solutions/developer-experience/authors-sync-silent-reload-modal-layout-vitest-sonner-2026-05-04.md — dialog flex shell pattern and isDirty guard confirmed in place",
+    "Unified course card pattern: docs/solutions/best-practices/unified-course-card-shared-shell-pattern-2026-04-20.md — overlay token pattern referenced for backdrop approach"
+  ],
+  "agent_native_gaps": [],
+  "applied_fixes": []
+}

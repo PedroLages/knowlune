@@ -1,0 +1,69 @@
+Code review complete (headless mode).
+
+Scope: 37f9fd1b -> HEAD (main) -- 5 changed files (excluding pipeline artifacts)
+Intent: Polish author dialog and card UI: section groupings, backdrop dim+blur, card name color consistency, short field widths, monospace URLs, specialty paste handler, granular store selectors, extract shared AuthorAboutSection
+Reviewers: correctness, testing, maintainability, project-standards, agent-native-reviewer, learnings-researcher, performance, reliability, adversarial, kieran-typescript
+Verdict: Ready with minor advisory items
+Artifact: .context/compound-engineering/ce-review/20260504-235047-c2534003/
+
+Applied 0 safe_auto fixes (no safe_auto findings).
+
+Requirements completeness:
+- R1 (card name consistency) -- MET: group-hover:text-brand/80
+- R2 (backdrop depth) -- MET: bg-black/60 backdrop-blur-sm overlay
+- R3 (visible input borders) -- MET: border-2 on all Input/Textarea
+- R4 (field section groups) -- MET: Profile, Media, Links, Quote sections
+- R5 (narrow short fields) -- MET: max-w-[10rem] and max-w-[16rem]
+- R6 (URL readability) -- MET: font-mono text-xs on URL inputs
+- R7 (existing fixes preserved) -- MET: scroll shell, isDirty guard, badge truncation present
+- R8 (churn mitigation) -- MET: granular useAuthorStore selectors
+- R9 (dark mode borders) -- MET: border-2 + border-input provides visibility
+
+Advisory findings (report-only):
+
+[P3][advisory -> human] File: src/app/components/authors/AuthorFormDialog.tsx:292 -- border-2 className on Input overrides base border width but may interact unexpectedly with Tailwind v4 cascade (correctness, confidence 0.65)
+  Why: The Input component's base className includes 'border border-input' (1px solid). Adding only 'border-2' sets width to 2px but the color still comes from border-input in the base class. Visual verification recommended to ensure Tailwind v4 does not reset the border-color.
+  Suggested fix: Verify that border-2 correctly overrides the base 1px border. If needed, use border-2 border-input explicitly.
+
+[P3][advisory -> human] File: src/app/components/authors/__tests__/AuthorFormDialog.test.tsx:64 -- No automated test for dialog section headings (testing, confidence 0.70)
+  Why: The section grouping is a key UX improvement (R4). Without a test, a future refactor could flatten the form fields back into a single list without detection.
+  Suggested fix: Consider adding screen.getByRole('heading', {name: 'Profile'}) assertions.
+
+[P3][advisory -> human] File: src/app/components/authors/AuthorFormDialog.tsx:40 -- mergeSpecialtiesFromInput is closely coupled but appropriately colocated (maintainability, confidence 0.65)
+  Why: Minor maintainability note -- the function is used exclusively by two handlers within AuthorFormDialog. Keeping it file-scoped is appropriate.
+
+[P3][advisory -> human] File: src/app/components/authors/AuthorAboutSection.tsx:1 -- Component name has Author prefix in authors directory (maintainability, confidence 0.60)
+  Why: Inside src/app/components/authors/, the 'Author' prefix on every component adds noise. But outside the directory, the prefix helps clarity. Current naming follows existing convention.
+
+Manual findings (actionable, needs handoff):
+
+[P3][manual -> human] File: src/app/components/authors/AuthorFormDialog.tsx:170 -- handleSpecialtyPaste paste handling of selection ranges (correctness, confidence 0.75)
+  Why: Edge case consideration -- the handler correctly replaces selected text before extracting paste tokens via slice manipulation. No bug found; this is a validation finding confirming correct behavior.
+
+Pre-existing issues:
+(none)
+
+Residual risks:
+- backdrop-blur-sm on the Radix overlay may have variable performance on low-end mobile devices
+
+Learnings & Past Solutions:
+- Past solutions: docs/solutions/developer-experience/authors-sync-silent-reload-modal-layout-vitest-sonner-2026-05-04.md -- dialog flex shell pattern and isDirty guard confirmed in place
+- Unified course card pattern: docs/solutions/best-practices/unified-course-card-shared-shell-pattern-2026-04-20.md -- overlay token pattern referenced
+
+Agent-Native Gaps:
+(none)
+
+Testing gaps:
+- No test for section heading rendering (Profile/Media/Links/Quote)
+- No test verifying backdrop overlayClassName is applied
+- Granular store selector mock pattern coverage is implicit (integration tests pass)
+
+Schema Drift Check:
+N/A -- no database migration files in diff
+
+Coverage:
+- Suppressed: 0 findings below 0.60 confidence
+- Untracked files excluded: none
+- Failed reviewers: none
+
+Review complete

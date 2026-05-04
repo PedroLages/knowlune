@@ -1,0 +1,11 @@
+{
+  "reviewers_dispached": [
+    "correctness", "testing", "maintainability", "project-standards",
+    "agent-native-reviewer", "learnings-researcher",
+    "performance", "reliability", "adversarial", "kieran-typescript"
+  ],
+  "reviewers_failed": [],
+  "findings_suppressed": 0,
+  "findings_pre_existing": 0,
+  "untracked_files_excluded": []
+}
