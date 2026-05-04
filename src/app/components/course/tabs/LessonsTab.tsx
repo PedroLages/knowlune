@@ -443,6 +443,7 @@ function FolderTreeNode({
   searchQuery,
   onFocusMaterials,
   forceOpen,
+  groupIndexMap,
 }: {
   node: FolderNode
   courseId: string
@@ -455,6 +456,7 @@ function FolderTreeNode({
   searchQuery: string
   onFocusMaterials?: () => void
   forceOpen?: boolean
+  groupIndexMap: Map<string, number>
 }) {
   const totalCount = countNodeItems(node)
   const isActive = nodeContainsLesson(node, lessonId)
@@ -481,20 +483,23 @@ function FolderTreeNode({
       <CollapsibleContent>
         <div className="ml-2 pl-2 border-l border-border/50 space-y-0.5">
           {/* Direct items in this folder */}
-          {node.items.map((group, idx) => (
+          {node.items.map(group => {
+            const originalIndex = groupIndexMap.get(group.primary.id) ?? 0
+            return (
             <MaterialGroupRow
               key={group.primary.id}
               group={group}
               courseId={courseId}
               lessonId={lessonId}
-              index={idx}
+              index={originalIndex}
               activeRef={group.primary.id === lessonId ? activeRef : undefined}
               searchQuery={searchQuery}
               onFocusMaterials={onFocusMaterials}
               isExpanded={expandedMaterialGroups.has(group.primary.id)}
               onToggleExpand={() => toggleMaterialGroup(group.primary.id)}
             />
-          ))}
+            )
+          })}
           {/* Nested subfolders */}
           {node.children.map(child => (
             <FolderTreeNode
@@ -510,6 +515,7 @@ function FolderTreeNode({
               searchQuery={searchQuery}
               onFocusMaterials={onFocusMaterials}
               forceOpen={forceOpen}
+              groupIndexMap={groupIndexMap}
             />
           ))}
         </div>
@@ -811,6 +817,7 @@ export function LessonsTab({ courseId, lessonId, adapter, onFocusMaterials }: Le
               searchQuery={searchQuery}
               onFocusMaterials={onFocusMaterials}
               forceOpen={!!searchQuery}
+              groupIndexMap={groupIndexMap}
             />
           ))}
         </>
