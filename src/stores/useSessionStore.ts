@@ -7,6 +7,7 @@ import { appEventBus } from '@/lib/eventBus'
 import { getCurrentStreak } from '@/lib/studyLog'
 import { type SyncableRecord } from '@/lib/sync/syncableWrite'
 import { persistStudySession } from '@/lib/sessions/persistStudySession'
+import { isCourseFullyCompleteForSessionQuality } from '@/lib/sessionQualityCourseGate'
 
 /**
  * E92-S09: studySessions is an INSERT-only P0 sync table.
@@ -255,23 +256,33 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     persistWithRetry(async () => {
       await persistStudySession('put', closedSession as unknown as SyncableRecord)
     })
-      .then(() => {
+      .then(async () => {
         // Notify listeners (e.g., momentum scores) that session data changed
         window.dispatchEvent(new CustomEvent('study-log-updated'))
 
-        // Only show quality score popup for sessions >= 60 seconds
+        // Only show quality score popup for sessions >= 60 seconds, and only when
+        // the course is fully completed (all lessons/pdfs done). Mid-course session
+        // ends should not interrupt with the QualityScoreDialog.
         if (isLongEnoughForQualityScore) {
           const qualityResult = {
             score: closedSession.qualityScore!,
             factors: closedSession.qualityFactors!,
           }
-          // Notify quality score UI to show the result dialog
-          // Event detail includes all needed data so listeners don't need store access
-          window.dispatchEvent(
-            new CustomEvent('session-quality-calculated', {
-              detail: qualityResult,
-            })
-          )
+          let showQualityDialog = false
+          try {
+            showQualityDialog = await isCourseFullyCompleteForSessionQuality(
+              closedSession.courseId
+            )
+          } catch (err) {
+            console.error('[SessionStore] Course completion check for quality dialog failed:', err)
+          }
+          if (showQualityDialog) {
+            window.dispatchEvent(
+              new CustomEvent('session-quality-calculated', {
+                detail: qualityResult,
+              })
+            )
+          }
         }
 
         // E43-S07: Only emit streak:milestone for meaningful thresholds.
