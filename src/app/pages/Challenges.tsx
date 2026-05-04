@@ -10,6 +10,7 @@ import {
   Check,
   BookOpen,
   FileText,
+  Route,
 } from 'lucide-react'
 import { cn } from '@/app/components/ui/utils'
 import { EmptyState } from '@/app/components/EmptyState'
@@ -26,6 +27,7 @@ import {
 } from '@/app/components/ui/collapsible'
 import { useChallengeStore } from '@/stores/useChallengeStore'
 import { CreateChallengeDialog } from '@/app/components/challenges/CreateChallengeDialog'
+import { PathMilestoneCard } from '@/app/components/challenges/PathMilestoneCard'
 import { fireMilestoneToasts } from '@/lib/fireMilestoneToasts'
 import type { Challenge, ChallengeType } from '@/data/types'
 
@@ -35,6 +37,7 @@ const typeConfig: Record<ChallengeType, { label: string; unit: string; icon: typ
   streak: { label: 'Streak', unit: 'days', icon: Flame },
   books: { label: 'Books', unit: 'books', icon: BookOpen },
   pages: { label: 'Pages', unit: 'pages', icon: FileText },
+  pathMilestone: { label: 'Path Progress', unit: '%', icon: Route },
 }
 
 /** Parse date-only string as local date (avoids UTC midnight shift). */
@@ -232,9 +235,13 @@ export function Challenges() {
             <div>
               <h2 className="sr-only">Active Challenges</h2>
               <div className="grid gap-4 sm:grid-cols-2">
-                {active.map(challenge => (
-                  <ChallengeCard key={challenge.id} challenge={challenge} />
-                ))}
+                {active.map(challenge =>
+                  challenge.type === 'pathMilestone' ? (
+                    <PathMilestoneCard key={challenge.id} challenge={challenge} />
+                  ) : (
+                    <ChallengeCard key={challenge.id} challenge={challenge} />
+                  )
+                )}
               </div>
             </div>
           )}
@@ -257,9 +264,13 @@ export function Challenges() {
               </CollapsibleTrigger>
               <CollapsibleContent>
                 <div className="grid gap-4 pt-2 sm:grid-cols-2">
-                  {completed.map(challenge => (
-                    <ChallengeCard key={challenge.id} challenge={challenge} />
-                  ))}
+                  {completed.map(challenge =>
+                    challenge.type === 'pathMilestone' ? (
+                      <PathMilestoneCard key={challenge.id} challenge={challenge} />
+                    ) : (
+                      <ChallengeCard key={challenge.id} challenge={challenge} />
+                    )
+                  )}
                 </div>
               </CollapsibleContent>
             </Collapsible>
@@ -279,9 +290,13 @@ export function Challenges() {
               </CollapsibleTrigger>
               <CollapsibleContent>
                 <div className="grid gap-4 pt-2 sm:grid-cols-2">
-                  {expired.map(challenge => (
-                    <ChallengeCard key={challenge.id} challenge={challenge} />
-                  ))}
+                  {expired.map(challenge =>
+                    challenge.type === 'pathMilestone' ? (
+                      <PathMilestoneCard key={challenge.id} challenge={challenge} />
+                    ) : (
+                      <ChallengeCard key={challenge.id} challenge={challenge} />
+                    )
+                  )}
                 </div>
               </CollapsibleContent>
             </Collapsible>

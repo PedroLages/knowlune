@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import type { DayOfWeek, StudySchedule } from '@/data/types'
+import { DAY_LABELS } from '@/lib/dateTime'
 
 const DAY_ORDER: DayOfWeek[] = [
   'monday',
@@ -10,16 +11,6 @@ const DAY_ORDER: DayOfWeek[] = [
   'saturday',
   'sunday',
 ]
-
-const DAY_LABELS: Record<DayOfWeek, string> = {
-  monday: 'Mon',
-  tuesday: 'Tue',
-  wednesday: 'Wed',
-  thursday: 'Thu',
-  friday: 'Fri',
-  saturday: 'Sat',
-  sunday: 'Sun',
-}
 
 function formatTime(time: string): string {
   const [h, m] = time.split(':').map(Number)

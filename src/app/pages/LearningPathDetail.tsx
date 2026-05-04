@@ -65,10 +65,13 @@ import { InlineCoursePicker } from '@/app/components/figma/InlineCoursePicker'
 import { ImportWizardDialog } from '@/app/components/figma/ImportWizardDialog'
 import { InlineEditableField } from '@/app/components/figma/InlineEditableField'
 import { CourseTypeBadge } from '@/app/components/shared/CourseTypeBadge'
+import { PlanMyWeekButton } from '@/app/components/learning-path/PlanMyWeekButton'
+import { PathScheduleList } from '@/app/components/learning-path/PathScheduleList'
 import { useLearningPathStore } from '@/stores/useLearningPathStore'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
 import { useAuthorStore } from '@/stores/useAuthorStore'
 import { usePathProgress } from '@/app/hooks/usePathProgress'
+import { usePathMilestones } from '@/app/hooks/usePathMilestones'
 import { useImportWizardTrigger } from '@/app/hooks/useImportWizardTrigger'
 import { useLoadCourseThumbnails } from '@/app/hooks/useLoadCourseThumbnails'
 // db import removed (E89-S01) — catalog courses table dropped
@@ -374,6 +377,13 @@ export function LearningPathDetail() {
   // Real progress tracking from contentProgress (catalog) + progress table (imported)
   const pathProgress = usePathProgress(courseEntries)
 
+  // Watch path progress and fire milestone challenges automatically
+  usePathMilestones({
+    pathId: pathId ?? '',
+    pathName: path?.name ?? 'Learning Path',
+    completionPct: pathProgress.completionPct,
+  })
+
   // Build course info lookup — uses real progress data
   const courseInfo = useMemo(() => {
     const map = new Map<
@@ -405,6 +415,18 @@ export function LearningPathDetail() {
 
     return map
   }, [importedCourses, catalogCourses, authors, pathProgress.courseProgress])
+
+  // Course name lookup for PlanMyWeek and other components
+  const courseNames = useMemo(() => {
+    const names: Record<string, string> = {}
+    for (const ic of importedCourses) {
+      names[ic.id] = ic.name
+    }
+    for (const cc of catalogCourses) {
+      names[cc.id] = cc.title
+    }
+    return names
+  }, [importedCourses, catalogCourses])
 
   // DnD sensors (same pattern as AILearningPath)
   const sensors = useSensors(
@@ -1133,6 +1155,20 @@ export function LearningPathDetail() {
                     </div>
                   </Link>
                 ))}
+
+              {/* Plan My Week */}
+              {path && (
+                <>
+                  <PlanMyWeekButton
+                    pathId={pathId!}
+                    pathName={path.name}
+                    entries={courseEntries}
+                    courseNames={courseNames}
+                    progress={pathProgress}
+                  />
+                  <PathScheduleList pathId={pathId!} />
+                </>
+              )}
 
               {/* Daily Tip Card */}
               <div className="p-6 bg-gradient-to-br from-brand to-brand-hover rounded-2xl text-brand-foreground">

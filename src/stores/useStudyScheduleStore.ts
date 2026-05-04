@@ -59,6 +59,15 @@ interface StudyScheduleState {
   // Getters
   getSchedulesForDay: (day: DayOfWeek, enabledOnly?: boolean) => StudySchedule[]
   getSchedulesForCourse: (courseId: string, enabledOnly?: boolean) => StudySchedule[]
+  getSchedulesForPath: (pathId: string) => StudySchedule[]
+
+  // Batch operations
+  addSchedules: (
+    schedules: Array<Omit<StudySchedule, 'id' | 'createdAt' | 'updatedAt'>>
+  ) => Promise<{
+    created: StudySchedule[]
+    failed: Array<{ input: Omit<StudySchedule, 'id' | 'createdAt' | 'updatedAt'>; error: string }>
+  }>
 }
 
 export const useStudyScheduleStore = create<StudyScheduleState>((set, get) => ({
@@ -160,6 +169,42 @@ export const useStudyScheduleStore = create<StudyScheduleState>((set, get) => ({
 
   getSchedulesForCourse: (courseId, enabledOnly = true) => {
     return get().schedules.filter(s => s.courseId === courseId && (!enabledOnly || s.enabled))
+  },
+
+  getSchedulesForPath: (pathId) => {
+    return get().schedules.filter(s => s.learningPathId === pathId)
+  },
+
+  addSchedules: async (schedules) => {
+    const created: StudySchedule[] = []
+    const failed: Array<{
+      input: Omit<StudySchedule, 'id' | 'createdAt' | 'updatedAt'>
+      error: string
+    }> = []
+
+    for (const input of schedules) {
+      try {
+        const result = await get().addSchedule(input)
+        if (result) {
+          created.push(result)
+        } else {
+          failed.push({ input, error: 'Failed to create schedule' })
+        }
+      } catch (err) {
+        failed.push({
+          input,
+          error: err instanceof Error ? err.message : 'Unknown error',
+        })
+      }
+    }
+
+    if (failed.length > 0) {
+      toast.error(
+        `${created.length} of ${schedules.length} schedule${schedules.length !== 1 ? 's' : ''} created`
+      )
+    }
+
+    return { created, failed }
   },
 
   // --- Feed token management ---

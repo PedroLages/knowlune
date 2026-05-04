@@ -14,6 +14,7 @@ interface NewChallengeData {
   type: ChallengeType
   targetValue: number
   deadline: string // ISO 8601 date
+  pathId?: string // FK → LearningPath.id (used by pathMilestone challenges)
 }
 
 interface ChallengeState {
@@ -25,6 +26,7 @@ interface ChallengeState {
   loadChallenges: () => Promise<void>
   refreshAllProgress: () => Promise<Map<string, number[]>>
   addChallenge: (data: NewChallengeData) => Promise<void>
+  updateChallenge: (id: string, updates: Partial<Challenge>) => Promise<void>
   deleteChallenge: (id: string) => Promise<void>
 
   /**
@@ -122,6 +124,7 @@ export const useChallengeStore = create<ChallengeState>((set, get) => ({
       type: data.type,
       targetValue: data.targetValue,
       deadline: data.deadline,
+      pathId: data.pathId,
       createdAt: new Date().toISOString(),
       currentProgress: 0,
       celebratedMilestones: [],
@@ -147,6 +150,36 @@ export const useChallengeStore = create<ChallengeState>((set, get) => ({
       })
       console.error('[ChallengeStore] Failed to persist challenge:', error)
       throw error
+    }
+  },
+
+  updateChallenge: async (id: string, updates: Partial<Challenge>) => {
+    const { challenges } = get()
+    const existing = challenges.find(c => c.id === id)
+    if (!existing) return
+
+    const updated: Challenge = {
+      ...existing,
+      ...updates,
+      id, // Prevent id override
+    }
+
+    // Optimistic update
+    set(state => ({
+      challenges: state.challenges.map(c => (c.id === id ? updated : c)),
+    }))
+
+    try {
+      await persistWithRetry(async () => {
+        await syncableWrite('challenges', 'put', updated as unknown as SyncableRecord)
+      })
+    } catch (error) {
+      // Rollback on failure
+      set(state => ({
+        challenges: state.challenges.map(c => (c.id === id ? existing : c)),
+      }))
+      console.error('[ChallengeStore] Failed to update challenge:', error)
+      toast.error('Failed to update challenge progress')
     }
   },
 

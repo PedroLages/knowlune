@@ -81,6 +81,10 @@ export function usePathProgress(entries: LearningPathEntry[]): PathProgressSumma
     }
 
     // --- Imported courses: use progress table + localStorage fallback ---
+    let importedMap = new Map<string, any>()
+    let videoProgress: any[] = []
+    let localProgress: Record<string, any> = {}
+
     if (importedEntries.length > 0) {
       const importedCourseIds = importedEntries.map(e => e.courseId)
 
@@ -92,18 +96,18 @@ export function usePathProgress(entries: LearningPathEntry[]): PathProgressSumma
         .toArray()
         .catch(() => [])
 
-      const importedMap = new Map(importedCourses.map(c => [c.id, c]))
+      importedMap = new Map(importedCourses.map(c => [c.id, c]))
 
       // Load video progress from Dexie
       // eslint-disable-next-line error-handling/no-silent-catch -- non-critical persistence error
-      const videoProgress = await db.progress
+      videoProgress = await db.progress
         .where('courseId')
         .anyOf(importedCourseIds)
         .toArray()
         .catch(() => [])
 
       // Also check localStorage progress (pre-seeded/legacy)
-      const localProgress = getAllProgress()
+      localProgress = getAllProgress()
 
       for (const entry of importedEntries) {
         const importedCourse = importedMap.get(entry.courseId)
@@ -141,10 +145,11 @@ export function usePathProgress(entries: LearningPathEntry[]): PathProgressSumma
       }
     }
 
-    const overallPct =
-      totalLessonsCount > 0 ? Math.round((totalCompletedLessons / totalLessonsCount) * 100) : 0
-
     const remainingLessons = totalLessonsCount - totalCompletedLessons
+    const overallPct =
+      totalLessonsCount > 0
+        ? Math.round((totalCompletedLessons / totalLessonsCount) * 100)
+        : 0
     const estimatedRemainingHours =
       Math.round(((remainingLessons * MINUTES_PER_LESSON) / 60) * 10) / 10
 
