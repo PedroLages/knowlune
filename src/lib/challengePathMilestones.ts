@@ -102,7 +102,12 @@ export async function calculatePathMilestoneProgress(pathId: string): Promise<nu
   const importedCourseMap = new Map(importedCourses.map(c => [c.id, c]))
   const localProgress = getAllProgress()
 
-  return computePathCompletionPct(importedEntries, importedCourseMap, videoProgress, localProgress)
+  const normalizedProgress = videoProgress.map(vp => ({
+    courseId: vp.courseId,
+    completedAt: vp.completedAt ? new Date(vp.completedAt).getTime() : undefined,
+  }))
+
+  return computePathCompletionPct(importedEntries, importedCourseMap, normalizedProgress, localProgress)
 }
 
 // Re-export for convenience
