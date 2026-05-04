@@ -1,0 +1,27 @@
+{
+  "reviewer": "testing",
+  "findings": [
+    {
+      "title": "toSortedVideos lacks direct test coverage; integration tests don't assert sort order",
+      "severity": "P3",
+      "file": "src/lib/courseImport.ts",
+      "line": 82,
+      "confidence": 0.72,
+      "autofix_class": "advisory",
+      "owner": "human",
+      "requires_verification": false,
+      "pre_existing": false,
+      "why_it_matters": "toSortedVideos() is a new private helper that determines import ordering. Integration tests in courseImport.test.ts call the full import pipeline but only assert videoCount, not that video[0] has the correct order or filename. A sort regression in toSortedVideos wouldn't be caught by existing tests. Since the function is module-private, direct unit tests aren't possible without exporting it — but adding sort-order assertions to existing integration tests (checking that the first video is the path-sorted first) would close this gap.",
+      "evidence": [
+        "toSortedVideos() at src/lib/courseImport.ts:82-104 — module-private (not exported)",
+        "courseImport.test.ts tests importCourseFromFolder but only asserts videoCount (line 103), not video order",
+        "A sort regression (e.g., removing the .sort() call) would pass all existing tests"
+      ],
+      "suggested_fix": "Add order assertion to existing integration test (e.g., after importing a course with videos at paths '01-intro/1.mp4' and '02-advanced/1.mp4', assert that the first video has order:1 and filename matching the path-sorted first entry). No need to export toSortedVideos."
+    }
+  ],
+  "residual_risks": [],
+  "testing_gaps": [
+    "Integration tests don't assert on video sort order after import"
+  ]
+}
