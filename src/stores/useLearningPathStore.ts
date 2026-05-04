@@ -56,6 +56,14 @@ interface LearningPathState {
     orderedEntries: Array<{ courseId: string; position: number; justification: string }>
   ) => Promise<void>
 
+  // Placement suggestion
+  applyPlacementSuggestion: (
+    pathId: string,
+    courseId: string,
+    suggestedPosition: number,
+    justification: string
+  ) => Promise<void>
+
   // Batch operations
   createPathWithCourses: (
     name: string,
@@ -833,6 +841,56 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
     return get()
       .entries.filter(e => e.pathId === pathId)
       .sort((a, b) => a.position - b.position)
+  },
+
+  applyPlacementSuggestion: async (
+    pathId: string,
+    courseId: string,
+    suggestedPosition: number,
+    justification: string
+  ) => {
+    const pathEntries = get()
+      .entries.filter(e => e.pathId === pathId)
+      .sort((a, b) => a.position - b.position)
+
+    const entry = pathEntries.find(e => e.courseId === courseId)
+    if (!entry) return
+
+    const fromIndex = pathEntries.indexOf(entry)
+    const toIndex = suggestedPosition - 1
+
+    // Reorder array
+    const reordered = [...pathEntries]
+    const [moved] = reordered.splice(fromIndex, 1)
+    reordered.splice(Math.min(toIndex, reordered.length), 0, {
+      ...moved,
+      justification,
+      isManuallyOrdered: false,
+    })
+
+    const updated = reordered.map((e, index) => ({
+      ...e,
+      position: index + 1,
+    }))
+
+    // Optimistic update
+    set(state => ({
+      entries: [...state.entries.filter(e => e.pathId !== pathId), ...updated],
+      error: null,
+    }))
+
+    await persistWithRetry(async () => {
+      for (const e of updated) {
+        await syncableWrite('learningPathEntries', 'put', e as unknown as SyncableRecord)
+      }
+      const existingPath = await db.learningPaths.get(pathId)
+      if (existingPath) {
+        await syncableWrite('learningPaths', 'put', existingPath as unknown as SyncableRecord)
+      }
+    }).catch(error => {
+      console.error('[LearningPathStore] Failed to apply placement suggestion:', error)
+      set({ error: 'Failed to apply placement suggestion' })
+    })
   },
 
   createPathWithCourses: async (
