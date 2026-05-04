@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { useChallengeStore } from '@/stores/useChallengeStore'
-import { CHALLENGE_MILESTONES } from '@/lib/challengeMilestones'
+import { detectChallengeMilestones } from '@/lib/challengeMilestones'
 import { fireMilestoneToasts } from '@/lib/fireMilestoneToasts'
 
 interface UsePathMilestonesOptions {
@@ -83,12 +83,10 @@ export function usePathMilestones({ pathId, pathName, completionPct }: UsePathMi
 
     // Progress increased — find ALL thresholds crossed between prev and curr
     // This handles jumps (R8): 20% -> 60% crosses 25% and 50%
-    const crossedThresholds = CHALLENGE_MILESTONES.filter(threshold => {
-      if (prevPct >= threshold) return false // already crossed before
-      if (currPct < threshold) return false // not yet reached
-      if (challenge.celebratedMilestones.includes(threshold)) return false // already celebrated
-      return true
-    })
+    // detectChallengeMilestones returns thresholds at/below currPct not yet celebrated;
+    // filter to keep only those above prevPct (crossed since last check)
+    const allNewThresholds = detectChallengeMilestones(challenge, currPct)
+    const crossedThresholds = allNewThresholds.filter(t => t > prevPct)
 
     if (crossedThresholds.length === 0) {
       // No new milestones, but update progress
