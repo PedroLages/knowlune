@@ -36,6 +36,7 @@ import { useOnlineStatus } from '@/app/hooks/useOnlineStatus'
 import { DateRangeFilter, type DateRange } from '@/app/components/reports/DateRangeFilter'
 import { AIAnalyticsTab } from '@/app/components/reports/AIAnalyticsTab'
 import { QuizAnalyticsDashboard } from '@/app/components/reports/QuizAnalyticsDashboard'
+import { PathAnalyticsTab } from '@/app/components/reports/PathAnalyticsTab'
 import { CategoryRadar } from '@/app/components/reports/CategoryRadar'
 import { SkillsRadar } from '@/app/components/reports/SkillsRadar'
 import { RecentActivityTimeline } from '@/app/components/reports/RecentActivityTimeline'
@@ -69,7 +70,7 @@ const areaChartConfig = {
 /*  Component                                                          */
 /* ------------------------------------------------------------------ */
 
-const VALID_TABS = ['study', 'quizzes', 'ai'] as const
+const VALID_TABS = ['study', 'quizzes', 'ai', 'paths'] as const
 
 function InlineSectionError({
   error,
@@ -282,6 +283,7 @@ export default function Reports() {
             <TabsTrigger value="study">Study Analytics</TabsTrigger>
             <TabsTrigger value="quizzes">Quiz Analytics</TabsTrigger>
             <TabsTrigger value="ai">AI Analytics</TabsTrigger>
+            <TabsTrigger value="paths">Learning Paths</TabsTrigger>
           </TabsList>
         </motion.div>
 
@@ -291,6 +293,10 @@ export default function Reports() {
 
             <TabsContent value="ai" className="mt-6">
               <AIAnalyticsTab />
+            </TabsContent>
+
+            <TabsContent value="paths" className="mt-6">
+              <PathAnalyticsTab dateRange={dateRange} />
             </TabsContent>
 
             <TabsContent value="study" className="mt-6">
