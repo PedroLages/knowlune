@@ -65,6 +65,7 @@ import { InlineCoursePicker } from '@/app/components/figma/InlineCoursePicker'
 import { ImportWizardDialog } from '@/app/components/figma/ImportWizardDialog'
 import { InlineEditableField } from '@/app/components/figma/InlineEditableField'
 import { CourseTypeBadge } from '@/app/components/shared/CourseTypeBadge'
+import { PlanMyWeekButton } from '@/app/components/learning-path/PlanMyWeekButton'
 import { useLearningPathStore } from '@/stores/useLearningPathStore'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
 import { useAuthorStore } from '@/stores/useAuthorStore'
@@ -1141,6 +1142,16 @@ export function LearningPathDetail() {
                     </div>
                   </Link>
                 ))}
+
+              {/* Plan My Week */}
+              {path && (
+                <PlanMyWeekButton
+                  pathId={pathId!}
+                  pathName={path.name}
+                  entries={courseEntries}
+                  progress={pathProgress}
+                />
+              )}
 
               {/* Daily Tip Card */}
               <div className="p-6 bg-gradient-to-br from-brand to-brand-hover rounded-2xl text-brand-foreground">
