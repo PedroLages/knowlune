@@ -20,7 +20,7 @@
  * a single `db.version(CHECKPOINT_VERSION).stores(CHECKPOINT_SCHEMA)` call
  * for fresh installs.
  */
-export const CHECKPOINT_VERSION = 61
+export const CHECKPOINT_VERSION = 63
 
 /**
  * Shared `searchFrecency` index string. Used by both the v53 `.stores()` call
@@ -98,7 +98,7 @@ export const CHECKPOINT_SCHEMA: Record<string, string> = {
   pathEnrollments: 'id, pathId, status, userId, [userId+updatedAt]',
   flashcards: 'id, courseId, noteId, due, createdAt, userId, [userId+updatedAt]',
   entitlements: 'userId',
-  learningPaths: 'id, createdAt, userId, [userId+updatedAt]',
+  learningPaths: 'id, createdAt, userId, isTemplate, forkedFrom, [userId+updatedAt]',
   learningPathEntries: 'id, [pathId+courseId], pathId, userId, [userId+updatedAt]',
   youtubeVideoCache: 'videoId, expiresAt',
   youtubeTranscripts: '[courseId+videoId], courseId, videoId, status',
@@ -137,6 +137,8 @@ export const CHECKPOINT_SCHEMA: Record<string, string> = {
   // v60 (fix E-ABS-QA): ABS library caches (local-only; not synced).
   absSeries: 'id, serverId, libraryId, name',
   absCollections: 'id, serverId, libraryId, name',
+  // v63 (AI-first path building): local-only reorder history for preference vectors.
+  reorderHistory: 'id, pathId, courseId, movedAt',
 }
 
 // v42 (E109-S01): vocabularyItems table added

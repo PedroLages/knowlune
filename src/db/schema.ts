@@ -32,6 +32,7 @@ import type {
   NotificationPreferences,
   CourseEmbedding,
   StudySchedule,
+  ReorderHistoryEntry,
   Book,
   BookHighlight,
   AudioBookmark,
@@ -136,6 +137,7 @@ export type ElearningDatabase = Dexie & {
   notificationPreferences: EntityTable<NotificationPreferences, 'id'>
   courseEmbeddings: EntityTable<CourseEmbedding, 'courseId'>
   studySchedules: EntityTable<StudySchedule, 'id'>
+  reorderHistory: EntityTable<ReorderHistoryEntry, 'id'>
   books: EntityTable<Book, 'id'>
   bookHighlights: EntityTable<BookHighlight, 'id'>
   bookFiles: Table<{ bookId: string; filename: string; blob: Blob }> // OPFS fallback
@@ -1698,6 +1700,19 @@ function _declareLegacyMigrations(database: Dexie): void {
   database.version(62).stores({
     learningPaths: 'id, createdAt, userId, isTemplate, forkedFrom, [userId+updatedAt]',
   })
+
+  // v63 (reorder history): Add `reorderHistory` table for local-only personalization
+  // (AI-first path building). Stores user reorder events to learn preference vectors.
+  // Local-only: NOT added to SYNCABLE_TABLES — preferences are device-local.
+  // Indexes on pathId, courseId, movedAt for efficient aggregation queries.
+  database
+    .version(63)
+    .stores({
+      reorderHistory: 'id, pathId, courseId, movedAt',
+    })
+    .upgrade(async _tx => {
+      // No backfill. Table is new; populated on first AI-involved reorder.
+    })
 } // end _declareLegacyMigrations
 
 export { db, CHECKPOINT_VERSION, CHECKPOINT_SCHEMA }
