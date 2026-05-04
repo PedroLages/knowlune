@@ -27,6 +27,7 @@ describe('useLessonChromeStore initial state', () => {
     expect(state.isReadingMode).toBe(false)
     expect(state.notesOpen).toBe(false)
     expect(state.hasNotes).toBe(false)
+    expect(state.mobileNotesPanel).toBe('closed')
   })
 })
 
@@ -313,6 +314,102 @@ describe('reset', () => {
     })
 
     expect(called).toBe(false)
+  })
+})
+
+describe('mobileNotesPanel', () => {
+  it('should default to closed', () => {
+    expect(useLessonChromeStore.getState().mobileNotesPanel).toBe('closed')
+  })
+
+  it('should update via setMobileNotesPanel', () => {
+    act(() => {
+      useLessonChromeStore.getState().setMobileNotesPanel('expanded')
+    })
+    expect(useLessonChromeStore.getState().mobileNotesPanel).toBe('expanded')
+  })
+
+  it('should set to fullscreen via setMobileNotesPanel', () => {
+    act(() => {
+      useLessonChromeStore.getState().setMobileNotesPanel('fullscreen')
+    })
+    expect(useLessonChromeStore.getState().mobileNotesPanel).toBe('fullscreen')
+  })
+
+  it('should support convenience action openMobileNotesPanel', () => {
+    act(() => {
+      useLessonChromeStore.getState().openMobileNotesPanel()
+    })
+    expect(useLessonChromeStore.getState().mobileNotesPanel).toBe('expanded')
+  })
+
+  it('should support convenience action closeMobileNotesPanel', () => {
+    act(() => {
+      useLessonChromeStore.getState().setMobileNotesPanel('expanded')
+    })
+    act(() => {
+      useLessonChromeStore.getState().closeMobileNotesPanel()
+    })
+    expect(useLessonChromeStore.getState().mobileNotesPanel).toBe('closed')
+  })
+
+  it('should support convenience action maximizeMobileNotesPanel', () => {
+    act(() => {
+      useLessonChromeStore.getState().maximizeMobileNotesPanel()
+    })
+    expect(useLessonChromeStore.getState().mobileNotesPanel).toBe('fullscreen')
+  })
+
+  it('should handle rapid state transitions correctly', () => {
+    act(() => {
+      useLessonChromeStore.getState().setMobileNotesPanel('expanded')
+      useLessonChromeStore.getState().setMobileNotesPanel('fullscreen')
+      useLessonChromeStore.getState().setMobileNotesPanel('expanded')
+      useLessonChromeStore.getState().setMobileNotesPanel('closed')
+    })
+    expect(useLessonChromeStore.getState().mobileNotesPanel).toBe('closed')
+  })
+
+  it('should reset to closed via reset()', () => {
+    act(() => {
+      useLessonChromeStore.getState().setMobileNotesPanel('expanded')
+    })
+    expect(useLessonChromeStore.getState().mobileNotesPanel).toBe('expanded')
+
+    act(() => {
+      useLessonChromeStore.getState().reset()
+    })
+    expect(useLessonChromeStore.getState().mobileNotesPanel).toBe('closed')
+  })
+
+  it('should not affect other state fields', () => {
+    act(() => {
+      useLessonChromeStore.getState().setMobileNotesPanel('expanded')
+    })
+    // Other state should remain at defaults
+    expect(useLessonChromeStore.getState().isTheater).toBe(false)
+    expect(useLessonChromeStore.getState().notesOpen).toBe(false)
+    expect(useLessonChromeStore.getState().hasNotes).toBe(false)
+  })
+})
+
+describe('full reset includes mobileNotesPanel', () => {
+  it('should reset mobileNotesPanel along with all other state', () => {
+    act(() => {
+      const s = useLessonChromeStore.getState()
+      s.toggleTheater()
+      s.toggleNotes()
+      s.setMobileNotesPanel('fullscreen')
+    })
+
+    act(() => {
+      useLessonChromeStore.getState().reset()
+    })
+
+    const s = useLessonChromeStore.getState()
+    expect(s.isTheater).toBe(false)
+    expect(s.notesOpen).toBe(false)
+    expect(s.mobileNotesPanel).toBe('closed')
   })
 })
 

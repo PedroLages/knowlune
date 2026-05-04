@@ -85,6 +85,17 @@ export interface LessonChromeState {
   /** Set the QA panel open/closed to a specific value (matches Radix onOpenChange contract). */
   setQAPanelOpen: (open: boolean) => void
 
+  /** Mobile floating notes panel state: closed pill, expanded panel, or fullscreen overlay. */
+  mobileNotesPanel: 'closed' | 'expanded' | 'fullscreen'
+  /** Set the mobile notes panel to a specific state. */
+  setMobileNotesPanel: (state: 'closed' | 'expanded' | 'fullscreen') => void
+  /** Convenience: open the mobile notes panel to expanded state. */
+  openMobileNotesPanel: () => void
+  /** Convenience: close the mobile notes panel to closed (pill) state. */
+  closeMobileNotesPanel: () => void
+  /** Convenience: maximize the mobile notes panel to fullscreen overlay. */
+  maximizeMobileNotesPanel: () => void
+
   /** Reset all state to defaults. Called on route change when leaving a lesson page. */
   reset: () => void
 }
@@ -153,6 +164,24 @@ export const useLessonChromeStore = create<LessonChromeState>((set, get) => ({
     set({ qaPanelOpen: open })
   },
 
+  mobileNotesPanel: 'closed',
+
+  setMobileNotesPanel: (state: 'closed' | 'expanded' | 'fullscreen') => {
+    set({ mobileNotesPanel: state })
+  },
+
+  openMobileNotesPanel: () => {
+    set({ mobileNotesPanel: 'expanded' })
+  },
+
+  closeMobileNotesPanel: () => {
+    set({ mobileNotesPanel: 'closed' })
+  },
+
+  maximizeMobileNotesPanel: () => {
+    set({ mobileNotesPanel: 'fullscreen' })
+  },
+
   reset: () => {
     readingModeToggleFn = null
     document.documentElement.removeAttribute('data-theater-mode')
@@ -162,6 +191,7 @@ export const useLessonChromeStore = create<LessonChromeState>((set, get) => ({
       notesOpen: false,
       hasNotes: false,
       qaPanelOpen: false,
+      mobileNotesPanel: 'closed',
     })
   },
 }))

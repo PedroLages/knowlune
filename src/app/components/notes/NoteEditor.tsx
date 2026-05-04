@@ -114,6 +114,8 @@ interface NoteEditorProps {
   onCaptureFrame?: () => Promise<CapturedFrame | null>
   compact?: boolean
   className?: string
+  /** Callback when save status changes (for parent toolbar indicators). */
+  onSaveStatusChange?: (status: 'idle' | 'saved') => void
 }
 
 /**
@@ -160,6 +162,7 @@ export function NoteEditor({
   onCaptureFrame,
   compact = false,
   className,
+  onSaveStatusChange,
 }: NoteEditorProps) {
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saved'>('idle')
   const [wordCount, setWordCount] = useState(0)
@@ -209,6 +212,15 @@ export function NoteEditor({
       setSaveStatus('idle')
     }, 2000)
   }, [])
+
+  // Sync save status to parent via callback (for FloatingNotesPanel toolbar)
+  const onSaveStatusChangeRef = useRef(onSaveStatusChange)
+  useEffect(() => {
+    onSaveStatusChangeRef.current = onSaveStatusChange
+  })
+  useEffect(() => {
+    onSaveStatusChangeRef.current?.(saveStatus)
+  }, [saveStatus])
 
   const handleImageFiles = useCallback(
     async (
