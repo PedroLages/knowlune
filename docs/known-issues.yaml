@@ -1745,3 +1745,31 @@ issues:
   description: "Same duplication concern as personalizedSuggestPlacement. Suggested: add optional personalizationContext parameter to suggestOrder."
   source: ce-review-R1-P3
   created: 2026-05-04
+
+# Added 2026-05-04 — fix-author-page-dialog-polish design review residuals
+- id: KI-dialog-specialty-tag-touch
+  severity: medium
+  status: open
+  title: "Specialty tag remove button touch target ~16px (below 44px WCAG minimum)"
+  description: "The specialty tag remove button in AuthorFormDialog has p-0.5 padding with size-3 X icon, producing a clickable area well below the 44x44px minimum required by WCAG 2.5.8."
+  file: src/app/components/authors/AuthorFormDialog.tsx
+  source: design-review-R1-M1
+  created: 2026-05-04
+
+- id: KI-dialog-focus-ring-token
+  severity: low
+  status: open
+  title: "Author card focus ring uses ring-brand instead of dedicated ring-focus-ring token"
+  description: "Link wrapper around author cards substitutes ring-brand for the system's dedicated ring-focus-ring token."
+  file: src/app/pages/Authors.tsx:273
+  source: design-review-R1-L1
+  created: 2026-05-04
+
+- id: KI-dialog-edu-input-width
+  severity: low
+  status: open
+  title: "Education input max-w-[16rem] may clip longer credentials"
+  description: "Education input constrained to max-w-[16rem] (256px). Longer credentials may be visually clipped."
+  file: src/app/components/authors/AuthorFormDialog.tsx
+  source: design-review-R1-L2
+  created: 2026-05-04
