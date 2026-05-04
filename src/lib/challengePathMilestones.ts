@@ -3,6 +3,7 @@ import { db } from '@/db'
 import { getAllProgress } from '@/lib/progress'
 import type { ChallengeTierConfig } from '@/lib/challengeMilestones'
 import { CHALLENGE_MILESTONES } from '@/lib/challengeMilestones'
+import { computePathCompletionPct } from '@/lib/pathCompletion'
 
 // ── Path-specific tier configuration ──────────────────────────
 
@@ -105,32 +106,7 @@ export async function calculatePathMilestoneProgress(pathId: string): Promise<nu
   const importedCourseMap = new Map(importedCourses.map(c => [c.id, c]))
   const localProgress = getAllProgress()
 
-  let totalCompletedLessons = 0
-  let totalLessonsCount = 0
-
-  for (const entry of importedEntries) {
-    const importedCourse = importedCourseMap.get(entry.courseId)
-    const totalLessons = importedCourse?.videoCount ?? 0
-
-    // Count completed videos from Dexie progress table
-    const completedFromDexie = videoProgress.filter(
-      vp => vp.courseId === entry.courseId && vp.completedAt
-    ).length
-
-    // Count completed from localStorage
-    const localCp = localProgress[entry.courseId]
-    const completedFromLocal = localCp?.completedLessons?.length ?? 0
-
-    const completedLessons = Math.min(
-      Math.max(completedFromDexie, completedFromLocal),
-      totalLessons
-    )
-
-    totalCompletedLessons += completedLessons
-    totalLessonsCount += totalLessons
-  }
-
-  return totalLessonsCount > 0 ? Math.round((totalCompletedLessons / totalLessonsCount) * 100) : 0
+  return computePathCompletionPct(importedEntries, importedCourseMap, videoProgress, localProgress)
 }
 
 // Re-export for convenience
