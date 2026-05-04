@@ -74,6 +74,35 @@ export interface ScannedImage {
   fileHandle: FileSystemFileHandle
 }
 
+type VideoExtractionResult = {
+  entry: { handle: FileSystemFileHandle; path: string }
+  metadata: { duration: number; width: number; height: number; fileSize: number }
+}
+
+function toSortedVideos(
+  videoResults: PromiseSettledResult<VideoExtractionResult>[]
+): ScannedVideo[] {
+  return videoResults
+    .filter(
+      (r): r is PromiseFulfilledResult<VideoExtractionResult> => r.status === 'fulfilled'
+    )
+    .sort((a, b) =>
+      a.value.entry.path.localeCompare(b.value.entry.path, undefined, { numeric: true })
+    )
+    .map((r, index) => ({
+      id: crypto.randomUUID(),
+      filename: r.value.entry.handle.name,
+      path: r.value.entry.path,
+      duration: r.value.metadata.duration,
+      format: getVideoFormat(r.value.entry.handle.name),
+      order: index + 1,
+      fileHandle: r.value.entry.handle,
+      fileSize: r.value.metadata.fileSize,
+      width: r.value.metadata.width,
+      height: r.value.metadata.height,
+    }))
+}
+
 /**
  * Complete scan result from a course folder, ready for preview/edit
  * before persisting to IndexedDB. Contains all metadata the wizard needs.
@@ -246,31 +275,7 @@ export async function scanCourseFolder(): Promise<ScannedCourse> {
     const courseName = dirHandle.name
     const now = new Date().toISOString()
 
-    // Build video records from successful extractions (sorted by path for deterministic ordering)
-    const videos: ScannedVideo[] = videoResults
-      .filter(
-        (
-          r
-        ): r is PromiseFulfilledResult<{
-          entry: { handle: FileSystemFileHandle; path: string }
-          metadata: { duration: number; width: number; height: number; fileSize: number }
-        }> => r.status === 'fulfilled'
-      )
-      .sort((a, b) =>
-        a.value.entry.path.localeCompare(b.value.entry.path, undefined, { numeric: true })
-      )
-      .map((r, index) => ({
-        id: crypto.randomUUID(),
-        filename: r.value.entry.handle.name,
-        path: r.value.entry.path,
-        duration: r.value.metadata.duration,
-        format: getVideoFormat(r.value.entry.handle.name),
-        order: index + 1,
-        fileHandle: r.value.entry.handle,
-        fileSize: r.value.metadata.fileSize,
-        width: r.value.metadata.width,
-        height: r.value.metadata.height,
-      }))
+    const videos: ScannedVideo[] = toSortedVideos(videoResults)
 
     // Build PDF records from successful extractions
     const pdfs: ScannedPdf[] = pdfResults
@@ -668,30 +673,7 @@ export async function scanCourseFolderFromHandle(
     const courseId = crypto.randomUUID()
     const now = new Date().toISOString()
 
-    const videos: ScannedVideo[] = videoResults
-      .filter(
-        (
-          r
-        ): r is PromiseFulfilledResult<{
-          entry: { handle: FileSystemFileHandle; path: string }
-          metadata: { duration: number; width: number; height: number; fileSize: number }
-        }> => r.status === 'fulfilled'
-      )
-      .sort((a, b) =>
-        a.value.entry.path.localeCompare(b.value.entry.path, undefined, { numeric: true })
-      )
-      .map((r, index) => ({
-        id: crypto.randomUUID(),
-        filename: r.value.entry.handle.name,
-        path: r.value.entry.path,
-        duration: r.value.metadata.duration,
-        format: getVideoFormat(r.value.entry.handle.name),
-        order: index + 1,
-        fileHandle: r.value.entry.handle,
-        fileSize: r.value.metadata.fileSize,
-        width: r.value.metadata.width,
-        height: r.value.metadata.height,
-      }))
+    const videos: ScannedVideo[] = toSortedVideos(videoResults)
 
     const pdfs: ScannedPdf[] = pdfResults
       .filter(
