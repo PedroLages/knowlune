@@ -465,6 +465,25 @@ export interface LearningPathEntry {
   isManuallyOrdered: boolean // User manually reordered it
 }
 
+// --- Reorder History (local-only personalization) ---
+
+export interface ReorderHistoryEntry {
+  id: string // UUID
+  pathId: string // FK -> LearningPath.id
+  courseId: string // FK -> course UUID
+  /** AI-suggested position (null if no prior AI suggestion was active) */
+  suggestedPosition: number | null
+  /** User's chosen position after manual reorder */
+  chosenPosition: number
+  courseName: string
+  courseTags: string[]
+  /** Names of up to 2 courses before the moved course */
+  surroundingBefore: string[]
+  /** Names of up to 2 courses after the moved course */
+  surroundingAfter: string[]
+  movedAt: string // ISO 8601
+}
+
 export interface TemplatePath {
   id: string // Primary key: "template_<slug>"
   name: string

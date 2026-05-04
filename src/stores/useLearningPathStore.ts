@@ -56,6 +56,14 @@ interface LearningPathState {
     orderedEntries: Array<{ courseId: string; position: number; justification: string }>
   ) => Promise<void>
 
+  // Placement suggestion
+  applyPlacementSuggestion: (
+    pathId: string,
+    courseId: string,
+    suggestedPosition: number,
+    justification: string
+  ) => Promise<void>
+
   // Batch operations
   createPathWithCourses: (
     name: string,
@@ -89,6 +97,17 @@ interface LearningPathState {
     paths?: LearningPath[]
     entries?: LearningPathEntry[]
   }) => Promise<void>
+}
+
+/** Resolve course IDs to names for reorder history context */
+function resolvedCourseNames(
+  entries: LearningPathEntry[]
+): string[] {
+  const importedCourses = useCourseImportStore.getState().importedCourses
+  return entries.map(e => {
+    const course = importedCourses.find(c => c.id === e.courseId)
+    return course?.name || 'Unknown Course'
+  })
 }
 
 export const useLearningPathStore = create<LearningPathState>((set, get) => ({
@@ -553,6 +572,69 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
       console.error('[LearningPathStore] Failed to persist reordering:', error)
       set({ error: 'Failed to save reordering' })
     })
+
+    // Record reorder history for personalization (fire-and-forget, local-only)
+    if (movedEntry.justification || movedEntry.isManuallyOrdered) {
+      try {
+        // Determine the prior AI-suggested position from the entry's original position
+        const suggestedPos = movedEntry.isManuallyOrdered ? movedEntry.position : null
+        // Resolve course name from imported courses
+        const importedCourses = useCourseImportStore.getState().importedCourses
+        const courseData = importedCourses.find(c => c.id === movedEntry.courseId)
+        const courseName = courseData?.name || 'Unknown Course'
+        const courseTags = courseData?.tags || []
+
+        // Capture surrounding context (up to 2 courses before/after at the NEW positions)
+        const reindexed = reordered.map((e, i) => ({ ...e, position: i + 1 }))
+        const movedPos = reindexed.find(e => e.id === movedEntry.id)?.position ?? toIndex + 1
+        const beforeCourses = resolvedCourseNames(
+          reindexed.filter(
+            e => e.id !== movedEntry.id && e.position < movedPos
+          ).slice(-2)
+        )
+        const afterCourses = resolvedCourseNames(
+          reindexed.filter(
+            e => e.id !== movedEntry.id && e.position > movedPos
+          ).slice(0, 2)
+        )
+
+        const historyEntry = {
+          id: crypto.randomUUID(),
+          pathId,
+          courseId: movedEntry.courseId,
+          suggestedPosition: suggestedPos,
+          chosenPosition: movedPos,
+          courseName,
+          courseTags,
+          surroundingBefore: beforeCourses,
+          surroundingAfter: afterCourses,
+          movedAt: new Date().toISOString(),
+        }
+
+        // Fire-and-forget to local-only table
+        db.reorderHistory.add(historyEntry).catch(err => {
+          console.warn('[LearningPathStore] Failed to record reorder history:', err)
+        })
+
+        // Trim old entries (keep last 50, only entries < 90 days)
+        db.reorderHistory
+          .orderBy('movedAt')
+          .reverse()
+          .toArray()
+          .then(all => {
+            const cutoff = Date.now() - 90 * 24 * 60 * 60 * 1000
+            const toDelete = all
+              .filter((e, i) => i >= 50 || new Date(e.movedAt).getTime() < cutoff)
+              .map(e => e.id)
+            if (toDelete.length > 0) {
+              db.reorderHistory.bulkDelete(toDelete).catch(() => {})
+            }
+          })
+          .catch(() => {})
+      } catch (err) {
+        console.warn('[LearningPathStore] Failed to record reorder history:', err)
+      }
+    }
   },
 
   generatePath: async () => {
@@ -759,6 +841,56 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
     return get()
       .entries.filter(e => e.pathId === pathId)
       .sort((a, b) => a.position - b.position)
+  },
+
+  applyPlacementSuggestion: async (
+    pathId: string,
+    courseId: string,
+    suggestedPosition: number,
+    justification: string
+  ) => {
+    const pathEntries = get()
+      .entries.filter(e => e.pathId === pathId)
+      .sort((a, b) => a.position - b.position)
+
+    const entry = pathEntries.find(e => e.courseId === courseId)
+    if (!entry) return
+
+    const fromIndex = pathEntries.indexOf(entry)
+    const toIndex = suggestedPosition - 1
+
+    // Reorder array
+    const reordered = [...pathEntries]
+    const [moved] = reordered.splice(fromIndex, 1)
+    reordered.splice(Math.min(toIndex, reordered.length), 0, {
+      ...moved,
+      justification,
+      isManuallyOrdered: false,
+    })
+
+    const updated = reordered.map((e, index) => ({
+      ...e,
+      position: index + 1,
+    }))
+
+    // Optimistic update
+    set(state => ({
+      entries: [...state.entries.filter(e => e.pathId !== pathId), ...updated],
+      error: null,
+    }))
+
+    await persistWithRetry(async () => {
+      for (const e of updated) {
+        await syncableWrite('learningPathEntries', 'put', e as unknown as SyncableRecord)
+      }
+      const existingPath = await db.learningPaths.get(pathId)
+      if (existingPath) {
+        await syncableWrite('learningPaths', 'put', existingPath as unknown as SyncableRecord)
+      }
+    }).catch(error => {
+      console.error('[LearningPathStore] Failed to apply placement suggestion:', error)
+      set({ error: 'Failed to apply placement suggestion' })
+    })
   },
 
   createPathWithCourses: async (

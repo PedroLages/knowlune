@@ -3,6 +3,7 @@
  */
 
 import type { LearningPathCourse } from '@/data/types'
+import type { GeneratePathFromGoalResult } from './generatePathFromGoal'
 
 /**
  * Window interface extension for test mocking
@@ -13,6 +14,7 @@ declare global {
     __mockLearningPathResponse?: {
       learningPath: LearningPathCourse[]
     }
+    __mockGoalPathResponse?: GeneratePathFromGoalResult
   }
 }
 

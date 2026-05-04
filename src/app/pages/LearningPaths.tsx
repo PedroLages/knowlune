@@ -13,6 +13,7 @@ import {
   Download,
   LayoutTemplate,
   ChevronDown,
+  Sparkles,
 } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
 import { Card, CardContent } from '@/app/components/ui/card'
@@ -25,6 +26,7 @@ import {
   DropdownMenuTrigger,
 } from '@/app/components/ui/dropdown-menu'
 import { Input } from '@/app/components/ui/input'
+import { Textarea } from '@/app/components/ui/textarea'
 import {
   Collapsible,
   CollapsibleContent,
@@ -39,6 +41,7 @@ import { PathCardHeader } from '@/app/components/figma/PathCardHeader'
 import { ImportWizardDialog } from '@/app/components/figma/ImportWizardDialog'
 import { CurriculumComposer } from '@/app/components/figma/CurriculumComposer'
 import { InlineEditableField } from '@/app/components/figma/InlineEditableField'
+import { PremiumGate } from '@/app/components/PremiumGate'
 import { useLearningPathStore } from '@/stores/useLearningPathStore'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
 import { useMultiPathProgress } from '@/app/hooks/usePathProgress'
@@ -47,6 +50,48 @@ import { useImportWizardTrigger } from '@/app/hooks/useImportWizardTrigger'
 import { useLoadCourseThumbnails } from '@/app/hooks/useLoadCourseThumbnails'
 import { staggerContainer, fadeUp } from '@/lib/motion'
 import type { LearningPath, LearningPathEntry } from '@/data/types'
+
+// --- AI Goal Input (empty state) ---
+
+function AIGoalInput({
+  goalText,
+  onGoalTextChange,
+  onGenerate,
+}: {
+  goalText: string
+  onGoalTextChange: (value: string) => void
+  onGenerate: () => void
+}) {
+  return (
+    <PremiumGate featureLabel="AI path generation">
+      <div className="rounded-2xl border border-border/50 bg-surface-sunken/30 p-6 space-y-4">
+        <div className="flex items-center gap-2">
+          <Sparkles className="size-5 text-brand" aria-hidden="true" />
+          <h3 className="text-base font-semibold">Generate with AI</h3>
+        </div>
+        <p className="text-sm text-muted-foreground">
+          Describe your learning goal and let AI build a path from your course library.
+        </p>
+        <Textarea
+          value={goalText}
+          onChange={e => onGoalTextChange(e.target.value)}
+          placeholder="e.g., I want to become a full-stack web developer in 6 months..."
+          rows={3}
+          maxLength={500}
+        />
+        <Button
+          variant="brand"
+          className="w-full"
+          disabled={!goalText.trim()}
+          onClick={onGenerate}
+        >
+          <Sparkles className="size-4 mr-2" aria-hidden="true" />
+          Generate Path
+        </Button>
+      </div>
+    </PremiumGate>
+  )
+}
 
 // --- Path Card ---
 
@@ -300,6 +345,8 @@ export function LearningPaths() {
   const [isLoaded, setIsLoaded] = useState(false)
   const [search, setSearch] = useState('')
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
+  const [aiDialogOpen, setAiDialogOpen] = useState(false)
+  const [aiGoalText, setAiGoalText] = useState('')
   const [discoverOpen, setDiscoverOpen] = useState(false)
 
   // Import wizard trigger (singleton guard pattern)
@@ -530,18 +577,38 @@ export function LearningPaths() {
                 onAction={() => setCreateDialogOpen(true)}
               />
             </motion.div>
+
+            {/* AI goal-to-path generation (premium-gated) */}
+            <motion.div variants={fadeUp} className="mt-8 max-w-lg mx-auto">
+              <AIGoalInput
+                goalText={aiGoalText}
+                onGoalTextChange={setAiGoalText}
+                onGenerate={() => setAiDialogOpen(true)}
+              />
+            </motion.div>
           </>
         ) : userPaths.length === 0 && templates.length === 0 ? (
           /* No templates, no paths — original empty state */
-          <motion.div variants={fadeUp}>
-            <EmptyState
-              icon={Route}
-              title="No learning paths yet"
-              description="Learning paths help you organize courses into structured journeys. Create your first path to get started."
-              actionLabel="Create Path"
-              onAction={() => setCreateDialogOpen(true)}
-            />
-          </motion.div>
+          <>
+            <motion.div variants={fadeUp}>
+              <EmptyState
+                icon={Route}
+                title="No learning paths yet"
+                description="Learning paths help you organize courses into structured journeys. Create your first path to get started."
+                actionLabel="Create Path"
+                onAction={() => setCreateDialogOpen(true)}
+              />
+            </motion.div>
+
+            {/* AI goal-to-path generation (premium-gated) */}
+            <motion.div variants={fadeUp} className="mt-8 max-w-lg mx-auto">
+              <AIGoalInput
+                goalText={aiGoalText}
+                onGoalTextChange={setAiGoalText}
+                onGenerate={() => setAiDialogOpen(true)}
+              />
+            </motion.div>
+          </>
         ) : filteredPaths.length === 0 && search.trim() ? (
           /* No search results */
           <motion.div variants={fadeUp}>
@@ -616,6 +683,12 @@ export function LearningPaths() {
 
       {/* Dialogs */}
       <CurriculumComposer open={createDialogOpen} onOpenChange={setCreateDialogOpen} />
+      <CurriculumComposer
+        open={aiDialogOpen}
+        onOpenChange={setAiDialogOpen}
+        mode="ai"
+        initialGoal={aiGoalText}
+      />
 
       {/* Import Wizard Dialog (R1) */}
       <ImportWizardDialog
