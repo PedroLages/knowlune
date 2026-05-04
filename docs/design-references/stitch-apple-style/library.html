@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Libris - Library</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "inverse-on-surface": "#eaf1ff",
+                        "on-primary": "#ffffff",
+                        "error-container": "#ffdad6",
+                        "surface-bright": "#f8f9ff",
+                        "primary-container": "#005bc1",
+                        "secondary": "#4648d4",
+                        "on-surface-variant": "#424753",
+                        "surface-container-low": "#eff4ff",
+                        "tertiary-fixed": "#ffd9e4",
+                        "secondary-fixed-dim": "#c0c1ff",
+                        "on-surface": "#0b1c30",
+                        "error": "#ba1a1a",
+                        "surface-variant": "#d3e4fe",
+                        "tertiary-fixed-dim": "#ffb0cd",
+                        "on-tertiary-container": "#ffcbdc",
+                        "tertiary-container": "#b4136d",
+                        "surface-container": "#e5eeff",
+                        "primary": "#004494",
+                        "on-background": "#0b1c30",
+                        "primary-fixed": "#d8e2ff",
+                        "on-error": "#ffffff",
+                        "secondary-container": "#6063ee",
+                        "secondary-fixed": "#e1e0ff",
+                        "outline-variant": "#c2c6d5",
+                        "on-primary-fixed": "#001a41",
+                        "on-tertiary-fixed-variant": "#8c0053",
+                        "background": "#f8f9ff",
+                        "surface-container-highest": "#d3e4fe",
+                        "tertiary": "#8d0053",
+                        "on-error-container": "#93000a",
+                        "on-secondary": "#ffffff",
+                        "inverse-surface": "#213145",
+                        "on-secondary-fixed": "#07006c",
+                        "surface-container-high": "#dce9ff",
+                        "surface": "#f8f9ff",
+                        "primary-fixed-dim": "#adc6ff",
+                        "inverse-primary": "#adc6ff",
+                        "on-secondary-fixed-variant": "#2f2ebe",
+                        "on-tertiary": "#ffffff",
+                        "on-primary-container": "#c9d9ff",
+                        "surface-container-lowest": "#ffffff",
+                        "surface-dim": "#cbdbf5",
+                        "outline": "#727784",
+                        "surface-tint": "#005bc0",
+                        "on-tertiary-fixed": "#3e0022",
+                        "on-secondary-container": "#fffbff",
+                        "on-primary-fixed-variant": "#004493"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "xxl": "64px",
+                        "md": "16px",
+                        "margin": "32px",
+                        "xs": "4px",
+                        "xl": "40px",
+                        "lg": "24px",
+                        "unit": "4px",
+                        "sm": "8px",
+                        "gutter": "24px"
+                    },
+                    "fontFamily": {
+                        "metadata-xs": ["Inter"],
+                        "headline-md": ["Inter"],
+                        "label-sm": ["Inter"],
+                        "body-lg": ["Inter"],
+                        "display-xl": ["Inter"],
+                        "headline-lg": ["Inter"],
+                        "body-md": ["Inter"]
+                    },
+                    "fontSize": {
+                        "metadata-xs": ["12px", { "lineHeight": "1.2", "letterSpacing": "0.02em", "fontWeight": "500" }],
+                        "headline-md": ["24px", { "lineHeight": "1.3", "fontWeight": "600" }],
+                        "label-sm": ["14px", { "lineHeight": "1.4", "letterSpacing": "0.01em", "fontWeight": "500" }],
+                        "body-lg": ["18px", { "lineHeight": "1.6", "fontWeight": "400" }],
+                        "display-xl": ["48px", { "lineHeight": "1.1", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "headline-lg": ["32px", { "lineHeight": "1.2", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+                        "body-md": ["16px", { "lineHeight": "1.5", "fontWeight": "400" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .material-symbols-outlined[data-weight="fill"] {
+            font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-surface font-body-md text-body-md antialiased min-h-screen flex flex-col md:flex-row">
+<!-- SideNavBar (Web Only) -->
+<nav class="hidden md:flex bg-[#f9f9fe] dark:bg-gray-950 text-blue-600 dark:text-blue-400 font-['Inter'] text-sm font-medium h-screen w-64 border-r border-r border-gray-200 dark:border-gray-800 flat no shadows flex-col p-4 space-y-2 shrink-0 sticky top-0">
+<div class="mb-xl flex items-center gap-sm px-4">
+<div class="w-8 h-8 rounded-full bg-primary-container flex items-center justify-center text-on-primary font-bold overflow-hidden shrink-0">
+<img alt="Library Brand Logo" class="w-full h-full object-cover" data-alt="A clean, minimalist abstract logo mark featuring geometric shapes in a cool blue and white color palette, evoking a sense of digital organization and premium quality. The logo is set against a soft, bright background, maintaining the Apple-inspired, sophisticated aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCS0g33QIWvoRVLJw5ofExujrauXsWgZyBZfRY_Urp2DuJGfY4kq-uUc6RAu77wWn046bCDIJT-uA77_I7CBAyhJfvEQI7ol9VNHjhkRrq_cWPwjfh1c19s9DMHQ2KCoDSXUCbxGJZlyRu-HKTQXXTjKbZ1ZEwvg_APj-ySZhVOxr1WJR8rLsPZWsHmPmmGZjrOLjNw8Vq1M6vptsZmXerfOpBt2x9ob69xFflgaiCK60TjY8_T7fXDQIntpM-GawTi0NMNBPCUzsoT"/>
+</div>
+<div>
+<h1 class="text-lg font-bold text-blue-600 font-headline-md text-headline-md">Libris Premium</h1>
+<p class="font-metadata-xs text-metadata-xs text-on-surface-variant">Digital Collection</p>
+</div>
+</div>
+<div class="flex-1 space-y-unit">
+<a class="flex items-center gap-md px-4 py-3 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl hover:pl-2 transition-all duration-200 scale-98 on press" href="#">
+<span class="material-symbols-outlined text-lg">home_storage</span>
+<span>Home</span>
+</a>
+<a class="flex items-center gap-md px-4 py-3 bg-white dark:bg-gray-900 text-blue-600 dark:text-blue-400 shadow-[0_1px_2px_0_rgba(0,0,0,0.05)] rounded-xl hover:pl-2 transition-all duration-200 scale-98 on press" href="#">
+<span class="material-symbols-outlined text-lg" data-weight="fill">library_books</span>
+<span>Library</span>
+</a>
+<a class="flex items-center gap-md px-4 py-3 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl hover:pl-2 transition-all duration-200 scale-98 on press" href="#">
+<span class="material-symbols-outlined text-lg">menu_book</span>
+<span>Reading Now</span>
+</a>
+<a class="flex items-center gap-md px-4 py-3 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl hover:pl-2 transition-all duration-200 scale-98 on press" href="#">
+<span class="material-symbols-outlined text-lg">inventory_2</span>
+<span>Archive</span>
+</a>
+<a class="flex items-center gap-md px-4 py-3 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl hover:pl-2 transition-all duration-200 scale-98 on press" href="#">
+<span class="material-symbols-outlined text-lg">settings</span>
+<span>Settings</span>
+</a>
+</div>
+<div class="mt-auto space-y-unit pt-md border-t border-outline-variant/30">
+<button class="w-full flex items-center justify-center gap-sm bg-primary-container text-on-primary py-sm px-md rounded-lg hover:bg-primary transition-colors font-label-sm text-label-sm mb-md active:scale-[0.98]">
+                Upgrade Storage
+            </button>
+<a class="flex items-center gap-md px-4 py-2 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl hover:pl-2 transition-all duration-200 scale-98 on press" href="#">
+<span class="material-symbols-outlined text-lg">help</span>
+<span class="font-label-sm text-label-sm">Help</span>
+</a>
+<a class="flex items-center gap-md px-4 py-2 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl hover:pl-2 transition-all duration-200 scale-98 on press" href="#">
+<span class="material-symbols-outlined text-lg">shield</span>
+<span class="font-label-sm text-label-sm">Privacy</span>
+</a>
+<a class="flex items-center gap-md px-4 py-2 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl hover:pl-2 transition-all duration-200 scale-98 on press mt-sm" href="#">
+<span class="material-symbols-outlined text-lg text-error">logout</span>
+<span class="font-label-sm text-label-sm text-error">Logout</span>
+</a>
+</div>
+</nav>
+<!-- Main Content Canvas -->
+<main class="flex-1 w-full max-w-[1280px] mx-auto min-h-screen flex flex-col">
+<!-- TopNavBar (Responsive adaptation - hides navigation links on mobile if BottomNavBar is present, but we don't have BottomNavBar in this specific prompt, so we keep it responsive) -->
+<header class="bg-white/80 dark:bg-gray-900/80 backdrop-blur-md text-blue-600 dark:text-blue-400 font-['Inter'] antialiased tracking-tight sticky top-0 w-full z-50 border-b border-gray-100 dark:border-gray-800 shadow-[0_10px_15px_-3px_rgba(0,91,193,0.04),0_4px_6px_-2px_rgba(0,0,0,0.02)] flex justify-between items-center px-8 py-4 max-w-[1280px] mx-auto md:hidden">
+<div class="flex items-center gap-md">
+<span class="text-xl font-semibold text-gray-900 dark:text-white font-headline-md text-headline-md tracking-tight">Libris</span>
+</div>
+<div class="flex items-center gap-md">
+<button class="w-10 h-10 flex items-center justify-center text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg transition-all duration-200 active:scale-95">
+<span class="material-symbols-outlined">search</span>
+</button>
+<button class="w-10 h-10 flex items-center justify-center text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg transition-all duration-200 active:scale-95">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="w-10 h-10 flex items-center justify-center text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg transition-all duration-200 active:scale-95">
+<span class="material-symbols-outlined">bookmark</span>
+</button>
+<div class="w-8 h-8 rounded-full overflow-hidden bg-surface-container ml-sm cursor-pointer border border-outline-variant/30 hover:border-primary-container transition-colors">
+<img alt="User profile" class="w-full h-full object-cover" data-alt="A close up, high key portrait of a young professional in a brightly lit, modern environment. The lighting is soft and even, highlighting a relaxed expression. The overall tone is consistent with a clean, premium Apple-inspired aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDoQCMF7nAHs7wXBvr06S1VLFEb1_XoAoUa_R5KMmFoSJ7mZmOkpm-CzNtrqgE1dvyUO1iMjy41lEGCf37V8PosOUlbGj_NFgf_fKkqxUQidQ7enZfW5Yn7A40-Qzfbe2hMnj1ekMLBUCe1ncTZNfYblBJeuNvpsvOk80iPVz9CNlSv18qSMe74UHFBsKa6FLg0SF8mJenzEjvmcvsButzyW8p4hVlkZBP6MLVCPCv8P133ZyQLRiCelCBFTfkjK8G0HlmlHsHGt5vX"/>
+</div>
+</div>
+</header>
+<div class="px-8 py-xl flex-1 flex flex-col">
+<!-- Page Header & Tab Navigation -->
+<div class="mb-xl">
+<h2 class="font-display-xl text-display-xl text-on-surface mb-lg">Library</h2>
+<div class="flex items-center gap-margin border-b border-outline-variant/30 pb-xs">
+<button class="text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 pb-1 font-medium font-label-sm text-label-sm pb-sm px-xs">All Books</button>
+<button class="text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors font-label-sm text-label-sm pb-sm px-xs border-b-2 border-transparent">Audiobooks</button>
+<button class="text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors font-label-sm text-label-sm pb-sm px-xs border-b-2 border-transparent">EPUBs</button>
+<button class="text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors font-label-sm text-label-sm pb-sm px-xs border-b-2 border-transparent">PDFs</button>
+</div>
+</div>
+<!-- Filter Bar -->
+<div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-md mb-xl">
+<div class="relative w-full md:w-96">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-lg">search</span>
+<input class="w-full pl-10 pr-4 py-2 bg-surface-container-lowest border border-outline-variant rounded-lg font-body-md text-body-md text-on-surface focus:outline-none focus:border-primary-container focus:ring-4 focus:ring-primary-container/15 transition-all" placeholder="Search your library..." type="text"/>
+</div>
+<div class="flex items-center gap-md self-end md:self-auto">
+<div class="relative">
+<select class="appearance-none bg-surface-container-lowest border border-outline-variant rounded-lg pl-4 pr-10 py-2 font-body-md text-body-md text-on-surface focus:outline-none focus:border-primary-container focus:ring-4 focus:ring-primary-container/15 transition-all cursor-pointer">
+<option>Recent</option>
+<option>Title</option>
+<option>Progress</option>
+</select>
+<span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none">expand_more</span>
+</div>
+<div class="flex items-center bg-surface-container-lowest border border-outline-variant rounded-lg p-xs">
+<button class="w-8 h-8 flex items-center justify-center rounded bg-surface-variant text-primary-container transition-colors">
+<span class="material-symbols-outlined text-[20px]" data-weight="fill">grid_view</span>
+</button>
+<button class="w-8 h-8 flex items-center justify-center rounded text-on-surface-variant hover:bg-surface-container transition-colors">
+<span class="material-symbols-outlined text-[20px]">view_list</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Grid View (Media Cards) -->
+<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-lg">
+<!-- Card 1: EPUB -->
+<article class="bg-surface-container-lowest rounded-xl p-lg shadow-[0_10px_15px_-3px_rgba(0,91,193,0.04),0_4px_6px_-2px_rgba(0,0,0,0.02)] hover:shadow-[0_20px_25px_-5px_rgba(0,91,193,0.08),0_10px_10px_-5px_rgba(0,0,0,0.04)] hover:-translate-y-1 transition-all duration-300 flex flex-col h-full cursor-pointer group">
+<div class="aspect-[2/3] w-full mb-md rounded bg-surface-container overflow-hidden relative">
+<img alt="Book Cover" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" data-alt="A minimalist book cover design for 'The Design of Everyday Things', featuring clean typography and simple geometric shapes in a bright, modern setting. The aesthetic is extremely clean, adhering to a sophisticated blue-white light mode palette." src="https://lh3.googleusercontent.com/aida-public/AB6AXuD7twOFa4CIzOq1ch1ZY56U5tCDLhpamrXStGqyw8BG6r6CNpc7ATV63NHrjJR-06KSJisKbhMFgCB_G6fzsSemx6xAK1Kos0xkoOxYr2R6jJKk7iWMwsfpwPSXXawpjQxITx7lJPmd2j59Ycdyw_Gc_Gq8Snw-0a_-U2D62GxjfmoFnilmHC4CDGfFp6ZW7kGFbUpPZ1kXp-48gQd85F458d57HkIWsmDsSokcpj92PxzBuFiRxC1Z_PoZbAGrkBWf6KsifVonZlM_"/>
+<div class="absolute top-2 right-2 bg-primary-container/10 px-2 py-1 rounded-full backdrop-blur-sm">
+<span class="font-metadata-xs text-metadata-xs text-primary-container">EPUB</span>
+</div>
+</div>
+<div class="flex-1 flex flex-col">
+<h3 class="font-headline-md text-[18px] leading-snug text-on-surface mb-xs line-clamp-2">The Design of Everyday Things</h3>
+<p class="font-body-md text-[14px] text-on-surface-variant mb-md">Don Norman</p>
+<div class="mt-auto">
+<div class="flex justify-between items-center mb-sm">
+<span class="font-metadata-xs text-metadata-xs text-on-surface-variant">320 pages</span>
+<span class="font-metadata-xs text-metadata-xs font-semibold text-primary-container">65%</span>
+</div>
+<div class="h-[6px] w-full bg-outline-variant/30 rounded-full overflow-hidden">
+<div class="h-full bg-primary-container rounded-full" style="width: 65%;"></div>
+</div>
+</div>
+</div>
+</article>
+<!-- Card 2: Audiobook -->
+<article class="bg-surface-container-lowest rounded-xl p-lg shadow-[0_10px_15px_-3px_rgba(0,91,193,0.04),0_4px_6px_-2px_rgba(0,0,0,0.02)] hover:shadow-[0_20px_25px_-5px_rgba(0,91,193,0.08),0_10px_10px_-5px_rgba(0,0,0,0.04)] hover:-translate-y-1 transition-all duration-300 flex flex-col h-full cursor-pointer group">
+<div class="aspect-[2/3] w-full mb-md rounded bg-surface-container overflow-hidden relative">
+<img alt="Book Cover" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" data-alt="A clean, conceptual book cover for 'Thinking, Fast and Slow' featuring abstract representations of two mindsets, depicted with subtle gradients and crisp lines. The lighting is bright and studio-like, matching a high-end digital library feel." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBf8IZa7ULIiKkPuPvkVAp9YMDm8eisHmhpJlHBcF4Cz-Ask3RfL5pYT0jt3Rv16WP8qAlyGymUntyxLLqYj9_kFiGYrIWo5C1sfjGoMNClhbs3-uvyVVrh6P_7Nvn7hE1ZoYpH471TkA8L0rPNLWqMdegvdapfqq0ABfL-9Sq60kMJ3F2sp5NzLO10uDekyBA2p7XsLgGyfHXPpqsuKoCSXzhYykr7TsdlnwMMOglcoT5GnO_OD3ANDCjdqORKMrqKs8Jg6EwGEz7H"/>
+<div class="absolute top-2 right-2 bg-secondary/10 px-2 py-1 rounded-full backdrop-blur-sm flex items-center gap-1">
+<span class="material-symbols-outlined text-[12px] text-secondary">headphones</span>
+<span class="font-metadata-xs text-metadata-xs text-secondary">Audiobook</span>
+</div>
+</div>
+<div class="flex-1 flex flex-col">
+<h3 class="font-headline-md text-[18px] leading-snug text-on-surface mb-xs line-clamp-2">Thinking, Fast and Slow</h3>
+<p class="font-body-md text-[14px] text-on-surface-variant mb-md">Daniel Kahneman</p>
+<div class="mt-auto">
+<div class="flex justify-between items-center mb-sm">
+<span class="font-metadata-xs text-metadata-xs text-on-surface-variant">12h 30m</span>
+<span class="font-metadata-xs text-metadata-xs font-semibold text-primary-container">10%</span>
+</div>
+<div class="h-[6px] w-full bg-outline-variant/30 rounded-full overflow-hidden">
+<div class="h-full bg-primary-container rounded-full" style="width: 10%;"></div>
+</div>
+</div>
+</div>
+</article>
+<!-- Card 3: PDF -->
+<article class="bg-surface-container-lowest rounded-xl p-lg shadow-[0_10px_15px_-3px_rgba(0,91,193,0.04),0_4px_6px_-2px_rgba(0,0,0,0.02)] hover:shadow-[0_20px_25px_-5px_rgba(0,91,193,0.08),0_10px_10px_-5px_rgba(0,0,0,0.04)] hover:-translate-y-1 transition-all duration-300 flex flex-col h-full cursor-pointer group">
+<div class="aspect-[2/3] w-full mb-md rounded bg-surface-container overflow-hidden relative">
+<img alt="Book Cover" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" data-alt="A technical, minimalist book cover for 'Clean Architecture' showing subtle code snippets and architectural blueprints subtly blended into a pristine white background with cool blue accents. High-key lighting, premium corporate style." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAyXFhL-c6H3tgFccFrBeFTWO2T34mmHePanepSH1NmRqoxK7aByUhBVQCB_VW50R2TJWbLEjZ-yf0gcn61BVt1HThVSPh_9IU4WLCuGSkvy5wNSu-bxYqyH2sRHVJ94nW6g50CLGDb46tiqJk5JKtWQ5y4IYvdS1hhyUMu9ye8wYjDKG-1fXJ8glM6xF1G60VLvFpnxe6aDTCwYSlFGCfgsV8cGPCSi9V-DFMzr8pNqB1QJu0NvEJq3GfqPM35egBA5ittyaduC0-p"/>
+<div class="absolute top-2 right-2 bg-error/10 px-2 py-1 rounded-full backdrop-blur-sm">
+<span class="font-metadata-xs text-metadata-xs text-error">PDF</span>
+</div>
+</div>
+<div class="flex-1 flex flex-col">
+<h3 class="font-headline-md text-[18px] leading-snug text-on-surface mb-xs line-clamp-2">Clean Architecture</h3>
+<p class="font-body-md text-[14px] text-on-surface-variant mb-md">Robert C. Martin</p>
+<div class="mt-auto">
+<div class="flex justify-between items-center mb-sm">
+<span class="font-metadata-xs text-metadata-xs text-on-surface-variant">499 pages</span>
+<span class="font-metadata-xs text-metadata-xs font-semibold text-primary-container">95%</span>
+</div>
+<div class="h-[6px] w-full bg-outline-variant/30 rounded-full overflow-hidden">
+<div class="h-full bg-primary-container rounded-full" style="width: 95%;"></div>
+</div>
+</div>
+</div>
+</article>
+<!-- Card 4: EPUB -->
+<article class="bg-surface-container-lowest rounded-xl p-lg shadow-[0_10px_15px_-3px_rgba(0,91,193,0.04),0_4px_6px_-2px_rgba(0,0,0,0.02)] hover:shadow-[0_20px_25px_-5px_rgba(0,91,193,0.08),0_10px_10px_-5px_rgba(0,0,0,0.04)] hover:-translate-y-1 transition-all duration-300 flex flex-col h-full cursor-pointer group">
+<div class="aspect-[2/3] w-full mb-md rounded bg-surface-container overflow-hidden relative">
+<img alt="Book Cover" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" data-alt="A modern, crisp book cover featuring abstract typography on a stark white background with faint blue shadows. The design is highly legible and aligns with a minimalist, Apple-inspired digital library aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAHbGVCfAVqmpElBc7W_kOf_ZNCyw5Kld-SlrugLT3L8E8gq00B0t7zAJ2DpMzUx9o_rEZPWVKTITdsL4ZC2VsdNKG4IhZ82JVpCJSEFyodrRt4vLtkMBmF4Y8QYYN0AR6CDPwhfMJrNWlp4CO982Yf6HX4qwDFY7EOM2cD-FHbHwf7VCPqGs9Jhe6EkF-PnVrPxPLuyGfkcK9kX7j6bBUoy_nLjEFy2WfbINTYPLImQWZwLvRzjz3wwFhQyIGIBmE-FVQ4SPWQO69a"/>
+<div class="absolute top-2 right-2 bg-primary-container/10 px-2 py-1 rounded-full backdrop-blur-sm">
+<span class="font-metadata-xs text-metadata-xs text-primary-container">EPUB</span>
+</div>
+</div>
+<div class="flex-1 flex flex-col">
+<h3 class="font-headline-md text-[18px] leading-snug text-on-surface mb-xs line-clamp-2">Atomic Habits</h3>
+<p class="font-body-md text-[14px] text-on-surface-variant mb-md">James Clear</p>
+<div class="mt-auto">
+<div class="flex justify-between items-center mb-sm">
+<span class="font-metadata-xs text-metadata-xs text-on-surface-variant">320 pages</span>
+<span class="font-metadata-xs text-metadata-xs font-semibold text-primary-container">0%</span>
+</div>
+<div class="h-[6px] w-full bg-outline-variant/30 rounded-full overflow-hidden">
+<div class="h-full bg-primary-container rounded-full" style="width: 0%;"></div>
+</div>
+</div>
+</div>
+</article>
+</div>
+</div>
+</main>
+</body></html>

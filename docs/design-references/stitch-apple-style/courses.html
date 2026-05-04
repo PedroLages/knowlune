@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Knowlune - Courses Library</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+  tailwind.config = {
+    darkMode: "class",
+    theme: {
+      extend: {
+        "colors": {
+                "on-primary-fixed": "#001a41",
+                "secondary-fixed": "#b7eaff",
+                "inverse-primary": "#adc6ff",
+                "primary-fixed-dim": "#adc6ff",
+                "surface-bright": "#f9f9ff",
+                "on-secondary": "#ffffff",
+                "on-secondary-fixed": "#001f28",
+                "on-background": "#191b22",
+                "on-primary-fixed-variant": "#004493",
+                "on-tertiary-fixed-variant": "#7c2e00",
+                "on-error-container": "#93000a",
+                "tertiary-fixed-dim": "#ffb595",
+                "on-tertiary": "#ffffff",
+                "tertiary-fixed": "#ffdbcc",
+                "surface-container": "#ecedf6",
+                "primary": "#004494",
+                "on-surface": "#191b22",
+                "surface-container-low": "#f2f3fc",
+                "on-primary-container": "#c9d9ff",
+                "surface-variant": "#e1e2eb",
+                "secondary-container": "#00ccf9",
+                "on-secondary-fixed-variant": "#004e60",
+                "secondary-fixed-dim": "#4cd6ff",
+                "on-error": "#ffffff",
+                "primary-container": "#005bc1",
+                "surface": "#f9f9ff",
+                "error": "#ba1a1a",
+                "outline-variant": "#c2c6d5",
+                "outline": "#727784",
+                "background": "#f9f9ff",
+                "inverse-surface": "#2e3037",
+                "on-tertiary-fixed": "#351000",
+                "on-surface-variant": "#424753",
+                "surface-container-highest": "#e1e2eb",
+                "surface-container-lowest": "#ffffff",
+                "secondary": "#00677f",
+                "tertiary-container": "#a33f00",
+                "on-secondary-container": "#005266",
+                "on-tertiary-container": "#ffcfbb",
+                "tertiary": "#7c2f00",
+                "primary-fixed": "#d8e2ff",
+                "on-primary": "#ffffff",
+                "surface-container-high": "#e7e7f1",
+                "inverse-on-surface": "#eff0f9",
+                "error-container": "#ffdad6",
+                "surface-tint": "#005bc0",
+                "surface-dim": "#d8d9e2"
+        },
+        "borderRadius": {
+                "DEFAULT": "0.25rem",
+                "lg": "0.5rem",
+                "xl": "0.75rem",
+                "full": "9999px"
+        },
+        "spacing": {
+                "md": "16px",
+                "xl": "48px",
+                "lg": "24px",
+                "xs": "4px",
+                "gutter": "20px",
+                "base": "4px",
+                "sm": "8px",
+                "margin": "24px",
+                "2xl": "64px"
+        },
+        "fontFamily": {
+                "display": [
+                        "Inter"
+                ],
+                "label-md": [
+                        "Inter"
+                ],
+                "h2": [
+                        "Inter"
+                ],
+                "body-lg": [
+                        "Inter"
+                ],
+                "body-md": [
+                        "Inter"
+                ],
+                "label-sm": [
+                        "Inter"
+                ],
+                "h3": [
+                        "Inter"
+                ],
+                "h1": [
+                        "Inter"
+                ]
+        },
+        "fontSize": {
+                "display": [
+                        "48px",
+                        {
+                                "lineHeight": "1.1",
+                                "letterSpacing": "-0.022em",
+                                "fontWeight": "700"
+                        }
+                ],
+                "label-md": [
+                        "13px",
+                        {
+                                "lineHeight": "1.4",
+                                "letterSpacing": "0.01em",
+                                "fontWeight": "500"
+                        }
+                ],
+                "h2": [
+                        "24px",
+                        {
+                                "lineHeight": "1.3",
+                                "letterSpacing": "-0.014em",
+                                "fontWeight": "600"
+                        }
+                ],
+                "body-lg": [
+                        "17px",
+                        {
+                                "lineHeight": "1.5",
+                                "letterSpacing": "-0.011em",
+                                "fontWeight": "400"
+                        }
+                ],
+                "body-md": [
+                        "15px",
+                        {
+                                "lineHeight": "1.5",
+                                "letterSpacing": "-0.009em",
+                                "fontWeight": "400"
+                        }
+                ],
+                "label-sm": [
+                        "11px",
+                        {
+                                "lineHeight": "1.4",
+                                "letterSpacing": "0.02em",
+                                "fontWeight": "600"
+                        }
+                ],
+                "h3": [
+                        "20px",
+                        {
+                                "lineHeight": "1.4",
+                                "letterSpacing": "-0.011em",
+                                "fontWeight": "600"
+                        }
+                ],
+                "h1": [
+                        "32px",
+                        {
+                                "lineHeight": "1.2",
+                                "letterSpacing": "-0.017em",
+                                "fontWeight": "600"
+                        }
+                ]
+        }
+},
+    },
+  }
+</script>
+<style>
+    body { background-color: #f9f9fe; }
+    .shadow-ambient {
+        box-shadow: 0 2px 4px rgba(0,0,0,0.02), 0 10px 20px rgba(0,0,0,0.04);
+    }
+    .shadow-ambient-hover {
+        box-shadow: 0 4px 8px rgba(0,0,0,0.02), 0 15px 30px rgba(0,0,0,0.06);
+    }
+</style>
+</head>
+<body class="font-display text-on-background min-h-screen flex flex-col">
+<!-- TopNavBar Shared Component -->
+<nav class="bg-white/80 backdrop-blur-md dark:bg-slate-950/80 font-['Inter'] tracking-tight docked full-width top-0 sticky z-50 border-b border-black/5 dark:border-white/10 shadow-[0_2px_4px_rgba(0,0,0,0.02)]">
+<div class="flex justify-between items-center h-16 px-8 max-w-[1200px] mx-auto">
+<div class="flex items-center gap-xl">
+<div class="text-2xl font-black text-[#005bc1] dark:text-blue-400 tracking-tighter">Knowlune</div>
+<div class="hidden md:flex items-center gap-lg">
+<a class="text-slate-500 dark:text-slate-400 font-medium hover:bg-slate-50 dark:hover:bg-slate-900 transition-colors duration-200 px-sm py-xs rounded-md active:scale-95 transition-transform duration-150" href="#">Dashboard</a>
+<a class="text-[#005bc1] dark:text-blue-400 font-semibold border-b-2 border-[#005bc1] dark:border-blue-400 pb-1 px-sm hover:bg-slate-50 dark:hover:bg-slate-900 transition-colors duration-200 active:scale-95 transition-transform duration-150" href="#">Library</a>
+<a class="text-slate-500 dark:text-slate-400 font-medium hover:bg-slate-50 dark:hover:bg-slate-900 transition-colors duration-200 px-sm py-xs rounded-md active:scale-95 transition-transform duration-150" href="#">Resources</a>
+<a class="text-slate-500 dark:text-slate-400 font-medium hover:bg-slate-50 dark:hover:bg-slate-900 transition-colors duration-200 px-sm py-xs rounded-md active:scale-95 transition-transform duration-150" href="#">Community</a>
+</div>
+</div>
+<div class="flex items-center gap-lg">
+<button class="bg-primary-container text-on-primary rounded-full px-lg py-sm font-label-md hover:opacity-90 transition-opacity flex items-center gap-sm">Import Course</button>
+<div class="flex items-center gap-sm text-[#005bc1] dark:text-blue-400">
+<button class="p-xs hover:bg-slate-50 dark:hover:bg-slate-900 rounded-full transition-colors active:scale-95"><span class="material-symbols-outlined">notifications</span></button>
+<button class="p-xs hover:bg-slate-50 dark:hover:bg-slate-900 rounded-full transition-colors active:scale-95"><span class="material-symbols-outlined">settings</span></button>
+<img alt="User Profile" class="w-8 h-8 rounded-full ml-sm border border-black/5 object-cover cursor-pointer" data-alt="A close-up portrait of a professional individual looking directly at the camera. The lighting is soft and flattering, creating a premium corporate aesthetic. The background is a clean, neutral white that blends seamlessly with the light-mode UI. The person appears approachable yet serious, reflecting an intellectual and educational environment." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBGpTb5HLh9jBr84GBaBYj9jFw72_rFXRmOxS9DlqqzHYDPcU36KDak994fgKkUqxZ_L9BpmCp9Xth7z5k3LuFNzNOgW0KE_I4tMzD9ZeW6JHMGACxh79CmLKjqph0SiuiRzeIZJaj8jc4Vng9O_5LMwatrz-5rFnpXLXw4O3ceWWbQ-yKeMTfp38QPxCBmoWa53Tnwz29N4a81u9MK1AgfQBm_nbdRrLCuX6nA14Gfgm4xCSTkzhmrvQaaiQ1E_x_HZZ21599yHyL-"/>
+</div>
+</div>
+</div>
+</nav>
+<div class="flex flex-1 max-w-[1440px] mx-auto w-full">
+<!-- SideNavBar Shared Component (Hidden on mobile, flex on lg) -->
+<aside class="hidden lg:flex flex-col p-4 space-y-2 bg-[#f9f9fe] dark:bg-slate-950 font-['Inter'] text-sm antialiased h-screen w-64 border-r border-black/5 dark:border-white/10 shrink-0 sticky top-16" style="height: calc(100vh - 64px);">
+<div class="p-4 mb-4 flex items-center gap-md">
+<img alt="User Workspace" class="w-10 h-10 rounded-xl object-cover border border-black/5" data-alt="A modern, minimalist workspace environment featuring a clean desk surface with high-end digital devices. The scene is brightly lit with natural, diffuse white light typical of a premium educational brand's light-mode aesthetic. There are subtle hints of primary blue branding elements scattered softly in the background. The mood is calm, organized, and deeply focused on cognitive learning." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCbpn4lh0G-X83wsYY_OA8tNSr14JiWXLVaqJ0lr2mvCP3q3pv4mMXcWBzO7mR-Oe3seCXXgJdl5xOgFFrFIov0In3fzs_G3b0km28-wDWU82jsyrgE4xV0AkTOVxWm6QtuNMYK4N8SDMqFSS1JCXHhNO7zqv9IwoP33bK99eKCFP30ECfeynhia4XDzFAPb6BKosfmsq59f4hSxXAus7_SYYOw9v5xn5t9q4kO8zOfjuMp5vosed-nFgKfn9ATf4iap4h-0XfzYrJR"/>
+<div>
+<h2 class="text-lg font-bold text-slate-900 dark:text-white leading-tight">Knowlune Library</h2>
+<p class="text-xs text-slate-500">Premium Education</p>
+</div>
+</div>
+<nav class="flex-1 space-y-1">
+<a class="flex items-center gap-3 px-3 py-2 text-slate-600 dark:text-slate-400 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg hover:translate-x-1 transition-all duration-200 cursor-pointer tap-highlight-transparent font-medium" href="#">
+<span class="material-symbols-outlined text-lg">home</span> Home
+            </a>
+<a class="flex items-center gap-3 px-3 py-2 bg-white dark:bg-slate-900 text-[#005bc1] dark:text-blue-400 shadow-sm rounded-lg font-bold hover:translate-x-1 transition-all duration-200 cursor-pointer tap-highlight-transparent" href="#">
+<span class="material-symbols-outlined text-lg" style="font-variation-settings: 'FILL' 1;">local_library</span> My Library
+            </a>
+<a class="flex items-center gap-3 px-3 py-2 text-slate-600 dark:text-slate-400 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg hover:translate-x-1 transition-all duration-200 cursor-pointer tap-highlight-transparent font-medium" href="#">
+<span class="material-symbols-outlined text-lg">auto_stories</span> Learning Paths
+            </a>
+<a class="flex items-center gap-3 px-3 py-2 text-slate-600 dark:text-slate-400 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg hover:translate-x-1 transition-all duration-200 cursor-pointer tap-highlight-transparent font-medium" href="#">
+<span class="material-symbols-outlined text-lg">bookmark</span> Favorites
+            </a>
+<a class="flex items-center gap-3 px-3 py-2 text-slate-600 dark:text-slate-400 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg hover:translate-x-1 transition-all duration-200 cursor-pointer tap-highlight-transparent font-medium" href="#">
+<span class="material-symbols-outlined text-lg">archive</span> Archive
+            </a>
+</nav>
+<div class="mt-auto p-4">
+<button class="w-full bg-white border border-black/5 text-[#005bc1] rounded-full py-2 font-label-md hover:bg-slate-50 transition-colors shadow-sm">Upgrade Pro</button>
+</div>
+</aside>
+<!-- Main Content Canvas -->
+<main class="flex-1 px-lg py-xl max-w-[1000px] mx-auto w-full">
+<!-- Header -->
+<header class="flex justify-between items-end mb-lg">
+<div class="flex items-center gap-md">
+<h1 class="font-h1 text-h1 text-on-surface">Courses</h1>
+<span class="bg-surface-variant text-on-surface-variant font-label-sm text-label-sm px-2 py-0.5 rounded-full mt-2">24</span>
+</div>
+<div class="flex items-center gap-md">
+<button class="p-2 text-outline hover:text-on-surface hover:bg-surface-container rounded-full transition-colors">
+<span class="material-symbols-outlined text-[24px]">search</span>
+</button>
+<button class="bg-primary-container text-on-primary font-label-md text-label-md px-lg py-sm rounded-full shadow-sm hover:opacity-90 transition-opacity">
+                    Import Course
+                </button>
+</div>
+</header>
+<!-- Filter Bar -->
+<div class="bg-surface-container-lowest border border-black/5 rounded-xl p-md mb-xl shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-md">
+<!-- Status Pills -->
+<div class="flex flex-wrap items-center gap-sm">
+<button class="flex items-center gap-xs px-3 py-1.5 rounded-full bg-surface-variant text-on-surface-variant font-label-sm text-label-sm border border-transparent hover:border-outline-variant transition-colors">
+<span class="material-symbols-outlined text-[16px]">radio_button_unchecked</span>
+                    Not Started
+                </button>
+<button class="flex items-center gap-xs px-3 py-1.5 rounded-full bg-primary-fixed text-on-primary-fixed-variant font-label-sm text-label-sm border border-transparent hover:border-primary-container transition-colors shadow-sm">
+<span class="material-symbols-outlined text-[16px]" style="font-variation-settings: 'FILL' 1;">play_circle</span>
+                    Active
+                </button>
+<button class="flex items-center gap-xs px-3 py-1.5 rounded-full bg-[#e6f4ea] text-[#137333] font-label-sm text-label-sm border border-transparent hover:border-[#137333]/30 transition-colors">
+<span class="material-symbols-outlined text-[16px]" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+                    Completed
+                </button>
+<button class="flex items-center gap-xs px-3 py-1.5 rounded-full bg-tertiary-fixed text-on-tertiary-fixed font-label-sm text-label-sm border border-transparent hover:border-tertiary-container/30 transition-colors">
+<span class="material-symbols-outlined text-[16px]">pause_circle</span>
+                    Paused
+                </button>
+</div>
+<!-- Controls -->
+<div class="flex items-center gap-md">
+<div class="flex items-center gap-sm text-outline border-r border-black/5 pr-md">
+<button class="p-1 rounded bg-surface-variant text-on-surface">
+<span class="material-symbols-outlined text-[20px]">grid_view</span>
+</button>
+<button class="p-1 rounded hover:bg-surface-container hover:text-on-surface transition-colors">
+<span class="material-symbols-outlined text-[20px]">view_list</span>
+</button>
+<button class="p-1 rounded hover:bg-surface-container hover:text-on-surface transition-colors">
+<span class="material-symbols-outlined text-[20px]">view_comfy</span>
+</button>
+</div>
+<button class="flex items-center gap-xs text-on-surface-variant font-label-md text-label-md hover:text-on-surface transition-colors">
+                    Most Recent <span class="material-symbols-outlined text-[18px]">expand_more</span>
+</button>
+<button class="flex items-center gap-xs text-on-surface-variant font-label-md text-label-md hover:text-on-surface transition-colors">
+                    Columns: 3 <span class="material-symbols-outlined text-[18px]">expand_more</span>
+</button>
+</div>
+</div>
+<!-- Course Grid -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-lg">
+<!-- Card 1 -->
+<article class="bg-surface-container-lowest rounded-xl border border-black/5 shadow-ambient hover:shadow-ambient-hover hover:-translate-y-1 transition-all duration-300 flex flex-col overflow-hidden">
+<div class="relative w-full pt-[56.25%] bg-surface-variant">
+<img alt="UI Design Course" class="absolute inset-0 w-full h-full object-cover" data-alt="A pristine, minimalist digital workspace showing a sleek laptop running high-end design software. The lighting is soft and cool, embodying a premium educational aesthetic in light mode. There are subtle hints of 'cool blue-white' brand colors in the UI elements visible on the screen. The scene conveys a sense of intellectual clarity and modern corporate professionalism." src="https://lh3.googleusercontent.com/aida-public/AB6AXuC5DgvJBb-u0alNYBbuFvGLolpJ9RSc-11pKyzk-NFHwy7kAPkeubAdOkfzLesCHdeJszwLGVoUXxCXRQ3weIIEhXrNBiTmAHVZXHik9_HQ6Ox2nUUwf2nx-UXhHFEBEBR9A_gW_1Sd4xYZwB_VRYDuF7QmQhiK_i2hUUhOsZIvTydHjz6vaoQq5qkX5YepsIQ3Aqa8Xj9_1I9JDfNA6D2ao4YxaNBse9xWv7SRIFwdU0J2qFRRAFOJhPPnRWRZnED6bLVkNnMGIBPR"/>
+<div class="absolute bottom-2 right-2 bg-[#d32f2f] text-white font-label-sm text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full shadow-sm">HOT</div>
+</div>
+<div class="p-md flex flex-col flex-1 gap-sm">
+<h3 class="font-h3 text-h3 text-on-surface line-clamp-2 leading-tight">Advanced UI/UX Principles</h3>
+<div class="flex flex-wrap gap-xs mt-xs">
+<span class="inline-flex items-center gap-1 bg-surface-container text-on-surface-variant font-label-sm text-[10px] px-2 py-1 rounded-full border border-black/5">Design <span class="material-symbols-outlined text-[12px] cursor-pointer hover:text-on-surface">close</span></span>
+<span class="inline-flex items-center gap-1 bg-surface-container text-on-surface-variant font-label-sm text-[10px] px-2 py-1 rounded-full border border-black/5">UI/UX <span class="material-symbols-outlined text-[12px] cursor-pointer hover:text-on-surface">close</span></span>
+</div>
+<div class="mt-auto pt-md flex items-center gap-md text-outline font-label-sm text-label-sm border-t border-black/5">
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">play_circle</span> 12
+                        </div>
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">description</span> 4
+                        </div>
+</div>
+</div>
+</article>
+<!-- Card 2 -->
+<article class="bg-surface-container-lowest rounded-xl border border-black/5 shadow-ambient hover:shadow-ambient-hover hover:-translate-y-1 transition-all duration-300 flex flex-col overflow-hidden">
+<div class="relative w-full pt-[56.25%] bg-surface-variant">
+<img alt="Code Course" class="absolute inset-0 w-full h-full object-cover" data-alt="A clean, modern coding environment displaying elegant lines of code on a high-resolution monitor. The environment is flooded with soft, natural white light, avoiding dark mode clichés to fit a bright, premium educational platform. The color palette emphasizes serene whites and subtle primary blue accents. The mood is highly focused and intellectually stimulating." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAXQ4UocWluMRdmHVq8HHBD6oakeySkeCOTb_CwrMdhmZqWrGZD3ECqQeeKH0nc7dmtY7qn3Duytr_6bfoZMS6PchYAlRCx1h7wHib0I_5IamyRA_3RXnh16j2Fi3ZHcGuRfz_t-YrQQMgY5RmK0pBgVstQrCioKotS8h7HaHc936MPUEE-01HyAAKfX0aVBbvcQpmU4otvEUSPnDh79wdciZlRBewWx8TwwXjcgjK6xHXhAxQsGJgJjeb2pw3WB7svdyp58mvGUDf3"/>
+<div class="absolute bottom-2 right-2 bg-secondary-fixed text-on-secondary-fixed-variant font-label-sm text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full shadow-sm">ICE</div>
+</div>
+<div class="p-md flex flex-col flex-1 gap-sm">
+<h3 class="font-h3 text-h3 text-on-surface line-clamp-2 leading-tight">Functional React Patterns</h3>
+<div class="flex flex-wrap gap-xs mt-xs">
+<span class="inline-flex items-center gap-1 bg-surface-container text-on-surface-variant font-label-sm text-[10px] px-2 py-1 rounded-full border border-black/5">Engineering <span class="material-symbols-outlined text-[12px] cursor-pointer hover:text-on-surface">close</span></span>
+<span class="inline-flex items-center gap-1 bg-surface-container text-on-surface-variant font-label-sm text-[10px] px-2 py-1 rounded-full border border-black/5">React <span class="material-symbols-outlined text-[12px] cursor-pointer hover:text-on-surface">close</span></span>
+</div>
+<div class="mt-auto pt-md flex items-center gap-md text-outline font-label-sm text-label-sm border-t border-black/5">
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">play_circle</span> 8
+                        </div>
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">description</span> 15
+                        </div>
+</div>
+</div>
+</article>
+<!-- Card 3 -->
+<article class="bg-surface-container-lowest rounded-xl border border-black/5 shadow-ambient hover:shadow-ambient-hover hover:-translate-y-1 transition-all duration-300 flex flex-col overflow-hidden">
+<div class="relative w-full pt-[56.25%] bg-surface-variant">
+<img alt="Strategy Course" class="absolute inset-0 w-full h-full object-cover" data-alt="A bright, sunlit conference table featuring beautifully printed strategy documents and minimalist architectural models. The scene is shot from a top-down perspective, emphasizing clean geometry and expansive whitespace. The lighting is pristine and high-fidelity, typical of a 'digital calm' corporate aesthetic. The overall mood is analytical, serene, and deeply professional." src="https://lh3.googleusercontent.com/aida-public/AB6AXuC9yTC-gDCwm1VGzyRMRxZNFdk5rBp0z67YXEgdBOAbSiFnJVND3pOcoXFjUl2i7GZcryO98tgjH9V4VAJ1PeBm6TivqNmNLc16kEybO1JvK7reQRvmtbkUTtA4f-4TzgP0F2TB9b6penohzIaPjGiVKUwnxekz44PrZfC_-4lyR4sW5_Y_VQQPpklTS2IKkGXLIi_e8z6kWWAfcuNkpE8hOgGOYQtxb3U6JQEQTMr5a2fZknS3hwbUcPz8h4OPaD4fLCaokLQO8QgW"/>
+<div class="absolute bottom-2 right-2 bg-[#ff8f00] text-white font-label-sm text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full shadow-sm">WARM</div>
+</div>
+<div class="p-md flex flex-col flex-1 gap-sm">
+<h3 class="font-h3 text-h3 text-on-surface line-clamp-2 leading-tight">Product Strategy Masterclass</h3>
+<div class="flex flex-wrap gap-xs mt-xs">
+<span class="inline-flex items-center gap-1 bg-surface-container text-on-surface-variant font-label-sm text-[10px] px-2 py-1 rounded-full border border-black/5">Product <span class="material-symbols-outlined text-[12px] cursor-pointer hover:text-on-surface">close</span></span>
+<span class="inline-flex items-center gap-1 bg-surface-container text-on-surface-variant font-label-sm text-[10px] px-2 py-1 rounded-full border border-black/5">Strategy <span class="material-symbols-outlined text-[12px] cursor-pointer hover:text-on-surface">close</span></span>
+</div>
+<div class="mt-auto pt-md flex items-center gap-md text-outline font-label-sm text-label-sm border-t border-black/5">
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">play_circle</span> 24
+                        </div>
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">description</span> 2
+                        </div>
+</div>
+</div>
+</article>
+</div>
+</main>
+</div>
+</body></html>

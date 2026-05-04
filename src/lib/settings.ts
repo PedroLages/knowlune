@@ -94,7 +94,7 @@ const defaults: AppSettings = {
   bio: '',
   theme: 'system',
   profilePhotoUrl: undefined,
-  colorScheme: 'professional',
+  colorScheme: 'clean',
   accessibilityFont: false,
   contentDensity: 'default',
   reduceMotion: 'system',

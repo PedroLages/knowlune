@@ -436,7 +436,7 @@ export function BottomNav({ mode = 'standard', courseId, lessonId, onFeedbackCli
                                 className={cn(
                                   'flex items-center gap-3 px-4 py-3 rounded-xl transition-colors duration-150',
                                   active
-                                    ? 'bg-brand text-brand-foreground'
+                                    ? 'bg-card text-brand font-medium shadow-sm'
                                     : 'text-foreground hover:bg-accent active:bg-accent'
                                 )}
                               >

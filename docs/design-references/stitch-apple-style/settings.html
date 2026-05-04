@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Knowlune - Settings</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-secondary": "#ffffff",
+                        "primary-fixed-dim": "#bdc2ff",
+                        "on-primary-fixed": "#000965",
+                        "outline-variant": "#c6c5d5",
+                        "on-tertiary": "#ffffff",
+                        "on-surface": "#191a28",
+                        "on-secondary-container": "#63577f",
+                        "outline": "#767684",
+                        "inverse-on-surface": "#f1efff",
+                        "on-error-container": "#93000a",
+                        "error-container": "#ffdad6",
+                        "on-primary-container": "#fdfaff",
+                        "tertiary-container": "#986b21",
+                        "inverse-primary": "#bdc2ff",
+                        "primary": "#4450b7",
+                        "error": "#ba1a1a",
+                        "secondary-container": "#e0d0ff",
+                        "surface-bright": "#fbf8ff",
+                        "surface-container": "#eeecff",
+                        "background": "#fbf8ff",
+                        "secondary-fixed-dim": "#cfbfee",
+                        "surface-container-lowest": "#ffffff",
+                        "surface": "#fbf8ff",
+                        "on-background": "#191a28",
+                        "tertiary-fixed": "#ffddb1",
+                        "surface-container-highest": "#e2e1f4",
+                        "on-tertiary-fixed-variant": "#624000",
+                        "on-tertiary-fixed": "#291800",
+                        "on-secondary-fixed-variant": "#4c4067",
+                        "on-primary-fixed-variant": "#2e3aa2",
+                        "surface-container-high": "#e8e6fa",
+                        "on-primary": "#ffffff",
+                        "primary-container": "#5e6ad2",
+                        "on-tertiary-container": "#fffaf8",
+                        "on-surface-variant": "#454652",
+                        "surface-tint": "#4854bb",
+                        "surface-variant": "#e2e1f4",
+                        "surface-dim": "#d9d8ec",
+                        "secondary-fixed": "#eaddff",
+                        "primary-fixed": "#dfe0ff",
+                        "tertiary-fixed-dim": "#f4bd6b",
+                        "surface-container-low": "#f4f2ff",
+                        "inverse-surface": "#2e2f3e",
+                        "on-secondary-fixed": "#201539",
+                        "on-error": "#ffffff",
+                        "tertiary": "#7c5306",
+                        "secondary": "#645881"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "sm": "0.5rem",
+                        "base": "4px",
+                        "2xl": "4rem",
+                        "margin": "2rem",
+                        "gutter": "1.5rem",
+                        "xl": "2.5rem",
+                        "xs": "0.25rem",
+                        "md": "1rem",
+                        "lg": "1.5rem"
+                    },
+                    "fontFamily": {
+                        "h3": ["Inter"],
+                        "body-md": ["Inter"],
+                        "h2": ["Inter"],
+                        "h1": ["Inter"],
+                        "body-lg": ["Inter"],
+                        "label-sm": ["Inter"],
+                        "label-md": ["Inter"],
+                        "body-sm": ["Inter"]
+                    },
+                    "fontSize": {
+                        "h3": ["24px", { "lineHeight": "1.4", "letterSpacing": "0em", "fontWeight": "600" }],
+                        "body-md": ["16px", { "lineHeight": "1.6", "letterSpacing": "0em", "fontWeight": "400" }],
+                        "h2": ["30px", { "lineHeight": "1.3", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+                        "h1": ["40px", { "lineHeight": "1.2", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "body-lg": ["18px", { "lineHeight": "1.6", "letterSpacing": "0em", "fontWeight": "400" }],
+                        "label-sm": ["12px", { "lineHeight": "1", "letterSpacing": "0.05em", "fontWeight": "600" }],
+                        "label-md": ["14px", { "lineHeight": "1", "letterSpacing": "0.01em", "fontWeight": "500" }],
+                        "body-sm": ["14px", { "lineHeight": "1.5", "letterSpacing": "0em", "fontWeight": "400" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body { background-color: #f9f9fe; }
+    </style>
+</head>
+<body class="font-body-md text-body-md text-on-surface bg-background antialiased flex h-screen overflow-hidden">
+<!-- SideNavBar -->
+<nav class="h-screen sticky left-0 top-0 border-r w-20 md:w-64 border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-950 font-['Inter'] text-sm font-medium flex flex-col p-4 space-y-2 z-50 flex-shrink-0 shadow-none">
+<div class="flex items-center space-x-3 p-2 mb-6">
+<div class="w-8 h-8 rounded bg-primary flex items-center justify-center text-on-primary">
+<span class="material-symbols-outlined text-lg">school</span>
+</div>
+<div class="hidden md:flex flex-col">
+<span class="text-lg font-black tracking-tighter text-indigo-600">Knowlune</span>
+<span class="text-[10px] text-on-surface-variant uppercase tracking-wider">Learning Engine</span>
+</div>
+</div>
+<div class="flex-1 space-y-2 overflow-y-auto">
+<a class="flex items-center space-x-3 p-3 rounded-lg text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-900 transition-all scale-105 duration-200 ease-out group" href="#">
+<span class="material-symbols-outlined">grid_view</span>
+<span class="hidden md:block">Dashboard</span>
+</a>
+<a class="flex items-center space-x-3 p-3 rounded-lg text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-900 transition-all scale-105 duration-200 ease-out group" href="#">
+<span class="material-symbols-outlined">auto_stories</span>
+<span class="hidden md:block">Library</span>
+</a>
+<a class="flex items-center space-x-3 p-3 rounded-lg text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-900 transition-all scale-105 duration-200 ease-out group" href="#">
+<span class="material-symbols-outlined">school</span>
+<span class="hidden md:block">Courses</span>
+</a>
+<a class="flex items-center space-x-3 p-3 rounded-lg text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-900 transition-all scale-105 duration-200 ease-out group" href="#">
+<span class="material-symbols-outlined">emoji_events</span>
+<span class="hidden md:block">Goals</span>
+</a>
+<a class="flex items-center space-x-3 p-3 rounded-lg text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-900 transition-all scale-105 duration-200 ease-out group" href="#">
+<span class="material-symbols-outlined">inventory_2</span>
+<span class="hidden md:block">Archive</span>
+</a>
+</div>
+<div class="mt-auto space-y-2 pt-4 border-t border-outline-variant/30">
+<a class="flex items-center space-x-3 p-3 rounded-lg text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-900 transition-all scale-105 duration-200 ease-out group" href="#">
+<span class="material-symbols-outlined">help_outline</span>
+<span class="hidden md:block">Help</span>
+</a>
+<a class="flex items-center space-x-3 p-3 rounded-lg text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-900 transition-all scale-105 duration-200 ease-out group" href="#">
+<span class="material-symbols-outlined">logout</span>
+<span class="hidden md:block">Logout</span>
+</a>
+</div>
+</nav>
+<!-- Main Content Area -->
+<main class="flex-1 overflow-y-auto w-full bg-[#f9f9fe]">
+<!-- TopAppBar Contextual Header -->
+<header class="sticky top-0 z-40 bg-[#f9f9fe]/90 backdrop-blur-md border-b border-gray-100 px-8 h-16 w-full flex justify-between items-center shadow-sm">
+<div class="flex items-center">
+<h1 class="font-h3 text-h3 text-on-surface">Settings</h1>
+</div>
+<div class="flex items-center space-x-4">
+<button class="text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+</div>
+</header>
+<div class="max-w-[800px] mx-auto py-xl px-4 md:px-lg space-y-2xl">
+<!-- SECTION 1: PROFILE -->
+<section>
+<h2 class="font-label-md text-label-md text-on-surface-variant uppercase mb-sm px-4">PROFILE</h2>
+<div class="bg-surface-container-lowest rounded-xl border border-black/5 shadow-[0_4px_12px_rgba(0,0,0,0.03)] overflow-hidden">
+<!-- Row 1: Avatar -->
+<div class="p-md flex items-center justify-between border-b border-black/5 hover:bg-surface-bright transition-colors">
+<div class="flex items-center space-x-4">
+<span class="material-symbols-outlined text-on-surface-variant">person</span>
+<span class="font-body-md text-body-md text-on-surface">Profile Picture</span>
+</div>
+<div class="relative group cursor-pointer">
+<img alt="Profile Picture" class="w-16 h-16 rounded-full object-cover border-2 border-surface-container-lowest shadow-sm" data-alt="A close up portrait of a young professional man with a subtle smile. He has short dark hair and is wearing a dark, minimal sweater. The lighting is soft and studio-quality, creating a modern, approachable aesthetic suitable for a high-end software application. The background is a clean, out-of-focus neutral gray." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDGTtpMiHT7NqzTCIpVvBnVGa0obZ8_FRJnLRYM7NP-PKtLDA6qXQelgmgrAZGTGuQq8rWekoeJ6NGzVtetuzJxQRcvmHiFCtdCaBLQ_2W2DCw4I4vVlp6_4CQSTWEX6qTIX3oNK5ecFcVrtM7t7aapMh5WmVgr_O3fAfqy0pa5EnRXfu0LIUhbjIK03z8SeoJsuwjvXSIat6uQOyicZHKFJkG_31nJwod-e18j5jGRw3ikBSaugqwkKd1WJUywMRKGRiOScyo-lr2Y"/>
+<div class="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-white text-sm">photo_camera</span>
+</div>
+</div>
+</div>
+<!-- Row 2: Display Name -->
+<div class="p-md flex items-center border-b border-black/5 hover:bg-surface-bright transition-colors">
+<div class="flex items-center space-x-4 w-1/3">
+<span class="material-symbols-outlined text-on-surface-variant">badge</span>
+<label class="font-body-md text-body-md text-on-surface" for="displayName">Display Name</label>
+</div>
+<div class="flex-1">
+<input class="w-full bg-transparent border-none focus:ring-0 font-body-md text-body-md text-on-surface placeholder:text-on-surface-variant/50 p-0" id="displayName" placeholder="Alex Mitchell" type="text" value="Alex Mitchell"/>
+</div>
+</div>
+<!-- Row 3: Bio -->
+<div class="p-md flex items-start hover:bg-surface-bright transition-colors">
+<div class="flex items-center space-x-4 w-1/3 pt-2">
+<span class="material-symbols-outlined text-on-surface-variant">description</span>
+<label class="font-body-md text-body-md text-on-surface" for="bio">Bio</label>
+</div>
+<div class="flex-1">
+<textarea class="w-full bg-transparent border-none focus:ring-0 font-body-md text-body-md text-on-surface placeholder:text-on-surface-variant/50 p-0 resize-none" id="bio" rows="2">Lifelong learner focused on cognitive science and advanced mathematics.</textarea>
+</div>
+</div>
+</div>
+</section>
+</div>
+</main>
+</body></html>

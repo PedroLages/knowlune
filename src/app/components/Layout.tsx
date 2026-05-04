@@ -100,7 +100,7 @@ function NavLink({
         iconOnly ? 'justify-center py-2.5 mx-2' : 'gap-3 px-4 py-2.5'
       } ${
         isActive
-          ? 'bg-brand-soft text-brand-soft-foreground font-medium'
+          ? 'bg-card text-brand font-medium shadow-sm'
           : 'text-muted-foreground hover:bg-accent hover:text-foreground'
       }`}
     >
@@ -122,19 +122,7 @@ function NavLink({
     )
   }
 
-  return (
-    <li className="relative">
-      {!iconOnly && (
-        <span
-          aria-hidden="true"
-          className={`absolute left-0 top-1/2 -translate-y-1/2 h-5 w-[3px] rounded-r-full transition-all duration-200 ${
-            isActive ? 'bg-brand' : 'bg-transparent'
-          }`}
-        />
-      )}
-      {link}
-    </li>
-  )
+  return <li className="relative">{link}</li>
 }
 
 // Reusable sidebar content component
@@ -526,7 +514,7 @@ export function Layout() {
         >
           {/* Sidebar */}
           <aside
-            className={`${sidebarCollapsed ? 'w-[72px] px-0 py-6' : 'w-[220px] p-6'} bg-card flex flex-col overflow-hidden transition-[width] duration-200 ease-out h-full`}
+            className={`${sidebarCollapsed ? 'w-[72px] px-0 py-6' : 'w-[220px] p-6'} bg-accent flex flex-col overflow-hidden transition-[width] duration-200 ease-out h-full rounded-2xl`}
             aria-label="Sidebar"
           >
             <SidebarContent
@@ -583,8 +571,8 @@ export function Layout() {
         <header
           data-theater-hide
           className={cn(
-            'bg-card m-6 mb-0 p-4 px-6 flex items-center gap-4 justify-between relative z-10',
-            isLessonRoute && 'border-b-2 border-brand'
+            'bg-background/80 backdrop-blur-xl mx-4 mt-4 px-4 py-3 flex items-center gap-4 justify-between relative z-10 rounded-xl',
+            isLessonRoute && 'border-b border-brand'
           )}
           role="banner"
         >
