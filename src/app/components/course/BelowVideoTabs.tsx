@@ -23,6 +23,7 @@ import {
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/app/components/ui/tabs'
 import { Button } from '@/app/components/ui/button'
 import { useMediaQuery } from '@/app/hooks/useMediaQuery'
+import { useLessonChromeStore } from '@/stores/useLessonChromeStore'
 import { AISummaryPanel } from '@/app/components/figma/AISummaryPanel'
 import type { CourseAdapter } from '@/lib/courseAdapter'
 import type { CapturedFrame } from '@/lib/frame-capture'
@@ -156,9 +157,27 @@ export function BelowVideoTabs({
   }, [adapter, lessonId, transcriptVersion])
 
   // Fullscreen notes overlay (mobile)
+  // Synced with useLessonChromeStore.mobileNotesPanel for dual-state coordination
+  // between the FloatingNotesPanel and the existing fullscreen overlay.
   const [isNotesFullscreen, setIsNotesFullscreen] = useState(false)
+  const mobileNotesPanel = useLessonChromeStore(s => s.mobileNotesPanel)
+  const setMobileNotesPanel = useLessonChromeStore(s => s.setMobileNotesPanel)
   const fullscreenTriggerRef = useRef<HTMLButtonElement>(null)
   const fullscreenOverlayRef = useRef<HTMLDivElement>(null)
+
+  // Sync fullscreen overlay with store: open when store says 'fullscreen'
+  useEffect(() => {
+    if (mobileNotesPanel === 'fullscreen' && !isNotesFullscreen) {
+      setIsNotesFullscreen(true)
+    }
+  }, [mobileNotesPanel, isNotesFullscreen])
+
+  // When closing fullscreen overlay, sync store back to 'expanded'
+  const closeFullscreenNotes = useCallback(() => {
+    setIsNotesFullscreen(false)
+    setMobileNotesPanel('expanded')
+    requestAnimationFrame(() => fullscreenTriggerRef.current?.focus())
+  }, [setMobileNotesPanel])
 
   // ESC handler + focus trap for fullscreen notes overlay
   useEffect(() => {
@@ -168,8 +187,7 @@ export function BelowVideoTabs({
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        setIsNotesFullscreen(false)
-        requestAnimationFrame(() => fullscreenTriggerRef.current?.focus())
+        closeFullscreenNotes()
         return
       }
 
@@ -210,11 +228,24 @@ export function BelowVideoTabs({
     }
   }, [isNotesFullscreen])
 
+  // On mobile, tapping the Notes tab opens the floating panel instead of inline content.
+  const handleTabsValueChange = useCallback(
+    (value: string) => {
+      if (isMobile && value === 'notes') {
+        // Open the floating notes panel instead of switching to inline content
+        useLessonChromeStore.getState().setMobileNotesPanel('expanded')
+        return
+      }
+      setActiveTab(value)
+    },
+    [isMobile]
+  )
+
   return (
     <>
       <Tabs
         value={activeTab}
-        onValueChange={setActiveTab}
+        onValueChange={handleTabsValueChange}
         className="mt-4"
         data-testid="below-video-tabs"
       >
@@ -276,13 +307,21 @@ export function BelowVideoTabs({
                   </Button>
                 </div>
               )}
-              <NotesTab
-                courseId={courseId}
-                lessonId={lessonId}
-                onSeek={onSeek}
-                currentTime={currentTime}
-                onCaptureFrame={onCaptureFrame}
-              />
+              {/* On mobile, NotesTab content is rendered in the FloatingNotesPanel.
+                  Here we show a brief message. The actual editor is in the floating panel. */}
+              {isMobile ? (
+                <div className="p-4 text-sm text-muted-foreground text-center">
+                  Notes are open in the floating panel below the video.
+                </div>
+              ) : (
+                <NotesTab
+                  courseId={courseId}
+                  lessonId={lessonId}
+                  onSeek={onSeek}
+                  currentTime={currentTime}
+                  onCaptureFrame={onCaptureFrame}
+                />
+              )}
             </div>
           </TabsContent>
         )}
@@ -375,10 +414,7 @@ export function BelowVideoTabs({
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => {
-                setIsNotesFullscreen(false)
-                requestAnimationFrame(() => fullscreenTriggerRef.current?.focus())
-              }}
+              onClick={closeFullscreenNotes}
               aria-label="Close fullscreen notes"
               data-testid="notes-fullscreen-close"
             >

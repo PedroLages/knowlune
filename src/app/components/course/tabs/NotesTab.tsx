@@ -30,6 +30,8 @@ export interface NotesTabProps {
   currentTime?: number
   /** Callback to capture the current video frame as a JPEG for embedding in notes */
   onCaptureFrame?: () => Promise<CapturedFrame | null>
+  /** Callback when save status changes (for parent toolbar "Saved" indicator). */
+  onSaveStatusChange?: (status: 'idle' | 'saved') => void
 }
 
 export function NotesTab({
@@ -38,6 +40,7 @@ export function NotesTab({
   onSeek,
   currentTime,
   onCaptureFrame,
+  onSaveStatusChange,
 }: NotesTabProps) {
   const notes = useNoteStore(s => s.notes)
   const loadNotesByLesson = useNoteStore(s => s.loadNotesByLesson)
@@ -251,6 +254,7 @@ export function NotesTab({
         onVideoSeek={onSeek}
         currentVideoTime={currentTime}
         onCaptureFrame={onCaptureFrame}
+        onSaveStatusChange={onSaveStatusChange}
         compact
       />
     </div>

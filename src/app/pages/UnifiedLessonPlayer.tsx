@@ -54,6 +54,7 @@ import { CompletionModal } from '@/app/components/celebrations/CompletionModal'
 import { LessonContentRenderer } from '@/app/components/course/LessonContentRenderer'
 import { BelowVideoTabs } from '@/app/components/course/BelowVideoTabs'
 import { NotesPanel } from '@/app/components/course/NotesPanel'
+import { FloatingNotesPanel } from '@/app/components/course/FloatingNotesPanel'
 import { LessonsTab } from '@/app/components/course/tabs/LessonsTab'
 import { NotesTab } from '@/app/components/course/tabs/NotesTab'
 import type { VideoPlayerHandle } from '@/app/components/figma/VideoPlayer'
@@ -155,6 +156,7 @@ export function UnifiedLessonPlayer() {
   const videoPlayerRef = useRef<VideoPlayerHandle>(null)
   const titleRef = useRef<HTMLHeadingElement>(null)
   const videoContainerRef = useRef<HTMLDivElement>(null)
+  const floatingPanelPortalRef = useRef<HTMLDivElement>(null)
 
   // Lesson navigation: prev/next lesson via adapter
   const { prevLesson, nextLesson, totalLessons, lessons } = useLessonNavigation(adapter, lessonId)
@@ -388,16 +390,18 @@ export function UnifiedLessonPlayer() {
   const mainContent = (
     <>
       {/* Video/PDF Content */}
-      <div
-        ref={videoContainerRef}
-        className={cn(
-          'relative mb-3 w-full overflow-hidden',
-          !state.isPdf &&
-            !isTheater &&
-            'aspect-video max-h-[65svh] xl:max-h-[72svh] 2xl:max-h-[78svh]',
-          !state.isPdf && isTheater && 'h-[calc(100svh-1rem)]'
-        )}
-      >
+      <div className="relative">
+        <div
+          ref={videoContainerRef}
+          className={cn(
+            'relative mb-3 w-full overflow-hidden',
+            !state.isPdf &&
+              !isTheater &&
+              'aspect-video max-h-[65svh] xl:max-h-[72svh] 2xl:max-h-[78svh]',
+            !state.isPdf && isTheater && 'h-[calc(100svh-1rem)]'
+          )}
+          data-testid="video-container"
+        >
         <LessonContentRenderer
           ref={videoPlayerRef}
           courseId={courseId!}
@@ -419,6 +423,29 @@ export function UnifiedLessonPlayer() {
           onBookmarkSeek={state.handleTranscriptSeek}
           autoplay={shouldAutoPlay}
         />
+      </div>
+
+        {/* Portal target for FloatingNotesPanel — sibling to video container,
+            positioned absolutely over it. Rendered outside overflow-hidden
+            so the floating panel (which uses fixed positioning) has the right
+            stacking context and is not clipped. */}
+        <div
+          ref={floatingPanelPortalRef}
+          className="absolute inset-0 pointer-events-none"
+          aria-hidden="true"
+        />
+
+        {/* Floating notes panel (mobile only, portal-rendered into the sibling div above) */}
+        {!isDesktop && !isTablet && !state.isPdf && (
+          <FloatingNotesPanel
+            courseId={courseId!}
+            lessonId={lessonId!}
+            currentTime={state.currentTime}
+            onSeek={state.handleTranscriptSeek}
+            onCaptureFrame={handleCaptureFrame}
+            portalTarget={floatingPanelPortalRef.current}
+          />
+        )}
       </div>
 
       {/* Lesson title — below video, matching YouTube/Udemy/Coursera pattern */}
