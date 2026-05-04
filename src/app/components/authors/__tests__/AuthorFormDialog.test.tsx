@@ -22,8 +22,18 @@ const mockAddAuthor = vi.fn()
 const mockUpdateAuthor = vi.fn()
 
 const defaultStoreReturn = {
+  authors: [] as ImportedAuthor[],
+  isLoading: false,
+  isLoaded: true,
+  error: null,
+  loadAuthors: vi.fn(),
+  clearAuthorsLoadError: vi.fn(),
   addAuthor: mockAddAuthor,
   updateAuthor: mockUpdateAuthor,
+  deleteAuthor: vi.fn(),
+  getAuthorById: vi.fn(),
+  linkCourseToAuthor: vi.fn(),
+  unlinkCourseFromAuthor: vi.fn(),
 }
 
 const sampleAuthor: ImportedAuthor = {
@@ -115,6 +125,46 @@ describe('AuthorFormDialog', () => {
     const saveButton = screen.getByRole('button', { name: /save changes/i })
     expect(saveButton.closest('[data-slot="dialog-footer"]')).toBeTruthy()
     expect(saveButton.closest('.overflow-y-auto')).toBeNull()
+  })
+
+  it('splits pasted comma-separated specialties into tags', async () => {
+    const user = userEvent.setup()
+    render(<AuthorFormDialog open={true} onOpenChange={vi.fn()} />)
+
+    const input = screen.getByLabelText('Specialties')
+    await user.click(input)
+    await user.paste('DevOps, Cloud Engineering, CI/CD')
+
+    expect(screen.getByText('DevOps')).toBeInTheDocument()
+    expect(screen.getByText('Cloud Engineering')).toBeInTheDocument()
+    expect(screen.getByText('CI/CD')).toBeInTheDocument()
+    expect(input).toHaveValue('')
+  })
+
+  it('paste of a single token without delimiters leaves text in the input', async () => {
+    const user = userEvent.setup()
+    render(<AuthorFormDialog open={true} onOpenChange={vi.fn()} />)
+
+    const input = screen.getByLabelText('Specialties')
+    await user.click(input)
+    await user.paste('Kubernetes')
+
+    expect(input).toHaveValue('Kubernetes')
+    expect(screen.queryByRole('button', { name: /remove kubernetes/i })).not.toBeInTheDocument()
+  })
+
+  it('splits semicolon-separated specialties on Enter', async () => {
+    const user = userEvent.setup()
+    render(<AuthorFormDialog open={true} onOpenChange={vi.fn()} />)
+
+    const input = screen.getByLabelText('Specialties')
+    await user.click(input)
+    await user.type(input, 'Rust; Go')
+    await user.keyboard('{Enter}')
+
+    expect(screen.getByText('Rust')).toBeInTheDocument()
+    expect(screen.getByText('Go')).toBeInTheDocument()
+    expect(input).toHaveValue('')
   })
 
   it('clears validation errors when correcting input', async () => {

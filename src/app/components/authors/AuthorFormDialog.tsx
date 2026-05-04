@@ -16,6 +16,7 @@ import { Textarea } from '@/app/components/ui/textarea'
 import { Badge } from '@/app/components/ui/badge'
 import { Separator } from '@/app/components/ui/separator'
 import { useAuthorStore } from '@/stores/useAuthorStore'
+import { flattenSpecialties } from '@/lib/authors'
 import type { AuthorSocialLinks, ImportedAuthor } from '@/data/types'
 
 interface FormErrors {
@@ -33,6 +34,23 @@ interface AuthorFormDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   author?: EditableAuthor // undefined = create mode, defined = edit mode
+}
+
+/** Append tokens from one input chunk (comma / semicolon / pipe aware) without case-insensitive dupes. */
+function mergeSpecialtiesFromInput(existing: string[], chunk: string): string[] {
+  const trimmed = chunk.trim()
+  if (!trimmed) return existing
+  const incoming = flattenSpecialties([trimmed])
+  if (incoming.length === 0) return existing
+  const seen = new Set(existing.map(s => s.toLowerCase()))
+  const out = [...existing]
+  for (const t of incoming) {
+    const k = t.toLowerCase()
+    if (seen.has(k)) continue
+    seen.add(k)
+    out.push(t)
+  }
+  return out
 }
 
 function isValidUrl(value: string): boolean {
@@ -140,10 +158,25 @@ export function AuthorFormDialog({ open, onOpenChange, author }: AuthorFormDialo
 
   function handleAddSpecialty() {
     const trimmed = specialtyInput.trim()
-    if (trimmed && !specialties.includes(trimmed)) {
-      setIsDirty(true)
-      setSpecialties(prev => [...prev, trimmed])
+    if (!trimmed) {
+      setSpecialtyInput('')
+      return
     }
+    setIsDirty(true)
+    setSpecialties(prev => mergeSpecialtiesFromInput(prev, trimmed))
+    setSpecialtyInput('')
+  }
+
+  function handleSpecialtyPaste(e: React.ClipboardEvent<HTMLInputElement>) {
+    const text = e.clipboardData.getData('text/plain')
+    if (!text.trim() || !/[,;|]/.test(text)) return
+    e.preventDefault()
+    const el = e.currentTarget
+    const start = el.selectionStart ?? specialtyInput.length
+    const end = el.selectionEnd ?? specialtyInput.length
+    const combined = specialtyInput.slice(0, start) + text + specialtyInput.slice(end)
+    setIsDirty(true)
+    setSpecialties(prev => mergeSpecialtiesFromInput(prev, combined))
     setSpecialtyInput('')
   }
 
@@ -232,7 +265,7 @@ export function AuthorFormDialog({ open, onOpenChange, author }: AuthorFormDialo
           onInput={() => setIsDirty(true)}
           noValidate
         >
-          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain">
+          <div className="min-h-0 min-w-0 flex-1 space-y-4 overflow-x-hidden overflow-y-auto overscroll-contain">
             {/* ── Profile ── */}
             <div>
               <h3 className="font-semibold uppercase tracking-wider text-muted-foreground mb-2 text-xs">
@@ -306,12 +339,16 @@ export function AuthorFormDialog({ open, onOpenChange, author }: AuthorFormDialo
                 </div>
 
                 {/* Specialties */}
-                <div className="space-y-1.5">
+                <div className="min-w-0 space-y-1.5">
                   <Label htmlFor="author-specialties">Specialties</Label>
                   {specialties.length > 0 && (
-                    <div className="flex flex-wrap gap-1.5 mb-1.5">
+                    <div className="mb-1.5 flex min-w-0 flex-wrap gap-1.5">
                       {specialties.map(specialty => (
-                        <Badge key={specialty} variant="secondary" className="gap-1 pr-1">
+                        <Badge
+                          key={specialty}
+                          variant="secondary"
+                          className="max-w-full min-w-0 gap-1 break-words pr-1"
+                        >
                           {specialty}
                           <button
                             type="button"
@@ -327,12 +364,13 @@ export function AuthorFormDialog({ open, onOpenChange, author }: AuthorFormDialo
                   )}
                   <Input
                     id="author-specialties"
-                    placeholder="Type a specialty and press Enter"
+                    placeholder="Enter or paste — commas split into tags"
                     value={specialtyInput}
                     onChange={e => setSpecialtyInput(e.target.value)}
                     onKeyDown={handleSpecialtyKeyDown}
+                    onPaste={handleSpecialtyPaste}
                     onBlur={handleAddSpecialty}
-                    className="border-2"
+                    className="min-w-0 border-2"
                   />
                 </div>
 
