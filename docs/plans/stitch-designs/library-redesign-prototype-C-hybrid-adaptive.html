@@ -1,0 +1,851 @@
+<!DOCTYPE html>
+<html lang="en" class="light">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Knowlune Library — Hybrid Adaptive</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400..700;1,9..40,400..700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+/* ==========================================================================
+   Knowlune Design Tokens — exact values from src/styles/theme.css
+   ========================================================================== */
+:root {
+  /* Light mode (Professional — default) */
+  --background: #faf5ee;
+  --foreground: #1c1d2b;
+  --card: #ffffff;
+  --card-foreground: #1c1d2b;
+  --popover: #ffffff;
+  --popover-foreground: #1c1d2b;
+  --primary: #1c1d2b;
+  --primary-foreground: #ffffff;
+  --secondary: #eeeef6;
+  --secondary-foreground: #1c1d2b;
+  --muted: #e9e7e4;
+  --muted-foreground: #656870;
+  --accent: #eeeef6;
+  --accent-foreground: #1c1d2b;
+  --destructive: #c44850;
+  --destructive-foreground: #ffffff;
+  --border: rgba(0, 0, 0, 0.07);
+  --input-background: #f0eeeb;
+  --font-body: 'DM Sans', system-ui, -apple-system, sans-serif;
+  --font-heading: 'Space Grotesk Variable', 'Space Grotesk', system-ui, -apple-system, sans-serif;
+
+  /* Brand */
+  --brand: #5e6ad2;
+  --brand-hover: #4d57b5;
+  --brand-foreground: #ffffff;
+  --brand-soft: #d0d2ee;
+  --brand-soft-foreground: #3d46b8;
+  --brand-muted: #c8c9e4;
+
+  /* Semantic */
+  --success: #3a7553;
+  --success-foreground: #ffffff;
+  --warning: #866224;
+  --warning-foreground: #ffffff;
+  --gold: #c49245;
+  --gold-foreground: #ffffff;
+  --surface-elevated: #ffffff;
+  --surface-sunken: oklch(0.97 0.005 80);
+
+  /* Shadows */
+  --shadow-brand: oklch(0.45 0.12 270 / 0.08);
+  --shadow-warm: oklch(0.5 0.05 60 / 0.06);
+  --shadow-card: 0 1px 2px rgba(0,0,0,0.03), 0 4px 16px rgba(0,0,0,0.04);
+
+  /* Radius */
+  --radius: 0.625rem;
+  --radius-sm: calc(0.625rem - 4px);
+  --radius-md: calc(0.625rem - 2px);
+  --radius-lg: 0.625rem;
+  --radius-xl: calc(0.625rem + 4px);
+  --radius-2xl: calc(0.625rem + 6px);
+
+  /* Audiobook player tokens (reused for glass effects) */
+  --surface-glass: oklch(1 0 0 / 0.55);
+  --surface-glass-border: oklch(0 0 0 / 0.08);
+}
+
+/* Dark mode overrides — exact from theme.css .dark */
+.dark {
+  --background: #1a1b26;
+  --foreground: #e8e9f0;
+  --card: #242536;
+  --card-foreground: #e8e9f0;
+  --popover: #242536;
+  --popover-foreground: #e8e9f0;
+  --primary: #e8e9f0;
+  --primary-foreground: #1a1b26;
+  --secondary: #32334a;
+  --secondary-foreground: #e8e9f0;
+  --muted: #32334a;
+  --muted-foreground: #b2b5c8;
+  --accent: #32334a;
+  --accent-foreground: #e8e9f0;
+  --destructive: #e07078;
+  --destructive-foreground: #fce8e9;
+  --border: rgba(255, 255, 255, 0.06);
+  --input-background: #1e1f30;
+  --brand: #6069c0;
+  --brand-hover: #5660b3;
+  --brand-foreground: #ffffff;
+  --brand-soft: #2a2c48;
+  --brand-soft-foreground: #a0a8eb;
+  --brand-muted: #3a3c60;
+  --success: #6ab888;
+  --success-foreground: #ffffff;
+  --warning: #daa860;
+  --warning-foreground: #1a1b26;
+  --gold: #daa860;
+  --gold-foreground: #1a1b26;
+  --surface-elevated: #2a2b3e;
+  --surface-sunken: #151620;
+  --surface-glass: oklch(0.18 0.01 270 / 0.55);
+  --surface-glass-border: oklch(1 0 0 / 0.12);
+  --shadow-brand: oklch(0.25 0.12 270 / 0.2);
+  --shadow-warm: oklch(0.25 0.05 60 / 0.15);
+  --shadow-card: 0 1px 2px rgba(0,0,0,0.15), 0 4px 16px rgba(0,0,0,0.2);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { font-size: 16px; }
+body {
+  font-family: var(--font-body);
+  background: var(--background);
+  color: var(--foreground);
+  min-height: 100vh; line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  transition: background 0.35s ease, color 0.35s ease;
+}
+h1, h2, h3, h4 { font-family: var(--font-heading); }
+
+/* Theme toggle */
+.theme-toggle {
+  width: 36px; height: 36px; border-radius: var(--radius-md);
+  border: 1px solid var(--border); background: var(--card);
+  color: var(--muted-foreground); cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.2s; flex-shrink: 0;
+}
+.theme-toggle:hover { color: var(--foreground); border-color: var(--brand); }
+.theme-toggle svg { width: 16px; height: 16px; }
+.light .moon-icon { display: none; }
+.dark .sun-icon { display: none; }
+
+.app { display: flex; min-height: 100vh; }
+
+/* Sidebar */
+.sidebar {
+  width: 240px; flex-shrink: 0;
+  background: var(--surface-sunken);
+  border-right: 1px solid var(--border);
+  padding: 1.5rem 1rem; display: flex; flex-direction: column; gap: 2rem;
+  position: sticky; top: 0; height: 100vh; z-index: 20;
+}
+.sidebar-logo {
+  font-family: var(--font-heading); font-weight: 700; font-size: 1.2rem;
+  letter-spacing: -0.03em; color: var(--foreground); padding: 0 0.5rem;
+}
+.sidebar-nav { display: flex; flex-direction: column; gap: 0.125rem; }
+.sidebar-link {
+  display: flex; align-items: center; gap: 0.75rem;
+  padding: 0.6rem 0.75rem; border-radius: var(--radius-lg);
+  color: var(--muted-foreground); font-size: 0.875rem; font-weight: 500;
+  text-decoration: none; cursor: pointer;
+  transition: all 0.18s ease;
+}
+.sidebar-link:hover { background: var(--muted); color: var(--foreground); }
+.sidebar-link.active { background: var(--brand-soft); color: var(--brand-soft-foreground); font-weight: 600; }
+.sidebar-link svg { width: 18px; height: 18px; flex-shrink: 0; }
+.sidebar-bottom { margin-top: auto; }
+
+/* Main */
+.main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+
+/* Header — glass */
+.header {
+  position: sticky; top: 0; z-index: 30;
+  background: var(--surface-glass);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--surface-glass-border);
+  padding: 0.75rem 2rem;
+  display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+}
+.header-left { display: flex; align-items: center; gap: 1rem; }
+.header-title {
+  font-family: var(--font-heading); font-weight: 700; font-size: 1.15rem;
+  letter-spacing: -0.02em;
+}
+.header-search {
+  position: relative;
+}
+.header-search svg {
+  position: absolute; left: 0.75rem; top: 50%; transform: translateY(-50%);
+  width: 15px; height: 15px; color: var(--muted-foreground); pointer-events: none;
+}
+.header-search input {
+  background: var(--input-background); border: 1px solid var(--border);
+  border-radius: 9999px; padding: 0.45rem 1rem 0.45rem 2.5rem;
+  color: var(--foreground); font-family: var(--font-body); font-size: 0.85rem;
+  width: 240px; outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.header-search input:focus { border-color: var(--brand); box-shadow: 0 0 0 3px rgba(94,106,210,0.12); }
+.header-search input::placeholder { color: var(--muted-foreground); }
+.header-actions { display: flex; align-items: center; gap: 0.625rem; }
+.btn-brand {
+  background: var(--brand); color: var(--brand-foreground);
+  border: none; padding: 0.5rem 1.25rem; border-radius: 9999px;
+  font-family: var(--font-body); font-weight: 600; font-size: 0.85rem;
+  cursor: pointer; transition: all 0.2s;
+  box-shadow: var(--shadow-brand);
+}
+.btn-brand:hover { background: var(--brand-hover); transform: translateY(-1px); }
+.avatar {
+  width: 32px; height: 32px; border-radius: 50%;
+  background: linear-gradient(135deg, #5e6ad2, #7b83d6);
+  border: 1.5px solid var(--border);
+}
+
+/* Tab bar — underline style */
+.tab-bar {
+  display: flex; gap: 0;
+  padding: 0.5rem 2rem 0;
+  background: var(--background);
+  border-bottom: 1px solid var(--border);
+}
+.tab-underline {
+  padding: 0.6rem 1.25rem; border: none; background: none;
+  color: var(--muted-foreground);
+  font-family: var(--font-body); font-weight: 500; font-size: 0.875rem;
+  cursor: pointer; position: relative;
+  transition: color 0.2s; white-space: nowrap;
+}
+.tab-underline:hover { color: var(--foreground); }
+.tab-underline.active { color: var(--brand); font-weight: 600; }
+.tab-underline.active::after {
+  content: ''; position: absolute; bottom: 0; left: 0.75rem; right: 0.75rem;
+  height: 2px; background: var(--brand); border-radius: 2px 2px 0 0;
+}
+
+/* Content */
+.content-scroll { flex: 1; overflow-y: auto; }
+.tab-panel { display: none; flex-direction: column; gap: 1.75rem; padding: 1.5rem 2rem 3rem; }
+.tab-panel.active { display: flex; }
+
+/* Hero — warm, brand-tinted */
+.hero {
+  position: relative; border-radius: var(--radius-2xl); overflow: hidden;
+  min-height: 340px; display: flex; align-items: flex-end; isolation: isolate;
+  box-shadow: var(--shadow-card);
+}
+.hero-bg {
+  position: absolute; inset: 0; z-index: 0;
+  background:
+    linear-gradient(145deg, #e8e6f0 0%, #f0edf5 25%, #f5f2f0 55%, #faf5ee 100%);
+}
+.hero-bg::before {
+  content: '';
+  position: absolute; inset: 0;
+  background:
+    radial-gradient(ellipse 70% 50% at 25% 30%, rgba(94,106,210,0.08), transparent 55%),
+    radial-gradient(ellipse 50% 40% at 75% 60%, rgba(196,146,69,0.06), transparent 50%);
+}
+.hero-overlay {
+  position: absolute; inset: 0; z-index: 1;
+  background: linear-gradient(180deg, transparent 20%, rgba(250,245,238,0.55) 60%, rgba(250,245,238,0.9) 100%),
+              linear-gradient(90deg, rgba(250,245,238,0.85) 0%, rgba(250,245,238,0.35) 45%, transparent 65%);
+}
+.hero-content { position: relative; z-index: 2; padding: 2.25rem; max-width: 520px; }
+.hero-label {
+  font-size: 0.68rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.14em; color: var(--brand); margin-bottom: 0.5rem; display: block;
+}
+.hero-title {
+  font-family: var(--font-heading); font-size: clamp(1.6rem, 3.2vw, 2.4rem);
+  font-weight: 700; line-height: 1.12; letter-spacing: -0.03em;
+  color: var(--foreground); margin-bottom: 0.375rem;
+}
+.hero-author { font-size: 0.95rem; color: var(--muted-foreground); margin-bottom: 0.75rem; }
+.hero-desc {
+  font-size: 0.85rem; color: var(--muted-foreground); line-height: 1.55;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  margin-bottom: 1.25rem;
+}
+.hero-actions { display: flex; align-items: center; gap: 1rem; }
+.btn-play-hero {
+  width: 48px; height: 48px; border-radius: 50%;
+  background: var(--brand); color: var(--brand-foreground);
+  border: none; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 8px 24px rgba(94,106,210,0.3);
+  transition: all 0.2s; flex-shrink: 0;
+}
+.btn-play-hero:hover { background: var(--brand-hover); transform: scale(1.05); }
+.btn-play-hero svg { width: 20px; height: 20px; margin-left: 2px; }
+.hero-progress { font-size: 0.8rem; color: var(--muted-foreground); }
+.hero-progress strong { color: var(--foreground); font-weight: 600; }
+.btn-detail {
+  background: var(--card); border: 1px solid var(--border);
+  color: var(--foreground); padding: 0.45rem 1rem; border-radius: 9999px;
+  font-family: var(--font-body); font-weight: 500; font-size: 0.8rem;
+  cursor: pointer; transition: all 0.2s;
+  box-shadow: var(--shadow-card);
+}
+.btn-detail:hover { border-color: var(--brand); }
+
+/* Shelf section */
+.shelf-section { position: relative; }
+.shelf-header {
+  display: flex; align-items: baseline; justify-content: space-between;
+  margin-bottom: 0.75rem;
+}
+.shelf-heading {
+  font-family: var(--font-heading); font-weight: 600; font-size: 1rem;
+  letter-spacing: -0.01em; display: flex; align-items: baseline; gap: 0.5rem;
+}
+.shelf-count {
+  font-size: 0.68rem; font-weight: 700; color: var(--muted-foreground);
+  background: var(--muted); padding: 0.12rem 0.5rem; border-radius: 9999px;
+}
+.shelf-seeall {
+  font-size: 0.8rem; font-weight: 600; color: var(--brand-soft-foreground);
+  background: none; border: none; cursor: pointer; transition: color 0.2s;
+  font-family: var(--font-body);
+}
+.shelf-seeall:hover { color: var(--brand); }
+.shelf-scroll {
+  display: flex; gap: 0.875rem; overflow-x: auto;
+  scroll-snap-type: x mandatory; scrollbar-width: none;
+  padding-bottom: 0.5rem;
+}
+.shelf-scroll::-webkit-scrollbar { display: none; }
+
+/* Book card */
+.book-card {
+  flex-shrink: 0; width: 164px; scroll-snap-align: start;
+  cursor: pointer; transition: transform 0.2s ease;
+}
+.book-card:hover { transform: translateY(-3px); }
+.book-cover-wrap {
+  position: relative; aspect-ratio: 1; border-radius: var(--radius-xl);
+  overflow: hidden; margin-bottom: 0.55rem;
+  box-shadow: var(--shadow-card);
+}
+.book-cover { width: 100%; height: 100%; transition: transform 0.35s ease; }
+.book-card:hover .book-cover { transform: scale(1.05); }
+.book-cover-overlay {
+  position: absolute; inset: 0;
+  background: linear-gradient(180deg, transparent 55%, rgba(0,0,0,0.55) 100%);
+  opacity: 0; transition: opacity 0.2s;
+  display: flex; align-items: center; justify-content: center;
+}
+.book-card:hover .book-cover-overlay { opacity: 1; }
+.btn-cover-play {
+  width: 38px; height: 38px; border-radius: 50%;
+  background: var(--brand); color: var(--brand-foreground);
+  border: none; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 4px 16px rgba(94,106,210,0.3);
+  transform: translateY(6px); transition: all 0.25s ease;
+}
+.book-card:hover .btn-cover-play { transform: translateY(0); }
+.btn-cover-play svg { width: 16px; height: 16px; margin-left: 1px; }
+.book-progress-bar {
+  position: absolute; bottom: 0; left: 0; right: 0; height: 3px;
+  background: rgba(0,0,0,0.06);
+}
+.book-progress-fill { height: 100%; background: var(--brand); border-radius: 0 2px 2px 0; }
+.book-title {
+  font-weight: 600; font-size: 0.83rem; color: var(--foreground);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.book-author {
+  font-size: 0.76rem; color: var(--muted-foreground);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.book-badge {
+  position: absolute; top: 0.4rem; right: 0.4rem;
+  padding: 0.18rem 0.5rem; border-radius: 9999px;
+  font-size: 0.62rem; font-weight: 700;
+  background: var(--surface-glass); backdrop-filter: blur(8px);
+  color: var(--brand-soft-foreground);
+  border: 1px solid var(--surface-glass-border);
+}
+
+/* Browse tab */
+.browse-toolbar { display: flex; flex-direction: column; gap: 0.75rem; }
+.toolbar-row { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+.filter-pill {
+  padding: 0.38rem 0.85rem; border-radius: 9999px;
+  border: 1px solid var(--border); background: transparent;
+  color: var(--muted-foreground); font-family: var(--font-body);
+  font-size: 0.8rem; font-weight: 500; cursor: pointer;
+  transition: all 0.18s; white-space: nowrap;
+}
+.filter-pill:hover { border-color: var(--brand-soft-foreground); color: var(--foreground); }
+.filter-pill.active { background: var(--brand); color: var(--brand-foreground); border-color: var(--brand); }
+.filter-chip {
+  padding: 0.28rem 0.6rem 0.28rem 0.7rem; border-radius: 9999px;
+  background: var(--brand-soft); color: var(--brand-soft-foreground);
+  font-size: 0.73rem; font-weight: 500;
+  display: inline-flex; align-items: center; gap: 0.3rem;
+}
+.filter-chip button {
+  background: none; border: none; color: inherit; cursor: pointer;
+  font-size: 1rem; opacity: 0.6; padding: 0;
+}
+.filter-chip button:hover { opacity: 1; }
+.view-toggle {
+  display: flex; background: var(--muted); border-radius: 9999px; padding: 2px;
+}
+.view-toggle-btn {
+  width: 32px; height: 28px; border-radius: 9999px; border: none;
+  background: transparent; color: var(--muted-foreground); cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.18s;
+}
+.view-toggle-btn.active { background: var(--card); color: var(--foreground); box-shadow: 0 1px 2px rgba(0,0,0,0.06); }
+.view-toggle-btn svg { width: 14px; height: 14px; }
+
+.browse-grid {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.25rem;
+}
+.browse-card { cursor: pointer; transition: transform 0.2s; }
+.browse-card:hover { transform: translateY(-2px); }
+.browse-cover {
+  aspect-ratio: 2/3; border-radius: var(--radius-lg); overflow: hidden;
+  margin-bottom: 0.5rem; position: relative;
+  box-shadow: var(--shadow-card);
+}
+.browse-cover-bg { width: 100%; height: 100%; }
+.browse-badge {
+  position: absolute; top: 0.4rem; right: 0.4rem;
+  padding: 0.18rem 0.5rem; border-radius: 9999px;
+  font-size: 0.62rem; font-weight: 700;
+  background: var(--surface-glass); backdrop-filter: blur(8px);
+  border: 1px solid var(--surface-glass-border);
+}
+.badge-reading { color: var(--brand-soft-foreground); }
+.badge-unread { color: var(--muted-foreground); }
+.badge-finished { color: var(--success); }
+
+/* Collections */
+.collections-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.25rem; }
+.collection-card {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: var(--radius-xl); padding: 1.25rem; cursor: pointer;
+  transition: all 0.2s ease; box-shadow: var(--shadow-card);
+}
+.collection-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-brand); border-color: var(--brand-soft); }
+.collection-covers {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 0.2rem;
+  aspect-ratio: 1; border-radius: var(--radius-md); overflow: hidden;
+  margin-bottom: 0.75rem;
+}
+.collection-covers div { border-radius: 2px; }
+.collection-name { font-weight: 600; font-size: 0.92rem; }
+.collection-count { font-size: 0.78rem; color: var(--muted-foreground); margin-top: 0.15rem; }
+.btn-create-collection {
+  background: none; border: 1.5px dashed var(--border);
+  border-radius: 9999px; padding: 0.5rem 1.15rem;
+  font-family: var(--font-body); font-weight: 600; font-size: 0.85rem;
+  color: var(--muted-foreground); cursor: pointer;
+  transition: all 0.2s; display: inline-flex; align-items: center; gap: 0.35rem;
+}
+.btn-create-collection:hover { border-color: var(--brand); color: var(--brand); background: var(--brand-soft); }
+
+/* History */
+.stats-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 1.25rem; }
+.stat-card {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: var(--radius-xl); padding: 1.35rem; text-align: center;
+  box-shadow: var(--shadow-card);
+}
+.stat-value {
+  font-family: var(--font-heading); font-size: 2.2rem; font-weight: 700;
+  letter-spacing: -0.03em; color: var(--brand-soft-foreground);
+}
+.stat-label { font-size: 0.78rem; color: var(--muted-foreground); margin-top: 0.15rem; }
+.history-list { display: flex; flex-direction: column; gap: 0.375rem; }
+.history-item {
+  display: flex; align-items: center; gap: 0.875rem;
+  padding: 0.75rem 1rem; background: var(--card);
+  border: 1px solid var(--border); border-radius: var(--radius-lg);
+  transition: all 0.18s; box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+}
+.history-item:hover { background: var(--surface-elevated); transform: translateX(3px); }
+.history-cover { width: 40px; height: 40px; border-radius: var(--radius-sm); flex-shrink: 0; }
+.history-info { flex: 1; min-width: 0; }
+.history-title { font-weight: 600; font-size: 0.88rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.history-meta { font-size: 0.75rem; color: var(--muted-foreground); }
+.history-rating { color: var(--gold); font-size: 0.82rem; letter-spacing: 0.08em; }
+.history-date { font-size: 0.78rem; color: var(--muted-foreground); white-space: nowrap; font-weight: 500; }
+
+/* Section divider */
+.section-divider { height: 1px; background: var(--border); margin: 0.25rem 0; }
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .sidebar { width: 68px; padding: 1.25rem 0.5rem; }
+  .sidebar-logo { font-size: 0; }
+  .sidebar-logo::after { content: 'K'; font-size: 1.2rem; font-family: var(--font-heading); font-weight: 700; }
+  .sidebar-link span { display: none; }
+  .sidebar-link { justify-content: center; padding: 0.6rem; }
+  .browse-grid { grid-template-columns: repeat(3, 1fr); }
+  .collections-grid { grid-template-columns: repeat(2, 1fr); }
+  .tab-panel, .header { padding-left: 1.25rem; padding-right: 1.25rem; }
+  .tab-bar { padding-left: 1.25rem; padding-right: 1.25rem; }
+}
+@media (max-width: 640px) {
+  .sidebar { display: none; }
+  .browse-grid { grid-template-columns: repeat(2, 1fr); gap: 0.75rem; }
+  .collections-grid, .stats-row { grid-template-columns: 1fr; }
+  .tab-panel { padding: 1rem; gap: 1.25rem; }
+  .hero { min-height: 280px; border-radius: var(--radius-xl); }
+  .hero-content { padding: 1.35rem; }
+  .tab-bar { padding: 0.375rem 1rem; overflow-x: auto; }
+  .book-card { width: 140px; }
+  .header { padding: 0.625rem 1rem; }
+  .header-search input { width: 140px; }
+}
+
+/* ==========================================================================
+   Dark mode adjustments for hero gradient (handled via CSS custom props)
+   ========================================================================== */
+.dark .hero-bg {
+  background: linear-gradient(145deg, #1e1f35 0%, #1f2038 25%, #1a1b2e 55%, #1a1b26 100%);
+}
+.dark .hero-bg::before {
+  background:
+    radial-gradient(ellipse 70% 50% at 25% 30%, rgba(96,105,192,0.12), transparent 55%),
+    radial-gradient(ellipse 50% 40% at 75% 60%, rgba(218,168,96,0.08), transparent 50%);
+}
+.dark .hero-overlay {
+  background: linear-gradient(180deg, transparent 20%, rgba(26,27,38,0.55) 60%, rgba(26,27,38,0.92) 100%),
+              linear-gradient(90deg, rgba(26,27,38,0.88) 0%, rgba(26,27,38,0.35) 45%, transparent 65%);
+}
+.dark .book-badge { color: var(--brand-soft-foreground); }
+.dark .browse-badge { color: var(--muted-foreground); }
+.dark .badge-reading { color: var(--brand-soft-foreground); }
+.dark .badge-finished { color: var(--success); }
+</style>
+</head>
+<body>
+
+<div class="app">
+
+<aside class="sidebar">
+  <div class="sidebar-logo">Knowlune</div>
+  <nav class="sidebar-nav">
+    <a class="sidebar-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg> <span>Discover</span></a>
+    <a class="sidebar-link active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="3" width="8" height="7" rx="1.5"/><rect x="14" y="3" width="8" height="7" rx="1.5"/><rect x="2" y="14" width="8" height="7" rx="1.5"/><rect x="14" y="14" width="8" height="7" rx="1.5"/></svg> <span>Library</span></a>
+    <a class="sidebar-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="2" width="20" height="20" rx="2.5"/><path d="M2 9h20M9 21V9"/></svg> <span>Collections</span></a>
+    <a class="sidebar-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><path d="M12 8v8M8 12h8"/></svg> <span>Archive</span></a>
+  </nav>
+  <div class="sidebar-bottom">
+    <button class="theme-toggle" onclick="document.documentElement.classList.toggle('dark')" title="Toggle theme">
+      <svg class="sun-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+      <svg class="moon-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+    </button>
+  </div>
+</aside>
+
+<div class="main">
+
+<header class="header">
+  <div class="header-left">
+    <h1 class="header-title">Library</h1>
+    <div class="header-search">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+      <input type="text" placeholder="Search library..."/>
+    </div>
+  </div>
+  <div class="header-actions">
+    <button class="btn-brand">+ Import</button>
+    <div class="avatar"></div>
+  </div>
+</header>
+
+<div class="tab-bar">
+  <button class="tab-underline active" data-tab="continue">Continue</button>
+  <button class="tab-underline" data-tab="browse">Browse</button>
+  <button class="tab-underline" data-tab="collections">Collections</button>
+  <button class="tab-underline" data-tab="history">History</button>
+</div>
+
+<div class="content-scroll">
+
+<!-- CONTINUE -->
+<div class="tab-panel active" id="tab-continue">
+
+  <section class="hero">
+    <div class="hero-bg"></div><div class="hero-overlay"></div>
+    <div class="hero-content">
+      <span class="hero-label">Pick up where you left off</span>
+      <h2 class="hero-title">The Quantum Thief's Dilemma</h2>
+      <p class="hero-author">Elena Vasquez</p>
+      <p class="hero-desc">A high-stakes heist through parallel dimensions where the rules of physics are as flexible as the protagonist's morals.</p>
+      <div class="hero-actions">
+        <button class="btn-play-hero"><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="6,3 20,12 6,21"/></svg></button>
+        <div>
+          <div class="hero-progress"><strong>64% complete</strong> &middot; Chapter 8 of 14</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="shelf-section">
+    <div class="shelf-header">
+      <div class="shelf-heading">Continue Reading <span class="shelf-count">4</span></div>
+      <button class="shelf-seeall">See All</button>
+    </div>
+    <div class="shelf-scroll">
+      <div class="book-card">
+        <div class="book-cover-wrap">
+          <div class="book-cover" style="background:linear-gradient(150deg,#d0c8e8,#b0a4d8,#9080c8)"></div>
+          <div class="book-cover-overlay"><button class="btn-cover-play"><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="6,3 20,12 6,21"/></svg></button></div>
+          <div class="book-progress-bar"><div class="book-progress-fill" style="width:75%"></div></div>
+        </div>
+        <div class="book-title">Echoes of Silence</div>
+        <div class="book-author">J.K. Sterling</div>
+      </div>
+      <div class="book-card">
+        <div class="book-cover-wrap">
+          <div class="book-cover" style="background:linear-gradient(150deg,#e8ccbc,#d8a890,#c8846c)"></div>
+          <div class="book-cover-overlay"><button class="btn-cover-play"><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="6,3 20,12 6,21"/></svg></button></div>
+          <div class="book-progress-bar"><div class="book-progress-fill" style="width:22%"></div></div>
+        </div>
+        <div class="book-title">The Concrete Horizon</div>
+        <div class="book-author">Marcus Vance</div>
+      </div>
+      <div class="book-card">
+        <div class="book-cover-wrap">
+          <div class="book-cover" style="background:linear-gradient(150deg,#bcd8c4,#94c0a0,#6ca87c)"></div>
+          <div class="book-cover-overlay"><button class="btn-cover-play"><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="6,3 20,12 6,21"/></svg></button></div>
+          <div class="book-progress-bar"><div class="book-progress-fill" style="width:48%"></div></div>
+        </div>
+        <div class="book-title">Green Worlds</div>
+        <div class="book-author">Sarah Chen</div>
+      </div>
+      <div class="book-card">
+        <div class="book-cover-wrap">
+          <div class="book-cover" style="background:linear-gradient(150deg,#e0d4c0,#d0c0a0,#c0ac80)"></div>
+          <div class="book-cover-overlay"><button class="btn-cover-play"><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="6,3 20,12 6,21"/></svg></button></div>
+          <div class="book-progress-bar"><div class="book-progress-fill" style="width:91%"></div></div>
+          <span class="book-badge">Almost done</span>
+        </div>
+        <div class="book-title">Dust &amp; Embers</div>
+        <div class="book-author">Ravi Patel</div>
+      </div>
+      <div class="book-card">
+        <div class="book-cover-wrap">
+          <div class="book-cover" style="background:linear-gradient(150deg,#c8c8e0,#a8a8d0,#8888c0)"></div>
+          <div class="book-cover-overlay"><button class="btn-cover-play"><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="6,3 20,12 6,21"/></svg></button></div>
+          <div class="book-progress-bar"><div class="book-progress-fill" style="width:12%"></div></div>
+        </div>
+        <div class="book-title">The Last Algorithm</div>
+        <div class="book-author">David Okonkwo</div>
+      </div>
+    </div>
+  </section>
+
+  <div class="section-divider"></div>
+
+  <section class="shelf-section">
+    <div class="shelf-header">
+      <div class="shelf-heading">Recently Added <span class="shelf-count">6</span></div>
+      <button class="shelf-seeall">See All</button>
+    </div>
+    <div class="shelf-scroll">
+      <div class="book-card">
+        <div class="book-cover-wrap" style="box-shadow:var(--shadow-card)">
+          <div class="book-cover" style="background:linear-gradient(150deg,#d8c4e4,#c0a4d4,#a884c4)"></div>
+        </div>
+        <div class="book-title">Neon Requiem</div>
+        <div class="book-author">Aiko Tanaka</div>
+      </div>
+      <div class="book-card">
+        <div class="book-cover-wrap" style="box-shadow:var(--shadow-card)">
+          <div class="book-cover" style="background:linear-gradient(150deg,#bcd4d8,#98bcc4,#74a4b0)"></div>
+        </div>
+        <div class="book-title">Deep Ocean Theory</div>
+        <div class="book-author">James Morrison</div>
+      </div>
+      <div class="book-card">
+        <div class="book-cover-wrap" style="box-shadow:var(--shadow-card)">
+          <div class="book-cover" style="background:linear-gradient(150deg,#e0bcc4,#d49ca8,#c87c90)"></div>
+        </div>
+        <div class="book-title">Crimson Threads</div>
+        <div class="book-author">Lena Okafor</div>
+      </div>
+      <div class="book-card">
+        <div class="book-cover-wrap" style="box-shadow:var(--shadow-card)">
+          <div class="book-cover" style="background:linear-gradient(150deg,#d8ccb8,#c8b898,#b8a478)"></div>
+        </div>
+        <div class="book-title">Iron Roots</div>
+        <div class="book-author">Thomas Berg</div>
+      </div>
+      <div class="book-card">
+        <div class="book-cover-wrap" style="box-shadow:var(--shadow-card)">
+          <div class="book-cover" style="background:linear-gradient(150deg,#bcc4d8,#98a8c4,#748cb0)"></div>
+        </div>
+        <div class="book-title">Arctic Code</div>
+        <div class="book-author">Nina Holm</div>
+      </div>
+      <div class="book-card">
+        <div class="book-cover-wrap" style="box-shadow:var(--shadow-card)">
+          <div class="book-cover" style="background:linear-gradient(150deg,#c4bcd8,#a898c4,#8c74b0)"></div>
+        </div>
+        <div class="book-title">Phantom Circuits</div>
+        <div class="book-author">Leo Kim</div>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<!-- BROWSE -->
+<div class="tab-panel" id="tab-browse">
+  <div class="browse-toolbar">
+    <div class="toolbar-row">
+      <div class="header-search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+        <input type="text" placeholder="Filter by title, author..." style="width:260px"/>
+      </div>
+      <button class="filter-pill active">All Formats</button>
+      <button class="filter-pill">Audiobooks</button>
+      <button class="filter-pill">Ebooks</button>
+      <span style="color:var(--muted-foreground);margin:0 0.1rem;font-size:0.75rem">&middot;</span>
+      <button class="filter-pill active">All Status</button>
+      <button class="filter-pill">Reading</button>
+      <button class="filter-pill">Unread</button>
+      <button class="filter-pill">Finished</button>
+      <div class="view-toggle" style="margin-left:auto">
+        <button class="view-toggle-btn active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></button>
+        <button class="view-toggle-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
+      </div>
+    </div>
+    <div class="toolbar-row">
+      <span class="filter-chip">Science Fiction <button>&times;</button></span>
+      <span class="filter-chip">Reading <button>&times;</button></span>
+    </div>
+  </div>
+  <div class="browse-grid">
+    <div class="browse-card"><div class="browse-cover"><div class="browse-cover-bg" style="background:linear-gradient(160deg,#d0c8e8,#a8a0d4)"></div><span class="browse-badge badge-reading">Reading</span></div><div class="book-title">The Quantum Thief's Dilemma</div><div class="book-author">Elena Vasquez</div></div>
+    <div class="browse-card"><div class="browse-cover"><div class="browse-cover-bg" style="background:linear-gradient(160deg,#e8ccbc,#d4a890)"></div><span class="browse-badge badge-unread">Unread</span></div><div class="book-title">The Concrete Horizon</div><div class="book-author">Marcus Vance</div></div>
+    <div class="browse-card"><div class="browse-cover"><div class="browse-cover-bg" style="background:linear-gradient(160deg,#bcd8c4,#94c0a0)"></div><span class="browse-badge badge-finished">Finished</span></div><div class="book-title">Green Worlds</div><div class="book-author">Sarah Chen</div></div>
+    <div class="browse-card"><div class="browse-cover"><div class="browse-cover-bg" style="background:linear-gradient(160deg,#d8ccb8,#c4b898)"></div><span class="browse-badge badge-reading">Reading</span></div><div class="book-title">Iron Roots</div><div class="book-author">Thomas Berg</div></div>
+    <div class="browse-card"><div class="browse-cover"><div class="browse-cover-bg" style="background:linear-gradient(160deg,#c8c8e0,#a4a4d0)"></div><span class="browse-badge badge-unread">Unread</span></div><div class="book-title">The Last Algorithm</div><div class="book-author">David Okonkwo</div></div>
+    <div class="browse-card"><div class="browse-cover"><div class="browse-cover-bg" style="background:linear-gradient(160deg,#d8c4e4,#bc98d4)"></div><span class="browse-badge badge-finished">Finished</span></div><div class="book-title">Neon Requiem</div><div class="book-author">Aiko Tanaka</div></div>
+    <div class="browse-card"><div class="browse-cover"><div class="browse-cover-bg" style="background:linear-gradient(160deg,#bcd4d8,#94bcc4)"></div><span class="browse-badge badge-reading">Reading</span></div><div class="book-title">Deep Ocean Theory</div><div class="book-author">James Morrison</div></div>
+    <div class="browse-card"><div class="browse-cover"><div class="browse-cover-bg" style="background:linear-gradient(160deg,#e0bcc4,#d490a0)"></div><span class="browse-badge badge-unread">Unread</span></div><div class="book-title">Crimson Threads</div><div class="book-author">Lena Okafor</div></div>
+  </div>
+</div>
+
+<!-- COLLECTIONS -->
+<div class="tab-panel" id="tab-collections">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.25rem">
+    <h2 style="font-family:var(--font-heading);font-weight:600;font-size:1.1rem">Your Collections</h2>
+    <button class="btn-create-collection">+ New Collection</button>
+  </div>
+  <div class="collections-grid">
+    <div class="collection-card">
+      <div class="collection-covers">
+        <div style="background:linear-gradient(135deg,#bcc8e0,#90a0d0)"></div><div style="background:linear-gradient(135deg,#dcb8b8,#cc9090)"></div>
+        <div style="background:linear-gradient(135deg,#bcd8c0,#90c098)"></div><div style="background:linear-gradient(135deg,#bcbcd8,#9090c0)"></div>
+      </div>
+      <div class="collection-name">Sci-Fi Classics</div><div class="collection-count">8 books</div>
+    </div>
+    <div class="collection-card">
+      <div class="collection-covers">
+        <div style="background:linear-gradient(135deg,#dcc4b0,#cca878)"></div><div style="background:linear-gradient(135deg,#dcbcdc,#c898c8)"></div>
+        <div style="background:linear-gradient(135deg,#bcd8cc,#90c0a8)"></div><div style="background:linear-gradient(135deg,#dcc4a0,#cca868)"></div>
+      </div>
+      <div class="collection-name">2026 Reading Challenge</div><div class="collection-count">5 books</div>
+    </div>
+    <div class="collection-card">
+      <div class="collection-covers">
+        <div style="background:linear-gradient(135deg,#bcc0d8,#9098c0)"></div><div style="background:linear-gradient(135deg,#ccd0d8,#a0a8c0)"></div>
+        <div style="background:linear-gradient(135deg,#bcd0cc,#90a8a0)"></div><div style="background:linear-gradient(135deg,#ccd0cc,#a0a8a0)"></div>
+      </div>
+      <div class="collection-name">Philosophy Deep Dives</div><div class="collection-count">3 books</div>
+    </div>
+    <div class="collection-card">
+      <div class="collection-covers">
+        <div style="background:linear-gradient(135deg,#dcbcd0,#cc90b0)"></div><div style="background:linear-gradient(135deg,#bcd8bc,#90c090)"></div>
+        <div style="background:linear-gradient(135deg,#bcc8d8,#9098c0)"></div><div style="background:linear-gradient(135deg,#dcccbc,#ccb090)"></div>
+      </div>
+      <div class="collection-name">Weekend Listens</div><div class="collection-count">6 books</div>
+    </div>
+    <div class="collection-card" style="display:flex;align-items:center;justify-content:center;border-style:dashed;border-color:var(--border)">
+      <button class="btn-create-collection" style="border:none">+ Create Collection</button>
+    </div>
+  </div>
+</div>
+
+<!-- HISTORY -->
+<div class="tab-panel" id="tab-history">
+  <div class="stats-row">
+    <div class="stat-card"><div class="stat-value">12</div><div class="stat-label">Books finished this year</div></div>
+    <div class="stat-card"><div class="stat-value">4,200</div><div class="stat-label">Pages read</div></div>
+    <div class="stat-card"><div class="stat-value">142h</div><div class="stat-label">Hours listened</div></div>
+  </div>
+  <h2 style="font-family:var(--font-heading);font-weight:600;font-size:1rem;margin-bottom:0.75rem">Recently Finished</h2>
+  <div class="history-list">
+    <div class="history-item">
+      <div class="history-cover" style="background:linear-gradient(135deg,#bcd8c4,#94c0a0)"></div>
+      <div class="history-info"><div class="history-title">Green Worlds</div><div class="history-meta">Sarah Chen &middot; 320 pages</div></div>
+      <div class="history-rating">&#9733;&#9733;&#9733;&#9733;&#9734;</div>
+      <div class="history-date">Apr 28, 2026</div>
+    </div>
+    <div class="history-item">
+      <div class="history-cover" style="background:linear-gradient(135deg,#e0bcc4,#d490a0)"></div>
+      <div class="history-info"><div class="history-title">Crimson Threads</div><div class="history-meta">Lena Okafor &middot; 8h 12m</div></div>
+      <div class="history-rating">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
+      <div class="history-date">Apr 15, 2026</div>
+    </div>
+    <div class="history-item">
+      <div class="history-cover" style="background:linear-gradient(135deg,#d8c4e4,#bc98d4)"></div>
+      <div class="history-info"><div class="history-title">Neon Requiem</div><div class="history-meta">Aiko Tanaka &middot; 445 pages</div></div>
+      <div class="history-rating">&#9733;&#9733;&#9733;&#9734;&#9734;</div>
+      <div class="history-date">Mar 30, 2026</div>
+    </div>
+    <div class="history-item">
+      <div class="history-cover" style="background:linear-gradient(135deg,#d8ccb8,#c4b898)"></div>
+      <div class="history-info"><div class="history-title">Iron Roots</div><div class="history-meta">Thomas Berg &middot; 12h 45m</div></div>
+      <div class="history-rating">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
+      <div class="history-date">Mar 12, 2026</div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /content-scroll -->
+</div><!-- /main -->
+</div><!-- /app -->
+
+<script>
+document.querySelectorAll('.tab-underline').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-underline').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+  });
+});
+document.querySelectorAll('.filter-pill').forEach(pill => {
+  pill.addEventListener('click', function() { this.classList.toggle('active'); });
+});
+document.querySelectorAll('.view-toggle-btn').forEach(btn => {
+  btn.addEventListener('click', function() {
+    this.parentElement.querySelectorAll('.view-toggle-btn').forEach(b => b.classList.remove('active'));
+    this.classList.add('active');
+  });
+});
+</script>
+</body>
+</html>

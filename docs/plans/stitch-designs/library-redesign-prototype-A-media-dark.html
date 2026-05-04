@@ -1,0 +1,1136 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Knowlune Library — Media/Dark</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400..700;1,9..40,400..700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --bg: #1a1b26;
+  --fg: #e8e9f0;
+  --card: #242536;
+  --card-hover: #2a2b3e;
+  --muted: #32334a;
+  --muted-fg: #b2b5c8;
+  --border: rgba(255,255,255,0.06);
+  --border-strong: rgba(255,255,255,0.10);
+  --brand: #6069c0;
+  --brand-hover: #5660b3;
+  --brand-fg: #ffffff;
+  --brand-soft: #2a2c48;
+  --brand-soft-fg: #a0a8eb;
+  --surface-elevated: #2a2b3e;
+  --surface-sunken: #151620;
+  --radius-lg: 0.625rem;
+  --radius-xl: 1rem;
+  --radius-2xl: 1.25rem;
+  --font-body: 'DM Sans', system-ui, sans-serif;
+  --font-heading: 'Space Grotesk', system-ui, sans-serif;
+  --glass-bg: rgba(26,27,38,0.82);
+  --glass-border: rgba(255,255,255,0.08);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { font-size: 16px; }
+body {
+  font-family: var(--font-body);
+  background: var(--bg);
+  color: var(--fg);
+  min-height: 100vh;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Subtle noise texture overlay */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.03;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 256px 256px;
+}
+
+.app { position: relative; z-index: 1; display: flex; min-height: 100vh; }
+
+/* Sidebar */
+.sidebar {
+  width: 240px;
+  flex-shrink: 0;
+  background: var(--surface-sunken);
+  border-right: 1px solid var(--border);
+  padding: 1.5rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  z-index: 20;
+}
+.sidebar-logo {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 1.25rem;
+  letter-spacing: -0.03em;
+  color: var(--fg);
+  padding: 0 0.5rem;
+}
+.sidebar-nav { display: flex; flex-direction: column; gap: 0.25rem; }
+.sidebar-link {
+  display: flex; align-items: center; gap: 0.75rem;
+  padding: 0.625rem 0.75rem;
+  border-radius: var(--radius-lg);
+  color: var(--muted-fg);
+  font-size: 0.9rem;
+  font-weight: 500;
+  text-decoration: none;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+.sidebar-link:hover { background: var(--card); color: var(--fg); }
+.sidebar-link.active { background: var(--brand-soft); color: var(--brand-soft-fg); font-weight: 600; }
+.sidebar-link svg { width: 18px; height: 18px; flex-shrink: 0; }
+.sidebar-bottom { margin-top: auto; }
+.sidebar-upgrade {
+  display: block; width: 100%; padding: 0.625rem;
+  background: linear-gradient(135deg, var(--brand), #7b83d6);
+  color: var(--brand-fg);
+  border: none; border-radius: var(--radius-lg);
+  font-family: var(--font-body); font-weight: 600; font-size: 0.85rem;
+  cursor: pointer; text-align: center;
+  transition: opacity 0.2s;
+}
+.sidebar-upgrade:hover { opacity: 0.9; }
+
+/* Main */
+.main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+
+/* Header */
+.header {
+  position: sticky; top: 0; z-index: 30;
+  background: var(--glass-bg);
+  backdrop-filter: blur(20px) saturate(1.4);
+  -webkit-backdrop-filter: blur(20px) saturate(1.4);
+  border-bottom: 1px solid var(--glass-border);
+  padding: 0.875rem 2rem;
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 1.5rem;
+}
+.header-left { display: flex; align-items: center; gap: 1rem; }
+.header-title {
+  font-family: var(--font-heading);
+  font-weight: 700; font-size: 1.15rem;
+  letter-spacing: -0.02em;
+}
+.header-search {
+  position: relative;
+}
+.header-search svg {
+  position: absolute; left: 0.75rem; top: 50%; transform: translateY(-50%);
+  width: 16px; height: 16px; color: var(--muted-fg); pointer-events: none;
+}
+.header-search input {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 9999px;
+  padding: 0.5rem 1rem 0.5rem 2.5rem;
+  color: var(--fg);
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  width: 260px;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.header-search input:focus {
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px rgba(96,105,192,0.15);
+}
+.header-search input::placeholder { color: var(--muted-fg); }
+.header-actions { display: flex; align-items: center; gap: 0.75rem; }
+.btn-import {
+  background: var(--brand);
+  color: var(--brand-fg);
+  border: none;
+  padding: 0.5rem 1.25rem;
+  border-radius: 9999px;
+  font-family: var(--font-body);
+  font-weight: 600; font-size: 0.85rem;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.15s;
+}
+.btn-import:hover { background: var(--brand-hover); transform: translateY(-1px); }
+.avatar {
+  width: 34px; height: 34px; border-radius: 50%;
+  background: linear-gradient(135deg, #7b83d6, #4a5290);
+  border: 2px solid var(--border-strong);
+  flex-shrink: 0;
+}
+
+/* Tab bar */
+.tab-bar {
+  display: flex; gap: 0.25rem;
+  padding: 0.75rem 2rem;
+  background: var(--surface-sunken);
+  border-bottom: 1px solid var(--border);
+}
+.tab-btn {
+  padding: 0.5rem 1.25rem;
+  border-radius: 9999px;
+  border: none;
+  background: transparent;
+  color: var(--muted-fg);
+  font-family: var(--font-body);
+  font-weight: 500; font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+.tab-btn:hover { color: var(--fg); background: var(--card); }
+.tab-btn.active { background: var(--brand); color: var(--brand-fg); font-weight: 600; }
+
+/* Tab panels */
+.tab-panel { display: none; flex-direction: column; gap: 2rem; padding: 2rem; }
+.tab-panel.active { display: flex; }
+.content-scroll { flex: 1; overflow-y: auto; }
+
+/* Cinematic Hero */
+.hero {
+  position: relative;
+  border-radius: var(--radius-2xl);
+  overflow: hidden;
+  min-height: 380px;
+  display: flex; align-items: flex-end;
+  isolation: isolate;
+}
+.hero-bg {
+  position: absolute; inset: 0; z-index: 0;
+  background:
+    radial-gradient(ellipse 80% 60% at 30% 40%, rgba(123,131,214,0.25), transparent 60%),
+    radial-gradient(ellipse 60% 70% at 80% 20%, rgba(160,168,235,0.15), transparent 50%),
+    radial-gradient(ellipse 100% 50% at 50% 100%, rgba(74,82,144,0.3), transparent 50%),
+    linear-gradient(160deg, #1e1f35 0%, #1a1b30 30%, #151620 70%, #1a1b30 100%);
+}
+.hero-bg::after {
+  content: '';
+  position: absolute; inset: 0;
+  background:
+    repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(255,255,255,0.008) 2px, rgba(255,255,255,0.008) 4px);
+  mask-image: radial-gradient(ellipse 80% 60% at 30% 40%, black 30%, transparent 70%);
+}
+.hero-overlay {
+  position: absolute; inset: 0; z-index: 1;
+  background: linear-gradient(180deg, transparent 20%, rgba(21,22,32,0.6) 60%, rgba(21,22,32,0.92) 100%),
+              linear-gradient(90deg, rgba(21,22,32,0.85) 0%, rgba(21,22,32,0.4) 40%, transparent 65%);
+}
+.hero-content {
+  position: relative; z-index: 2;
+  padding: 2.5rem;
+  max-width: 560px;
+}
+.hero-label {
+  font-size: 0.7rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.15em;
+  color: var(--brand-soft-fg);
+  margin-bottom: 0.75rem;
+  display: block;
+}
+.hero-title {
+  font-family: var(--font-heading);
+  font-size: clamp(1.75rem, 3.5vw, 2.75rem);
+  font-weight: 700; line-height: 1.15;
+  letter-spacing: -0.03em;
+  color: #ffffff;
+  margin-bottom: 0.5rem;
+}
+.hero-author { font-size: 1rem; color: var(--brand-soft-fg); margin-bottom: 1rem; }
+.hero-desc {
+  font-size: 0.9rem; color: rgba(232,233,240,0.7);
+  line-height: 1.6; margin-bottom: 1.5rem;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.hero-actions { display: flex; align-items: center; gap: 1rem; }
+.btn-play {
+  width: 52px; height: 52px; border-radius: 50%;
+  background: var(--brand);
+  color: var(--brand-fg);
+  border: none; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.2s ease;
+  box-shadow: 0 8px 32px rgba(96,105,192,0.35);
+  flex-shrink: 0;
+}
+.btn-play:hover { background: var(--brand-hover); transform: scale(1.06); box-shadow: 0 12px 40px rgba(96,105,192,0.45); }
+.btn-play svg { width: 22px; height: 22px; margin-left: 2px; }
+.hero-progress { font-size: 0.8rem; color: var(--muted-fg); }
+.hero-progress strong { color: var(--fg); font-weight: 600; }
+
+/* Shelf section */
+.shelf-section { position: relative; }
+.shelf-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 0.875rem;
+}
+.shelf-heading {
+  display: flex; align-items: center; gap: 0.625rem;
+  font-family: var(--font-heading);
+  font-weight: 600; font-size: 1rem;
+  letter-spacing: -0.01em;
+}
+.shelf-count {
+  font-size: 0.7rem; font-weight: 700;
+  background: var(--muted); color: var(--muted-fg);
+  padding: 0.15rem 0.5rem; border-radius: 9999px;
+}
+.shelf-arrows { display: flex; gap: 0.25rem; }
+.shelf-arrow {
+  width: 30px; height: 30px; border-radius: 50%;
+  background: var(--card); border: 1px solid var(--border);
+  color: var(--muted-fg); cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.2s;
+  opacity: 0; transition: opacity 0.2s, background 0.2s, color 0.2s;
+}
+.shelf-section:hover .shelf-arrow { opacity: 1; }
+.shelf-arrow:hover { background: var(--brand-soft); color: var(--brand-soft-fg); border-color: transparent; }
+.shelf-scroll {
+  display: flex; gap: 0.875rem;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  padding-bottom: 0.5rem;
+}
+.shelf-scroll::-webkit-scrollbar { display: none; }
+
+/* Book card */
+.book-card {
+  flex-shrink: 0; width: 170px;
+  scroll-snap-align: start;
+  cursor: pointer;
+  transition: transform 0.25s ease;
+}
+.book-card:hover { transform: translateY(-4px); }
+.book-cover-wrap {
+  position: relative;
+  aspect-ratio: 1;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  margin-bottom: 0.625rem;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+  border: 1px solid var(--border);
+}
+.book-cover {
+  width: 100%; height: 100%;
+  transition: transform 0.4s ease;
+}
+.book-card:hover .book-cover { transform: scale(1.06); }
+.book-cover-overlay {
+  position: absolute; inset: 0;
+  background: linear-gradient(180deg, transparent 55%, rgba(0,0,0,0.7) 100%);
+  opacity: 0; transition: opacity 0.25s ease;
+  display: flex; align-items: center; justify-content: center;
+}
+.book-card:hover .book-cover-overlay { opacity: 1; }
+.btn-cover-play {
+  width: 42px; height: 42px; border-radius: 50%;
+  background: rgba(255,255,255,0.2);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255,255,255,0.2);
+  color: white; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.2s;
+  transform: translateY(8px); transition: transform 0.3s ease, background 0.2s;
+}
+.book-card:hover .btn-cover-play { transform: translateY(0); }
+.btn-cover-play:hover { background: var(--brand); }
+.btn-cover-play svg { width: 18px; height: 18px; margin-left: 1px; }
+.book-progress-bar {
+  position: absolute; bottom: 0; left: 0; right: 0; height: 3px;
+  background: rgba(255,255,255,0.1);
+}
+.book-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--brand), #7b83d6);
+  border-radius: 0 2px 2px 0;
+  transition: width 0.5s ease;
+}
+.book-title {
+  font-weight: 600; font-size: 0.85rem;
+  color: var(--fg);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  line-height: 1.3;
+}
+.book-author {
+  font-size: 0.78rem; color: var(--muted-fg);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  margin-top: 0.125rem;
+}
+
+/* Browse tab */
+.browse-filters {
+  display: flex; flex-direction: column; gap: 0.75rem;
+}
+.filter-row {
+  display: flex; align-items: center; gap: 0.625rem;
+  flex-wrap: wrap;
+}
+.filter-pill {
+  padding: 0.4rem 0.95rem;
+  border-radius: 9999px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--muted-fg);
+  font-family: var(--font-body);
+  font-size: 0.8rem; font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+.filter-pill:hover { border-color: var(--border-strong); color: var(--fg); }
+.filter-pill.active { background: var(--brand); color: var(--brand-fg); border-color: var(--brand); }
+.filter-chip {
+  padding: 0.3rem 0.65rem 0.3rem 0.75rem;
+  border-radius: 9999px;
+  background: var(--brand-soft);
+  color: var(--brand-soft-fg);
+  font-size: 0.75rem; font-weight: 500;
+  display: inline-flex; align-items: center; gap: 0.35rem;
+}
+.filter-chip button {
+  background: none; border: none; color: inherit;
+  cursor: pointer; font-size: 1rem; line-height: 1;
+  opacity: 0.7; transition: opacity 0.15s;
+  padding: 0;
+}
+.filter-chip button:hover { opacity: 1; }
+.browse-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1.25rem;
+}
+.browse-card { cursor: pointer; transition: transform 0.25s ease; }
+.browse-card:hover { transform: translateY(-3px); }
+.browse-cover {
+  aspect-ratio: 2/3;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  margin-bottom: 0.5rem;
+  border: 1px solid var(--border);
+  position: relative;
+}
+.browse-cover-bg { width: 100%; height: 100%; }
+.browse-status {
+  position: absolute; top: 0.5rem; right: 0.5rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: 9999px;
+  font-size: 0.65rem; font-weight: 700;
+  backdrop-filter: blur(8px);
+}
+.status-reading { background: rgba(96,105,192,0.3); color: var(--brand-soft-fg); }
+.status-unread { background: rgba(232,233,240,0.12); color: var(--muted-fg); }
+.status-finished { background: rgba(106,184,136,0.2); color: #6ab888; }
+
+/* Collections tab */
+.collections-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.25rem;
+}
+.collection-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  padding: 1.25rem;
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+.collection-card:hover { background: var(--card-hover); transform: translateY(-2px); border-color: var(--border-strong); }
+.collection-covers {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 0.25rem;
+  aspect-ratio: 1;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  margin-bottom: 0.875rem;
+}
+.collection-covers div { border-radius: 2px; }
+.collection-name { font-weight: 600; font-size: 0.95rem; }
+.collection-count { font-size: 0.8rem; color: var(--muted-fg); margin-top: 0.25rem; }
+.btn-create-collection {
+  padding: 0.625rem 1.25rem;
+  border-radius: 9999px;
+  border: 1.5px dashed var(--border-strong);
+  background: transparent;
+  color: var(--muted-fg);
+  font-family: var(--font-body);
+  font-weight: 600; font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: inline-flex; align-items: center; gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+.btn-create-collection:hover { border-color: var(--brand); color: var(--brand-soft-fg); background: var(--brand-soft); }
+
+/* History tab */
+.stats-row {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  gap: 1rem; margin-bottom: 1.5rem;
+}
+.stat-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  padding: 1.25rem;
+  text-align: center;
+}
+.stat-value {
+  font-family: var(--font-heading);
+  font-size: 2rem; font-weight: 700;
+  letter-spacing: -0.03em;
+  color: var(--brand-soft-fg);
+}
+.stat-label { font-size: 0.8rem; color: var(--muted-fg); margin-top: 0.25rem; }
+.history-list { display: flex; flex-direction: column; gap: 0.5rem; }
+.history-item {
+  display: flex; align-items: center; gap: 1rem;
+  padding: 0.875rem 1rem;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  transition: background 0.2s;
+}
+.history-item:hover { background: var(--card-hover); }
+.history-cover {
+  width: 44px; height: 44px;
+  border-radius: 6px; flex-shrink: 0;
+}
+.history-info { flex: 1; min-width: 0; }
+.history-title { font-weight: 600; font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.history-meta { font-size: 0.78rem; color: var(--muted-fg); }
+.history-rating { color: #daa860; font-size: 0.85rem; letter-spacing: 0.1em; }
+.history-date { font-size: 0.78rem; color: var(--muted-fg); white-space: nowrap; }
+
+/* Empty state */
+.empty-state {
+  text-align: center; padding: 3rem 1rem;
+  color: var(--muted-fg);
+}
+.empty-state h3 { font-family: var(--font-heading); font-size: 1.1rem; color: var(--fg); margin-bottom: 0.5rem; }
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .sidebar { width: 68px; padding: 1.25rem 0.5rem; }
+  .sidebar-logo { font-size: 0; }
+  .sidebar-logo::after { content: 'K'; font-size: 1.25rem; }
+  .sidebar-link span { display: none; }
+  .sidebar-link { justify-content: center; padding: 0.625rem; }
+  .sidebar-upgrade { font-size: 0; padding: 0.625rem; }
+  .sidebar-upgrade::after { content: 'Pro'; font-size: 0.7rem; }
+  .browse-grid { grid-template-columns: repeat(3, 1fr); }
+  .collections-grid { grid-template-columns: repeat(2, 1fr); }
+  .tab-panel { padding: 1.5rem; }
+  .header { padding: 0.75rem 1.25rem; }
+  .hero-content { padding: 2rem; }
+}
+@media (max-width: 640px) {
+  .sidebar { display: none; }
+  .header-search input { width: 160px; }
+  .browse-grid { grid-template-columns: repeat(2, 1fr); gap: 0.875rem; }
+  .collections-grid { grid-template-columns: 1fr; }
+  .stats-row { grid-template-columns: 1fr; }
+  .tab-panel { padding: 1rem; gap: 1.5rem; }
+  .hero { min-height: 320px; border-radius: var(--radius-xl); }
+  .hero-content { padding: 1.5rem; }
+  .tab-bar { padding: 0.5rem 1rem; overflow-x: auto; }
+  .book-card { width: 140px; }
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- Sidebar -->
+<aside class="sidebar">
+  <div class="sidebar-logo">Knowlune</div>
+  <nav class="sidebar-nav">
+    <a class="sidebar-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg> <span>Discover</span></a>
+    <a class="sidebar-link active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg> <span>Library</span></a>
+    <a class="sidebar-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg> <span>Collections</span></a>
+    <a class="sidebar-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><path d="M12 8v8M8 12h8"/></svg> <span>Archive</span></a>
+  </nav>
+  <div class="sidebar-bottom">
+    <button class="sidebar-upgrade">Upgrade to Pro</button>
+  </div>
+</aside>
+
+<div class="main">
+
+<!-- Header -->
+<header class="header">
+  <div class="header-left">
+    <h1 class="header-title">Library</h1>
+    <div class="header-search">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+      <input type="text" placeholder="Search your library..."/>
+    </div>
+  </div>
+  <div class="header-actions">
+    <button class="btn-import">+ Import</button>
+    <div class="avatar"></div>
+  </div>
+</header>
+
+<!-- Tab bar -->
+<div class="tab-bar">
+  <button class="tab-btn active" data-tab="continue">Continue</button>
+  <button class="tab-btn" data-tab="browse">Browse</button>
+  <button class="tab-btn" data-tab="collections">Collections</button>
+  <button class="tab-btn" data-tab="history">History</button>
+</div>
+
+<!-- Content -->
+<div class="content-scroll">
+
+<!-- CONTINUE TAB -->
+<div class="tab-panel active" id="tab-continue">
+
+  <!-- Hero -->
+  <section class="hero">
+    <div class="hero-bg"></div>
+    <div class="hero-overlay"></div>
+    <div class="hero-content">
+      <span class="hero-label">Pick up where you left off</span>
+      <h2 class="hero-title">The Quantum Thief's Dilemma</h2>
+      <p class="hero-author">Elena Vasquez</p>
+      <p class="hero-desc">A high-stakes heist through parallel dimensions where the rules of physics are as flexible as the protagonist's morals.</p>
+      <div class="hero-actions">
+        <button class="btn-play"><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="6,3 20,12 6,21"/></svg></button>
+        <div>
+          <div class="hero-progress"><strong>64% complete</strong> — Chapter 8 of 14</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Continue Listening -->
+  <section class="shelf-section">
+    <div class="shelf-header">
+      <div class="shelf-heading">
+        Continue Listening
+        <span class="shelf-count">4</span>
+      </div>
+      <div class="shelf-arrows">
+        <button class="shelf-arrow"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15,18 9,12 15,6"/></svg></button>
+        <button class="shelf-arrow"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9,18 15,12 9,6"/></svg></button>
+      </div>
+    </div>
+    <div class="shelf-scroll">
+      <div class="book-card">
+        <div class="book-cover-wrap">
+          <div class="book-cover" style="background:linear-gradient(135deg,#1a2740,#2d4470,#4a5a8a)"></div>
+          <div class="book-cover-overlay"><button class="btn-cover-play"><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="6,3 20,12 6,21"/></svg></button></div>
+          <div class="book-progress-bar"><div class="book-progress-fill" style="width:75%"></div></div>
+        </div>
+        <div class="book-title">Echoes of Silence</div>
+        <div class="book-author">J.K. Sterling</div>
+      </div>
+      <div class="book-card">
+        <div class="book-cover-wrap">
+          <div class="book-cover" style="background:linear-gradient(135deg,#2d1a20,#5a3040,#8a4a60)"></div>
+          <div class="book-cover-overlay"><button class="btn-cover-play"><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="6,3 20,12 6,21"/></svg></button></div>
+          <div class="book-progress-bar"><div class="book-progress-fill" style="width:22%"></div></div>
+        </div>
+        <div class="book-title">The Concrete Horizon</div>
+        <div class="book-author">Marcus Vance</div>
+      </div>
+      <div class="book-card">
+        <div class="book-cover-wrap">
+          <div class="book-cover" style="background:linear-gradient(135deg,#1a3020,#2d5530,#4a7a4a)"></div>
+          <div class="book-cover-overlay"><button class="btn-cover-play"><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="6,3 20,12 6,21"/></svg></button></div>
+          <div class="book-progress-bar"><div class="book-progress-fill" style="width:48%"></div></div>
+        </div>
+        <div class="book-title">Green Worlds</div>
+        <div class="book-author">Sarah Chen</div>
+      </div>
+      <div class="book-card">
+        <div class="book-cover-wrap">
+          <div class="book-cover" style="background:linear-gradient(135deg,#30201a,#55382d,#7a504a)"></div>
+          <div class="book-cover-overlay"><button class="btn-cover-play"><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="6,3 20,12 6,21"/></svg></button></div>
+          <div class="book-progress-bar"><div class="book-progress-fill" style="width:91%"></div></div>
+        </div>
+        <div class="book-title">Dust &amp; Embers</div>
+        <div class="book-author">Ravi Patel</div>
+      </div>
+      <div class="book-card">
+        <div class="book-cover-wrap">
+          <div class="book-cover" style="background:linear-gradient(135deg,#201a30,#352d55,#4a447a)"></div>
+          <div class="book-cover-overlay"><button class="btn-cover-play"><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="6,3 20,12 6,21"/></svg></button></div>
+          <div class="book-progress-bar"><div class="book-progress-fill" style="width:12%"></div></div>
+        </div>
+        <div class="book-title">The Last Algorithm</div>
+        <div class="book-author">David Okonkwo</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Recently Added -->
+  <section class="shelf-section">
+    <div class="shelf-header">
+      <div class="shelf-heading">
+        Recently Added
+        <span class="shelf-count">6</span>
+      </div>
+      <div class="shelf-arrows">
+        <button class="shelf-arrow"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15,18 9,12 15,6"/></svg></button>
+        <button class="shelf-arrow"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9,18 15,12 9,6"/></svg></button>
+      </div>
+    </div>
+    <div class="shelf-scroll">
+      <div class="book-card">
+        <div class="book-cover-wrap" style="border:none">
+          <div class="book-cover" style="background:linear-gradient(145deg,#3a2050,#5a3a78,#8a5aaa)"></div>
+        </div>
+        <div class="book-title">Neon Requiem</div>
+        <div class="book-author">Aiko Tanaka</div>
+      </div>
+      <div class="book-card">
+        <div class="book-cover-wrap" style="border:none">
+          <div class="book-cover" style="background:linear-gradient(145deg,#1a3a40,#2d5560,#4a7a8a)"></div>
+        </div>
+        <div class="book-title">Deep Ocean Theory</div>
+        <div class="book-author">James Morrison</div>
+      </div>
+      <div class="book-card">
+        <div class="book-cover-wrap" style="border:none">
+          <div class="book-cover" style="background:linear-gradient(145deg,#401a30,#602d4a,#8a4a6a)"></div>
+        </div>
+        <div class="book-title">Crimson Threads</div>
+        <div class="book-author">Lena Okafor</div>
+      </div>
+      <div class="book-card">
+        <div class="book-cover-wrap" style="border:none">
+          <div class="book-cover" style="background:linear-gradient(145deg,#302010,#4a3520,#6a5030)"></div>
+        </div>
+        <div class="book-title">Iron Roots</div>
+        <div class="book-author">Thomas Berg</div>
+      </div>
+      <div class="book-card">
+        <div class="book-cover-wrap" style="border:none">
+          <div class="book-cover" style="background:linear-gradient(145deg,#1a2535,#2a3a50,#4a5a7a)"></div>
+        </div>
+        <div class="book-title">Arctic Code</div>
+        <div class="book-author">Nina Holm</div>
+      </div>
+      <div class="book-card">
+        <div class="book-cover-wrap" style="border:none">
+          <div class="book-cover" style="background:linear-gradient(145deg,#2a1a35,#3a2a50,#5a3a7a)"></div>
+        </div>
+        <div class="book-title">Phantom Circuits</div>
+        <div class="book-author">Leo Kim</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Recent Series -->
+  <section class="shelf-section">
+    <div class="shelf-header">
+      <div class="shelf-heading">
+        Recent Series
+        <span class="shelf-count">3</span>
+      </div>
+      <div class="shelf-arrows">
+        <button class="shelf-arrow"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15,18 9,12 15,6"/></svg></button>
+        <button class="shelf-arrow"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9,18 15,12 9,6"/></svg></button>
+      </div>
+    </div>
+    <div class="shelf-scroll">
+      <div class="book-card" style="width:240px">
+        <div class="book-cover-wrap" style="aspect-ratio:16/10; display:flex">
+          <div style="flex:1;background:linear-gradient(135deg,#203040,#304860,#406080)"></div>
+          <div style="flex:1;background:linear-gradient(135deg,#302040,#483060,#604080)"></div>
+          <div style="flex:1;background:linear-gradient(135deg,#402030,#603048,#804060)"></div>
+        </div>
+        <div class="book-title">The Void Trilogy</div>
+        <div class="book-author">3 books — 2 finished</div>
+      </div>
+      <div class="book-card" style="width:240px">
+        <div class="book-cover-wrap" style="aspect-ratio:16/10; display:flex">
+          <div style="flex:1;background:linear-gradient(135deg,#1a3020,#2a4a30,#3a6a40)"></div>
+          <div style="flex:1;background:linear-gradient(135deg,#2a1a20,#4a2a30,#6a3a40)"></div>
+        </div>
+        <div class="book-title">Earthbound Saga</div>
+        <div class="book-author">2 books — 0 finished</div>
+      </div>
+      <div class="book-card" style="width:240px">
+        <div class="book-cover-wrap" style="aspect-ratio:16/10; display:flex">
+          <div style="flex:1;background:linear-gradient(135deg,#201a30,#302a50,#403a70)"></div>
+          <div style="flex:1;background:linear-gradient(135deg,#301a20,#502a30,#703a40)"></div>
+          <div style="flex:1;background:linear-gradient(135deg,#1a302a,#2a5040,#3a7060)"></div>
+          <div style="flex:1;background:linear-gradient(135deg,#302010,#503020,#705030)"></div>
+        </div>
+        <div class="book-title">Chronicles of Ash</div>
+        <div class="book-author">4 books — 3 finished</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Discover -->
+  <section class="shelf-section">
+    <div class="shelf-header">
+      <div class="shelf-heading">
+        Discover
+        <span class="shelf-count">8</span>
+      </div>
+      <div class="shelf-arrows">
+        <button class="shelf-arrow"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15,18 9,12 15,6"/></svg></button>
+        <button class="shelf-arrow"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9,18 15,12 9,6"/></svg></button>
+      </div>
+    </div>
+    <div class="shelf-scroll">
+      <div class="book-card">
+        <div class="book-cover-wrap" style="border:none">
+          <div class="book-cover" style="background:linear-gradient(145deg,#25301a,#40502a,#607040)"></div>
+        </div>
+        <div class="book-title">Silent Spring</div>
+        <div class="book-author">Rachel Carson</div>
+      </div>
+      <div class="book-card">
+        <div class="book-cover-wrap" style="border:none">
+          <div class="book-cover" style="background:linear-gradient(145deg,#1a2835,#2a4050,#4a6070)"></div>
+        </div>
+        <div class="book-title">Atlas Shrugged</div>
+        <div class="book-author">Ayn Rand</div>
+      </div>
+      <div class="book-card">
+        <div class="book-cover-wrap" style="border:none">
+          <div class="book-cover" style="background:linear-gradient(145deg,#351a25,#502a3a,#704050)"></div>
+        </div>
+        <div class="book-title">Beloved</div>
+        <div class="book-author">Toni Morrison</div>
+      </div>
+      <div class="book-card">
+        <div class="book-cover-wrap" style="border:none">
+          <div class="book-cover" style="background:linear-gradient(145deg,#1a1a35,#2a2a50,#4a4a70)"></div>
+        </div>
+        <div class="book-title">Foundation</div>
+        <div class="book-author">Isaac Asimov</div>
+      </div>
+      <div class="book-card">
+        <div class="book-cover-wrap" style="border:none">
+          <div class="book-cover" style="background:linear-gradient(145deg,#301a2a,#4a2a3a,#6a3a50)"></div>
+        </div>
+        <div class="book-title">The Dispossessed</div>
+        <div class="book-author">Ursula K. Le Guin</div>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<!-- BROWSE TAB -->
+<div class="tab-panel" id="tab-browse">
+
+  <div class="browse-filters">
+    <div class="filter-row" style="gap:1rem">
+      <div class="header-search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+        <input type="text" placeholder="Filter by title, author, series..." style="width:300px"/>
+      </div>
+      <button class="filter-pill active">All</button>
+      <button class="filter-pill">Audiobooks</button>
+      <button class="filter-pill">Ebooks</button>
+      <span style="color:var(--border);margin:0 0.25rem">|</span>
+      <button class="filter-pill active">All Status</button>
+      <button class="filter-pill">Reading</button>
+      <button class="filter-pill">Unread</button>
+      <button class="filter-pill">Finished</button>
+      <select style="margin-left:auto;background:var(--card);border:1px solid var(--border);color:var(--fg);padding:0.4rem 0.75rem;border-radius:9999px;font-family:var(--font-body);font-size:0.8rem;cursor:pointer">
+        <option>Recently Added</option>
+        <option>Title A-Z</option>
+        <option>Author A-Z</option>
+        <option>Progress</option>
+      </select>
+      <div style="display:flex;background:var(--card);border-radius:9999px;padding:0.2rem">
+        <button class="filter-pill active" style="border:none">Grid</button>
+        <button class="filter-pill" style="border:none">List</button>
+      </div>
+    </div>
+    <div class="filter-row">
+      <span class="filter-chip">Science Fiction <button>&times;</button></span>
+      <span class="filter-chip">In Progress <button>&times;</button></span>
+    </div>
+  </div>
+
+  <div class="browse-grid">
+    <div class="browse-card">
+      <div class="browse-cover">
+        <div class="browse-cover-bg" style="background:linear-gradient(160deg,#1a2740,#2d4470,#5a6a9a)"></div>
+        <span class="browse-status status-reading">Reading</span>
+      </div>
+      <div class="book-title">The Quantum Thief's Dilemma</div>
+      <div class="book-author">Elena Vasquez</div>
+    </div>
+    <div class="browse-card">
+      <div class="browse-cover">
+        <div class="browse-cover-bg" style="background:linear-gradient(160deg,#2d1a20,#5a3040,#8a5060)"></div>
+        <span class="browse-status status-unread">Unread</span>
+      </div>
+      <div class="book-title">The Concrete Horizon</div>
+      <div class="book-author">Marcus Vance</div>
+    </div>
+    <div class="browse-card">
+      <div class="browse-cover">
+        <div class="browse-cover-bg" style="background:linear-gradient(160deg,#1a3020,#2d5530,#4a7a4a)"></div>
+        <span class="browse-status status-finished">Finished</span>
+      </div>
+      <div class="book-title">Green Worlds</div>
+      <div class="book-author">Sarah Chen</div>
+    </div>
+    <div class="browse-card">
+      <div class="browse-cover">
+        <div class="browse-cover-bg" style="background:linear-gradient(160deg,#302010,#4a3520,#6a5030)"></div>
+        <span class="browse-status status-reading">Reading</span>
+      </div>
+      <div class="book-title">Iron Roots</div>
+      <div class="book-author">Thomas Berg</div>
+    </div>
+    <div class="browse-card">
+      <div class="browse-cover">
+        <div class="browse-cover-bg" style="background:linear-gradient(160deg,#201a30,#352d55,#4a447a)"></div>
+        <span class="browse-status status-unread">Unread</span>
+      </div>
+      <div class="book-title">The Last Algorithm</div>
+      <div class="book-author">David Okonkwo</div>
+    </div>
+    <div class="browse-card">
+      <div class="browse-cover">
+        <div class="browse-cover-bg" style="background:linear-gradient(160deg,#3a2050,#5a3a78,#8a5aaa)"></div>
+        <span class="browse-status status-finished">Finished</span>
+      </div>
+      <div class="book-title">Neon Requiem</div>
+      <div class="book-author">Aiko Tanaka</div>
+    </div>
+    <div class="browse-card">
+      <div class="browse-cover">
+        <div class="browse-cover-bg" style="background:linear-gradient(160deg,#1a3a40,#2d5560,#4a7a8a)"></div>
+        <span class="browse-status status-reading">Reading</span>
+      </div>
+      <div class="book-title">Deep Ocean Theory</div>
+      <div class="book-author">James Morrison</div>
+    </div>
+    <div class="browse-card">
+      <div class="browse-cover">
+        <div class="browse-cover-bg" style="background:linear-gradient(160deg,#401a30,#602d4a,#8a4a6a)"></div>
+        <span class="browse-status status-unread">Unread</span>
+      </div>
+      <div class="book-title">Crimson Threads</div>
+      <div class="book-author">Lena Okafor</div>
+    </div>
+    <div class="browse-card">
+      <div class="browse-cover">
+        <div class="browse-cover-bg" style="background:linear-gradient(160deg,#1a2535,#2a3a50,#4a5a7a)"></div>
+        <span class="browse-status status-finished">Finished</span>
+      </div>
+      <div class="book-title">Arctic Code</div>
+      <div class="book-author">Nina Holm</div>
+    </div>
+    <div class="browse-card">
+      <div class="browse-cover">
+        <div class="browse-cover-bg" style="background:linear-gradient(160deg,#2a1a35,#3a2a50,#5a3a7a)"></div>
+        <span class="browse-status status-reading">Reading</span>
+      </div>
+      <div class="book-title">Phantom Circuits</div>
+      <div class="book-author">Leo Kim</div>
+    </div>
+    <div class="browse-card">
+      <div class="browse-cover">
+        <div class="browse-cover-bg" style="background:linear-gradient(160deg,#30201a,#55382d,#7a504a)"></div>
+        <span class="browse-status status-unread">Unread</span>
+      </div>
+      <div class="book-title">Dust &amp; Embers</div>
+      <div class="book-author">Ravi Patel</div>
+    </div>
+    <div class="browse-card">
+      <div class="browse-cover">
+        <div class="browse-cover-bg" style="background:linear-gradient(160deg,#1a302a,#2d5040,#4a7060)"></div>
+        <span class="browse-status status-finished">Finished</span>
+      </div>
+      <div class="book-title">The Glass Horizon</div>
+      <div class="book-author">Maria Santos</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- COLLECTIONS TAB -->
+<div class="tab-panel" id="tab-collections">
+
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.5rem">
+    <h2 style="font-family:var(--font-heading);font-weight:600;font-size:1.1rem">Your Collections</h2>
+    <button class="btn-create-collection">+ New Collection</button>
+  </div>
+
+  <div class="collections-grid">
+    <div class="collection-card">
+      <div class="collection-covers">
+        <div style="background:linear-gradient(135deg,#203040,#406080)"></div>
+        <div style="background:linear-gradient(135deg,#402020,#604030)"></div>
+        <div style="background:linear-gradient(135deg,#204020,#306030)"></div>
+        <div style="background:linear-gradient(135deg,#202040,#303060)"></div>
+      </div>
+      <div class="collection-name">Sci-Fi Classics</div>
+      <div class="collection-count">8 books</div>
+    </div>
+    <div class="collection-card">
+      <div class="collection-covers">
+        <div style="background:linear-gradient(135deg,#403020,#605040)"></div>
+        <div style="background:linear-gradient(135deg,#402040,#604060)"></div>
+        <div style="background:linear-gradient(135deg,#204030,#306050)"></div>
+        <div style="background:linear-gradient(135deg,#402010,#604020)"></div>
+      </div>
+      <div class="collection-name">2026 Reading Challenge</div>
+      <div class="collection-count">5 books</div>
+    </div>
+    <div class="collection-card">
+      <div class="collection-covers">
+        <div style="background:linear-gradient(135deg,#203040,#304050)"></div>
+        <div style="background:linear-gradient(135deg,#303040,#404050)"></div>
+        <div style="background:linear-gradient(135deg,#203030,#304040)"></div>
+        <div style="background:linear-gradient(135deg,#303030,#404040)"></div>
+      </div>
+      <div class="collection-name">Philosophy Deep Dives</div>
+      <div class="collection-count">3 books</div>
+    </div>
+    <div class="collection-card">
+      <div class="collection-covers">
+        <div style="background:linear-gradient(135deg,#402030,#603040)"></div>
+        <div style="background:linear-gradient(135deg,#304020,#406030)"></div>
+        <div style="background:linear-gradient(135deg,#204040,#306060)"></div>
+        <div style="background:linear-gradient(135deg,#403040,#604060)"></div>
+      </div>
+      <div class="collection-name">Weekend Listens</div>
+      <div class="collection-count">6 books</div>
+    </div>
+    <div class="collection-card" style="display:flex;align-items:center;justify-content:center;border-style:dashed;border-color:var(--border-strong)">
+      <button class="btn-create-collection" style="border:none;margin:0">+ Create Collection</button>
+    </div>
+  </div>
+
+</div>
+
+<!-- HISTORY TAB -->
+<div class="tab-panel" id="tab-history">
+
+  <div class="stats-row">
+    <div class="stat-card">
+      <div class="stat-value">12</div>
+      <div class="stat-label">Books finished this year</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value">4,200</div>
+      <div class="stat-label">Pages read</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value">142h</div>
+      <div class="stat-label">Hours listened</div>
+    </div>
+  </div>
+
+  <h2 style="font-family:var(--font-heading);font-weight:600;font-size:1rem;margin-bottom:0.875rem">Recently Finished</h2>
+
+  <div class="history-list">
+    <div class="history-item">
+      <div class="history-cover" style="background:linear-gradient(135deg,#1a2740,#2d4470)"></div>
+      <div class="history-info">
+        <div class="history-title">Green Worlds</div>
+        <div class="history-meta">Sarah Chen — 320 pages</div>
+      </div>
+      <div class="history-rating">&#9733;&#9733;&#9733;&#9733;&#9734;</div>
+      <div class="history-date">Apr 28, 2026</div>
+    </div>
+    <div class="history-item">
+      <div class="history-cover" style="background:linear-gradient(135deg,#401a30,#602d4a)"></div>
+      <div class="history-info">
+        <div class="history-title">Crimson Threads</div>
+        <div class="history-meta">Lena Okafor — 8h 12m</div>
+      </div>
+      <div class="history-rating">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
+      <div class="history-date">Apr 15, 2026</div>
+    </div>
+    <div class="history-item">
+      <div class="history-cover" style="background:linear-gradient(135deg,#3a2050,#5a3a78)"></div>
+      <div class="history-info">
+        <div class="history-title">Neon Requiem</div>
+        <div class="history-meta">Aiko Tanaka — 445 pages</div>
+      </div>
+      <div class="history-rating">&#9733;&#9733;&#9733;&#9734;&#9734;</div>
+      <div class="history-date">Mar 30, 2026</div>
+    </div>
+    <div class="history-item">
+      <div class="history-cover" style="background:linear-gradient(135deg,#302010,#4a3520)"></div>
+      <div class="history-info">
+        <div class="history-title">Iron Roots</div>
+        <div class="history-meta">Thomas Berg — 12h 45m</div>
+      </div>
+      <div class="history-rating">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
+      <div class="history-date">Mar 12, 2026</div>
+    </div>
+    <div class="history-item">
+      <div class="history-cover" style="background:linear-gradient(135deg,#1a302a,#2d5040)"></div>
+      <div class="history-info">
+        <div class="history-title">The Glass Horizon</div>
+        <div class="history-meta">Maria Santos — 290 pages</div>
+      </div>
+      <div class="history-rating">&#9733;&#9733;&#9733;&#9733;&#9734;</div>
+      <div class="history-date">Feb 18, 2026</div>
+    </div>
+  </div>
+
+</div>
+
+</div><!-- /content-scroll -->
+
+</div><!-- /main -->
+</div><!-- /app -->
+
+<script>
+// Tab switching
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+  });
+});
+
+// Shelf scroll arrows
+document.querySelectorAll('.shelf-arrow').forEach(arrow => {
+  arrow.addEventListener('click', () => {
+    const scroll = arrow.closest('.shelf-section').querySelector('.shelf-scroll');
+    const isLeft = arrow.querySelector('svg').innerHTML.includes('15,18');
+    scroll.scrollBy({ left: isLeft ? -400 : 400, behavior: 'smooth' });
+  });
+});
+
+// Filter pills in Browse
+document.querySelectorAll('#tab-browse .filter-pill').forEach(pill => {
+  pill.addEventListener('click', function() {
+    const row = this.closest('.filter-row');
+    // Only toggle within same group (simplified — just toggle self)
+    if (this.closest('[style]') && this.closest('[style]').display === 'flex') {
+      // View toggle group
+      this.parentElement.querySelectorAll('.filter-pill').forEach(p => p.classList.remove('active'));
+      this.classList.add('active');
+    } else {
+      this.classList.toggle('active');
+    }
+  });
+});
+</script>
+</body>
+</html>
