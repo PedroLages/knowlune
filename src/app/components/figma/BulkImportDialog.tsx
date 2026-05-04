@@ -548,11 +548,11 @@ export function BulkImportDialog({
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent
-        className="sm:max-w-lg"
+        className="min-w-0 overflow-x-hidden sm:max-w-lg"
         data-testid="bulk-import-dialog"
         aria-describedby="bulk-import-description"
       >
-        <DialogHeader>
+        <DialogHeader className="pr-12">
           <DialogTitle>
             {step === 'choose' && 'Import Courses'}
             {step === 'select-folders' && 'Select Course Folders'}
@@ -643,27 +643,34 @@ export function BulkImportDialog({
         {/* Step: Select sub-folders */}
         {step === 'select-folders' && (
           <>
-            <div className="flex items-center justify-between py-1">
+            <div className="flex min-w-0 flex-wrap items-center justify-between gap-x-2 gap-y-1 py-1">
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={handleSelectAll}
-                className="text-xs"
+                className="shrink-0 text-xs"
                 data-testid="bulk-select-all"
               >
                 {folders.every(f => f.selected) ? 'Deselect All' : 'Select All'}
               </Button>
-              <span className="text-sm text-muted-foreground" data-testid="bulk-selected-count">
+              <span
+                className="text-right text-sm text-muted-foreground whitespace-nowrap sm:shrink-0"
+                data-testid="bulk-selected-count"
+              >
                 {selectedCount} of {folders.length} selected
               </span>
             </div>
 
-            <ScrollArea className="max-h-[40vh]">
-              <div className="flex flex-col gap-1 pr-3" role="list" aria-label="Course folders">
+            <ScrollArea className="max-h-[40vh] min-w-0 w-full">
+              <div
+                className="flex min-w-0 flex-col gap-1 pr-3"
+                role="list"
+                aria-label="Course folders"
+              >
                 {folders.map((folder, index) => (
                   <label
                     key={folder.name}
-                    className="flex items-center gap-3 rounded-lg px-3 py-2 cursor-pointer hover:bg-accent transition-colors"
+                    className="flex min-w-0 w-full cursor-pointer items-center gap-3 rounded-lg px-3 py-2 transition-colors hover:bg-accent"
                     role="listitem"
                   >
                     <Checkbox
@@ -673,16 +680,16 @@ export function BulkImportDialog({
                       data-testid={`bulk-folder-${folder.name}`}
                     />
                     <FolderOpen
-                      className="size-4 text-muted-foreground shrink-0"
+                      className="size-4 shrink-0 text-muted-foreground"
                       aria-hidden="true"
                     />
-                    <span className="text-sm truncate">{folder.name}</span>
+                    <span className="min-w-0 flex-1 truncate text-left text-sm">{folder.name}</span>
                   </label>
                 ))}
               </div>
             </ScrollArea>
 
-            <DialogFooter>
+            <DialogFooter className="w-full max-w-full sm:flex-wrap">
               <Button
                 variant="outline"
                 onClick={() => setStep('choose')}
@@ -739,12 +746,12 @@ export function BulkImportDialog({
               />
             </div>
 
-            <ScrollArea className="max-h-[40vh]">
-              <div className="flex flex-col gap-1 pr-3" role="list" aria-label="Scan progress">
+            <ScrollArea className="max-h-[40vh] min-w-0 w-full">
+              <div className="flex min-w-0 flex-col gap-1 pr-3" role="list" aria-label="Scan progress">
                 {importItems.map(item => (
                   <div
                     key={item.folderName}
-                    className="flex items-center gap-3 rounded-lg px-3 py-2"
+                    className="flex min-w-0 items-center gap-3 rounded-lg px-3 py-2"
                     role="listitem"
                   >
                     {item.status === 'pending' && (
@@ -794,8 +801,8 @@ export function BulkImportDialog({
         {/* Step: Review course details before importing */}
         {step === 'review' && (
           <>
-            <ScrollArea className="max-h-[50vh]">
-              <div className="flex flex-col gap-2 pr-3" data-testid="bulk-review-list">
+            <ScrollArea className="max-h-[50vh] min-w-0 w-full">
+              <div className="flex min-w-0 flex-col gap-2 pr-3" data-testid="bulk-review-list">
                 {[...scannedCourses.values()].map(course => {
                   const isExpanded = expandedCourseId === course.id
                   const override = courseOverrides.get(course.id)
@@ -923,7 +930,7 @@ export function BulkImportDialog({
               </div>
             </ScrollArea>
 
-            <DialogFooter>
+            <DialogFooter className="w-full max-w-full sm:flex-wrap">
               <Button
                 variant="outline"
                 onClick={() => setStep('select-folders')}
@@ -958,12 +965,12 @@ export function BulkImportDialog({
               </div>
             )}
 
-            <ScrollArea className="max-h-[40vh]">
-              <div className="flex flex-col gap-1 pr-3" role="list" aria-label="Import progress">
+            <ScrollArea className="max-h-[40vh] min-w-0 w-full">
+              <div className="flex min-w-0 flex-col gap-1 pr-3" role="list" aria-label="Import progress">
                 {importItems.map(item => (
                   <div
                     key={item.folderName}
-                    className="flex items-center gap-3 rounded-lg px-3 py-2"
+                    className="flex min-w-0 items-center gap-3 rounded-lg px-3 py-2"
                     role="listitem"
                     data-testid={`bulk-item-${item.folderName}`}
                   >
@@ -1078,7 +1085,7 @@ export function BulkImportDialog({
                   </div>
                 </div>
 
-                <DialogFooter>
+                <DialogFooter className="w-full max-w-full sm:flex-wrap">
                   <Button
                     variant="brand"
                     onClick={() => handleOpenChange(false)}
