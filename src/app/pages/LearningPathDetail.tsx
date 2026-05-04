@@ -69,6 +69,7 @@ import { useLearningPathStore } from '@/stores/useLearningPathStore'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
 import { useAuthorStore } from '@/stores/useAuthorStore'
 import { usePathProgress } from '@/app/hooks/usePathProgress'
+import { usePathMilestones } from '@/app/hooks/usePathMilestones'
 import { useImportWizardTrigger } from '@/app/hooks/useImportWizardTrigger'
 import { useLoadCourseThumbnails } from '@/app/hooks/useLoadCourseThumbnails'
 // db import removed (E89-S01) — catalog courses table dropped
@@ -373,6 +374,13 @@ export function LearningPathDetail() {
 
   // Real progress tracking from contentProgress (catalog) + progress table (imported)
   const pathProgress = usePathProgress(courseEntries)
+
+  // Watch path progress and fire milestone challenges automatically
+  usePathMilestones({
+    pathId: pathId ?? '',
+    pathName: path?.name ?? 'Learning Path',
+    completionPct: pathProgress.completionPct,
+  })
 
   // Build course info lookup — uses real progress data
   const courseInfo = useMemo(() => {
