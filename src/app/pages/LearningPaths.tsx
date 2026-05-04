@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
-import { Link } from 'react-router'
+import { Link, useNavigate } from 'react-router'
 import { motion } from 'motion/react'
 import {
   Plus,
@@ -42,6 +42,7 @@ import { InlineEditableField } from '@/app/components/figma/InlineEditableField'
 import { useLearningPathStore } from '@/stores/useLearningPathStore'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
 import { useMultiPathProgress } from '@/app/hooks/usePathProgress'
+import { useNextBestCourse } from '@/app/hooks/useNextBestCourse'
 import { useImportWizardTrigger } from '@/app/hooks/useImportWizardTrigger'
 import { useLoadCourseThumbnails } from '@/app/hooks/useLoadCourseThumbnails'
 import { staggerContainer, fadeUp } from '@/lib/motion'
@@ -62,11 +63,47 @@ function PathCard({
   courseThumbnails: string[]
   onImport: (pathId: string) => void
 }) {
+  const navigate = useNavigate()
   const renamePath = useLearningPathStore(s => s.renamePath)
   const updateDescription = useLearningPathStore(s => s.updateDescription)
   const deletePathWithUndo = useLearningPathStore(s => s.deletePathWithUndo)
   const isNotStarted = completionPct === 0 && courseCount > 0
   const isCompleted = completionPct >= 100
+
+  // Get next best course info (internally — not from parent props)
+  const { entry, course, action, targetLessonId } = useNextBestCourse(path.id)
+
+  // Determine footer action text and navigation
+  const footerAction = useMemo(() => {
+    if (action === 'resume' && course) {
+      const label = `Continue ${course.name.length > 30 ? course.name.slice(0, 28) + '...' : course.name}`
+      const navTo = targetLessonId
+        ? `/courses/${entry!.courseId}/lessons/${targetLessonId}`
+        : `/courses/${entry!.courseId}`
+      return { label, navTo, variant: 'brand' as const }
+    }
+    if (action === 'start' && course) {
+      const label = `Start ${course.name.length > 30 ? course.name.slice(0, 28) + '...' : course.name}`
+      const navTo = targetLessonId
+        ? `/courses/${entry!.courseId}/lessons/${targetLessonId}`
+        : `/courses/${entry!.courseId}`
+      return { label, navTo, variant: 'brand' as const }
+    }
+    if (action === 'complete' || (action === null && isCompleted)) {
+      return { label: 'Review', navTo: `/learning-paths/${path.id}`, variant: 'outline' as const }
+    }
+    return null
+  }, [action, course, entry, targetLessonId, isCompleted, path.id])
+
+  const handleFooterClick = useCallback(
+    (e: React.MouseEvent) => {
+      if (!footerAction) return
+      e.preventDefault()
+      e.stopPropagation()
+      navigate(footerAction.navTo)
+    },
+    [footerAction, navigate]
+  )
 
   return (
     <motion.div variants={fadeUp}>
@@ -170,7 +207,7 @@ function PathCard({
               />
             </div>
 
-            {/* Footer: course thumbnails + arrow */}
+            {/* Footer: course thumbnails + continue/start/review button */}
             <div className="flex items-center justify-between border-t border-border pt-4">
               <div className="flex -space-x-3">
                 {courseThumbnails.slice(0, 3).map((url, i) => (
@@ -193,18 +230,33 @@ function PathCard({
                   </div>
                 )}
               </div>
-              {isCompleted ? (
-                <span className="text-xs font-bold text-success uppercase">Review</span>
-              ) : isNotStarted ? (
-                <span className="text-xs font-bold text-muted-foreground uppercase">
-                  Not Started
-                </span>
-              ) : (
-                <ArrowRight
-                  className="size-4 text-muted-foreground group-hover:text-brand transition-colors"
-                  aria-hidden="true"
-                />
-              )}
+
+              {/* Action button */}
+              <div onClick={e => e.stopPropagation()}>
+                {footerAction ? (
+                  <Button
+                    variant={footerAction.variant}
+                    size="sm"
+                    className="text-xs whitespace-nowrap"
+                    onClick={handleFooterClick}
+                    aria-label={footerAction.label}
+                  >
+                    {footerAction.label}
+                    {footerAction.variant === 'brand' && (
+                      <ArrowRight className="ml-1.5 size-3.5" aria-hidden="true" />
+                    )}
+                  </Button>
+                ) : isNotStarted ? (
+                  <span className="text-xs font-bold text-muted-foreground uppercase">
+                    Not Started
+                  </span>
+                ) : (
+                  <ArrowRight
+                    className="size-4 text-muted-foreground group-hover:text-brand transition-colors"
+                    aria-hidden="true"
+                  />
+                )}
+              </div>
             </div>
           </Link>
         </CardContent>
