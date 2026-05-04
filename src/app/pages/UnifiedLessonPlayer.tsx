@@ -79,7 +79,10 @@ import { ReadingModeDiscoveryTooltip } from '@/app/components/figma/ReadingModeD
 import { ReadingModeTOC } from '@/app/components/figma/ReadingModeTOC'
 import { MiniPlayer } from '@/app/components/course/MiniPlayer'
 import { NextCourseSuggestion } from '@/app/components/NextCourseSuggestion'
+import { NextInPath } from '@/app/components/NextInPath'
 import { suggestNextCourse } from '@/lib/courseSuggestion'
+import { useLearningPathStore } from '@/stores/useLearningPathStore'
+import { useNextBestCourse } from '@/app/hooks/useNextBestCourse'
 
 /** Type-safe accessor for boolean flags in React Router location.state. */
 function parseLocationFlag(state: unknown, flag: string): boolean {
@@ -292,6 +295,35 @@ export function UnifiedLessonPlayer() {
     const thumbnailUrl = suggestion.course.youtubeThumbnailUrl ?? null
     return { ...suggestion, thumbnailUrl }
   }, [state.showCourseSuggestion, courseId, importedCourses])
+
+  // Path-based next course suggestion (R9, R10)
+  const allPathEntries = useLearningPathStore(s => s.entries)
+  const paths = useLearningPathStore(s => s.paths)
+
+  const pathContext = useMemo(() => {
+    if (!courseId) return null
+    const matchingEntry = allPathEntries.find(e => e.courseId === courseId)
+    if (!matchingEntry) return null
+    const path = paths.find(p => p.id === matchingEntry.pathId)
+    if (!path || path.isTemplate) return null
+    return { pathId: matchingEntry.pathId, pathName: path.name }
+  }, [allPathEntries, courseId, paths])
+
+  const coursePathId = pathContext?.pathId ?? ''
+  const nextBest = useNextBestCourse(coursePathId)
+
+  const pathSuggestion = useMemo(() => {
+    if (!state.showCourseSuggestion || !courseId || !pathContext) return null
+    const isLastInPath = nextBest.action === 'complete' || nextBest.action === null
+    return {
+      pathName: pathContext.pathName,
+      courseName,
+      isLastInPath,
+      nextCourseId: !isLastInPath ? nextBest.entry?.courseId ?? null : null,
+      nextTargetLessonId: !isLastInPath ? nextBest.targetLessonId : null,
+      pathId: pathContext.pathId,
+    }
+  }, [state.showCourseSuggestion, courseId, pathContext, nextBest, courseName])
 
   // Loading state
   if (loading) {
@@ -684,8 +716,20 @@ export function UnifiedLessonPlayer() {
         />
       )}
 
-      {/* Next course suggestion card (E91-S08) */}
-      {courseSuggestion && (
+      {/* Next course suggestion — path-based or tag-based (R9, R10, E91-S08) */}
+      {pathSuggestion ? (
+        <div className="mt-4">
+          <NextInPath
+            pathName={pathSuggestion.pathName}
+            courseName={pathSuggestion.courseName}
+            isLastInPath={pathSuggestion.isLastInPath}
+            nextCourseId={pathSuggestion.nextCourseId}
+            nextTargetLessonId={pathSuggestion.nextTargetLessonId}
+            pathId={pathSuggestion.pathId}
+            onDismiss={() => state.setShowCourseSuggestion(false)}
+          />
+        </div>
+      ) : courseSuggestion ? (
         <div className="mt-4">
           <NextCourseSuggestion
             suggestedCourse={courseSuggestion.course}
@@ -694,7 +738,7 @@ export function UnifiedLessonPlayer() {
             onDismiss={() => state.setShowCourseSuggestion(false)}
           />
         </div>
-      )}
+      ) : null}
 
       {/* Completion celebration modal (lesson or course level) */}
       <CompletionModal
