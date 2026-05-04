@@ -1,0 +1,171 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { act } from 'react'
+import { render } from '@testing-library/react'
+import { CourseNotesTab } from '../CourseNotesTab'
+import { useNoteStore } from '@/stores/useNoteStore'
+import type { Note, Module } from '@/data/types'
+
+// Mock sonner to prevent actual toast calls
+vi.mock('sonner', () => ({
+  toast: {
+    success: vi.fn(),
+    error: vi.fn(),
+  },
+}))
+
+function makeNote(overrides: Partial<Note> = {}): Note {
+  return {
+    id: crypto.randomUUID(),
+    courseId: 'course-1',
+    videoId: 'lesson-1',
+    content: '<p>Test note content</p>',
+    createdAt: '2025-01-15T10:00:00.000Z',
+    updatedAt: '2025-01-15T10:00:00.000Z',
+    tags: [],
+    ...overrides,
+  }
+}
+
+function makeModule(overrides: Partial<Module> = {}): Module {
+  return {
+    id: 'mod-1',
+    title: 'Module 1',
+    description: 'First module',
+    order: 1,
+    lessons: [
+      {
+        id: 'lesson-1',
+        title: 'Lesson 1',
+        description: 'First lesson',
+        order: 1,
+        resources: [],
+        keyTopics: [],
+      },
+    ],
+    ...overrides,
+  }
+}
+
+describe('CourseNotesTab export', () => {
+  beforeEach(() => {
+    useNoteStore.setState({ notes: [], isLoading: false })
+    vi.clearAllMocks()
+  })
+
+  it('shows export button when notes exist', () => {
+    useNoteStore.setState({
+      notes: [makeNote({ id: 'n1', courseId: 'course-1' })],
+    })
+
+    const { getByTestId } = render(
+      <CourseNotesTab
+        courseId="course-1"
+        courseName="Test Course"
+        modules={[makeModule()]}
+      />
+    )
+
+    expect(getByTestId('export-notes-button')).toBeTruthy()
+  })
+
+  it('shows empty state when no notes exist (no export button)', () => {
+    useNoteStore.setState({ notes: [] })
+
+    const { queryByTestId, getByText } = render(
+      <CourseNotesTab
+        courseId="course-1"
+        courseName="Test Course"
+        modules={[makeModule()]}
+      />
+    )
+
+    // Empty state renders; export button is not present
+    expect(queryByTestId('export-notes-button')).toBeNull()
+    expect(getByText(/No notes yet/)).toBeTruthy()
+  })
+
+  it('export button is disabled when all notes have empty content', () => {
+    useNoteStore.setState({
+      notes: [makeNote({ id: 'n1', courseId: 'course-1', content: '' })],
+    })
+
+    const { getByTestId } = render(
+      <CourseNotesTab
+        courseId="course-1"
+        courseName="Test Course"
+        modules={[makeModule()]}
+      />
+    )
+
+    const btn = getByTestId('export-notes-button') as HTMLButtonElement
+    expect(btn.disabled).toBe(true)
+  })
+
+  it('export button click opens popover with format options', () => {
+    useNoteStore.setState({
+      notes: [makeNote({ id: 'n1', courseId: 'course-1' })],
+    })
+
+    const { getByTestId, getByText } = render(
+      <CourseNotesTab
+        courseId="course-1"
+        courseName="Test Course"
+        modules={[makeModule()]}
+      />
+    )
+
+    const btn = getByTestId('export-notes-button')
+    act(() => {
+      btn.click()
+    })
+
+    // Popover content should be visible
+    expect(getByText('Export format')).toBeTruthy()
+    expect(getByTestId('export-combined-md')).toBeTruthy()
+    expect(getByTestId('export-zip')).toBeTruthy()
+  })
+})
+
+describe('CourseNotesTab sorting', () => {
+  beforeEach(() => {
+    useNoteStore.setState({ notes: [], isLoading: false })
+    vi.clearAllMocks()
+  })
+
+  it('sorts by video-order by default', () => {
+    useNoteStore.setState({
+      notes: [makeNote({ id: 'n1' })],
+    })
+
+    const { getByText } = render(
+      <CourseNotesTab
+        courseId="course-1"
+        courseName="Test Course"
+        modules={[makeModule()]}
+      />
+    )
+
+    expect(getByText('Video Order')).toBeTruthy()
+  })
+
+  it('toggles sort mode on click', () => {
+    useNoteStore.setState({
+      notes: [makeNote({ id: 'n1' })],
+    })
+
+    const { getByLabelText, getByText } = render(
+      <CourseNotesTab
+        courseId="course-1"
+        courseName="Test Course"
+        modules={[makeModule()]}
+      />
+    )
+
+    const sortBtn = getByLabelText('Sort notes')
+    act(() => {
+      sortBtn.click()
+    })
+
+    expect(getByText('Date Created')).toBeTruthy()
+  })
+})

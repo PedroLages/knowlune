@@ -1,10 +1,27 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, useCallback } from 'react'
 import { toast } from 'sonner'
-import { FileText, ArrowUpDown } from 'lucide-react'
+import { FileText, ArrowUpDown, Download, Loader2 } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
 import { Skeleton } from '@/app/components/ui/skeleton'
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/app/components/ui/popover'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/app/components/ui/tooltip'
 import { NoteCard } from './NoteCard'
 import { useNoteStore } from '@/stores/useNoteStore'
+import {
+  exportCombinedMarkdown,
+  exportNotesZip,
+  type ModuleLessonMapEntry,
+} from '@/lib/noteExport'
+import { downloadBlob } from '@/lib/fileDownload'
+import { sanitizeFilename } from '@/lib/noteExport'
 import type { Module, Note } from '@/data/types'
 
 interface CourseNotesTabProps {
@@ -29,9 +46,78 @@ export function CourseNotesTab({ courseId, courseName, modules }: CourseNotesTab
   const deleteNote = useNoteStore(s => s.deleteNote)
   const [sortMode, setSortMode] = useState<SortMode>('video-order')
 
+  const [isExporting, setIsExporting] = useState(false)
+
   useEffect(() => {
     loadNotesByCourse(courseId)
   }, [courseId, loadNotesByCourse])
+
+  // Filter out soft-deleted notes and notes with empty content (R9)
+  const exportableNotes = useMemo(
+    () => notes.filter(n => !n.deleted && n.content?.trim().length > 0),
+    [notes]
+  )
+
+  // Build module/lesson lookup for export functions
+  const moduleLessonMap = useMemo(() => {
+    const map = new Map<string, ModuleLessonMapEntry>()
+    for (const mod of modules) {
+      for (const lesson of mod.lessons) {
+        map.set(lesson.id, {
+          moduleName: mod.title,
+          moduleOrder: mod.order,
+          lessonName: lesson.title,
+          lessonOrder: lesson.order,
+        })
+      }
+    }
+    return map
+  }, [modules])
+
+  const courseSlug = useMemo(() => sanitizeFilename(courseName), [courseName])
+
+  const getExportDisabledReason = useMemo((): string | null => {
+    if (exportableNotes.length === 0) {
+      if (notes.length === 0) return 'No notes to export'
+      return 'No notes with content to export'
+    }
+    return null
+  }, [exportableNotes.length, notes.length])
+
+  const handleExport = useCallback(
+    async (format: 'combined-markdown' | 'zip') => {
+      setIsExporting(true)
+      try {
+        if (format === 'combined-markdown') {
+          const { content, filename } = exportCombinedMarkdown(
+            notes,
+            courseName,
+            courseSlug,
+            moduleLessonMap
+          )
+          downloadBlob(
+            new Blob([content], { type: 'text/markdown;charset=utf-8' }),
+            filename
+          )
+          toast.success(`Exported ${exportableNotes.length} notes as Combined Markdown`)
+        } else {
+          const { blob, filename } = await exportNotesZip(
+            notes,
+            courseName,
+            courseSlug,
+            moduleLessonMap
+          )
+          downloadBlob(blob, filename)
+          toast.success(`Exported ${exportableNotes.length} notes as ZIP`)
+        }
+      } catch {
+        toast.error('Export failed. Please try again.')
+      } finally {
+        setIsExporting(false)
+      }
+    },
+    [notes, courseName, courseSlug, moduleLessonMap, exportableNotes.length]
+  )
 
   // Build lookup from videoId → lesson/module info
   const lessonMap = useMemo(() => {
@@ -146,9 +232,75 @@ export function CourseNotesTab({ courseId, courseName, modules }: CourseNotesTab
     <div>
       {/* Sort controls */}
       <div className="flex items-center justify-between mb-4">
-        <p className="text-sm text-muted-foreground">
-          {notes.length} {notes.length === 1 ? 'note' : 'notes'}
-        </p>
+        <div className="flex items-center gap-2">
+          <p className="text-sm text-muted-foreground">
+            {notes.length} {notes.length === 1 ? 'note' : 'notes'}
+          </p>
+
+          {/* Export button */}
+          <Popover>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    disabled={getExportDisabledReason !== null || isExporting}
+                    aria-label="Export all notes"
+                    data-testid="export-notes-button"
+                  >
+                    {isExporting ? (
+                      <Loader2 className="size-3.5 mr-1.5 animate-spin" />
+                    ) : (
+                      <Download className="size-3.5 mr-1.5" />
+                    )}
+                    {isExporting ? `Exporting ${exportableNotes.length} notes...` : 'Export All'}
+                  </Button>
+                </PopoverTrigger>
+              </TooltipTrigger>
+              {getExportDisabledReason && (
+                <TooltipContent side="bottom">
+                  <p>{getExportDisabledReason}</p>
+                </TooltipContent>
+              )}
+            </Tooltip>
+            <PopoverContent align="start" className="w-72">
+              <div className="space-y-2">
+                <p className="text-sm font-medium">Export format</p>
+                <Button
+                  variant="ghost"
+                  className="w-full justify-start h-auto py-3"
+                  onClick={() => handleExport('combined-markdown')}
+                  data-testid="export-combined-md"
+                >
+                  <div className="text-left">
+                    <p className="text-sm font-medium">Combined Markdown (.md)</p>
+                    <p className="text-xs text-muted-foreground">
+                      All notes in a single file, grouped by module and lesson.
+                      {exportableNotes.length > 50 &&
+                        ' Warning: large export may include many notes.'}
+                    </p>
+                  </div>
+                </Button>
+                <Button
+                  variant="ghost"
+                  className="w-full justify-start h-auto py-3"
+                  onClick={() => handleExport('zip')}
+                  data-testid="export-zip"
+                >
+                  <div className="text-left">
+                    <p className="text-sm font-medium">ZIP Archive (.zip, best for Obsidian import)</p>
+                    <p className="text-xs text-muted-foreground">
+                      Organized by module and lesson, each note as a separate .md file with
+                      frontmatter.
+                    </p>
+                  </div>
+                </Button>
+              </div>
+            </PopoverContent>
+          </Popover>
+        </div>
+
         <Button
           variant="outline"
           size="sm"
