@@ -15,6 +15,11 @@ import type { LessonItem } from '@/lib/courseAdapter'
 import type { CelebrationType } from '@/app/components/celebrations/CompletionModal'
 import type { CompletionStatus, Module } from '@/data/types'
 
+/** Read the current autoPlay preference from the lesson chrome store. */
+function readAutoPlay(): boolean {
+  return useLessonChromeStore.getState().autoPlay
+}
+
 export interface CompletionFlowParams {
   courseId: string | undefined
   lessonId: string | undefined
@@ -120,8 +125,9 @@ export function useCompletionFlow(params: CompletionFlowParams): CompletionFlowR
     // Show celebration modal (only on full course completion)
     showCelebration()
 
-    // Trigger auto-advance countdown if next lesson exists
-    if (nextLesson) {
+    // Trigger auto-advance countdown only when auto-play is enabled
+    const autoPlay = readAutoPlay()
+    if (nextLesson && autoPlay) {
       setShowAutoAdvance(true)
     }
   }, [
@@ -137,14 +143,15 @@ export function useCompletionFlow(params: CompletionFlowParams): CompletionFlowR
   // so we only need to show celebration and trigger auto-advance countdown.
   const handleYouTubeAutoComplete = useCallback(() => {
     showCelebration()
-    if (nextLesson) {
+    const autoPlay = readAutoPlay()
+    if (nextLesson && autoPlay) {
       setShowAutoAdvance(true)
     }
   }, [showCelebration, nextLesson, setShowAutoAdvance])
 
   const handleAutoAdvance = useCallback(() => {
     if (nextLesson && courseId) {
-      const autoPlay = useLessonChromeStore.getState().autoPlay
+      const autoPlay = readAutoPlay()
       navigate(`/courses/${courseId}/lessons/${nextLesson.id}`, {
         state: autoPlay ? { autoPlay: true } : undefined,
       })
@@ -160,7 +167,8 @@ export function useCompletionFlow(params: CompletionFlowParams): CompletionFlowR
     (status: CompletionStatus) => {
       if (status === 'completed') {
         showCelebration()
-        if (nextLesson) {
+        const autoPlay = readAutoPlay()
+        if (nextLesson && autoPlay) {
           setShowAutoAdvance(true)
         }
       }
@@ -172,7 +180,7 @@ export function useCompletionFlow(params: CompletionFlowParams): CompletionFlowR
   const handleCelebrationContinue = useCallback(() => {
     setCelebrationOpen(false)
     if (nextLesson && courseId) {
-      const autoPlay = useLessonChromeStore.getState().autoPlay
+      const autoPlay = readAutoPlay()
       navigate(`/courses/${courseId}/lessons/${nextLesson.id}`, {
         state: autoPlay ? { autoPlay: true } : undefined,
       })

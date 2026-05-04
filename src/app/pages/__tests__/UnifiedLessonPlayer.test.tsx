@@ -188,6 +188,7 @@ vi.mock('@/app/components/course/LessonHeaderCard', () => ({
 // ---------------------------------------------------------------------------
 
 import { UnifiedLessonPlayer } from '../UnifiedLessonPlayer'
+import { useLessonChromeStore } from '@/stores/useLessonChromeStore'
 
 function renderPlayer(courseId = 'test-course', lessonId = 'lesson-1') {
   return render(
@@ -208,6 +209,9 @@ describe('UnifiedLessonPlayer — E54-S01 callbacks', () => {
     vi.clearAllMocks()
     mockSetItemStatus.mockResolvedValue(undefined)
     mockGetItemStatus.mockReturnValue('not-started')
+    // Reset autoPlay to default after tests that toggle it — Zustand store
+    // is a singleton so state leaks between tests without explicit reset.
+    useLessonChromeStore.setState({ autoPlay: true })
   })
 
   it('renders lesson player content', async () => {
@@ -231,8 +235,28 @@ describe('UnifiedLessonPlayer — E54-S01 callbacks', () => {
     // Celebration modal should NOT appear for individual lesson completion
     expect(screen.queryByTestId('celebration-modal')).not.toBeInTheDocument()
 
-    // Auto-advance countdown SHOULD still appear
+    // Auto-advance countdown SHOULD still appear (autoPlay defaults to true in the store)
     expect(screen.getByTestId('auto-advance-countdown')).toBeInTheDocument()
+  })
+
+  it('does NOT show auto-advance countdown when autoPlay is disabled', async () => {
+    renderPlayer()
+
+    // Toggle autoPlay off before ending the video
+    useLessonChromeStore.getState().toggleAutoPlay()
+
+    const endButton = await screen.findByTestId('trigger-ended')
+
+    await act(async () => {
+      endButton.click()
+    })
+
+    await waitFor(() => {
+      expect(mockSetItemStatus).toHaveBeenCalled()
+    })
+
+    // Countdown should NOT appear when autoPlay is off
+    expect(screen.queryByTestId('auto-advance-countdown')).not.toBeInTheDocument()
   })
 
   it('does NOT show celebration when setItemStatus throws (persistence failure)', async () => {

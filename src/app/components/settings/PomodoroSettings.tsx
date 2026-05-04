@@ -150,21 +150,6 @@ export function PomodoroSettings() {
 
         <div className="h-px mx-4 bg-border/50" />
 
-        {/* Session Quality Score */}
-        <div className="p-4 flex items-center justify-between gap-4 hover:bg-muted/30 transition-colors">
-          <div>
-            <p className="text-sm font-medium">Session quality score</p>
-            <p className="text-xs text-muted-foreground">Show quality popup after study sessions</p>
-          </div>
-          <Switch
-            id="show-quality-score"
-            checked={prefs.showQualityScore}
-            onCheckedChange={checked => updatePref({ showQualityScore: checked })}
-          />
-        </div>
-
-        <div className="h-px mx-4 bg-border/50" />
-
         {/* Notification Sound */}
         <div className="p-4 hover:bg-muted/30 transition-colors">
           <div className="flex items-center justify-between gap-4">

@@ -52,8 +52,6 @@ import { useCourseImportStore } from '@/stores/useCourseImportStore'
 import { useAuthStore, selectIsGuestMode } from '@/stores/useAuthStore'
 import { GuestBanner } from './auth/GuestBanner'
 import { toast } from 'sonner'
-import { QualityScoreDialog } from './session/QualityScoreDialog'
-import type { QualityScoreResult } from '@/lib/qualityScore'
 import { useFocusMode } from '@/hooks/useFocusMode'
 import { FocusOverlay } from './figma/FocusOverlay'
 import { TrialIndicator } from './trial/TrialIndicator'
@@ -467,33 +465,6 @@ export function Layout() {
   const { stale, staleDays, refetch: refetchNoticeAck } = useNoticeAcknowledgement()
   const noticeEffectiveDate = formatNoticeEffectiveDate(CURRENT_NOTICE_VERSION)
 
-  // Quality score dialog state (E11-S03)
-  const [qualityDialogOpen, setQualityDialogOpen] = useState(false)
-  const [qualityResult, setQualityResult] = useState<QualityScoreResult | null>(null)
-
-  useEffect(() => {
-    const handleQualityScore = (e: Event) => {
-      // Check user preference before showing the popup
-      try {
-        const raw = localStorage.getItem('pomodoro-preferences')
-        if (raw) {
-          const prefs = JSON.parse(raw)
-          if (prefs.showQualityScore === false) return
-        }
-      } catch {
-        // silent-catch-ok: localStorage read for UI preference, use default (show)
-      }
-
-      const detail = (e as CustomEvent<QualityScoreResult>).detail
-      if (detail && typeof detail.score === 'number') {
-        setQualityResult(detail)
-        setQualityDialogOpen(true)
-      }
-    }
-    window.addEventListener('session-quality-calculated', handleQualityScore)
-    return () => window.removeEventListener('session-quality-calculated', handleQualityScore)
-  }, [])
-
   return (
     <div className="flex h-screen overflow-hidden bg-background grain-overlay">
       {/* Skip to content link for keyboard/screen-reader users */}
@@ -843,16 +814,6 @@ export function Layout() {
             onFeedbackClick={() => setFeedbackOpen(true)}
           />
         </div>
-      )}
-
-      {/* Quality Score Dialog (E11-S03) */}
-      {qualityResult && (
-        <QualityScoreDialog
-          open={qualityDialogOpen}
-          onOpenChange={setQualityDialogOpen}
-          score={qualityResult.score}
-          factors={qualityResult.factors}
-        />
       )}
 
       {/* Import progress indicator (E1B-S03) — non-blocking overlay */}
