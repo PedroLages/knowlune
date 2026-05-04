@@ -107,59 +107,59 @@ export function PathAnalyticsTab({ dateRange }: Props) {
     return map
   }, [paths, entries])
 
-  // Compute path rows with session data
+  // Compute path rows with session data (parallelized per-path queries)
   const computePathRows = useCallback(async () => {
     try {
-      const rows: PathRow[] = []
+      const rows = await Promise.all(
+        paths.map(async path => {
+          const progress = progressMap.get(path.id)
+          const courseIds = pathCourseIds.get(path.id) ?? []
 
-      for (const path of paths) {
-        const progress = progressMap.get(path.id)
-        const courseIds = pathCourseIds.get(path.id) ?? []
+          let hoursSpent = 0
+          let lastActivityDate: string | null = null
 
-        let hoursSpent = 0
-        let lastActivityDate: string | null = null
+          // Query study sessions for courses in this path
+          if (courseIds.length > 0) {
+            let query = db.studySessions.where('courseId').anyOf(courseIds)
 
-        // Query study sessions for courses in this path
-        if (courseIds.length > 0) {
-          let query = db.studySessions.where('courseId').anyOf(courseIds)
+            // Apply date range filter for sessions
+            if (dateRange.from || dateRange.to) {
+              query = query.filter(s => {
+                const startTime = new Date(s.startTime).getTime()
+                if (dateRange.from && startTime < dateRange.from.getTime()) return false
+                if (dateRange.to && startTime > dateRange.to.getTime()) return false
+                return true
+              })
+            }
 
-          // Apply date range filter for sessions
-          if (dateRange.from || dateRange.to) {
-            query = query.filter(s => {
-              const startTime = new Date(s.startTime).getTime()
-              if (dateRange.from && startTime < dateRange.from.getTime()) return false
-              if (dateRange.to && startTime > dateRange.to.getTime()) return false
-              return true
-            })
+            const sessions = await query.toArray()
+
+            // Sum active duration (seconds -> hours)
+            hoursSpent =
+              Math.round(
+                (sessions.reduce((sum, s) => sum + s.duration, 0) / 3600) * 10
+              ) / 10
+
+            // Find last activity
+            if (sessions.length > 0) {
+              const timestamps = sessions.map(s => new Date(s.startTime).getTime())
+              const latest = new Date(Math.max(...timestamps))
+              lastActivityDate = latest.toISOString()
+            }
           }
 
-          const sessions = await query.toArray()
-
-          // Sum active duration (seconds -> hours)
-          hoursSpent =
-            Math.round(
-              (sessions.reduce((sum, s) => sum + s.duration, 0) / 3600) * 10
-            ) / 10
-
-          // Find last activity
-          if (sessions.length > 0) {
-            const timestamps = sessions.map(s => new Date(s.startTime).getTime())
-            const latest = new Date(Math.max(...timestamps))
-            lastActivityDate = latest.toISOString()
+          return {
+            pathId: path.id,
+            pathName: path.name,
+            completionPct: progress?.completionPct ?? 0,
+            completedCourses: progress?.completedCourses ?? 0,
+            totalCourses: progress?.totalCourses ?? 0,
+            hoursSpent,
+            estimatedRemainingHours: progress?.estimatedRemainingHours ?? 0,
+            lastActivityDate,
           }
-        }
-
-        rows.push({
-          pathId: path.id,
-          pathName: path.name,
-          completionPct: progress?.completionPct ?? 0,
-          completedCourses: progress?.completedCourses ?? 0,
-          totalCourses: progress?.totalCourses ?? 0,
-          hoursSpent,
-          estimatedRemainingHours: progress?.estimatedRemainingHours ?? 0,
-          lastActivityDate,
         })
-      }
+      )
 
       setPathRows(rows)
     } catch (err) {
@@ -271,7 +271,7 @@ export function PathAnalyticsTab({ dateRange }: Props) {
           <CardTitle className="text-base">Path Completion Distribution</CardTitle>
         </CardHeader>
         <CardContent>
-          <ChartContainer config={stackedBarConfig} className="h-[200px] w-full">
+          <ChartContainer config={stackedBarConfig} className="h-[200px] w-full" aria-label="Stacked bar chart showing path completion distribution across 0-25%, 25-50%, 50-75%, and 75-100% buckets" role="img">
             <BarChart data={stackedBarData} layout="vertical" margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.3} horizontal={false} />
               <XAxis type="number" tickLine={false} axisLine={false} allowDecimals={false} />
@@ -305,7 +305,7 @@ export function PathAnalyticsTab({ dateRange }: Props) {
               No study hours recorded{(dateRange.from || dateRange.to) ? ' in this date range' : ' yet'}.
             </p>
           ) : (
-            <ChartContainer config={cumulativeHoursConfig} className="h-[250px] w-full">
+            <ChartContainer config={cumulativeHoursConfig} className="h-[250px] w-full" aria-label="Line chart showing study hours per learning path" role="img">
               <LineChart data={cumulativeHoursData}>
                 <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.3} />
                 <XAxis
@@ -440,8 +440,9 @@ function SortableTh({
   sortDir: 'asc' | 'desc'
   onSort: (key: keyof PathRow) => void
 }) {
+  const ariaSort = currentSort === sortKey ? (sortDir === 'asc' ? 'ascending' as const : 'descending' as const) : 'none' as const
   return (
-    <th className="py-2.5 pr-4 text-left">
+    <th className="py-2.5 pr-4 text-left" aria-sort={ariaSort}>
       <button
         className="text-xs font-semibold text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors flex items-center gap-1"
         onClick={() => onSort(sortKey)}

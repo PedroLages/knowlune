@@ -102,4 +102,56 @@ describe('calculatePathMilestoneProgress', () => {
     const result = await calculatePathMilestoneProgress('path-1')
     expect(result).toBe(0)
   })
+
+  it('returns 50% when half of imported course videos are completed', async () => {
+    await db.importedCourses.put(makeImportedCourse({ id: 'course-1', videoCount: 4 }))
+    await db.learningPathEntries.put(makeEntry({ courseId: 'course-1' }))
+
+    // Seed 2 of 4 videos as completed
+    await db.progress.bulkPut([
+      { courseId: 'course-1', videoId: 'vid-1', currentTime: 300, completionPercentage: 100, completedAt: new Date().toISOString() },
+      { courseId: 'course-1', videoId: 'vid-2', currentTime: 300, completionPercentage: 100, completedAt: new Date().toISOString() },
+      { courseId: 'course-1', videoId: 'vid-3', currentTime: 0, completionPercentage: 0, completedAt: undefined },
+      { courseId: 'course-1', videoId: 'vid-4', currentTime: 0, completionPercentage: 0, completedAt: undefined },
+    ])
+
+    const result = await calculatePathMilestoneProgress('path-1')
+    expect(result).toBe(50)
+  })
+
+  it('returns 100% when all imported course videos are completed', async () => {
+    await db.importedCourses.put(makeImportedCourse({ id: 'course-1', videoCount: 4 }))
+    await db.learningPathEntries.put(makeEntry({ courseId: 'course-1' }))
+
+    // Seed all 4 videos as completed
+    await db.progress.bulkPut([
+      { courseId: 'course-1', videoId: 'vid-1', currentTime: 300, completionPercentage: 100, completedAt: new Date().toISOString() },
+      { courseId: 'course-1', videoId: 'vid-2', currentTime: 300, completionPercentage: 100, completedAt: new Date().toISOString() },
+      { courseId: 'course-1', videoId: 'vid-3', currentTime: 300, completionPercentage: 100, completedAt: new Date().toISOString() },
+      { courseId: 'course-1', videoId: 'vid-4', currentTime: 300, completionPercentage: 100, completedAt: new Date().toISOString() },
+    ])
+
+    const result = await calculatePathMilestoneProgress('path-1')
+    expect(result).toBe(100)
+  })
+
+  it('handles mixed catalog and imported entries correctly', async () => {
+    await db.importedCourses.put(makeImportedCourse({ id: 'course-1', videoCount: 4 }))
+    await db.learningPathEntries.bulkPut([
+      makeEntry({ courseId: 'catalog-1', courseType: 'catalog' }),
+      makeEntry({ id: crypto.randomUUID(), courseId: 'course-1', position: 2 }),
+    ])
+
+    // Seed 3 of 4 imported videos as completed
+    await db.progress.bulkPut([
+      { courseId: 'course-1', videoId: 'vid-1', currentTime: 300, completionPercentage: 100, completedAt: new Date().toISOString() },
+      { courseId: 'course-1', videoId: 'vid-2', currentTime: 300, completionPercentage: 100, completedAt: new Date().toISOString() },
+      { courseId: 'course-1', videoId: 'vid-3', currentTime: 300, completionPercentage: 100, completedAt: new Date().toISOString() },
+      { courseId: 'course-1', videoId: 'vid-4', currentTime: 0, completionPercentage: 0, completedAt: undefined },
+    ])
+
+    const result = await calculatePathMilestoneProgress('path-1')
+    // 3 out of 4 imported videos = 75%. Catalog entries contribute 0.
+    expect(result).toBe(75)
+  })
 })

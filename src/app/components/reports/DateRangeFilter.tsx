@@ -77,7 +77,7 @@ export function DateRangeFilter({ value, onChange }: DateRangeFilterProps) {
         {PRESETS.map(preset => (
           <Button
             key={preset.label}
-            variant={activePreset === preset.label ? 'default' : 'outline'}
+            variant={activePreset === preset.label ? 'brand' : 'outline'}
             size="sm"
             className="min-h-[36px] text-xs"
             onClick={() => applyPreset(preset.days)}

@@ -416,6 +416,18 @@ export function LearningPathDetail() {
     return map
   }, [importedCourses, catalogCourses, authors, pathProgress.courseProgress])
 
+  // Course name lookup for PlanMyWeek and other components
+  const courseNames = useMemo(() => {
+    const names: Record<string, string> = {}
+    for (const ic of importedCourses) {
+      names[ic.id] = ic.name
+    }
+    for (const cc of catalogCourses) {
+      names[cc.id] = cc.title
+    }
+    return names
+  }, [importedCourses, catalogCourses])
+
   // DnD sensors (same pattern as AILearningPath)
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -1151,6 +1163,7 @@ export function LearningPathDetail() {
                     pathId={pathId!}
                     pathName={path.name}
                     entries={courseEntries}
+                    courseNames={courseNames}
                     progress={pathProgress}
                   />
                   <PathScheduleList pathId={pathId!} />

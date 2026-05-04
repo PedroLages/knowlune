@@ -19,6 +19,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/app/components/ui/dialog'
+import { ScrollArea } from '@/app/components/ui/scroll-area'
 import { useStudyScheduleStore } from '@/stores/useStudyScheduleStore'
 import type { PathProgressSummary } from '@/app/hooks/usePathProgress'
 import type { LearningPathEntry, DayOfWeek } from '@/data/types'
@@ -46,6 +47,7 @@ interface PlanMyWeekPreviewProps {
   pathId: string
   pathName: string
   entries: LearningPathEntry[]
+  courseNames: Record<string, string>
   progress: PathProgressSummary
 }
 
@@ -61,6 +63,7 @@ export function PlanMyWeekPreview({
   pathId,
   pathName,
   entries,
+  courseNames,
   progress,
 }: PlanMyWeekPreviewProps) {
   const { addSchedules } = useStudyScheduleStore()
@@ -79,7 +82,7 @@ export function PlanMyWeekPreview({
       if (cp && cp.completionPct < 100) {
         incompleteCourses.push({
           courseId: entry.courseId,
-          courseName: cp.courseId, // We'll resolve names below
+          courseName: courseNames[entry.courseId] ?? entry.courseId,
         })
       }
     }
@@ -192,7 +195,8 @@ export function PlanMyWeekPreview({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex-1 overflow-y-auto min-h-0 space-y-3 -mx-6 px-6">
+        <ScrollArea className="flex-1 min-h-0">
+          <div className="space-y-3">
           {scheduleEntries.length === 0 ? (
             <p className="text-center text-muted-foreground py-8">
               All courses are complete — nothing to schedule.
@@ -208,13 +212,14 @@ export function PlanMyWeekPreview({
                   <h4 className="text-sm font-medium">
                     {entry.title} — {entry.courseName}
                   </h4>
-                  <button
+                  <Button
+                    variant="ghost"
+                    size="icon"
                     onClick={() => removeEntry(index)}
-                    className="text-muted-foreground hover:text-destructive transition-colors"
                     aria-label="Remove entry"
                   >
                     <Trash2 className="size-4" aria-hidden="true" />
-                  </button>
+                  </Button>
                 </div>
 
                 {/* Day + Start Time */}
@@ -277,7 +282,8 @@ export function PlanMyWeekPreview({
               </div>
             ))
           )}
-        </div>
+          </div>
+        </ScrollArea>
 
         {/* Add entry button */}
         {scheduleEntries.length > 0 && (

@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback } from 'react'
 import { db } from '@/db'
 import { getAllProgress, PROGRESS_UPDATED_EVENT } from '@/lib/progress'
 import type { LearningPathEntry } from '@/data/types'
-import { computePathCompletionPct } from '@/lib/pathCompletion'
 
 const MINUTES_PER_LESSON = 15
 
@@ -146,12 +145,11 @@ export function usePathProgress(entries: LearningPathEntry[]): PathProgressSumma
       }
     }
 
-    const overallPct =
-      importedEntries.length > 0
-        ? computePathCompletionPct(importedEntries, importedMap, videoProgress, localProgress)
-        : 0
-
     const remainingLessons = totalLessonsCount - totalCompletedLessons
+    const overallPct =
+      totalLessonsCount > 0
+        ? Math.round((totalCompletedLessons / totalLessonsCount) * 100)
+        : 0
     const estimatedRemainingHours =
       Math.round(((remainingLessons * MINUTES_PER_LESSON) / 60) * 10) / 10
 

@@ -98,7 +98,7 @@ export function PathMilestoneCard({ challenge }: PathMilestoneCardProps) {
           </div>
           <Progress
             value={progressPercent}
-            className={cn('h-2.5', isCompleted && '[&>div]:bg-amber-500')}
+            className={cn('h-2.5', isCompleted && '[&>div]:bg-warning')}
             aria-label={`${challenge.name}: ${progressPercent}% complete`}
           />
         </div>
