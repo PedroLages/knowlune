@@ -334,7 +334,7 @@ export type QualityTrend = 'improving' | 'stable' | 'declining'
 
 // --- Learning Challenges (Story 6.1) ---
 
-export type ChallengeType = 'completion' | 'time' | 'streak' | 'books' | 'pages'
+export type ChallengeType = 'completion' | 'time' | 'streak' | 'books' | 'pages' | 'pathMilestone'
 
 export interface Challenge {
   id: string
@@ -346,6 +346,7 @@ export interface Challenge {
   currentProgress: number // starts at 0 (updated by E06-S02)
   celebratedMilestones: number[] // [25, 50, 75, 100] (used by E06-S03)
   completedAt?: string // ISO 8601 (set when 100% reached)
+  pathId?: string // FK → LearningPath.id (used by pathMilestone challenges)
 }
 
 // --- AI / Vector Embeddings (Epic 9) ---

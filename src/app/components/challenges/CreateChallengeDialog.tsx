@@ -27,6 +27,7 @@ const typeUnits: Record<ChallengeType, string> = {
   streak: 'days',
   books: 'books',
   pages: 'pages',
+  pathMilestone: '%',
 }
 
 const typeLabels: Record<ChallengeType, string> = {
@@ -35,6 +36,7 @@ const typeLabels: Record<ChallengeType, string> = {
   streak: 'Streak (days)',
   books: 'Books (finish count)',
   pages: 'Pages (total read)',
+  pathMilestone: 'Path Progress (%)',
 }
 
 interface FormErrors {

@@ -1,6 +1,7 @@
 import { db } from '@/db'
 import { getStudyLog, toLocalDateString } from '@/lib/studyLog'
 import type { Challenge } from '@/data/types'
+import { calculatePathMilestoneProgress } from '@/lib/challengePathMilestones'
 
 /**
  * Count completed content items since the challenge was created.
@@ -101,5 +102,7 @@ export async function calculateProgress(challenge: Challenge): Promise<number> {
       return calculateBooksProgress(challenge)
     case 'pages':
       return calculatePagesProgress(challenge)
+    case 'pathMilestone':
+      return calculatePathMilestoneProgress(challenge.pathId ?? '')
   }
 }

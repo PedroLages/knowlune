@@ -10,6 +10,7 @@ import {
   Check,
   BookOpen,
   FileText,
+  Route,
 } from 'lucide-react'
 import { cn } from '@/app/components/ui/utils'
 import { EmptyState } from '@/app/components/EmptyState'
@@ -35,6 +36,7 @@ const typeConfig: Record<ChallengeType, { label: string; unit: string; icon: typ
   streak: { label: 'Streak', unit: 'days', icon: Flame },
   books: { label: 'Books', unit: 'books', icon: BookOpen },
   pages: { label: 'Pages', unit: 'pages', icon: FileText },
+  pathMilestone: { label: 'Path Progress', unit: '%', icon: Route },
 }
 
 /** Parse date-only string as local date (avoids UTC midnight shift). */

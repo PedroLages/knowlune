@@ -14,6 +14,7 @@ interface NewChallengeData {
   type: ChallengeType
   targetValue: number
   deadline: string // ISO 8601 date
+  pathId?: string // FK → LearningPath.id (used by pathMilestone challenges)
 }
 
 interface ChallengeState {
@@ -122,6 +123,7 @@ export const useChallengeStore = create<ChallengeState>((set, get) => ({
       type: data.type,
       targetValue: data.targetValue,
       deadline: data.deadline,
+      pathId: data.pathId,
       createdAt: new Date().toISOString(),
       currentProgress: 0,
       celebratedMilestones: [],
