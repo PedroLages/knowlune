@@ -28,7 +28,7 @@ export function useCourseAdapter(courseId: string | undefined): UseCourseAdapter
 
     const videos = await db.importedVideos.where('courseId').equals(courseId).sortBy('order')
 
-    const pdfs = await db.importedPdfs.where('courseId').equals(courseId).toArray()
+    const pdfs = await db.importedPdfs.where('courseId').equals(courseId).sortBy('filename')
 
     const adapter = createCourseAdapter(course, videos, pdfs)
     return { adapter, error: null }

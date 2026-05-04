@@ -677,6 +677,9 @@ export async function scanCourseFolderFromHandle(
           metadata: { duration: number; width: number; height: number; fileSize: number }
         }> => r.status === 'fulfilled'
       )
+      .sort((a, b) =>
+        a.value.entry.path.localeCompare(b.value.entry.path, undefined, { numeric: true })
+      )
       .map((r, index) => ({
         id: crypto.randomUUID(),
         filename: r.value.entry.handle.name,
@@ -809,9 +812,13 @@ export async function scanFromDroppedFiles(
     store.setImportProgress({ current: 0, total: totalFiles })
 
     // Extract video metadata from File objects
+    // Sort dropped files by name for deterministic order (no folder structure in drops)
+    const sortedVideoFiles = [...videoFiles].sort((a, b) =>
+      a.name.localeCompare(b.name, undefined, { numeric: true })
+    )
     let processedCount = 0
     const videos: ScannedVideo[] = []
-    for (const file of videoFiles) {
+    for (const file of sortedVideoFiles) {
       try {
         const metadata = await extractVideoMetadataFromFile(file)
         videos.push({

@@ -124,7 +124,10 @@ export async function getLastWatchedLesson(
     if (a.currentTime > 0 && b.currentTime <= 0) return -1
     if (b.currentTime > 0 && a.currentTime <= 0) return 1
     // Then by completion percentage (higher = more recent activity)
-    return b.completionPercentage - a.completionPercentage
+    const cmpDiff = b.completionPercentage - a.completionPercentage
+    if (cmpDiff !== 0) return cmpDiff
+    // Tiebreaker: deterministic sort by videoId when all prior criteria are equal
+    return a.videoId.localeCompare(b.videoId)
   })
 
   const best = sorted[0]

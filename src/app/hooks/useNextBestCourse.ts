@@ -50,7 +50,7 @@ async function getFirstLessonId(courseId: string): Promise<string | null> {
     const pdfs = await db.importedPdfs
       .where('courseId')
       .equals(courseId)
-      .sortBy('order') as unknown as Array<{ id: string; order: number }>
+      .sortBy('filename')
     if (pdfs.length > 0) return pdfs[0].id
 
     return null
@@ -84,7 +84,7 @@ async function findFirstIncompleteLesson(
       const videos = await db.importedVideos
         .where('courseId')
         .equals(courseId)
-        .toArray()
+        .sortBy('order')
       const videoOrderMap = new Map(videos.map(v => [v.id, v.order]))
 
       const sorted = lessonEntries.sort(
