@@ -210,6 +210,13 @@ export function UnifiedLessonPlayer() {
     setShowCourseSuggestion: state.setShowCourseSuggestion,
   })
 
+  // Cancel in-progress auto-advance countdown when user toggles autoPlay off
+  useEffect(() => {
+    if (!storeAutoPlay && state.showAutoAdvance) {
+      completion.handleCancelAutoAdvance()
+    }
+  }, [storeAutoPlay, state.showAutoAdvance, completion.handleCancelAutoAdvance])
+
   // Mini-player callbacks
   const miniPlayer = useMiniPlayerState({
     videoPlayerRef,

@@ -14,7 +14,6 @@ export interface PomodoroPreferences {
   autoStartFocus: boolean // default: false
   notificationVolume: number // 0-1 (default: 0.5)
   notificationSound: PomodoroSoundId // default: 'gentle-bell'
-  showQualityScore: boolean // default: true (show session quality popup)
 }
 
 const STORAGE_KEY = 'pomodoro-preferences'
@@ -26,7 +25,6 @@ const defaults: PomodoroPreferences = {
   autoStartFocus: false,
   notificationVolume: 0.5,
   notificationSound: 'gentle-bell',
-  showQualityScore: true,
 }
 
 export function getPomodoroPreferences(): PomodoroPreferences {
@@ -34,6 +32,8 @@ export function getPomodoroPreferences(): PomodoroPreferences {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (!raw) return { ...defaults }
     const parsed = JSON.parse(raw) as Partial<PomodoroPreferences>
+    // Clean up stale keys from removed preferences (e.g., showQualityScore from E11-S03)
+    delete (parsed as Record<string, unknown>).showQualityScore
     return { ...defaults, ...parsed }
   } catch {
     return { ...defaults }
