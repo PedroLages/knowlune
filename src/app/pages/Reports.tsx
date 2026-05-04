@@ -33,6 +33,7 @@ import {
 } from '@/lib/reportStats'
 import { Button } from '@/app/components/ui/button'
 import { useOnlineStatus } from '@/app/hooks/useOnlineStatus'
+import { DateRangeFilter, type DateRange } from '@/app/components/reports/DateRangeFilter'
 import { AIAnalyticsTab } from '@/app/components/reports/AIAnalyticsTab'
 import { QuizAnalyticsDashboard } from '@/app/components/reports/QuizAnalyticsDashboard'
 import { CategoryRadar } from '@/app/components/reports/CategoryRadar'
@@ -97,6 +98,7 @@ export default function Reports() {
     ? (rawTab as string)
     : 'study'
 
+  const [dateRange, setDateRange] = useState<DateRange>({ from: null, to: null })
   const [hasInteracted, setHasInteracted] = useState(false)
 
   const allCourses = useCourseStore(s => s.courses)
@@ -261,6 +263,11 @@ export default function Reports() {
               : 'AI Analytics displayed'
           : ''}
       </span>
+
+      {/* Date Range Filter */}
+      <div className="mb-4">
+        <DateRangeFilter value={dateRange} onChange={setDateRange} />
+      </div>
 
       <Tabs
         value={activeTab}
