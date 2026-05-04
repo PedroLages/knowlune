@@ -16,6 +16,7 @@ const STATS_KEY = 'dashboard-section-stats'
 export type DashboardSectionId =
   | 'recommended-next'
   | 'metrics-strip'
+  | 'continue-learning-path'
   | 'quiz-performance'
   | 'engagement-zone'
   | 'study-history'
@@ -31,6 +32,7 @@ export type DashboardSectionId =
 export const SECTION_LABELS: Record<DashboardSectionId, string> = {
   'recommended-next': 'Recommended Next',
   'metrics-strip': 'Metrics & Achievements',
+  'continue-learning-path': 'Continue Learning Paths',
   'quiz-performance': 'Quiz Performance',
   'engagement-zone': 'Study Streak & Goals',
   'study-history': 'Study History',
@@ -47,6 +49,7 @@ export const SECTION_LABELS: Record<DashboardSectionId, string> = {
 export const DEFAULT_ORDER: DashboardSectionId[] = [
   'recommended-next',
   'metrics-strip',
+  'continue-learning-path',
   'quiz-performance',
   'engagement-zone',
   'study-history',
