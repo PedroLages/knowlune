@@ -1,0 +1,313 @@
+{
+  "runId": "20260504-021112-7f8167a9",
+  "scope": "8 files changed (4 new + 4 modified) across hooks, components, pages, and config",
+  "intent": "Implement Smart Resume for learning paths -- add useNextBestCourse hook, Overview dashboard section, path card Continue buttons navigating to lesson player, and post-completion path continuity in the lesson player",
+  "mode": "headless",
+  "reviewers": [
+    "correctness-reviewer (always)",
+    "testing-reviewer (always)",
+    "maintainability-reviewer (always)",
+    "project-standards-reviewer (always)",
+    "agent-native-reviewer (always)",
+    "learnings-researcher (always)",
+    "performance-reviewer (async Dexie queries, sub-10ms claim verification)",
+    "reliability-reviewer (error handling in async functions, cancellation patterns)",
+    "adversarial-reviewer (race conditions in dual-effect pattern, edge cases)",
+    "kieran-typescript (TypeScript hooks and components)",
+    "julik-frontend-races (cancellation logic, async effects, event listeners)"
+  ],
+  "verdict": "Ready with fixes",
+  "artifactPath": ".context/compound-engineering/ce-review/20260504-021112-7f8167a9/",
+  "appliedFixes": 3,
+  "findings": [
+    {
+      "id": "CORR-001",
+      "title": "ContinueLearningPathSection navigates to course detail page, not lesson player",
+      "severity": "P2",
+      "file": "src/app/components/ContinueLearningPathSection.tsx",
+      "line": 188,
+      "confidence": 0.92,
+      "autofixClass": "manual",
+      "owner": "downstream-resolver",
+      "requires_verification": false,
+      "pre_existing": false,
+      "suggestedFix": "Compute targetLessonId in the deriveNextCourse helper by querying useContentProgressStore statusMap and course lesson data, then navigate to `/courses/${courseId}/lessons/${targetLessonId}`. This resolves the plan requirement R7 for the Overview section.",
+      "why_it_matters": "Plan requirement R7 specifies 1-click resume to the exact lesson. The current implementation navigates to the course detail page, adding an extra click. The path cards in LearningPaths.tsx correctly implement lesson player navigation, but the Overview section does not.",
+      "evidence": [
+        "Line 188: navigate(`/courses/${courseId}`) should be /courses/${courseId}/lessons/${targetLessonId}",
+        "Comment on lines 186-187 acknowledges the gap: 'the lesson player URL isn't known without the hook's async targetLessonId resolution'",
+        "Plan Unit 2 explicitly says: 'Continue button navigates to `/courses/${courseId}/lessons/${targetLessonId}`'"
+      ]
+    },
+    {
+      "id": "CORR-002",
+      "title": "Test description mismatch: 'missing course data' test actually tests missing path entries",
+      "severity": "P3",
+      "file": "src/app/hooks/__tests__/useNextBestCourse.test.tsx",
+      "line": 329,
+      "confidence": 0.95,
+      "autofixClass": "safe_auto",
+      "owner": "review-fixer",
+      "requires_verification": false,
+      "pre_existing": false,
+      "suggestedFix": "Fixed: changed test description to 'returns null action when pathId has no entries' to match actual test behavior.",
+      "why_it_matters": "Misleading test description creates confusion for future maintainers. The test verifies graceful degradation for unknown pathIds, not the missing ImportedCourse scenario described in the original name.",
+      "evidence": [
+        "Test uses 'path-nonexistent' which has no matching entries in the store",
+        "Original comment admitted the mismatch: 'We need entries that reference missing-course... Instead, this tests that the hook returns INITIAL_RESULT when pathId does not match anything'"
+      ]
+    },
+    {
+      "id": "PERF-001",
+      "title": "Dexie sortBy on importedPdfs may fail if no 'order' index exists",
+      "severity": "P2",
+      "file": "src/app/hooks/useNextBestCourse.ts",
+      "line": 53,
+      "confidence": 0.75,
+      "autofixClass": "manual",
+      "owner": "downstream-resolver",
+      "requires_verification": true,
+      "pre_existing": true,
+      "suggestedFix": "Verify importedPdfs Dexie table has an index on 'order', or add one. If not, sortBy falls back to in-memory sort which is correct but slower. The `as unknown as Array<{id: string, order: number}>` cast should be replaced with the proper table type if the schema type is available.",
+      "why_it_matters": "Dexie 4's sortBy requires an index on the sort property for indexed sort; without one, it falls back to in-memory sort. For PDF courses with many lessons, this could be slow. The type cast bypasses type safety.",
+      "evidence": [
+        "Line 53: `.sortBy('order') as unknown as Array<{ id: string; order: number }>`",
+        "Contrast with importedVideos on line 47 which has the same pattern but no type cast",
+        "If the PDF table type matches ImportedVideo's type, the cast could mask a missing `order` field"
+      ]
+    },
+    {
+      "id": "PERF-002",
+      "title": "findFirstIncompleteLesson makes multiple Dexie queries per evaluation",
+      "severity": "P3",
+      "file": "src/app/hooks/useNextBestCourse.ts",
+      "line": 83,
+      "confidence": 0.70,
+      "autofixClass": "gated_auto",
+      "owner": "downstream-resolver",
+      "requires_verification": false,
+      "pre_existing": false,
+      "suggestedFix": "Cache the video order map or merge the two Dexie queries (sort video order + get all videos) into a single query. Consider lifting lesson order data into the store to avoid Dexie queries on every reactivity tick.",
+      "why_it_matters": "The hook runs on every progress event. Each run triggers up to 3 Dexie queries per course (videos sorted, videos for order map, potentially PDFs). While fast for small courses, this contradicts the plan's 'sub-10ms' claim for courses with 100+ lessons.",
+      "evidence": [
+        "getFirstLessonId queries importedVideos.sortBy and importedPdfs.sortBy",
+        "findFirstIncompleteLesson queries importedVideos.toArray for order map, then may fall back to getFirstLessonId",
+        "Plan claims 'sub-10ms' but implementation makes synchronous-pattern async Dexie queries"
+      ]
+    },
+    {
+      "id": "MAINT-001",
+      "title": "Duplicate traversal logic between deriveNextCourse and computeNextBestCourse",
+      "severity": "P2",
+      "file": "src/app/components/ContinueLearningPathSection.tsx",
+      "line": 35,
+      "confidence": 0.88,
+      "autofixClass": "manual",
+      "owner": "downstream-resolver",
+      "requires_verification": false,
+      "pre_existing": false,
+      "suggestedFix": "Extract the shared 'find first actionable course in sorted entries' logic into a shared utility function that both the hook and the section can import. The section version currently lacks targetLessonId resolution; the hook version has it. A shared utility would prevent them from diverging further.",
+      "why_it_matters": "deriveNextCourse in ContinueLearningPathSection.tsx and computeNextBestCourse in useNextBestCourse.ts both traverse sorted entries to find the first resume/start course. When one is updated, the other may become stale. This violates DRY and increases maintenance burden.",
+      "evidence": [
+        "deriveNextCourse (line 35-64) does 2-pass traversal over sortedEntries checking completionPct thresholds",
+        "computeNextBestCourse (line 115-151) does identical 2-pass traversal",
+        "Both accept sortedEntries, courseProgress, and importedCourses with the same shape",
+        "The plan's Key Technical Decisions says 'the Overview section derives per-path next courses from the aggregate useMultiPathProgress result' to avoid Rules of Hooks violations, but doesn't justify the duplication"
+      ]
+    },
+    {
+      "id": "MAINT-002",
+      "title": "Custom ErrorBoundary in ContinueLearningPathSection reimplements shared utility",
+      "severity": "P3",
+      "file": "src/app/components/ContinueLearningPathSection.tsx",
+      "line": 300,
+      "confidence": 0.80,
+      "autofixClass": "manual",
+      "owner": "downstream-resolver",
+      "requires_verification": false,
+      "pre_existing": false,
+      "suggestedFix": "Replace the local ErrorBoundary class with the app's shared error boundary component (if one exists), or extract to a shared utility file for reuse across dashboard sections.",
+      "why_it_matters": "A custom ErrorBoundary is defined inline in the component file. If other components need error boundaries, this pattern encourages duplication. It also imports Component, ReactNode, and ErrorInfo at the bottom of the file (line 289) mixing import conventions.",
+      "evidence": [
+        "ErrorBoundary class defined at lines 300-318 inside the component file",
+        "Import statements for React at line 289 (bottom of file) instead of top with other imports",
+        "Dashboard has 15+ sections that could benefit from shared error boundary"
+      ]
+    },
+    {
+      "id": "TEST-001",
+      "title": "Missing test coverage for Overview section (Unit 2)",
+      "severity": "P2",
+      "file": "src/app/components/ContinueLearningPathSection.tsx",
+      "line": 1,
+      "confidence": 0.90,
+      "autofixClass": "manual",
+      "owner": "downstream-resolver",
+      "requires_verification": false,
+      "pre_existing": false,
+      "suggestedFix": "Add tests for ContinueLearningPathSection covering: renders when paths exist, empty state when no paths, 'N more paths' expand, navigation click handler, and error boundary fallback.",
+      "why_it_matters": "Plan Unit 2 specifies 10 test scenarios (happy paths + edge cases). The diff only includes the useNextBestCourse hook tests. The Overview section and the new ContinueLearningPathSection have zero test coverage.",
+      "evidence": [
+        "Plan lists 10 test scenarios for Unit 2 (Overview section)",
+        "No test files were created or modified for Overview or ContinueLearningPathSection",
+        "Plan says: 'Test: src/app/pages/__tests__/Overview.test.tsx (extend existing)' but no diff for this file"
+      ]
+    },
+    {
+      "id": "TEST-002",
+      "title": "Missing test coverage for path card footer buttons (Unit 3)",
+      "severity": "P2",
+      "file": "src/app/pages/LearningPaths.tsx",
+      "line": 1416,
+      "confidence": 0.90,
+      "autofixClass": "manual",
+      "owner": "downstream-resolver",
+      "requires_verification": false,
+      "pre_existing": false,
+      "suggestedFix": "Add tests for PathCard footer changes covering: Continue button with course name, Start button, Review button, navigation to lesson player when targetLessonId is present, and fallback behavior.",
+      "why_it_matters": "Plan Unit 3 specifies 9 test scenarios. The PathCard footer was significantly rewritten (replaced inline ArrowRight/Not Started with Button), but no tests verify the new behavior.",
+      "evidence": [
+        "Plan lists 9 test scenarios for Unit 3 (path card buttons)",
+        "No LearningPaths.test.tsx diff in the changes",
+        "The footer logic includes conditional branches for resume/start/complete with targetLessonId fallback that needs testing"
+      ]
+    },
+    {
+      "id": "TEST-003",
+      "title": "Missing test coverage for NextInPath and lesson player integration (Unit 4)",
+      "severity": "P2",
+      "file": "src/app/components/NextInPath.tsx",
+      "line": 1,
+      "confidence": 0.90,
+      "autofixClass": "manual",
+      "owner": "downstream-resolver",
+      "requires_verification": false,
+      "pre_existing": false,
+      "suggestedFix": "Add tests for NextInPath: renders next in path when not last, renders path complete when last, navigation to lesson player with targetLessonId, navigation to path detail for complete, dismiss button, and focus management.",
+      "why_it_matters": "Plan Unit 4 specifies 9 test scenarios. The NextInPath component and the path context logic in UnifiedLessonPlayer both lack test coverage.",
+      "evidence": [
+        "Plan lists 9 test scenarios for Unit 4 (post-completion path continuity)",
+        "No UnifiedLessonPlayer.test.tsx diff in the changes",
+        "NextInPath has focus management (line 49-51) with no test coverage"
+      ]
+    },
+    {
+      "id": "ADVR-001",
+      "title": "Race condition between main effect and progress event handler",
+      "severity": "P2",
+      "file": "src/app/hooks/useNextBestCourse.ts",
+      "line": 214,
+      "confidence": 0.70,
+      "autofixClass": "manual",
+      "owner": "downstream-resolver",
+      "requires_verification": true,
+      "pre_existing": false,
+      "suggestedFix": "Consolidate the two effects into one: use runCompute callback in the progress event handler instead of duplicating the computeNextBestCourse call. Alternatively, use a single ref-based approach where both the main computation and the event handler share one cancellation mechanism.",
+      "why_it_matters": "Two separate effects both write to the same result state. The main effect (line 214) uses runCompute with dual cancellation (cancelledRef + currentCancelled). The progress event handler (line 220) uses only cancelledRef and calls computeNextBestCourse directly. If a progress event fires between deps re-render and cleanup, the event handler could set stale state. While React's effect ordering makes this unlikely, the pattern is fragile and a future refactor could break the implicit ordering.",
+      "evidence": [
+        "Line 214-217: Main effect uses `runCompute` which has dual cancellation pattern",
+        "Line 222-225: Progress handler calls `computeNextBestCourse` directly (not through runCompute)",
+        "Line 224: Event handler only checks `cancelledRef.current` — does not use `currentCancelled` pattern",
+        "The main effect uses `useCallback` for runCompute but the event handler uses a new inline function on every render"
+      ]
+    },
+    {
+      "id": "ADVR-002",
+      "title": "PathCard shows ArrowRight for in-progress path with missing course data",
+      "severity": "P2",
+      "file": "src/app/pages/LearningPaths.tsx",
+      "line": 1416,
+      "confidence": 0.75,
+      "autofixClass": "manual",
+      "owner": "downstream-resolver",
+      "requires_verification": false,
+      "pre_existing": false,
+      "suggestedFix": "In the PathCard footerAction computation, handle the case where action is 'resume' or 'start' but course is null. Show a generic 'Continue' label with fallback navigation, or fall through to a clear 'Unavailable' state instead of showing the default ArrowRight/NotStarted which implies the path has no progress.",
+      "why_it_matters": "If a course is in-progress (action='resume') but its ImportedCourse data is missing (course=null), the footerAction returns null, and the card falls through to show the generic ArrowRight icon. This is misleading because the path IS in progress — the arrow icon suggests there's nothing to continue.",
+      "evidence": [
+        "Line 1417-1435: footerAction returns null when course is null (the `if (action === 'resume' && course)` check)",
+        "Line 1519-1528: When footerAction is null and isNotStarted is false, shows ArrowRight icon",
+        "The test for 'missing course data gracefully' in the hook tests this scenario but no frontend test covers the PathCard rendering"
+      ]
+    },
+    {
+      "id": "RELI-001",
+      "title": "EMPTY_MAP shared across hook invocations could be mutated",
+      "severity": "P3",
+      "file": "src/app/hooks/useNextBestCourse.ts",
+      "line": 153,
+      "confidence": 0.65,
+      "autofixClass": "gated_auto",
+      "owner": "downstream-resolver",
+      "requires_verification": false,
+      "pre_existing": false,
+      "suggestedFix": "Replace EMPTY_MAP with a function call: `() => new Map()` or use `useMemo` to create a fresh empty map per hook instance. This prevents one hook instance from accidentally polluting another's path entries if the map is ever mutated.",
+      "why_it_matters": "EMPTY_MAP is a module-level constant reused across all hook invocations. Currently not mutated, but if future code adds entries to it, all hook instances would share the mutation. Defensive coding prevents future bugs.",
+      "evidence": [
+        "Line 153: const EMPTY_MAP = new Map<string, LearningPathEntry[]>()",
+        "Line 177: if (sortedEntries.length === 0) return EMPTY_MAP",
+        "New Map() at module level creates a shared reference across all hook instances"
+      ]
+    },
+    {
+      "id": "PROJ-001",
+      "title": "Bottom-of-file React imports break convention",
+      "severity": "P3",
+      "file": "src/app/components/ContinueLearningPathSection.tsx",
+      "line": 289,
+      "confidence": 0.85,
+      "autofixClass": "safe_auto",
+      "owner": "review-fixer",
+      "requires_verification": false,
+      "pre_existing": false,
+      "suggestedFix": "Move the `import { Component, type ReactNode, type ErrorInfo } from 'react'` to the top of the file with the other imports.",
+      "why_it_matters": "Import conventions place all imports at the top of the file. The ErrorBoundary imports for React are at line 289, far below the top-level imports at lines 10-20.",
+      "evidence": [
+        "Top-level imports at lines 10-20",
+        "Line 289: import { Component, type ReactNode, type ErrorInfo } from 'react'",
+        "This is a maintainability convention violation"
+      ]
+    }
+  ],
+  "preExisting": [
+    {
+      "id": "PERF-001",
+      "title": "Dexie sortBy on importedPdfs may fail if no 'order' index exists",
+      "severity": "P2",
+      "file": "src/app/hooks/useNextBestCourse.ts",
+      "line": 53,
+      "confidence": 0.75,
+      "autofixClass": "manual",
+      "owner": "downstream-resolver",
+      "requires_verification": true,
+      "pre_existing": true,
+      "suggestedFix": "Verify importedPdfs Dexie table has an index on 'order', or add one."
+    }
+  ],
+  "residualRisks": [
+    "The cancelledRef pattern (shared across two effects) is fragile; future changes could introduce a race condition between the main computation effect and the PROGRESS_UPDATED_EVENT handler",
+    "Dexie queries in the hot path of every progress event could cause performance degradation for users with many courses",
+    "The overview section navigation to course detail (not lesson player) means users get a 2-step resume from the dashboard instead of 1-click"
+  ],
+  "testingGaps": [
+    "No tests for ContinueLearningPathSection (9 scenarios in plan)",
+    "No tests for PathCard footer buttons in LearningPaths (9 scenarios in plan)",
+    "No tests for NextInPath component or UnifiedLessonPlayer path context (9 scenarios in plan)",
+    "No test for Dexie query failure in getFirstLessonId or findFirstIncompleteLesson",
+    "No test for edge case where action='resume' but course is null at the UI level",
+    "Course progress at boundary values (completionPct exactly 0, 100, or negative) not tested"
+  ],
+  "requirementsChecklist": {
+    "plan_source": "explicit",
+    "R1": { "status": "met", "notes": "useNextBestCourse hook created with correct return shape" },
+    "R2": { "status": "met", "notes": "Reactivity via PROGRESS_UPDATED_EVENT listener" },
+    "R3": { "status": "met", "notes": "ContinueLearningPathSection created and registered in Overview" },
+    "R4": { "status": "met", "notes": "Multiple paths shown with expandable 'N more paths' link" },
+    "R5": { "status": "met", "notes": "Uses dashboard card pattern (rounded-2xl, border, bg-card)" },
+    "R6": { "status": "met", "notes": "Path cards show Continue/Start button in footer" },
+    "R7": { "status": "partially addressed", "notes": "Path cards navigate to lesson player (correct); Overview section navigates to course detail page (not 1-click resume)" },
+    "R8": { "status": "met", "notes": "Completed paths show Review button" },
+    "R9": { "status": "met", "notes": "NextInPath component created and rendered in lesson player" },
+    "R10": { "status": "met", "notes": "Last course shows path complete message" }
+  }
+}

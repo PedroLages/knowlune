@@ -7,7 +7,7 @@
  * @see R3, R4, R5 — docs/plans/2026-05-04-001-feat-smart-resume-learning-paths-plan.md
  */
 
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback, Component, type ReactNode, type ErrorInfo } from 'react'
 import { useNavigate } from 'react-router'
 import { motion } from 'motion/react'
 import { Route, ChevronDown, ChevronUp, ArrowRight } from 'lucide-react'
@@ -285,8 +285,6 @@ export function ContinueLearningPathSection() {
 }
 
 // ── Simple Error Boundary ────────────────────────────────────────────────
-
-import { Component, type ReactNode, type ErrorInfo } from 'react'
 
 interface ErrorBoundaryProps {
   children: ReactNode

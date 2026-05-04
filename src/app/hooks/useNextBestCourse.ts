@@ -54,7 +54,8 @@ async function getFirstLessonId(courseId: string): Promise<string | null> {
     if (pdfs.length > 0) return pdfs[0].id
 
     return null
-  } catch {
+  } catch (err) {
+    console.error('[getFirstLessonId] Dexie query failed for course', courseId, err)
     return null
   }
 }
@@ -96,7 +97,8 @@ async function findFirstIncompleteLesson(
 
     // All complete or no entries in statusMap — fall back to first lesson
     return getFirstLessonId(courseId)
-  } catch {
+  } catch (err) {
+    console.error('[findFirstIncompleteLesson] failed for course', courseId, err)
     return getFirstLessonId(courseId)
   }
 }

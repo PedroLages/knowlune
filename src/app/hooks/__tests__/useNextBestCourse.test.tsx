@@ -326,13 +326,10 @@ describe('useNextBestCourse', () => {
     })
   })
 
-  it('handles missing course data gracefully (entry exists but no matching ImportedCourse)', async () => {
-    // We need entries that reference 'missing-course' for this path
-    // Since the mock entries are in module scope, we create a path with no entries
-    // and use the progress map that has 'missing-course' — but the hook won't
-    // find it because there are no entries for that path.
-    // Instead, this tests that the hook returns INITIAL_RESULT when pathId doesn't
-    // match anything — which is the expected graceful degradation for missing data.
+  it('returns null action when pathId has no entries (graceful degradation for missing/mismatched data)', async () => {
+    // Uses a pathId ('path-nonexistent') with no matching entries in the store.
+    // The hook should return INITIAL_RESULT as graceful degradation — even
+    // though the progress map has entries, no entries mean no actionable courses.
 
     const emptyProgressMap = new Map<string, PathProgressSummary>()
     emptyProgressMap.set('path-nonexistent', {
