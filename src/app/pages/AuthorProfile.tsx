@@ -56,7 +56,10 @@ export function AuthorProfile() {
     if (state?.__viaPalette === true) return
     void recordVisit('author', authorId)
   }, [authorId, location.state])
-  const { authors: storeAuthors, isLoaded, isLoading, loadAuthors } = useAuthorStore()
+  const storeAuthors = useAuthorStore(s => s.authors)
+  const isLoaded = useAuthorStore(s => s.isLoaded)
+  const isLoading = useAuthorStore(s => s.isLoading)
+  const loadAuthors = useAuthorStore(s => s.loadAuthors)
   const courses = useCourseStore(s => s.courses)
   const importedCourses = useCourseImportStore(state => state.importedCourses)
   const loadImportedCourses = useCourseImportStore(state => state.loadImportedCourses)

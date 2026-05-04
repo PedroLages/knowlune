@@ -48,7 +48,8 @@ function isValidUrl(value: string): boolean {
 }
 
 export function AuthorFormDialog({ open, onOpenChange, author }: AuthorFormDialogProps) {
-  const { addAuthor, updateAuthor } = useAuthorStore()
+  const addAuthor = useAuthorStore(s => s.addAuthor)
+  const updateAuthor = useAuthorStore(s => s.updateAuthor)
   const isEditMode = !!author
 
   const [name, setName] = useState('')
@@ -212,7 +213,10 @@ export function AuthorFormDialog({ open, onOpenChange, author }: AuthorFormDialo
         onOpenChange(v)
       }}
     >
-      <DialogContent className="flex max-h-[min(85vh,calc(100dvh-2rem))] min-h-0 min-w-0 flex-col gap-4 overflow-hidden overflow-x-hidden sm:max-w-lg">
+      <DialogContent
+        overlayClassName="bg-black/60 backdrop-blur-sm"
+        className="flex max-h-[min(85vh,calc(100dvh-2rem))] min-h-0 min-w-0 flex-col gap-4 overflow-hidden overflow-x-hidden sm:max-w-lg"
+      >
         <DialogHeader className="shrink-0 pr-12 text-center sm:text-left">
           <DialogTitle>{isEditMode ? 'Edit Author' : 'Create Author'}</DialogTitle>
           <DialogDescription>
@@ -229,225 +233,269 @@ export function AuthorFormDialog({ open, onOpenChange, author }: AuthorFormDialo
           noValidate
         >
           <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain">
-          {/* Name (required) */}
-          <div className="space-y-1.5">
-            <Label htmlFor="author-name">
-              Name <span className="text-destructive">*</span>
-            </Label>
-            <Input
-              id="author-name"
-              placeholder="e.g., Jane Smith"
-              maxLength={100}
-              value={name}
-              onChange={e => {
-                setName(e.target.value)
-                if (errors.name) setErrors(prev => ({ ...prev, name: undefined }))
-              }}
-              aria-invalid={!!errors.name}
-              aria-describedby={errors.name ? 'author-name-error' : undefined}
-            />
-            {errors.name && (
-              <p id="author-name-error" role="alert" className="text-destructive text-xs">
-                {errors.name}
-              </p>
-            )}
-          </div>
+            {/* ── Profile ── */}
+            <div>
+              <h3 className="font-semibold uppercase tracking-wider text-muted-foreground mb-2 text-xs">
+                Profile
+              </h3>
+              <Separator className="mb-3" />
+              <div className="space-y-3">
+                {/* Name (required) */}
+                <div className="space-y-1.5">
+                  <Label htmlFor="author-name">
+                    Name <span className="text-destructive">*</span>
+                  </Label>
+                  <Input
+                    id="author-name"
+                    placeholder="e.g., Jane Smith"
+                    maxLength={100}
+                    value={name}
+                    onChange={e => {
+                      setName(e.target.value)
+                      if (errors.name) setErrors(prev => ({ ...prev, name: undefined }))
+                    }}
+                    aria-invalid={!!errors.name}
+                    aria-describedby={errors.name ? 'author-name-error' : undefined}
+                    className="border-2"
+                  />
+                  {errors.name && (
+                    <p id="author-name-error" role="alert" className="text-destructive text-xs">
+                      {errors.name}
+                    </p>
+                  )}
+                </div>
 
-          {/* Title */}
-          <div className="space-y-1.5">
-            <Label htmlFor="author-title">Title</Label>
-            <Input
-              id="author-title"
-              placeholder="e.g., Software Engineering Expert"
-              maxLength={200}
-              value={title}
-              onChange={e => setTitle(e.target.value)}
-            />
-          </div>
+                {/* Title */}
+                <div className="space-y-1.5">
+                  <Label htmlFor="author-title">Title</Label>
+                  <Input
+                    id="author-title"
+                    placeholder="e.g., Software Engineering Expert"
+                    maxLength={200}
+                    value={title}
+                    onChange={e => setTitle(e.target.value)}
+                    className="border-2"
+                  />
+                </div>
 
-          {/* Short Bio */}
-          <div className="space-y-1.5">
-            <Label htmlFor="author-short-bio">Short Bio</Label>
-            <Input
-              id="author-short-bio"
-              placeholder="Brief one-liner description"
-              maxLength={200}
-              value={shortBio}
-              onChange={e => setShortBio(e.target.value)}
-            />
-          </div>
+                {/* Short Bio */}
+                <div className="space-y-1.5">
+                  <Label htmlFor="author-short-bio">Short Bio</Label>
+                  <Input
+                    id="author-short-bio"
+                    placeholder="Brief one-liner description"
+                    maxLength={200}
+                    value={shortBio}
+                    onChange={e => setShortBio(e.target.value)}
+                    className="border-2"
+                  />
+                </div>
 
-          {/* Bio */}
-          <div className="space-y-1.5">
-            <Label htmlFor="author-bio">Bio</Label>
-            <Textarea
-              id="author-bio"
-              placeholder="Detailed biography..."
-              maxLength={2000}
-              rows={4}
-              value={bio}
-              onChange={e => setBio(e.target.value)}
-            />
-          </div>
+                {/* Bio */}
+                <div className="space-y-1.5">
+                  <Label htmlFor="author-bio">Bio</Label>
+                  <Textarea
+                    id="author-bio"
+                    placeholder="Detailed biography..."
+                    maxLength={2000}
+                    rows={4}
+                    value={bio}
+                    onChange={e => setBio(e.target.value)}
+                    className="border-2"
+                  />
+                </div>
 
-          {/* Specialties */}
-          <div className="space-y-1.5">
-            <Label htmlFor="author-specialties">Specialties</Label>
-            {specialties.length > 0 && (
-              <div className="flex flex-wrap gap-1.5 mb-1.5">
-                {specialties.map(specialty => (
-                  <Badge key={specialty} variant="secondary" className="gap-1 pr-1">
-                    {specialty}
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveSpecialty(specialty)}
-                      className="rounded-full p-0.5 hover:bg-muted-foreground/20 transition-colors"
-                      aria-label={`Remove ${specialty}`}
-                    >
-                      <X className="size-3" aria-hidden="true" />
-                    </button>
-                  </Badge>
-                ))}
+                {/* Specialties */}
+                <div className="space-y-1.5">
+                  <Label htmlFor="author-specialties">Specialties</Label>
+                  {specialties.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 mb-1.5">
+                      {specialties.map(specialty => (
+                        <Badge key={specialty} variant="secondary" className="gap-1 pr-1">
+                          {specialty}
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveSpecialty(specialty)}
+                            className="rounded-full p-0.5 hover:bg-muted-foreground/20 transition-colors"
+                            aria-label={`Remove ${specialty}`}
+                          >
+                            <X className="size-3" aria-hidden="true" />
+                          </button>
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
+                  <Input
+                    id="author-specialties"
+                    placeholder="Type a specialty and press Enter"
+                    value={specialtyInput}
+                    onChange={e => setSpecialtyInput(e.target.value)}
+                    onKeyDown={handleSpecialtyKeyDown}
+                    onBlur={handleAddSpecialty}
+                    className="border-2"
+                  />
+                </div>
+
+                {/* Years of Experience */}
+                <div className="space-y-1.5">
+                  <Label htmlFor="author-experience">Years of Experience</Label>
+                  <Input
+                    id="author-experience"
+                    type="number"
+                    min="0"
+                    placeholder="e.g., 10"
+                    value={yearsExperience}
+                    onChange={e => setYearsExperience(e.target.value)}
+                    className="max-w-[10rem] border-2"
+                  />
+                </div>
+
+                {/* Education */}
+                <div className="space-y-1.5">
+                  <Label htmlFor="author-education">Education</Label>
+                  <Input
+                    id="author-education"
+                    placeholder="e.g., PhD Computer Science, MIT"
+                    maxLength={200}
+                    value={education}
+                    onChange={e => setEducation(e.target.value)}
+                    className="max-w-[16rem] border-2"
+                  />
+                </div>
               </div>
-            )}
-            <Input
-              id="author-specialties"
-              placeholder="Type a specialty and press Enter"
-              value={specialtyInput}
-              onChange={e => setSpecialtyInput(e.target.value)}
-              onKeyDown={handleSpecialtyKeyDown}
-              onBlur={handleAddSpecialty}
-            />
-          </div>
-
-          {/* Years of Experience */}
-          <div className="space-y-1.5">
-            <Label htmlFor="author-experience">Years of Experience</Label>
-            <Input
-              id="author-experience"
-              type="number"
-              min="0"
-              placeholder="e.g., 10"
-              value={yearsExperience}
-              onChange={e => setYearsExperience(e.target.value)}
-            />
-          </div>
-
-          {/* Education */}
-          <div className="space-y-1.5">
-            <Label htmlFor="author-education">Education</Label>
-            <Input
-              id="author-education"
-              placeholder="e.g., PhD Computer Science, MIT"
-              maxLength={200}
-              value={education}
-              onChange={e => setEducation(e.target.value)}
-            />
-          </div>
-
-          {/* Avatar URL */}
-          <div className="space-y-1.5">
-            <Label htmlFor="author-avatar">Avatar URL</Label>
-            <Input
-              id="author-avatar"
-              type="url"
-              placeholder="https://example.com/photo.jpg"
-              value={avatar}
-              onChange={e => {
-                setAvatar(e.target.value)
-                if (errors.avatar) setErrors(prev => ({ ...prev, avatar: undefined }))
-              }}
-              aria-invalid={!!errors.avatar}
-              aria-describedby={errors.avatar ? 'author-avatar-error' : undefined}
-            />
-            {errors.avatar && (
-              <p id="author-avatar-error" role="alert" className="text-destructive text-xs">
-                {errors.avatar}
-              </p>
-            )}
-          </div>
-
-          <Separator />
-
-          {/* Social Links Section */}
-          <div className="space-y-3">
-            <h3 className="text-sm font-medium">Social Links</h3>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="author-website">Website</Label>
-              <Input
-                id="author-website"
-                type="url"
-                placeholder="https://example.com"
-                value={website}
-                onChange={e => {
-                  setWebsite(e.target.value)
-                  if (errors.website) setErrors(prev => ({ ...prev, website: undefined }))
-                }}
-                aria-invalid={!!errors.website}
-                aria-describedby={errors.website ? 'author-website-error' : undefined}
-              />
-              {errors.website && (
-                <p id="author-website-error" role="alert" className="text-destructive text-xs">
-                  {errors.website}
-                </p>
-              )}
             </div>
 
-            <div className="space-y-1.5">
-              <Label htmlFor="author-linkedin">LinkedIn</Label>
-              <Input
-                id="author-linkedin"
-                type="url"
-                placeholder="https://linkedin.com/in/username"
-                value={linkedin}
-                onChange={e => {
-                  setLinkedin(e.target.value)
-                  if (errors.linkedin) setErrors(prev => ({ ...prev, linkedin: undefined }))
-                }}
-                aria-invalid={!!errors.linkedin}
-                aria-describedby={errors.linkedin ? 'author-linkedin-error' : undefined}
-              />
-              {errors.linkedin && (
-                <p id="author-linkedin-error" role="alert" className="text-destructive text-xs">
-                  {errors.linkedin}
-                </p>
-              )}
+            {/* ── Media ── */}
+            <Separator />
+            <div>
+              <h3 className="font-semibold uppercase tracking-wider text-muted-foreground mb-2 text-xs">
+                Media
+              </h3>
+              <Separator className="mb-3" />
+              <div className="space-y-3">
+                {/* Avatar URL */}
+                <div className="space-y-1.5">
+                  <Label htmlFor="author-avatar">Avatar URL</Label>
+                  <Input
+                    id="author-avatar"
+                    type="url"
+                    placeholder="https://example.com/photo.jpg"
+                    value={avatar}
+                    onChange={e => {
+                      setAvatar(e.target.value)
+                      if (errors.avatar) setErrors(prev => ({ ...prev, avatar: undefined }))
+                    }}
+                    aria-invalid={!!errors.avatar}
+                    aria-describedby={errors.avatar ? 'author-avatar-error' : undefined}
+                    className="font-mono text-xs border-2"
+                  />
+                  {errors.avatar && (
+                    <p id="author-avatar-error" role="alert" className="text-destructive text-xs">
+                      {errors.avatar}
+                    </p>
+                  )}
+                </div>
+              </div>
             </div>
 
-            <div className="space-y-1.5">
-              <Label htmlFor="author-twitter">Twitter</Label>
-              <Input
-                id="author-twitter"
-                type="url"
-                placeholder="https://twitter.com/username"
-                value={twitter}
-                onChange={e => {
-                  setTwitter(e.target.value)
-                  if (errors.twitter) setErrors(prev => ({ ...prev, twitter: undefined }))
-                }}
-                aria-invalid={!!errors.twitter}
-                aria-describedby={errors.twitter ? 'author-twitter-error' : undefined}
-              />
-              {errors.twitter && (
-                <p id="author-twitter-error" role="alert" className="text-destructive text-xs">
-                  {errors.twitter}
-                </p>
-              )}
-            </div>
-          </div>
+            {/* ── Links ── */}
+            <Separator />
+            <div>
+              <h3 className="font-semibold uppercase tracking-wider text-muted-foreground mb-2 text-xs">
+                Links
+              </h3>
+              <Separator className="mb-3" />
+              <div className="space-y-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="author-website">Website</Label>
+                  <Input
+                    id="author-website"
+                    type="url"
+                    placeholder="https://example.com"
+                    value={website}
+                    onChange={e => {
+                      setWebsite(e.target.value)
+                      if (errors.website) setErrors(prev => ({ ...prev, website: undefined }))
+                    }}
+                    aria-invalid={!!errors.website}
+                    aria-describedby={errors.website ? 'author-website-error' : undefined}
+                    className="font-mono text-xs border-2"
+                  />
+                  {errors.website && (
+                    <p id="author-website-error" role="alert" className="text-destructive text-xs">
+                      {errors.website}
+                    </p>
+                  )}
+                </div>
 
-          {/* Featured Quote */}
-          <div className="space-y-1.5">
-            <Label htmlFor="author-quote">Featured Quote</Label>
-            <Input
-              id="author-quote"
-              placeholder="A memorable quote from the author"
-              maxLength={300}
-              value={featuredQuote}
-              onChange={e => setFeaturedQuote(e.target.value)}
-            />
-          </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="author-linkedin">LinkedIn</Label>
+                  <Input
+                    id="author-linkedin"
+                    type="url"
+                    placeholder="https://linkedin.com/in/username"
+                    value={linkedin}
+                    onChange={e => {
+                      setLinkedin(e.target.value)
+                      if (errors.linkedin) setErrors(prev => ({ ...prev, linkedin: undefined }))
+                    }}
+                    aria-invalid={!!errors.linkedin}
+                    aria-describedby={errors.linkedin ? 'author-linkedin-error' : undefined}
+                    className="font-mono text-xs border-2"
+                  />
+                  {errors.linkedin && (
+                    <p id="author-linkedin-error" role="alert" className="text-destructive text-xs">
+                      {errors.linkedin}
+                    </p>
+                  )}
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="author-twitter">Twitter</Label>
+                  <Input
+                    id="author-twitter"
+                    type="url"
+                    placeholder="https://twitter.com/username"
+                    value={twitter}
+                    onChange={e => {
+                      setTwitter(e.target.value)
+                      if (errors.twitter) setErrors(prev => ({ ...prev, twitter: undefined }))
+                    }}
+                    aria-invalid={!!errors.twitter}
+                    aria-describedby={errors.twitter ? 'author-twitter-error' : undefined}
+                    className="font-mono text-xs border-2"
+                  />
+                  {errors.twitter && (
+                    <p id="author-twitter-error" role="alert" className="text-destructive text-xs">
+                      {errors.twitter}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* ── Quote ── */}
+            <Separator />
+            <div>
+              <h3 className="font-semibold uppercase tracking-wider text-muted-foreground mb-2 text-xs">
+                Quote
+              </h3>
+              <Separator className="mb-3" />
+              <div className="space-y-3">
+                {/* Featured Quote */}
+                <div className="space-y-1.5">
+                  <Label htmlFor="author-quote">Featured Quote</Label>
+                  <Input
+                    id="author-quote"
+                    placeholder="A memorable quote from the author"
+                    maxLength={300}
+                    value={featuredQuote}
+                    onChange={e => setFeaturedQuote(e.target.value)}
+                    className="border-2"
+                  />
+                </div>
+              </div>
+            </div>
           </div>
 
           <DialogFooter className="shrink-0 border-border border-t pt-4">

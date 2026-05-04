@@ -45,7 +45,10 @@ const sampleAuthor: ImportedAuthor = {
 
 beforeEach(() => {
   vi.clearAllMocks()
-  vi.mocked(useAuthorStore).mockReturnValue(defaultStoreReturn as never)
+  vi.mocked(useAuthorStore).mockImplementation(
+    (selector?: (state: typeof defaultStoreReturn) => unknown) =>
+      selector ? selector(defaultStoreReturn) : defaultStoreReturn,
+  )
 })
 
 describe('AuthorFormDialog', () => {

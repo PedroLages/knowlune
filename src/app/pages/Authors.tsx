@@ -48,7 +48,10 @@ import type { ImportedAuthor } from '@/data/types'
 type SortMode = 'alphabetical' | 'most-courses' | 'recently-added'
 
 export function Authors() {
-  const { authors: storeAuthors, isLoaded, isLoading, loadAuthors } = useAuthorStore()
+  const storeAuthors = useAuthorStore(s => s.authors)
+  const isLoaded = useAuthorStore(s => s.isLoaded)
+  const isLoading = useAuthorStore(s => s.isLoading)
+  const loadAuthors = useAuthorStore(s => s.loadAuthors)
   const courses = useCourseStore(s => s.courses)
   const importedCourses = useCourseImportStore(s => s.importedCourses)
   const loadImportedCourses = useCourseImportStore(s => s.loadImportedCourses)
@@ -281,7 +284,7 @@ function AuthorCard({
             </Avatar>
 
             {/* Name & Title */}
-            <h2 className="text-lg font-semibold group-hover:text-brand transition-colors">
+            <h2 className="text-lg font-semibold group-hover:text-brand/80 transition-colors">
               {author.name}
             </h2>
             {author.title && (
