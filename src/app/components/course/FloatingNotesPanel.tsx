@@ -85,7 +85,11 @@ export function FloatingNotesPanel({
   }, [])
 
   // Swipe gesture tracking
+  // Use ref for delta tracking to avoid stale closure in handleTouchEnd.
+  // React state updates from touchMove are batched and may not commit
+  // before the synchronous touchend handler fires on fast swipes.
   const [swipeDelta, setSwipeDelta] = useState(0)
+  const swipeDeltaRef = useRef(0)
   const touchStartY = useRef(0)
   const isSwiping = useRef(false)
   const handleRef = useRef<HTMLDivElement>(null)
@@ -102,6 +106,7 @@ export function FloatingNotesPanel({
 
     isSwiping.current = true
     touchStartY.current = touch.clientY
+    swipeDeltaRef.current = 0
     setSwipeDelta(0)
   }, [mobileNotesPanel])
 
@@ -109,6 +114,7 @@ export function FloatingNotesPanel({
     if (!isSwiping.current) return
     const touch = e.touches[0]
     const delta = Math.max(0, touch.clientY - touchStartY.current)
+    swipeDeltaRef.current = delta
     setSwipeDelta(delta)
   }, [])
 
@@ -116,11 +122,13 @@ export function FloatingNotesPanel({
     if (!isSwiping.current) return
     isSwiping.current = false
     // 48px min drag distance to trigger collapse (prevents accidental closes)
-    if (swipeDelta >= 48) {
+    // Read from ref (not state) to avoid stale closure on fast swipes
+    if (swipeDeltaRef.current >= 48) {
       closeMobileNotesPanel()
     }
+    swipeDeltaRef.current = 0
     setSwipeDelta(0)
-  }, [swipeDelta, closeMobileNotesPanel])
+  }, [closeMobileNotesPanel])
 
   // Don't render pill when no notes exist and panel is closed (R8)
   const showPill = nonEmptyCount > 0 || mobileNotesPanel !== 'closed'
@@ -128,8 +136,9 @@ export function FloatingNotesPanel({
   // When fullscreen, this component doesn't render anything except keeping the
   // store state set — the BelowVideoTabs overlay handles rendering
   if (mobileNotesPanel === 'fullscreen') {
-    // Render nothing when in fullscreen; BelowVideoTabs owns the overlay
-    // Return null but keep the component mounted so hooks persist
+    // Render nothing when in fullscreen; BelowVideoTabs owns the overlay.
+    // Return null but keep the component mounted so hooks persist.
+    return null
   }
 
   // Portal target not ready yet — render nothing

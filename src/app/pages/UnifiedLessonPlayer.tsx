@@ -25,7 +25,7 @@
  * @see E89-S05, E89-S06, E89-S07, E89-S08
  */
 
-import { useEffect, useMemo, useRef } from 'react'
+import { useEffect, useMemo, useRef, useState, useCallback } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router'
 import { recordVisit } from '@/lib/searchFrecency'
 import {
@@ -156,7 +156,10 @@ export function UnifiedLessonPlayer() {
   const videoPlayerRef = useRef<VideoPlayerHandle>(null)
   const titleRef = useRef<HTMLHeadingElement>(null)
   const videoContainerRef = useRef<HTMLDivElement>(null)
-  const floatingPanelPortalRef = useRef<HTMLDivElement>(null)
+  const [floatingPanelPortalTarget, setFloatingPanelPortalTarget] = useState<HTMLDivElement | null>(null)
+  const floatingPanelPortalRef = useCallback((node: HTMLDivElement | null) => {
+    if (node) setFloatingPanelPortalTarget(node)
+  }, [])
 
   // Lesson navigation: prev/next lesson via adapter
   const { prevLesson, nextLesson, totalLessons, lessons } = useLessonNavigation(adapter, lessonId)
@@ -443,7 +446,7 @@ export function UnifiedLessonPlayer() {
             currentTime={state.currentTime}
             onSeek={state.handleTranscriptSeek}
             onCaptureFrame={handleCaptureFrame}
-            portalTarget={floatingPanelPortalRef.current}
+            portalTarget={floatingPanelPortalTarget}
           />
         )}
       </div>

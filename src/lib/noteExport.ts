@@ -1,4 +1,5 @@
 import TurndownService from 'turndown'
+import JSZip from 'jszip'
 import type { Note } from '@/data/types'
 
 /**
@@ -93,7 +94,7 @@ export function generateFrontmatter(note: Note, courseName: string, lessonName: 
   const frontmatter = [
     '---',
     `title: "${title.replace(/"/g, '\\"')}"`,
-    `tags: [${note.tags.map(tag => `"${tag}"`).join(', ')}]`,
+    `tags: [${note.tags.map(tag => `"${tag.replace(/"/g, '\\"')}"`).join(', ')}]`,
     `course: "${courseName.replace(/"/g, '\\"')}"`,
     `lesson: "${lessonName.replace(/"/g, '\\"')}"`,
     `created: "${note.createdAt}"`,
@@ -294,10 +295,13 @@ export async function exportNotesZip(
   courseSlug: string,
   moduleLessonMap: Map<string, ModuleLessonMapEntry>
 ): Promise<{ blob: Blob; filename: string }> {
-  const JSZip = (await import('jszip')).default
   const exportable = filterExportableNotes(notes)
   const zip = new JSZip()
   const courseFolder = sanitizeFilename(courseSlug || courseName) || 'course'
+
+  // Track used note filenames per lesson folder to prevent silent overwrites
+  // when two notes in the same lesson produce the same sanitized filename.
+  const usedFilenames = new Map<string, Set<string>>()
 
   // Yield main thread every chunkSize notes to keep UI responsive for large exports
   const CHUNK_SIZE = 20
@@ -320,18 +324,37 @@ export async function exportNotesZip(
       : ''
     const lessonFolder = sanitizeFilename(lessonName)
 
+    // Determine the folder prefix for dedup scope
+    const folderPrefix = moduleFolder
+      ? `${courseFolder}/${moduleFolder}/${lessonFolder}/`
+      : `${courseFolder}/${lessonFolder}/`
+
     // Derive note filename from content
     const plainText = extractTextFromHtml(note.content)
     const firstLine = plainText.split('\n')[0]?.trim() || 'note'
-    const noteFilename = sanitizeFilename(firstLine.slice(0, 50)) || 'note'
+    let noteFilename = sanitizeFilename(firstLine.slice(0, 50)) || 'note'
+
+    // Deduplicate filenames within the same lesson folder
+    if (!usedFilenames.has(folderPrefix)) {
+      usedFilenames.set(folderPrefix, new Set())
+    }
+    const folderFiles = usedFilenames.get(folderPrefix)!
+
+    if (folderFiles.has(noteFilename)) {
+      // Find next available suffix
+      let suffix = 2
+      while (folderFiles.has(`${noteFilename}-${suffix}`)) {
+        suffix++
+      }
+      noteFilename = `${noteFilename}-${suffix}`
+    }
+    folderFiles.add(noteFilename)
 
     const frontmatter = generateFrontmatter(note, courseName, lessonName)
     const markdown = htmlToMarkdown(note.content)
     const fileContent = frontmatter + markdown
 
-    const filePath = moduleFolder
-      ? `${courseFolder}/${moduleFolder}/${lessonFolder}/${noteFilename}.md`
-      : `${courseFolder}/${lessonFolder}/${noteFilename}.md`
+    const filePath = `${folderPrefix}${noteFilename}.md`
 
     zip.file(filePath, fileContent)
   }

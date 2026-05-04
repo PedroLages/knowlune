@@ -603,6 +603,29 @@ describe('exportNotesZip', () => {
     expect(content).toContain('Test')
   })
 
+  it('deduplicates note filenames within the same lesson folder to prevent silent overwrites', async () => {
+    const notes = [
+      makeNote({ id: 'n1', videoId: 'video-1', content: '<p>Untitled Note</p>' }),
+      makeNote({ id: 'n2', videoId: 'video-1', content: '<p>Untitled Note</p>' }),
+    ]
+
+    const { blob } = await exportNotesZip(
+      notes, 'Test Course', 'test-course', lessonMap
+    )
+
+    const JSZip = (await import('jszip')).default
+    const zip = await JSZip.loadAsync(blob)
+
+    const filePaths = Object.keys(zip.files).filter(p => p.endsWith('.md'))
+
+    // Both notes should be present (not overwritten)
+    expect(filePaths).toHaveLength(2)
+
+    // First note keeps original name, second gets -2 suffix
+    expect(filePaths.some(p => p.endsWith('Untitled-Note.md'))).toBe(true)
+    expect(filePaths.some(p => p.endsWith('Untitled-Note-2.md'))).toBe(true)
+  })
+
   it('sanitizes filenames with special characters', async () => {
     const notes = [
       makeNote({ id: 'n1', videoId: 'video-special', content: '<p>Note/With:Special*Chars</p>' }),

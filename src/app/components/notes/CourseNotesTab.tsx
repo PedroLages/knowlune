@@ -90,7 +90,7 @@ export function CourseNotesTab({ courseId, courseName, modules }: CourseNotesTab
       try {
         if (format === 'combined-markdown') {
           const { content, filename } = exportCombinedMarkdown(
-            notes,
+            exportableNotes,
             courseName,
             courseSlug,
             moduleLessonMap
@@ -102,7 +102,7 @@ export function CourseNotesTab({ courseId, courseName, modules }: CourseNotesTab
           toast.success(`Exported ${exportableNotes.length} notes as Combined Markdown`)
         } else {
           const { blob, filename } = await exportNotesZip(
-            notes,
+            exportableNotes,
             courseName,
             courseSlug,
             moduleLessonMap
@@ -110,13 +110,14 @@ export function CourseNotesTab({ courseId, courseName, modules }: CourseNotesTab
           downloadBlob(blob, filename)
           toast.success(`Exported ${exportableNotes.length} notes as ZIP`)
         }
-      } catch {
+      } catch (err) {
+        console.error('Course notes export failed:', err)
         toast.error('Export failed. Please try again.')
       } finally {
         setIsExporting(false)
       }
     },
-    [notes, courseName, courseSlug, moduleLessonMap, exportableNotes.length]
+    [exportableNotes, courseName, courseSlug, moduleLessonMap]
   )
 
   // Build lookup from videoId → lesson/module info

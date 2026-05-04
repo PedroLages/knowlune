@@ -299,7 +299,10 @@ export function BelowVideoTabs({
                     variant="ghost"
                     size="icon"
                     className="size-8"
-                    onClick={() => setIsNotesFullscreen(true)}
+                    onClick={() => {
+                      setMobileNotesPanel('fullscreen')
+                      setIsNotesFullscreen(true)
+                    }}
                     aria-label="Open notes in fullscreen"
                     data-testid="notes-fullscreen-button"
                   >
