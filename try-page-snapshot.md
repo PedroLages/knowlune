@@ -1,0 +1,174 @@
+- generic [active] [ref=e9]:
+  - generic [ref=e10]:
+    - status [ref=e1]
+    - alert [ref=e2]
+    - generic [ref=e12]:
+      - generic [ref=e13]:
+        - link "Knowlune home" [ref=e14] [cursor=pointer]:
+          - /url: /
+          - img "Knowlune" [ref=e15]:
+            - generic [ref=e18]: Knowlune
+        - paragraph [ref=e19]: Illuminate Your Path
+      - generic [ref=e20]:
+        - heading "Try Knowlune — no account needed" [level=1] [ref=e21]
+        - paragraph [ref=e22]: See what you can do before you commit.
+      - table [ref=e24]:
+        - rowgroup [ref=e25]:
+          - row "Feature Guest Account" [ref=e26]:
+            - columnheader "Feature" [ref=e27]
+            - columnheader "Guest" [ref=e28]
+            - columnheader "Account" [ref=e29]
+        - rowgroup [ref=e30]:
+          - row "Import content 1 item Unlimited" [ref=e31]:
+            - cell "Import content" [ref=e32]
+            - cell "1 item" [ref=e33]:
+              - generic [ref=e34]: 1 item
+            - cell "Unlimited" [ref=e35]:
+              - generic [ref=e36]: Unlimited
+          - row "Sync across devices No Yes" [ref=e37]:
+            - cell "Sync across devices" [ref=e38]
+            - cell "No" [ref=e39]:
+              - img "No" [ref=e41]
+            - cell "Yes" [ref=e44]:
+              - img "Yes" [ref=e46]
+          - row "Learning streaks No Yes" [ref=e49]:
+            - cell "Learning streaks" [ref=e50]
+            - cell "No" [ref=e51]:
+              - img "No" [ref=e53]
+            - cell "Yes" [ref=e56]:
+              - img "Yes" [ref=e58]
+          - row "AI summaries No Yes" [ref=e61]:
+            - cell "AI summaries" [ref=e62]
+            - cell "No" [ref=e63]:
+              - img "No" [ref=e65]
+            - cell "Yes" [ref=e68]:
+              - img "Yes" [ref=e70]
+          - row "Progress saved Session only Forever" [ref=e73]:
+            - cell "Progress saved" [ref=e74]
+            - cell "Session only" [ref=e75]:
+              - generic [ref=e76]: Session only
+            - cell "Forever" [ref=e77]:
+              - generic [ref=e78]: Forever
+      - generic [ref=e79]: You can switch to a full account anytime — your progress comes with you.
+      - generic [ref=e80]:
+        - link "Sign up to unlock everything" [ref=e81] [cursor=pointer]:
+          - /url: /
+        - link "Continue as guest" [ref=e82] [cursor=pointer]:
+          - /url: /guest
+    - region "Notifications alt+T"
+  - button "/agentation v2.3.3 Output Detail Standard React Components Hide Until Restart Marker Color Indigo Blue Cyan Green Yellow Orange Red Clear on copy/send Block page interactions Manage MCP & Webhooks Manage MCP & Webhooks MCP Connection MCP connection allows agents to receive and act on annotations. Learn more Webhooks Auto-Send The webhook URL will receive live annotation changes and annotation data." [ref=e4] [cursor=pointer]:
+    - img [ref=e6]
+    - generic:
+      - generic:
+        - button:
+          - img
+      - generic:
+        - button [disabled]:
+          - img
+      - generic:
+        - button [disabled]:
+          - img
+      - generic:
+        - button [disabled]:
+          - img
+      - generic:
+        - button [disabled]:
+          - img
+      - generic:
+        - button:
+          - img
+      - generic:
+        - button:
+          - img
+    - generic:
+      - generic:
+        - generic:
+          - generic:
+            - generic: /agentation
+            - generic: v2.3.3
+            - button "Switch to light mode":
+              - generic:
+                - generic:
+                  - img
+          - generic:
+            - generic:
+              - generic:
+                - text: Output Detail
+                - generic:
+                  - img
+              - button "Standard":
+                - generic: Standard
+            - generic:
+              - generic:
+                - text: React Components
+                - generic:
+                  - img
+              - generic:
+                - checkbox [checked]
+            - generic:
+              - generic:
+                - text: Hide Until Restart
+                - generic:
+                  - img
+              - generic:
+                - checkbox
+          - generic:
+            - generic: Marker Color
+            - generic:
+              - button "Indigo":
+                - generic "Indigo"
+              - button "Blue":
+                - generic "Blue"
+              - button "Cyan":
+                - generic "Cyan"
+              - button "Green":
+                - generic "Green"
+              - button "Yellow":
+                - generic "Yellow"
+              - button "Orange":
+                - generic "Orange"
+              - button "Red":
+                - generic "Red"
+          - generic:
+            - generic:
+              - checkbox "Clear on copy/send"
+              - generic:
+                - text: Clear on copy/send
+                - generic:
+                  - img
+            - generic:
+              - checkbox "Block page interactions" [checked]
+              - generic:
+                - img
+              - generic: Block page interactions
+          - generic:
+            - button "Manage MCP & Webhooks":
+              - generic: Manage MCP & Webhooks
+              - generic:
+                - img
+        - generic:
+          - button "Manage MCP & Webhooks":
+            - img
+            - generic: Manage MCP & Webhooks
+          - generic:
+            - generic:
+              - generic:
+                - text: MCP Connection
+                - generic:
+                  - img
+            - paragraph:
+              - text: MCP connection allows agents to receive and act on annotations.
+              - link "Learn more":
+                - /url: https://agentation.dev/mcp
+          - generic:
+            - generic:
+              - generic:
+                - text: Webhooks
+                - generic:
+                  - img
+              - generic:
+                - generic: Auto-Send
+                - generic:
+                  - checkbox [checked] [disabled]
+            - paragraph: The webhook URL will receive live annotation changes and annotation data.
+            - textbox "Webhook URL"

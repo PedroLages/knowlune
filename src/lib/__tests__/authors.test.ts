@@ -34,6 +34,9 @@ import {
   getAuthorForCourse,
   getAuthorForImportedCourse,
   getAvatarSrc,
+  flattenSpecialties,
+  totalCoursesForAuthor,
+  withAuthorCourseCounts,
 } from '../authors'
 
 describe('authors', () => {
@@ -89,6 +92,93 @@ describe('authors', () => {
       expect(result).toHaveLength(1)
       expect(result[0].name).toBe('Jane Smith')
       expect(result[0].isPreseeded).toBe(false)
+    })
+
+    it('normalizes CSV-like specialties on AuthorView', () => {
+      const imported = [
+        {
+          id: 'author-1',
+          name: 'Jane Smith',
+          bio: 'A bio',
+          specialties: ['DevOps, Cloud, CI/CD'],
+          isPreseeded: false,
+          createdAt: '2026-01-01',
+        },
+      ]
+      const result = getMergedAuthors(imported as never[])
+      expect(result[0].specialties).toEqual(['DevOps', 'Cloud', 'CI/CD'])
+    })
+  })
+
+  describe('flattenSpecialties', () => {
+    it('preserves well-formed multi-entry order', () => {
+      expect(flattenSpecialties(['React', 'Node'])).toEqual(['React', 'Node'])
+    })
+
+    it('splits a single comma-separated entry', () => {
+      expect(flattenSpecialties(['A, B, C'])).toEqual(['A', 'B', 'C'])
+    })
+
+    it('splits on semicolons and pipes', () => {
+      expect(flattenSpecialties(['A; B', 'X|Y'])).toEqual(['A', 'B', 'X', 'Y'])
+    })
+
+    it('drops whitespace-only entries and keeps Rust', () => {
+      expect(flattenSpecialties(['  ', '', 'Rust'])).toEqual(['Rust'])
+    })
+
+    it('dedupes case-insensitively keeping first spelling', () => {
+      expect(flattenSpecialties(['react', 'React', 'node'])).toEqual(['react', 'node'])
+    })
+
+    it('keeps single token without delimiters unchanged', () => {
+      expect(flattenSpecialties(['Systems Design'])).toEqual(['Systems Design'])
+    })
+  })
+
+  describe('totalCoursesForAuthor', () => {
+    it('sums canonical and imported rows for authorId', () => {
+      const n = totalCoursesForAuthor(
+        'a1',
+        [{ authorId: 'a1' } as never, { authorId: 'a2' } as never],
+        [{ authorId: 'a1' } as never, { authorId: 'a1' } as never]
+      )
+      expect(n).toBe(3)
+    })
+
+    it('ignores imported courses with missing authorId', () => {
+      const n = totalCoursesForAuthor(
+        'a1',
+        [],
+        [{ authorId: undefined } as never, { id: 'x' } as never]
+      )
+      expect(n).toBe(0)
+    })
+  })
+
+  describe('withAuthorCourseCounts', () => {
+    it('overrides AuthorView courseCount with canonical plus imported totals', () => {
+      mockCourseStoreGetState.mockReturnValue({
+        courses: [
+          { authorId: 'a1', totalLessons: 1, estimatedHours: 1, totalVideos: 1, category: 'X' },
+        ],
+      })
+      const base = getMergedAuthors([
+        {
+          id: 'a1',
+          name: 'Ann',
+          bio: 'Bio',
+          isPreseeded: false,
+          createdAt: '2026-01-01',
+        },
+      ] as never[])
+      expect(base[0].courseCount).toBe(1)
+      const enriched = withAuthorCourseCounts(
+        base,
+        [{ authorId: 'a1' } as never, { authorId: 'a1' } as never],
+        [{ authorId: 'a1' } as never]
+      )
+      expect(enriched[0].courseCount).toBe(3)
     })
   })
 

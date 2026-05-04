@@ -31,7 +31,13 @@ import { useAuthorStore } from '@/stores/useAuthorStore'
 import { useCourseStore } from '@/stores/useCourseStore'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
 import { useLazyStore } from '@/hooks/useLazyStore'
-import { getMergedAuthors, getAvatarSrc, getInitials, type AuthorView } from '@/lib/authors'
+import {
+  getMergedAuthors,
+  getAvatarSrc,
+  getInitials,
+  withAuthorCourseCounts,
+  type AuthorView,
+} from '@/lib/authors'
 import { getCourseCompletionPercent } from '@/lib/progress'
 import { AuthorFormDialog } from '@/app/components/authors/AuthorFormDialog'
 import { AuthorsSyncErrorBanner } from '@/app/components/authors/AuthorsSyncErrorBanner'
@@ -62,8 +68,11 @@ export function AuthorProfile() {
   useLazyStore(loadAuthors)
   useLazyStore(loadImportedCourses)
 
-  // Merge pre-seeded + store authors and find the one matching the URL param
-  const allAuthors = useMemo(() => getMergedAuthors(storeAuthors), [storeAuthors])
+  // Merge store authors; course counts match Authors grid / featured (canonical + imported).
+  const allAuthors = useMemo(
+    () => withAuthorCourseCounts(getMergedAuthors(storeAuthors), courses, importedCourses),
+    [storeAuthors, courses, importedCourses]
+  )
   const author: AuthorView | undefined = allAuthors.find(a => a.id === authorId)
 
   // Get courses by this author (pre-seeded + imported)

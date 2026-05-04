@@ -31,7 +31,13 @@ import { useAuthorStore } from '@/stores/useAuthorStore'
 import { useCourseStore } from '@/stores/useCourseStore'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
 import { useLazyStore } from '@/hooks/useLazyStore'
-import { getMergedAuthors, getAvatarSrc, getInitials, type AuthorView } from '@/lib/authors'
+import {
+  getMergedAuthors,
+  getAvatarSrc,
+  getInitials,
+  withAuthorCourseCounts,
+  type AuthorView,
+} from '@/lib/authors'
 import { HeaderSearchButton } from '@/app/components/figma/HeaderSearchButton'
 import { getCourseCompletionPercent } from '@/lib/progress'
 import { AuthorFormDialog } from '@/app/components/authors/AuthorFormDialog'
@@ -43,6 +49,9 @@ type SortMode = 'alphabetical' | 'most-courses' | 'recently-added'
 
 export function Authors() {
   const { authors: storeAuthors, isLoaded, isLoading, loadAuthors } = useAuthorStore()
+  const courses = useCourseStore(s => s.courses)
+  const importedCourses = useCourseImportStore(s => s.importedCourses)
+  const loadImportedCourses = useCourseImportStore(s => s.loadImportedCourses)
   const [createOpen, setCreateOpen] = useState(false)
   const [editAuthor, setEditAuthor] = useState<ImportedAuthor | undefined>()
   const [deleteAuthor, setDeleteAuthor] = useState<ImportedAuthor | undefined>()
@@ -50,9 +59,13 @@ export function Authors() {
 
   // Lazy-load author store on mount (deferred — not critical for initial app load)
   useLazyStore(loadAuthors)
+  useLazyStore(loadImportedCourses)
 
-  // Merge pre-seeded + imported authors into unified view
-  const allAuthors = useMemo(() => getMergedAuthors(storeAuthors), [storeAuthors])
+  // Merge store authors into unified view; course counts match profile (canonical + imported).
+  const allAuthors = useMemo(
+    () => withAuthorCourseCounts(getMergedAuthors(storeAuthors), courses, importedCourses),
+    [storeAuthors, courses, importedCourses]
+  )
 
   // Sort
   const sorted = useMemo(() => {
@@ -251,14 +264,14 @@ function AuthorCard({
   onDelete?: () => void
 }) {
   return (
-    <div className="group relative">
+    <div className="group relative min-w-0">
       <Link
         to={`/authors/${author.id}`}
-        className="block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 rounded-2xl"
+        className="block min-w-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 rounded-2xl"
         data-testid="author-card"
       >
-        <Card className="h-full rounded-2xl border-0 shadow-sm hover:shadow-xl hover:scale-[1.02] transition-all duration-300">
-          <CardContent className="flex flex-col items-center text-center p-6 pt-8">
+        <Card className="h-full min-w-0 rounded-2xl border-0 shadow-sm hover:shadow-xl hover:scale-[1.02] transition-all duration-300">
+          <CardContent className="flex flex-col items-center text-center p-6 pt-8 min-w-0 w-full">
             {/* Avatar */}
             <Avatar className="size-24 mb-4 ring-2 ring-border/50 group-hover:ring-brand/30 transition-all">
               <AvatarImage {...getAvatarSrc(author.avatar, 96)} alt={author.name} />
@@ -271,7 +284,11 @@ function AuthorCard({
             <h2 className="text-lg font-semibold group-hover:text-brand transition-colors">
               {author.name}
             </h2>
-            {author.title && <p className="text-sm text-muted-foreground mt-1">{author.title}</p>}
+            {author.title && (
+              <p className="text-sm text-muted-foreground mt-1 line-clamp-2 break-words max-w-full">
+                {author.title}
+              </p>
+            )}
 
             {/* Bio snippet for authors without a title */}
             {!author.title && author.bio && (
@@ -282,14 +299,18 @@ function AuthorCard({
 
             {/* Specialty Badges */}
             {author.specialties.length > 0 && (
-              <div className="flex flex-wrap justify-center gap-1.5 mt-3 mb-5">
+              <div className="flex min-w-0 w-full flex-wrap justify-center gap-1.5 mt-3 mb-5">
                 {author.specialties.slice(0, 3).map(specialty => (
-                  <Badge key={specialty} variant="secondary" className="text-xs">
+                  <Badge
+                    key={specialty}
+                    variant="secondary"
+                    className="text-xs max-w-full truncate"
+                  >
                     {specialty}
                   </Badge>
                 ))}
                 {author.specialties.length > 3 && (
-                  <Badge variant="secondary" className="text-xs">
+                  <Badge variant="secondary" className="text-xs shrink-0">
                     +{author.specialties.length - 3}
                   </Badge>
                 )}
@@ -369,11 +390,7 @@ function FeaturedAuthorProfile({
 }) {
   const courses = useCourseStore(s => s.courses)
   const importedCourses = useCourseImportStore(s => s.importedCourses)
-  const loadImportedCourses = useCourseImportStore(s => s.loadImportedCourses)
   const getAllTags = useCourseImportStore(s => s.getAllTags)
-
-  // Lazy-load imported courses (deferred — not critical for initial app load)
-  useLazyStore(loadImportedCourses)
 
   const authorCourses = useMemo(
     () => courses.filter(c => c.authorId === author.id),

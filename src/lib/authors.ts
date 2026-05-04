@@ -1,6 +1,6 @@
 import { useCourseStore } from '@/stores/useCourseStore'
 import { useAuthorStore } from '@/stores/useAuthorStore'
-import type { Author, Course, ImportedAuthor } from '@/data/types'
+import type { Author, Course, ImportedAuthor, ImportedCourse } from '@/data/types'
 
 /**
  * Unified author view type for display purposes.
@@ -27,10 +27,66 @@ export interface AuthorView {
   preseededAuthor?: Author
 }
 
+/**
+ * Normalize specialty strings for display: split comma/semicolon/pipe-separated
+ * blobs inside a single array entry, trim, drop empties, dedupe case-insensitively
+ * (first spelling wins).
+ */
+export function flattenSpecialties(input: string[]): string[] {
+  const seen = new Set<string>()
+  const out: string[] = []
+  for (const raw of input) {
+    const trimmed = raw.trim()
+    if (!trimmed) continue
+    const parts = trimmed
+      .split(/[,;|]/)
+      .map(s => s.trim())
+      .filter(Boolean)
+    const tokens = parts.length > 1 ? parts : [trimmed]
+    for (const t of tokens) {
+      const k = t.toLowerCase()
+      if (seen.has(k)) continue
+      seen.add(k)
+      out.push(t)
+    }
+  }
+  return out
+}
+
+/** Count canonical + imported courses attributed to an author (matches AuthorProfile / featured). */
+export function totalCoursesForAuthor(
+  authorId: string,
+  courses: Course[],
+  importedCourses: ImportedCourse[]
+): number {
+  const canonical = courses.filter(c => c.authorId === authorId).length
+  const imported = importedCourses.filter(
+    c => c.authorId !== undefined && c.authorId === authorId
+  ).length
+  return canonical + imported
+}
+
+/**
+ * Override `courseCount` on merged author views using live course lists
+ * (canonical + imported). Call from pages that subscribe to both stores.
+ */
+export function withAuthorCourseCounts(
+  views: AuthorView[],
+  courses: Course[],
+  importedCourses: ImportedCourse[]
+): AuthorView[] {
+  return views.map(a => ({
+    ...a,
+    courseCount: totalCoursesForAuthor(a.id, courses, importedCourses),
+  }))
+}
+
 /** Convert an ImportedAuthor to AuthorView */
 function importedToView(author: ImportedAuthor): AuthorView {
-  const stats = getImportedAuthorStats(author)
   const bioText = author.bio ?? ''
+  const canonicalCourseCount = useCourseStore
+    .getState()
+    .courses.filter(c => c.authorId === author.id).length
   return {
     id: author.id,
     name: author.name,
@@ -40,12 +96,12 @@ function importedToView(author: ImportedAuthor): AuthorView {
     shortBio:
       author.shortBio ??
       (bioText ? bioText.slice(0, 120) + (bioText.length > 120 ? '...' : '') : ''),
-    specialties: author.specialties ?? [],
+    specialties: flattenSpecialties(author.specialties ?? []),
     yearsExperience: author.yearsExperience ?? 0,
     education: author.education,
     socialLinks: author.socialLinks ?? {},
     featuredQuote: author.featuredQuote,
-    courseCount: stats.courseCount,
+    courseCount: canonicalCourseCount,
     isPreseeded: author.isPreseeded,
     createdAt: author.createdAt,
     importedAuthor: author,

@@ -1,0 +1,240 @@
+- generic [active] [ref=e9]:
+  - generic [ref=e10]:
+    - status [ref=e1]
+    - alert [ref=e2]
+    - generic [ref=e11]:
+      - link "Skip to content" [ref=e12] [cursor=pointer]:
+        - /url: "#main-content"
+      - generic [ref=e13]:
+        - complementary "Sidebar" [ref=e14]:
+          - generic [ref=e16]:
+            - img "Knowlune" [ref=e17]:
+              - generic [ref=e20]: Knowlune
+            - paragraph [ref=e21]: Illuminate Your Path
+          - navigation "Main navigation" [ref=e22]:
+            - generic [ref=e23]:
+              - generic [ref=e24]:
+                - generic [ref=e25]: Library
+                - list "Library" [ref=e26]:
+                  - listitem [ref=e27]:
+                    - link "Overview" [ref=e29] [cursor=pointer]:
+                      - /url: /overview
+                      - img [ref=e30]
+                      - generic [ref=e35]: Overview
+                  - listitem [ref=e36]:
+                    - link "Courses" [ref=e38] [cursor=pointer]:
+                      - /url: /courses
+                      - img [ref=e39]
+                      - generic [ref=e42]: Courses
+                  - listitem [ref=e43]:
+                    - link "Learning Paths" [ref=e45] [cursor=pointer]:
+                      - /url: /learning-paths
+                      - img [ref=e46]
+                      - generic [ref=e50]: Learning Paths
+                  - listitem [ref=e51]:
+                    - link "Books" [ref=e53] [cursor=pointer]:
+                      - /url: /library
+                      - img [ref=e54]
+                      - generic [ref=e56]: Books
+              - generic [ref=e57]:
+                - generic [ref=e58]: Study
+                - list "Study" [ref=e59]:
+                  - listitem [ref=e60]:
+                    - link "My Courses" [ref=e62] [cursor=pointer]:
+                      - /url: /my-class
+                      - img [ref=e63]
+                      - generic [ref=e65]: My Courses
+                  - listitem [ref=e66]:
+                    - link "Flashcards" [ref=e68] [cursor=pointer]:
+                      - /url: /flashcards
+                      - img [ref=e69]
+                      - generic [ref=e73]: Flashcards
+                  - listitem [ref=e74]:
+                    - link "Vocabulary" [ref=e76] [cursor=pointer]:
+                      - /url: /vocabulary
+                      - img [ref=e77]
+                      - generic [ref=e80]: Vocabulary
+                  - listitem [ref=e81]:
+                    - link "Highlight Review" [ref=e83] [cursor=pointer]:
+                      - /url: /highlight-review
+                      - img [ref=e84]
+                      - generic [ref=e87]: Highlight Review
+                  - listitem [ref=e88]:
+                    - link "Cross-Book Search" [ref=e90] [cursor=pointer]:
+                      - /url: /search-annotations
+                      - img [ref=e91]
+                      - generic [ref=e94]: Cross-Book Search
+              - generic [ref=e95]:
+                - generic [ref=e96]: Track
+                - list "Track" [ref=e97]:
+                  - listitem [ref=e98]:
+                    - link "Knowledge Map" [ref=e100] [cursor=pointer]:
+                      - /url: /knowledge-map
+                      - img [ref=e101]
+                      - generic [ref=e103]: Knowledge Map
+          - generic [ref=e104]:
+            - button "Send Feedback" [ref=e105]:
+              - img [ref=e106]
+              - generic [ref=e108]: Send Feedback
+            - list [ref=e109]:
+              - listitem [ref=e110]:
+                - link "Settings" [ref=e112] [cursor=pointer]:
+                  - /url: /settings
+                  - img [ref=e113]
+                  - generic [ref=e116]: Settings
+        - button "Collapse sidebar" [ref=e117] [cursor=pointer]:
+          - img [ref=e118]
+      - generic [ref=e120]:
+        - banner [ref=e121]:
+          - generic:
+            - search "Site search":
+              - button "Open search (Cmd+K)" [ref=e122] [cursor=pointer]:
+                - img [ref=e123]
+                - generic [ref=e126]: Search...
+                - generic:
+                  - generic: ⌘
+                  - text: K
+          - generic [ref=e127]:
+            - 'button "Sync status: Synced." [ref=e128] [cursor=pointer]':
+              - img [ref=e129]
+            - button "Switch to light mode" [ref=e132] [cursor=pointer]:
+              - img
+            - button "Notifications" [ref=e133] [cursor=pointer]:
+              - img
+            - status [ref=e134]
+            - button "Sign in to your account" [ref=e135] [cursor=pointer]:
+              - img
+              - text: Sign In
+        - main [ref=e136]:
+          - generic [ref=e137]:
+            - generic [ref=e138]:
+              - generic [ref=e139]:
+                - heading "Learning Paths" [level=1] [ref=e140]
+                - paragraph [ref=e141]: Organize courses into structured learning journeys
+              - button "Create Path" [ref=e143] [cursor=pointer]:
+                - img
+                - text: Create Path
+            - status [ref=e144]
+            - status [ref=e146]:
+              - generic [ref=e148]:
+                - img [ref=e150]
+                - heading "No learning paths yet" [level=2] [ref=e154]
+                - paragraph [ref=e155]: Learning paths help you organize courses into structured journeys. Create your first path to get started.
+                - button "Create Path" [ref=e156] [cursor=pointer]
+    - region "Notifications alt+T"
+  - button "/agentation v2.3.3 Output Detail Standard React Components Hide Until Restart Marker Color Indigo Blue Cyan Green Yellow Orange Red Clear on copy/send Block page interactions Manage MCP & Webhooks Manage MCP & Webhooks MCP Connection MCP connection allows agents to receive and act on annotations. Learn more Webhooks Auto-Send The webhook URL will receive live annotation changes and annotation data." [ref=e4] [cursor=pointer]:
+    - img [ref=e6]
+    - generic:
+      - generic:
+        - button:
+          - img
+      - generic:
+        - button [disabled]:
+          - img
+      - generic:
+        - button [disabled]:
+          - img
+      - generic:
+        - button [disabled]:
+          - img
+      - generic:
+        - button [disabled]:
+          - img
+      - generic:
+        - button:
+          - img
+      - generic:
+        - button:
+          - img
+    - generic:
+      - generic:
+        - generic:
+          - generic:
+            - generic: /agentation
+            - generic: v2.3.3
+            - button "Switch to light mode":
+              - generic:
+                - generic:
+                  - img
+          - generic:
+            - generic:
+              - generic:
+                - text: Output Detail
+                - generic:
+                  - img
+              - button "Standard":
+                - generic: Standard
+            - generic:
+              - generic:
+                - text: React Components
+                - generic:
+                  - img
+              - generic:
+                - checkbox [checked]
+            - generic:
+              - generic:
+                - text: Hide Until Restart
+                - generic:
+                  - img
+              - generic:
+                - checkbox
+          - generic:
+            - generic: Marker Color
+            - generic:
+              - button "Indigo":
+                - generic "Indigo"
+              - button "Blue":
+                - generic "Blue"
+              - button "Cyan":
+                - generic "Cyan"
+              - button "Green":
+                - generic "Green"
+              - button "Yellow":
+                - generic "Yellow"
+              - button "Orange":
+                - generic "Orange"
+              - button "Red":
+                - generic "Red"
+          - generic:
+            - generic:
+              - checkbox "Clear on copy/send"
+              - generic:
+                - text: Clear on copy/send
+                - generic:
+                  - img
+            - generic:
+              - checkbox "Block page interactions" [checked]
+              - generic:
+                - img
+              - generic: Block page interactions
+          - generic:
+            - button "Manage MCP & Webhooks":
+              - generic: Manage MCP & Webhooks
+              - generic:
+                - img
+        - generic:
+          - button "Manage MCP & Webhooks":
+            - img
+            - generic: Manage MCP & Webhooks
+          - generic:
+            - generic:
+              - generic:
+                - text: MCP Connection
+                - generic:
+                  - img
+            - paragraph:
+              - text: MCP connection allows agents to receive and act on annotations.
+              - link "Learn more":
+                - /url: https://agentation.dev/mcp
+          - generic:
+            - generic:
+              - generic:
+                - text: Webhooks
+                - generic:
+                  - img
+              - generic:
+                - generic: Auto-Send
+                - generic:
+                  - checkbox [checked] [disabled]
+            - paragraph: The webhook URL will receive live annotation changes and annotation data.
+            - textbox "Webhook URL"
