@@ -3,22 +3,6 @@ import { render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
 import { BookOpen } from 'lucide-react'
 import { LibraryRail } from '@/app/components/library/rails/LibraryRail'
-import type { Book } from '@/data/types'
-
-function makeBook(overrides: Partial<Book> = {}): Book {
-  return {
-    id: overrides.id ?? crypto.randomUUID(),
-    title: overrides.title ?? 'Test Title',
-    format: overrides.format ?? 'audiobook',
-    status: overrides.status ?? 'unread',
-    tags: [],
-    chapters: [],
-    source: { type: 'local', opfsPath: '/tmp/book' },
-    progress: overrides.progress ?? 0,
-    createdAt: overrides.createdAt ?? '2026-05-01T00:00:00.000Z',
-    ...overrides,
-  }
-}
 
 function StubTile({ bookId, label }: { bookId: string; label: string }) {
   return (
