@@ -161,7 +161,7 @@ export function ThisWeekSection() {
             {dailyData.map(day => (
               <div key={day.label} className="flex-1 flex flex-col items-center gap-1.5">
                 <div
-                  // eslint-disable-next-line react-best-practices/no-inline-styles -- dynamic bar height from percentage
+                   
                   className="w-full bg-brand rounded-t-[3px] motion-safe:transition-[height] motion-safe:duration-300 min-h-[2px]"
                   style={{ height: day.pct > 0 ? `${Math.max(day.pct, 4)}%` : '0px' }}
                   title={`${day.label}: ${day.minutes} min`}

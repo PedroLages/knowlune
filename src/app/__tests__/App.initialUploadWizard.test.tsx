@@ -166,7 +166,7 @@ beforeEach(() => {
 
   // Re-wire the useAuthStore mock each test because mockAuthUser is reassigned
   vi.mocked(useAuthStore).mockImplementation(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     ((selector?: (s: unknown) => unknown) => {
       const state = {
         user: mockAuthUser,

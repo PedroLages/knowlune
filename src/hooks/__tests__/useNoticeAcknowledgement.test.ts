@@ -82,7 +82,7 @@ describe('useNoticeAcknowledgement', () => {
   })
 
   it('returns fail-open defaults before query resolves', () => {
-    // eslint-disable-next-line @typescript-eslint/no-empty-function
+     
     mockLimit.mockReturnValue(new Promise(() => {})) // never resolves
     const { result } = renderHook(() => useNoticeAcknowledgement())
     expect(result.current.acknowledged).toBe(true)

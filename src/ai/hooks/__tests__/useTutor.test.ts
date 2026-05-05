@@ -69,7 +69,7 @@ async function* makeStream(chunks: string[]) {
 
 async function* makeErrorStream(): AsyncGenerator<never> {
   throw new LLMError('Provider offline', 'NETWORK_ERROR')
-  // eslint-disable-next-line no-unreachable
+   
   yield undefined as never
 }
 

@@ -80,7 +80,7 @@ test.describe('WCAG 2.5.8 target-size audit', () => {
         if (violations.length > 0) {
           // Print readable report; failure message attaches the same.
           const report = violations.map(formatViolation).join('\n  ')
-          // eslint-disable-next-line no-console
+           
           console.log(`Target size violations on ${title}:\n  ${report}`)
         }
 
