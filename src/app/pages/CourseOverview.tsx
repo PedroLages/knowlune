@@ -37,6 +37,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/app/components/ui/avatar'
 import { Skeleton } from '@/app/components/ui/skeleton'
 import { cn } from '@/app/components/ui/utils'
 import { StudyScheduleEditor } from '@/app/components/figma/StudyScheduleEditor'
+import { CourseJourneyNodeIndicator } from '@/app/components/course/CourseJourneyNodeIndicator'
 import { formatClockDuration as formatDuration } from '@/lib/formatDuration'
 import { getInitials } from '@/lib/textUtils'
 import type { ImportedVideo, ImportedPdf, VideoProgress, YouTubeCourseChapter } from '@/data/types'
@@ -576,22 +577,14 @@ export function CourseOverview() {
                 return (
                   <div key={`${group.title}-${groupIndex}`} className="relative pl-8 group/module">
                     {/* Timeline dot */}
-                    <div
+                    <CourseJourneyNodeIndicator
+                      status={status}
                       className={cn(
-                        'absolute -left-[13px] top-1 size-6 rounded-full border-4 border-background flex items-center justify-center transition-colors duration-300',
-                        status === 'completed' && 'bg-success shadow-[0_0_8px_var(--success)]',
-                        status === 'active' &&
-                          'bg-accent-violet shadow-[0_0_12px_var(--accent-violet)]',
-                        status === 'upcoming' && 'bg-muted-foreground/30'
+                        'absolute -left-[13px] top-1',
+                        status === 'active' && 'shadow-[0_0_12px_var(--brand)]',
+                        status === 'completed' && 'shadow-[0_0_8px_var(--success)]'
                       )}
-                    >
-                      {status === 'completed' && (
-                        <CheckCircle2
-                          className="size-3 text-success-foreground"
-                          aria-hidden="true"
-                        />
-                      )}
-                    </div>
+                    />
 
                     {/* Module card */}
                     <div
