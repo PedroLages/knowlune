@@ -1,0 +1,53 @@
+{
+  "run_id": "20260505-233537-8a228fe",
+  "mode": "headless",
+  "scope": "feature/ce-2026-05-05-fix-library-qa-issues vs base f9be6cea",
+  "intent": "Fix six visual/UX QA issues discovered after library shelf consistency implementation: (1) remove chapter info from Browse audiobook cards, (2) reposition Daily Highlights above format tabs, (3) migrate Discover shelf to LibraryRail+BookTile pattern, (4) switch to icon-only format badges, (5) fix hover overlay icon contrast on light covers, and (6) fix hover-lift animation clipping in scroll containers.",
+  "plan": "docs/plans/2026-05-05-007-fix-library-qa-issues-plan.md",
+  "plan_source": "explicit",
+  "verdict": "Ready to merge",
+  "reviewers": "correctness, testing, maintainability, project-standards, adversarial, kieran-typescript, agent-native-reviewer, learnings-researcher",
+  "reviewer_justifications": {
+    "adversarial": "9 files changed, ~150+ executable lines across 8 TSX components (>=50 threshold)",
+    "kieran-typescript": "TypeScript React component changes across multiple library files"
+  },
+  "findings": [],
+  "pre_existing": [],
+  "residual_risks": [
+    "Discover shelf migration changes component from LibraryMediaShelfRow to LibraryRail — chevron hover behavior now matches Recently Added (intentional per plan). Visual verification via design review recommended.",
+    "BookTile action icon reduced from size-10 (40px) to size-6 (24px) inside p-2 backdrop circle — total footprint unchanged (40px), but icon within is smaller. The backdrop circle pattern is proven in BookCard's format badge."
+  ],
+  "testing_gaps": [
+    "RecentBookCard format badge change (text removal, icon-only) has no test coverage — no RecentBookCard.test.tsx exists",
+    "BookTile dark backdrop circle (bg-black/60 backdrop-blur-md rounded-full) wrapping action icon has no explicit test in overlay test suite",
+    "Discover shelf BookTile rendering not explicitly verified in LibraryMediaShelfColumn tests (existing assertions use >=1 which pass but don't distinguish Discover children from other shelves)",
+    "Scroll container pt-2 additions have no className-level regression tests (visual verification is appropriate for CSS changes)"
+  ],
+  "learnings": [
+    "Preceding solution doc: docs/solutions/ui-bugs/library-shelf-sizing-hover-consistency-2026-05-05.md — documents the translateZ(0) corner-clipping fix and unified sizing pattern from plan 005. This plan addresses 6 post-unification QA follow-ups."
+  ],
+  "agent_native_gaps": [],
+  "requirements_completeness": {
+    "R1_chapter_removal": "met",
+    "R2_daily_highlights_reorder": "met",
+    "R3_discover_rail_migration": "met",
+    "R4_icon_only_badges": "met",
+    "R5_hover_icon_contrast": "met",
+    "R6_hover_animation_clipping": "met",
+    "unit_1_bookcard_chapter": "met",
+    "unit_2_highlights_reorder": "met",
+    "unit_3_discover_migration": "met",
+    "unit_4_icon_only_badges": "met",
+    "unit_5_hover_contrast": "met",
+    "unit_6_animation_clipping": "met"
+  },
+  "applied_fixes": [],
+  "untracked_files_excluded": [
+    ".context/compound-engineering/ce-review/20260505-222526-c7ca0c9a/",
+    ".context/compound-engineering/ce-runs/fix-library-qa-issues-2026-05-05.md",
+    "docs/plans/2026-05-05-001-feat-abs-ebook-sync-format-detection-plan.md",
+    "docs/plans/2026-05-05-007-fix-library-qa-issues-plan.md"
+  ],
+  "suppressed_count": 0,
+  "failed_reviewers": []
+}
