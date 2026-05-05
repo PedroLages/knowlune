@@ -1,0 +1,209 @@
+{
+  "run_id": "20260505-123249-74bffe74",
+  "mode": "headless",
+  "base": "2209d044",
+  "branch": "feature/ce-2026-05-05-refactor-courses-control-bar-ux",
+  "intent": "Refactor the Courses page control bar from an undifferentiated row of widgets into clearly grouped, labeled sections (Filter, Sort, View). Improve card hover/focus states, increase metadata contrast, sharpen metadata density per view mode, add filter summary chip, and rename section heading from 'Imported Courses' to 'Your Courses'.",
+  "reviewers": [
+    "correctness (always)",
+    "testing (always)",
+    "maintainability (always)",
+    "project-standards (always)",
+    "agent-native-reviewer (always - CE)",
+    "learnings-researcher (always - CE)",
+    "kieran-typescript (TypeScript React components modified)",
+    "julik-frontend-races (UI interactive state, DOM events, animations)"
+  ],
+  "verdict": "Ready with fixes",
+  "applied_fixes": [
+    {
+      "file": "src/app/components/courses/__tests__/ControlBarSection.test.tsx",
+      "line": 4,
+      "description": "Removed unused Button import (TS6133)",
+      "autofix_class": "safe_auto"
+    }
+  ],
+  "findings": [
+    {
+      "id": "F01",
+      "title": "File size text uses text-muted-foreground/70 reducing contrast below WCAG AA",
+      "severity": "P1",
+      "file": "src/app/components/figma/ImportedCourseCard.tsx",
+      "line": 703,
+      "confidence": 0.85,
+      "autofix_class": "gated_auto",
+      "owner": "downstream-resolver",
+      "requires_verification": true,
+      "pre_existing": true,
+      "why_it_matters": "The file size text uses text-muted-foreground/70 which is 70% opacity of an already potentially low-contrast token. This fails WCAG AA 4.5:1 contrast for the secondary metadata text, directly contradicting R5 which requires WCAG AA contrast on dark backgrounds.",
+      "suggested_fix": "Change text-muted-foreground/70 to text-muted-foreground (matching sibling elements) or adjust via the theme token approach described in Unit 4.",
+      "evidence": [
+        "Line 703: className=\"text-muted-foreground/70\" on file size span",
+        "Sibling elements (video count, PDF count) use className=\"text-muted-foreground\" without opacity",
+        "R5 requires WCAG AA contrast for secondary metadata"
+      ]
+    },
+    {
+      "id": "F02",
+      "title": "hover:scale-[1.01] may cause text blurriness on some browsers",
+      "severity": "P1",
+      "file": "src/app/components/figma/ImportedCourseCard.tsx",
+      "line": 303,
+      "confidence": 0.70,
+      "autofix_class": "gated_auto",
+      "owner": "downstream-resolver",
+      "requires_verification": true,
+      "pre_existing": false,
+      "why_it_matters": "Using transform: scale() on a card containing text, images, and gradient backgrounds can cause sub-pixel rendering artifacts. Text may appear slightly blurry when rendered at non-integer pixel positions after scaling, especially on non-Retina displays. The plan risk table acknowledges this (\"Hover effects may cause layout shift in grid\") and correctly recommends GPU-composited transforms, but scale can still degrade text quality.",
+      "suggested_fix": "Replace hover:scale-[1.01] with hover:-translate-y-0.5 hover:shadow-md to achieve a lift effect without text scaling artifacts. Keep motion-safe/motion-reduce guards.",
+      "evidence": [
+        "Line 303: hover:scale-[1.01] on the article wrapper",
+        "Text and gradient backgrounds inside the card will be scaled",
+        "translateY achieves similar visual lift without rasterization artifacts"
+      ]
+    },
+    {
+      "id": "F03",
+      "title": "Filter summary chip shows raw status keys instead of human-readable labels",
+      "severity": "P1",
+      "file": "src/app/pages/Courses.tsx",
+      "line": 274,
+      "confidence": 0.90,
+      "autofix_class": "gated_auto",
+      "owner": "downstream-resolver",
+      "requires_verification": false,
+      "pre_existing": false,
+      "why_it_matters": "The summary chip uses selectedStatuses.join(', ') which renders internal keys like \"not-started, active\" instead of human-readable labels like \"Not Started, Active\". Users will see technical identifiers rather than friendly status names, creating a poor UX and potential confusion.",
+      "suggested_fix": "Create a mapping from status keys to labels (reusing the existing statuses array in StatusFilter.tsx or defining a local const map) and join the display labels instead: selectedStatuses.map(s => statusLabels[s] ?? s).join(', ')",
+      "evidence": [
+        "Line 274: Filtered by: {selectedStatuses.join(', ')}",
+        "Status keys are kebab-case internal identifiers (not-started, active, completed, paused)",
+        "StatusFilter.tsx defines human-readable labels: 'Not Started', 'Active', 'Completed', 'Paused'"
+      ]
+    },
+    {
+      "id": "F04",
+      "title": "GridColumnControl active state uses bg-brand-soft while adjacent ViewModeToggle uses bg-brand",
+      "severity": "P2",
+      "file": "src/app/components/courses/GridColumnControl.tsx",
+      "line": 70,
+      "confidence": 0.75,
+      "autofix_class": "gated_auto",
+      "owner": "downstream-resolver",
+      "requires_verification": false,
+      "pre_existing": true,
+      "why_it_matters": "GridColumnControl and ViewModeToggle sit side by side in the View section but use different active state styles. ViewModeToggle uses bg-brand (strong fill) per Unit 3, while GridColumnControl retains bg-brand-soft (subtle fill). This creates visual inconsistency within the same toolbar section, making the column control look like a different control family.",
+      "suggested_fix": "Consider whether GridColumnControl should also use bg-brand for active state to match ViewModeToggle, or document the intentional difference if the subordinate control warrants a lower visual weight.",
+      "evidence": [
+        "GridColumnControl line 70: data-[state=on]:bg-brand-soft data-[state=on]:text-brand-soft-foreground",
+        "ViewModeToggle line 57: data-[state=on]:bg-brand data-[state=on]:text-brand-foreground",
+        "Both controls sit inside the same ControlBarSection label='View' group"
+      ]
+    },
+    {
+      "id": "F05",
+      "title": "Compact card hover ring may lack contrast on dark backgrounds",
+      "severity": "P2",
+      "file": "src/app/components/figma/ImportedCourseCompactCard.tsx",
+      "line": 209,
+      "confidence": 0.65,
+      "autofix_class": "gated_auto",
+      "owner": "downstream-resolver",
+      "requires_verification": true,
+      "pre_existing": false,
+      "why_it_matters": "The compact card hover effect uses hover:ring-1 hover:ring-border. The border token is typically a subtle color by design (~hsl(var(--border))), which may not provide sufficient visible affordance on dark backgrounds where the card edge already blends. Compact cards have limited space, so the hover state needs to be clearly perceptible.",
+      "suggested_fix": "Consider hover:ring-1 hover:ring-muted-foreground/30 or hover:shadow-sm for a more visible hover affordance. Verify contrast in dark mode.",
+      "evidence": [
+        "Line 209: hover:ring-1 hover:ring-border",
+        "Plan requires R6: clear hover/focus states with visible affordance",
+        "border token is intentionally subtle and may not provide sufficient hover distinction"
+      ]
+    },
+    {
+      "id": "F06",
+      "title": "Test uses brittle className string assertions instead of toHaveClass()",
+      "severity": "P2",
+      "file": "src/app/components/courses/__tests__/ControlBarSection.test.tsx",
+      "line": 49,
+      "confidence": 0.80,
+      "autofix_class": "manual",
+      "owner": "downstream-resolver",
+      "requires_verification": false,
+      "pre_existing": false,
+      "why_it_matters": "The test at lines 49-51 uses expect(label.className).toContain('uppercase') which compares against the raw className string. This is brittle — if Tailwind reorders classes or additional classes are added, the assertion may break or give unclear failure messages. jest-dom's toHaveClass() is the idiomatic and more resilient matcher.",
+      "suggested_fix": "Replace expect(label.className).toContain(...) with expect(label).toHaveClass(...) from @testing-library/jest-dom, which handles class ordering and partial matches gracefully.",
+      "evidence": [
+        "Lines 49-51: expect(label.className).toContain('uppercase'), .toContain('tracking-wider'), .toContain('text-xs')",
+        "jest-dom's toHaveClass() is the standard matcher for class assertions"
+      ]
+    },
+    {
+      "id": "F07",
+      "title": "ControlBarSection divider coupling to instance ordering creates maintainability trap",
+      "severity": "P3",
+      "file": "src/app/components/courses/ControlBarSection.tsx",
+      "line": 17,
+      "confidence": 0.75,
+      "autofix_class": "advisory",
+      "owner": "human",
+      "requires_verification": false,
+      "pre_existing": false,
+      "why_it_matters": "The component's JSDoc tells callers to use showDivider={false} on the first section and showDivider={true} (default) on subsequent sections. This couples correctness to instance ordering. If sections are reordered in Courses.tsx, the divider logic must be manually updated. A more robust approach would be to have the parent control dividers, or to detect first-child position automatically.",
+      "suggested_fix": "Either: (a) have Courses.tsx manage dividers explicitly between sections, (b) use CSS :first-child to suppress the first divider automatically, or (c) keep as-is since the three-section layout is stable and unlikely to be reordered.",
+      "evidence": [
+        "JSDoc lines 17-18: 'The first section should use showDivider={false}; subsequent sections use the default showDivider={true}'",
+        "Plan's Implementation Notes already flags this as a 'Low' concern",
+        "Three sections (Filter, Sort, View) are logically stable in this order"
+      ]
+    }
+  ],
+  "requirements_checklist": {
+    "plan_source": "explicit",
+    "plan_path": "docs/plans/2026-05-05-001-refactor-courses-control-bar-ux-plan.md",
+    "requirements": {
+      "R1": {
+        "status": "met",
+        "notes": "ControlBarSection wrapper created with labeled groups, dividers, and consistent spacing. Three groups (Filter, Sort, View) implemented in Courses.tsx."
+      },
+      "R2": {
+        "status": "met",
+        "notes": "ViewModeToggle active state strengthened to bg-brand with ring-1 and focus-visible ring. Selected state now highly visible."
+      },
+      "R3": {
+        "status": "met",
+        "notes": "GridColumnControl wrapped inside View section alongside ViewModeToggle, conditionally rendered only in grid mode via {courseViewMode === 'grid' && ...}."
+      },
+      "R4": {
+        "status": "partially addressed",
+        "notes": "Compact cards: metadata is minimal (thumbnail+title+progress) per plan. Grid cards: metadata layout improved with mt-auto, icons increased to size-4. List rows: metadata reordered above progress bar for scannable order. However, contrast on file size element uses text-muted-foreground/70 which fails R4's 'high contrast' requirement."
+      },
+      "R5": {
+        "status": "not addressed",
+        "notes": "No theme token adjustments made. The pre-existing text-muted-foreground/70 on file size (ImportedCourseCard.tsx:703) remains and fails WCAG AA. Unit 4 deferred token-level changes or per-component overrides."
+      },
+      "R6": {
+        "status": "met",
+        "notes": "Grid cards: hover:shadow-md hover:scale-[1.01] with motion-safe/reduce guards. Compact cards: hover:ring-1 hover:ring-border with transition-shadow. Both cards have focus-visible rings."
+      },
+      "R7": {
+        "status": "met",
+        "notes": "Section heading renamed from 'Imported Courses' to 'Your Courses' at line 289 of Courses.tsx."
+      }
+    }
+  },
+  "residual_risks": [
+    "The scale transform (hover:scale-[1.01]) on ImportedCourseCard may cause text blurriness; consider translateY as alternative",
+    "Filter summary chip shows raw kebab-case status keys instead of human-readable labels",
+    "GridColumnControl active state differs from adjacent ViewModeToggle (brand-soft vs brand)"
+  ],
+  "testing_gaps": [
+    "No test for filter summary chip visibility when statuses are selected",
+    "No test for 'Clear all' button in filter summary",
+    "No test verifying human-readable labels in filter summary chip",
+    "No test for GridColumnControl hiding in non-grid view modes (may be covered by existing tests)"
+  ],
+  "learnings": [
+    "The Separator component's data-slot and data-orientation attributes are the correct selectors for testing separator presence and orientation",
+    "ControlBarSection is a ~30-line abstraction that pays for itself in layout consistency"
+  ]
+}

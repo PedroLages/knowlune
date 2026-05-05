@@ -1,0 +1,96 @@
+{
+  "run_id": "20260505-124520-c211c5ce",
+  "mode": "headless",
+  "base": "2209d044",
+  "branch": "feature/ce-2026-05-05-refactor-courses-control-bar-ux",
+  "intent": "R2 verification of R1 fix round. 6 findings (3 HIGH, 3 MEDIUM) were addressed in commit a2fbe92c. This review verifies they are resolved and checks for regressions.",
+  "reviewers": [
+    "correctness (always)",
+    "testing (always)",
+    "maintainability (always)",
+    "project-standards (always)",
+    "agent-native-reviewer (always - CE)",
+    "learnings-researcher (always - CE)"
+  ],
+  "verdict": "Ready to merge",
+  "applied_fixes": [],
+  "findings": [],
+  "fix_verification": {
+    "F01": {
+      "severity": "P1",
+      "title": "File size text uses text-muted-foreground/70 reducing contrast below WCAG AA",
+      "status": "resolved",
+      "evidence": "Changed to text-muted-foreground on ImportedCourseCard.tsx file size span. No remaining text-muted-foreground/70 instances in that file."
+    },
+    "F02": {
+      "severity": "P1",
+      "title": "hover:scale-[1.01] may cause text blurriness on some browsers",
+      "status": "resolved",
+      "evidence": "Replaced with hover:-translate-y-0.5 hover:shadow-md. No scale-[1.01] instances remain."
+    },
+    "F03": {
+      "severity": "P1",
+      "title": "Filter summary chip shows raw status keys instead of human-readable labels",
+      "status": "resolved",
+      "evidence": "Added useMemo-based statusLabelMap lookup. Filter summary now shows human-readable labels."
+    },
+    "F04": {
+      "severity": "P2",
+      "title": "GridColumnControl active state uses bg-brand-soft while adjacent ViewModeToggle uses bg-brand",
+      "status": "resolved",
+      "evidence": "GridColumnControl active state uses data-[state=on]:bg-brand data-[state=on]:text-brand-foreground, matching ViewModeToggle."
+    },
+    "F05": {
+      "severity": "P2",
+      "title": "Compact card hover ring may lack contrast on dark backgrounds",
+      "status": "resolved",
+      "evidence": "Changed from hover:ring-1 hover:ring-border to hover:ring-1 hover:ring-muted-foreground/30 hover:shadow-sm."
+    },
+    "F06": {
+      "severity": "P2",
+      "title": "Test uses brittle className string assertions instead of toHaveClass()",
+      "status": "resolved",
+      "evidence": "Replaced expect(label.className).toContain(...) with expect(label).toHaveClass(...) from jest-dom."
+    }
+  },
+  "requirements_checklist": {
+    "plan_source": "explicit",
+    "plan_path": "docs/plans/2026-05-05-001-refactor-courses-control-bar-ux-plan.md",
+    "requirements": {
+      "R1": {
+        "status": "met",
+        "notes": "ControlBarSection wrapper created. Three labeled groups (Filter, Sort, View) with dividers."
+      },
+      "R2": {
+        "status": "met",
+        "notes": "ViewModeToggle active state: bg-brand with ring-1 and focus-visible ring."
+      },
+      "R3": {
+        "status": "met",
+        "notes": "GridColumnControl inside View section, conditionally rendered only in grid mode."
+      },
+      "R4": {
+        "status": "met",
+        "notes": "Grid cards: metadata layout improved with mt-auto, icons size-4, full-width layout. List rows: metadata reordered above progress for scannability. Compact: thumbnail+title+progress only. File size contrast fixed (was text-muted-foreground/70, now text-muted-foreground)."
+      },
+      "R5": {
+        "status": "met",
+        "notes": "File size span text-muted-foreground/70 corrected to text-muted-foreground, resolving the WCAG AA contrast failure on dark backgrounds."
+      },
+      "R6": {
+        "status": "met",
+        "notes": "Grid cards: hover:-translate-y-0.5 hover:shadow-md with motion-safe/motion-reduce. Compact cards: hover:ring-1 hover:ring-muted-foreground/30 hover:shadow-sm. Both have focus-visible rings."
+      },
+      "R7": {
+        "status": "met",
+        "notes": "Section heading renamed from 'Imported Courses' to 'Your Courses'."
+      }
+    }
+  },
+  "residual_risks": [],
+  "testing_gaps": [],
+  "learnings": [
+    "All 6 R1 findings (3 P1, 3 P2) resolved in commit a2fbe92c. The fix round was complete and accurate.",
+    "TypeScript check and production build both pass cleanly."
+  ]
+}
