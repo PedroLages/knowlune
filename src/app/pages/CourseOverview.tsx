@@ -38,6 +38,7 @@ import { Skeleton } from '@/app/components/ui/skeleton'
 import { cn } from '@/app/components/ui/utils'
 import { StudyScheduleEditor } from '@/app/components/figma/StudyScheduleEditor'
 import { CourseJourneyNodeIndicator } from '@/app/components/course/CourseJourneyNodeIndicator'
+import { sortImportedVideosForCurriculum } from '@/lib/sortImportedVideosForCurriculum'
 import { formatClockDuration as formatDuration } from '@/lib/formatDuration'
 import { getInitials } from '@/lib/textUtils'
 import type { ImportedVideo, ImportedPdf, VideoProgress, YouTubeCourseChapter } from '@/data/types'
@@ -271,10 +272,14 @@ export function CourseOverview() {
   )
 
   const groupedContent = useMemo(() => {
-    if (capabilities?.requiresNetwork && chapters.length > 0) {
-      return groupByChapter(videos, chapters)
-    }
-    return groupByFolder(videos, capabilities?.requiresNetwork ? [] : pdfs)
+    const raw =
+      capabilities?.requiresNetwork && chapters.length > 0
+        ? groupByChapter(videos, chapters)
+        : groupByFolder(videos, capabilities?.requiresNetwork ? [] : pdfs)
+    return raw.map(group => ({
+      ...group,
+      videos: sortImportedVideosForCurriculum(group.videos),
+    }))
   }, [videos, pdfs, chapters, capabilities?.requiresNetwork])
 
   const toggleModule = useCallback((index: number) => {
@@ -575,15 +580,11 @@ export function CourseOverview() {
                 const isExpanded = expandedModules.has(groupIndex)
 
                 return (
-                  <div key={`${group.title}-${groupIndex}`} className="relative pl-8 group/module">
-                    {/* Timeline dot */}
+                  <div key={`${group.title}-${groupIndex}`} className="relative pl-10 group/module">
+                    {/* Timeline node (~48px); -left aligns center with rail (was -left-[13px] at size-6) */}
                     <CourseJourneyNodeIndicator
                       status={status}
-                      className={cn(
-                        'absolute -left-[13px] top-1',
-                        status === 'active' && 'shadow-[0_0_12px_var(--brand)]',
-                        status === 'completed' && 'shadow-[0_0_8px_var(--success)]'
-                      )}
+                      className="absolute -left-[25px] top-1"
                     />
 
                     {/* Module card */}

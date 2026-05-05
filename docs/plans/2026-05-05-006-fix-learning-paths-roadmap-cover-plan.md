@@ -17,7 +17,7 @@ The Learning Path detail page currently offers two views: a map (SVG `TrailMap` 
 
 On the listing page, path cards are slightly too wide, making the grid feel cramped at certain breakpoints. A small gap or padding reduction tightens the layout.
 
-The "bucket not found" error is a missing infrastructure provisioning: the `learning-path-covers` Supabase Storage bucket was never created in `storage-setup.sql`, so all cover image uploads and deletions fail at the API level.
+The "bucket not found" error is a missing infrastructure provisioning: the `learning-path-covers` Supabase Storage bucket was never created in `storage-setup.sql`, so all cover image uploads and deletions fail at the API level. Path covers are auto-generated non-sensitive metadata images with typical file size ~150KB after JPEG compression at 1280x720 quality 0.82; the bucket's 2MB limit serves as a safety ceiling, not expected usage.
 
 In the cover dialog, gradient preset buttons use `ring-2 ring-offset-2 scale-105` on selection, which causes the button to overflow its grid cell and trigger horizontal scrollbars. The dialog body's `overflow-y-auto` also shows a vertical scrollbar when content exceeds the max height.
 
@@ -73,8 +73,8 @@ In the cover dialog, gradient preset buttons use `ring-2 ring-offset-2 scale-105
 ## Key Technical Decisions
 
 - **Remove map view entirely, not hide it**: Delete the `RoadmapMapView`, `RoadmapViewToggle`, `TrailMap` components and their imports. Remove the `viewMode` state from the detail page. Always render `RoadmapListView`. This is a one-way simplification — no feature flag, no backwards compatibility shim.
-- **Card width reduction via max-width constraint**: Reducing `gap` in a `fr`-based grid (like `grid-cols-3`) actually *increases* column width since less space is consumed by gutters. The correct approach is to cap the card's maximum width. Add `max-w-[380px]` to the `PathCard` wrapper or grid container at the `lg` breakpoint to constrain card width. Apply to all 4 grid containers in LearningPaths.tsx (skeleton, template, user paths, discover-more) for consistent spacing and to prevent layout shift during loading.
-- **Storage bucket: add to setup SQL**: Add `learning-path-covers` bucket with `public` access (matching the pattern used by `course-thumbnails`). The bucket is for path cover images only — JPEG, PNG, WebP, max ~200KB per file.
+- **Card width reduction via max-width constraint**: Reducing `gap` in a `fr`-based grid (like `grid-cols-3`) actually *increases* column width since less space is consumed by gutters. The correct approach is to cap each card's maximum width at the card-wrapper level. Add `max-w-[380px]` to the outermost `<div>` of each `PathCard` component — NOT to the grid container (which would center the entire grid, not individual cards). At wider viewports (1536px+), grid cells can exceed 380px and cards would look stretched without this per-card constraint. Apply the same `max-w-[380px]` to every `PathCard` rendered in all 4 grid containers in LearningPaths.tsx (skeleton, template, user paths, discover-more) for consistent spacing and to prevent layout shift during loading.
+- **Storage bucket: add to setup SQL**: Add `learning-path-covers` bucket with `public: true` access. This deliberately diverges from the existing 6 buckets' `public: false` + RLS pattern: path covers are auto-generated non-sensitive metadata images, and public access enables CDN caching while avoiding signed-URL overhead on every image load. The bucket is for path cover images only — JPEG, PNG, WebP, max 2MB file size (safety ceiling; typical ~150KB after JPEG compression at 1280x720 quality 0.82).
 - **Dialog scrollbar fix: contain ring overflow**: Add `overflow-hidden` to the gradient preset grid container and change the selected state from `ring-2 ring-offset-2` to `ring-2 ring-offset-1` (or use `outline` instead of `ring-offset` which doesn't affect layout). The `scale-105` on hover is fine because it only applies on hover and the container clips it.
 
 ## Implementation Units
@@ -111,7 +111,7 @@ In the cover dialog, gradient preset buttons use `ring-2 ring-offset-2 scale-105
 
 **Test scenarios:**
 - Happy path: detail page renders the list view (syllabus-style course rows) without any map or toggle
-- Happy path: "Jump to Next" functionality works within the list view
+
 - Edge case: empty course entries — page shows appropriate empty state, no map fallback
 - Edge case: completed courses show check indicators in the list
 
@@ -134,8 +134,8 @@ In the cover dialog, gradient preset buttons use `ring-2 ring-offset-2 scale-105
 
 **Approach:**
 - Reducing `gap` in an `fr`-based grid (like `grid-cols-3`) actually **increases** column width since less space is consumed by gutters — the opposite of the desired effect. Instead, cap the max card width.
-- Add `max-w-[380px] mx-auto` to the `PathCard` wrapper component (or the grid container) at the `lg` breakpoint.
-- Apply the same `max-w-[380px]` to all 4 grid containers in LearningPaths.tsx (skeleton grid ~line 491, template grid ~line 572, user paths grid ~line 644, discover-more grid ~line 683) for consistent spacing and to prevent layout shift during loading transitions.
+- Add `max-w-[380px]` to each individual `PathCard` item within the grid (the card's outermost wrapper `<div>` element in `PathCard.tsx`), NOT to the grid container. At wider viewports (1536px+), grid cells can exceed 380px and cards would look stretched without this constraint. Adding `mx-auto` to grid containers centers the entire grid, not individual cards, so it must go on the card wrapper instead.
+- Apply the same `max-w-[380px]` to all 4 grid containers in LearningPaths.tsx (skeleton grid ~line 491, template grid ~line 572, user paths grid ~line 644, discover-more grid ~line 683) — meaning each PathCard rendered in those grids receives the constraint — for consistent spacing and to prevent layout shift during loading transitions.
 - Keep `gap-6` unchanged.
 
 **Patterns to follow:**
@@ -163,7 +163,7 @@ In the cover dialog, gradient preset buttons use `ring-2 ring-offset-2 scale-105
 - Modify: `supabase/storage-setup.sql`
 
 **Approach:**
-- The `learning-path-covers` bucket deliberately diverges from the existing 6 buckets: it uses `public: true` because `pathCoverUpload.ts` calls `getPublicUrl()` and uses flat keys (`{pathId}.jpg`, no user folder prefix). Path covers are non-sensitive public assets — unlike user-owned book files or avatars. This is an intentional architectural choice, not pattern drift.
+- The `learning-path-covers` bucket deliberately diverges from the existing 6 buckets (`public: false` + RLS): it uses `public: true` because `pathCoverUpload.ts` calls `getPublicUrl()` and uses flat keys (`{pathId}.jpg`, no user folder prefix). Path covers are auto-generated non-sensitive metadata images — unlike user-owned book files or avatars. Public access enables CDN caching and avoids signed-URL overhead on every image load, which is important because the listing page renders multiple path covers simultaneously. This is an intentional divergence justified by performance and the non-sensitive nature of the assets.
 - Add a new bucket creation block to the SQL script using the same idempotent guards as existing buckets (`DROP POLICY IF EXISTS`, `ON CONFLICT DO NOTHING`):
 
 ```sql
@@ -264,7 +264,7 @@ using (bucket_id = 'learning-path-covers' and auth.role() = 'authenticated');
 - Remove the `vi.mock('@/app/components/figma/TrailMap', ...)` mock — it references a deleted module.
 - Add assertions verifying the list view renders directly without a toggle.
 - Grep for `RoadmapViewMode` type references across the codebase before deleting `RoadmapViewToggle.tsx`.
-- Verify cover upload flow works (may need a test Supabase project with the bucket provisioned).
+- Verify cover upload flow: this is a configuration fix (missing bucket), not a code-path bug. Test via a unit test that mocks the Supabase storage client and confirms the upload call resolves (covering the "bucket not found → bucket exists" transition), plus a manual verification step after running `storage-setup.sql` against the actual Supabase project to confirm uploads succeed end-to-end.
 
 **Test scenarios:**
 - Happy path: detail page shows syllabus-style list without map toggle

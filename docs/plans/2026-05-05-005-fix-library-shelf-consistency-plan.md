@@ -117,11 +117,13 @@ The hover overlay on BookTile currently shows a text button ("Continue" or "Open
 - Edge case: EPUB with existing portrait cover fills the square frame via `object-cover` (top/bottom may be cropped — acceptable for consistency)
 - Edge case: hover scale does not produce visible sharp corners (verify `translateZ(0)` GPU compositing fix, with `isolate` as supplemental stacking context)
 - Edge case: missing cover shows fallback icon centered in the square frame
+- Edge case: Audio badge remains visible on audiobook BookTiles in the default (non-hover) state to prevent format-blindness regression
 
 **Verification:**
 - BookTile cards in Continue Listening and Recently Added shelves are the same width as Discover cards at all breakpoints.
 - Hover animation (lift distance, shadow intensity, image scale speed) matches Browse grid BookCards.
 - Cover corners stay rounded throughout the hover transition.
+- Audio format badge is preserved on BookTile — not removed; the hover overlay icon is additive (action hint, not format indicator).
 
 ---
 
@@ -182,6 +184,7 @@ The hover overlay on BookTile currently shows a text button ("Continue" or "Open
 - Change the AbsPaginationSentinel skeleton loader grid at Library.tsx line ~1374 from `xl:grid-cols-5` to `xl:grid-cols-6` for cosmetic consistency.
 - With sidebar (220px + 24px margin) and main content padding (48px), the available content width at 1280px viewport is ~988px. At 6 columns with gap-6, cards are ~145px wide. If cards feel cramped (title truncation before ~15 chars, or card width below 150px), reduce gap to `gap-4` (~151px per card).
 - Target: maintain ≥44px touch targets and readable titles.
+	- **Dead code note:** `LocalSeriesView.tsx` contains its own `xl:grid-cols-5` grid class but is dead code — zero imports across the entire codebase. Do NOT update its grid. This note is for future maintainers to avoid unnecessary work on an unused component.
 
 **Patterns to follow:**
 - SmartGroupedView.tsx line 31 — the existing `GRID_CLASSES` constant
@@ -281,7 +284,7 @@ The hover overlay on BookTile currently shows a text button ("Continue" or "Open
 - Update: `tests/e2e/library-continue.spec.ts` (if Daily Highlights position or BookTile overlay assertions exist)
 
 **Approach:**
-- Update BookTile unit tests: verify square sizing, new hover classes, icon overlay (no text), and removed Audio badge.
+- Update BookTile unit tests: verify square sizing, new hover classes, icon overlay (no text), and preserved Audio badge (persistent format indicator, not removed).
 - Update LibraryMediaShelfColumn tests: verify no `overlayAction` prop is passed to BookTile.
 - Update E2E tests: remove any assertions checking for "Remote" text in Browse grid. Add assertions for format icons on BookCards. Update Daily Highlights position assertions.
 
@@ -304,7 +307,8 @@ The hover overlay on BookTile currently shows a text button ("Continue" or "Open
 |------|------------|
 | EPUB portrait covers cropped to square | Acceptable trade-off for visual consistency. EPUB covers in horizontal shelves (Continue/Recently Added) will `object-cover` fill the square frame — top/bottom may be cropped. This already happens in the Browse grid for audiobooks. |
 | `overlayAction` prop removal breaks undiscovered consumers | Grep for `overlayAction` and `BookTile` imports before removing. If other consumers exist, keep the prop as optional with a fallback to the icon. |
-| Corner clipping fix (`isolate`) may have side effects on z-index stacking | `isolate` creates a new stacking context. Test that overlay elements, badges, and progress bar still render correctly within the cover container. |
+| Corner clipping fix (`translateZ(0)` + `isolate`) may have side effects on z-index stacking | Both `translateZ(0)` (GPU compositing) and `isolate` (stacking context) create a new stacking context. Test that overlay elements, badges, and progress bar still render correctly within the cover container. `translateZ(0)` is the primary WebKit fix; `isolate` alone is insufficient. |
+| Audio format badge removal could cause format-blindness regression | Mitigated: the Audio badge is preserved on BookTile (Unit 1 explicitly keeps it). The hover overlay icon is additive, not a replacement. Audiobooks and ebooks remain distinguishable in the default state. |
 | 6-column grid may make cards too small on 1280px viewports | Test at 1280px width. If cards feel cramped, reduce gap from `gap-6` to `gap-4` for the xl breakpoint. |
 
 ## Sources & References
