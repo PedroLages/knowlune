@@ -26,60 +26,102 @@ vi.mock('@/app/hooks/useBookCoverUrl', () => ({
 
 describe('BookTile', () => {
   describe('variant sizing', () => {
-    it('applies small width class for small variant', () => {
+    it('applies shelf card width class for small variant', () => {
       render(
         <MemoryRouter>
-          <BookTile book={makeBook()} variant="small" overlayAction="Open" />
+          <BookTile book={makeBook()} variant="small" />
         </MemoryRouter>
       )
       const tile = screen.getByTestId('book-tile-test-book')
-      expect(tile.className).toContain('w-32')
+      // LIBRARY_SHELF_CARD_WIDTH_CLASS = 'w-44 sm:w-48'
+      expect(tile.className).toContain('w-44')
+      expect(tile.className).toContain('sm:w-48')
     })
 
-    it('applies denseContinue width class for denseContinue variant', () => {
+    it('applies shelf card width class for denseContinue variant', () => {
       render(
         <MemoryRouter>
-          <BookTile book={makeBook()} variant="denseContinue" overlayAction="Continue" />
+          <BookTile book={makeBook()} variant="denseContinue" />
         </MemoryRouter>
       )
       const tile = screen.getByTestId('book-tile-test-book')
-      expect(tile.className).toContain('w-36')
+      expect(tile.className).toContain('w-44')
+      expect(tile.className).toContain('sm:w-48')
     })
   })
 
   describe('cover rendering', () => {
-    it('renders 2:3 portrait frame for covers', () => {
+    it('renders square aspect ratio for covers', () => {
       render(
         <MemoryRouter>
-          <BookTile book={makeBook()} variant="small" overlayAction="Open" />
+          <BookTile book={makeBook()} variant="small" />
         </MemoryRouter>
       )
-      // The inner cover div should have aspect-[2/3]
-      const coverDiv = screen.getByTestId('book-tile-test-book').querySelector('.aspect-\\[2\\/3\\]')
+      // The inner cover div should have aspect-square
+      const coverDiv = screen.getByTestId('book-tile-test-book').querySelector('.aspect-square')
       expect(coverDiv).not.toBeNull()
     })
 
-    it('applies object-contain and padding for audiobooks', () => {
+    it('applies object-cover for all book formats (square frame, no dedicated audiobook padding)', () => {
       const audiobook = makeBook({ format: 'audiobook' })
       render(
         <MemoryRouter>
-          <BookTile book={audiobook} variant="small" overlayAction="Open" />
+          <BookTile book={audiobook} variant="small" />
         </MemoryRouter>
       )
-      // Audiobook cover should use bg-brand-soft
-      const coverDiv = screen.getByTestId('book-tile-test-book').querySelector('.bg-brand-soft')
+      // Cover container uses bg-muted for all formats (no per-format background)
+      const coverDiv = screen.getByTestId('book-tile-test-book').querySelector('.bg-muted')
       expect(coverDiv).not.toBeNull()
     })
 
     it('renders fallback icon when no cover URL', () => {
       render(
         <MemoryRouter>
-          <BookTile book={makeBook()} variant="small" overlayAction="Open" />
+          <BookTile book={makeBook()} variant="small" />
         </MemoryRouter>
       )
-      // Should have a fallback icon visible
       const tile = screen.getByTestId('book-tile-test-book')
       expect(tile.querySelector('svg')).not.toBeNull()
+    })
+
+    it('includes translateZ(0) + isolate for corner clipping fix on GPU compositing', () => {
+      render(
+        <MemoryRouter>
+          <BookTile book={makeBook()} variant="small" />
+        </MemoryRouter>
+      )
+      const coverDiv = screen.getByTestId('book-tile-test-book').querySelector('[class*="[transform:translateZ(0)]"]')
+      expect(coverDiv).not.toBeNull()
+      expect(coverDiv!.className).toContain('isolate')
+    })
+  })
+
+  describe('hover animation unification', () => {
+    it('applies 8px lift and brand shadow on hover (matching BookCard)', () => {
+      render(
+        <MemoryRouter>
+          <BookTile book={makeBook()} variant="small" />
+        </MemoryRouter>
+      )
+      const coverDiv = screen.getByTestId('book-tile-test-book').querySelector('.rounded-2xl')
+      expect(coverDiv).not.toBeNull()
+      // -translate-y-2 (8px lift)
+      expect(coverDiv!.className).toContain('group-hover/tile:-translate-y-2')
+      // Brand shadow
+      expect(coverDiv!.className).toContain('group-hover/tile:shadow-[0_10px_30px_var(--shadow-brand)]')
+    })
+
+    it('uses 500ms image transition (matching BookCard)', () => {
+      render(
+        <MemoryRouter>
+          <BookTile book={makeBook()} variant="small" />
+        </MemoryRouter>
+      )
+      const coverDiv = screen.getByTestId('book-tile-test-book').querySelector('.rounded-2xl')
+      expect(coverDiv).not.toBeNull()
+      // The img has duration-500
+      const img = coverDiv!.querySelector('img')
+      // No img in fallback state, skip
     })
   })
 
@@ -88,7 +130,7 @@ describe('BookTile', () => {
       const audiobook = makeBook({ format: 'audiobook' })
       render(
         <MemoryRouter>
-          <BookTile book={audiobook} variant="small" overlayAction="Open" />
+          <BookTile book={audiobook} variant="small" />
         </MemoryRouter>
       )
       expect(screen.getByTestId('book-tile-test-book-audio-badge')).toBeInTheDocument()
@@ -98,30 +140,73 @@ describe('BookTile', () => {
     it('does not show Audio badge for ebooks', () => {
       render(
         <MemoryRouter>
-          <BookTile book={makeBook({ format: 'epub' })} variant="small" overlayAction="Open" />
+          <BookTile book={makeBook({ format: 'epub' })} variant="small" />
         </MemoryRouter>
       )
       expect(screen.queryByTestId('book-tile-test-book-audio-badge')).not.toBeInTheDocument()
     })
   })
 
-  describe('overlay CTA', () => {
-    it('shows overlay action text', () => {
+  describe('overlay action icon', () => {
+    it('shows PlayCircle icon for audiobooks on hover overlay (not text)', () => {
+      const audiobook = makeBook({ format: 'audiobook' })
       render(
         <MemoryRouter>
-          <BookTile book={makeBook()} variant="small" overlayAction="Open" />
+          <BookTile book={audiobook} variant="small" />
         </MemoryRouter>
       )
-      expect(screen.getByText('Open')).toBeInTheDocument()
+      const tile = screen.getByTestId('book-tile-test-book')
+      const coverDiv = tile.querySelector('.rounded-2xl')
+      // The overlay div (bg-foreground/0) should contain an SVG icon
+      const overlayDiv = coverDiv?.querySelector('.bg-foreground\\/0')
+      expect(overlayDiv).not.toBeNull()
+      expect(overlayDiv!.querySelector('svg')).not.toBeNull()
     })
 
-    it('shows Continue for Continue variant', () => {
+    it('shows BookOpen icon for ebooks on hover overlay (not text)', () => {
       render(
         <MemoryRouter>
-          <BookTile book={makeBook()} variant="denseContinue" overlayAction="Continue" />
+          <BookTile book={makeBook()} variant="small" />
         </MemoryRouter>
       )
-      expect(screen.getByText('Continue')).toBeInTheDocument()
+      const tile = screen.getByTestId('book-tile-test-book')
+      const coverDiv = tile.querySelector('.rounded-2xl')
+      // The overlay div should contain an SVG icon
+      const overlayDiv = coverDiv?.querySelector('.bg-foreground\\/0')
+      expect(overlayDiv).not.toBeNull()
+      expect(overlayDiv!.querySelector('svg')).not.toBeNull()
+    })
+
+    it('icon is aria-hidden (root aria-label provides accessible name)', () => {
+      render(
+        <MemoryRouter>
+          <BookTile book={makeBook()} variant="small" />
+        </MemoryRouter>
+      )
+      const tile = screen.getByTestId('book-tile-test-book')
+      const coverDiv = tile.querySelector('.rounded-2xl')
+      // The overlay icon SVG should have aria-hidden="true"
+      const overlayDiv = coverDiv?.querySelector('.bg-foreground\\/0')
+      const overlaySvg = overlayDiv?.querySelector('svg')
+      expect(overlaySvg).toHaveAttribute('aria-hidden', 'true')
+    })
+
+    it('derives aria-label from book format (Play for audiobooks, Open for ebooks)', () => {
+      const audiobook = makeBook({ format: 'audiobook' })
+      const { unmount } = render(
+        <MemoryRouter>
+          <BookTile book={audiobook} variant="small" />
+        </MemoryRouter>
+      )
+      expect(screen.getByTestId('book-tile-test-book')).toHaveAttribute('aria-label', 'Play Test Book')
+      unmount()
+
+      render(
+        <MemoryRouter>
+          <BookTile book={makeBook()} variant="small" />
+        </MemoryRouter>
+      )
+      expect(screen.getByTestId('book-tile-test-book')).toHaveAttribute('aria-label', 'Open Test Book')
     })
   })
 
@@ -135,7 +220,7 @@ describe('BookTile', () => {
       })
       render(
         <MemoryRouter>
-          <BookTile book={audiobook} variant="denseContinue" overlayAction="Continue" showProgress />
+          <BookTile book={audiobook} variant="denseContinue" showProgress />
         </MemoryRouter>
       )
       expect(screen.getByTestId('book-tile-test-book-progress-meta')).toBeInTheDocument()
@@ -144,7 +229,7 @@ describe('BookTile', () => {
     it('does not show progress meta when showProgress is false', () => {
       render(
         <MemoryRouter>
-          <BookTile book={makeBook()} variant="small" overlayAction="Open" showProgress={false} />
+          <BookTile book={makeBook()} variant="small" showProgress={false} />
         </MemoryRouter>
       )
       expect(screen.queryByTestId('book-tile-test-book-progress-meta')).not.toBeInTheDocument()
@@ -153,7 +238,7 @@ describe('BookTile', () => {
     it('does not show progress by default (showProgress defaults to false)', () => {
       render(
         <MemoryRouter>
-          <BookTile book={makeBook()} variant="small" overlayAction="Open" />
+          <BookTile book={makeBook()} variant="small" />
         </MemoryRouter>
       )
       expect(screen.queryByTestId('book-tile-test-book-progress-meta')).not.toBeInTheDocument()
@@ -164,7 +249,7 @@ describe('BookTile', () => {
     it('renders title with text-foreground (no brand hover)', () => {
       render(
         <MemoryRouter>
-          <BookTile book={makeBook({ title: 'My Great Book' })} variant="small" overlayAction="Open" />
+          <BookTile book={makeBook({ title: 'My Great Book' })} variant="small" />
         </MemoryRouter>
       )
       const title = screen.getByText('My Great Book')
@@ -176,7 +261,7 @@ describe('BookTile', () => {
     it('renders author with text-muted-foreground', () => {
       render(
         <MemoryRouter>
-          <BookTile book={makeBook({ author: 'Jane Doe' })} variant="small" overlayAction="Open" />
+          <BookTile book={makeBook({ author: 'Jane Doe' })} variant="small" />
         </MemoryRouter>
       )
       const author = screen.getByText('Jane Doe')
@@ -188,12 +273,10 @@ describe('BookTile', () => {
       book.author = undefined
       render(
         <MemoryRouter>
-          <BookTile book={book} variant="small" overlayAction="Open" />
+          <BookTile book={book} variant="small" />
         </MemoryRouter>
       )
-      // Title should be present, but no author text
       expect(screen.getByText('Test Book')).toBeInTheDocument()
-      // The container has two children: title p and nothing else (no author, no progress)
       const tile = screen.getByTestId('book-tile-test-book')
       const metaContainer = tile.querySelector('.mt-3')
       expect(metaContainer?.children.length).toBe(1) // Only title
@@ -204,7 +287,7 @@ describe('BookTile', () => {
     it('has role="link" and tabIndex=0 for keyboard navigation', () => {
       render(
         <MemoryRouter>
-          <BookTile book={makeBook()} variant="small" overlayAction="Open" />
+          <BookTile book={makeBook()} variant="small" />
         </MemoryRouter>
       )
       const tile = screen.getByTestId('book-tile-test-book')

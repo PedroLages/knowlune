@@ -785,12 +785,15 @@ export function Library() {
       )}
 
       {/* ============================================================ */}
-      {/* CONTINUE tab — hero + shelves + queue + highlights            */}
+      {/* CONTINUE tab — format tabs + highlights + hero + shelves + queue */}
       {/* ============================================================ */}
       {books.length > 0 && libraryTab === 'continue' && (
         <div className="flex flex-col gap-8" data-testid="library-tab-panel-continue">
           {/* Format tabs for switching Audiobooks/Ebooks context */}
           <LibraryFormatModeTabs />
+
+          {/* Daily Highlights — rendered at top, between format tabs and media hero */}
+          <DailyHighlightsStrip />
 
           {/* Media-first hero + shelves */}
           {modeBooksForMedia.length === 0 ? (
@@ -851,7 +854,6 @@ export function Library() {
           )}
 
           <ReadingQueue />
-          <DailyHighlightsStrip />
         </div>
       )}
 
@@ -1044,7 +1046,7 @@ export function Library() {
               filters.source === 'audiobookshelf' &&
               (absViewMode === 'series' || absViewMode === 'collections')
             ) && (
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-6">
                 {filteredBooks.map(book => (
                   <BookContextMenu key={book.id} book={book} onEdit={() => setEditingBook(book)}>
                     <BookCard book={book} />
@@ -1371,7 +1373,7 @@ function AbsPaginationSentinel({
   return (
     <div ref={sentinelRef} data-testid="abs-pagination-sentinel">
       {isSyncing && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
           {Array.from({ length: 3 }).map((_, i) => (
             <div key={i} className="rounded-[24px] border border-border/50 overflow-hidden">
               <div className="aspect-[2/3] bg-muted animate-pulse" />

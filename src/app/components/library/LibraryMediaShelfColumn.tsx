@@ -125,7 +125,7 @@ export function LibraryMediaShelfColumn() {
         data-testid="media-shelf-continue"
       >
         {shelves.continue.map(book => (
-          <BookTile key={book.id} book={book} variant="denseContinue" overlayAction="Continue" showProgress />
+          <BookTile key={book.id} book={book} variant="denseContinue" showProgress />
         ))}
       </LibraryRail>
 
@@ -136,7 +136,7 @@ export function LibraryMediaShelfColumn() {
         data-testid="media-shelf-recently-added"
       >
         {shelves.recentlyAdded.map(book => (
-          <BookTile key={book.id} book={book} variant="small" overlayAction="Open" />
+          <BookTile key={book.id} book={book} variant="small" />
         ))}
       </LibraryRail>
 
