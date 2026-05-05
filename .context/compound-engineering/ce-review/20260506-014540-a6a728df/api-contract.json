@@ -1,0 +1,24 @@
+{
+  "reviewer": "api-contract",
+  "findings": [
+    {
+      "title": "detectFormat function is exported but has no type guard",
+      "severity": "P3",
+      "file": "src/app/hooks/useAudiobookshelfSync.ts",
+      "line": 51,
+      "why_it_matters": "detectFormat is exported and called by tests. If any other module imports and uses it outside the sync mapping context, the function has no warning about its heuristic limitations (requires BOTH narrators AND duration). This is loose API design.",
+      "autofix_class": "advisory",
+      "owner": "human",
+      "requires_verification": false,
+      "confidence": 0.60,
+      "evidence": [
+        "export function detectFormat at line 51 — public API surface of the module",
+        "No JSDoc @warning or @see reference about the heuristic not being 100% reliable"
+      ],
+      "pre_existing": false,
+      "suggested_fix": null
+    }
+  ],
+  "residual_risks": [],
+  "testing_gaps": []
+}

@@ -39,6 +39,23 @@ function safeAbsLastOpenedIso(ms: number): string | null {
 export const VALID_FORMATS: readonly BookFormat[] = ['epub', 'audiobook'] as const
 
 /**
+ * Resolve narrator names from an ABS library item, handling both shape variants.
+ *
+ * ABS can return narrators as string[], as { name: string }[], or as a single
+ * narratorName string fallback. This helper normalizes all to string[].
+ */
+export function resolveNarratorNames(absItem: AbsLibraryItem): string[] {
+  const rawNarrators = (absItem.media.metadata.narrators ?? []) as Array<
+    string | { name: string }
+  >
+  return rawNarrators.length > 0
+    ? rawNarrators.map(n => (typeof n === 'string' ? n : n.name))
+    : (((absItem.media.metadata as Record<string, unknown>).narratorName as string)
+        ?.split(', ')
+        .filter(Boolean) ?? [])
+}
+
+/**
  * Detect whether an ABS library item is an ebook or audiobook based on its media metadata.
  *
  * Rule: If the item has non-empty narrators AND a positive duration, it's an audiobook.
@@ -49,16 +66,7 @@ export const VALID_FORMATS: readonly BookFormat[] = ['epub', 'audiobook'] as con
  * the reverse.
  */
 export function detectFormat(absItem: AbsLibraryItem): BookFormat {
-  // Resolve narrators — handle both (string | { name: string })[] shapes and narratorName fallback
-  const rawNarrators = (absItem.media.metadata.narrators ?? []) as Array<
-    string | { name: string }
-  >
-  const narratorNames =
-    rawNarrators.length > 0
-      ? rawNarrators.map(n => (typeof n === 'string' ? n : n.name))
-      : (((absItem.media.metadata as Record<string, unknown>).narratorName as string)
-          ?.split(', ')
-          .filter(Boolean) ?? [])
+  const narratorNames = resolveNarratorNames(absItem)
 
   // Resolve duration — prefer metadata.duration, fallback to media.duration
   const duration = absItem.media.metadata.duration || absItem.media.duration
@@ -117,6 +125,92 @@ export async function applyAbsProgressToBooks(
   }
 }
 
+/**
+ * Map an ABS library item to a Book record.
+ *
+ * `apiKey` is passed in explicitly so this mapper stays synchronous.
+ * Callers that cannot resolve a credential pass `null`, which forces
+ * cover-URL / Bearer-auth paths to omit the credential.
+ */
+export function mapAbsItemToBook(absItem: AbsLibraryItem, server: AudiobookshelfServer, apiKey: string): Book {
+  const bookId = crypto.randomUUID()
+
+  // Detect format from media metadata
+  const format = detectFormat(absItem)
+  const isEbook = format === 'epub'
+
+  // Handle narrators — ABS list endpoint returns `narratorName` (string), not `narrators` (array)
+  const narratorNames = resolveNarratorNames(absItem)
+
+  // Map chapters — skip dummy audio chapter synthesis for ebooks
+  const absChapters = absItem.media.chapters ?? []
+  const chapters: BookChapter[] = isEbook
+    ? []
+    : absChapters.length > 0
+      ? absChapters.map((ch, index) => ({
+          id: ch.id,
+          bookId,
+          title: ch.title,
+          order: index,
+          position: { type: 'time' as const, seconds: ch.start },
+        }))
+      : [
+          {
+            id: `${bookId}-ch0`,
+            bookId,
+            title: 'Chapter 1',
+            order: 0,
+            position: { type: 'time' as const, seconds: 0 },
+          },
+        ]
+
+  // Author names — ABS list endpoint returns `authorName` (string), not `authors` (array)
+  const authorsArray = absItem.media.metadata.authors ?? []
+  const authorNames =
+    authorsArray.length > 0
+      ? authorsArray.map(a => a.name).join(', ')
+      : (((absItem.media.metadata as Record<string, unknown>).authorName as string) ?? '')
+
+  // Cover URL — routed through backend proxy (handles auth + CORS)
+  const coverUrl = AudiobookshelfService.getCoverUrl(server.url, absItem.id, apiKey)
+
+  // Duration: prefer metadata.duration, fallback to media.duration (newer ABS versions)
+  const duration = absItem.media.metadata.duration || absItem.media.duration || undefined
+
+  // Source URL — ebooks use the ABS ebook download endpoint with Bearer auth;
+  // audiobooks use the server root (chapters fetched separately on demand)
+  const baseUrl = server.url.replace(/\/+$/, '')
+  const sourceUrl = isEbook
+    ? `${baseUrl}/api/items/${encodeURIComponent(absItem.id)}/ebook`
+    : baseUrl
+
+  return {
+    id: bookId,
+    title: absItem.media.metadata.title,
+    author: authorNames || 'Unknown Author',
+    narrator: narratorNames.length > 0 ? narratorNames.join(', ') : undefined,
+    format: VALID_FORMATS.includes(format) ? format : 'audiobook',
+    status: 'unread',
+    coverUrl,
+    description: absItem.media.metadata.description,
+    tags: [],
+    chapters,
+    source: {
+      type: 'remote',
+      url: sourceUrl,
+      auth: apiKey ? { bearer: apiKey } : undefined,
+    },
+    totalDuration: isEbook ? undefined : duration,
+    progress: 0,
+    isbn: absItem.media.metadata.isbn,
+    absServerId: server.id,
+    absItemId: absItem.id,
+    createdAt: new Date().toISOString(),
+    series: absItem.media.metadata.series || undefined,
+    seriesSequence: absItem.media.metadata.seriesSequence || undefined,
+  }
+}
+
 interface SyncState {
   isSyncing: boolean
   syncError: string | null
@@ -143,106 +237,6 @@ export function useAudiobookshelfSync() {
 
   /** Last `applyAbsProgressToBooks` run per server (throttled visibility refresh) */
   const lastProgressPullRef = useRef<Record<string, number>>({})
-
-  /**
-   * Map an ABS library item to a Book record.
-   *
-   * `apiKey` is passed in explicitly (read through `getAbsApiKey` by the
-   * caller) so this mapper stays synchronous. Callers that cannot resolve
-   * a credential pass `null`, which forces cover-URL / Bearer-auth paths
-   * to omit the credential — behavior matches the pre-E95-S05 guard.
-   */
-  const mapAbsItemToBook = useCallback(
-    (absItem: AbsLibraryItem, server: AudiobookshelfServer, apiKey: string): Book => {
-      const bookId = crypto.randomUUID()
-
-      // Detect format from media metadata
-      const format = detectFormat(absItem)
-      const isEbook = format === 'epub'
-
-      // Handle narrators — ABS list endpoint returns `narratorName` (string), not `narrators` (array)
-      const rawNarrators = (absItem.media.metadata.narrators ?? []) as Array<
-        string | { name: string }
-      >
-      const narratorNames =
-        rawNarrators.length > 0
-          ? rawNarrators.map(n => (typeof n === 'string' ? n : n.name))
-          : (((absItem.media.metadata as Record<string, unknown>).narratorName as string)
-              ?.split(', ')
-              .filter(Boolean) ?? [])
-
-      // Map chapters — skip dummy audio chapter synthesis for ebooks
-      const absChapters = absItem.media.chapters ?? []
-      const chapters: BookChapter[] = isEbook
-        ? []
-        : absChapters.length > 0
-          ? absChapters.map((ch, index) => ({
-              id: ch.id,
-              bookId,
-              title: ch.title,
-              order: index,
-              position: { type: 'time' as const, seconds: ch.start },
-            }))
-          : [
-              {
-                id: `${bookId}-ch0`,
-                bookId,
-                title: 'Chapter 1',
-                order: 0,
-                position: { type: 'time' as const, seconds: 0 },
-              },
-            ]
-
-      // Author names — ABS list endpoint returns `authorName` (string), not `authors` (array)
-      const authorsArray = absItem.media.metadata.authors ?? []
-      const authorNames =
-        authorsArray.length > 0
-          ? authorsArray.map(a => a.name).join(', ')
-          : (((absItem.media.metadata as Record<string, unknown>).authorName as string) ?? '')
-
-      // Cover URL — routed through backend proxy (handles auth + CORS)
-      const coverUrl = AudiobookshelfService.getCoverUrl(server.url, absItem.id, apiKey)
-
-      // Duration: prefer metadata.duration, fallback to media.duration (newer ABS versions)
-      const duration = absItem.media.metadata.duration || absItem.media.duration || undefined
-
-      // Source URL — ebooks use the ABS ebook download endpoint with Bearer auth;
-      // audiobooks use the server root (chapters fetched separately on demand)
-      const baseUrl = server.url.replace(/\/+$/, '')
-      const sourceUrl = isEbook
-        ? `${baseUrl}/api/items/${encodeURIComponent(absItem.id)}/ebook`
-        : baseUrl
-
-      return {
-        id: bookId,
-        title: absItem.media.metadata.title,
-        author: authorNames || 'Unknown Author',
-        narrator: narratorNames.length > 0 ? narratorNames.join(', ') : undefined,
-        format: VALID_FORMATS.includes(format) ? format : 'audiobook',
-        status: 'unread',
-        coverUrl,
-        description: absItem.media.metadata.description,
-        tags: [],
-        chapters,
-        source: {
-          type: 'remote',
-          url: sourceUrl,
-          // apiKey resolved at sync time via the vault broker (E95-S05).
-          auth: apiKey ? { bearer: apiKey } : undefined,
-        },
-        totalDuration: isEbook ? undefined : duration,
-        progress: 0,
-        isbn: absItem.media.metadata.isbn,
-        absServerId: server.id,
-        absItemId: absItem.id,
-        createdAt: new Date().toISOString(),
-        // E110-S02: Copy series metadata from ABS for local series grouping
-        series: absItem.media.metadata.series || undefined,
-        seriesSequence: absItem.media.metadata.seriesSequence || undefined,
-      }
-    },
-    []
-  )
 
   /**
    * Sync catalog from a single ABS server. Fetches page 0 for each selected library.
@@ -370,7 +364,7 @@ export function useAudiobookshelfSync() {
           lastSyncedAt: new Date().toISOString(),
         })
 
-        toast.success(`Synced ${allMappedBooks.length} book`, { duration: 3000 })
+        toast.success(`Synced ${allMappedBooks.length} book${allMappedBooks.length !== 1 ? 's' : ''}`, { duration: 3000 })
         if (removedCount > 0) {
           toast.info(
             `Removed ${removedCount} book${removedCount > 1 ? 's' : ''} no longer on server`,
@@ -404,7 +398,7 @@ export function useAudiobookshelfSync() {
         syncingServers.current.delete(server.id)
       }
     },
-    [mapAbsItemToBook, bulkUpsertAbsBooks, updateServer]
+    [bulkUpsertAbsBooks, updateServer]
   )
 
   // Throttled ABS progress pull when the tab becomes visible (no full catalog refetch)

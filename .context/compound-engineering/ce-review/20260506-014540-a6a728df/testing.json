@@ -1,0 +1,30 @@
+{
+  "reviewer": "testing",
+  "findings": [
+    {
+      "title": "Missing direct test for mapAbsItemToBook ebook wiring",
+      "severity": "P2",
+      "file": "src/app/hooks/__tests__/useAudiobookshelfSync.map.test.ts",
+      "line": 1,
+      "why_it_matters": "Only detectFormat and VALID_FORMATS are tested. The full mapAbsItemToBook mapping (source.url format for ebooks vs audiobooks, chapters array for ebooks, totalDuration being undefined for ebooks, allow-list gating in the returned Book object) has no test coverage. A regression in the wiring would not be caught by the current tests.",
+      "autofix_class": "manual",
+      "owner": "downstream-resolver",
+      "requires_verification": false,
+      "confidence": 0.75,
+      "evidence": [
+        "Test file only imports detectFormat and VALID_FORMATS — never calls mapAbsItemToBook or verifies complete Book shape",
+        "The source.url format logic (line 212-214 in useAudiobookshelfSync.ts) is critical for ebook rendering but untested",
+        "The chapters and totalDuration ebook paths are only tested indirectly through detectFormat returning 'epub'"
+      ],
+      "pre_existing": false,
+      "suggested_fix": "Add integration tests that call mapAbsItemToBook (or a testable wrapper) with both ebook and audiobook ABS items, asserting the full Book shape including source.url, chapters.length, and totalDuration"
+    }
+  ],
+  "residual_risks": [],
+  "testing_gaps": [
+    "No test verifies that the ebook source.url correctly includes /api/items/{id}/ebook",
+    "No test verifies that audiobook source.url remains the server root",
+    "No test verifies that chapters are empty for ebooks but populated for audiobooks",
+    "No test verifies that totalDuration is undefined for ebooks"
+  ]
+}

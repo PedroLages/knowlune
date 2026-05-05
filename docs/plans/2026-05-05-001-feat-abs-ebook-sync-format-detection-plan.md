@@ -3,6 +3,7 @@ title: "feat: Detect ebook format during ABS sync and wire to EPUB reader"
 type: feat
 status: active
 date: 2026-05-05
+deepened: 2026-05-05
 ---
 
 # feat: Detect ebook format during ABS sync and wire to EPUB reader
@@ -26,7 +27,8 @@ Even if format were correct, two downstream blockers prevent the EPUB from rende
 - **R3.** Ebook items must have `source.url` pointing to a fetchable EPUB file endpoint on the ABS server
 - **R4.** `BookContentService` must authenticate with Bearer tokens when fetching remote EPUBs
 - **R5.** Ebook items must not synthesize dummy audio chapters
-- **R6.** Existing audiobooks re-synced after this change must not be reclassified
+- **R6.** Existing audiobooks re-synced after this change should not be reclassified under normal conditions
+  - **Note:** This requirement is in tension with the metadata-based detection heuristic (see Key Technical Decisions). Audiobooks that lack narrator metadata in ABS will be classified as `'epub'` on re-sync. The plan mitigates this through a startup reclassification check (see Deferred to Implementation Verification) but cannot guarantee R6 for all cases.
 
 ## Scope Boundaries
 
@@ -38,7 +40,7 @@ Even if format were correct, two downstream blockers prevent the EPUB from rende
 ### Deferred to Separate Tasks
 
 - **Library-type-based detection**: Fetching and caching ABS library metadata (`mediaType`) during server setup for a stronger format signal
-- **Manual format override**: UI for correcting an auto-detected format on individual books
+- **Manual format override**: UI for correcting an auto-detected format on individual books (elevated from nice-to-have to near-term requirement given known false-positive risk — see Risks & Dependencies)
 - **PDF support via ABS**: detecting and routing PDF items from ABS
 
 ### Deferred to Implementation Verification
@@ -72,8 +74,11 @@ Even if format were correct, two downstream blockers prevent the EPUB from rende
 
 - **Format detection: item metadata heuristic over library-type lookup**: Checking `narrators` and `duration` on each item's `media.metadata` avoids an extra API call (`fetchLibraries`) per sync cycle. Library-type lookup can be added later as a stronger signal without changing the item-mapping interface.
 - **Detection rule: positive audiobook signal only**: If an item has narrators AND duration, it's an audiobook. Everything else defaults to `'epub'`. This avoids false audiobook classifications and is conservative — a misclassified audiobook (no narrator metadata) would open in the EPUB reader rather than playing audio, which is less confusing than the reverse.
+  - **R6 tension acknowledged (Finding 3):** This heuristic cannot guarantee R6 for audiobooks lacking narrator metadata in ABS. Real ABS audiobooks (especially older or community-managed imports) may lack narrator metadata and would be reclassified as `'epub'` on re-sync. The startup reclassification migration (see Deferred to Implementation Verification) mitigates this by fixing pre-existing misclassified items without requiring re-sync. Note that this migration itself also reclassifies audiobooks lacking narrator metadata to `'epub'` — it performs the same reclassification on app load that re-sync would produce, making the R6 tension visible at both entry points (re-sync and migration). For audiobooks that ARE re-synced and lose narrator metadata between syncs, this is accepted as a data-quality limitation on the ABS side — users can correct it by fixing ABS metadata and re-syncing, or via the upcoming manual override.
+  - **Dual-format items acknowledged (Finding 2):** Items existing as both audiobook and ebook in ABS (separate library items sharing the same work) will both be classified as `'audiobook'` if both have narrators and duration. The current heuristic has no mechanism to deduplicate or treat one as the ebook variant. This is accepted as a scope limitation — the dual-format case is rare in practice (ABS typically stores each work in one library). If dual-format syncing becomes a user need, the deferred library-type-based detection would resolve it by treating all items in an "ebooks" library as `'epub'` regardless of metadata signals.
+  - **Manual override gap acknowledged (Finding 4):** The heuristic has known false-positive risk for audiobooks without narrator metadata. Deferring manual format override means affected users have no self-service correction path. This elevates the manual override task from nice-to-have to near-term requirement. See updated Risks & Dependencies.
 - **Ebook file URL: Bearer-only auth, no query-param token**: Ebooks use `{serverUrl}/api/items/{itemId}/ebook` with no embedded credentials in the URL. Authentication is handled exclusively by the `Authorization: Bearer` header from `source.auth = { bearer: apiKey }`, which the existing sync infrastructure already sets for all ABS items (line 185 of `useAudiobookshelfSync.ts`). This avoids credential leakage through server logs, CDN caches, proxy logs, browser history, and Referer headers — all of which capture query parameters. Unlike the cover image endpoint (which uses `?token=` because `<img>` tags can't set headers), ebook downloads use `fetch()` where Bearer headers are the correct auth channel.
-- **Bearr auth in BookContentService: additive, non-breaking**: The existing Basic Auth path is preserved. Bearer auth is added as a parallel branch, gated on `'bearer' in source.auth`, following the `RemoteAuth` discriminated union. This is the mechanism that delivers the API key for the ebook download.
+- **Bearer auth in BookContentService: additive, non-breaking**: The existing Basic Auth path is preserved. Bearer auth is added as a parallel branch, gated on `'bearer' in source.auth`, following the `RemoteAuth` discriminated union. This is the mechanism that delivers the API key for the ebook download.
 
 ## Implementation Units
 
@@ -83,18 +88,20 @@ Even if format were correct, two downstream blockers prevent the EPUB from rende
 
 **Requirements:** R1, R2, R3, R5
 
-**Dependencies:** None
+**Dependencies:** Unit 3 type change (`AbsLibraryItem.mediaType` must include `'ebook'`), or widen inline before Unit 3
 
 **Files:**
 - Modify: `src/app/hooks/useAudiobookshelfSync.ts`
 - Test: `src/app/hooks/__tests__/useAudiobookshelfSync.map.test.ts` (new)
 
 **Approach:**
+- **Widen the sync loop filter (Finding 1):** Change line 288 from `if (absItem.mediaType && absItem.mediaType !== 'book') continue` to accept items where `mediaType` is `'book'` or `'ebook'`. The simplest correct form is `if (absItem.mediaType && absItem.mediaType !== 'book' && absItem.mediaType !== 'ebook') continue`, accepting both known book-like types and rejecting `'podcast'`. If Unit 3's widened type union is available, use it here; otherwise widen inline.
 - Extract a `detectFormat(absItem: AbsLibraryItem): BookFormat` helper that checks narrators and duration
 - Use the same narrator resolution as existing code: normalize from both `narrators` (handling `string | { name: string }` shapes) and `narratorName` (comma-separated string) fallback paths before checking non-emptiness
 - Use the same duration fallback as existing code: `absItem.media.metadata.duration || absItem.media.duration`
 - If item has non-empty narrators AND a positive duration → `'audiobook'`
 - Otherwise → `'epub'`
+- **Dual-format items (Finding 2):** Items that exist in both an "audiobooks" library and an "ebooks" library in ABS are both synced into the local book store as separate books. The heuristic will classify both as `'audiobook'` if both have narrators and duration. This is accepted for now — the deferred library-type-based detection would resolve this by treating all items from an "ebooks"-type library as `'epub'` regardless of metadata signals. No special deduplication logic is added in this unit.
 - In `mapAbsItemToBook`: call `detectFormat()`, conditionally set `source.url` — for ebooks use `{serverUrl}/api/items/{itemId}/ebook` (no query-param token; auth handled by Bearer header in `source.auth`, which is already set for all ABS items at line 185); for audiobooks keep existing server root URL
 - Skip dummy chapter synthesis for ebooks (return empty `chapters` array or omit the fallback)
 - Gate the format through an allow-list (`VALID_FORMATS`) before returning
@@ -107,10 +114,14 @@ Even if format were correct, two downstream blockers prevent the EPUB from rende
 - Happy path: ABS item with narrators=["Jane Doe"] and duration=3600 → `format: 'audiobook'`, keeps server root URL
 - Happy path: ABS item with no narrators and no duration → `format: 'epub'`, gets ebook download URL without embedded credentials (auth via Bearer header)
 - Happy path: ABS item with empty narrators array and no duration → `format: 'epub'`
+- Happy path: Sync loop filter accepts `mediaType: 'ebook'` items (do NOT skip them) → item reaches `mapAbsItemToBook`
+- Happy path: Sync loop filter still correctly rejects `mediaType: 'podcast'` items → podcast items are skipped (no regression)
+- Edge case: Sync loop filter with `mediaType` undefined → item is accepted (existing behavior, undefined only occurs on legacy ABS data)
 - Edge case: ABS item with narrators but no duration → `format: 'epub'` (needs both signals)
 - Edge case: ABS item with duration but no narrators → `format: 'epub'` (needs both signals)
 - Edge case: ABS item with narrators=["Solo"] and duration=0 → `format: 'epub'` (zero duration treated as absent)
 - Edge case: Ebook chapters array is empty (no dummy audio chapter synthesized)
+- Edge case: Dual-format ABS item — an item with both narrators and duration (satisfies audiobook heuristic) → classified as `'audiobook'` (dual-format accepted as scope limitation, no deduplication)
 - Integration: `bulkUpsertAbsBooks` merge preserves existing book `id` while updating `format` and `source` on re-sync
 
 **Verification:**
@@ -179,18 +190,21 @@ Even if format were correct, two downstream blockers prevent the EPUB from rende
 
 ## System-Wide Impact
 
-- **Interaction graph:** `mapAbsItemToBook` → `bulkUpsertAbsBooks` → Dexie `books` table → `getBookDestinationPath` → `BookReader` dispatch. The format field ripples through routing and reader selection. No callbacks, middleware, or observers are affected.
+- **Interaction graph:** `mapAbsItemToBook` → `bulkUpsertAbsBooks` → Dexie `books` table → `getBookDestinationPath` → `BookReader` dispatch. The format field ripples through routing and reader selection. Additionally, the sync loop filter (line 288) is an affected entry point — it must be widened to accept `mediaType: 'ebook'` items that newer ABS versions return.
 - **Error propagation:** If Bearer auth fails in `BookContentService`, the existing `RemoteEpubError` with cache-fallback logic handles it. No new error paths are introduced.
 - **State lifecycle risks:** `bulkUpsertAbsBooks` replaces `format` and `source` on re-sync. A properly-tagged audiobook (with both narrators and duration in ABS metadata) will not be reclassified. However, audiobooks that lack narrator metadata in ABS may be reclassified as `'epub'` on re-sync (see Risks table). An ebook previously misclassified as audiobook will be corrected on next sync.
 - **API surface parity:** The ABS ebook download endpoint (`/api/items/{id}/ebook`) uses Bearer header auth (via `source.auth`, wired by Unit 2), unlike the cover endpoint which uses `?token=` query params (necessary because `<img>` tags can't set headers). Both endpoints are authenticated; they differ in auth channel because their consumers have different capabilities.
 - **Integration coverage:** The full chain (sync → store → route → reader → content fetch) spans 5 modules. E2E test coverage of an ebook sync-and-read flow is recommended but not required for this plan (the ABS test server fixture would need ebook items).
-- **Unchanged invariants:** Podcast filtering (`mediaType !== 'book'`) is preserved. OPDS sync is untouched. Local EPUB imports are untouched. The `RemoteAuth` type is unchanged. Audiobook playback is unchanged.
+- **Unchanged invariants:** Podcast filtering (`mediaType === 'podcast'`) is preserved — items with `mediaType: 'podcast'` are still rejected by the sync loop. OPDS sync is untouched. Local EPUB imports are untouched. The `RemoteAuth` type is unchanged. Audiobook playback is unchanged. **Changed invariant (Finding 1):** The sync loop filter previously rejected all non-`'book'` `mediaType` values. It now accepts both `'book'` and `'ebook'`. This is a deliberate widening — podcast items remain filtered out.
 
 ## Risks & Dependencies
 
 | Risk | Mitigation |
-|------|------------|
-| Some audiobooks lack narrator metadata in ABS, causing false `'epub'` classification | Detection requires BOTH narrators AND duration. If a real audiobook has neither, it's a data quality issue on the ABS side. Users can re-sync after fixing ABS metadata. Manual format override is deferred to a follow-up. |
+| --- | --- |
+| Some audiobooks lack narrator metadata in ABS, causing false `'epub'` classification on re-sync (Finding 3 — R6 tension) | Detection requires BOTH narrators AND duration, which cannot guarantee R6 for audiobooks lacking narrator metadata. Mitigations: (1) Startup reclassification migration checks for pre-existing audiobooks with `absItemId` set but no narrator metadata, reclassifying them as `'epub'` once on app load without requiring re-sync. (2) Users can fix ABS metadata (add narrators) and re-sync. (3) The deferred manual format override is now elevated to near-term requirement (see Finding 4). |
+| No self-service correction path for false-positive classifications (Finding 4) | Manual format override was deferred as a separate task but is now elevated to near-term requirement given the known false-positive risk. Until then, the startup reclassification migration provides a one-time fix for pre-existing items. Users with misclassified items after re-sync must edit ABS metadata or wait for manual override UI. |
+| Sync loop filter blocks `mediaType: 'ebook'` items before format detection runs (Finding 1) | Unit 1 explicitly widens the sync loop filter to accept both `'book'` and `'ebook'` mediaType values. Test scenarios cover this change (sync filter accepts ebook, rejects podcast). |
+| Dual-format items (same work in both audiobook and ebook libraries) classified as `'audiobook'` by heuristic (Finding 2) | Accepted as scope limitation — dual-format is rare in practice. The deferred library-type-based detection would resolve this by treating all items from an "ebooks"-type library as `'epub'` regardless of metadata signals. No special deduplication logic in this plan. |
 | ABS ebook download endpoint may differ across ABS versions | The `/api/items/{id}/ebook?token=` pattern is standard in ABS v2.x. If an older server returns 404, the existing error handling in `BookContentService` surfaces it. |
 
 ## Sources & References

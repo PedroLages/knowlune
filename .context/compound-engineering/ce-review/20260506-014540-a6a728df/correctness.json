@@ -1,0 +1,8 @@
+{
+  "reviewer": "correctness",
+  "findings": [],
+  "residual_risks": [
+    "Heuristic relies on narrator+duration metadata — audiobooks lacking narrator metadata in ABS will be classified as 'epub'. This is an acknowledged R6 tension documented in the plan."
+  ],
+  "testing_gaps": []
+}

@@ -1,0 +1,9 @@
+{
+  "reviewer": "security",
+  "findings": [],
+  "residual_risks": [
+    "Bearer token sent in Authorization header for every ABS ebook fetch. The token is the ABS API key — same credential used for the sync API. No new credential exposure beyond the existing Bearer auth already used by sync operations.",
+    "Ebook URLs use encodeURIComponent on absItem.id — prevents path injection."
+  ],
+  "testing_gaps": []
+}

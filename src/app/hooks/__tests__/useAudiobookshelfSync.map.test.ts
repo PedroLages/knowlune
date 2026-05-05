@@ -7,8 +7,8 @@
  * @see useAudiobookshelfSync.ts
  */
 import { describe, it, expect } from 'vitest'
-import { detectFormat, VALID_FORMATS } from '@/app/hooks/useAudiobookshelfSync'
-import type { AbsLibraryItem } from '@/data/types'
+import { detectFormat, VALID_FORMATS, mapAbsItemToBook } from '@/app/hooks/useAudiobookshelfSync'
+import type { AbsLibraryItem, AudiobookshelfServer, Book } from '@/data/types'
 
 // ── Helpers ──────────────────────────────────────────────────────
 
@@ -221,5 +221,144 @@ describe('detectFormat', () => {
   it('handles items where mediaType is undefined (legacy ABS data)', () => {
     const item = makeAbsItemWithNarrators(['Jane Doe'], 3600)
     expect(detectFormat(item)).toBe('audiobook')
+  })
+})
+
+// ── Helpers for mapAbsItemToBook tests ──────────────────────────
+
+function makeServer(overrides: Partial<AudiobookshelfServer> = {}): AudiobookshelfServer {
+  return {
+    id: 'server-1',
+    name: 'Test Server',
+    url: 'http://abs-server:13378',
+    libraryIds: ['lib-1'],
+    status: 'connected',
+    createdAt: '2026-01-01T00:00:00.000Z',
+    updatedAt: '2026-01-01T00:00:00.000Z',
+    ...overrides,
+  }
+}
+
+// ── Integration tests ───────────────────────────────────────────
+
+describe('mapAbsItemToBook', () => {
+  interface RemoteSource {
+    type: 'remote'
+    url: string
+    auth?: { bearer: string }
+  }
+
+  function src(book: Book): RemoteSource {
+    return book.source as RemoteSource
+  }
+
+  it('maps an ebook to full Book shape with chapters.length=0 and no totalDuration', () => {
+    const server = makeServer()
+    const item = makeAbsItem({
+      id: 'ebook-1',
+      mediaType: 'ebook',
+      media: {
+        metadata: {
+          title: 'Ebook Title',
+          authors: [{ id: 'auth-1', name: 'Ebook Author' }],
+          narrators: [],
+          duration: 0,
+          numChapters: 0,
+          description: 'An ebook description',
+          isbn: '978-1234567890',
+        },
+        chapters: [],
+      },
+    })
+
+    const book = mapAbsItemToBook(item, server, 'test-api-key')
+
+    expect(book.title).toBe('Ebook Title')
+    expect(book.format).toBe('epub')
+    expect(book.author).toBe('Ebook Author')
+    expect(book.narrator).toBeUndefined()
+    expect(src(book).url).toBe('http://abs-server:13378/api/items/ebook-1/ebook')
+    expect(src(book).auth).toEqual({ bearer: 'test-api-key' })
+    expect(book.chapters).toHaveLength(0)
+    expect(book.totalDuration).toBeUndefined()
+    expect(book.absServerId).toBe('server-1')
+    expect(book.absItemId).toBe('ebook-1')
+    expect(book.isbn).toBe('978-1234567890')
+    expect(book.id).toBeDefined()
+    expect(book.createdAt).toBeDefined()
+    expect(book.coverUrl).toContain('/api/items/ebook-1/cover')
+    expect(book.status).toBe('unread')
+  })
+
+  it('maps an audiobook to full Book shape with chapters and totalDuration', () => {
+    const server = makeServer()
+    const item = makeAbsItemWithNarrators(
+      ['Jane Doe', 'John Smith'],
+      7200,
+      { id: 'audiobook-1', mediaType: 'book' }
+    )
+
+    const book = mapAbsItemToBook(item, server, 'test-api-key')
+
+    expect(book.title).toBe('Test Item')
+    expect(book.format).toBe('audiobook')
+    expect(book.narrator).toBe('Jane Doe, John Smith')
+    expect(src(book).url).toBe('http://abs-server:13378')
+    expect(src(book).auth).toEqual({ bearer: 'test-api-key' })
+    expect(book.chapters).toHaveLength(1)
+    expect(book.chapters[0].title).toBe('Chapter 1')
+    expect(book.chapters[0].position).toEqual({ type: 'time', seconds: 0 })
+    expect(book.totalDuration).toBe(7200)
+    expect(book.absServerId).toBe('server-1')
+    expect(book.absItemId).toBe('audiobook-1')
+    expect(book.id).toBeDefined()
+    expect(book.createdAt).toBeDefined()
+    expect(book.coverUrl).toContain('/api/items/audiobook-1/cover')
+    expect(book.status).toBe('unread')
+  })
+
+  it('synthesizes a single chapter when ABS has no chapters', () => {
+    const server = makeServer()
+    const item = makeAbsItem({
+      id: 'audiobook-noch',
+      mediaType: 'book',
+      media: {
+        metadata: {
+          title: 'No Chapters',
+          authors: [{ id: 'auth-1', name: 'Author' }],
+          narrators: ['Solo Narrator'],
+          duration: 3600,
+          numChapters: 0,
+        },
+        chapters: [],
+      },
+    })
+
+    const book = mapAbsItemToBook(item, server, 'key')
+
+    expect(book.format).toBe('audiobook')
+    expect(book.chapters).toHaveLength(1)
+    expect(book.chapters[0].title).toBe('Chapter 1')
+    expect(book.chapters[0].position).toEqual({ type: 'time', seconds: 0 })
+    expect(book.totalDuration).toBe(3600)
+    expect(src(book).url).toBe('http://abs-server:13378')
+  })
+
+  it('strips trailing slash from server URL for audiobook source', () => {
+    const server = makeServer({ url: 'http://abs-server:13378/' })
+    const item = makeAbsItemWithNarrators(['Narrator'], 1800)
+
+    const book = mapAbsItemToBook(item, server, 'key')
+
+    expect(src(book).url).toBe('http://abs-server:13378')
+  })
+
+  it('omits source.auth when apiKey is empty string', () => {
+    const server = makeServer()
+    const item = makeAbsItemWithNarrators(['Narrator'], 1800)
+
+    const book = mapAbsItemToBook(item, server, '')
+
+    expect(src(book).auth).toBeUndefined()
   })
 })
