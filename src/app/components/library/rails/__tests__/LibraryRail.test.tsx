@@ -1,0 +1,140 @@
+import { describe, it, expect } from 'vitest'
+import { render, screen } from '@testing-library/react'
+import { MemoryRouter } from 'react-router'
+import { BookOpen } from 'lucide-react'
+import { LibraryRail } from '@/app/components/library/rails/LibraryRail'
+import type { Book } from '@/data/types'
+
+function makeBook(overrides: Partial<Book> = {}): Book {
+  return {
+    id: overrides.id ?? crypto.randomUUID(),
+    title: overrides.title ?? 'Test Title',
+    format: overrides.format ?? 'audiobook',
+    status: overrides.status ?? 'unread',
+    tags: [],
+    chapters: [],
+    source: { type: 'local', opfsPath: '/tmp/book' },
+    progress: overrides.progress ?? 0,
+    createdAt: overrides.createdAt ?? '2026-05-01T00:00:00.000Z',
+    ...overrides,
+  }
+}
+
+function StubTile({ bookId, label }: { bookId: string; label: string }) {
+  return (
+    <div data-testid={`tile-${bookId}`} data-rail-tile>
+      {label}
+    </div>
+  )
+}
+
+describe('LibraryRail', () => {
+  it('renders the heading with title', () => {
+    render(
+      <MemoryRouter>
+        <LibraryRail icon={BookOpen} title="Continue Listening">
+          <StubTile bookId="1" label="Item 1" />
+        </LibraryRail>
+      </MemoryRouter>
+    )
+
+    expect(screen.getByRole('heading', { name: /continue listening/i })).toBeInTheDocument()
+  })
+
+  it('renders null when children are empty', () => {
+    const { container } = render(
+      <MemoryRouter>
+        <LibraryRail icon={BookOpen} title="Empty Shelf">
+          {null}
+        </LibraryRail>
+      </MemoryRouter>
+    )
+
+    expect(container.firstChild).toBeNull()
+  })
+
+  it('shows chevron buttons for scrollable content', () => {
+    render(
+      <MemoryRouter>
+        <LibraryRail
+          icon={BookOpen}
+          title="My Shelf"
+          data-testid="my-shelf"
+        >
+          {Array.from({ length: 10 }, (_, i) => (
+            <StubTile key={i} bookId={String(i)} label={`Item ${i}`} />
+          ))}
+        </LibraryRail>
+      </MemoryRouter>
+    )
+
+    expect(screen.getByLabelText('Scroll left')).toBeInTheDocument()
+    expect(screen.getByLabelText('Scroll right')).toBeInTheDocument()
+  })
+
+  it('applies scrollbar-none to the viewport', () => {
+    render(
+      <MemoryRouter>
+        <LibraryRail
+          icon={BookOpen}
+          title="My Shelf"
+          data-testid="my-shelf"
+        >
+          <StubTile bookId="1" label="Item 1" />
+        </LibraryRail>
+      </MemoryRouter>
+    )
+
+    const scroller = screen.getByTestId('my-shelf-scroller')
+    expect(scroller.className).toContain('scrollbar-none')
+  })
+
+  it('disables left chevron when at scroll start', () => {
+    render(
+      <MemoryRouter>
+        <LibraryRail icon={BookOpen} title="My Shelf">
+          <StubTile bookId="1" label="Item 1" />
+        </LibraryRail>
+      </MemoryRouter>
+    )
+
+    const leftBtn = screen.getByLabelText('Scroll left')
+    expect(leftBtn).toBeDisabled()
+  })
+
+  it('renders children inside snap-start wrappers', () => {
+    render(
+      <MemoryRouter>
+        <LibraryRail
+          icon={BookOpen}
+          title="My Shelf"
+          data-testid="my-shelf"
+        >
+          <StubTile bookId="1" label="Item 1" />
+        </LibraryRail>
+      </MemoryRouter>
+    )
+
+    // The scroller should contain the child tile (wrapped in a snap-start div)
+    const scroller = screen.getByTestId('my-shelf-scroller')
+    const snapItems = scroller.querySelectorAll('.snap-start')
+    expect(snapItems.length).toBe(1)
+    expect(screen.getByTestId('tile-1')).toBeInTheDocument()
+  })
+
+  it('renders subtitle when provided', () => {
+    render(
+      <MemoryRouter>
+        <LibraryRail
+          icon={BookOpen}
+          title="My Shelf"
+          subtitle="Some description"
+        >
+          <StubTile bookId="1" label="Item 1" />
+        </LibraryRail>
+      </MemoryRouter>
+    )
+
+    expect(screen.getByText('Some description')).toBeInTheDocument()
+  })
+})

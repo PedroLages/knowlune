@@ -2,7 +2,6 @@ import { useMemo } from 'react'
 import { BookOpen, Compass, Headphones, LibraryBig, Repeat2, Rows3 } from 'lucide-react'
 import type { Book } from '@/data/types'
 import { useBookStore } from '@/stores/useBookStore'
-import { ContinueShelfTile } from '@/app/components/library/ContinueShelfTile'
 import { RecentBookCard } from '@/app/components/library/RecentBookCard'
 import { LibraryMediaShelfRow } from '@/app/components/library/LibraryMediaShelfRow'
 import type { RecentSeriesGroup } from '@/lib/libraryShelves'
@@ -21,6 +20,8 @@ import {
 import { cn } from '@/app/components/ui/utils'
 import { LIBRARY_SHELF_CARD_WIDTH_CLASS } from '@/app/components/library/shelfCardSizing'
 import { useBookCoverUrl } from '@/app/hooks/useBookCoverUrl'
+import { LibraryRail } from '@/app/components/library/rails/LibraryRail'
+import { BookTile } from '@/app/components/library/BookTile'
 
 type Mode = 'audiobooks' | 'ebooks'
 
@@ -116,28 +117,28 @@ export function LibraryMediaShelfColumn() {
 
   return (
     <div className="flex flex-col gap-8" data-testid="library-media-shelf-column">
-      <LibraryMediaShelfRow
+      <LibraryRail
         icon={mode === 'audiobooks' ? Headphones : BookOpen}
-        label={mode === 'audiobooks' ? 'Continue Listening' : 'Continue Reading'}
+        title={mode === 'audiobooks' ? 'Continue Listening' : 'Continue Reading'}
         count={shelves.continue.length}
         subtitle={mode === 'audiobooks' ? 'Pick up where you left off' : 'Jump back into your latest pages'}
         data-testid="media-shelf-continue"
       >
         {shelves.continue.map(book => (
-          <ContinueShelfTile key={book.id} book={book} />
+          <BookTile key={book.id} book={book} variant="denseContinue" overlayAction="Continue" showProgress />
         ))}
-      </LibraryMediaShelfRow>
+      </LibraryRail>
 
-      <LibraryMediaShelfRow
+      <LibraryRail
         icon={LibraryBig}
-        label="Recently Added"
+        title="Recently Added"
         count={shelves.recentlyAdded.length}
         data-testid="media-shelf-recently-added"
       >
         {shelves.recentlyAdded.map(book => (
-          <RecentBookCard key={book.id} book={book} />
+          <BookTile key={book.id} book={book} variant="small" overlayAction="Open" />
         ))}
-      </LibraryMediaShelfRow>
+      </LibraryRail>
 
       <LibraryMediaShelfRow
         icon={Rows3}
