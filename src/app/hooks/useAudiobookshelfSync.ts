@@ -11,7 +11,7 @@
 
 import { useCallback, useEffect, useRef, useState, type MutableRefObject } from 'react'
 import { toast } from 'sonner'
-import type { AbsProgress, AudiobookshelfServer, AbsLibraryItem, Book, BookChapter } from '@/data/types'
+import type { AbsProgress, AudiobookshelfServer, AbsLibraryItem, Book, BookChapter, BookFormat } from '@/data/types'
 import * as AudiobookshelfService from '@/services/AudiobookshelfService'
 import { useBookStore } from '@/stores/useBookStore'
 import { useAudiobookshelfStore } from '@/stores/useAudiobookshelfStore'
@@ -34,6 +34,40 @@ function safeAbsLastOpenedIso(ms: number): string | null {
  * Overlay ABS user progress onto local books for one server (after catalog sync
  * or throttled tab focus). Best-effort — logs errors, never throws to callers.
  */
+
+/** Allow-list guard for format values returned by detectFormat. */
+export const VALID_FORMATS: readonly BookFormat[] = ['epub', 'audiobook'] as const
+
+/**
+ * Detect whether an ABS library item is an ebook or audiobook based on its media metadata.
+ *
+ * Rule: If the item has non-empty narrators AND a positive duration, it's an audiobook.
+ * Otherwise, it defaults to 'epub'.
+ *
+ * This is intentionally conservative — a misclassified audiobook (no narrator metadata)
+ * opens in the EPUB reader rather than playing audio, which is less confusing than
+ * the reverse.
+ */
+export function detectFormat(absItem: AbsLibraryItem): BookFormat {
+  // Resolve narrators — handle both (string | { name: string })[] shapes and narratorName fallback
+  const rawNarrators = (absItem.media.metadata.narrators ?? []) as Array<
+    string | { name: string }
+  >
+  const narratorNames =
+    rawNarrators.length > 0
+      ? rawNarrators.map(n => (typeof n === 'string' ? n : n.name))
+      : (((absItem.media.metadata as Record<string, unknown>).narratorName as string)
+          ?.split(', ')
+          .filter(Boolean) ?? [])
+
+  // Resolve duration — prefer metadata.duration, fallback to media.duration
+  const duration = absItem.media.metadata.duration || absItem.media.duration
+
+  // Both narrators AND positive duration required for audiobook classification
+  const isAudiobook = narratorNames.length > 0 && (duration ?? 0) > 0
+
+  return isAudiobook ? 'audiobook' : 'epub'
+}
 export async function applyAbsProgressToBooks(
   server: AudiobookshelfServer,
   apiKey: string
@@ -122,6 +156,10 @@ export function useAudiobookshelfSync() {
     (absItem: AbsLibraryItem, server: AudiobookshelfServer, apiKey: string): Book => {
       const bookId = crypto.randomUUID()
 
+      // Detect format from media metadata
+      const format = detectFormat(absItem)
+      const isEbook = format === 'epub'
+
       // Handle narrators — ABS list endpoint returns `narratorName` (string), not `narrators` (array)
       const rawNarrators = (absItem.media.metadata.narrators ?? []) as Array<
         string | { name: string }
@@ -133,10 +171,11 @@ export function useAudiobookshelfSync() {
               ?.split(', ')
               .filter(Boolean) ?? [])
 
-      // Map chapters — if ABS returns none, synthesize a single chapter so the player can stream
+      // Map chapters — skip dummy audio chapter synthesis for ebooks
       const absChapters = absItem.media.chapters ?? []
-      const chapters: BookChapter[] =
-        absChapters.length > 0
+      const chapters: BookChapter[] = isEbook
+        ? []
+        : absChapters.length > 0
           ? absChapters.map((ch, index) => ({
               id: ch.id,
               bookId,
@@ -167,12 +206,19 @@ export function useAudiobookshelfSync() {
       // Duration: prefer metadata.duration, fallback to media.duration (newer ABS versions)
       const duration = absItem.media.metadata.duration || absItem.media.duration || undefined
 
+      // Source URL — ebooks use the ABS ebook download endpoint with Bearer auth;
+      // audiobooks use the server root (chapters fetched separately on demand)
+      const baseUrl = server.url.replace(/\/+$/, '')
+      const sourceUrl = isEbook
+        ? `${baseUrl}/api/items/${encodeURIComponent(absItem.id)}/ebook`
+        : baseUrl
+
       return {
         id: bookId,
         title: absItem.media.metadata.title,
         author: authorNames || 'Unknown Author',
         narrator: narratorNames.length > 0 ? narratorNames.join(', ') : undefined,
-        format: 'audiobook',
+        format: VALID_FORMATS.includes(format) ? format : 'audiobook',
         status: 'unread',
         coverUrl,
         description: absItem.media.metadata.description,
@@ -180,11 +226,11 @@ export function useAudiobookshelfSync() {
         chapters,
         source: {
           type: 'remote',
-          url: server.url.replace(/\/+$/, ''),
+          url: sourceUrl,
           // apiKey resolved at sync time via the vault broker (E95-S05).
           auth: apiKey ? { bearer: apiKey } : undefined,
         },
-        totalDuration: duration,
+        totalDuration: isEbook ? undefined : duration,
         progress: 0,
         isbn: absItem.media.metadata.isbn,
         absServerId: server.id,
@@ -285,7 +331,7 @@ export function useAudiobookshelfSync() {
 
             totalItems = result.data.total
             for (const absItem of result.data.results) {
-              if (absItem.mediaType && absItem.mediaType !== 'book') continue
+              if (absItem.mediaType && absItem.mediaType !== 'book' && absItem.mediaType !== 'ebook') continue
               allMappedBooks.push(mapAbsItemToBook(absItem, server, apiKey))
             }
 
@@ -324,10 +370,10 @@ export function useAudiobookshelfSync() {
           lastSyncedAt: new Date().toISOString(),
         })
 
-        toast.success(`Synced ${allMappedBooks.length} audiobooks`, { duration: 3000 })
+        toast.success(`Synced ${allMappedBooks.length} book`, { duration: 3000 })
         if (removedCount > 0) {
           toast.info(
-            `Removed ${removedCount} audiobook${removedCount > 1 ? 's' : ''} no longer on server`,
+            `Removed ${removedCount} book${removedCount > 1 ? 's' : ''} no longer on server`,
             { duration: 5000 }
           )
         }
