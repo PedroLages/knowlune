@@ -7,21 +7,14 @@ import { cn } from '@/app/components/ui/utils'
 import { PlanMyWeekButton } from '@/app/components/learning-path/PlanMyWeekButton'
 import { PathScheduleList } from '@/app/components/learning-path/PathScheduleList'
 import { isOrderSuggestionAvailable } from '@/ai/learningPath/suggestOrder'
-import type { LearningPathEntry } from '@/data/types'
+import type { LearningPathEntry, PathCourseInfo } from '@/data/types'
 import type { PathProgressSummary } from '@/app/hooks/usePathProgress'
-
-interface CourseInfo {
-  name: string
-  type: 'imported' | 'catalog'
-  authorName?: string
-  completionPct: number
-}
 
 interface FocusPanelProps {
   pathId: string
   pathName: string
   entries: LearningPathEntry[]
-  courseInfoMap: Map<string, CourseInfo>
+  courseInfoMap: Map<string, PathCourseInfo>
   courseNames: Record<string, string>
   progress: PathProgressSummary
   isSuggesting: boolean

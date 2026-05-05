@@ -472,6 +472,14 @@ export interface LearningPathEntry {
   isManuallyOrdered: boolean // User manually reordered it
 }
 
+/** Lightweight course info for path views — shared by FocusPanel and RoadmapListView */
+export interface PathCourseInfo {
+  name: string
+  type: 'imported' | 'catalog'
+  authorName?: string
+  completionPct: number
+}
+
 // --- Reorder History (local-only personalization) ---
 
 export interface ReorderHistoryEntry {

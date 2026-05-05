@@ -88,7 +88,7 @@ import {
   suggestPathOrder,
   type OrderSuggestionResult,
 } from '@/ai/learningPath/suggestOrder'
-import type { LearningPathEntry, Course } from '@/data/types'
+import type { LearningPathEntry, Course, PathCourseInfo } from '@/data/types'
 
 // --- Sortable Course Row ---
 
@@ -393,10 +393,7 @@ export function LearningPathDetail() {
 
   // Build course info lookup — uses real progress data
   const courseInfo = useMemo(() => {
-    const map = new Map<
-      string,
-      { name: string; type: 'imported' | 'catalog'; authorName?: string; completionPct: number }
-    >()
+    const map = new Map<string, PathCourseInfo>()
 
     for (const ic of importedCourses) {
       const authorName = ic.authorId ? authors.find(a => a.id === ic.authorId)?.name : undefined

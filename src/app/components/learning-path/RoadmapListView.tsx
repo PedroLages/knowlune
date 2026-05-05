@@ -13,17 +13,10 @@ import { Badge } from '@/app/components/ui/badge'
 import { Card, CardContent } from '@/app/components/ui/card'
 import { cn } from '@/app/components/ui/utils'
 import { CourseTypeBadge } from '@/app/components/shared/CourseTypeBadge'
-import type { LearningPathEntry } from '@/data/types'
-
-interface CourseInfo {
-  name: string
-  type: 'imported' | 'catalog'
-  authorName?: string
-  completionPct: number
-}
+import type { LearningPathEntry, PathCourseInfo } from '@/data/types'
 
 interface CourseEntry extends LearningPathEntry {
-  info?: CourseInfo
+  info?: PathCourseInfo
   thumbnailUrl?: string
 }
 
@@ -34,7 +27,7 @@ interface GapResolution {
 
 interface RoadmapListViewProps {
   entries: CourseEntry[]
-  courseInfoMap: Map<string, CourseInfo>
+  courseInfoMap: Map<string, PathCourseInfo>
   thumbnailUrls: Record<string, string>
   gapEntries: CourseEntry[]
   onGapResolve: (resolution: GapResolution) => void
