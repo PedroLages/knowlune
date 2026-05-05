@@ -1,4 +1,4 @@
-import { Check, Circle } from 'lucide-react'
+import { Check, Lock } from 'lucide-react'
 import { cn } from '@/app/components/ui/utils'
 
 export type CourseJourneyNodeStatus = 'completed' | 'active' | 'upcoming'
@@ -16,8 +16,8 @@ type Props = {
 }
 
 /**
- * Timeline node for Course Journey. Uses size-6 to align with the existing
- * rail (`pl-8` / `-left-[13px]`); reference mocks often use ~50px for less-dense layouts.
+ * Timeline node for Course Journey — HTML-reference proportions (~48px) with
+ * Knowlune theme tokens. Rail offset is tuned in CourseOverview (`-left-[…]`).
  */
 export function CourseJourneyNodeIndicator({
   status,
@@ -31,19 +31,22 @@ export function CourseJourneyNodeIndicator({
       data-testid={testId}
       data-status={status}
       className={cn(
-        'size-6 rounded-full border-4 border-background flex items-center justify-center transition-colors duration-300',
-        status === 'completed' && 'bg-success text-success-foreground shadow-sm',
-        status === 'active' && 'bg-card text-brand border-brand shadow-sm',
-        status === 'upcoming' && 'bg-muted text-muted-foreground shadow-none border-border',
+        'size-12 shrink-0 rounded-full border-4 border-background flex items-center justify-center transition-colors duration-300',
+        status === 'completed' &&
+          'bg-success text-success-foreground shadow-[0_0_16px_var(--success)]',
+        status === 'active' &&
+          'bg-card text-brand shadow-[0_0_20px_var(--brand)] border-brand ring-0',
+        status === 'upcoming' &&
+          'bg-muted/50 text-muted-foreground shadow-none border-border ring-1 ring-border/80',
         className
       )}
     >
       {status === 'completed' ? (
-        <Check className="size-3" aria-hidden="true" />
+        <Check className="size-6 stroke-[3]" aria-hidden="true" />
       ) : status === 'active' ? (
-        <span className="size-2 rounded-full bg-brand" aria-hidden="true" />
+        <span className="size-3.5 rounded-full bg-brand shadow-inner" aria-hidden="true" />
       ) : (
-        <Circle className="size-3" aria-hidden="true" strokeWidth={2} />
+        <Lock className="size-5" aria-hidden="true" strokeWidth={2} />
       )}
     </div>
   )

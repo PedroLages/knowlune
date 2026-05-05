@@ -16,14 +16,15 @@ describe('CourseJourneyNodeIndicator', () => {
     render(<CourseJourneyNodeIndicator status="active" />)
     const node = screen.getByRole('img', { name: 'Current module' })
     expect(node).toHaveAttribute('data-status', 'active')
-    expect(node.querySelector('span.size-2.rounded-full')).toBeInTheDocument()
+    expect(node.querySelector('span.rounded-full.bg-brand')).toBeInTheDocument()
     expect(node.querySelector('svg')).toBeNull()
   })
 
-  it('renders upcoming state with circle outline glyph and label (not a lock)', () => {
+  it('renders upcoming state with lock glyph and label', () => {
     render(<CourseJourneyNodeIndicator status="upcoming" />)
     const node = screen.getByRole('img', { name: 'Upcoming module' })
     expect(node).toHaveAttribute('data-status', 'upcoming')
-    expect(node.querySelector('svg circle')).toBeTruthy()
+    expect(node.querySelector('svg')).toBeTruthy()
+    expect(node.querySelector('svg path')).toBeTruthy()
   })
 })

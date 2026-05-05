@@ -119,9 +119,7 @@ describe('BookTile', () => {
       )
       const coverDiv = screen.getByTestId('book-tile-test-book').querySelector('.rounded-2xl')
       expect(coverDiv).not.toBeNull()
-      // The img has duration-500
-      const img = coverDiv!.querySelector('img')
-      // No img in fallback state, skip
+      // Cover div is rendered; img not asserted (fallback state has no cover img)
     })
   })
 
