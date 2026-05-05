@@ -47,7 +47,7 @@ export function RoadmapMapView({
       {currentIndex >= 0 && (
         <p className="text-sm text-muted-foreground text-center">
           {completedCount} of {entries.length} courses completed
-          {currentIndex >= 0 && entries[currentIndex]
+          {entries[currentIndex]
             ? ` — next: course ${currentIndex + 1}`
             : ''}
         </p>

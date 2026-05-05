@@ -110,22 +110,35 @@ export function PathCoverDialog({ open, onOpenChange, path }: PathCoverDialogPro
 
   const handleRemove = useCallback(async () => {
     setIsRemoving(true)
+    const prevCoverUrl = path.coverImageUrl
+    const prevCoverPreset = path.coverPreset
     try {
-      if (path.coverImageUrl) {
-        await deletePathCover(path.id)
-      }
+      // Update store first so a failed storage delete does not leave state
+      // referencing a cover that was already removed from the bucket.
       await updatePathCover(path.id, {
         coverImageUrl: undefined,
         coverPreset: undefined,
       })
+      if (prevCoverUrl) {
+        try {
+          await deletePathCover(path.id)
+        } catch {
+          // Revert store update so state stays consistent with storage
+          await updatePathCover(path.id, {
+            coverImageUrl: prevCoverUrl,
+            coverPreset: prevCoverPreset,
+          })
+          throw new Error('Failed to remove cover from storage')
+        }
+      }
       toast.success('Cover removed')
       handleOpenChange(false)
-    } catch {
-      toast.error('Failed to remove cover')
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to remove cover')
     } finally {
       setIsRemoving(false)
     }
-  }, [path.id, path.coverImageUrl, updatePathCover, handleOpenChange])
+  }, [path.id, path.coverImageUrl, path.coverPreset, updatePathCover, handleOpenChange])
 
   const canSave = selectedPreset || uploadFile
   const isBusy = isUploading || isRemoving

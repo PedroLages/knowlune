@@ -1,0 +1,106 @@
+{
+  "runId": "20260505-140903-1016b11e",
+  "mode": "headless",
+  "scope": "branch cursor/ce-artifacts-2026-05-05, base 179ce0eb, 18 files changed, +1257/-212",
+  "plan": "docs/plans/2026-05-05-002-fix-learning-paths-authors-roadmap-ux-plan.md",
+  "planSource": "explicit",
+  "intent": "Ship cohesive UX polish: reduce card density ~20% on Learning Paths and Authors pages, add cover image customization, and redesign the DevOps Roadmap detail page into a map-first experience with list toggle and unified focus panel. Fix accessibility blockers across all touched surfaces.",
+  "reviewers": "correctness, testing, maintainability, project-standards (always); adversarial, kieran-typescript (conditional)",
+  "verdict": "Not ready",
+  "appliedFixes": [
+    {
+      "findingId": "F5",
+      "description": "Removed redundant currentIndex >= 0 guard inside outer guard in RoadmapMapView.tsx line 50",
+      "file": "src/app/components/learning-path/RoadmapMapView.tsx"
+    }
+  ],
+  "findings": [
+    {
+      "id": "F1",
+      "title": "Gap resolution flow incomplete — match/replace/import don't convey gap entry context",
+      "severity": "P1",
+      "file": "src/app/pages/LearningPathDetail.tsx",
+      "line": 1762,
+      "autofixClass": "manual",
+      "owner": "downstream-resolver",
+      "requiresVerification": true,
+      "confidence": 0.92,
+      "preExisting": false,
+      "suggestedFix": "Pass the gap entry ID from the GapResolution to handleImportClick/setPickerOpen so the import wizard and inline picker can target the specific gap entry. The import wizard needs a pre-filled search term (from gap entry justification) and auto-resolve on success. The inline picker's handlePickerAddCourse should replace the gap entry instead of adding a new course when operating in match/replace mode. Consider adding a resolvedEntryId state that flows through the picker/wizard callbacks."
+    },
+    {
+      "id": "F2",
+      "title": "PathCoverDialog handleRemove cannot roll back Supabase Storage deletion on store failure",
+      "severity": "P2",
+      "file": "src/app/components/learning-path/PathCoverDialog.tsx",
+      "line": 766,
+      "autofixClass": "gated_auto",
+      "owner": "downstream-resolver",
+      "requiresVerification": true,
+      "confidence": 0.78,
+      "preExisting": false,
+      "suggestedFix": "Swap the order: update the store first (optimistic), then delete from Supabase Storage. If the storage delete fails, revert the store. Or use a two-phase approach: delete from storage first, and if the store update fails, re-upload the backup blob."
+    },
+    {
+      "id": "F3",
+      "title": "Missing tests for new learning-path components",
+      "severity": "P2",
+      "file": "src/app/components/learning-path/PathCoverDialog.tsx",
+      "line": 1,
+      "autofixClass": "manual",
+      "owner": "downstream-resolver",
+      "requiresVerification": true,
+      "confidence": 0.85,
+      "preExisting": false,
+      "suggestedFix": "Create test files per the plan: PathCoverDialog.test.tsx, and extend LearningPathDetail.test.tsx to cover map/list toggle, FocusPanel rendering, gap resolution UI, delete confirmation dialog, and SPA navigation on path-not-found."
+    },
+    {
+      "id": "F4",
+      "title": "PathCoverDialog gradient presets use hardcoded Tailwind classes bypassing design tokens",
+      "severity": "P3",
+      "file": "src/app/components/learning-path/PathCoverDialog.tsx",
+      "line": 680,
+      "autofixClass": "advisory",
+      "owner": "human",
+      "requiresVerification": false,
+      "confidence": 0.72,
+      "preExisting": false,
+      "suggestedFix": "Consider defining gradient presets as CSS custom properties or theme tokens rather than hardcoding Tailwind gradient classes. If these are truly decorative-only gradients that don't need theming, document the exception."
+    },
+    {
+      "id": "F6",
+      "title": "pathCoverUpload.ts uses console.error for production error logging",
+      "severity": "P3",
+      "file": "src/lib/pathCoverUpload.ts",
+      "line": 2607,
+      "autofixClass": "advisory",
+      "owner": "human",
+      "requiresVerification": false,
+      "confidence": 0.65,
+      "preExisting": false,
+      "suggestedFix": "Replace console.error with a structured logging pattern consistent with the app's error tracking. Consider using the toast system or an error boundary pattern for user-facing feedback."
+    }
+  ],
+  "residualRisks": [
+    "Cover image sync: newly added coverImageUrl/coverPreset fields on LearningPath must be included in the sync engine's schema to survive cross-device sync.",
+    "Dexie schema: if cover fields need indexing, the schema.ts must be updated. Current PR doesn't change schema.ts.",
+    "FocusPanel conditional rendering: when courseEntries.length === 0, the FocusPanel is hidden entirely. Users with empty paths see no right-rail content."
+  ],
+  "testingGaps": [
+    "No tests for PathCoverDialog, RoadmapListView, RoadmapMapView, RoadmapViewToggle, FocusPanel",
+    "No tests for pathCoverUpload utility",
+    "No test for LearningPathDetail AlertDialog delete confirmation",
+    "No test for LearningPathDetail SPA navigation on path-not-found",
+    "No test for TrailMap reduced-motion gating of SVG animate elements",
+    "No test for AuthorFormDialog required+aria-required on name field",
+    "No test for EmptyState role=region + aria-label change"
+  ],
+  "requirementsCompleteness": {
+    "R1_path_cards_density": "met",
+    "R2_authors_cards_density": "met",
+    "R3_keyboard_accessibility": "met",
+    "R4_cover_image_support": "met",
+    "R5_roadmap_redesign": "partially_addressed",
+    "R6_reduced_motion_safety": "met"
+  }
+}

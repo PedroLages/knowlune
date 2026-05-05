@@ -289,6 +289,7 @@ export function LearningPathDetail() {
     renamePath,
     updateDescription,
     deletePathWithUndo,
+    replaceGapEntry,
   } = useLearningPathStore()
   const { importedCourses, loadImportedCourses, thumbnailUrls, loadThumbnailUrls } =
     useCourseImportStore()
@@ -297,6 +298,7 @@ export function LearningPathDetail() {
   const [isLoaded, setIsLoaded] = useState(false)
   const catalogCourses: Course[] = [] // Catalog courses table dropped (E89-S01)
   const [pickerOpen, setPickerOpen] = useState(false)
+  const [resolvingGapEntryId, setResolvingGapEntryId] = useState<string | null>(null)
   const [viewMode, setViewMode] = useState<RoadmapViewMode>('map')
 
   // Import wizard trigger (singleton guard pattern)
@@ -304,6 +306,7 @@ export function LearningPathDetail() {
     trigger: importTrigger,
     isOpen: importWizardOpen,
     setIsOpen: setImportWizardOpen,
+    gapContext: wizardGapContext,
   } = useImportWizardTrigger()
 
   // "Keep panel open" toggle persisted in localStorage
@@ -325,7 +328,8 @@ export function LearningPathDetail() {
 
   // Handle import wizard click with singleton guard (R10)
   const handleImportClick = useCallback(
-    () => importTrigger(pathId ?? null),
+    (gap?: { gapEntryId: string; searchTerm?: string }) =>
+      importTrigger(pathId ?? null, gap),
     [importTrigger, pathId]
   )
 
@@ -523,6 +527,21 @@ export function LearningPathDetail() {
     (courses: Array<{ courseId: string; courseType: 'imported' | 'catalog' }>) => {
       if (!pathId || courses.length === 0) return
       const course = courses[0]
+
+      // Resolve gap entry inline (match/replace mode from gap entry resolution)
+      if (resolvingGapEntryId) {
+        replaceGapEntry(pathId, resolvingGapEntryId, course.courseId, course.courseType).catch(
+          () => {
+            toast.error('Failed to resolve gap entry')
+          }
+        )
+        setResolvingGapEntryId(null)
+        if (!keepPanelOpen) {
+          setPickerOpen(false)
+        }
+        return
+      }
+
       addCourseToPath(pathId, course.courseId, course.courseType).catch(() => {
         toast.error('Failed to add course')
       })
@@ -530,7 +549,7 @@ export function LearningPathDetail() {
         setPickerOpen(false)
       }
     },
-    [pathId, addCourseToPath, keepPanelOpen]
+    [pathId, addCourseToPath, replaceGapEntry, resolvingGapEntryId, keepPanelOpen]
   )
 
   // AI Suggest Order handler (E26-S04)
@@ -780,9 +799,19 @@ export function LearningPathDetail() {
                 thumbnailUrls={thumbnailUrls}
                 gapEntries={courseEntries.filter(e => e.courseId === '')}
                 onGapResolve={resolution => {
+                  // Find the gap entry to extract its search term
+                  const gapEntry = courseEntries.find(e => e.id === resolution.entryId)
+                  const matchTitleMatch =
+                    gapEntry?.justification?.match(/\[Search for: (.+)\]$/)
+                  const searchTerm = matchTitleMatch ? matchTitleMatch[1] : undefined
+
                   if (resolution.type === 'import') {
-                    handleImportClick()
+                    handleImportClick({
+                      gapEntryId: resolution.entryId,
+                      searchTerm,
+                    })
                   } else if (resolution.type === 'match' || resolution.type === 'replace') {
+                    setResolvingGapEntryId(resolution.entryId)
                     setPickerOpen(true)
                   }
                 }}
@@ -826,7 +855,7 @@ export function LearningPathDetail() {
             <div className="flex justify-center mt-4">
               <Button
                 variant="brand-outline"
-                onClick={handleImportClick}
+                onClick={() => handleImportClick()}
                 data-testid="import-course-button"
                 className={pickerOpen ? 'hidden' : ''}
               >
@@ -1011,7 +1040,7 @@ export function LearningPathDetail() {
                                     size="sm"
                                     className="text-xs"
                                     onClick={() => {
-                                      // Open the add-course picker dialog
+                                      setResolvingGapEntryId(entry.id)
                                       setPickerOpen(true)
                                     }}
                                   >
@@ -1087,7 +1116,7 @@ export function LearningPathDetail() {
 
               <Button
                 variant="brand-outline"
-                onClick={handleImportClick}
+                onClick={() => handleImportClick()}
                 data-testid="import-course-button"
                 className={pickerOpen ? 'hidden' : 'w-full'}
               >
@@ -1120,6 +1149,8 @@ export function LearningPathDetail() {
         open={importWizardOpen}
         onOpenChange={setImportWizardOpen}
         targetPathId={pathId}
+        gapEntryId={wizardGapContext?.gapEntryId}
+        searchTerm={wizardGapContext?.searchTerm}
       />
 
       {/* Delete Path Confirmation Dialog */}
