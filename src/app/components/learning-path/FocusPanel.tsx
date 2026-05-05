@@ -43,8 +43,9 @@ export function FocusPanel({
 }: FocusPanelProps) {
   const [expandedSection, setExpandedSection] = useState<'upnext' | 'plan' | null>(null)
 
-  // Upcoming entries (not started)
+  // Upcoming entries (not started, excluding unresolved gap entries)
   const upcomingEntries = entries.filter(e => {
+    if (e.courseId === '') return false
     const info = courseInfoMap.get(e.courseId)
     return (info?.completionPct ?? 0) === 0
   })
