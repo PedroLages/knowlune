@@ -1,0 +1,69 @@
+{
+  "run_id": "20260505-222526-c7ca0c9a",
+  "mode": "headless",
+  "round": 2,
+  "branch": "feature/ce-2026-05-05-fix-learning-paths-roadmap-cover",
+  "base": "68f4b5304d6d1b648d57acfc3fb4716ba8b6ffb1",
+  "plan": "docs/plans/2026-05-05-006-fix-learning-paths-roadmap-cover-plan.md",
+  "plan_source": "explicit",
+  "intent": "Four fixes: remove roadmap/map view, tighten card widths, fix bucket-not-found error, fix dialog scrollbars. Round 2 re-review focused on verifying two Round 1 fixes (storage RLS ownership guard + list-only view test assertions).",
+  "previous_review": "20260505-220746-d3ae5f42",
+  "previous_fixes": [
+    "ceacf73f - fix(storage): add user-ownership guard to learning-path-covers RLS policies",
+    "67f347e4 - test(learning-path): add list-only view assertions after roadmap removal"
+  ],
+  "verdict": "Ready with fixes",
+  "fix_order": null,
+  "findings": [
+    {
+      "id": "R2-001",
+      "severity": "P3",
+      "file": "supabase/storage-setup.sql",
+      "line": 12,
+      "confidence": 0.65,
+      "autofix_class": "advisory",
+      "owner": "human",
+      "requires_verification": false,
+      "pre_existing": false,
+      "title": "Header comment describes userId-folder convention but learning-path-covers uses flat keys",
+      "why_it_matters": "The file header (lines 12-14) says 'Path convention: {userId}/{recordId}/{filename}' and describes foldername-based RLS. The new learning-path-covers bucket intentionally diverges from this pattern (flat keys, filename-based ownership). The header should note the exception to prevent confusion during future maintenance.",
+      "evidence": [
+        "storage-setup.sql line 12: 'Path convention: {userId}/{recordId}/{filename}'",
+        "storage-setup.sql line 13: 'RLS policy: (storage.foldername(name))[1] = auth.uid()::text'",
+        "storage-setup.sql lines 258-283: learning-path-covers uses split_part(storage.filename(name), '.', 1) instead of foldername"
+      ],
+      "suggested_fix": "Add a note to the file header acknowledging the learning-path-covers divergence from the folder convention, or add a separate section comment above the learning-path-covers block explaining the flat-key pattern."
+    }
+  ],
+  "applied_fixes": [],
+  "residual_actionable": [],
+  "pre_existing": [],
+  "residual_risks": [
+    "The scale-105 hover effect on gradient preset buttons may be partially clipped by the new overflow-hidden on the grid container when a button is selected. Users see a subtle visual cutoff on edges. Low impact — the primary fix (no scrollbars) is achieved."
+  ],
+  "testing_gaps": [
+    "No test verifies the gap-entry rendering path in the list-only view. Gap entries have courseId === '' and require special handling. Existing tests may cover this in other test files."
+  ],
+  "learnings": [],
+  "agent_native_gaps": [],
+  "schema_drift": null,
+  "deployment_notes": [
+    "The storage-setup.sql must be run against each Supabase environment (local dev + production) to create the learning-path-covers bucket and RLS policies. Without this migration, cover uploads will continue to fail with 'bucket not found'."
+  ],
+  "suppressed_count": 0,
+  "failed_reviewers": [],
+  "fixes_verified": [
+    {
+      "commit": "ceacf73f",
+      "description": "Storage RLS ownership guard",
+      "status": "verified_correct",
+      "detail": "INSERT, UPDATE, DELETE policies now enforce auth.uid() match against learning_paths.user_id via subquery lookup. Key format ${pathId}.jpg (confirmed in pathCoverUpload.ts:105) is compatible with split_part() extraction. NULL subquery result correctly blocks unauthorized operations."
+    },
+    {
+      "commit": "67f347e4",
+      "description": "List-only view test assertions",
+      "status": "verified_correct",
+      "detail": "New test properly asserts 'Courses' heading, '0 of 1 completed' progress summary, and negative assertions for removed 'Your Roadmap' heading and 'Map' toggle. Mock data (1 entry, 0 completed) supports the expected assertions."
+    }
+  ]
+}
