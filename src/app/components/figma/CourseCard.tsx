@@ -106,6 +106,8 @@ function getDifficultyBadgeVariant(
       return 'default'
     case 'advanced':
       return 'destructive'
+    case 'expert':
+      return 'outline'
     default:
       return 'outline'
   }

@@ -28,7 +28,7 @@ import { useAuthorStore } from '@/stores/useAuthorStore'
 import { getAvatarSrc, getInitials } from '@/lib/authors'
 import { db } from '@/db'
 import { VideoReorderDialog } from '@/app/components/course/VideoReorderDialog'
-import type { ImportedCourse, ImportedVideo, YouTubeCourseChapter } from '@/data/types'
+import type { Difficulty, ImportedCourse, ImportedVideo, YouTubeCourseChapter } from '@/data/types'
 
 interface EditCourseDialogProps {
   open: boolean
@@ -47,6 +47,7 @@ export function EditCourseDialog({ open, onOpenChange, course, allTags }: EditCo
   const [name, setName] = useState(course.name)
   const [description, setDescription] = useState(course.description ?? '')
   const [category, setCategory] = useState(course.category)
+  const [difficulty, setDifficulty] = useState<Difficulty | ''>(course.difficulty ?? '')
   const [tags, setTags] = useState<string[]>(course.tags)
   const [tagInput, setTagInput] = useState('')
   const [authorId, setAuthorId] = useState<string>(course.authorId ?? '')
@@ -67,6 +68,7 @@ export function EditCourseDialog({ open, onOpenChange, course, allTags }: EditCo
       setName(course.name)
       setDescription(course.description ?? '')
       setCategory(course.category)
+      setDifficulty(course.difficulty ?? '')
       setTags([...course.tags])
       setTagInput('')
       setAuthorId(course.authorId ?? '')
@@ -107,6 +109,7 @@ export function EditCourseDialog({ open, onOpenChange, course, allTags }: EditCo
     name.trim() !== course.name ||
     (description.trim() || '') !== (course.description ?? '') ||
     category.trim() !== course.category ||
+    (difficulty || '') !== (course.difficulty ?? '') ||
     JSON.stringify([...tags].sort()) !== JSON.stringify([...course.tags].sort()) ||
     authorId !== (course.authorId ?? '')
 
@@ -147,6 +150,7 @@ export function EditCourseDialog({ open, onOpenChange, course, allTags }: EditCo
         name: name.trim(),
         description: description.trim(),
         category: category.trim(),
+        difficulty: difficulty || null,
         tags,
         authorId: newAuthorId,
       })
@@ -246,6 +250,26 @@ export function EditCourseDialog({ open, onOpenChange, course, allTags }: EditCo
                   placeholder="e.g. Programming, Design"
                   maxLength={60}
                 />
+              </div>
+
+              {/* Difficulty */}
+              <div className="space-y-2">
+                <Label htmlFor="edit-course-difficulty">Difficulty</Label>
+                <Select
+                  value={difficulty || '__unset__'}
+                  onValueChange={v => setDifficulty(v === '__unset__' ? '' : (v as Difficulty))}
+                >
+                  <SelectTrigger id="edit-course-difficulty" data-testid="edit-course-difficulty">
+                    <SelectValue placeholder="Select difficulty" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__unset__">Not set</SelectItem>
+                    <SelectItem value="beginner">Beginner</SelectItem>
+                    <SelectItem value="intermediate">Intermediate</SelectItem>
+                    <SelectItem value="advanced">Advanced</SelectItem>
+                    <SelectItem value="expert">Expert</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
               {/* Author */}

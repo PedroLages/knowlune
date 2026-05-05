@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, type ReactNode } from 'react'
 import { useParams, Link, useNavigate, useLocation } from 'react-router'
 import { recordVisit } from '@/lib/searchFrecency'
 import {
@@ -6,7 +6,6 @@ import {
   Clock,
   ExternalLink,
   GraduationCap,
-  Award,
   Users,
   Pencil,
   Trash2,
@@ -42,6 +41,7 @@ import { AuthorFormDialog } from '@/app/components/authors/AuthorFormDialog'
 import { AuthorAboutSection } from '@/app/components/authors/AuthorAboutSection'
 import { AuthorsSyncErrorBanner } from '@/app/components/authors/AuthorsSyncErrorBanner'
 import { DeleteAuthorDialog } from '@/app/components/authors/DeleteAuthorDialog'
+import type { Difficulty } from '@/data/types'
 
 export function AuthorProfile() {
   const { authorId } = useParams<{ authorId: string }>()
@@ -237,17 +237,24 @@ export function AuthorProfile() {
         <StatCard
           icon={Clock}
           value={`${Math.round(authorCourses.reduce((sum, c) => sum + c.estimatedHours, 0))}h`}
-          label="Content"
+          label="Hours of content"
         />
         <StatCard
           icon={GraduationCap}
           value={authorCourses.reduce((sum, c) => sum + c.totalLessons, 0)}
-          label="Lessons"
+          label="Number of lessons"
         />
         <StatCard
-          icon={Award}
-          value={author.yearsExperience > 0 ? `${author.yearsExperience}y` : '\u2014'}
-          label="Experience"
+          icon={Users}
+          value={
+            <DifficultyChips
+              difficulties={[
+                ...authorCourses.map(c => c.difficulty),
+                ...authorImportedCourses.map(c => c.difficulty).filter(Boolean),
+              ]}
+            />
+          }
+          label="Difficulty"
         />
       </div>
 
@@ -311,14 +318,75 @@ function StatCard({
   label,
 }: {
   icon: typeof BookOpen
-  value: string | number
+  value: ReactNode
   label: string
 }) {
   return (
     <div className="flex flex-col items-center gap-1 rounded-2xl bg-card p-4 shadow-sm">
       <Icon className="size-5 text-brand mb-1" aria-hidden="true" />
-      <span className="text-xl font-bold tabular-nums">{value}</span>
+      {typeof value === 'string' || typeof value === 'number' ? (
+        <span className="text-xl font-bold tabular-nums">{value}</span>
+      ) : (
+        <div className="min-h-[1.75rem] flex items-center justify-center">{value}</div>
+      )}
       <span className="text-xs text-muted-foreground">{label}</span>
     </div>
   )
+}
+
+function DifficultyChips({ difficulties }: { difficulties: Array<Difficulty | undefined> }) {
+  const chips = useMemo(() => {
+    const order: Difficulty[] = ['beginner', 'intermediate', 'advanced', 'expert']
+    const set = new Set<Difficulty>()
+    for (const d of difficulties) {
+      if (!d) continue
+      set.add(d)
+    }
+    const unique = order.filter(d => set.has(d))
+    return unique.slice(0, 3)
+  }, [difficulties])
+
+  if (chips.length === 0) {
+    return <span className="text-xs text-muted-foreground">Not set</span>
+  }
+
+  return (
+    <div className="flex flex-wrap items-center justify-center gap-1.5">
+      {chips.map(chip => (
+        <Badge
+          key={chip}
+          variant={difficultyBadgeVariant(chip)}
+          className={`text-[11px] px-2 py-0.5 capitalize ${difficultyBadgeClass(chip)}`}
+        >
+          {chip}
+        </Badge>
+      ))}
+    </div>
+  )
+}
+
+function difficultyBadgeVariant(d: Difficulty): 'default' | 'secondary' | 'destructive' | 'outline' {
+  switch (d) {
+    case 'beginner':
+      return 'secondary'
+    case 'intermediate':
+      return 'default'
+    case 'advanced':
+      return 'destructive'
+    case 'expert':
+      return 'outline'
+  }
+}
+
+function difficultyBadgeClass(d: Difficulty): string {
+  switch (d) {
+    case 'beginner':
+      return 'bg-green-100 text-green-900 dark:bg-green-900 dark:text-green-100 hover:bg-green-100 dark:hover:bg-green-900'
+    case 'intermediate':
+      return 'bg-amber-100 text-amber-900 dark:bg-amber-900 dark:text-amber-100 hover:bg-amber-100 dark:hover:bg-amber-900'
+    case 'advanced':
+      return 'bg-red-100 text-red-900 dark:bg-red-900 dark:text-red-100 hover:bg-red-100 dark:hover:bg-red-900'
+    case 'expert':
+      return 'bg-purple-100 text-purple-900 dark:bg-purple-900 dark:text-purple-100 hover:bg-purple-100 dark:hover:bg-purple-900'
+  }
 }

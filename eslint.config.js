@@ -61,6 +61,22 @@ export default tseslint.config(eslint.configs.recommended, ...tseslint.configs.r
     'test-patterns/use-seeding-helpers': 'warn',
   },
 }, {
+  // Test helper scripts in ESM (.mjs) — run in Node and/or browser contexts
+  // (Playwright page.evaluate, etc.). Declare common globals to avoid no-undef noise.
+  files: ['tests/**/*.mjs'],
+  languageOptions: {
+    globals: {
+      console: 'readonly',
+      process: 'readonly',
+      window: 'readonly',
+      document: 'readonly',
+      sessionStorage: 'readonly',
+      localStorage: 'readonly',
+      indexedDB: 'readonly',
+      crypto: 'readonly',
+    },
+  },
+}, {
   // Node.js script environment configuration
   files: ['scripts/**/*.mjs', 'scripts/**/*.js'],
   languageOptions: {

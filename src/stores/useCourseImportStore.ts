@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { db } from '@/db'
-import type { ImportedCourse, LearnerCourseStatus } from '@/data/types'
+import type { Difficulty, ImportedCourse, LearnerCourseStatus } from '@/data/types'
 import { useAuthStore, selectIsGuestMode } from '@/stores/useAuthStore'
 import { persistWithRetry } from '@/lib/persistWithRetry'
 import { syncableWrite } from '@/lib/sync/syncableWrite'
@@ -26,6 +26,7 @@ export interface CourseDetailsUpdate {
   name?: string
   description?: string
   category?: string
+  difficulty?: Difficulty | null
   tags?: string[]
   authorId?: string | null // null to unlink, string to set, undefined to leave unchanged
 }
@@ -253,6 +254,7 @@ export const useCourseImportStore = create<CourseImportState>((set, get) => ({
     if (details.description !== undefined)
       patch.description = details.description.trim() || undefined
     if (details.category !== undefined) patch.category = details.category.trim()
+    if (details.difficulty !== undefined) patch.difficulty = details.difficulty ?? undefined
     if (normalizedTags !== undefined) patch.tags = normalizedTags
     if (details.authorId !== undefined) patch.authorId = details.authorId ?? undefined
 
