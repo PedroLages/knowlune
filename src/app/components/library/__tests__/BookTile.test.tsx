@@ -124,7 +124,7 @@ describe('BookTile', () => {
   })
 
   describe('badge system', () => {
-    it('shows Audio badge for audiobooks', () => {
+    it('shows icon-only Audio badge for audiobooks', () => {
       const audiobook = makeBook({ format: 'audiobook' })
       render(
         <MemoryRouter>
@@ -132,7 +132,8 @@ describe('BookTile', () => {
         </MemoryRouter>
       )
       expect(screen.getByTestId('book-tile-test-book-audio-badge')).toBeInTheDocument()
-      expect(screen.getByText('Audio')).toBeInTheDocument()
+      // Icon only — no text label
+      expect(screen.queryByText('Audio')).not.toBeInTheDocument()
     })
 
     it('does not show Audio badge for ebooks', () => {

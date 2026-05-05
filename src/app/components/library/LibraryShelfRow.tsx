@@ -162,7 +162,7 @@ export function LibraryShelfRow({
         </button>
         <div
           ref={scrollerRef}
-          className="flex gap-4 overflow-x-auto snap-x snap-mandatory pb-2 -mx-2 px-2 scroll-smooth [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          className="flex gap-4 overflow-x-auto snap-x snap-mandatory pt-2 pb-2 -mx-2 px-2 scroll-smooth [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
           data-testid={scrollerTestId}
           tabIndex={0}
           onKeyDown={handleScrollerKeyDown}

@@ -21,22 +21,6 @@ import { StarRating } from './StarRating'
 import { useBookCoverUrl } from '@/app/hooks/useBookCoverUrl'
 import { useBookReviewStore } from '@/stores/useBookReviewStore'
 
-/** Find the current chapter title based on playback position in seconds */
-function findCurrentChapterTitle(chapters: Book['chapters'], posSeconds: number): string {
-  return (
-    chapters.find(
-      (_ch, i, arr) =>
-        posSeconds >= (_ch.position.type === 'time' ? _ch.position.seconds : 0) &&
-        (i === arr.length - 1 ||
-          posSeconds <
-            (() => {
-              const nextPos = arr[i + 1].position
-              return nextPos.type === 'time' ? nextPos.seconds : Infinity
-            })())
-    )?.title ?? 'Chapter 1'
-  )
-}
-
 /** Format seconds to "Xh Ym" display */
 function formatDuration(seconds: number): string {
   const hours = Math.floor(seconds / 3600)
@@ -129,17 +113,6 @@ export const BookCard = memo(function BookCard({ book }: BookCardProps) {
           {book.progress === 0 && isRecentlyAdded(book.createdAt) && (
             <p className="text-[10px] font-bold text-brand uppercase tracking-wider mt-0.5">NEW</p>
           )}
-          {/* Chapter + time remaining when playing */}
-          {book.chapters.length > 0 &&
-            book.currentPosition?.type === 'time' &&
-            (book.progress ?? 0) > 0 && (
-              <p
-                className="text-[10px] text-muted-foreground mt-0.5 truncate"
-                data-testid={`chapter-${book.id}`}
-              >
-                {findCurrentChapterTitle(book.chapters, book.currentPosition!.seconds)}
-              </p>
-            )}
           {book.totalDuration != null && book.totalDuration > 0 && (
             <p
               className="text-[10px] text-muted-foreground mt-0.5 flex items-center justify-center gap-1"

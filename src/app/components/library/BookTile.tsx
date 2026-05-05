@@ -10,7 +10,8 @@
  * the frame natively (no padding needed).
  *
  * Overlay on hover/focus shows a format-aware action icon (PlayCircle for
- * audiobooks, BookOpen for ebooks). A persistent "Audio" badge appears for
+ * audiobooks, BookOpen for ebooks) inside a dark backdrop circle for contrast
+ * on any cover color. An icon-only audio badge (Headphones) appears for
  * audiobooks in the default (non-hover) state.
  * Progress display (thin bar + meta line) only on the denseContinue variant.
  *
@@ -150,7 +151,7 @@ export const BookTile = memo(function BookTile({
           </div>
         )}
 
-        {/* Hover/Focus overlay with format-aware action icon */}
+        {/* Hover/Focus overlay with format-aware action icon in dark backdrop circle */}
         <div
           className={cn(
             'absolute inset-0 flex items-center justify-center',
@@ -158,29 +159,27 @@ export const BookTile = memo(function BookTile({
             'group-hover/tile:bg-foreground/30 group-focus-within/tile:bg-foreground/30'
           )}
         >
-          <ActionIcon
-            className={cn(
-              'size-10 text-white',
-              'opacity-0 transition-opacity duration-200',
-              'group-hover/tile:opacity-100 group-focus-within/tile:opacity-100'
-            )}
-            aria-hidden="true"
-          />
+          <div className="rounded-full bg-black/60 backdrop-blur-md p-2">
+            <ActionIcon
+              className={cn(
+                'size-6 text-white',
+                'opacity-0 transition-opacity duration-200',
+                'group-hover/tile:opacity-100 group-focus-within/tile:opacity-100'
+              )}
+              aria-hidden="true"
+            />
+          </div>
         </div>
 
-        {/* Audio badge — top-left, audiobooks only (persistent format indicator) */}
+        {/* Audio badge — top-right, audiobooks only (icon-only format indicator) */}
         {isAudiobook && (
-          <span
-            className={cn(
-              'absolute top-2 left-2 inline-flex items-center gap-1 rounded-full px-2 py-0.5',
-              'bg-brand-soft text-brand-soft-foreground text-[10px] font-medium leading-tight z-10'
-            )}
+          <div
+            className="absolute top-2 right-2 rounded-full bg-black/60 backdrop-blur p-1.5 z-10"
             aria-label="Audio format"
             data-testid={`book-tile-${book.id}-audio-badge`}
           >
-            <Headphones className="size-3" aria-hidden="true" />
-            Audio
-          </span>
+            <Headphones className="size-3.5 text-white" aria-hidden="true" />
+          </div>
         )}
 
         {/* Progress bar — denseContinue variant only, pinned to bottom of cover */}

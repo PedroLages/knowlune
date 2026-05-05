@@ -62,12 +62,12 @@ export const RecentBookCard = memo(function RecentBookCard({ book }: RecentBookC
             <FallbackIcon className="size-6 text-muted-foreground" />
           </div>
         )}
-        {/* Format indicator — high contrast pill */}
-        <div className="absolute bottom-2 right-2 flex items-center gap-1 rounded-full bg-black/60 backdrop-blur-md px-2 py-1">
-          <FormatIcon className="size-3 text-white" aria-hidden="true" />
-          <span className="text-[10px] font-semibold text-white">
-            {isAudiobook ? 'Audio' : 'eBook'}
-          </span>
+        {/* Format indicator — icon-only high contrast badge */}
+        <div
+          className="absolute bottom-2 right-2 rounded-full bg-black/60 backdrop-blur-md p-1.5"
+          aria-label={isAudiobook ? 'Audio format' : 'eBook format'}
+        >
+          <FormatIcon className="size-3.5 text-white" aria-hidden="true" />
         </div>
       </div>
 

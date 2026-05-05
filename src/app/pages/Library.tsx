@@ -789,11 +789,11 @@ export function Library() {
       {/* ============================================================ */}
       {books.length > 0 && libraryTab === 'continue' && (
         <div className="flex flex-col gap-8" data-testid="library-tab-panel-continue">
+          {/* Daily Highlights — rendered at very top for maximum engagement */}
+          <DailyHighlightsStrip />
+
           {/* Format tabs for switching Audiobooks/Ebooks context */}
           <LibraryFormatModeTabs />
-
-          {/* Daily Highlights — rendered at top, between format tabs and media hero */}
-          <DailyHighlightsStrip />
 
           {/* Media-first hero + shelves */}
           {modeBooksForMedia.length === 0 ? (
