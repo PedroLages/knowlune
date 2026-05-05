@@ -26,12 +26,9 @@ import {
   BookOpen,
   ChevronRight,
   Sparkles,
-  Loader2,
-  Settings,
   Clock,
   CheckCircle2,
   Check,
-  Lock,
   Flame,
   Download,
   Import,
@@ -52,21 +49,31 @@ import {
   DialogTitle,
 } from '@/app/components/ui/dialog'
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/app/components/ui/alert-dialog'
+import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/app/components/ui/collapsible'
-import { cn } from '@/app/components/ui/utils'
 import { EmptyState } from '@/app/components/EmptyState'
 import { DelayedFallback } from '@/app/components/DelayedFallback'
-import { TrailMap } from '@/app/components/figma/TrailMap'
 import { MoveUpDownButtons } from '@/app/components/figma/MoveUpDownButtons'
 import { InlineCoursePicker } from '@/app/components/figma/InlineCoursePicker'
 import { ImportWizardDialog } from '@/app/components/figma/ImportWizardDialog'
 import { InlineEditableField } from '@/app/components/figma/InlineEditableField'
 import { CourseTypeBadge } from '@/app/components/shared/CourseTypeBadge'
-import { PlanMyWeekButton } from '@/app/components/learning-path/PlanMyWeekButton'
-import { PathScheduleList } from '@/app/components/learning-path/PathScheduleList'
+import { RoadmapViewToggle, type RoadmapViewMode } from '@/app/components/learning-path/RoadmapViewToggle'
+import { RoadmapMapView } from '@/app/components/learning-path/RoadmapMapView'
+import { RoadmapListView } from '@/app/components/learning-path/RoadmapListView'
+import { FocusPanel } from '@/app/components/learning-path/FocusPanel'
 import { useLearningPathStore } from '@/stores/useLearningPathStore'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
 import { useAuthorStore } from '@/stores/useAuthorStore'
@@ -78,7 +85,6 @@ import { useLoadCourseThumbnails } from '@/app/hooks/useLoadCourseThumbnails'
 import { staggerContainer, fadeUp } from '@/lib/motion'
 import { toast } from 'sonner'
 import {
-  isOrderSuggestionAvailable,
   suggestPathOrder,
   type OrderSuggestionResult,
 } from '@/ai/learningPath/suggestOrder'
@@ -291,6 +297,7 @@ export function LearningPathDetail() {
   const [isLoaded, setIsLoaded] = useState(false)
   const catalogCourses: Course[] = [] // Catalog courses table dropped (E89-S01)
   const [pickerOpen, setPickerOpen] = useState(false)
+  const [viewMode, setViewMode] = useState<RoadmapViewMode>('map')
 
   // Import wizard trigger (singleton guard pattern)
   const {
@@ -505,6 +512,8 @@ export function LearningPathDetail() {
     [pathId, removeCourseFromPath]
   )
 
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
+
   const handleDeletePath = useCallback(() => {
     if (pathId) {
       deletePathWithUndo(pathId)
@@ -586,14 +595,6 @@ export function LearningPathDetail() {
         : null),
     [courseEntries, courseInfo, completedEntries.length]
   )
-  const upcomingEntries = useMemo(
-    () =>
-      courseEntries.filter(e => {
-        const pct = courseInfo.get(e.courseId)?.completionPct ?? 0
-        return pct === 0 && e !== currentEntry
-      }),
-    [courseEntries, courseInfo, currentEntry]
-  )
   const currentIndex = currentEntry ? courseEntries.indexOf(currentEntry) : -1
   const [showReorderList, setShowReorderList] = useState(false)
 
@@ -632,7 +633,7 @@ export function LearningPathDetail() {
           description="This learning path does not exist or has been deleted."
           actionLabel="View All Paths"
           onAction={() => {
-            window.location.href = '/learning-paths'
+            navigate('/learning-paths')
           }}
         />
       </div>
@@ -737,7 +738,7 @@ export function LearningPathDetail() {
               variant="ghost"
               size="icon"
               className="text-muted-foreground hover:text-destructive"
-              onClick={handleDeletePath}
+              onClick={() => setDeleteConfirmOpen(true)}
               aria-label="Delete learning path"
               data-testid="delete-path-button"
             >
@@ -754,17 +755,43 @@ export function LearningPathDetail() {
           </div>
         </motion.div>
 
-        {/* Trail Map */}
+        {/* View Toggle + Map/List (when courses exist) */}
         {courseEntries.length > 0 && (
-          <motion.div variants={fadeUp}>
-            <h2 className="text-xs font-bold text-muted-foreground uppercase tracking-[0.2em] mb-4 px-2">
-              Path Journey
-            </h2>
-            <TrailMap
-              totalCourses={courseEntries.length}
-              completedCount={completedEntries.length}
-              currentIndex={currentIndex}
-            />
+          <motion.div variants={fadeUp} className="space-y-6">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-bold">Your Roadmap</h2>
+              <RoadmapViewToggle mode={viewMode} onModeChange={setViewMode} />
+            </div>
+
+            {viewMode === 'map' ? (
+              <RoadmapMapView
+                entries={courseEntries}
+                completedCount={completedEntries.length}
+                currentIndex={currentIndex}
+                onJumpToNext={() => {
+                  setViewMode('list')
+                }}
+              />
+            ) : (
+              <RoadmapListView
+                entries={courseEntries.map(e => ({
+                  ...e,
+                  info: courseInfo.get(e.courseId),
+                  thumbnailUrl: thumbnailUrls[e.courseId],
+                }))}
+                courseInfoMap={courseInfo}
+                thumbnailUrls={thumbnailUrls}
+                gapEntries={courseEntries.filter(e => e.courseId === '')}
+                onGapResolve={resolution => {
+                  if (resolution.type === 'import') {
+                    handleImportClick()
+                  } else if (resolution.type === 'match' || resolution.type === 'replace') {
+                    setPickerOpen(true)
+                  }
+                }}
+                onCourseClick={courseId => navigate(`/courses/${courseId}`)}
+              />
+            )}
           </motion.div>
         )}
 
@@ -1026,8 +1053,8 @@ export function LearningPathDetail() {
               )}
             </div>
 
-            {/* Right Column: Sidebar */}
-            <aside className="lg:col-span-4 space-y-8">
+            {/* Right Column: Focus Panel + Actions */}
+            <aside className="lg:col-span-4 space-y-6">
               {/* Add Course collapsible panel */}
               <Collapsible open={pickerOpen} onOpenChange={setPickerOpen} className="space-y-3">
                 <CollapsibleTrigger asChild>
@@ -1036,14 +1063,13 @@ export function LearningPathDetail() {
                     data-testid="add-course-button"
                     className="w-full"
                     aria-expanded={pickerOpen}
-                    aria-controls="inline-course-picker-panel"
+                    aria-controls="inline-course-picker-panel-sidebar"
                   >
                     <Plus className="size-4 mr-2" aria-hidden="true" />
                     {pickerOpen ? 'Cancel' : 'Add Course'}
                   </Button>
                 </CollapsibleTrigger>
-                <CollapsibleContent id="inline-course-picker-panel" className="space-y-3">
-                  {/* Keep panel open toggle */}
+                <CollapsibleContent id="inline-course-picker-panel-sidebar" className="space-y-3">
                   <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer select-none">
                     <input
                       type="checkbox"
@@ -1072,117 +1098,21 @@ export function LearningPathDetail() {
                 Import Course
               </Button>
 
-              {/* Coming Up Next */}
-              {upcomingEntries.length > 0 && (
-                <Card className="rounded-2xl">
-                  <CardContent className="p-8">
-                    <h3 className="text-lg font-bold mb-6">Coming Up Next</h3>
-                    <div className="space-y-6">
-                      {upcomingEntries.slice(0, 3).map((entry, i) => {
-                        const info = courseInfo.get(entry.courseId)
-                        return (
-                          <div
-                            key={entry.courseId}
-                            className={cn('flex items-start gap-4', i > 0 && 'opacity-60')}
-                          >
-                            <div className="size-10 rounded-lg bg-muted flex items-center justify-center shrink-0">
-                              <Lock className="size-4 text-muted-foreground" aria-hidden="true" />
-                            </div>
-                            <div>
-                              <h4 className="font-bold text-foreground">
-                                {info?.name || 'Unknown Course'}
-                              </h4>
-                              {info?.authorName && (
-                                <p className="text-xs text-muted-foreground font-medium mt-1">
-                                  {info.authorName}
-                                </p>
-                              )}
-                            </div>
-                          </div>
-                        )
-                      })}
-                    </div>
-                    <Button
-                      variant="outline"
-                      className="w-full mt-8"
-                      onClick={() => setShowReorderList(v => !v)}
-                    >
-                      {showReorderList ? 'Hide Curriculum' : 'View Full Curriculum'}
-                    </Button>
-                  </CardContent>
-                </Card>
+              {/* Focus Panel — unified right rail */}
+              {path && courseEntries.length > 0 && (
+                <FocusPanel
+                  pathId={pathId!}
+                  pathName={path.name}
+                  entries={courseEntries}
+                  courseInfoMap={courseInfo}
+                  courseNames={courseNames}
+                  progress={pathProgress}
+                  isSuggesting={isSuggesting}
+                  onSuggestOrder={handleSuggestOrder}
+                  onToggleCurriculum={() => setShowReorderList(v => !v)}
+                  showCurriculum={showReorderList}
+                />
               )}
-
-              {/* Suggest Order */}
-              {courseEntries.length >= 2 &&
-                (isOrderSuggestionAvailable() ? (
-                  <button
-                    className="w-full bg-brand-soft p-6 rounded-2xl border border-brand/20 flex items-center justify-between group hover:bg-brand-muted transition-all text-left"
-                    onClick={handleSuggestOrder}
-                    disabled={isSuggesting}
-                    data-testid="suggest-order-button"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="size-10 rounded-full bg-card flex items-center justify-center text-brand shadow-sm">
-                        {isSuggesting ? (
-                          <Loader2 className="size-5 animate-spin" aria-hidden="true" />
-                        ) : (
-                          <Sparkles className="size-5" aria-hidden="true" />
-                        )}
-                      </div>
-                      <span className="font-bold text-foreground">
-                        {isSuggesting ? 'Analyzing...' : 'Suggest Order'}
-                      </span>
-                    </div>
-                    <ChevronRight
-                      className="size-5 text-muted-foreground group-hover:text-brand transition-colors"
-                      aria-hidden="true"
-                    />
-                  </button>
-                ) : (
-                  <Link
-                    to="/settings"
-                    className="w-full block bg-muted p-6 rounded-2xl border border-border"
-                    data-testid="suggest-order-settings-link"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="size-10 rounded-full bg-card flex items-center justify-center text-muted-foreground shadow-sm">
-                        <Settings className="size-5" aria-hidden="true" />
-                      </div>
-                      <span className="font-medium text-muted-foreground">
-                        Configure AI for ordering
-                      </span>
-                    </div>
-                  </Link>
-                ))}
-
-              {/* Plan My Week */}
-              {path && (
-                <>
-                  <PlanMyWeekButton
-                    pathId={pathId!}
-                    pathName={path.name}
-                    entries={courseEntries}
-                    courseNames={courseNames}
-                    progress={pathProgress}
-                  />
-                  <PathScheduleList pathId={pathId!} />
-                </>
-              )}
-
-              {/* Daily Tip Card */}
-              <div className="p-6 bg-gradient-to-br from-brand to-brand-hover rounded-2xl text-brand-foreground">
-                <span className="text-[10px] font-black uppercase tracking-widest bg-white/20 px-2 py-0.5 rounded-full mb-4 inline-block">
-                  Study Tip
-                </span>
-                <h4 className="font-bold text-lg mb-2 italic">
-                  &quot;Focus on one concept at a time.&quot;
-                </h4>
-                <p className="text-brand-foreground/80 text-sm leading-relaxed">
-                  Multitasking while learning reduces retention. Master each course before moving to
-                  the next.
-                </p>
-              </div>
             </aside>
           </div>
         )}
@@ -1194,6 +1124,28 @@ export function LearningPathDetail() {
         onOpenChange={setImportWizardOpen}
         targetPathId={pathId}
       />
+
+      {/* Delete Path Confirmation Dialog */}
+      <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this learning path?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete &ldquo;{path?.name}&rdquo; and all associated course
+              entries. You can undo this action from the toast notification.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={handleDeletePath}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* AI Order Suggestion Confirmation Dialog (E26-S04) */}
       <Dialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen}>
