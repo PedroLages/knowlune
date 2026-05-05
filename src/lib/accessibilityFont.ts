@@ -1,5 +1,4 @@
 const ACCESSIBILITY_FONT_FAMILY = "'Atkinson Hyperlegible', system-ui, -apple-system, sans-serif"
-const DEFAULT_FONT_FAMILY = "'DM Sans', system-ui, -apple-system, sans-serif"
 
 /**
  * Dynamically loads the Atkinson Hyperlegible font (regular + bold) and
@@ -18,8 +17,9 @@ export async function loadAccessibilityFont(): Promise<void> {
 }
 
 /**
- * Restores `--font-body` to the default DM Sans stack.
+ * Restores `--font-body` to the CSS cascade value (DM Sans by default,
+ * Inter Variable when `.apple` is active).
  */
 export function unloadAccessibilityFont(): void {
-  document.documentElement.style.setProperty('--font-body', DEFAULT_FONT_FAMILY)
+  document.documentElement.style.removeProperty('--font-body')
 }

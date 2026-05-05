@@ -13,6 +13,12 @@ export function useFontScale() {
     function applyFontScale() {
       const settings = getSettings()
       const fontSize: FontSize = settings.fontSize ?? 'medium'
+      if (fontSize === 'medium') {
+        // Remove inline style so CSS cascade resolves the correct value
+        // based on the active color scheme (16px default, 17px in Apple).
+        document.documentElement.style.removeProperty('--font-size')
+        return
+      }
       const px = FONT_SIZE_PX[fontSize] ?? 16
       document.documentElement.style.setProperty('--font-size', `${px}px`)
     }
