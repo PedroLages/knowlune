@@ -24,7 +24,7 @@ beforeEach(() => {
     streaks: true,
     badges: true,
     animations: true,
-    colorScheme: 'professional',
+    colorScheme: 'clean',
     courseViewMode: 'grid',
     courseGridColumns: 'auto',
   })
@@ -37,7 +37,7 @@ describe('useEngagementPrefsStore initial state', () => {
     expect(state.streaks).toBe(true)
     expect(state.badges).toBe(true)
     expect(state.animations).toBe(true)
-    expect(state.colorScheme).toBe('professional')
+    expect(state.colorScheme).toBe('clean')
     expect(state.courseViewMode).toBe('grid')
   })
 })
@@ -88,7 +88,7 @@ describe('resetToDefaults', () => {
     const state = useEngagementPrefsStore.getState()
     expect(state.achievements).toBe(true)
     expect(state.animations).toBe(true)
-    expect(state.colorScheme).toBe('professional')
+    expect(state.colorScheme).toBe('clean')
   })
 
   it('should persist defaults to localStorage', () => {
@@ -102,7 +102,7 @@ describe('resetToDefaults', () => {
   it('should bridge colorScheme + courseViewMode reset to AppSettings', () => {
     useEngagementPrefsStore.getState().resetToDefaults()
     expect(mockSaveSettings).toHaveBeenCalledWith({
-      colorScheme: 'professional',
+      colorScheme: 'clean',
       courseViewMode: 'grid',
       courseGridColumns: 'auto',
     })
