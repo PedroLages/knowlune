@@ -123,6 +123,12 @@
 
   /* Audiobook player tokens */
   --surface-glass: oklch(1 0 0 / 0.55);
+
+  /* Component radius hooks (overridden in .apple scheme) */
+  --button-radius: var(--radius-xl);
+  --button-press-scale: 1;
+  --card-radius: var(--radius-2xl);
+  --input-radius: var(--radius-md);
   --surface-glass-border: oklch(0 0 0 / 0.08);
   --surface-player-panel: oklch(1 0 0 / 0.42);
   --surface-player-panel-border: oklch(0 0 0 / 0.06);
@@ -502,6 +508,335 @@
     ellipse 115% 95% at 50% 48%,
     transparent 40%,
     oklch(0.4 0.06 250 / 0.12) 100%
+  );
+}
+
+/* --------------------------------------------------------------------------
+ * Apple color scheme — activated by `.apple` class on <html>
+ * (feat: Apple design system as 4th color scheme)
+ *
+ * Photography-first aesthetic: pure white surfaces, Action Blue (#0066cc),
+ * SF Pro typography (Inter substitute), non-linear radius scale,
+ * zero texture overlays, colored shadow suppression.
+ * -------------------------------------------------------------------------- */
+
+.apple {
+  /* Core surfaces — pure white, cool neutrals */
+  --background: #ffffff;
+  --foreground: #1d1d1f;
+  --card: #ffffff;
+  --card-foreground: #1d1d1f;
+  --popover: #ffffff;
+  --popover-foreground: #1d1d1f;
+  --primary: #1d1d1f;
+  --primary-foreground: #ffffff;
+  --secondary: #f5f5f7;
+  --secondary-foreground: #1d1d1f;
+  --muted: #f5f5f7;
+  --muted-foreground: #7a7a7a;
+  --accent: #f5f5f7;
+  --accent-foreground: #1d1d1f;
+  --border: rgba(0, 0, 0, 0.08);
+  --input: transparent;
+  --input-background: #f5f5f7;
+  --switch-background: #c6c6c8;
+  --ring: #0066cc;
+  --focus-ring: #0071e3;
+  --surface-elevated: #ffffff;
+  --surface-sunken: #f5f5f7;
+
+  /* Brand — Action Blue (#0066cc) */
+  --brand: #0066cc;
+  --brand-hover: #0055aa;
+  --brand-foreground: #ffffff;
+  --brand-soft: #dbe9f7;
+  --brand-soft-foreground: #0055aa;
+  --brand-muted: #c4ddf5;
+
+  /* Semantic colors */
+  --success: #2d7a4f;
+  --success-foreground: #ffffff;
+  --success-soft: #e8f5ed;
+  --warning: #8a6518;
+  --warning-foreground: #ffffff;
+  --destructive: #c44850;
+  --destructive-foreground: #ffffff;
+  --destructive-soft-foreground: #8b2d35;
+  --info: #0066cc;
+  --info-foreground: #ffffff;
+
+  /* Sidebar — cool neutral */
+  --sidebar: #f5f5f7;
+  --sidebar-foreground: #1d1d1f;
+  --sidebar-primary: #0066cc;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #fafafc;
+  --sidebar-accent-foreground: #1d1d1f;
+  --sidebar-border: rgba(0, 0, 0, 0.06);
+  --sidebar-ring: #0066cc;
+
+  /* Scrollbar */
+  --scrollbar-thumb: #c6c6c8;
+  --scrollbar-thumb-hover: #a1a1a6;
+  --scrollbar-track: transparent;
+
+  /* Font override — Inter for Apple scheme */
+  --font-body: 'Inter Variable', 'Inter', system-ui, -apple-system, sans-serif;
+  --font-heading: 'Inter Variable', 'Inter', system-ui, -apple-system, sans-serif;
+  --font-size: 17px;
+  --font-weight-medium: 600;
+  --font-weight-normal: 400;
+
+  /* Radius overrides — Apple non-linear scale (5/8/11/18px base) */
+  --radius: 11px;
+  --radius-sm: 5px;
+  --radius-md: 8px;
+  --radius-lg: 18px;
+  --radius-xl: 18px;
+  --radius-2xl: 18px;
+
+  /* Component radius hooks — pill shapes for buttons/inputs */
+  --button-radius: 9999px;
+  --button-press-scale: 0.95;
+  --card-radius: 18px;
+  --input-radius: 9999px;
+
+  /* Shadow suppression — no colored shadows in Apple scheme */
+  --shadow-brand: none;
+  --shadow-warm: none;
+  --shadow-gold: none;
+
+  /* Apple-specific tokens (for deferred imagery component work) */
+  --apple-product-shadow: rgba(0, 0, 0, 0.22) 3px 5px 30px 0;
+  --apple-hairline-color: #e0e0e0;
+
+  /* Gold */
+  --gold: #c49245;
+  --gold-foreground: #ffffff;
+  --gold-muted: #f0e8d8;
+  --gold-soft-foreground: #8a6520;
+
+  /* Accent violet */
+  --accent-violet: #9a8cb8;
+  --accent-violet-foreground: #ffffff;
+  --accent-violet-muted: #f0ecf5;
+
+  /* Study day / freeze day text */
+  --study-day-text: #2d7a4f;
+  --freeze-day-text: #0066cc;
+
+  /* Momentum tier tokens */
+  --momentum-hot: #b84a30;
+  --momentum-hot-bg: #faf0eb;
+  --momentum-warm: #c49245;
+  --momentum-warm-bg: #f8f2e8;
+  --momentum-cold: #0066cc;
+  --momentum-cold-bg: #e8f0fa;
+
+  /* At-risk course indicator */
+  --at-risk: #b84a30;
+  --at-risk-bg: #faf0eb;
+
+  /* Resource type badges */
+  --resource-video: oklch(0.546 0.245 262.881);
+  --resource-video-bg: oklch(0.932 0.032 255.585);
+  --resource-pdf: oklch(0.577 0.245 27.325);
+  --resource-pdf-bg: oklch(0.936 0.032 17.717);
+  --resource-audio: oklch(0.558 0.288 302.321);
+  --resource-audio-bg: oklch(0.943 0.029 294.588);
+  --resource-image: oklch(0.527 0.154 150.069);
+  --resource-image-bg: oklch(0.962 0.044 156.743);
+  --resource-notes: oklch(0.553 0.135 66.442);
+  --resource-notes-bg: oklch(0.962 0.059 95.277);
+
+  /* Chart colors — Apple palette */
+  --chart-1: #0066cc;
+  --chart-2: #5cc08a;
+  --chart-3: #e0a850;
+  --chart-4: #e86868;
+  --chart-5: #aeaeb2;
+
+  /* Table selected */
+  --table-selected: #e8f0fa;
+
+  /* Audiobook atmosphere — clean light scrim */
+  --surface-player-panel: oklch(1 0 0 / 0.48);
+  --surface-player-panel-border: oklch(0.45 0.06 230 / 0.1);
+  --player-header-glass: oklch(0.99 0.01 230 / 0.78);
+  --player-header-glass-border: oklch(0.45 0.06 230 / 0.12);
+  --player-cover-halo: 0 0 0 1px oklch(1 0 0 / 0.5), 0 0 72px oklch(0.55 0.1 230 / 0.14);
+  --player-atmosphere-scrim: linear-gradient(
+    180deg,
+    oklch(0.99 0.01 230 / 0.9) 0%,
+    oklch(0.98 0.015 230 / 0.42) 34%,
+    oklch(0.97 0.02 230 / 0.18) 54%,
+    oklch(0.95 0.02 230 / 0.75) 100%
+  );
+  --player-atmosphere-vignette: radial-gradient(
+    ellipse 115% 95% at 50% 48%,
+    transparent 40%,
+    oklch(0.4 0.06 230 / 0.12) 100%
+  );
+}
+
+.dark.apple {
+  /* Core surfaces — dark neutrals */
+  --background: #1a1a1c;
+  --foreground: #f5f5f7;
+  --card: #2a2a2c;
+  --card-foreground: #f5f5f7;
+  --popover: #2a2a2c;
+  --popover-foreground: #f5f5f7;
+  --primary: #f5f5f7;
+  --primary-foreground: #1a1a1c;
+  --secondary: #2a2a2c;
+  --secondary-foreground: #f5f5f7;
+  --muted: #2a2a2c;
+  --muted-foreground: #98989d;
+  --accent: #2a2a2c;
+  --accent-foreground: #f5f5f7;
+  --border: rgba(255, 255, 255, 0.08);
+  --input: rgba(255, 255, 255, 0.08);
+  --input-background: #242426;
+  --switch-background: #48484a;
+  --ring: #2997ff;
+  --focus-ring: #2997ff;
+
+  /* Surface depth tokens */
+  --brand-soft: #1a2740;
+  --brand-soft-foreground: #6db5ff;
+  --brand-muted: #243550;
+  --success-soft: #162e22;
+  --surface-elevated: #2a2a2c;
+  --surface-sunken: #151517;
+
+  /* Brand — Sky Link Blue for dark */
+  --brand: #2997ff;
+  --brand-hover: #4da8ff;
+  --brand-foreground: #0a1520;
+  --info: #2997ff;
+  --info-foreground: #0a1520;
+
+  /* Semantic colors */
+  --success: #5cc08a;
+  --success-foreground: #ffffff;
+  --warning: #e0a850;
+  --warning-foreground: #1a1a1c;
+  --destructive: #e86868;
+  --destructive-foreground: #fde8e8;
+  --destructive-soft-foreground: #f5aaaa;
+
+  /* Sidebar — dark cool container */
+  --sidebar: #1e1e20;
+  --sidebar-foreground: #f5f5f7;
+  --sidebar-primary: #2997ff;
+  --sidebar-primary-foreground: #f5f5f7;
+  --sidebar-accent: #2a2a2c;
+  --sidebar-accent-foreground: #f5f5f7;
+  --sidebar-border: rgba(255, 255, 255, 0.06);
+  --sidebar-ring: #2997ff;
+
+  /* Scrollbar */
+  --scrollbar-thumb: #48484a;
+  --scrollbar-thumb-hover: #636366;
+  --scrollbar-track: #1a1a1c;
+
+  /* Shadows — none (Apple suppresses colored shadows) */
+  --shadow-brand: none;
+  --shadow-warm: none;
+  --shadow-gold: none;
+
+  /* Font override — Inter for Apple scheme (same as light) */
+  --font-body: 'Inter Variable', 'Inter', system-ui, -apple-system, sans-serif;
+  --font-heading: 'Inter Variable', 'Inter', system-ui, -apple-system, sans-serif;
+  --font-size: 17px;
+  --font-weight-medium: 600;
+  --font-weight-normal: 400;
+
+  /* Radius overrides — same as light Apple */
+  --radius: 11px;
+  --radius-sm: 5px;
+  --radius-md: 8px;
+  --radius-lg: 18px;
+  --radius-xl: 18px;
+  --radius-2xl: 18px;
+
+  /* Component radius hooks */
+  --button-radius: 9999px;
+  --button-press-scale: 0.95;
+  --card-radius: 18px;
+  --input-radius: 9999px;
+
+  /* Apple-specific tokens */
+  --apple-product-shadow: rgba(0, 0, 0, 0.4) 3px 5px 30px 0;
+  --apple-hairline-color: rgba(255, 255, 255, 0.12);
+
+  /* Gold */
+  --gold: #e0a850;
+  --gold-foreground: #1a1a1c;
+  --gold-muted: #302818;
+  --gold-soft-foreground: #e0a850;
+
+  /* Accent violet */
+  --accent-violet: #b5a8cc;
+  --accent-violet-foreground: #1a1a1c;
+  --accent-violet-muted: #2e2840;
+
+  /* Study day / freeze day text */
+  --study-day-text: #5cc08a;
+  --freeze-day-text: #2997ff;
+
+  /* Momentum tier tokens */
+  --momentum-hot: #e8845a;
+  --momentum-hot-bg: #2e2018;
+  --momentum-warm: #e0a850;
+  --momentum-warm-bg: #2e2818;
+  --momentum-cold: #2997ff;
+  --momentum-cold-bg: #1a2740;
+
+  /* At-risk course indicator */
+  --at-risk: #e8845a;
+  --at-risk-bg: #2e2018;
+
+  /* Resource type badges (same as clean dark) */
+  --resource-video: oklch(0.707 0.165 254.624);
+  --resource-video-bg: oklch(0.279 0.077 261.692);
+  --resource-pdf: oklch(0.707 0.165 22.18);
+  --resource-pdf-bg: oklch(0.279 0.077 22.18);
+  --resource-audio: oklch(0.714 0.203 305.504);
+  --resource-audio-bg: oklch(0.279 0.077 296.753);
+  --resource-image: oklch(0.696 0.17 149.48);
+  --resource-image-bg: oklch(0.279 0.077 155.995);
+  --resource-notes: oklch(0.684 0.133 79.938);
+  --resource-notes-bg: oklch(0.279 0.077 85.874);
+
+  /* Chart colors — Apple dark palette */
+  --chart-1: #2997ff;
+  --chart-2: #5cc08a;
+  --chart-3: #e0a850;
+  --chart-4: #e86868;
+  --chart-5: #aeaeb2;
+
+  /* Table selected */
+  --table-selected: #1a2740;
+
+  /* Audiobook atmosphere — clean dark scrim */
+  --surface-player-panel: oklch(0.15 0.03 230 / 0.58);
+  --surface-player-panel-border: oklch(0.75 0.08 230 / 0.14);
+  --player-header-glass: oklch(0.12 0.03 230 / 0.82);
+  --player-header-glass-border: oklch(0.75 0.08 230 / 0.12);
+  --player-cover-halo: 0 0 0 1px oklch(0.75 0.1 230 / 0.22), 0 0 96px oklch(0.55 0.12 230 / 0.2);
+  --player-atmosphere-scrim: linear-gradient(
+    180deg,
+    oklch(0.14 0.04 230 / 0.85) 0%,
+    oklch(0.12 0.035 230 / 0.38) 44%,
+    oklch(0.1 0.04 230 / 0.28) 58%,
+    oklch(0.08 0.04 230 / 0.9) 100%
+  );
+  --player-atmosphere-vignette: radial-gradient(
+    ellipse 115% 95% at 50% 45%,
+    transparent 34%,
+    oklch(0.04 0.04 230 / 0.68) 100%
   );
 }
 
