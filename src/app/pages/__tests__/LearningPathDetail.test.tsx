@@ -74,10 +74,6 @@ vi.mock('@/app/components/DelayedFallback', () => ({
   DelayedFallback: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }))
 
-vi.mock('@/app/components/figma/TrailMap', () => ({
-  TrailMap: () => <div data-testid="trail-map">Trail Map</div>,
-}))
-
 vi.mock('@/app/components/figma/MoveUpDownButtons', () => ({
   MoveUpDownButtons: () => <div data-testid="move-buttons">Move</div>,
 }))

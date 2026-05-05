@@ -70,8 +70,6 @@ import { InlineCoursePicker } from '@/app/components/figma/InlineCoursePicker'
 import { ImportWizardDialog } from '@/app/components/figma/ImportWizardDialog'
 import { InlineEditableField } from '@/app/components/figma/InlineEditableField'
 import { CourseTypeBadge } from '@/app/components/shared/CourseTypeBadge'
-import { RoadmapViewToggle, type RoadmapViewMode } from '@/app/components/learning-path/RoadmapViewToggle'
-import { RoadmapMapView } from '@/app/components/learning-path/RoadmapMapView'
 import { RoadmapListView } from '@/app/components/learning-path/RoadmapListView'
 import { FocusPanel } from '@/app/components/learning-path/FocusPanel'
 import { useLearningPathStore } from '@/stores/useLearningPathStore'
@@ -299,7 +297,6 @@ export function LearningPathDetail() {
   const catalogCourses: Course[] = [] // Catalog courses table dropped (E89-S01)
   const [pickerOpen, setPickerOpen] = useState(false)
   const [resolvingGapEntryId, setResolvingGapEntryId] = useState<string | null>(null)
-  const [viewMode, setViewMode] = useState<RoadmapViewMode>('map')
 
   // Import wizard trigger (singleton guard pattern)
   const {
@@ -611,7 +608,6 @@ export function LearningPathDetail() {
         : null),
     [courseEntries, courseInfo, completedEntries.length]
   )
-  const currentIndex = currentEntry ? courseEntries.indexOf(currentEntry) : -1
   const [showReorderList, setShowReorderList] = useState(false)
 
   // Loading state
@@ -771,53 +767,44 @@ export function LearningPathDetail() {
           </div>
         </motion.div>
 
-        {/* View Toggle + Map/List (when courses exist) */}
+        {/* Course list (when courses exist) */}
         {courseEntries.length > 0 && (
           <motion.div variants={fadeUp} className="space-y-6">
-            <div className="flex items-center justify-between">
-              <h2 className="text-xl font-bold">Your Roadmap</h2>
-              <RoadmapViewToggle mode={viewMode} onModeChange={setViewMode} />
+            <div>
+              <h2 className="text-xl font-bold">Courses</h2>
+              <p className="text-sm text-muted-foreground mt-1">
+                {completedEntries.length} of {courseEntries.length} completed
+              </p>
             </div>
 
-            {viewMode === 'map' ? (
-              <RoadmapMapView
-                entries={courseEntries}
-                completedCount={completedEntries.length}
-                currentIndex={currentIndex}
-                onJumpToNext={() => {
-                  setViewMode('list')
-                }}
-              />
-            ) : (
-              <RoadmapListView
-                entries={courseEntries.map(e => ({
-                  ...e,
-                  info: courseInfo.get(e.courseId),
-                  thumbnailUrl: thumbnailUrls[e.courseId],
-                }))}
-                courseInfoMap={courseInfo}
-                thumbnailUrls={thumbnailUrls}
-                gapEntries={courseEntries.filter(e => e.courseId === '')}
-                onGapResolve={resolution => {
-                  // Find the gap entry to extract its search term
-                  const gapEntry = courseEntries.find(e => e.id === resolution.entryId)
-                  const matchTitleMatch =
-                    gapEntry?.justification?.match(/\[Search for: (.+)\]$/)
-                  const searchTerm = matchTitleMatch ? matchTitleMatch[1] : undefined
+            <RoadmapListView
+              entries={courseEntries.map(e => ({
+                ...e,
+                info: courseInfo.get(e.courseId),
+                thumbnailUrl: thumbnailUrls[e.courseId],
+              }))}
+              courseInfoMap={courseInfo}
+              thumbnailUrls={thumbnailUrls}
+              gapEntries={courseEntries.filter(e => e.courseId === '')}
+              onGapResolve={resolution => {
+                // Find the gap entry to extract its search term
+                const gapEntry = courseEntries.find(e => e.id === resolution.entryId)
+                const matchTitleMatch =
+                  gapEntry?.justification?.match(/\[Search for: (.+)\]$/)
+                const searchTerm = matchTitleMatch ? matchTitleMatch[1] : undefined
 
-                  if (resolution.type === 'import') {
-                    handleImportClick({
-                      gapEntryId: resolution.entryId,
-                      searchTerm,
-                    })
-                  } else if (resolution.type === 'match' || resolution.type === 'replace') {
-                    setResolvingGapEntryId(resolution.entryId)
-                    setPickerOpen(true)
-                  }
-                }}
-                onCourseClick={courseId => navigate(`/courses/${courseId}`)}
-              />
-            )}
+                if (resolution.type === 'import') {
+                  handleImportClick({
+                    gapEntryId: resolution.entryId,
+                    searchTerm,
+                  })
+                } else if (resolution.type === 'match' || resolution.type === 'replace') {
+                  setResolvingGapEntryId(resolution.entryId)
+                  setPickerOpen(true)
+                }
+              }}
+              onCourseClick={courseId => navigate(`/courses/${courseId}`)}
+            />
           </motion.div>
         )}
 
