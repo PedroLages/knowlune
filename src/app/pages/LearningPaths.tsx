@@ -27,6 +27,7 @@ import {
 } from '@/app/components/ui/dropdown-menu'
 import { Input } from '@/app/components/ui/input'
 import { Textarea } from '@/app/components/ui/textarea'
+import { Label } from '@/app/components/ui/label'
 import {
   Collapsible,
   CollapsibleContent,
@@ -72,12 +73,17 @@ function AIGoalInput({
         <p className="text-sm text-muted-foreground">
           Describe your learning goal and let AI build a path from your course library.
         </p>
+        <Label htmlFor="ai-goal-textarea" className="sr-only">
+          Describe your learning goal
+        </Label>
         <Textarea
+          id="ai-goal-textarea"
           value={goalText}
           onChange={e => onGoalTextChange(e.target.value)}
           placeholder="e.g., I want to become a full-stack web developer in 6 months..."
           rows={3}
           maxLength={500}
+          aria-label="Describe your learning goal"
         />
         <Button
           variant="brand"
@@ -154,16 +160,17 @@ function PathCard({
     <motion.div variants={fadeUp}>
       <Card
         className={cn(
-          'group relative transition-all duration-300 hover:shadow-xl overflow-hidden rounded-2xl',
-          isNotStarted && 'opacity-70'
+          'group relative transition-all duration-300 hover:shadow-xl overflow-hidden rounded-2xl'
         )}
       >
-        {/* Gradient header */}
-        <PathCardHeader
-          pathName={path.name}
-          completionPct={completionPct}
-          isAIGenerated={path.isAIGenerated}
-        />
+        {/* Gradient header — dimmed when not started */}
+        <div className={cn(isNotStarted && 'opacity-70')}>
+          <PathCardHeader
+            pathName={path.name}
+            completionPct={completionPct}
+            isAIGenerated={path.isAIGenerated}
+          />
+        </div>
 
         {/* Dropdown menu — over gradient */}
         <div className="absolute top-4 right-4 z-10">
@@ -172,7 +179,7 @@ function PathCard({
               <Button
                 variant="ghost"
                 size="icon"
-                className="size-8 bg-white/20 hover:bg-white/40 backdrop-blur-md text-white rounded-full"
+                className="size-11 bg-white/20 hover:bg-white/40 backdrop-blur-md text-white rounded-full"
                 aria-label={`Actions for ${path.name}`}
               >
                 <MoreHorizontal className="size-4" aria-hidden="true" />
@@ -195,11 +202,11 @@ function PathCard({
         </div>
 
         {/* Card body */}
-        <CardContent className="px-6 pb-6 pt-1 relative">
+        <CardContent className="px-4 pb-4 pt-1 relative">
           {/* Progress ring — overlapping header */}
           <div className="absolute -top-10 left-6">
             <div className="bg-card rounded-full p-1.5 shadow-lg">
-              <PathProgressRing percentage={completionPct} size="md">
+              <PathProgressRing percentage={completionPct} size="sm">
                 {isCompleted ? (
                   <CheckCircle2 className="size-5 text-success" aria-hidden="true" />
                 ) : (
@@ -213,9 +220,8 @@ function PathCard({
 
           <Link
             to={`/learning-paths/${path.id}`}
-            className="block focus:outline-none mt-10"
+            className="block focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 rounded-lg mt-7"
             aria-label={`${path.name} — ${courseCount} courses, ${completionPct}% completed`}
-            tabIndex={-1}
           >
             {/* Course count badge */}
             <div className="flex items-center gap-2 mb-2">
@@ -248,7 +254,7 @@ function PathCard({
                 ariaLabel={`Edit path description`}
                 placeholder="Add a description..."
                 maxLength={500}
-                className="text-sm text-muted-foreground leading-relaxed"
+                className="text-sm text-muted-foreground leading-relaxed line-clamp-2"
               />
             </div>
 
@@ -315,10 +321,10 @@ function PathCard({
 function PathCardSkeleton() {
   return (
     <Card className="overflow-hidden rounded-2xl">
-      <Skeleton className="h-32 w-full rounded-none" />
-      <CardContent className="px-6 pb-6 pt-1 relative">
-        <Skeleton className="absolute -top-10 left-6 size-[72px] rounded-full" />
-        <div className="mt-10 space-y-3">
+      <Skeleton className="h-24 w-full rounded-none" />
+      <CardContent className="px-4 pb-4 pt-1 relative">
+        <Skeleton className="absolute -top-9 left-4 size-[56px] rounded-full" />
+        <div className="mt-7 space-y-3">
           <Skeleton className="h-4 w-16" />
           <Skeleton className="h-6 w-3/4" />
           <Skeleton className="h-4 w-full" />
@@ -472,7 +478,7 @@ export function LearningPaths() {
             <Skeleton className="h-10 w-64" />
             <Skeleton className="h-5 w-96" />
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {Array.from({ length: 3 }, (_, i) => (
               <PathCardSkeleton key={i} />
             ))}
@@ -553,7 +559,7 @@ export function LearningPaths() {
                 Browse curated learning paths to discover how paths work. Fork one to get started
                 instantly.
               </p>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {templates.map(tpl => {
                   const tplEntries = getEntriesForPath(tpl.id)
                   return (
@@ -625,7 +631,7 @@ export function LearningPaths() {
               variants={staggerContainer}
               initial="hidden"
               animate="visible"
-              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
+              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
               role="list"
               aria-label="Learning paths"
             >
@@ -649,9 +655,12 @@ export function LearningPaths() {
             {templates.length > 0 && (
               <motion.div variants={fadeUp} className="mt-12">
                 <Collapsible open={discoverOpen} onOpenChange={setDiscoverOpen}>
-                  <CollapsibleTrigger className="flex items-center gap-2 w-full text-left py-2 group">
+                  <CollapsibleTrigger
+                    className="flex items-center gap-2 w-full text-left py-2 group"
+                    aria-controls="discover-more-paths-panel"
+                  >
                     <LayoutTemplate className="w-5 h-5 text-muted-foreground" />
-                    <span className="text-lg font-semibold flex-1">Discover more paths</span>
+                    <h2 className="text-lg font-semibold flex-1">Discover more paths</h2>
                     <Badge variant="secondary" className="text-xs mr-2">
                       {templates.length}
                     </Badge>
@@ -659,8 +668,8 @@ export function LearningPaths() {
                       className={`w-4 h-4 text-muted-foreground transition-transform ${discoverOpen ? 'rotate-180' : ''}`}
                     />
                   </CollapsibleTrigger>
-                  <CollapsibleContent className="pt-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                  <CollapsibleContent id="discover-more-paths-panel" className="pt-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                       {templates.map(tpl => {
                         const tplEntries = getEntriesForPath(tpl.id)
                         return (
