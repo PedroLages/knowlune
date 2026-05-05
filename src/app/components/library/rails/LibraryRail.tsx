@@ -11,6 +11,7 @@
 
 import { Children, type ReactNode, useCallback, useEffect, useRef, useState } from 'react'
 import { cn } from '@/app/components/ui/utils'
+import { isChildrenEmpty } from '@/lib/react-utils'
 import { RailHeader, type RailHeaderProps } from './RailHeader'
 import { RailControls } from './RailControls'
 import { RailViewport } from './RailViewport'
@@ -22,11 +23,6 @@ export interface LibraryRailProps extends RailHeaderProps {
   snap?: boolean
   /** data-testid for the rail section */
   'data-testid'?: string
-}
-
-function isChildrenEmpty(children: ReactNode): boolean {
-  if (children === null || children === undefined || children === false) return true
-  return Children.toArray(children).length === 0
 }
 
 export function LibraryRail({

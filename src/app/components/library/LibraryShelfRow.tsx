@@ -15,6 +15,7 @@
 
 import { Children, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { isChildrenEmpty } from '@/lib/react-utils'
 import {
   LibraryShelfHeading,
   type LibraryShelfHeadingLevel,
@@ -55,10 +56,6 @@ export interface LibraryShelfRowProps {
  * Note: Children.toArray already filters null/undefined/false, so we only
  * need to check length after calling it.
  */
-function isChildrenEmpty(children: ReactNode): boolean {
-  if (children === null || children === undefined || children === false) return true
-  return Children.toArray(children).length === 0
-}
 
 export function LibraryShelfRow({
   icon,
