@@ -25,12 +25,20 @@ const schemePreviewColors = {
     muted: '#dce3f0',
     text: '#595f6a',
   },
+  apple: {
+    bg: '#ffffff',
+    sidebar: '#f5f5f7',
+    brand: '#0066cc',
+    muted: '#f5f5f7',
+    text: '#7a7a7a',
+  },
 } as const
 
 const schemeOptions: { value: ColorScheme; label: string; description: string }[] = [
   { value: 'professional', label: 'Professional', description: 'Warm tones, muted palette' },
   { value: 'vibrant', label: 'Vibrant', description: 'High-contrast, energized colors' },
   { value: 'clean', label: 'Clean', description: 'Cool white, Apple-inspired' },
+  { value: 'apple', label: 'Apple', description: 'Photography-first, Action Blue' },
 ]
 
 export function ColorSchemePicker() {
@@ -42,7 +50,7 @@ export function ColorSchemePicker() {
       value={colorScheme}
       onValueChange={(value: string) => setPreference('colorScheme', value as ColorScheme)}
       aria-label="Color scheme"
-      className="grid grid-cols-3 gap-4"
+      className="grid grid-cols-2 gap-4 lg:grid-cols-4"
       data-testid="color-scheme-picker"
     >
       {schemeOptions.map(({ value, label, description }) => {

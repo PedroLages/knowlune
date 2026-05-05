@@ -19,15 +19,17 @@ export function useColorScheme() {
   // Apply / remove the `.vibrant` class on <html> whenever the preference changes
   useEffect(() => {
     const root = document.documentElement
-    root.classList.remove('vibrant', 'clean')
+    root.classList.remove('vibrant', 'clean', 'apple')
     if (colorScheme === 'vibrant') {
       root.classList.add('vibrant')
     } else if (colorScheme === 'clean') {
       root.classList.add('clean')
+    } else if (colorScheme === 'apple') {
+      root.classList.add('apple')
     }
 
     return () => {
-      root.classList.remove('vibrant', 'clean')
+      root.classList.remove('vibrant', 'clean', 'apple')
     }
   }, [colorScheme])
 
