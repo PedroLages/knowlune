@@ -272,7 +272,7 @@ test.describe('WCAG 2.4.13 focus-indicator audit', () => {
                 `  Tab #${f.tabIndex} (${f.theme}) ${f.selector}\n    mechanism=${f.mechanism} outline=${f.outlineWidthPx}px ${f.outlineStyle} shadowSpread=${f.shadowSpreadPx}px color=${f.indicatorColor} bg=${f.backgroundColor} ratio=${f.contrastRatio}:1\n    reason: ${f.reason}`
             )
             .join('\n')
-          // eslint-disable-next-line no-console
+           
           console.log(
             `Focus indicator violations on ${route.path} (${theme}):\n${report}`
           )

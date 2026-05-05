@@ -1133,7 +1133,7 @@ async function _doDownload(): Promise<void> {
     ) {
       // Intentional: using console.info keeps this self-contained until the
       // global analytics client lands. Matches src/lib/credentials/telemetry.ts.
-      // eslint-disable-next-line no-console
+       
       console.info('[telemetry] sync.server_config.hydrated', {
         table: entry.dexieTable,
         count: recordsToApply.length,

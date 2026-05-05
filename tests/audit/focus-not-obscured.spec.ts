@@ -140,7 +140,7 @@ test.describe('WCAG 2.4.11 focus-not-obscured audit', () => {
               `  Tab #${f.tabIndex}: ${f.focused.selector} obscured by ${f.obscuredBy.selector}`
           )
           .join('\n')
-        // eslint-disable-next-line no-console
+         
         console.log(`Focus-obscured violations on ${route.path}:\n${report}`)
       }
 

@@ -33,10 +33,12 @@ import { useLazyStore } from '@/hooks/useLazyStore'
 import { getLastWatchedLesson, getFirstLesson } from '@/lib/progress'
 import { Button } from '@/app/components/ui/button'
 import { Badge } from '@/app/components/ui/badge'
+import { Avatar, AvatarFallback, AvatarImage } from '@/app/components/ui/avatar'
 import { Skeleton } from '@/app/components/ui/skeleton'
 import { cn } from '@/app/components/ui/utils'
 import { StudyScheduleEditor } from '@/app/components/figma/StudyScheduleEditor'
 import { formatClockDuration as formatDuration } from '@/lib/formatDuration'
+import { getInitials } from '@/lib/textUtils'
 import type { ImportedVideo, ImportedPdf, VideoProgress, YouTubeCourseChapter } from '@/data/types'
 
 // ---------------------------------------------------------------------------
@@ -369,7 +371,7 @@ export function CourseOverview() {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.6 }}
-        className="relative h-[45vh] min-h-[400px] w-full bg-surface-sunken flex flex-col items-center justify-center text-center px-6 overflow-hidden border-b border-border/60"
+        className="relative min-h-[45vh] w-full bg-surface-sunken flex flex-col items-center justify-center text-center px-6 py-16 sm:py-20 overflow-hidden border-b border-border/60"
         data-testid="course-overview-hero"
       >
         {/* Radial glow */}
@@ -394,22 +396,31 @@ export function CourseOverview() {
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.1 }}
-            className="font-display text-5xl sm:text-6xl font-bold text-foreground tracking-tight"
+            className="font-display text-4xl sm:text-5xl md:text-6xl font-bold text-foreground tracking-tight"
             data-testid="course-overview-title"
           >
             {course.name}
           </motion.h1>
-          {authorName &&
-            (authorData?.id ? (
-              <Link
-                to={`/authors/${authorData.id}`}
-                className="text-lg text-muted-foreground font-light hover:text-foreground transition-colors inline-block"
-              >
-                By {authorName}
-              </Link>
-            ) : (
-              <p className="text-lg text-muted-foreground font-light">By {authorName}</p>
-            ))}
+          {authorName && (
+            <div className="flex items-center justify-center gap-2.5">
+              <Avatar className="size-8 shrink-0 ring-1 ring-border/50" aria-hidden="true">
+                <AvatarImage src={authorData?.photoUrl ?? ''} alt="" />
+                <AvatarFallback className="text-xs font-semibold bg-brand/10 text-brand">
+                  {getInitials(authorName)}
+                </AvatarFallback>
+              </Avatar>
+              {authorData?.id ? (
+                <Link
+                  to={`/authors/${authorData.id}`}
+                  className="text-lg text-muted-foreground font-light hover:text-foreground transition-colors inline-flex items-center gap-1"
+                >
+                  By {authorName}
+                </Link>
+              ) : (
+                <p className="text-lg text-muted-foreground font-light">By {authorName}</p>
+              )}
+            </div>
+          )}
 
           {ctaLabel && ctaLessonId && (
             <motion.div

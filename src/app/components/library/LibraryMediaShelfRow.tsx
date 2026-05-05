@@ -1,6 +1,7 @@
 import { Children, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { cn } from '@/app/components/ui/utils'
+import { isChildrenEmpty } from '@/lib/react-utils'
 import {
   LibraryShelfHeading,
   type LibraryShelfHeadingLevel,
@@ -17,10 +18,6 @@ export interface LibraryMediaShelfRowProps {
   'data-testid'?: string
 }
 
-function isChildrenEmpty(children: ReactNode): boolean {
-  if (children === null || children === undefined || children === false) return true
-  return Children.toArray(children).length === 0
-}
 
 export function LibraryMediaShelfRow({
   icon,

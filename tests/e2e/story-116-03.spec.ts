@@ -70,12 +70,12 @@ test.describe('Library shelf integration (E116-S03)', () => {
     await expect(recentScroller).toBeVisible()
     await expect(continueScroller).toBeVisible()
 
-    // AC-4: cards inside scrollers (Recently Added uses RecentBookCard)
+    // AC-4: cards inside scrollers (both shelves use unified BookTile)
     await expect(
-      recentScroller.locator('[data-testid^="recent-book-card-"]').first()
+      recentScroller.locator('[data-testid^="book-tile-"]').first()
     ).toBeVisible()
     await expect(
-      continueScroller.locator('[data-testid^="continue-shelf-tile-"]').first()
+      continueScroller.locator('[data-testid^="book-tile-"]').first()
     ).toBeVisible()
 
     // AC-8: no console errors on mount

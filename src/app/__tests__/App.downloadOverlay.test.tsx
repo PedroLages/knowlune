@@ -138,7 +138,7 @@ beforeEach(() => {
   })
 
   vi.mocked(useAuthStore).mockImplementation(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     ((selector?: (s: unknown) => unknown) => {
       const state = {
         user: mockAuthUser,
