@@ -29,6 +29,10 @@ interface LearningPathState {
   createPath: (name: string, description?: string) => Promise<LearningPath>
   renamePath: (pathId: string, name: string) => Promise<void>
   updateDescription: (pathId: string, description: string) => Promise<void>
+  updatePathCover: (
+    pathId: string,
+    cover: { coverImageUrl?: string; coverPreset?: string }
+  ) => Promise<void>
   deletePath: (pathId: string) => Promise<void>
   deletePathWithUndo: (pathId: string) => void
   restorePath: (pathId: string) => void
@@ -247,6 +251,43 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
         error: 'Failed to update path description',
       })
       toast.error('Failed to update path description')
+    }
+  },
+
+  updatePathCover: async (pathId, cover) => {
+    const now = new Date().toISOString()
+    const prevPaths = get().paths
+    const prevActivePath = get().activePath
+    const existing = prevPaths.find(p => p.id === pathId)
+    if (!existing) return
+
+    // Optimistic update
+    set(state => ({
+      paths: state.paths.map(p =>
+        p.id === pathId ? { ...p, ...cover, updatedAt: now } : p
+      ),
+      activePath:
+        state.activePath?.id === pathId
+          ? { ...state.activePath, ...cover, updatedAt: now }
+          : state.activePath,
+      error: null,
+    }))
+
+    try {
+      await persistWithRetry(async () => {
+        await syncableWrite('learningPaths', 'put', {
+          ...existing,
+          ...cover,
+        } as unknown as SyncableRecord)
+      })
+    } catch (error) {
+      console.error('[LearningPathStore] Failed to update path cover:', error)
+      set({
+        paths: prevPaths,
+        activePath: prevActivePath,
+        error: 'Failed to update path cover',
+      })
+      toast.error('Failed to update path cover')
     }
   },
 

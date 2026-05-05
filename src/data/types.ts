@@ -456,6 +456,10 @@ export interface LearningPath {
   forkedFrom?: string // template ID this path was forked from (null for original/user-created paths)
   estimatedHours?: number // total estimated hours (copied from template on fork)
   difficultyLabel?: string // e.g. "Beginner → Intermediate" (copied from template on fork)
+  /** Supabase Storage public URL for a custom cover image */
+  coverImageUrl?: string
+  /** Gradient preset key (e.g., 'cyan-blue', 'emerald-green') — used when coverImageUrl is unset */
+  coverPreset?: string
 }
 
 export interface LearningPathEntry {

@@ -13,6 +13,7 @@ import {
   Download,
   LayoutTemplate,
   ChevronDown,
+  Image,
   Sparkles,
 } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
@@ -42,6 +43,7 @@ import { PathCardHeader } from '@/app/components/figma/PathCardHeader'
 import { ImportWizardDialog } from '@/app/components/figma/ImportWizardDialog'
 import { CurriculumComposer } from '@/app/components/figma/CurriculumComposer'
 import { InlineEditableField } from '@/app/components/figma/InlineEditableField'
+import { PathCoverDialog } from '@/app/components/learning-path/PathCoverDialog'
 import { PremiumGate } from '@/app/components/PremiumGate'
 import { useLearningPathStore } from '@/stores/useLearningPathStore'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
@@ -107,12 +109,14 @@ function PathCard({
   completionPct,
   courseThumbnails,
   onImport,
+  onOpenCoverDialog,
 }: {
   path: LearningPath
   courseCount: number
   completionPct: number
   courseThumbnails: string[]
   onImport: (pathId: string) => void
+  onOpenCoverDialog: (path: LearningPath) => void
 }) {
   const navigate = useNavigate()
   const renamePath = useLearningPathStore(s => s.renamePath)
@@ -169,6 +173,7 @@ function PathCard({
             pathName={path.name}
             completionPct={completionPct}
             isAIGenerated={path.isAIGenerated}
+            coverImageUrl={path.coverImageUrl}
           />
         </div>
 
@@ -186,6 +191,10 @@ function PathCard({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
+              <DropdownMenuItem onSelect={() => onOpenCoverDialog(path)}>
+                <Image className="mr-2 size-4" aria-hidden="true" />
+                Change Cover
+              </DropdownMenuItem>
               <DropdownMenuItem onSelect={() => onImport(path.id)}>
                 <Download className="mr-2 size-4" aria-hidden="true" />
                 Import Course
@@ -354,6 +363,7 @@ export function LearningPaths() {
   const [aiDialogOpen, setAiDialogOpen] = useState(false)
   const [aiGoalText, setAiGoalText] = useState('')
   const [discoverOpen, setDiscoverOpen] = useState(false)
+  const [coverDialogPath, setCoverDialogPath] = useState<LearningPath | null>(null)
 
   // Import wizard trigger (singleton guard pattern)
   const {
@@ -645,6 +655,7 @@ export function LearningPaths() {
                       completionPct={stats.completionPct}
                       courseThumbnails={pathThumbnails.get(path.id) || []}
                       onImport={handlePathImport}
+                      onOpenCoverDialog={setCoverDialogPath}
                     />
                   </div>
                 )
@@ -698,6 +709,17 @@ export function LearningPaths() {
         mode="ai"
         initialGoal={aiGoalText}
       />
+
+      {/* Path Cover Dialog */}
+      {coverDialogPath && (
+        <PathCoverDialog
+          open={!!coverDialogPath}
+          onOpenChange={open => {
+            if (!open) setCoverDialogPath(null)
+          }}
+          path={coverDialogPath}
+        />
+      )}
 
       {/* Import Wizard Dialog (R1) */}
       <ImportWizardDialog
