@@ -32,7 +32,8 @@ VALUES
   ('avatars',           'avatars',           false, 1048576),      -- 1 MB
   ('pdfs',              'pdfs',              false, 104857600),     -- 100 MB
   ('book-files',        'book-files',        false, 209715200),    -- 200 MB
-  ('book-covers',       'book-covers',       false, 2097152)       -- 2 MB
+  ('book-covers',            'book-covers',            false, 2097152),      -- 2 MB
+  ('learning-path-covers',   'learning-path-covers',   true,  2097152)       -- 2 MB (public: path covers are auto-generated, non-sensitive metadata)
 ON CONFLICT (id) DO NOTHING;
 
 -- ─── RLS Policies ───────────────────────────────────────────────────────────
@@ -240,5 +241,33 @@ CREATE POLICY "book-covers: owner update"
     bucket_id = 'book-covers'
     AND (storage.foldername(name))[1] = auth.uid()::text
   );
+
+-- ── learning-path-covers ──
+-- Public bucket: path covers are auto-generated non-sensitive metadata images.
+-- Public access enables CDN caching; no signed URLs needed for listing page loads.
+
+DROP POLICY IF EXISTS "Anyone can read learning path covers" ON storage.objects;
+CREATE POLICY "Anyone can read learning path covers"
+  ON storage.objects FOR SELECT
+  USING (bucket_id = 'learning-path-covers');
+
+DROP POLICY IF EXISTS "Authenticated users can upload learning path covers" ON storage.objects;
+CREATE POLICY "Authenticated users can upload learning path covers"
+  ON storage.objects FOR INSERT
+  TO authenticated
+  WITH CHECK (bucket_id = 'learning-path-covers');
+
+DROP POLICY IF EXISTS "Users can update own learning path covers" ON storage.objects;
+CREATE POLICY "Users can update own learning path covers"
+  ON storage.objects FOR UPDATE
+  TO authenticated
+  USING (bucket_id = 'learning-path-covers')
+  WITH CHECK (bucket_id = 'learning-path-covers');
+
+DROP POLICY IF EXISTS "Users can delete own learning path covers" ON storage.objects;
+CREATE POLICY "Users can delete own learning path covers"
+  ON storage.objects FOR DELETE
+  TO authenticated
+  USING (bucket_id = 'learning-path-covers');
 
 COMMIT;
