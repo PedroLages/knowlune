@@ -150,7 +150,7 @@ export function AuthorProfile() {
             {/* Avatar */}
             <Avatar className="size-28 sm:size-32 shrink-0 ring-2 ring-border/50 self-center sm:self-start">
               <AvatarImage {...getAvatarSrc(author.avatar, 128)} alt={author.name} />
-              <AvatarFallback className="text-2xl font-semibold bg-brand/10 text-brand">
+              <AvatarFallback className="text-2xl font-semibold bg-brand/10 text-brand" aria-hidden="true">
                 {getInitials(author.name)}
               </AvatarFallback>
             </Avatar>
