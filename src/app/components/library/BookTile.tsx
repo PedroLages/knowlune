@@ -38,6 +38,7 @@ export interface BookTileProps {
 }
 
 function formatRemainingTime(seconds: number): string {
+  if (!Number.isFinite(seconds)) return '0m'
   const safe = Math.max(0, seconds)
   const hours = Math.floor(safe / 3600)
   const minutes = Math.floor((safe % 3600) / 60)
@@ -54,7 +55,7 @@ function getProgressMeta(book: Book): string {
     book.totalDuration > 0 &&
     book.currentPosition?.type === 'time'
   ) {
-    const remaining = Math.max(0, book.totalDuration - book.currentPosition.seconds)
+    const remaining = Math.max(0, book.totalDuration - (book.currentPosition.seconds ?? 0))
     return `${formatRemainingTime(remaining)} left · ${progressLabel}`
   }
 
@@ -64,7 +65,7 @@ function getProgressMeta(book: Book): string {
     book.totalPages > 0 &&
     book.currentPosition?.type === 'page'
   ) {
-    const pagesLeft = Math.max(0, book.totalPages - book.currentPosition.pageNumber)
+    const pagesLeft = Math.max(0, book.totalPages - (book.currentPosition.pageNumber ?? 0))
     return `${pagesLeft} pages left · ${progressLabel}`
   }
 
@@ -115,7 +116,7 @@ export const BookTile = memo(function BookTile({
       onClick={handleClick}
       onKeyDown={handleKeyDown}
       className={cn(
-        'group/tile cursor-pointer focus-visible:outline-none',
+        'group/tile cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-lg',
         sizes.container,
         className
       )}
@@ -152,13 +153,13 @@ export const BookTile = memo(function BookTile({
         <div
           className={cn(
             'absolute inset-0 flex items-center justify-center',
-            'bg-black/0 transition-colors duration-200',
-            'group-hover/tile:bg-black/30 group-focus-within/tile:bg-black/30'
+            'bg-foreground/0 transition-colors duration-200',
+            'group-hover/tile:bg-foreground/30 group-focus-within/tile:bg-foreground/30'
           )}
         >
           <span
             className={cn(
-              'rounded-full bg-white/90 px-4 py-1.5 text-sm font-semibold text-foreground',
+              'rounded-full bg-background/90 px-4 py-1.5 text-sm font-semibold text-foreground',
               'opacity-0 transition-opacity duration-200',
               'group-hover/tile:opacity-100 group-focus-within/tile:opacity-100'
             )}
@@ -184,7 +185,7 @@ export const BookTile = memo(function BookTile({
 
         {/* Progress bar — denseContinue variant only, pinned to bottom of cover */}
         {showProgress && (
-          <div className="absolute bottom-0 left-0 right-0 h-1 bg-white/25">
+          <div className="absolute bottom-0 left-0 right-0 h-1 bg-foreground/25">
             <div
               className="h-full rounded-full bg-brand transition-all"
               style={{ width: `${Math.max(0, Math.min(100, book.progress))}%` }}
