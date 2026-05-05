@@ -3,7 +3,7 @@ import { saveSettings, saveSettingsToSupabase } from '@/lib/settings'
 
 const STORAGE_KEY = 'levelup-engagement-prefs-v1'
 
-export type ColorScheme = 'professional' | 'vibrant' | 'clean'
+export type ColorScheme = 'professional' | 'vibrant' | 'clean' | 'apple'
 export type CourseViewMode = 'grid' | 'list' | 'compact'
 export type CourseGridColumns = 'auto' | 2 | 3 | 4 | 5
 
@@ -19,7 +19,7 @@ export interface EngagementPrefs {
   badges: boolean
   /** Enable page transitions and celebratory effects */
   animations: boolean
-  /** Color scheme: professional (default) or vibrant */
+  /** Color scheme: clean (default) or professional/vibrant/apple */
   colorScheme: ColorScheme
   /**
    * Courses page view mode (E99-S01).
@@ -45,7 +45,7 @@ const defaults: EngagementPrefs = {
   streaks: true,
   badges: true,
   animations: true,
-  colorScheme: 'professional',
+  colorScheme: 'clean',
   courseViewMode: 'grid',
   courseGridColumns: 'auto',
 }
@@ -62,9 +62,9 @@ function loadPersistedPrefs(): EngagementPrefs {
         badges: typeof parsed.badges === 'boolean' ? parsed.badges : defaults.badges,
         animations:
           typeof parsed.animations === 'boolean' ? parsed.animations : defaults.animations,
-        colorScheme: ['professional', 'vibrant', 'clean'].includes(parsed.colorScheme)
+        colorScheme: ['professional', 'vibrant', 'clean', 'apple'].includes(parsed.colorScheme)
           ? parsed.colorScheme
-          : 'professional',
+          : defaults.colorScheme,
         courseViewMode: VALID_COURSE_VIEW_MODES.includes(parsed.courseViewMode)
           ? parsed.courseViewMode
           : 'grid',

@@ -38,7 +38,7 @@ export interface AppSettings {
    * design tokens in theme.css with more saturated OKLCH values.
    * UI toggle ships in E21-S05; this story (E21-S04) provides the tokens + hook.
    */
-  colorScheme: 'professional' | 'vibrant' | 'clean'
+  colorScheme: 'professional' | 'vibrant' | 'clean' | 'apple'
   /** Whether to use Atkinson Hyperlegible font for improved readability. */
   accessibilityFont: boolean
   /** Content area density: 'default' or 'spacious' (increased padding/gap/line-height). */
@@ -450,7 +450,7 @@ export async function hydrateSettingsFromSupabase(
       useEngagementPrefsStore.getState().setPreference('streaks', s.streaksEnabled)
     }
     if (typeof s.colorScheme === 'string') {
-      const validSchemes = ['professional', 'vibrant', 'clean']
+      const validSchemes = ['professional', 'vibrant', 'clean', 'apple']
       if (validSchemes.includes(s.colorScheme)) {
         useEngagementPrefsStore
           .getState()
