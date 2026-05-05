@@ -19,7 +19,7 @@ export interface EngagementPrefs {
   badges: boolean
   /** Enable page transitions and celebratory effects */
   animations: boolean
-  /** Color scheme: professional (default) or vibrant */
+  /** Color scheme: clean (default) or professional/vibrant/apple */
   colorScheme: ColorScheme
   /**
    * Courses page view mode (E99-S01).
@@ -64,7 +64,7 @@ function loadPersistedPrefs(): EngagementPrefs {
           typeof parsed.animations === 'boolean' ? parsed.animations : defaults.animations,
         colorScheme: ['professional', 'vibrant', 'clean', 'apple'].includes(parsed.colorScheme)
           ? parsed.colorScheme
-          : 'professional',
+          : defaults.colorScheme,
         courseViewMode: VALID_COURSE_VIEW_MODES.includes(parsed.courseViewMode)
           ? parsed.courseViewMode
           : 'grid',
