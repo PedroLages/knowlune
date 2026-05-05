@@ -196,7 +196,25 @@ export function ImportedCourseListRow({
             {authorData ? authorData.name : 'Unknown Author'}
           </p>
 
-          {/* Progress bar (thin) */}
+          {/* Inline metadata (counts, duration) — shown on tablet+ */}
+          <div className="hidden sm:flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+            <span className="flex items-center gap-1">
+              <Video className="size-4" aria-hidden="true" />
+              {course.videoCount}
+            </span>
+            {course.totalDuration != null && course.totalDuration > 0 && (
+              <span className="flex items-center gap-1">
+                <Clock className="size-4" aria-hidden="true" />
+                {formatCourseDuration(course.totalDuration)}
+              </span>
+            )}
+            <span className="flex items-center gap-1">
+              <FileText className="size-4" aria-hidden="true" />
+              {course.pdfCount}
+            </span>
+          </div>
+
+          {/* Progress bar (thin) — after metadata for scannable order */}
           {completionPercent > 0 && (
             <div
               className="mt-1 h-0.5 w-full max-w-48 bg-muted rounded-full overflow-hidden"
@@ -213,24 +231,6 @@ export function ImportedCourseListRow({
               />
             </div>
           )}
-
-          {/* Inline metadata (counts, duration) — shown on tablet+ */}
-          <div className="hidden sm:flex items-center gap-3 mt-1 text-xs text-muted-foreground">
-            <span className="flex items-center gap-1">
-              <Video className="size-3" aria-hidden="true" />
-              {course.videoCount}
-            </span>
-            {course.totalDuration != null && course.totalDuration > 0 && (
-              <span className="flex items-center gap-1">
-                <Clock className="size-3" aria-hidden="true" />
-                {formatCourseDuration(course.totalDuration)}
-              </span>
-            )}
-            <span className="flex items-center gap-1">
-              <FileText className="size-3" aria-hidden="true" />
-              {course.pdfCount}
-            </span>
-          </div>
         </div>
 
         {/* Tag badges — hidden on mobile, capped on desktop */}
