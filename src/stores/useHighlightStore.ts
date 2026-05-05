@@ -98,24 +98,33 @@ export const useHighlightStore = create<HighlightStoreState>((set, get) => ({
   },
 
   deleteHighlight: async (highlightId: string) => {
-    const highlight = get().highlights.find(h => h.id === highlightId)
-    if (!highlight) return
+    let highlight = get().highlights.find(h => h.id === highlightId)
+    let optimisticRemoval = true
 
-    // Optimistic removal
-    set(state => ({
-      highlights: state.highlights.filter(h => h.id !== highlightId),
-      selectedHighlightId:
-        state.selectedHighlightId === highlightId ? null : state.selectedHighlightId,
-    }))
+    if (!highlight) {
+      const row = await db.bookHighlights.get(highlightId)
+      if (!row) return
+      highlight = row
+      optimisticRemoval = false
+    }
+
+    if (optimisticRemoval) {
+      set(state => ({
+        highlights: state.highlights.filter(h => h.id !== highlightId),
+        selectedHighlightId:
+          state.selectedHighlightId === highlightId ? null : state.selectedHighlightId,
+      }))
+    }
 
     try {
       await persistWithRetry(() => syncableWrite('bookHighlights', 'delete', highlightId))
       appEventBus.emit({ type: 'highlight:deleted', highlightId, bookId: highlight.bookId })
     } catch {
-      // Rollback
-      set(state => ({
-        highlights: [...state.highlights, highlight],
-      }))
+      if (optimisticRemoval) {
+        set(state => ({
+          highlights: [...state.highlights, highlight],
+        }))
+      }
       throw new Error('Failed to delete highlight')
     }
   },

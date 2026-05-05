@@ -1,0 +1,17 @@
+{
+  "runId": "20260505-222526-c7ca0c9a",
+  "blockers": 0,
+  "high": 0,
+  "medium": 0,
+  "low": 1,
+  "nit": 0,
+  "findings": [
+    {
+      "id": "R2-001",
+      "severity": "low",
+      "autofixClass": "advisory",
+      "owner": "human",
+      "suggestedFix": "Add a note to the storage-setup.sql file header acknowledging the learning-path-covers divergence from the userId folder convention, or add a separate section comment above the learning-path-covers block explaining the flat-key pattern for this bucket."
+    }
+  ]
+}

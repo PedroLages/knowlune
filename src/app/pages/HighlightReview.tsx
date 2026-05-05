@@ -20,6 +20,7 @@ import { motion, AnimatePresence } from 'motion/react'
 import { toast } from 'sonner'
 import { db } from '@/db/schema'
 import { useBookStore } from '@/stores/useBookStore'
+import { useHighlightStore } from '@/stores/useHighlightStore'
 import { Button } from '@/app/components/ui/button'
 import { Skeleton } from '@/app/components/ui/skeleton'
 import { HighlightReviewCard } from '@/app/components/highlights/HighlightReviewCard'
@@ -110,6 +111,39 @@ export function HighlightReview() {
   useEffect(() => {
     ratingsRef.current = ratings
   }, [ratings])
+
+  const handleDelete = useCallback(async (highlightId: string) => {
+    const snapshotHighlights = highlightsRef.current
+    const snapshotRatings = ratingsRef.current
+    const snapshotCloze = clozeHighlight
+    const snapshotClozeOpen = clozeOpen
+
+    setHighlights(prev => {
+      const next = prev.filter(h => h.id !== highlightId)
+      setCurrentIndex(idx => Math.min(idx, Math.max(0, next.length - 1)))
+      return next
+    })
+    setRatings(prev => {
+      const next = { ...prev }
+      delete next[highlightId]
+      return next
+    })
+    if (snapshotCloze?.id === highlightId) {
+      setClozeOpen(false)
+      setClozeHighlight(null)
+    }
+
+    try {
+      await useHighlightStore.getState().deleteHighlight(highlightId)
+    } catch (err) {
+      console.error('[HighlightReview] Failed to delete highlight:', err)
+      setHighlights(snapshotHighlights)
+      setRatings(snapshotRatings)
+      setClozeHighlight(snapshotCloze)
+      setClozeOpen(snapshotClozeOpen)
+      toast.error('Failed to delete highlight. Please try again.')
+    }
+  }, [clozeHighlight, clozeOpen])
 
   const handleRate = useCallback(
     async (highlightId: string, rating: 'keep' | 'dismiss') => {
@@ -264,6 +298,7 @@ export function HighlightReview() {
                 }}
                 onRate={handleRate}
                 currentRating={ratings[currentHighlight.id] ?? currentHighlight.reviewRating}
+                onDelete={handleDelete}
               />
             )}
           </motion.div>
