@@ -29,6 +29,10 @@ interface LearningPathState {
   createPath: (name: string, description?: string) => Promise<LearningPath>
   renamePath: (pathId: string, name: string) => Promise<void>
   updateDescription: (pathId: string, description: string) => Promise<void>
+  updatePathCover: (
+    pathId: string,
+    cover: { coverImageUrl?: string; coverPreset?: string }
+  ) => Promise<void>
   deletePath: (pathId: string) => Promise<void>
   deletePathWithUndo: (pathId: string) => void
   restorePath: (pathId: string) => void
@@ -62,6 +66,14 @@ interface LearningPathState {
     courseId: string,
     suggestedPosition: number,
     justification: string
+  ) => Promise<void>
+
+  // Gap entry resolution
+  replaceGapEntry: (
+    pathId: string,
+    gapEntryId: string,
+    newCourseId: string,
+    newCourseType: 'imported' | 'catalog'
   ) => Promise<void>
 
   // Batch operations
@@ -247,6 +259,43 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
         error: 'Failed to update path description',
       })
       toast.error('Failed to update path description')
+    }
+  },
+
+  updatePathCover: async (pathId, cover) => {
+    const now = new Date().toISOString()
+    const prevPaths = get().paths
+    const prevActivePath = get().activePath
+    const existing = prevPaths.find(p => p.id === pathId)
+    if (!existing) return
+
+    // Optimistic update
+    set(state => ({
+      paths: state.paths.map(p =>
+        p.id === pathId ? { ...p, ...cover, updatedAt: now } : p
+      ),
+      activePath:
+        state.activePath?.id === pathId
+          ? { ...state.activePath, ...cover, updatedAt: now }
+          : state.activePath,
+      error: null,
+    }))
+
+    try {
+      await persistWithRetry(async () => {
+        await syncableWrite('learningPaths', 'put', {
+          ...existing,
+          ...cover,
+        } as unknown as SyncableRecord)
+      })
+    } catch (error) {
+      console.error('[LearningPathStore] Failed to update path cover:', error)
+      set({
+        paths: prevPaths,
+        activePath: prevActivePath,
+        error: 'Failed to update path cover',
+      })
+      toast.error('Failed to update path cover')
     }
   },
 
@@ -891,6 +940,63 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
       console.error('[LearningPathStore] Failed to apply placement suggestion:', error)
       set({ error: 'Failed to apply placement suggestion' })
     })
+  },
+
+  replaceGapEntry: async (pathId, gapEntryId, newCourseId, newCourseType) => {
+    const state = get()
+    const gapEntry = state.entries.find(e => e.id === gapEntryId && e.pathId === pathId)
+    if (!gapEntry) return
+
+    // Check duplicate — the new course must not already exist in this path
+    const existingEntries = state.entries.filter(e => e.pathId === pathId)
+    if (existingEntries.some(e => e.courseId === newCourseId)) {
+      set({ error: 'Course is already in this learning path' })
+      return
+    }
+
+    const replacementEntry: LearningPathEntry = {
+      id: crypto.randomUUID(),
+      pathId,
+      courseId: newCourseId,
+      courseType: newCourseType,
+      position: gapEntry.position,
+      justification: gapEntry.justification,
+      isManuallyOrdered: false,
+    }
+
+    const prevEntries = get().entries
+    const prevPaths = get().paths
+
+    // Optimistic update — remove gap entry, add real course
+    set(state => ({
+      entries: [
+        ...state.entries.filter(e => e.id !== gapEntryId),
+        replacementEntry,
+      ],
+      paths: state.paths.map(p =>
+        p.id === pathId ? { ...p, updatedAt: new Date().toISOString() } : p
+      ),
+      error: null,
+    }))
+
+    try {
+      await persistWithRetry(async () => {
+        await syncableWrite('learningPathEntries', 'delete', gapEntryId)
+        await syncableWrite('learningPathEntries', 'add', replacementEntry as unknown as SyncableRecord)
+        const existingPath = await db.learningPaths.get(pathId)
+        if (existingPath) {
+          await syncableWrite('learningPaths', 'put', existingPath as unknown as SyncableRecord)
+        }
+      })
+    } catch (error) {
+      console.error('[LearningPathStore] Failed to replace gap entry:', error)
+      set({
+        entries: prevEntries,
+        paths: prevPaths,
+        error: 'Failed to resolve gap entry',
+      })
+      toast.error('Failed to resolve gap entry')
+    }
   },
 
   createPathWithCourses: async (

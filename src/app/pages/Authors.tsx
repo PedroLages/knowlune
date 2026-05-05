@@ -38,6 +38,7 @@ import {
   type AuthorView,
 } from '@/lib/authors'
 import { HeaderSearchButton } from '@/app/components/figma/HeaderSearchButton'
+import { cn } from '@/app/components/ui/utils'
 import { getCourseCompletionPercent } from '@/lib/progress'
 import { AuthorFormDialog } from '@/app/components/authors/AuthorFormDialog'
 import { AuthorAboutSection } from '@/app/components/authors/AuthorAboutSection'
@@ -226,7 +227,7 @@ export function Authors() {
             />
           )}
           gridClassName="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-[var(--content-gap)]"
-          estimateRowHeight={320}
+          estimateRowHeight={260}
           data-testid="authors-virtual-grid"
         />
       )}
@@ -273,12 +274,12 @@ function AuthorCard({
         className="block min-w-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 rounded-2xl"
         data-testid="author-card"
       >
-        <Card className="h-full min-w-0 rounded-2xl border-0 shadow-sm hover:shadow-xl hover:scale-[1.02] transition-all duration-300">
-          <CardContent className="flex flex-col items-center text-center p-6 pt-8 min-w-0 w-full">
+        <Card className="h-full min-w-0 rounded-2xl border-0 shadow-sm hover:shadow-xl motion-safe:hover:scale-[1.02] transition-all duration-300">
+          <CardContent className="flex flex-col items-center text-center p-5 pt-6 min-w-0 w-full">
             {/* Avatar */}
-            <Avatar className="size-24 mb-4 ring-2 ring-border/50 group-hover:ring-brand/30 transition-all">
-              <AvatarImage {...getAvatarSrc(author.avatar, 96)} alt={author.name} />
-              <AvatarFallback className="text-lg font-semibold bg-brand/10 text-brand">
+            <Avatar className="size-20 mb-3 ring-2 ring-border/50 group-hover:ring-brand/30 transition-all">
+              <AvatarImage {...getAvatarSrc(author.avatar, 80)} alt={author.name} />
+              <AvatarFallback className="text-lg font-semibold bg-brand/10 text-brand" aria-hidden="true">
                 {getInitials(author.name)}
               </AvatarFallback>
             </Avatar>
@@ -319,10 +320,8 @@ function AuthorCard({
                 )}
               </div>
             )}
-            {author.specialties.length === 0 && <div className="mb-5 mt-3" />}
-
-            {/* Stats Row */}
-            <div className="flex items-center justify-center gap-6 text-sm text-muted-foreground">
+            {/* Stats Row — pushed to bottom via flex-grow when no specialties */}
+            <div className={cn('flex items-center justify-center gap-6 text-sm text-muted-foreground', author.specialties.length === 0 && 'mt-auto')}>
               <div className="flex items-center gap-1.5" data-testid="author-course-count">
                 <BookOpen className="size-4 text-brand" aria-hidden="true" />
                 <span className="tabular-nums font-medium">{author.courseCount}</span>
@@ -414,9 +413,9 @@ function FeaturedAuthorProfile({
         <CardContent className="p-6 sm:p-8">
           <div className="flex flex-col sm:flex-row gap-6">
             {/* Large Avatar */}
-            <Avatar className="size-28 sm:size-36 shrink-0 ring-2 ring-border/50 self-center sm:self-start">
-              <AvatarImage {...getAvatarSrc(author.avatar, 192)} alt={author.name} />
-              <AvatarFallback className="text-3xl font-semibold bg-brand/10 text-brand">
+            <Avatar className="size-24 sm:size-32 shrink-0 ring-2 ring-border/50 self-center sm:self-start">
+              <AvatarImage {...getAvatarSrc(author.avatar, 128)} alt={author.name} />
+              <AvatarFallback className="text-2xl font-semibold bg-brand/10 text-brand" aria-hidden="true">
                 {getInitials(author.name)}
               </AvatarFallback>
             </Avatar>
@@ -500,7 +499,7 @@ function FeaturedAuthorProfile({
           </div>
 
           {/* Stats strip */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-6">
+          <div className="flex flex-wrap justify-center gap-3 mt-6">
             <div className="flex flex-col items-center gap-1 rounded-xl bg-muted ring-1 ring-border/20 p-4 shadow-sm">
               <BookOpen className="size-5 text-brand mb-1" aria-hidden="true" />
               <span className="text-xl font-bold tabular-nums">{totalCourseCount}</span>

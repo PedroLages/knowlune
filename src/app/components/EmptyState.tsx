@@ -44,7 +44,8 @@ export function EmptyState({
 
   return (
     <motion.div
-      role="status"
+      role="region"
+      aria-label={title}
       variants={fadeUp}
       initial={shouldReduceMotion ? false : 'hidden'}
       animate="visible"
@@ -54,7 +55,7 @@ export function EmptyState({
         <CardContent className="flex flex-col items-center justify-center py-12 px-6 text-center">
           <div className="size-16 rounded-full bg-brand-soft flex items-center justify-center mb-4">
             <Icon
-              className="size-8 text-brand-muted"
+              className="size-8 text-brand-soft-foreground"
               aria-hidden="true"
               data-testid="empty-state-icon"
             />

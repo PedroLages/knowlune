@@ -34,8 +34,8 @@ The current UI is close to "premium", but three gaps are holding it back:
 
 ## Requirements Trace
 
-- R1. **Learning Paths cards are ~20% smaller** without losing information hierarchy.
-- R2. **Authors cards are ~20% smaller** without losing readability or actions.
+- R1. **Learning Paths cards are ~20% smaller** without losing information hierarchy. Objective metric: path cards should be <=280px height (down from ~350px) so that items per viewport increase by >=25% at 1440px width.
+- R2. **Authors cards are ~20% smaller** without losing readability or actions. Objective metric: authors cards should be <=260px height (down from ~320px) so that items per viewport increase by >=25% at 1440px width.
 - R3. Learning Path cards remain **keyboard accessible** and meet WCAG expectations (tab order, touch targets, reduced motion, contrast).
 - R4. Users can **change a Learning Path cover image** (at least via overflow menu → dialog), with safe fallbacks.
 - R5. DevOps Roadmap detail page is redesigned top-to-bottom into a **map-first experience** with a **List** fallback/toggle, clear "Up next", and coherent sidebar/focus panel.
@@ -114,13 +114,12 @@ The current UI is close to "premium", but three gaps are holding it back:
 - Should roadmap redesign require new data? **No** — use existing path entries + progress computations.
 - Should `window.location.href` fallback in "path not found" be fixed? **Yes** — use React Router `navigate()` to preserve SPA state (origin H-1).
 - Should delete path have a confirmation dialog? **Yes** — `AlertDialog` before deletion, not just undo toast (origin H-4).
+- Exact storage strategy for cover images: **Option B — Supabase Storage**. Upload processed cover images to a Supabase Storage bucket (e.g., `learning-path-covers/`) and persist the public URL on the `LearningPath` record. This ensures cover images survive across devices through the existing sync engine, unlike Dexie/OPFS blob URLs which are local-only. The upload pipeline mirrors the existing pattern in `src/lib/thumbnailService.ts` (resize + JPEG output) and the book cover upload UX in `src/app/components/library/BookMetadataEditor.tsx`. Processing should stabilize aspect ratio to avoid flex-compression/letterboxing regressions (see `docs/solutions/ui-bugs/audiobook-cover-letterbox-flex-compression-2026-04-25.md`).
 
 ### Deferred to Implementation
 
-- Exact storage strategy for cover images:
-  - (A) store a processed image blob in Dexie/OPFS and reference via object URL, or
-  - (B) store a persisted URL in Supabase Storage (preferred for cross-device sync).
-  The implementation should choose the option that matches existing storage patterns for similar assets.
+- Exact Supabase Storage bucket name and folder structure: determined during implementation based on existing storage layout conventions.
+- Image processing dimensions and quality parameters: determined during implementation to balance visual quality and storage footprint.
 
 ## High-Level Technical Design
 
@@ -270,7 +269,7 @@ The current UI is close to "premium", but three gaps are holding it back:
 - Implement the "Option A" flow from the design review:
   - Overflow menu item "Change cover" -> dialog.
   - Dialog supports: gradient preset selection + image upload + remove/reset.
-- For upload: process images to a stable format and aspect ratio (mirroring existing patterns used for thumbnails/covers elsewhere in the app, e.g. `src/lib/thumbnailService.ts` and book cover upload handling in `src/app/components/library/BookMetadataEditor.tsx`).
+- For upload: process images to a stable format and aspect ratio (mirroring existing patterns used for thumbnails/covers elsewhere in the app, e.g. `src/lib/thumbnailService.ts` and book cover upload handling in `src/app/components/library/BookMetadataEditor.tsx`). Upload the processed image to Supabase Storage (bucket: `learning-path-covers/`), then persist the resulting public URL as `coverImageUrl` on the `LearningPath` record. This ensures covers survive cross-device sync (see resolved Open Questions for rationale).
 - Ensure cover rendering is layout-stable: avoid flex-compression/letterboxing regressions by using fixed aspect containers and `shrink-0` where appropriate (see `docs/solutions/ui-bugs/audiobook-cover-letterbox-flex-compression-2026-04-25.md`).
 - Ensure the cover is decorative (`alt=""`) and text overlays remain readable (add overlay gradient when an image is present).
 
@@ -323,7 +322,7 @@ The current UI is close to "premium", but three gaps are holding it back:
 - Happy path: "Continue" uses Next Best Course and is always visible.
 - Edge case: empty path shows empty state + CTAs; still navigable.
 - Edge case: all complete shows completion state and "Review"/recap CTA.
-- Edge case: gap entries show a clear "resolve" flow and a success state once resolved.
+- Edge case (gap/unmatched resolution): gap entry ("Not in your library") offers three resolution paths: (a) import -- searches the import dialog and adds the matching course, removing the gap badge on success; (b) match -- opens a course picker to link an existing library course, updating the entry and removing the gap badge; (c) replace -- replaces the gap entry with a manually selected course. Each path updates the map/list view without a page reload. An entry left unresolved persists as a gap badge.
 - Error path: offline/degraded disables Suggest Order / Import with clear inline explanation and retry.
 - Destructive action: delete path shows confirmation dialog; only proceeds on explicit confirm.
 - Navigation: "path not found" fallback navigates via SPA router (no full page reload).
@@ -332,6 +331,7 @@ The current UI is close to "premium", but three gaps are holding it back:
 **Verification:**
 - The roadmap (map/list) is now the primary mental model and the page feels "filled" on desktop while staying compact on smaller screens.
 - Delete path requires explicit confirmation.
+- Gap/unmatched entries present import, match, and replace options; each resolution path completes without a page reload and removes the gap badge.
 - Navigation stays within SPA (no `window.location` hard loads).
 
 ## System-Wide Impact

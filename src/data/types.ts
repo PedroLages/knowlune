@@ -456,6 +456,10 @@ export interface LearningPath {
   forkedFrom?: string // template ID this path was forked from (null for original/user-created paths)
   estimatedHours?: number // total estimated hours (copied from template on fork)
   difficultyLabel?: string // e.g. "Beginner → Intermediate" (copied from template on fork)
+  /** Supabase Storage public URL for a custom cover image */
+  coverImageUrl?: string
+  /** Gradient preset key (e.g., 'cyan-blue', 'emerald-green') — used when coverImageUrl is unset */
+  coverPreset?: string
 }
 
 export interface LearningPathEntry {
@@ -466,6 +470,14 @@ export interface LearningPathEntry {
   position: number // 1-indexed sequence position
   justification?: string // AI-provided reasoning for placement
   isManuallyOrdered: boolean // User manually reordered it
+}
+
+/** Lightweight course info for path views — shared by FocusPanel and RoadmapListView */
+export interface PathCourseInfo {
+  name: string
+  type: 'imported' | 'catalog'
+  authorName?: string
+  completionPct: number
 }
 
 // --- Reorder History (local-only personalization) ---

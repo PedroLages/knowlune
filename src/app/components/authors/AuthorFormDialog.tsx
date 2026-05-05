@@ -287,6 +287,8 @@ export function AuthorFormDialog({ open, onOpenChange, author }: AuthorFormDialo
                       setName(e.target.value)
                       if (errors.name) setErrors(prev => ({ ...prev, name: undefined }))
                     }}
+                    required
+                    aria-required="true"
                     aria-invalid={!!errors.name}
                     aria-describedby={errors.name ? 'author-name-error' : undefined}
                     className="border-2"

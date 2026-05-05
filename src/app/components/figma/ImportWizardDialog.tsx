@@ -68,7 +68,7 @@ export function __resetWizardOpenCount(): void {
 export const IMPORT_WIZARD_SET_TARGET = 'import-wizard-set-target' as const
 
 export interface ImportWizardSetTargetEvent extends CustomEvent {
-  detail: { pathId: string | null }
+  detail: { pathId: string | null; gap?: { gapEntryId: string; searchTerm?: string } }
 }
 
 /** Live scan progress shown inside the wizard during folder scanning. */
@@ -113,9 +113,13 @@ interface ImportWizardDialogProps {
   onOpenChange: (open: boolean) => void
   /** Pre-fill step 3 with this path ID when the dialog opens (R3, R4). */
   targetPathId?: string
+  /** Gap entry context for auto-resolution on import success. */
+  gapEntryId?: string
+  /** Search term from gap entry justification, pre-fills course name. */
+  searchTerm?: string
 }
 
-export function ImportWizardDialog({ open, onOpenChange, targetPathId }: ImportWizardDialogProps) {
+export function ImportWizardDialog({ open, onOpenChange, targetPathId, gapEntryId, searchTerm }: ImportWizardDialogProps) {
   const [step, setStep] = useState<WizardStep>('select')
   const [scannedCourse, setScannedCourse] = useState<ScannedCourse | null>(null)
   const [courseName, setCourseName] = useState('')
@@ -142,12 +146,20 @@ export function ImportWizardDialog({ open, onOpenChange, targetPathId }: ImportW
 
   // Refs for singleton guard and target path tracking
   const targetPathIdRef = useRef(targetPathId)
+  const gapEntryIdRef = useRef(gapEntryId)
+  const searchTermRef = useRef(searchTerm)
   const prevOpenRef = useRef(false)
 
-  // Keep targetPathIdRef in sync with prop
+  // Keep refs in sync with props
   useEffect(() => {
     targetPathIdRef.current = targetPathId
   }, [targetPathId])
+  useEffect(() => {
+    gapEntryIdRef.current = gapEntryId
+  }, [gapEntryId])
+  useEffect(() => {
+    searchTermRef.current = searchTerm
+  }, [searchTerm])
 
   // Singleton guard: track open state transitions for wizardOpenCount (R10)
   useEffect(() => {
@@ -164,7 +176,16 @@ export function ImportWizardDialog({ open, onOpenChange, targetPathId }: ImportW
     function handleSetTarget(e: Event) {
       const event = e as ImportWizardSetTargetEvent
       const newTarget = event.detail?.pathId ?? undefined
+      const newGap = event.detail?.gap
       targetPathIdRef.current = newTarget
+      if (newGap) {
+        gapEntryIdRef.current = newGap.gapEntryId
+        searchTermRef.current = newGap.searchTerm
+        // Pre-fill course name with search term from gap
+        if (newGap.searchTerm) {
+          setCourseName(newGap.searchTerm)
+        }
+      }
       // When target is updated while wizard is open, update step 3 UI
       if (newTarget && scannedCourse) {
         setSelectedPathId(newTarget)
@@ -345,7 +366,7 @@ export function ImportWizardDialog({ open, onOpenChange, targetPathId }: ImportW
     try {
       const scanned = await scanCourseFolder()
       setScannedCourse(scanned)
-      setCourseName(scanned.name)
+      setCourseName(searchTermRef.current || scanned.name)
       setTags([]) // Start with empty tags; AI or user will populate
       setDescription('')
       setAiTagsApplied(false)
@@ -366,7 +387,7 @@ export function ImportWizardDialog({ open, onOpenChange, targetPathId }: ImportW
     try {
       const scanned = await scanFromDroppedFiles(files, 'Imported Course')
       setScannedCourse(scanned)
-      setCourseName(scanned.name)
+      setCourseName(searchTermRef.current || scanned.name)
       setTags([])
       setDescription('')
       setAiTagsApplied(false)
@@ -417,18 +438,32 @@ export function ImportWizardDialog({ open, onOpenChange, targetPathId }: ImportW
         )
       }
 
-      // Add to learning path if one was selected (E26-S04)
-      if (pathChoice !== 'skip' && importedCourse) {
+      // Add to learning path or resolve gap entry
+      if (importedCourse) {
         const courseId = importedCourse.id
+        const currentGapEntryId = gapEntryIdRef.current
+        const currentTargetPathId = targetPathIdRef.current
+
         try {
-          if (pathChoice === 'new' && newPathName.trim()) {
-            const newPath = await createPath(newPathName.trim())
-            await addCourseToPath(newPath.id, courseId, 'imported')
-            toast.success(`Added to new path "${newPathName.trim()}"`)
-          } else if (selectedPathId) {
-            await addCourseToPath(selectedPathId, courseId, 'imported')
-            const pathName = learningPaths.find(p => p.id === selectedPathId)?.name
-            toast.success(`Added to "${pathName}"`)
+          if (currentGapEntryId && currentTargetPathId) {
+            // Resolve the gap entry: replace the placeholder with the newly imported course
+            await useLearningPathStore.getState().replaceGapEntry(
+              currentTargetPathId,
+              currentGapEntryId,
+              courseId,
+              'imported'
+            )
+            toast.success('Gap entry resolved with imported course')
+          } else if (pathChoice !== 'skip') {
+            if (pathChoice === 'new' && newPathName.trim()) {
+              const newPath = await createPath(newPathName.trim())
+              await addCourseToPath(newPath.id, courseId, 'imported')
+              toast.success(`Added to new path "${newPathName.trim()}"`)
+            } else if (selectedPathId) {
+              await addCourseToPath(selectedPathId, courseId, 'imported')
+              const pathName = learningPaths.find(p => p.id === selectedPathId)?.name
+              toast.success(`Added to "${pathName}"`)
+            }
           }
         } catch {
           toast.error('Course imported, but failed to add to learning path')

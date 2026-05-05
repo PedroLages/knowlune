@@ -1,0 +1,84 @@
+{
+  "runId": "20260505-144148-f4fde7bb",
+  "mode": "headless",
+  "scope": "branch cursor/ce-artifacts-2026-05-05, base 179ce0eb, 21 files changed",
+  "plan": "docs/plans/2026-05-05-002-fix-learning-paths-authors-roadmap-ux-plan.md",
+  "planSource": "explicit",
+  "intent": "Ship cohesive UX polish: reduce card density ~20% on Learning Paths and Authors pages, add cover image customization, and redesign the DevOps Roadmap detail page into a map-first experience with list toggle and unified focus panel. Fix accessibility blockers across all touched surfaces. Round 2: re-check gap resolution context (P1) and storage ordering (P2) fixes from Round 1.",
+  "reviewers": ["correctness", "testing", "maintainability", "project-standards", "agent-native-reviewer", "learnings-researcher", "security", "reliability", "adversarial", "kieran-typescript", "julik-frontend-races"],
+  "verdict": "Ready with fixes",
+  "findings": [
+    {
+      "id": "R2-001",
+      "severity": "P2",
+      "file": "src/app/components/learning-path/FocusPanel.tsx",
+      "line": 47,
+      "title": "FocusPanel 'Up Next' includes unresolved gap entries as 'Unknown Course'",
+      "confidence": 0.85,
+      "autofix_class": "safe_auto",
+      "owner": "review-fixer",
+      "requires_verification": false,
+      "pre_existing": false,
+      "suggested_fix": "Add `if (e.courseId === '') return false` guard before the completionPct check in upcomingEntries filter"
+    },
+    {
+      "id": "R2-002",
+      "severity": "P3",
+      "file": "src/app/pages/LearningPathDetail.tsx",
+      "line": 614,
+      "title": "currentIndex computed via indexOf on full entries array includes gap entries, potentially misaligning trail map CURRENT marker",
+      "confidence": 0.70,
+      "autofix_class": "gated_auto",
+      "owner": "downstream-resolver",
+      "requires_verification": false,
+      "pre_existing": false,
+      "suggested_fix": "Compute currentIndex by filtering out gap entries first, or use findIndex with a predicate that skips gaps"
+    },
+    {
+      "id": "R2-003",
+      "severity": "P3",
+      "file": "src/app/components/figma/PathCardHeader.tsx",
+      "line": 9,
+      "title": "Hardcoded Tailwind gradient color classes (e.g. 'from-cyan-400 to-blue-600') in GRADIENTS array",
+      "confidence": 0.60,
+      "autofix_class": "advisory",
+      "owner": "human",
+      "requires_verification": false,
+      "pre_existing": false,
+      "suggested_fix": "Consider extracting gradient colors as CSS custom properties in theme.css for consistency. Low priority since gradients are decorative, not semantic."
+    }
+  ],
+  "appliedFixes": [
+    {
+      "findingId": "R2-001",
+      "file": "src/app/components/learning-path/FocusPanel.tsx",
+      "line": 46,
+      "description": "Added `if (e.courseId === '') return false` guard to exclude unresolved gap entries from Up Next section"
+    }
+  ],
+  "round1Recheck": {
+    "p1_gapResolutionContext": {
+      "status": "fixed",
+      "files": ["src/app/hooks/useImportWizardTrigger.ts", "src/app/components/figma/ImportWizardDialog.tsx", "src/app/pages/LearningPathDetail.tsx", "src/stores/useLearningPathStore.ts"],
+      "verification": "GapContext interface added, trigger accepts gap parameter, ImportWizardDialog accepts gapEntryId/searchTerm props, replaceGapEntry store method added with optimistic update + rollback, import wizard auto-resolves gaps on import, course picker resolves gaps on match/replace"
+    },
+    "p2_storageOrdering": {
+      "status": "fixed",
+      "files": ["src/app/components/learning-path/PathCoverDialog.tsx"],
+      "verification": "handleRemove now captures previous cover state, updates store optimistically first, then deletes from Supabase Storage, with proper store rollback on storage failure"
+    }
+  },
+  "preExisting": [],
+  "residualRisks": [],
+  "testingGaps": [
+    "No unit test coverage for new FocusPanel gap-entry filtering",
+    "No integration test for gap resolution flow end-to-end (import wizard → replaceGapEntry → list refresh)",
+    "No test for TrailMap currentIndex with mixed gap/real entries"
+  ],
+  "coverage": {
+    "suppressedCount": 1,
+    "suppressedDetail": "R2-003 (PathCardHeader hardcoded gradient colors) suppressed at 0.60 confidence threshold",
+    "untrackedExcluded": ["src/app/components/authors/AuthorSocialLinks.tsx"],
+    "failedReviewers": []
+  }
+}

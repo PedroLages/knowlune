@@ -36,6 +36,8 @@ interface PathCardHeaderProps {
   completionPct: number
   /** Whether the path was AI-generated */
   isAIGenerated?: boolean
+  /** Custom cover image URL (Supabase Storage public URL) */
+  coverImageUrl?: string
   /** Additional className */
   className?: string
 }
@@ -50,19 +52,43 @@ export function PathCardHeader({
   pathName,
   completionPct,
   isAIGenerated,
+  coverImageUrl,
   className,
 }: PathCardHeaderProps) {
   const isCompleted = completionPct >= 100
   const isNotStarted = completionPct === 0
+  const hasCoverImage = !!coverImageUrl
 
   const gradient = isNotStarted
     ? MUTED_GRADIENT
     : GRADIENTS[hashString(pathName) % GRADIENTS.length]
 
   return (
-    <div className={cn('relative h-32 bg-gradient-to-br overflow-hidden', gradient, className)}>
-      {/* Subtle radial highlight */}
-      <div className="absolute inset-0 opacity-20 bg-[radial-gradient(circle_at_50%_120%,rgba(255,255,255,0.8),transparent)]" />
+    <div
+      className={cn(
+        'relative h-24 overflow-hidden',
+        hasCoverImage ? 'bg-muted' : `bg-gradient-to-br ${gradient}`,
+        className
+      )}
+    >
+      {/* Cover image */}
+      {coverImageUrl && (
+        <>
+          <img
+            src={coverImageUrl}
+            alt=""
+            className="absolute inset-0 w-full h-full object-cover shrink-0"
+            loading="lazy"
+          />
+          {/* Overlay gradient for text readability */}
+          <div className="absolute inset-0 bg-gradient-to-b from-black/10 to-black/50" />
+        </>
+      )}
+
+      {/* Subtle radial highlight — only on gradient backgrounds */}
+      {!hasCoverImage && (
+        <div className="absolute inset-0 opacity-20 bg-[radial-gradient(circle_at_50%_120%,rgba(255,255,255,0.8),transparent)]" />
+      )}
 
       {/* Completed overlay */}
       {isCompleted && (
