@@ -19,6 +19,9 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import Dexie from 'dexie'
 import { vi } from 'vitest'
 import type { BookHighlight, VocabularyItem } from '@/data/types'
+import { persistWithRetry } from '@/lib/persistWithRetry'
+import type { SyncableRecord } from '@/lib/sync/syncableWrite'
+import { syncableWrite } from '@/lib/sync/syncableWrite'
 
 let useHighlightStore: (typeof import('@/stores/useHighlightStore'))['useHighlightStore']
 let useVocabularyStore: (typeof import('@/stores/useVocabularyStore'))['useVocabularyStore']
@@ -124,6 +127,24 @@ describe('E93-S06 sync wiring — bookHighlights', () => {
 
     const stored = await db.bookHighlights.get(highlight.id)
     expect(stored).toBeUndefined()
+
+    const entries = await getQueueEntries('bookHighlights')
+    const deleteEntry = entries.find(e => e.operation === 'delete')
+    expect(deleteEntry).toBeDefined()
+    expect(deleteEntry!.payload).toEqual({ id: highlight.id })
+  })
+
+  it('deleteHighlight when highlight is not in Zustand memory → still removes Dexie row and queues delete', async () => {
+    const highlight = makeHighlight()
+    await persistWithRetry(() =>
+      syncableWrite('bookHighlights', 'put', highlight as unknown as SyncableRecord)
+    )
+
+    expect(useHighlightStore.getState().highlights).toHaveLength(0)
+
+    await useHighlightStore.getState().deleteHighlight(highlight.id)
+
+    expect(await db.bookHighlights.get(highlight.id)).toBeUndefined()
 
     const entries = await getQueueEntries('bookHighlights')
     const deleteEntry = entries.find(e => e.operation === 'delete')

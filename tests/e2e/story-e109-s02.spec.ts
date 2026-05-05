@@ -58,6 +58,46 @@ test.describe('Daily Highlight Review (E109-S02)', () => {
     await expect(page.getByText(/Test highlight passage number/)).toBeVisible()
   })
 
+  test('permanent delete removes card and updates counter', async ({ page }) => {
+    await navigateAndWait(page, '/')
+    await seedHighlights(page, 2)
+    await navigateAndWait(page, '/highlight-review')
+
+    await expect(page.getByText(/1 \/ 2/)).toBeVisible()
+
+    await page.getByTestId('highlight-delete-trigger-btn').click()
+    await page.getByTestId('highlight-delete-confirm-btn').click()
+
+    await expect(page.getByText(/1 \/ 1/)).toBeVisible()
+    await expect(page.getByTestId('highlight-review-quote')).toBeVisible()
+  })
+
+  test('permanent delete on the only highlight shows empty state', async ({ page }) => {
+    await navigateAndWait(page, '/')
+    await seedHighlights(page, 1)
+    await navigateAndWait(page, '/highlight-review')
+
+    await page.getByTestId('highlight-delete-trigger-btn').click()
+    await page.getByTestId('highlight-delete-confirm-btn').click()
+
+    await expect(page.getByTestId('highlight-review-empty')).toBeVisible()
+    await expect(page.getByText('No highlights yet')).toBeVisible()
+  })
+
+  test('delete confirmation can be cancelled', async ({ page }) => {
+    await navigateAndWait(page, '/')
+    await seedHighlights(page, 1)
+    await navigateAndWait(page, '/highlight-review')
+
+    await expect(page.getByTestId('highlight-review-quote')).toBeVisible()
+
+    await page.getByTestId('highlight-delete-trigger-btn').click()
+    await page.getByTestId('highlight-delete-cancel-btn').click()
+
+    await expect(page.getByTestId('highlight-review-quote')).toBeVisible()
+    await expect(page.getByTestId('highlight-review-empty')).not.toBeVisible()
+  })
+
   test('rating buttons are visible and can be clicked', async ({ page }) => {
     await navigateAndWait(page, '/')
     await seedHighlights(page, 2)

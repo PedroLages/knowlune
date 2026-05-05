@@ -7,10 +7,21 @@
  * @module HighlightReviewCard
  * @since E86-S02 (created), E109-S02 (keep/dismiss rating)
  */
-import { BookOpen, Layers, ChevronRight, ThumbsUp, ThumbsDown } from 'lucide-react'
+import { BookOpen, Layers, ChevronRight, ThumbsUp, ThumbsDown, Trash2 } from 'lucide-react'
 import { useNavigate } from 'react-router'
 import { Card, CardContent } from '@/app/components/ui/card'
 import { Button } from '@/app/components/ui/button'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/app/components/ui/alert-dialog'
 import { cn } from '@/app/components/ui/utils'
 import type { BookHighlight } from '@/data/types'
 
@@ -24,6 +35,7 @@ export interface HighlightReviewCardProps {
   onFlashcard?: (highlight: BookHighlight) => void
   onRate?: (highlightId: string, rating: 'keep' | 'dismiss') => void
   currentRating?: 'keep' | 'dismiss'
+  onDelete?: (highlightId: string) => void
 }
 
 export function HighlightReviewCard({
@@ -36,6 +48,7 @@ export function HighlightReviewCard({
   onFlashcard,
   onRate,
   currentRating,
+  onDelete,
 }: HighlightReviewCardProps) {
   const navigate = useNavigate()
   const isLast = currentIndex === totalCount - 1
@@ -130,6 +143,47 @@ export function HighlightReviewCard({
                 <ThumbsUp className="size-3.5" aria-hidden="true" />
                 Keep
               </Button>
+            </div>
+          )}
+
+          {onDelete && (
+            <div className="flex justify-center pt-1">
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="gap-1.5 text-muted-foreground hover:text-destructive"
+                    aria-label="Delete highlight permanently"
+                    data-testid="highlight-delete-trigger-btn"
+                  >
+                    <Trash2 className="size-3.5" aria-hidden="true" />
+                    Delete from library
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Delete this highlight?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This permanently removes the highlight from your library. This is not the same
+                      as Dismiss, which only hides it from daily review.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel data-testid="highlight-delete-cancel-btn">
+                      Cancel
+                    </AlertDialogCancel>
+                    <AlertDialogAction
+                      data-testid="highlight-delete-confirm-btn"
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      onClick={() => onDelete(highlight.id)}
+                    >
+                      Delete
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             </div>
           )}
         </CardContent>
