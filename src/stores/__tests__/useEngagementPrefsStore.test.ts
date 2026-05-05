@@ -216,7 +216,7 @@ describe('loadPersistedPrefs', () => {
     const state = fresh.getState()
     expect(state.achievements).toBe(true) // default
     expect(state.streaks).toBe(true) // default
-    expect(state.colorScheme).toBe('professional') // default
+    expect(state.colorScheme).toBe('clean') // default
     expect(state.courseViewMode).toBe('grid') // default (E99-S01)
   })
 

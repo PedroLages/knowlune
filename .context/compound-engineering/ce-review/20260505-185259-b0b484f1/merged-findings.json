@@ -1,0 +1,129 @@
+{
+  "runId": "20260505-185259-b0b484f1",
+  "scope": "Branch feature/ce-2026-05-05-feat-apple-design-system against base e1fd5da1",
+  "intent": "Add Apple design system as a 4th color scheme (.apple CSS class) with full token blocks, component radius refactors, grain suppression, settings UI, and test coverage.",
+  "mode": "headless",
+  "verdict": "Ready with fixes",
+  "reviewers": [
+    "correctness (always)",
+    "testing (always)",
+    "maintainability (always)",
+    "project-standards (always)",
+    "agent-native-reviewer (always)",
+    "learnings-researcher (always)",
+    "kieran-typescript (conditional — TypeScript components, hooks, and types modified)"
+  ],
+  "appliedFixes": [],
+  "findings": [
+    {
+      "id": "F-001",
+      "title": "input-group.tsx uses calc(var(--radius) - 5px) — shrinks in Apple scheme",
+      "severity": "P2",
+      "file": "src/app/components/ui/input-group.tsx",
+      "line": 38,
+      "confidence": 0.85,
+      "autofix_class": "advisory",
+      "owner": "human",
+      "requires_verification": true,
+      "pre_existing": false,
+      "suggested_fix": "Accept 6px (Apple tight aesthetic) or add component-scoped --input-group-radius hook. Document disposition.",
+      "merged_from": ["correctness", "kieran-typescript"],
+      "why_it_matters": "The Apple scheme overrides --radius from ~14px (calc-derived) to 11px. Three usages of calc(var(--radius) - 5px) in input-group.tsx drop from ~9px to 6px. While likely acceptable for Apple's tighter inline aesthetic, this was not surfaced in the plan's scope.",
+      "evidence": [
+        "src/app/components/ui/input-group.tsx:38: [&>kbd]:rounded-[calc(var(--radius)-5px)]",
+        "src/app/components/ui/input-group.tsx:81: xs: h-6 gap-1 rounded-[calc(var(--radius)-5px)]",
+        "src/app/components/ui/input-group.tsx:83: 'icon-xs': size-6 rounded-[calc(var(--radius)-5px)]",
+        "Apple --radius override: theme.css line 851: --radius: 11px"
+      ]
+    },
+    {
+      "id": "F-002",
+      "title": "Plan-required --radius audit not performed",
+      "severity": "P2",
+      "file": "src/styles/theme.css",
+      "line": 851,
+      "confidence": 0.85,
+      "autofix_class": "manual",
+      "owner": "downstream-resolver",
+      "requires_verification": false,
+      "pre_existing": false,
+      "suggested_fix": "Document disposition of the 3 input-group.tsx matches found by grep. Accept or add component hooks.",
+      "merged_from": ["correctness"],
+      "why_it_matters": "The plan's Unit 2 verification explicitly requires: 'Run grep -r var(--radius) src/ to identify components referencing the base --radius token directly. Each must be evaluated.' This was not completed. Three matches exist in input-group.tsx.",
+      "evidence": [
+        "Plan document lines 188-191 (Unit 2 Verification section): '--radius audit' requirement",
+        "Matches found: input-group.tsx lines 38, 81, 83"
+      ]
+    },
+    {
+      "id": "F-003",
+      "title": "ColorSchemePicker preview colors are hardcoded hex values",
+      "severity": "P3",
+      "file": "src/app/components/settings/ColorSchemePicker.tsx",
+      "line": 7,
+      "confidence": 0.65,
+      "autofix_class": "advisory",
+      "owner": "human",
+      "requires_verification": false,
+      "pre_existing": true,
+      "suggested_fix": null,
+      "merged_from": ["maintainability"],
+      "why_it_matters": "The schemePreviewColors duplicate token values from theme.css and can drift independently. Pre-existing pattern inherited from Clean/Professional/Vibrant implementations — not a regression.",
+      "evidence": [
+        "schemePreviewColors object lines 7-35 uses hardcoded hex like '#ffffff', '#f5f5f7', '#0066cc'",
+        "Same pattern existed for professional, vibrant, and clean before this change"
+      ]
+    }
+  ],
+  "preExisting": [
+    {
+      "id": "F-004",
+      "title": "loadPersistedPrefs invalid scheme fallback defaults to 'professional' not 'clean'",
+      "severity": "P2",
+      "file": "src/stores/useEngagementPrefsStore.ts",
+      "line": 67,
+      "confidence": 0.70,
+      "autofix_class": "gated_auto",
+      "owner": "downstream-resolver",
+      "requires_verification": true,
+      "pre_existing": true,
+      "suggested_fix": "Change 'professional' fallback on line 67 to defaults.colorScheme (which is now 'clean')",
+      "why_it_matters": "When persisted localStorage has an invalid/missing colorScheme, the fallback returns 'professional' instead of the app-wide default 'clean'. This means corrupted localStorage results in Professional theme instead of Clean.",
+      "evidence": [
+        "line 65-67: colorScheme: ['professional', 'vibrant', 'clean', 'apple'].includes(parsed.colorScheme) ? parsed.colorScheme : 'professional'",
+        "defaults.colorScheme is 'clean' at line 48",
+        "settings.ts defaults.colorScheme is also 'clean' at line 97"
+      ]
+    }
+  ],
+  "residualRisks": [
+    "Apple dark mode WCAG AA contrast not verified in this review (4.5:1 for --foreground vs --background/card)",
+    "Visual regression from 17px base font size (~6.25% rem-scale increase) not checked — plan requires spot-checking 7 routes at desktop and mobile",
+    "motion-safe:active:scale press effect may interact with existing button animation transitions; verify no double-animation on Apple-scheme buttons"
+  ],
+  "testingGaps": [
+    "No test verifies non-Apple schemes produce identical visual output before/after the radius refactor (CSS variable defaults should match hardcoded values — verify with browser rendering)",
+    "No E2E test verifies the .apple class is applied when selected via Settings UI",
+    "No test for the store default migration ('professional' -> 'clean') — existing store tests assert the new default but don't explicitly test the migration path"
+  ],
+  "learnings": [
+    {
+      "source": "docs/solutions/2026-04-25-focus-ring-token-additive-migration.md",
+      "relevance": "Additive token pattern: define in :root first with current-behavior defaults, then override in scheme blocks. Directly followed by this implementation (component hooks in :root, overridden in .apple).",
+      "key_insight": "The additive migration pattern ensures Professional/Vibrant/Clean are visually unchanged while Apple gets custom overrides."
+    }
+  ],
+  "schemaDrift": null,
+  "deploymentNotes": null,
+  "coverage": {
+    "filesReviewed": 12,
+    "untrackedFilesExcluded": [
+      ".context/compound-engineering/ce-runs/feat-apple-design-system-2026-05-05.md",
+      "docs/plans/2026-05-05-004-feat-apple-design-system-plan.md"
+    ],
+    "suppressed": 1,
+    "suppressedDetails": "P3 finding: ColorSchemePicker as ColorScheme type assertion (line 51) — suppressed as borderline pedantic; value is constrained by RadioGroup options.",
+    "tests": "49/49 unit tests pass. Build passes. TypeScript compiles cleanly. Lint: 0 errors, 327 warnings (all pre-existing).",
+    "failedReviewers": []
+  }
+}

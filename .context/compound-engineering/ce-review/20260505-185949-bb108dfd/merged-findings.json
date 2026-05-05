@@ -1,0 +1,59 @@
+{
+  "runId": "20260505-185949-bb108dfd",
+  "base": "e1fd5da1b97175836e4bf63df5ac257df5a40350",
+  "branch": "feature/ce-2026-05-05-feat-apple-design-system",
+  "mode": "headless",
+  "intent": "Add .apple as a 4th color scheme with full CSS token overrides, component radius refactors to CSS custom property hooks, type plumbing, settings UI update, and test coverage.",
+  "plan": {
+    "source": "docs/plans/2026-05-05-004-feat-apple-design-system-plan.md",
+    "plan_source": "explicit",
+    "requirements": {
+      "R1": {"status": "met", "detail": "ColorScheme type includes 'apple', picker shows 4 options"},
+      "R2": {"status": "met", "detail": "Full .apple and .dark.apple token blocks in theme.css"},
+      "R3": {"status": "met", "detail": "Apple radius scale (5/8/11/18px) overridden in .apple block"},
+      "R4": {"status": "met", "detail": "Inter font, 17px base, weight 600 medium in .apple"},
+      "R5": {"status": "met", "detail": "Grain suppressed via :not(.apple) selectors"},
+      "R6": {"status": "met", "detail": "--button-press-scale: 0.95, motion-safe:active:scale applied"},
+      "R7": {"status": "met", "detail": "--shadow-brand/warm/gold: none in both Apple blocks"},
+      "R8": {"status": "met", "detail": ".dark.apple block with Apple-derived dark tokens"},
+      "R9": {"status": "met", "detail": "Radius refactors use CSS vars defaulting to current values"},
+      "R10": {"status": "met", "detail": "Settings UI shows 4 options in grid-cols-2 lg:grid-cols-4"},
+      "R11": {"status": "met", "detail": "No hardcoded Tailwind colors in changed files"}
+    },
+    "implementation_units": {
+      "Unit 1": {"status": "met"},
+      "Unit 2": {"status": "met"},
+      "Unit 3": {"status": "met"},
+      "Unit 4": {"status": "met"},
+      "Unit 5": {"status": "met"},
+      "Unit 6": {"status": "met"}
+    }
+  },
+  "applied_fixes": [
+    {
+      "title": "Store test assertion mismatch after default change",
+      "severity": "P2",
+      "file": "src/stores/__tests__/useEngagementPrefsStore.test.ts",
+      "line": 219,
+      "autofix_class": "safe_auto",
+      "owner": "review-fixer",
+      "suggested_fix": "Changed expect(state.colorScheme).toBe('professional') to expect(state.colorScheme).toBe('clean') to match the new store default"
+    }
+  ],
+  "findings": [],
+  "pre_existing": [],
+  "residual_risks": [
+    "--radius audit: input-group.tsx calc(var(--radius) - 5px) shrinks to ~6px under Apple's 11px base. Accepted in Round 1 as fitting Apple's tighter inline aesthetic."
+  ],
+  "testing_gaps": [],
+  "coverage": {
+    "suppressed": 0,
+    "failed_reviewers": [],
+    "untracked_files_excluded": [
+      ".context/compound-engineering/ce-review/20260505-185259-b0b484f1/",
+      ".context/compound-engineering/ce-runs/feat-apple-design-system-2026-05-05.md",
+      "docs/plans/2026-05-05-004-feat-apple-design-system-plan.md"
+    ]
+  },
+  "verdict": "Ready to merge"
+}
