@@ -360,6 +360,7 @@ export function CourseOverview() {
 
   const totalLessons = videos.length + pdfs.length
   const authorName = adapterAuthorInfo?.name ?? authorData?.name
+  const authorPhotoUrl = authorData?.photoUrl?.trim() || undefined
 
   return (
     <div
@@ -402,24 +403,30 @@ export function CourseOverview() {
             {course.name}
           </motion.h1>
           {authorName && (
-            <div className="flex items-center justify-center gap-2.5">
-              <Avatar className="size-8 shrink-0 ring-1 ring-border/50" aria-hidden="true">
-                <AvatarImage src={authorData?.photoUrl ?? ''} alt="" />
-                <AvatarFallback className="text-xs font-semibold bg-brand/10 text-brand">
-                  {getInitials(authorName)}
-                </AvatarFallback>
-              </Avatar>
-              {authorData?.id ? (
-                <Link
-                  to={`/authors/${authorData.id}`}
-                  className="text-lg text-muted-foreground font-light hover:text-foreground transition-colors inline-flex items-center gap-1"
-                >
-                  By {authorName}
-                </Link>
-              ) : (
+            authorData?.id ? (
+              <Link
+                to={`/authors/${authorData.id}`}
+                className="inline-flex items-center justify-center gap-2.5 text-lg text-muted-foreground font-light hover:text-foreground transition-colors"
+              >
+                <Avatar className="size-8 shrink-0 ring-1 ring-border/50" aria-hidden="true">
+                  {authorPhotoUrl ? <AvatarImage src={authorPhotoUrl} alt="" /> : null}
+                  <AvatarFallback className="text-xs font-semibold bg-brand/10 text-brand">
+                    {getInitials(authorName)}
+                  </AvatarFallback>
+                </Avatar>
+                <span>By {authorName}</span>
+              </Link>
+            ) : (
+              <div className="flex items-center justify-center gap-2.5">
+                <Avatar className="size-8 shrink-0 ring-1 ring-border/50" aria-hidden="true">
+                  {authorPhotoUrl ? <AvatarImage src={authorPhotoUrl} alt="" /> : null}
+                  <AvatarFallback className="text-xs font-semibold bg-brand/10 text-brand">
+                    {getInitials(authorName)}
+                  </AvatarFallback>
+                </Avatar>
                 <p className="text-lg text-muted-foreground font-light">By {authorName}</p>
-              )}
-            </div>
+              </div>
+            )
           )}
 
           {ctaLabel && ctaLessonId && (
