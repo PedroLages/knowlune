@@ -151,16 +151,16 @@ export function LibraryMediaShelfColumn() {
         ))}
       </LibraryMediaShelfRow>
 
-      <LibraryMediaShelfRow
+      <LibraryRail
         icon={Compass}
-        label="Discover"
+        title="Discover"
         count={shelves.discover.length}
         data-testid="media-shelf-discover"
       >
         {shelves.discover.map(book => (
-          <RecentBookCard key={book.id} book={book} />
+          <BookTile key={book.id} book={book} variant="small" />
         ))}
-      </LibraryMediaShelfRow>
+      </LibraryRail>
 
       <LibraryMediaShelfRow
         icon={Repeat2}

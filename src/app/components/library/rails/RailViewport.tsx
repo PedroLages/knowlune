@@ -25,7 +25,7 @@ export const RailViewport = forwardRef<HTMLDivElement, RailViewportProps>(
       <div
         ref={ref}
         className={cn(
-          'flex gap-4 overflow-x-auto pb-2 -mx-2 px-2 scroll-smooth scrollbar-none',
+          'flex gap-4 overflow-x-auto pt-2 pb-2 -mx-2 px-2 scroll-smooth scrollbar-none',
           snap && 'snap-x snap-mandatory',
           className
         )}
