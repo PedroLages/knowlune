@@ -159,7 +159,13 @@ export const BookTile = memo(function BookTile({
             'group-hover/tile:bg-foreground/30 group-focus-within/tile:bg-foreground/30'
           )}
         >
-          <div className="rounded-full bg-black/60 backdrop-blur-md p-2">
+          <div
+            className={cn(
+              'rounded-full bg-black/60 backdrop-blur-md p-2',
+              'opacity-0 transition-opacity duration-200',
+              'group-hover/tile:opacity-100 group-focus-within/tile:opacity-100'
+            )}
+          >
             <ActionIcon
               className={cn(
                 'size-6 text-white',
