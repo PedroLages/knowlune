@@ -255,19 +255,31 @@ DROP POLICY IF EXISTS "Authenticated users can upload learning path covers" ON s
 CREATE POLICY "Authenticated users can upload learning path covers"
   ON storage.objects FOR INSERT
   TO authenticated
-  WITH CHECK (bucket_id = 'learning-path-covers');
+  WITH CHECK (
+    bucket_id = 'learning-path-covers'
+    AND auth.uid() = (SELECT user_id FROM public.learning_paths WHERE id = split_part(storage.filename(name), '.', 1))
+  );
 
 DROP POLICY IF EXISTS "Users can update own learning path covers" ON storage.objects;
 CREATE POLICY "Users can update own learning path covers"
   ON storage.objects FOR UPDATE
   TO authenticated
-  USING (bucket_id = 'learning-path-covers')
-  WITH CHECK (bucket_id = 'learning-path-covers');
+  USING (
+    bucket_id = 'learning-path-covers'
+    AND auth.uid() = (SELECT user_id FROM public.learning_paths WHERE id = split_part(storage.filename(name), '.', 1))
+  )
+  WITH CHECK (
+    bucket_id = 'learning-path-covers'
+    AND auth.uid() = (SELECT user_id FROM public.learning_paths WHERE id = split_part(storage.filename(name), '.', 1))
+  );
 
 DROP POLICY IF EXISTS "Users can delete own learning path covers" ON storage.objects;
 CREATE POLICY "Users can delete own learning path covers"
   ON storage.objects FOR DELETE
   TO authenticated
-  USING (bucket_id = 'learning-path-covers');
+  USING (
+    bucket_id = 'learning-path-covers'
+    AND auth.uid() = (SELECT user_id FROM public.learning_paths WHERE id = split_part(storage.filename(name), '.', 1))
+  );
 
 COMMIT;
