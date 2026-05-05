@@ -25,7 +25,7 @@ export function ControlBarSection({
 }: ControlBarSectionProps) {
   return (
     <div className={cn('flex items-center gap-3', className)}>
-      {showDivider && <Separator orientation="vertical" className="h-6" />}
+      {showDivider && <Separator orientation="vertical" className="!h-6" />}
       <span className="text-xs text-muted-foreground uppercase tracking-wider shrink-0">
         {label}
       </span>
