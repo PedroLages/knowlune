@@ -1,3 +1,4 @@
+import { useReducedMotion } from 'motion/react'
 import { Check, Play, Lock } from 'lucide-react'
 import { cn } from '@/app/components/ui/utils'
 
@@ -22,6 +23,8 @@ interface TrailMapProps {
  * - Upcoming: outlined muted circle with lock icon
  */
 export function TrailMap({ totalCourses, completedCount, currentIndex, className }: TrailMapProps) {
+  const shouldReduceMotion = useReducedMotion()
+
   if (totalCourses === 0) return null
 
   // Calculate waypoint X positions (evenly spaced)
@@ -76,6 +79,8 @@ export function TrailMap({ totalCourses, completedCount, currentIndex, className
         viewBox={`0 0 ${viewWidth} ${viewHeight + 40}`}
         fill="none"
         preserveAspectRatio="xMidYMid meet"
+        role="img"
+        aria-label={`Learning journey: ${completedCount} of ${totalCourses} courses completed`}
       >
         {/* Background trail (dashed) */}
         <path
@@ -109,15 +114,19 @@ export function TrailMap({ totalCourses, completedCount, currentIndex, className
           if (isCurrent) {
             return (
               <g key={i}>
-                {/* Pulsing ring */}
+                {/* Pulsing ring — only animates when reduced motion is not preferred */}
                 <circle cx={wp.x} cy={cy} r="22" fill="var(--brand)" opacity="0.15">
-                  <animate attributeName="r" values="22;28;22" dur="2s" repeatCount="indefinite" />
-                  <animate
-                    attributeName="opacity"
-                    values="0.15;0.05;0.15"
-                    dur="2s"
-                    repeatCount="indefinite"
-                  />
+                  {!shouldReduceMotion && (
+                    <>
+                      <animate attributeName="r" values="22;28;22" dur="2s" repeatCount="indefinite" />
+                      <animate
+                        attributeName="opacity"
+                        values="0.15;0.05;0.15"
+                        dur="2s"
+                        repeatCount="indefinite"
+                      />
+                    </>
+                  )}
                 </circle>
                 {/* Main circle */}
                 <circle
