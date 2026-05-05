@@ -299,7 +299,8 @@ export function ImportedCourseCard({
         {...previewHandlers}
         data-preview={showPreview && videoReady ? '' : undefined}
         className={cn(
-          'group cursor-default focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 outline-none',
+          'group cursor-default focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 outline-none rounded-lg',
+          'hover:-translate-y-0.5 hover:shadow-md motion-safe:transition-all motion-reduce:transition-none motion-reduce:hover:-translate-y-0',
           showPreview && videoReady && 'z-10'
         )}
       >
@@ -504,7 +505,7 @@ export function ImportedCourseCard({
                       </span>
                     )}
                     {course.totalFileSize != null && course.totalFileSize > 0 && (
-                      <span className="text-muted-foreground/70">
+                      <span className="text-muted-foreground">
                         {formatFileSize(course.totalFileSize)}
                       </span>
                     )}
@@ -681,10 +682,10 @@ export function ImportedCourseCard({
                 )}
               </div>
             )}
-            <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+            <div className="mt-auto flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs text-muted-foreground">
               {course.videoCount > 0 && (
                 <span data-testid="course-card-video-count" className="flex items-center gap-1">
-                  <Video className="size-3.5" aria-hidden="true" />
+                  <Video className="size-4" aria-hidden="true" />
                   <span>
                     {course.videoCount} {course.videoCount === 1 ? 'video' : 'videos'}
                   </span>
@@ -692,14 +693,14 @@ export function ImportedCourseCard({
               )}
               {course.pdfCount > 0 && (
                 <span data-testid="course-card-pdf-count" className="flex items-center gap-1">
-                  <FileText className="size-3.5" aria-hidden="true" />
+                  <FileText className="size-4" aria-hidden="true" />
                   <span>
                     {course.pdfCount} {course.pdfCount === 1 ? 'PDF' : 'PDFs'}
                   </span>
                 </span>
               )}
               {course.totalFileSize != null && course.totalFileSize > 0 && (
-                <span data-testid="course-card-file-size" className="text-muted-foreground/70">
+                <span data-testid="course-card-file-size" className="text-muted-foreground">
                   {formatFileSize(course.totalFileSize)}
                 </span>
               )}

@@ -3,7 +3,7 @@ import { cn } from '@/app/components/ui/utils'
 import { ToggleGroup, ToggleGroupItem } from '@/app/components/ui/toggle-group'
 import type { LearnerCourseStatus } from '@/data/types'
 
-const statuses: {
+export const statuses: {
   value: LearnerCourseStatus
   label: string
   icon: typeof Circle
@@ -46,8 +46,7 @@ interface StatusFilterProps {
 
 export function StatusFilter({ selectedStatuses, onSelectedStatusesChange }: StatusFilterProps) {
   return (
-    <div data-testid="status-filter-bar" className="flex flex-wrap gap-2 items-center mb-6">
-      <span className="text-xs text-muted-foreground mr-1">Status:</span>
+    <div data-testid="status-filter-bar" className="flex flex-wrap gap-2 items-center">
       <ToggleGroup
         type="multiple"
         value={selectedStatuses}

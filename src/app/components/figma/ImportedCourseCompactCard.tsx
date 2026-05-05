@@ -206,7 +206,9 @@ export function ImportedCourseCompactCard({
         className={cn(
           'group relative flex flex-col cursor-pointer outline-none',
           'min-h-[44px] min-w-[44px]',
-          'focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 rounded-lg'
+          'hover:ring-1 hover:ring-muted-foreground/30 hover:shadow-sm',
+          'focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 rounded-lg',
+          'motion-safe:transition-shadow'
         )}
       >
         {/* Thumbnail wrapper */}

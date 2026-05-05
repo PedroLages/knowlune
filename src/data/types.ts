@@ -5,7 +5,7 @@ export type CourseCategory =
   | 'operative-training'
   | 'research-library'
 
-export type Difficulty = 'beginner' | 'intermediate' | 'advanced'
+export type Difficulty = 'beginner' | 'intermediate' | 'advanced' | 'expert'
 
 export type ResourceType = 'video' | 'pdf' | 'audio' | 'image' | 'markdown'
 
@@ -175,6 +175,8 @@ export interface ImportedCourse {
   description?: string // AI-suggested or user-entered course description
   importedAt: string // ISO 8601
   category: string
+  /** Learner-assigned difficulty level (optional; used for UI chips + filtering). */
+  difficulty?: Difficulty
   tags: string[]
   status: LearnerCourseStatus
   videoCount: number

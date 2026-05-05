@@ -54,7 +54,9 @@ export function ViewModeToggle({ value, onChange, className }: ViewModeTogglePro
           className={cn(
             'min-h-11 min-w-11 px-3 gap-2',
             'text-muted-foreground',
-            'data-[state=on]:bg-brand-soft data-[state=on]:text-brand-soft-foreground',
+            'data-[state=on]:bg-brand data-[state=on]:text-brand-foreground',
+            'data-[state=on]:ring-1 data-[state=on]:ring-brand/30',
+            'focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-1',
             'motion-safe:transition-colors'
           )}
         >

@@ -12,7 +12,7 @@ import {
 import { ImportedCourseCard } from '@/app/components/figma/ImportedCourseCard'
 import { ImportedCourseCompactCard } from '@/app/components/figma/ImportedCourseCompactCard'
 import { ImportedCourseListRow } from '@/app/components/figma/ImportedCourseListRow'
-import { StatusFilter } from '@/app/components/figma/StatusFilter'
+import { StatusFilter, statuses as statusFilterOptions } from '@/app/components/figma/StatusFilter'
 import { FolderOpen, BookOpen, Youtube } from 'lucide-react'
 import { getImportedCourseCompletionPercent } from '@/lib/progress'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
@@ -25,6 +25,7 @@ import { calculateMomentumScore } from '@/lib/momentum'
 import { HeaderSearchButton } from '@/app/components/figma/HeaderSearchButton'
 import { ViewModeToggle } from '@/app/components/courses/ViewModeToggle'
 import { GridColumnControl } from '@/app/components/courses/GridColumnControl'
+import { ControlBarSection } from '@/app/components/courses/ControlBarSection'
 import { getGridClassName } from '@/app/components/courses/gridClassName'
 import { useEngagementPrefsStore } from '@/stores/useEngagementPrefsStore'
 
@@ -150,6 +151,19 @@ export function Courses() {
 
   const totalCourses = importedCourses.length
 
+  // Lookup map for human-readable status labels (F03)
+  const statusLabelMap = useMemo(() => {
+    const map = new Map<string, string>()
+    for (const s of statusFilterOptions) {
+      map.set(s.value, s.label)
+    }
+    return map
+  }, [])
+
+  const filterSummaryLabel = selectedStatuses
+    .map(s => statusLabelMap.get(s) ?? s)
+    .join(', ')
+
   return (
     <div>
       <div
@@ -224,45 +238,68 @@ export function Courses() {
         </Card>
       ) : (
         <>
-          {/* AC5 (E1C-S05): Sort dropdown alongside filters */}
-          <div className="flex flex-wrap gap-x-6 gap-y-2 items-start">
+          {/* Grouped control bar: Filter, Sort, View sections */}
+          <div className="flex flex-wrap items-center gap-6">
             {importedCourses.length > 0 && (
-              <StatusFilter
-                selectedStatuses={selectedStatuses}
-                onSelectedStatusesChange={setSelectedStatuses}
-              />
+              <ControlBarSection label="Filter" showDivider={false}>
+                <StatusFilter
+                  selectedStatuses={selectedStatuses}
+                  onSelectedStatusesChange={setSelectedStatuses}
+                />
+              </ControlBarSection>
             )}
-            <Select value={sortMode} onValueChange={v => setSortMode(v as SortMode)}>
-              <SelectTrigger
-                data-testid="sort-select"
-                aria-label="Sort courses"
-                className="w-full sm:w-[180px] rounded-xl min-h-[44px]"
-              >
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="recent">Most Recent</SelectItem>
-                <SelectItem value="momentum">Sort by Momentum</SelectItem>
-              </SelectContent>
-            </Select>
-            {/* E99-S01: view mode toggle. All three branches render the existing
-                grid until the list/compact renderers ship in S03/S04. */}
-            <ViewModeToggle
-              value={courseViewMode}
-              onChange={mode => setEngagementPref('courseViewMode', mode)}
-            />
-            {/* E99-S02: grid column control. Visible only in grid view. */}
-            {courseViewMode === 'grid' && (
-              <GridColumnControl
-                value={courseGridColumns}
-                onChange={cols => setEngagementPref('courseGridColumns', cols)}
-              />
-            )}
+            <ControlBarSection label="Sort">
+              <Select value={sortMode} onValueChange={v => setSortMode(v as SortMode)}>
+                <SelectTrigger
+                  data-testid="sort-select"
+                  aria-label="Sort courses"
+                  className="w-full sm:w-[180px] rounded-xl min-h-[44px]"
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="recent">Most Recent</SelectItem>
+                  <SelectItem value="momentum">Sort by Momentum</SelectItem>
+                </SelectContent>
+              </Select>
+            </ControlBarSection>
+            <ControlBarSection label="View">
+              <div className="flex items-center gap-2">
+                <ViewModeToggle
+                  value={courseViewMode}
+                  onChange={mode => setEngagementPref('courseViewMode', mode)}
+                />
+                {/* E99-S02: grid column control. Visible only in grid view. */}
+                {courseViewMode === 'grid' && (
+                  <GridColumnControl
+                    value={courseGridColumns}
+                    onChange={cols => setEngagementPref('courseGridColumns', cols)}
+                  />
+                )}
+              </div>
+            </ControlBarSection>
           </div>
 
-          {/* Imported Courses Section */}
+          {/* Filter summary chip — visible when any status filter is active */}
+          {selectedStatuses.length > 0 && (
+            <div className="mb-4 flex items-center gap-2">
+              <span className="inline-flex items-center gap-1.5 bg-muted/50 rounded-full px-3 py-1 text-xs text-muted-foreground">
+                Filtered by: {filterSummaryLabel}
+              </span>
+              <button
+                type="button"
+                onClick={() => setSelectedStatuses([])}
+                className="text-xs text-muted-foreground hover:text-foreground underline"
+                data-testid="clear-all-filters"
+              >
+                Clear all
+              </button>
+            </div>
+          )}
+
+          {/* Your Courses Section */}
           <div className="mb-8">
-            <h2 className="text-xl font-semibold mb-4">Imported Courses</h2>
+            <h2 className="text-xl font-semibold mb-4">Your Courses</h2>
             {importedCourses.length === 0 ? (
               <div
                 data-testid="imported-courses-empty-state"
