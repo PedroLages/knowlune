@@ -3,7 +3,7 @@ import { cn } from '@/app/components/ui/utils'
 import { ToggleGroup, ToggleGroupItem } from '@/app/components/ui/toggle-group'
 import type { LearnerCourseStatus } from '@/data/types'
 
-const statuses: {
+export const statuses: {
   value: LearnerCourseStatus
   label: string
   icon: typeof Circle

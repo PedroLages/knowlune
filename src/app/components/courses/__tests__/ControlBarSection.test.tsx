@@ -1,7 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { ControlBarSection } from '@/app/components/courses/ControlBarSection'
-import { Button } from '@/app/components/ui/button'
 
 describe('ControlBarSection', () => {
   it('renders label text and children', () => {
@@ -46,8 +45,8 @@ describe('ControlBarSection', () => {
     )
 
     const label = screen.getByText('View')
-    expect(label.className).toContain('uppercase')
-    expect(label.className).toContain('tracking-wider')
-    expect(label.className).toContain('text-xs')
+    expect(label).toHaveClass('uppercase')
+    expect(label).toHaveClass('tracking-wider')
+    expect(label).toHaveClass('text-xs')
   })
 })

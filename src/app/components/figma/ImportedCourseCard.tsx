@@ -300,7 +300,7 @@ export function ImportedCourseCard({
         data-preview={showPreview && videoReady ? '' : undefined}
         className={cn(
           'group cursor-default focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 outline-none rounded-lg',
-          'hover:shadow-md hover:scale-[1.01] motion-safe:transition-all motion-reduce:transition-none motion-reduce:hover:scale-100',
+          'hover:-translate-y-0.5 hover:shadow-md motion-safe:transition-all motion-reduce:transition-none motion-reduce:hover:-translate-y-0',
           showPreview && videoReady && 'z-10'
         )}
       >
@@ -505,7 +505,7 @@ export function ImportedCourseCard({
                       </span>
                     )}
                     {course.totalFileSize != null && course.totalFileSize > 0 && (
-                      <span className="text-muted-foreground/70">
+                      <span className="text-muted-foreground">
                         {formatFileSize(course.totalFileSize)}
                       </span>
                     )}
@@ -700,7 +700,7 @@ export function ImportedCourseCard({
                 </span>
               )}
               {course.totalFileSize != null && course.totalFileSize > 0 && (
-                <span data-testid="course-card-file-size" className="text-muted-foreground/70">
+                <span data-testid="course-card-file-size" className="text-muted-foreground">
                   {formatFileSize(course.totalFileSize)}
                 </span>
               )}

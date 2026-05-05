@@ -67,7 +67,7 @@ export function GridColumnControl({ value, onChange, className }: GridColumnCont
             className={cn(
               'min-h-11 min-w-11 px-3',
               'text-muted-foreground',
-              'data-[state=on]:bg-brand-soft data-[state=on]:text-brand-soft-foreground',
+              'data-[state=on]:bg-brand data-[state=on]:text-brand-foreground',
               'motion-safe:transition-colors'
             )}
           >

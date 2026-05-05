@@ -12,7 +12,7 @@ import {
 import { ImportedCourseCard } from '@/app/components/figma/ImportedCourseCard'
 import { ImportedCourseCompactCard } from '@/app/components/figma/ImportedCourseCompactCard'
 import { ImportedCourseListRow } from '@/app/components/figma/ImportedCourseListRow'
-import { StatusFilter } from '@/app/components/figma/StatusFilter'
+import { StatusFilter, statuses as statusFilterOptions } from '@/app/components/figma/StatusFilter'
 import { FolderOpen, BookOpen, Youtube } from 'lucide-react'
 import { getImportedCourseCompletionPercent } from '@/lib/progress'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
@@ -151,6 +151,19 @@ export function Courses() {
 
   const totalCourses = importedCourses.length
 
+  // Lookup map for human-readable status labels (F03)
+  const statusLabelMap = useMemo(() => {
+    const map = new Map<string, string>()
+    for (const s of statusFilterOptions) {
+      map.set(s.value, s.label)
+    }
+    return map
+  }, [])
+
+  const filterSummaryLabel = selectedStatuses
+    .map(s => statusLabelMap.get(s) ?? s)
+    .join(', ')
+
   return (
     <div>
       <div
@@ -271,7 +284,7 @@ export function Courses() {
           {selectedStatuses.length > 0 && (
             <div className="mb-4 flex items-center gap-2">
               <span className="inline-flex items-center gap-1.5 bg-muted/50 rounded-full px-3 py-1 text-xs text-muted-foreground">
-                Filtered by: {selectedStatuses.join(', ')}
+                Filtered by: {filterSummaryLabel}
               </span>
               <button
                 type="button"
