@@ -6,7 +6,7 @@ status: active
 startedAt: 2026-05-05T14:00:00Z
 updatedAt: 2026-05-05T14:00:00Z
 lastGreenSha: 87d16eddcd38e796aedef5cc0215a0dc83b751c9
-stage: phase-2.1.5
+stage: phase-2.4
 runMode: autopilot
 stagesCompleted:
   - phase-0-classify
@@ -15,6 +15,10 @@ stagesCompleted:
   - phase-1.3-deepen-round-1
   - phase-1.3-approved
   - phase-2.1-work-done
+  - phase-2.1.5-techdebt
+  - phase-2.2-pre-checks
+  - phase-2.3-review-R1-fixed
+  - phase-2.3-review-R2-green
 artifacts:
   planPath: docs/plans/2026-05-05-002-fix-learning-paths-authors-roadmap-ux-plan.md
   commitShas:
