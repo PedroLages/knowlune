@@ -207,7 +207,7 @@ export function PathCoverDialog({ open, onOpenChange, path }: PathCoverDialogPro
               Gradient Presets
             </Label>
             <Separator className="mb-3 mt-2" />
-            <div className="grid grid-cols-4 gap-2">
+            <div className="grid grid-cols-4 gap-2 overflow-hidden">
               {GRADIENT_PRESETS.map(preset => (
                 <button
                   key={preset.key}
@@ -217,7 +217,7 @@ export function PathCoverDialog({ open, onOpenChange, path }: PathCoverDialogPro
                     preset.from,
                     preset.to,
                     selectedPreset === preset.key
-                      ? 'ring-2 ring-brand ring-offset-2 scale-105'
+                      ? 'ring-2 ring-brand ring-offset-1 scale-105'
                       : 'hover:scale-105'
                   )}
                   onClick={() => {

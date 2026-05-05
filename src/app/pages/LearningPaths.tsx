@@ -490,7 +490,9 @@ export function LearningPaths() {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {Array.from({ length: 3 }, (_, i) => (
-              <PathCardSkeleton key={i} />
+              <div key={i} className="w-full max-w-[380px] mx-auto">
+                <PathCardSkeleton />
+              </div>
             ))}
           </div>
         </div>
@@ -573,12 +575,13 @@ export function LearningPaths() {
                 {templates.map(tpl => {
                   const tplEntries = getEntriesForPath(tpl.id)
                   return (
-                    <TemplateCard
-                      key={tpl.id}
-                      template={tpl}
-                      courseCount={tplEntries.length}
-                      matchCount={templateMatchCounts.get(tpl.id) ?? 0}
-                    />
+                    <div key={tpl.id} className="w-full max-w-[380px] mx-auto">
+                      <TemplateCard
+                        template={tpl}
+                        courseCount={tplEntries.length}
+                        matchCount={templateMatchCounts.get(tpl.id) ?? 0}
+                      />
+                    </div>
                   )
                 })}
               </div>
@@ -648,7 +651,7 @@ export function LearningPaths() {
               {filteredPaths.map(path => {
                 const stats = pathStats.get(path.id) || { courseCount: 0, completionPct: 0 }
                 return (
-                  <div key={path.id} role="listitem">
+                  <div key={path.id} role="listitem" className="w-full max-w-[380px] mx-auto">
                     <PathCard
                       path={path}
                       courseCount={stats.courseCount}
@@ -684,12 +687,13 @@ export function LearningPaths() {
                       {templates.map(tpl => {
                         const tplEntries = getEntriesForPath(tpl.id)
                         return (
-                          <TemplateCard
-                            key={tpl.id}
-                            template={tpl}
-                            courseCount={tplEntries.length}
-                            matchCount={templateMatchCounts.get(tpl.id) ?? 0}
-                          />
+                          <div key={tpl.id} className="w-full max-w-[380px] mx-auto">
+                            <TemplateCard
+                              template={tpl}
+                              courseCount={tplEntries.length}
+                              matchCount={templateMatchCounts.get(tpl.id) ?? 0}
+                            />
+                          </div>
                         )
                       })}
                     </div>

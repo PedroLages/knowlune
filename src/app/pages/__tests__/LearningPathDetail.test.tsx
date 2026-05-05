@@ -74,10 +74,6 @@ vi.mock('@/app/components/DelayedFallback', () => ({
   DelayedFallback: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }))
 
-vi.mock('@/app/components/figma/TrailMap', () => ({
-  TrailMap: () => <div data-testid="trail-map">Trail Map</div>,
-}))
-
 vi.mock('@/app/components/figma/MoveUpDownButtons', () => ({
   MoveUpDownButtons: () => <div data-testid="move-buttons">Move</div>,
 }))
@@ -374,5 +370,21 @@ describe('LearningPathDetail', () => {
       'path-1',
       'Updated description'
     )
+  })
+
+  it('renders list-only view with Courses heading and progress summary after roadmap removal', async () => {
+    renderPage()
+
+    await waitFor(() => {
+      // Courses heading replaces the old "Your Roadmap" heading
+      expect(screen.getByRole('heading', { name: 'Courses' })).toBeInTheDocument()
+    })
+
+    // Progress summary shows completed count: 0 of 1 with the mock data
+    expect(screen.getByText('0 of 1 completed')).toBeInTheDocument()
+
+    // Negative assertions: roadmap/map UI is no longer rendered
+    expect(screen.queryByText('Your Roadmap')).not.toBeInTheDocument()
+    expect(screen.queryByText('Map')).not.toBeInTheDocument()
   })
 })
