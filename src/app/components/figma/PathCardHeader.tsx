@@ -63,13 +63,18 @@ export function PathCardHeader({
   const isNotStarted = completionPct === 0
   const hasCoverImage = !!coverImageUrl
 
-  // Determine gradient: preset > hash-based > muted (not-started)
+  // Determine gradient: explicit preset > hash-based > muted (not-started with no preset)
+  const presetGradient =
+    !hasCoverImage && coverPreset && PRESET_GRADIENT_MAP[coverPreset]
+      ? PRESET_GRADIENT_MAP[coverPreset]
+      : null
+
   const gradient = hasCoverImage
     ? '' // cover image overrides gradient
-    : isNotStarted
-      ? MUTED_GRADIENT
-      : coverPreset && PRESET_GRADIENT_MAP[coverPreset]
-        ? PRESET_GRADIENT_MAP[coverPreset]
+    : presetGradient
+      ? presetGradient
+      : isNotStarted
+        ? MUTED_GRADIENT
         : GRADIENTS[hashString(pathName) % GRADIENTS.length]
 
   return (

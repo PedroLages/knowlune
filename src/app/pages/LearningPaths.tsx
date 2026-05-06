@@ -219,12 +219,12 @@ function PathCard({
 
         {/* Card body */}
         <CardContent className="px-4 pb-4 pt-8 relative flex flex-col h-[calc(100%-6rem)]">
-          {/* Progress ring — centered at header/card boundary */}
-          <div className="absolute -top-[30px] left-4">
+          {/* Progress ring — centered at header/card boundary (md ring 72px + p-1.5 → -top half height) */}
+          <div className="absolute -top-[42px] left-4">
             <div className="bg-card rounded-full p-1.5 shadow-lg">
-              <PathProgressRing percentage={completionPct} size="sm">
+              <PathProgressRing percentage={completionPct} size="md">
                 {isCompleted ? (
-                  <CheckCircle2 className="size-5 text-success" aria-hidden="true" />
+                  <CheckCircle2 className="size-6 text-success" aria-hidden="true" />
                 ) : (
                   <span className="font-bold text-foreground">
                     {Math.round(completionPct)}%
@@ -327,7 +327,7 @@ function PathCardSkeleton() {
     <Card className="overflow-hidden rounded-2xl">
       <Skeleton className="h-24 w-full rounded-none" />
       <CardContent className="px-4 pb-4 pt-1 relative">
-        <Skeleton className="absolute -top-[30px] left-4 size-[60px] rounded-full" />
+        <Skeleton className="absolute -top-[42px] left-4 size-[84px] rounded-full" />
         <div className="mt-7 space-y-3">
           <Skeleton className="h-4 w-16" />
           <Skeleton className="h-6 w-3/4" />
