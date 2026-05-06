@@ -1,0 +1,24 @@
+{
+  "reviewer": "maintainability",
+  "findings": [
+    {
+      "title": "Duplicated title-fallback expression across indexing and display layers",
+      "severity": "P2",
+      "file": "/Volumes/SSD/Dev/Apps/Knowlune/src/lib/unifiedSearch.ts",
+      "line": 244,
+      "confidence": 0.70,
+      "autofix_class": "gated_auto",
+      "owner": "review-fixer",
+      "requires_verification": false,
+      "pre_existing": false,
+      "suggested_fix": "Extract a shared helper `getLessonDisplayTitle(video: { filename?: string; youtubeVideoId?: string; id: string }): string` into `src/lib/searchLabelUtils.ts` that encapsulates the fallback chain `normalizeFilename(video.filename) || video.youtubeVideoId || video.id`. Replace both call sites with the helper. This centralizes the title-resolution policy so changes to fallback priority only touch one location."
+    }
+  ],
+  "residual_risks": [
+    "Placeholder/description drift: `CommandInput.placeholder` now reads 'Search pages, courses, books, lessons...' while `CommandDialog.description` still says '...notes, highlights, and authors'. This is cosmetic but could confuse users about what is actually searchable.",
+    "The `min(60vh, 400px)` clamp on `CommandList` introduces a magic number (400px). The previous value was 300px; the rationale for 400px is undocumented. If the dialog layout changes (e.g., taller header), this cap might need adjustment and the intent is not obvious."
+  ],
+  "testing_gaps": [
+    "`normalizeFilename` has unit tests but the fallback chain `normalizeFilename(...) || youtubeVideoId || id` is untested as a policy. A test for `getLessonDisplayTitle` (if extracted) would lock down the fallback priority and prevent drift between the two call sites."
+  ]
+}

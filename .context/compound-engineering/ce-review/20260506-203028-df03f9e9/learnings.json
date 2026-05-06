@@ -1,0 +1,117 @@
+{
+  "reviewer": "learnings",
+  "findings": [
+    {
+      "file": "docs/solutions/ui-bugs/search-palette-library-ux-regressions-2026-05-03.md",
+      "relevance": "direct",
+      "match_reasons": [
+        "Same component (SearchCommandPalette)",
+        "Same 'Recently opened' label resolution pattern",
+        "Same module (search palette)",
+        "Documents async Dexie label resolution with Promise.all + ignore unmount guard",
+        "Documents the recentHitKeys useMemo pattern for stable dependency keys"
+      ],
+      "key_insight": "RecentHit schema stores only {type, id, openedAt} intentionally. Labels must be resolved from Dexie at render time via a useEffect with Promise.all and an ignore unmount flag. The stable key useMemo(recentHitKeys) compares serialized type:id tuples to prevent re-fetching on unrelated re-renders.",
+      "severity": "medium"
+    },
+    {
+      "file": "docs/solutions/best-practices/unified-search-index-non-obvious-invariants-2026-04-18.md",
+      "relevance": "direct",
+      "match_reasons": [
+        "Same search infrastructure",
+        "Documents cmdk shouldFilter={false} invariant",
+        "Documents useMemo render-phase write pattern (not for memoization)",
+        "Documents Promise.allSettled flatMap pattern",
+        "Documents aria-live separate settle delay (400ms vs 150ms search debounce)",
+        "Documents Home/End synthetic mousemove dispatch for cmdk keyboard nav"
+      ],
+      "key_insight": "Seven load-bearing invariants in the search index layer. Most critical for this work: (1) shouldFilter={false} on Command is non-negotiable — removing it causes cmdk double-filtering; (2) useMemo is used for render-phase ref assignment, not memoization — switching to useEffect introduces stale-ref races; (3) Promise.allSettled results must use flatMap with status guards, never array destructure.",
+      "severity": "medium"
+    },
+    {
+      "file": "docs/solutions/best-practices/search-prefix-scope-invariants-2026-04-18.md",
+      "relevance": "direct",
+      "match_reasons": [
+        "Same component (SearchCommandPalette)",
+        "Documents scope chip behavior",
+        "Documents prefix detection invariants",
+        "Documents initialScope one-shot reset pattern",
+        "Documents hint dismissal pattern"
+      ],
+      "key_insight": "Scope prefix detection is position-0 only (leading space is escape hatch). Backspace on empty search-within-scope clears scope entirely. initialScope is one-shot — parent must reset to null in onOpenChange. shouldFilter={false} is load-bearing and must not be removed.",
+      "severity": "medium"
+    },
+    {
+      "file": "docs/solutions/ui-bugs/qa-chat-panel-uuid-leakage-overflow-auto-scroll-2026-04-29.md",
+      "relevance": "tangential",
+      "match_reasons": [
+        "Same UUID-leakage pattern resolved with Dexie enrichment",
+        "CSS overflow patterns (min-w-0, break-words, overflow-wrap:anywhere)",
+        "ScrollArea auto-scroll targeting [data-slot='scroll-area-viewport']",
+        "Promise.allSettled for graceful degradation in enrichment lookups"
+      ],
+      "key_insight": "UUID leakage fix pattern is identical — enrich sparse IDs by resolving from Dexie at render time using Promise.allSettled for graceful degradation. CSS overflow fix requires min-w-0 on flex items containing user-generated text, plus both break-words and overflow-wrap:anywhere for robust word breaking. ScrollArea auto-scroll must target the internal [data-slot='scroll-area-viewport'] element, not the root wrapper.",
+      "severity": "medium"
+    }
+  ],
+  "residual_risks": [
+    {
+      "risk": "IU-1 normalizeFilename may produce unexpected results for non-English filenames or filenames without clear separators (e.g., lesson1final.mp4 -> Lesson1Final). Output is still more readable than UUID.",
+      "mitigation": "Cover edge cases in unit tests: empty string, no separators, mixed separators, already-formatted strings."
+    },
+    {
+      "risk": "IU-3 max-h increase on CommandList affects 5 other consumers (SettingsSearch, ProviderModelPicker, etc.). Regression possible if those consumers relied on the 300px clamp.",
+      "mitigation": "Verify all 5 consumers render correctly with the new max-h after change."
+    },
+    {
+      "risk": "IU-5 shorter placeholder reduces discoverability of notes/highlights search. Screen reader users still get full list from CommandDialog description.",
+      "mitigation": "Acceptable trade-off per plan, but verify no accessibility complaints in QA."
+    }
+  ],
+  "testing_gaps": [
+    {
+      "gap": "No tests for empty Pages section gating (IU-2)",
+      "detail": "The plan says 'no new tests needed, existing snapshot covers it', but a dedicated test for the empty-section edge case would prevent regression."
+    },
+    {
+      "gap": "No visual regression test for scrollbar suppression (IU-3)",
+      "detail": "The scrollbar-always-visible issue is a visual UX concern. Current test suite does not capture visual state of CommandList scrollbar."
+    },
+    {
+      "gap": "No test for scope chip clear button spacing (IU-4)",
+      "detail": "Spacing change is purely visual. Current test suite cannot validate padding/visual spacing changes."
+    }
+  ],
+  "learnings": [
+    {
+      "topic": "Async label resolution in SearchCommandPalette",
+      "path": "docs/solutions/ui-bugs/search-palette-library-ux-regressions-2026-05-03.md",
+      "relevance": "The normalizeFilename utility being created in IU-1 should be used in the existing useEffect-based label resolution at line 826 of SearchCommandPalette.tsx, which already follows the pattern documented in this solution (useEffect + Promise.all + ignore unmount guard + stable key from useMemo)."
+    },
+    {
+      "topic": "shouldFilter={false} invariant on Command",
+      "path": "docs/solutions/best-practices/unified-search-index-non-obvious-invariants-2026-04-18.md",
+      "relevance": "IU-3 modifies CommandList's max-h in command.tsx. Must not touch shouldFilter={false} on the parent Command component — that invariant is load-bearing for the entire search palette."
+    },
+    {
+      "topic": "useMemo render-phase write pattern",
+      "path": "docs/solutions/best-practices/unified-search-index-non-obvious-invariants-2026-04-18.md",
+      "relevance": "If any work touches the index-sync layer (unifiedSearch.ts), must preserve the useMemo render-phase write pattern — switching to useEffect would introduce stale ref races."
+    },
+    {
+      "topic": "Scope chip behavior invariants",
+      "path": "docs/solutions/best-practices/search-prefix-scope-invariants-2026-04-18.md",
+      "relevance": "IU-4 and IU-5 modify the scope chip and placeholder areas. Must preserve the invariant that backspace on empty query clears scope, and that initialScope is one-shot (reset in onOpenChange)."
+    },
+    {
+      "topic": "UUID leakage prevention pattern",
+      "path": "docs/solutions/ui-bugs/qa-chat-panel-uuid-leakage-overflow-auto-scroll-2026-04-29.md",
+      "relevance": "The normalizeFilename fix (IU-1) follows the same UUID-leakage prevention pattern documented here: always resolve display labels from canonical data store, never render raw database keys."
+    },
+    {
+      "topic": "Promise.allSettled with flatMap guard",
+      "path": "docs/solutions/best-practices/unified-search-index-non-obvious-invariants-2026-04-18.md",
+      "relevance": "If the normalizeFilename utility or label resolution uses Promise.allSettled, must flatMap with status === 'fulfilled' guard — never array destructure, which silently drops errors."
+    }
+  ]
+}

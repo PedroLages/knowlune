@@ -1,0 +1,34 @@
+{
+  "reviewer": "correctness",
+  "findings": [],
+  "residual_risks": [
+    {
+      "risk": "normalizeFilename() on filenames without clear separators (e.g., 'lesson1final.mp4' → 'Lesson1Final') produces no-space output that is still more readable than a UUID but may not parse well visually. The plan acknowledges this.",
+      "file": "src/lib/searchLabelUtils.ts",
+      "line": 6,
+      "owner": "advisory"
+    },
+    {
+      "risk": "Search index in toSearchableLesson now indexes normalizeFilename(video.filename) instead of the raw slug. Users searching by the original filename slug (e.g., 'demo-pdf-2') will no longer get exact-title matches — only fuzzy (0.2) or partial matches against the normalized form. Acceptable trade-off per plan",
+      "file": "src/lib/unifiedSearch.ts",
+      "line": 244,
+      "owner": "advisory"
+    }
+  ],
+  "testing_gaps": [
+    {
+      "gap": "Test file tests normalizeFilename('') twice (one test named 'falsy input' but does not pass undefined/null). Since the function type is string, TS prevents passing undefined/null from app code, but the 'falsy input' test name is misleading and doesn't exercise the runtime guard branch against non-string falsy values.",
+      "file": "src/lib/__tests__/searchLabelUtils.test.ts",
+      "line": 27,
+      "severity": "low",
+      "owner": "human"
+    },
+    {
+      "gap": "No unit test for the youtubeVideoId fallback chain in the call sites. Plan states 'covered by unifiedSearch tests' but those tests are not included in this diff. The fallback chain normalizeFilename(fn) || youtubeVideoId || id is only exercised by the existing palette/snapshot tests.",
+      "file": "src/lib/unifiedSearch.ts",
+      "line": 244,
+      "severity": "low",
+      "owner": "human"
+    }
+  ]
+}
