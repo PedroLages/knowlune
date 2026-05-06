@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, act } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router'
 import { ImportedCourseCompactCard } from '../ImportedCourseCompactCard'
 import type { ImportedCourse } from '@/data/types'
@@ -7,6 +8,7 @@ import type { ImportedCourse } from '@/data/types'
 const mockUpdateCourseStatus = vi.fn()
 const mockRemoveImportedCourse = vi.fn().mockResolvedValue(undefined)
 const mockNavigate = vi.fn()
+const mockOnToggleSelect = vi.fn()
 
 let mockImportError: string | null = null
 
@@ -264,5 +266,90 @@ describe('ImportedCourseCompactCard — accessibility', () => {
     renderCard({}, { completionPercent: 42 })
     const bar = screen.getByRole('progressbar')
     expect(bar).toHaveAttribute('aria-valuenow', '42')
+  })
+})
+
+describe('ImportedCourseCompactCard — selection mode (onToggleSelect)', () => {
+  beforeEach(() => {
+    mockOnToggleSelect.mockClear()
+  })
+
+  it('renders a checkbox when onToggleSelect is provided', () => {
+    render(
+      <MemoryRouter>
+        <ImportedCourseCompactCard
+          course={makeCourse({ id: 'c1', name: 'Selectable Course' })}
+          selected={false}
+          onToggleSelect={mockOnToggleSelect}
+        />
+      </MemoryRouter>
+    )
+    const checkbox = screen.getByRole('checkbox', { name: /Select Selectable Course/i })
+    expect(checkbox).toBeInTheDocument()
+  })
+
+  it('does not render a checkbox when onToggleSelect is undefined', () => {
+    renderCard()
+    expect(screen.queryByRole('checkbox')).not.toBeInTheDocument()
+  })
+
+  it('checkbox click calls onToggleSelect with the course ID', async () => {
+    const user = userEvent.setup()
+    render(
+      <MemoryRouter>
+        <ImportedCourseCompactCard
+          course={makeCourse({ id: 'c1' })}
+          selected={false}
+          onToggleSelect={mockOnToggleSelect}
+        />
+      </MemoryRouter>
+    )
+    const checkbox = screen.getByRole('checkbox')
+    await user.click(checkbox)
+    expect(mockOnToggleSelect).toHaveBeenCalledWith('c1')
+  })
+
+  it('checkbox click does not trigger card navigation', async () => {
+    const user = userEvent.setup()
+    render(
+      <MemoryRouter>
+        <ImportedCourseCompactCard
+          course={makeCourse({ id: 'c1' })}
+          selected={false}
+          onToggleSelect={mockOnToggleSelect}
+        />
+      </MemoryRouter>
+    )
+    const checkbox = screen.getByRole('checkbox')
+    await user.click(checkbox)
+    expect(mockNavigate).not.toHaveBeenCalled()
+  })
+
+  it('renders checked checkbox when selected=true', () => {
+    render(
+      <MemoryRouter>
+        <ImportedCourseCompactCard
+          course={makeCourse({ id: 'c1' })}
+          selected={true}
+          onToggleSelect={mockOnToggleSelect}
+        />
+      </MemoryRouter>
+    )
+    const checkbox = screen.getByRole('checkbox')
+    expect(checkbox).toHaveAttribute('data-state', 'checked')
+  })
+
+  it('renders unchecked checkbox when selected=false', () => {
+    render(
+      <MemoryRouter>
+        <ImportedCourseCompactCard
+          course={makeCourse({ id: 'c1' })}
+          selected={false}
+          onToggleSelect={mockOnToggleSelect}
+        />
+      </MemoryRouter>
+    )
+    const checkbox = screen.getByRole('checkbox')
+    expect(checkbox).toHaveAttribute('data-state', 'unchecked')
   })
 })

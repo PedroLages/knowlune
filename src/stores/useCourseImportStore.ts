@@ -15,6 +15,9 @@ import type { ThumbnailSource } from '@/data/types'
 import type { AutoAnalysisStatus } from '@/lib/autoAnalysis'
 import { refreshCourseEmbeddingIfChanged } from '@/ai/courseEmbeddingService'
 import { useAuthorStore } from './useAuthorStore'
+import { toast } from 'sonner'
+import { toastWithUndo } from '@/lib/toastHelpers'
+import { TOAST_DURATION } from '@/lib/toastConfig'
 
 function normalizeTags(tags: string[]): string[] {
   const unique = [...new Set(tags.map(t => t.trim().toLowerCase()).filter(Boolean))]
@@ -41,6 +44,7 @@ interface CourseImportState {
 
   addImportedCourse: (course: ImportedCourse) => Promise<{ error?: { code: string; modality: string } }>
   removeImportedCourse: (courseId: string) => Promise<void>
+  removeImportedCourses: (courseIds: string[]) => Promise<void>
   updateCourseTags: (courseId: string, tags: string[]) => Promise<void>
   updateCourseStatus: (courseId: string, status: LearnerCourseStatus) => Promise<void>
   updateCourseDetails: (courseId: string, details: CourseDetailsUpdate) => Promise<boolean>
@@ -161,6 +165,62 @@ export const useCourseImportStore = create<CourseImportState>((set, get) => ({
         }))
       }
       console.error('[Database] Failed to remove course:', error)
+    }
+  },
+
+  removeImportedCourses: async (courseIds: string[]) => {
+    const { importedCourses } = get()
+    // Capture snapshot for undo — full ImportedCourse records for each requested ID
+    const snapshot = courseIds
+      .map(id => importedCourses.find(c => c.id === id))
+      .filter((c): c is ImportedCourse => c !== undefined)
+
+    const deleted: ImportedCourse[] = []
+    const failed: { id: string; name: string }[] = []
+
+    // Sequential deletion — each removeImportedCourse handles its own
+    // optimistic removal and rollback. Detect failure by checking if the
+    // course still exists in Zustand after the call resolves.
+    for (const id of courseIds) {
+      await get().removeImportedCourse(id)
+      const stillExists = get().importedCourses.find(c => c.id === id)
+      if (stillExists) {
+        failed.push({ id, name: stillExists.name })
+      } else {
+        const course = snapshot.find(c => c.id === id)
+        if (course) deleted.push(course)
+      }
+    }
+
+    // Undo toast for successful deletions (8s window)
+    if (deleted.length > 0) {
+      toastWithUndo({
+        message: `${deleted.length} ${deleted.length === 1 ? 'course' : 'courses'} deleted`,
+        onUndo: async () => {
+          for (const course of deleted) {
+            await syncableWrite(
+              'importedCourses',
+              'add',
+              course as unknown as SyncableRecord
+            )
+          }
+          set(state => ({
+            importedCourses: [...deleted, ...state.importedCourses],
+          }))
+          toast.success(
+            `${deleted.length} ${deleted.length === 1 ? 'course' : 'courses'} restored`
+          )
+        },
+        duration: TOAST_DURATION.LONG,
+      })
+    }
+
+    // Error toast for any failures
+    if (failed.length > 0) {
+      const names = failed.map(f => f.name)
+      toast.error(
+        `Failed to delete ${failed.length} ${failed.length === 1 ? 'course' : 'courses'}: ${names.join(', ')}`
+      )
     }
   },
 

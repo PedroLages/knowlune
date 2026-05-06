@@ -46,6 +46,7 @@ const storeState = {
   autoAnalysisStatus: {} as Record<string, string>,
   addImportedCourse: vi.fn(),
   removeImportedCourse: vi.fn(),
+  removeImportedCourses: vi.fn().mockResolvedValue(undefined),
   updateCourseTags: vi.fn(),
   updateCourseStatus: vi.fn(),
   updateCourseDetails: vi.fn().mockResolvedValue(true),
@@ -389,6 +390,91 @@ describe('Courses page', () => {
     it('sort dropdown has accessible label', () => {
       renderCourses()
       expect(screen.getByLabelText('Sort courses')).toBeInTheDocument()
+    })
+  })
+
+  describe('selection mode', () => {
+    beforeEach(() => {
+      storeState.importedCourses = mockCourses
+      vi.clearAllMocks()
+    })
+
+    it('clicking "Select" enters selection mode and shows action bar', async () => {
+      const user = userEvent.setup()
+      renderCourses()
+      await user.click(screen.getByTestId('enter-selection-mode-btn'))
+      expect(screen.getByTestId('selection-action-bar')).toBeInTheDocument()
+      expect(screen.getByTestId('selected-count')).toHaveTextContent('0 selected')
+    })
+
+    it('exits selection mode and shows control bar when "Cancel" is clicked', async () => {
+      const user = userEvent.setup()
+      renderCourses()
+      await user.click(screen.getByTestId('enter-selection-mode-btn'))
+      expect(screen.getByTestId('selection-action-bar')).toBeInTheDocument()
+      await user.click(screen.getByTestId('cancel-selection-btn'))
+      expect(screen.queryByTestId('selection-action-bar')).not.toBeInTheDocument()
+    })
+
+    it('"Select All" selects all filtered courses', async () => {
+      const user = userEvent.setup()
+      renderCourses()
+      await user.click(screen.getByTestId('enter-selection-mode-btn'))
+      await user.click(screen.getByTestId('select-all-btn'))
+      expect(screen.getByTestId('selected-count')).toHaveTextContent('2 selected')
+    })
+
+    it('"Deselect All" clears selection', async () => {
+      const user = userEvent.setup()
+      renderCourses()
+      await user.click(screen.getByTestId('enter-selection-mode-btn'))
+      await user.click(screen.getByTestId('select-all-btn'))
+      expect(screen.getByTestId('selected-count')).toHaveTextContent('2 selected')
+      await user.click(screen.getByTestId('deselect-all-btn'))
+      expect(screen.getByTestId('selected-count')).toHaveTextContent('0 selected')
+    })
+
+    it('"Delete Selected" is disabled while deletion is in progress (BULK-002)', async () => {
+      const user = userEvent.setup()
+
+      // Create a deferred promise so isDeleting stays true
+      const deferred = new Promise<void>(() => {})
+      storeState.removeImportedCourses = vi.fn().mockReturnValue(deferred)
+
+      renderCourses()
+      await user.click(screen.getByTestId('enter-selection-mode-btn'))
+      await user.click(screen.getByTestId('select-all-btn'))
+
+      const deleteBtn = screen.getByTestId('delete-selected-btn')
+      expect(deleteBtn).toBeEnabled()
+
+      await user.click(deleteBtn)
+
+      // Button should be disabled and show loading state while deletion is in progress
+      expect(deleteBtn).toBeDisabled()
+      expect(screen.getByText('Deleting...')).toBeInTheDocument()
+    })
+
+    it('"Delete Selected" is disabled when nothing is selected', async () => {
+      const user = userEvent.setup()
+      renderCourses()
+      await user.click(screen.getByTestId('enter-selection-mode-btn'))
+      const deleteBtn = screen.getByTestId('delete-selected-btn')
+      expect(deleteBtn).toBeDisabled()
+    })
+
+    it('pressing Escape exits selection mode and clears selection', async () => {
+      const user = userEvent.setup()
+      renderCourses()
+      await user.click(screen.getByTestId('enter-selection-mode-btn'))
+      await user.click(screen.getByTestId('select-all-btn'))
+      expect(screen.getByTestId('selection-action-bar')).toBeInTheDocument()
+      expect(screen.getByTestId('selected-count')).toHaveTextContent('2 selected')
+      await user.keyboard('{Escape}')
+      expect(screen.queryByTestId('selection-action-bar')).not.toBeInTheDocument()
+      // Re-enter selection mode to verify selection was cleared
+      await user.click(screen.getByTestId('enter-selection-mode-btn'))
+      expect(screen.getByTestId('selected-count')).toHaveTextContent('0 selected')
     })
   })
 })

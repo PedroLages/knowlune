@@ -13,7 +13,7 @@ import { ImportedCourseCard } from '@/app/components/figma/ImportedCourseCard'
 import { ImportedCourseCompactCard } from '@/app/components/figma/ImportedCourseCompactCard'
 import { ImportedCourseListRow } from '@/app/components/figma/ImportedCourseListRow'
 import { StatusFilter, statuses as statusFilterOptions } from '@/app/components/figma/StatusFilter'
-import { FolderOpen, BookOpen, Youtube } from 'lucide-react'
+import { FolderOpen, BookOpen, Youtube, Trash2, X, Loader2 } from 'lucide-react'
 import { getImportedCourseCompletionPercent } from '@/lib/progress'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
 import { useLazyStore } from '@/hooks/useLazyStore'
@@ -43,10 +43,14 @@ export function Courses() {
   const [youtubeImportOpen, setYoutubeImportOpen] = useState(false)
   const [momentumMap, setMomentumMap] = useState<Map<string, MomentumScore>>(new Map())
   const [importedCompletionMap, setImportedCompletionMap] = useState<Map<string, number>>(new Map())
+  const [selectionMode, setSelectionMode] = useState(false)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [isDeleting, setIsDeleting] = useState(false)
 
   const importedCourses = useCourseImportStore(state => state.importedCourses)
   const loadImportedCourses = useCourseImportStore(state => state.loadImportedCourses)
   const getAllTags = useCourseImportStore(state => state.getAllTags)
+  const removeImportedCourses = useCourseImportStore(state => state.removeImportedCourses)
   const courseViewMode = useEngagementPrefsStore(state => state.courseViewMode)
   const courseGridColumns = useEngagementPrefsStore(state => state.courseGridColumns)
   const setEngagementPref = useEngagementPrefsStore(state => state.setPreference)
@@ -165,6 +169,55 @@ export function Courses() {
     .map(s => statusLabelMap.get(s) ?? s)
     .join(', ')
 
+  // Selection mode handlers
+  function handleToggleSelect(courseId: string) {
+    setSelectedIds(prev => {
+      const next = new Set(prev)
+      if (next.has(courseId)) {
+        next.delete(courseId)
+      } else {
+        next.add(courseId)
+      }
+      return next
+    })
+  }
+
+  function handleSelectAll() {
+    setSelectedIds(new Set(sortedImportedCourses.map(c => c.id)))
+  }
+
+  function handleDeselectAll() {
+    setSelectedIds(new Set())
+  }
+
+  function handleCancelSelection() {
+    setSelectionMode(false)
+    setSelectedIds(new Set())
+  }
+
+  async function handleDeleteSelected() {
+    if (isDeleting || selectedIds.size === 0) return
+    setIsDeleting(true)
+    const ids = Array.from(selectedIds)
+    await removeImportedCourses(ids)
+    setSelectedIds(new Set())
+    setSelectionMode(false)
+    setIsDeleting(false)
+  }
+
+  // Escape key exits selection mode
+  useEffect(() => {
+    if (!selectionMode) return
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') {
+        setSelectionMode(false)
+        setSelectedIds(new Set())
+      }
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [selectionMode])
+
   return (
     <div>
       <div
@@ -239,50 +292,117 @@ export function Courses() {
         </Card>
       ) : (
         <>
-          {/* Grouped control bar: Filter, Sort, View sections */}
-          <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
-            {importedCourses.length > 0 && (
-              <ControlBarSection label="Filter" showDivider={false}>
-                <StatusFilter
-                  selectedStatuses={selectedStatuses}
-                  onSelectedStatusesChange={setSelectedStatuses}
-                />
-              </ControlBarSection>
-            )}
-            <ControlBarSection label="Sort">
-              <Select value={sortMode} onValueChange={v => setSortMode(v as SortMode)}>
-                <SelectTrigger
-                  data-testid="sort-select"
-                  aria-label="Sort courses"
-                  className="w-full sm:w-[180px] rounded-xl min-h-[44px]"
-                >
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="recent">Most Recent</SelectItem>
-                  <SelectItem value="momentum">Sort by Momentum</SelectItem>
-                </SelectContent>
-              </Select>
-            </ControlBarSection>
-            <ControlBarSection label="View">
-              <div className="flex items-center gap-3">
-                <ViewModeToggle
-                  value={courseViewMode}
-                  onChange={mode => setEngagementPref('courseViewMode', mode)}
-                />
-                {/* E99-S02: grid column control. Visible only in grid view. */}
-                {courseViewMode === 'grid' && (
+          {/* Selection mode action bar replaces the control bar */}
+          {selectionMode ? (
+            <div
+              className="flex flex-wrap items-center gap-x-4 gap-y-2"
+              data-testid="selection-action-bar"
+            >
+              <span className="text-sm font-medium" data-testid="selected-count">
+                {selectedIds.size} selected
+              </span>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleSelectAll}
+                data-testid="select-all-btn"
+              >
+                Select All
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleDeselectAll}
+                data-testid="deselect-all-btn"
+              >
+                Deselect All
+              </Button>
+              <Button
+                variant="destructive"
+                size="sm"
+                disabled={selectedIds.size === 0 || isDeleting}
+                onClick={handleDeleteSelected}
+                data-testid="delete-selected-btn"
+              >
+                {isDeleting ? (
                   <>
-                    <Separator orientation="vertical" className="!h-6" />
-                    <GridColumnControl
-                      value={courseGridColumns}
-                      onChange={cols => setEngagementPref('courseGridColumns', cols)}
-                    />
+                    <Loader2 className="size-4 mr-1 animate-spin" aria-hidden="true" />
+                    Deleting...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="size-4 mr-1" aria-hidden="true" />
+                    Delete Selected ({selectedIds.size})
                   </>
                 )}
-              </div>
-            </ControlBarSection>
-          </div>
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleCancelSelection}
+                data-testid="cancel-selection-btn"
+              >
+                <X className="size-4 mr-1" aria-hidden="true" />
+                Cancel
+              </Button>
+            </div>
+          ) : (
+            /* Grouped control bar: Filter, Sort, Select, View sections */
+            <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
+              {importedCourses.length > 0 && (
+                <ControlBarSection label="Filter" showDivider={false}>
+                  <StatusFilter
+                    selectedStatuses={selectedStatuses}
+                    onSelectedStatusesChange={setSelectedStatuses}
+                  />
+                </ControlBarSection>
+              )}
+              <ControlBarSection label="Sort">
+                <Select value={sortMode} onValueChange={v => setSortMode(v as SortMode)}>
+                  <SelectTrigger
+                    data-testid="sort-select"
+                    aria-label="Sort courses"
+                    className="w-full sm:w-[180px] rounded-xl min-h-[44px]"
+                  >
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="recent">Most Recent</SelectItem>
+                    <SelectItem value="momentum">Sort by Momentum</SelectItem>
+                  </SelectContent>
+                </Select>
+              </ControlBarSection>
+              <ControlBarSection label="Select">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setSelectionMode(true)}
+                  data-testid="enter-selection-mode-btn"
+                  className="min-h-[44px]"
+                >
+                  Select
+                </Button>
+              </ControlBarSection>
+              <ControlBarSection label="View">
+                <div className="flex items-center gap-3">
+                  <ViewModeToggle
+                    value={courseViewMode}
+                    onChange={mode => setEngagementPref('courseViewMode', mode)}
+                  />
+                  {/* E99-S02: grid column control. Visible only in grid view. */}
+                  {courseViewMode === 'grid' && (
+                    <>
+                      <Separator orientation="vertical" className="!h-6" />
+                      <GridColumnControl
+                        value={courseGridColumns}
+                        onChange={cols => setEngagementPref('courseGridColumns', cols)}
+                      />
+                    </>
+                  )}
+                </div>
+              </ControlBarSection>
+            </div>
+          )}
 
           {/* Filter summary chip — visible when any status filter is active */}
           {selectedStatuses.length > 0 && (
@@ -345,12 +465,16 @@ export function Courses() {
                       course={course}
                       allTags={allTags}
                       completionPercent={importedCompletionMap.get(course.id) ?? 0}
+                      selected={selectedIds.has(course.id)}
+                      onToggleSelect={selectionMode ? handleToggleSelect : undefined}
                     />
                   ) : courseViewMode === 'compact' ? (
                     <ImportedCourseCompactCard
                       course={course}
                       allTags={allTags}
                       completionPercent={importedCompletionMap.get(course.id) ?? 0}
+                      selected={selectedIds.has(course.id)}
+                      onToggleSelect={selectionMode ? handleToggleSelect : undefined}
                     />
                   ) : (
                     <ImportedCourseCard
@@ -358,6 +482,8 @@ export function Courses() {
                       allTags={allTags}
                       completionPercent={importedCompletionMap.get(course.id) ?? 0}
                       momentumScore={momentumMap.get(course.id)}
+                      selected={selectedIds.has(course.id)}
+                      onToggleSelect={selectionMode ? handleToggleSelect : undefined}
                     />
                   )
                 }
