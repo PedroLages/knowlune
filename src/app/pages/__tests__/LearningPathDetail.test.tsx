@@ -372,19 +372,18 @@ describe('LearningPathDetail', () => {
     )
   })
 
-  it('renders list-only view with Courses heading and progress summary after roadmap removal', async () => {
+  it('renders the timeline heading and summary stats', async () => {
     renderPage()
 
     await waitFor(() => {
-      // Courses heading replaces the old "Your Roadmap" heading
-      expect(screen.getByRole('heading', { name: 'Courses' })).toBeInTheDocument()
+      // Timeline heading replaces the old "Courses" heading
+      expect(screen.getByRole('heading', { name: 'Course Timeline' })).toBeInTheDocument()
     })
 
-    // Progress summary shows completed count: 0 of 1 with the mock data
-    expect(screen.getByText('0 of 1 completed')).toBeInTheDocument()
+    // Header shows course count
+    expect(screen.getByText('1 courses')).toBeInTheDocument()
 
-    // Negative assertions: roadmap/map UI is no longer rendered
-    expect(screen.queryByText('Your Roadmap')).not.toBeInTheDocument()
-    expect(screen.queryByText('Map')).not.toBeInTheDocument()
+    // The PathSummaryPanel renders with progress data
+    expect(screen.getByTestId('path-summary-panel')).toBeInTheDocument()
   })
 })
