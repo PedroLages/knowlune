@@ -33,6 +33,8 @@ interface PathTimelineProps {
   autoScrollToCurrent?: boolean
   /** Set of course IDs that are currently loading */
   loadingResolve?: Set<string>
+  /** When true, renders cards without the timeline connector column */
+  simplified?: boolean
   className?: string
 }
 
@@ -91,10 +93,12 @@ function GapTimelineEntry({
   entry,
   onResolve,
   isLoading,
+  simplified,
 }: {
   entry: TimelineEntry
   onResolve: (resolution: GapResolution) => void
   isLoading?: boolean
+  simplified?: boolean
 }) {
   const searchTerm = extractGapSearchTerm(entry.justification)
   const justification = cleanGapJustification(entry.justification)
@@ -102,13 +106,15 @@ function GapTimelineEntry({
   return (
     <div className="flex gap-4" data-testid={`gap-entry-${entry.id}`}>
       {/* Connector line column */}
-      <div className="flex flex-col items-center">
-        <StatusCircle status="gap" />
-        <div className="w-px flex-1 bg-gradient-to-b from-warning/50 to-warning/20" />
-      </div>
+      {!simplified && (
+        <div className="flex flex-col items-center">
+          <StatusCircle status="gap" />
+          <div className="w-[2px] flex-1 bg-gradient-to-b from-warning/50 to-warning/20" />
+        </div>
+      )}
 
       {/* Content */}
-      <div className="flex-1 pb-8">
+      <div className={simplified ? 'flex-1 mb-4' : 'flex-1 pb-8'}>
         <Card className="border-2 border-dashed border-warning/40 bg-warning/5">
           <CardContent className="p-4">
             <div className="flex items-start gap-4">
@@ -174,6 +180,7 @@ function CourseTimelineEntry({
   isCompleted,
   isInProgress,
   onClick,
+  simplified,
 }: {
   entry: TimelineEntry
   info?: PathCourseInfo
@@ -181,6 +188,7 @@ function CourseTimelineEntry({
   isCompleted: boolean
   isInProgress: boolean
   onClick: () => void
+  simplified?: boolean
 }) {
   const status = isCompleted ? 'completed' : isInProgress ? 'in-progress' : 'locked'
   const entryRef = useRef<HTMLDivElement>(null)
@@ -188,13 +196,15 @@ function CourseTimelineEntry({
   return (
     <div className="flex gap-4" ref={entryRef}>
       {/* Connector line column */}
-      <div className="flex flex-col items-center">
-        <StatusCircle status={status} />
-        <div className="w-px flex-1 bg-gradient-to-b from-brand/40 via-border to-border" />
-      </div>
+      {!simplified && (
+        <div className="flex flex-col items-center">
+          <StatusCircle status={status} />
+          <div className="w-[2px] flex-1 bg-gradient-to-b from-brand/40 via-border to-border" />
+        </div>
+      )}
 
       {/* Content */}
-      <div className="flex-1 pb-8">
+      <div className={simplified ? 'flex-1 min-w-0 mb-4' : 'flex-1 pb-8 min-w-0'}>
         <Card
           className={cn(
             'cursor-pointer hover:shadow-md transition-all duration-200',
@@ -220,7 +230,7 @@ function CourseTimelineEntry({
               {/* Course info */}
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
-                  <h3 className="font-medium text-sm leading-tight truncate">
+                  <h3 className="font-medium text-sm leading-tight line-clamp-2">
                     {info?.name || 'Unknown Course'}
                   </h3>
                   <CourseTypeBadge courseType={entry.courseType} />
@@ -270,6 +280,7 @@ export function PathTimeline({
   onCourseClick,
   autoScrollToCurrent = true,
   loadingResolve,
+  simplified,
   className,
 }: PathTimelineProps) {
   const gapEntryIds = useMemo(() => new Set(gapEntries.map(e => e.id)), [gapEntries])
@@ -317,6 +328,7 @@ export function PathTimeline({
                 entry={entry}
                 onResolve={onGapResolve}
                 isLoading={loadingResolve?.has(entry.id)}
+                simplified={simplified}
               />
             </div>
           )
@@ -336,6 +348,7 @@ export function PathTimeline({
               isCompleted={isCompleted}
               isInProgress={isInProgress}
               onClick={() => onCourseClick(entry.courseId)}
+              simplified={simplified}
             />
           </div>
         )

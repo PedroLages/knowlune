@@ -74,6 +74,21 @@ function resizeToJpegBlob(
 }
 
 /**
+ * Get the current user's ID from the authenticated Supabase session.
+ * Throws if the user is not authenticated.
+ */
+async function getUserId(): Promise<string> {
+  if (!supabase) {
+    throw new Error('Supabase client is not available. Configure VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.')
+  }
+  const { data, error } = await supabase.auth.getUser()
+  if (error || !data.user) {
+    throw new Error('Authentication required to upload covers')
+  }
+  return data.user.id
+}
+
+/**
  * Upload a cover image file to Supabase Storage and return the public URL.
  *
  * Processing steps:
@@ -91,6 +106,9 @@ export async function uploadPathCover(file: File, pathId: string): Promise<strin
     throw new Error('Supabase client is not available. Configure VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.')
   }
 
+  // Get authenticated user ID for path-scoped storage key
+  const userId = await getUserId()
+
   // Validate file type
   const supportedFormats = ['image/jpeg', 'image/png', 'image/webp']
   if (!supportedFormats.includes(file.type)) {
@@ -101,8 +119,8 @@ export async function uploadPathCover(file: File, pathId: string): Promise<strin
   const img = await loadImageFile(file)
   const blob = await resizeToJpegBlob(img, COVER_W, COVER_H)
 
-  // Upload to Supabase Storage
-  const key = `${pathId}.jpg`
+  // Upload to Supabase Storage under user-scoped path for RLS compatibility
+  const key = `${userId}/${pathId}.jpg`
   const { error } = await supabase.storage.from(BUCKET_NAME).upload(key, blob, {
     contentType: 'image/jpeg',
     cacheControl: '3600',
@@ -123,11 +141,18 @@ export async function uploadPathCover(file: File, pathId: string): Promise<strin
  * Delete a cover image from Supabase Storage.
  */
 export async function deletePathCover(pathId: string): Promise<void> {
-  if (!supabase) return
+  try {
+    if (!supabase) return
 
-  const key = `${pathId}.jpg`
-  const { error } = await supabase.storage.from(BUCKET_NAME).remove([key])
-  if (error) {
-    console.warn('[PathCoverUpload] Delete failed (non-fatal):', error.message)
+    // Get authenticated user ID to resolve the user-scoped storage path
+    const userId = await getUserId()
+
+    const key = `${userId}/${pathId}.jpg`
+    const { error } = await supabase.storage.from(BUCKET_NAME).remove([key])
+    if (error) {
+      console.warn('[PathCoverUpload] Delete failed (non-fatal):', error.message)
+    }
+  } catch (err) {
+    console.warn('[PathCoverUpload] Delete failed (non-fatal):', err)
   }
 }

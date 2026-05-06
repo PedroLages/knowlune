@@ -1,5 +1,6 @@
 import { Sparkles, CheckCircle2 } from 'lucide-react'
 import { cn } from '@/app/components/ui/utils'
+import { PRESET_GRADIENT_MAP } from '@/data/pathCoverGradients'
 
 /**
  * Gradient presets for path card headers.
@@ -38,6 +39,8 @@ interface PathCardHeaderProps {
   isAIGenerated?: boolean
   /** Custom cover image URL (Supabase Storage public URL) */
   coverImageUrl?: string
+  /** Named gradient preset key (e.g. 'cyan-blue'). Used when coverImageUrl is absent. */
+  coverPreset?: string
   /** Additional className */
   className?: string
 }
@@ -53,15 +56,21 @@ export function PathCardHeader({
   completionPct,
   isAIGenerated,
   coverImageUrl,
+  coverPreset,
   className,
 }: PathCardHeaderProps) {
   const isCompleted = completionPct >= 100
   const isNotStarted = completionPct === 0
   const hasCoverImage = !!coverImageUrl
 
-  const gradient = isNotStarted
-    ? MUTED_GRADIENT
-    : GRADIENTS[hashString(pathName) % GRADIENTS.length]
+  // Determine gradient: preset > hash-based > muted (not-started)
+  const gradient = hasCoverImage
+    ? '' // cover image overrides gradient
+    : isNotStarted
+      ? MUTED_GRADIENT
+      : coverPreset && PRESET_GRADIENT_MAP[coverPreset]
+        ? PRESET_GRADIENT_MAP[coverPreset]
+        : GRADIENTS[hashString(pathName) % GRADIENTS.length]
 
   return (
     <div

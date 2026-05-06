@@ -744,7 +744,7 @@ export function Layout() {
                 aria-label="Sign in to your account"
               >
                 <LogIn className="size-4" aria-hidden="true" />
-                Sign In
+                <span className="hidden sm:inline">Sign In</span>
               </Button>
             )}
           </div>
