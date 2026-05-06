@@ -1,0 +1,48 @@
+Code review complete (headless mode).
+
+Scope: feature/ce-2026-05-05-abs-ebook-sync-format-detection vs 0c7baecb (8 files, ~400+ executable lines)
+Intent: Add format detection to ABS sync pipeline so ebooks are classified as 'epub' with correct download URL and Bearer auth, instead of all items being classified as 'audiobook'. Includes type widening for AbsLibrary.mediaType and format preservation on re-sync.
+Reviewers: correctness (always), testing (always), maintainability (always), project-standards (always), agent-native-reviewer (always), learnings-researcher (always), security (Bearer auth path in BookContentService, credential handling), api-contract (AbsLibrary.mediaType type change, exported detectFormat/resolveNarratorNames functions), reliability (error handling for Bearer auth failures in BookContentService), adversarial (>=50 executable code lines + auth changes + external API integration), kieran-typescript (TypeScript hooks, services, type definitions)
+Verdict: Ready to merge
+Artifact: .context/compound-engineering/ce-review/20260506-020529-36656726/
+
+Applied 0 safe_auto fixes.
+
+Advisory findings (report-only):
+
+[P3][advisory -> human] File: src/app/hooks/useAudiobookshelfSync.ts:77 -- detectFormat exported without heuristic limitation warning (api-contract, confidence 0.60)
+  Why: detectFormat is exported and callable from any module. If consumers are unaware that it requires BOTH narrators AND duration for audiobook classification, they may misinterpret an 'epub' result as an authoritative format signal. The heuristic is intentionally conservative (no narrator metadata -> defaults to epub), but this tradeoff is invisible to external callers.
+  Evidence: export function detectFormat at line 77 -- public API surface of the module
+  Evidence: JSDoc at lines 67-76 describes the rule but does not warn about the narrator+duration requirement as a limitation
+  Suggested fix: Add a @warning to detectFormat's JSDoc documenting the heuristic limitation and R6 tension
+
+[P3][advisory -> human] File: src/app/hooks/useAudiobookshelfSync.ts:177 -- Inline author name resolution duplicates pattern (maintainability, confidence 0.65)
+  Why: Author name resolution follows the identical pattern as narrator resolution (check array, fallback to string field via bracket access) but is left inline while narrator resolution was extracted to resolveNarratorNames. This asymmetry is a minor consistency debt.
+  Evidence: Lines 177-181: authorsArray.map(a => a.name).join(', ') with (metadata as Record).authorName fallback
+  Evidence: Line 152: resolveNarratorNames(absItem) handles the identical pattern for narrators
+  Suggested fix: Extract a resolveAuthorNames(absItem: AbsLibraryItem): string helper following the same pattern as resolveNarratorNames
+
+Requirements Completeness (plan_source: explicit):
+- R1: MET
+- R2: MET
+- R3: MET
+- R4: MET
+- R5: MET
+- R6: MET
+- Unit 1: DONE
+- Unit 2: DONE
+- Unit 3: DONE
+
+Residual risks:
+- The heuristic still cannot detect audiobooks without narrator metadata (acknowledged R6 tension). The format preservation mitigation prevents re-sync from reclassifying existing audiobooks, but new audiobooks without narrator metadata will still be classified as 'epub'.
+
+Testing gaps:
+- No E2E test validates the full sync-and-read chain for ebooks from ABS (pre-existing gap)
+
+Coverage:
+- Suppressed: 0 findings below 0.60 confidence
+- Failed reviewers: None
+- Both previous review rounds (20260506-014540, 20260506-020011) addressed; 2 fix commits applied their findings. All previously identified P0-P2 issues are resolved.
+- No safe_auto fixes applied in this round.
+
+Review complete

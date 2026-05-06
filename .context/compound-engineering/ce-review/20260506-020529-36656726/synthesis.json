@@ -1,0 +1,90 @@
+{
+  "run_id": "20260506-020529-36656726",
+  "mode": "headless",
+  "scope": {
+    "branch": "feature/ce-2026-05-05-abs-ebook-sync-format-detection",
+    "base": "0c7baecb092fb5be6995e84f395294eb9049b7e5",
+    "files": [
+      "docs/plans/2026-05-05-001-feat-abs-ebook-sync-format-detection-plan.md",
+      "src/app/hooks/__tests__/useAudiobookshelfSync.map.test.ts",
+      "src/app/hooks/useAudiobookshelfSync.ts",
+      "src/data/types.ts",
+      "src/services/BookContentService.ts",
+      "src/services/__tests__/BookContentService.test.ts",
+      "src/stores/__tests__/useBookStore.test.ts",
+      "src/stores/useBookStore.ts"
+    ],
+    "untracked_excluded": []
+  },
+  "intent": "Add format detection to ABS sync pipeline so ebooks are classified as 'epub' with correct download URL and Bearer auth, instead of all items being classified as 'audiobook'. Includes type widening for AbsLibrary.mediaType and format preservation on re-sync.",
+  "reviewers": [
+    "correctness (always)",
+    "testing (always)",
+    "maintainability (always)",
+    "project-standards (always)",
+    "agent-native-reviewer (always)",
+    "learnings-researcher (always)",
+    "security (Bearer auth path in BookContentService, credential handling)",
+    "api-contract (AbsLibrary.mediaType type change, exported detectFormat/resolveNarratorNames functions)",
+    "reliability (error handling for Bearer auth failures in BookContentService)",
+    "adversarial (>=50 executable code lines + auth changes + external API integration)",
+    "kieran-typescript (TypeScript hooks, services, type definitions)"
+  ],
+  "applied_fixes": [],
+  "findings": [
+    {
+      "title": "detectFormat exported without heuristic limitation warning",
+      "severity": "P3",
+      "file": "src/app/hooks/useAudiobookshelfSync.ts",
+      "line": 77,
+      "why_it_matters": "detectFormat is exported and callable from any module. If consumers are unaware that it requires BOTH narrators AND duration for audiobook classification, they may misinterpret an 'epub' result as an authoritative format signal. The heuristic is intentionally conservative (no narrator metadata -> defaults to epub), but this tradeoff is invisible to external callers.",
+      "autofix_class": "advisory",
+      "owner": "human",
+      "requires_verification": false,
+      "confidence": 0.60,
+      "evidence": [
+        "export function detectFormat at line 77 — public API surface of the module",
+        "JSDoc at lines 67-76 describes the rule but does not warn about the narrator+duration requirement as a limitation",
+        "No @warning or @see reference: 'This heuristic requires both narrators AND duration; items without narrator metadata are classified as epub even if they are audiobooks in ABS'"
+      ],
+      "pre_existing": false,
+      "suggested_fix": "Add a @warning to detectFormat's JSDoc: '@warning This heuristic requires both narrators AND duration metadata. ABS items without narrator metadata (including some audiobooks) will be classified as epub. See docs/plans/2026-05-05-001-feat-abs-ebook-sync-format-detection-plan.md for the R6 tension analysis.'"
+    },
+    {
+      "title": "Inline author name resolution duplicates pattern",
+      "severity": "P3",
+      "file": "src/app/hooks/useAudiobookshelfSync.ts",
+      "line": 177,
+      "why_it_matters": "Author name resolution at lines 177-181 follows the identical pattern as narrator resolution (check array, fallback to string field via bracket access). If author metadata sources change in the future, this inline logic must be updated separately from the narrator logic. The inconsistent treatment — narratorNames extracted as a helper, authorNames left inline — creates an asymmetry that future developers may not notice.",
+      "autofix_class": "advisory",
+      "owner": "human",
+      "requires_verification": false,
+      "confidence": 0.65,
+      "evidence": [
+        "Lines 177-181: authorsArray.map(a => a.name).join(', ') with (metadata as Record).authorName fallback",
+        "Line 152: resolveNarratorNames(absItem) handles the identical pattern for narrators",
+        "Both handle an array fallback to a string field on metadata accessed via bracket notation"
+      ],
+      "pre_existing": false,
+      "suggested_fix": "Extract a resolveAuthorNames(absItem: AbsLibraryItem): string helper following the same pattern as resolveNarratorNames, and use it at line 177. This maintains consistency and simplifies future author metadata changes."
+    }
+  ],
+  "pre_existing": [],
+  "requirements_completeness": {
+    "plan_source": "explicit",
+    "R1": "MET — detectFormat returns 'epub' for items without narrators+duration; format is set from detectFormat result, preserved on re-sync via bulkUpsertAbsBooks format check",
+    "R2": "MET — detectFormat returns 'audiobook' for items with narrators AND duration; existing audiobook behavior is preserved",
+    "R3": "MET — ebooks get `${baseUrl}/api/items/${encodeURIComponent(absItem.id)}/ebook`",
+    "R4": "MET — Bearer auth added as first branch in BookContentService.fetchRemoteEpub auth header logic",
+    "R5": "MET — isEbook ? [] : ... pattern skips dummy audio chapter synthesis for ebooks",
+    "R6": "MET — bulkUpsertAbsBooks preserves existing format via format: existing.format on re-sync, providing stronger guarantees than the plan's metadata-only heuristic",
+    "Unit 1": "DONE — Format detection, ebook wiring, sync loop filter widening, toast pluralization, bulkUpsertAbsBooks format preservation",
+    "Unit 2": "DONE — Bearer auth support in BookContentService",
+    "Unit 3": "DONE — AbsLibrary.mediaType type widened to include 'ebook'"
+  },
+  "coverage": {
+    "suppressed": 0,
+    "untracked_excluded": [],
+    "failed_reviewers": []
+  }
+}
