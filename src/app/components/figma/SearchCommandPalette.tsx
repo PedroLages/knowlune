@@ -15,7 +15,6 @@ import {
   ChevronDown,
   ChevronRight,
   Sparkles,
-  Clock,
 } from 'lucide-react'
 import {
   SECTION_ORDER,
@@ -32,13 +31,12 @@ import {
   CommandShortcut,
 } from '@/app/components/ui/command'
 import { Badge } from '@/app/components/ui/badge'
-import { normalizeFilename } from '@/lib/searchLabelUtils'
 import { truncateSnippet, highlightMatches, buildHighlightPatterns } from '@/lib/searchUtils'
 import { parsePrefix } from '@/lib/searchPrefix'
 import { db } from '@/db/schema'
 import { useUnifiedSearchIndex } from '@/lib/useUnifiedSearchIndex'
 import type { EntityType, UnifiedSearchResult } from '@/lib/unifiedSearch'
-import { recordVisit, getRecentHits, RECENT_LIST_KEY, type RecentHit } from '@/lib/searchFrecency'
+import { recordVisit } from '@/lib/searchFrecency'
 import { readHintDismissed, writeHintDismissed } from '@/lib/searchHintDismiss'
 import { getMergedAuthors } from '@/lib/authors'
 import { getBookDestinationPath } from '@/lib/bookNavigation'
@@ -149,8 +147,6 @@ interface ContinueLearningItem {
 
 /** Maximum rows rendered in the "Continue learning" section. */
 const CONTINUE_LEARNING_MAX = 2
-/** Maximum rows rendered in the "Recently opened" section. */
-const RECENT_OPENED_MAX = 5
 /** Number of Best Matches rows above the grouped sections. */
 const BEST_MATCHES_LIMIT = 3
 
@@ -191,10 +187,6 @@ export function SearchCommandPalette({
   // Story 2 invariant: other hook consumers (Courses.tsx, Authors.tsx,
   // Notes.tsx) must not re-render on palette-specific state changes.
 
-  // Recent hits — synchronous LS read on mount; re-read on cross-tab
-  // `storage` events and after `recordVisit` in this tab.
-  const [recentHits, setRecentHits] = useState<RecentHit[]>(() => getRecentHits())
-
   // Continue Learning — `undefined` until the palette-open effect resolves,
   // so we can discriminate "loading" from "definitively empty" and avoid
   // flashing the welcome copy before Dexie answers.
@@ -209,22 +201,12 @@ export function SearchCommandPalette({
   // Prefix-hint dismissal — lazy LS read once at mount.
   const [hintDismissed, setHintDismissed] = useState<boolean>(() => readHintDismissed())
 
-  // Resolved human-readable labels for "Recently opened" rows.
-  // Populated async on palette open / recentHits change. Key = `${type}:${id}`.
-  const [resolvedRecentLabels, setResolvedRecentLabels] = useState<
-    Map<string, { title: string; subtitle?: string }>
-  >(new Map())
-
   const highlightPatterns = useMemo(() => buildHighlightPatterns(debouncedQuery), [debouncedQuery])
 
   // Capture focus and reset state on open/close
   useEffect(() => {
     if (open) {
       previouslyFocusedRef.current = document.activeElement as HTMLElement
-      // Re-read LS on every open so a visit recorded in another tab while
-      // the palette was closed is reflected. The `storage` listener covers
-      // the live case; this covers the open-after-a-while case.
-      setRecentHits(getRecentHits())
     } else {
       setSearchQuery('')
       setDebouncedQuery('')
@@ -248,16 +230,6 @@ export function SearchCommandPalette({
       setScope(initialScope)
     }
   }, [open, initialScope])
-
-  // Cross-tab sync — re-read LS when another tab writes to the recent list.
-  useEffect(() => {
-    const onStorage = (e: StorageEvent) => {
-      if (e.key !== RECENT_LIST_KEY) return
-      setRecentHits(getRecentHits())
-    }
-    window.addEventListener('storage', onStorage)
-    return () => window.removeEventListener('storage', onStorage)
-  }, [])
 
   // 150ms debounce for search
   useEffect(() => {
@@ -631,12 +603,8 @@ export function SearchCommandPalette({
     }
 
     // Record the visit (LS + Dexie). Fire-and-forget — navigation must not
-    // block on the write. Optimistically update local `recentHits` so the
-    // palette's Recently-opened row reflects the new entry immediately on
-    // next open (cross-tab sync via `storage` listener covers other tabs).
-    void recordVisit(result.type, result.id).then(() => {
-      setRecentHits(getRecentHits())
-    })
+    // block on the write.
+    void recordVisit(result.type, result.id)
 
     handleOpenChange(false)
     // `__viaPalette` tells Unit 5 route-mount effects to skip their own
@@ -661,86 +629,7 @@ export function SearchCommandPalette({
         path = `/library/${item.id}`
       }
     }
-    void recordVisit(item.type, item.id).then(() => {
-      setRecentHits(getRecentHits())
-    })
-    handleOpenChange(false)
-    navigate(path, { state: { __viaPalette: true } })
-  }
-
-  /**
-   * Recently Opened row select — validate against Dexie (the entry may refer
-   * to a deleted entity). Stale entries are purged from LS on the fly.
-   * For authors, validate against the merged projection (Story 1 latent-bug fix).
-   */
-  const handleRecentSelect = async (hit: RecentHit) => {
-    let path: string | null = null
-    let exists = true
-    try {
-      switch (hit.type) {
-        case 'course': {
-          const row = await db.importedCourses.get(hit.id)
-          if (!row) exists = false
-          else path = `/courses/${hit.id}`
-          break
-        }
-        case 'lesson': {
-          const row = await db.importedVideos.get(hit.id)
-          if (!row) exists = false
-          else path = `/courses/${row.courseId}/lessons/${hit.id}`
-          break
-        }
-        case 'book': {
-          const row = await db.books.get(hit.id)
-          if (!row) exists = false
-          else path = getBookDestinationPath(row)
-          break
-        }
-        case 'note': {
-          const row = await db.notes.get(hit.id)
-          if (!row) exists = false
-          else
-            path = `/courses/${row.courseId}/lessons/${row.videoId}?panel=notes${
-              row.timestamp != null ? `&t=${row.timestamp}` : ''
-            }`
-          break
-        }
-        case 'highlight': {
-          const row = await db.bookHighlights.get(hit.id)
-          if (!row) exists = false
-          else path = `/library/${row.bookId}/read?sourceHighlightId=${encodeURIComponent(hit.id)}`
-          break
-        }
-        case 'author': {
-          const storeAuthors = (await db.authors.toArray()) as ImportedAuthor[]
-          const merged = getMergedAuthors(storeAuthors)
-          if (!merged.some(a => a.id === hit.id)) exists = false
-          else path = `/authors/${hit.id}`
-          break
-        }
-      }
-    } catch (e) {
-      // silent-catch-ok: same deleted-entity fallback as handleResultSelect
-      console.warn('[search-palette] recent-hit existence check failed:', e)
-      exists = false
-    }
-
-    if (!exists || !path) {
-      toast.error('Item no longer available')
-      // Purge the stale entry from LS + local state.
-      const next = recentHits.filter(h => !(h.type === hit.type && h.id === hit.id))
-      setRecentHits(next)
-      try {
-        localStorage.setItem(RECENT_LIST_KEY, JSON.stringify(next))
-      } catch {
-        // silent-catch-ok: LS purge is best-effort; user-visible toast already fired
-      }
-      return
-    }
-
-    void recordVisit(hit.type, hit.id).then(() => {
-      setRecentHits(getRecentHits())
-    })
+    void recordVisit(item.type, item.id)
     handleOpenChange(false)
     navigate(path, { state: { __viaPalette: true } })
   }
@@ -781,101 +670,14 @@ export function SearchCommandPalette({
   const isEmptyQuery = !hasActiveQuery
   const isLoadingEmptyState = isEmptyQuery && continueLearning === undefined
   const hasContinueLearning = (continueLearning?.length ?? 0) > 0
-  const displayedRecentHits = recentHits.slice(0, RECENT_OPENED_MAX)
-  const hasRecentOpened = displayedRecentHits.length > 0
-  // Stable key of the displayed recent-hit list so the label-resolution effect
-  // only re-fires when the hit list actually changes, not on unrelated renders.
-  const recentHitKeys = useMemo(
-    () => displayedRecentHits.map(h => `${h.type}:${h.id}`).join(','),
-    [displayedRecentHits]
-  )
   // Fresh-install welcome: both empty-state rows are definitively empty.
   // Guard !scope: a HeaderSearchButton open on an empty index should not show
   // "nothing here yet" while the Courses chip is visible.
   const showWelcomeCopy =
-    isEmptyQuery && !scope && !isLoadingEmptyState && !hasContinueLearning && !hasRecentOpened
+    isEmptyQuery && !scope && !isLoadingEmptyState && !hasContinueLearning
   // Suppress Pages when welcome copy is visible — a 9-item nav list
   // contradicts the "nothing here yet" message.
   const showPages = !showWelcomeCopy && !scope && staticPagesFiltered.length > 0
-
-  // ─── Recently Opened label resolution — one-shot per open + hit list ─────
-  //
-  // Resolves human-readable titles/subtitles from Dexie (and merged authors
-  // for author hits) so the palette renders e.g. "Introduction to Calculus"
-  // instead of a raw UUID. Keyed on the stable `recentHitKeys` so identical
-  // hit lists don't re-fetch after unrelated re-renders.
-  useEffect(() => {
-    if (!open) return
-    if (displayedRecentHits.length === 0) {
-      setResolvedRecentLabels(new Map())
-      return
-    }
-    let ignore = false
-    void (async () => {
-      const labelMap = new Map<string, { title: string; subtitle?: string }>()
-      try {
-        const results = await Promise.all(
-          displayedRecentHits.map(async hit => {
-            const key = `${hit.type}:${hit.id}`
-            try {
-              switch (hit.type) {
-                case 'course': {
-                  const row = await db.importedCourses.get(hit.id)
-                  return { key, label: row ? { title: row.name } : null }
-                }
-                case 'lesson': {
-                  const row = await db.importedVideos.get(hit.id)
-                  return { key, label: row ? { title: normalizeFilename(row.filename) || row.youtubeVideoId || row.id } : null }
-                }
-                case 'book': {
-                  const row = await db.books.get(hit.id)
-                  return {
-                    key,
-                    label: row ? { title: row.title, subtitle: row.author || undefined } : null,
-                  }
-                }
-                case 'note': {
-                  const row = await db.notes.get(hit.id)
-                  return {
-                    key,
-                    label: row ? { title: row.content.slice(0, 80) } : null,
-                  }
-                }
-                case 'highlight': {
-                  const row = await db.bookHighlights.get(hit.id)
-                  return {
-                    key,
-                    label: row ? { title: row.textAnchor.slice(0, 80) } : null,
-                  }
-                }
-                case 'author': {
-                  const storeAuthors = (await db.authors.toArray()) as ImportedAuthor[]
-                  const merged = getMergedAuthors(storeAuthors)
-                  const author = merged.find(a => a.id === hit.id)
-                  return { key, label: author ? { title: author.name } : null }
-                }
-                default:
-                  return { key, label: null }
-              }
-            } catch {
-              // silent-catch-ok: individual row lookup failures shouldn't block the batch
-              return { key, label: null }
-            }
-          })
-        )
-        for (const { key, label } of results) {
-          if (label) labelMap.set(key, label)
-        }
-      } catch (err) {
-        // silent-catch-ok: label resolution is best-effort; raw ID is a safe fallback
-        console.error('[search-palette] recent-label resolution failed:', err)
-      }
-      if (!ignore) setResolvedRecentLabels(labelMap)
-    })()
-    return () => {
-      ignore = true
-    }
-  }, [open, recentHitKeys, displayedRecentHits.length])
 
   return (
     <CommandDialog
@@ -1026,44 +828,6 @@ export function SearchCommandPalette({
                     className={`ml-2 shrink-0 text-[10px] px-1.5 py-0 h-4 ${TYPE_BADGE_CLASS[item.type]}`}
                   >
                     {TYPE_BADGE_LABEL[item.type]}
-                  </Badge>
-                </CommandItem>
-              )
-            })}
-          </CommandGroup>
-        )}
-
-        {/* Recently Opened — shown only on empty query (unscoped). */}
-        {isEmptyQuery && !scope && hasRecentOpened && (
-          <CommandGroup heading="Recently opened">
-            {displayedRecentHits.map(hit => {
-              const sectionConfig = SECTION_ORDER.find(s => s.type === hit.type)
-              const Icon = sectionConfig?.icon ?? Clock
-              const resolved = resolvedRecentLabels.get(`${hit.type}:${hit.id}`)
-              const displayTitle = resolved?.title ?? hit.id
-              const displaySubtitle = resolved?.subtitle
-              return (
-                <CommandItem
-                  key={`recent:${hit.type}:${hit.id}`}
-                  value={`recent:${hit.type}:${hit.id}`}
-                  onSelect={() => void handleRecentSelect(hit)}
-                  aria-label={`${displayTitle}, ${TYPE_BADGE_LABEL[hit.type]}`}
-                  className="min-h-[44px]"
-                  data-testid={`search-recent-${hit.type}-${hit.id}`}
-                >
-                  <Icon className="mr-2 size-4 shrink-0" />
-                  <div className="flex flex-col gap-0.5 min-w-0 flex-1">
-                    <span className="text-sm truncate">{displayTitle}</span>
-                    {displaySubtitle && (
-                      <span className="text-[11px] text-muted-foreground truncate">
-                        {displaySubtitle}
-                      </span>
-                    )}
-                  </div>
-                  <Badge
-                    className={`ml-2 shrink-0 text-[10px] px-1.5 py-0 h-4 ${TYPE_BADGE_CLASS[hit.type]}`}
-                  >
-                    {TYPE_BADGE_LABEL[hit.type]}
                   </Badge>
                 </CommandItem>
               )
