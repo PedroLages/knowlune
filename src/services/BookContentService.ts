@@ -128,7 +128,13 @@ class BookContentService {
       }
 
       const headers: Record<string, string> = {}
-      if (source.auth && 'username' in source.auth && source.auth.password) {
+      if (source.auth && 'bearer' in source.auth) {
+        // Bearer token auth (e.g., Audiobookshelf ABS) — used by fetch() where
+        // Authorization headers are the correct auth channel (unlike <img> tags
+        // which require query-parameter tokens for cover images).
+        // The bearer value is the ABS API key, resolved at sync time.
+        headers['Authorization'] = `Bearer ${source.auth.bearer}`
+      } else if (source.auth && 'username' in source.auth && source.auth.password) {
         // Issue 2: Warn if credentials are sent over plain HTTP (RFC 7617 security)
         if (/^http:\/\//i.test(source.url)) {
           console.warn(

@@ -1,0 +1,12 @@
+{
+  "reviewer": "learnings-researcher",
+  "findings": [],
+  "residual_risks": [],
+  "testing_gaps": [],
+  "learnings": [
+    "docs/solutions/best-practices/format-pairing-cross-format-position-translation-2026-04-25.md: Never call ABS chapter endpoints during library sync (N+1 fan-out). Followed — item-level metadata from list endpoint is used for format detection.",
+    "docs/solutions/best-practices/audiobook-prefs-hydration-allow-list-pattern-2026-04-25.md: Treat external format values as untrusted input. Gate with allow-list membership checks. Followed — VALID_FORMATS allow-list guards the format before storing.",
+    "docs/solutions/sync/abs-sync-qa-fix-patterns-2026-04-24.md: Auth guards must short-circuit sync cycles on failed credentials. Followed — Bearer auth failure in BookContentService throws RemoteEpubError with isCachedVersion fallback.",
+    "docs/solutions/sync/e96-closeout-sync-patterns-2026-04-19.md: Per-row read-before-write during hydration prevents bulkPut from clobbering locally-set fields. Not directly relevant to this diff."
+  ]
+}

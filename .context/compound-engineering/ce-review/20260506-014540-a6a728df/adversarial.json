@@ -1,0 +1,29 @@
+{
+  "reviewer": "adversarial",
+  "findings": [
+    {
+      "title": "Re-sync reclassifies format for all synced items",
+      "severity": "P2",
+      "file": "src/app/hooks/useAudiobookshelfSync.ts",
+      "line": 221,
+      "why_it_matters": "bulkUpsertAbsBooks replaces format and source on every re-sync. If ABS metadata changes between syncs (e.g., narrators removed due to ABS bug or metadata edit), an audiobook could be reclassified as 'epub' on re-sync. The plan acknowledges this for audiobooks without narrator metadata, but any ABS metadata change affecting the heuristic triggers reclassification.",
+      "autofix_class": "advisory",
+      "owner": "human",
+      "requires_verification": false,
+      "confidence": 0.65,
+      "evidence": [
+        "bulkUpsertAbsBooks merge semantics (from plan: 'replaces format and source from newly-mapped books on re-sync')",
+        "The heuristic is re-evaluated on every sync from ABS metadata",
+        "Plan's own R6 tension documentation acknowledges this risk"
+      ],
+      "pre_existing": false,
+      "suggested_fix": "Consider persisting the detected format separately from the sync-derived format, so re-sync only updates when confidence is high (e.g., ABS says 'ebook' but local says 'audiobook' — trust local unless ABS metadata is unambiguous)"
+    }
+  ],
+  "residual_risks": [
+    "Sync loop filter widening (line 334) now accepts 'ebook' items. If a future ABS version returns a new mediaType that should also be accepted (e.g., 'comic'), the filter must be updated independently."
+  ],
+  "testing_gaps": [
+    "No E2E test validates the full sync-and-read chain for ebooks from ABS"
+  ]
+}

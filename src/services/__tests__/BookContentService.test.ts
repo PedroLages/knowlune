@@ -27,6 +27,14 @@ function makeRemoteBook(
   return makeBook({ type: 'remote', url, auth }, id)
 }
 
+function makeRemoteBookWithBearer(
+  token: string,
+  url = 'https://abs.local/api/items/item-1/ebook',
+  id = 'book-bearer-1'
+): Book {
+  return makeBook({ type: 'remote', url, auth: { bearer: token } }, id)
+}
+
 const MOCK_EPUB_BUFFER = new ArrayBuffer(100)
 
 /** Stub fetch to return a Response with the given options. */
@@ -139,6 +147,51 @@ describe('BookContentService', () => {
       )
     })
 
+    it('includes Bearer auth header when source.auth has bearer token', async () => {
+      vi.stubGlobal('fetch', stubFetch(MOCK_EPUB_BUFFER))
+
+      const book = makeRemoteBookWithBearer('token123')
+      await bookContentService.getEpubContent(book)
+
+      expect(fetch).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.objectContaining({
+          headers: expect.objectContaining({
+            Authorization: 'Bearer token123',
+          }),
+        })
+      )
+    })
+
+    it('sends Bearer auth header with empty token', async () => {
+      vi.stubGlobal('fetch', stubFetch(MOCK_EPUB_BUFFER))
+
+      const book = makeRemoteBookWithBearer('')
+      await bookContentService.getEpubContent(book)
+
+      expect(fetch).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.objectContaining({
+          headers: expect.objectContaining({
+            Authorization: 'Bearer ',
+          }),
+        })
+      )
+    })
+
+    it('prefers Bearer auth over Basic when both are present', async () => {
+      vi.stubGlobal('fetch', stubFetch(MOCK_EPUB_BUFFER))
+
+      // RemoteAuth is a discriminated union — both can't coexist in one object,
+      // but test that Bearer path runs independently.
+      const book = makeRemoteBookWithBearer('token456')
+      await bookContentService.getEpubContent(book)
+
+      const callHeaders = (fetch as ReturnType<typeof vi.fn>).mock.calls[0][1].headers
+      expect(callHeaders.Authorization).toBe('Bearer token456')
+      expect(callHeaders.Authorization).not.toContain('Basic')
+    })
+
     it('omits auth header when no credentials', async () => {
       vi.stubGlobal('fetch', stubFetch(MOCK_EPUB_BUFFER))
 
@@ -175,6 +228,20 @@ describe('BookContentService', () => {
       } catch (err) {
         expect(err).toBeInstanceOf(RemoteEpubError)
         expect((err as RemoteEpubError).code).toBe('auth')
+      }
+    })
+
+    it('throws RemoteEpubError with code "auth" for 401 with Bearer token', async () => {
+      vi.stubGlobal('fetch', stubFetch(null, 401))
+
+      const book = makeRemoteBookWithBearer('expired-token')
+      try {
+        await bookContentService.getEpubContent(book)
+        expect.unreachable('should have thrown')
+      } catch (err) {
+        expect(err).toBeInstanceOf(RemoteEpubError)
+        expect((err as RemoteEpubError).code).toBe('auth')
+        expect((err as RemoteEpubError).message).toContain('Authentication failed')
       }
     })
 

@@ -1044,13 +1044,13 @@ export interface LegacyAudiobookshelfServer extends AudiobookshelfServer {
 export interface AbsLibrary {
   id: string
   name: string
-  mediaType: string // 'book' | 'podcast'
+  mediaType: 'book' | 'podcast' | 'ebook' | (string & {})
 }
 
 export interface AbsLibraryItem {
   id: string
   ino: string // inode — used in streaming URLs
-  mediaType?: string // 'book' | 'podcast' — present when library contains mixed media
+  mediaType?: 'book' | 'podcast' | 'ebook' | (string & {}) // — present when library contains mixed media
   media: {
     metadata: {
       title: string

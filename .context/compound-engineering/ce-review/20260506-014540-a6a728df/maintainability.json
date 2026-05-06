@@ -1,0 +1,27 @@
+{
+  "reviewer": "maintainability",
+  "findings": [
+    {
+      "title": "Duplicated narrator resolution logic",
+      "severity": "P2",
+      "file": "src/app/hooks/useAudiobookshelfSync.ts",
+      "line": 51,
+      "why_it_matters": "The identical 5-line narrator extraction pattern appears in detectFormat (lines 51-61) and mapAbsItemToBook (lines 163-172). Any future change to narrator resolution (e.g., adding a new ABS metadata field) must be made in both places. This is a maintenance trap — one copy will inevitably be missed.",
+      "autofix_class": "manual",
+      "owner": "downstream-resolver",
+      "requires_verification": true,
+      "confidence": 0.85,
+      "evidence": [
+        "Line 53-61: const rawNarrators = ...; const narratorNames = rawNarrators.length > 0 ? ... : ...",
+        "Line 163-172: identical code block",
+        "Both blocks handle the same (string | {name:string})[] array and narratorName fallback"
+      ],
+      "pre_existing": false,
+      "suggested_fix": "Extract a shared resolveNarratorNames(absItem: AbsLibraryItem): string[] helper, export it, and use it in both detectFormat and mapAbsItemToBook"
+    }
+  ],
+  "residual_risks": [
+    "detectFormat and mapAbsItemToBook both resolve duration independently (line 64 vs line 207). Slightly different patterns (with vs without || undefined) but functionally equivalent."
+  ],
+  "testing_gaps": []
+}

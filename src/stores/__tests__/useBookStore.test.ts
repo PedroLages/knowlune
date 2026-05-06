@@ -547,6 +547,48 @@ describe('bulkUpsertAbsBooks', () => {
     expect(b?.progress).toBe(42)
     expect(b?.currentPosition).toEqual({ type: 'time', seconds: 1200 })
   })
+
+  it('preserves format from existing record on re-sync', async () => {
+    // Existing audiobook
+    const existing = makeBook({
+      id: 'fmt-preserve-1',
+      title: 'Original Title',
+      format: 'audiobook',
+      status: 'reading',
+      progress: 30,
+      absServerId: 'srv-1',
+      absItemId: 'fmt-item-1',
+      source: { type: 'remote', url: 'http://abs' },
+      totalDuration: 7200,
+    })
+
+    await act(async () => {
+      await useBookStore.getState().importBook(existing as never)
+    })
+
+    // Re-sync with a different format — should NOT overwrite
+    const fromCatalog = makeBook({
+      id: 'new-fmt-id',
+      title: 'Updated from ABS',
+      format: 'epub', // Different format that should be rejected
+      progress: 0,
+      absServerId: 'srv-1',
+      absItemId: 'fmt-item-1',
+      source: { type: 'remote', url: 'http://abs' },
+      totalDuration: 7200,
+    })
+
+    await act(async () => {
+      await useBookStore.getState().bulkUpsertAbsBooks([fromCatalog as never])
+    })
+
+    const b = useBookStore.getState().books.find(x => x.absItemId === 'fmt-item-1')
+    expect(b?.id).toBe('fmt-preserve-1')
+    // Format must be preserved from the existing record — a regression would
+    // cause existing audiobooks to be reclassified as epub on every re-sync.
+    expect(b?.format).toBe('audiobook')
+    expect(b?.title).toBe('Updated from ABS') // title SHOULD update from catalog
+  })
 })
 
 describe('getFilteredBooks — source filter', () => {

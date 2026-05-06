@@ -1,0 +1,8 @@
+{
+  "reviewer": "reliability",
+  "findings": [],
+  "residual_risks": [
+    "Bearer auth fallthrough — if 'bearer' in source.auth is true but source.auth.bearer is undefined or null, the Authorization header would be 'Bearer undefined'. However, the RemoteAuth discriminated union requires bearer to be a string, so TypeScript prevents this at compile time."
+  ],
+  "testing_gaps": []
+}
