@@ -1,5 +1,6 @@
 import { Sparkles, CheckCircle2 } from 'lucide-react'
 import { cn } from '@/app/components/ui/utils'
+import { PRESET_GRADIENT_MAP } from '@/data/pathCoverGradients'
 
 /**
  * Gradient presets for path card headers.
@@ -18,21 +19,6 @@ const GRADIENTS = [
 
 /** Not-started paths get a muted gradient */
 const MUTED_GRADIENT = 'from-muted-foreground/60 to-muted-foreground/80'
-
-/**
- * Mapping from named preset keys to gradient class strings.
- * Mirrors GRADIENT_PRESETS in PathCoverDialog.
- */
-const PRESET_GRADIENT_MAP: Record<string, string> = {
-  'cyan-blue': 'from-cyan-400 to-blue-600',
-  'emerald-green': 'from-emerald-400 to-green-600',
-  'purple-indigo': 'from-purple-500 to-indigo-700',
-  'orange-blue': 'from-orange-400 to-blue-500',
-  'pink-purple': 'from-pink-400 to-purple-600',
-  'amber-orange': 'from-amber-400 to-orange-600',
-  'teal-cyan': 'from-teal-400 to-cyan-600',
-  'rose-red': 'from-rose-400 to-red-600',
-}
 
 /** Simple string hash to pick a gradient deterministically */
 function hashString(str: string): number {

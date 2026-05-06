@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { EditPathDialog } from '../EditPathDialog'
+import { toast } from 'sonner'
 import type { LearningPath } from '@/data/types'
 
 vi.mock('sonner', () => ({
@@ -133,5 +134,31 @@ describe('EditPathDialog', () => {
     // updateDescription should NOT have been called since description didn't change
     expect(mockUpdateDescription).not.toHaveBeenCalled()
     expect(onOpenChange).toHaveBeenCalledWith(false)
+  })
+
+  it('shows error toast when renamePath fails', async () => {
+    const user = userEvent.setup()
+    mockRenamePath.mockRejectedValueOnce(new Error('Network error'))
+
+    const { onOpenChange } = renderDialog()
+    await waitFor(() => {
+      expect(screen.getByDisplayValue('Web Development')).toBeInTheDocument()
+    })
+
+    // Change title
+    const titleInput = screen.getByLabelText('Path title')
+    await user.clear(titleInput)
+    await user.type(titleInput, 'Updated Path')
+
+    // Save
+    await user.click(screen.getByText('Save'))
+
+    await waitFor(() => {
+      expect(mockRenamePath).toHaveBeenCalledWith('path-1', 'Updated Path')
+    })
+
+    // Verify error toast was shown and dialog did not close
+    expect(toast.error).toHaveBeenCalledWith('Failed to update path')
+    expect(onOpenChange).not.toHaveBeenCalled()
   })
 })

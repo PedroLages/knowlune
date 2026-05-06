@@ -141,14 +141,18 @@ export async function uploadPathCover(file: File, pathId: string): Promise<strin
  * Delete a cover image from Supabase Storage.
  */
 export async function deletePathCover(pathId: string): Promise<void> {
-  if (!supabase) return
+  try {
+    if (!supabase) return
 
-  // Get authenticated user ID to resolve the user-scoped storage path
-  const userId = await getUserId()
+    // Get authenticated user ID to resolve the user-scoped storage path
+    const userId = await getUserId()
 
-  const key = `${userId}/${pathId}.jpg`
-  const { error } = await supabase.storage.from(BUCKET_NAME).remove([key])
-  if (error) {
-    console.warn('[PathCoverUpload] Delete failed (non-fatal):', error.message)
+    const key = `${userId}/${pathId}.jpg`
+    const { error } = await supabase.storage.from(BUCKET_NAME).remove([key])
+    if (error) {
+      console.warn('[PathCoverUpload] Delete failed (non-fatal):', error.message)
+    }
+  } catch (err) {
+    console.warn('[PathCoverUpload] Delete failed (non-fatal):', err)
   }
 }

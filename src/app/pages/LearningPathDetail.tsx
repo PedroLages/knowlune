@@ -73,6 +73,7 @@ import { ControlCenter } from '@/app/components/learning-path/ControlCenter'
 import { useLearningPathStore } from '@/stores/useLearningPathStore'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
 import { useAuthorStore } from '@/stores/useAuthorStore'
+import { useIsMobile } from '@/app/hooks/useMediaQuery'
 import { usePathProgress } from '@/app/hooks/usePathProgress'
 import { usePathMilestones } from '@/app/hooks/usePathMilestones'
 import { useImportWizardTrigger } from '@/app/hooks/useImportWizardTrigger'
@@ -593,6 +594,7 @@ export function LearningPathDetail() {
   // Check prefers-reduced-motion
   const prefersReducedMotion = useReducedMotion()
   const shouldAnimate = !prefersReducedMotion
+  const isMobile = useIsMobile()
 
   // Wrapped stagger variants based on motion preference
   const containerVariants = shouldAnimate ? staggerContainer : { hidden: {}, visible: {} }
@@ -844,6 +846,7 @@ export function LearningPathDetail() {
                     }}
                     onCourseClick={courseId => navigate(`/courses/${courseId}`)}
                     autoScrollToCurrent
+                    simplified={isMobile}
                   />
                 </motion.section>
               )}

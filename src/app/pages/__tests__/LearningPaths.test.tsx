@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { MemoryRouter } from 'react-router'
+import { MemoryRouter, useLocation } from 'react-router'
 import { LearningPaths } from '../LearningPaths'
 import type { LearningPath, LearningPathEntry } from '@/data/types'
 
@@ -364,6 +364,40 @@ describe('LearningPaths', () => {
     // Dialog should close
     await waitFor(() => {
       expect(screen.queryByTestId('edit-path-dialog-mock')).not.toBeInTheDocument()
+    })
+  })
+
+  it('navigates to /learning-paths/:pathId when card title or description is clicked', async () => {
+    const user = userEvent.setup()
+
+    // Helper component to track current location
+    function LocationDisplay() {
+      const location = useLocation()
+      return <div data-testid="location-display">{location.pathname}</div>
+    }
+
+    render(
+      <MemoryRouter initialEntries={['/']}>
+        <LocationDisplay />
+        <LearningPaths />
+      </MemoryRouter>
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText('Web Development')).toBeInTheDocument()
+    })
+
+    // The card title and description are wrapped in a <Link> with an aria-label
+    // (courseCount is 0 because entries are empty in the test store mock)
+    const cardLink = screen.getByRole('link', { name: /Web Development.*0 courses.*0%/ })
+    expect(cardLink).toHaveAttribute('href', '/learning-paths/path-1')
+
+    // Click the link to navigate
+    await user.click(cardLink)
+
+    // Verify the URL changed to the path detail page
+    await waitFor(() => {
+      expect(screen.getByTestId('location-display')).toHaveTextContent('/learning-paths/path-1')
     })
   })
 

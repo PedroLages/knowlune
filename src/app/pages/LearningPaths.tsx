@@ -218,15 +218,15 @@ function PathCard({
         </div>
 
         {/* Card body */}
-        <CardContent className="px-4 pb-4 pt-1 relative flex flex-col h-[calc(100%-6rem)]">
-          {/* Progress ring — overlapping header */}
-          <div className="absolute -top-[42px] left-4">
+        <CardContent className="px-4 pb-4 pt-8 relative flex flex-col h-[calc(100%-6rem)]">
+          {/* Progress ring — centered at header/card boundary */}
+          <div className="absolute -top-[30px] left-4">
             <div className="bg-card rounded-full p-1.5 shadow-lg">
-              <PathProgressRing percentage={completionPct} size="md">
+              <PathProgressRing percentage={completionPct} size="sm">
                 {isCompleted ? (
-                  <CheckCircle2 className="size-6 text-success" aria-hidden="true" />
+                  <CheckCircle2 className="size-5 text-success" aria-hidden="true" />
                 ) : (
-                  <span className="text-xs font-bold text-foreground">
+                  <span className="font-bold text-foreground">
                     {Math.round(completionPct)}%
                   </span>
                 )}
@@ -236,7 +236,7 @@ function PathCard({
 
           <Link
             to={`/learning-paths/${path.id}`}
-            className="flex flex-col flex-1 min-h-0 focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 rounded-lg mt-7"
+            className="flex flex-col flex-1 min-h-0 focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 rounded-lg"
             aria-label={`${path.name} — ${courseCount} courses, ${completionPct}% completed`}
           >
             {/* Course count badge */}
@@ -327,7 +327,7 @@ function PathCardSkeleton() {
     <Card className="overflow-hidden rounded-2xl">
       <Skeleton className="h-24 w-full rounded-none" />
       <CardContent className="px-4 pb-4 pt-1 relative">
-        <Skeleton className="absolute -top-[42px] left-4 size-[84px] rounded-full" />
+        <Skeleton className="absolute -top-[30px] left-4 size-[60px] rounded-full" />
         <div className="mt-7 space-y-3">
           <Skeleton className="h-4 w-16" />
           <Skeleton className="h-6 w-3/4" />

@@ -1,0 +1,8 @@
+{
+  "reviewer": "testing",
+  "findings": [],
+  "residual_risks": [],
+  "testing_gaps": [
+    "DDL-only change — no behavioral logic added. Manual verification steps defined in plan document."
+  ]
+}

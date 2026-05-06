@@ -1,0 +1,8 @@
+{
+  "reviewer": "data-migrations",
+  "findings": [],
+  "residual_risks": [
+    "Bucket creation SQL (learning-path-covers + RLS policies) is not part of a numbered migration — must be executed manually via Supabase Dashboard SQL Editor. Risk of being forgotten during deployment."
+  ],
+  "testing_gaps": []
+}

@@ -15,22 +15,8 @@ import { Separator } from '@/app/components/ui/separator'
 import { cn } from '@/app/components/ui/utils'
 import { uploadPathCover, deletePathCover } from '@/lib/pathCoverUpload'
 import { useLearningPathStore } from '@/stores/useLearningPathStore'
+import { GRADIENT_PRESETS } from '@/data/pathCoverGradients'
 import type { LearningPath } from '@/data/types'
-
-/**
- * Gradient presets available for path covers.
- * Mirrors the PathCardHeader gradients but as named keys.
- */
-const GRADIENT_PRESETS = [
-  { key: 'cyan-blue', label: 'Cyan → Blue', from: 'from-cyan-400', to: 'to-blue-600' },
-  { key: 'emerald-green', label: 'Emerald → Green', from: 'from-emerald-400', to: 'to-green-600' },
-  { key: 'purple-indigo', label: 'Purple → Indigo', from: 'from-purple-500', to: 'to-indigo-700' },
-  { key: 'orange-blue', label: 'Orange → Blue', from: 'from-orange-400', to: 'to-blue-500' },
-  { key: 'pink-purple', label: 'Pink → Purple', from: 'from-pink-400', to: 'to-purple-600' },
-  { key: 'amber-orange', label: 'Amber → Orange', from: 'from-amber-400', to: 'to-orange-600' },
-  { key: 'teal-cyan', label: 'Teal → Cyan', from: 'from-teal-400', to: 'to-cyan-600' },
-  { key: 'rose-red', label: 'Rose → Red', from: 'from-rose-400', to: 'to-red-600' },
-] as const
 
 interface PathCoverDialogProps {
   open: boolean
@@ -111,7 +97,6 @@ export function PathCoverDialog({ open, onOpenChange, path }: PathCoverDialogPro
   const handleRemove = useCallback(async () => {
     setIsRemoving(true)
     const prevCoverUrl = path.coverImageUrl
-    const prevCoverPreset = path.coverPreset
     try {
       // Update store first so a failed storage delete does not leave state
       // referencing a cover that was already removed from the bucket.
@@ -120,16 +105,10 @@ export function PathCoverDialog({ open, onOpenChange, path }: PathCoverDialogPro
         coverPreset: undefined,
       })
       if (prevCoverUrl) {
-        try {
-          await deletePathCover(path.id)
-        } catch {
-          // Revert store update so state stays consistent with storage
-          await updatePathCover(path.id, {
-            coverImageUrl: prevCoverUrl,
-            coverPreset: prevCoverPreset,
-          })
-          throw new Error('Failed to remove cover from storage')
-        }
+        // deletePathCover handles all errors internally (non-fatal cleanup).
+        // The store has already been updated above, so a storage delete
+        // failure does not leave stale state in the UI.
+        await deletePathCover(path.id)
       }
       toast.success('Cover removed')
       handleOpenChange(false)
