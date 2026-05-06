@@ -38,6 +38,8 @@ describe('ViewModeToggle (E99-S01)', () => {
     // Clicking the active item makes Radix emit '' — the component should filter it.
     await user.click(screen.getByRole('radio', { name: 'Grid view' }))
 
+    expect(onChange).not.toHaveBeenCalled()
+
     // onChange may be called with '' filtered, so it should never be called with a non-mode value.
     for (const call of onChange.mock.calls) {
       expect(['grid', 'list', 'compact']).toContain(call[0])
@@ -60,6 +62,9 @@ describe('ViewModeToggle (E99-S01)', () => {
       const item = screen.getByRole('radio', { name: label })
       expect(item.className).toContain('min-h-11')
       expect(item.className).toContain('min-w-11')
+      expect(item.className).toContain('items-center')
+      expect(item.className).toContain('justify-center')
+      expect(item.className).toContain('gap-2')
     }
   })
 })
