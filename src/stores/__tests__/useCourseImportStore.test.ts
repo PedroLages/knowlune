@@ -4,6 +4,10 @@ import { act } from 'react'
 import Dexie from 'dexie'
 import type { ImportedCourse } from '@/data/types'
 
+vi.mock('@/lib/toastHelpers', () => ({
+  toastWithUndo: vi.fn(),
+}))
+
 let useCourseImportStore: (typeof import('@/stores/useCourseImportStore'))['useCourseImportStore']
 
 function makeCourse(overrides: Partial<ImportedCourse> = {}): ImportedCourse {
@@ -595,5 +599,179 @@ describe('setters', () => {
 
     useCourseImportStore.getState().setImportProgress(null)
     expect(useCourseImportStore.getState().importProgress).toBeNull()
+  })
+})
+
+describe('removeImportedCourses (bulk delete)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('deletes multiple courses sequentially', async () => {
+    const course1 = makeCourse({ name: 'Course One' })
+    const course2 = makeCourse({ name: 'Course Two' })
+    await act(async () => {
+      await useCourseImportStore.getState().addImportedCourse(course1)
+      await useCourseImportStore.getState().addImportedCourse(course2)
+    })
+    expect(useCourseImportStore.getState().importedCourses).toHaveLength(2)
+
+    await act(async () => {
+      await useCourseImportStore.getState().removeImportedCourses([course1.id, course2.id])
+    })
+    expect(useCourseImportStore.getState().importedCourses).toHaveLength(0)
+  })
+
+  it('continues deletion when some courses fail (partial failure)', async () => {
+    const course1 = makeCourse({ name: 'Good Course' })
+    const course2 = makeCourse({ name: 'Failing Course' })
+
+    // Set courses directly in store state (bypass persist to avoid IndexedDB interaction)
+    useCourseImportStore.setState({ importedCourses: [course1, course2] })
+
+    // Spy on removeImportedCourse so course2's deletion appears to fail
+    const originalRemove = useCourseImportStore.getState().removeImportedCourse
+    vi.spyOn(useCourseImportStore.getState(), 'removeImportedCourse')
+      .mockImplementation(async (id: string) => {
+        if (id === course2.id) {
+          // Simulate failure: do not remove from state, set error
+          useCourseImportStore.setState({ importError: 'Failed to remove course' })
+          return
+        }
+        // For course1: remove from state
+        useCourseImportStore.setState(state => ({
+          importedCourses: state.importedCourses.filter(c => c.id !== id),
+        }))
+      })
+
+    await act(async () => {
+      await useCourseImportStore.getState().removeImportedCourses([course1.id, course2.id])
+    })
+
+    // course1 should be removed; course2 should remain (simulated failure)
+    const remaining = useCourseImportStore.getState().importedCourses
+    expect(remaining).toHaveLength(1)
+    expect(remaining[0].id).toBe(course2.id)
+  })
+
+  it('shows undo toast for successfully deleted courses', async () => {
+    const course1 = makeCourse({ name: 'Undo Course' })
+    await act(async () => {
+      await useCourseImportStore.getState().addImportedCourse(course1)
+    })
+
+    await act(async () => {
+      await useCourseImportStore.getState().removeImportedCourses([course1.id])
+    })
+
+    const { toastWithUndo } = await import('@/lib/toastHelpers')
+    expect(toastWithUndo).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: '1 course deleted',
+      })
+    )
+  })
+
+  it('undo callback restores deleted courses in store', async () => {
+    const { toastWithUndo } = await import('@/lib/toastHelpers')
+    const course1 = makeCourse({ name: 'Restorable Course' })
+    await act(async () => {
+      await useCourseImportStore.getState().addImportedCourse(course1)
+    })
+
+    let capturedOnUndo: (() => Promise<void>) | undefined
+    vi.mocked(toastWithUndo).mockImplementation((opts: { onUndo: () => Promise<void> }) => {
+      capturedOnUndo = opts.onUndo
+    })
+
+    await act(async () => {
+      await useCourseImportStore.getState().removeImportedCourses([course1.id])
+    })
+    expect(useCourseImportStore.getState().importedCourses).toHaveLength(0)
+
+    // Fire the undo callback
+    await act(async () => {
+      await capturedOnUndo!()
+    })
+
+    const restored = useCourseImportStore.getState().importedCourses
+    expect(restored).toHaveLength(1)
+    expect(restored[0].name).toBe('Restorable Course')
+  })
+
+  it('undo callback restores only successfully deleted courses on partial failure (BULK-003)', async () => {
+    const { toastWithUndo } = await import('@/lib/toastHelpers')
+    const course1 = makeCourse({ name: 'Good Course' })
+    const course2 = makeCourse({ name: 'Failed Course' })
+
+    // Set courses directly in store state (bypass persist)
+    useCourseImportStore.setState({ importedCourses: [course1, course2] })
+
+    // Spy so course2's deletion appears to fail
+    vi.spyOn(useCourseImportStore.getState(), 'removeImportedCourse')
+      .mockImplementation(async (id: string) => {
+        if (id === course2.id) {
+          useCourseImportStore.setState({ importError: 'Failed to remove course' })
+          return
+        }
+        // For course1: remove from state (success)
+        useCourseImportStore.setState(state => ({
+          importedCourses: state.importedCourses.filter(c => c.id !== id),
+        }))
+      })
+
+    let capturedOnUndo: (() => Promise<void>) | undefined
+    vi.mocked(toastWithUndo).mockImplementation((opts: { onUndo: () => Promise<void> }) => {
+      capturedOnUndo = opts.onUndo
+    })
+
+    await act(async () => {
+      await useCourseImportStore.getState().removeImportedCourses([course1.id, course2.id])
+    })
+
+    // course1 removed, course2 remains
+    const afterDelete = useCourseImportStore.getState().importedCourses
+    expect(afterDelete).toHaveLength(1)
+    expect(afterDelete[0].id).toBe(course2.id)
+
+    // Fire the undo callback
+    await act(async () => {
+      await capturedOnUndo!()
+    })
+
+    const restored = useCourseImportStore.getState().importedCourses
+    // Should have course2 (never removed) + course1 (restored by undo) = 2 total
+    expect(restored).toHaveLength(2)
+    // No duplicate entries
+    expect(restored.filter(c => c.id === course1.id)).toHaveLength(1)
+    expect(restored.filter(c => c.id === course2.id)).toHaveLength(1)
+  })
+
+  it('rolls back each course individually when all deletions fail', async () => {
+    const course1 = makeCourse({ name: 'Fail One' })
+    const course2 = makeCourse({ name: 'Fail Two' })
+
+    // Set courses directly in store state
+    useCourseImportStore.setState({ importedCourses: [course1, course2] })
+
+    // Both deletions appear to fail (no courses removed from state)
+    vi.spyOn(useCourseImportStore.getState(), 'removeImportedCourse')
+      .mockImplementation(async () => {
+        useCourseImportStore.setState({ importError: 'Failed to remove course' })
+      })
+
+    const { toastWithUndo } = await import('@/lib/toastHelpers')
+
+    await act(async () => {
+      await useCourseImportStore.getState().removeImportedCourses([course1.id, course2.id])
+    })
+
+    // Both should still exist due to individual rollback
+    const remaining = useCourseImportStore.getState().importedCourses
+    expect(remaining).toHaveLength(2)
+    // No toastWithUndo because no courses were successfully deleted
+    expect(vi.mocked(toastWithUndo)).not.toHaveBeenCalledWith(
+      expect.objectContaining({ message: expect.stringContaining('deleted') })
+    )
   })
 })

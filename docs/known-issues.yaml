@@ -1773,3 +1773,13 @@ issues:
   file: src/app/components/authors/AuthorFormDialog.tsx
   source: design-review-R1-L2
   created: 2026-05-04
+
+# Added 2026-05-07 — bulk-course-delete R3 advisory
+- id: KI-bulk-checkbox-badge-overlap
+  severity: low
+  status: open
+  title: "Selection checkbox overlaps completion/status badges in selection mode"
+  description: "When selection mode is active, the checkbox (z-40 at top-3 left-3) sits directly on top of the completion badge (z-30) and progress ring at the same coordinates. Compact card has similar overlap (checkbox z-20, status badge z-10 both at top-1 left-1). Acceptable trade-off since selection mode is transitory and completion progress is visible via the card-bottom progress bar."
+  file: src/app/components/figma/ImportedCourseCard.tsx:363
+  source: ce-review-R3-P3
+  created: 2026-05-07

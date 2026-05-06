@@ -197,7 +197,7 @@ export const useCourseImportStore = create<CourseImportState>((set, get) => ({
       toastWithUndo({
         message: `${deleted.length} ${deleted.length === 1 ? 'course' : 'courses'} deleted`,
         onUndo: async () => {
-          for (const course of snapshot) {
+          for (const course of deleted) {
             await syncableWrite(
               'importedCourses',
               'add',
@@ -205,10 +205,10 @@ export const useCourseImportStore = create<CourseImportState>((set, get) => ({
             )
           }
           set(state => ({
-            importedCourses: [...snapshot, ...state.importedCourses],
+            importedCourses: [...deleted, ...state.importedCourses],
           }))
           toast.success(
-            `${snapshot.length} ${snapshot.length === 1 ? 'course' : 'courses'} restored`
+            `${deleted.length} ${deleted.length === 1 ? 'course' : 'courses'} restored`
           )
         },
         duration: TOAST_DURATION.LONG,

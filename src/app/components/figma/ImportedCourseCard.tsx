@@ -361,7 +361,7 @@ export function ImportedCourseCard({
           )}
           {/* Selection checkbox — top-left, only when selection mode is active */}
           {onToggleSelect && (
-            <div className="absolute top-3 left-3 z-30" onClick={e => e.stopPropagation()}>
+            <div className="absolute top-3 left-3 z-40" onClick={e => e.stopPropagation()}>
               <div className="bg-background/80 rounded-full p-0.5">
                 <Checkbox
                   checked={selected}

@@ -8,6 +8,7 @@ import type { ImportedCourse } from '@/data/types'
 const mockUpdateCourseStatus = vi.fn()
 const mockRemoveImportedCourse = vi.fn().mockResolvedValue(undefined)
 const mockNavigate = vi.fn()
+const mockOnToggleSelect = vi.fn()
 let mockImportError: string | null = null
 
 vi.mock('react-router', async () => {
@@ -139,5 +140,50 @@ describe('ImportedCourseListRow', () => {
     renderRow()
     await user.click(screen.getByTestId('course-list-row-overflow-trigger'))
     expect(mockNavigate).not.toHaveBeenCalled()
+  })
+})
+
+describe('ImportedCourseListRow — selection mode (onToggleSelect)', () => {
+  beforeEach(() => {
+    mockOnToggleSelect.mockClear()
+  })
+
+  it('renders a checkbox when onToggleSelect is provided', () => {
+    render(<ImportedCourseListRow course={baseCourse} allTags={[]} selected={false} onToggleSelect={mockOnToggleSelect} />, { wrapper: MemoryRouter })
+    const checkbox = screen.getByRole('checkbox', { name: /Select Test Course Title/i })
+    expect(checkbox).toBeInTheDocument()
+  })
+
+  it('does not render a checkbox when onToggleSelect is undefined', () => {
+    renderRow()
+    expect(screen.queryByRole('checkbox')).not.toBeInTheDocument()
+  })
+
+  it('checkbox click calls onToggleSelect with the course ID', async () => {
+    const user = userEvent.setup()
+    render(<ImportedCourseListRow course={baseCourse} allTags={[]} selected={false} onToggleSelect={mockOnToggleSelect} />, { wrapper: MemoryRouter })
+    const checkbox = screen.getByRole('checkbox')
+    await user.click(checkbox)
+    expect(mockOnToggleSelect).toHaveBeenCalledWith('course-1')
+  })
+
+  it('checkbox click does not trigger row navigation', async () => {
+    const user = userEvent.setup()
+    render(<ImportedCourseListRow course={baseCourse} allTags={[]} selected={false} onToggleSelect={mockOnToggleSelect} />, { wrapper: MemoryRouter })
+    const checkbox = screen.getByRole('checkbox')
+    await user.click(checkbox)
+    expect(mockNavigate).not.toHaveBeenCalled()
+  })
+
+  it('renders checked checkbox when selected=true', () => {
+    render(<ImportedCourseListRow course={baseCourse} allTags={[]} selected={true} onToggleSelect={mockOnToggleSelect} />, { wrapper: MemoryRouter })
+    const checkbox = screen.getByRole('checkbox')
+    expect(checkbox).toHaveAttribute('data-state', 'checked')
+  })
+
+  it('renders unchecked checkbox when selected=false', () => {
+    render(<ImportedCourseListRow course={baseCourse} allTags={[]} selected={false} onToggleSelect={mockOnToggleSelect} />, { wrapper: MemoryRouter })
+    const checkbox = screen.getByRole('checkbox')
+    expect(checkbox).toHaveAttribute('data-state', 'unchecked')
   })
 })
