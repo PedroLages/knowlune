@@ -47,6 +47,7 @@ import {
   DialogTitle,
   DialogClose,
 } from '@/app/components/ui/dialog'
+import { Checkbox } from '@/app/components/ui/checkbox'
 import { TagBadgeList } from '@/app/components/figma/TagBadgeList'
 import { TagEditor } from '@/app/components/figma/TagEditor'
 import { VideoPlayer } from '@/app/components/figma/VideoPlayer'
@@ -117,6 +118,9 @@ interface ImportedCourseCardProps {
   momentumScore?: MomentumScore
   /** Hides editing controls (camera overlay, edit/delete menu, tag editing). Status changes remain available. */
   readOnly?: boolean
+  /** When provided, enables selection mode with a checkbox overlay */
+  selected?: boolean
+  onToggleSelect?: (courseId: string) => void
 }
 
 export function ImportedCourseCard({
@@ -125,6 +129,8 @@ export function ImportedCourseCard({
   completionPercent = 0,
   momentumScore,
   readOnly = false,
+  selected = false,
+  onToggleSelect,
 }: ImportedCourseCardProps) {
   const updateCourseTags = useCourseImportStore(state => state.updateCourseTags)
   const updateCourseStatus = useCourseImportStore(state => state.updateCourseStatus)
@@ -199,6 +205,10 @@ export function ImportedCourseCard({
 
   function handleCardClick(e: React.MouseEvent) {
     guardNavigation(e)
+    if (onToggleSelect) {
+      onToggleSelect(course.id)
+      return
+    }
     if (!e.defaultPrevented) navigate(`/courses/${course.id}/overview`)
   }
 
@@ -206,6 +216,10 @@ export function ImportedCourseCard({
     if (e.target !== e.currentTarget) return
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault()
+      if (onToggleSelect) {
+        onToggleSelect(course.id)
+        return
+      }
       if (course.status === 'not-started' && !readOnly) {
         // Start the course (mirrors PlayOverlay click)
         void handleStartStudying(e as unknown as React.MouseEvent)
@@ -345,6 +359,19 @@ export function ImportedCourseCard({
               )}
             />
           )}
+          {/* Selection checkbox — top-left, only when selection mode is active */}
+          {onToggleSelect && (
+            <div className="absolute top-3 left-3 z-30" onClick={e => e.stopPropagation()}>
+              <div className="bg-background/80 rounded-full p-0.5">
+                <Checkbox
+                  checked={selected}
+                  onCheckedChange={() => onToggleSelect(course.id)}
+                  aria-label={`Select ${course.name}`}
+                />
+              </div>
+            </div>
+          )}
+
           {/* Completion/progress badge — top-left */}
           {completionPercent === 100 ? (
             <div

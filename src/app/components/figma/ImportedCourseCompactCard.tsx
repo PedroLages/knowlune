@@ -31,6 +31,7 @@ import {
 } from '@/app/components/ui/alert-dialog'
 import { toast } from 'sonner'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
+import { Checkbox } from '@/app/components/ui/checkbox'
 import { useLazyVisible } from '@/hooks/useLazyVisible'
 import type { ImportedCourse, LearnerCourseStatus } from '@/data/types'
 
@@ -70,6 +71,9 @@ interface ImportedCourseCompactCardProps {
   completionPercent?: number
   /** Hides destructive controls. Status changes remain available. */
   readOnly?: boolean
+  /** When provided, enables selection mode with a checkbox overlay */
+  selected?: boolean
+  onToggleSelect?: (courseId: string) => void
 }
 
 /**
@@ -84,6 +88,8 @@ export function ImportedCourseCompactCard({
   course,
   completionPercent = 0,
   readOnly = false,
+  selected = false,
+  onToggleSelect,
 }: ImportedCourseCompactCardProps) {
   const navigate = useNavigate()
   const updateCourseStatus = useCourseImportStore(state => state.updateCourseStatus)
@@ -159,6 +165,10 @@ export function ImportedCourseCompactCard({
       longPressTriggeredRef.current = false
       return
     }
+    if (onToggleSelect) {
+      onToggleSelect(course.id)
+      return
+    }
     navigate(`/courses/${course.id}/overview`)
   }
 
@@ -166,6 +176,10 @@ export function ImportedCourseCompactCard({
     if (e.target !== e.currentTarget) return
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault()
+      if (onToggleSelect) {
+        onToggleSelect(course.id)
+        return
+      }
       navigate(`/courses/${course.id}/overview`)
     }
   }
@@ -243,6 +257,22 @@ export function ImportedCourseCompactCard({
               data-testid="compact-completion-overlay"
             >
               <CheckCircle2 className="size-8 text-success-foreground" aria-hidden="true" />
+            </div>
+          )}
+
+          {/* Selection checkbox — top-left, only visible in selection mode */}
+          {onToggleSelect && (
+            <div
+              className="absolute top-1 left-1 z-20"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="bg-background/80 rounded-full p-0.5">
+                <Checkbox
+                  checked={selected}
+                  onCheckedChange={() => onToggleSelect(course.id)}
+                  aria-label={`Select ${course.name}`}
+                />
+              </div>
             </div>
           )}
 

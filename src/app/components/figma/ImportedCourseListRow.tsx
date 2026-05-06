@@ -36,6 +36,7 @@ import { toast } from 'sonner'
 import { TagBadgeList } from '@/app/components/figma/TagBadgeList'
 import { EditCourseDialog } from '@/app/components/figma/EditCourseDialog'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
+import { Checkbox } from '@/app/components/ui/checkbox'
 import { useAuthorStore } from '@/stores/useAuthorStore'
 import { formatCourseDuration } from '@/lib/format'
 import type { ImportedCourse, LearnerCourseStatus } from '@/data/types'
@@ -72,6 +73,9 @@ interface ImportedCourseListRowProps {
   completionPercent?: number
   /** Hides editing controls (edit/delete menu items). Status changes remain available. */
   readOnly?: boolean
+  /** When provided, enables selection mode with a checkbox overlay */
+  selected?: boolean
+  onToggleSelect?: (courseId: string) => void
 }
 
 export function ImportedCourseListRow({
@@ -79,6 +83,8 @@ export function ImportedCourseListRow({
   allTags,
   completionPercent = 0,
   readOnly = false,
+  selected = false,
+  onToggleSelect,
 }: ImportedCourseListRowProps) {
   const updateCourseStatus = useCourseImportStore(state => state.updateCourseStatus)
   const removeImportedCourse = useCourseImportStore(state => state.removeImportedCourse)
@@ -107,6 +113,10 @@ export function ImportedCourseListRow({
   }
 
   function handleRowClick() {
+    if (onToggleSelect) {
+      onToggleSelect(course.id)
+      return
+    }
     navigateToCourse()
   }
 
@@ -114,6 +124,10 @@ export function ImportedCourseListRow({
     if (e.target !== e.currentTarget) return
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault()
+      if (onToggleSelect) {
+        onToggleSelect(course.id)
+        return
+      }
       navigateToCourse()
     }
   }
@@ -157,6 +171,19 @@ export function ImportedCourseListRow({
           'border border-transparent hover:border-border'
         )}
       >
+        {/* Selection checkbox — only shows in selection mode */}
+        {onToggleSelect && (
+          <div className="shrink-0" onClick={e => e.stopPropagation()}>
+            <div className="bg-background/80 rounded-full p-0.5">
+              <Checkbox
+                checked={selected}
+                onCheckedChange={() => onToggleSelect(course.id)}
+                aria-label={`Select ${course.name}`}
+              />
+            </div>
+          </div>
+        )}
+
         {/* Thumbnail */}
         <div
           data-testid="course-list-row-thumbnail"
