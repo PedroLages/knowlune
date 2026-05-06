@@ -47,6 +47,7 @@ import { PathCoverDialog } from '@/app/components/learning-path/PathCoverDialog'
 import { PremiumGate } from '@/app/components/PremiumGate'
 import { useLearningPathStore } from '@/stores/useLearningPathStore'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
+import { extractGapSearchTerm } from '@/data/learningPathUtils'
 import { useMultiPathProgress } from '@/app/hooks/usePathProgress'
 import { useNextBestCourse } from '@/app/hooks/useNextBestCourse'
 import { useImportWizardTrigger } from '@/app/hooks/useImportWizardTrigger'
@@ -462,8 +463,8 @@ export function LearningPaths() {
     for (const tpl of templates) {
       const tplEntries = entries.filter(e => e.pathId === tpl.id)
       const matched = tplEntries.filter(e => {
-        const matchTitleMatch = e.justification?.match(/\[Search for: (.+)\]$/)
-        return matchTitleMatch && importedNames.has(normalize(matchTitleMatch[1]))
+        const searchTerm = extractGapSearchTerm(e.justification)
+        return searchTerm && importedNames.has(normalize(searchTerm))
       }).length
       counts.set(tpl.id, matched)
     }

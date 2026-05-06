@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { useParams, Link, useNavigate } from 'react-router'
-import { motion } from 'motion/react'
+import { motion, useReducedMotion } from 'motion/react'
 import {
   DndContext,
   closestCenter,
@@ -19,21 +19,16 @@ import {
 import { CSS } from '@dnd-kit/utilities'
 import {
   ArrowLeft,
-  ArrowRight,
   GripVertical,
   X,
   Plus,
   BookOpen,
   ChevronRight,
   Sparkles,
-  Clock,
-  CheckCircle2,
-  Check,
-  Flame,
   Download,
-  Import,
   AlertCircle,
   LayoutTemplate,
+  Check,
   Trash2,
 } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
@@ -70,8 +65,11 @@ import { InlineCoursePicker } from '@/app/components/figma/InlineCoursePicker'
 import { ImportWizardDialog } from '@/app/components/figma/ImportWizardDialog'
 import { InlineEditableField } from '@/app/components/figma/InlineEditableField'
 import { CourseTypeBadge } from '@/app/components/shared/CourseTypeBadge'
-import { RoadmapListView } from '@/app/components/learning-path/RoadmapListView'
-import { FocusPanel } from '@/app/components/learning-path/FocusPanel'
+import { CourseThumbnail } from '@/app/components/shared/CourseThumbnail'
+import { PathSummaryPanel } from '@/app/components/learning-path/PathSummaryPanel'
+import { ContinueLearningBento } from '@/app/components/learning-path/ContinueLearningBento'
+import { PathTimeline } from '@/app/components/learning-path/PathTimeline'
+import { ControlCenter } from '@/app/components/learning-path/ControlCenter'
 import { useLearningPathStore } from '@/stores/useLearningPathStore'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
 import { useAuthorStore } from '@/stores/useAuthorStore'
@@ -79,13 +77,10 @@ import { usePathProgress } from '@/app/hooks/usePathProgress'
 import { usePathMilestones } from '@/app/hooks/usePathMilestones'
 import { useImportWizardTrigger } from '@/app/hooks/useImportWizardTrigger'
 import { useLoadCourseThumbnails } from '@/app/hooks/useLoadCourseThumbnails'
-// db import removed (E89-S01) — catalog courses table dropped
 import { staggerContainer, fadeUp } from '@/lib/motion'
+import { extractGapSearchTerm, cleanGapJustification } from '@/data/learningPathUtils'
 import { toast } from 'sonner'
-import {
-  suggestPathOrder,
-  type OrderSuggestionResult,
-} from '@/ai/learningPath/suggestOrder'
+import { suggestPathOrder, type OrderSuggestionResult } from '@/ai/learningPath/suggestOrder'
 import type { LearningPathEntry, Course, PathCourseInfo } from '@/data/types'
 
 // --- Sortable Course Row ---
@@ -159,15 +154,7 @@ function SortableCourseRow({
             </div>
 
             {/* Thumbnail */}
-            <div className="size-12 shrink-0 rounded-lg bg-muted overflow-hidden">
-              {thumbnailUrl ? (
-                <img src={thumbnailUrl} alt="" className="size-full object-cover" loading="lazy" />
-              ) : (
-                <div className="size-full flex items-center justify-center">
-                  <BookOpen className="size-5 text-muted-foreground" aria-hidden="true" />
-                </div>
-              )}
-            </div>
+            <CourseThumbnail url={thumbnailUrl} />
 
             {/* Course info */}
             <div className="min-w-0 flex-1">
@@ -311,6 +298,7 @@ export function LearningPathDetail() {
     try {
       return localStorage.getItem('keepCoursePanelOpen') === 'true'
     } catch {
+      // silent-catch-ok: localStorage may be unavailable
       return false
     }
   })
@@ -325,8 +313,7 @@ export function LearningPathDetail() {
 
   // Handle import wizard click with singleton guard (R10)
   const handleImportClick = useCallback(
-    (gap?: { gapEntryId: string; searchTerm?: string }) =>
-      importTrigger(pathId ?? null, gap),
+    (gap?: { gapEntryId: string; searchTerm?: string }) => importTrigger(pathId ?? null, gap),
     [importTrigger, pathId]
   )
 
@@ -338,12 +325,7 @@ export function LearningPathDetail() {
   // Load all data on mount
   useEffect(() => {
     let ignore = false
-    Promise.all([
-      loadPaths(),
-      loadImportedCourses(),
-      loadAuthors(),
-      // Catalog courses table dropped (E89-S01) — no catalog load needed
-    ])
+    Promise.all([loadPaths(), loadImportedCourses(), loadAuthors()])
       .then(() => {
         if (!ignore) setIsLoaded(true)
       })
@@ -458,7 +440,6 @@ export function LearningPathDetail() {
   )
 
   // Focus restoration after Move Up/Down (E66-S01, WCAG 2.5.7)
-  // Refs keyed by courseId so they survive index changes during re-render.
   const moveUpRefs = useRef<Map<string, HTMLButtonElement | null>>(new Map())
   const moveDownRefs = useRef<Map<string, HTMLButtonElement | null>>(new Map())
   const registerMoveUpRef = useCallback((courseId: string, el: HTMLButtonElement | null) => {
@@ -555,21 +536,20 @@ export function LearningPathDetail() {
 
     setIsSuggesting(true)
     try {
-      // Build course name and tag maps
-      const courseNames = new Map<string, string>()
+      const courseNamesMap = new Map<string, string>()
       const courseTags = new Map<string, string[]>()
 
       for (const ic of importedCourses) {
-        courseNames.set(ic.id, ic.name)
+        courseNamesMap.set(ic.id, ic.name)
         courseTags.set(ic.id, ic.tags || [])
       }
 
       for (const cc of catalogCourses) {
-        courseNames.set(cc.id, cc.title)
+        courseNamesMap.set(cc.id, cc.title)
         courseTags.set(cc.id, [])
       }
 
-      const result = await suggestPathOrder(courseEntries, courseNames, courseTags)
+      const result = await suggestPathOrder(courseEntries, courseNamesMap, courseTags)
       setOrderSuggestion(result)
       setConfirmDialogOpen(true)
     } catch (err) {
@@ -609,6 +589,14 @@ export function LearningPathDetail() {
     [courseEntries, courseInfo, completedEntries.length]
   )
   const [showReorderList, setShowReorderList] = useState(false)
+
+  // Check prefers-reduced-motion
+  const prefersReducedMotion = useReducedMotion()
+  const shouldAnimate = !prefersReducedMotion
+
+  // Wrapped stagger variants based on motion preference
+  const containerVariants = shouldAnimate ? staggerContainer : { hidden: {}, visible: {} }
+  const itemVariants = shouldAnimate ? fadeUp : { hidden: {}, visible: {} }
 
   // Loading state
   if (!isLoaded) {
@@ -655,13 +643,13 @@ export function LearningPathDetail() {
   return (
     <>
       <motion.div
-        variants={staggerContainer}
+        variants={containerVariants}
         initial="hidden"
         animate="visible"
         className="space-y-8"
       >
         {/* Back link */}
-        <motion.div variants={fadeUp}>
+        <motion.div variants={itemVariants}>
           <Link
             to="/learning-paths"
             className="inline-flex items-center gap-2 text-brand font-medium hover:-translate-x-1 transition-transform"
@@ -673,7 +661,7 @@ export function LearningPathDetail() {
 
         {/* Template banner — for paths forked from a template */}
         {path.forkedFrom && (
-          <motion.div variants={fadeUp}>
+          <motion.div variants={itemVariants}>
             <div className="flex items-center gap-3 p-4 rounded-xl bg-brand-soft/50 border border-brand-soft mb-4">
               <LayoutTemplate className="w-5 h-5 text-brand-soft-foreground flex-shrink-0" />
               <div className="flex-1">
@@ -690,7 +678,7 @@ export function LearningPathDetail() {
 
         {/* Gap entry summary — for paths with unmatched entries */}
         {gapCount > 0 && (
-          <motion.div variants={fadeUp}>
+          <motion.div variants={itemVariants}>
             <div className="flex items-center gap-3 p-4 rounded-xl bg-warning/10 border border-warning/30 mb-4">
               <AlertCircle className="w-5 h-5 text-warning flex-shrink-0" />
               <div className="flex-1">
@@ -706,9 +694,9 @@ export function LearningPathDetail() {
           </motion.div>
         )}
 
-        {/* Header */}
+        {/* Header with title, description, and delete button */}
         <motion.div
-          variants={fadeUp}
+          variants={itemVariants}
           className="flex flex-col md:flex-row md:items-end justify-between gap-[var(--content-gap)]"
         >
           <div>
@@ -730,19 +718,13 @@ export function LearningPathDetail() {
             />
             <div className="flex flex-wrap items-center gap-4 text-muted-foreground font-medium text-sm">
               <span className="flex items-center gap-1.5">
-                <Clock className="size-4 text-brand" aria-hidden="true" />
-                {pathProgress.completedLessons} lessons completed
+                <Sparkles className="size-4 text-brand" aria-hidden="true" />
+                {courseEntries.length} courses
               </span>
               <span className="flex items-center gap-1.5">
-                <CheckCircle2 className="size-4 text-brand" aria-hidden="true" />
-                {pathProgress.completedCourses}/{pathProgress.totalCourses} courses done
+                <Check className="size-4 text-brand" aria-hidden="true" />
+                {completedEntries.length} completed
               </span>
-              {pathProgress.estimatedRemainingHours > 0 && (
-                <span className="flex items-center gap-1.5">
-                  <Flame className="size-4 text-brand" aria-hidden="true" />~
-                  {pathProgress.estimatedRemainingHours}h remaining
-                </span>
-              )}
             </div>
           </div>
           <div className="flex items-start gap-3">
@@ -761,166 +743,39 @@ export function LearningPathDetail() {
                 {pathProgress.completionPct}%
               </span>
               <span className="text-sm font-bold text-muted-foreground tracking-widest uppercase">
-                Completed
+                Complete
               </span>
             </div>
           </div>
         </motion.div>
 
-        {/* Course list (when courses exist) */}
+        {/* Path Summary Panel (glass stats strip) */}
         {courseEntries.length > 0 && (
-          <motion.div variants={fadeUp} className="space-y-6">
-            <div>
-              <h2 className="text-xl font-bold">Courses</h2>
-              <p className="text-sm text-muted-foreground mt-1">
-                {completedEntries.length} of {courseEntries.length} completed
-              </p>
-            </div>
-
-            <RoadmapListView
-              entries={courseEntries.map(e => ({
-                ...e,
-                info: courseInfo.get(e.courseId),
-                thumbnailUrl: thumbnailUrls[e.courseId],
-              }))}
-              courseInfoMap={courseInfo}
-              thumbnailUrls={thumbnailUrls}
-              gapEntries={courseEntries.filter(e => e.courseId === '')}
-              onGapResolve={resolution => {
-                // Find the gap entry to extract its search term
-                const gapEntry = courseEntries.find(e => e.id === resolution.entryId)
-                const matchTitleMatch =
-                  gapEntry?.justification?.match(/\[Search for: (.+)\]$/)
-                const searchTerm = matchTitleMatch ? matchTitleMatch[1] : undefined
-
-                if (resolution.type === 'import') {
-                  handleImportClick({
-                    gapEntryId: resolution.entryId,
-                    searchTerm,
-                  })
-                } else if (resolution.type === 'match' || resolution.type === 'replace') {
-                  setResolvingGapEntryId(resolution.entryId)
-                  setPickerOpen(true)
-                }
-              }}
-              onCourseClick={courseId => navigate(`/courses/${courseId}`)}
-            />
+          <motion.div variants={itemVariants}>
+            <PathSummaryPanel progress={pathProgress} />
           </motion.div>
         )}
 
-        {/* Empty state */}
-        {courseEntries.length === 0 ? (
-          <motion.div variants={fadeUp} className="space-y-6">
-            <EmptyState
-              icon={BookOpen}
-              title="No courses yet"
-              description="Add courses to build your learning path. You can reorder them by dragging or using the arrow buttons."
-              actionLabel="Add Course"
-              onAction={() => setPickerOpen(true)}
-            />
-            {/* Collapsible course picker — rendered here so it mounts even in empty state (BLOCKER 2) */}
-            <Collapsible open={pickerOpen} onOpenChange={setPickerOpen} className="space-y-3">
-              <CollapsibleContent id="inline-course-picker-panel" className="space-y-3">
-                {/* Keep panel open toggle */}
-                <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer select-none">
-                  <input
-                    type="checkbox"
-                    checked={keepPanelOpen}
-                    onChange={e => setKeepPanelOpen(e.target.checked)}
-                    className="rounded border-muted-foreground/30"
-                    data-testid="keep-panel-open-toggle"
+        {/* Course list section */}
+        {courseEntries.length > 0 ? (
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-[var(--content-gap)]">
+            {/* Left Column (8 cols): Continue Learning + Timeline */}
+            <div className="lg:col-span-8 space-y-8">
+              {/* Continue Learning Bento Card */}
+              {currentEntry && (
+                <motion.section variants={itemVariants}>
+                  <ContinueLearningBento
+                    entry={currentEntry}
+                    courseInfo={courseInfo.get(currentEntry.courseId)}
+                    thumbnailUrl={thumbnailUrls[currentEntry.courseId]}
+                    onViewCurriculum={() => setShowReorderList(false)}
                   />
-                  Keep panel open
-                </label>
-                <InlineCoursePicker
-                  mode="singleSelect"
-                  excludeCourseIds={existingCourseIds}
-                  onAdd={handlePickerAddCourse}
-                />
-              </CollapsibleContent>
-            </Collapsible>
-            <div className="flex justify-center mt-4">
-              <Button
-                variant="brand-outline"
-                onClick={() => handleImportClick()}
-                data-testid="import-course-button"
-                className={pickerOpen ? 'hidden' : ''}
-              >
-                <Download className="size-4 mr-2" aria-hidden="true" />
-                Import Course
-              </Button>
-            </div>
-          </motion.div>
-        ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
-            {/* Left Column: Primary Content */}
-            <div className="lg:col-span-8 space-y-12">
-              {/* Hero: Now Learning */}
-              {currentEntry &&
-                (() => {
-                  const info = courseInfo.get(currentEntry.courseId)
-                  const pct = info?.completionPct ?? 0
-                  return (
-                    <motion.section variants={fadeUp}>
-                      <Card className="overflow-hidden shadow-xl border-brand/20 rounded-2xl">
-                        <div className="flex flex-col md:flex-row min-h-[280px]">
-                          {/* Thumbnail */}
-                          <div className="md:w-5/12 relative bg-muted">
-                            {thumbnailUrls[currentEntry.courseId] ? (
-                              <img
-                                src={thumbnailUrls[currentEntry.courseId]}
-                                alt=""
-                                className="h-full w-full object-cover"
-                                loading="lazy"
-                              />
-                            ) : (
-                              <div className="h-full min-h-[200px] flex items-center justify-center bg-gradient-to-br from-brand/10 to-brand/30">
-                                <BookOpen className="size-16 text-brand/40" aria-hidden="true" />
-                              </div>
-                            )}
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-end p-6">
-                              <Badge className="bg-brand/80 backdrop-blur-sm text-brand-foreground text-xs uppercase tracking-wider">
-                                Now Learning
-                              </Badge>
-                            </div>
-                          </div>
-                          {/* Info */}
-                          <div className="md:w-7/12 p-8 flex flex-col justify-between">
-                            <div>
-                              <h3 className="text-2xl md:text-3xl font-bold mb-2">
-                                {info?.name || 'Unknown Course'}
-                              </h3>
-                              <p className="text-muted-foreground mb-6 flex items-center gap-2 font-medium">
-                                {info?.authorName && <>{info.authorName} • </>}
-                                <span className="text-brand">{pct}% Complete</span>
-                              </p>
-                              <div className="w-full bg-muted h-2.5 rounded-full mb-6">
-                                <div
-                                  className="bg-brand h-full rounded-full transition-all duration-300"
-                                  style={{ width: `${pct}%` }}
-                                />
-                              </div>
-                            </div>
-                            <Button
-                              variant="brand"
-                              className="w-full md:w-fit px-8 py-4 shadow-lg shadow-brand/20"
-                              asChild
-                            >
-                              <Link to={`/courses/${currentEntry.courseId}`}>
-                                Continue Learning
-                                <ArrowRight className="size-4 ml-2" aria-hidden="true" />
-                              </Link>
-                            </Button>
-                          </div>
-                        </div>
-                      </Card>
-                    </motion.section>
-                  )
-                })()}
+                </motion.section>
+              )}
 
               {/* Completed Courses Strip */}
               {completedEntries.length > 0 && (
-                <motion.section variants={fadeUp}>
+                <motion.section variants={itemVariants}>
                   <h2 className="text-xl font-bold mb-6 px-2">Completed Courses</h2>
                   <div className="flex overflow-x-auto gap-4 pb-4 scrollbar-thin">
                     {completedEntries.map(entry => {
@@ -960,9 +815,59 @@ export function LearningPathDetail() {
                 </motion.section>
               )}
 
+              {/* Timeline */}
+              {!showReorderList && (
+                <motion.section variants={itemVariants}>
+                  <h2 className="text-xl font-bold mb-4">Course Timeline</h2>
+                  <PathTimeline
+                    entries={courseEntries.map(e => ({
+                      ...e,
+                      info: courseInfo.get(e.courseId),
+                      thumbnailUrl: thumbnailUrls[e.courseId],
+                    }))}
+                    courseInfoMap={courseInfo}
+                    thumbnailUrls={thumbnailUrls}
+                    gapEntries={courseEntries.filter(e => e.courseId === '')}
+                    onGapResolve={resolution => {
+                      const gapEntry = courseEntries.find(e => e.id === resolution.entryId)
+                      const searchTerm = extractGapSearchTerm(gapEntry?.justification)
+
+                      if (resolution.type === 'import') {
+                        handleImportClick({
+                          gapEntryId: resolution.entryId,
+                          searchTerm,
+                        })
+                      } else if (resolution.type === 'match' || resolution.type === 'replace') {
+                        setResolvingGapEntryId(resolution.entryId)
+                        setPickerOpen(true)
+                      }
+                    }}
+                    onCourseClick={courseId => navigate(`/courses/${courseId}`)}
+                    autoScrollToCurrent
+                  />
+                </motion.section>
+              )}
+
+              {/* Gap entry summary between timeline and reorder list */}
+              {gapCount > 0 && !showReorderList && (
+                <motion.div variants={itemVariants}>
+                  <div className="flex items-center gap-3 p-4 rounded-xl bg-warning/10 border border-warning/30">
+                    <AlertCircle className="w-5 h-5 text-warning flex-shrink-0" />
+                    <div className="flex-1">
+                      <p className="text-sm font-medium">
+                        {matchedCount} of {courseEntries.length} courses matched
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Resolve gap entries above to complete your path.
+                      </p>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+
               {/* Full Reorder List (togglable) */}
               {showReorderList && (
-                <motion.section variants={fadeUp}>
+                <motion.section variants={itemVariants}>
                   <div className="flex items-center justify-between mb-4">
                     <h2 className="text-xl font-bold">All Courses (Reorder)</h2>
                     <Button variant="outline" size="sm" onClick={() => setShowReorderList(false)}>
@@ -987,12 +892,8 @@ export function LearningPathDetail() {
                         {courseEntries.map((entry, index) => {
                           // Gap entry: courseId is empty — render as non-sortable gap card
                           if (entry.courseId === '') {
-                            const matchTitleMatch =
-                              entry.justification?.match(/\[Search for: (.+)\]$/)
-                            const searchTerm = matchTitleMatch ? matchTitleMatch[1] : undefined
-                            const justification =
-                              entry.justification?.replace(/\s*\[Search for: .+\]$/, '') ||
-                              undefined
+                            const searchTerm = extractGapSearchTerm(entry.justification)
+                            const justification = cleanGapJustification(entry.justification)
                             return (
                               <div
                                 key={entry.id}
@@ -1031,7 +932,7 @@ export function LearningPathDetail() {
                                       setPickerOpen(true)
                                     }}
                                   >
-                                    <Import className="w-3.5 h-3.5 mr-1" />
+                                    <Download className="w-3.5 h-3.5 mr-1" />
                                     Find this course
                                   </Button>
                                 </div>
@@ -1066,8 +967,8 @@ export function LearningPathDetail() {
               )}
             </div>
 
-            {/* Right Column: Focus Panel + Actions */}
-            <aside className="lg:col-span-4 space-y-6">
+            {/* Right Column (4 cols, sticky): Control Center sidebar */}
+            <aside className="lg:col-span-4 space-y-6 lg:sticky lg:top-24 lg:self-start">
               {/* Add Course collapsible panel */}
               <Collapsible open={pickerOpen} onOpenChange={setPickerOpen} className="space-y-3">
                 <CollapsibleTrigger asChild>
@@ -1111,9 +1012,9 @@ export function LearningPathDetail() {
                 Import Course
               </Button>
 
-              {/* Focus Panel — unified right rail */}
+              {/* ControlCenter — unified right-rail component */}
               {path && courseEntries.length > 0 && (
-                <FocusPanel
+                <ControlCenter
                   pathId={pathId!}
                   pathName={path.name}
                   entries={courseEntries}
@@ -1128,6 +1029,47 @@ export function LearningPathDetail() {
               )}
             </aside>
           </div>
+        ) : (
+          /* Empty state — no courses in path */
+          <motion.div variants={itemVariants} className="space-y-6">
+            <EmptyState
+              icon={BookOpen}
+              title="No courses yet"
+              description="Add courses to build your learning path. You can reorder them by dragging or using the arrow buttons."
+              actionLabel="Add Course"
+              onAction={() => setPickerOpen(true)}
+            />
+            <Collapsible open={pickerOpen} onOpenChange={setPickerOpen} className="space-y-3">
+              <CollapsibleContent id="inline-course-picker-panel" className="space-y-3">
+                <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={keepPanelOpen}
+                    onChange={e => setKeepPanelOpen(e.target.checked)}
+                    className="rounded border-muted-foreground/30"
+                    data-testid="keep-panel-open-toggle"
+                  />
+                  Keep panel open
+                </label>
+                <InlineCoursePicker
+                  mode="singleSelect"
+                  excludeCourseIds={existingCourseIds}
+                  onAdd={handlePickerAddCourse}
+                />
+              </CollapsibleContent>
+            </Collapsible>
+            <div className="flex justify-center mt-4">
+              <Button
+                variant="brand-outline"
+                onClick={() => handleImportClick()}
+                data-testid="import-course-button"
+                className={pickerOpen ? 'hidden' : ''}
+              >
+                <Download className="size-4 mr-2" aria-hidden="true" />
+                Import Course
+              </Button>
+            </div>
+          </motion.div>
         )}
       </motion.div>
 
@@ -1180,12 +1122,10 @@ export function LearningPathDetail() {
 
           {orderSuggestion && (
             <div className="flex-1 overflow-y-auto min-h-0 -mx-6 px-6 space-y-3">
-              {/* Overall rationale */}
               <div className="rounded-xl border border-brand/20 bg-brand-soft/30 p-3">
                 <p className="text-sm text-muted-foreground italic">{orderSuggestion.rationale}</p>
               </div>
 
-              {/* Suggested order list */}
               <div
                 className="space-y-2"
                 role="list"

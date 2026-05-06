@@ -13,6 +13,7 @@ import { useLearningPathStore } from '@/stores/useLearningPathStore'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
 import { db } from '@/db'
 import { fadeUp, staggerContainer } from '@/lib/motion'
+import { extractGapSearchTerm } from '@/data/learningPathUtils'
 import type { LearningPath, LearningPathEntry } from '@/data/types'
 
 const difficultyLevels: Record<string, number> = {
@@ -104,8 +105,8 @@ export function TemplateSyllabus() {
       s.toLowerCase().replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, ' ').trim()
     const importedNames = new Set(importedCourses.map(c => normalize(c.name)))
     return entries.filter(e => {
-      const matchTitleMatch = e.justification?.match(/\[Search for: (.+)\]$/)
-      return matchTitleMatch && importedNames.has(normalize(matchTitleMatch[1]))
+      const searchTerm = extractGapSearchTerm(e.justification)
+      return searchTerm && importedNames.has(normalize(searchTerm))
     }).length
   }, [entries, importedCourses])
 
@@ -113,9 +114,9 @@ export function TemplateSyllabus() {
   const topicCoverage = useMemo(() => {
     const topicCount: Record<string, number> = {}
     for (const entry of entries) {
-      const match = entry.justification?.match(/\[Search for: (.+)\]$/)
-      if (match) {
-        const tags = match[1].toLowerCase().split(/[,/]/).map(t => t.trim()).filter(Boolean)
+      const searchTerm = extractGapSearchTerm(entry.justification)
+      if (searchTerm) {
+        const tags = searchTerm.toLowerCase().split(/[,/]/).map(t => t.trim()).filter(Boolean)
         for (const tag of tags) {
           topicCount[tag] = (topicCount[tag] || 0) + 1
         }

@@ -13,6 +13,7 @@ import { Badge } from '@/app/components/ui/badge'
 import { Card, CardContent } from '@/app/components/ui/card'
 import { cn } from '@/app/components/ui/utils'
 import { CourseTypeBadge } from '@/app/components/shared/CourseTypeBadge'
+import { extractGapSearchTerm, cleanGapJustification } from '@/data/learningPathUtils'
 import type { LearningPathEntry, PathCourseInfo } from '@/data/types'
 
 interface CourseEntry extends LearningPathEntry {
@@ -45,9 +46,8 @@ function GapEntryCard({
   onResolve: (resolution: GapResolution) => void
   isLoading?: boolean
 }) {
-  const matchTitleMatch = entry.justification?.match(/\[Search for: (.+)\]$/)
-  const searchTerm = matchTitleMatch ? matchTitleMatch[1] : undefined
-  const justification = entry.justification?.replace(/\s*\[Search for: .+\]$/, '') || undefined
+  const searchTerm = extractGapSearchTerm(entry.justification)
+  const justification = cleanGapJustification(entry.justification)
 
   return (
     <Card
