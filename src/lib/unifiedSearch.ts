@@ -31,6 +31,7 @@ import type {
   Course,
 } from '@/data/types'
 import type { AuthorView } from '@/lib/authors'
+import { normalizeFilename } from '@/lib/searchLabelUtils'
 
 // ────────────────────────────────────────────────────────────────────────────
 // Types
@@ -240,7 +241,7 @@ export function toSearchableCourse(course: ImportedCourse): SearchableDoc {
 export function toSearchableLesson(video: ImportedVideo, parentCourseName?: string): SearchableDoc {
   // Derive a title — `filename` is the source of truth for local imports;
   // YouTube imports may have richer metadata but still fall back safely.
-  const title = video.filename || video.youtubeVideoId || video.id
+  const title = normalizeFilename(video.filename) || video.youtubeVideoId || video.id
   if (parentCourseName) {
     courseNameMap.set(video.courseId, parentCourseName)
   }

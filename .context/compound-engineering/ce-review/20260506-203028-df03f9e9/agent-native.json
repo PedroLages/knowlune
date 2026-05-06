@@ -1,0 +1,67 @@
+{
+  "reviewer": "agent-native",
+  "findings": [
+    {
+      "title": "No runtime agent tool layer: every UI action in SearchCommandPalette is an orphan feature",
+      "severity": "P0",
+      "file": "src/app/components/figma/SearchCommandPalette.tsx",
+      "line": 1,
+      "confidence": 0.95,
+      "autofix_class": "manual",
+      "owner": "human",
+      "requires_verification": false,
+      "pre_existing": true,
+      "suggested_fix": "Introduce an agent-accessible tool layer for the app. The SearchCommandPalette exposes 20+ user actions (search across 6 entity types, navigate to 9 pages, scope filter, dismiss hint, open/close palette, expand sections) with zero agent equivalents. At minimum: expose a `search_content(query, types?, limit?)` tool wrapping the unifiedSearch MiniSearch index, a `navigate_to(path)` tool wrapping route navigation, a `get_recent_activity(limit?)` tool, and a `get_continue_learning(limit?)` tool. These should be registered in an MCP server or AI SDK tools array that the runtime agent can invoke. The existing data layer (Dexie + MiniSearch) is well-suited for this — no new query infrastructure is needed."
+    },
+    {
+      "title": "normalizeFilename is a well-scoped pure utility but call sites use different fallback chains",
+      "severity": "P2",
+      "file": "src/app/components/figma/SearchCommandPalette.tsx",
+      "line": 826,
+      "confidence": 0.70,
+      "autofix_class": "advisory",
+      "owner": "human",
+      "requires_verification": false,
+      "pre_existing": false,
+      "suggested_fix": "The two call sites (unifiedSearch.ts:243 and SearchCommandPalette.tsx:826) have slightly different fallback chains. unifiedSearch.ts uses `normalizeFilename(video.filename) || video.youtubeVideoId || video.id`. SearchCommandPalette.tsx uses `normalizeFilename(row.filename) || row.youtubeVideoId || row.id`. These are functionally identical, but a third fallback pattern exists in toSearchableLesson where the fallback produces 'Untitled Lesson' via spread. Consider extracting a shared `resolveLessonTitle(video)` helper that centralizes the fallback chain so all consumers behave identically."
+    },
+    {
+      "title": "No E2E test coverage for empty-state behavior gated by IU-2",
+      "severity": "P2",
+      "file": "src/app/components/figma/SearchCommandPalette.tsx",
+      "line": 796,
+      "confidence": 0.80,
+      "autofix_class": "gated_auto",
+      "owner": "review-fixer",
+      "requires_verification": true,
+      "pre_existing": true,
+      "suggested_fix": "The `showPages` gate (line 799) now checks `staticPagesFiltered.length > 0` to suppress an empty Pages section. This behavior is not covered by any E2E test. Add a Playwright test that opens the palette and verifies: (1) when no query is entered and no pages match, the Pages group heading is absent from the DOM; (2) when a query matches a page, the group heading and items render. The existing `data-testid` attributes (e.g., `data-testid=\"search-result-...\"`) make this testable."
+    },
+    {
+      "title": "normalizeFilename may produce non-human-readable output for certain filename patterns",
+      "severity": "P3",
+      "file": "src/lib/searchLabelUtils.ts",
+      "line": 6,
+      "confidence": 0.65,
+      "autofix_class": "advisory",
+      "owner": "downstream-resolver",
+      "requires_verification": false,
+      "pre_existing": false,
+      "suggested_fix": "The `.toLowerCase()` on each word segment means acronyms (e.g. 'WAL', 'API', 'SQL') get lowercased ('Wal', 'Api', 'Sql'). For an agent reading these labels, the ambiguity is minimal since context (badge type, subtitles) disambiguates. If this becomes a problem at call sites where `displayTitle` is the only signal, add an acronym-preserving variant or allow the caller to pass an `acronyms: Set<string>` parameter."
+    }
+  ],
+  "residual_risks": [
+    {
+      "risk": "normalizeFilename applies .toLowerCase() to each word segment, which folds acronyms (WAL, API, SQL) into lowercase. If an agent later uses these titles for semantic matching or entity resolution, the loss of casing reduces signal. Acceptable because MiniSearch uses case-insensitive tokenization."
+    },
+    {
+      "risk": "The placeholder shortening (IU-5) removes 'notes' and 'highlights' from the visible search hint. An agent reading the rendered DOM to discover searchable entity types would not see these types listed. The CommandDialog description still has the full list, but a DOM-reading agent would need to parse the <DialogDescription> (which is typically visually hidden). Low risk — agents querying the search index directly would have full type awareness via the SEARCHABLE_TYPES or similar config."
+    }
+  ],
+  "testing_gaps": [
+    {
+      "gap": "SearchCommandPalette has no dedicated E2E test. It is only referenced indirectly in tests/e2e/regression/story-e27-s03.spec.ts. The three visual fixes (empty Pages gate, scrollbar, scope chip spacing) are not covered by any E2E assertion. The normalizeFilename function has good unit test coverage in src/lib/__tests__/searchLabelUtils.test.ts (6 cases covering extensions, separators, empty input).",
+      "severity": "P2"
+    }
+  ]
+}

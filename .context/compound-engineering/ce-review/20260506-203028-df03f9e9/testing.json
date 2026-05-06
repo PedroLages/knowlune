@@ -1,0 +1,50 @@
+{
+  "reviewer": "testing",
+  "findings": [
+    {
+      "title": "IU-1: || fallback chain with youtubeVideoId and id has no test coverage at either call site",
+      "severity": "P2",
+      "file": "/Volumes/SSD/Dev/Apps/Knowlune/src/lib/unifiedSearch.ts",
+      "line": 244,
+      "confidence": 0.85,
+      "autofix_class": "manual",
+      "owner": "downstream-resolver",
+      "requires_verification": false,
+      "pre_existing": false,
+      "suggested_fix": "Add a test case to src/lib/__tests__/unifiedSearch.test.ts that calls toSearchableLesson with { filename: '', youtubeVideoId: 'abc123' } and asserts displayTitle === 'abc123'. Add a second case with { filename: '', youtubeVideoId: undefined } to verify the final id fallback."
+    },
+    {
+      "title": "IU-2: Pages section empty-state gating has no test coverage",
+      "severity": "P3",
+      "file": "/Volumes/SSD/Dev/Apps/Knowlune/src/app/components/figma/SearchCommandPalette.tsx",
+      "line": 799,
+      "confidence": 0.90,
+      "autofix_class": "manual",
+      "owner": "downstream-resolver",
+      "requires_verification": false,
+      "pre_existing": false,
+      "suggested_fix": "Add a test case in search-palette-best-matches.spec.ts (or a new unit test) that verifies the Pages section heading is absent when staticPagesFiltered is empty but showWelcomeCopy and scope conditions would otherwise allow it. The plan claimed existing tests cover this, but no existing E2E or unit test exercises this condition."
+    },
+    {
+      "title": "Duplicate test case provides false confidence about falsy input handling in normalizeFilename",
+      "severity": "P3",
+      "file": "/Volumes/SSD/Dev/Apps/Knowlune/src/lib/__tests__/searchLabelUtils.test.ts",
+      "line": 28,
+      "confidence": 0.95,
+      "autofix_class": "safe_auto",
+      "owner": "review-fixer",
+      "requires_verification": false,
+      "pre_existing": false,
+      "suggested_fix": "Replace line 27-29 with: it('returns empty string for null input', () => { expect(normalizeFilename(null as unknown as string)).toBe('') }) and it('returns empty string for undefined input', () => { expect(normalizeFilename(undefined as unknown as string)).toBe('') }). This verifies the !filename guard in the function body works for true falsy values."
+    }
+  ],
+  "residual_risks": [
+    "Palette lesson label resolution (line 828) has no E2E test verifying the display title when a lesson hit appears in the recently-opened list. The existing E2E tests seed only course and book hits, never lesson hits, so the normalizeFilename integration in the palette's useEffect is untested end-to-end."
+  ],
+  "testing_gaps": [
+    "toSearchableLesson call-site fallback chain — no test with empty filename + present youtubeVideoId",
+    "toSearchableLesson call-site fallback chain — no test with empty filename and absent youtubeVideoId (id fallback)",
+    "SearchCommandPalette 'Pages' section heading visibility — no test for empty filtered pages condition",
+    "SearchCommandPalette recent-lesson label resolution — no E2E test seeds lesson-type recent hits to verify the resolved display title"
+  ]
+}

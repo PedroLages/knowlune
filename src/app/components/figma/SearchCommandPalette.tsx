@@ -32,6 +32,7 @@ import {
   CommandShortcut,
 } from '@/app/components/ui/command'
 import { Badge } from '@/app/components/ui/badge'
+import { normalizeFilename } from '@/lib/searchLabelUtils'
 import { truncateSnippet, highlightMatches, buildHighlightPatterns } from '@/lib/searchUtils'
 import { parsePrefix } from '@/lib/searchPrefix'
 import { db } from '@/db/schema'
@@ -795,7 +796,7 @@ export function SearchCommandPalette({
     isEmptyQuery && !scope && !isLoadingEmptyState && !hasContinueLearning && !hasRecentOpened
   // Suppress Pages when welcome copy is visible — a 9-item nav list
   // contradicts the "nothing here yet" message.
-  const showPages = !showWelcomeCopy && !scope
+  const showPages = !showWelcomeCopy && !scope && staticPagesFiltered.length > 0
 
   // ─── Recently Opened label resolution — one-shot per open + hit list ─────
   //
@@ -824,7 +825,7 @@ export function SearchCommandPalette({
                 }
                 case 'lesson': {
                   const row = await db.importedVideos.get(hit.id)
-                  return { key, label: row ? { title: row.filename || row.id } : null }
+                  return { key, label: row ? { title: normalizeFilename(row.filename) || row.youtubeVideoId || row.id } : null }
                 }
                 case 'book': {
                   const row = await db.books.get(hit.id)
@@ -890,7 +891,7 @@ export function SearchCommandPalette({
       contentClassName="max-sm:inset-0 max-sm:translate-x-0 max-sm:translate-y-0 max-sm:max-w-full max-sm:rounded-none max-sm:h-full max-sm:w-full"
     >
       <CommandInput
-        placeholder={scope ? '' : 'Search pages, courses, books, lessons, notes, highlights...'}
+        placeholder={scope ? '' : 'Search pages, courses, books, lessons...'}
         onValueChange={handleInputChange}
         onKeyDown={handleInputKeyDown}
         value={searchQuery}
@@ -906,7 +907,7 @@ export function SearchCommandPalette({
               <button
                 type="button"
                 onClick={() => setScope(null)}
-                className={`h-5 px-0.5 rounded-l-none text-[10px] leading-none flex items-center ${TYPE_BADGE_CLASS[scope]} opacity-70 hover:opacity-100`}
+                className={`h-5 px-1.5 rounded-l-none text-[10px] leading-none flex items-center ${TYPE_BADGE_CLASS[scope]} opacity-70 hover:opacity-100`}
                 aria-label="Clear scope filter"
                 data-testid="search-scope-chip-clear"
               >
