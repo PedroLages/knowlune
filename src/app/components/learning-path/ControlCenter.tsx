@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback, useEffect } from 'react'
 import { Lock, Sparkles, Settings, Loader2, Play, Check } from 'lucide-react'
 import { Link } from 'react-router'
 import { Button } from '@/app/components/ui/button'
@@ -10,7 +10,6 @@ import { PlanMyWeekButton } from '@/app/components/learning-path/PlanMyWeekButto
 import { PathScheduleList } from '@/app/components/learning-path/PathScheduleList'
 import { isOrderSuggestionAvailable } from '@/ai/learningPath/suggestOrder'
 import { dispatchFocusRequest } from '@/lib/focusModeEvents'
-import type { FocusTargetType } from '@/hooks/useFocusMode'
 import type { LearningPathEntry, PathCourseInfo } from '@/data/types'
 import type { PathProgressSummary } from '@/app/hooks/usePathProgress'
 
@@ -106,7 +105,7 @@ export function ControlCenter({
   const completedAll = entries.length > 0 && progress.completionPct >= 100
 
   // Pick a study tip on mount — context-aware if possible
-  useMemo(() => {
+  useEffect(() => {
     const applicableTips = [...STUDY_TIPS]
 
     // Add path-specific tips
@@ -134,13 +133,13 @@ export function ControlCenter({
     // Pick one randomly
     const idx = Math.floor(Math.random() * applicableTips.length)
     setFilteredTip(applicableTips[idx])
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps -- intentional: pick once on mount
+  }, []) // intentional: pick once on mount
 
   const handleStartFocusSession = useCallback(() => {
     // Focus session timer is a future feature.
     // Using 'interleaved-review' as a bridge type until learning-path-specific
     // focus targets are implemented.
-    dispatchFocusRequest(pathId, 'interleaved-review' as FocusTargetType)
+    dispatchFocusRequest(pathId, 'interleaved-review')
   }, [pathId])
 
   // --- Up Next Section ---
@@ -163,13 +162,18 @@ export function ControlCenter({
               return (
                 <div
                   key={entry.courseId || `upcoming-${i}`}
-                  className={cn('flex items-start gap-3', i > 0 && i < 3 && 'opacity-60')}
+                  className="flex items-start gap-3"
                 >
                   <div className="size-8 rounded-lg bg-muted flex items-center justify-center shrink-0">
                     <Lock className="size-3.5 text-muted-foreground" aria-hidden="true" />
                   </div>
                   <div>
-                    <h4 className="font-medium text-sm text-foreground">
+                    <h4
+                      className={cn(
+                        'font-medium text-sm',
+                        i > 0 && i < 3 ? 'text-muted-foreground' : 'text-foreground'
+                      )}
+                    >
                       {info?.name || 'Unknown Course'}
                     </h4>
                     {info?.authorName && (

@@ -52,7 +52,7 @@ export function PathSummaryPanel({ progress, className }: PathSummaryPanelProps)
   return (
     <div
       className={cn(
-        'rounded-xl border border-border bg-[var(--surface-glass)] backdrop-blur-xl p-4 md:p-6',
+        'rounded-xl border border-[var(--surface-glass-border)] bg-[var(--surface-glass)] backdrop-blur-xl p-4 md:p-6',
         className
       )}
       data-testid="path-summary-panel"
@@ -64,7 +64,7 @@ export function PathSummaryPanel({ progress, className }: PathSummaryPanelProps)
           return (
             <div key={stat.label} className="flex items-center gap-3">
               <div className="size-10 shrink-0 rounded-lg bg-brand-soft flex items-center justify-center">
-                <Icon className="size-5 text-brand" aria-hidden="true" />
+                <Icon className="size-5 text-brand-soft-foreground" aria-hidden="true" />
               </div>
               <div className="min-w-0">
                 <p className="text-lg md:text-2xl font-bold tabular-nums text-foreground">

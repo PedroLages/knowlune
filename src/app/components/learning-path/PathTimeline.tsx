@@ -1,4 +1,5 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useMemo } from 'react'
+import { useReducedMotion } from 'motion/react'
 import { Check, Play, Lock, AlertCircle, Import, Search, Replace } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
 import { Badge } from '@/app/components/ui/badge'
@@ -42,7 +43,6 @@ function StatusCircle({
   status,
 }: {
   status: 'completed' | 'in-progress' | 'locked' | 'gap'
-  position: number
 }) {
   const baseClass =
     'size-8 shrink-0 rounded-full flex items-center justify-center text-sm font-semibold relative z-10'
@@ -103,7 +103,7 @@ function GapTimelineEntry({
     <div className="flex gap-4" data-testid={`gap-entry-${entry.id}`}>
       {/* Connector line column */}
       <div className="flex flex-col items-center">
-        <StatusCircle status="gap" position={entry.position} />
+        <StatusCircle status="gap" />
         <div className="w-px flex-1 bg-gradient-to-b from-warning/50 to-warning/20" />
       </div>
 
@@ -189,7 +189,7 @@ function CourseTimelineEntry({
     <div className="flex gap-4" ref={entryRef}>
       {/* Connector line column */}
       <div className="flex flex-col items-center">
-        <StatusCircle status={status} position={entry.position} />
+        <StatusCircle status={status} />
         <div className="w-px flex-1 bg-gradient-to-b from-brand/40 via-border to-border" />
       </div>
 
@@ -272,8 +272,9 @@ export function PathTimeline({
   loadingResolve,
   className,
 }: PathTimelineProps) {
-  const gapEntryIds = new Set(gapEntries.map(e => e.id))
+  const gapEntryIds = useMemo(() => new Set(gapEntries.map(e => e.id)), [gapEntries])
   const timelineRef = useRef<HTMLDivElement>(null)
+  const prefersReducedMotion = useReducedMotion()
 
   // Auto-scroll to the current in-progress entry on mount
   useEffect(() => {
@@ -294,12 +295,12 @@ export function PathTimeline({
       if (!container) return
       const rows = container.querySelectorAll('[role="listitem"]')
       if (rows[currentIndex]) {
-        rows[currentIndex].scrollIntoView({ behavior: 'smooth', block: 'center' })
+        rows[currentIndex].scrollIntoView({ behavior: prefersReducedMotion ? 'instant' : 'smooth', block: 'center' })
       }
     }, 300)
 
     return () => clearTimeout(timer)
-  }, [autoScrollToCurrent, entries, courseInfoMap, gapEntryIds])
+  }, [autoScrollToCurrent, entries, courseInfoMap, gapEntryIds, prefersReducedMotion])
 
   if (entries.length === 0) {
     return null

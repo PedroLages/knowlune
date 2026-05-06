@@ -37,12 +37,18 @@ export function ContinueLearningBento({
         {/* Left: Thumbnail with play overlay */}
         <div className="md:w-2/5 relative bg-muted overflow-hidden">
           {thumbnailUrl ? (
-            <img
-              src={thumbnailUrl}
-              alt=""
-              className="h-full w-full object-cover mix-blend-luminosity"
-              loading="lazy"
-            />
+            <div className="relative h-full">
+              <img
+                src={thumbnailUrl}
+                alt=""
+                className="h-full w-full object-cover"
+                loading="lazy"
+              />
+              <div
+                className="absolute inset-0 bg-gradient-to-br from-brand-soft/30 to-transparent pointer-events-none"
+                aria-hidden="true"
+              />
+            </div>
           ) : (
             <div className="h-full min-h-[180px] flex items-center justify-center bg-gradient-to-br from-brand/10 to-brand/30">
               <BookOpen className="size-16 text-brand/40" aria-hidden="true" />
@@ -52,7 +58,7 @@ export function ContinueLearningBento({
           <div className="absolute inset-0 flex items-center justify-center">
             <Link
               to={`/courses/${entry.courseId}`}
-              className="size-16 rounded-full bg-brand/90 backdrop-blur-sm flex items-center justify-center text-brand-foreground shadow-lg hover:bg-brand hover:scale-105 transition-all duration-200 group"
+              className="size-16 rounded-full bg-brand/90 flex items-center justify-center text-brand-foreground shadow-lg hover:bg-brand hover:scale-105 transition-all duration-200 group"
               aria-label={`Continue ${courseInfo?.name || 'course'}`}
             >
               <Play

@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { useParams, Link, useNavigate } from 'react-router'
-import { motion } from 'motion/react'
+import { motion, useReducedMotion } from 'motion/react'
 import {
   DndContext,
   closestCenter,
@@ -79,7 +79,6 @@ import { useImportWizardTrigger } from '@/app/hooks/useImportWizardTrigger'
 import { useLoadCourseThumbnails } from '@/app/hooks/useLoadCourseThumbnails'
 import { staggerContainer, fadeUp } from '@/lib/motion'
 import { extractGapSearchTerm, cleanGapJustification } from '@/data/learningPathUtils'
-import { useReducedMotion } from 'motion/react'
 import { toast } from 'sonner'
 import { suggestPathOrder, type OrderSuggestionResult } from '@/ai/learningPath/suggestOrder'
 import type { LearningPathEntry, Course, PathCourseInfo } from '@/data/types'
@@ -299,6 +298,7 @@ export function LearningPathDetail() {
     try {
       return localStorage.getItem('keepCoursePanelOpen') === 'true'
     } catch {
+      // silent-catch-ok: localStorage may be unavailable
       return false
     }
   })
