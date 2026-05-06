@@ -164,7 +164,7 @@ function PathCard({
     <motion.div variants={fadeUp}>
       <Card
         className={cn(
-          'group relative transition-all duration-300 hover:shadow-xl overflow-hidden rounded-2xl'
+          'group relative transition-all duration-300 hover:shadow-xl overflow-hidden rounded-2xl h-[320px] md:h-[340px]'
         )}
       >
         {/* Gradient header — dimmed when not started */}
@@ -211,9 +211,9 @@ function PathCard({
         </div>
 
         {/* Card body */}
-        <CardContent className="px-4 pb-4 pt-1 relative">
+        <CardContent className="px-4 pb-4 pt-1 relative flex flex-col h-[calc(100%-6rem)]">
           {/* Progress ring — overlapping header */}
-          <div className="absolute -top-10 left-6">
+          <div className="absolute -top-10 left-4">
             <div className="bg-card rounded-full p-1.5 shadow-lg">
               <PathProgressRing percentage={completionPct} size="sm">
                 {isCompleted ? (
@@ -229,7 +229,7 @@ function PathCard({
 
           <Link
             to={`/learning-paths/${path.id}`}
-            className="block focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 rounded-lg mt-7"
+            className="flex flex-col flex-1 min-h-0 focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 rounded-lg mt-7"
             aria-label={`${path.name} — ${courseCount} courses, ${completionPct}% completed`}
           >
             {/* Course count badge */}
@@ -252,10 +252,10 @@ function PathCard({
                 onSave={name => renamePath(path.id, name)}
                 ariaLabel={`Edit path name: ${path.name}`}
                 maxLength={100}
-                className="text-xl font-bold leading-tight mb-2"
+                className="text-xl font-bold leading-tight mb-1.5 line-clamp-2"
               />
             </div>
-            <div onClick={e => e.stopPropagation()} className="mb-6">
+            <div onClick={e => e.stopPropagation()} className="mb-4">
               <InlineEditableField
                 value={path.description || ''}
                 onSave={desc => updateDescription(path.id, desc)}
@@ -268,7 +268,7 @@ function PathCard({
             </div>
 
             {/* Footer: course thumbnails + continue/start/review button */}
-            <div className="flex items-center justify-between border-t border-border pt-4">
+            <div className="mt-auto flex items-center justify-between border-t border-border pt-4">
               <div className="flex -space-x-3">
                 {courseThumbnails.slice(0, 3).map((url, i) => (
                   <img
@@ -488,9 +488,9 @@ export function LearningPaths() {
             <Skeleton className="h-10 w-64" />
             <Skeleton className="h-5 w-96" />
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-[var(--content-gap)]">
             {Array.from({ length: 3 }, (_, i) => (
-              <div key={i} className="w-full max-w-[380px] mx-auto">
+              <div key={i} className="w-full">
                 <PathCardSkeleton />
               </div>
             ))}
@@ -571,11 +571,11 @@ export function LearningPaths() {
                 Browse curated learning paths to discover how paths work. Fork one to get started
                 instantly.
               </p>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-[var(--content-gap)]">
                 {templates.map(tpl => {
                   const tplEntries = getEntriesForPath(tpl.id)
                   return (
-                    <div key={tpl.id} className="w-full max-w-[380px] mx-auto">
+                    <div key={tpl.id} className="w-full">
                       <TemplateCard
                         template={tpl}
                         courseCount={tplEntries.length}
@@ -644,14 +644,14 @@ export function LearningPaths() {
               variants={staggerContainer}
               initial="hidden"
               animate="visible"
-              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-[var(--content-gap)]"
               role="list"
               aria-label="Learning paths"
             >
               {filteredPaths.map(path => {
                 const stats = pathStats.get(path.id) || { courseCount: 0, completionPct: 0 }
                 return (
-                  <div key={path.id} role="listitem" className="w-full max-w-[380px] mx-auto">
+                  <div key={path.id} role="listitem" className="w-full">
                     <PathCard
                       path={path}
                       courseCount={stats.courseCount}
@@ -683,11 +683,11 @@ export function LearningPaths() {
                     />
                   </CollapsibleTrigger>
                   <CollapsibleContent id="discover-more-paths-panel" className="pt-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-[var(--content-gap)]">
                       {templates.map(tpl => {
                         const tplEntries = getEntriesForPath(tpl.id)
                         return (
-                          <div key={tpl.id} className="w-full max-w-[380px] mx-auto">
+                          <div key={tpl.id} className="w-full">
                             <TemplateCard
                               template={tpl}
                               courseCount={tplEntries.length}
