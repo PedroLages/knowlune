@@ -186,6 +186,20 @@ describe('LearningPaths', () => {
     })
   })
 
+  it('renders a width-filling responsive grid (no per-card max-width wrapper)', async () => {
+    renderPage()
+    await waitFor(() => {
+      expect(screen.getByRole('list', { name: 'Learning paths' })).toBeInTheDocument()
+    })
+
+    const grid = screen.getByRole('list', { name: 'Learning paths' })
+    expect(grid.className).toContain('xl:grid-cols-4')
+    expect(grid.className).toContain('gap-[var(--content-gap)]')
+
+    // Regression guard: the previous layout wrapped each card with `max-w-[380px] mx-auto`
+    expect(grid.innerHTML).not.toContain('max-w-[380px]')
+  })
+
   it('renders "Create Path" button in header', async () => {
     renderPage()
     await waitFor(() => {
