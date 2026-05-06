@@ -7,7 +7,7 @@
  * @see useAudiobookshelfSync.ts
  */
 import { describe, it, expect } from 'vitest'
-import { detectFormat, VALID_FORMATS, mapAbsItemToBook } from '@/app/hooks/useAudiobookshelfSync'
+import { detectFormat, isValidSyncItem, VALID_FORMATS, mapAbsItemToBook } from '@/app/hooks/useAudiobookshelfSync'
 import type { AbsLibraryItem, AudiobookshelfServer, Book } from '@/data/types'
 
 // ── Helpers ──────────────────────────────────────────────────────
@@ -61,6 +61,33 @@ describe('VALID_FORMATS', () => {
 
   it('does not include pdf', () => {
     expect(VALID_FORMATS).not.toContain('pdf')
+  })
+})
+
+describe('isValidSyncItem', () => {
+  it('accepts items with mediaType "book"', () => {
+    const item = makeAbsItem({ mediaType: 'book' })
+    expect(isValidSyncItem(item)).toBe(true)
+  })
+
+  it('accepts items with mediaType "ebook"', () => {
+    const item = makeAbsItem({ mediaType: 'ebook' })
+    expect(isValidSyncItem(item)).toBe(true)
+  })
+
+  it('accepts items with undefined mediaType (legacy ABS data)', () => {
+    const item = makeAbsItem({ mediaType: undefined })
+    expect(isValidSyncItem(item)).toBe(true)
+  })
+
+  it('rejects items with mediaType "podcast"', () => {
+    const item = makeAbsItem({ mediaType: 'podcast' })
+    expect(isValidSyncItem(item)).toBe(false)
+  })
+
+  it('rejects items with mediaType "comic"', () => {
+    const item = makeAbsItem({ mediaType: 'comic' })
+    expect(isValidSyncItem(item)).toBe(false)
   })
 })
 

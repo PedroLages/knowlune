@@ -39,6 +39,15 @@ function safeAbsLastOpenedIso(ms: number): string | null {
 export const VALID_FORMATS: readonly BookFormat[] = ['epub', 'audiobook'] as const
 
 /**
+ * Filter predicate for items that should be synced from an ABS catalog.
+ * Accepts items with mediaType 'book', 'ebook', or undefined (legacy data).
+ * Rejects items like 'podcast', 'comic', etc.
+ */
+export function isValidSyncItem(absItem: AbsLibraryItem): boolean {
+  return !absItem.mediaType || absItem.mediaType === 'book' || absItem.mediaType === 'ebook'
+}
+
+/**
  * Resolve narrator names from an ABS library item, handling both shape variants.
  *
  * ABS can return narrators as string[], as { name: string }[], or as a single
@@ -325,7 +334,7 @@ export function useAudiobookshelfSync() {
 
             totalItems = result.data.total
             for (const absItem of result.data.results) {
-              if (absItem.mediaType && absItem.mediaType !== 'book' && absItem.mediaType !== 'ebook') continue
+              if (!isValidSyncItem(absItem)) continue
               allMappedBooks.push(mapAbsItemToBook(absItem, server, apiKey))
             }
 
