@@ -1,10 +1,12 @@
 import { useEffect, useRef } from 'react'
-import { Check, Play, Lock, AlertCircle, Import, Search, Replace, BookOpen } from 'lucide-react'
+import { Check, Play, Lock, AlertCircle, Import, Search, Replace } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
 import { Badge } from '@/app/components/ui/badge'
 import { Card, CardContent } from '@/app/components/ui/card'
 import { cn } from '@/app/components/ui/utils'
 import { CourseTypeBadge } from '@/app/components/shared/CourseTypeBadge'
+import { CourseThumbnail } from '@/app/components/shared/CourseThumbnail'
+import { extractGapSearchTerm, cleanGapJustification } from '@/data/learningPathUtils'
 import type { LearningPathEntry, PathCourseInfo } from '@/data/types'
 
 // ---- Types ----
@@ -94,9 +96,8 @@ function GapTimelineEntry({
   onResolve: (resolution: GapResolution) => void
   isLoading?: boolean
 }) {
-  const matchTitleMatch = entry.justification?.match(/\[Search for: (.+)\]$/)
-  const searchTerm = matchTitleMatch ? matchTitleMatch[1] : undefined
-  const justification = entry.justification?.replace(/\s*\[Search for: .+\]$/, '') || undefined
+  const searchTerm = extractGapSearchTerm(entry.justification)
+  const justification = cleanGapJustification(entry.justification)
 
   return (
     <div className="flex gap-4" data-testid={`gap-entry-${entry.id}`}>
@@ -214,15 +215,7 @@ function CourseTimelineEntry({
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               {/* Thumbnail */}
-              <div className="size-12 shrink-0 rounded-lg bg-muted overflow-hidden">
-                {thumbUrl ? (
-                  <img src={thumbUrl} alt="" className="size-full object-cover" loading="lazy" />
-                ) : (
-                  <div className="size-full flex items-center justify-center">
-                    <BookOpen className="size-5 text-muted-foreground" aria-hidden="true" />
-                  </div>
-                )}
-              </div>
+              <CourseThumbnail url={thumbUrl} />
 
               {/* Course info */}
               <div className="min-w-0 flex-1">

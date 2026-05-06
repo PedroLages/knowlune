@@ -65,6 +65,7 @@ import { InlineCoursePicker } from '@/app/components/figma/InlineCoursePicker'
 import { ImportWizardDialog } from '@/app/components/figma/ImportWizardDialog'
 import { InlineEditableField } from '@/app/components/figma/InlineEditableField'
 import { CourseTypeBadge } from '@/app/components/shared/CourseTypeBadge'
+import { CourseThumbnail } from '@/app/components/shared/CourseThumbnail'
 import { PathSummaryPanel } from '@/app/components/learning-path/PathSummaryPanel'
 import { ContinueLearningBento } from '@/app/components/learning-path/ContinueLearningBento'
 import { PathTimeline } from '@/app/components/learning-path/PathTimeline'
@@ -77,6 +78,7 @@ import { usePathMilestones } from '@/app/hooks/usePathMilestones'
 import { useImportWizardTrigger } from '@/app/hooks/useImportWizardTrigger'
 import { useLoadCourseThumbnails } from '@/app/hooks/useLoadCourseThumbnails'
 import { staggerContainer, fadeUp } from '@/lib/motion'
+import { extractGapSearchTerm, cleanGapJustification } from '@/data/learningPathUtils'
 import { useReducedMotion } from 'motion/react'
 import { toast } from 'sonner'
 import { suggestPathOrder, type OrderSuggestionResult } from '@/ai/learningPath/suggestOrder'
@@ -153,15 +155,7 @@ function SortableCourseRow({
             </div>
 
             {/* Thumbnail */}
-            <div className="size-12 shrink-0 rounded-lg bg-muted overflow-hidden">
-              {thumbnailUrl ? (
-                <img src={thumbnailUrl} alt="" className="size-full object-cover" loading="lazy" />
-              ) : (
-                <div className="size-full flex items-center justify-center">
-                  <BookOpen className="size-5 text-muted-foreground" aria-hidden="true" />
-                </div>
-              )}
-            </div>
+            <CourseThumbnail url={thumbnailUrl} />
 
             {/* Course info */}
             <div className="min-w-0 flex-1">
@@ -836,9 +830,7 @@ export function LearningPathDetail() {
                     gapEntries={courseEntries.filter(e => e.courseId === '')}
                     onGapResolve={resolution => {
                       const gapEntry = courseEntries.find(e => e.id === resolution.entryId)
-                      const matchTitleMatch =
-                        gapEntry?.justification?.match(/\[Search for: (.+)\]$/)
-                      const searchTerm = matchTitleMatch ? matchTitleMatch[1] : undefined
+                      const searchTerm = extractGapSearchTerm(gapEntry?.justification)
 
                       if (resolution.type === 'import') {
                         handleImportClick({
@@ -900,12 +892,8 @@ export function LearningPathDetail() {
                         {courseEntries.map((entry, index) => {
                           // Gap entry: courseId is empty — render as non-sortable gap card
                           if (entry.courseId === '') {
-                            const matchTitleMatch =
-                              entry.justification?.match(/\[Search for: (.+)\]$/)
-                            const searchTerm = matchTitleMatch ? matchTitleMatch[1] : undefined
-                            const justification =
-                              entry.justification?.replace(/\s*\[Search for: .+\]$/, '') ||
-                              undefined
+                            const searchTerm = extractGapSearchTerm(entry.justification)
+                            const justification = cleanGapJustification(entry.justification)
                             return (
                               <div
                                 key={entry.id}

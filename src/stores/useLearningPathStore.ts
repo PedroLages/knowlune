@@ -6,6 +6,7 @@ import { persistWithRetry } from '@/lib/persistWithRetry'
 import { trackAIUsage } from '@/lib/aiEventTracking'
 import { syncableWrite, type SyncableRecord } from '@/lib/sync/syncableWrite'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
+import { extractGapSearchTerm } from '@/data/learningPathUtils'
 
 interface LearningPathState {
   // Multi-path state (E26-S01/S02)
@@ -1194,8 +1195,7 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
 
       const newEntries: LearningPathEntry[] = []
       for (const entry of templateEntries) {
-        const matchTitleMatch = entry.justification?.match(/\[Search for: (.+)\]$/)
-        const matchTitle = matchTitleMatch ? matchTitleMatch[1] : undefined
+        const matchTitle = extractGapSearchTerm(entry.justification)
 
         let courseId = ''
         let courseType: 'imported' | 'catalog' = 'catalog'
