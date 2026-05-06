@@ -43,7 +43,11 @@ export function ViewModeToggle({ value, onChange, className }: ViewModeTogglePro
       }}
       aria-label="Courses view mode"
       data-testid="course-view-mode-toggle"
-      className={cn('rounded-xl', className)}
+      className={cn(
+        // shrink-0: parent flex rows must not squeeze this control; overflow-visible: focus rings / labels
+        'rounded-xl shrink-0 min-w-min overflow-visible',
+        className
+      )}
     >
       {OPTIONS.map(({ value: option, label, Icon }) => (
         <ToggleGroupItem
@@ -52,7 +56,9 @@ export function ViewModeToggle({ value, onChange, className }: ViewModeTogglePro
           aria-label={label}
           data-testid={`course-view-mode-${option}`}
           className={cn(
-            'min-h-11 min-w-11 px-3',
+            // min-w-max overrides ToggleGroupItem min-w-0 so flex segments cannot clip labels ("Compact").
+            'min-h-11 min-w-max px-3.5',
+            'first:rounded-l-xl last:rounded-r-xl',
             'inline-flex items-center justify-center gap-2',
             'text-muted-foreground',
             'data-[state=on]:bg-brand data-[state=on]:text-brand-foreground',

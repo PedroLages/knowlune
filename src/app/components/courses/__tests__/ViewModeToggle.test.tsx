@@ -55,13 +55,13 @@ describe('ViewModeToggle (E99-S01)', () => {
     expect(group).toBeInTheDocument()
   })
 
-  it('applies 44px minimum touch target classes to each item', () => {
+  it('applies 44px minimum height and non-clipping min-width to each item', () => {
     render(<ViewModeToggle value="grid" onChange={() => {}} />)
 
     for (const label of ['Grid view', 'List view', 'Compact view']) {
       const item = screen.getByRole('radio', { name: label })
       expect(item.className).toContain('min-h-11')
-      expect(item.className).toContain('min-w-11')
+      expect(item.className).toContain('min-w-max')
       expect(item.className).toContain('items-center')
       expect(item.className).toContain('justify-center')
       expect(item.className).toContain('gap-2')
