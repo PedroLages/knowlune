@@ -1,0 +1,120 @@
+{
+  "runId": "20260507-001321-f1f4347e",
+  "mode": "headless",
+  "scope": {
+    "branch": "feature/ce-2026-05-06-bulk-course-delete",
+    "base": "543ef75cfa821a6e60b5db13874ef5408dbdf91b",
+    "files": [
+      "src/app/components/figma/ImportedCourseCard.tsx",
+      "src/app/components/figma/ImportedCourseCompactCard.tsx",
+      "src/app/components/figma/ImportedCourseListRow.tsx",
+      "src/app/components/figma/__tests__/ImportedCourseCard.test.tsx",
+      "src/app/components/figma/__tests__/ImportedCourseCompactCard.test.tsx",
+      "src/app/components/figma/__tests__/ImportedCourseListRow.test.tsx",
+      "src/app/pages/Courses.tsx",
+      "src/app/pages/__tests__/Courses.test.tsx",
+      "src/stores/__tests__/useCourseImportStore.test.ts",
+      "src/stores/useCourseImportStore.ts",
+      "tests/e2e/courses-bulk-delete.spec.ts"
+    ]
+  },
+  "intent": "Add a selection mode to the Courses page that lets users select multiple courses via checkboxes and delete them all at once, with undo support via toast.",
+  "verdict": "Ready with fixes",
+  "appliedFixes": [],
+  "findings": [
+    {
+      "id": "BULK-001",
+      "title": "Undo callback restores all requested courses from snapshot instead of only successfully deleted ones",
+      "severity": "P1",
+      "file": "src/stores/useCourseImportStore.ts",
+      "line": 199,
+      "confidence": 0.90,
+      "pre_existing": false,
+      "requires_verification": true,
+      "autofix_class": "gated_auto",
+      "owner": "downstream-resolver",
+      "suggestedFix": "Replace `snapshot` with `deleted` in the undo callback. Change line 200 from `for (const course of snapshot)` to `for (const course of deleted)`. Change line 208 from `importedCourses: [...snapshot, ...state.importedCourses]` to `importedCourses: [...deleted, ...state.importedCourses]`. Change line 211 from `${snapshot.length}` to `${deleted.length}`.",
+      "why_it_matters": "When some course deletions fail (partial failure), the undo callback re-adds ALL courses from the pre-deletion snapshot, including courses that were never successfully deleted. This causes duplicate entries in the store state for courses that failed deletion, leading to incorrect UI state and potential sync queue conflicts.",
+      "evidence": [
+        "The `snapshot` variable on line 174 captures all matching courses from pre-deletion state regardless of whether they are successfully deleted",
+        "The `deleted` array on line 178 only includes courses confirmed as removed (checked on line 186-192)",
+        "The undo callback on lines 199-214 iterates `snapshot` instead of `deleted`, re-adding courses still present in the store"
+      ]
+    },
+    {
+      "id": "BULK-002",
+      "title": "No test coverage for isDeleting guard preventing double-clicks during active deletion",
+      "severity": "P2",
+      "file": "src/app/pages/__tests__/Courses.test.tsx",
+      "line": 1167,
+      "confidence": 0.75,
+      "pre_existing": false,
+      "requires_verification": false,
+      "autofix_class": "manual",
+      "owner": "downstream-resolver",
+      "suggestedFix": "Add a test that verifies the 'Delete Selected' button is disabled while deletion is in progress (isDeleting=true). Use a deferred promise in the mock removeImportedCourses to control timing.",
+      "why_it_matters": "The isDeleting guard is the only protection against overlapping batch deletions. Without test coverage, a regression could allow double-clicks to start concurrent delete batches, causing race conditions on shared store state.",
+      "evidence": [
+        "handleDeleteSelected checks `if (isDeleting || selectedIds.size === 0) return` on line 835",
+        "No test exercises the disabled state during deletion"
+      ]
+    },
+    {
+      "id": "BULK-003",
+      "title": "Partial-failure undo test does not verify snapshot-vs-deleted correctness",
+      "severity": "P2",
+      "file": "src/stores/__tests__/useCourseImportStore.test.ts",
+      "line": 1289,
+      "confidence": 0.75,
+      "pre_existing": false,
+      "requires_verification": false,
+      "autofix_class": "manual",
+      "owner": "downstream-resolver",
+      "suggestedFix": "Extend the 'undo callback restores deleted courses in store' test to cover partial failure: make one of two courses fail to delete, verify undo restores only the successfully deleted course (not the failed one), and verify no duplicate entries appear in the store.",
+      "why_it_matters": "The current undo test only exercises the all-success path, which does not surface the snapshot-vs-deleted bug (BULK-001). Adding a partial-failure + undo scenario would catch regressions and validate correctness.",
+      "evidence": [
+        "The partial-failure test ('continues deletion when some courses fail') exists but does not test undo behavior",
+        "The undo test only deletes a single course (all-success path)"
+      ]
+    }
+  ],
+  "requirementsCompleteness": {
+    "plan_source": "explicit",
+    "requirements": {
+      "R1": "met",
+      "R2": "met",
+      "R3": "met",
+      "R4": "met",
+      "R5": "met",
+      "R6": "met",
+      "R7": "met",
+      "R8": "met",
+      "R9": "met",
+      "R10": "partially addressed (undo restores full snapshot on partial failure — see BULK-001)",
+      "R11": "met"
+    },
+    "implementationUnits": {
+      "Unit 1 (card selection props)": "met",
+      "Unit 2 (Courses page selection state)": "met",
+      "Unit 3 (batch delete with undo)": "partially addressed (BULK-001: undo uses wrong variable)",
+      "Unit 4 (E2E smoke test)": "met"
+    }
+  },
+  "residualRisks": [
+    "Sequential deletion of 100+ courses may take 5-10 seconds with no progress indicator (v1 scope decision — accept per plan risks)",
+    "Undo does not restore child records (videos, PDFs) per scope boundaries — restored courses have zero content until re-imported",
+    "Undo re-queues sync 'add' entries that may race with in-flight 'delete' entries — LWW semantics on Supabase make this acceptable per plan"
+  ],
+  "testingGaps": [
+    "No test for isDeleting guard preventing concurrent delete batches",
+    "No partial-failure + undo test to verify snapshot-vs-deleted correctness"
+  ],
+  "priorMediumFindingsResolved": {
+    "completion_badge_z_index_overlap": true,
+    "missing_unit_tests": true,
+    "details": {
+      "z_index_fix": "ImportedCourseCard.tsx checkbox z-index changed from z-30 to z-40 (unstaged change in working tree)",
+      "unit_tests": "415 lines of new test code across 5 test files (all unstaged additions)"
+    }
+  }
+}

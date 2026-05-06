@@ -348,7 +348,10 @@ export function Courses() {
             </div>
           ) : (
             /* Grouped control bar: Filter, Sort, Select, View sections */
-            <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
+            <div
+              className="flex w-full min-w-0 flex-nowrap items-center gap-x-4 overflow-x-auto overflow-y-visible pb-1 scroll-smooth sm:gap-x-6"
+              data-testid="courses-control-bar"
+            >
               {importedCourses.length > 0 && (
                 <ControlBarSection label="Filter" showDivider={false}>
                   <StatusFilter

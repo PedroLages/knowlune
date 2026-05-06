@@ -1,0 +1,141 @@
+{
+  "runId": "20260506-235959-49035a74",
+  "mode": "headless",
+  "scope": {
+    "branch": "feature/ce-2026-05-06-bulk-course-delete",
+    "base": "543ef75cfa821a6e60b5db13874ef5408dbdf91b",
+    "files": [
+      "src/app/components/figma/ImportedCourseCard.tsx",
+      "src/app/components/figma/ImportedCourseCompactCard.tsx",
+      "src/app/components/figma/ImportedCourseListRow.tsx",
+      "src/app/pages/Courses.tsx",
+      "src/stores/useCourseImportStore.ts",
+      "tests/e2e/courses-bulk-delete.spec.ts"
+    ]
+  },
+  "intent": "Add bulk course delete with selection mode and undo to the Courses page. Selection mode activates checkboxes on all course cards across grid/compact/list views. An action bar replaces the control bar with Select All, Deselect All, Delete Selected, and Cancel. Deletions run sequentially with undo toast (8s).",
+  "reviewers": [
+    "correctness",
+    "testing",
+    "maintainability",
+    "project-standards",
+    "agent-native-reviewer",
+    "learnings-researcher"
+  ],
+  "verdict": "Ready with fixes",
+  "plan_source": "explicit",
+  "applied_fixes": [],
+  "findings": [
+    {
+      "id": "f1",
+      "title": "Completion badge overlaps selection checkbox in grid card",
+      "severity": "P2",
+      "file": "src/app/components/figma/ImportedCourseCard.tsx",
+      "line": 363,
+      "confidence": 0.85,
+      "autofix_class": "gated_auto",
+      "owner": "downstream-resolver",
+      "requires_verification": true,
+      "pre_existing": false,
+      "suggested_fix": "Increase checkbox wrapper z-index to z-40 when a completion or progress badge is also rendered, or reposition the checkbox to top-3 right-3. The simplest fix: change the checkbox wrapper z-30 to z-40 in ImportedCourseCard.tsx. Alternatively, conditionally render the checkbox at a different position when completionPercent > 0.",
+      "why_it_matters": "The selection checkbox (line 363) and completion badge/progress ring (lines 376-388) both use absolute top-3 left-3 z-30. Since the completion badge renders after the checkbox in DOM order, the badge (bg-success with px-3 py-1) completely obscures the checkbox when both are visible. Users cannot select a completed or in-progress course by clicking the checkbox area; they must click the card body instead, which may be confusing.",
+      "evidence": [
+        "ImportedCourseCard.tsx:363-373 renders checkbox at position top-3 left-3 z-30",
+        "ImportedCourseCard.tsx:376-388 renders completion badge at position top-3 left-3 z-30",
+        "Checkbox renders first in DOM, completion badge renders second thus overlays it",
+        "Semi-transparent bg-background/80 on checkbox wrapper is insufficient against bg-success badge"
+      ]
+    },
+    {
+      "id": "f2",
+      "title": "Missing unit tests specified in implementation plan",
+      "severity": "P2",
+      "file": "docs/plans/2026-05-06-006-feat-bulk-course-delete-plan.md",
+      "line": 0,
+      "confidence": 0.95,
+      "autofix_class": "manual",
+      "owner": "downstream-resolver",
+      "requires_verification": false,
+      "pre_existing": false,
+      "suggested_fix": "Create the unit test files listed in the plan: src/app/components/figma/__tests__/ImportedCourseCard.test.tsx (checkbox render/no-render), src/pages/__tests__/Courses.test.tsx (selection mode state transitions), src/stores/__tests__/useCourseImportStore.test.ts (batch delete, undo, partial failure). Or mark the plan checkboxes as intentionally skipped with rationale.",
+      "why_it_matters": "The plan's Implementation Units specify 5 unit test files across Units 1-3. None were created. Only the E2E test covers the feature. Unit tests would exercise edge cases more thoroughly: checkbox rendering conditional on onToggleSelect prop, selection mode state management (Escape, Select All, Deselect All), store error handling (partial failures, total failures, rollback verification), and undo behavior (snapshot capture, re-queue syncableWrite). Without these, regressions in isolated logic are harder to catch.",
+      "evidence": [
+        "Plan Unit 1 lists 3 component test files — none created",
+        "Plan Unit 2 lists 1 page test file — not created",
+        "Plan Unit 3 lists 1 store test file — not created",
+        "Only tests/e2e/courses-bulk-delete.spec.ts was created"
+      ]
+    },
+    {
+      "id": "f3",
+      "title": "Selection action bar lacks semantic grouping for accessibility",
+      "severity": "P3",
+      "file": "src/app/pages/Courses.tsx",
+      "line": 583,
+      "confidence": 0.75,
+      "autofix_class": "advisory",
+      "owner": "human",
+      "requires_verification": false,
+      "pre_existing": false,
+      "suggested_fix": "Add role=\"toolbar\" and aria-label=\"Course selection\" to the selection action bar div element for better screen reader context.",
+      "why_it_matters": "The action bar replaces the control bar when selection mode is active. While all buttons have text labels (providing basic accessibility), the grouping lacks semantic structure. A toolbar role would help screen reader users understand that these controls are a cohesive set of selection-mode actions.",
+      "evidence": [
+        "Courses.tsx:583 renders div with data-testid='selection-action-bar' but no role or aria-label",
+        "Compare: the control bar it replaces also lacks a role — this is a style choice, not a regression"
+      ]
+    }
+  ],
+  "requirements_completeness": {
+    "plan_source": "explicit",
+    "requirements": {
+      "R1": "met",
+      "R2": "met",
+      "R3": "met",
+      "R4": "met",
+      "R5": "met",
+      "R6": "met",
+      "R7": "met",
+      "R8": "met",
+      "R9": "met",
+      "R10": "met",
+      "R11": "met"
+    },
+    "implementation_units": {
+      "Unit 1: Card components with selection props": "met",
+      "Unit 2: Courses page selection state and action bar": "met",
+      "Unit 3: Store batch delete with undo": "met",
+      "Unit 4: E2E smoke test": "met",
+      "Unit 1 test files (3x component tests)": "not addressed",
+      "Unit 2 test file (Courses.test.tsx)": "not addressed",
+      "Unit 3 test file (useCourseImportStore.test.ts)": "not addressed"
+    }
+  },
+  "residual_risks": [
+    "Undo restores course records but not child records (videos, PDFs) — documented in scope boundaries but could surprise users. Consider adding a toast note: 'Courses restored. Re-import videos to recover content.'",
+    "Sequential deletion of 100+ courses may take 5-10 seconds with no progress indicator beyond incremental card disappearance. The plan acknowledges this but it could degrade UX for power users with large libraries.",
+    "If user navigates away during batch deletion, in-flight deletions still complete in Dexie/sync queue, but the optimistic removal from Zustand persists. Remaining undeleted courses reappear on next loadImportedCourses(). Acceptable per scope boundaries."
+  ],
+  "learnings": [
+    "The implementer correctly followed the established undo pattern from useAuthorStore.deleteAuthor (closure-capture -> optimistic remove -> toastWithUndo).",
+    "The implementer correctly used sequential iteration instead of Promise.allSettled to avoid Zustand state races, consistent with the lesson from docs/solutions/best-practices/paths-as-study-plan-implementation-lessons-2026-05-04.md.",
+    "The Select All implementation correctly uses sortedImportedCourses (filtered list) per R5 — confirming filter-aware selection."
+  ],
+  "testing_gaps": [
+    "No unit tests for card components: checkbox conditional rendering, click propagation, and keyboard behavior.",
+    "No unit tests for Courses page: selection mode state transitions, Escape handling, Select All/Deselect All with filters.",
+    "No unit tests for store: removeImportedCourses with partial failure, undo callback, edge cases (empty array, all fail)."
+  ],
+  "coverage": {
+    "suppressed": 0,
+    "untracked_files_excluded": [
+      ".context/compound-engineering/ce-runs/bulk-course-delete-2026-05-06.md",
+      "docs/brainstorms/2026-05-06-bulk-course-delete-requirements.md",
+      "docs/plans/2026-05-06-004-fix-search-command-palette-plan.md",
+      "docs/plans/2026-05-06-005-fix-learning-path-cover-gradient-preset-and-upload-rls-plan.md",
+      "docs/plans/2026-05-06-006-feat-bulk-course-delete-plan.md",
+      "docs/solutions/ui-bugs/search-command-palette-rendering-fixes-2026-05-06.md"
+    ],
+    "failed_reviewers": []
+  },
+  "verdict_detail": "Code is structurally sound and covers all 11 requirements. The two P2 findings (completion badge overlap, missing unit tests) should be addressed before merging. The overlap is a functional defect in selection mode UX. Missing unit tests represent incomplete implementation per the explicit plan."
+}

@@ -52,7 +52,7 @@ export function StatusFilter({ selectedStatuses, onSelectedStatusesChange }: Sta
         value={selectedStatuses}
         onValueChange={value => onSelectedStatusesChange(value as LearnerCourseStatus[])}
         aria-label="Filter by status"
-        className="flex flex-wrap gap-2"
+        className="flex w-auto flex-wrap gap-2 items-center rounded-none bg-transparent shadow-none"
       >
         {statuses.map(({ value, label, icon: Icon, activeClass }) => (
           <ToggleGroupItem
@@ -60,10 +60,13 @@ export function StatusFilter({ selectedStatuses, onSelectedStatusesChange }: Sta
             value={value}
             data-testid="status-filter-button"
             className={cn(
-              'min-h-[44px] rounded-full border px-3 py-2',
+              // Reset ToggleGroupItem defaults (segmented control + toggle focus border) so each
+              // option is a standalone pill — matches TopicFilter.tsx.
+              'flex-none min-h-[44px] rounded-full border px-3 py-2',
               'inline-flex items-center gap-1',
               'text-xs font-semibold transition-colors cursor-pointer shadow-none',
-              'focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:outline-none',
+              'first:rounded-full last:rounded-full',
+              'focus-visible:border-transparent focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:outline-none',
               'data-[state=off]:bg-transparent data-[state=off]:hover:bg-accent data-[state=off]:border-input',
               'data-[state=on]:border-transparent',
               activeClass
@@ -74,16 +77,6 @@ export function StatusFilter({ selectedStatuses, onSelectedStatusesChange }: Sta
           </ToggleGroupItem>
         ))}
       </ToggleGroup>
-      {selectedStatuses.length > 0 && (
-        <button
-          type="button"
-          data-testid="clear-status-filters"
-          onClick={() => onSelectedStatusesChange([])}
-          className="ml-1 inline-flex min-h-11 items-center px-2 text-xs text-muted-foreground hover:text-foreground underline"
-        >
-          Clear
-        </button>
-      )}
     </div>
   )
 }

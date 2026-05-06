@@ -300,18 +300,18 @@ describe('Courses page', () => {
       expect(screen.queryByText('Paused Course')).not.toBeInTheDocument()
     })
 
-    it('shows clear button when status filter is active', async () => {
+    it('shows clear-all when status filter is active (summary row; no duplicate Clear beside pills)', async () => {
       const user = userEvent.setup()
       renderCourses()
 
-      expect(screen.queryByTestId('clear-status-filters')).not.toBeInTheDocument()
+      expect(screen.queryByTestId('clear-all-filters')).not.toBeInTheDocument()
 
       await user.click(getStatusFilterButton('Not Started'))
 
-      expect(screen.getByTestId('clear-status-filters')).toBeInTheDocument()
+      expect(screen.getByTestId('clear-all-filters')).toBeInTheDocument()
     })
 
-    it('clears status filters when clear button is clicked', async () => {
+    it('clears status filters when Clear all is clicked', async () => {
       const user = userEvent.setup()
       renderCourses()
 
@@ -319,7 +319,7 @@ describe('Courses page', () => {
 
       expect(screen.queryByText('Completed Course')).not.toBeInTheDocument()
 
-      await user.click(screen.getByTestId('clear-status-filters'))
+      await user.click(screen.getByTestId('clear-all-filters'))
 
       expect(screen.getByText('Active Course')).toBeInTheDocument()
       expect(screen.getByText('Completed Course')).toBeInTheDocument()
