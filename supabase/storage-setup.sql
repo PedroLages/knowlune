@@ -252,34 +252,37 @@ CREATE POLICY "Anyone can read learning path covers"
   USING (bucket_id = 'learning-path-covers');
 
 DROP POLICY IF EXISTS "Authenticated users can upload learning path covers" ON storage.objects;
-CREATE POLICY "Authenticated users can upload learning path covers"
+DROP POLICY IF EXISTS "Users can update own learning path covers" ON storage.objects;
+DROP POLICY IF EXISTS "Users can delete own learning path covers" ON storage.objects;
+DROP POLICY IF EXISTS "learning-path-covers: owner insert" ON storage.objects;
+CREATE POLICY "learning-path-covers: owner insert"
   ON storage.objects FOR INSERT
   TO authenticated
   WITH CHECK (
     bucket_id = 'learning-path-covers'
-    AND auth.uid() = (SELECT user_id FROM public.learning_paths WHERE id = split_part(storage.filename(name), '.', 1))
+    AND (storage.foldername(name))[1] = auth.uid()::text
   );
 
-DROP POLICY IF EXISTS "Users can update own learning path covers" ON storage.objects;
-CREATE POLICY "Users can update own learning path covers"
+DROP POLICY IF EXISTS "learning-path-covers: owner update" ON storage.objects;
+CREATE POLICY "learning-path-covers: owner update"
   ON storage.objects FOR UPDATE
   TO authenticated
   USING (
     bucket_id = 'learning-path-covers'
-    AND auth.uid() = (SELECT user_id FROM public.learning_paths WHERE id = split_part(storage.filename(name), '.', 1))
+    AND (storage.foldername(name))[1] = auth.uid()::text
   )
   WITH CHECK (
     bucket_id = 'learning-path-covers'
-    AND auth.uid() = (SELECT user_id FROM public.learning_paths WHERE id = split_part(storage.filename(name), '.', 1))
+    AND (storage.foldername(name))[1] = auth.uid()::text
   );
 
-DROP POLICY IF EXISTS "Users can delete own learning path covers" ON storage.objects;
-CREATE POLICY "Users can delete own learning path covers"
+DROP POLICY IF EXISTS "learning-path-covers: owner delete" ON storage.objects;
+CREATE POLICY "learning-path-covers: owner delete"
   ON storage.objects FOR DELETE
   TO authenticated
   USING (
     bucket_id = 'learning-path-covers'
-    AND auth.uid() = (SELECT user_id FROM public.learning_paths WHERE id = split_part(storage.filename(name), '.', 1))
+    AND (storage.foldername(name))[1] = auth.uid()::text
   );
 
 COMMIT;

@@ -19,6 +19,21 @@ const GRADIENTS = [
 /** Not-started paths get a muted gradient */
 const MUTED_GRADIENT = 'from-muted-foreground/60 to-muted-foreground/80'
 
+/**
+ * Mapping from named preset keys to gradient class strings.
+ * Mirrors GRADIENT_PRESETS in PathCoverDialog.
+ */
+const PRESET_GRADIENT_MAP: Record<string, string> = {
+  'cyan-blue': 'from-cyan-400 to-blue-600',
+  'emerald-green': 'from-emerald-400 to-green-600',
+  'purple-indigo': 'from-purple-500 to-indigo-700',
+  'orange-blue': 'from-orange-400 to-blue-500',
+  'pink-purple': 'from-pink-400 to-purple-600',
+  'amber-orange': 'from-amber-400 to-orange-600',
+  'teal-cyan': 'from-teal-400 to-cyan-600',
+  'rose-red': 'from-rose-400 to-red-600',
+}
+
 /** Simple string hash to pick a gradient deterministically */
 function hashString(str: string): number {
   let hash = 0
@@ -38,6 +53,8 @@ interface PathCardHeaderProps {
   isAIGenerated?: boolean
   /** Custom cover image URL (Supabase Storage public URL) */
   coverImageUrl?: string
+  /** Named gradient preset key (e.g. 'cyan-blue'). Used when coverImageUrl is absent. */
+  coverPreset?: string
   /** Additional className */
   className?: string
 }
@@ -53,15 +70,21 @@ export function PathCardHeader({
   completionPct,
   isAIGenerated,
   coverImageUrl,
+  coverPreset,
   className,
 }: PathCardHeaderProps) {
   const isCompleted = completionPct >= 100
   const isNotStarted = completionPct === 0
   const hasCoverImage = !!coverImageUrl
 
-  const gradient = isNotStarted
-    ? MUTED_GRADIENT
-    : GRADIENTS[hashString(pathName) % GRADIENTS.length]
+  // Determine gradient: preset > hash-based > muted (not-started)
+  const gradient = hasCoverImage
+    ? '' // cover image overrides gradient
+    : isNotStarted
+      ? MUTED_GRADIENT
+      : coverPreset && PRESET_GRADIENT_MAP[coverPreset]
+        ? PRESET_GRADIENT_MAP[coverPreset]
+        : GRADIENTS[hashString(pathName) % GRADIENTS.length]
 
   return (
     <div

@@ -14,6 +14,7 @@ import {
   LayoutTemplate,
   ChevronDown,
   Image,
+  Pencil,
   Sparkles,
 } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
@@ -42,8 +43,8 @@ import { PathProgressRing } from '@/app/components/figma/PathProgressRing'
 import { PathCardHeader } from '@/app/components/figma/PathCardHeader'
 import { ImportWizardDialog } from '@/app/components/figma/ImportWizardDialog'
 import { CurriculumComposer } from '@/app/components/figma/CurriculumComposer'
-import { InlineEditableField } from '@/app/components/figma/InlineEditableField'
 import { PathCoverDialog } from '@/app/components/learning-path/PathCoverDialog'
+import { EditPathDialog } from '@/app/components/learning-path/EditPathDialog'
 import { PremiumGate } from '@/app/components/PremiumGate'
 import { useLearningPathStore } from '@/stores/useLearningPathStore'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
@@ -111,6 +112,7 @@ function PathCard({
   courseThumbnails,
   onImport,
   onOpenCoverDialog,
+  onOpenEditDialog,
 }: {
   path: LearningPath
   courseCount: number
@@ -118,10 +120,9 @@ function PathCard({
   courseThumbnails: string[]
   onImport: (pathId: string) => void
   onOpenCoverDialog: (path: LearningPath) => void
+  onOpenEditDialog: (path: LearningPath) => void
 }) {
   const navigate = useNavigate()
-  const renamePath = useLearningPathStore(s => s.renamePath)
-  const updateDescription = useLearningPathStore(s => s.updateDescription)
   const deletePathWithUndo = useLearningPathStore(s => s.deletePathWithUndo)
   const isNotStarted = completionPct === 0 && courseCount > 0
   const isCompleted = completionPct >= 100
@@ -132,18 +133,18 @@ function PathCard({
   // Determine footer action text and navigation
   const footerAction = useMemo(() => {
     if (action === 'resume' && course) {
-      const label = `Continue ${course.name.length > 30 ? course.name.slice(0, 28) + '...' : course.name}`
+      const label = 'Continue'
       const navTo = targetLessonId
         ? `/courses/${entry!.courseId}/lessons/${targetLessonId}`
         : `/courses/${entry!.courseId}`
-      return { label, navTo, variant: 'brand' as const }
+      return { label, navTo, variant: 'brand' as const, courseName: course.name }
     }
     if (action === 'start' && course) {
-      const label = `Start ${course.name.length > 30 ? course.name.slice(0, 28) + '...' : course.name}`
+      const label = 'Start'
       const navTo = targetLessonId
         ? `/courses/${entry!.courseId}/lessons/${targetLessonId}`
         : `/courses/${entry!.courseId}`
-      return { label, navTo, variant: 'brand' as const }
+      return { label, navTo, variant: 'brand' as const, courseName: course.name }
     }
     if (action === 'complete' || (action === null && isCompleted)) {
       return { label: 'Review', navTo: `/learning-paths/${path.id}`, variant: 'outline' as const }
@@ -175,6 +176,7 @@ function PathCard({
             completionPct={completionPct}
             isAIGenerated={path.isAIGenerated}
             coverImageUrl={path.coverImageUrl}
+            coverPreset={path.coverPreset}
           />
         </div>
 
@@ -192,6 +194,10 @@ function PathCard({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
+              <DropdownMenuItem onSelect={() => onOpenEditDialog(path)}>
+                <Pencil className="mr-2 size-4" aria-hidden="true" />
+                Edit
+              </DropdownMenuItem>
               <DropdownMenuItem onSelect={() => onOpenCoverDialog(path)}>
                 <Image className="mr-2 size-4" aria-hidden="true" />
                 Change Cover
@@ -214,11 +220,11 @@ function PathCard({
         {/* Card body */}
         <CardContent className="px-4 pb-4 pt-1 relative flex flex-col h-[calc(100%-6rem)]">
           {/* Progress ring — overlapping header */}
-          <div className="absolute -top-10 left-4">
+          <div className="absolute -top-[42px] left-4">
             <div className="bg-card rounded-full p-1.5 shadow-lg">
-              <PathProgressRing percentage={completionPct} size="sm">
+              <PathProgressRing percentage={completionPct} size="md">
                 {isCompleted ? (
-                  <CheckCircle2 className="size-5 text-success" aria-hidden="true" />
+                  <CheckCircle2 className="size-6 text-success" aria-hidden="true" />
                 ) : (
                   <span className="text-xs font-bold text-foreground">
                     {Math.round(completionPct)}%
@@ -247,26 +253,14 @@ function PathCard({
             </div>
 
             {/* Title + description */}
-            <div onClick={e => e.stopPropagation()}>
-              <InlineEditableField
-                value={path.name}
-                onSave={name => renamePath(path.id, name)}
-                ariaLabel={`Edit path name: ${path.name}`}
-                maxLength={100}
-                className="text-xl font-bold leading-tight mb-1.5 line-clamp-2"
-              />
-            </div>
-            <div onClick={e => e.stopPropagation()} className="mb-4">
-              <InlineEditableField
-                value={path.description || ''}
-                onSave={desc => updateDescription(path.id, desc)}
-                as="textarea"
-                ariaLabel={`Edit path description`}
-                placeholder="Add a description..."
-                maxLength={500}
-                className="text-sm text-muted-foreground leading-relaxed line-clamp-2"
-              />
-            </div>
+            <h3 className="text-xl font-bold leading-tight mb-1.5 line-clamp-2">
+              {path.name}
+            </h3>
+            {path.description && (
+              <p className="text-sm text-muted-foreground leading-relaxed line-clamp-2 mb-4">
+                {path.description}
+              </p>
+            )}
 
             {/* Footer: course thumbnails + continue/start/review button */}
             <div className="mt-auto flex items-center justify-between border-t border-border pt-4">
@@ -300,7 +294,7 @@ function PathCard({
                     size="sm"
                     className="text-xs whitespace-nowrap"
                     onClick={handleFooterClick}
-                    aria-label={footerAction.label}
+                    aria-label={`${footerAction.label}${footerAction.courseName ? ' ' + footerAction.courseName : ''}`}
                   >
                     {footerAction.label}
                     {footerAction.variant === 'brand' && (
@@ -333,7 +327,7 @@ function PathCardSkeleton() {
     <Card className="overflow-hidden rounded-2xl">
       <Skeleton className="h-24 w-full rounded-none" />
       <CardContent className="px-4 pb-4 pt-1 relative">
-        <Skeleton className="absolute -top-9 left-4 size-[56px] rounded-full" />
+        <Skeleton className="absolute -top-[42px] left-4 size-[84px] rounded-full" />
         <div className="mt-7 space-y-3">
           <Skeleton className="h-4 w-16" />
           <Skeleton className="h-6 w-3/4" />
@@ -365,6 +359,7 @@ export function LearningPaths() {
   const [aiGoalText, setAiGoalText] = useState('')
   const [discoverOpen, setDiscoverOpen] = useState(false)
   const [coverDialogPath, setCoverDialogPath] = useState<LearningPath | null>(null)
+  const [editDialogPath, setEditDialogPath] = useState<LearningPath | null>(null)
 
   // Import wizard trigger (singleton guard pattern)
   const {
@@ -660,6 +655,7 @@ export function LearningPaths() {
                       courseThumbnails={pathThumbnails.get(path.id) || []}
                       onImport={handlePathImport}
                       onOpenCoverDialog={setCoverDialogPath}
+                      onOpenEditDialog={setEditDialogPath}
                     />
                   </div>
                 )
@@ -723,6 +719,17 @@ export function LearningPaths() {
             if (!open) setCoverDialogPath(null)
           }}
           path={coverDialogPath}
+        />
+      )}
+
+      {/* Edit Path Dialog */}
+      {editDialogPath && (
+        <EditPathDialog
+          open={!!editDialogPath}
+          onOpenChange={open => {
+            if (!open) setEditDialogPath(null)
+          }}
+          path={editDialogPath}
         />
       )}
 
