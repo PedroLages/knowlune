@@ -35,7 +35,7 @@ export const statuses: {
     label: 'Paused',
     icon: PauseCircle,
     activeClass:
-      'data-[state=on]:bg-muted-foreground data-[state=on]:text-white data-[state=on]:hover:bg-muted-foreground/90',
+      'data-[state=on]:bg-muted-foreground data-[state=on]:text-background data-[state=on]:hover:bg-muted-foreground/90',
   },
 ]
 
@@ -46,7 +46,7 @@ interface StatusFilterProps {
 
 export function StatusFilter({ selectedStatuses, onSelectedStatusesChange }: StatusFilterProps) {
   return (
-    <div data-testid="status-filter-bar" className="flex flex-wrap gap-2 items-center">
+    <div data-testid="status-filter-bar" className="flex flex-wrap items-center gap-2">
       <ToggleGroup
         type="multiple"
         value={selectedStatuses}
@@ -60,7 +60,10 @@ export function StatusFilter({ selectedStatuses, onSelectedStatusesChange }: Sta
             value={value}
             data-testid="status-filter-button"
             className={cn(
-              'min-h-[44px] rounded-full border px-3 py-2 text-xs font-semibold transition-colors first:rounded-full last:rounded-full gap-1 cursor-pointer shadow-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:outline-none',
+              'min-h-[44px] rounded-full border px-3 py-2',
+              'inline-flex items-center gap-1',
+              'text-xs font-semibold transition-colors cursor-pointer shadow-none',
+              'focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:outline-none',
               'data-[state=off]:bg-transparent data-[state=off]:hover:bg-accent data-[state=off]:border-input',
               'data-[state=on]:border-transparent',
               activeClass
@@ -76,7 +79,7 @@ export function StatusFilter({ selectedStatuses, onSelectedStatusesChange }: Sta
           type="button"
           data-testid="clear-status-filters"
           onClick={() => onSelectedStatusesChange([])}
-          className="text-xs text-muted-foreground hover:text-foreground underline ml-1"
+          className="ml-1 inline-flex min-h-11 items-center px-2 text-xs text-muted-foreground hover:text-foreground underline"
         >
           Clear
         </button>

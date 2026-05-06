@@ -28,6 +28,7 @@ import { GridColumnControl } from '@/app/components/courses/GridColumnControl'
 import { ControlBarSection } from '@/app/components/courses/ControlBarSection'
 import { getGridClassName } from '@/app/components/courses/gridClassName'
 import { useEngagementPrefsStore } from '@/stores/useEngagementPrefsStore'
+import { Separator } from '@/app/components/ui/separator'
 
 import type { LearnerCourseStatus } from '@/data/types'
 import type { MomentumScore } from '@/lib/momentum'
@@ -239,7 +240,7 @@ export function Courses() {
       ) : (
         <>
           {/* Grouped control bar: Filter, Sort, View sections */}
-          <div className="flex flex-wrap items-center gap-6">
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
             {importedCourses.length > 0 && (
               <ControlBarSection label="Filter" showDivider={false}>
                 <StatusFilter
@@ -264,17 +265,20 @@ export function Courses() {
               </Select>
             </ControlBarSection>
             <ControlBarSection label="View">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-3">
                 <ViewModeToggle
                   value={courseViewMode}
                   onChange={mode => setEngagementPref('courseViewMode', mode)}
                 />
                 {/* E99-S02: grid column control. Visible only in grid view. */}
                 {courseViewMode === 'grid' && (
-                  <GridColumnControl
-                    value={courseGridColumns}
-                    onChange={cols => setEngagementPref('courseGridColumns', cols)}
-                  />
+                  <>
+                    <Separator orientation="vertical" className="!h-6" />
+                    <GridColumnControl
+                      value={courseGridColumns}
+                      onChange={cols => setEngagementPref('courseGridColumns', cols)}
+                    />
+                  </>
                 )}
               </div>
             </ControlBarSection>
@@ -289,7 +293,7 @@ export function Courses() {
               <button
                 type="button"
                 onClick={() => setSelectedStatuses([])}
-                className="text-xs text-muted-foreground hover:text-foreground underline"
+                className="inline-flex min-h-11 items-center px-2 text-xs text-muted-foreground hover:text-foreground underline"
                 data-testid="clear-all-filters"
               >
                 Clear all

@@ -52,7 +52,8 @@ export function ViewModeToggle({ value, onChange, className }: ViewModeTogglePro
           aria-label={label}
           data-testid={`course-view-mode-${option}`}
           className={cn(
-            'min-h-11 min-w-11 px-3 gap-2',
+            'min-h-11 min-w-11 px-3',
+            'inline-flex items-center justify-center gap-2',
             'text-muted-foreground',
             'data-[state=on]:bg-brand data-[state=on]:text-brand-foreground',
             'data-[state=on]:ring-1 data-[state=on]:ring-brand/30',

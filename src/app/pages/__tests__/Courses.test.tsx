@@ -178,6 +178,15 @@ function renderCourses() {
 }
 
 describe('Courses page', () => {
+  function getStatusFilterButton(label: 'Not Started' | 'Active' | 'Completed' | 'Paused') {
+    const buttons = screen.getAllByTestId('status-filter-button')
+    const match = buttons.find(b => b.textContent?.includes(label))
+    if (!match) {
+      throw new Error(`Status filter button not found for label: ${label}`)
+    }
+    return match
+  }
+
   beforeEach(() => {
     storeState.importedCourses = []
     storeState.loadImportedCourses = vi.fn()
@@ -283,9 +292,7 @@ describe('Courses page', () => {
       const user = userEvent.setup()
       renderCourses()
 
-      const statusButtons = screen.getAllByTestId('status-filter-button')
-      // Click the "Completed" filter (third button — order: not-started, active, completed, paused)
-      await user.click(statusButtons[2])
+      await user.click(getStatusFilterButton('Completed'))
 
       expect(screen.queryByText('Active Course')).not.toBeInTheDocument()
       expect(screen.getByText('Completed Course')).toBeInTheDocument()
@@ -298,8 +305,7 @@ describe('Courses page', () => {
 
       expect(screen.queryByTestId('clear-status-filters')).not.toBeInTheDocument()
 
-      const statusButtons = screen.getAllByTestId('status-filter-button')
-      await user.click(statusButtons[0])
+      await user.click(getStatusFilterButton('Not Started'))
 
       expect(screen.getByTestId('clear-status-filters')).toBeInTheDocument()
     })
@@ -308,8 +314,7 @@ describe('Courses page', () => {
       const user = userEvent.setup()
       renderCourses()
 
-      const statusButtons = screen.getAllByTestId('status-filter-button')
-      await user.click(statusButtons[1]) // Select Active (index 1 — order: not-started, active, completed, paused)
+      await user.click(getStatusFilterButton('Active'))
 
       expect(screen.queryByText('Completed Course')).not.toBeInTheDocument()
 
@@ -342,9 +347,7 @@ describe('Courses page', () => {
       const user = userEvent.setup()
       renderCourses()
 
-      // Select "Active" status filter (index 1 — order: not-started, active, completed, paused)
-      const statusButtons = screen.getAllByTestId('status-filter-button')
-      await user.click(statusButtons[1])
+      await user.click(getStatusFilterButton('Active'))
 
       // Should show both Active courses (Active Course + Active Beta Course)
       expect(screen.getByText('Active Course')).toBeInTheDocument()
