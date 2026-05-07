@@ -23,13 +23,13 @@ import { useBookCoverUrl } from '@/app/hooks/useBookCoverUrl'
 import { LibraryRail } from '@/app/components/library/rails/LibraryRail'
 import { BookTile } from '@/app/components/library/BookTile'
 
-type Mode = 'audiobooks' | 'ebooks'
+type Mode = 'audiobooks' | 'ebooks' | 'all'
 
 function getActiveMode(formatFilter: string[] | undefined): Mode {
-  if (!formatFilter || formatFilter.length === 0) return 'audiobooks'
+  if (!formatFilter || formatFilter.length === 0) return 'all'
   if (formatFilter.length === 1 && formatFilter[0] === 'audiobook') return 'audiobooks'
   if (formatFilter.every(v => v === 'epub' || v === 'pdf')) return 'ebooks'
-  return 'audiobooks'
+  return 'all'
 }
 
 function getModeBooks(allBooks: Book[], filters: { source?: string }, mode: Mode): Book[] {
@@ -38,6 +38,7 @@ function getModeBooks(allBooks: Book[], filters: { source?: string }, mode: Mode
       ? allBooks.filter(b => (filters.source === 'audiobookshelf' ? b.absServerId : !b.absServerId))
       : allBooks
 
+  if (mode === 'all') return sourceFiltered
   return mode === 'audiobooks'
     ? sourceFiltered.filter(b => b.format === 'audiobook')
     : sourceFiltered.filter(b => b.format === 'epub' || b.format === 'pdf')
@@ -94,6 +95,116 @@ export function LibraryMediaShelfColumn() {
 
   const modeBooks = useMemo(() => getModeBooks(books, filters, mode), [books, filters, mode])
 
+  const abBooks = useMemo(
+    () => modeBooks.filter(b => b.format === 'audiobook'),
+    [modeBooks]
+  )
+  const ebBooks = useMemo(
+    () => modeBooks.filter(b => b.format === 'epub' || b.format === 'pdf'),
+    [modeBooks]
+  )
+
+  if (books.length === 0) return null
+
+  if (mode === 'all') {
+    return (
+      <div className="flex flex-col gap-8" data-testid="library-media-shelf-column">
+        {abBooks.length > 0 && (
+          <LibraryRail
+            icon={Headphones}
+            title="Continue Listening"
+            count={getContinueListeningShelf(abBooks).length}
+            subtitle="Pick up where you left off"
+            data-testid="media-shelf-continue-listening"
+          >
+            {getContinueListeningShelf(abBooks).map(book => (
+              <BookTile key={book.id} book={book} variant="denseContinue" showProgress />
+            ))}
+          </LibraryRail>
+        )}
+        {ebBooks.length > 0 && (
+          <LibraryRail
+            icon={BookOpen}
+            title="Continue Reading"
+            count={getContinueReadingShelf(ebBooks).length}
+            subtitle="Jump back into your latest pages"
+            data-testid="media-shelf-continue-reading"
+          >
+            {getContinueReadingShelf(ebBooks).map(book => (
+              <BookTile key={book.id} book={book} variant="denseContinue" showProgress />
+            ))}
+          </LibraryRail>
+        )}
+        {(abBooks.length > 0 || ebBooks.length > 0) && (
+          <LibraryRail
+            icon={LibraryBig}
+            title="Recently Added"
+            count={abBooks.length + ebBooks.length}
+            data-testid="media-shelf-recently-added"
+          >
+            {[...abBooks, ...ebBooks].map(book => (
+              <BookTile key={book.id} book={book} variant="small" />
+            ))}
+          </LibraryRail>
+        )}
+        {(abBooks.length > 0 || ebBooks.length > 0) && (
+          <LibraryMediaShelfRow
+            icon={Rows3}
+            label="Recent Series"
+            count={
+              getAudiobookRecentSeriesShelf(abBooks).length +
+              getEbookRecentSeriesShelf(ebBooks).length
+            }
+            data-testid="media-shelf-recent-series"
+          >
+            {[
+              ...getAudiobookRecentSeriesShelf(abBooks),
+              ...getEbookRecentSeriesShelf(ebBooks),
+            ].map(group => (
+              <SeriesTile key={group.name.toLowerCase()} group={group} />
+            ))}
+          </LibraryMediaShelfRow>
+        )}
+        {(abBooks.length > 0 || ebBooks.length > 0) && (
+          <LibraryRail
+            icon={Compass}
+            title="Discover"
+            count={
+              getAudiobookDiscoverShelf(abBooks).length +
+              getEbookDiscoverShelf(ebBooks).length
+            }
+            data-testid="media-shelf-discover"
+          >
+            {[
+              ...getAudiobookDiscoverShelf(abBooks),
+              ...getEbookDiscoverShelf(ebBooks),
+            ].map(book => (
+              <BookTile key={book.id} book={book} variant="small" />
+            ))}
+          </LibraryRail>
+        )}
+        {(abBooks.length > 0 || ebBooks.length > 0) && (
+          <LibraryMediaShelfRow
+            icon={Repeat2}
+            label="Listen & Read Again"
+            count={
+              getAudiobookListenAgainShelf(abBooks).length +
+              getEbookReadAgainShelf(ebBooks).length
+            }
+            data-testid="media-shelf-again"
+          >
+            {[
+              ...getAudiobookListenAgainShelf(abBooks),
+              ...getEbookReadAgainShelf(ebBooks),
+            ].map(book => (
+              <RecentBookCard key={book.id} book={book} tone="muted" />
+            ))}
+          </LibraryMediaShelfRow>
+        )}
+      </div>
+    )
+  }
+
   const shelves = useMemo(() => {
     if (mode === 'audiobooks') {
       return {
@@ -112,8 +223,6 @@ export function LibraryMediaShelfColumn() {
       again: getEbookReadAgainShelf(modeBooks),
     }
   }, [mode, modeBooks])
-
-  if (books.length === 0) return null
 
   return (
     <div className="flex flex-col gap-8" data-testid="library-media-shelf-column">
@@ -175,4 +284,3 @@ export function LibraryMediaShelfColumn() {
     </div>
   )
 }
-
