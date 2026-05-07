@@ -3,7 +3,9 @@ schemaVersion: 1
 slug: fix-learning-path-card-progress-ring-and-cover-rls
 status: active
 runMode: autopilot
-stage: phase-2.5
+stage: phase-3.1
+prUrl: "https://github.com/PedroLages/knowlune/pull/537"
+merged: true
 demoReel: skipped-minor-fixes
 reviewRounds: 1
 reviewBlockers: 0
