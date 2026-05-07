@@ -121,15 +121,33 @@ export async function uploadPathCover(file: File, pathId: string): Promise<strin
 
   // Upload to Supabase Storage under user-scoped path for RLS compatibility
   const key = `${userId}/${pathId}.jpg`
+
+  // Attempt pure INSERT (no upsert — explicit delete+insert on 409 Conflict)
   const { error } = await supabase.storage.from(BUCKET_NAME).upload(key, blob, {
     contentType: 'image/jpeg',
     cacheControl: '3600',
-    upsert: true,
   })
 
-  if (error) {
+  // 409 Conflict: object already exists — delete then re-insert
+  if (error?.statusCode === 409) {
+    const { error: removeError } = await supabase.storage.from(BUCKET_NAME).remove([key])
+    if (removeError) {
+      console.error('[PathCoverUpload] Remove failed during 409 retry:', removeError)
+      throw new Error('Failed to upload cover image. Please try again.')
+    }
+
+    const { error: retryError } = await supabase.storage.from(BUCKET_NAME).upload(key, blob, {
+      contentType: 'image/jpeg',
+      cacheControl: '3600',
+    })
+
+    if (retryError) {
+      console.error('[PathCoverUpload] Retry upload failed after 409:', retryError)
+      throw new Error('Failed to upload cover image. Please try again.')
+    }
+  } else if (error) {
     console.error('[PathCoverUpload] Upload failed:', error)
-    throw new Error(error.message || 'Failed to upload cover image')
+    throw new Error('Failed to upload cover image. Please try again.')
   }
 
   // Get public URL

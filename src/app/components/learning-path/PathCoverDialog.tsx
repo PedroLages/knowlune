@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 import { toast } from 'sonner'
 import { Upload, Trash2, X } from 'lucide-react'
 import {
@@ -32,22 +32,35 @@ export function PathCoverDialog({ open, onOpenChange, path }: PathCoverDialogPro
   const [uploadFile, setUploadFile] = useState<File | null>(null)
   const [isUploading, setIsUploading] = useState(false)
   const [isRemoving, setIsRemoving] = useState(false)
+  const triggerRef = useRef<HTMLElement | null>(null)
 
   const hasExistingCover = !!path.coverImageUrl
+  const isBusy = isUploading || isRemoving
+
+  // Save reference to focused element when dialog opens (for focus restoration on close)
+  useEffect(() => {
+    if (open) {
+      triggerRef.current = document.activeElement as HTMLElement
+    }
+  }, [open])
 
   // Reset state when dialog opens
   const handleOpenChange = useCallback(
     (open: boolean) => {
+      // Prevent dismiss while upload or remove is in progress
+      if (!open && isBusy) return
       if (!open) {
         setSelectedPreset(path.coverPreset ?? null)
         setUploadPreview(null)
         setUploadFile(null)
         setIsUploading(false)
         setIsRemoving(false)
+        // Restore focus to the trigger element (R9)
+        queueMicrotask(() => triggerRef.current?.focus())
       }
       onOpenChange(open)
     },
-    [onOpenChange, path.coverPreset]
+    [onOpenChange, path.coverPreset, isBusy]
   )
 
   const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -120,7 +133,6 @@ export function PathCoverDialog({ open, onOpenChange, path }: PathCoverDialogPro
   }, [path.id, path.coverImageUrl, path.coverPreset, updatePathCover, handleOpenChange])
 
   const canSave = selectedPreset || uploadFile
-  const isBusy = isUploading || isRemoving
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
