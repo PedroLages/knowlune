@@ -13,7 +13,12 @@
 
 import { test, expect } from '../support/fixtures'
 import { seedBooks } from '../support/helpers/indexeddb-seed'
-import { tabSeedsBase, tabSeedsWithMixedAudiobook } from '../support/helpers/library-tab-seed'
+import {
+  tabSeedsBase,
+  tabSeedsAudiobooksOnly,
+  tabSeedsEbooksOnly,
+  tabSeedsWithMixedAudiobook,
+} from '../support/helpers/library-tab-seed'
 
 const TAB_BUTTON = (id: string) => `[role="tab"][data-testid="library-tab-${id}"]`
 const TAB_PANEL = (id: string) => `[data-testid="library-tab-panel-${id}"]`
@@ -227,5 +232,45 @@ test.describe('Mixed-format library defaults', () => {
     // Click ebooks tab — hero should update to ebook content
     await page.getByTestId('library-format-mode-ebooks').click()
     await expect(page.getByTestId('library-media-hero')).toBeVisible()
+  })
+})
+
+test.describe('Single-format library auto-filter', () => {
+  test('Audiobooks-only library auto-selects Audiobooks format tab', async ({ page }) => {
+    await page.goto('/')
+    await seedBooks(page, tabSeedsAudiobooksOnly())
+    await page.goto('/library?tab=continue')
+
+    // Format tab bar is visible
+    await expect(page.getByTestId('library-format-mode-tabs')).toBeVisible()
+    // Audiobooks tab should be active (auto-filter applied)
+    await expect(page.getByTestId('library-format-mode-audiobooks')).toHaveAttribute(
+      'aria-selected',
+      'true'
+    )
+    // Ebooks tab should NOT be active
+    await expect(page.getByTestId('library-format-mode-ebooks')).toHaveAttribute(
+      'aria-selected',
+      'false'
+    )
+  })
+
+  test('Ebooks-only library auto-selects Ebooks format tab', async ({ page }) => {
+    await page.goto('/')
+    await seedBooks(page, tabSeedsEbooksOnly())
+    await page.goto('/library?tab=continue')
+
+    // Format tab bar is visible
+    await expect(page.getByTestId('library-format-mode-tabs')).toBeVisible()
+    // Ebooks tab should be active (auto-filter applied)
+    await expect(page.getByTestId('library-format-mode-ebooks')).toHaveAttribute(
+      'aria-selected',
+      'true'
+    )
+    // Audiobooks tab should NOT be active
+    await expect(page.getByTestId('library-format-mode-audiobooks')).toHaveAttribute(
+      'aria-selected',
+      'false'
+    )
   })
 })
