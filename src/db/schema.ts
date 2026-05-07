@@ -166,6 +166,8 @@ export type ElearningDatabase = Dexie & {
   // v60 (fix E-ABS-QA): Cached ABS series and collections (local-only, not synced).
   absSeries: EntityTable<AbsSeries, 'id'>
   absCollections: EntityTable<AbsCollection, 'id'>
+  // v64 (offline downloads): per-device download state, local-only.
+  downloads: Table<import('@/services/DownloadManager').DownloadRecord>
 }
 
 /**
@@ -1712,6 +1714,18 @@ function _declareLegacyMigrations(database: Dexie): void {
     })
     .upgrade(async _tx => {
       // No backfill. Table is new; populated on first AI-involved reorder.
+    })
+
+  // v64 (offline downloads): Add `downloads` table for per-device download state.
+  // Local-only: NOT added to SYNCABLE_TABLES — download state is per-device.
+  // Compound index on [bookId+status] for efficient UI lookups.
+  database
+    .version(64)
+    .stores({
+      downloads: 'id, bookId, status, [bookId+status], createdAt',
+    })
+    .upgrade(async _tx => {
+      // No backfill. Table is new; populated on first download.
     })
 } // end _declareLegacyMigrations
 

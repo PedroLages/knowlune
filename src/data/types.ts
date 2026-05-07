@@ -896,6 +896,8 @@ export interface Book {
   sourceUrl?: string | null // remote URL for 'remote' sources; null for local/fileHandle
   // E94-S07: Storage URL for primary book file; null until first sync upload
   fileUrl?: string | null
+  /** OPFS file path for offline-downloaded content. Per-device, never synced. */
+  offlinePath?: string | null
   // Sync metadata — stamped by syncableWrite
   userId?: string | null
   guestSessionId?: string | null
