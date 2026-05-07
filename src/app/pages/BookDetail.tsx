@@ -28,7 +28,7 @@ function DetailSkeleton() {
     <div role="status" aria-busy="true" aria-label="Loading book details" className="space-y-6 p-6">
       <Skeleton className="h-6 w-32" />
       <div className="grid grid-cols-1 md:grid-cols-[280px_1fr] gap-8 md:gap-12">
-        <Skeleton className="aspect-[2/3] w-full rounded-xl" />
+        <Skeleton className="aspect-square w-full rounded-xl" />
         <div className="space-y-4">
           <Skeleton className="h-6 w-48" />
           <Skeleton className="h-12 w-3/4" />

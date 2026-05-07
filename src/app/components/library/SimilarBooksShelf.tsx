@@ -33,7 +33,10 @@ const SimilarBookCard = memo(function SimilarBookCard({ book }: SimilarBookCardP
   const navigate = useNavigate()
   const resolvedCoverUrl = useBookCoverUrl({ bookId: book.id, coverUrl: book.coverUrl })
   const isAudio = book.format === 'audiobook'
-  const FallbackIcon = isAudio ? Headphones : BookOpen
+  const fallbackIcon = isAudio ? Headphones : BookOpen
+  const FormatBadgeIcon = isAudio ? Headphones : BookOpen
+  const aspectClass = isAudio ? 'aspect-square' : 'aspect-[2/3]'
+  const formatLabel = isAudio ? 'Audio format' : 'Ebook format'
 
   const handleClick = useCallback(() => {
     navigate(`/library/${book.id}`)
@@ -60,13 +63,20 @@ const SimilarBookCard = memo(function SimilarBookCard({ book }: SimilarBookCardP
       aria-label={`View details for ${book.title}`}
     >
       {/* Cover */}
-      <div className="relative aspect-[2/3] overflow-hidden rounded-xl bg-muted shadow-card-ambient transition-all duration-300 group-hover:-translate-y-1 group-hover:shadow-[0_8px_25px_var(--shadow-brand)]">
+      <div className={`relative ${aspectClass} overflow-hidden rounded-2xl bg-muted shadow-card-ambient transition-all duration-300 group-hover:-translate-y-2 group-hover:shadow-[0_10px_30px_var(--shadow-brand)]`}>
         <BookCoverImage
           src={resolvedCoverUrl}
           title={book.title}
-          fallbackIcon={FallbackIcon}
+          fallbackIcon={fallbackIcon}
           className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
         />
+        {/* Format icon badge — top-right corner (matching BookCard pattern) */}
+        <div
+          className="absolute top-2 right-2 rounded-full bg-black/60 backdrop-blur p-1.5 z-10"
+          aria-label={formatLabel}
+        >
+          <FormatBadgeIcon className="size-3.5 text-white" aria-hidden="true" />
+        </div>
       </div>
 
       {/* Title + Author below cover */}

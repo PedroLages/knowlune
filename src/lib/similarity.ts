@@ -134,17 +134,34 @@ function scoreByGenreAndTags(hero: Book, candidate: Book): number {
   return score
 }
 
+// ─── Work-level deduplication ──────────────────────────────────────────────────
+
+/**
+ * Normalize a title|author pair for work-level deduplication.
+ * Conservative: trim, lowercase, collapse whitespace. Does NOT strip subtitles
+ * or edition markers — false positives (merging distinct works) are worse than
+ * false negatives (showing occasional duplicates).
+ */
+function normalizeWorkKey(title: string, author: string): string {
+  return `${title.trim().toLowerCase().replace(/\s+/g, ' ')}|${author.trim().toLowerCase().replace(/\s+/g, ' ')}`
+}
+
 // ─── Main Algorithm ───────────────────────────────────────────────────────────
 
 /**
  * Find books similar to the given hero book.
  *
- * Uses a five-tier approach:
+ * Uses a five-tier approach with work-level deduplication:
  * 1. Same series books (ordered by seriesSequence)
- * 2. Same author books
+ * 2. Same author books (work-level deduped: same title+author across formats → 1 card)
  * 3. Description keyword overlap (bigram-weighted)
  * 4. Genre + tag overlap (supplemental)
  * 5. Deduplication across tiers, top 12
+ *
+ * Work-level deduplication: when a candidate matches an already-selected book
+ * on normalized (title, author), the existing entry is replaced only if the
+ * candidate matches the hero's format (format-contextual recommendation).
+ * linkedBookId is tracked bidirectionally as an additive defense.
  *
  * @param hero - The reference book to find similar books for.
  * @param candidates - The pool of candidate books (typically from Dexie).
@@ -153,6 +170,47 @@ function scoreByGenreAndTags(hero: Book, candidate: Book): number {
 export function findSimilarBooks(hero: Book, candidates: Book[]): SimilarBook[] {
   const results: SimilarBook[] = []
   const seenIds = new Set<string>([hero.id])
+  const seenWorkKeys = new Map<string, number>() // workKey → index in results[]
+
+  // Pre-consume hero's linkedBookId to prevent the linked edition from appearing
+  if (hero.linkedBookId) {
+    seenIds.add(hero.linkedBookId)
+  }
+
+  /**
+   * Try to add a candidate to results, handling work-level deduplication.
+   * Returns true if the candidate was added (or replaced an existing entry).
+   */
+  function tryAddCandidate(book: Book, tier: SimilarBook['tier'], score: number): boolean {
+    // Skip if this book's ID is already consumed
+    if (seenIds.has(book.id)) return false
+    // Skip if this book's linked edition is already shown
+    if (book.linkedBookId && seenIds.has(book.linkedBookId)) return false
+
+    const workKey = normalizeWorkKey(book.title || '', book.author || '')
+    const existingIdx = seenWorkKeys.get(workKey)
+
+    if (existingIdx !== undefined) {
+      // Same work, different format — prefer the edition matching hero's format
+      const existing = results[existingIdx]
+      if (book.format === hero.format) {
+        // Remove old entry, insert new one
+        seenIds.delete(existing.book.id)
+        results[existingIdx] = { book, tier, score }
+        seenIds.add(book.id)
+        if (book.linkedBookId) seenIds.add(book.linkedBookId)
+        return true
+      }
+      // Keep existing entry (already matches hero's format, or neither does)
+      return false
+    }
+
+    seenIds.add(book.id)
+    if (book.linkedBookId) seenIds.add(book.linkedBookId)
+    seenWorkKeys.set(workKey, results.length)
+    results.push({ book, tier, score })
+    return true
+  }
 
   // Pre-compute hero keyword signature
   const heroSignature = hero.description
@@ -174,10 +232,7 @@ export function findSimilarBooks(hero: Book, candidates: Book[]): SimilarBook[] 
       })
 
     for (const book of seriesBooks) {
-      if (seenIds.has(book.id)) continue
-      seenIds.add(book.id)
-      results.push({ book, tier: 'series', score: 100 })
-      if (results.length >= MAX_RESULTS) return results
+      if (tryAddCandidate(book, 'series', 100) && results.length >= MAX_RESULTS) return results
     }
   }
 
@@ -188,9 +243,7 @@ export function findSimilarBooks(hero: Book, candidates: Book[]): SimilarBook[] 
     )
 
     for (const book of authorBooks) {
-      seenIds.add(book.id)
-      results.push({ book, tier: 'author', score: 50 })
-      if (results.length >= MAX_RESULTS) return results
+      if (tryAddCandidate(book, 'author', 50) && results.length >= MAX_RESULTS) return results
     }
   }
 
@@ -207,10 +260,7 @@ export function findSimilarBooks(hero: Book, candidates: Book[]): SimilarBook[] 
       .sort((a, b) => b.score - a.score)
 
     for (const entry of scored) {
-      if (seenIds.has(entry.book.id)) continue
-      seenIds.add(entry.book.id)
-      results.push({ book: entry.book, tier: 'keyword', score: entry.score })
-      if (results.length >= MAX_RESULTS) return results
+      if (tryAddCandidate(entry.book, 'keyword', entry.score) && results.length >= MAX_RESULTS) return results
     }
   }
 
@@ -228,9 +278,7 @@ export function findSimilarBooks(hero: Book, candidates: Book[]): SimilarBook[] 
     .sort((a, b) => b.score - a.score)
 
   for (const entry of genreTagScored) {
-    seenIds.add(entry.book.id)
-    results.push({ book: entry.book, tier: 'genre-tag', score: entry.score })
-    if (results.length >= MAX_RESULTS) return results
+    if (tryAddCandidate(entry.book, 'genre-tag', entry.score) && results.length >= MAX_RESULTS) return results
   }
 
   return results
