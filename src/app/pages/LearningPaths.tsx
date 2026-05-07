@@ -298,7 +298,7 @@ function PathCard({
                 {footerAction ? (
                   <Button
                     variant={footerAction.variant}
-                    className="px-6 py-2 rounded-xl text-sm font-bold group-hover:px-7 motion-safe:transition-[padding]"
+                    className="px-6 has-[>svg]:px-6 py-2 rounded-xl text-sm font-bold group-hover:px-7 motion-safe:transition-[padding]"
                     onClick={handleFooterClick}
                     aria-label={`${footerAction.label}${footerAction.courseName ? ' ' + footerAction.courseName : ''}`}
                   >
