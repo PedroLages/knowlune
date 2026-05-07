@@ -129,7 +129,7 @@ export async function uploadPathCover(file: File, pathId: string): Promise<strin
   })
 
   // 409 Conflict: object already exists — delete then re-insert
-  if (error?.statusCode === 409) {
+  if (error?.statusCode === '409') {
     const { error: removeError } = await supabase.storage.from(BUCKET_NAME).remove([key])
     if (removeError) {
       console.error('[PathCoverUpload] Remove failed during 409 retry:', removeError)
