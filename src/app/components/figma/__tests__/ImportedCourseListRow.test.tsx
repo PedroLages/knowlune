@@ -117,6 +117,44 @@ describe('ImportedCourseListRow', () => {
     expect(mockNavigate).toHaveBeenCalledWith('/courses/course-1/overview')
   })
 
+  it('not-started row click activates course then navigates', async () => {
+    mockUpdateCourseStatus.mockResolvedValueOnce(undefined)
+    const user = userEvent.setup()
+    renderRow({
+      course: { ...baseCourse, id: 'ns-row', status: 'not-started' },
+      completionPercent: 0,
+    })
+    await user.click(screen.getByTestId('imported-course-list-row'))
+    expect(mockUpdateCourseStatus).toHaveBeenCalledWith('ns-row', 'active')
+    expect(mockNavigate).toHaveBeenCalledWith('/courses/ns-row/overview')
+  })
+
+  it('list-row-start-btn starts course', async () => {
+    mockUpdateCourseStatus.mockResolvedValueOnce(undefined)
+    const user = userEvent.setup()
+    renderRow({
+      course: { ...baseCourse, id: 'ns-btn', status: 'not-started' },
+      completionPercent: 0,
+    })
+    await user.click(screen.getByTestId('list-row-start-btn'))
+    expect(mockUpdateCourseStatus).toHaveBeenCalledWith('ns-btn', 'active')
+    expect(mockNavigate).toHaveBeenCalledWith('/courses/ns-btn/overview')
+  })
+
+  it('pressing Enter on not-started row activates course', async () => {
+    mockUpdateCourseStatus.mockResolvedValueOnce(undefined)
+    const user = userEvent.setup()
+    renderRow({
+      course: { ...baseCourse, id: 'ns-kb', status: 'not-started' },
+      completionPercent: 0,
+    })
+    const row = screen.getByTestId('imported-course-list-row')
+    row.focus()
+    await user.keyboard('{Enter}')
+    expect(mockUpdateCourseStatus).toHaveBeenCalledWith('ns-kb', 'active')
+    expect(mockNavigate).toHaveBeenCalledWith('/courses/ns-kb/overview')
+  })
+
   it('pressing Enter on focused row navigates to course detail', async () => {
     const user = userEvent.setup()
     renderRow()

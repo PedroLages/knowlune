@@ -197,7 +197,8 @@ test('DR-1: /courses grid structure and card anatomy (1440px)', async ({ page })
   r.coursesAxe = await runAxe(page);
   r.consoleErrors = errors;
   fs.writeFileSync('/tmp/dr-part1.json', JSON.stringify(r, null, 2));
-  expect(true).toBe(true);
+  const axe = r.coursesAxe as { violations: unknown[] };
+  expect(axe.violations.length).toBe(0);
 });
 
 // ─── TEST 2: /courses Start Learning button behavior ─────────────────────
@@ -248,7 +249,9 @@ test('DR-2: start learning button anatomy on not-started cards', async ({ page }
   });
 
   fs.writeFileSync('/tmp/dr-part2.json', JSON.stringify(r, null, 2));
-  expect(true).toBe(true);
+  const play = r.playOverlayCheck as Array<{ hasPlayBtn: boolean; statusText?: string }>;
+  expect(play.length).toBeGreaterThan(0);
+  expect(play.some((p) => p.hasPlayBtn)).toBe(true);
 });
 
 // ─── TEST 3: /my-class — progress variant (desktop 1440px) ──────────────────
@@ -275,7 +278,10 @@ test('DR-3: /my-class progress variant (1440px)', async ({ page }) => {
 
   r.myClassAxe = await runAxe(page);
   fs.writeFileSync('/tmp/dr-part3.json', JSON.stringify(r, null, 2));
-  expect(true).toBe(true);
+  const myAxe = r.myClassAxe as { violations: unknown[] };
+  expect(myAxe.violations.length).toBe(0);
+  const myClass = r.myClassCards as { importedCount: number };
+  expect(myClass.importedCount).toBeGreaterThanOrEqual(0);
 });
 
 // ─── TEST 4: Authors + Library reference ─────────────────────────────────────
@@ -329,7 +335,9 @@ test('DR-4: authors profile and library BookCard reference (1440px)', async ({ p
   });
 
   fs.writeFileSync('/tmp/dr-part4.json', JSON.stringify(r, null, 2));
-  expect(true).toBe(true);
+  expect(Array.isArray(r.authorLinks)).toBe(true);
+  const dna = r.bookCardDNA as unknown[] | undefined;
+  expect(Array.isArray(dna)).toBe(true);
 });
 
 // ─── TEST 5: Mobile 375px ────────────────────────────────────────────────────
@@ -390,7 +398,8 @@ test('DR-5: mobile 375px - overflow, touch targets, touch overlay', async ({ pag
   await page.screenshot({ path: `${SCREENSHOT_DIR}/07-courses-375-detail.png` });
 
   fs.writeFileSync('/tmp/dr-part5.json', JSON.stringify(r, null, 2));
-  expect(true).toBe(true);
+  const mob = r.mobileOverflow as { hasHorizontalScroll: boolean };
+  expect(mob.hasHorizontalScroll).toBe(false);
 });
 
 // ─── TEST 6: Tablet 768px ────────────────────────────────────────────────────
@@ -419,5 +428,6 @@ test('DR-6: tablet 768px - layout grid and heights', async ({ page }) => {
   });
 
   fs.writeFileSync('/tmp/dr-part6.json', JSON.stringify(r, null, 2));
-  expect(true).toBe(true);
+  const tab = r.tabletOverflow as { hasHorizontalScroll: boolean };
+  expect(tab.hasHorizontalScroll).toBe(false);
 });

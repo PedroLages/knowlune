@@ -9,7 +9,7 @@
  * in the viewport.
  */
 
-import { useCallback } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { cn } from '@/app/components/ui/utils'
 
@@ -36,6 +36,25 @@ export function RailControls({
   onScroll,
   'data-testid': testId,
 }: RailControlsProps) {
+  const mountedRef = useRef(true)
+  const rafOuterRef = useRef<number | null>(null)
+  const rafInnerRef = useRef<number | null>(null)
+
+  useEffect(() => {
+    mountedRef.current = true
+    return () => {
+      mountedRef.current = false
+      if (rafOuterRef.current != null) {
+        cancelAnimationFrame(rafOuterRef.current)
+        rafOuterRef.current = null
+      }
+      if (rafInnerRef.current != null) {
+        cancelAnimationFrame(rafInnerRef.current)
+        rafInnerRef.current = null
+      }
+    }
+  }, [])
+
   const scrollBy = useCallback(
     (direction: 'left' | 'right') => {
       const el = viewportRef.current
@@ -62,10 +81,15 @@ export function RailControls({
         behavior: 'smooth',
       })
 
-      // Let scroll event handler update affordances; fire callback after a tick
       if (onScroll) {
-        requestAnimationFrame(() => {
-          requestAnimationFrame(onScroll)
+        if (rafOuterRef.current != null) cancelAnimationFrame(rafOuterRef.current)
+        if (rafInnerRef.current != null) cancelAnimationFrame(rafInnerRef.current)
+        rafOuterRef.current = requestAnimationFrame(() => {
+          rafInnerRef.current = requestAnimationFrame(() => {
+            rafOuterRef.current = null
+            rafInnerRef.current = null
+            if (mountedRef.current) onScroll()
+          })
         })
       }
     },

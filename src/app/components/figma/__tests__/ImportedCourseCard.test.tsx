@@ -297,7 +297,13 @@ describe('ImportedCourseCard', () => {
 
       await user.click(screen.getByTestId('status-badge'))
 
-      expect(screen.getAllByRole('menuitem')).toHaveLength(7)
+      expect(screen.getByRole('menuitem', { name: /not started/i })).toBeInTheDocument()
+      expect(screen.getByRole('menuitem', { name: /^active$/i })).toBeInTheDocument()
+      expect(screen.getByRole('menuitem', { name: /completed/i })).toBeInTheDocument()
+      expect(screen.getByRole('menuitem', { name: /paused/i })).toBeInTheDocument()
+      expect(screen.getByTestId('edit-course-menu-item')).toBeInTheDocument()
+      expect(screen.getByTestId('change-thumbnail-menu-item')).toBeInTheDocument()
+      expect(screen.getByTestId('delete-course-menu-item')).toBeInTheDocument()
     })
 
     it('calls updateCourseStatus when a different status is selected', async () => {
@@ -391,6 +397,15 @@ describe('ImportedCourseCard', () => {
       expect(screen.queryByTestId('start-course-btn')).toBeNull()
     })
 
+    it('click on article surface starts course for not-started (same as Start button)', async () => {
+      mockUpdateCourseStatus.mockResolvedValueOnce(undefined)
+      const user = userEvent.setup()
+      renderCard({ id: 'c1', status: 'not-started' })
+      await user.click(screen.getByRole('article'))
+      expect(mockUpdateCourseStatus).toHaveBeenCalledWith('c1', 'active')
+      expect(mockNavigate).toHaveBeenCalledWith('/courses/c1/overview')
+    })
+
     it('does NOT navigate when updateCourseStatus rejects', async () => {
       // Swallow the unhandled rejection that propagates through React's event
       // handler — this test asserts the navigation guard contract, not the
@@ -453,6 +468,36 @@ describe('ImportedCourseCard', () => {
       await user.click(btn)
       expect(mockUpdateCourseStatus).toHaveBeenCalledTimes(1)
       resolveFn()
+    })
+  })
+
+  describe('Continue Learning', () => {
+    it('paused: continue resumes course and navigates', async () => {
+      mockUpdateCourseStatus.mockResolvedValueOnce(undefined)
+      const user = userEvent.setup()
+      renderCard({ id: 'c-p', status: 'paused', completionPercent: 10 })
+      await user.click(screen.getByTestId('continue-course-btn'))
+      expect(mockUpdateCourseStatus).toHaveBeenCalledWith('c-p', 'active')
+      expect(mockNavigate).toHaveBeenCalledWith('/courses/c-p/overview')
+    })
+
+    it('active: continue navigates without changing status', async () => {
+      const user = userEvent.setup()
+      renderCard({ id: 'c-a', status: 'active', completionPercent: 22 })
+      await user.click(screen.getByTestId('continue-course-btn'))
+      expect(mockUpdateCourseStatus).not.toHaveBeenCalled()
+      expect(mockNavigate).toHaveBeenCalledWith('/courses/c-a/overview')
+    })
+
+    it('continue shows toast and does not navigate on importError after resume', async () => {
+      const { toast } = await import('sonner')
+      mockImportError = 'disk full'
+      mockUpdateCourseStatus.mockResolvedValueOnce(undefined)
+      const user = userEvent.setup()
+      renderCard({ id: 'c-e', status: 'paused', completionPercent: 5 })
+      await user.click(screen.getByTestId('continue-course-btn'))
+      expect(toast.error).toHaveBeenCalledWith('disk full')
+      expect(mockNavigate).not.toHaveBeenCalled()
     })
   })
 

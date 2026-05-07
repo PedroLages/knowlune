@@ -56,6 +56,7 @@ import { EditCourseDialog } from '@/app/components/figma/EditCourseDialog'
 import { Avatar, AvatarFallback, AvatarImage } from '@/app/components/ui/avatar'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
 import { useAuthorStore } from '@/stores/useAuthorStore'
+import { useImportedCourseStartFlow } from '@/app/hooks/useImportedCourseStartFlow'
 import { useCourseCardPreview } from '@/hooks/useCourseCardPreview'
 import { useLazyVisible } from '@/hooks/useLazyVisible'
 import { useVideoFromHandle } from '@/hooks/useVideoFromHandle'
@@ -151,7 +152,8 @@ export function ImportedCourseCard({
   const [editDialogOpen, setEditDialogOpen] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const statusBadgeRef = useRef<HTMLButtonElement>(null)
-  const startingRef = useRef(false)
+  const continuingRef = useRef(false)
+  const { startStudying } = useImportedCourseStartFlow(course.id)
   const thumbnailUrl = thumbnailUrls[course.id] ?? course.youtubeThumbnailUrl ?? null
 
   // Lazy-load thumbnail: only render <img> when card enters viewport (E1B-S04 AC5)
@@ -208,6 +210,10 @@ export function ImportedCourseCard({
       onToggleSelect(course.id)
       return
     }
+    if (course.status === 'not-started' && !readOnly && !e.defaultPrevented) {
+      void startStudying(e)
+      return
+    }
     if (!e.defaultPrevented) navigate(`/courses/${course.id}/overview`)
   }
 
@@ -220,8 +226,7 @@ export function ImportedCourseCard({
         return
       }
       if (course.status === 'not-started' && !readOnly) {
-        // Start the course
-        void handleStartStudying(e as unknown as React.MouseEvent)
+        void startStudying(e)
         return
       }
       navigate(`/courses/${course.id}/overview`)
@@ -283,20 +288,22 @@ export function ImportedCourseCard({
   const isCompleted = course.status === 'completed' || completionPercent === 100
   const showPlay = course.status === 'not-started' && !isCompleted && !readOnly
 
-  async function handleStartStudying(e: React.MouseEvent) {
+  async function handleContinueLearning(e: React.SyntheticEvent) {
     e.stopPropagation()
-    if (startingRef.current) return
-    startingRef.current = true
+    if (continuingRef.current) return
+    continuingRef.current = true
     try {
-      await updateCourseStatus(course.id, 'active')
-      const { importError } = useCourseImportStore.getState()
-      if (importError) {
-        toast.error(importError)
-        return
+      if (status === 'paused') {
+        await updateCourseStatus(course.id, 'active')
+        const { importError } = useCourseImportStore.getState()
+        if (importError) {
+          toast.error(importError)
+          return
+        }
       }
       navigate(`/courses/${course.id}/overview`)
     } finally {
-      startingRef.current = false
+      continuingRef.current = false
     }
   }
 
@@ -728,7 +735,7 @@ export function ImportedCourseCard({
                     variant="brand"
                     size="sm"
                     data-testid="start-course-btn"
-                    onClick={handleStartStudying}
+                    onClick={startStudying}
                     aria-label={`Start studying "${course.name}"`}
                     className="mt-3 w-full button-press gap-2"
                   >
@@ -743,18 +750,7 @@ export function ImportedCourseCard({
                     data-testid="continue-course-btn"
                     aria-label={`Continue "${course.name}"`}
                     className="mt-3 w-full button-press gap-2"
-                    onClick={async e => {
-                      e.stopPropagation()
-                      if (status === 'paused') {
-                        await updateCourseStatus(course.id, 'active')
-                        const { importError } = useCourseImportStore.getState()
-                        if (importError) {
-                          toast.error(importError)
-                          return
-                        }
-                      }
-                      navigate(`/courses/${course.id}/overview`)
-                    }}
+                    onClick={handleContinueLearning}
                   >
                     <PlayCircle className="size-4" aria-hidden="true" />
                     Continue Learning

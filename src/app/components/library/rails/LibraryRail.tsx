@@ -9,7 +9,7 @@
  * LibraryShelfRow for the Continue Listening + Recently Added shelves.
  */
 
-import { Children, type ReactNode, useRef } from 'react'
+import { Children, type ReactNode, useMemo, useRef } from 'react'
 import { cn } from '@/app/components/ui/utils'
 import { isChildrenEmpty } from '@/lib/react-utils'
 import { useShelfScrollAffordances } from '@/app/hooks/useShelfScrollAffordances'
@@ -40,7 +40,7 @@ export function LibraryRail({
 }: LibraryRailProps) {
   const scrollerRef = useRef<HTMLDivElement | null>(null)
 
-  const childItems = Children.toArray(children).filter(Boolean)
+  const childItems = useMemo(() => Children.toArray(children).filter(Boolean), [children])
 
   const { canScrollLeft, canScrollRight, hasOverflow, update } = useShelfScrollAffordances(
     scrollerRef,

@@ -34,6 +34,7 @@ import {
   AlertDialogTitle,
 } from '@/app/components/ui/alert-dialog'
 import { toast } from 'sonner'
+import { useImportedCourseStartFlow } from '@/app/hooks/useImportedCourseStartFlow'
 import { TagBadgeList } from '@/app/components/figma/TagBadgeList'
 import { EditCourseDialog } from '@/app/components/figma/EditCourseDialog'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
@@ -108,6 +109,11 @@ export function ImportedCourseListRow({
   const status = course.status
   const config = statusConfig[status]
   const StatusIcon = config.icon
+  const { startStudying } = useImportedCourseStartFlow(course.id)
+
+  const importedDate = new Date(course.importedAt).toLocaleDateString()
+  const isCompleted = status === 'completed' || completionPercent === 100
+  const showPlay = !readOnly && status === 'not-started' && !isCompleted
 
   function navigateToCourse() {
     navigate(`/courses/${course.id}/overview`)
@@ -116,6 +122,10 @@ export function ImportedCourseListRow({
   function handleRowClick() {
     if (onToggleSelect) {
       onToggleSelect(course.id)
+      return
+    }
+    if (showPlay) {
+      void startStudying()
       return
     }
     navigateToCourse()
@@ -127,6 +137,10 @@ export function ImportedCourseListRow({
       e.preventDefault()
       if (onToggleSelect) {
         onToggleSelect(course.id)
+        return
+      }
+      if (showPlay) {
+        void startStudying(e)
         return
       }
       navigateToCourse()
@@ -149,28 +163,6 @@ export function ImportedCourseListRow({
       setDeleting(false)
     } else {
       toast.success('Course deleted')
-    }
-  }
-
-  const importedDate = new Date(course.importedAt).toLocaleDateString()
-  const isCompleted = status === 'completed' || completionPercent === 100
-  const showPlay = !readOnly && status === 'not-started' && !isCompleted
-  const startingRef = useRef(false)
-
-  async function handleStartStudying(e: React.MouseEvent) {
-    e.stopPropagation()
-    if (startingRef.current) return
-    startingRef.current = true
-    try {
-      await updateCourseStatus(course.id, 'active')
-      const { importError } = useCourseImportStore.getState()
-      if (importError) {
-        toast.error(importError)
-        return
-      }
-      navigate(`/courses/${course.id}/overview`)
-    } finally {
-      startingRef.current = false
     }
   }
 
@@ -312,7 +304,8 @@ export function ImportedCourseListRow({
             variant="brand-outline"
             size="sm"
             data-testid="list-row-start-btn"
-            onClick={handleStartStudying}
+            aria-label={`Start studying "${course.name}"`}
+            onClick={startStudying}
             className="shrink-0 gap-1.5"
           >
             <PlayCircle className="size-3.5" aria-hidden="true" />

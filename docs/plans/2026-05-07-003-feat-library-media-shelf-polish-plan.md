@@ -1,15 +1,15 @@
 ---
-title: 'feat: Library media shelves — remove audio badge, overflow-only arrows, Listen Again tint'
+title: 'feat: Library media shelves — optional audio badge, overflow-only arrows, Listen Again tint'
 type: feat
 status: active
 date: 2026-05-07
 ---
 
-# feat: Library media shelves — remove audio badge, overflow-only arrows, Listen Again tint
+# feat: Library media shelves — optional audio badge, overflow-only arrows, Listen Again tint
 
 ## Summary
 
-Polish the Library **Audiobooks / Ebooks** media rail experience: remove the small audiobook **format badge** on cover tiles so hover/focus shows only the existing dark overlay and primary action icon; make horizontal **scroll chevrons larger** and **hide them entirely** when the shelf content fits the viewport; apply a **muted / greyed presentation** to tiles in **Listen Again / Read Again**. Changes touch shared rail primitives so **Continue Listening**, **Recently Added**, **Discover**, **Recent Series**, and **Listen Again** behave consistently, and **Browse** grid audiobook cards align by removing the same corner badge from `BookCard`.
+Polish the Library **Audiobooks / Ebooks** media rail experience: **`BookTile` ships the small audiobook corner badge** for format clarity (centered hover play overlay removed per visual direction); make horizontal **scroll chevrons larger** and **hide them entirely** when the shelf content fits the viewport; apply a **muted / greyed presentation** to tiles in **Listen Again / Read Again**. Browse grid audiobook **`BookCard`** omits the corner badge to match a calmer grid pattern. Changes touch shared rail primitives so **Continue Listening**, **Recently Added**, **Discover**, **Recent Series**, and **Listen Again** behave consistently.
 
 ---
 
@@ -21,7 +21,7 @@ Users find the top-right **Headphones** badge on audiobook covers visually noisy
 
 ## Requirements
 
-- R1. **No small audiobook format badge** on cover art in the Library media tile experience: keep the existing hover/focus overlay (dim + centered play/open control) and progress bar where applicable; do not show the extra corner icon.
+- R1. **Library `BookTile`:** Remove the centered hover **play/open overlay**; **keep** the small top-right **Headphones** audiobook badge for format recognition. Progress bar and tile affordances otherwise unchanged.
 - R2. **Browse tab parity:** Audiobook grid cards (`BookCard` square layout) no longer show the top-right Headphones badge, matching the media shelf art-first pattern.
 - R3. **Larger chevrons** for horizontal shelf navigation (rails and legacy shelf row components used by media columns).
 - R4. **Chevrons only when content overflows** the scroller (`scrollWidth` meaningfully greater than `clientWidth`). When all items fit, **no** scroll buttons (not merely disabled/ghosted).
@@ -42,14 +42,14 @@ Users find the top-right **Headphones** badge on audiobook covers visually noisy
 
 ### Relevant Code and Patterns
 
-- **`src/app/components/library/BookTile.tsx`** — Centered `PlayCircle` / `BookOpen` on hover; **Headphones** badge is `absolute top-2 right-2` with `data-testid` `book-tile-${id}-audio-badge` (remove per R1).
-- **`src/app/components/library/BookCard.tsx`** — Audiobook square cover has the same **top-right Headphones** badge (remove per R2).
+- **`src/app/components/library/BookTile.tsx`** — **No** centered hover play/open overlay (R1). **Headphones** badge remains `absolute top-2 right-2` with `data-testid` `book-tile-${id}-audio-badge`.
+- **`src/app/components/library/BookCard.tsx`** — Audiobook square cover: **no** top-right Headphones badge (R2).
 - **`src/app/components/library/rails/RailControls.tsx`** — Chevrons are `size-8` with `ChevronLeft/Right` at `size-4`; use `group-hover/rail` + `disabled:opacity-35` (R3–R4: grow controls; **hide** when no overflow, not just disable).
 - **`src/app/components/library/rails/LibraryRail.tsx`** — Computes `canScrollLeft` / `canScrollRight` from scroll position; extend with **`hasOverflow`** when `scrollWidth` exceeds `clientWidth` (same `maxScrollLeft` computation).
 - **`src/app/components/library/LibraryShelfRow.tsx`** — Same scroll math as `LibraryRail` but `group/shelf` and `size-9` buttons; must get the same overflow gate + larger hit targets.
 - **`src/app/components/library/LibraryMediaShelfRow.tsx`** — Slightly larger buttons (`size-10`) but always visible on md+; align with overflow-only + sizing.
 - **`src/app/components/library/LibraryMediaShelfColumn.tsx`** — Maps shelves to `LibraryRail` / `LibraryMediaShelfRow`; passes `RecentBookCard` for Again — add **muted** prop here only for that shelf.
-- **Tests:** `src/app/components/library/__tests__/BookTile.test.tsx` and `src/app/components/library/__tests__/LibraryMediaShelfColumn.test.tsx` assert audio badge test IDs — **must be updated** when the badge is removed.
+- **Tests:** `BookTile` keeps audio-badge assertions where applicable; `LibraryMediaShelfColumn` / rail tests cover overflow affordances and muted Again shelf.
 
 ### Institutional Learnings
 
@@ -74,7 +74,7 @@ Users find the top-right **Headphones** badge on audiobook covers visually noisy
 
 ### Resolved During Planning
 
-- **Which “small icon”?** The screenshots and code match the **Headphones corner badge** on `BookTile` / `BookCard`, not the centered play overlay — remove the badge only.
+- **Which affordances on `BookTile`?** Ship **no** centered hover overlay; **keep** the corner **Headphones** badge on library tiles; **remove** badge on Browse `BookCard` only (R2).
 - **Does Browse need rail changes?** Browse uses **`BookCard`** grid, not rails — R2 covers it.
 
 ### Deferred to Implementation
@@ -85,27 +85,15 @@ Users find the top-right **Headphones** badge on audiobook covers visually noisy
 
 ## Implementation Units
 
-- U1. **Remove audiobook cover corner badge from BookTile and BookCard**
+- U1. **~~Remove audiobook cover corner badge from BookTile and BookCard~~** → **Superseded:** R1 removes hover overlay on `BookTile` and **retains** the headphones badge; R2 still removes badge from `BookCard` only.
 
-**Goal:** Satisfy R1 and R2; keep hover overlay and progress UI.
+**Goal:** Satisfy R1 (tile overlay + badge) and R2 (Browse grid).
 
 **Requirements:** R1, R2
 
-**Dependencies:** None
+**Shipped approach:** Delete centered overlay from `BookTile`; keep `*-audio-badge` test IDs; remove badge block from audiobook `BookCard`; update tests accordingly.
 
-**Files:**
-- Modify: `src/app/components/library/BookTile.tsx`
-- Modify: `src/app/components/library/BookCard.tsx`
-- Modify: `src/app/components/library/__tests__/BookTile.test.tsx`
-- Modify: `src/app/components/library/__tests__/LibraryMediaShelfColumn.test.tsx` (remove assertions on `*-audio-badge` test IDs)
-
-**Approach:** Delete the Headphones badge JSX blocks; update file header comment in `BookTile` that mentions the badge.
-
-**Test scenarios:**
-- Happy path: Audiobook `BookTile` renders **without** `book-tile-*-audio-badge`; EPUB tile unchanged for badge absence.
-- Integration: `LibraryMediaShelfColumn` tests no longer expect audio-badge test IDs on Continue/Recently Added when store seeds audiobooks.
-
-**Verification:** Storybook/manual: hover audiobook tile — dim overlay + center icon only; no top-right glyph.
+**Verification:** Library audiobook tile shows corner badge without center play-on-hover; Browse grid has no corner badge.
 
 ---
 
@@ -162,9 +150,8 @@ Users find the top-right **Headphones** badge on audiobook covers visually noisy
 
 ## System-Wide Impact
 
-- **Interaction graph:** Only Library media tiles and Browse grid audiobook cards lose the format badge; navigation and reader flows unchanged.
-- **API surface parity:** `BookTile` / `BookCard` props unchanged except optional `RecentBookCard` extension.
-- **Unchanged invariants:** Shelf data selectors, `getAudiobookListenAgainShelf`, routing, and `data-testid` prefixes for tiles (`book-tile-${id}`) except removal of `-audio-badge` nodes.
+- **Interaction graph:** Browse grid audiobook cards omit the format badge; library `BookTile` keeps it; navigation and reader flows unchanged.
+- **Unchanged invariants:** Shelf data selectors, `getAudiobookListenAgainShelf`, routing, and `data-testid` prefixes for tiles (`book-tile-${id}`, `book-tile-*-audio-badge` on library audiobooks).
 
 ---
 

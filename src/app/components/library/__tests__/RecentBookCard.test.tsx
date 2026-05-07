@@ -42,7 +42,9 @@ describe('RecentBookCard', () => {
     )
     const root = screen.getByTestId('recent-book-card-rb-1')
     expect(root).toHaveAttribute('data-tone', 'muted')
-    expect(root.className).toContain('grayscale')
-    expect(root.className).toContain('opacity-[0.72]')
+    const cover = root.querySelector('.aspect-square') as HTMLElement | null
+    expect(cover).not.toBeNull()
+    expect(cover!.className).toMatch(/opacity-\[0\.88\]/)
+    expect(cover!.className).toContain('grayscale')
   })
 })

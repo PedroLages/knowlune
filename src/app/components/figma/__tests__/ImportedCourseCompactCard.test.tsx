@@ -255,6 +255,42 @@ describe('ImportedCourseCompactCard — long-press', () => {
   })
 })
 
+describe('ImportedCourseCompactCard — start not-started course', () => {
+  beforeEach(() => {
+    mockUpdateCourseStatus.mockReset()
+    mockNavigate.mockClear()
+    mockImportError = null
+  })
+
+  it('article click activates not-started course', async () => {
+    mockUpdateCourseStatus.mockResolvedValueOnce(undefined)
+    const user = userEvent.setup()
+    renderCard({ id: 'c-compact-ns', status: 'not-started' })
+    await user.click(screen.getByTestId('imported-course-compact-card'))
+    expect(mockUpdateCourseStatus).toHaveBeenCalledWith('c-compact-ns', 'active')
+    expect(mockNavigate).toHaveBeenCalledWith('/courses/c-compact-ns/overview')
+  })
+
+  it('Enter on card activates not-started course', async () => {
+    mockUpdateCourseStatus.mockResolvedValueOnce(undefined)
+    const user = userEvent.setup()
+    renderCard({ id: 'c-compact-kb', status: 'not-started' })
+    const card = screen.getByTestId('imported-course-compact-card')
+    card.focus()
+    await user.keyboard('{Enter}')
+    expect(mockUpdateCourseStatus).toHaveBeenCalledWith('c-compact-kb', 'active')
+    expect(mockNavigate).toHaveBeenCalledWith('/courses/c-compact-kb/overview')
+  })
+
+  it('compact-start-btn activates course', async () => {
+    mockUpdateCourseStatus.mockResolvedValueOnce(undefined)
+    const user = userEvent.setup()
+    renderCard({ id: 'c-compact-btn', status: 'not-started' })
+    await user.click(screen.getByTestId('compact-start-btn'))
+    expect(mockUpdateCourseStatus).toHaveBeenCalledWith('c-compact-btn', 'active')
+  })
+})
+
 describe('ImportedCourseCompactCard — accessibility', () => {
   it('card has an accessible name including the course title', () => {
     renderCard({ name: 'Special Course' })

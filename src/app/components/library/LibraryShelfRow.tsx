@@ -109,7 +109,10 @@ export function LibraryShelfRow({
   }
 
   return (
-    <section className="mb-8 group/shelf" data-testid={testId ?? 'library-shelf-row'}>
+    <section
+      className="mb-8 group/shelf focus-within:outline-none"
+      data-testid={testId ?? 'library-shelf-row'}
+    >
       <LibraryShelfHeading
         icon={icon}
         label={label}
@@ -129,7 +132,7 @@ export function LibraryShelfRow({
               onClick={() => scrollByViewport('left')}
               disabled={!canScrollLeft}
               aria-label="Scroll left"
-              className="pointer-events-none absolute left-1 top-[38%] z-20 hidden size-11 -translate-y-1/2 items-center justify-center rounded-full border border-border/60 bg-background/90 text-foreground opacity-0 shadow-sm backdrop-blur transition-opacity duration-200 disabled:cursor-not-allowed disabled:opacity-35 group-hover/shelf:pointer-events-auto group-hover/shelf:opacity-100 md:flex"
+              className="pointer-events-none absolute left-1 top-[38%] z-20 hidden size-11 -translate-y-1/2 items-center justify-center rounded-full border border-border/60 bg-background/90 text-foreground opacity-0 shadow-sm backdrop-blur transition-opacity duration-200 disabled:cursor-not-allowed disabled:opacity-35 group-hover/shelf:pointer-events-auto group-hover/shelf:opacity-100 group-focus-within/shelf:pointer-events-auto group-focus-within/shelf:opacity-100 md:flex"
               data-testid={testId ? `${testId}-scroll-left` : 'library-shelf-row-scroll-left'}
             >
               <ChevronLeft className="size-6" aria-hidden="true" />
@@ -139,7 +142,7 @@ export function LibraryShelfRow({
               onClick={() => scrollByViewport('right')}
               disabled={!canScrollRight}
               aria-label="Scroll right"
-              className="pointer-events-none absolute right-1 top-[38%] z-20 hidden size-11 -translate-y-1/2 items-center justify-center rounded-full border border-border/60 bg-background/90 text-foreground opacity-0 shadow-sm backdrop-blur transition-opacity duration-200 disabled:cursor-not-allowed disabled:opacity-35 group-hover/shelf:pointer-events-auto group-hover/shelf:opacity-100 md:flex"
+              className="pointer-events-none absolute right-1 top-[38%] z-20 hidden size-11 -translate-y-1/2 items-center justify-center rounded-full border border-border/60 bg-background/90 text-foreground opacity-0 shadow-sm backdrop-blur transition-opacity duration-200 disabled:cursor-not-allowed disabled:opacity-35 group-hover/shelf:pointer-events-auto group-hover/shelf:opacity-100 group-focus-within/shelf:pointer-events-auto group-focus-within/shelf:opacity-100 md:flex"
               data-testid={testId ? `${testId}-scroll-right` : 'library-shelf-row-scroll-right'}
             >
               <ChevronRight className="size-6" aria-hidden="true" />

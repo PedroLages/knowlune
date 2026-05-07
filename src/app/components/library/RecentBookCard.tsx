@@ -55,15 +55,19 @@ export const RecentBookCard = memo(function RecentBookCard({
       onKeyDown={handleKeyDown}
       className={cn(
         'group cursor-pointer focus-visible:outline-none rounded-lg',
-        LIBRARY_SHELF_CARD_WIDTH_CLASS,
-        tone === 'muted' &&
-          'opacity-[0.72] grayscale transition-opacity hover:opacity-90 focus-visible:opacity-90'
+        LIBRARY_SHELF_CARD_WIDTH_CLASS
       )}
       data-testid={`recent-book-card-${book.id}`}
       data-tone={tone}
     >
       {/* Cover — always square for uniform row height */}
-      <div className="relative aspect-square rounded-2xl overflow-hidden shadow-card-ambient transition-all duration-300 group-hover:-translate-y-2 group-hover:shadow-[0_10px_30px_var(--shadow-brand)]">
+      <div
+        className={cn(
+          'relative aspect-square rounded-2xl overflow-hidden shadow-card-ambient transition-all duration-300 group-hover:-translate-y-2 group-hover:shadow-[0_10px_30px_var(--shadow-brand)]',
+          tone === 'muted' &&
+            'opacity-[0.88] grayscale transition-opacity group-hover:opacity-95 focus-visible:opacity-95'
+        )}
+      >
         {resolvedCoverUrl ? (
           <img
             src={resolvedCoverUrl}

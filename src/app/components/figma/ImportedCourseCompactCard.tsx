@@ -33,6 +33,7 @@ import {
 import { toast } from 'sonner'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
 import { Checkbox } from '@/app/components/ui/checkbox'
+import { useImportedCourseStartFlow } from '@/app/hooks/useImportedCourseStartFlow'
 import { useLazyVisible } from '@/hooks/useLazyVisible'
 import type { ImportedCourse, LearnerCourseStatus } from '@/data/types'
 
@@ -108,7 +109,7 @@ export function ImportedCourseCompactCard({
   const pressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const pressStartRef = useRef<{ x: number; y: number } | null>(null)
   const longPressTriggeredRef = useRef(false)
-  const startingRef = useRef(false)
+  const { startStudying } = useImportedCourseStartFlow(course.id)
 
   useEffect(() => {
     return () => {
@@ -172,6 +173,10 @@ export function ImportedCourseCompactCard({
       onToggleSelect(course.id)
       return
     }
+    if (showPlay) {
+      void startStudying(e)
+      return
+    }
     navigate(`/courses/${course.id}/overview`)
   }
 
@@ -181,6 +186,10 @@ export function ImportedCourseCompactCard({
       e.preventDefault()
       if (onToggleSelect) {
         onToggleSelect(course.id)
+        return
+      }
+      if (showPlay) {
+        void startStudying(e)
         return
       }
       navigate(`/courses/${course.id}/overview`)
@@ -203,23 +212,6 @@ export function ImportedCourseCompactCard({
       setDeleting(false)
     } else {
       toast.success('Course deleted')
-    }
-  }
-
-  async function handleStartStudying(e: React.MouseEvent) {
-    e.stopPropagation()
-    if (startingRef.current) return
-    startingRef.current = true
-    try {
-      await updateCourseStatus(course.id, 'active')
-      const { importError } = useCourseImportStore.getState()
-      if (importError) {
-        toast.error(importError)
-        return
-      }
-      navigate(`/courses/${course.id}/overview`)
-    } finally {
-      startingRef.current = false
     }
   }
 
@@ -426,7 +418,7 @@ export function ImportedCourseCompactCard({
             size="touch-icon"
             data-testid="compact-start-btn"
             aria-label={`Start learning "${course.name}"`}
-            onClick={handleStartStudying}
+            onClick={startStudying}
             onPointerDown={e => {
               // Stop long-press tracking from intercepting the button click
               e.stopPropagation()
