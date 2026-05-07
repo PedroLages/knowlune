@@ -168,7 +168,6 @@ function PathCard({
   return (
     <motion.div variants={fadeUp}>
       <Card
-        data-testid="learning-path-card"
         className={cn(
           'group relative overflow-hidden rounded-2xl h-[360px] md:h-[380px] shadow-sm hover:shadow-md motion-safe:transition-shadow motion-safe:duration-300'
         )}
@@ -226,14 +225,14 @@ function PathCard({
 
         {/* Card body */}
         <CardContent className="px-6 pb-5 pt-12 relative flex flex-col h-[calc(100%-8rem)]">
-          {/* Progress ring — positioned at -top-10 to match Lumina reference offset */}
-          <div className="absolute -top-10 left-6">
-            <div className="rounded-full bg-white p-2 shadow-lg dark:bg-card">
-              <PathProgressRing percentage={completionPct} size={80} strokeWidth={8}>
+          {/* Progress ring — centered on header/body seam via translate (scales with any ring size) */}
+          <div className="absolute top-0 left-6 -translate-y-1/2">
+            <div className="bg-card rounded-full p-2 shadow-lg">
+              <PathProgressRing percentage={completionPct} size={80}>
                 {isCompleted ? (
                   <CheckCircle2 className="size-6 text-success" aria-hidden="true" />
                 ) : (
-                  <span className="text-xl font-bold tabular-nums leading-none text-foreground">
+                  <span className="text-lg font-bold text-foreground">
                     {Math.round(completionPct)}%
                   </span>
                 )}
@@ -247,11 +246,11 @@ function PathCard({
             aria-label={`${path.name} — ${courseCount} courses, ${completionPct}% completed`}
           >
             {/* Course count badge */}
-            <div className="flex items-center gap-2 mb-3">
+            <div className="flex items-center gap-2 mb-2">
               <Badge
                 variant="secondary"
                 className={cn(
-                  'px-3 py-1 font-semibold uppercase tracking-wider',
+                  'text-[10px] uppercase tracking-wider',
                   isCompleted && 'bg-success-soft text-success'
                 )}
               >
@@ -260,20 +259,15 @@ function PathCard({
             </div>
 
             {/* Title + description */}
-            <h3
-              className={cn(
-                'text-xl font-bold leading-tight line-clamp-2',
-                path.description ? 'mb-2' : 'mb-6'
-              )}
-            >
+            <h3 className="text-xl font-bold leading-tight mb-1.5 line-clamp-2">
               {path.name}
             </h3>
             {path.description && (
-              <p className="text-sm font-medium text-muted-foreground leading-relaxed line-clamp-2 mb-6">
+              <p className="text-sm text-muted-foreground leading-relaxed line-clamp-2 mb-4">
                 {path.description}
               </p>
             )}
-            <Separator className="mb-6" />
+            <Separator className="mb-4" />
 
             {/* Footer: course thumbnails + continue/start/review button */}
             <div className="mt-auto flex items-center justify-between">
@@ -283,17 +277,17 @@ function PathCard({
                     key={i}
                     src={url}
                     alt=""
-                    className="size-8 rounded-full bg-muted object-cover ring-2 ring-white dark:ring-card"
+                    className="size-8 rounded-full border-2 border-card bg-muted object-cover"
                     loading="lazy"
                   />
                 ))}
                 {courseCount === 0 && (
-                  <div className="size-8 rounded-full bg-muted flex items-center justify-center ring-2 ring-white dark:ring-card">
+                  <div className="size-8 rounded-full border-2 border-card bg-muted flex items-center justify-center">
                     <BookOpen className="size-3.5 text-muted-foreground" aria-hidden="true" />
                   </div>
                 )}
                 {courseCount > 3 && (
-                  <div className="size-8 rounded-full bg-muted flex items-center justify-center text-[10px] font-bold text-muted-foreground ring-2 ring-white dark:ring-card">
+                  <div className="size-8 rounded-full border-2 border-card bg-muted flex items-center justify-center text-[10px] font-bold text-muted-foreground">
                     +{courseCount - 3}
                   </div>
                 )}
@@ -336,22 +330,22 @@ function PathCard({
 
 function PathCardSkeleton() {
   return (
-    <Card className="relative overflow-hidden rounded-2xl h-[360px] md:h-[380px] shadow-sm hover:shadow-md motion-safe:transition-shadow motion-safe:duration-300">
+    <Card className="overflow-hidden rounded-2xl">
       <Skeleton className="h-32 w-full rounded-none" />
-      <CardContent className="px-6 pb-5 pt-12 relative flex flex-col h-[calc(100%-8rem)]">
-        <Skeleton className="absolute -top-10 left-6 size-[96px] rounded-full" />
-        <div className="flex flex-col flex-1 min-h-0 space-y-3">
+      <CardContent className="px-6 pb-5 pt-1 relative">
+        <Skeleton className="absolute top-0 left-6 -translate-y-1/2 size-[96px] rounded-full" />
+        <div className="mt-7 space-y-3">
           <Skeleton className="h-4 w-16" />
           <Skeleton className="h-6 w-3/4" />
           <Skeleton className="h-4 w-full" />
           <Skeleton className="h-px w-full" />
-          <div className="mt-auto flex justify-between pt-4">
+          <div className="flex justify-between pt-4">
             <div className="flex -space-x-3">
               <Skeleton className="size-8 rounded-full" />
               <Skeleton className="size-8 rounded-full" />
               <Skeleton className="size-8 rounded-full" />
             </div>
-            <Skeleton className="h-9 w-24 rounded-xl" />
+            <Skeleton className="h-4 w-4" />
           </div>
         </div>
       </CardContent>
