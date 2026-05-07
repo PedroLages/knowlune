@@ -1,5 +1,5 @@
 /**
- * Source filter tabs for the Library page: All | Local | Audiobookshelf.
+ * Source filter tabs for the Library page: All | Local | Server.
  *
  * Hidden when no ABS servers are configured (local-only users see no tabs).
  * Uses the same pill styling as LibraryFilters status pills for visual consistency.
@@ -18,7 +18,7 @@ type SourceValue = 'all' | 'local' | 'audiobookshelf'
 const SOURCE_TABS: { value: SourceValue; label: string; icon?: true }[] = [
   { value: 'all', label: 'All' },
   { value: 'local', label: 'Local' },
-  { value: 'audiobookshelf', label: 'Audiobookshelf', icon: true },
+  { value: 'audiobookshelf', label: 'Server', icon: true },
 ]
 
 export function LibrarySourceTabs() {

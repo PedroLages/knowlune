@@ -29,11 +29,6 @@ function formatDuration(seconds: number): string {
   return `${minutes}m`
 }
 
-function isRecentlyAdded(createdAt: string): boolean {
-  const sevenDaysMs = 7 * 24 * 60 * 60 * 1000
-  return Date.now() - new Date(createdAt).getTime() < sevenDaysMs
-}
-
 interface BookCardProps {
   book: Book
 }
@@ -90,6 +85,13 @@ export const BookCard = memo(function BookCard({ book }: BookCardProps) {
               <CheckCircle2 className="size-10 text-success drop-shadow-md" aria-hidden="true" />
             </div>
           )}
+          {/* Format icon badge — top-right corner (parity with ebook branch) */}
+          <div
+            className="absolute top-2 right-2 rounded-full bg-black/60 backdrop-blur p-1.5 z-10"
+            aria-label="Audio format"
+          >
+            <Headphones className="size-3.5 text-white" aria-hidden="true" />
+          </div>
         </div>
         {/* Metadata below cover */}
         <div className="mt-3 px-1 text-center">
@@ -102,9 +104,6 @@ export const BookCard = memo(function BookCard({ book }: BookCardProps) {
             <div className="flex items-center justify-center gap-2 mt-1 flex-wrap">
               <BookStatusBadge status={book.status} />
             </div>
-          )}
-          {book.progress === 0 && isRecentlyAdded(book.createdAt) && (
-            <p className="text-[10px] font-bold text-brand uppercase tracking-wider mt-0.5">NEW</p>
           )}
           {book.totalDuration != null && book.totalDuration > 0 && (
             <p
@@ -186,9 +185,6 @@ export const BookCard = memo(function BookCard({ book }: BookCardProps) {
           {book.title}
         </p>
         <p className="text-xs text-muted-foreground mt-1 truncate">{book.author}</p>
-        {book.progress === 0 && isRecentlyAdded(book.createdAt) && (
-          <p className="text-[10px] font-bold text-brand uppercase tracking-wider mt-0.5">NEW</p>
-        )}
         {(book.progress ?? 0) > 0 && (book.progress ?? 0) < 100 && (
           <p className="text-[10px] text-muted-foreground mt-0.5">{book.progress}% complete</p>
         )}

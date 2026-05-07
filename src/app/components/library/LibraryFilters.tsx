@@ -210,9 +210,11 @@ export function LibraryFilters({ viewToggle }: LibraryFiltersProps = {}) {
           {activeChips.map(chip => (
             <button
               key={chip.key}
+              type="button"
               onClick={() => removeChip(chip.key)}
               className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-brand-soft text-brand-soft-foreground text-xs font-medium transition-colors hover:bg-brand-soft/80"
               aria-label={`Remove ${chip.label} filter`}
+              data-testid={`library-active-filter-remove-${chip.key}`}
             >
               {chip.label}
               <X className="size-3" />
