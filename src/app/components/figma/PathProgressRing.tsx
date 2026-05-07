@@ -34,10 +34,9 @@ export function PathProgressRing({
   strokeWidth,
 }: PathProgressRingProps) {
   // Resolve config: numeric size computes directly, string preset uses SIZES lookup
-  const resolvedStroke = strokeWidth ?? undefined
   const config =
     typeof size === 'number'
-      ? { size, stroke: resolvedStroke ?? 3, fontSize: 'text-xs' as const }
+      ? { size, stroke: strokeWidth ?? 3, fontSize: 'text-xs' as const }
       : SIZES[size]
   // Optional strokeWidth prop overrides the default from SIZES config
   const effectiveStroke = strokeWidth ?? config.stroke
