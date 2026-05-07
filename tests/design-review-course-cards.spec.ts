@@ -106,7 +106,7 @@ test('DR-1: /courses grid structure and card anatomy (1440px)', async ({ page })
       ),
       // Old hover scale check (should be removed in refactored cards)
       hasOldHoverScale: c.className.includes('scale-[1.02]') || c.className.includes('hover:scale'),
-      // R2 check: play overlay present (only for not-started)
+      // R2 check: Start Learning button present (only for not-started)
       hasPlayBtn: !!c.querySelector('[data-testid="start-course-btn"]'),
       // R4: Imported date in body (should NOT be in body per plan)
       hasImportedDateInBody: (() => {
@@ -200,8 +200,8 @@ test('DR-1: /courses grid structure and card anatomy (1440px)', async ({ page })
   expect(true).toBe(true);
 });
 
-// ─── TEST 2: /courses play overlay behavior ──────────────────────────────────
-test('DR-2: play overlay anatomy on not-started cards', async ({ page }) => {
+// ─── TEST 2: /courses Start Learning button behavior ─────────────────────
+test('DR-2: start learning button anatomy on not-started cards', async ({ page }) => {
   const r: Record<string, unknown> = {};
   await page.setViewportSize({ width: 1440, height: 900 });
 
@@ -221,15 +221,15 @@ test('DR-2: play overlay anatomy on not-started cards', async ({ page }) => {
         playBtnTag: playBtn?.tagName,
         playBtnAriaLabel: playBtn?.getAttribute('aria-label'),
         playBtnClass: playBtn?.className?.substring(0, 200) || null,
-        // Desktop: opacity-0 by default (hover reveals it)
+        // Now always visible (opacity: 1) — no longer hover-revealed
         playBtnComputedOpacity: playBtn ? window.getComputedStyle(playBtn).opacity : null,
-        // Is play in cover area or body?
+        // Button is in card body (p-5) area, not the cover
         playInBody: playBtn ? !!playBtn.closest('.p-5') : false,
       };
     });
   });
 
-  // Z-index checks for overlapping overlays (camera vs play vs status)
+  // Camera button was moved to overflow menu — should no longer appear on cover
   r.zIndexCheck = await page.evaluate(() => {
     const cards = Array.from(document.querySelectorAll('[data-testid="imported-course-card"]'));
     return cards.slice(0, 4).map(c => {
@@ -366,7 +366,7 @@ test('DR-5: mobile 375px - overflow, touch targets, touch overlay', async ({ pag
     }));
   });
 
-  // Touch overlay: on mobile (hover:none), play overlay should always be visible
+  // Start button is always visible (no longer hover-revealed)
   r.touchPlayOverlayVisibility = await page.evaluate(() => {
     return Array.from(document.querySelectorAll('[data-testid="start-course-btn"]')).map(btn => {
       const s = window.getComputedStyle(btn);

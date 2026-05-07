@@ -297,7 +297,7 @@ describe('ImportedCourseCard', () => {
 
       await user.click(screen.getByTestId('status-badge'))
 
-      expect(screen.getAllByRole('menuitem')).toHaveLength(6)
+      expect(screen.getAllByRole('menuitem')).toHaveLength(7)
     })
 
     it('calls updateCourseStatus when a different status is selected', async () => {
@@ -456,24 +456,26 @@ describe('ImportedCourseCard', () => {
     })
   })
 
-  describe('mutual exclusion: PlayOverlay vs CompletionOverlay', () => {
-    it('completed status with completionPercent=100 hides PlayOverlay and renders CompletionOverlay', () => {
+  describe('Start/Continue button visibility with CompletionOverlay', () => {
+    it('completed status with completionPercent=100 hides start button and renders CompletionOverlay', () => {
       const { container } = renderCard({ status: 'completed' }, [], { completionPercent: 100 })
       expect(screen.queryByTestId('start-course-btn')).toBeNull()
+      expect(screen.queryByTestId('continue-course-btn')).toBeNull()
       // CompletionOverlay is decorative (aria-hidden) — locate via the wrapper containing the check icon.
       // It's rendered with `pointer-events-none` and `aria-hidden="true"`.
       const overlay = container.querySelector('[aria-hidden="true"].pointer-events-none')
       expect(overlay).not.toBeNull()
     })
 
-    it('not-started + completionPercent=100 still suppresses PlayOverlay (isCompleted derives true)', () => {
+    it('not-started + completionPercent=100 still suppresses start button (isCompleted derives true)', () => {
       renderCard({ status: 'not-started' }, [], { completionPercent: 100 })
       expect(screen.queryByTestId('start-course-btn')).toBeNull()
+      expect(screen.queryByTestId('continue-course-btn')).toBeNull()
     })
   })
 
   describe('readOnly prop', () => {
-    it('hides camera overlay, edit menu item, and delete menu item when readOnly=true', async () => {
+    it('hides edit, change thumbnail, and delete menu items when readOnly=true', async () => {
       const user = userEvent.setup()
       render(
         <MemoryRouter>

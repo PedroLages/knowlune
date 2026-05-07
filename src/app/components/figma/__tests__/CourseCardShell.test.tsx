@@ -1,7 +1,6 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect } from 'vitest'
 import { render, screen } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
-import { CardCover, CoverProgressBar, PlayOverlay, CompletionOverlay } from '../CourseCardShell'
+import { CardCover, CoverProgressBar, CompletionOverlay } from '../CourseCardShell'
 
 // ── CoverProgressBar ─────────────────────────────────────────────────
 
@@ -32,54 +31,6 @@ describe('CoverProgressBar', () => {
     const bar = container.querySelector('.bg-brand')
     expect(bar).not.toBeNull()
     expect((bar as HTMLElement).style.width).toBe('0%')
-  })
-})
-
-// ── PlayOverlay ───────────────────────────────────────────────────────
-
-describe('PlayOverlay', () => {
-  it('is not rendered when show=false', () => {
-    const { container } = render(
-      <PlayOverlay show={false} onClick={vi.fn()} aria-label="Start studying" />
-    )
-    expect(container.firstChild).toBeNull()
-  })
-
-  it('renders button with aria-label when show=true', () => {
-    render(<PlayOverlay show={true} onClick={vi.fn()} aria-label='Start studying "My Course"' />)
-    expect(screen.getByRole('button', { name: /Start studying/i })).toBeInTheDocument()
-  })
-
-  it('renders button with explicit type="button" to prevent form submission', () => {
-    render(<PlayOverlay show={true} onClick={vi.fn()} aria-label="Start" />)
-    expect(screen.getByRole('button')).toHaveAttribute('type', 'button')
-  })
-
-  it('calls onClick and stops propagation when clicked', async () => {
-    const user = userEvent.setup()
-    const onClick = vi.fn()
-    const parentClick = vi.fn()
-
-    render(
-      <div onClick={parentClick}>
-        <PlayOverlay show={true} onClick={onClick} aria-label="Start" />
-      </div>
-    )
-    await user.click(screen.getByRole('button'))
-    expect(onClick).toHaveBeenCalledOnce()
-    expect(parentClick).not.toHaveBeenCalled()
-  })
-
-  it('passes data-testid to the button', () => {
-    render(
-      <PlayOverlay
-        show={true}
-        onClick={vi.fn()}
-        data-testid="start-course-btn"
-        aria-label="Start"
-      />
-    )
-    expect(screen.getByTestId('start-course-btn')).toBeInTheDocument()
   })
 })
 

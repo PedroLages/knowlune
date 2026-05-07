@@ -67,7 +67,6 @@ import { ProgressRing } from './ProgressRing'
 import {
   CardCover,
   CoverProgressBar,
-  PlayOverlay,
   CompletionOverlay,
   CoverCornerChip,
   OVERLAY_SCRIM_CLASS,
@@ -221,7 +220,7 @@ export function ImportedCourseCard({
         return
       }
       if (course.status === 'not-started' && !readOnly) {
-        // Start the course (mirrors PlayOverlay click)
+        // Start the course
         void handleStartStudying(e as unknown as React.MouseEvent)
         return
       }
@@ -337,7 +336,7 @@ export function ImportedCourseCard({
               className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 motion-reduce:transition-none motion-reduce:group-hover:scale-100"
             />
           )}
-          {/* Inline video preview — suppressed on not-started cards so it doesn't compete with PlayOverlay */}
+          {/* Inline video preview — suppressed on not-started cards so the Start Learning button has visual primacy */}
           {showPreview && previewBlobUrl && !showPlay && (
             // width/height attrs prevent the browser from using intrinsic video dimensions before layout.
             // This was the root cause of the pixelated/cropped preview on non-16:9 source videos.
@@ -460,6 +459,17 @@ export function ImportedCourseCard({
                         Edit details
                       </DropdownMenuItem>
                       <DropdownMenuItem
+                        data-testid="change-thumbnail-menu-item"
+                        className="gap-2 min-h-[44px]"
+                        onClick={e => {
+                          e.stopPropagation()
+                          setThumbnailPickerOpen(true)
+                        }}
+                      >
+                        <Camera className="size-4" aria-hidden="true" />
+                        Change thumbnail
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
                         data-testid="delete-course-menu-item"
                         variant="destructive"
                         className="gap-2 min-h-[44px]"
@@ -568,30 +578,7 @@ export function ImportedCourseCard({
             </Popover>
           </div>
 
-          {/* Camera overlay — only shown when not-started (mutually exclusive with Play overlay) */}
-          {!readOnly && status !== 'not-started' && (
-            <button
-              data-testid="course-thumbnail-edit-btn"
-              onClick={e => {
-                e.stopPropagation()
-                setThumbnailPickerOpen(true)
-              }}
-              aria-label="Change thumbnail"
-              className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity duration-200 flex items-center justify-center focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-white outline-none z-10"
-            >
-              <Camera className="size-8 text-white drop-shadow" aria-hidden="true" />
-            </button>
-          )}
-
-          {/* Play overlay — only on not-started courses */}
-          <PlayOverlay
-            show={showPlay}
-            onClick={handleStartStudying}
-            data-testid="start-course-btn"
-            aria-label={`Start studying "${course.name}"`}
-          />
-
-          {/* Full completion overlay */}
+          {/* Completion overlay */}
           <CompletionOverlay show={isCompleted} />
 
           {/* Resolution chip — bottom-left, only when ≥1080p (sub-HD is not a selling point) */}
@@ -732,6 +719,49 @@ export function ImportedCourseCard({
                 </span>
               )}
             </div>
+
+            {/* Action buttons — always visible, no hover needed */}
+            {!readOnly && (
+              <>
+                {showPlay && (
+                  <Button
+                    variant="brand"
+                    size="sm"
+                    data-testid="start-course-btn"
+                    onClick={handleStartStudying}
+                    aria-label={`Start studying "${course.name}"`}
+                    className="mt-3 w-full button-press gap-2"
+                  >
+                    <PlayCircle className="size-4" aria-hidden="true" />
+                    Start Learning
+                  </Button>
+                )}
+                {(status === 'active' || status === 'paused') && !isCompleted && (
+                  <Button
+                    variant="brand-outline"
+                    size="sm"
+                    data-testid="continue-course-btn"
+                    aria-label={`Continue "${course.name}"`}
+                    className="mt-3 w-full button-press gap-2"
+                    onClick={async e => {
+                      e.stopPropagation()
+                      if (status === 'paused') {
+                        await updateCourseStatus(course.id, 'active')
+                        const { importError } = useCourseImportStore.getState()
+                        if (importError) {
+                          toast.error(importError)
+                          return
+                        }
+                      }
+                      navigate(`/courses/${course.id}/overview`)
+                    }}
+                  >
+                    <PlayCircle className="size-4" aria-hidden="true" />
+                    Continue Learning
+                  </Button>
+                )}
+              </>
+            )}
             {momentumScore && momentumScore.score > 0 && (
               <div className="mt-2">
                 <MomentumBadge score={momentumScore.score} tier={momentumScore.tier} />

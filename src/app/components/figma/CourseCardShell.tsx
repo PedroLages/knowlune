@@ -1,5 +1,5 @@
-import type { MouseEvent, ReactNode } from 'react'
-import { Play, CheckCircle2 } from 'lucide-react'
+import type { ReactNode } from 'react'
+import { CheckCircle2 } from 'lucide-react'
 import { cn } from '@/app/components/ui/utils'
 
 // ── Internal shared primitives for CourseCard + ImportedCourseCard ───
@@ -55,49 +55,6 @@ function CoverProgressBar({ progress }: CoverProgressBarProps) {
   )
 }
 
-interface PlayOverlayProps {
-  show: boolean
-  onClick: (e: MouseEvent<HTMLButtonElement>) => void
-  'data-testid'?: string
-  'aria-label'?: string
-}
-
-/**
- * Hover-revealed centered Play CTA for not-started courses.
- * Visible on touch devices via `[@media(hover:none)]:opacity-100`.
- * Click handler must call stopPropagation before state transitions.
- */
-function PlayOverlay({
-  show,
-  onClick,
-  'data-testid': testId,
-  'aria-label': ariaLabel,
-}: PlayOverlayProps) {
-  if (!show) return null
-  return (
-    <button
-      type="button"
-      data-testid={testId}
-      aria-label={ariaLabel}
-      onClick={(e: MouseEvent<HTMLButtonElement>) => {
-        e.stopPropagation()
-        onClick(e)
-      }}
-      className={cn(
-        'absolute inset-0 z-20 flex items-center justify-center',
-        'opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100',
-        'focus-visible:opacity-100 transition-opacity duration-300',
-        'outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-foreground/50',
-        'motion-reduce:transition-none'
-      )}
-    >
-      <span className="bg-foreground/60 backdrop-blur-sm rounded-full p-4 flex items-center justify-center">
-        <Play className="size-8 text-white fill-white" aria-hidden="true" />
-      </span>
-    </button>
-  )
-}
-
 interface CompletionOverlayProps {
   show: boolean
 }
@@ -146,4 +103,4 @@ function CoverCornerChip({ position, children, 'data-testid': testId }: CoverCor
   )
 }
 
-export { CardCover, CoverProgressBar, PlayOverlay, CompletionOverlay, CoverCornerChip, OVERLAY_SCRIM_CLASS }
+export { CardCover, CoverProgressBar, CompletionOverlay, CoverCornerChip, OVERLAY_SCRIM_CLASS }

@@ -14,6 +14,7 @@ import {
 } from 'lucide-react'
 import { useNavigate } from 'react-router'
 import { Badge } from '@/app/components/ui/badge'
+import { Button } from '@/app/components/ui/button'
 import { cn } from '@/app/components/ui/utils'
 import {
   DropdownMenu,
@@ -153,6 +154,25 @@ export function ImportedCourseListRow({
 
   const importedDate = new Date(course.importedAt).toLocaleDateString()
   const isCompleted = status === 'completed' || completionPercent === 100
+  const showPlay = !readOnly && status === 'not-started' && !isCompleted
+  const startingRef = useRef(false)
+
+  async function handleStartStudying(e: React.MouseEvent) {
+    e.stopPropagation()
+    if (startingRef.current) return
+    startingRef.current = true
+    try {
+      await updateCourseStatus(course.id, 'active')
+      const { importError } = useCourseImportStore.getState()
+      if (importError) {
+        toast.error(importError)
+        return
+      }
+      navigate(`/courses/${course.id}/overview`)
+    } finally {
+      startingRef.current = false
+    }
+  }
 
   return (
     <>
@@ -285,6 +305,20 @@ export function ImportedCourseListRow({
         >
           {importedDate}
         </div>
+
+        {/* Start Learning button — only for not-started courses */}
+        {showPlay && (
+          <Button
+            variant="brand-outline"
+            size="sm"
+            data-testid="list-row-start-btn"
+            onClick={handleStartStudying}
+            className="shrink-0 gap-1.5"
+          >
+            <PlayCircle className="size-3.5" aria-hidden="true" />
+            Start
+          </Button>
+        )}
 
         {/* Overflow menu */}
         <div className="shrink-0">
