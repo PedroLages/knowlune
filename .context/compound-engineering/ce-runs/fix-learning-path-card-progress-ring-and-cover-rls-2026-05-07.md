@@ -3,8 +3,29 @@ schemaVersion: 1
 slug: fix-learning-path-card-progress-ring-and-cover-rls
 status: active
 runMode: autopilot
-stage: phase-2.1
+stage: phase-2.5
+demoReel: skipped-minor-fixes
+reviewRounds: 1
+reviewBlockers: 0
+reviewHigh: 0
+reviewMedium: 1
+reviewMediumFixed: "focus-restoration-trigger-ref"
+reviewLow: 3
+precheckTscWarning: "1 error fixed (pathCoverUpload.ts:132), 6 pre-existing errors on main (test files — ImportedCourseCard, useCourseImportStore)"
 planApproval: auto-approved-by-critic
+workBranch: feature/ce-2026-05-07-fix-learning-path-card-progress-ring-and-cover-rls
+workCommits:
+  - d7b1c0c64d1797982b03dcd69a76591a8d805141
+  - c32bf122971f5bf219485e0733deed4de2c42e21
+  - e87bfe792ecf468e720504e00d877f8710d26ba8
+workModifiedFiles:
+  - src/app/components/figma/PathProgressRing.tsx
+  - src/app/components/learning-path/PathCoverDialog.tsx
+  - src/app/pages/LearningPaths.tsx
+  - src/lib/__tests__/pathCoverUpload.test.ts
+  - src/lib/pathCoverUpload.ts
+  - supabase/migrations/20260507000001_learning_path_cover_storage_policies.sql
+  - supabase/migrations/rollback/20260507000001_learning_path_cover_storage_policies_rollback.sql
 planCriticScore: 87
 planCriticVerdict: approve
 planCriticBlockers: 0
