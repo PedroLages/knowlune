@@ -10,7 +10,7 @@
  * the frame natively (no padding needed).
  *
  * Hover uses motion only (lift, shadow, slight image scale) — no play/open
- * overlay on the cover.
+ * overlay on the cover. Audiobooks show a small Headphones badge top-right.
  * Progress display (thin bar + meta line) only on the denseContinue variant.
  *
  * Titles use a single token (no "blue title" group-hover:brand bug).
@@ -145,6 +145,16 @@ export const BookTile = memo(function BookTile({
         ) : (
           <div className="flex h-full w-full items-center justify-center">
             <FallbackIcon className="size-8 text-muted-foreground" aria-hidden="true" />
+          </div>
+        )}
+
+        {isAudiobook && (
+          <div
+            className="absolute top-2 right-2 z-10 rounded-full bg-black/60 p-1.5 backdrop-blur"
+            aria-label="Audio format"
+            data-testid={`book-tile-${book.id}-audio-badge`}
+          >
+            <Headphones className="size-3.5 text-white" aria-hidden="true" />
           </div>
         )}
 
