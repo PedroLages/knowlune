@@ -13,40 +13,12 @@
 
 import { test, expect } from '../support/fixtures'
 import { seedBooks } from '../support/helpers/indexeddb-seed'
-import { FIXED_DATE } from '../utils/test-time'
+import { tabSeedsBase, tabSeedsWithMixedAudiobook } from '../support/helpers/library-tab-seed'
 
 const TAB_BUTTON = (id: string) => `[role="tab"][data-testid="library-tab-${id}"]`
 const TAB_PANEL = (id: string) => `[data-testid="library-tab-panel-${id}"]`
 
-const TEST_BOOKS = [
-  {
-    id: 'tab-test-book-1',
-    title: 'Tab Test Novel',
-    author: 'Tab Author',
-    format: 'epub',
-    status: 'finished',
-    tags: [],
-    chapters: [],
-    source: { type: 'local', opfsPath: '/test' },
-    progress: 100,
-    finishedAt: FIXED_DATE,
-    totalPages: 320,
-    rating: 4,
-    createdAt: FIXED_DATE,
-  },
-  {
-    id: 'tab-test-book-2',
-    title: 'Continue Reading Book',
-    author: 'Some Author',
-    format: 'epub',
-    status: 'reading',
-    tags: [],
-    chapters: [],
-    source: { type: 'local', opfsPath: '/test2' },
-    progress: 45,
-    createdAt: FIXED_DATE,
-  },
-]
+const TEST_BOOKS = tabSeedsBase()
 
 test.beforeEach(async ({ page }) => {
   await page.goto('/')
@@ -217,31 +189,15 @@ test.describe('Tab content rendering', () => {
 })
 
 test.describe('Mixed-format library defaults', () => {
-  const MIXED_FORMAT_BOOKS = [
-    ...TEST_BOOKS,
-    {
-      id: 'tab-test-mixed-audiobook',
-      title: 'Mixed Library Audio',
-      author: 'Narrator',
-      format: 'audiobook',
-      status: 'unread' as const,
-      tags: [],
-      chapters: [],
-      source: { type: 'local' as const, opfsPath: '/test-audio' },
-      progress: 0,
-      createdAt: FIXED_DATE,
-    },
-  ]
-
   test.beforeEach(async ({ page }) => {
     await page.goto('/')
-    await seedBooks(page, MIXED_FORMAT_BOOKS)
+    await seedBooks(page, tabSeedsWithMixedAudiobook())
   })
 
-  test('Browse tab does not auto-apply Format: audiobook chip when both formats exist', async ({
+  test('Browse tab does not auto-apply format filter chip when both formats exist', async ({
     page,
   }) => {
     await page.goto('/library?tab=browse')
-    await expect(page.getByText(/^Format:\s*audiobook$/i)).toHaveCount(0)
+    await expect(page.getByTestId('library-active-filter-remove-format')).toHaveCount(0)
   })
 })

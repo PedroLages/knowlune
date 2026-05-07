@@ -108,4 +108,45 @@ describe('BookCard', () => {
     )
     expect(screen.getByText('Finished')).toBeInTheDocument()
   })
+
+  it('shows Reading pill on audiobook card layout', () => {
+    render(
+      <MemoryRouter>
+        <BookCard
+          book={makeBook({
+            format: 'audiobook',
+            id: 'audio-reading',
+            status: 'reading',
+            progress: 33,
+          })}
+        />
+      </MemoryRouter>
+    )
+    expect(screen.getByText('Reading')).toBeInTheDocument()
+  })
+
+  it('shows Finished pill on audiobook card layout', () => {
+    render(
+      <MemoryRouter>
+        <BookCard
+          book={makeBook({
+            format: 'audiobook',
+            id: 'audio-done',
+            status: 'finished',
+            progress: 100,
+          })}
+        />
+      </MemoryRouter>
+    )
+    expect(screen.getByText('Finished')).toBeInTheDocument()
+  })
+
+  it('does not show Want to Read on unread audiobook card', () => {
+    render(
+      <MemoryRouter>
+        <BookCard book={makeBook({ format: 'audiobook', id: 'audio-unread', status: 'unread' })} />
+      </MemoryRouter>
+    )
+    expect(screen.queryByText('Want to Read')).not.toBeInTheDocument()
+  })
 })

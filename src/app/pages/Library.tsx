@@ -79,6 +79,16 @@ import type { Book } from '@/data/types'
 import { cn } from '@/app/components/ui/utils'
 import { useOnlineStatus } from '@/app/hooks/useOnlineStatus'
 import { useKeyboardShortcuts } from '@/app/hooks/useKeyboardShortcuts'
+import {
+  LIBRARY_FORMAT_CLEARED_KEY,
+  LIBRARY_FORMAT_CLEARED_VALUE,
+  chooseFirstEmptyFormatDefault,
+  chooseHandledEmptyFormatResync,
+  isAudiobookOnlyFormatFilter,
+  isEbookTabFormatFilter,
+  libraryHasAudiobooks,
+  libraryHasEbooks,
+} from '@/lib/libraryMediaFormatDefault'
 
 export function Library() {
   const isOnline = useOnlineStatus()
@@ -397,16 +407,28 @@ export function Library() {
   // empty (all books removed).
   const initialMediaFormatDefaultAppliedRef = useRef(false)
   const prevFilterFormatRef = useRef(filters.format)
+  const prevHadEbooksRef = useRef<boolean | null>(null)
+  const prevHadAudiobooksRef = useRef<boolean | null>(null)
+
   useEffect(() => {
     const format = filters.format
     const isEmpty = !format || format.length === 0
+    const hasAudiobooks = libraryHasAudiobooks(books)
+    const hasEbooks = libraryHasEbooks(books)
+
+    const syncInventoryModalities = () => {
+      prevHadEbooksRef.current = hasEbooks
+      prevHadAudiobooksRef.current = hasAudiobooks
+    }
 
     // Library emptied — reset both gates so a fresh default fires when books reappear.
     if (books.length === 0) {
       initialMediaFormatDefaultAppliedRef.current = false
       prevFilterFormatRef.current = format
+      prevHadEbooksRef.current = null
+      prevHadAudiobooksRef.current = null
       try {
-        sessionStorage.removeItem('libraryFormatCleared')
+        sessionStorage.removeItem(LIBRARY_FORMAT_CLEARED_KEY)
       } catch {
         // silent-catch-ok: sessionStorage may be unavailable in locked-down contexts
       }
@@ -416,13 +438,45 @@ export function Library() {
     // User explicitly cleared the format chip earlier in this session — do not re-apply.
     let formatCleared = false
     try {
-      formatCleared = sessionStorage.getItem('libraryFormatCleared') === '1'
+      formatCleared =
+        sessionStorage.getItem(LIBRARY_FORMAT_CLEARED_KEY) === LIBRARY_FORMAT_CLEARED_VALUE
     } catch {
       // silent-catch-ok
     }
     if (formatCleared) {
       prevFilterFormatRef.current = format
+      syncInventoryModalities()
       return
+    }
+
+    // Widen narrow tab filter when the opposite modality appears (import / sync).
+    if (
+      prevHadEbooksRef.current !== null &&
+      prevHadAudiobooksRef.current !== null &&
+      !isEmpty &&
+      hasAudiobooks &&
+      hasEbooks
+    ) {
+      if (
+        isAudiobookOnlyFormatFilter(format) &&
+        !prevHadEbooksRef.current &&
+        hasEbooks
+      ) {
+        setFilter('format', undefined)
+        prevFilterFormatRef.current = format
+        syncInventoryModalities()
+        return
+      }
+      if (
+        isEbookTabFormatFilter(format) &&
+        !prevHadAudiobooksRef.current &&
+        hasAudiobooks
+      ) {
+        setFilter('format', undefined)
+        prevFilterFormatRef.current = format
+        syncInventoryModalities()
+        return
+      }
     }
 
     const prevFormat = prevFilterFormatRef.current
@@ -431,37 +485,49 @@ export function Library() {
     // User cleared the format chip (was filtered, now empty) — not the mixed-library initial state.
     if (isEmpty && prevWasNonEmpty) {
       try {
-        sessionStorage.setItem('libraryFormatCleared', '1')
+        sessionStorage.setItem(LIBRARY_FORMAT_CLEARED_KEY, LIBRARY_FORMAT_CLEARED_VALUE)
       } catch {
         // silent-catch-ok
       }
       prevFilterFormatRef.current = format
+      syncInventoryModalities()
       return
     }
 
     if (!isEmpty) {
+      initialMediaFormatDefaultAppliedRef.current = true
       prevFilterFormatRef.current = format
+      syncInventoryModalities()
       return
     }
 
-    // Still empty after initial handling (e.g. mixed library): do not treat as user clear.
+    // Still empty after initial handling — mixed stays unset; single-modality inventory can resync.
     if (initialMediaFormatDefaultAppliedRef.current) {
+      const resync = chooseHandledEmptyFormatResync(hasAudiobooks, hasEbooks)
+      if (resync === 'stay_unset' || resync === null) {
+        prevFilterFormatRef.current = format
+        syncInventoryModalities()
+        return
+      }
+      if (resync === 'audiobook') {
+        setFilter('format', ['audiobook'])
+      } else if (resync === 'ebooks') {
+        setFilter('format', ['epub', 'pdf'])
+      }
       prevFilterFormatRef.current = format
+      syncInventoryModalities()
       return
     }
 
-    const hasAudiobooks = books.some(b => b.format === 'audiobook')
-    const hasEbooks = books.some(b => b.format === 'epub' || b.format === 'pdf')
-
-    if (hasAudiobooks && hasEbooks) {
-      // Leave format unset so user reaches true "all formats" mode.
-    } else if (hasAudiobooks) {
+    const choice = chooseFirstEmptyFormatDefault(hasAudiobooks, hasEbooks)
+    if (choice === 'audiobook') {
       setFilter('format', ['audiobook'])
-    } else if (hasEbooks) {
+    } else if (choice === 'ebooks') {
       setFilter('format', ['epub', 'pdf'])
     }
-
     initialMediaFormatDefaultAppliedRef.current = true
+    prevFilterFormatRef.current = format
+    syncInventoryModalities()
   }, [books.length, filters.format, setFilter, books])
 
   // Yearly goal celebration — fires when a book is marked finished (E86-S05)
