@@ -166,11 +166,14 @@ export function BookDetailHero({
     if (typeof navigator.share === 'function') {
       try {
         await navigator.share({ title: book.title, url })
-      } catch {
-        // User cancelled share dialog — not an error
+      } catch (err) {
+        // User cancelled native share dialog — not an error
+        if (err instanceof DOMException && err.name === 'AbortError') return
+        // Re-throw unexpected errors (network failures, etc.)
+        throw err
       }
     } else {
-      await navigator.clipboard.writeText(url)
+      await navigator.clipboard?.writeText(url)
     }
   }, [book.id, book.title])
 
