@@ -968,7 +968,7 @@ export function Library() {
           ) : (
             <>
               <LibraryMediaHero books={modeBooksForMedia} modeLabel={activeModeLabel} />
-              <LibraryMediaShelfColumn />
+              <LibraryMediaShelfColumn onEdit={setEditingBook} />
             </>
           )}
 

@@ -39,6 +39,8 @@ vi.mock('@/app/hooks/useBookCoverUrl', () => ({
   useBookCoverUrl: () => null,
 }))
 
+const noopEdit = vi.fn()
+
 describe('LibraryMediaShelfColumn', () => {
   beforeEach(() => {
     store.books.length = 0
@@ -81,7 +83,7 @@ describe('LibraryMediaShelfColumn', () => {
   it('renders required audiobook section labels when shelves have content', () => {
     render(
       <MemoryRouter>
-        <LibraryMediaShelfColumn />
+        <LibraryMediaShelfColumn onEdit={noopEdit} />
       </MemoryRouter>
     )
 
@@ -115,7 +117,7 @@ describe('LibraryMediaShelfColumn', () => {
 
     render(
       <MemoryRouter>
-        <LibraryMediaShelfColumn />
+        <LibraryMediaShelfColumn onEdit={noopEdit} />
       </MemoryRouter>
     )
 
@@ -126,7 +128,7 @@ describe('LibraryMediaShelfColumn', () => {
   it('renders BookTile for Continue shelf with denseContinue variant', () => {
     render(
       <MemoryRouter>
-        <LibraryMediaShelfColumn />
+        <LibraryMediaShelfColumn onEdit={noopEdit} />
       </MemoryRouter>
     )
 
@@ -141,7 +143,7 @@ describe('LibraryMediaShelfColumn', () => {
   it('renders BookTile for Recently Added shelf with small variant', () => {
     render(
       <MemoryRouter>
-        <LibraryMediaShelfColumn />
+        <LibraryMediaShelfColumn onEdit={noopEdit} />
       </MemoryRouter>
     )
 
@@ -156,7 +158,7 @@ describe('LibraryMediaShelfColumn', () => {
   it('applies muted tone to Listen Again shelf cards', () => {
     render(
       <MemoryRouter>
-        <LibraryMediaShelfColumn />
+        <LibraryMediaShelfColumn onEdit={noopEdit} />
       </MemoryRouter>
     )
     const again = screen.getByTestId('recent-book-card-audio-finished')

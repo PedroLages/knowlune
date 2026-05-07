@@ -18,6 +18,10 @@ function isInProgress(book: Book): boolean {
   return book.progress > 0 && book.progress < 100 && book.status !== 'finished'
 }
 
+function isEffectivelyFinished(book: Book): boolean {
+  return book.status === 'finished' || book.progress >= 100
+}
+
 function pickHeroBook(books: Book[]): Book | null {
   const inProgress = books
     .filter(b => !!b.lastOpenedAt && isInProgress(b))
@@ -56,9 +60,13 @@ export function LibraryMediaHero({
     ? isAudio
       ? 'Continue listening'
       : 'Continue reading'
-    : modeLabel === 'Books'
-      ? 'Explore book'
-      : `Explore ${modeLabel.toLowerCase()}`
+    : isEffectivelyFinished(heroBook)
+      ? isAudio
+        ? 'Listen again'
+        : 'Read again'
+      : isAudio
+        ? 'Continue listening'
+        : 'Continue reading'
 
   const FallbackIcon = isAudio ? Headphones : BookOpen
 

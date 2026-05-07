@@ -28,7 +28,20 @@ export function tabSeedsBase() {
       chapters: [],
       source: { type: 'local' as const, opfsPath: '/test2' },
       progress: 45,
+      lastOpenedAt: FIXED_DATE,
       createdAt: FIXED_DATE,
+    },
+    {
+      id: 'tab-test-hero-unread',
+      title: 'Hero Unread Ebook',
+      author: 'Seed Author',
+      format: 'epub',
+      status: 'unread' as const,
+      tags: [],
+      chapters: [],
+      source: { type: 'local' as const, opfsPath: '/test-hero' },
+      progress: 0,
+      createdAt: '2025-06-01T12:00:00.000Z',
     },
   ]
 }

@@ -22,6 +22,7 @@ import { LIBRARY_SHELF_CARD_WIDTH_CLASS } from '@/app/components/library/shelfCa
 import { useBookCoverUrl } from '@/app/hooks/useBookCoverUrl'
 import { LibraryRail } from '@/app/components/library/rails/LibraryRail'
 import { BookTile } from '@/app/components/library/BookTile'
+import { BookContextMenu } from '@/app/components/library/BookContextMenu'
 
 type Mode = 'audiobooks' | 'ebooks' | 'all'
 
@@ -87,7 +88,7 @@ function SeriesTile({ group }: { group: RecentSeriesGroup }) {
   )
 }
 
-export function LibraryMediaShelfColumn() {
+export function LibraryMediaShelfColumn({ onEdit }: { onEdit: (book: Book) => void }) {
   const books = useBookStore(s => s.books)
   const filters = useBookStore(s => s.filters)
 
@@ -118,7 +119,9 @@ export function LibraryMediaShelfColumn() {
             data-testid="media-shelf-continue-listening"
           >
             {getContinueListeningShelf(abBooks).map(book => (
-              <BookTile key={book.id} book={book} variant="denseContinue" showProgress />
+              <BookContextMenu key={book.id} book={book} onEdit={() => onEdit(book)}>
+                <BookTile book={book} variant="denseContinue" showProgress />
+              </BookContextMenu>
             ))}
           </LibraryRail>
         )}
@@ -131,7 +134,9 @@ export function LibraryMediaShelfColumn() {
             data-testid="media-shelf-continue-reading"
           >
             {getContinueReadingShelf(ebBooks).map(book => (
-              <BookTile key={book.id} book={book} variant="denseContinue" showProgress />
+              <BookContextMenu key={book.id} book={book} onEdit={() => onEdit(book)}>
+                <BookTile book={book} variant="denseContinue" showProgress />
+              </BookContextMenu>
             ))}
           </LibraryRail>
         )}
@@ -143,7 +148,9 @@ export function LibraryMediaShelfColumn() {
             data-testid="media-shelf-recently-added"
           >
             {[...abBooks, ...ebBooks].map(book => (
-              <BookTile key={book.id} book={book} variant="small" />
+              <BookContextMenu key={book.id} book={book} onEdit={() => onEdit(book)}>
+                <BookTile book={book} variant="small" />
+              </BookContextMenu>
             ))}
           </LibraryRail>
         )}
@@ -179,7 +186,9 @@ export function LibraryMediaShelfColumn() {
               ...getAudiobookDiscoverShelf(abBooks),
               ...getEbookDiscoverShelf(ebBooks),
             ].map(book => (
-              <BookTile key={book.id} book={book} variant="small" />
+              <BookContextMenu key={book.id} book={book} onEdit={() => onEdit(book)}>
+                <BookTile book={book} variant="small" />
+              </BookContextMenu>
             ))}
           </LibraryRail>
         )}
@@ -197,7 +206,9 @@ export function LibraryMediaShelfColumn() {
               ...getAudiobookListenAgainShelf(abBooks),
               ...getEbookReadAgainShelf(ebBooks),
             ].map(book => (
-              <RecentBookCard key={book.id} book={book} tone="muted" />
+              <BookContextMenu key={book.id} book={book} onEdit={() => onEdit(book)}>
+                <RecentBookCard book={book} tone="muted" />
+              </BookContextMenu>
             ))}
           </LibraryMediaShelfRow>
         )}
@@ -234,7 +245,9 @@ export function LibraryMediaShelfColumn() {
         data-testid="media-shelf-continue"
       >
         {shelves.continue.map(book => (
-          <BookTile key={book.id} book={book} variant="denseContinue" showProgress />
+          <BookContextMenu key={book.id} book={book} onEdit={() => onEdit(book)}>
+            <BookTile book={book} variant="denseContinue" showProgress />
+          </BookContextMenu>
         ))}
       </LibraryRail>
 
@@ -245,7 +258,9 @@ export function LibraryMediaShelfColumn() {
         data-testid="media-shelf-recently-added"
       >
         {shelves.recentlyAdded.map(book => (
-          <BookTile key={book.id} book={book} variant="small" />
+          <BookContextMenu key={book.id} book={book} onEdit={() => onEdit(book)}>
+            <BookTile book={book} variant="small" />
+          </BookContextMenu>
         ))}
       </LibraryRail>
 
@@ -267,7 +282,9 @@ export function LibraryMediaShelfColumn() {
         data-testid="media-shelf-discover"
       >
         {shelves.discover.map(book => (
-          <BookTile key={book.id} book={book} variant="small" />
+          <BookContextMenu key={book.id} book={book} onEdit={() => onEdit(book)}>
+            <BookTile book={book} variant="small" />
+          </BookContextMenu>
         ))}
       </LibraryRail>
 
@@ -278,7 +295,9 @@ export function LibraryMediaShelfColumn() {
         data-testid="media-shelf-again"
       >
         {shelves.again.map(book => (
-          <RecentBookCard key={book.id} book={book} tone="muted" />
+          <BookContextMenu key={book.id} book={book} onEdit={() => onEdit(book)}>
+            <RecentBookCard book={book} tone="muted" />
+          </BookContextMenu>
         ))}
       </LibraryMediaShelfRow>
     </div>

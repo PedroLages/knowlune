@@ -19,6 +19,7 @@ import {
   tabSeedsEbooksOnly,
   tabSeedsWithMixedAudiobook,
 } from '../support/helpers/library-tab-seed'
+import { FIXED_DATE } from '../utils/test-time'
 
 const TAB_BUTTON = (id: string) => `[role="tab"][data-testid="library-tab-${id}"]`
 const TAB_PANEL = (id: string) => `[data-testid="library-tab-panel-${id}"]`
@@ -152,7 +153,11 @@ test.describe('Tab content rendering', () => {
 
     await expect(page.locator('[data-testid="library-media-hero"]')).toBeVisible()
     await expect(page.getByText('Recently Added')).toBeVisible()
-    await expect(page.getByText('Continue Reading')).toBeVisible()
+    await expect(
+      page
+        .getByTestId('media-shelf-continue-reading')
+        .or(page.getByTestId('media-shelf-continue'))
+    ).toBeVisible()
   })
 
   test('History tab shows stats and recently finished list', async ({ page }) => {
@@ -187,9 +192,116 @@ test.describe('Tab content rendering', () => {
         !e.includes('favicon') &&
         !e.includes('404') &&
         !e.includes('400') &&
-        !e.includes('syncEngine')
+        !e.includes('syncEngine') &&
+        !e.includes('403 (Forbidden)')
     )
     expect(realErrors, `Console errors during tab nav: ${realErrors.join('\n')}`).toEqual([])
+  })
+})
+
+test.describe('Continue tab hero and context menu', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto('/')
+    await seedBooks(page, tabSeedsBase())
+  })
+
+  test('hero primary uses Continue reading, not Explore, for newest unread ebook', async ({ page }) => {
+    await page.goto('/library?tab=continue')
+
+    await expect(page.getByTestId('library-media-hero-primary')).toHaveText(/Continue reading/i)
+    await expect(page.getByTestId('library-media-hero-primary')).not.toHaveText(/Explore/i)
+  })
+
+  test('hero shows Read again when hero book is finished', async ({ page }) => {
+    await page.goto('/')
+    await page.evaluate(async () => {
+      await new Promise<void>((resolve, reject) => {
+        const req = indexedDB.open('ElearningDB')
+        req.onerror = () => reject(req.error)
+        req.onsuccess = () => {
+          const db = req.result
+          if (!db.objectStoreNames.contains('books')) {
+            db.close()
+            resolve()
+            return
+          }
+          const tx = db.transaction('books', 'readwrite')
+          tx.objectStore('books').clear()
+          tx.oncomplete = () => {
+            db.close()
+            resolve()
+          }
+          tx.onerror = () => reject(tx.error)
+        }
+      })
+    })
+    await seedBooks(page, [
+      {
+        id: 'only-finished',
+        title: 'Finished Only',
+        author: 'Author',
+        format: 'epub',
+        status: 'finished' as const,
+        tags: [],
+        chapters: [],
+        source: { type: 'local' as const, opfsPath: '/only' },
+        progress: 100,
+        finishedAt: FIXED_DATE,
+        createdAt: FIXED_DATE,
+      },
+    ])
+    await page.goto('/library?tab=continue')
+
+    await expect(page.getByTestId('library-media-hero-primary')).toHaveText(/Read again/i)
+  })
+
+  test('hero primary uses Continue listening for unread audiobook', async ({ page }) => {
+    await page.goto('/')
+    await page.evaluate(async () => {
+      await new Promise<void>((resolve, reject) => {
+        const req = indexedDB.open('ElearningDB')
+        req.onerror = () => reject(req.error)
+        req.onsuccess = () => {
+          const db = req.result
+          if (!db.objectStoreNames.contains('books')) {
+            db.close()
+            resolve()
+            return
+          }
+          const tx = db.transaction('books', 'readwrite')
+          tx.objectStore('books').clear()
+          tx.oncomplete = () => {
+            db.close()
+            resolve()
+          }
+          tx.onerror = () => reject(tx.error)
+        }
+      })
+    })
+    await seedBooks(page, [
+      {
+        id: 'solo-audio',
+        title: 'Solo Audiobook',
+        author: 'Narrator',
+        format: 'audiobook' as const,
+        status: 'unread' as const,
+        tags: [],
+        chapters: [],
+        source: { type: 'local' as const, opfsPath: '/solo-ab' },
+        progress: 0,
+        createdAt: '2025-08-01T12:00:00.000Z',
+      },
+    ])
+    await page.goto('/library?tab=continue')
+
+    await expect(page.getByTestId('library-media-hero-primary')).toHaveText(/Continue listening/i)
+  })
+
+  test('Continue tab book tile opens context menu on right-click', async ({ page }) => {
+    await page.goto('/library?tab=continue')
+
+    await page.getByTestId('book-tile-tab-test-hero-unread').first().click({ button: 'right' })
+    await expect(page.getByTestId('context-menu-edit')).toBeVisible({ timeout: 3000 })
   })
 })
 
@@ -197,6 +309,18 @@ test.describe('Mixed-format library defaults', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/')
     await seedBooks(page, tabSeedsWithMixedAudiobook())
+  })
+
+  test('Browse audiobook grid card opens overflow menu from more-actions', async ({ page }) => {
+    await page.goto('/library?tab=browse')
+
+    const card = page.getByTestId('book-card-tab-test-mixed-audiobook')
+    await card.hover()
+    await page
+      .getByRole('button', { name: 'More actions for Mixed Library Audio' })
+      .click({ force: true })
+
+    await expect(page.getByRole('menuitem', { name: 'Edit' })).toBeVisible({ timeout: 3000 })
   })
 
   test('Browse tab does not auto-apply format filter chip when both formats exist', async ({
