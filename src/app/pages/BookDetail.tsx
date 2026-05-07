@@ -14,7 +14,7 @@
  */
 
 import { useMemo, useEffect, useState } from 'react'
-import { useParams, useNavigate } from 'react-router'
+import { useParams, useNavigate, useLocation } from 'react-router'
 import { toast } from 'sonner'
 import { Skeleton } from '@/app/components/ui/skeleton'
 import { useBookStore } from '@/stores/useBookStore'
@@ -53,6 +53,8 @@ function DetailSkeleton() {
 export function BookDetail() {
   const { bookId } = useParams<{ bookId: string }>()
   const navigate = useNavigate()
+  const location = useLocation()
+  const returnTab = (location.state as { returnTab?: string } | null)?.returnTab ?? 'continue'
   const books = useBookStore(s => s.books)
   const isLoaded = useBookStore(s => s.isLoaded)
   const loadBooks = useBookStore(s => s.loadBooks)
@@ -105,7 +107,7 @@ export function BookDetail() {
 
   return (
     <div className="mx-auto max-w-5xl px-4 sm:px-6 py-6">
-      <BookDetailHero book={book} returnTab="continue" />
+      <BookDetailHero book={book} returnTab={returnTab} />
       <div className="mt-10">
         <SimilarBooksShelf similarBooks={similarBooks} />
       </div>

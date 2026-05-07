@@ -169,11 +169,17 @@ export function BookDetailHero({
       } catch (err) {
         // User cancelled native share dialog — not an error
         if (err instanceof DOMException && err.name === 'AbortError') return
-        // Re-throw unexpected errors (network failures, etc.)
-        throw err
+        // Log and report unexpected errors instead of throwing (avoids unhandled rejection)
+        console.error('Share failed:', err)
+        toast.error('Failed to share this book')
       }
     } else {
-      await navigator.clipboard?.writeText(url)
+      try {
+        await navigator.clipboard?.writeText(url)
+        toast.info('Book URL copied to clipboard')
+      } catch {
+        toast.info(`Book URL: ${url}`)
+      }
     }
   }, [book.id, book.title])
 

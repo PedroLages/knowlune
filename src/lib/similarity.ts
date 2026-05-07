@@ -28,7 +28,7 @@ const STOP_WORDS = new Set([
   'shall', 'can', 'need', 'dare', 'ought', 'used',
   'it', 'its', 'that', 'those', 'this', 'these', 'i', 'you', 'he', 'she',
   'we', 'they', 'me', 'him', 'her', 'us', 'them', 'my', 'your', 'his',
-  'my', 'our', 'their', 'mine', 'yours', 'hers', 'ours', 'theirs',
+  'our', 'their', 'mine', 'yours', 'hers', 'ours', 'theirs',
   'not', 'no', 'nor', 'neither', 'never', 'none', 'nothing',
   'so', 'very', 'too', 'quite', 'rather', 'some', 'any', 'each', 'every',
   'all', 'both', 'few', 'more', 'most', 'other', 'such', 'only', 'own',
