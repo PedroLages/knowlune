@@ -194,8 +194,9 @@ export function findSimilarBooks(hero: Book, candidates: Book[]): SimilarBook[] 
       // Same work, different format — prefer the edition matching hero's format
       const existing = results[existingIdx]
       if (book.format === hero.format) {
-        // Remove old entry, insert new one
+        // Remove old entry, insert new one — also clean up old entry's linkedBookId
         seenIds.delete(existing.book.id)
+        if (existing.book.linkedBookId) seenIds.delete(existing.book.linkedBookId)
         results[existingIdx] = { book, tier, score }
         seenIds.add(book.id)
         if (book.linkedBookId) seenIds.add(book.linkedBookId)

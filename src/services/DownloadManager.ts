@@ -32,6 +32,7 @@ export interface DownloadRecord {
 
 class DownloadManager {
   private activeController: AbortController | null = null
+  private retryTimer: ReturnType<typeof setTimeout> | null = null
   private initialized = false
 
   /** Initialize on app mount — reconcile orphaned state, hydrate store. */
@@ -94,9 +95,11 @@ class DownloadManager {
     const existing = store.downloads.get(book.id)
 
     if (existing?.status === 'downloaded') return
+    // Explicit guard: never start a second download for the same book
+    if (existing?.status === 'downloading' || existing?.status === 'retrying') return
 
     const hasActive = store.hasActiveDownload()
-    if (hasActive && existing?.status !== 'downloading') {
+    if (hasActive) {
       store.setDownloadState(book.id, { status: 'pending', progress: 0, totalSize: 0, retryCount: 0 })
       return
     }
@@ -109,9 +112,13 @@ class DownloadManager {
   cancelDownload(bookId: string): void {
     const store = useDownloadStore.getState()
     const rec = store.downloads.get(bookId)
-    if (rec?.status === 'downloading') {
+    if (rec?.status === 'downloading' || rec?.status === 'retrying') {
       this.activeController?.abort()
       this.activeController = null
+      if (this.retryTimer) {
+        clearTimeout(this.retryTimer)
+        this.retryTimer = null
+      }
       store.setDownloadState(bookId, { status: 'paused', error: 'Download cancelled' })
     }
   }
@@ -190,52 +197,35 @@ class DownloadManager {
   private async _performDownload(book: Book): Promise<void> {
     const store = useDownloadStore.getState()
     const bookId = book.id
-    this.activeController = new AbortController()
 
-    const existingRec = store.downloads.get(bookId)
-    const checkpoint = existingRec?.checkpoint
+    // Scope AbortController locally per call frame — avoids cross-retry interference
+    const controller = new AbortController()
+    this.activeController = controller
 
     try {
       const url = await this.resolveDownloadUrl(book)
-      const headers: Record<string, string> = {}
 
-      if (checkpoint && checkpoint.byteOffset > 0) {
-        headers['Range'] = `bytes=${checkpoint.byteOffset}-`
-        if (checkpoint.etag) {
-          headers['If-Range'] = checkpoint.etag
-        }
-      }
-
-      const response = await fetch(url, {
-        headers,
-        signal: this.activeController.signal,
-      })
-
-      const contentLength = response.headers.get('Content-Length')
-      let totalSize = contentLength ? parseInt(contentLength, 10) : 0
-      const isRangeResponse = response.status === 206
-
-      if (isRangeResponse && checkpoint) {
-        totalSize = checkpoint.byteOffset + totalSize
-      }
-
-      if (!isRangeResponse && checkpoint && checkpoint.byteOffset > 0) {
-        checkpoint.byteOffset = 0
-      }
-
-      store.setDownloadState(bookId, {
-        status: 'downloading',
-        progress: checkpoint?.byteOffset ?? 0,
-        totalSize,
-        retryCount: 0,
-      })
+      // Always fetch from scratch (no Range resume — see fix from post-merge review).
+      // Resume requires keepExistingData + seek which is incompatible with pipeTo.
+      const response = await fetch(url, { signal: controller.signal })
 
       if (!response.body) {
         throw new Error('Response has no readable body')
       }
 
+      const contentLength = response.headers.get('Content-Length')
+      const totalSize = contentLength ? parseInt(contentLength, 10) : 0
+
+      store.setDownloadState(bookId, {
+        status: 'downloading',
+        progress: 0,
+        totalSize,
+        retryCount: 0,
+      })
+
       const ext = book.format === 'audiobook' ? '.m4b' : '.epub'
-      const finalPath = `${bookId}/book${ext}`
+      // Absolute OPFS path matching OpfsStorageService convention for reader compatibility
+      const opfsPath = `/knowlune/books/${bookId}/book${ext}`
 
       // Streaming write to OPFS via createWritable + pipeTo
       const root = await navigator.storage.getDirectory()
@@ -251,10 +241,10 @@ class DownloadManager {
         status: 'downloaded',
         progress: totalSize,
         totalSize,
-        opfsPath: finalPath,
+        opfsPath: opfsPath,
       })
 
-      await db.books.update(bookId, { offlinePath: finalPath })
+      await db.books.update(bookId, { offlinePath: opfsPath })
 
       // Trigger quota check after download completes
       checkStorageQuota()
@@ -267,7 +257,7 @@ class DownloadManager {
           status: 'downloaded',
           progress: totalSize,
           totalSize,
-          opfsPath: finalPath,
+          opfsPath: opfsPath,
           originalSource: book.source,
           retryCount: 0,
           createdAt: record.createdAt,
@@ -287,8 +277,21 @@ class DownloadManager {
           retryCount,
           error: (err as Error).message,
         })
+        // Abortable retry timer — cancelDownload clears this.retryTimer
         const delay = Math.pow(2, retryCount) * 1000
-        await new Promise(resolve => setTimeout(resolve, delay))
+        await new Promise<void>((resolve, reject) => {
+          this.retryTimer = setTimeout(() => {
+            this.retryTimer = null
+            resolve()
+          }, delay)
+          controller.signal.addEventListener('abort', () => {
+            if (this.retryTimer) {
+              clearTimeout(this.retryTimer)
+              this.retryTimer = null
+            }
+            reject(new DOMException('Aborted', 'AbortError'))
+          })
+        })
         await this._performDownload(book)
       } else {
         store.setDownloadState(bookId, {
@@ -298,7 +301,10 @@ class DownloadManager {
         })
       }
     } finally {
-      this.activeController = null
+      // Only clear if this frame's controller is still the active one
+      if (this.activeController === controller) {
+        this.activeController = null
+      }
     }
   }
 

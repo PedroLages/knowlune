@@ -190,7 +190,7 @@ export const BookCard = memo(function BookCard({ book }: BookCardProps) {
         </div>
         {isDownloaded && (
           <div
-            className="absolute top-2 left-2 rounded-full bg-success/80 backdrop-blur p-1 z-10"
+            className="absolute top-10 left-2 rounded-full bg-success/80 backdrop-blur p-1 z-10"
             aria-label="Available offline"
           >
             <DownloadCloud className="size-3 text-white" aria-hidden="true" />

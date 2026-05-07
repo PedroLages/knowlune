@@ -202,13 +202,16 @@ export function BookContextMenu({ book, children, onEdit }: BookContextMenuProps
   const handleDownloadAction = async () => {
     if (downloadStatus === 'downloaded') {
       await downloadManager.removeDownload(book.id)
+      toast.success('Download removed')
     } else if (downloadStatus === 'downloading' || downloadStatus === 'retrying') {
       downloadManager.cancelDownload(book.id)
+      toast.info('Download cancelled')
     } else {
       try {
-        downloadManager.startDownload(book)
+        await downloadManager.startDownload(book)
+        toast.success(`"${book.title}" queued for download`)
       } catch (err) {
-        // toast handled by downloadManager callers
+        toast.error((err as Error).message || 'Download failed')
       }
     }
   }
