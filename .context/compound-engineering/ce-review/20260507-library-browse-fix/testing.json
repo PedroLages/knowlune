@@ -1,0 +1,95 @@
+{
+  "reviewer": "testing",
+  "findings": [
+    {
+      "title": "E2E uses anchored full-string regex; misses combo format chip and couples to label shape",
+      "severity": "P2",
+      "file": "tests/e2e/library-tabs.spec.ts",
+      "line": 244,
+      "confidence": 0.82,
+      "autofix_class": "manual",
+      "owner": "review-fixer",
+      "requires_verification": false,
+      "pre_existing": false,
+      "why_it_matters": "Active format chip copy is built as `Format: ${filters.format.join(', ')}` in LibraryFilters. A single-format audiobook filter renders as exactly `Format: audiobook`, so the regex matches the regression this test targets. However, a buggy state that still auto-includes audiobook alongside another value (e.g. `audiobook` + `epub`) would render `Format: audiobook, epub`, which does not match `/^Format:\\s*audiobook$/i`; `toHaveCount(0)` would still pass, yielding a false negative. The assertion also breaks if copy changes (Oxford comma, localized labels, or separator) even when behavior is correct.",
+      "suggested_fix": "Assert absence of the format chip using a stable selector, e.g. `expect(page.getByTestId('library-active-filter-remove-format')).toHaveCount(0)`, optionally plus a store/fixture assertion that `filters.format` is unset after navigation. If keeping text, use a broader pattern (e.g. `/Format:.*audiobook/i`) only together with an assertion that no format chip exists at all.",
+      "evidence": [
+        "LibraryFilters builds chip label via join(', ') for multi-value filters",
+        "Anchored /^Format:\\s*audiobook$/i does not match 'Format: audiobook, epub'"
+      ]
+    },
+    {
+      "title": "New Library format-default and filtering logic lacks unit or component tests",
+      "severity": "P2",
+      "file": "src/app/pages/Library.tsx",
+      "line": 369,
+      "confidence": 0.78,
+      "autofix_class": "manual",
+      "owner": "human",
+      "requires_verification": false,
+      "pre_existing": false,
+      "why_it_matters": "The diff changes `modeBooksForMedia`, `activeModeLabel`, and a gated `useEffect` (sessionStorage `libraryFormatCleared`, `prevFilterFormatRef`, mixed vs single-modality libraries, empty-library reset). Only one E2E checks mixed-library no auto chip; branches for single-format auto-apply, user clearing the chip, library emptied reset, and 'Items' empty-state buttons are not covered by new tests. Regressions in those branches would slip past CI unless caught elsewhere.",
+      "suggested_fix": "Extract the format-default decision into a pure helper (inputs: books, current format, flags) and unit-test cases: mixed modalities leave format unset; audiobook-only applies ['audiobook']; ebook-only applies ['epub','pdf']; user clear persists session flag; empty books resets refs. Alternatively add focused RTL tests around Library with a stubbed book store."
+    },
+    {
+      "title": "BookCard status pill tests only exercise the EPUB card layout, not the audiobook layout",
+      "severity": "P3",
+      "file": "src/app/components/library/__tests__/BookCard.test.tsx",
+      "line": 103,
+      "confidence": 0.72,
+      "autofix_class": "manual",
+      "owner": "review-fixer",
+      "requires_verification": false,
+      "pre_existing": false,
+      "why_it_matters": "`makeBook` defaults to `format: 'epub'`. The audiobook branch uses different markup (`book.status !== 'unread'` before rendering BookStatusBadge). Reading/Finished tests never render the audiobook path, so spacing/regression in the square-cover status row is unproven.",
+      "suggested_fix": "Duplicate Reading/Finished (and unread absence) cases with `format: 'audiobook'` and ids distinct from defaults so queries stay unambiguous."
+    },
+    {
+      "title": "BookStatusBadge unread early-return has no direct unit test",
+      "severity": "P3",
+      "file": "src/app/components/library/BookStatusBadge.tsx",
+      "line": 24,
+      "confidence": 0.65,
+      "autofix_class": "safe_auto",
+      "owner": "review-fixer",
+      "requires_verification": false,
+      "pre_existing": false,
+      "why_it_matters": "The new guard is behavior on BookStatusBadge itself; BookCard tests cover only one consumer layout. BookListItem and any future callers could diverge.",
+      "suggested_fix": "Add BookStatusBadge.test.tsx: unread → container empty/null; reading/finished render expected labels (lightweight snapshot or text)."
+    }
+  ],
+  "residual_risks": [
+    {
+      "description": "Mixed-format E2E depends on seed data containing both an EPUB-like and an audiobook entry; if TEST_BOOKS or seed shape changes to a single modality, the test could pass while production mixed libraries regress.",
+      "severity": "LOW",
+      "confidence": 0.70
+    },
+    {
+      "description": "Timer- or store-order flakes: Library mount effect vs browse tab paint could theoretically race; the current assertion is only on eventual chip absence, which is usually stable but not exercised for flakiness in burn-in.",
+      "severity": "LOW",
+      "confidence": 0.55
+    }
+  ],
+  "testing_gaps": [
+    {
+      "description": "No automated test for single-modality library still auto-applying audiobook-only or ebook-only format on first mount.",
+      "file": "src/app/pages/Library.tsx",
+      "gap_type": "missing_test_case"
+    },
+    {
+      "description": "No test for user clearing an active format filter (non-empty → empty) setting sessionStorage and not re-applying default on remount within session.",
+      "file": "src/app/pages/Library.tsx",
+      "gap_type": "missing_test_case"
+    },
+    {
+      "description": "No test for empty mixed-format view: activeModeLabel 'Items', copy, and data-testid buttons library-format-empty-view-audiobooks / library-format-empty-view-ebooks.",
+      "file": "src/app/pages/Library.tsx",
+      "gap_type": "missing_test_case"
+    },
+    {
+      "description": "E2E mixed-format case does not assert positive outcome (e.g. both formats visible in browse) — only refutes exact audiobook-only chip string.",
+      "file": "tests/e2e/library-tabs.spec.ts",
+      "gap_type": "weak_assertion"
+    }
+  ]
+}

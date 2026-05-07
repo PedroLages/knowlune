@@ -1,0 +1,16 @@
+{
+  "reviewer": "project-standards",
+  "findings": [
+    {
+      "id": "ps-001",
+      "confidence": 0.82,
+      "file": "tests/e2e/library-tabs.spec.ts",
+      "violation": "New `MIXED_FORMAT_BOOKS` adds another hand-built book literal (spread of `TEST_BOOKS` plus inline audiobook row) instead of a shared factory helper.",
+      "rule_citation": ".claude/rules/testing/test-patterns.md § “NFR Violations to Avoid” / “Code Duplication” (lines 101–104): “❌ NEVER copy-paste seeding logic … ✅ USE factory functions from `tests/support/fixtures/factories/`”; and § “Test Data Management” (lines 108–118): use factories with overrides rather than ad-hoc literals."
+    }
+  ],
+  "residual_risks": [
+    "No `AGENTS.md` exists anywhere under the Knowlune repository (glob from repo root); this review applied `CLAUDE.md` and path-scoped rules under `.claude/rules/` for the touched file types only."
+  ],
+  "testing_gaps": []
+}

@@ -1,0 +1,14 @@
+Agent-native review — Library format filter / Browse chip behavior (branch worktree fix-library-browse-audiobook-filter)
+
+Scope reviewed: Library.tsx mount effect for media-first format default (mixed library leaves filters.format unset; single-modality still auto-applies audiobook vs epub+pdf), aligned derived state (activeFormatTab / activeModeLabel / modeBooksForMedia when format empty), BookStatusBadge returning null for unread (“Want to Read” pill hidden on cards/list rows), LibraryFormatModeTabs and LibraryFilters chip removal unchanged in API.
+
+Does this diff introduce NEW UI-only actions agents cannot mirror?
+No. The behavioral change is almost entirely automatic filtering logic on mount plus presentation (badge). Users were already changing format via LibraryFormatModeTabs clicks and clearing chips via LibraryFilters.removeChip → setFilter; Browse tab switching was already URL + localStorage (handleTabChange). Nothing new was added that is exclusively reachable by human UI gesture without an equivalent programmatic path: the same mutations remain useBookStore.setFilter / setFilters and search params, callable from any automation that can invoke the client store or deep-link (?tab=, ?view=).
+
+SessionStorage gate libraryFormatCleared: still the same pattern as before this work — it distinguishes “user cleared the format chip this session” vs “initial empty filter on mixed library”. That is not a new affordance; it is internal state. An external “agent” integrated only via API with no browser session would already have been unable to replicate sessionStorage semantics unless the app exposed the same policy through a server flag or store action. This diff does not widen that gap relative to format/Browse.
+
+In-app agent tooling: the codebase has human chat Q&A (ChatQA / useChatQA) for notes, not a tool registry that maps Library UI actions to agent function calls. There is no regression and no new orphan control from this Library change — the overall product still lacks action parity for Library (filters, tab, import, sync, etc.) versus a hypothetical embedded agent with tools, but that absence predates this fix.
+
+Cosmetic: unread status pill removed from card surfaces only; “Want to Read” still exists as a filter pill in LibraryFilters — agents were never given a dedicated tool for either; no new critical parity gap from hiding the card badge.
+
+Summary judgment: this branch does not add net-new UI-only capabilities; it corrects default filter application and label/list derivation. The broader “Knowlune Library has no agent tools / dynamic tool prompt for library state” observation remains true at the app level, unchanged in severity by this PR.

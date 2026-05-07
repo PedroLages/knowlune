@@ -1,0 +1,27 @@
+{
+  "reviewer": "correctness",
+  "findings": [
+    {
+      "title": "Non-tab format arrays still bypass filters.format membership for Continue hero list",
+      "severity": "P3",
+      "file": "src/app/pages/Library.tsx",
+      "line": 381,
+      "confidence": 0.72,
+      "autofix_class": "manual",
+      "owner": "review-fixer",
+      "requires_verification": true,
+      "pre_existing": true,
+      "suggested_fix": "FilterBook store applies format via filters.format.includes(b.format) (useBookStore ~278). For non-empty format that is neither exactly ['audiobook'] nor only epub/pdf values, modeBooksForMedia returns all sourceFiltered — same as LibraryMediaShelfColumn getActiveMode→'all' + getModeBooks, so Continue tab is internally consistent. Browse remains narrower when FilterSidebar builds a custom subset (e.g. ['audiobook','epub']). If parity with Browse is required, use sourceFiltered.filter(b => f.includes(b.format)) in the final branch (and consider aligning LibraryMediaShelfColumn similarly)."
+    }
+  ],
+  "residual_risks": [
+    "Transition isEmpty && prevWasNonEmpty uses prevFilterFormatRef, not the session flag alone. If filters.format ever goes from non-empty to empty without a real chip clear (programmatic reset or future persisted-filter hydration ordering), libraryFormatCleared could be set and suppress auto-default for the rest of the session — no evidence in current useBookStore that filters are rehydrated after first paint.",
+    "useEffect depends on the full books array reference; store churn that replaces books without changing length or format re-runs the effect but after initialMediaFormatDefaultAppliedRef is true only updates prevFilterFormatRef — no duplicate setFilter observed in trace; sessionStorage is not written on those paths.",
+    "getFilteredBooks in Library.tsx is still read via useBookStore.getState().getFilteredBooks() without subscribing to filters — pre-existing stale Browse grid risk on filter-only updates (outside this diff)."
+  ],
+  "testing_gaps": [
+    "E2E covers Browse tab absence of Format: audiobook chip for mixed seeding; no assertion that Continue tab shows Items / all-format hero when mixed.",
+    "No automated test for the sessionStorage + prevFilterFormatRef state machine (user clear vs mixed initial vs empty-library reset).",
+    "BookStatusBadge unread regression covered in unit tests; no integration test that list rows still layout correctly when badge returns null."
+  ]
+}

@@ -1,0 +1,110 @@
+{
+  "reviewer": "adversarial",
+  "findings": [
+    {
+      "title": "Mixed-library \"all formats\" sticks after catalog shrinks to audiobook-only",
+      "severity": "P2",
+      "file": "src/app/pages/Library.tsx",
+      "line": 448,
+      "why_it_matters": "The one-shot default runs only while `initialMediaFormatDefaultAppliedRef` is false. After a mixed library leaves `filters.format` empty and sets that ref true, a later transition to audiobook-only inventory (delete all ebooks, ABS sync drops ebooks, etc.) still hits the early `if (initialMediaFormatDefaultAppliedRef.current) return` path. Format stays unset even though auto-narrowing to `['audiobook']` would now match the single-modality heuristic, so Browse/Continue stay in permanent \"show all modalities\" semantics while the corpus is actually one modality.",
+      "autofix_class": "advisory",
+      "owner": "human",
+      "requires_verification": true,
+      "confidence": 0.82,
+      "evidence": [
+        "Trigger: `books` once had both audiobooks and ebooks; effect took the `hasAudiobooks && hasEbooks` branch, left format empty, set `initialMediaFormatDefaultAppliedRef` true (Library.tsx ~456–464).",
+        "Later trigger: every ebook disappears; deps `[books.length, …, books]` may fire again if length or identity changes.",
+        "Effect path: format still empty, not `formatCleared`, not `(isEmpty && prevWasNonEmpty)`; reaches `if (initialMediaFormatDefaultAppliedRef.current) { … return }` (~448–450) and exits before recomputing `hasAudiobooks` / `hasEbooks`.",
+        "Outcome: filter remains empty indefinitely while the library is audiobook-only—no second chance to apply the single-format default."
+      ],
+      "pre_existing": false,
+      "suggested_fix": "Optionally re-run the single-modality auto-pick when `books` content changes and `hasEbooks` flips from true→false (or audiobooks false→true) while format is still empty and `libraryFormatCleared` is unset, or key the gate on a content hash rather than a one-shot boolean."
+    },
+    {
+      "title": "StrictMode remount drops `initialMediaFormatDefaultAppliedRef` while store filter stays set",
+      "severity": "P3",
+      "file": "src/app/pages/Library.tsx",
+      "line": 398,
+      "why_it_matters": "In dev StrictMode the component remounts; `useRef(false)` resets but Zustand `filters.format` can already be `['audiobook']` from the first mount’s `setFilter`. The effect returns through the non-empty branch (~442–444) without ever setting `initialMediaFormatDefaultAppliedRef` true on the new instance. Most paths still behave, but any future logic that assumes \"ref true means default already applied\" while format is non-empty becomes wrong in dev only—masking bugs until production.",
+      "autofix_class": "advisory",
+      "owner": "human",
+      "requires_verification": false,
+      "confidence": 0.74,
+      "evidence": [
+        "First mount: single-format audiobook library, empty format → `setFilter('format', ['audiobook'])` and `initialMediaFormatDefaultAppliedRef.current = true` (~458–464).",
+        "StrictMode unmount/remount: new instance `initialMediaFormatDefaultAppliedRef` is false; `prevFilterFormatRef` re-inits from current `filters.format` (already `['audiobook']`).",
+        "Effect sees `!isEmpty`, updates `prevFilterFormatRef`, returns (~442–444); `initialMediaFormatDefaultAppliedRef` remains false for the lifetime of that mount.",
+        "Assumption violated: ref boolean is not equivalent to \"store already received the default\" after remount."
+      ],
+      "pre_existing": false,
+      "suggested_fix": "When taking the `!isEmpty` early exit, set `initialMediaFormatDefaultAppliedRef.current = true` if the current format matches what the default would have chosen, or derive gate from stored filter provenance instead of a mount-scoped ref."
+    },
+    {
+      "title": "First inventory snapshot pins format before later `loadBooks` reveals mixed modality",
+      "severity": "P2",
+      "file": "src/app/pages/Library.tsx",
+      "line": 453,
+      "why_it_matters": "`loadBooks` is async and may complete first with only ABS items (all audiobooks) then later hydrate local ebooks (or vice versa). The effect runs once with `hasAudiobooks && !hasEbooks`, applies `['audiobook']`, sets the one-shot ref true. When ebooks appear on a subsequent run, format is already non-empty so the effect bails (~442–444). User remains locked to audiobook filter despite a mixed corpus—inverse of \"mixed keeps empty\"; both are timing/order assumptions between `books` completeness and one-shot gate.",
+      "autofix_class": "advisory",
+      "owner": "human",
+      "requires_verification": true,
+      "confidence": 0.68,
+      "evidence": [
+        "Concurrent or staged `loadBooks` resolutions change `books` after first non-empty snapshot.",
+        "First effect pass: only audiobooks visible → `setFilter('format', ['audiobook'])` (~458–459) and `initialMediaFormatDefaultAppliedRef` true (~464).",
+        "Second pass: ebooks now in `books` but `filters.format` still `['audiobook']` → early return (~442–444).",
+        "No branch widens filter back toward \"all\" when modality balance changes unless the user clears manually."
+      ],
+      "pre_existing": false,
+      "suggested_fix": "Defer auto-pick until `loadBooks` reports settled/complete, or re-evaluate when `books` gains a new modality while current filter equals the prior single-modality default."
+    },
+    {
+      "title": "`sessionStorage` write failure loses \"cleared chip\" intent across navigations",
+      "severity": "P3",
+      "file": "src/app/pages/Library.tsx",
+      "line": 433,
+      "why_it_matters": "User clears from a non-empty format to empty; the code tries `sessionStorage.setItem('libraryFormatCleared','1')` inside try/catch. On `QuotaExceededError` or privacy-mode throw, the flag is absent. Same-tab remount or return visit in the same session may read `formatCleared` false and re-enter the default block, undoing the user’s explicit empty filter.",
+      "autofix_class": "advisory",
+      "owner": "human",
+      "requires_verification": false,
+      "confidence": 0.71,
+      "evidence": [
+        "User path: `isEmpty && prevWasNonEmpty` → `setItem` (~433–437); catch swallows failure.",
+        "Later navigation remounts Library; `getItem` returns null → `formatCleared` false (~419).",
+        "If `initialMediaFormatDefaultAppliedRef` is false on that mount (e.g. new instance) and format empty with books present, auto-default may run again (~453–464).",
+        "Assumption: successful persistence of user intent; storage can fail silently."
+      ],
+      "pre_existing": false,
+      "suggested_fix": "Mirror the flag in memory (module-level or store field) when `setItem` fails, or fall back to a non-sessionStorage user-intent signal."
+    },
+    {
+      "title": "`prevFilterFormatRef` first render can lag persist rehydration of `filters.format`",
+      "severity": "P3",
+      "file": "src/app/pages/Library.tsx",
+      "line": 399,
+      "why_it_matters": "`useRef(filters.format)` initializes once. If the first committed render sees a placeholder empty filter and persist middleware hydrates a non-empty `format` immediately after, the ref may still equal `undefined`/[] until the effect runs; combined with synchronous `books` already loaded, transient branches can treat an empty-filter state that was never user-intended. Usually the effect corrects via the `!isEmpty` branch, but any intermediate UI or duplicated effect invocation (StrictMode double invoke) expands the glitch window.",
+      "autofix_class": "advisory",
+      "owner": "human",
+      "requires_verification": true,
+      "confidence": 0.61,
+      "evidence": [
+        "`prevFilterFormatRef` only uses ctor arg; no sync update on hydration render.",
+        "`useBookStore(s => s.filters)` can change identity/value after middleware runs between paint and effect.",
+        "Effect compares `prevFormat`/`prevWasNonEmpty` (~428–439) before necessarily observing post-hydration `filters.format` on first paint.",
+        "`filters.format` in deps (~465) eventual consistency—ordering vs `books` first paint assumptions."
+      ],
+      "pre_existing": false,
+      "suggested_fix": "Seed `prevFilterFormatRef` from `getState().filters.format` inside the effect on first line, or init ref lazily via `useLayoutEffect`/store subscription post-rehydrate."
+    }
+  ],
+  "residual_risks": [
+    "Effect deps use `books.length` plus `books` identity; if the store mutates book records in-place without changing reference or length, modality transitions may never retrigger the gate.",
+    "Rapid successive `setFilter('format', …)` calls are batched by React, but interleaved updates from Audiobookshelf sync and Library may still reorder effect runs versus user input—ordering assumptions between external store writers and this effect remain unserialized."
+  ],
+  "testing_gaps": [
+    "RTL test: StrictMode wrapper + single-format auto-default asserting `initialMediaFormatDefaultAppliedRef` equivalence is unnecessary, but asserting no double `setFilter` and stable format across remount is missing.",
+    "Integration: library transitions mixed → audiobook-only with empty filter should justify expected format behavior (narrow vs stay-all).",
+    "Fault injection: `sessionStorage.setItem` throw during chip clear does not regress auto-default.",
+    "Staged load: two-phase `loadBooks` where Phase-1 implies single modality and Phase-2 introduces second modality."
+  ]
+}

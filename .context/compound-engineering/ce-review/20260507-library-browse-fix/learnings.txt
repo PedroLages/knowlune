@@ -1,0 +1,63 @@
+Institutional learnings — Library Browse, format filter, mixed inventory, audiobook chip, badges
+================================================================================================
+Search note: docs/solutions/ is not present in this worktree copy; queries used the main repo
+`/Volumes/SSD/Dev/Apps/Knowlune/docs/solutions/` as the canonical KB.
+`docs/solutions/patterns/critical-patterns.md` was not found in-repo (skipping always-on file).
+
+1) Library Browse E2E — default format chip vs mixed seeding
+   File: docs/solutions/best-practices/library-browse-e2e-format-filter-mixed-seeding-2026-05-07.md
+   Module: library | Severity: medium | problem_type: best_practice
+   - Browse uses a media-first default: active “audiobook” format chip until user clears it;
+     clear intent is persisted in sessionStorage (`libraryFormatCleared`).
+   - E2E that seeds mixed formats (local EPUB + ABS) and opens Browse can flake with “empty grid”
+     or missing tiles — often filtered out by the default chip, not a seed failure.
+   - Fix pattern: after `/library?tab=browse`, click remove control with test id
+     `library-active-filter-remove-format` (short timeout, catch if absent). Centralize in a
+     shared seed helper.
+   - UI: `LibraryFilters` exposes stable `data-testid` on format chip dismiss so tests avoid
+     brittle label/role text.
+
+2) Format chip re-applying after clear — product invariant
+   File: docs/solutions/ui-bugs/search-palette-library-ux-regressions-2026-05-03.md
+   Module: search / library | Severity: medium | problem_type: ui_bug
+   - Root issue: `useEffect` re-applied audiobook default whenever `filters.format` was empty;
+     ref-only gating fails across remounts.
+   - Resolution: combined gate — (a) ref once per mount, (b) `libraryFormatCleared` in
+     sessionStorage for user override across remounts, (c) reset ref + session flag when
+     `books.length === 0` so defaults can apply again when library repopulates.
+   - Related navigation invariant: use shared `getBookDestinationPath` from `src/lib/bookNavigation.ts`
+     for any book deep link (EPUB/audiobook → `/library/:id/read`), not ad-hoc paths in each surface.
+
+3) Library tabbed IA — URL/tab persistence primitives
+   File: docs/solutions/best-practices/library-page-tabbed-ia-refactor-patterns-2026-05-02.md
+   Module: library | problem_type: best_practice
+   - Tab state: URL param > localStorage > default; sync both ways; use a Set of valid tab strings.
+   - Pairs triggers/content with `data-testid` for E2E — relevant when Browse behavior is guarded
+     by routing and persisted UI state together.
+
+4) Browse BookCard format icon vs status badge (overlap / layout)
+   File: docs/solutions/ui-bugs/library-shelf-sizing-hover-consistency-2026-05-05.md
+   Module: library | Severity: medium
+   - Browse grid: format icon badge at `top-2 right-2` (`Headphones` / `BookOpen`); needs `z-10`
+     above finished overlays.
+   - On EPUB covers, status badge moved `top-2 right-2` → `top-2 left-2` to avoid collision with
+     the format icon (BookStatusBadge / “NEW” positioning should respect this stacking contract).
+   - Browse “Remote”/“Local” per-card labels were removed as redundant with source tabs.
+   - Invariant: format indicator visible without hover ≠ hover action icon — keep both roles.
+
+5) BookTile rails / composition (Browse-adjacent shelves)
+   File: docs/solutions/best-practices/library-carousels-unified-booktile-composable-rails-2026-05-05.md
+   - Named Tailwind groups (`group/rail`) prevent wrong hover targets when multiple rails nest.
+   - Shared sizing via shelf constants keeps Continue/Recent visually aligned with other shelves.
+
+Weak / tangential
+- Lesson badge numbering doc (lesson-badge-*): folder-local vs global indices in course sidebar —
+  not Library BookStatusBadge; only relevant if mistaken “badge” semantics recur elsewhere.
+
+Recommendations for this fix
+- When changing Browse filtering or chips: preserve sessionStorage override semantics from (2);
+  do not regress `libraryFormatCleared` handling.
+- Add or extend E2E using `library-active-filter-remove-format` when asserting mixed-format grids (1).
+- For card chrome: if touching BookStatusBadge or format chip layout, re-check EPUB top-left vs
+  format icon top-right overlap (4).
+- Prefer `getBookDestinationPath` for any navigation from search, palette, or tests that open books (2).

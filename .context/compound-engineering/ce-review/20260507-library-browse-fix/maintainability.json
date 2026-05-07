@@ -1,0 +1,119 @@
+{
+  "reviewer": "maintainability",
+  "findings": [
+    {
+      "id": "M1",
+      "severity": "P2",
+      "title": "Format-filter classification is duplicated across Library and LibraryFormatModeTabs",
+      "description": "The same decision tree (empty → all, single audiobook → audiobooks, epub+pdf only → ebooks, else → all) appears as `getActiveMode` in LibraryFormatModeTabs.tsx and again in `activeFormatTab` / `activeModeLabel` in Library.tsx. `modeBooksForMedia` repeats the format branch for filtering. Any change to what counts as “ebooks” or how combined filters behave must be edited in multiple places, with high drift risk.",
+      "location": "src/app/pages/Library.tsx:348–382; src/app/components/library/LibraryFormatModeTabs.tsx:11–16",
+      "evidence": [
+        "Library.tsx activeFormatTab / activeModeLabel / modeBooksForMedia mirror getActiveMode + filter branches",
+        "LibraryFormatModeTabs defines getActiveMode locally without export"
+      ],
+      "autofix_class": "refactor",
+      "owner": "human",
+      "confidence": 88,
+      "pre_existing": false,
+      "suggested_fix": "Export a single pure helper (e.g. `classifyLibraryFormatFilter(format): { tab, modeLabel, matchesBook }`) from a small `src/lib/libraryFormatFilter.ts` or colocate next to the store; have LibraryFormatModeTabs and Library.tsx import it. Optionally fold `modeBooksForMedia` filtering into the same helper output or a paired `filterBooksByFormatMode`."
+    },
+    {
+      "id": "M2",
+      "severity": "P3",
+      "title": "Source-scoped book list filtering is copy-pasted for counts vs hero shelf",
+      "description": "The `sourceFiltered` construction (`filters.source` narrowing ABS vs local) is duplicated between `modeBooksForMedia` and `LibraryFormatModeTabs` counts useMemo. Coupling is accidental, not domain-driven: both must stay in lockstep or counts and hero content diverge.",
+      "location": "src/app/pages/Library.tsx:365–370; src/app/components/library/LibraryFormatModeTabs.tsx:26–30",
+      "evidence": [
+        "identical ternary on filters.source and absServerId predicate"
+      ],
+      "autofix_class": "refactor",
+      "owner": "human",
+      "confidence": 82,
+      "pre_existing": false,
+      "suggested_fix": "Expose `selectBooksForLibrarySource(books, source)` from the book store or a tiny selector module and reuse in both places."
+    },
+    {
+      "id": "M3",
+      "severity": "P2",
+      "title": "Media-first default effect is a dense implicit state machine",
+      "description": "The effect chains `initialMediaFormatDefaultAppliedRef`, `prevFilterFormatRef`, and `libraryFormatCleared` sessionStorage with several early returns. The behavior is correct-by-comment but hard to verify without tracing transitions (empty library reset, session flag, user clear vs mixed initial empty). This raises the cost of safe changes for the next maintainer.",
+      "location": "src/app/pages/Library.tsx:389–465",
+      "evidence": [
+        "multiple early returns interleave sessionStorage IO and ref updates",
+        "prevWasNonEmpty vs isEmpty distinguishes user clear from mixed-library unset"
+      ],
+      "autofix_class": "advisory",
+      "owner": "human",
+      "confidence": 76,
+      "pre_existing": false,
+      "suggested_fix": "Extract named pure functions (e.g. `readFormatClearedFlag()`, `computeDefaultFormatMutation(books, format, gates)`) and/or a short state comment block enumerating transitions. Prefer colocated unit tests for the pure piece over growing the effect inline."
+    },
+    {
+      "id": "M4",
+      "severity": "P3",
+      "title": "`prevFilterFormatRef` name undersells its role in transition detection",
+      "description": "`prev` reads as “previous render” but the ref is really the last format filter value the effect has synchronized for edge detection (user narrowed then cleared vs never-set empty in mixed libraries). Intent is only clear after reading the block.",
+      "location": "src/app/pages/Library.tsx:399,428–448",
+      "evidence": [
+        "prevWasNonEmpty && isEmpty drives sessionStorage user-clear path"
+      ],
+      "autofix_class": "trivial",
+      "owner": "human",
+      "confidence": 70,
+      "pre_existing": false,
+      "suggested_fix": "Rename to e.g. lastSeenFormatForDefaultEffectRef or add a one-line comment at declaration describing clear-vs-initial-empty edge detection."
+    },
+    {
+      "id": "M5",
+      "severity": "P3",
+      "title": "Continue-tab empty state repeats `activeModeLabel === 'Items'` checks",
+      "description": "Four branches compare the same string literal for copy and CTA layout. A local boolean (`isItemsMode`) derived next to `activeModeLabel` would reduce repetition and make the JSX guard easier to scan.",
+      "location": "src/app/pages/Library.tsx:826–879",
+      "evidence": [
+        "activeModeLabel === 'Items' in headings, body, and conditional button groups"
+      ],
+      "autofix_class": "trivial",
+      "owner": "human",
+      "confidence": 78,
+      "pre_existing": false,
+      "suggested_fix": "const isItemsMode = activeModeLabel === 'Items' immediately after activeModeLabel useMemo; use isItemsMode in JSX."
+    },
+    {
+      "id": "M6",
+      "severity": "P3",
+      "title": "sessionStorage key/value for format cleared is a magic pair",
+      "description": "`libraryFormatCleared` and `'1'` are stringly-typed and only documented by surrounding logic. Typos or future second callers will not get compile-time help.",
+      "location": "src/app/pages/Library.tsx:409–434",
+      "evidence": [
+        "sessionStorage.setItem('libraryFormatCleared', '1')",
+        "getItem('libraryFormatCleared') === '1'"
+      ],
+      "autofix_class": "trivial",
+      "owner": "human",
+      "confidence": 72,
+      "pre_existing": false,
+      "suggested_fix": "Module-level `const LIBRARY_FORMAT_CLEARED_KEY = 'libraryFormatCleared' as const` and `const LIBRARY_FORMAT_CLEARED_VALUE = '1' as const` (or a 2-line comment + single export if other modules need the contract)."
+    }
+  ],
+  "residual_risks": [
+    {
+      "id": "R1",
+      "severity": "LOW",
+      "description": "Adding new `Book.format` values or non-standard filter combinations will require touching several duplicated branches until M1/M2 are consolidated; regressions may show up only in UI (counts vs grid vs hero mismatch)."
+    }
+  ],
+  "testing_gaps": [
+    {
+      "id": "TG1",
+      "severity": "P2",
+      "description": "No isolated tests visible for the auto-default effect’s transition matrix: mixed library (no setFilter), single-format auto-apply, user chip clear + sessionStorage persistence, library emptied ref/flag reset. Pure extraction in M3 would make this tractable.",
+      "file": "src/app/pages/Library.tsx (effect block)"
+    },
+    {
+      "id": "TG2",
+      "severity": "P3",
+      "description": "Items-mode empty state CTAs vs audiobook/ebook labels are UI-only; a regression test would lock the branching intended for mixed libraries.",
+      "file": "src/app/pages/Library.tsx (continue tab empty state)"
+    }
+  ]
+}
