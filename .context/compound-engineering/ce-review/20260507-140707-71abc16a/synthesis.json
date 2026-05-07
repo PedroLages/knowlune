@@ -1,0 +1,34 @@
+{
+  "runId": "20260507-140707-71abc16a",
+  "mode": "headless",
+  "scope": {
+    "base": "92341d3128667d057b3ab30d22881349356f4e54",
+    "branch": "feature/ce-2026-05-07-fix-ebook-library-visibility",
+    "files": [
+      ".context/compound-engineering/ce-runs/fix-ebook-library-visibility-2026-05-07.md",
+      "src/app/components/library/LibraryMediaHero.tsx",
+      "src/app/pages/Library.tsx",
+      "supabase/storage-setup.sql",
+      "tests/e2e/library-tabs.spec.ts",
+      "tests/support/helpers/library-tab-seed.ts"
+    ]
+  },
+  "intent": "Fix ebook library visibility by updating Library.tsx so that when both audiobooks and ebooks exist, the default view shows all formats (not just audiobooks). Changes include: fixing auto-filter to only fire for single-format libraries, updating activeModeLabel to return 'Books' for unset/mixed format, fixing modeBooksForMedia to return all books when format is unset, switching format comparisons to use activeFormatTab, and adding E2E tests for single-format auto-filter behavior.",
+  "reviewers": [
+    "correctness (always-on)",
+    "testing (always-on)",
+    "maintainability (always-on)",
+    "project-standards (always-on)",
+    "agent-native-reviewer (CE always-on)",
+    "learnings-researcher (CE always-on)",
+    "kieran-typescript (stack-specific conditional -- diff touches TypeScript component logic and test code)"
+  ],
+  "verdict": "Ready to merge",
+  "findings": [],
+  "appliedFixes": [],
+  "residualRisks": [],
+  "testingGaps": [],
+  "learnings": [],
+  "agentNativeGaps": [],
+  "preExisting": []
+}

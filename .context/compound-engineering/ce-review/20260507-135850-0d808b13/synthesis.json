@@ -1,0 +1,112 @@
+{
+  "runId": "20260507-135850-0d808b13",
+  "scope": {
+    "base": "92341d3128667d057b3ab30d22881349356f4e54",
+    "branch": "feature/ce-2026-05-07-fix-ebook-library-visibility",
+    "files": [
+      ".context/compound-engineering/ce-runs/fix-ebook-library-visibility-2026-05-07.md",
+      "src/app/components/library/LibraryMediaHero.tsx",
+      "src/app/pages/Library.tsx",
+      "supabase/storage-setup.sql",
+      "tests/e2e/library-tabs.spec.ts"
+    ]
+  },
+  "intent": "Fix Library.tsx upstream defaults so 'all' mode (mixed audiobook + ebook) is reachable. Three paths blocked it: activeModeLabel defaulted to audiobooks, modeBooksForMedia returned only audiobooks when format unset, empty-state switch-format logic used string comparisons instead of activeFormatTab enum.",
+  "mode": "headless",
+  "reviewers": ["correctness", "testing", "maintainability", "project-standards", "agent-native", "learnings-researcher", "adversarial", "kieran-typescript"],
+  "safeAutoFixes": 0,
+  "findings": [
+    {
+      "id": "F001",
+      "title": "Missing E2E regression tests for single-format auto-filter behavior",
+      "severity": "P2",
+      "file": "tests/e2e/library-tabs.spec.ts",
+      "line": 231,
+      "confidence": 0.8,
+      "autofixClass": "manual",
+      "owner": "downstream-resolver",
+      "requiresVerification": true,
+      "preExisting": false,
+      "suggestedFix": "Add two E2E tests: one seeding only audiobooks (verify auto-filter shows audiobooks tab), one seeding only ebooks (verify auto-filter shows ebooks tab). Follow existing `tabSeedsWithMixedAudiobook()` pattern with seed helpers from tests/utils/test-seeds.",
+      "whyItMatters": "The auto-filter effect is critical for single-format UX. Without regression tests, a future change to the effect could silently break single-format defaulting (e.g., showing all books in the Hero when only audiobooks exist).",
+      "evidence": [
+        "tests/e2e/library-tabs.spec.ts:191-231 only covers mixed-format library scenarios",
+        "chooseFirstEmptyFormatDefault() has unit tests but no E2E coverage for the full effect pipeline"
+      ]
+    },
+    {
+      "id": "F002",
+      "title": "Weak E2E assertion for Books badge — not targetted to specific element",
+      "severity": "P3",
+      "file": "tests/e2e/library-tabs.spec.ts",
+      "line": 212,
+      "confidence": 0.65,
+      "autofixClass": "gated_auto",
+      "owner": "downstream-resolver",
+      "requiresVerification": false,
+      "preExisting": false,
+      "suggestedFix": "Add a `data-testid` attribute (e.g., `data-testid=\"library-media-hero-badge\"`) to the badge span in LibraryMediaHero.tsx line 109, then update the assertion to `await expect(page.getByTestId('library-media-hero-badge')).toContainText('Books')`.",
+      "whyItMatters": "Current assertion `toContainText('Books')` on the hero container is loose — if 'Books' text appears elsewhere in the hero (title, description), the test passes spuriously.",
+      "evidence": [
+        "src/app/components/library/LibraryMediaHero.tsx:108-111 — the badge is a plain span without testid",
+        "The hero contains multiple text elements (title, author, description) where 'Books' could accidentally appear"
+      ]
+    },
+    {
+      "id": "F003",
+      "title": "Unrelated storage-setup.sql change adds scope creep",
+      "severity": "P3",
+      "file": "supabase/storage-setup.sql",
+      "line": 35,
+      "confidence": 0.85,
+      "autofixClass": "advisory",
+      "owner": "human",
+      "requiresVerification": false,
+      "preExisting": false,
+      "suggestedFix": "Remove the storage-setup.sql change from this PR and submit it separately, or document in the PR description that it is intentional adjacent cleanup.",
+      "whyItMatters": "The storage-setup.sql change (DELETE policy for learning-path-covers) is unrelated to the ebook library visibility fix. Combining concerns makes review harder and increases revert risk.",
+      "evidence": [
+        "git diff shows a supabase/storage-setup.sql hunk adding DELETE policy for learning-path-covers",
+        "The plan at docs/plans/2026-05-07-008-fix-ebook-library-visibility-plan.md scopes changes to Library.tsx only"
+      ]
+    },
+    {
+      "id": "F004",
+      "title": "Connect ABS button shows in 'all' mode for ebook-only library after clearing filter",
+      "severity": "P3",
+      "file": "src/app/pages/Library.tsx",
+      "line": 955,
+      "confidence": 0.65,
+      "autofixClass": "gated_auto",
+      "owner": "downstream-resolver",
+      "requiresVerification": false,
+      "preExisting": false,
+      "suggestedFix": "Refine the gate from `activeFormatTab !== 'ebooks'` to also check library inventory: `activeFormatTab !== 'ebooks' && !(activeFormatTab === 'all' && !libraryHasAudiobooks(books))`. Or accept as intentional (Connect ABS is not harmful even with ebooks only).",
+      "whyItMatters": "When a user has only ebooks and clears the format chip, the Connect ABS button appears despite no audiobooks existing. Old behavior (via activeModeLabel === 'Audiobooks') would not show it. Risk is low — connecting ABS does nothing bad — but it may confuse ebook-only users.",
+      "evidence": [
+        "Old code: `{activeModeLabel === 'Audiobooks' && (...Connect ABS...)` — only showed in audiobook mode",
+        "New code: `{activeFormatTab !== 'ebooks' && (...Connect ABS...)` — shows in 'all' mode too",
+        "When auto-filter is cleared on ebook-only library, activeFormatTab = 'all', no audiobooks exist"
+      ]
+    }
+  ],
+  "residualRisks": [
+    "The widening logic (lines 452-480) could race with a rapid addition-and-removal of the opposite modality during sync, but this is unlikely in practice",
+    "SessionStorage format-cleared flag persists across page loads — a user who cleared once never gets auto-filter defaults again until they clear storage"
+  ],
+  "testingGaps": [
+    "No E2E coverage for empty-state switch-format button text",
+    "No E2E coverage for single-format library defaulting (regression risk)",
+    "No E2E coverage for library with zero books (edge case: empty library should not crash)"
+  ],
+  "requirementsCompleteness": {
+    "planSource": "explicit",
+    "plan": "docs/plans/2026-05-07-008-fix-ebook-library-visibility-plan.md",
+    "R1": "met — auto-filter leaves format unset when both formats exist; modeBooksForMedia returns all books",
+    "R2": "met — single-format auto-filter still applies via chooseFirstEmptyFormatDefault",
+    "R3": "met — no changes to LibraryFormatModeTabs component",
+    "Unit1": "met — pre-existing via chooseFirstEmptyFormatDefault helper library (effect had no changes needed)",
+    "Unit2": "met — activeModeLabel defaults to 'Books'; modeBooksForMedia returns all books on unset; switch-format uses activeFormatTab"
+  },
+  "verdict": "Ready with fixes"
+}

@@ -1,0 +1,107 @@
+{
+  "run_id": "20260505-215206-50c854c1",
+  "mode": "headless",
+  "scope": "13 files changed (base: f4960c8b): BookTile.tsx, BookCard.tsx, LibraryMediaShelfColumn.tsx, SmartGroupedView.tsx, Library.tsx, BookTile.test.tsx, CourseJourneyNodeIndicator.tsx, CourseJourneyNodeIndicator.test.tsx, CourseOverview.tsx, sortImportedVideosForCurriculum.ts (new), sortImportedVideosForCurriculum.test.ts (new), 2 plan docs",
+  "intent": "Fix six library UX consistency issues: (1) BookTile sizing to match Discover cards (square, w-44 sm:w-48), (2) hover animation unification with BookCard, (3) hover overlay icons replacing text, (4) Browse grid 5->6 columns at xl, (5) remote badge removal + format icon on BookCard, (6) Daily Highlights repositioned to top. Also includes course overview timeline node sizing and curriculum video sort.",
+  "verdict": "Ready to merge",
+  "applied_fixes": [
+    "Collapsed identical VARIANT_SIZES entries into single SHELF_CARD_SIZE constant in BookTile.tsx (both variants had same values)",
+    "Derived format aria-label from book.format instead of hardcoding 'Audiobook format'/'Ebook format' per branch in BookCard.tsx"
+  ],
+  "findings": [
+    {
+      "id": "F1",
+      "severity": "P1",
+      "file": "src/app/components/library/BookCard.tsx",
+      "line": 109,
+      "title": "Duplicated format icon badge markup across audiobook and EPUB branches",
+      "autofix_class": "gated_auto",
+      "owner": "downstream-resolver",
+      "requires_verification": false,
+      "pre_existing": false,
+      "confidence": 0.85,
+      "why_it_matters": "Nearly identical JSX (same classes, same structure) appears at lines 109-115 (audiobook branch) and 209-215 (EPUB branch). Only the icon component differs. If the badge style is updated in the future, both sites must be changed. Since formatLabel is now derived from book.format, the markup could be unified or extracted into a shared helper.",
+      "suggested_fix": "Extract a local <FormatIconBadge> component or unify the cover JSX structure so format-specific differences (icon, aspect ratio) are computed once and the badge renders in a single location."
+    },
+    {
+      "id": "F2",
+      "severity": "P1",
+      "file": "src/app/components/library/__tests__/BookTile.test.tsx",
+      "line": 97,
+      "title": "Weak test for 500ms image transition doesn't verify transition duration",
+      "autofix_class": "manual",
+      "owner": "downstream-resolver",
+      "requires_verification": false,
+      "pre_existing": false,
+      "confidence": 0.75,
+      "why_it_matters": "The test named 'uses 500ms image transition (matching BookCard)' does not assert the `duration-500` class on the img element. The test comment admits 'img not asserted (fallback state has no cover img)'. If the 500ms transition is accidentally changed back to 300ms, this test would still pass. The animation unification (R2) is a key requirement from the plan.",
+      "suggested_fix": "Use the mocked `useBookCoverUrl` to return a cover URL so the <img> element renders, then assert the `duration-500` class is present on the img element. Update the test name to describe what's actually asserted or add a targeted assertion for transition duration."
+    },
+    {
+      "id": "F3",
+      "severity": "P2",
+      "file": "src/app/components/library/__tests__/BookTile.test.tsx",
+      "line": 74,
+      "title": "Fragile CSS class substring selector couples test to Tailwind's exact class generation format",
+      "autofix_class": "manual",
+      "owner": "downstream-resolver",
+      "requires_verification": false,
+      "pre_existing": false,
+      "confidence": 0.65,
+      "why_it_matters": "The test uses `querySelector('[class*=\"[transform:translateZ(0)]\"]')` to verify the GPU compositing fix. This substring selector depends on Tailwind's exact bracket-class encoding (square brackets, colon escaping). If Tailwind v4 changes its arbitrary value output format, this test silently breaks without any actual regression.",
+      "suggested_fix": "Add a `data-testid='book-tile-cover'` attribute to the cover container div, then use `getComputedStyle` on that element to assert `transform` includes `translateZ(0)`, or assert via a data-attribute approach that isn't coupled to Tailwind's class generation internals."
+    },
+    {
+      "id": "F4",
+      "severity": "P2",
+      "file": "src/app/pages/Library.tsx",
+      "line": 1377,
+      "title": "AbsPaginationSentinel skeleton uses aspect-[2/3] which doesn't match all BookCard formats",
+      "autofix_class": "manual",
+      "owner": "downstream-resolver",
+      "requires_verification": false,
+      "pre_existing": true,
+      "confidence": 0.60,
+      "why_it_matters": "The pagination skeleton loader still uses `aspect-[2/3]` for its placeholder cards, but BookCard now uses `aspect-square` for audiobooks and `aspect-[2/3]` for EPUBs. During ABS syncing, the skeleton doesn't accurately preview the dominant card format, causing a layout shift when real cards replace skeletons.",
+      "suggested_fix": "Use `aspect-square` for the skeleton card placeholders (matching the more common audiobook format in the library), or use a neutral placeholder aspect that minimizes layout shift."
+    },
+    {
+      "id": "F5",
+      "severity": "P3",
+      "file": "src/app/components/library/BookTile.tsx",
+      "line": 4,
+      "title": "JSDoc describes 'two variants' but variants are now sizing-identical",
+      "autofix_class": "gated_auto",
+      "owner": "downstream-resolver",
+      "requires_verification": false,
+      "pre_existing": false,
+      "confidence": 0.70,
+      "why_it_matters": "The JSDoc says 'Two variants, both using the shared shelf card width class' but with the recent collapse to a single SHELF_CARD_SIZE constant, both variants are identical in sizing and layout. The variant prop now only ties to the type system; the actual behavioral difference (progress display) is controlled by the separate `showProgress` boolean. This misalignment between type and description can confuse future maintainers.",
+      "suggested_fix": "Consider collapsing `variant` + `showProgress` into a single prop (e.g., `showProgress: boolean`) in a follow-up refactor, since the variant type no longer carries sizing meaning. Update JSDoc to reflect the current design."
+    },
+    {
+      "id": "F6",
+      "severity": "P3",
+      "file": "src/app/components/library/BookTile.tsx",
+      "line": 100,
+      "title": "ActionIcon uses ternary for format-to-icon mapping instead of a lookup map",
+      "autofix_class": "advisory",
+      "owner": "human",
+      "requires_verification": false,
+      "pre_existing": false,
+      "confidence": 0.60,
+      "why_it_matters": "`const ActionIcon = isAudiobook ? PlayCircle : BookOpen` works correctly for current formats but would silently assign BookOpen to any future audio-like format. A lookup map documents format-to-icon relationships explicitly and makes adding new formats safer.",
+      "suggested_fix": "Use `const ACTION_ICON: Record<string, IconComponent> = { audiobook: PlayCircle, epub: BookOpen, pdf: BookOpen }` with a fallback."
+    }
+  ],
+  "residual_risks": [
+    "GPU compositing fix: `[transform:translateZ(0)]` is overridden by `group-hover/tile:-translate-y-2` on hover (both set the `transform` property). While `translateY` still creates a stacking context, it may not trigger GPU compositing on all browsers the way `translateZ(0)` does. The corner clipping fix may not work during hover animation on WebKit.",
+    "Tailwind v4 source scanning: LIBRARY_SHELF_CARD_WIDTH_CLASS is used in template literals (e.g., `${LIBRARY_SHELF_CARD_WIDTH_CLASS} aspect-square`). Tailwind v4's source scanner may not resolve imported constants in template literals. The classes should still be generated because the constant string 'w-44 sm:w-48' appears in shelfCardSizing.ts. Verify in the built CSS that the classes are present."
+  ],
+  "testing_gaps": [
+    "No E2E test updates despite plan calling for removal of remote badge assertions and addition of format icon assertions in library-browse.spec.ts and library-continue.spec.ts",
+    "No LibraryMediaShelfColumn test update to verify overlayAction prop is no longer passed (plan Unit 6 requirement)",
+    "CourseJourneyNodeIndicator: new glow shadow classes (shadow-[0_0_20px_var(--brand)]) are visual-only and untested",
+    "sortImportedVideosForCurriculum: no test for non-numeric filenames, empty arrays, or filenames with extensions that contain dots"
+  ]
+}
