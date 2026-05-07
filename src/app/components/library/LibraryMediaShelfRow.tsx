@@ -1,7 +1,8 @@
-import { Children, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Children, type ReactNode, useCallback, useMemo, useRef } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { cn } from '@/app/components/ui/utils'
 import { isChildrenEmpty } from '@/lib/react-utils'
+import { useShelfScrollAffordances } from '@/app/hooks/useShelfScrollAffordances'
 import {
   LibraryShelfHeading,
   type LibraryShelfHeadingLevel,
@@ -30,8 +31,6 @@ export function LibraryMediaShelfRow({
   'data-testid': testId,
 }: LibraryMediaShelfRowProps) {
   const scrollerRef = useRef<HTMLDivElement | null>(null)
-  const [canScrollLeft, setCanScrollLeft] = useState(false)
-  const [canScrollRight, setCanScrollRight] = useState(false)
 
   const childItems = useMemo(() => Children.toArray(children).filter(Boolean), [children])
 
@@ -40,13 +39,10 @@ export function LibraryMediaShelfRow({
     [testId]
   )
 
-  const updateScrollAffordances = useCallback(() => {
-    const el = scrollerRef.current
-    if (!el) return
-    const maxScrollLeft = Math.max(0, el.scrollWidth - el.clientWidth)
-    setCanScrollLeft(el.scrollLeft > 1)
-    setCanScrollRight(el.scrollLeft < maxScrollLeft - 1)
-  }, [])
+  const { canScrollLeft, canScrollRight, hasOverflow } = useShelfScrollAffordances(
+    scrollerRef,
+    childItems.length
+  )
 
   const scrollByViewport = useCallback((direction: 'left' | 'right') => {
     const el = scrollerRef.current
@@ -68,26 +64,6 @@ export function LibraryMediaShelfRow({
     [scrollByViewport]
   )
 
-  useEffect(() => {
-    if (childItems.length === 0) {
-      setCanScrollLeft(false)
-      setCanScrollRight(false)
-      return
-    }
-
-    updateScrollAffordances()
-    const el = scrollerRef.current
-    if (!el) return
-
-    const handleScroll = () => updateScrollAffordances()
-    el.addEventListener('scroll', handleScroll, { passive: true })
-    window.addEventListener('resize', handleScroll)
-    return () => {
-      el.removeEventListener('scroll', handleScroll)
-      window.removeEventListener('resize', handleScroll)
-    }
-  }, [updateScrollAffordances, childItems.length])
-
   if (isChildrenEmpty(children)) return null
 
   return (
@@ -103,32 +79,36 @@ export function LibraryMediaShelfRow({
       />
 
       <div className="relative">
-        <button
-          type="button"
-          onClick={() => scrollByViewport('left')}
-          disabled={!canScrollLeft}
-          aria-label="Scroll left"
-          className={cn(
-            'absolute left-1 top-[38%] z-20 hidden size-10 -translate-y-1/2 items-center justify-center rounded-full bg-card/80 text-foreground shadow-sm ring-1 ring-border/10 backdrop-blur transition-opacity disabled:cursor-not-allowed disabled:opacity-35 md:flex',
-            canScrollLeft ? 'opacity-100' : 'opacity-60'
-          )}
-          data-testid={testId ? `${testId}-scroll-left` : 'library-media-shelf-row-scroll-left'}
-        >
-          <ChevronLeft className="size-4" aria-hidden="true" />
-        </button>
-        <button
-          type="button"
-          onClick={() => scrollByViewport('right')}
-          disabled={!canScrollRight}
-          aria-label="Scroll right"
-          className={cn(
-            'absolute right-1 top-[38%] z-20 hidden size-10 -translate-y-1/2 items-center justify-center rounded-full bg-card/80 text-foreground shadow-sm ring-1 ring-border/10 backdrop-blur transition-opacity disabled:cursor-not-allowed disabled:opacity-35 md:flex',
-            canScrollRight ? 'opacity-100' : 'opacity-60'
-          )}
-          data-testid={testId ? `${testId}-scroll-right` : 'library-media-shelf-row-scroll-right'}
-        >
-          <ChevronRight className="size-4" aria-hidden="true" />
-        </button>
+        {hasOverflow && (
+          <>
+            <button
+              type="button"
+              onClick={() => scrollByViewport('left')}
+              disabled={!canScrollLeft}
+              aria-label="Scroll left"
+              className={cn(
+                'absolute left-1 top-[38%] z-20 hidden size-12 -translate-y-1/2 items-center justify-center rounded-full bg-card/80 text-foreground shadow-sm ring-1 ring-border/10 backdrop-blur transition-opacity disabled:cursor-not-allowed disabled:opacity-35 md:flex',
+                canScrollLeft ? 'opacity-100' : 'opacity-60'
+              )}
+              data-testid={testId ? `${testId}-scroll-left` : 'library-media-shelf-row-scroll-left'}
+            >
+              <ChevronLeft className="size-6" aria-hidden="true" />
+            </button>
+            <button
+              type="button"
+              onClick={() => scrollByViewport('right')}
+              disabled={!canScrollRight}
+              aria-label="Scroll right"
+              className={cn(
+                'absolute right-1 top-[38%] z-20 hidden size-12 -translate-y-1/2 items-center justify-center rounded-full bg-card/80 text-foreground shadow-sm ring-1 ring-border/10 backdrop-blur transition-opacity disabled:cursor-not-allowed disabled:opacity-35 md:flex',
+                canScrollRight ? 'opacity-100' : 'opacity-60'
+              )}
+              data-testid={testId ? `${testId}-scroll-right` : 'library-media-shelf-row-scroll-right'}
+            >
+              <ChevronRight className="size-6" aria-hidden="true" />
+            </button>
+          </>
+        )}
 
         <div
           ref={scrollerRef}

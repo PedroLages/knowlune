@@ -123,23 +123,12 @@ describe('BookTile', () => {
     })
   })
 
-  describe('badge system', () => {
-    it('shows icon-only Audio badge for audiobooks', () => {
+  describe('cover chrome', () => {
+    it('does not render a corner format badge for audiobooks (hover overlay only)', () => {
       const audiobook = makeBook({ format: 'audiobook' })
       render(
         <MemoryRouter>
           <BookTile book={audiobook} variant="small" />
-        </MemoryRouter>
-      )
-      expect(screen.getByTestId('book-tile-test-book-audio-badge')).toBeInTheDocument()
-      // Icon only — no text label
-      expect(screen.queryByText('Audio')).not.toBeInTheDocument()
-    })
-
-    it('does not show Audio badge for ebooks', () => {
-      render(
-        <MemoryRouter>
-          <BookTile book={makeBook({ format: 'epub' })} variant="small" />
         </MemoryRouter>
       )
       expect(screen.queryByTestId('book-tile-test-book-audio-badge')).not.toBeInTheDocument()

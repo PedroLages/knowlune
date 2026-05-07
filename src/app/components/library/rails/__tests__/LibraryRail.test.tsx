@@ -1,8 +1,15 @@
 import { describe, it, expect } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
 import { BookOpen } from 'lucide-react'
 import { LibraryRail } from '@/app/components/library/rails/LibraryRail'
+
+function mockRailScrollerOverflow(scroller: HTMLElement) {
+  Object.defineProperty(scroller, 'scrollWidth', { value: 4000, configurable: true })
+  Object.defineProperty(scroller, 'clientWidth', { value: 400, configurable: true })
+  Object.defineProperty(scroller, 'scrollLeft', { value: 0, configurable: true, writable: true })
+  window.dispatchEvent(new Event('resize'))
+}
 
 function StubTile({ bookId, label }: { bookId: string; label: string }) {
   return (
@@ -37,7 +44,7 @@ describe('LibraryRail', () => {
     expect(container.firstChild).toBeNull()
   })
 
-  it('shows chevron buttons for scrollable content', () => {
+  it('shows chevron buttons for scrollable content', async () => {
     render(
       <MemoryRouter>
         <LibraryRail
@@ -52,8 +59,11 @@ describe('LibraryRail', () => {
       </MemoryRouter>
     )
 
-    expect(screen.getByLabelText('Scroll left')).toBeInTheDocument()
-    expect(screen.getByLabelText('Scroll right')).toBeInTheDocument()
+    mockRailScrollerOverflow(screen.getByTestId('my-shelf-scroller'))
+    await waitFor(() => {
+      expect(screen.getByLabelText('Scroll left')).toBeInTheDocument()
+      expect(screen.getByLabelText('Scroll right')).toBeInTheDocument()
+    })
   })
 
   it('applies scrollbar-none to the viewport', () => {
@@ -73,7 +83,7 @@ describe('LibraryRail', () => {
     expect(scroller.className).toContain('scrollbar-none')
   })
 
-  it('disables left chevron when at scroll start', () => {
+  it('disables left chevron when at scroll start', async () => {
     render(
       <MemoryRouter>
         <LibraryRail icon={BookOpen} title="My Shelf">
@@ -82,8 +92,12 @@ describe('LibraryRail', () => {
       </MemoryRouter>
     )
 
-    const leftBtn = screen.getByLabelText('Scroll left')
-    expect(leftBtn).toBeDisabled()
+    mockRailScrollerOverflow(screen.getByTestId('rail-viewport'))
+
+    await waitFor(() => {
+      const leftBtn = screen.getByLabelText('Scroll left')
+      expect(leftBtn).toBeDisabled()
+    })
   })
 
   it('renders children inside snap-start wrappers', () => {

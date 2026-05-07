@@ -11,8 +11,7 @@
  *
  * Overlay on hover/focus shows a format-aware action icon (PlayCircle for
  * audiobooks, BookOpen for ebooks) inside a dark backdrop circle for contrast
- * on any cover color. An icon-only audio badge (Headphones) appears for
- * audiobooks in the default (non-hover) state.
+ * on any cover color.
  * Progress display (thin bar + meta line) only on the denseContinue variant.
  *
  * Titles use a single token (no "blue title" group-hover:brand bug).
@@ -176,17 +175,6 @@ export const BookTile = memo(function BookTile({
             />
           </div>
         </div>
-
-        {/* Audio badge — top-right, audiobooks only (icon-only format indicator) */}
-        {isAudiobook && (
-          <div
-            className="absolute top-2 right-2 rounded-full bg-black/60 backdrop-blur p-1.5 z-10"
-            aria-label="Audio format"
-            data-testid={`book-tile-${book.id}-audio-badge`}
-          >
-            <Headphones className="size-3.5 text-white" aria-hidden="true" />
-          </div>
-        )}
 
         {/* Progress bar — denseContinue variant only, pinned to bottom of cover */}
         {showProgress && (

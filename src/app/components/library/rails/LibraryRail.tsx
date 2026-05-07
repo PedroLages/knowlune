@@ -9,9 +9,10 @@
  * LibraryShelfRow for the Continue Listening + Recently Added shelves.
  */
 
-import { Children, type ReactNode, useCallback, useEffect, useRef, useState } from 'react'
+import { Children, type ReactNode, useRef } from 'react'
 import { cn } from '@/app/components/ui/utils'
 import { isChildrenEmpty } from '@/lib/react-utils'
+import { useShelfScrollAffordances } from '@/app/hooks/useShelfScrollAffordances'
 import { RailHeader, type RailHeaderProps } from './RailHeader'
 import { RailControls } from './RailControls'
 import { RailViewport } from './RailViewport'
@@ -38,38 +39,13 @@ export function LibraryRail({
   'data-testid': testId,
 }: LibraryRailProps) {
   const scrollerRef = useRef<HTMLDivElement | null>(null)
-  const [canScrollLeft, setCanScrollLeft] = useState(false)
-  const [canScrollRight, setCanScrollRight] = useState(false)
 
   const childItems = Children.toArray(children).filter(Boolean)
 
-  const updateScrollAffordances = useCallback(() => {
-    const el = scrollerRef.current
-    if (!el) return
-    const maxScrollLeft = Math.max(0, el.scrollWidth - el.clientWidth)
-    setCanScrollLeft(el.scrollLeft > 1)
-    setCanScrollRight(el.scrollLeft < maxScrollLeft - 1)
-  }, [])
-
-  useEffect(() => {
-    if (childItems.length === 0) {
-      setCanScrollLeft(false)
-      setCanScrollRight(false)
-      return
-    }
-
-    updateScrollAffordances()
-    const el = scrollerRef.current
-    if (!el) return
-
-    const handleScroll = () => updateScrollAffordances()
-    el.addEventListener('scroll', handleScroll, { passive: true })
-    window.addEventListener('resize', handleScroll)
-    return () => {
-      el.removeEventListener('scroll', handleScroll)
-      window.removeEventListener('resize', handleScroll)
-    }
-  }, [updateScrollAffordances, childItems.length])
+  const { canScrollLeft, canScrollRight, hasOverflow, update } = useShelfScrollAffordances(
+    scrollerRef,
+    childItems.length
+  )
 
   if (isChildrenEmpty(children)) return null
 
@@ -94,7 +70,8 @@ export function LibraryRail({
           viewportRef={scrollerRef}
           canScrollLeft={canScrollLeft}
           canScrollRight={canScrollRight}
-          onScroll={updateScrollAffordances}
+          hasOverflow={hasOverflow}
+          onScroll={update}
           data-testid={testId}
         />
 
