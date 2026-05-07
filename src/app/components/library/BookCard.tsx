@@ -90,13 +90,6 @@ export const BookCard = memo(function BookCard({ book }: BookCardProps) {
               <CheckCircle2 className="size-10 text-success drop-shadow-md" aria-hidden="true" />
             </div>
           )}
-          {/* Format icon badge — top-right corner */}
-          <div
-            className="absolute top-2 right-2 rounded-full bg-black/60 backdrop-blur p-1.5 z-10"
-            aria-label="Audiobook format"
-          >
-            <Headphones className="size-3.5 text-white" aria-hidden="true" />
-          </div>
         </div>
         {/* Metadata below cover */}
         <div className="mt-3 px-1 text-center">

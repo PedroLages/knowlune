@@ -13,7 +13,7 @@
  * docs/plans/2026-04-18-001-feat-library-shelf-row-primitive-tests-plan.md
  */
 import { describe, it, expect, vi } from 'vitest'
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { LibraryShelfRow, type LibraryShelfRowProps } from '../LibraryShelfRow'
 
 /**
@@ -28,6 +28,14 @@ const StubIcon = ({ className }: { className?: string }) => (
  * Convenience factory — keeps test rendering terse without leaking defaults
  * that hide real behavior (like a stub child that masks the empty-case).
  */
+/** jsdom does not lay out overflow; shelf hooks need mocked dimensions */
+function mockShelfScrollerOverflow(scroller: HTMLElement) {
+  Object.defineProperty(scroller, 'scrollWidth', { value: 900, configurable: true })
+  Object.defineProperty(scroller, 'clientWidth', { value: 300, configurable: true })
+  Object.defineProperty(scroller, 'scrollLeft', { value: 0, configurable: true, writable: true })
+  window.dispatchEvent(new Event('resize'))
+}
+
 function renderShelf(overrides: Partial<LibraryShelfRowProps> = {}) {
   const props: LibraryShelfRowProps = {
     icon: StubIcon,
@@ -263,13 +271,16 @@ describe('LibraryShelfRow', () => {
   })
 
   describe('desktop scroll affordances', () => {
-    it('renders left/right scroll controls and edge fades', () => {
+    it('renders left/right scroll controls when content overflows', async () => {
       renderShelf({ 'data-testid': 'continue-listening' })
-      expect(screen.getByTestId('continue-listening-scroll-left')).toBeInTheDocument()
-      expect(screen.getByTestId('continue-listening-scroll-right')).toBeInTheDocument()
+      mockShelfScrollerOverflow(screen.getByTestId('continue-listening-scroller'))
+      await waitFor(() => {
+        expect(screen.getByTestId('continue-listening-scroll-left')).toBeInTheDocument()
+        expect(screen.getByTestId('continue-listening-scroll-right')).toBeInTheDocument()
+      })
     })
 
-    it('disables left chevron at start and enables right when overflow exists', () => {
+    it('disables left chevron at start and enables right when overflow exists', async () => {
       renderShelf({
         'data-testid': 'continue-listening',
         children: [
@@ -280,13 +291,12 @@ describe('LibraryShelfRow', () => {
       })
 
       const scroller = screen.getByTestId('continue-listening-scroller')
-      Object.defineProperty(scroller, 'scrollWidth', { value: 900, configurable: true })
-      Object.defineProperty(scroller, 'clientWidth', { value: 300, configurable: true })
-      Object.defineProperty(scroller, 'scrollLeft', { value: 0, configurable: true, writable: true })
-      fireEvent.scroll(scroller)
+      mockShelfScrollerOverflow(scroller)
 
-      expect(screen.getByTestId('continue-listening-scroll-left')).toBeDisabled()
-      expect(screen.getByTestId('continue-listening-scroll-right')).not.toBeDisabled()
+      await waitFor(() => {
+        expect(screen.getByTestId('continue-listening-scroll-left')).toBeDisabled()
+        expect(screen.getByTestId('continue-listening-scroll-right')).not.toBeDisabled()
+      })
     })
 
     it('handles keyboard arrows on the scroller', () => {

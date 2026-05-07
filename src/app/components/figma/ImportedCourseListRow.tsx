@@ -14,6 +14,7 @@ import {
 } from 'lucide-react'
 import { useNavigate } from 'react-router'
 import { Badge } from '@/app/components/ui/badge'
+import { Button } from '@/app/components/ui/button'
 import { cn } from '@/app/components/ui/utils'
 import {
   DropdownMenu,
@@ -33,6 +34,7 @@ import {
   AlertDialogTitle,
 } from '@/app/components/ui/alert-dialog'
 import { toast } from 'sonner'
+import { useImportedCourseStartFlow } from '@/app/hooks/useImportedCourseStartFlow'
 import { TagBadgeList } from '@/app/components/figma/TagBadgeList'
 import { EditCourseDialog } from '@/app/components/figma/EditCourseDialog'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
@@ -107,6 +109,11 @@ export function ImportedCourseListRow({
   const status = course.status
   const config = statusConfig[status]
   const StatusIcon = config.icon
+  const { startStudying } = useImportedCourseStartFlow(course.id)
+
+  const importedDate = new Date(course.importedAt).toLocaleDateString()
+  const isCompleted = status === 'completed' || completionPercent === 100
+  const showPlay = !readOnly && status === 'not-started' && !isCompleted
 
   function navigateToCourse() {
     navigate(`/courses/${course.id}/overview`)
@@ -115,6 +122,10 @@ export function ImportedCourseListRow({
   function handleRowClick() {
     if (onToggleSelect) {
       onToggleSelect(course.id)
+      return
+    }
+    if (showPlay) {
+      void startStudying()
       return
     }
     navigateToCourse()
@@ -126,6 +137,10 @@ export function ImportedCourseListRow({
       e.preventDefault()
       if (onToggleSelect) {
         onToggleSelect(course.id)
+        return
+      }
+      if (showPlay) {
+        void startStudying(e)
         return
       }
       navigateToCourse()
@@ -150,9 +165,6 @@ export function ImportedCourseListRow({
       toast.success('Course deleted')
     }
   }
-
-  const importedDate = new Date(course.importedAt).toLocaleDateString()
-  const isCompleted = status === 'completed' || completionPercent === 100
 
   return (
     <>
@@ -285,6 +297,21 @@ export function ImportedCourseListRow({
         >
           {importedDate}
         </div>
+
+        {/* Start Learning button — only for not-started courses */}
+        {showPlay && (
+          <Button
+            variant="brand-outline"
+            size="sm"
+            data-testid="list-row-start-btn"
+            aria-label={`Start studying "${course.name}"`}
+            onClick={startStudying}
+            className="shrink-0 gap-1.5"
+          >
+            <PlayCircle className="size-3.5" aria-hidden="true" />
+            Start
+          </Button>
+        )}
 
         {/* Overflow menu */}
         <div className="shrink-0">

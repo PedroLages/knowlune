@@ -169,7 +169,7 @@ export function LibraryMediaShelfColumn() {
         data-testid="media-shelf-again"
       >
         {shelves.again.map(book => (
-          <RecentBookCard key={book.id} book={book} />
+          <RecentBookCard key={book.id} book={book} tone="muted" />
         ))}
       </LibraryMediaShelfRow>
     </div>

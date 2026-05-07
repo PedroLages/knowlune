@@ -15,12 +15,20 @@ import type { Book } from '@/data/types'
 import { useBookCoverUrl } from '@/app/hooks/useBookCoverUrl'
 import { LIBRARY_SHELF_CARD_WIDTH_CLASS } from '@/app/components/library/shelfCardSizing'
 import { getBookDestinationPath } from '@/lib/bookNavigation'
+import { cn } from '@/app/components/ui/utils'
+
+export type RecentBookCardTone = 'default' | 'muted'
 
 interface RecentBookCardProps {
   book: Book
+  /** Muted styling for replay shelves (e.g. Listen Again) */
+  tone?: RecentBookCardTone
 }
 
-export const RecentBookCard = memo(function RecentBookCard({ book }: RecentBookCardProps) {
+export const RecentBookCard = memo(function RecentBookCard({
+  book,
+  tone = 'default',
+}: RecentBookCardProps) {
   const navigate = useNavigate()
   const resolvedCoverUrl = useBookCoverUrl({ bookId: book.id, coverUrl: book.coverUrl })
 
@@ -45,11 +53,21 @@ export const RecentBookCard = memo(function RecentBookCard({ book }: RecentBookC
       tabIndex={0}
       onClick={handleClick}
       onKeyDown={handleKeyDown}
-      className={`group ${LIBRARY_SHELF_CARD_WIDTH_CLASS} cursor-pointer focus-visible:outline-none`}
+      className={cn(
+        'group cursor-pointer focus-visible:outline-none rounded-lg',
+        LIBRARY_SHELF_CARD_WIDTH_CLASS
+      )}
       data-testid={`recent-book-card-${book.id}`}
+      data-tone={tone}
     >
       {/* Cover — always square for uniform row height */}
-      <div className="relative aspect-square rounded-2xl overflow-hidden shadow-card-ambient transition-all duration-300 group-hover:-translate-y-2 group-hover:shadow-[0_10px_30px_var(--shadow-brand)]">
+      <div
+        className={cn(
+          'relative aspect-square rounded-2xl overflow-hidden shadow-card-ambient transition-all duration-300 group-hover:-translate-y-2 group-hover:shadow-[0_10px_30px_var(--shadow-brand)]',
+          tone === 'muted' &&
+            'opacity-[0.88] grayscale transition-opacity group-hover:opacity-95 focus-visible:opacity-95'
+        )}
+      >
         {resolvedCoverUrl ? (
           <img
             src={resolvedCoverUrl}

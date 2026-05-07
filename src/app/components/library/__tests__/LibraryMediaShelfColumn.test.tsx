@@ -135,7 +135,6 @@ describe('LibraryMediaShelfColumn', () => {
     expect(tiles.length).toBeGreaterThanOrEqual(1)
     // Progress meta should be present for denseContinue variant (only Continue shelf has this)
     expect(screen.getByTestId('book-tile-audio-continue-progress-meta')).toBeInTheDocument()
-    // Audio badge should be present for audiobooks
     expect(screen.getAllByTestId('book-tile-audio-continue-audio-badge').length).toBeGreaterThanOrEqual(1)
   })
 
@@ -149,10 +148,19 @@ describe('LibraryMediaShelfColumn', () => {
     // The recently added book should be a BookTile
     const recentTiles = screen.getAllByTestId('book-tile-audio-recent')
     expect(recentTiles.length).toBeGreaterThanOrEqual(1)
-    // Audio badge should be present
     expect(screen.getAllByTestId('book-tile-audio-recent-audio-badge').length).toBeGreaterThanOrEqual(1)
     // Progress should not be present on small variant (only on Continue variant)
     expect(screen.queryByTestId('book-tile-audio-recent-progress-meta')).not.toBeInTheDocument()
+  })
+
+  it('applies muted tone to Listen Again shelf cards', () => {
+    render(
+      <MemoryRouter>
+        <LibraryMediaShelfColumn />
+      </MemoryRouter>
+    )
+    const again = screen.getByTestId('recent-book-card-audio-finished')
+    expect(again).toHaveAttribute('data-tone', 'muted')
   })
 })
 

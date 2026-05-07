@@ -13,9 +13,10 @@
  * @since E116-S01
  */
 
-import { Children, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Children, type ReactNode, useCallback, useMemo, useRef } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { isChildrenEmpty } from '@/lib/react-utils'
+import { useShelfScrollAffordances } from '@/app/hooks/useShelfScrollAffordances'
 import {
   LibraryShelfHeading,
   type LibraryShelfHeadingLevel,
@@ -69,21 +70,18 @@ export function LibraryShelfRow({
   'data-testid': testId,
 }: LibraryShelfRowProps) {
   const scrollerRef = useRef<HTMLDivElement | null>(null)
-  const [canScrollLeft, setCanScrollLeft] = useState(false)
-  const [canScrollRight, setCanScrollRight] = useState(false)
 
   const scrollerTestId = useMemo(
     () => (testId ? `${testId}-scroller` : 'library-shelf-row-scroller'),
     [testId]
   )
 
-  const updateScrollAffordances = useCallback(() => {
-    const el = scrollerRef.current
-    if (!el) return
-    const maxScrollLeft = Math.max(0, el.scrollWidth - el.clientWidth)
-    setCanScrollLeft(el.scrollLeft > 1)
-    setCanScrollRight(el.scrollLeft < maxScrollLeft - 1)
-  }, [])
+  const childItems = useMemo(() => Children.toArray(children).filter(Boolean), [children])
+
+  const { canScrollLeft, canScrollRight, hasOverflow } = useShelfScrollAffordances(
+    scrollerRef,
+    childItems.length
+  )
 
   const scrollByViewport = useCallback((direction: 'left' | 'right') => {
     const el = scrollerRef.current
@@ -110,24 +108,11 @@ export function LibraryShelfRow({
     return null
   }
 
-  const childItems = Children.toArray(children).filter(Boolean)
-
-  useEffect(() => {
-    updateScrollAffordances()
-    const el = scrollerRef.current
-    if (!el) return
-
-    const handleScroll = () => updateScrollAffordances()
-    el.addEventListener('scroll', handleScroll, { passive: true })
-    window.addEventListener('resize', handleScroll)
-    return () => {
-      el.removeEventListener('scroll', handleScroll)
-      window.removeEventListener('resize', handleScroll)
-    }
-  }, [updateScrollAffordances, childItems.length])
-
   return (
-    <section className="mb-8 group/shelf" data-testid={testId ?? 'library-shelf-row'}>
+    <section
+      className="mb-8 group/shelf focus-within:outline-none"
+      data-testid={testId ?? 'library-shelf-row'}
+    >
       <LibraryShelfHeading
         icon={icon}
         label={label}
@@ -140,26 +125,30 @@ export function LibraryShelfRow({
       />
 
       <div className="relative">
-        <button
-          type="button"
-          onClick={() => scrollByViewport('left')}
-          disabled={!canScrollLeft}
-          aria-label="Scroll left"
-          className="pointer-events-none absolute left-1 top-[38%] z-20 hidden size-9 -translate-y-1/2 items-center justify-center rounded-full border border-border/60 bg-background/90 text-foreground opacity-0 shadow-sm backdrop-blur transition-opacity duration-200 disabled:cursor-not-allowed disabled:opacity-35 group-hover/shelf:pointer-events-auto group-hover/shelf:opacity-100 md:flex"
-          data-testid={testId ? `${testId}-scroll-left` : 'library-shelf-row-scroll-left'}
-        >
-          <ChevronLeft className="size-4" aria-hidden="true" />
-        </button>
-        <button
-          type="button"
-          onClick={() => scrollByViewport('right')}
-          disabled={!canScrollRight}
-          aria-label="Scroll right"
-          className="pointer-events-none absolute right-1 top-[38%] z-20 hidden size-9 -translate-y-1/2 items-center justify-center rounded-full border border-border/60 bg-background/90 text-foreground opacity-0 shadow-sm backdrop-blur transition-opacity duration-200 disabled:cursor-not-allowed disabled:opacity-35 group-hover/shelf:pointer-events-auto group-hover/shelf:opacity-100 md:flex"
-          data-testid={testId ? `${testId}-scroll-right` : 'library-shelf-row-scroll-right'}
-        >
-          <ChevronRight className="size-4" aria-hidden="true" />
-        </button>
+        {hasOverflow && (
+          <>
+            <button
+              type="button"
+              onClick={() => scrollByViewport('left')}
+              disabled={!canScrollLeft}
+              aria-label="Scroll left"
+              className="pointer-events-none absolute left-1 top-[38%] z-20 hidden size-11 -translate-y-1/2 items-center justify-center rounded-full border border-border/60 bg-background/90 text-foreground opacity-0 shadow-sm backdrop-blur transition-opacity duration-200 disabled:cursor-not-allowed disabled:opacity-35 group-hover/shelf:pointer-events-auto group-hover/shelf:opacity-100 group-focus-within/shelf:pointer-events-auto group-focus-within/shelf:opacity-100 md:flex"
+              data-testid={testId ? `${testId}-scroll-left` : 'library-shelf-row-scroll-left'}
+            >
+              <ChevronLeft className="size-6" aria-hidden="true" />
+            </button>
+            <button
+              type="button"
+              onClick={() => scrollByViewport('right')}
+              disabled={!canScrollRight}
+              aria-label="Scroll right"
+              className="pointer-events-none absolute right-1 top-[38%] z-20 hidden size-11 -translate-y-1/2 items-center justify-center rounded-full border border-border/60 bg-background/90 text-foreground opacity-0 shadow-sm backdrop-blur transition-opacity duration-200 disabled:cursor-not-allowed disabled:opacity-35 group-hover/shelf:pointer-events-auto group-hover/shelf:opacity-100 group-focus-within/shelf:pointer-events-auto group-focus-within/shelf:opacity-100 md:flex"
+              data-testid={testId ? `${testId}-scroll-right` : 'library-shelf-row-scroll-right'}
+            >
+              <ChevronRight className="size-6" aria-hidden="true" />
+            </button>
+          </>
+        )}
         <div
           ref={scrollerRef}
           className="flex gap-4 overflow-x-auto snap-x snap-mandatory pt-2 pb-2 -mx-2 px-2 scroll-smooth [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"

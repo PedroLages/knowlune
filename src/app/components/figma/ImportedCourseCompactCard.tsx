@@ -11,6 +11,7 @@ import {
 } from 'lucide-react'
 import { useNavigate } from 'react-router'
 import { Badge } from '@/app/components/ui/badge'
+import { Button } from '@/app/components/ui/button'
 import { cn } from '@/app/components/ui/utils'
 import {
   DropdownMenu,
@@ -32,6 +33,7 @@ import {
 import { toast } from 'sonner'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
 import { Checkbox } from '@/app/components/ui/checkbox'
+import { useImportedCourseStartFlow } from '@/app/hooks/useImportedCourseStartFlow'
 import { useLazyVisible } from '@/hooks/useLazyVisible'
 import type { ImportedCourse, LearnerCourseStatus } from '@/data/types'
 
@@ -107,6 +109,7 @@ export function ImportedCourseCompactCard({
   const pressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const pressStartRef = useRef<{ x: number; y: number } | null>(null)
   const longPressTriggeredRef = useRef(false)
+  const { startStudying } = useImportedCourseStartFlow(course.id)
 
   useEffect(() => {
     return () => {
@@ -121,6 +124,7 @@ export function ImportedCourseCompactCard({
   const StatusIcon = config.icon
   const isCompleted = status === 'completed' || completionPercent === 100
   const safeProgress = Math.max(0, Math.min(100, completionPercent))
+  const showPlay = status === 'not-started' && !isCompleted && !readOnly
 
   function clearPressTimer() {
     if (pressTimerRef.current) {
@@ -169,6 +173,10 @@ export function ImportedCourseCompactCard({
       onToggleSelect(course.id)
       return
     }
+    if (showPlay) {
+      void startStudying(e)
+      return
+    }
     navigate(`/courses/${course.id}/overview`)
   }
 
@@ -178,6 +186,10 @@ export function ImportedCourseCompactCard({
       e.preventDefault()
       if (onToggleSelect) {
         onToggleSelect(course.id)
+        return
+      }
+      if (showPlay) {
+        void startStudying(e)
         return
       }
       navigate(`/courses/${course.id}/overview`)
@@ -398,6 +410,24 @@ export function ImportedCourseCompactCard({
         >
           {course.name}
         </h3>
+
+        {/* Start Learning — icon-only button, always visible for not-started courses */}
+        {showPlay && (
+          <Button
+            type="button"
+            size="touch-icon"
+            data-testid="compact-start-btn"
+            aria-label={`Start learning "${course.name}"`}
+            onClick={startStudying}
+            onPointerDown={e => {
+              // Stop long-press tracking from intercepting the button click
+              e.stopPropagation()
+            }}
+            className="mt-2 self-start button-press"
+          >
+            <PlayCircle className="size-5" aria-hidden="true" />
+          </Button>
+        )}
       </article>
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>

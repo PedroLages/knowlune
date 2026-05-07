@@ -9,7 +9,7 @@
  * in the viewport.
  */
 
-import { useCallback } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { cn } from '@/app/components/ui/utils'
 
@@ -20,6 +20,8 @@ export interface RailControlsProps {
   canScrollLeft: boolean
   /** Whether a right scroll is possible */
   canScrollRight: boolean
+  /** When false, the row fits the viewport — no chevrons rendered */
+  hasOverflow: boolean
   /** Callback after scroll state changes */
   onScroll?: () => void
   /** data-testid prefix for the buttons */
@@ -30,9 +32,29 @@ export function RailControls({
   viewportRef,
   canScrollLeft,
   canScrollRight,
+  hasOverflow,
   onScroll,
   'data-testid': testId,
 }: RailControlsProps) {
+  const mountedRef = useRef(true)
+  const rafOuterRef = useRef<number | null>(null)
+  const rafInnerRef = useRef<number | null>(null)
+
+  useEffect(() => {
+    mountedRef.current = true
+    return () => {
+      mountedRef.current = false
+      if (rafOuterRef.current != null) {
+        cancelAnimationFrame(rafOuterRef.current)
+        rafOuterRef.current = null
+      }
+      if (rafInnerRef.current != null) {
+        cancelAnimationFrame(rafInnerRef.current)
+        rafInnerRef.current = null
+      }
+    }
+  }, [])
+
   const scrollBy = useCallback(
     (direction: 'left' | 'right') => {
       const el = viewportRef.current
@@ -59,15 +81,24 @@ export function RailControls({
         behavior: 'smooth',
       })
 
-      // Let scroll event handler update affordances; fire callback after a tick
       if (onScroll) {
-        requestAnimationFrame(() => {
-          requestAnimationFrame(onScroll)
+        if (rafOuterRef.current != null) cancelAnimationFrame(rafOuterRef.current)
+        if (rafInnerRef.current != null) cancelAnimationFrame(rafInnerRef.current)
+        rafOuterRef.current = requestAnimationFrame(() => {
+          rafInnerRef.current = requestAnimationFrame(() => {
+            rafOuterRef.current = null
+            rafInnerRef.current = null
+            if (mountedRef.current) onScroll()
+          })
         })
       }
     },
     [viewportRef, onScroll]
   )
+
+  if (!hasOverflow) {
+    return null
+  }
 
   return (
     <>
@@ -77,14 +108,14 @@ export function RailControls({
         disabled={!canScrollLeft}
         aria-label="Scroll left"
         className={cn(
-          'pointer-events-none absolute left-1 top-[38%] z-20 hidden size-8 -translate-y-1/2 items-center justify-center rounded-full border border-border/60 bg-background/90 text-foreground opacity-0 shadow-sm backdrop-blur transition-opacity duration-200 disabled:cursor-not-allowed disabled:opacity-35',
+          'pointer-events-none absolute left-1 top-[38%] z-20 hidden size-11 -translate-y-1/2 items-center justify-center rounded-full border border-border/60 bg-background/90 text-foreground opacity-0 shadow-sm backdrop-blur transition-opacity duration-200 disabled:cursor-not-allowed disabled:opacity-35',
           'group-hover/rail:pointer-events-auto group-hover/rail:opacity-100',
           'group-focus-within/rail:pointer-events-auto group-focus-within/rail:opacity-100',
           'md:flex'
         )}
         data-testid={testId ? `${testId}-scroll-left` : 'rail-scroll-left'}
       >
-        <ChevronLeft className="size-4" aria-hidden="true" />
+        <ChevronLeft className="size-6" aria-hidden="true" />
       </button>
       <button
         type="button"
@@ -92,14 +123,14 @@ export function RailControls({
         disabled={!canScrollRight}
         aria-label="Scroll right"
         className={cn(
-          'pointer-events-none absolute right-1 top-[38%] z-20 hidden size-8 -translate-y-1/2 items-center justify-center rounded-full border border-border/60 bg-background/90 text-foreground opacity-0 shadow-sm backdrop-blur transition-opacity duration-200 disabled:cursor-not-allowed disabled:opacity-35',
+          'pointer-events-none absolute right-1 top-[38%] z-20 hidden size-11 -translate-y-1/2 items-center justify-center rounded-full border border-border/60 bg-background/90 text-foreground opacity-0 shadow-sm backdrop-blur transition-opacity duration-200 disabled:cursor-not-allowed disabled:opacity-35',
           'group-hover/rail:pointer-events-auto group-hover/rail:opacity-100',
           'group-focus-within/rail:pointer-events-auto group-focus-within/rail:opacity-100',
           'md:flex'
         )}
         data-testid={testId ? `${testId}-scroll-right` : 'rail-scroll-right'}
       >
-        <ChevronRight className="size-4" aria-hidden="true" />
+        <ChevronRight className="size-6" aria-hidden="true" />
       </button>
     </>
   )

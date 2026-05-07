@@ -106,7 +106,7 @@ test('DR-1: /courses grid structure and card anatomy (1440px)', async ({ page })
       ),
       // Old hover scale check (should be removed in refactored cards)
       hasOldHoverScale: c.className.includes('scale-[1.02]') || c.className.includes('hover:scale'),
-      // R2 check: play overlay present (only for not-started)
+      // R2 check: Start Learning button present (only for not-started)
       hasPlayBtn: !!c.querySelector('[data-testid="start-course-btn"]'),
       // R4: Imported date in body (should NOT be in body per plan)
       hasImportedDateInBody: (() => {
@@ -197,11 +197,12 @@ test('DR-1: /courses grid structure and card anatomy (1440px)', async ({ page })
   r.coursesAxe = await runAxe(page);
   r.consoleErrors = errors;
   fs.writeFileSync('/tmp/dr-part1.json', JSON.stringify(r, null, 2));
-  expect(true).toBe(true);
+  const axe = r.coursesAxe as { violations: unknown[] };
+  expect(axe.violations.length).toBe(0);
 });
 
-// ─── TEST 2: /courses play overlay behavior ──────────────────────────────────
-test('DR-2: play overlay anatomy on not-started cards', async ({ page }) => {
+// ─── TEST 2: /courses Start Learning button behavior ─────────────────────
+test('DR-2: start learning button anatomy on not-started cards', async ({ page }) => {
   const r: Record<string, unknown> = {};
   await page.setViewportSize({ width: 1440, height: 900 });
 
@@ -221,15 +222,15 @@ test('DR-2: play overlay anatomy on not-started cards', async ({ page }) => {
         playBtnTag: playBtn?.tagName,
         playBtnAriaLabel: playBtn?.getAttribute('aria-label'),
         playBtnClass: playBtn?.className?.substring(0, 200) || null,
-        // Desktop: opacity-0 by default (hover reveals it)
+        // Now always visible (opacity: 1) — no longer hover-revealed
         playBtnComputedOpacity: playBtn ? window.getComputedStyle(playBtn).opacity : null,
-        // Is play in cover area or body?
+        // Button is in card body (p-5) area, not the cover
         playInBody: playBtn ? !!playBtn.closest('.p-5') : false,
       };
     });
   });
 
-  // Z-index checks for overlapping overlays (camera vs play vs status)
+  // Camera button was moved to overflow menu — should no longer appear on cover
   r.zIndexCheck = await page.evaluate(() => {
     const cards = Array.from(document.querySelectorAll('[data-testid="imported-course-card"]'));
     return cards.slice(0, 4).map(c => {
@@ -248,7 +249,9 @@ test('DR-2: play overlay anatomy on not-started cards', async ({ page }) => {
   });
 
   fs.writeFileSync('/tmp/dr-part2.json', JSON.stringify(r, null, 2));
-  expect(true).toBe(true);
+  const play = r.playOverlayCheck as Array<{ hasPlayBtn: boolean; statusText?: string }>;
+  expect(play.length).toBeGreaterThan(0);
+  expect(play.some((p) => p.hasPlayBtn)).toBe(true);
 });
 
 // ─── TEST 3: /my-class — progress variant (desktop 1440px) ──────────────────
@@ -275,7 +278,10 @@ test('DR-3: /my-class progress variant (1440px)', async ({ page }) => {
 
   r.myClassAxe = await runAxe(page);
   fs.writeFileSync('/tmp/dr-part3.json', JSON.stringify(r, null, 2));
-  expect(true).toBe(true);
+  const myAxe = r.myClassAxe as { violations: unknown[] };
+  expect(myAxe.violations.length).toBe(0);
+  const myClass = r.myClassCards as { importedCount: number };
+  expect(myClass.importedCount).toBeGreaterThanOrEqual(0);
 });
 
 // ─── TEST 4: Authors + Library reference ─────────────────────────────────────
@@ -329,7 +335,9 @@ test('DR-4: authors profile and library BookCard reference (1440px)', async ({ p
   });
 
   fs.writeFileSync('/tmp/dr-part4.json', JSON.stringify(r, null, 2));
-  expect(true).toBe(true);
+  expect(Array.isArray(r.authorLinks)).toBe(true);
+  const dna = r.bookCardDNA as unknown[] | undefined;
+  expect(Array.isArray(dna)).toBe(true);
 });
 
 // ─── TEST 5: Mobile 375px ────────────────────────────────────────────────────
@@ -366,7 +374,7 @@ test('DR-5: mobile 375px - overflow, touch targets, touch overlay', async ({ pag
     }));
   });
 
-  // Touch overlay: on mobile (hover:none), play overlay should always be visible
+  // Start button is always visible (no longer hover-revealed)
   r.touchPlayOverlayVisibility = await page.evaluate(() => {
     return Array.from(document.querySelectorAll('[data-testid="start-course-btn"]')).map(btn => {
       const s = window.getComputedStyle(btn);
@@ -390,7 +398,8 @@ test('DR-5: mobile 375px - overflow, touch targets, touch overlay', async ({ pag
   await page.screenshot({ path: `${SCREENSHOT_DIR}/07-courses-375-detail.png` });
 
   fs.writeFileSync('/tmp/dr-part5.json', JSON.stringify(r, null, 2));
-  expect(true).toBe(true);
+  const mob = r.mobileOverflow as { hasHorizontalScroll: boolean };
+  expect(mob.hasHorizontalScroll).toBe(false);
 });
 
 // ─── TEST 6: Tablet 768px ────────────────────────────────────────────────────
@@ -419,5 +428,6 @@ test('DR-6: tablet 768px - layout grid and heights', async ({ page }) => {
   });
 
   fs.writeFileSync('/tmp/dr-part6.json', JSON.stringify(r, null, 2));
-  expect(true).toBe(true);
+  const tab = r.tabletOverflow as { hasHorizontalScroll: boolean };
+  expect(tab.hasHorizontalScroll).toBe(false);
 });

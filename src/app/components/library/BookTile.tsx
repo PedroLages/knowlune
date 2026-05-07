@@ -9,10 +9,8 @@
  * All covers use aspect-square with object-cover — square audiobook art fills
  * the frame natively (no padding needed).
  *
- * Overlay on hover/focus shows a format-aware action icon (PlayCircle for
- * audiobooks, BookOpen for ebooks) inside a dark backdrop circle for contrast
- * on any cover color. An icon-only audio badge (Headphones) appears for
- * audiobooks in the default (non-hover) state.
+ * Hover uses motion only (lift, shadow, slight image scale) — no play/open
+ * overlay on the cover. Audiobooks show a small Headphones badge top-right.
  * Progress display (thin bar + meta line) only on the denseContinue variant.
  *
  * Titles use a single token (no "blue title" group-hover:brand bug).
@@ -20,7 +18,7 @@
 
 import { memo, type KeyboardEvent } from 'react'
 import { useNavigate } from 'react-router'
-import { BookOpen, Headphones, PlayCircle } from 'lucide-react'
+import { BookOpen, Headphones } from 'lucide-react'
 import type { Book } from '@/data/types'
 import { useBookCoverUrl } from '@/app/hooks/useBookCoverUrl'
 import { getBookDestinationPath } from '@/lib/bookNavigation'
@@ -98,7 +96,6 @@ export const BookTile = memo(function BookTile({
   const resolvedCoverUrl = useBookCoverUrl({ bookId: book.id, coverUrl: book.coverUrl })
   const isAudiobook = book.format === 'audiobook'
   const FallbackIcon = isAudiobook ? Headphones : BookOpen
-  const ActionIcon = isAudiobook ? PlayCircle : BookOpen
   const readerPath = getBookDestinationPath(book)
 
   const sizes = VARIANT_SIZES[variant]
@@ -151,36 +148,9 @@ export const BookTile = memo(function BookTile({
           </div>
         )}
 
-        {/* Hover/Focus overlay with format-aware action icon in dark backdrop circle */}
-        <div
-          className={cn(
-            'absolute inset-0 flex items-center justify-center',
-            'bg-foreground/0 transition-colors duration-200',
-            'group-hover/tile:bg-foreground/30 group-focus-within/tile:bg-foreground/30'
-          )}
-        >
-          <div
-            className={cn(
-              'rounded-full bg-black/60 backdrop-blur-md p-2',
-              'opacity-0 transition-opacity duration-200',
-              'group-hover/tile:opacity-100 group-focus-within/tile:opacity-100'
-            )}
-          >
-            <ActionIcon
-              className={cn(
-                'size-6 text-white',
-                'opacity-0 transition-opacity duration-200',
-                'group-hover/tile:opacity-100 group-focus-within/tile:opacity-100'
-              )}
-              aria-hidden="true"
-            />
-          </div>
-        </div>
-
-        {/* Audio badge — top-right, audiobooks only (icon-only format indicator) */}
         {isAudiobook && (
           <div
-            className="absolute top-2 right-2 rounded-full bg-black/60 backdrop-blur p-1.5 z-10"
+            className="absolute top-2 right-2 z-10 rounded-full bg-black/60 p-1.5 backdrop-blur"
             aria-label="Audio format"
             data-testid={`book-tile-${book.id}-audio-badge`}
           >
