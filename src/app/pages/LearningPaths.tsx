@@ -225,10 +225,10 @@ function PathCard({
 
         {/* Card body */}
         <CardContent className="px-6 pb-5 pt-12 relative flex flex-col h-[calc(100%-8rem)]">
-          {/* Progress ring — positioned at -top-10 to match Lumina reference offset */}
-          <div className="absolute -top-10 left-6">
+          {/* Progress ring — centered on header/body seam via translate (scales with any ring size) */}
+          <div className="absolute top-0 left-6 -translate-y-1/2">
             <div className="bg-card rounded-full p-2 shadow-lg">
-              <PathProgressRing percentage={completionPct} size={80} strokeWidth={8}>
+              <PathProgressRing percentage={completionPct} size={80}>
                 {isCompleted ? (
                   <CheckCircle2 className="size-6 text-success" aria-hidden="true" />
                 ) : (
@@ -333,7 +333,7 @@ function PathCardSkeleton() {
     <Card className="overflow-hidden rounded-2xl">
       <Skeleton className="h-32 w-full rounded-none" />
       <CardContent className="px-6 pb-5 pt-1 relative">
-        <Skeleton className="absolute -top-10 left-6 size-[96px] rounded-full" />
+        <Skeleton className="absolute top-0 left-6 -translate-y-1/2 size-[96px] rounded-full" />
         <div className="mt-7 space-y-3">
           <Skeleton className="h-4 w-16" />
           <Skeleton className="h-6 w-3/4" />
