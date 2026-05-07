@@ -1,7 +1,6 @@
 ---
 title: "Learning Path Card Design Refresh — Progress Ring Consistency and Positioning Lessons from PR #544"
 date: 2026-05-07
-last_updated: 2026-05-08
 category: best-practices
 module: learning-paths
 problem_type: best_practice
@@ -19,10 +18,6 @@ tags:
   - scope-management
   - pathprogressring
   - learning-paths
-  - stitch
-  - data-testid
-  - playwright
-  - indexeddb
 related_components:
   - documentation
 ---
@@ -131,34 +126,6 @@ These errors pre-existed the PR — they were not caused by the changes. The cor
 
 The errors were documented in the PR description as discovered-but-unaddressed, giving reviewers visibility. They should be addressed in a dedicated follow-up task covering the course import module.
 
-### 4. Stitch / Lumina Parity Polish and Skeleton Mirroring (PR #545)
-
-PR [#545](https://github.com/PedroLages/knowlune/pull/545) layered **visual parity** on the same `PathCard` / `PathCardSkeleton` pair (user-supplied Stitch HTML reference). No behavior change to navigation, menus, or `useNextBestCourse`.
-
-**Card body and chrome**
-
-- Progress disc: `rounded-full bg-white p-2 shadow-lg dark:bg-card` so light mode matches the reference “white floating disc” without hardcoding Lumina blues.
-- In-progress label: `text-xl font-bold tabular-nums leading-none` inside the 80px / 8px-stroke ring; completed paths keep the success icon (avoids “100%” clipping).
-- Course-count pill: rely on shadcn `Badge` base `text-xs`, override with `px-3 py-1 font-semibold uppercase tracking-wider` (replacing ultralight `text-[10px]`).
-- Spacing rhythm: title `mb-2` when a description exists, else `mb-6`; description `mb-6` + `font-medium`; `Separator` `mb-6` before the footer row; badge row `mb-3`.
-- Avatars / overflow chip: `ring-2 ring-white dark:ring-card` instead of `border-card` for stacked separation; theme-safe in dark mode.
-
-**Stable selectors**
-
-- `data-testid="learning-path-card"` on the list card root supports unit tests and automation. Prefer scoping queries under the `list` “Learning paths” when asserting grid structure.
-
-**Skeleton**
-
-- Mirror the loaded card: same fixed heights (`h-[360px] md:h-[380px]`), shadow/hover transition classes, `CardContent` `pt-12` and `h-[calc(100%-8rem)]`, inner column `flex flex-col flex-1 min-h-0`, footer row `mt-auto`, ring placeholder `size-[96px]` at `-top-10 left-6` (80px ring + `p-2` padding). Removes the old `pt-1` + `mt-7` compensation that fought the real card layout.
-
-### 5. Unit Test Oracle: Card Count vs `filteredPaths`
-
-A grid test may assert `getAllByTestId('learning-path-card').length === mockPaths.length`. That only holds when **every** mocked path is a non-template row in `userPaths` / `filteredPaths`. If `isTemplate: true` rows are added to the mock, the count drifts while the UI is still correct. Prefer filtering `paths` the same way the page does, or scope `getAllByTestId` within the list node.
-
-### 6. Capturing PR Evidence When the Guest Library Is Empty
-
-`/learning-paths` as guest often has **no courses**, so “Create Path” cannot submit until at least one course is selected. E2E already seeds IndexedDB via `seedIndexedDBStore` in `tests/support/helpers/seed-helpers.ts`. For a **manual screenshot** or ad-hoc Playwright script: after guest init (`sessionStorage` / onboarding keys per `local-storage-fixture`), `page.goto('/learning-paths')`, open `indexedDB` on `ElearningDB`, `put` a minimal `learningPaths` row (`isTemplate: false`), reload, then wait for `[data-testid="learning-path-card"]`. This exercises real `PathCard` markup without importing a course.
-
 ## Why This Matters
 
 1. **Component consistency reduces cognitive load.** Developers working with ring components across the codebase now encounter the same `strokeWidth` prop pattern everywhere. This is the "extract shared primitive on second consumer" principle applied to prop interfaces.
@@ -192,10 +159,8 @@ A grid test may assert `getAllByTestId('learning-path-card').length === mockPath
 
 ## Related
 
-- [PR #544](https://github.com/PedroLages/knowlune/pull/544) — ring stroke, header height, positioning
-- [PR #545](https://github.com/PedroLages/knowlune/pull/545) — Stitch parity polish, skeleton, `data-testid`, test assertion
+- [PR #544](https://github.com/PedroLages/knowlune/pull/544) — the PR that shipped these changes
 - [Plan: Refresh Learning Path Card Design](../../plans/2026-05-07-013-feat-learning-path-card-design-refresh-plan.md)
-- [Plan: Stitch learning path card parity](../../plans/2026-05-08-001-feat-stitch-learning-path-card-parity-plan.md) (local plan; may be untracked)
 - [Learning Paths Card Navigation, Cover RLS, Progress Ring Sizing — Implementation Lessons](./learning-paths-card-navigation-cover-rls-timeline-lessons-2026-05-06.md) — related ring-sizing lessons from PR #525 (moderate overlap: discusses ring sizing trade-offs at 48px vs 72px; this doc extends coverage to stroke width consistency and positioning strategy)
 - `src/app/components/figma/PathProgressRing.tsx` — the component extended in this PR
 - `src/app/components/library/ProgressRing.tsx` — sibling ring with the same `strokeWidth` pattern
