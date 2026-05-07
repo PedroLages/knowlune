@@ -548,8 +548,8 @@ describe('bulkUpsertAbsBooks', () => {
     expect(b?.currentPosition).toEqual({ type: 'time', seconds: 1200 })
   })
 
-  it('preserves format from existing record on re-sync', async () => {
-    // Existing audiobook
+  it('updates format from catalog on re-sync (no longer preserved)', async () => {
+    // Existing audiobook synced before format detection
     const existing = makeBook({
       id: 'fmt-preserve-1',
       title: 'Original Title',
@@ -566,11 +566,11 @@ describe('bulkUpsertAbsBooks', () => {
       await useBookStore.getState().importBook(existing as never)
     })
 
-    // Re-sync with a different format — should NOT overwrite
+    // Re-sync with a corrected format — catalog format wins
     const fromCatalog = makeBook({
       id: 'new-fmt-id',
       title: 'Updated from ABS',
-      format: 'epub', // Different format that should be rejected
+      format: 'epub', // Catalog detects this as an ebook
       progress: 0,
       absServerId: 'srv-1',
       absItemId: 'fmt-item-1',
@@ -584,10 +584,13 @@ describe('bulkUpsertAbsBooks', () => {
 
     const b = useBookStore.getState().books.find(x => x.absItemId === 'fmt-item-1')
     expect(b?.id).toBe('fmt-preserve-1')
-    // Format must be preserved from the existing record — a regression would
-    // cause existing audiobooks to be reclassified as epub on every re-sync.
-    expect(b?.format).toBe('audiobook')
-    expect(b?.title).toBe('Updated from ABS') // title SHOULD update from catalog
+    // Format is NOT preserved from the existing record — catalog is source of truth.
+    // This fixes the bug where ABS ebooks synced before format detection were stuck as 'audiobook'.
+    expect(b?.format).toBe('epub')
+    // User-data fields ARE still preserved
+    expect(b?.progress).toBe(30)
+    expect(b?.status).toBe('reading')
+    expect(b?.title).toBe('Updated from ABS') // metadata updates from catalog
   })
 })
 

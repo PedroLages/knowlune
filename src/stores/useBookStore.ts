@@ -595,7 +595,6 @@ export const useBookStore = create<BookStoreState>((set, get) => ({
           ? {
               ...book,
               id: existing.id,
-              format: existing.format,
               status: existing.status,
               progress: existing.progress,
               currentPosition: existing.currentPosition,

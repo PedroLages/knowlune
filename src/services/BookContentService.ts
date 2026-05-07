@@ -41,7 +41,7 @@ export function enableTestMode(): void {
 export class RemoteEpubError extends Error {
   constructor(
     message: string,
-    public readonly code: 'network' | 'auth' | 'not-found' | 'server' | 'timeout',
+    public readonly code: 'network' | 'auth' | 'not-found' | 'server' | 'timeout' | 'unsupported-format',
     public readonly hasCachedVersion: boolean = false
   ) {
     super(message)
@@ -188,6 +188,25 @@ class BookContentService {
       }
 
       const arrayBuffer = await response.arrayBuffer()
+
+      // Validate EPUB content before caching or returning
+      if (arrayBuffer.byteLength === 0) {
+        throw new RemoteEpubError(
+          'Server returned empty content.',
+          'server',
+          await this.hasCachedEpub(bookId)
+        )
+      }
+
+      // ZIP magic number: 0x50 0x4B ('PK') at byte 0
+      const magic = new Uint8Array(arrayBuffer, 0, 2)
+      if (magic[0] !== 0x50 || magic[1] !== 0x4b) {
+        throw new RemoteEpubError(
+          'The server returned a file that is not a valid EPUB. The file may be in an unsupported format.',
+          'unsupported-format',
+          await this.hasCachedEpub(bookId)
+        )
+      }
 
       // Cache the successful response (best-effort, non-blocking)
       this.cacheEpub(bookId, arrayBuffer).catch(err => {
