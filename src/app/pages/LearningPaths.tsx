@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { motion } from 'motion/react'
 import {
@@ -113,6 +113,7 @@ function PathCard({
   onImport,
   onOpenCoverDialog,
   onOpenEditDialog,
+  coverDialogTriggerRef,
 }: {
   path: LearningPath
   courseCount: number
@@ -121,6 +122,7 @@ function PathCard({
   onImport: (pathId: string) => void
   onOpenCoverDialog: (path: LearningPath) => void
   onOpenEditDialog: (path: LearningPath) => void
+  coverDialogTriggerRef: React.MutableRefObject<HTMLElement | null>
 }) {
   const navigate = useNavigate()
   const deletePathWithUndo = useLearningPathStore(s => s.deletePathWithUndo)
@@ -198,7 +200,10 @@ function PathCard({
                 <Pencil className="mr-2 size-4" aria-hidden="true" />
                 Edit
               </DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => onOpenCoverDialog(path)}>
+              <DropdownMenuItem onSelect={() => {
+                coverDialogTriggerRef.current = document.activeElement as HTMLElement
+                onOpenCoverDialog(path)
+              }}>
                 <Image className="mr-2 size-4" aria-hidden="true" />
                 Change Cover
               </DropdownMenuItem>
@@ -359,6 +364,7 @@ export function LearningPaths() {
   const [aiGoalText, setAiGoalText] = useState('')
   const [discoverOpen, setDiscoverOpen] = useState(false)
   const [coverDialogPath, setCoverDialogPath] = useState<LearningPath | null>(null)
+  const coverDialogTriggerRef = useRef<HTMLElement | null>(null)
   const [editDialogPath, setEditDialogPath] = useState<LearningPath | null>(null)
 
   // Import wizard trigger (singleton guard pattern)
@@ -656,6 +662,7 @@ export function LearningPaths() {
                       onImport={handlePathImport}
                       onOpenCoverDialog={setCoverDialogPath}
                       onOpenEditDialog={setEditDialogPath}
+                      coverDialogTriggerRef={coverDialogTriggerRef}
                     />
                   </div>
                 )
@@ -719,6 +726,7 @@ export function LearningPaths() {
             if (!open) setCoverDialogPath(null)
           }}
           path={coverDialogPath}
+          triggerRef={coverDialogTriggerRef}
         />
       )}
 

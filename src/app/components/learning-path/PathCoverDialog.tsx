@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from 'react'
+import { useState, useRef, useCallback } from 'react'
 import { toast } from 'sonner'
 import { Upload, Trash2, X } from 'lucide-react'
 import {
@@ -22,9 +22,10 @@ interface PathCoverDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   path: LearningPath
+  triggerRef?: React.RefObject<HTMLElement | null>
 }
 
-export function PathCoverDialog({ open, onOpenChange, path }: PathCoverDialogProps) {
+export function PathCoverDialog({ open, onOpenChange, path, triggerRef }: PathCoverDialogProps) {
   const updatePathCover = useLearningPathStore(s => s.updatePathCover)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [selectedPreset, setSelectedPreset] = useState<string | null>(path.coverPreset ?? null)
@@ -32,17 +33,9 @@ export function PathCoverDialog({ open, onOpenChange, path }: PathCoverDialogPro
   const [uploadFile, setUploadFile] = useState<File | null>(null)
   const [isUploading, setIsUploading] = useState(false)
   const [isRemoving, setIsRemoving] = useState(false)
-  const triggerRef = useRef<HTMLElement | null>(null)
 
   const hasExistingCover = !!path.coverImageUrl
   const isBusy = isUploading || isRemoving
-
-  // Save reference to focused element when dialog opens (for focus restoration on close)
-  useEffect(() => {
-    if (open) {
-      triggerRef.current = document.activeElement as HTMLElement
-    }
-  }, [open])
 
   // Reset state when dialog opens
   const handleOpenChange = useCallback(
@@ -55,12 +48,12 @@ export function PathCoverDialog({ open, onOpenChange, path }: PathCoverDialogPro
         setUploadFile(null)
         setIsUploading(false)
         setIsRemoving(false)
-        // Restore focus to the trigger element (R9)
-        queueMicrotask(() => triggerRef.current?.focus())
+        // Restore focus to the trigger element (R9) — use rAF for reliable timing
+        requestAnimationFrame(() => triggerRef?.current?.focus())
       }
       onOpenChange(open)
     },
-    [onOpenChange, path.coverPreset, isBusy]
+    [onOpenChange, path.coverPreset, isBusy, triggerRef]
   )
 
   const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
