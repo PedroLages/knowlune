@@ -165,7 +165,7 @@ describe('pathCoverUpload', () => {
       mockGetUser.mockResolvedValueOnce({ data: { user: null }, error: new Error('no session') })
 
       const file = new File([new Uint8Array([1])], 'cover.png', { type: 'image/png' })
-      await expect(uploadPathCover(file, PATH_ID)).rejects.toThrow(/Authentication required/)
+      await expect(uploadPathCover(file, PATH_ID)).rejects.toThrow(/Sign in required to upload covers/)
       expect(mockUpload).not.toHaveBeenCalled()
     })
 
