@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 import { toast } from 'sonner'
 import { Upload, Trash2, X } from 'lucide-react'
 import {
@@ -28,6 +28,8 @@ interface PathCoverDialogProps {
 export function PathCoverDialog({ open, onOpenChange, path, triggerRef }: PathCoverDialogProps) {
   const updatePathCover = useLearningPathStore(s => s.updatePathCover)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  /** Blob URL from `URL.createObjectURL` — must be revoked when replaced or cleared */
+  const objectPreviewUrlRef = useRef<string | null>(null)
   const [selectedPreset, setSelectedPreset] = useState<string | null>(path.coverPreset ?? null)
   const [uploadPreview, setUploadPreview] = useState<string | null>(null)
   const [uploadFile, setUploadFile] = useState<File | null>(null)
@@ -37,12 +39,29 @@ export function PathCoverDialog({ open, onOpenChange, path, triggerRef }: PathCo
   const hasExistingCover = !!path.coverImageUrl
   const isBusy = isUploading || isRemoving
 
+  const revokeObjectPreview = useCallback(() => {
+    if (objectPreviewUrlRef.current) {
+      URL.revokeObjectURL(objectPreviewUrlRef.current)
+      objectPreviewUrlRef.current = null
+    }
+  }, [])
+
+  useEffect(() => {
+    return () => {
+      if (objectPreviewUrlRef.current) {
+        URL.revokeObjectURL(objectPreviewUrlRef.current)
+        objectPreviewUrlRef.current = null
+      }
+    }
+  }, [])
+
   // Reset state when dialog opens
   const handleOpenChange = useCallback(
     (open: boolean) => {
       // Prevent dismiss while upload or remove is in progress
       if (!open && isBusy) return
       if (!open) {
+        revokeObjectPreview()
         setSelectedPreset(path.coverPreset ?? null)
         setUploadPreview(null)
         setUploadFile(null)
@@ -53,7 +72,7 @@ export function PathCoverDialog({ open, onOpenChange, path, triggerRef }: PathCo
       }
       onOpenChange(open)
     },
-    [onOpenChange, path.coverPreset, isBusy, triggerRef]
+    [onOpenChange, path.coverPreset, isBusy, triggerRef, revokeObjectPreview]
   )
 
   const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -65,11 +84,13 @@ export function PathCoverDialog({ open, onOpenChange, path, triggerRef }: PathCo
       return
     }
 
+    revokeObjectPreview()
+    const url = URL.createObjectURL(file)
+    objectPreviewUrlRef.current = url
+    setUploadPreview(url)
     setUploadFile(file)
     setSelectedPreset(null)
-    const url = URL.createObjectURL(file)
-    setUploadPreview(url)
-  }, [])
+  }, [revokeObjectPreview])
 
   const handleSave = useCallback(async () => {
     setIsUploading(true)
@@ -164,6 +185,7 @@ export function PathCoverDialog({ open, onOpenChange, path, triggerRef }: PathCo
                   size="icon"
                   className="absolute top-2 right-2 size-8 bg-black/30 hover:bg-black/50 text-white rounded-full"
                   onClick={() => {
+                    revokeObjectPreview()
                     setUploadPreview(null)
                     setUploadFile(null)
                     if (fileInputRef.current) fileInputRef.current.value = ''
@@ -205,9 +227,10 @@ export function PathCoverDialog({ open, onOpenChange, path, triggerRef }: PathCo
                       : 'hover:scale-105'
                   )}
                   onClick={() => {
-                    setSelectedPreset(preset.key)
+                    revokeObjectPreview()
                     setUploadPreview(null)
                     setUploadFile(null)
+                    setSelectedPreset(preset.key)
                   }}
                   aria-label={`${preset.label} gradient`}
                   aria-pressed={selectedPreset === preset.key}
