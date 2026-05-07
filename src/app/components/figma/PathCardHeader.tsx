@@ -80,7 +80,7 @@ export function PathCardHeader({
   return (
     <div
       className={cn(
-        'relative h-24 overflow-hidden',
+        'relative h-32 overflow-hidden',
         hasCoverImage ? 'bg-muted' : `bg-gradient-to-br ${gradient}`,
         className
       )}
