@@ -10,6 +10,7 @@
 import { db } from '@/db/schema'
 import { opfsStorageService } from '@/services/OpfsStorageService'
 import { useDownloadStore, type PendingDownloadState } from '@/stores/useDownloadStore'
+import { checkStorageQuota } from '@/lib/storageQuotaMonitor'
 import type { Book, ContentSource } from '@/data/types'
 
 export type DownloadStatus = 'pending' | 'downloading' | 'downloaded' | 'failed' | 'paused' | 'retrying'
@@ -87,6 +88,8 @@ class DownloadManager {
 
   /** Serialized download flow — resolves the file URL, streams to OPFS. */
   async startDownload(book: Book): Promise<void> {
+    await this._requestPersistentStorage()
+
     const store = useDownloadStore.getState()
     const existing = store.downloads.get(book.id)
 
@@ -165,6 +168,25 @@ class DownloadManager {
 
   // ─── Private ─────────────────────────────────────────────────────────
 
+  /** Request persistent storage on first download to reduce OPFS eviction risk. */
+  private async _requestPersistentStorage(): Promise<void> {
+    if (typeof navigator.storage?.persist !== 'function') return
+    if (localStorage.getItem('knowlune_storage_persist_requested')) return
+
+    try {
+      const alreadyPersisted = await navigator.storage.persisted()
+      if (alreadyPersisted) {
+        localStorage.setItem('knowlune_storage_persist_requested', '1')
+        return
+      }
+      const granted = await navigator.storage.persist()
+      console.info(`[DownloadManager] Persistent storage ${granted ? 'granted' : 'denied'}`)
+    } catch (err) {
+      console.warn('[DownloadManager] persist() failed:', err)
+    }
+    localStorage.setItem('knowlune_storage_persist_requested', '1')
+  }
+
   private async _performDownload(book: Book): Promise<void> {
     const store = useDownloadStore.getState()
     const bookId = book.id
@@ -233,6 +255,9 @@ class DownloadManager {
       })
 
       await db.books.update(bookId, { offlinePath: finalPath })
+
+      // Trigger quota check after download completes
+      checkStorageQuota()
 
       const record = store.downloads.get(bookId)
       if (record) {

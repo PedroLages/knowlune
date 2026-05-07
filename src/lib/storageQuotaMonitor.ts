@@ -1,16 +1,19 @@
 /**
- * IndexedDB Storage Quota Monitor (E32-S03)
+ * Browser Storage Quota Monitor (E32-S03, extended for offline downloads).
  *
- * Monitors IndexedDB storage usage via `navigator.storage.estimate()` and warns
- * users when approaching browser storage limits. Catches QuotaExceededError
- * during Dexie writes with user-friendly error handling.
+ * Monitors total browser storage usage via `navigator.storage.estimate()`
+ * (includes OPFS + IndexedDB) and warns users at graduated thresholds.
+ * Catches QuotaExceededError during Dexie writes with user-friendly error handling.
  *
  * Runs:
  * - On app startup (deferred via requestIdleCallback)
  * - After bulk operations (import, AI analysis)
+ * - After each download completes
  *
- * Thresholds:
- * - 80%+ usage: persistent warning toast linking to Settings > Data Management
+ * Graduated thresholds:
+ * - 70%: info toast
+ * - 85%: warning toast with "Manage Storage" action
+ * - 95%: persistent error toast with Settings link
  * - QuotaExceededError: user-friendly error toast with guidance
  */
 
@@ -19,14 +22,18 @@ import { TOAST_DURATION } from '@/lib/toastConfig'
 
 // --- Constants ---
 
-/** Usage percentage that triggers a warning (80%) */
-const WARNING_THRESHOLD = 0.8
+/** Graduated quota thresholds */
+const THRESHOLD_INFO = 0.70   // 70% — informational
+const THRESHOLD_WARNING = 0.85 // 85% — action recommended
+const THRESHOLD_CRITICAL = 0.95 // 95% — immediate action needed
 
 /** Minimum interval between warning toasts (5 minutes) to avoid spam */
 const WARNING_THROTTLE_MS = 5 * 60 * 1000
 
 /** Module-level throttle state — shared across all callers in the same tab */
 let lastQuotaWarningAt = 0
+/** Track last-seen severity to avoid re-toasting at same level */
+let lastSeverity: 'info' | 'warning' | 'critical' | null = null
 
 // --- Types ---
 
@@ -68,54 +75,80 @@ export async function getStorageEstimate(): Promise<StorageEstimate | null> {
 }
 
 /**
- * Check storage usage and show a warning toast if usage exceeds the threshold.
+ * Check storage usage and show a graduated warning toast if usage exceeds thresholds.
  * Throttled to avoid toast spam — at most once per WARNING_THROTTLE_MS.
  *
- * Called on app startup and after bulk operations (import, AI analysis).
+ * Called on app startup, after bulk operations (import, AI analysis),
+ * and after each download completes.
  */
 export async function checkStorageQuota(): Promise<void> {
   const estimate = await getStorageEstimate()
   if (!estimate) return
 
-  if (estimate.usagePercent >= WARNING_THRESHOLD) {
-    showQuotaWarning(estimate)
+  const pct = estimate.usagePercent
+
+  if (pct >= THRESHOLD_CRITICAL) {
+    showQuotaWarning(estimate, 'critical')
+  } else if (pct >= THRESHOLD_WARNING) {
+    showQuotaWarning(estimate, 'warning')
+  } else if (pct >= THRESHOLD_INFO) {
+    showQuotaWarning(estimate, 'info')
   }
 }
 
 /**
- * Shows a persistent warning toast when storage usage exceeds the threshold.
- * Links the user to Settings > Data Management for cleanup.
- * Throttled to prevent duplicate toasts.
+ * Shows a graduated warning toast based on storage usage.
+ * - 70% (info): brief toast
+ * - 85% (warning): persistent toast with "Manage Storage" action
+ * - 95% (critical): persistent error toast with Settings link
+ * Throttled to prevent duplicate toasts at the same severity level.
  */
-function showQuotaWarning(estimate: StorageEstimate): void {
+function showQuotaWarning(estimate: StorageEstimate, severity: 'info' | 'warning' | 'critical'): void {
   const now = Date.now()
-  // Handle backward clock jumps
   if (lastQuotaWarningAt > now) {
     lastQuotaWarningAt = 0
+    lastSeverity = null
   }
-  if (now - lastQuotaWarningAt < WARNING_THROTTLE_MS) return
+  // Re-toast only if severity escalated or throttle window passed
+  if (now - lastQuotaWarningAt < WARNING_THROTTLE_MS && lastSeverity === severity) return
   lastQuotaWarningAt = now
+  lastSeverity = severity
 
   const percent = Math.round(estimate.usagePercent * 100)
-  toast.warning(
-    `Storage is ${percent}% full (${estimate.usageMB} MB of ${estimate.quotaMB} MB). ` +
-      'Free up space in Settings > Data Management to avoid data loss.',
-    {
-      duration: TOAST_DURATION.PERSISTENT,
-      action: {
-        label: 'Go to Settings',
-        onClick: () => {
-          window.location.hash = ''
-          window.location.pathname = '/settings'
-          // Scroll to Data Management section after navigation
-          setTimeout(() => {
-            const section = document.getElementById('data-management')
-            section?.scrollIntoView({ behavior: 'smooth' })
-          }, 500)
+  const detail = `(${estimate.usageMB} MB of ${estimate.quotaMB} MB)`
+
+  if (severity === 'critical') {
+    toast.error(
+      `Storage nearly full: ${percent}% ${detail}. Free up space in Settings to avoid data loss.`,
+      {
+        duration: TOAST_DURATION.PERSISTENT,
+        action: {
+          label: 'Settings',
+          onClick: () => {
+            window.location.pathname = '/settings'
+          },
         },
-      },
-    }
-  )
+      }
+    )
+  } else if (severity === 'warning') {
+    toast.warning(
+      `Storage is ${percent}% full ${detail}. Consider managing downloads to free up space.`,
+      {
+        duration: TOAST_DURATION.PERSISTENT,
+        action: {
+          label: 'Manage Storage',
+          onClick: () => {
+            window.location.pathname = '/settings'
+          },
+        },
+      }
+    )
+  } else {
+    toast.info(
+      `Storage ${percent}% used ${detail}.`,
+      { duration: 5000 }
+    )
+  }
 }
 
 // --- QuotaExceededError handling ---
