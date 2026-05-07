@@ -35,7 +35,16 @@ function makeRemoteBookWithBearer(
   return makeBook({ type: 'remote', url, auth: { bearer: token } }, id)
 }
 
-const MOCK_EPUB_BUFFER = new ArrayBuffer(100)
+/** Valid EMPTY-like buffer with ZIP magic bytes (PK at position 0). */
+function createEpubBuffer(size = 100): ArrayBuffer {
+  const buf = new ArrayBuffer(size)
+  const view = new Uint8Array(buf)
+  view[0] = 0x50 // P
+  view[1] = 0x4b // K
+  return buf
+}
+
+const MOCK_EPUB_BUFFER = createEpubBuffer(100)
 
 /** Stub fetch to return a Response with the given options. */
 function stubFetch(body: BodyInit | null, status = 200, headers?: Record<string, string>) {
@@ -303,10 +312,81 @@ describe('BookContentService', () => {
     })
   })
 
+  describe('remote fetch — content validation', () => {
+    function createPdfBuffer(): ArrayBuffer {
+      const buf = new ArrayBuffer(100)
+      const view = new Uint8Array(buf)
+      view[0] = 0x25 // %
+      view[1] = 0x50 // P
+      view[2] = 0x44 // D
+      view[3] = 0x46 // F
+      return buf
+    }
+
+    function createHtmlBuffer(): ArrayBuffer {
+      const buf = new ArrayBuffer(100)
+      const view = new Uint8Array(buf)
+      view[0] = 0x3c // <
+      view[1] = 0x21 // !
+      return buf
+    }
+
+    it('passes validation for valid EPUB (ZIP magic bytes PK)', async () => {
+      vi.stubGlobal('fetch', stubFetch(createEpubBuffer()))
+
+      const book = makeRemoteBookWithBearer('valid-token')
+      const result = await bookContentService.getEpubContent(book)
+
+      expect(result).toBeInstanceOf(ArrayBuffer)
+      expect(result.byteLength).toBe(100)
+    })
+
+    it('throws RemoteEpubError with code "server" for empty response (0 bytes)', async () => {
+      vi.stubGlobal('fetch', stubFetch(new ArrayBuffer(0)))
+
+      const book = makeRemoteBookWithBearer('valid-token')
+      try {
+        await bookContentService.getEpubContent(book)
+        expect.unreachable('should have thrown')
+      } catch (err) {
+        expect(err).toBeInstanceOf(RemoteEpubError)
+        expect((err as RemoteEpubError).code).toBe('server')
+        expect((err as RemoteEpubError).message).toContain('empty')
+      }
+    })
+
+    it('throws RemoteEpubError with code "unsupported-format" for PDF content', async () => {
+      vi.stubGlobal('fetch', stubFetch(createPdfBuffer()))
+
+      const book = makeRemoteBookWithBearer('valid-token')
+      try {
+        await bookContentService.getEpubContent(book)
+        expect.unreachable('should have thrown')
+      } catch (err) {
+        expect(err).toBeInstanceOf(RemoteEpubError)
+        expect((err as RemoteEpubError).code).toBe('unsupported-format')
+        expect((err as RemoteEpubError).message).toContain('not a valid EPUB')
+      }
+    })
+
+    it('throws RemoteEpubError with code "unsupported-format" for HTML content', async () => {
+      vi.stubGlobal('fetch', stubFetch(createHtmlBuffer()))
+
+      const book = makeRemoteBookWithBearer('valid-token')
+      try {
+        await bookContentService.getEpubContent(book)
+        expect.unreachable('should have thrown')
+      } catch (err) {
+        expect(err).toBeInstanceOf(RemoteEpubError)
+        expect((err as RemoteEpubError).code).toBe('unsupported-format')
+        expect((err as RemoteEpubError).message).toContain('not a valid EPUB')
+      }
+    })
+  })
+
   describe('remote fetch — caching', () => {
     it('caches EPUB after successful fetch', async () => {
-      const buffer = new ArrayBuffer(50)
-      vi.stubGlobal('fetch', stubFetch(buffer))
+      vi.stubGlobal('fetch', stubFetch(createEpubBuffer(50)))
 
       const book = makeRemoteBook()
       await bookContentService.getEpubContent(book)

@@ -380,12 +380,60 @@ describe('mapAbsItemToBook', () => {
     expect(src(book).url).toBe('http://abs-server:13378')
   })
 
+  it('strips trailing slash from server URL for ebook source URL', () => {
+    const server = makeServer({ url: 'http://abs-server:13378/' })
+    const item = makeAbsItem({
+      id: 'trailing-slash-ebook',
+      mediaType: 'ebook',
+      media: {
+        metadata: {
+          title: 'Trailing Slash',
+          authors: [{ id: 'auth-1', name: 'Author' }],
+          narrators: [],
+          duration: 0,
+          numChapters: 0,
+        },
+        chapters: [],
+      },
+    })
+
+    const book = mapAbsItemToBook(item, server, 'key')
+
+    // Should not double the path separator
+    expect(src(book).url).toBe('http://abs-server:13378/api/items/trailing-slash-ebook/ebook')
+  })
+
   it('omits source.auth when apiKey is empty string', () => {
     const server = makeServer()
     const item = makeAbsItemWithNarrators(['Narrator'], 1800)
 
     const book = mapAbsItemToBook(item, server, '')
 
+    expect(src(book).auth).toBeUndefined()
+  })
+
+  it('produces correct format and URL for ebook even with empty apiKey', () => {
+    const server = makeServer()
+    const item = makeAbsItem({
+      id: 'no-auth-ebook',
+      mediaType: 'ebook',
+      media: {
+        metadata: {
+          title: 'No Auth Ebook',
+          authors: [{ id: 'auth-1', name: 'Author' }],
+          narrators: [],
+          duration: 0,
+          numChapters: 0,
+        },
+        chapters: [],
+      },
+    })
+
+    const book = mapAbsItemToBook(item, server, '')
+
+    // Format and URL should be correct even without auth token
+    expect(book.format).toBe('epub')
+    expect(src(book).url).toBe('http://abs-server:13378/api/items/no-auth-ebook/ebook')
     expect(src(book).auth).toBeUndefined()
   })
 })
