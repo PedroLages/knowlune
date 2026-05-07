@@ -7,6 +7,7 @@ import { useBookCoverUrl } from '@/app/hooks/useBookCoverUrl'
 import { cn } from '@/app/components/ui/utils'
 import { sanitizeDescriptionHtml } from '@/lib/textUtils'
 import { getBookDestinationPath } from '@/lib/bookNavigation'
+import { isFinished } from '@/lib/libraryShelves'
 
 function toTimestamp(value: string | undefined): number {
   if (!value) return 0
@@ -16,10 +17,6 @@ function toTimestamp(value: string | undefined): number {
 
 function isInProgress(book: Book): boolean {
   return book.progress > 0 && book.progress < 100 && book.status !== 'finished'
-}
-
-function isEffectivelyFinished(book: Book): boolean {
-  return book.status === 'finished' || book.progress >= 100
 }
 
 function pickHeroBook(books: Book[]): Book | null {
@@ -60,7 +57,7 @@ export function LibraryMediaHero({
     ? isAudio
       ? 'Continue listening'
       : 'Continue reading'
-    : isEffectivelyFinished(heroBook)
+    : isFinished(heroBook)
       ? isAudio
         ? 'Listen again'
         : 'Read again'

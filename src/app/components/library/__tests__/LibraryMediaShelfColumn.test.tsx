@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router'
 import type { Book } from '@/data/types'
 import { LibraryMediaShelfColumn } from '@/app/components/library/LibraryMediaShelfColumn'
@@ -155,14 +156,18 @@ describe('LibraryMediaShelfColumn', () => {
     expect(screen.queryByTestId('book-tile-audio-recent-progress-meta')).not.toBeInTheDocument()
   })
 
-  it('applies muted tone to Listen Again shelf cards', () => {
+  it('opens book context menu from Continue shelf tile (right-click)', async () => {
+    const user = userEvent.setup()
     render(
       <MemoryRouter>
         <LibraryMediaShelfColumn onEdit={noopEdit} />
       </MemoryRouter>
     )
-    const again = screen.getByTestId('recent-book-card-audio-finished')
-    expect(again).toHaveAttribute('data-tone', 'muted')
+
+    const rail = screen.getByTestId('media-shelf-continue')
+    const tile = within(rail).getByTestId('book-tile-audio-continue')
+    await user.pointer({ keys: '[MouseRight>]', target: tile })
+    expect(await screen.findByTestId('context-menu-edit')).toBeInTheDocument()
   })
 })
 

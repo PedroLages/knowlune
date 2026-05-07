@@ -22,7 +22,8 @@ function sortByLastOpenedDesc(a: Book, b: Book): number {
   return toTimestamp(b.lastOpenedAt) - toTimestamp(a.lastOpenedAt)
 }
 
-function isFinished(book: Book): boolean {
+/** Shared “finished” semantics for shelves, hero CTAs, and filters. */
+export function isFinished(book: Book): boolean {
   return book.status === 'finished' || book.progress >= 100
 }
 

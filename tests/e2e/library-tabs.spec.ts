@@ -12,7 +12,7 @@
  */
 
 import { test, expect } from '../support/fixtures'
-import { seedBooks } from '../support/helpers/indexeddb-seed'
+import { clearBooksStore, seedBooks } from '../support/helpers/indexeddb-seed'
 import {
   tabSeedsBase,
   tabSeedsAudiobooksOnly,
@@ -192,8 +192,7 @@ test.describe('Tab content rendering', () => {
         !e.includes('favicon') &&
         !e.includes('404') &&
         !e.includes('400') &&
-        !e.includes('syncEngine') &&
-        !e.includes('403 (Forbidden)')
+        !e.includes('syncEngine')
     )
     expect(realErrors, `Console errors during tab nav: ${realErrors.join('\n')}`).toEqual([])
   })
@@ -205,7 +204,24 @@ test.describe('Continue tab hero and context menu', () => {
     await seedBooks(page, tabSeedsBase())
   })
 
-  test('hero primary uses Continue reading, not Explore, for newest unread ebook', async ({ page }) => {
+  test('hero primary uses Continue reading, not Explore, when hero is newest unread ebook', async ({
+    page,
+  }) => {
+    await clearBooksStore(page)
+    await seedBooks(page, [
+      {
+        id: 'tab-test-hero-unread',
+        title: 'Hero Unread Ebook',
+        author: 'Seed Author',
+        format: 'epub',
+        status: 'unread' as const,
+        tags: [],
+        chapters: [],
+        source: { type: 'local' as const, opfsPath: '/test-hero' },
+        progress: 0,
+        createdAt: '2025-06-01T12:00:00.000Z',
+      },
+    ])
     await page.goto('/library?tab=continue')
 
     await expect(page.getByTestId('library-media-hero-primary')).toHaveText(/Continue reading/i)
@@ -214,27 +230,7 @@ test.describe('Continue tab hero and context menu', () => {
 
   test('hero shows Read again when hero book is finished', async ({ page }) => {
     await page.goto('/')
-    await page.evaluate(async () => {
-      await new Promise<void>((resolve, reject) => {
-        const req = indexedDB.open('ElearningDB')
-        req.onerror = () => reject(req.error)
-        req.onsuccess = () => {
-          const db = req.result
-          if (!db.objectStoreNames.contains('books')) {
-            db.close()
-            resolve()
-            return
-          }
-          const tx = db.transaction('books', 'readwrite')
-          tx.objectStore('books').clear()
-          tx.oncomplete = () => {
-            db.close()
-            resolve()
-          }
-          tx.onerror = () => reject(tx.error)
-        }
-      })
-    })
+    await clearBooksStore(page)
     await seedBooks(page, [
       {
         id: 'only-finished',
@@ -257,27 +253,7 @@ test.describe('Continue tab hero and context menu', () => {
 
   test('hero primary uses Continue listening for unread audiobook', async ({ page }) => {
     await page.goto('/')
-    await page.evaluate(async () => {
-      await new Promise<void>((resolve, reject) => {
-        const req = indexedDB.open('ElearningDB')
-        req.onerror = () => reject(req.error)
-        req.onsuccess = () => {
-          const db = req.result
-          if (!db.objectStoreNames.contains('books')) {
-            db.close()
-            resolve()
-            return
-          }
-          const tx = db.transaction('books', 'readwrite')
-          tx.objectStore('books').clear()
-          tx.oncomplete = () => {
-            db.close()
-            resolve()
-          }
-          tx.onerror = () => reject(tx.error)
-        }
-      })
-    })
+    await clearBooksStore(page)
     await seedBooks(page, [
       {
         id: 'solo-audio',
@@ -303,6 +279,11 @@ test.describe('Continue tab hero and context menu', () => {
     await page.getByTestId('book-tile-tab-test-hero-unread').first().click({ button: 'right' })
     await expect(page.getByTestId('context-menu-edit')).toBeVisible({ timeout: 3000 })
   })
+
+  test('Continue shelf tile exposes more-actions control', async ({ page }) => {
+    await page.goto('/library?tab=continue')
+    await expect(page.getByTestId('book-more-actions').first()).toBeAttached()
+  })
 })
 
 test.describe('Mixed-format library defaults', () => {
@@ -316,9 +297,7 @@ test.describe('Mixed-format library defaults', () => {
 
     const card = page.getByTestId('book-card-tab-test-mixed-audiobook')
     await card.hover()
-    await page
-      .getByRole('button', { name: 'More actions for Mixed Library Audio' })
-      .click({ force: true })
+    await page.getByRole('button', { name: 'More actions for Mixed Library Audio' }).click()
 
     await expect(page.getByRole('menuitem', { name: 'Edit' })).toBeVisible({ timeout: 3000 })
   })
@@ -360,8 +339,12 @@ test.describe('Mixed-format library defaults', () => {
 })
 
 test.describe('Single-format library auto-filter', () => {
-  test('Audiobooks-only library auto-selects Audiobooks format tab', async ({ page }) => {
+  test.beforeEach(async ({ page }) => {
     await page.goto('/')
+    await clearBooksStore(page)
+  })
+
+  test('Audiobooks-only library auto-selects Audiobooks format tab', async ({ page }) => {
     await seedBooks(page, tabSeedsAudiobooksOnly())
     await page.goto('/library?tab=continue')
 
@@ -380,7 +363,6 @@ test.describe('Single-format library auto-filter', () => {
   })
 
   test('Ebooks-only library auto-selects Ebooks format tab', async ({ page }) => {
-    await page.goto('/')
     await seedBooks(page, tabSeedsEbooksOnly())
     await page.goto('/library?tab=continue')
 

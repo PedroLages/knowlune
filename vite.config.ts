@@ -597,6 +597,16 @@ export default defineConfig({
     }
   },
   server: {
+    // Worktrees (and some monorepo layouts) resolve packages to a parent `node_modules`
+    // (e.g. @fontsource fonts). Without this, dev can log 403 for blocked file reads.
+    fs: {
+      allow: [
+        path.resolve(__dirname),
+        path.resolve(__dirname, 'node_modules'),
+        path.resolve(__dirname, '..', 'node_modules'),
+        path.resolve(__dirname, '..', '..', 'node_modules'),
+      ],
+    },
     // ┌─────────────────────────────────────────────────────────────┐
     // │              Ollama Dev Proxy Architecture                  │
     // ├─────────────────────────────────────────────────────────────┤

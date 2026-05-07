@@ -274,6 +274,11 @@ export async function seedBooks(page: Page, books: Record<string, unknown>[]): P
   await seedIndexedDBStore(page, 'ElearningDB', 'books', books)
 }
 
+/** Clears all rows in the `books` store (E2E isolation). */
+export async function clearBooksStore(page: Page): Promise<void> {
+  await clearIndexedDBStore(page, 'ElearningDB', 'books')
+}
+
 /**
  * Seeds the vocabularyItems object store in ElearningDB.
  * Convenience wrapper around seedIndexedDBStore.
