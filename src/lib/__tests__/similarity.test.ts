@@ -152,7 +152,7 @@ describe('findSimilarBooks', () => {
     const hero = makeBook({
       id: 'hero',
       title: 'Hero Book',
-      genre: 'self-help',
+      genre: 'Self-Help',
       tags: ['productivity', 'habits'],
       description: '', // no keyword signal
     })
@@ -160,7 +160,7 @@ describe('findSimilarBooks', () => {
     const genreMatch = makeBook({
       id: 'genre',
       title: 'Genre Match',
-      genre: 'self-help',
+      genre: 'Self-Help',
       tags: ['productivity', 'time-management'],
       description: '',
     })
@@ -229,7 +229,6 @@ describe('findSimilarBooks', () => {
     })
 
     const results = findSimilarBooks(hero, [noDesc])
-    const result = results.find(r => r.book.id === 'no-desc')
     // Should not crash; may or may not match depending on genre/tags
     expect(Array.isArray(results)).toBe(true)
   })

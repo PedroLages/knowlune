@@ -22,7 +22,6 @@ import { type SimilarBook } from '@/lib/similarity'
 import { LibraryMediaShelfRow } from '@/app/components/library/LibraryMediaShelfRow'
 import { BookCoverImage } from '@/app/components/library/BookCoverImage'
 import { useBookCoverUrl } from '@/app/hooks/useBookCoverUrl'
-import { cn } from '@/app/components/ui/utils'
 
 // ─── Similar Book Card ────────────────────────────────────────────────────────
 
