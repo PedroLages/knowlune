@@ -20,7 +20,7 @@
  * a single `db.version(CHECKPOINT_VERSION).stores(CHECKPOINT_SCHEMA)` call
  * for fresh installs.
  */
-export const CHECKPOINT_VERSION = 63
+export const CHECKPOINT_VERSION = 64
 
 /**
  * Shared `searchFrecency` index string. Used by both the v53 `.stores()` call
@@ -139,6 +139,8 @@ export const CHECKPOINT_SCHEMA: Record<string, string> = {
   absCollections: 'id, serverId, libraryId, name',
   // v63 (AI-first path building): local-only reorder history for preference vectors.
   reorderHistory: 'id, pathId, courseId, movedAt',
+  // v64 (offline downloads): per-device download state, local-only.
+  downloads: 'id, bookId, status, [bookId+status], createdAt',
 }
 
 // v42 (E109-S01): vocabularyItems table added
