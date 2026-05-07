@@ -356,10 +356,10 @@ export function Library() {
 
   const activeModeLabel = useMemo(() => {
     const f = filters.format
-    if (!f || f.length === 0) return 'Audiobooks' as const
+    if (!f || f.length === 0) return 'Items' as const
     if (f.length === 1 && f[0] === 'audiobook') return 'Audiobooks' as const
     if (f.every(v => v === 'epub' || v === 'pdf')) return 'Ebooks' as const
-    return 'Audiobooks' as const
+    return 'Items' as const
   }, [filters.format])
 
   const modeBooksForMedia = useMemo(() => {
@@ -369,14 +369,16 @@ export function Library() {
         : books
 
     const f = filters.format
-    // Default to audiobooks when format is unset or mixed.
-    if (!f || f.length === 0 || (f.length === 1 && f[0] === 'audiobook')) {
+    if (!f || f.length === 0) {
+      return sourceFiltered
+    }
+    if (f.length === 1 && f[0] === 'audiobook') {
       return sourceFiltered.filter(b => b.format === 'audiobook')
     }
     if (f.every(v => v === 'epub' || v === 'pdf')) {
       return sourceFiltered.filter(b => b.format === 'epub' || b.format === 'pdf')
     }
-    return sourceFiltered.filter(b => b.format === 'audiobook')
+    return sourceFiltered
   }, [books, filters.format, filters.source])
 
   // Load books on mount
@@ -384,8 +386,9 @@ export function Library() {
     loadBooks()
   }, [loadBooks])
 
-  // Media-first default: when books exist and no format is chosen,
-  // prefer audiobooks if present, otherwise fall back to ebooks.
+  // Media-first default for single-format libraries: when books exist and no
+  // format is chosen, auto-pick audiobooks-only or ebooks-only if just one
+  // modality exists; mixed libraries keep format unset (all formats).
   //
   // Gate: runs at most once per mount (ref) and never in a session where the
   // user has already cleared the format chip (sessionStorage flag). When the
@@ -393,10 +396,15 @@ export function Library() {
   // the page does not re-apply the default. Resets only when the library is
   // empty (all books removed).
   const initialMediaFormatDefaultAppliedRef = useRef(false)
+  const prevFilterFormatRef = useRef(filters.format)
   useEffect(() => {
+    const format = filters.format
+    const isEmpty = !format || format.length === 0
+
     // Library emptied — reset both gates so a fresh default fires when books reappear.
     if (books.length === 0) {
       initialMediaFormatDefaultAppliedRef.current = false
+      prevFilterFormatRef.current = format
       try {
         sessionStorage.removeItem('libraryFormatCleared')
       } catch {
@@ -412,29 +420,48 @@ export function Library() {
     } catch {
       // silent-catch-ok
     }
-    if (formatCleared) return
-
-    if (!filters.format || filters.format.length === 0) {
-      // Ref already fired — this is a user-initiated clear (chip ×). Persist the
-      // intent so it survives page remounts within this session.
-      if (initialMediaFormatDefaultAppliedRef.current) {
-        try {
-          sessionStorage.setItem('libraryFormatCleared', '1')
-        } catch {
-          // silent-catch-ok
-        }
-        return
-      }
-
-      // First time: apply the one-shot media-first default.
-      const hasAudiobooks = books.some(b => b.format === 'audiobook')
-      if (hasAudiobooks) {
-        setFilter('format', ['audiobook'])
-      } else if (books.some(b => b.format === 'epub' || b.format === 'pdf')) {
-        setFilter('format', ['epub', 'pdf'])
-      }
-      initialMediaFormatDefaultAppliedRef.current = true
+    if (formatCleared) {
+      prevFilterFormatRef.current = format
+      return
     }
+
+    const prevFormat = prevFilterFormatRef.current
+    const prevWasNonEmpty = !!prevFormat && prevFormat.length > 0
+
+    // User cleared the format chip (was filtered, now empty) — not the mixed-library initial state.
+    if (isEmpty && prevWasNonEmpty) {
+      try {
+        sessionStorage.setItem('libraryFormatCleared', '1')
+      } catch {
+        // silent-catch-ok
+      }
+      prevFilterFormatRef.current = format
+      return
+    }
+
+    if (!isEmpty) {
+      prevFilterFormatRef.current = format
+      return
+    }
+
+    // Still empty after initial handling (e.g. mixed library): do not treat as user clear.
+    if (initialMediaFormatDefaultAppliedRef.current) {
+      prevFilterFormatRef.current = format
+      return
+    }
+
+    const hasAudiobooks = books.some(b => b.format === 'audiobook')
+    const hasEbooks = books.some(b => b.format === 'epub' || b.format === 'pdf')
+
+    if (hasAudiobooks && hasEbooks) {
+      // Leave format unset so user reaches true "all formats" mode.
+    } else if (hasAudiobooks) {
+      setFilter('format', ['audiobook'])
+    } else if (hasEbooks) {
+      setFilter('format', ['epub', 'pdf'])
+    }
+
+    initialMediaFormatDefaultAppliedRef.current = true
   }, [books.length, filters.format, setFilter, books])
 
   // Yearly goal celebration — fires when a book is marked finished (E86-S05)
@@ -803,27 +830,53 @@ export function Library() {
             >
               <div className="flex flex-col gap-2">
                 <h2 className="text-xl font-semibold tracking-tight text-foreground">
-                  No {activeModeLabel.toLowerCase()} yet.
+                  {activeModeLabel === 'Items'
+                    ? 'No books in this view yet.'
+                    : `No ${activeModeLabel.toLowerCase()} yet.`}
                 </h2>
                 <p className="text-sm text-muted-foreground">
-                  Your library has books in the other format. Switch modes, or add your first{' '}
-                  {activeModeLabel.toLowerCase()}.
+                  {activeModeLabel === 'Items'
+                    ? 'Try another source or format tab, or import a book.'
+                    : `Your library has books in the other format. Switch modes, or add your first ${activeModeLabel.toLowerCase()}.`}
                 </p>
               </div>
               <div className="mt-5 flex flex-col sm:flex-row items-start sm:items-center gap-3">
-                <Button
-                  variant="outline"
-                  onClick={() =>
-                    setFilter(
-                      'format',
-                      activeModeLabel === 'Audiobooks' ? (['epub', 'pdf'] as string[]) : (['audiobook'] as string[])
-                    )
-                  }
-                  className="min-h-[44px]"
-                  data-testid="library-format-empty-switch"
-                >
-                  Switch to {activeModeLabel === 'Audiobooks' ? 'Ebooks' : 'Audiobooks'}
-                </Button>
+                {activeModeLabel === 'Items' ? (
+                  <>
+                    <Button
+                      variant="outline"
+                      onClick={() => setFilter('format', ['audiobook'])}
+                      className="min-h-[44px]"
+                      data-testid="library-format-empty-view-audiobooks"
+                    >
+                      View audiobooks
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => setFilter('format', ['epub', 'pdf'])}
+                      className="min-h-[44px]"
+                      data-testid="library-format-empty-view-ebooks"
+                    >
+                      View ebooks
+                    </Button>
+                  </>
+                ) : (
+                  <Button
+                    variant="outline"
+                    onClick={() =>
+                      setFilter(
+                        'format',
+                        activeModeLabel === 'Audiobooks'
+                          ? (['epub', 'pdf'] as string[])
+                          : (['audiobook'] as string[])
+                      )
+                    }
+                    className="min-h-[44px]"
+                    data-testid="library-format-empty-switch"
+                  >
+                    Switch to {activeModeLabel === 'Audiobooks' ? 'Ebooks' : 'Audiobooks'}
+                  </Button>
+                )}
                 <Button
                   variant="brand"
                   onClick={() => setImportOpen(true)}

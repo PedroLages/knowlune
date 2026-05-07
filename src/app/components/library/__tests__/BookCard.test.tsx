@@ -81,4 +81,31 @@ describe('BookCard', () => {
     )
     expect(screen.queryByText('NEW')).not.toBeInTheDocument()
   })
+
+  it('does not show Want to Read pill for unread status', () => {
+    render(
+      <MemoryRouter>
+        <BookCard book={makeBook({ status: 'unread' })} />
+      </MemoryRouter>
+    )
+    expect(screen.queryByText('Want to Read')).not.toBeInTheDocument()
+  })
+
+  it('shows Reading pill for in-progress book', () => {
+    render(
+      <MemoryRouter>
+        <BookCard book={makeBook({ status: 'reading', progress: 12 })} />
+      </MemoryRouter>
+    )
+    expect(screen.getByText('Reading')).toBeInTheDocument()
+  })
+
+  it('shows Finished pill for finished book', () => {
+    render(
+      <MemoryRouter>
+        <BookCard book={makeBook({ status: 'finished', progress: 100 })} />
+      </MemoryRouter>
+    )
+    expect(screen.getByText('Finished')).toBeInTheDocument()
+  })
 })

@@ -215,3 +215,33 @@ test.describe('Tab content rendering', () => {
     expect(realErrors, `Console errors during tab nav: ${realErrors.join('\n')}`).toEqual([])
   })
 })
+
+test.describe('Mixed-format library defaults', () => {
+  const MIXED_FORMAT_BOOKS = [
+    ...TEST_BOOKS,
+    {
+      id: 'tab-test-mixed-audiobook',
+      title: 'Mixed Library Audio',
+      author: 'Narrator',
+      format: 'audiobook',
+      status: 'unread' as const,
+      tags: [],
+      chapters: [],
+      source: { type: 'local' as const, opfsPath: '/test-audio' },
+      progress: 0,
+      createdAt: FIXED_DATE,
+    },
+  ]
+
+  test.beforeEach(async ({ page }) => {
+    await page.goto('/')
+    await seedBooks(page, MIXED_FORMAT_BOOKS)
+  })
+
+  test('Browse tab does not auto-apply Format: audiobook chip when both formats exist', async ({
+    page,
+  }) => {
+    await page.goto('/library?tab=browse')
+    await expect(page.getByText(/^Format:\s*audiobook$/i)).toHaveCount(0)
+  })
+})

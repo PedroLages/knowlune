@@ -22,6 +22,7 @@ interface BookStatusBadgeProps {
 }
 
 export function BookStatusBadge({ status, className }: BookStatusBadgeProps) {
+  if (status === 'unread') return null
   const config = STATUS_CONFIG[status]
   return (
     <span
