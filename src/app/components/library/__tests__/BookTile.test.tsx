@@ -124,7 +124,7 @@ describe('BookTile', () => {
   })
 
   describe('cover chrome', () => {
-    it('does not render a corner format badge for audiobooks (hover overlay only)', () => {
+    it('does not render a corner format badge for audiobooks', () => {
       const audiobook = makeBook({ format: 'audiobook' })
       render(
         <MemoryRouter>
@@ -135,8 +135,8 @@ describe('BookTile', () => {
     })
   })
 
-  describe('overlay action icon', () => {
-    it('shows PlayCircle icon for audiobooks on hover overlay (not text)', () => {
+  describe('hover affordance', () => {
+    it('does not render a centered play/open overlay on the cover', () => {
       const audiobook = makeBook({ format: 'audiobook' })
       render(
         <MemoryRouter>
@@ -145,38 +145,7 @@ describe('BookTile', () => {
       )
       const tile = screen.getByTestId('book-tile-test-book')
       const coverDiv = tile.querySelector('.rounded-2xl')
-      // The overlay div (bg-foreground/0) should contain an SVG icon
-      const overlayDiv = coverDiv?.querySelector('.bg-foreground\\/0')
-      expect(overlayDiv).not.toBeNull()
-      expect(overlayDiv!.querySelector('svg')).not.toBeNull()
-    })
-
-    it('shows BookOpen icon for ebooks on hover overlay (not text)', () => {
-      render(
-        <MemoryRouter>
-          <BookTile book={makeBook()} variant="small" />
-        </MemoryRouter>
-      )
-      const tile = screen.getByTestId('book-tile-test-book')
-      const coverDiv = tile.querySelector('.rounded-2xl')
-      // The overlay div should contain an SVG icon
-      const overlayDiv = coverDiv?.querySelector('.bg-foreground\\/0')
-      expect(overlayDiv).not.toBeNull()
-      expect(overlayDiv!.querySelector('svg')).not.toBeNull()
-    })
-
-    it('icon is aria-hidden (root aria-label provides accessible name)', () => {
-      render(
-        <MemoryRouter>
-          <BookTile book={makeBook()} variant="small" />
-        </MemoryRouter>
-      )
-      const tile = screen.getByTestId('book-tile-test-book')
-      const coverDiv = tile.querySelector('.rounded-2xl')
-      // The overlay icon SVG should have aria-hidden="true"
-      const overlayDiv = coverDiv?.querySelector('.bg-foreground\\/0')
-      const overlaySvg = overlayDiv?.querySelector('svg')
-      expect(overlaySvg).toHaveAttribute('aria-hidden', 'true')
+      expect(coverDiv?.querySelector('.bg-foreground\\/0')).toBeNull()
     })
 
     it('derives aria-label from book format (Play for audiobooks, Open for ebooks)', () => {
