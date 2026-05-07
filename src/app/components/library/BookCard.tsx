@@ -12,7 +12,7 @@
 
 import { memo, type KeyboardEvent } from 'react'
 import { useNavigate } from 'react-router'
-import { Headphones, BookOpen, ArrowRightLeft, Clock, CheckCircle2 } from 'lucide-react'
+import { Headphones, BookOpen, ArrowRightLeft, Clock, CheckCircle2, DownloadCloud } from 'lucide-react'
 import type { Book } from '@/data/types'
 import { getBookDestinationPath } from '@/lib/bookNavigation'
 import { BookStatusBadge } from './BookStatusBadge'
@@ -20,6 +20,7 @@ import { BookCoverImage } from './BookCoverImage'
 import { StarRating } from './StarRating'
 import { useBookCoverUrl } from '@/app/hooks/useBookCoverUrl'
 import { useBookReviewStore } from '@/stores/useBookReviewStore'
+import { useIsDownloaded } from '@/stores/useDownloadStore'
 
 /** Format seconds to "Xh Ym" display */
 function formatDuration(seconds: number): string {
@@ -37,6 +38,7 @@ export const BookCard = memo(function BookCard({ book }: BookCardProps) {
   const navigate = useNavigate()
   const resolvedCoverUrl = useBookCoverUrl({ bookId: book.id, coverUrl: book.coverUrl })
   const review = useBookReviewStore(s => s.getReviewForBook(book.id))
+  const isDownloaded = useIsDownloaded(book.id)
 
   const readerPath = getBookDestinationPath(book)
 
@@ -92,6 +94,14 @@ export const BookCard = memo(function BookCard({ book }: BookCardProps) {
           >
             <Headphones className="size-3.5 text-white" aria-hidden="true" />
           </div>
+          {isDownloaded && (
+            <div
+              className="absolute top-2 left-2 rounded-full bg-success/80 backdrop-blur p-1 z-10"
+              aria-label="Available offline"
+            >
+              <DownloadCloud className="size-3 text-white" aria-hidden="true" />
+            </div>
+          )}
         </div>
         {/* Metadata below cover */}
         <div className="mt-3 px-1 text-center">
@@ -178,6 +188,14 @@ export const BookCard = memo(function BookCard({ book }: BookCardProps) {
         >
           <BookOpen className="size-3.5 text-white" aria-hidden="true" />
         </div>
+        {isDownloaded && (
+          <div
+            className="absolute top-2 left-2 rounded-full bg-success/80 backdrop-blur p-1 z-10"
+            aria-label="Available offline"
+          >
+            <DownloadCloud className="size-3 text-white" aria-hidden="true" />
+          </div>
+        )}
       </div>
       {/* Metadata below cover */}
       <div className="mt-3 px-1 text-center">

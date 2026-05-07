@@ -51,6 +51,7 @@ import {
 import { BookContextMenu } from '@/app/components/library/BookContextMenu'
 import { BookMetadataEditor } from '@/app/components/library/BookMetadataEditor'
 import { LibraryFilters } from '@/app/components/library/LibraryFilters'
+import { useAllDownloadedBookIds } from '@/stores/useDownloadStore'
 import { LibrarySourceTabs } from '@/app/components/library/LibrarySourceTabs'
 import { ReadingQueue } from '@/app/components/library/ReadingQueue'
 import { ShelfManager } from '@/app/components/library/ShelfManager'
@@ -111,6 +112,8 @@ export function Library() {
   }, [])
   const [importOpen, setImportOpen] = useState(false)
   const [droppedFile, setDroppedFile] = useState<File | null>(null)
+  const [downloadedOnly, setDownloadedOnly] = useState(false)
+  const downloadedBookIds = useAllDownloadedBookIds()
   const [editingBook, setEditingBook] = useState<Book | null>(null)
   const [goalsOpen, setGoalsOpen] = useState(false)
   const [catalogsOpen, setCatalogsOpen] = useState(false)
@@ -350,7 +353,14 @@ export function Library() {
   // Use useBookStore.getState() to always read from the authoritative store state.
   // The previously-extracted getFilteredBooks via selector had stale get() reads on initial
   // render when books loaded async (E110-S02 regression).
-  const filteredBooks = useBookStore.getState().getFilteredBooks()
+  const filteredBooks = useMemo(() => {
+    const base = useBookStore.getState().getFilteredBooks()
+    if (downloadedOnly) {
+      const ids = new Set(downloadedBookIds)
+      return base.filter(b => ids.has(b.id))
+    }
+    return base
+  }, [downloadedOnly, downloadedBookIds, books, filters])
 
   // Stable ID array so LocalSeriesView's useMemo dep doesn't fire on every render (ADV-3).
   const filteredBookIds = useMemo(() => filteredBooks.map(b => b.id), [filteredBooks])
@@ -994,6 +1004,9 @@ export function Library() {
 
           {/* PRIMARY row: status pills + view toggle + search + filter */}
           <LibraryFilters
+            downloadedOnly={downloadedOnly}
+            onToggleDownloaded={() => setDownloadedOnly(v => !v)}
+            downloadedCount={downloadedBookIds.length}
             viewToggle={
               filters.source === 'audiobookshelf' && absServers.length > 0 ? (
                 <div
