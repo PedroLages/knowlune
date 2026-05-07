@@ -26,6 +26,7 @@ import {
   type CourseStorageEntry,
 } from '@/lib/storageEstimate'
 import { PerCourseStorageTable } from './PerCourseStorageTable'
+import { DownloadStorageSection } from './DownloadStorageSection'
 import { CleanupActionsSection } from './CleanupActionsSection'
 
 // --- Chart Config ---
@@ -452,6 +453,7 @@ export function StorageManagement() {
             <CategoryBreakdownLegend overview={overview} />
             <PerCourseStorageTable courses={perCourse} onRefresh={handleRefresh} />
             <CleanupActionsSection onRefresh={handleRefresh} />
+            <DownloadStorageSection />
           </>
         )}
       </CardContent>
