@@ -15,6 +15,11 @@ interface PathProgressRingProps {
   className?: string
   /** Override the center content (defaults to percentage text) */
   children?: React.ReactNode
+  /**
+   * Override the default stroke width from the SIZES config.
+   * Follows the same pattern as library/ProgressRing and figma/ProgressRing.
+   */
+  strokeWidth?: number
 }
 
 /**
@@ -26,13 +31,16 @@ export function PathProgressRing({
   size = 'md',
   className,
   children,
+  strokeWidth,
 }: PathProgressRingProps) {
   // Resolve config: numeric size computes directly, string preset uses SIZES lookup
   const config =
     typeof size === 'number'
-      ? { size, stroke: 3, fontSize: 'text-xs' }
+      ? { size, stroke: strokeWidth ?? 3, fontSize: 'text-xs' as const }
       : SIZES[size]
-  const radius = (config.size - config.stroke * 2) / 2
+  // Optional strokeWidth prop overrides the default from SIZES config
+  const effectiveStroke = strokeWidth ?? config.stroke
+  const radius = (config.size - effectiveStroke * 2) / 2
   const circumference = 2 * Math.PI * radius
   const offset = circumference - (Math.min(percentage, 100) / 100) * circumference
 
@@ -69,7 +77,7 @@ export function PathProgressRing({
           cx={config.size / 2}
           cy={config.size / 2}
           r={radius}
-          strokeWidth={config.stroke}
+          strokeWidth={effectiveStroke}
           className="stroke-muted"
         />
         {/* Progress arc */}
@@ -77,7 +85,7 @@ export function PathProgressRing({
           cx={config.size / 2}
           cy={config.size / 2}
           r={radius}
-          strokeWidth={config.stroke}
+          strokeWidth={effectiveStroke}
           strokeDasharray={circumference}
           strokeDashoffset={offset}
           strokeLinecap={lineCap}
