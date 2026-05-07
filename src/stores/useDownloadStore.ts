@@ -7,6 +7,7 @@
  * @since offline-book-downloads (2026-05-07)
  */
 
+import { useMemo } from 'react'
 import { create } from 'zustand'
 import type { DownloadRecord, DownloadStatus } from '@/services/DownloadManager'
 
@@ -120,11 +121,12 @@ export function useIsDownloading(bookId: string): boolean {
 }
 
 export function useAllDownloadedBookIds(): string[] {
-  return useDownloadStore(s => {
+  const downloads = useDownloadStore(s => s.downloads)
+  return useMemo(() => {
     const ids: string[] = []
-    s.downloads.forEach((rec, bookId) => {
+    downloads.forEach((rec, bookId) => {
       if (rec.status === 'downloaded') ids.push(bookId)
     })
     return ids
-  })
+  }, [downloads])
 }
