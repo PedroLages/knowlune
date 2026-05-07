@@ -3,16 +3,16 @@ import { BookOpen, Headphones } from 'lucide-react'
 import { useBookStore } from '@/stores/useBookStore'
 import { cn } from '@/app/components/ui/utils'
 
-export type LibraryFormatMode = 'audiobooks' | 'ebooks'
+export type LibraryFormatMode = 'audiobooks' | 'ebooks' | 'all'
 
 const AUDIOBOOKS_FILTER = ['audiobook']
 const EBOOKS_FILTER = ['epub', 'pdf']
 
 function getActiveMode(formatFilter: string[] | undefined): LibraryFormatMode {
-  if (!formatFilter || formatFilter.length === 0) return 'audiobooks'
+  if (!formatFilter || formatFilter.length === 0) return 'all'
   if (formatFilter.length === 1 && formatFilter[0] === 'audiobook') return 'audiobooks'
   if (formatFilter.every(v => v === 'epub' || v === 'pdf')) return 'ebooks'
-  return 'audiobooks'
+  return 'all'
 }
 
 export function LibraryFormatModeTabs() {
