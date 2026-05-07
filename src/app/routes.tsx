@@ -122,6 +122,9 @@ const Notifications = React.lazy(() =>
   import('./pages/Notifications').then(m => ({ default: m.Notifications }))
 )
 const LibraryPage = React.lazy(() => import('./pages/Library').then(m => ({ default: m.Library })))
+const BookDetailPage = React.lazy(() =>
+  import('./pages/BookDetail').then(m => ({ default: m.BookDetail }))
+)
 const CollectionDetail = React.lazy(() =>
   import('./pages/CollectionDetail').then(m => ({ default: m.CollectionDetail }))
 )
@@ -502,7 +505,7 @@ export const router = createBrowserRouter([
             path: 'library/:bookId',
             element: (
               <SuspensePage>
-                <LibraryPage />
+                <BookDetailPage />
               </SuspensePage>
             ),
           },
