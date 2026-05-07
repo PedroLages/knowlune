@@ -8,7 +8,7 @@
  */
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Search, SlidersHorizontal, X } from 'lucide-react'
+import { Search, SlidersHorizontal, DownloadCloud, X } from 'lucide-react'
 import { Input } from '@/app/components/ui/input'
 import { Button } from '@/app/components/ui/button'
 import { FilterSidebar } from '@/app/components/library/FilterSidebar'
@@ -26,9 +26,12 @@ const STATUS_PILLS: { value: 'all' | BookStatus; label: string }[] = [
 
 interface LibraryFiltersProps {
   viewToggle?: React.ReactNode
+  downloadedOnly?: boolean
+  onToggleDownloaded?: () => void
+  downloadedCount?: number
 }
 
-export function LibraryFilters({ viewToggle }: LibraryFiltersProps = {}) {
+export function LibraryFilters({ viewToggle, downloadedOnly, onToggleDownloaded, downloadedCount }: LibraryFiltersProps = {}) {
   const filters = useBookStore(s => s.filters)
   const setFilter = useBookStore(s => s.setFilter)
   const books = useBookStore(s => s.books)
@@ -133,6 +136,26 @@ export function LibraryFilters({ viewToggle }: LibraryFiltersProps = {}) {
                 </button>
               )
             })}
+            {onToggleDownloaded && (
+              <button
+                role="tab"
+                aria-selected={downloadedOnly}
+                aria-label={`Downloaded — ${downloadedCount ?? 0} book${downloadedCount !== 1 ? 's' : ''}`}
+                onClick={onToggleDownloaded}
+                className={cn(
+                  'whitespace-nowrap rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors min-h-[36px] flex-shrink-0 outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2',
+                  downloadedOnly
+                    ? 'bg-brand text-brand-foreground'
+                    : 'bg-muted text-muted-foreground hover:bg-muted/80',
+                  !downloadedOnly && (downloadedCount ?? 0) === 0 && 'opacity-40'
+                )}
+                data-testid="filter-pill-downloaded"
+              >
+                <DownloadCloud className="size-3.5 mr-1 inline" aria-hidden="true" />
+                Downloaded
+                <span className="ml-1 text-[11px]">({downloadedCount ?? 0})</span>
+              </button>
+            )}
           </div>
         </div>
 

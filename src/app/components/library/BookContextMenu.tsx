@@ -14,6 +14,8 @@ import {
   Check,
   MoreVertical,
   ArrowRightLeft,
+  Download,
+  CircleX,
   Highlighter,
   Library,
   ListOrdered,
@@ -26,6 +28,9 @@ import { useShelfStore } from '@/stores/useShelfStore'
 import { useReadingQueueStore } from '@/stores/useReadingQueueStore'
 import { LinkFormatsDialog } from './LinkFormatsDialog'
 import { rescanBookChapters } from '@/lib/rescanBookChapters'
+import { downloadManager } from '@/services/DownloadManager'
+import { useDownloadState } from '@/stores/useDownloadStore'
+import { canDownload } from './DownloadButton'
 
 // Lazy-load AboutBookDialog to defer ~5.5KB until dialog opens
 const AboutBookDialog = lazy(() => import('./AboutBookDialog'))
@@ -191,6 +196,23 @@ export function BookContextMenu({ book, children, onEdit }: BookContextMenuProps
     }
   }
 
+  const downloadState = useDownloadState(book.id)
+  const downloadStatus = downloadState?.status ?? 'remote'
+
+  const handleDownloadAction = async () => {
+    if (downloadStatus === 'downloaded') {
+      await downloadManager.removeDownload(book.id)
+    } else if (downloadStatus === 'downloading' || downloadStatus === 'retrying') {
+      downloadManager.cancelDownload(book.id)
+    } else {
+      try {
+        downloadManager.startDownload(book)
+      } catch (err) {
+        // toast handled by downloadManager callers
+      }
+    }
+  }
+
   return (
     <>
       <div className="group relative">
@@ -209,6 +231,38 @@ export function BookContextMenu({ book, children, onEdit }: BookContextMenuProps
               <ArrowRightLeft className="h-3.5 w-3.5" aria-hidden="true" />
               {book.linkedBookId ? 'Linked Format…' : 'Link Format…'}
             </ContextMenuItem>
+            {canDownload(book) && (
+              <>
+                <ContextMenuSeparator />
+                <ContextMenuItem
+                  onClick={handleDownloadAction}
+                  data-testid="context-menu-download"
+                  className="flex items-center gap-2 min-h-[44px]"
+                  aria-label={
+                    downloadStatus === 'downloaded'
+                      ? 'Remove Download'
+                      : downloadStatus === 'downloading' || downloadStatus === 'retrying'
+                        ? 'Cancel Download'
+                        : downloadStatus === 'failed'
+                          ? 'Retry Download'
+                          : 'Download for Offline'
+                  }
+                >
+                  {downloadStatus === 'downloaded' ? (
+                    <CircleX className="h-3.5 w-3.5" aria-hidden="true" />
+                  ) : (
+                    <Download className="h-3.5 w-3.5" aria-hidden="true" />
+                  )}
+                  {downloadStatus === 'downloaded'
+                    ? 'Remove Download'
+                    : downloadStatus === 'downloading' || downloadStatus === 'retrying'
+                      ? 'Cancel Download'
+                      : downloadStatus === 'failed'
+                        ? 'Retry Download'
+                        : 'Download for Offline'}
+                </ContextMenuItem>
+              </>
+            )}
             {canRescanChapters && (
               <ContextMenuItem
                 onClick={handleRescanChapters}
@@ -310,6 +364,38 @@ export function BookContextMenu({ book, children, onEdit }: BookContextMenuProps
               <ArrowRightLeft className="h-3.5 w-3.5" aria-hidden="true" />
               {book.linkedBookId ? 'Linked Format…' : 'Link Format…'}
             </DropdownMenuItem>
+            {canDownload(book) && (
+              <>
+                <div className="bg-border h-px my-1" />
+                <DropdownMenuItem
+                  onClick={handleDownloadAction}
+                  data-testid="dropdown-menu-download"
+                  className="flex items-center gap-2 min-h-[44px]"
+                  aria-label={
+                    downloadStatus === 'downloaded'
+                      ? 'Remove Download'
+                      : downloadStatus === 'downloading' || downloadStatus === 'retrying'
+                        ? 'Cancel Download'
+                        : downloadStatus === 'failed'
+                          ? 'Retry Download'
+                          : 'Download for Offline'
+                  }
+                >
+                  {downloadStatus === 'downloaded' ? (
+                    <CircleX className="h-3.5 w-3.5" aria-hidden="true" />
+                  ) : (
+                    <Download className="h-3.5 w-3.5" aria-hidden="true" />
+                  )}
+                  {downloadStatus === 'downloaded'
+                    ? 'Remove Download'
+                    : downloadStatus === 'downloading' || downloadStatus === 'retrying'
+                      ? 'Cancel Download'
+                      : downloadStatus === 'failed'
+                        ? 'Retry Download'
+                        : 'Download for Offline'}
+                </DropdownMenuItem>
+              </>
+            )}
             {canRescanChapters && (
               <DropdownMenuItem
                 onClick={handleRescanChapters}

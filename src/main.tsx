@@ -128,6 +128,11 @@ if (navigator.storage?.persist) {
   navigator.storage.persist()
 }
 
+// Reconcile orphaned download state from previous session (offline-book-downloads)
+import('@/services/DownloadManager').then(({ downloadManager }) => {
+  downloadManager.initialize()
+})
+
 // Start Web Vitals performance monitoring (deferred — non-critical)
 deferInit(() => {
   import('@/lib/performanceMonitoring').then(({ initPerformanceMonitoring }) => {

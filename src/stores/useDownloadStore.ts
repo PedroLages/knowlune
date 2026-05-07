@@ -118,3 +118,13 @@ export function useIsDownloading(bookId: string): boolean {
   const status = useDownloadStore(s => s.downloads.get(bookId)?.status)
   return status === 'downloading' || status === 'retrying' || status === 'pending'
 }
+
+export function useAllDownloadedBookIds(): string[] {
+  return useDownloadStore(s => {
+    const ids: string[] = []
+    s.downloads.forEach((rec, bookId) => {
+      if (rec.status === 'downloaded') ids.push(bookId)
+    })
+    return ids
+  })
+}
