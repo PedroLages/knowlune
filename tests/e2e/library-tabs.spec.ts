@@ -200,4 +200,32 @@ test.describe('Mixed-format library defaults', () => {
     await page.goto('/library?tab=browse')
     await expect(page.getByTestId('library-active-filter-remove-format')).toHaveCount(0)
   })
+
+  test('Continue tab shows Books badge when both formats exist and no format is selected', async ({
+    page,
+  }) => {
+    await page.goto('/library?tab=continue')
+
+    // Hero should be visible
+    await expect(page.getByTestId('library-media-hero')).toBeVisible()
+    // Badge shows 'Books' in all-mode (not a single format name)
+    await expect(page.getByTestId('library-media-hero')).toContainText('Books')
+  })
+
+  test('Continue tab format tab switching works with mixed-format library', async ({
+    page,
+  }) => {
+    await page.goto('/library?tab=continue')
+
+    // Format tab bar is visible
+    await expect(page.getByTestId('library-format-mode-tabs')).toBeVisible()
+
+    // Click audiobooks tab — hero should update to audiobook content
+    await page.getByTestId('library-format-mode-audiobooks').click()
+    await expect(page.getByTestId('library-media-hero')).toBeVisible()
+
+    // Click ebooks tab — hero should update to ebook content
+    await page.getByTestId('library-format-mode-ebooks').click()
+    await expect(page.getByTestId('library-media-hero')).toBeVisible()
+  })
 })
