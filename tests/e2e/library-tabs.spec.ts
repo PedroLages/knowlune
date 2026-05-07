@@ -13,7 +13,12 @@
 
 import { test, expect } from '../support/fixtures'
 import { seedBooks } from '../support/helpers/indexeddb-seed'
-import { tabSeedsBase, tabSeedsWithMixedAudiobook } from '../support/helpers/library-tab-seed'
+import {
+  tabSeedsBase,
+  tabSeedsAudiobooksOnly,
+  tabSeedsEbooksOnly,
+  tabSeedsWithMixedAudiobook,
+} from '../support/helpers/library-tab-seed'
 
 const TAB_BUTTON = (id: string) => `[role="tab"][data-testid="library-tab-${id}"]`
 const TAB_PANEL = (id: string) => `[data-testid="library-tab-panel-${id}"]`
@@ -199,5 +204,73 @@ test.describe('Mixed-format library defaults', () => {
   }) => {
     await page.goto('/library?tab=browse')
     await expect(page.getByTestId('library-active-filter-remove-format')).toHaveCount(0)
+  })
+
+  test('Continue tab shows Books badge when both formats exist and no format is selected', async ({
+    page,
+  }) => {
+    await page.goto('/library?tab=continue')
+
+    // Hero should be visible
+    await expect(page.getByTestId('library-media-hero')).toBeVisible()
+    // Badge shows 'Books' in all-mode (not a single format name)
+    await expect(page.getByTestId('library-media-hero')).toContainText('Books')
+  })
+
+  test('Continue tab format tab switching works with mixed-format library', async ({
+    page,
+  }) => {
+    await page.goto('/library?tab=continue')
+
+    // Format tab bar is visible
+    await expect(page.getByTestId('library-format-mode-tabs')).toBeVisible()
+
+    // Click audiobooks tab — hero should update to audiobook content
+    await page.getByTestId('library-format-mode-audiobooks').click()
+    await expect(page.getByTestId('library-media-hero')).toBeVisible()
+
+    // Click ebooks tab — hero should update to ebook content
+    await page.getByTestId('library-format-mode-ebooks').click()
+    await expect(page.getByTestId('library-media-hero')).toBeVisible()
+  })
+})
+
+test.describe('Single-format library auto-filter', () => {
+  test('Audiobooks-only library auto-selects Audiobooks format tab', async ({ page }) => {
+    await page.goto('/')
+    await seedBooks(page, tabSeedsAudiobooksOnly())
+    await page.goto('/library?tab=continue')
+
+    // Format tab bar is visible
+    await expect(page.getByTestId('library-format-mode-tabs')).toBeVisible()
+    // Audiobooks tab should be active (auto-filter applied)
+    await expect(page.getByTestId('library-format-mode-audiobooks')).toHaveAttribute(
+      'aria-selected',
+      'true'
+    )
+    // Ebooks tab should NOT be active
+    await expect(page.getByTestId('library-format-mode-ebooks')).toHaveAttribute(
+      'aria-selected',
+      'false'
+    )
+  })
+
+  test('Ebooks-only library auto-selects Ebooks format tab', async ({ page }) => {
+    await page.goto('/')
+    await seedBooks(page, tabSeedsEbooksOnly())
+    await page.goto('/library?tab=continue')
+
+    // Format tab bar is visible
+    await expect(page.getByTestId('library-format-mode-tabs')).toBeVisible()
+    // Ebooks tab should be active (auto-filter applied)
+    await expect(page.getByTestId('library-format-mode-ebooks')).toHaveAttribute(
+      'aria-selected',
+      'true'
+    )
+    // Audiobooks tab should NOT be active
+    await expect(page.getByTestId('library-format-mode-audiobooks')).toHaveAttribute(
+      'aria-selected',
+      'false'
+    )
   })
 })

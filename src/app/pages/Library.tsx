@@ -366,10 +366,10 @@ export function Library() {
 
   const activeModeLabel = useMemo(() => {
     const f = filters.format
-    if (!f || f.length === 0) return 'Items' as const
+    if (!f || f.length === 0) return 'Books' as const
     if (f.length === 1 && f[0] === 'audiobook') return 'Audiobooks' as const
     if (f.every(v => v === 'epub' || v === 'pdf')) return 'Ebooks' as const
-    return 'Items' as const
+    return 'Books' as const
   }, [filters.format])
 
   const modeBooksForMedia = useMemo(() => {
@@ -896,18 +896,18 @@ export function Library() {
             >
               <div className="flex flex-col gap-2">
                 <h2 className="text-xl font-semibold tracking-tight text-foreground">
-                  {activeModeLabel === 'Items'
+                  {activeFormatTab === 'all'
                     ? 'No books in this view yet.'
                     : `No ${activeModeLabel.toLowerCase()} yet.`}
                 </h2>
                 <p className="text-sm text-muted-foreground">
-                  {activeModeLabel === 'Items'
+                  {activeFormatTab === 'all'
                     ? 'Try another source or format tab, or import a book.'
                     : `Your library has books in the other format. Switch modes, or add your first ${activeModeLabel.toLowerCase()}.`}
                 </p>
               </div>
               <div className="mt-5 flex flex-col sm:flex-row items-start sm:items-center gap-3">
-                {activeModeLabel === 'Items' ? (
+                {activeFormatTab === 'all' ? (
                   <>
                     <Button
                       variant="outline"
@@ -932,7 +932,7 @@ export function Library() {
                     onClick={() =>
                       setFilter(
                         'format',
-                        activeModeLabel === 'Audiobooks'
+                        activeFormatTab === 'audiobooks'
                           ? (['epub', 'pdf'] as string[])
                           : (['audiobook'] as string[])
                       )
@@ -940,7 +940,7 @@ export function Library() {
                     className="min-h-[44px]"
                     data-testid="library-format-empty-switch"
                   >
-                    Switch to {activeModeLabel === 'Audiobooks' ? 'Ebooks' : 'Audiobooks'}
+                    Switch to {activeFormatTab === 'audiobooks' ? 'Ebooks' : 'Audiobooks'}
                   </Button>
                 )}
                 <Button
@@ -952,7 +952,7 @@ export function Library() {
                   <Plus className="mr-2 h-4 w-4" />
                   Import Book
                 </Button>
-                {activeModeLabel === 'Audiobooks' && (
+                {activeFormatTab !== 'ebooks' && (
                   <Button
                     variant="outline"
                     onClick={() => setAbsSettingsOpen(true)}

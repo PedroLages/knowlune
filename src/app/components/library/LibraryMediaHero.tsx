@@ -33,7 +33,7 @@ export function LibraryMediaHero({
   modeLabel,
 }: {
   books: Book[]
-  modeLabel: 'Audiobooks' | 'Ebooks' | 'Items'
+  modeLabel: 'Audiobooks' | 'Ebooks' | 'Books'
 }) {
   const navigate = useNavigate()
   const heroBook = useMemo(() => pickHeroBook(books), [books])
@@ -56,7 +56,7 @@ export function LibraryMediaHero({
     ? isAudio
       ? 'Continue listening'
       : 'Continue reading'
-    : modeLabel === 'Items'
+    : modeLabel === 'Books'
       ? 'Explore book'
       : `Explore ${modeLabel.toLowerCase()}`
 

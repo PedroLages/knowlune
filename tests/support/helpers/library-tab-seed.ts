@@ -33,6 +33,66 @@ export function tabSeedsBase() {
   ]
 }
 
+/** Seed with only audiobook-format books (no ebooks). */
+export function tabSeedsAudiobooksOnly() {
+  return [
+    {
+      id: 'tab-test-audio-only-1',
+      title: 'Audio Only Book',
+      author: 'Audiobook Author',
+      format: 'audiobook',
+      status: 'unread',
+      tags: [],
+      chapters: [],
+      source: { type: 'local' as const, opfsPath: '/test-audio-1' },
+      progress: 0,
+      createdAt: FIXED_DATE,
+    },
+    {
+      id: 'tab-test-audio-only-2',
+      title: 'Continue Audio Book',
+      author: 'Another Narrator',
+      format: 'audiobook',
+      status: 'reading',
+      tags: [],
+      chapters: [],
+      source: { type: 'local' as const, opfsPath: '/test-audio-2' },
+      progress: 30,
+      createdAt: FIXED_DATE,
+    },
+  ]
+}
+
+/** Seed with only ebook-format books (epub/pdf, no audiobooks). */
+export function tabSeedsEbooksOnly() {
+  return [
+    {
+      id: 'tab-test-ebook-only-1',
+      title: 'Ebook Only Novel',
+      author: 'Ebook Author',
+      format: 'epub',
+      status: 'unread',
+      tags: [],
+      chapters: [],
+      source: { type: 'local' as const, opfsPath: '/test-ebook-1' },
+      progress: 0,
+      createdAt: FIXED_DATE,
+    },
+    {
+      id: 'tab-test-ebook-only-2',
+      title: 'Continue Ebook',
+      author: 'Another Author',
+      format: 'pdf',
+      status: 'reading',
+      tags: [],
+      chapters: [],
+      source: { type: 'local' as const, opfsPath: '/test-ebook-2' },
+      progress: 50,
+      createdAt: FIXED_DATE,
+    },
+  ]
+}
+
 export function tabSeedsWithMixedAudiobook() {
   return [
     ...tabSeedsBase(),

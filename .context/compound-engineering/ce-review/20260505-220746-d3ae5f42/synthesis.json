@@ -1,0 +1,98 @@
+{
+  "run_id": "20260505-220746-d3ae5f42",
+  "mode": "headless",
+  "branch": "feature/ce-2026-05-05-fix-learning-paths-roadmap-cover",
+  "base": "68f4b530",
+  "plan": "docs/plans/2026-05-05-006-fix-learning-paths-roadmap-cover-plan.md",
+  "plan_source": "explicit",
+  "intent": "Four fixes for Learning Paths: (1) remove SVG roadmap/map visualization from detail page in favor of list view; (2) constrain card widths on listing page; (3) provision learning-path-covers storage bucket; (4) fix dialog scrollbars from gradient preset ring overflow.",
+  "verdict": "Ready with fixes",
+  "reviewers": ["correctness", "testing", "maintainability", "project-standards", "agent-native-reviewer", "learnings-researcher", "security", "data-migrations", "adversarial", "kieran-typescript"],
+  "findings": [
+    {
+      "id": "F1",
+      "title": "learning-path-covers INSERT/UPDATE/DELETE policies lack per-user ownership guard",
+      "severity": "P1",
+      "file": "supabase/storage-setup.sql",
+      "line": 255,
+      "confidence": 0.82,
+      "autofix_class": "gated_auto",
+      "owner": "downstream-resolver",
+      "requires_verification": true,
+      "pre_existing": false,
+      "suggested_fix": "Adopt folder structure {userId}/{pathId}.jpg with owner checks matching other buckets' pattern, or gate INSERT/UPDATE/DELETE behind a path-ownership check via subquery to learning_paths table.",
+      "why_it_matters": "Any authenticated user can overwrite or delete any other user's path cover images. While path covers are non-sensitive metadata images, this breaks data integrity and the principle of least privilege that the other 6 buckets follow.",
+      "evidence": [
+        "INSERT policy (line 256) checks only bucket_id and auth.role(), no user ownership",
+        "UPDATE policy (line 262) checks only bucket_id, no user ownership",
+        "DELETE policy (line 269) checks only bucket_id, no user ownership",
+        "Other buckets use (storage.foldername(name))[1] = auth.uid()::text for ownership"
+      ]
+    },
+    {
+      "id": "F2",
+      "title": "Missing test assertions for list-only view after roadmap removal",
+      "severity": "P2",
+      "file": "src/app/pages/__tests__/LearningPathDetail.test.tsx",
+      "line": 77,
+      "confidence": 0.75,
+      "autofix_class": "manual",
+      "owner": "downstream-resolver",
+      "requires_verification": true,
+      "pre_existing": false,
+      "suggested_fix": "Add assertions for 'Courses' heading and '{N} of {M} completed' progress summary text. Add negative assertion that no map/toggle UI is rendered.",
+      "why_it_matters": "The plan's Unit 5 specifies tests should 'add list-only assertions' and 'remove map view assertions'. Only the TrailMap mock was removed; no new assertions verify the list-only layout, the 'Courses' heading, or the completion count. This leaves the removed-roadmap behavior untested against regressions.",
+      "evidence": [
+        "Plan Unit 5 says: 'add list-only assertions' and 'remove map view assertions'",
+        "Only the TrailMap vi.mock was removed (lines 77-79 deleted), no new assertions added"
+      ]
+    },
+    {
+      "id": "F3",
+      "title": "SQL header comment was inaccurate about DELETE policy scope",
+      "severity": "P3",
+      "file": "supabase/storage-setup.sql",
+      "line": 40,
+      "confidence": 0.90,
+      "autofix_class": "safe_auto",
+      "owner": "review-fixer",
+      "requires_verification": false,
+      "pre_existing": false,
+      "suggested_fix": "Updated header comment to clarify: DELETE policy omitted for user-owned buckets; learning-path-covers public bucket includes a DELETE policy.",
+      "why_it_matters": "The general comment said 'DELETE policy omitted intentionally' but the learning-path-covers section adds a DELETE policy. This could confuse future maintainers about whether the DELETE policy was intentional or accidental.",
+      "evidence": [
+        "Line 41 previously: 'DELETE policy omitted intentionally — files are overwritten via upsert.'",
+        "Lines 267-271 add a DELETE policy for learning-path-covers"
+      ],
+      "applied": true
+    }
+  ],
+  "requirements_completeness": [
+    {"req": "R1", "status": "met", "detail": "RoadmapMapView, RoadmapViewToggle, and TrailMap deleted. viewMode state removed. Always renders RoadmapListView."},
+    {"req": "R2", "status": "met", "detail": "'Your Roadmap' heading replaced with 'Courses' + progress summary line."},
+    {"req": "R3", "status": "met", "detail": "max-w-[380px] mx-auto wrappers added to all 4 grid containers."},
+    {"req": "R4", "status": "met", "detail": "learning-path-covers bucket added to storage-setup.sql with public:true and RLS policies."},
+    {"req": "R5", "status": "met", "detail": "overflow-hidden added to gradient grid, ring-offset-2 reduced to ring-offset-1."}
+  ],
+  "residual_risks": [
+    "Authenticated users can overwrite each other's path cover images (F1)"
+  ],
+  "testing_gaps": [
+    "No assertions for list-only layout after roadmap removal (F2)",
+    "No unit test coverage for path cover upload with the new bucket"
+  ],
+  "applied_fixes": [
+    "F3: Updated SQL header comment to accurately describe DELETE policy scope"
+  ],
+  "learnings": [],
+  "agent_native_gaps": [],
+  "schema_drift": null,
+  "deployment_notes": [
+    "Run storage-setup.sql against Supabase project to create learning-path-covers bucket before deploying"
+  ],
+  "coverage": {
+    "suppressed_findings": 0,
+    "untracked_files_excluded": [".context/compound-engineering/ce-review/20260505-215206-50c854c1/synthesis.json"],
+    "failed_reviewers": []
+  }
+}
