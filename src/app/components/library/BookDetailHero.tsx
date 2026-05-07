@@ -28,6 +28,7 @@ import { sanitizeDescriptionHtml } from '@/lib/textUtils'
 import { getBookDestinationPath } from '@/lib/bookNavigation'
 import { FormatBadge } from './FormatBadge'
 import { BookCoverImage } from './BookCoverImage'
+import { DownloadButton } from './DownloadButton'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -323,6 +324,8 @@ export function BookDetailHero({
                   Add to Library
                 </Button>
               )}
+
+              <DownloadButton book={book} />
 
               <Button
                 variant="outline"
