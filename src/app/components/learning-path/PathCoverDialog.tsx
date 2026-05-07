@@ -22,9 +22,10 @@ interface PathCoverDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   path: LearningPath
+  triggerRef?: React.RefObject<HTMLElement | null>
 }
 
-export function PathCoverDialog({ open, onOpenChange, path }: PathCoverDialogProps) {
+export function PathCoverDialog({ open, onOpenChange, path, triggerRef }: PathCoverDialogProps) {
   const updatePathCover = useLearningPathStore(s => s.updatePathCover)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [selectedPreset, setSelectedPreset] = useState<string | null>(path.coverPreset ?? null)
@@ -34,20 +35,25 @@ export function PathCoverDialog({ open, onOpenChange, path }: PathCoverDialogPro
   const [isRemoving, setIsRemoving] = useState(false)
 
   const hasExistingCover = !!path.coverImageUrl
+  const isBusy = isUploading || isRemoving
 
   // Reset state when dialog opens
   const handleOpenChange = useCallback(
     (open: boolean) => {
+      // Prevent dismiss while upload or remove is in progress
+      if (!open && isBusy) return
       if (!open) {
         setSelectedPreset(path.coverPreset ?? null)
         setUploadPreview(null)
         setUploadFile(null)
         setIsUploading(false)
         setIsRemoving(false)
+        // Restore focus to the trigger element (R9) — use rAF for reliable timing
+        requestAnimationFrame(() => triggerRef?.current?.focus())
       }
       onOpenChange(open)
     },
-    [onOpenChange, path.coverPreset]
+    [onOpenChange, path.coverPreset, isBusy, triggerRef]
   )
 
   const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -120,7 +126,6 @@ export function PathCoverDialog({ open, onOpenChange, path }: PathCoverDialogPro
   }, [path.id, path.coverImageUrl, path.coverPreset, updatePathCover, handleOpenChange])
 
   const canSave = selectedPreset || uploadFile
-  const isBusy = isUploading || isRemoving
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { motion } from 'motion/react'
 import {
@@ -113,6 +113,7 @@ function PathCard({
   onImport,
   onOpenCoverDialog,
   onOpenEditDialog,
+  coverDialogTriggerRef,
 }: {
   path: LearningPath
   courseCount: number
@@ -121,6 +122,7 @@ function PathCard({
   onImport: (pathId: string) => void
   onOpenCoverDialog: (path: LearningPath) => void
   onOpenEditDialog: (path: LearningPath) => void
+  coverDialogTriggerRef: React.MutableRefObject<HTMLElement | null>
 }) {
   const navigate = useNavigate()
   const deletePathWithUndo = useLearningPathStore(s => s.deletePathWithUndo)
@@ -198,7 +200,10 @@ function PathCard({
                 <Pencil className="mr-2 size-4" aria-hidden="true" />
                 Edit
               </DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => onOpenCoverDialog(path)}>
+              <DropdownMenuItem onSelect={() => {
+                coverDialogTriggerRef.current = document.activeElement as HTMLElement
+                onOpenCoverDialog(path)
+              }}>
                 <Image className="mr-2 size-4" aria-hidden="true" />
                 Change Cover
               </DropdownMenuItem>
@@ -219,9 +224,9 @@ function PathCard({
 
         {/* Card body */}
         <CardContent className="px-4 pb-4 pt-8 relative flex flex-col h-[calc(100%-6rem)]">
-          {/* Progress ring — centered at header/card boundary (md ring 72px + p-1.5 → -top half height) */}
-          <div className="absolute -top-[42px] left-4">
-            <div className="bg-card rounded-full p-1.5 shadow-lg">
+          {/* Progress ring — centered on header/body seam via translate (scales with any ring size) */}
+          <div className="absolute top-0 left-6 -translate-y-1/2">
+            <div className="bg-card rounded-full p-2 shadow-lg">
               <PathProgressRing percentage={completionPct} size="md">
                 {isCompleted ? (
                   <CheckCircle2 className="size-6 text-success" aria-hidden="true" />
@@ -327,7 +332,7 @@ function PathCardSkeleton() {
     <Card className="overflow-hidden rounded-2xl">
       <Skeleton className="h-24 w-full rounded-none" />
       <CardContent className="px-4 pb-4 pt-1 relative">
-        <Skeleton className="absolute -top-[42px] left-4 size-[84px] rounded-full" />
+        <Skeleton className="absolute top-0 left-6 -translate-y-1/2 size-[88px] rounded-full" />
         <div className="mt-7 space-y-3">
           <Skeleton className="h-4 w-16" />
           <Skeleton className="h-6 w-3/4" />
@@ -359,6 +364,7 @@ export function LearningPaths() {
   const [aiGoalText, setAiGoalText] = useState('')
   const [discoverOpen, setDiscoverOpen] = useState(false)
   const [coverDialogPath, setCoverDialogPath] = useState<LearningPath | null>(null)
+  const coverDialogTriggerRef = useRef<HTMLElement | null>(null)
   const [editDialogPath, setEditDialogPath] = useState<LearningPath | null>(null)
 
   // Import wizard trigger (singleton guard pattern)
@@ -656,6 +662,7 @@ export function LearningPaths() {
                       onImport={handlePathImport}
                       onOpenCoverDialog={setCoverDialogPath}
                       onOpenEditDialog={setEditDialogPath}
+                      coverDialogTriggerRef={coverDialogTriggerRef}
                     />
                   </div>
                 )
@@ -719,6 +726,7 @@ export function LearningPaths() {
             if (!open) setCoverDialogPath(null)
           }}
           path={coverDialogPath}
+          triggerRef={coverDialogTriggerRef}
         />
       )}
 

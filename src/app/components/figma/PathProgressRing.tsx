@@ -41,6 +41,9 @@ export function PathProgressRing({
       ? 'stroke-brand'
       : 'stroke-muted-foreground/30'
 
+  // Use butt linecap for very low percentages to avoid a floating-dot appearance
+  const lineCap = percentage > 0 && percentage < 3 ? 'butt' : 'round'
+
   return (
     <div
       className={cn('relative inline-flex items-center justify-center', className)}
@@ -73,7 +76,7 @@ export function PathProgressRing({
           strokeWidth={config.stroke}
           strokeDasharray={circumference}
           strokeDashoffset={offset}
-          strokeLinecap="round"
+          strokeLinecap={lineCap}
           className={cn(strokeClass, 'transition-[stroke-dashoffset] duration-500')}
         />
       </svg>

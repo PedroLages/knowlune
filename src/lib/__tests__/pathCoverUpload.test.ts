@@ -112,9 +112,52 @@ describe('pathCoverUpload', () => {
       expect(mockUpload).toHaveBeenCalledWith(
         `${USER_ID}/${PATH_ID}.jpg`,
         expect.any(Blob),
-        expect.objectContaining({ contentType: 'image/jpeg', upsert: true })
+        expect.objectContaining({ contentType: 'image/jpeg' })
+      )
+      // upsert should NOT be set — pure INSERT
+      expect(mockUpload.mock.calls[0][2]).not.toHaveProperty('upsert')
+      expect(url).toContain(`${USER_ID}/${PATH_ID}.jpg`)
+    })
+
+    it('handles 409 Conflict by deleting and retrying insert', async () => {
+      stubImageAndCanvas()
+
+      // First upload returns 409, second succeeds
+      mockUpload
+        .mockResolvedValueOnce({ error: { message: 'The resource already exists', statusCode: 409 } })
+        .mockResolvedValueOnce({ error: null })
+
+      const file = new File([new Uint8Array([1])], 'cover.png', { type: 'image/png' })
+      const url = await uploadPathCover(file, PATH_ID)
+
+      // First upload attempt (insert)
+      expect(mockUpload).toHaveBeenCalledTimes(2)
+      expect(mockUpload).toHaveBeenNthCalledWith(
+        1,
+        `${USER_ID}/${PATH_ID}.jpg`,
+        expect.any(Blob),
+        expect.objectContaining({ contentType: 'image/jpeg' })
+      )
+      // Remove called before retry
+      expect(mockRemove).toHaveBeenCalledWith([`${USER_ID}/${PATH_ID}.jpg`])
+      // Second upload attempt (re-insert)
+      expect(mockUpload).toHaveBeenNthCalledWith(
+        2,
+        `${USER_ID}/${PATH_ID}.jpg`,
+        expect.any(Blob),
+        expect.objectContaining({ contentType: 'image/jpeg' })
       )
       expect(url).toContain(`${USER_ID}/${PATH_ID}.jpg`)
+    })
+
+    it('throws a user-friendly error when 409 retry remove fails', async () => {
+      stubImageAndCanvas()
+
+      mockUpload.mockResolvedValueOnce({ error: { message: 'The resource already exists', statusCode: 409 } })
+      mockRemove.mockResolvedValueOnce({ error: { message: 'Remove permission denied', statusCode: 403 } })
+
+      const file = new File([new Uint8Array([1])], 'cover.png', { type: 'image/png' })
+      await expect(uploadPathCover(file, PATH_ID)).rejects.toThrow('Please try again')
     })
 
     it('rejects when user is not authenticated', async () => {
