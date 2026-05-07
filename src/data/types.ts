@@ -881,6 +881,8 @@ export interface Book {
   finishedAt?: string // ISO 8601 — set when status transitions to 'finished'
   absServerId?: string // FK to AudiobookshelfServer.id (if sourced from ABS)
   absItemId?: string // ABS item ID for dedup on re-sync
+  language?: string // Language code/name (e.g. "English") — populated from ABS metadata
+  publishDate?: string // Release/publish year or date (e.g. "2023") — populated from ABS metadata
   linkedBookId?: string // FK to paired format's Book.id (E103-S03 dual-format linking)
   series?: string // Series name for grouping (E110-S02)
   seriesSequence?: string // Position within series, e.g. "1", "2.5" (E110-S02)

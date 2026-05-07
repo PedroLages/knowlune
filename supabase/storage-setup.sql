@@ -38,7 +38,8 @@ ON CONFLICT (id) DO NOTHING;
 
 -- ─── RLS Policies ───────────────────────────────────────────────────────────
 -- Each bucket gets SELECT, INSERT, and UPDATE policies.
--- DELETE policy omitted intentionally — files are overwritten via upsert.
+-- DELETE policy omitted for user-owned buckets (files overwritten via upsert).
+-- learning-path-covers (public bucket) includes a DELETE policy for cover images.
 -- Path segment [1] is the userId folder; [2] is the recordId folder.
 
 -- Enable RLS on storage.objects (already enabled by Supabase, but idempotent):
