@@ -220,8 +220,8 @@ function PathCard({
         {/* Card body */}
         <CardContent className="px-4 pb-4 pt-8 relative flex flex-col h-[calc(100%-6rem)]">
           {/* Progress ring — centered on header/body seam via translate (scales with any ring size) */}
-          <div className="absolute top-0 left-4 -translate-y-1/2">
-            <div className="bg-card rounded-full p-1.5 shadow-lg">
+          <div className="absolute top-0 left-6 -translate-y-1/2">
+            <div className="bg-card rounded-full p-2 shadow-lg">
               <PathProgressRing percentage={completionPct} size="md">
                 {isCompleted ? (
                   <CheckCircle2 className="size-6 text-success" aria-hidden="true" />
@@ -327,7 +327,7 @@ function PathCardSkeleton() {
     <Card className="overflow-hidden rounded-2xl">
       <Skeleton className="h-24 w-full rounded-none" />
       <CardContent className="px-4 pb-4 pt-1 relative">
-        <Skeleton className="absolute top-0 left-4 -translate-y-1/2 size-[84px] rounded-full" />
+        <Skeleton className="absolute top-0 left-6 -translate-y-1/2 size-[88px] rounded-full" />
         <div className="mt-7 space-y-3">
           <Skeleton className="h-4 w-16" />
           <Skeleton className="h-6 w-3/4" />
