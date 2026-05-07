@@ -5,10 +5,10 @@
  * - AC1: Catalog sync from ABS creates Book records in Dexie
  * - AC2: ABS books display with cover, title, author, narrator, duration
  * - AC3: Cover images lazy-load with skeleton placeholders
- * - AC4: Source filter tabs (All / Local / Audiobookshelf)
+ * - AC4: Source filter tabs (All / Local / Server)
  * - AC5: Search filters across local and ABS books by title, author, narrator
  * - AC7: Offline degradation shows cached books + toast
- * - AC8: ARIA labels include narrator
+ * - AC8: ARIA labels include narrator (audiobook cards use the "Audiobook:" prefix)
  */
 import { test, expect } from '../../support/fixtures'
 import { seedIndexedDBStore } from '../../support/helpers/seed-helpers'
@@ -113,6 +113,14 @@ async function seedLibraryWithAbs(page: import('@playwright/test').Page): Promis
   // Reload so Zustand picks up seeded data
   await page.goto('/library?tab=browse')
   await page.waitForLoadState('domcontentloaded')
+  // First paint can run with an empty library; Library removes `libraryFormatCleared` and
+  // reapplies audiobook-only format. Dismiss that chip so seeded local EPUBs are visible.
+  const formatChip = page.getByRole('button', { name: /Remove Format:/ })
+  try {
+    await formatChip.first().click({ timeout: 6000 })
+  } catch {
+    // No format filter chip — OK
+  }
 }
 
 async function seedLibraryLocalOnly(page: import('@playwright/test').Page): Promise<void> {
@@ -139,12 +147,14 @@ async function seedLibraryLocalOnly(page: import('@playwright/test').Page): Prom
 }
 
 test.describe('E101-S03: Library Browsing & Catalog Sync', () => {
-  test('source tab "Audiobookshelf" appears when server is configured', async ({ page }) => {
+  test('source tab "Server" appears when server is configured', async ({ page }) => {
     await seedLibraryWithAbs(page)
 
     await expect(page.getByText('Thinking, Fast and Slow')).toBeVisible({ timeout: 10000 })
     await expect(page.getByTestId('source-tab-all')).toBeVisible()
     await expect(page.getByTestId('source-tab-local')).toBeVisible()
+    const tablist = page.getByRole('tablist', { name: 'Filter by source' })
+    await expect(tablist.getByRole('tab', { name: 'Server' })).toBeVisible()
     await expect(page.getByTestId('source-tab-audiobookshelf')).toBeVisible()
   })
 
@@ -156,12 +166,11 @@ test.describe('E101-S03: Library Browsing & Catalog Sync', () => {
     await expect(page.getByTestId('source-tab-audiobookshelf')).not.toBeVisible()
   })
 
-  test('clicking "Audiobookshelf" tab filters to show only remote ABS books', async ({ page }) => {
+  test('clicking "Server" tab filters to show only remote ABS books', async ({ page }) => {
     await seedLibraryWithAbs(page)
 
     await expect(page.getByText('Thinking, Fast and Slow')).toBeVisible({ timeout: 8000 })
 
-    // Click Audiobookshelf tab
     await page.getByTestId('source-tab-audiobookshelf').click()
 
     // ABS books should be visible
@@ -188,12 +197,13 @@ test.describe('E101-S03: Library Browsing & Catalog Sync', () => {
     await expect(page.getByText('Project Hail Mary')).not.toBeVisible()
   })
 
-  test('ABS books show "Remote" badge', async ({ page }) => {
+  test('ABS books show "Remote" badge in list view', async ({ page }) => {
     await seedLibraryWithAbs(page)
 
     await expect(page.getByText('Thinking, Fast and Slow')).toBeVisible({ timeout: 8000 })
 
-    // Remote badge should be visible for ABS books
+    await page.getByTestId('local-view-list').click()
+
     await expect(page.getByTestId('remote-badge-abs-book-1')).toBeVisible()
   })
 
@@ -236,7 +246,7 @@ test.describe('E101-S03: Library Browsing & Catalog Sync', () => {
     const bookCard = page.getByTestId('book-card-abs-book-1')
     await expect(bookCard).toHaveAttribute(
       'aria-label',
-      'Book: Thinking, Fast and Slow by Daniel Kahneman, narrated by Patrick Egan, 0% complete'
+      'Audiobook: Thinking, Fast and Slow by Daniel Kahneman, narrated by Patrick Egan, 0% complete'
     )
   })
 
@@ -245,7 +255,6 @@ test.describe('E101-S03: Library Browsing & Catalog Sync', () => {
 
     await expect(page.getByText('Thinking, Fast and Slow')).toBeVisible({ timeout: 8000 })
 
-    // Click Audiobookshelf tab first
     await page.getByTestId('source-tab-audiobookshelf').click()
     await expect(page.getByText('TypeScript Handbook')).not.toBeVisible()
 
@@ -263,7 +272,6 @@ test.describe('E101-S03: Library Browsing & Catalog Sync', () => {
 
     await expect(page.getByText('Thinking, Fast and Slow')).toBeVisible({ timeout: 8000 })
 
-    // Filter to Audiobookshelf tab
     await page.getByTestId('source-tab-audiobookshelf').click()
 
     // Search within ABS books only
@@ -308,7 +316,6 @@ test.describe('E101-S03: Library Browsing & Catalog Sync', () => {
 
     await expect(page.getByText('Thinking, Fast and Slow')).toBeVisible({ timeout: 10000 })
 
-    // Switch to ABS tab to reveal pagination sentinel area
     await page.getByTestId('source-tab-audiobookshelf').click()
 
     // With only 2 seeded ABS books and no real ABS API, the sentinel should NOT
