@@ -9,8 +9,8 @@ const SIZES = {
 interface PathProgressRingProps {
   /** Completion percentage 0-100 */
   percentage: number
-  /** Ring size preset */
-  size?: keyof typeof SIZES
+  /** Ring size preset or custom SVG size in px */
+  size?: keyof typeof SIZES | number
   /** Additional className for the container */
   className?: string
   /** Override the center content (defaults to percentage text) */
@@ -27,7 +27,11 @@ export function PathProgressRing({
   className,
   children,
 }: PathProgressRingProps) {
-  const config = SIZES[size]
+  // Resolve config: numeric size computes directly, string preset uses SIZES lookup
+  const config =
+    typeof size === 'number'
+      ? { size, stroke: 3, fontSize: 'text-xs' }
+      : SIZES[size]
   const radius = (config.size - config.stroke * 2) / 2
   const circumference = 2 * Math.PI * radius
   const offset = circumference - (Math.min(percentage, 100) / 100) * circumference

@@ -14,6 +14,18 @@ const COVER_H = 720
 const JPEG_QUALITY = 0.82
 const BUCKET_NAME = 'learning-path-covers'
 
+/** User-facing diagnostic messages keyed by failure category (never exposes internal schema/policy names) */
+const DIAGNOSTIC = {
+  AUTH_REQUIRED: 'Sign in required to upload covers',
+  FORMAT_UNSUPPORTED: 'Unsupported image format. Use JPEG, PNG, or WebP.',
+  IMAGE_PROCESSING: 'Could not process this image. Try a different file.',
+  REPLACE_REMOVE_FAILED: 'Failed to replace existing cover. Please try again.',
+  REPLACE_RETRY_FAILED: 'Cover upload failed after clearing old cover. Please try again.',
+  STORAGE_ERROR: 'Cover upload failed. Check your connection and try again.',
+  NETWORK_ERROR: 'Network error during upload. Check your connection.',
+  CONFIG_ERROR: 'App configuration error. Check your connection and try again.',
+} as const
+
 /** Validates and loads an image file into an ImageBitmap */
 async function loadImageFile(file: File): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
@@ -79,11 +91,11 @@ function resizeToJpegBlob(
  */
 async function getUserId(): Promise<string> {
   if (!supabase) {
-    throw new Error('Supabase client is not available. Configure VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.')
+    throw new Error(DIAGNOSTIC.CONFIG_ERROR)
   }
   const { data, error } = await supabase.auth.getUser()
   if (error || !data.user) {
-    throw new Error('Authentication required to upload covers')
+    throw new Error(DIAGNOSTIC.AUTH_REQUIRED)
   }
   return data.user.id
 }
@@ -103,7 +115,7 @@ async function getUserId(): Promise<string> {
  */
 export async function uploadPathCover(file: File, pathId: string): Promise<string> {
   if (!supabase) {
-    throw new Error('Supabase client is not available. Configure VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.')
+    throw new Error(DIAGNOSTIC.CONFIG_ERROR)
   }
 
   // Get authenticated user ID for path-scoped storage key
@@ -112,43 +124,78 @@ export async function uploadPathCover(file: File, pathId: string): Promise<strin
   // Validate file type
   const supportedFormats = ['image/jpeg', 'image/png', 'image/webp']
   if (!supportedFormats.includes(file.type)) {
-    throw new Error('Unsupported image format. Use JPEG, PNG, or WebP.')
+    throw new Error(DIAGNOSTIC.FORMAT_UNSUPPORTED)
   }
 
-  // Process image
-  const img = await loadImageFile(file)
-  const blob = await resizeToJpegBlob(img, COVER_W, COVER_H)
+  // Process image — remap all internal processing errors to one diagnostic
+  let blob: Blob
+  try {
+    const img = await loadImageFile(file)
+    blob = await resizeToJpegBlob(img, COVER_W, COVER_H)
+  } catch (err) {
+    // All four failure modes (reader read, image decode, canvas context, toBlob null)
+    // are remapped to IMAGE_PROCESSING. Original error logged for debugging.
+    console.error(
+      '[PathCoverUpload] Image processing failed:',
+      err instanceof Error ? err.message : err
+    )
+    throw new Error(DIAGNOSTIC.IMAGE_PROCESSING)
+  }
 
   // Upload to Supabase Storage under user-scoped path for RLS compatibility
   const key = `${userId}/${pathId}.jpg`
+  const maskedKey = `${userId.slice(0, 8)}.../${pathId.slice(0, 8)}...`
 
-  // Attempt pure INSERT (no upsert — explicit delete+insert on 409 Conflict)
-  const { error } = await supabase.storage.from(BUCKET_NAME).upload(key, blob, {
-    contentType: 'image/jpeg',
-    cacheControl: '3600',
-  })
-
-  // 409 Conflict: object already exists — delete then re-insert
-  // Supabase client may surface statusCode as string or number depending on version.
-  if (Number(error?.statusCode) === 409) {
-    const { error: removeError } = await supabase.storage.from(BUCKET_NAME).remove([key])
-    if (removeError) {
-      console.error('[PathCoverUpload] Remove failed during 409 retry:', removeError)
-      throw new Error('Failed to upload cover image. Please try again.')
-    }
-
-    const { error: retryError } = await supabase.storage.from(BUCKET_NAME).upload(key, blob, {
+  // Outer try/catch for thrown network/fetch errors (Supabase SDK may throw on connectivity failure)
+  try {
+    // Attempt pure INSERT (no upsert — explicit delete+insert on 409 Conflict)
+    const { error } = await supabase.storage.from(BUCKET_NAME).upload(key, blob, {
       contentType: 'image/jpeg',
       cacheControl: '3600',
     })
 
-    if (retryError) {
-      console.error('[PathCoverUpload] Retry upload failed after 409:', retryError)
-      throw new Error('Failed to upload cover image. Please try again.')
+    // 409 Conflict: object already exists — delete then re-insert
+    // Supabase client may surface statusCode as string or number depending on version.
+    if (Number(error?.statusCode) === 409) {
+      const { error: removeError } = await supabase.storage.from(BUCKET_NAME).remove([key])
+      if (removeError) {
+        console.error(
+          '[PathCoverUpload] Remove failed during 409 retry:',
+          { bucket: BUCKET_NAME, key: maskedKey, statusCode: removeError.statusCode || 'unknown', message: removeError.message }
+        )
+        throw new Error(DIAGNOSTIC.REPLACE_REMOVE_FAILED)
+      }
+
+      const { error: retryError } = await supabase.storage.from(BUCKET_NAME).upload(key, blob, {
+        contentType: 'image/jpeg',
+        cacheControl: '3600',
+      })
+
+      if (retryError) {
+        console.error(
+          '[PathCoverUpload] Retry upload failed after 409:',
+          { bucket: BUCKET_NAME, key: maskedKey, statusCode: retryError.statusCode || 'unknown', message: retryError.message }
+        )
+        throw new Error(DIAGNOSTIC.REPLACE_RETRY_FAILED)
+      }
+    } else if (error) {
+      console.error(
+        '[PathCoverUpload] Upload failed:',
+        { bucket: BUCKET_NAME, key: maskedKey, statusCode: error.statusCode || 'unknown', message: error.message }
+      )
+      throw new Error(DIAGNOSTIC.STORAGE_ERROR)
     }
-  } else if (error) {
-    console.error('[PathCoverUpload] Upload failed:', error)
-    throw new Error('Failed to upload cover image. Please try again.')
+  } catch (err) {
+    // Re-throw errors that already carry diagnostic messages (thrown above)
+    if (err instanceof Error && Object.values(DIAGNOSTIC).includes(err.message as typeof DIAGNOSTIC[keyof typeof DIAGNOSTIC])) {
+      throw err
+    }
+    // Catch thrown network/fetch errors that bypass the .error pathway
+    console.error(
+      '[PathCoverUpload] Network error during upload:',
+      { bucket: BUCKET_NAME, key: maskedKey, error: err instanceof Error ? err.message : String(err) }
+    )
+    throw new Error(DIAGNOSTIC.NETWORK_ERROR)
   }
 
   // Get public URL

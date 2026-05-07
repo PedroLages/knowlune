@@ -21,6 +21,7 @@ import { Button } from '@/app/components/ui/button'
 import { Card, CardContent } from '@/app/components/ui/card'
 import { Badge } from '@/app/components/ui/badge'
 import { Skeleton } from '@/app/components/ui/skeleton'
+import { Separator } from '@/app/components/ui/separator'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -168,7 +169,7 @@ function PathCard({
     <motion.div variants={fadeUp}>
       <Card
         className={cn(
-          'group relative transition-all duration-300 hover:shadow-xl overflow-hidden rounded-2xl h-[320px] md:h-[340px]'
+          'group relative overflow-hidden rounded-2xl h-[360px] md:h-[380px] shadow-sm hover:shadow-md motion-safe:transition-shadow motion-safe:duration-300'
         )}
       >
         {/* Gradient header — dimmed when not started */}
@@ -223,15 +224,15 @@ function PathCard({
         </div>
 
         {/* Card body */}
-        <CardContent className="px-4 pb-4 pt-8 relative flex flex-col h-[calc(100%-6rem)]">
+        <CardContent className="px-6 pb-5 pt-12 relative flex flex-col h-[calc(100%-8rem)]">
           {/* Progress ring — centered on header/body seam via translate (scales with any ring size) */}
           <div className="absolute top-0 left-6 -translate-y-1/2">
             <div className="bg-card rounded-full p-2 shadow-lg">
-              <PathProgressRing percentage={completionPct} size="md">
+              <PathProgressRing percentage={completionPct} size={80}>
                 {isCompleted ? (
                   <CheckCircle2 className="size-6 text-success" aria-hidden="true" />
                 ) : (
-                  <span className="font-bold text-foreground">
+                  <span className="text-lg font-bold text-foreground">
                     {Math.round(completionPct)}%
                   </span>
                 )}
@@ -266,9 +267,10 @@ function PathCard({
                 {path.description}
               </p>
             )}
+            <Separator className="mb-4" />
 
             {/* Footer: course thumbnails + continue/start/review button */}
-            <div className="mt-auto flex items-center justify-between border-t border-border pt-4">
+            <div className="mt-auto flex items-center justify-between">
               <div className="flex -space-x-3">
                 {courseThumbnails.slice(0, 3).map((url, i) => (
                   <img
@@ -296,8 +298,7 @@ function PathCard({
                 {footerAction ? (
                   <Button
                     variant={footerAction.variant}
-                    size="sm"
-                    className="text-xs whitespace-nowrap"
+                    className="px-6 py-2 rounded-xl text-sm font-bold group-hover:px-7 motion-safe:transition-[padding]"
                     onClick={handleFooterClick}
                     aria-label={`${footerAction.label}${footerAction.courseName ? ' ' + footerAction.courseName : ''}`}
                   >
@@ -307,12 +308,12 @@ function PathCard({
                     )}
                   </Button>
                 ) : isNotStarted ? (
-                  <span className="text-xs font-bold text-muted-foreground uppercase">
+                  <span className="text-xs font-bold text-muted-foreground uppercase px-2">
                     Not Started
                   </span>
                 ) : (
                   <ArrowRight
-                    className="size-4 text-muted-foreground group-hover:text-brand transition-colors"
+                    className="size-5 text-muted-foreground group-hover:text-brand transition-colors"
                     aria-hidden="true"
                   />
                 )}
@@ -330,14 +331,15 @@ function PathCard({
 function PathCardSkeleton() {
   return (
     <Card className="overflow-hidden rounded-2xl">
-      <Skeleton className="h-24 w-full rounded-none" />
-      <CardContent className="px-4 pb-4 pt-1 relative">
-        <Skeleton className="absolute top-0 left-6 -translate-y-1/2 size-[88px] rounded-full" />
+      <Skeleton className="h-32 w-full rounded-none" />
+      <CardContent className="px-6 pb-5 pt-1 relative">
+        <Skeleton className="absolute top-0 left-6 -translate-y-1/2 size-[96px] rounded-full" />
         <div className="mt-7 space-y-3">
           <Skeleton className="h-4 w-16" />
           <Skeleton className="h-6 w-3/4" />
           <Skeleton className="h-4 w-full" />
-          <div className="flex justify-between pt-4 border-t border-border">
+          <Skeleton className="h-px w-full" />
+          <div className="flex justify-between pt-4">
             <div className="flex -space-x-3">
               <Skeleton className="size-8 rounded-full" />
               <Skeleton className="size-8 rounded-full" />
