@@ -204,6 +204,10 @@ describe('LearningPaths', () => {
       expect(screen.getByRole('list', { name: 'Learning paths' })).toBeInTheDocument()
     })
 
+    expect(screen.getAllByTestId('learning-path-card')).toHaveLength(
+      mockLearningPathState.paths.length
+    )
+
     const grid = screen.getByRole('list', { name: 'Learning paths' })
     expect(grid.className).toContain('xl:grid-cols-4')
     expect(grid.className).toContain('gap-[var(--content-gap)]')
