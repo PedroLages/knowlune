@@ -115,9 +115,9 @@ async function seedLibraryWithAbs(page: import('@playwright/test').Page): Promis
   await page.waitForLoadState('domcontentloaded')
   // First paint can run with an empty library; Library removes `libraryFormatCleared` and
   // reapplies audiobook-only format. Dismiss that chip so seeded local EPUBs are visible.
-  const formatChip = page.getByRole('button', { name: /Remove Format:/ })
+  const formatChip = page.getByTestId('library-active-filter-remove-format')
   try {
-    await formatChip.first().click({ timeout: 6000 })
+    await formatChip.click({ timeout: 6000 })
   } catch {
     // No format filter chip — OK
   }

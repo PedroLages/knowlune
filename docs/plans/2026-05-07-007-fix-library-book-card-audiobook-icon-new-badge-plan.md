@@ -35,7 +35,7 @@ Align `BookCard` so audiobooks show a top-right **headphones** format badge like
 
 - `src/app/components/library/BookCard.tsx` — Browse grid card. The **non-audiobook** branch already renders a top-right format badge with `BookOpen` and `aria-label="Ebook format"`. The **audiobook** branch (`book.format === 'audiobook'`) has square cover, progress bar, and finished overlay but **no** equivalent top-right badge; `Headphones` is only used as `BookCoverImage` fallback.
 - `src/app/pages/Library.tsx` — Browse tab renders `<BookCard book={book} />` in the grid (`libraryTab === 'browse'`). Embeds `LibrarySourceTabs` when ABS servers exist (`absServers.length > 0`).
-- `src/app/components/library/LibrarySourceTabs.tsx` — Defines source pills via `SOURCE_TABS`; third entry is `{ value: 'audiobookshelf', label: 'Audiobookshelf', icon: true }` (cloud icon). **Single source of truth** for the filter label change to **Server**.
+- `src/app/components/library/LibrarySourceTabs.tsx` — Defines source pills via `SOURCE_TABS`; third entry is `{ value: 'audiobookshelf', label: 'Server', icon: true }` (cloud icon). Display label **Server**; filter value and `data-testid` remain `audiobookshelf`.
 - `src/app/components/library/RecentBookCard.tsx` — Reference for **headphones vs book** branching and accessible labels (`aria-label` for audio vs ebook). Placement there is bottom-right; this plan keeps **BookCard** top-right to match the existing ebook `BookCard` layout.
 - `CollectionDetail`, `SmartGroupedView`, `LocalSeriesView` also consume `BookCard`; behavior updates apply consistently (intended).
 
