@@ -718,6 +718,7 @@ export function Library() {
                 className="size-11 rounded-xl"
                 aria-label="Reading goals"
                 title="Reading Goals"
+                data-testid="library-reading-goals-trigger"
               >
                 <Target className="size-5" />
               </Button>
@@ -764,7 +765,10 @@ export function Library() {
                   <LibraryIcon className="mr-2 size-4" />
                   Manage Shelves
                 </DropdownMenuItem>
-                <DropdownMenuItem onSelect={() => setGoalsOpen(true)}>
+                <DropdownMenuItem
+                  onSelect={() => setGoalsOpen(true)}
+                  data-testid="library-reading-goals-menu-item"
+                >
                   <Target className="mr-2 size-4" />
                   Reading Goals
                 </DropdownMenuItem>

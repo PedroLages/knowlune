@@ -97,8 +97,11 @@ export function ReadingGoalSettings({ open, onOpenChange }: ReadingGoalSettingsP
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="rounded-2xl max-w-4xl">
-        <DialogHeader>
+      <DialogContent
+        data-testid="reading-goals-dialog"
+        className="flex max-h-[min(90dvh,960px)] min-h-0 flex-col gap-4 overflow-hidden rounded-2xl max-w-4xl"
+      >
+        <DialogHeader className="shrink-0 space-y-2 text-left">
           <div className="flex items-center gap-2">
             <Target className="size-5 text-brand" aria-hidden="true" />
             <DialogTitle>Reading Goals</DialogTitle>
@@ -109,176 +112,180 @@ export function ReadingGoalSettings({ open, onOpenChange }: ReadingGoalSettingsP
         </DialogHeader>
 
         {/* Motivational quote */}
-        <p className="text-sm italic text-muted-foreground text-center">
+        <p className="shrink-0 text-center text-sm italic text-muted-foreground mt-1">
           &ldquo;A book is a dream you hold in your hand.&rdquo; &mdash; Neil Gaiman
         </p>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-          {/* Left column: Daily + Streak + Heatmap */}
-          <div className="lg:col-span-7 space-y-6">
-            {/* Daily Goal Section */}
-            <div className="bg-card rounded-xl p-6 shadow-card-ambient space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-sm font-bold text-foreground">Daily Reading Goal</h3>
-                <span className="text-xs text-brand font-medium">
-                  {dailyTarget} {dailyType}
-                </span>
-              </div>
+        <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden pr-0.5">
+          <div className="grid grid-cols-1 items-start gap-8 lg:grid-cols-12">
+            {/* Left column: Daily + Streak + Heatmap */}
+            <div className="lg:col-span-7 space-y-6">
+              {/* Daily Goal Section */}
+              <div className="bg-card rounded-xl p-6 shadow-card-ambient space-y-4">
+                <div className="flex items-baseline justify-between gap-3">
+                  <h3 className="text-sm font-bold text-foreground">Daily Reading Goal</h3>
+                  <span className="shrink-0 text-xs font-medium text-brand tabular-nums">
+                    {dailyTarget} {dailyType}
+                  </span>
+                </div>
 
-              {/* Type toggle */}
-              <div className="flex gap-2" role="radiogroup" aria-label="Daily goal type">
-                {(['minutes', 'pages'] as const).map(type => (
-                  <button
-                    key={type}
-                    role="radio"
-                    aria-checked={dailyType === type}
-                    onClick={() => handleDailyTypeChange(type)}
-                    className={cn(
-                      'flex-1 rounded-xl border py-2.5 text-sm font-medium transition-colors min-h-[44px]',
-                      dailyType === type
-                        ? 'border-brand bg-brand-soft text-brand-soft-foreground'
-                        : 'border-border/15 bg-card text-muted-foreground hover:bg-muted/30'
-                    )}
-                  >
-                    {type === 'minutes' ? 'Minutes / day' : 'Pages / day'}
-                  </button>
-                ))}
-              </div>
+                {/* Type toggle */}
+                <div className="flex gap-2" role="radiogroup" aria-label="Daily goal type">
+                  {(['minutes', 'pages'] as const).map(type => (
+                    <button
+                      key={type}
+                      type="button"
+                      role="radio"
+                      aria-checked={dailyType === type}
+                      onClick={() => handleDailyTypeChange(type)}
+                      className={cn(
+                        'flex-1 rounded-xl border py-2.5 text-sm font-medium transition-colors min-h-[44px]',
+                        dailyType === type
+                          ? 'border-brand bg-brand-soft text-brand-soft-foreground'
+                          : 'border-border/15 bg-card text-muted-foreground hover:bg-muted/30'
+                      )}
+                    >
+                      {type === 'minutes' ? 'Minutes / day' : 'Pages / day'}
+                    </button>
+                  ))}
+                </div>
 
-              {/* Selectable preset cards */}
-              <div
-                className="grid grid-cols-2 sm:grid-cols-4 gap-3"
-                role="group"
-                aria-label="Daily goal presets"
-              >
-                {presets.map(value => (
-                  <button
-                    key={value}
-                    onClick={() => handlePresetSelect(value)}
-                    className={cn(
-                      'flex flex-col items-center gap-2 p-4 rounded-xl border transition-all',
-                      dailyTarget === value && !isCustomActive
-                        ? 'border-brand bg-brand-soft shadow-sm'
-                        : 'border-border/15 bg-card hover:bg-muted/30'
-                    )}
-                    aria-pressed={dailyTarget === value && !isCustomActive}
-                  >
-                    <Clock className="size-5 text-muted-foreground" aria-hidden="true" />
-                    <span className="text-lg font-bold">{value}</span>
-                    <span className="text-[10px] text-muted-foreground uppercase tracking-wider">
-                      {dailyType}
-                    </span>
-                  </button>
-                ))}
-              </div>
-
-              {/* Custom input */}
-              <div className="flex items-center gap-2">
-                <Input
-                  type="number"
-                  min={1}
-                  max={480}
-                  placeholder="Custom"
-                  value={customDaily}
-                  onChange={e => handleCustomDailyChange(e.target.value)}
-                  className={cn(
-                    'w-24 h-11 text-center text-sm',
-                    isCustomActive ? 'border-brand ring-1 ring-brand' : ''
-                  )}
-                  aria-label={`Custom daily goal in ${dailyType}`}
-                />
-                <span className="text-xs text-muted-foreground">{dailyType}</span>
-              </div>
-            </div>
-
-            {/* Streak display */}
-            <div className="flex items-center gap-4 p-6 bg-card rounded-xl shadow-card-ambient">
-              <div className="size-14 rounded-full bg-brand/10 flex items-center justify-center flex-shrink-0">
-                <Flame className="size-7 text-brand" aria-hidden="true" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-foreground">{streak.currentStreak} Days</p>
-                <p className="text-sm text-muted-foreground">
-                  {streak.currentStreak > 7
-                    ? `You're on fire! ${streak.currentStreak} days straight`
-                    : streak.currentStreak > 0
-                      ? 'Keep it going!'
-                      : 'Start your streak today'}
-                </p>
-              </div>
-            </div>
-
-            {/* Calendar heat map */}
-            <CalendarHeatMap dayMap={dayMap} today={today} weeks={13} />
-          </div>
-
-          {/* Right column: Yearly Progress */}
-          <div className="lg:col-span-5">
-            <div className="bg-card rounded-xl p-6 shadow-card-ambient sticky top-4 space-y-6">
-              <h3 className="text-sm font-bold text-foreground">Yearly Reading Goal</h3>
-
-              <div className="flex justify-center">
-                <ProgressRing
-                  percent={yearlyTarget > 0 ? (finishedThisYear / yearlyTarget) * 100 : 0}
-                  size={200}
-                  strokeWidth={10}
+                {/* Selectable preset cards */}
+                <div
+                  className="grid grid-cols-2 items-start gap-3 sm:grid-cols-4"
+                  role="group"
+                  aria-label="Daily goal presets"
                 >
-                  <div className="text-center">
-                    <span className="text-3xl font-bold text-foreground">{finishedThisYear}</span>
-                    <span className="text-sm text-muted-foreground"> / {yearlyTarget}</span>
-                    <p className="text-xs text-muted-foreground mt-1">books</p>
-                  </div>
-                </ProgressRing>
-              </div>
+                  {presets.map(value => (
+                    <button
+                      key={value}
+                      type="button"
+                      onClick={() => handlePresetSelect(value)}
+                      className={cn(
+                        'flex h-auto w-full flex-col items-center gap-2 self-start p-4 rounded-xl border transition-all',
+                        dailyTarget === value && !isCustomActive
+                          ? 'border-brand bg-brand-soft shadow-sm'
+                          : 'border-border/15 bg-card hover:bg-muted/30'
+                      )}
+                      aria-pressed={dailyTarget === value && !isCustomActive}
+                    >
+                      <Clock className="size-5 text-muted-foreground" aria-hidden="true" />
+                      <span className="text-lg font-bold">{value}</span>
+                      <span className="text-[10px] text-muted-foreground uppercase tracking-wider">
+                        {dailyType}
+                      </span>
+                    </button>
+                  ))}
+                </div>
 
-              {/* Yearly stepper */}
-              <div className="flex items-center gap-3">
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={() => adjustYearly(-1)}
-                  disabled={yearlyTarget <= 1}
-                  className="size-11 rounded-xl"
-                  aria-label="Decrease yearly goal"
-                >
-                  <Minus className="size-4" />
-                </Button>
-                <div className="flex-1 text-center">
-                  <Label htmlFor="yearly-goal-input" className="sr-only">
-                    Yearly book goal
-                  </Label>
+                {/* Custom input */}
+                <div className="flex items-center gap-2">
                   <Input
-                    id="yearly-goal-input"
                     type="number"
                     min={1}
-                    max={365}
-                    value={yearlyTarget}
-                    onChange={e => {
-                      const num = parseInt(e.target.value, 10)
-                      if (!isNaN(num) && num > 0) setYearlyTarget(Math.min(num, 365))
-                    }}
-                    className="text-center text-lg font-semibold h-11"
-                    aria-label="Yearly book goal"
+                    max={480}
+                    placeholder="Custom"
+                    value={customDaily}
+                    onChange={e => handleCustomDailyChange(e.target.value)}
+                    className={cn(
+                      'w-24 h-11 text-center text-sm',
+                      isCustomActive ? 'border-brand ring-1 ring-brand' : ''
+                    )}
+                    aria-label={`Custom daily goal in ${dailyType}`}
                   />
-                  <p className="text-xs text-muted-foreground mt-1">books this year</p>
+                  <span className="text-xs text-muted-foreground">{dailyType}</span>
                 </div>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={() => adjustYearly(1)}
-                  disabled={yearlyTarget >= 365}
-                  className="size-11 rounded-xl"
-                  aria-label="Increase yearly goal"
-                >
-                  <Plus className="size-4" />
-                </Button>
+              </div>
+
+              {/* Streak display */}
+              <div className="flex items-center gap-4 rounded-xl bg-card p-6 shadow-card-ambient">
+                <div className="flex size-14 shrink-0 items-center justify-center rounded-full bg-brand/10">
+                  <Flame className="size-7 text-brand" aria-hidden="true" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-foreground">{streak.currentStreak} Days</p>
+                  <p className="text-sm text-muted-foreground">
+                    {streak.currentStreak > 7
+                      ? `You're on fire! ${streak.currentStreak} days straight`
+                      : streak.currentStreak > 0
+                        ? 'Keep it going!'
+                        : 'Start your streak today'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Calendar heat map */}
+              <CalendarHeatMap dayMap={dayMap} today={today} weeks={13} />
+            </div>
+
+            {/* Right column: Yearly Progress */}
+            <div className="lg:col-span-5">
+              <div className="space-y-6 rounded-xl bg-card p-6 shadow-card-ambient">
+                <h3 className="text-sm font-bold text-foreground">Yearly Reading Goal</h3>
+
+                <div className="flex w-full max-w-full justify-center overflow-x-hidden">
+                  <ProgressRing
+                    percent={yearlyTarget > 0 ? (finishedThisYear / yearlyTarget) * 100 : 0}
+                    size={200}
+                    strokeWidth={10}
+                  >
+                    <div className="text-center">
+                      <span className="text-3xl font-bold text-foreground">{finishedThisYear}</span>
+                      <span className="text-sm text-muted-foreground"> / {yearlyTarget}</span>
+                      <p className="text-xs text-muted-foreground mt-1">books</p>
+                    </div>
+                  </ProgressRing>
+                </div>
+
+                {/* Yearly stepper */}
+                <div className="flex min-w-0 items-center gap-3">
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => adjustYearly(-1)}
+                    disabled={yearlyTarget <= 1}
+                    className="size-11 shrink-0 rounded-xl"
+                    aria-label="Decrease yearly goal"
+                  >
+                    <Minus className="size-4" />
+                  </Button>
+                  <div className="min-w-24 flex-1 text-center">
+                    <Label htmlFor="yearly-goal-input" className="sr-only">
+                      Yearly book goal
+                    </Label>
+                    <Input
+                      id="yearly-goal-input"
+                      type="number"
+                      min={1}
+                      max={365}
+                      value={yearlyTarget}
+                      onChange={e => {
+                        const num = parseInt(e.target.value, 10)
+                        if (!isNaN(num) && num > 0) setYearlyTarget(Math.min(num, 365))
+                      }}
+                      className="h-11 text-center text-lg font-semibold"
+                      aria-label="Yearly book goal"
+                    />
+                    <p className="mt-1 text-xs text-muted-foreground">books this year</p>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => adjustYearly(1)}
+                    disabled={yearlyTarget >= 365}
+                    className="size-11 shrink-0 rounded-xl"
+                    aria-label="Increase yearly goal"
+                  >
+                    <Plus className="size-4" />
+                  </Button>
+                </div>
               </div>
             </div>
           </div>
         </div>
 
         {/* Actions */}
-        <div className="flex justify-between pt-2">
+        <div className="flex shrink-0 justify-between gap-2 border-t border-border/10 pt-4">
           {goal && (
             <Button
               variant="ghost"

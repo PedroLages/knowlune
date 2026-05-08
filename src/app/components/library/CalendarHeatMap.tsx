@@ -65,9 +65,9 @@ export const CalendarHeatMap = memo(function CalendarHeatMap({
       aria-label={`Reading activity: ${activeDays} active days in the last ${weeks} weeks`}
     >
       {/* Legend */}
-      <div className="flex justify-between items-center text-[10px] font-bold text-muted-foreground uppercase tracking-widest px-1">
-        <span>Past {weeks} Weeks</span>
-        <span className="flex gap-1 items-center">
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 px-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+        <span className="shrink-0">Past {weeks} Weeks</span>
+        <span className="flex shrink-0 items-center gap-1.5">
           Less
           {[0, 1, 2, 3, 4].map(level => (
             <div key={level} className={cn('w-2.5 h-2.5 rounded-[2px]', LEVEL_CLASSES[level])} />
