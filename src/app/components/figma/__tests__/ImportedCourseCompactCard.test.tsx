@@ -106,6 +106,15 @@ describe('ImportedCourseCompactCard — minimal metadata', () => {
     expect(card.className).toContain('min-h-[44px]')
     expect(card.className).toContain('min-w-[44px]')
   })
+
+  it('card root omits hover ring utilities (no hover outline stroke)', () => {
+    renderCard()
+    const card = screen.getByTestId('imported-course-compact-card')
+    expect(card.className).not.toContain('hover:ring-1')
+    expect(card.className).not.toContain('hover:ring-muted-foreground')
+    expect(card.className).toContain('focus-visible:ring-2')
+    expect(card.className).toContain('focus-visible:ring-brand')
+  })
 })
 
 describe('ImportedCourseCompactCard — progress overlay', () => {
