@@ -806,6 +806,23 @@ export function LearningPathDetail() {
                 </motion.section>
               )}
 
+              {/* Gap entry summary between timeline and reorder list */}
+              {gapCount > 0 && !showReorderList && (
+                <motion.div variants={itemVariants}>
+                  <div className="flex items-center gap-3 p-4 rounded-xl bg-warning/10 border border-warning/30">
+                    <AlertCircle className="w-5 h-5 text-warning flex-shrink-0" />
+                    <div className="flex-1">
+                      <p className="text-sm font-medium">
+                        {matchedCount} of {courseEntries.length} courses matched
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Resolve gap entries above to complete your path.
+                      </p>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+
               {/* Full Reorder List (togglable) */}
               {showReorderList && (
                 <motion.section variants={itemVariants}>

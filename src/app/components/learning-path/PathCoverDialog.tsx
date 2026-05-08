@@ -225,7 +225,7 @@ export function PathCoverDialog({ open, onOpenChange, path, triggerRef }: PathCo
                     preset.to,
                     selectedPreset === preset.key
                       ? 'ring-2 ring-inset ring-brand'
-                      : 'hover:scale-[1.02]'
+                      : 'hover:brightness-110'
                   )}
                   onClick={() => {
                     revokeObjectPreview()
