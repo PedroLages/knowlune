@@ -56,6 +56,7 @@ export function PathHeroBanner({
         <Link
           to="/learning-paths"
           className="inline-flex items-center gap-2 text-white/80 hover:text-white text-sm font-medium mb-6 hover:-translate-x-1 transition-transform"
+          data-testid="hero-back-link"
         >
           <ArrowLeft className="size-4" aria-hidden="true" />
           Back to Learning Paths

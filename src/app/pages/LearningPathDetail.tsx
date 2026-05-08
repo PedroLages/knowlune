@@ -695,24 +695,6 @@ export function LearningPathDetail() {
             </motion.div>
           )}
 
-          {/* Gap entry summary — for paths with unmatched entries */}
-          {gapCount > 0 && (
-            <motion.div variants={itemVariants}>
-              <div className="flex items-center gap-3 p-4 rounded-xl bg-warning/10 border border-warning/30">
-                <AlertCircle className="w-5 h-5 text-warning flex-shrink-0" />
-                <div className="flex-1">
-                  <p className="text-sm font-medium">
-                    {matchedCount} of {courseEntries.length} courses matched from your library
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    Import the remaining {gapCount} {gapCount === 1 ? 'course' : 'courses'} to
-                    complete this path.
-                  </p>
-                </div>
-              </div>
-            </motion.div>
-          )}
-
           {/* Course list section */}
           {courseEntries.length > 0 ? (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-[var(--content-gap)]">

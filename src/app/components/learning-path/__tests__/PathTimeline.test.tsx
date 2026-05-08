@@ -55,9 +55,15 @@ describe('PathTimeline', () => {
     expect(screen.getByText('Course Alpha')).toBeInTheDocument()
   })
 
-  it('shows Locked badge for unstarted entries', () => {
-    const entries = [makeEntry({ courseId: 'c1' })]
-    const infoMap = new Map([['c1', makeCourseInfo({ completionPct: 0 })]])
+  it('shows Locked badge for unstarted entries after the first', () => {
+    const entries = [
+      makeEntry({ courseId: 'c1', position: 1 }),
+      makeEntry({ courseId: 'c2', position: 2 }),
+    ]
+    const infoMap = new Map([
+      ['c1', makeCourseInfo({ completionPct: 0 })],
+      ['c2', makeCourseInfo({ completionPct: 0 })],
+    ])
     render(
       <PathTimeline
         {...defaultProps}
@@ -65,6 +71,8 @@ describe('PathTimeline', () => {
         courseInfoMap={infoMap}
       />
     )
+    // First entry defaults to Up Next; second entry shows Locked
+    expect(screen.getByText('Up Next')).toBeInTheDocument()
     expect(screen.getAllByText('Locked').length).toBeGreaterThanOrEqual(1)
   })
 

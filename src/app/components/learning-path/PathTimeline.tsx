@@ -349,6 +349,22 @@ export function PathTimeline({
   className,
 }: PathTimelineProps) {
   const gapEntryIds = useMemo(() => new Set(gapEntries.map(e => e.id)), [gapEntries])
+
+  // When no courses have any progress data, the first non-gap entry should
+  // default to "in-progress" so the user sees a "Start Module" CTA rather
+  // than all courses appearing as "Locked".
+  const hasAnyProgress = useMemo(
+    () => entries.some(e => {
+      if (e.courseId === '' || gapEntryIds.has(e.id)) return false
+      return (courseInfoMap.get(e.courseId)?.completionPct ?? 0) > 0
+    }),
+    [entries, courseInfoMap, gapEntryIds]
+  )
+  const firstNonGapIndex = useMemo(
+    () => entries.findIndex(e => e.courseId !== '' && !gapEntryIds.has(e.id)),
+    [entries, gapEntryIds]
+  )
+
   const timelineRef = useRef<HTMLDivElement>(null)
   const prefersReducedMotion = useReducedMotion()
 
@@ -402,7 +418,9 @@ export function PathTimeline({
         const info = courseInfoMap.get(entry.courseId)
         const thumbUrl = thumbnailUrls[entry.courseId]
         const isCompleted = (info?.completionPct ?? 0) >= 100
-        const isInProgress = (info?.completionPct ?? 0) > 0 && !isCompleted
+        const isInProgress =
+          (!hasAnyProgress && i === firstNonGapIndex) ||
+          ((info?.completionPct ?? 0) > 0 && !isCompleted)
 
         return (
           <div key={entry.courseId} role="listitem">

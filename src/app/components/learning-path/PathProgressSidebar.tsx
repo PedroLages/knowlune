@@ -26,6 +26,7 @@ export function PathProgressSidebar({
       {/* Progress card */}
       <Card>
         <CardContent className="p-6 space-y-6">
+          <div aria-live="polite" aria-atomic="true">
           {/* Progress ring */}
           <div className="flex justify-center">
             <PathProgressRing percentage={completionPct} size="lg" strokeWidth={4}>
@@ -57,6 +58,7 @@ export function PathProgressSidebar({
               </span>
             </div>
           </div>
+          </div>
 
           {/* Skills tags */}
           {skillTags && skillTags.length > 0 && (
@@ -80,7 +82,7 @@ export function PathProgressSidebar({
       </Card>
 
       {/* Certificate card */}
-      <Card className="bg-gradient-to-br from-foreground to-foreground/80 border-0 overflow-hidden">
+      <Card className="bg-gradient-to-br from-foreground to-foreground/80 border-0 overflow-hidden" data-testid="certificate-card">
         <CardContent className="p-6">
           <div className="size-12 rounded-full bg-gold/20 flex items-center justify-center mb-4">
             <Award className="size-6 text-gold" aria-hidden="true" />
