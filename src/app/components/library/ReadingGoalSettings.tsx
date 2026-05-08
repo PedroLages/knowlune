@@ -112,12 +112,12 @@ export function ReadingGoalSettings({ open, onOpenChange }: ReadingGoalSettingsP
         </DialogHeader>
 
         {/* Motivational quote */}
-        <p className="shrink-0 text-center text-sm italic text-muted-foreground mt-1">
+        <p className="mb-1 shrink-0 text-center text-sm italic text-muted-foreground mt-1">
           &ldquo;A book is a dream you hold in your hand.&rdquo; &mdash; Neil Gaiman
         </p>
 
-        <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden pr-0.5">
-          <div className="grid grid-cols-1 items-start gap-8 lg:grid-cols-12">
+        <div className="min-h-0 flex-1 overflow-y-auto pr-0.5">
+          <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-12 lg:gap-8">
             {/* Left column: Daily + Streak + Heatmap */}
             <div className="lg:col-span-7 space-y-6">
               {/* Daily Goal Section */}
@@ -150,9 +150,13 @@ export function ReadingGoalSettings({ open, onOpenChange }: ReadingGoalSettingsP
                   ))}
                 </div>
 
+                <p className="text-[11px] text-muted-foreground">
+                  Presets are {dailyType === 'minutes' ? 'minutes per day' : 'pages per day'}.
+                </p>
+
                 {/* Selectable preset cards */}
                 <div
-                  className="grid grid-cols-2 items-start gap-3 sm:grid-cols-4"
+                  className="mt-1 grid grid-cols-2 items-start gap-3 sm:grid-cols-4"
                   role="group"
                   aria-label="Daily goal presets"
                 >
@@ -162,17 +166,16 @@ export function ReadingGoalSettings({ open, onOpenChange }: ReadingGoalSettingsP
                       type="button"
                       onClick={() => handlePresetSelect(value)}
                       className={cn(
-                        'flex h-auto w-full flex-col items-center gap-2 self-start p-4 rounded-xl border transition-all',
+                        'flex h-auto w-full flex-col items-center gap-1.5 self-start rounded-xl border p-3 transition-all sm:p-4',
                         dailyTarget === value && !isCustomActive
                           ? 'border-brand bg-brand-soft shadow-sm'
                           : 'border-border/15 bg-card hover:bg-muted/30'
                       )}
                       aria-pressed={dailyTarget === value && !isCustomActive}
                     >
-                      <Clock className="size-5 text-muted-foreground" aria-hidden="true" />
-                      <span className="text-lg font-bold">{value}</span>
-                      <span className="text-[10px] text-muted-foreground uppercase tracking-wider">
-                        {dailyType}
+                      <Clock className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+                      <span className="text-center text-lg font-bold leading-tight tabular-nums">
+                        {value}
                       </span>
                     </button>
                   ))}
@@ -223,7 +226,10 @@ export function ReadingGoalSettings({ open, onOpenChange }: ReadingGoalSettingsP
               <div className="space-y-6 rounded-xl bg-card p-6 shadow-card-ambient">
                 <h3 className="text-sm font-bold text-foreground">Yearly Reading Goal</h3>
 
-                <div className="flex w-full max-w-full justify-center overflow-x-hidden">
+                <div
+                  className="flex w-full max-w-full justify-center"
+                  data-testid="yearly-progress-ring"
+                >
                   <ProgressRing
                     percent={yearlyTarget > 0 ? (finishedThisYear / yearlyTarget) * 100 : 0}
                     size={200}
@@ -244,12 +250,12 @@ export function ReadingGoalSettings({ open, onOpenChange }: ReadingGoalSettingsP
                     size="icon"
                     onClick={() => adjustYearly(-1)}
                     disabled={yearlyTarget <= 1}
-                    className="size-11 shrink-0 rounded-xl"
+                    className="size-11 shrink-0 self-center rounded-xl"
                     aria-label="Decrease yearly goal"
                   >
                     <Minus className="size-4" />
                   </Button>
-                  <div className="min-w-24 flex-1 text-center">
+                  <div className="flex min-w-24 flex-1 flex-col items-center justify-center text-center">
                     <Label htmlFor="yearly-goal-input" className="sr-only">
                       Yearly book goal
                     </Label>
@@ -273,7 +279,7 @@ export function ReadingGoalSettings({ open, onOpenChange }: ReadingGoalSettingsP
                     size="icon"
                     onClick={() => adjustYearly(1)}
                     disabled={yearlyTarget >= 365}
-                    className="size-11 shrink-0 rounded-xl"
+                    className="size-11 shrink-0 self-center rounded-xl"
                     aria-label="Increase yearly goal"
                   >
                     <Plus className="size-4" />

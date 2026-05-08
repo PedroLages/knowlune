@@ -27,7 +27,11 @@ const LEVEL_CLASSES: Record<number, string> = {
   4: 'bg-[var(--heatmap-level-4)]',
 }
 
-const DAY_LABELS = ['', 'M', '', 'W', '', 'F', '']
+/** Two-letter weekday for row r: same weekday across columns (each column is +7 days). */
+function weekdayShortLabel(isoDate: string): string {
+  const d = new Date(isoDate + 'T12:00:00')
+  return d.toLocaleDateString('en-US', { weekday: 'short' }).slice(0, 2)
+}
 
 export const CalendarHeatMap = memo(function CalendarHeatMap({
   dayMap,
@@ -67,24 +71,28 @@ export const CalendarHeatMap = memo(function CalendarHeatMap({
       {/* Legend */}
       <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 px-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
         <span className="shrink-0">Past {weeks} Weeks</span>
-        <span className="flex shrink-0 items-center gap-1.5">
+        <span className="flex shrink-0 items-center gap-0.5 sm:gap-1">
           Less
           {[0, 1, 2, 3, 4].map(level => (
-            <div key={level} className={cn('w-2.5 h-2.5 rounded-[2px]', LEVEL_CLASSES[level])} />
+            <div key={level} className={cn('size-2.5 shrink-0 rounded-[2px]', LEVEL_CLASSES[level])} />
           ))}
           More
         </span>
       </div>
       {/* Grid */}
       <div className="flex gap-[3px] overflow-hidden rounded-lg bg-card p-2">
-        {/* Day labels */}
-        <div className="flex flex-col gap-[3px] pr-1">
-          {DAY_LABELS.map((label, i) => (
+        {/* Day labels — aligned to calendar weekday for each row (first column dates) */}
+        <div
+          className="flex flex-col gap-[3px] pr-1"
+          data-testid="calendar-heatmap-day-labels"
+          aria-hidden="true"
+        >
+          {columns[0]?.map((cell, i) => (
             <div
-              key={i}
-              className="w-3 h-3 flex items-center justify-center text-[8px] text-muted-foreground"
+              key={cell.date}
+              className="flex h-3 min-w-7 items-center justify-end text-[7px] leading-none text-muted-foreground"
             >
-              {label}
+              {weekdayShortLabel(cell.date)}
             </div>
           ))}
         </div>
