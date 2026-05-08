@@ -1,11 +1,10 @@
 import { useEffect, useRef, useMemo } from 'react'
 import { useReducedMotion } from 'motion/react'
-import { Check, Play, Lock, AlertCircle, Import, Search, Replace } from 'lucide-react'
+import { Check, Play, Lock, AlertCircle, Import, Search, Replace, PlayCircle, RotateCcw } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
 import { Badge } from '@/app/components/ui/badge'
 import { Card, CardContent } from '@/app/components/ui/card'
 import { cn } from '@/app/components/ui/utils'
-import { CourseTypeBadge } from '@/app/components/shared/CourseTypeBadge'
 import { CourseThumbnail } from '@/app/components/shared/CourseThumbnail'
 import { extractGapSearchTerm, cleanGapJustification } from '@/data/learningPathUtils'
 import type { LearningPathEntry, PathCourseInfo } from '@/data/types'
@@ -47,22 +46,24 @@ function StatusCircle({
   status: 'completed' | 'in-progress' | 'locked' | 'gap'
 }) {
   const baseClass =
-    'size-8 shrink-0 rounded-full flex items-center justify-center text-sm font-semibold relative z-10'
+    'size-7 shrink-0 rounded-full flex items-center justify-center relative z-10'
 
   if (status === 'completed') {
     return (
       <div className={cn(baseClass, 'bg-success text-success-foreground')}>
-        <Check className="size-4" aria-hidden="true" />
+        <Check className="size-3.5" aria-hidden="true" />
       </div>
     )
   }
 
   if (status === 'in-progress') {
     return (
-      <div
-        className={cn(baseClass, 'bg-brand text-brand-foreground shadow-[0_0_8px_var(--brand)]')}
-      >
-        <Play className="size-4 fill-current" aria-hidden="true" />
+      <div className="relative flex items-center justify-center">
+        {/* Pulse ring */}
+        <div className="absolute inset-0 size-7 rounded-full ring-[3px] ring-brand-soft animate-pulse" />
+        <div className={cn(baseClass, 'bg-brand text-brand-foreground')}>
+          <Play className="size-3.5 fill-current" aria-hidden="true" />
+        </div>
       </div>
     )
   }
@@ -75,7 +76,7 @@ function StatusCircle({
           'bg-warning/20 text-warning border-2 border-dashed border-warning/50'
         )}
       >
-        <AlertCircle className="size-4" aria-hidden="true" />
+        <AlertCircle className="size-3.5" aria-hidden="true" />
       </div>
     )
   }
@@ -83,7 +84,7 @@ function StatusCircle({
   // Locked
   return (
     <div className={cn(baseClass, 'bg-muted text-muted-foreground')}>
-      <Lock className="size-4" aria-hidden="true" />
+      <Lock className="size-3.5" aria-hidden="true" />
     </div>
   )
 }
@@ -179,6 +180,7 @@ function CourseTimelineEntry({
   thumbUrl,
   isCompleted,
   isInProgress,
+  index,
   onClick,
   simplified,
 }: {
@@ -187,11 +189,14 @@ function CourseTimelineEntry({
   thumbUrl?: string
   isCompleted: boolean
   isInProgress: boolean
+  index: number
   onClick: () => void
   simplified?: boolean
 }) {
   const status = isCompleted ? 'completed' : isInProgress ? 'in-progress' : 'locked'
   const entryRef = useRef<HTMLDivElement>(null)
+
+  const statusLabel = isCompleted ? 'Completed' : isInProgress ? 'Up Next' : 'Locked'
 
   return (
     <div className="flex gap-4" ref={entryRef}>
@@ -208,13 +213,13 @@ function CourseTimelineEntry({
         <Card
           className={cn(
             'cursor-pointer hover:shadow-md transition-all duration-200',
-            isCompleted && 'border-success/20 bg-success/5',
-            isInProgress && 'border-brand/20 bg-brand/5'
+            isCompleted && 'border-success/20',
+            isInProgress && 'border-brand/20'
           )}
           onClick={onClick}
           tabIndex={0}
           role="button"
-          aria-label={`${info?.name || 'Course'} — ${isCompleted ? 'Completed' : isInProgress ? `${info?.completionPct ?? 0}% complete` : 'Not started'}`}
+          aria-label={`Module ${index + 1}: ${info?.name || 'Course'} — ${statusLabel}`}
           onKeyDown={e => {
             if (e.key === 'Enter' || e.key === ' ') {
               e.preventDefault()
@@ -222,42 +227,83 @@ function CourseTimelineEntry({
             }
           }}
         >
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              {/* Thumbnail */}
-              <CourseThumbnail url={thumbUrl} />
-
-              {/* Course info */}
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
-                  <h3 className="font-medium text-sm leading-tight line-clamp-2">
-                    {info?.name || 'Unknown Course'}
-                  </h3>
-                  <CourseTypeBadge courseType={entry.courseType} />
-                </div>
-                <div className="flex items-center gap-2 mt-0.5">
-                  {info?.authorName && (
-                    <span className="text-xs text-muted-foreground truncate">
-                      {info.authorName}
-                    </span>
-                  )}
-                  {isCompleted ? (
-                    <Badge
-                      variant="outline"
-                      className="text-[10px] uppercase tracking-wider border-success/30 text-success"
-                    >
-                      Completed
-                    </Badge>
-                  ) : isInProgress ? (
-                    <span className="text-xs text-brand font-medium">
-                      {info?.completionPct ?? 0}% complete
-                    </span>
-                  ) : (
-                    <span className="text-xs text-muted-foreground">Not started</span>
-                  )}
-                </div>
-              </div>
+          <CardContent className="p-5">
+            {/* Header: module number + status badge */}
+            <div className="flex items-center gap-3 mb-3">
+              <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest">
+                Module {index + 1}
+              </span>
+              <span
+                className={cn(
+                  'px-2 py-0.5 text-[10px] font-bold rounded-full uppercase tracking-wider inline-flex items-center gap-1',
+                  isCompleted && 'bg-success-soft text-success',
+                  isInProgress && 'bg-brand-soft text-brand-soft-foreground',
+                  !isCompleted && !isInProgress && 'bg-muted text-muted-foreground'
+                )}
+              >
+                {isCompleted && <Check className="size-3" aria-hidden="true" />}
+                {isInProgress && (
+                  <span className="size-1.5 rounded-full bg-brand-soft-foreground animate-pulse" />
+                )}
+                {statusLabel}
+              </span>
             </div>
+
+            {/* Title */}
+            <h3 className="text-xl font-bold mb-1">{info?.name || 'Unknown Course'}</h3>
+
+            {/* Author */}
+            {info?.authorName && !simplified && (
+              <p className="text-sm text-muted-foreground mb-3">{info.authorName}</p>
+            )}
+
+            {/* Metadata row */}
+            {!simplified && (
+              <div className="flex items-center gap-6 text-sm text-muted-foreground font-medium mb-4">
+                <span className="inline-flex items-center gap-1.5">
+                  <CourseThumbnail url={thumbUrl} className="size-4 rounded" />
+                  <span>{entry.courseType === 'imported' ? 'Imported' : 'Catalog'}</span>
+                </span>
+              </div>
+            )}
+
+            {/* Action button */}
+            {!simplified && (
+              <div className="flex justify-end">
+                {isInProgress ? (
+                  <Button
+                    variant="brand"
+                    size="sm"
+                    className="px-5 py-2 rounded-xl text-sm font-bold shadow-sm"
+                    onClick={e => {
+                      e.stopPropagation()
+                      onClick()
+                    }}
+                  >
+                    <PlayCircle className="size-4 mr-1.5" aria-hidden="true" />
+                    Start Module
+                  </Button>
+                ) : isCompleted ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="px-5 py-2 rounded-xl text-sm font-bold"
+                    onClick={e => {
+                      e.stopPropagation()
+                      onClick()
+                    }}
+                  >
+                    <RotateCcw className="size-4 mr-1.5" aria-hidden="true" />
+                    Review
+                  </Button>
+                ) : (
+                  <span className="px-5 py-2 rounded-xl text-sm font-bold bg-muted/50 text-muted-foreground cursor-not-allowed inline-flex items-center gap-1.5">
+                    <Lock className="size-3.5" aria-hidden="true" />
+                    Locked
+                  </span>
+                )}
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -347,6 +393,7 @@ export function PathTimeline({
               thumbUrl={thumbUrl}
               isCompleted={isCompleted}
               isInProgress={isInProgress}
+              index={i}
               onClick={() => onCourseClick(entry.courseId)}
               simplified={simplified}
             />

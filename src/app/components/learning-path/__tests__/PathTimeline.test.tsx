@@ -55,7 +55,7 @@ describe('PathTimeline', () => {
     expect(screen.getByText('Course Alpha')).toBeInTheDocument()
   })
 
-  it('shows Not started for locked entries', () => {
+  it('shows Locked badge for unstarted entries', () => {
     const entries = [makeEntry({ courseId: 'c1' })]
     const infoMap = new Map([['c1', makeCourseInfo({ completionPct: 0 })]])
     render(
@@ -65,10 +65,10 @@ describe('PathTimeline', () => {
         courseInfoMap={infoMap}
       />
     )
-    expect(screen.getByText('Not started')).toBeInTheDocument()
+    expect(screen.getAllByText('Locked').length).toBeGreaterThanOrEqual(1)
   })
 
-  it('shows completion percentage for in-progress entries', () => {
+  it('shows Up Next badge for in-progress entries', () => {
     const entries = [makeEntry({ courseId: 'c1' })]
     const infoMap = new Map([['c1', makeCourseInfo({ completionPct: 45 })]])
     render(
@@ -78,7 +78,7 @@ describe('PathTimeline', () => {
         courseInfoMap={infoMap}
       />
     )
-    expect(screen.getByText('45% complete')).toBeInTheDocument()
+    expect(screen.getByText('Up Next')).toBeInTheDocument()
   })
 
   it('shows Completed badge for finished entries', () => {
