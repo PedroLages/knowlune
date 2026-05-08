@@ -370,21 +370,24 @@ async function run() {
     if (cardCount > 0) {
       const firstCard = cards.first()
 
-      // Check for hover classes
+      // Hover chrome: no outline shadow on article (cover uses CardCover ambient shadow).
       const hasHoverClasses = await firstCard.evaluate((el) => {
         const cls = el.className
         return {
-          hasHoverShadow: cls.includes('hover:shadow-md'),
-          hasHoverScale: cls.includes('hover:scale'),
+          hasHoverLift: cls.includes('hover:-translate-y-0.5'),
+          hasFocusRing: cls.includes('focus-visible:ring-2') && cls.includes('focus-visible:ring-brand'),
           hasTransition: cls.includes('motion-safe:transition-all')
         }
       })
 
-      if (!hasHoverClasses.hasHoverShadow) {
-        addFinding('medium', 'card-hover', 'ImportedCourseCard missing hover:shadow-md class')
+      if (!hasHoverClasses.hasHoverLift) {
+        addFinding('medium', 'card-hover', 'ImportedCourseCard missing hover lift (hover:-translate-y-0.5)')
       }
-      if (!hasHoverClasses.hasHoverScale) {
-        addFinding('low', 'card-hover', 'ImportedCourseCard missing hover:scale class')
+      if (!hasHoverClasses.hasFocusRing) {
+        addFinding('medium', 'card-hover', 'ImportedCourseCard missing focus-visible keyboard ring')
+      }
+      if (!hasHoverClasses.hasTransition) {
+        addFinding('low', 'card-hover', 'ImportedCourseCard missing motion-safe:transition-all')
       }
 
       // Check title hover color
