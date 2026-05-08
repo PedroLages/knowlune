@@ -100,6 +100,13 @@ describe('ImportedCourseCompactCard — minimal metadata', () => {
     expect(screen.getByTestId('compact-card-title').className).toContain('line-clamp-2')
   })
 
+  it('card root has min-h-[44px] / min-w-[44px] for touch targets', () => {
+    renderCard()
+    const card = screen.getByTestId('imported-course-compact-card')
+    expect(card.className).toContain('min-h-[44px]')
+    expect(card.className).toContain('min-w-[44px]')
+  })
+
   it('card root omits hover ring utilities (no hover outline stroke)', () => {
     renderCard()
     const card = screen.getByTestId('imported-course-compact-card')
