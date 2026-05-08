@@ -33,9 +33,16 @@ test.describe('Reading Goals modal layout', () => {
     await expect(pressedPreset).toBeVisible()
     const pBox = await pressedPreset.boundingBox()
     expect(pBox).not.toBeNull()
-    expect(pBox!.height).toBeGreaterThan(72)
-    expect(pBox!.height).toBeLessThan(160)
+    expect(pBox!.height).toBeGreaterThan(48)
+    expect(pBox!.height).toBeLessThan(140)
     expect(pBox!.width).toBeGreaterThan(56)
+
+    const ringSvg = page.getByTestId('yearly-progress-ring').locator('svg').first()
+    await expect(ringSvg).toBeVisible()
+    const svgBox = await ringSvg.boundingBox()
+    expect(svgBox).not.toBeNull()
+    expect(svgBox!.width).toBeGreaterThanOrEqual(200)
+    expect(svgBox!.height).toBeGreaterThanOrEqual(200)
   })
 
   test('Save Goals stays visible on short viewport', async ({ page }) => {
