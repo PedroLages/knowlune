@@ -29,7 +29,6 @@ import {
   AlertCircle,
   LayoutTemplate,
   Check,
-  Trash2,
 } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
 import { Badge } from '@/app/components/ui/badge'
@@ -63,10 +62,11 @@ import { DelayedFallback } from '@/app/components/DelayedFallback'
 import { MoveUpDownButtons } from '@/app/components/figma/MoveUpDownButtons'
 import { InlineCoursePicker } from '@/app/components/figma/InlineCoursePicker'
 import { ImportWizardDialog } from '@/app/components/figma/ImportWizardDialog'
-import { InlineEditableField } from '@/app/components/figma/InlineEditableField'
 import { CourseTypeBadge } from '@/app/components/shared/CourseTypeBadge'
 import { CourseThumbnail } from '@/app/components/shared/CourseThumbnail'
-import { PathSummaryPanel } from '@/app/components/learning-path/PathSummaryPanel'
+import { PathHeroBanner } from '@/app/components/learning-path/PathHeroBanner'
+import { PathProgressSidebar } from '@/app/components/learning-path/PathProgressSidebar'
+import { EditPathDialog } from '@/app/components/learning-path/EditPathDialog'
 import { ContinueLearningBento } from '@/app/components/learning-path/ContinueLearningBento'
 import { PathTimeline } from '@/app/components/learning-path/PathTimeline'
 import { ControlCenter } from '@/app/components/learning-path/ControlCenter'
@@ -272,8 +272,6 @@ export function LearningPathDetail() {
     removeCourseFromPath,
     getEntriesForPath,
     applyAIOrder,
-    renamePath,
-    updateDescription,
     deletePathWithUndo,
     replaceGapEntry,
   } = useLearningPathStore()
@@ -590,6 +588,19 @@ export function LearningPathDetail() {
     [courseEntries, courseInfo, completedEntries.length]
   )
   const [showReorderList, setShowReorderList] = useState(false)
+  const [editDialogOpen, setEditDialogOpen] = useState(false)
+
+  // First non-gap course ID for hero CTA
+  const firstCourseId = useMemo(
+    () => courseEntries.find(e => e.courseId !== '')?.courseId ?? null,
+    [courseEntries]
+  )
+
+  // Current in-progress course ID for hero CTA
+  const currentCourseId = useMemo(() => {
+    const inProgress = currentEntry?.courseId
+    return inProgress && inProgress !== '' ? inProgress : null
+  }, [currentEntry])
 
   // Check prefers-reduced-motion
   const prefersReducedMotion = useReducedMotion()
@@ -644,125 +655,69 @@ export function LearningPathDetail() {
 
   return (
     <>
-      <motion.div
-        variants={containerVariants}
-        initial="hidden"
-        animate="visible"
-        className="space-y-8"
-      >
-        {/* Back link */}
-        <motion.div variants={itemVariants}>
-          <Link
-            to="/learning-paths"
-            className="inline-flex items-center gap-2 text-brand font-medium hover:-translate-x-1 transition-transform"
-          >
-            <ArrowLeft className="size-4" aria-hidden="true" />
-            Back to Learning Paths
-          </Link>
-        </motion.div>
+      {/* Full-width hero banner — breaks out of Layout main padding */}
+      <div className="-mx-4 -mt-4 sm:-mx-6 sm:-mt-6">
+        <PathHeroBanner
+          path={path}
+          courseCount={courseEntries.length}
+          completedCount={completedEntries.length}
+          pathProgress={pathProgress}
+          thumbnailUrls={thumbnailUrls}
+          currentCourseId={currentCourseId}
+          firstCourseId={firstCourseId}
+          onEdit={() => setEditDialogOpen(true)}
+          onDelete={() => setDeleteConfirmOpen(true)}
+        />
+      </div>
 
-        {/* Template banner — for paths forked from a template */}
-        {path.forkedFrom && (
-          <motion.div variants={itemVariants}>
-            <div className="flex items-center gap-3 p-4 rounded-xl bg-brand-soft/50 border border-brand-soft mb-4">
-              <LayoutTemplate className="w-5 h-5 text-brand-soft-foreground flex-shrink-0" />
-              <div className="flex-1">
-                <p className="text-sm font-medium text-brand-soft-foreground">
-                  This path was created from a template
-                </p>
-              </div>
-              <Button variant="brand-outline" size="sm" asChild>
-                <Link to={`/learning-paths/templates/${path.forkedFrom}`}>View template</Link>
-              </Button>
-            </div>
-          </motion.div>
-        )}
-
-        {/* Gap entry summary — for paths with unmatched entries */}
-        {gapCount > 0 && (
-          <motion.div variants={itemVariants}>
-            <div className="flex items-center gap-3 p-4 rounded-xl bg-warning/10 border border-warning/30 mb-4">
-              <AlertCircle className="w-5 h-5 text-warning flex-shrink-0" />
-              <div className="flex-1">
-                <p className="text-sm font-medium">
-                  {matchedCount} of {courseEntries.length} courses matched from your library
-                </p>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  Import the remaining {gapCount} {gapCount === 1 ? 'course' : 'courses'} to
-                  complete this path.
-                </p>
-              </div>
-            </div>
-          </motion.div>
-        )}
-
-        {/* Header with title, description, and delete button */}
+      {/* Content area with negative margin to overlap hero */}
+      <div className="-mt-10 relative z-10">
         <motion.div
-          variants={itemVariants}
-          className="flex flex-col md:flex-row md:items-end justify-between gap-[var(--content-gap)]"
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+          className="space-y-8"
         >
-          <div>
-            <InlineEditableField
-              value={path.name}
-              onSave={name => renamePath(path.id, name)}
-              ariaLabel={`Edit path name`}
-              maxLength={100}
-              className="text-4xl md:text-5xl font-extrabold tracking-tight font-display mb-4"
-            />
-            <InlineEditableField
-              value={path.description || ''}
-              onSave={desc => updateDescription(path.id, desc)}
-              as="textarea"
-              ariaLabel={`Edit path description`}
-              placeholder="Add a description..."
-              maxLength={500}
-              className="text-muted-foreground leading-relaxed mb-4"
-            />
-            <div className="flex flex-wrap items-center gap-4 text-muted-foreground font-medium text-sm">
-              <span className="flex items-center gap-1.5">
-                <Sparkles className="size-4 text-brand" aria-hidden="true" />
-                {courseEntries.length} courses
-              </span>
-              <span className="flex items-center gap-1.5">
-                <Check className="size-4 text-brand" aria-hidden="true" />
-                {completedEntries.length} completed
-              </span>
-            </div>
-          </div>
-          <div className="flex items-start gap-3">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="text-muted-foreground hover:text-destructive"
-              onClick={() => setDeleteConfirmOpen(true)}
-              aria-label="Delete learning path"
-              data-testid="delete-path-button"
-            >
-              <Trash2 className="size-4" aria-hidden="true" />
-            </Button>
-            <div className="text-right shrink-0">
-              <span className="block text-5xl font-black text-brand mb-1">
-                {pathProgress.completionPct}%
-              </span>
-              <span className="text-sm font-bold text-muted-foreground tracking-widest uppercase">
-                Complete
-              </span>
-            </div>
-          </div>
-        </motion.div>
+          {/* Template banner — for paths forked from a template */}
+          {path.forkedFrom && (
+            <motion.div variants={itemVariants}>
+              <div className="flex items-center gap-3 p-4 rounded-xl bg-brand-soft/50 border border-brand-soft">
+                <LayoutTemplate className="w-5 h-5 text-brand-soft-foreground flex-shrink-0" />
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-brand-soft-foreground">
+                    This path was created from a template
+                  </p>
+                </div>
+                <Button variant="brand-outline" size="sm" asChild>
+                  <Link to={`/learning-paths/templates/${path.forkedFrom}`}>View template</Link>
+                </Button>
+              </div>
+            </motion.div>
+          )}
 
-        {/* Path Summary Panel (glass stats strip) */}
-        {courseEntries.length > 0 && (
-          <motion.div variants={itemVariants}>
-            <PathSummaryPanel progress={pathProgress} />
-          </motion.div>
-        )}
+          {/* Gap entry summary — for paths with unmatched entries */}
+          {gapCount > 0 && (
+            <motion.div variants={itemVariants}>
+              <div className="flex items-center gap-3 p-4 rounded-xl bg-warning/10 border border-warning/30">
+                <AlertCircle className="w-5 h-5 text-warning flex-shrink-0" />
+                <div className="flex-1">
+                  <p className="text-sm font-medium">
+                    {matchedCount} of {courseEntries.length} courses matched from your library
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Import the remaining {gapCount} {gapCount === 1 ? 'course' : 'courses'} to
+                    complete this path.
+                  </p>
+                </div>
+              </div>
+            </motion.div>
+          )}
 
-        {/* Course list section */}
-        {courseEntries.length > 0 ? (
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-[var(--content-gap)]">
-            {/* Left Column (8 cols): Continue Learning + Timeline */}
-            <div className="lg:col-span-8 space-y-8">
+          {/* Course list section */}
+          {courseEntries.length > 0 ? (
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-[var(--content-gap)]">
+              {/* Left Column (2/3): Continue Learning + Timeline */}
+              <div className="lg:col-span-2 space-y-8">
               {/* Continue Learning Bento Card */}
               {currentEntry && (
                 <motion.section variants={itemVariants}>
@@ -970,8 +925,11 @@ export function LearningPathDetail() {
               )}
             </div>
 
-            {/* Right Column (4 cols, sticky): Control Center sidebar */}
-            <aside className="lg:col-span-4 space-y-6 lg:sticky lg:top-24 lg:self-start">
+            {/* Right Column (1/3, sticky): Progress Sidebar + Control Center */}
+            <aside className="lg:col-span-1 space-y-6 lg:sticky lg:top-24 lg:self-start">
+              {/* Progress Sidebar */}
+              <PathProgressSidebar progress={pathProgress} />
+
               {/* Add Course collapsible panel */}
               <Collapsible open={pickerOpen} onOpenChange={setPickerOpen} className="space-y-3">
                 <CollapsibleTrigger asChild>
@@ -1074,7 +1032,15 @@ export function LearningPathDetail() {
             </div>
           </motion.div>
         )}
-      </motion.div>
+        </motion.div>
+      </div>
+
+      {/* Edit Path Dialog */}
+      <EditPathDialog
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        path={path}
+      />
 
       {/* Import Wizard Dialog (R2, R3) */}
       <ImportWizardDialog
