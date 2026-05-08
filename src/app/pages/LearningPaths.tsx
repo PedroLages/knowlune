@@ -1,33 +1,18 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
-import { Link, useNavigate } from 'react-router'
 import { motion } from 'motion/react'
 import {
   Plus,
   Search,
   Route,
-  MoreHorizontal,
-  Trash2,
-  BookOpen,
-  ArrowRight,
-  CheckCircle2,
   Download,
   LayoutTemplate,
   ChevronDown,
-  Image,
-  Pencil,
   Sparkles,
 } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
 import { Card, CardContent } from '@/app/components/ui/card'
 import { Badge } from '@/app/components/ui/badge'
 import { Skeleton } from '@/app/components/ui/skeleton'
-import { Separator } from '@/app/components/ui/separator'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/app/components/ui/dropdown-menu'
 import { Input } from '@/app/components/ui/input'
 import { Textarea } from '@/app/components/ui/textarea'
 import { Label } from '@/app/components/ui/label'
@@ -39,14 +24,12 @@ import {
 import { EmptyState } from '@/app/components/EmptyState'
 import { DelayedFallback } from '@/app/components/DelayedFallback'
 import { TemplateCard } from '@/app/components/course/TemplateCard'
-import { cn } from '@/app/components/ui/utils'
-import { PathProgressRing } from '@/app/components/figma/PathProgressRing'
-import { PathCardHeader } from '@/app/components/figma/PathCardHeader'
 import { ImportWizardDialog } from '@/app/components/figma/ImportWizardDialog'
 import { CurriculumComposer } from '@/app/components/figma/CurriculumComposer'
 import { PathCoverDialog } from '@/app/components/learning-path/PathCoverDialog'
 import { EditPathDialog } from '@/app/components/learning-path/EditPathDialog'
 import { PremiumGate } from '@/app/components/PremiumGate'
+import { LearningPathCard } from '@/app/components/learning-path/LearningPathCard'
 import { useLearningPathStore } from '@/stores/useLearningPathStore'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
 import { extractGapSearchTerm } from '@/data/learningPathUtils'
@@ -125,203 +108,51 @@ function PathCard({
   onOpenEditDialog: (path: LearningPath) => void
   coverDialogTriggerRef: React.MutableRefObject<HTMLElement | null>
 }) {
-  const navigate = useNavigate()
   const deletePathWithUndo = useLearningPathStore(s => s.deletePathWithUndo)
-  const isNotStarted = completionPct === 0 && courseCount > 0
   const isCompleted = completionPct >= 100
 
-  // Get next best course info (internally — not from parent props)
   const { entry, course, action, targetLessonId } = useNextBestCourse(path.id)
 
-  // Determine footer action text and navigation
   const footerAction = useMemo(() => {
     if (action === 'resume' && course) {
-      const label = 'Continue'
       const navTo = targetLessonId
         ? `/courses/${entry!.courseId}/lessons/${targetLessonId}`
         : `/courses/${entry!.courseId}`
-      return { label, navTo, variant: 'brand' as const, courseName: course.name }
+      return { label: 'Continue', to: navTo, variant: 'brand' as const, courseName: course.name }
     }
     if (action === 'start' && course) {
-      const label = 'Start'
       const navTo = targetLessonId
         ? `/courses/${entry!.courseId}/lessons/${targetLessonId}`
         : `/courses/${entry!.courseId}`
-      return { label, navTo, variant: 'brand' as const, courseName: course.name }
+      return { label: 'Start', to: navTo, variant: 'brand' as const, courseName: course.name }
     }
     if (action === 'complete' || (action === null && isCompleted)) {
-      return { label: 'Review', navTo: `/learning-paths/${path.id}`, variant: 'outline' as const }
+      return { label: 'Review', to: `/learning-paths/${path.id}`, variant: 'outline' as const }
     }
     return null
   }, [action, course, entry, targetLessonId, isCompleted, path.id])
 
-  const handleFooterClick = useCallback(
-    (e: React.MouseEvent) => {
-      if (!footerAction) return
-      e.preventDefault()
-      e.stopPropagation()
-      navigate(footerAction.navTo)
-    },
-    [footerAction, navigate]
-  )
-
   return (
     <motion.div variants={fadeUp}>
-      <Card
-        className={cn(
-          'group relative overflow-hidden rounded-2xl h-[360px] md:h-[380px] shadow-sm hover:shadow-md motion-safe:transition-shadow motion-safe:duration-300'
-        )}
-      >
-        {/* Gradient header — dimmed when not started */}
-        <div className={cn(isNotStarted && 'opacity-70')}>
-          <PathCardHeader
-            pathName={path.name}
-            completionPct={completionPct}
-            isAIGenerated={path.isAIGenerated}
-            coverImageUrl={path.coverImageUrl}
-            coverPreset={path.coverPreset}
-          />
-        </div>
-
-        {/* Dropdown menu — over gradient */}
-        <div className="absolute top-4 right-4 z-10">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="size-11 bg-white/20 hover:bg-white/40 backdrop-blur-md text-white rounded-full"
-                aria-label={`Actions for ${path.name}`}
-              >
-                <MoreHorizontal className="size-4" aria-hidden="true" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onSelect={() => onOpenEditDialog(path)}>
-                <Pencil className="mr-2 size-4" aria-hidden="true" />
-                Edit
-              </DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => {
-                coverDialogTriggerRef.current = document.activeElement as HTMLElement
-                onOpenCoverDialog(path)
-              }}>
-                <Image className="mr-2 size-4" aria-hidden="true" />
-                Change Cover
-              </DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => onImport(path.id)}>
-                <Download className="mr-2 size-4" aria-hidden="true" />
-                Import Course
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onSelect={() => deletePathWithUndo(path.id)}
-                className="text-destructive focus:text-destructive"
-              >
-                <Trash2 className="mr-2 size-4" aria-hidden="true" />
-                Delete
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-
-        {/* Card body */}
-        <CardContent className="px-6 pb-5 pt-12 relative flex flex-col h-[calc(100%-8rem)]">
-          {/* Progress ring — centered on header/body seam via translate (scales with any ring size) */}
-          <div className="absolute top-0 left-6 -translate-y-1/2">
-            <div className="bg-card rounded-full p-2 shadow-lg">
-              <PathProgressRing percentage={completionPct} size={80}>
-                {isCompleted ? (
-                  <CheckCircle2 className="size-6 text-success" aria-hidden="true" />
-                ) : (
-                  <span className="text-lg font-bold text-foreground">
-                    {Math.round(completionPct)}%
-                  </span>
-                )}
-              </PathProgressRing>
-            </div>
-          </div>
-
-          <Link
-            to={`/learning-paths/${path.id}`}
-            className="flex flex-col flex-1 min-h-0 focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 rounded-lg"
-            aria-label={`${path.name} — ${courseCount} courses, ${completionPct}% completed`}
-          >
-            {/* Course count badge */}
-            <div className="flex items-center gap-2 mb-2">
-              <Badge
-                variant="secondary"
-                className={cn(
-                  'text-[10px] uppercase tracking-wider',
-                  isCompleted && 'bg-success-soft text-success'
-                )}
-              >
-                {courseCount} {courseCount === 1 ? 'course' : 'courses'}
-              </Badge>
-            </div>
-
-            {/* Title + description */}
-            <h3 className="text-xl font-bold leading-tight mb-1.5 line-clamp-2">
-              {path.name}
-            </h3>
-            {path.description && (
-              <p className="text-sm text-muted-foreground leading-relaxed line-clamp-2 mb-4">
-                {path.description}
-              </p>
-            )}
-            <Separator className="mb-4" />
-
-            {/* Footer: course thumbnails + continue/start/review button */}
-            <div className="mt-auto flex items-center justify-between">
-              <div className="flex -space-x-3">
-                {courseThumbnails.slice(0, 3).map((url, i) => (
-                  <img
-                    key={i}
-                    src={url}
-                    alt=""
-                    className="size-8 rounded-full border-2 border-card bg-muted object-cover"
-                    loading="lazy"
-                  />
-                ))}
-                {courseCount === 0 && (
-                  <div className="size-8 rounded-full border-2 border-card bg-muted flex items-center justify-center">
-                    <BookOpen className="size-3.5 text-muted-foreground" aria-hidden="true" />
-                  </div>
-                )}
-                {courseCount > 3 && (
-                  <div className="size-8 rounded-full border-2 border-card bg-muted flex items-center justify-center text-[10px] font-bold text-muted-foreground">
-                    +{courseCount - 3}
-                  </div>
-                )}
-              </div>
-
-              {/* Action button */}
-              <div onClick={e => e.stopPropagation()}>
-                {footerAction ? (
-                  <Button
-                    variant={footerAction.variant}
-                    className="px-6 has-[>svg]:px-6 py-2 rounded-xl text-sm font-bold group-hover:px-7 motion-safe:transition-[padding]"
-                    onClick={handleFooterClick}
-                    aria-label={`${footerAction.label}${footerAction.courseName ? ' ' + footerAction.courseName : ''}`}
-                  >
-                    {footerAction.label}
-                    {footerAction.variant === 'brand' && (
-                      <ArrowRight className="ml-1.5 size-3.5" aria-hidden="true" />
-                    )}
-                  </Button>
-                ) : isNotStarted ? (
-                  <span className="text-xs font-bold text-muted-foreground uppercase px-2">
-                    Not Started
-                  </span>
-                ) : (
-                  <ArrowRight
-                    className="size-5 text-muted-foreground group-hover:text-brand transition-colors"
-                    aria-hidden="true"
-                  />
-                )}
-              </div>
-            </div>
-          </Link>
-        </CardContent>
-      </Card>
+      <LearningPathCard
+        pathName={path.name}
+        description={path.description}
+        completionPct={completionPct}
+        courseCount={courseCount}
+        courseThumbnails={courseThumbnails}
+        isAIGenerated={path.isAIGenerated}
+        coverImageUrl={path.coverImageUrl}
+        coverPreset={path.coverPreset}
+        href={`/learning-paths/${path.id}`}
+        action={footerAction}
+        onEdit={() => onOpenEditDialog(path)}
+        onChangeCover={() => {
+          coverDialogTriggerRef.current = document.activeElement as HTMLElement
+          onOpenCoverDialog(path)
+        }}
+        onImportCourse={() => onImport(path.id)}
+        onDelete={() => deletePathWithUndo(path.id)}
+      />
     </motion.div>
   )
 }

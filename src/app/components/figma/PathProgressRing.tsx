@@ -11,6 +11,8 @@ interface PathProgressRingProps {
   percentage: number
   /** Ring size preset or custom SVG size in px */
   size?: keyof typeof SIZES | number
+  /** Override the default stroke width (defaults to 3 for numeric sizes, or SIZES preset) */
+  strokeWidth?: number
   /** Additional className for the container */
   className?: string
   /** Override the center content (defaults to percentage text) */
@@ -24,13 +26,14 @@ interface PathProgressRingProps {
 export function PathProgressRing({
   percentage,
   size = 'md',
+  strokeWidth,
   className,
   children,
 }: PathProgressRingProps) {
   // Resolve config: numeric size computes directly, string preset uses SIZES lookup
   const config =
     typeof size === 'number'
-      ? { size, stroke: 3, fontSize: 'text-xs' }
+      ? { size, stroke: strokeWidth ?? 3, fontSize: 'text-xs' }
       : SIZES[size]
   const radius = (config.size - config.stroke * 2) / 2
   const circumference = 2 * Math.PI * radius
