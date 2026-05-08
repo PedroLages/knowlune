@@ -213,18 +213,19 @@ export function PathCoverDialog({ open, onOpenChange, path, triggerRef }: PathCo
               Gradient Presets
             </Label>
             <Separator className="mb-3 mt-2" />
-            <div className="grid grid-cols-4 gap-2 overflow-hidden">
+            <div className="grid grid-cols-4 gap-2">
               {GRADIENT_PRESETS.map(preset => (
                 <button
                   key={preset.key}
                   type="button"
                   className={cn(
-                    'aspect-video rounded-lg bg-gradient-to-br transition-all duration-200 focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2',
+                    'aspect-video rounded-lg bg-gradient-to-br transition-all duration-200',
+                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand',
                     preset.from,
                     preset.to,
                     selectedPreset === preset.key
-                      ? 'ring-2 ring-brand ring-offset-1 scale-105'
-                      : 'hover:scale-105'
+                      ? 'ring-2 ring-inset ring-brand'
+                      : 'hover:scale-[1.02]'
                   )}
                   onClick={() => {
                     revokeObjectPreview()

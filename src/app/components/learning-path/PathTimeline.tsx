@@ -173,6 +173,56 @@ function GapTimelineEntry({
   )
 }
 
+/** Action button row for a timeline entry: Start Module, Review, or Locked */
+function EntryActionButton({
+  status,
+  onClick,
+}: {
+  status: 'completed' | 'in-progress' | 'locked'
+  onClick: () => void
+}) {
+  if (status === 'in-progress') {
+    return (
+      <Button
+        variant="brand"
+        size="sm"
+        className="px-5 py-2 rounded-xl text-sm font-bold shadow-sm"
+        onClick={e => {
+          e.stopPropagation()
+          onClick()
+        }}
+      >
+        <PlayCircle className="size-4 mr-1.5" aria-hidden="true" />
+        Start Module
+      </Button>
+    )
+  }
+
+  if (status === 'completed') {
+    return (
+      <Button
+        variant="outline"
+        size="sm"
+        className="px-5 py-2 rounded-xl text-sm font-bold"
+        onClick={e => {
+          e.stopPropagation()
+          onClick()
+        }}
+      >
+        <RotateCcw className="size-4 mr-1.5" aria-hidden="true" />
+        Review
+      </Button>
+    )
+  }
+
+  return (
+    <span className="px-5 py-2 rounded-xl text-sm font-bold bg-muted/50 text-muted-foreground cursor-not-allowed inline-flex items-center gap-1.5">
+      <Lock className="size-3.5" aria-hidden="true" />
+      Locked
+    </span>
+  )
+}
+
 /** Regular course entry card on the timeline */
 function CourseTimelineEntry({
   entry,
@@ -270,38 +320,7 @@ function CourseTimelineEntry({
             {/* Action button */}
             {!simplified && (
               <div className="flex justify-end">
-                {isInProgress ? (
-                  <Button
-                    variant="brand"
-                    size="sm"
-                    className="px-5 py-2 rounded-xl text-sm font-bold shadow-sm"
-                    onClick={e => {
-                      e.stopPropagation()
-                      onClick()
-                    }}
-                  >
-                    <PlayCircle className="size-4 mr-1.5" aria-hidden="true" />
-                    Start Module
-                  </Button>
-                ) : isCompleted ? (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="px-5 py-2 rounded-xl text-sm font-bold"
-                    onClick={e => {
-                      e.stopPropagation()
-                      onClick()
-                    }}
-                  >
-                    <RotateCcw className="size-4 mr-1.5" aria-hidden="true" />
-                    Review
-                  </Button>
-                ) : (
-                  <span className="px-5 py-2 rounded-xl text-sm font-bold bg-muted/50 text-muted-foreground cursor-not-allowed inline-flex items-center gap-1.5">
-                    <Lock className="size-3.5" aria-hidden="true" />
-                    Locked
-                  </span>
-                )}
+                <EntryActionButton status={status} onClick={onClick} />
               </div>
             )}
           </CardContent>
