@@ -1,39 +1,15 @@
 import { Sparkles, CheckCircle2 } from 'lucide-react'
 import { cn } from '@/app/components/ui/utils'
-import { PRESET_GRADIENT_MAP } from '@/data/pathCoverGradients'
-
-/**
- * Gradient presets for path card headers.
- * Each path gets a deterministic gradient based on its name hash.
- */
-const GRADIENTS = [
-  'from-cyan-400 to-blue-600',
-  'from-emerald-400 to-green-600',
-  'from-purple-500 to-indigo-700',
-  'from-orange-400 to-blue-500',
-  'from-pink-400 to-purple-600',
-  'from-amber-400 to-orange-600',
-  'from-teal-400 to-cyan-600',
-  'from-rose-400 to-red-600',
-] as const
-
-/** Not-started paths get a muted gradient */
-const MUTED_GRADIENT = 'from-muted-foreground/60 to-muted-foreground/80'
-
-/** Simple string hash to pick a gradient deterministically */
-function hashString(str: string): number {
-  let hash = 0
-  for (let i = 0; i < str.length; i++) {
-    hash = (hash << 5) - hash + str.charCodeAt(i)
-    hash |= 0
-  }
-  return Math.abs(hash)
-}
+import { PathCoverReadabilityScrim } from '@/app/components/learning-path/PathCoverReadabilityScrim'
+import {
+  normalizePathCoverCompletionPct,
+  resolvePathCoverTheme,
+} from '@/data/pathCoverGradients'
 
 interface PathCardHeaderProps {
-  /** Path name — used to seed gradient selection */
+  /** Path name — used for hash fallback when there is no preset, image, or (after normalization) no progress */
   pathName: string
-  /** Completion percentage — determines visual treatment */
+  /** Completion percentage (0–100); coerced via `normalizePathCoverCompletionPct` for theme + completed overlay */
   completionPct: number
   /** Whether the path was AI-generated */
   isAIGenerated?: boolean
@@ -46,10 +22,9 @@ interface PathCardHeaderProps {
 }
 
 /**
- * Gradient header for learning path cards.
- * Picks a gradient deterministically from the path name,
- * adds a completed overlay for 100% paths, and shows
- * an AI badge for AI-generated paths.
+ * Gradient or photo header strip for learning path cards.
+ * Theme resolution matches {@link resolvePathCoverTheme}: image, preset, muted at 0% (after normalization),
+ * then hash fallback. Completed paths get a success overlay; AI-generated paths show a badge.
  */
 export function PathCardHeader({
   pathName,
@@ -59,23 +34,16 @@ export function PathCardHeader({
   coverPreset,
   className,
 }: PathCardHeaderProps) {
-  const isCompleted = completionPct >= 100
-  const isNotStarted = completionPct === 0
-  const hasCoverImage = !!coverImageUrl
-
-  // Determine gradient: explicit preset > hash-based > muted (not-started with no preset)
-  const presetGradient =
-    !hasCoverImage && coverPreset && PRESET_GRADIENT_MAP[coverPreset]
-      ? PRESET_GRADIENT_MAP[coverPreset]
-      : null
-
-  const gradient = hasCoverImage
-    ? '' // cover image overrides gradient
-    : presetGradient
-      ? presetGradient
-      : isNotStarted
-        ? MUTED_GRADIENT
-        : GRADIENTS[hashString(pathName) % GRADIENTS.length]
+  const pct = normalizePathCoverCompletionPct(completionPct)
+  const isCompleted = pct >= 100
+  const theme = resolvePathCoverTheme({
+    pathName,
+    coverImageUrl,
+    coverPreset,
+    completionPct: pct,
+  })
+  const hasCoverImage = theme.kind === 'image'
+  const gradient = theme.kind === 'gradient' ? theme.tailwindFragment : ''
 
   return (
     <div
@@ -86,16 +54,16 @@ export function PathCardHeader({
       )}
     >
       {/* Cover image */}
-      {coverImageUrl && (
+      {theme.kind === 'image' && (
         <>
           <img
-            src={coverImageUrl}
+            src={theme.url}
             alt=""
+            role="presentation"
             className="absolute inset-0 w-full h-full object-cover shrink-0"
             loading="lazy"
           />
-          {/* Overlay gradient for text readability */}
-          <div className="absolute inset-0 bg-gradient-to-b from-black/10 to-black/50" />
+          <PathCoverReadabilityScrim />
         </>
       )}
 

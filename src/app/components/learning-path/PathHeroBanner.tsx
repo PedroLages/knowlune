@@ -7,6 +7,9 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/app/components/ui/dropdown-menu'
+import { cn } from '@/app/components/ui/utils'
+import { PathCoverReadabilityScrim } from '@/app/components/learning-path/PathCoverReadabilityScrim'
+import { normalizePathCoverCompletionPct, resolvePathCoverTheme } from '@/data/pathCoverGradients'
 import type { LearningPath } from '@/data/types'
 import type { PathProgressSummary } from '@/app/hooks/usePathProgress'
 
@@ -43,25 +46,56 @@ export function PathHeroBanner({
 }: PathHeroBannerProps) {
   const hasDropdownActions = onEdit || onDelete
 
+  const completionPct = normalizePathCoverCompletionPct(pathProgress.completionPct)
+  const theme = resolvePathCoverTheme({
+    pathName: path.name,
+    coverImageUrl: path.coverImageUrl,
+    coverPreset: path.coverPreset,
+    completionPct,
+  })
+  const onDark = theme.heroTextOnDark
+
   // Collect up to 4 thumbnail URLs for the avatar stack
   const avatarUrls = Object.values(thumbnailUrls).filter(Boolean).slice(0, 4)
   const overflowCount = Math.max(0, courseCount - 4)
 
-  // Determine CTA target and label
+  // Determine CTA target and label (same normalized % as cover theme)
   const ctaCourseId = currentCourseId ?? firstCourseId
-  const ctaLabel = pathProgress.completionPct > 0 ? 'Continue Learning' : 'Start Learning'
+  const ctaLabel = completionPct > 0 ? 'Continue Learning' : 'Start Learning'
 
   return (
-    <section className="relative overflow-hidden bg-gradient-to-br from-brand to-brand-hover">
-      {/* Radial highlight overlay — same pattern as PathCardHeader */}
-      <div className="absolute inset-0 opacity-20 bg-[radial-gradient(circle_at_50%_120%,rgba(255,255,255,0.8),transparent)]" />
+    <section
+      data-testid="path-hero-banner"
+      className={cn(
+        'relative overflow-hidden',
+        theme.kind === 'image' ? 'bg-muted' : `bg-gradient-to-br ${theme.tailwindFragment}`
+      )}
+    >
+      {theme.kind === 'image' && (
+        <>
+          <img
+            src={theme.url}
+            alt=""
+            role="presentation"
+            className="absolute inset-0 w-full h-full object-cover"
+            loading="lazy"
+          />
+          <PathCoverReadabilityScrim />
+        </>
+      )}
+      {theme.kind === 'gradient' && (
+        <div className="absolute inset-0 opacity-20 bg-[radial-gradient(circle_at_50%_120%,rgba(255,255,255,0.8),transparent)]" />
+      )}
 
       {/* Content */}
       <div className="relative z-10 max-w-6xl mx-auto pt-8 pb-20 px-8 lg:px-12">
         {/* Back link */}
         <Link
           to={backUrl}
-          className="inline-flex items-center gap-2 text-white/80 hover:text-white text-sm font-medium mb-6 hover:-translate-x-1 transition-transform"
+          className={cn(
+            'inline-flex items-center gap-2 text-sm font-medium mb-6 hover:-translate-x-1 transition-transform',
+            onDark ? 'text-white/80 hover:text-white' : 'text-foreground/80 hover:text-foreground'
+          )}
           data-testid="hero-back-link"
         >
           <ArrowLeft className="size-4" aria-hidden="true" />
@@ -76,7 +110,12 @@ export function PathHeroBanner({
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="size-11 bg-white/20 hover:bg-white/40 backdrop-blur-md text-white rounded-full"
+                  className={cn(
+                    'size-11 backdrop-blur-md rounded-full',
+                    onDark
+                      ? 'bg-white/20 hover:bg-white/40 text-white'
+                      : 'bg-background/80 hover:bg-background text-foreground border border-border'
+                  )}
                   aria-label={`Actions for ${path.name}`}
                 >
                   <MoreHorizontal className="size-4" aria-hidden="true" />
@@ -106,11 +145,24 @@ export function PathHeroBanner({
         {/* Metadata badges row */}
         <div className="flex flex-wrap items-center gap-3 mb-6">
           {path.difficultyLabel && (
-            <span className="px-3 py-1 bg-white/20 backdrop-blur-sm rounded-full text-xs font-bold uppercase tracking-widest text-white">
+            <span
+              data-testid="path-hero-difficulty"
+              className={cn(
+                'px-3 py-1 backdrop-blur-sm rounded-full text-xs font-bold uppercase tracking-widest',
+                onDark
+                  ? 'bg-white/20 text-white'
+                  : 'bg-background/90 text-foreground border border-border'
+              )}
+            >
               {path.difficultyLabel}
             </span>
           )}
-          <span className="flex items-center gap-1.5 text-white/80 text-sm font-medium">
+          <span
+            className={cn(
+              'flex items-center gap-1.5 text-sm font-medium',
+              onDark ? 'text-white/80' : 'text-muted-foreground'
+            )}
+          >
             <Clock className="size-3.5" aria-hidden="true" />
             {courseCount} {courseCount === 1 ? 'course' : 'courses'}
             {path.estimatedHours != null && path.estimatedHours > 0 && (
@@ -120,13 +172,25 @@ export function PathHeroBanner({
         </div>
 
         {/* Title */}
-        <h1 className="font-display text-4xl lg:text-5xl font-bold tracking-tight mb-4 text-brand-foreground">
+        <h1
+          className={cn(
+            'font-display text-4xl lg:text-5xl font-bold tracking-tight mb-4',
+            onDark
+              ? 'text-white [text-shadow:_0_2px_12px_rgba(0,0,0,0.25)]'
+              : 'text-foreground'
+          )}
+        >
           {path.name}
         </h1>
 
         {/* Description */}
         {path.description && (
-          <p className="text-white/80 text-lg leading-relaxed mb-8 max-w-2xl">
+          <p
+            className={cn(
+              'text-lg leading-relaxed mb-8 max-w-2xl',
+              onDark ? 'text-white/80' : 'text-muted-foreground'
+            )}
+          >
             {path.description}
           </p>
         )}
@@ -152,17 +216,35 @@ export function PathHeroBanner({
                   key={i}
                   src={url}
                   alt=""
-                  className="size-10 rounded-full ring-2 ring-brand bg-muted object-cover hover:scale-110 hover:z-20 transition-transform"
+                  className={cn(
+                    'size-10 rounded-full bg-muted object-cover hover:scale-110 hover:z-20 transition-transform ring-2',
+                    onDark ? 'ring-white/40' : 'ring-foreground/20'
+                  )}
                   loading="lazy"
                 />
               ))}
               {avatarUrls.length === 0 && (
-                <div className="size-10 rounded-full ring-2 ring-brand bg-white/20 flex items-center justify-center">
-                  <BookOpen className="size-4 text-white/80" aria-hidden="true" />
+                <div
+                  className={cn(
+                    'size-10 rounded-full ring-2 flex items-center justify-center',
+                    onDark ? 'ring-white/40 bg-white/20' : 'ring-foreground/20 bg-muted'
+                  )}
+                >
+                  <BookOpen
+                    className={cn('size-4', onDark ? 'text-white/80' : 'text-muted-foreground')}
+                    aria-hidden="true"
+                  />
                 </div>
               )}
               {overflowCount > 0 && (
-                <div className="size-10 rounded-full ring-2 ring-brand bg-white/20 border-2 border-brand flex items-center justify-center text-xs font-bold text-white">
+                <div
+                  className={cn(
+                    'size-10 rounded-full ring-2 flex items-center justify-center text-xs font-bold border-2',
+                    onDark
+                      ? 'ring-white/40 bg-white/20 border-white/40 text-white'
+                      : 'ring-foreground/20 bg-muted border-border text-foreground'
+                  )}
+                >
                   +{overflowCount}
                 </div>
               )}
@@ -171,7 +253,12 @@ export function PathHeroBanner({
 
           {/* Progress indicator */}
           {courseCount > 0 && (
-            <span className="text-white/80 text-sm font-medium">
+            <span
+              className={cn(
+                'text-sm font-medium',
+                onDark ? 'text-white/80' : 'text-muted-foreground'
+              )}
+            >
               {completedCount} of {courseCount} completed
             </span>
           )}

@@ -37,7 +37,8 @@ describe('PathCardHeader', () => {
     )
 
     const header = container.firstChild as HTMLElement
-    expect(header.className).toMatch(/bg-gradient-to-br/)
+    expect(header.className).toContain('from-cyan-400')
+    expect(header.className).toContain('to-blue-600')
     expect(header.className).not.toContain('from-muted-foreground')
   })
 
@@ -78,5 +79,17 @@ describe('PathCardHeader', () => {
     render(<PathCardHeader pathName="Done" completionPct={100} />)
 
     expect(screen.getByText('Completed')).toBeInTheDocument()
+  })
+
+  it('shows AI Generated badge when isAIGenerated', () => {
+    render(
+      <PathCardHeader pathName="AI Path" completionPct={0} isAIGenerated />
+    )
+    expect(screen.getByText('AI Generated')).toBeInTheDocument()
+  })
+
+  it('does not show AI Generated badge when not AI', () => {
+    render(<PathCardHeader pathName="Manual Path" completionPct={0} isAIGenerated={false} />)
+    expect(screen.queryByText('AI Generated')).not.toBeInTheDocument()
   })
 })

@@ -80,12 +80,20 @@ describe('PathHeroBanner', () => {
 
   it('does not render difficulty badge when no label', () => {
     renderHero({ path: makePath({ difficultyLabel: undefined }) })
-    expect(document.querySelector('.tracking-widest')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('path-hero-difficulty')).not.toBeInTheDocument()
   })
 
   it('shows "Start Learning" CTA when progress is 0%', () => {
     renderHero({
       pathProgress: makeProgress({ completionPct: 0 }),
+      firstCourseId: 'course-1',
+    })
+    expect(screen.getByText('Start Learning')).toBeInTheDocument()
+  })
+
+  it('shows "Start Learning" when progress is NaN (normalized to 0)', () => {
+    renderHero({
+      pathProgress: makeProgress({ completionPct: Number.NaN }),
       firstCourseId: 'course-1',
     })
     expect(screen.getByText('Start Learning')).toBeInTheDocument()
@@ -176,5 +184,55 @@ describe('PathHeroBanner', () => {
   it('renders estimated hours when available', () => {
     renderHero({ path: makePath({ estimatedHours: 40 }) })
     expect(screen.getByText(/3 courses · ~40h/)).toBeInTheDocument()
+  })
+
+  it('uses cover preset gradient on hero section when no cover image', () => {
+    const { container } = renderHero({
+      path: makePath({ name: 'Any', coverPreset: 'purple-indigo' }),
+      pathProgress: makeProgress({ completionPct: 15 }),
+    })
+    const section = container.querySelector('[data-testid="path-hero-banner"]')
+    expect(section).toBeTruthy()
+    expect(section?.className).toContain('from-purple-500')
+    expect(section?.className).toContain('to-indigo-700')
+  })
+
+  it('renders cover image when coverImageUrl is set', () => {
+    const { container } = renderHero({
+      path: makePath({
+        coverImageUrl: 'https://cdn.example/hero.jpg',
+        coverPreset: 'cyan-blue',
+      }),
+      pathProgress: makeProgress({ completionPct: 20 }),
+    })
+    const img = container.querySelector('img[src="https://cdn.example/hero.jpg"]')
+    expect(img).toBeInTheDocument()
+  })
+
+  it('uses muted gradient when not started and no preset', () => {
+    const { container } = renderHero({
+      path: makePath({ name: 'New track' }),
+      pathProgress: makeProgress({ completionPct: 0 }),
+    })
+    const section = container.querySelector('[data-testid="path-hero-banner"]')
+    expect(section?.className).toContain('from-muted-foreground')
+  })
+
+  it('uses light-on-dark title when using saturated preset', () => {
+    const { container } = renderHero({
+      path: makePath({ name: 'Colored', coverPreset: 'teal-cyan' }),
+      pathProgress: makeProgress({ completionPct: 5 }),
+    })
+    const title = container.querySelector('h1')
+    expect(title?.className).toContain('text-white')
+  })
+
+  it('uses foreground title on muted hero', () => {
+    const { container } = renderHero({
+      path: makePath({ name: 'Muted track' }),
+      pathProgress: makeProgress({ completionPct: 0 }),
+    })
+    const title = container.querySelector('h1')
+    expect(title?.className).toContain('text-foreground')
   })
 })
