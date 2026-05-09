@@ -11,6 +11,7 @@ import {
   CollapsibleTrigger,
 } from '@/app/components/ui/collapsible'
 import { cn } from '@/app/components/ui/utils'
+import { CollapsibleCardSection } from '@/app/components/learning-path/CollapsibleCardSection'
 import { PlanMyWeekButton } from '@/app/components/learning-path/PlanMyWeekButton'
 import { PathScheduleList } from '@/app/components/learning-path/PathScheduleList'
 import { isOrderSuggestionAvailable } from '@/ai/learningPath/suggestOrder'
@@ -341,99 +342,69 @@ export function ControlCenter({
 
       {/* Group 2: Focus Session (collapsible) */}
       {!completedAll && (
-        <Collapsible open={focusSessionOpen} onOpenChange={setFocusSessionOpen}>
-          <Card className="rounded-xl">
-            <CardContent className="p-4">
-              <CollapsibleTrigger asChild>
-                <div className="flex items-center justify-between cursor-pointer select-none">
-                  <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">
-                    Focus Session
-                  </h3>
-                  <ChevronDown
-                    className={cn(
-                      'size-4 text-muted-foreground transition-transform duration-200',
-                      focusSessionOpen && 'rotate-180'
-                    )}
-                  />
-                </div>
-              </CollapsibleTrigger>
-              <CollapsibleContent className="pt-3">
-                <Button variant="brand" className="w-full" onClick={handleStartFocusSession}>
-                  <Play className="size-4 mr-2" aria-hidden="true" />
-                  Start focus session
-                </Button>
-              </CollapsibleContent>
-            </CardContent>
-          </Card>
-        </Collapsible>
+        <CollapsibleCardSection
+          title="Focus Session"
+          open={focusSessionOpen}
+          onOpenChange={setFocusSessionOpen}
+        >
+          <Button variant="brand" className="w-full" onClick={handleStartFocusSession}>
+            <Play className="size-4 mr-2" aria-hidden="true" />
+            Start focus session
+          </Button>
+        </CollapsibleCardSection>
       )}
 
       {/* Group 3: AI Ordering (collapsible) */}
       {entries.length >= 2 && (
-        <Collapsible open={aiOrderingOpen} onOpenChange={setAiOrderingOpen}>
-          <Card className="rounded-xl">
-            <CardContent className="p-4">
-              <CollapsibleTrigger asChild>
-                <div className="flex items-center justify-between cursor-pointer select-none">
-                  <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">
-                    AI Course Ordering
-                  </h3>
-                  <ChevronDown
-                    className={cn(
-                      'size-4 text-muted-foreground transition-transform duration-200',
-                      aiOrderingOpen && 'rotate-180'
-                    )}
-                  />
-                </div>
-              </CollapsibleTrigger>
-              <CollapsibleContent className="pt-3">
-                {isOrderSuggestionAvailable() ? (
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <Label htmlFor="ai-ordering-toggle" className="text-sm font-medium cursor-pointer">
-                        Enable AI ordering
-                      </Label>
-                      <Switch
-                        id="ai-ordering-toggle"
-                        checked={aiOrderingEnabled}
-                        onCheckedChange={setAiOrderingEnabled}
-                        aria-label="Toggle AI course ordering"
-                      />
-                    </div>
-                    {aiOrderingEnabled && (
-                      <button
-                        className="w-full text-left text-xs text-brand hover:underline font-medium flex items-center gap-1"
-                        onClick={onSuggestOrder}
-                        disabled={isSuggesting}
-                        data-testid="suggest-order-button"
-                      >
-                        {isSuggesting ? (
-                          <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
-                        ) : (
-                          <Sparkles className="size-3.5" aria-hidden="true" />
-                        )}
-                        Review suggested order
-                      </button>
-                    )}
-                  </div>
-                ) : (
-                  <Link
-                    to="/settings"
-                    className="flex items-center gap-3 text-left"
-                    data-testid="suggest-order-settings-link"
-                  >
-                    <div className="size-8 rounded-full bg-muted flex items-center justify-center text-muted-foreground shrink-0">
-                      <Settings className="size-4" aria-hidden="true" />
-                    </div>
-                    <span className="text-xs text-muted-foreground font-medium">
-                      Configure AI for ordering
-                    </span>
-                  </Link>
-                )}
-              </CollapsibleContent>
-            </CardContent>
-          </Card>
-        </Collapsible>
+        <CollapsibleCardSection
+          title="AI Course Ordering"
+          open={aiOrderingOpen}
+          onOpenChange={setAiOrderingOpen}
+        >
+          {isOrderSuggestionAvailable() ? (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="ai-ordering-toggle" className="text-sm font-medium cursor-pointer">
+                  Enable AI ordering
+                </Label>
+                <Switch
+                  id="ai-ordering-toggle"
+                  checked={aiOrderingEnabled}
+                  onCheckedChange={setAiOrderingEnabled}
+                  aria-label="Toggle AI course ordering"
+                />
+              </div>
+              {aiOrderingEnabled && (
+                <button
+                  className="w-full text-left text-xs text-brand hover:underline font-medium flex items-center gap-1"
+                  onClick={onSuggestOrder}
+                  disabled={isSuggesting}
+                  data-testid="suggest-order-button"
+                >
+                  {isSuggesting ? (
+                    <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
+                  ) : (
+                    <Sparkles className="size-3.5" aria-hidden="true" />
+                  )}
+                  Review suggested order
+                </button>
+              )}
+            </div>
+          ) : (
+            <Link
+              to="/settings"
+              className="flex items-center gap-3 text-left"
+              data-testid="suggest-order-settings-link"
+            >
+              <div className="size-8 rounded-full bg-muted flex items-center justify-center text-muted-foreground shrink-0">
+                <Settings className="size-4" aria-hidden="true" />
+              </div>
+              <span className="text-xs text-muted-foreground font-medium">
+                Configure AI for ordering
+              </span>
+            </Link>
+          )}
+        </CollapsibleCardSection>
       )}
 
       {/* Group 4: Study Tip (collapsible, collapsed by default) */}
