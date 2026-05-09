@@ -270,26 +270,3 @@
     color 300ms ease-out,
     border-color 300ms ease-out;
 }
-
-/* Unlock glow — brief shadow pulse when a module unlocks */
-@keyframes unlockGlow {
-  0% {
-    box-shadow: 0 0 0 0 color-mix(in oklch, var(--brand) 20%, transparent);
-  }
-  50% {
-    box-shadow: 0 0 20px 4px color-mix(in oklch, var(--brand) 10%, transparent);
-  }
-  100% {
-    box-shadow: 0 0 0 0 color-mix(in oklch, var(--brand) 0%, transparent);
-  }
-}
-
-.animate-unlock-glow {
-  animation: unlockGlow 800ms ease-out;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .animate-unlock-glow {
-    animation: none;
-  }
-}

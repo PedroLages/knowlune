@@ -298,6 +298,10 @@ export function LearningTrackDetail() {
       ),
     [courseEntries, courseInfo, manuallyCompletedIds]
   )
+  const completedEntryIds = useMemo(
+    () => new Set(completedEntries.map(e => e.id)),
+    [completedEntries]
+  )
   const currentEntry = useMemo(
     () =>
       courseEntries.find(e => {
@@ -307,10 +311,10 @@ export function LearningTrackDetail() {
       }) ??
       (courseEntries.length > completedEntries.length
         ? courseEntries.find(
-            e => e.courseId !== '' && !manuallyCompletedIds.has(e.id) && !completedEntries.includes(e)
+            e => e.courseId !== '' && !manuallyCompletedIds.has(e.id) && !completedEntryIds.has(e.id)
           ) ?? null
         : null),
-    [courseEntries, courseInfo, completedEntries, manuallyCompletedIds]
+    [courseEntries, courseInfo, completedEntries, completedEntryIds, manuallyCompletedIds]
   )
 
   // First non-gap course ID for hero CTA

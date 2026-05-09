@@ -34,38 +34,33 @@ export interface ManualModuleCompletion {
 }
 
 export function useManualModuleCompletion(trackId: string): ManualModuleCompletion {
-  const [completedIds, setCompletedIds] = useState<Set<string>>(() =>
-    loadFromStorage(trackId)
-  )
+  const [completedIds, setCompletedIds] = useState<Set<string>>(new Set())
 
-  // Reload when trackId changes
+  // Load from localStorage on mount and when trackId changes
   useEffect(() => {
     setCompletedIds(loadFromStorage(trackId))
   }, [trackId])
 
-  const markComplete = useCallback(
-    (entryId: string) => {
-      setCompletedIds(prev => {
-        const next = new Set(prev)
-        next.add(entryId)
-        persistToStorage(trackId, next)
-        return next
-      })
-    },
-    [trackId]
-  )
+  // Persist to localStorage whenever the set changes
+  useEffect(() => {
+    persistToStorage(trackId, completedIds)
+  }, [trackId, completedIds])
 
-  const undoComplete = useCallback(
-    (entryId: string) => {
-      setCompletedIds(prev => {
-        const next = new Set(prev)
-        next.delete(entryId)
-        persistToStorage(trackId, next)
-        return next
-      })
-    },
-    [trackId]
-  )
+  const markComplete = useCallback((entryId: string) => {
+    setCompletedIds(prev => {
+      const next = new Set(prev)
+      next.add(entryId)
+      return next
+    })
+  }, [])
+
+  const undoComplete = useCallback((entryId: string) => {
+    setCompletedIds(prev => {
+      const next = new Set(prev)
+      next.delete(entryId)
+      return next
+    })
+  }, [])
 
   const isManuallyCompleted = useCallback(
     (entryId: string) => completedIds.has(entryId),
