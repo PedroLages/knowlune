@@ -1783,3 +1783,112 @@ issues:
   file: src/app/components/figma/ImportedCourseCard.tsx:363
   source: ce-review-R3-P3
   created: 2026-05-07
+
+# Added 2026-05-09 — ce-review-learning-tracks-pages
+- id: KI-090
+  type: design
+  summary: "Hero heading truncation on mobile — long path names may break layout on small screens"
+  file: "src/app/pages/learning-tracks/"
+  severity: low
+  discovered_by: ce-review-learning-tracks-pages
+  discovered_on: 2026-05-09
+  status: open
+  scheduled_for: null
+  fixed_by: null
+  notes: "Suggestion: add break-words or hyphens-auto to hero heading to handle long path names on small screens."
+
+- id: KI-091
+  type: ux
+  summary: "Card action menu labels (Edit, Change Cover) shared with LearningPaths may not be intuitive for Tracks context"
+  file: "src/app/components/figma/LearningPathCard.tsx"
+  severity: low
+  discovered_by: ce-review-learning-tracks-pages
+  discovered_on: 2026-05-09
+  status: open
+  scheduled_for: null
+  fixed_by: null
+  notes: "Suggestion: review whether shared LearningPathCard should accept customizable action labels for Tracks context."
+
+- id: KI-092
+  type: test
+  summary: "Missing detailed E2E assertions for detail page content (syllabus, progress sidebar, ContinueLearningBento, empty syllabus state)"
+  file: "tests/e2e/"
+  severity: low
+  discovered_by: ce-review-learning-tracks-pages
+  discovered_on: 2026-05-09
+  status: open
+  scheduled_for: null
+  fixed_by: null
+  notes: "Detail page lacks E2E coverage for syllabus, progress sidebar, ContinueLearningBento, and empty syllabus state."
+
+- id: KI-093
+  type: reliability
+  summary: "Silent load failure on listing page — catch handler sets isLoaded=true with no user feedback"
+  file: "src/app/pages/learning-tracks/"
+  severity: low
+  discovered_by: ce-review-learning-tracks-pages
+  discovered_on: 2026-05-09
+  status: open
+  scheduled_for: null
+  fixed_by: null
+  notes: "Catch handler sets isLoaded=true without toast.error() or visible user feedback on load failure."
+
+- id: KI-094
+  type: ux
+  summary: "Loading skeleton shows 3 items but grid supports 4 columns on xl screens"
+  file: "src/app/pages/learning-tracks/"
+  severity: low
+  discovered_by: ce-review-learning-tracks-pages
+  discovered_on: 2026-05-09
+  status: open
+  scheduled_for: null
+  fixed_by: null
+  notes: "Skeleton count (3) should match grid column count (4 on xl) to reduce layout shift."
+
+- id: KI-095
+  type: ux
+  summary: "Listing page design is visually identical to LearningPaths — users may be confused about the distinction"
+  file: "src/app/pages/learning-tracks/"
+  severity: low
+  discovered_by: ce-review-learning-tracks-pages
+  discovered_on: 2026-05-09
+  status: open
+  scheduled_for: null
+  fixed_by: null
+  notes: "Suggestion: add contextual help text to differentiate Tracks from LearningPaths."
+
+- id: KI-096
+  type: ux
+  summary: "Layers icon is visually similar to Route icon at small sidebar sizes"
+  file: "src/app/config/navigation.ts"
+  severity: low
+  discovered_by: ce-review-learning-tracks-pages
+  discovered_on: 2026-05-09
+  status: open
+  scheduled_for: null
+  fixed_by: null
+  notes: "Suggestion: use more distinctive icon (GitFork, Waypoints) instead of Layers for sidebar navigation."
+
+- id: KI-097
+  type: design
+  summary: "Hero gradient section takes significant vertical space on mobile (~300px)"
+  file: "src/app/pages/learning-tracks/"
+  severity: low
+  discovered_by: ce-review-learning-tracks-pages
+  discovered_on: 2026-05-09
+  status: open
+  scheduled_for: null
+  fixed_by: null
+  notes: "Suggestion: reduce hero section padding on small screens to reclaim vertical space."
+
+- id: KI-098
+  type: reliability
+  summary: "No timeout on store hydration — if stores never resolve/reject, indefinite loading skeleton"
+  file: "src/stores/"
+  severity: low
+  discovered_by: ce-review-learning-tracks-pages
+  discovered_on: 2026-05-09
+  status: open
+  scheduled_for: null
+  fixed_by: null
+  notes: "Pre-existing app pattern. Suggestion: add timeout to store hydration to prevent indefinite loading state."
