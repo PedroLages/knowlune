@@ -16,6 +16,7 @@ import { useCourseImportStore } from '@/stores/useCourseImportStore'
 import { useAuthorStore } from '@/stores/useAuthorStore'
 import { usePathProgress } from '@/app/hooks/usePathProgress'
 import { useLoadCourseThumbnails } from '@/app/hooks/useLoadCourseThumbnails'
+import { useManualModuleCompletion } from '@/app/hooks/useManualModuleCompletion'
 import { staggerContainer, fadeUp } from '@/lib/motion'
 import { toast } from 'sonner'
 import { db } from '@/db'
@@ -182,6 +183,53 @@ export function LearningTrackDetail() {
   // Real progress tracking from contentProgress (catalog) + progress table (imported)
   const pathProgress = usePathProgress(courseEntries)
 
+  // Manual module completion (localStorage-backed, per-track)
+  const { completedIds: manuallyCompletedIds, markComplete, undoComplete } =
+    useManualModuleCompletion(trackId ?? '')
+
+  // Count manually completed entries not already counted in auto-progress
+  const manualCompletionsNotInAuto = useMemo(() => {
+    let count = 0
+    for (const entry of courseEntries) {
+      if (entry.courseId === '') continue
+      const autoCompleted =
+        (pathProgress.courseProgress.get(entry.courseId)?.completionPct ?? 0) >= 100
+      if (!autoCompleted && manuallyCompletedIds.has(entry.id)) count++
+    }
+    return count
+  }, [courseEntries, pathProgress.courseProgress, manuallyCompletedIds])
+
+  // Enhanced progress that includes manual completions
+  const enhancedProgress = useMemo(() => {
+    const completedCourses = pathProgress.completedCourses + manualCompletionsNotInAuto
+    const totalCourses = Math.max(pathProgress.totalCourses, 1)
+    return {
+      ...pathProgress,
+      completedCourses,
+      completionPct: (completedCourses / totalCourses) * 100,
+    }
+  }, [pathProgress, manualCompletionsNotInAuto])
+
+  // Toggle manual completion for a module entry
+  const handleMarkComplete = useCallback(
+    (entryId: string) => {
+      if (manuallyCompletedIds.has(entryId)) {
+        undoComplete(entryId)
+        toast.success('Module completion undone')
+      } else {
+        markComplete(entryId)
+        toast.success('Module marked as complete', {
+          action: {
+            label: 'Undo',
+            onClick: () => undoComplete(entryId),
+          },
+          duration: 5000,
+        })
+      }
+    },
+    [manuallyCompletedIds, markComplete, undoComplete]
+  )
+
   // Build course info lookup — uses real progress data
   const courseInfo = useMemo(() => {
     const map = new Map<string, PathCourseInfo>()
@@ -240,21 +288,29 @@ export function LearningTrackDetail() {
     return map
   }, [videosByCourse, pdfsByCourse, chaptersByCourse, importedCourses])
 
-  // Derived data
+  // Derived data — manual completions count toward completed entries
   const completedEntries = useMemo(
-    () => courseEntries.filter(e => (courseInfo.get(e.courseId)?.completionPct ?? 0) >= 100),
-    [courseEntries, courseInfo]
+    () =>
+      courseEntries.filter(
+        e =>
+          (courseInfo.get(e.courseId)?.completionPct ?? 0) >= 100 ||
+          manuallyCompletedIds.has(e.id)
+      ),
+    [courseEntries, courseInfo, manuallyCompletedIds]
   )
   const currentEntry = useMemo(
     () =>
       courseEntries.find(e => {
+        if (e.courseId === '') return false
         const pct = courseInfo.get(e.courseId)?.completionPct ?? 0
-        return pct > 0 && pct < 100
+        return pct > 0 && pct < 100 && !manuallyCompletedIds.has(e.id)
       }) ??
       (courseEntries.length > completedEntries.length
-        ? courseEntries[completedEntries.length]
+        ? courseEntries.find(
+            e => e.courseId !== '' && !manuallyCompletedIds.has(e.id) && !completedEntries.includes(e)
+          ) ?? null
         : null),
-    [courseEntries, courseInfo, completedEntries.length]
+    [courseEntries, courseInfo, completedEntries, manuallyCompletedIds]
   )
 
   // First non-gap course ID for hero CTA
@@ -400,7 +456,7 @@ export function LearningTrackDetail() {
           path={path}
           courseCount={courseEntries.length}
           completedCount={completedEntries.length}
-          pathProgress={pathProgress}
+          pathProgress={enhancedProgress}
           thumbnailUrls={thumbnailUrls}
           currentCourseId={currentCourseId}
           firstCourseId={firstCourseId}
@@ -481,6 +537,8 @@ export function LearningTrackDetail() {
                       videosByCourse={videosByCourse}
                       lessonGroupsByCourse={lessonGroupsByCourse}
                       videoProgressMap={videoProgressMap}
+                      manuallyCompletedIds={manuallyCompletedIds}
+                      onMarkComplete={handleMarkComplete}
                     />
                   </div>
                 </motion.section>
@@ -489,7 +547,7 @@ export function LearningTrackDetail() {
               {/* Right Column (1/3): Progress Sidebar */}
               <aside className="lg:col-span-1 space-y-6">
                 <PathProgressSidebar
-                  progress={pathProgress}
+                  progress={enhancedProgress}
                   difficultyLabel={path.difficultyLabel}
                   estimatedHours={path.estimatedHours}
                   courseCount={courseEntries.length}
