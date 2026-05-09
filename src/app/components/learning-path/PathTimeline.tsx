@@ -9,6 +9,7 @@ import { cn } from '@/app/components/ui/utils'
 import { CourseTypeBadge } from '@/app/components/shared/CourseTypeBadge'
 import { extractGapSearchTerm, cleanGapJustification } from '@/data/learningPathUtils'
 import { formatDuration } from '@/lib/formatDuration'
+import type { ChapterGroup } from '@/lib/curriculumGrouping'
 import type { LearningPathEntry, PathCourseInfo, ImportedVideo, VideoProgress } from '@/data/types'
 
 // ---- Types ----
@@ -38,6 +39,8 @@ interface PathTimelineProps {
   skipCourseId?: string
   /** Optional: videos grouped by course ID for accordion lesson rows */
   videosByCourse?: Map<string, ImportedVideo[]>
+  /** Optional: chapter/folder groups per course (same as CourseOverview); when set, drives expanded lesson layout */
+  lessonGroupsByCourse?: Map<string, ChapterGroup[]>
   /** Optional: video progress map for lesson completion status */
   videoProgressMap?: Map<string, VideoProgress>
   className?: string
@@ -235,7 +238,7 @@ function GapTimelineEntry({
   )
 }
 
-/** Action button row for a timeline entry: Start Module, Review, or Locked */
+/** Action for an unlocked timeline entry: Start Module or Review (locked uses header badge only). */
 function EntryActionButton({
   status,
   onClick,
@@ -277,12 +280,8 @@ function EntryActionButton({
     )
   }
 
-  return (
-    <span className="px-5 py-2 rounded-xl text-sm font-bold bg-muted/50 text-muted-foreground cursor-not-allowed inline-flex items-center gap-1.5">
-      <Lock className="size-3.5" aria-hidden="true" />
-      Locked
-    </span>
-  )
+  // Locked state: status pill in the card header already says "Locked" — avoid duplicating it beside metadata.
+  return null
 }
 
 /** Regular course entry card on the timeline */
@@ -295,6 +294,7 @@ function CourseTimelineEntry({
   onClick,
   simplified,
   videos,
+  lessonGroups,
   videoProgressMap,
 }: {
   entry: TimelineEntry
@@ -305,6 +305,7 @@ function CourseTimelineEntry({
   onClick: () => void
   simplified?: boolean
   videos?: ImportedVideo[]
+  lessonGroups?: ChapterGroup[]
   videoProgressMap?: Map<string, VideoProgress>
 }) {
   const isLocked = !isCompleted && !isInProgress
@@ -313,8 +314,14 @@ function CourseTimelineEntry({
   const entryRef = useRef<HTMLDivElement>(null)
   const [isExpanded, setIsExpanded] = useState(isInProgress)
 
+  const groupsWithVideos = lessonGroups?.filter(g => g.videos.length > 0) ?? []
   const videoCount = info?.videoCount ?? videos?.length ?? 0
-  const hasContent = info?.description || videoCount > 0 || (info?.totalDuration ?? 0) > 0 || (videos && videos.length > 0)
+  const hasContent =
+    Boolean(info?.description) ||
+    videoCount > 0 ||
+    (info?.totalDuration ?? 0) > 0 ||
+    Boolean(videos?.length) ||
+    groupsWithVideos.length > 0
 
   const renderCardContent = () => (
     <div className="flex items-start gap-3">
@@ -437,23 +444,55 @@ function CourseTimelineEntry({
             {renderCardContent()}
           </CardContent>
 
-          {/* Expanded content: lesson list (non-locked + expanded) */}
-          {!isLocked && isExpanded && videos && videos.length > 0 && (
-            <div className="border-t border-border px-6 pb-4 pt-3 space-y-1">
-              {videos.map(video => {
-                const prog = videoProgressMap?.get(video.id)
-                const isVideoCompleted = (prog?.completionPercentage ?? 0) >= 90
-                return (
-                  <LessonRow
-                    key={video.id}
-                    video={video}
-                    courseId={entry.courseId}
-                    isCompleted={isVideoCompleted}
-                  />
-                )
-              })}
+          {/* Expanded content: grouped lessons (preferred) or flat list */}
+          {!isLocked && isExpanded && groupsWithVideos.length > 0 && (
+            <div className="border-t border-border px-6 pb-4 pt-3 space-y-3">
+              {(() => {
+                const singleUngrouped = groupsWithVideos.length === 1 && groupsWithVideos[0].title === ''
+                return groupsWithVideos.map((group, gi) => (
+                  <div key={`${group.title}-${gi}`} className="space-y-1">
+                    {!singleUngrouped && (groupsWithVideos.length > 1 || group.title !== '') && (
+                      <h4 className="px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                        {group.title || 'Lessons'}
+                      </h4>
+                    )}
+                    {group.videos.map(video => {
+                      const prog = videoProgressMap?.get(video.id)
+                      const isVideoCompleted = (prog?.completionPercentage ?? 0) >= 90
+                      return (
+                        <LessonRow
+                          key={video.id}
+                          video={video}
+                          courseId={entry.courseId}
+                          isCompleted={isVideoCompleted}
+                        />
+                      )
+                    })}
+                  </div>
+                ))
+              })()}
             </div>
           )}
+          {!isLocked &&
+            isExpanded &&
+            groupsWithVideos.length === 0 &&
+            videos &&
+            videos.length > 0 && (
+              <div className="border-t border-border px-6 pb-4 pt-3 space-y-1">
+                {videos.map(video => {
+                  const prog = videoProgressMap?.get(video.id)
+                  const isVideoCompleted = (prog?.completionPercentage ?? 0) >= 90
+                  return (
+                    <LessonRow
+                      key={video.id}
+                      video={video}
+                      courseId={entry.courseId}
+                      isCompleted={isVideoCompleted}
+                    />
+                  )
+                })}
+              </div>
+            )}
         </Card>
       </div>
     </div>
@@ -477,6 +516,7 @@ export function PathTimeline({
   simplified,
   skipCourseId,
   videosByCourse,
+  lessonGroupsByCourse,
   videoProgressMap,
   className,
 }: PathTimelineProps) {
@@ -570,6 +610,7 @@ export function PathTimeline({
               onClick={() => onCourseClick(entry.courseId)}
               simplified={simplified}
               videos={videosByCourse?.get(entry.courseId)}
+              lessonGroups={lessonGroupsByCourse?.get(entry.courseId)}
               videoProgressMap={videoProgressMap}
             />
           </div>
