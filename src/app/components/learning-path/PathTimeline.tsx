@@ -6,7 +6,6 @@ import { Button } from '@/app/components/ui/button'
 import { Badge } from '@/app/components/ui/badge'
 import { Card, CardContent } from '@/app/components/ui/card'
 import { cn } from '@/app/components/ui/utils'
-import { CourseTypeBadge } from '@/app/components/shared/CourseTypeBadge'
 import { extractGapSearchTerm, cleanGapJustification } from '@/data/learningPathUtils'
 import { formatDuration } from '@/lib/formatDuration'
 import type { ChapterGroup } from '@/lib/curriculumGrouping'
@@ -367,7 +366,6 @@ function CourseTimelineEntry({
         {!simplified && (
           <div className="flex items-center justify-between gap-4 mt-4">
             <div className="flex items-center gap-4 text-sm text-muted-foreground font-medium">
-              <CourseTypeBadge courseType={entry.courseType} />
               {videoCount > 0 && (
                 <span className="flex items-center gap-1.5">
                   <Video className="size-4" aria-hidden="true" />

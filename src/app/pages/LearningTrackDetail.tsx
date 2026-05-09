@@ -35,6 +35,10 @@ export function LearningTrackDetail() {
   const [pdfsByCourse, setPdfsByCourse] = useState<Map<string, ImportedPdf[]>>(new Map())
   const [chaptersByCourse, setChaptersByCourse] = useState<Map<string, YouTubeCourseChapter[]>>(new Map())
   const [videoProgressMap, setVideoProgressMap] = useState<Map<string, VideoProgress>>(new Map())
+  // Prevents "No courses yet" flash during initial load by waiting until
+  // React has committed at least one render after isReady flips to true —
+  // ensures Zustand store updates (entries) are visible before deciding emptiness.
+  const [entriesChecked, setEntriesChecked] = useState(false)
 
   // Load all data on mount — uses requestAnimationFrame after Promise resolution
   // to ensure Zustand store state has been committed by React before rendering
@@ -88,6 +92,16 @@ export function LearningTrackDetail() {
 
   // Find the path
   const path = useMemo(() => paths.find(p => p.id === trackId), [paths, trackId])
+
+  // Gate: only show "No courses yet" after React has committed a render where
+  // isReady is true — prevents the empty state from flashing before Zustand
+  // store updates (entries) are visible in the component tree.
+  useEffect(() => {
+    if (isReady && path) {
+      const raf = requestAnimationFrame(() => setEntriesChecked(true))
+      return () => cancelAnimationFrame(raf)
+    }
+  }, [isReady, path])
 
   // Get sorted entries for this path
   const courseEntries = useMemo(
@@ -272,6 +286,38 @@ export function LearningTrackDetail() {
     return firstIncomplete?.id ?? sortedVideos[0]?.id
   }, [currentCourseId, firstCourseId, videosByCourse, videoProgressMap])
 
+  // First lesson for the ContinueLearningBento's current entry
+  const currentEntryTargetLessonId = useMemo(() => {
+    const courseId = currentEntry?.courseId
+    if (!courseId) return undefined
+
+    const videos = videosByCourse.get(courseId)
+    if (!videos || videos.length === 0) return undefined
+
+    const sortedVideos = [...videos].sort((a, b) => a.order - b.order)
+    const firstIncomplete = sortedVideos.find(v => {
+      const prog = videoProgressMap.get(v.id)
+      return (prog?.completionPercentage ?? 0) < 90
+    })
+
+    return firstIncomplete?.id ?? sortedVideos[0]?.id
+  }, [currentEntry, videosByCourse, videoProgressMap])
+
+  // Map of courseId → first incomplete lesson ID, for PathTimeline navigation
+  const firstLessonByCourse = useMemo(() => {
+    const map = new Map<string, string>()
+    for (const [courseId, videos] of videosByCourse) {
+      if (videos.length === 0) continue
+      const sortedVideos = [...videos].sort((a, b) => a.order - b.order)
+      const firstIncomplete = sortedVideos.find(v => {
+        const prog = videoProgressMap.get(v.id)
+        return (prog?.completionPercentage ?? 0) < 90
+      })
+      map.set(courseId, firstIncomplete?.id ?? sortedVideos[0].id)
+    }
+    return map
+  }, [videosByCourse, videoProgressMap])
+
   // Check prefers-reduced-motion
   const prefersReducedMotion = useReducedMotion()
   const shouldAnimate = !prefersReducedMotion
@@ -373,7 +419,11 @@ export function LearningTrackDetail() {
           className="space-y-8"
         >
           {/* Course list section */}
-          {courseEntries.length > 0 ? (
+          {!entriesChecked ? (
+            /* Brief hold during initial load — prevents flash of empty state
+               before Zustand store entries are visible in this render cycle */
+            null
+          ) : courseEntries.length > 0 ? (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-[var(--content-gap)]">
               {/* Left Column (2/3): Continue Learning + Timeline */}
               <div className="lg:col-span-2 space-y-8">
@@ -384,6 +434,7 @@ export function LearningTrackDetail() {
                       entry={currentEntry}
                       courseInfo={courseInfo.get(currentEntry.courseId)}
                       thumbnailUrl={thumbnailUrls[currentEntry.courseId]}
+                      targetLessonId={currentEntryTargetLessonId}
                     />
                   </motion.section>
                 )}
@@ -418,7 +469,14 @@ export function LearningTrackDetail() {
                       courseInfoMap={courseInfo}
                       gapEntries={courseEntries.filter(e => e.courseId === '')}
                       onGapResolve={() => {}}
-                      onCourseClick={courseId => navigate(`/courses/${courseId}`)}
+                      onCourseClick={courseId => {
+                        const lessonId = firstLessonByCourse.get(courseId)
+                        if (lessonId) {
+                          navigate(`/courses/${courseId}/lessons/${lessonId}`)
+                        } else {
+                          navigate(`/courses/${courseId}`)
+                        }
+                      }}
                       autoScrollToCurrent
                       videosByCourse={videosByCourse}
                       lessonGroupsByCourse={lessonGroupsByCourse}

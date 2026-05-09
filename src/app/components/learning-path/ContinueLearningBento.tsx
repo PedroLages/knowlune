@@ -8,6 +8,8 @@ interface ContinueLearningBentoProps {
   entry: LearningPathEntry
   courseInfo?: PathCourseInfo
   thumbnailUrl?: string
+  /** Optional: navigate directly to a specific lesson within the course */
+  targetLessonId?: string
   onViewCurriculum?: () => void
   className?: string
 }
@@ -21,10 +23,14 @@ export function ContinueLearningBento({
   entry,
   courseInfo,
   thumbnailUrl,
+  targetLessonId,
   onViewCurriculum,
   className,
 }: ContinueLearningBentoProps) {
   const pct = courseInfo?.completionPct ?? 0
+  const lessonPath = targetLessonId
+    ? `/courses/${entry.courseId}/lessons/${targetLessonId}`
+    : `/courses/${entry.courseId}`
 
   return (
     <div className={cn('rounded-xl border border-border bg-card overflow-hidden', className)}>
@@ -57,7 +63,7 @@ export function ContinueLearningBento({
           {/* Centered play button overlay */}
           <div className="absolute inset-0 flex items-center justify-center">
             <Link
-              to={`/courses/${entry.courseId}`}
+              to={lessonPath}
               className="size-16 rounded-full bg-brand/90 flex items-center justify-center text-brand-foreground shadow-lg hover:bg-brand hover:scale-105 transition-all duration-200 group"
               aria-label={`Continue ${courseInfo?.name || 'course'}`}
             >
@@ -94,7 +100,7 @@ export function ContinueLearningBento({
           </div>
           <div className="flex flex-wrap gap-3">
             <Button variant="brand" asChild>
-              <Link to={`/courses/${entry.courseId}`}>
+              <Link to={lessonPath}>
                 Continue lesson
                 <ArrowRight className="size-4 ml-2" aria-hidden="true" />
               </Link>

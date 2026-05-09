@@ -14,7 +14,7 @@ const COVER_H = 720
 const JPEG_QUALITY = 0.82
 const BUCKET_NAME = 'learning-path-covers'
 
-/** User-facing diagnostic messages keyed by failure category (never exposes internal schema/policy names) */
+/** User-facing diagnostic messages keyed by failure category */
 const DIAGNOSTIC = {
   AUTH_REQUIRED: 'Sign in required to upload covers',
   FORMAT_UNSUPPORTED: 'Unsupported image format. Use JPEG, PNG, or WebP.',
@@ -22,6 +22,9 @@ const DIAGNOSTIC = {
   REPLACE_REMOVE_FAILED: 'Failed to replace existing cover. Please try again.',
   REPLACE_RETRY_FAILED: 'Cover upload failed after clearing old cover. Please try again.',
   STORAGE_ERROR: 'Cover upload failed. Check your connection and try again.',
+  STORAGE_UNAUTHORIZED: 'Not authorized to upload covers. Try signing out and back in.',
+  STORAGE_NOT_FOUND: 'Cover storage not configured. Please contact support.',
+  STORAGE_TOO_LARGE: 'Image is too large. Use an image under 2 MB.',
   NETWORK_ERROR: 'Network error during upload. Check your connection.',
   CONFIG_ERROR: 'App configuration error. Check your connection and try again.',
 } as const
@@ -179,11 +182,21 @@ export async function uploadPathCover(file: File, pathId: string): Promise<strin
         throw new Error(DIAGNOSTIC.REPLACE_RETRY_FAILED)
       }
     } else if (error) {
+      // Map Supabase HTTP status codes to specific user-facing diagnostics
+      const status = Number(error.statusCode)
+      let diagnostic: string = DIAGNOSTIC.STORAGE_ERROR
+      if (status === 401 || status === 403) {
+        diagnostic = DIAGNOSTIC.STORAGE_UNAUTHORIZED
+      } else if (status === 404) {
+        diagnostic = DIAGNOSTIC.STORAGE_NOT_FOUND
+      } else if (status === 413) {
+        diagnostic = DIAGNOSTIC.STORAGE_TOO_LARGE
+      }
       console.error(
         '[PathCoverUpload] Upload failed:',
-        { bucket: BUCKET_NAME, key: maskedKey, statusCode: error.statusCode || 'unknown', message: error.message }
+        { bucket: BUCKET_NAME, key: maskedKey, statusCode: error.statusCode || 'unknown', message: error.message, diagnostic }
       )
-      throw new Error(DIAGNOSTIC.STORAGE_ERROR)
+      throw new Error(diagnostic)
     }
   } catch (err) {
     // Re-throw errors that already carry diagnostic messages (thrown above)

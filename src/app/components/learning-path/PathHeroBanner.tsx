@@ -7,6 +7,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/app/components/ui/dropdown-menu'
+import { cn } from '@/app/components/ui/utils'
+import { PRESET_GRADIENT_MAP } from '@/data/pathCoverGradients'
 import type { LearningPath } from '@/data/types'
 import type { PathProgressSummary } from '@/app/hooks/usePathProgress'
 
@@ -54,10 +56,36 @@ export function PathHeroBanner({
   const ctaCourseId = currentCourseId ?? firstCourseId
   const ctaLabel = pathProgress.completionPct > 0 ? 'Continue Learning' : 'Start Learning'
 
+  // Dynamic cover: image > preset gradient > default brand gradient
+  const hasCoverImage = !!path.coverImageUrl
+  const presetGradient =
+    !hasCoverImage && path.coverPreset && PRESET_GRADIENT_MAP[path.coverPreset]
+      ? PRESET_GRADIENT_MAP[path.coverPreset]
+      : null
+
   return (
-    <section className="relative overflow-hidden bg-gradient-to-br from-brand to-brand-hover">
+    <section
+      className={cn(
+        'relative overflow-hidden',
+        hasCoverImage ? 'bg-muted' : presetGradient ? `bg-gradient-to-br ${presetGradient}` : 'bg-gradient-to-br from-brand to-brand-hover'
+      )}
+    >
+      {/* Cover image background */}
+      {hasCoverImage && (
+        <>
+          <img
+            src={path.coverImageUrl}
+            alt=""
+            className="absolute inset-0 w-full h-full object-cover"
+          />
+          <div className="absolute inset-0 bg-gradient-to-b from-black/20 to-black/60" />
+        </>
+      )}
+
       {/* Radial highlight overlay — same pattern as PathCardHeader */}
-      <div className="absolute inset-0 opacity-20 bg-[radial-gradient(circle_at_50%_120%,rgba(255,255,255,0.8),transparent)]" />
+      {!hasCoverImage && (
+        <div className="absolute inset-0 opacity-20 bg-[radial-gradient(circle_at_50%_120%,rgba(255,255,255,0.8),transparent)]" />
+      )}
 
       {/* Content */}
       <div className="relative z-10 max-w-6xl mx-auto pt-8 pb-20 px-8 lg:px-12">
