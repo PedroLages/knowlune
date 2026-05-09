@@ -1,5 +1,5 @@
 import { useEffect, useRef, useMemo, useState } from 'react'
-import { useReducedMotion } from 'motion/react'
+import { useReducedMotion, motion, AnimatePresence } from 'motion/react'
 import { Link } from 'react-router'
 import { Check, Lock, AlertCircle, Import, Search, Replace, PlayCircle, RotateCcw, GripVertical, ChevronDown, Video, Clock, CheckCircle2, Undo2 } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
@@ -64,7 +64,7 @@ function StatusCircle({
   const borderRing = simplified ? '' : 'border-4 border-card'
   const baseClass = cn(
     dotSize,
-    'shrink-0 rounded-full flex items-center justify-center relative z-10',
+    'shrink-0 rounded-full flex items-center justify-center relative z-10 transition-all duration-300',
     borderRing
   )
   const iconSize = simplified ? 'size-3' : 'size-4'
@@ -363,6 +363,15 @@ function CourseTimelineEntry({
         : 'Locked'
   const entryRef = useRef<HTMLDivElement>(null)
   const [isExpanded, setIsExpanded] = useState(false)
+  const prevLockedRef = useRef(isLocked)
+  const justUnlocked = prevLockedRef.current && !isLocked
+  const prefersReducedMotion = useReducedMotion()
+  const shouldAnimate = !prefersReducedMotion
+
+  // Update ref after render so next render can detect transitions
+  useEffect(() => {
+    prevLockedRef.current = isLocked
+  }, [isLocked])
 
   const groupsWithVideos = lessonGroups?.filter(g => g.videos.length > 0) ?? []
   const videoCount = info?.videoCount ?? videos?.length ?? 0
@@ -472,12 +481,21 @@ function CourseTimelineEntry({
 
       {/* Content */}
       <div className={simplified ? 'flex-1 min-w-0 mb-4' : 'flex-1 pb-8 min-w-0'}>
+        <motion.div
+          key={`${entry.courseId}-${isLocked ? 'locked' : 'unlocked'}-${isManuallyCompleted ? 'manual' : 'auto'}`}
+          initial={
+            shouldAnimate && justUnlocked ? { opacity: 0.8, scale: 0.97 } : false
+          }
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+        >
         <Card
           className={cn(
-            'rounded-2xl border hover:shadow-md transition-shadow duration-200 group overflow-hidden',
+            'rounded-2xl border hover:shadow-md transition-all duration-300 group overflow-hidden',
             isCompleted && 'border-success/20',
             isInProgress && 'border-brand/20 ring-1 ring-brand/5',
-            isLocked && 'border-border/50 opacity-60 pointer-events-none'
+            isLocked && 'border-border/50 opacity-60 pointer-events-none',
+            justUnlocked && shouldAnimate && 'shadow-brand/10 shadow-lg'
           )}
           {...(isLocked
             ? {}
@@ -499,8 +517,16 @@ function CourseTimelineEntry({
           </CardContent>
 
           {/* Expanded content: grouped lessons (preferred) or flat list */}
-          {!isLocked && isExpanded && groupsWithVideos.length > 0 && (
-            <div className="border-t border-border px-6 pb-4 pt-3 space-y-3">
+          <AnimatePresence initial={false}>
+            {!isLocked && isExpanded && groupsWithVideos.length > 0 && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+                className="overflow-hidden border-t border-border"
+              >
+                <div className="px-6 pb-4 pt-3 space-y-3">
               {(() => {
                 const singleUngrouped = groupsWithVideos.length === 1 && groupsWithVideos[0].title === ''
                 return groupsWithVideos.map((group, gi) => (
@@ -525,14 +551,24 @@ function CourseTimelineEntry({
                   </div>
                 ))
               })()}
-            </div>
-          )}
-          {!isLocked &&
-            isExpanded &&
-            groupsWithVideos.length === 0 &&
-            videos &&
-            videos.length > 0 && (
-              <div className="border-t border-border px-6 pb-4 pt-3 space-y-1">
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+          <AnimatePresence initial={false}>
+            {!isLocked &&
+              isExpanded &&
+              groupsWithVideos.length === 0 &&
+              videos &&
+              videos.length > 0 && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+                  className="overflow-hidden border-t border-border"
+                >
+                  <div className="px-6 pb-4 pt-3 space-y-1">
                 {videos.map(video => {
                   const prog = videoProgressMap?.get(video.id)
                   const isVideoCompleted = (prog?.completionPercentage ?? 0) >= 90
@@ -545,9 +581,12 @@ function CourseTimelineEntry({
                     />
                   )
                 })}
-              </div>
-            )}
+                  </div>
+                </motion.div>
+              )}
+          </AnimatePresence>
         </Card>
+        </motion.div>
       </div>
     </div>
   )
