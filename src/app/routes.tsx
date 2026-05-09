@@ -96,6 +96,12 @@ const LearningPathDetail = React.lazy(() =>
 const TemplateSyllabus = React.lazy(() =>
   import('./pages/TemplateSyllabus').then(m => ({ default: m.TemplateSyllabus }))
 )
+const LearningTracks = React.lazy(() =>
+  import('./pages/LearningTracks').then(m => ({ default: m.LearningTracks }))
+)
+const LearningTrackDetail = React.lazy(() =>
+  import('./pages/LearningTrackDetail').then(m => ({ default: m.LearningTrackDetail }))
+)
 const KnowledgeGaps = React.lazy(() =>
   import('./pages/KnowledgeGaps').then(m => ({ default: m.KnowledgeGaps }))
 )
@@ -653,6 +659,22 @@ export const router = createBrowserRouter([
                 <PremiumFeaturePage {...PREMIUM_FEATURES.aiLearningPath} icon={Sparkles}>
                   <AILearningPath />
                 </PremiumFeaturePage>
+              </SuspensePage>
+            ),
+          },
+          {
+            path: 'learning-tracks',
+            element: (
+              <SuspensePage>
+                <LearningTracks />
+              </SuspensePage>
+            ),
+          },
+          {
+            path: 'learning-tracks/:trackId',
+            element: (
+              <SuspensePage>
+                <LearningTrackDetail />
               </SuspensePage>
             ),
           },

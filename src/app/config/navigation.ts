@@ -63,6 +63,7 @@ export const navigationGroups: NavigationGroup[] = [
       { name: 'Overview', path: '/overview', icon: LayoutDashboard },
       { name: 'Courses', path: '/courses', icon: GraduationCap },
       { name: 'Learning Paths', path: '/learning-paths', icon: Route },
+      { name: 'Learning Tracks', path: '/learning-tracks', icon: Layers },
       { name: 'Books', path: '/library', icon: Library },
       { name: 'Authors', path: '/authors', icon: Users, disclosureKey: 'course-imported' },
     ],
