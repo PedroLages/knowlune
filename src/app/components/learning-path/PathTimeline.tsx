@@ -1,7 +1,7 @@
 import { useEffect, useRef, useMemo, useState } from 'react'
 import { useReducedMotion } from 'motion/react'
 import { Link } from 'react-router'
-import { Check, Lock, AlertCircle, Import, Search, Replace, PlayCircle, RotateCcw, GripVertical, ChevronDown, Video, Clock, CheckCircle2 } from 'lucide-react'
+import { Check, Lock, AlertCircle, Import, Search, Replace, PlayCircle, RotateCcw, GripVertical, ChevronDown, Video, Clock, CheckCircle2, Undo2 } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
 import { Badge } from '@/app/components/ui/badge'
 import { Card, CardContent } from '@/app/components/ui/card'
@@ -42,6 +42,10 @@ interface PathTimelineProps {
   lessonGroupsByCourse?: Map<string, ChapterGroup[]>
   /** Optional: video progress map for lesson completion status */
   videoProgressMap?: Map<string, VideoProgress>
+  /** Optional: set of entry IDs manually marked as completed */
+  manuallyCompletedIds?: Set<string>
+  /** Optional: called when user marks an entry complete (toggles on/off) */
+  onMarkComplete?: (entryId: string) => void
   className?: string
 }
 
@@ -237,28 +241,65 @@ function GapTimelineEntry({
   )
 }
 
-/** Action for an unlocked timeline entry: Start Module or Review (locked uses header badge only). */
+/** Action for an unlocked timeline entry: Start Module, Review, Mark Complete, or Undo */
 function EntryActionButton({
   status,
+  isManuallyCompleted,
   onClick,
+  onMarkComplete,
 }: {
   status: 'completed' | 'in-progress' | 'locked'
+  isManuallyCompleted?: boolean
   onClick: () => void
+  onMarkComplete?: () => void
 }) {
-  if (status === 'in-progress') {
+  if (isManuallyCompleted) {
     return (
       <Button
-        variant="brand"
+        variant="ghost"
         size="sm"
-        className="px-5 py-2 rounded-xl text-sm font-bold shadow-sm"
+        className="px-3 py-2 rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground"
         onClick={e => {
           e.stopPropagation()
-          onClick()
+          onMarkComplete?.()
         }}
       >
-        <PlayCircle className="size-4 mr-1.5" aria-hidden="true" />
-        Start Module
+        <Undo2 className="size-4 mr-1" aria-hidden="true" />
+        Undo
       </Button>
+    )
+  }
+
+  if (status === 'in-progress') {
+    return (
+      <div className="flex items-center gap-2">
+        <Button
+          variant="brand"
+          size="sm"
+          className="px-5 py-2 rounded-xl text-sm font-bold shadow-sm"
+          onClick={e => {
+            e.stopPropagation()
+            onClick()
+          }}
+        >
+          <PlayCircle className="size-4 mr-1.5" aria-hidden="true" />
+          Start Module
+        </Button>
+        {onMarkComplete && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="px-3 py-2 rounded-xl text-sm font-medium"
+            onClick={e => {
+              e.stopPropagation()
+              onMarkComplete()
+            }}
+          >
+            <CheckCircle2 className="size-4 mr-1" aria-hidden="true" />
+            Complete
+          </Button>
+        )}
+      </div>
     )
   }
 
@@ -289,8 +330,10 @@ function CourseTimelineEntry({
   info,
   isCompleted,
   isInProgress,
+  isManuallyCompleted,
   index,
   onClick,
+  onMarkComplete,
   simplified,
   videos,
   lessonGroups,
@@ -300,8 +343,10 @@ function CourseTimelineEntry({
   info?: PathCourseInfo
   isCompleted: boolean
   isInProgress: boolean
+  isManuallyCompleted?: boolean
   index: number
   onClick: () => void
+  onMarkComplete?: () => void
   simplified?: boolean
   videos?: ImportedVideo[]
   lessonGroups?: ChapterGroup[]
@@ -309,7 +354,13 @@ function CourseTimelineEntry({
 }) {
   const isLocked = !isCompleted && !isInProgress
   const status = isCompleted ? 'completed' : isInProgress ? 'in-progress' : 'locked'
-  const statusLabel = isCompleted ? 'Completed' : isInProgress ? 'Up Next' : 'Locked'
+  const statusLabel = isManuallyCompleted
+    ? 'Completed'
+    : isCompleted
+      ? 'Completed'
+      : isInProgress
+        ? 'Up Next'
+        : 'Locked'
   const entryRef = useRef<HTMLDivElement>(null)
   const [isExpanded, setIsExpanded] = useState(false)
 
@@ -380,7 +431,12 @@ function CourseTimelineEntry({
               )}
             </div>
             <div className="flex items-center gap-3">
-              <EntryActionButton status={status} onClick={onClick} />
+              <EntryActionButton
+                status={status}
+                isManuallyCompleted={isManuallyCompleted}
+                onClick={onClick}
+                onMarkComplete={onMarkComplete}
+              />
               {hasContent && !isLocked && (
                 <ChevronDown
                   className={cn(
@@ -516,6 +572,8 @@ export function PathTimeline({
   videosByCourse,
   lessonGroupsByCourse,
   videoProgressMap,
+  manuallyCompletedIds,
+  onMarkComplete,
   className,
 }: PathTimelineProps) {
   const gapEntryIds = useMemo(() => new Set(gapEntries.map(e => e.id)), [gapEntries])
@@ -540,6 +598,19 @@ export function PathTimeline({
     () => filteredEntries.findIndex(e => e.courseId !== '' && !gapEntryIds.has(e.id)),
     [filteredEntries, gapEntryIds]
   )
+
+  // Find the first non-completed, non-gap entry — this is the "next unlocked" module.
+  // Manual completions count as completed, so they unlock the following entry.
+  const nextUnlockedIndex = useMemo(() => {
+    for (let i = 0; i < filteredEntries.length; i++) {
+      const e = filteredEntries[i]
+      if (e.courseId === '' || gapEntryIds.has(e.id)) continue
+      const pct = courseInfoMap.get(e.courseId)?.completionPct ?? 0
+      const manualDone = manuallyCompletedIds?.has(e.id) ?? false
+      if (pct < 100 && !manualDone) return i
+    }
+    return -1
+  }, [filteredEntries, courseInfoMap, gapEntryIds, manuallyCompletedIds])
 
   const timelineRef = useRef<HTMLDivElement>(null)
   const prefersReducedMotion = useReducedMotion()
@@ -592,10 +663,13 @@ export function PathTimeline({
         }
 
         const info = courseInfoMap.get(entry.courseId)
-        const isCompleted = (info?.completionPct ?? 0) >= 100
+        const isManuallyCompleted = manuallyCompletedIds?.has(entry.id) ?? false
+        const isCompleted = (info?.completionPct ?? 0) >= 100 || isManuallyCompleted
+        const hasRealProgress = (info?.completionPct ?? 0) > 0 && !isCompleted
         const isInProgress =
-          (!hasAnyProgress && i === firstNonGapIndex) ||
-          ((info?.completionPct ?? 0) > 0 && !isCompleted)
+          (!hasAnyProgress && i === firstNonGapIndex && !isCompleted) ||
+          hasRealProgress ||
+          i === nextUnlockedIndex
 
         return (
           <div key={entry.courseId} role="listitem">
@@ -604,8 +678,12 @@ export function PathTimeline({
               info={info}
               isCompleted={isCompleted}
               isInProgress={isInProgress}
+              isManuallyCompleted={isManuallyCompleted}
               index={i}
               onClick={() => onCourseClick(entry.courseId)}
+              onMarkComplete={
+                onMarkComplete ? () => onMarkComplete(entry.id) : undefined
+              }
               simplified={simplified}
               videos={videosByCourse?.get(entry.courseId)}
               lessonGroups={lessonGroupsByCourse?.get(entry.courseId)}

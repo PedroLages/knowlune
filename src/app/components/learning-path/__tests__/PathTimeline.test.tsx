@@ -424,4 +424,123 @@ describe('PathTimeline', () => {
     expect(screen.queryByText('Course Two')).not.toBeInTheDocument()
     expect(screen.getByText('Course Three')).toBeInTheDocument()
   })
+
+  // ---- Manual completion tests ----
+
+  it('manually completed entry shows Completed badge even with 0% auto-progress', () => {
+    const entries = [makeEntry({ id: 'entry-1', courseId: 'c1' })]
+    const infoMap = new Map([['c1', makeCourseInfo({ completionPct: 0 })]])
+    const manuallyCompletedIds = new Set(['entry-1'])
+
+    render(
+      <PathTimeline
+        {...defaultProps}
+        entries={entries}
+        courseInfoMap={infoMap}
+        manuallyCompletedIds={manuallyCompletedIds}
+      />
+    )
+    expect(screen.getByText('Completed')).toBeInTheDocument()
+    // Should show "Undo" button, not "Complete"
+    expect(screen.getByText('Undo')).toBeInTheDocument()
+  })
+
+  it('manually completing first module unlocks the second', () => {
+    const entries = [
+      makeEntry({ id: 'entry-1', courseId: 'c1', position: 1 }),
+      makeEntry({ id: 'entry-2', courseId: 'c2', position: 2 }),
+    ]
+    const infoMap = new Map([
+      ['c1', makeCourseInfo({ completionPct: 0 })],
+      ['c2', makeCourseInfo({ completionPct: 0 })],
+    ])
+    const manuallyCompletedIds = new Set(['entry-1'])
+
+    render(
+      <PathTimeline
+        {...defaultProps}
+        entries={entries}
+        courseInfoMap={infoMap}
+        manuallyCompletedIds={manuallyCompletedIds}
+      />
+    )
+    // First entry is completed (manual), second should be unlocked (Up Next)
+    expect(screen.getByText('Completed')).toBeInTheDocument()
+    expect(screen.getByText('Up Next')).toBeInTheDocument()
+    // Second entry should be interactive
+    const listItems = screen.getAllByRole('listitem')
+    expect(listItems[1].querySelector('[role="button"]')).not.toBeNull()
+  })
+
+  it('Complete button appears on in-progress entries', () => {
+    const onMarkComplete = vi.fn()
+    const entries = [makeEntry({ id: 'entry-1', courseId: 'c1' })]
+    const infoMap = new Map([['c1', makeCourseInfo({ completionPct: 0 })]])
+    render(
+      <PathTimeline
+        {...defaultProps}
+        entries={entries}
+        courseInfoMap={infoMap}
+        onMarkComplete={onMarkComplete}
+      />
+    )
+    expect(screen.getByText('Complete')).toBeInTheDocument()
+  })
+
+  it('clicking Complete calls onMarkComplete with the entry ID', () => {
+    const onMarkComplete = vi.fn()
+    const entries = [makeEntry({ id: 'entry-1', courseId: 'c1' })]
+    const infoMap = new Map([['c1', makeCourseInfo({ completionPct: 0 })]])
+    render(
+      <PathTimeline
+        {...defaultProps}
+        entries={entries}
+        courseInfoMap={infoMap}
+        onMarkComplete={onMarkComplete}
+      />
+    )
+    fireEvent.click(screen.getByText('Complete'))
+    expect(onMarkComplete).toHaveBeenCalledWith('entry-1')
+  })
+
+  it('locked module does not show Complete button', () => {
+    const entries = [
+      makeEntry({ id: 'entry-1', courseId: 'c1', position: 1 }),
+      makeEntry({ id: 'entry-2', courseId: 'c2', position: 2 }),
+    ]
+    const infoMap = new Map([
+      ['c1', makeCourseInfo({ completionPct: 0 })],
+      ['c2', makeCourseInfo({ completionPct: 0 })],
+    ])
+    render(
+      <PathTimeline
+        {...defaultProps}
+        entries={entries}
+        courseInfoMap={infoMap}
+        onMarkComplete={vi.fn()}
+      />
+    )
+    // "Complete" appears once (on the first/unlocked entry), not on the locked second
+    const completeButtons = screen.getAllByText('Complete')
+    expect(completeButtons.length).toBe(1)
+  })
+
+  it('clicking Undo on a manually completed entry calls onMarkComplete', () => {
+    const onMarkComplete = vi.fn()
+    const entries = [makeEntry({ id: 'entry-1', courseId: 'c1' })]
+    const infoMap = new Map([['c1', makeCourseInfo({ completionPct: 0 })]])
+    const manuallyCompletedIds = new Set(['entry-1'])
+
+    render(
+      <PathTimeline
+        {...defaultProps}
+        entries={entries}
+        courseInfoMap={infoMap}
+        manuallyCompletedIds={manuallyCompletedIds}
+        onMarkComplete={onMarkComplete}
+      />
+    )
+    fireEvent.click(screen.getByText('Undo'))
+    expect(onMarkComplete).toHaveBeenCalledWith('entry-1')
+  })
 })
