@@ -38,8 +38,8 @@ import { Skeleton } from '@/app/components/ui/skeleton'
 import { cn } from '@/app/components/ui/utils'
 import { StudyScheduleEditor } from '@/app/components/figma/StudyScheduleEditor'
 import { CourseJourneyNodeIndicator } from '@/app/components/course/CourseJourneyNodeIndicator'
-import { sortImportedVideosForCurriculum } from '@/lib/sortImportedVideosForCurriculum'
 import { formatClockDuration as formatDuration } from '@/lib/formatDuration'
+import { buildGroupedCurriculum } from '@/lib/curriculumGrouping'
 import { getInitials } from '@/lib/textUtils'
 import type { ImportedVideo, ImportedPdf, VideoProgress, YouTubeCourseChapter } from '@/data/types'
 
@@ -53,79 +53,8 @@ const COMPLETION_THRESHOLD = 90
 // Utility
 // ---------------------------------------------------------------------------
 
-function getFolderName(path: string): string {
-  const parts = path.split('/')
-  return parts.length > 1 ? parts[0] : ''
-}
-
 function stripExtension(filename: string): string {
   return filename.replace(/\.\w+$/, '')
-}
-
-// ---------------------------------------------------------------------------
-// Grouping
-// ---------------------------------------------------------------------------
-
-interface ChapterGroup {
-  title: string
-  videos: ImportedVideo[]
-  pdfs: ImportedPdf[]
-}
-
-function groupByFolder(videos: ImportedVideo[], pdfs: ImportedPdf[] = []): ChapterGroup[] {
-  const videoGroups = new Map<string, ImportedVideo[]>()
-  const pdfGroups = new Map<string, ImportedPdf[]>()
-
-  for (const video of videos) {
-    const folder = getFolderName(video.path)
-    if (!videoGroups.has(folder)) videoGroups.set(folder, [])
-    videoGroups.get(folder)!.push(video)
-  }
-
-  for (const pdf of pdfs) {
-    const folder = getFolderName(pdf.path)
-    if (!pdfGroups.has(folder)) pdfGroups.set(folder, [])
-    pdfGroups.get(folder)!.push(pdf)
-  }
-
-  const allFolders = new Set([...videoGroups.keys(), ...pdfGroups.keys()])
-  return Array.from(allFolders)
-    .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
-    .map(title => ({
-      title,
-      videos: videoGroups.get(title) ?? [],
-      pdfs: pdfGroups.get(title) ?? [],
-    }))
-}
-
-function groupByChapter(videos: ImportedVideo[], chapters: YouTubeCourseChapter[]): ChapterGroup[] {
-  if (chapters.length === 0) return [{ title: '', videos, pdfs: [] }]
-
-  const videoChapterMap = new Map<string, string>()
-  for (const ch of chapters) {
-    if (!videoChapterMap.has(ch.videoId)) {
-      videoChapterMap.set(ch.videoId, ch.title)
-    }
-  }
-
-  const groups: ChapterGroup[] = []
-  let currentTitle = ''
-  let currentVideos: ImportedVideo[] = []
-
-  for (const video of videos) {
-    const chTitle = videoChapterMap.get(video.youtubeVideoId ?? '') ?? ''
-    if (chTitle !== currentTitle && currentVideos.length > 0) {
-      groups.push({ title: currentTitle, videos: currentVideos, pdfs: [] })
-      currentVideos = []
-    }
-    currentTitle = chTitle
-    currentVideos.push(video)
-  }
-  if (currentVideos.length > 0) {
-    groups.push({ title: currentTitle, videos: currentVideos, pdfs: [] })
-  }
-
-  return groups
 }
 
 // ---------------------------------------------------------------------------
@@ -271,16 +200,16 @@ export function CourseOverview() {
     [videos, progressMap]
   )
 
-  const groupedContent = useMemo(() => {
-    const raw =
-      capabilities?.requiresNetwork && chapters.length > 0
-        ? groupByChapter(videos, chapters)
-        : groupByFolder(videos, capabilities?.requiresNetwork ? [] : pdfs)
-    return raw.map(group => ({
-      ...group,
-      videos: sortImportedVideosForCurriculum(group.videos),
-    }))
-  }, [videos, pdfs, chapters, capabilities?.requiresNetwork])
+  const groupedContent = useMemo(
+    () =>
+      buildGroupedCurriculum({
+        videos,
+        pdfs,
+        chapters,
+        preferChapterGrouping: Boolean(capabilities?.requiresNetwork),
+      }),
+    [videos, pdfs, chapters, capabilities?.requiresNetwork]
+  )
 
   const toggleModule = useCallback((index: number) => {
     setExpandedModules(prev => {

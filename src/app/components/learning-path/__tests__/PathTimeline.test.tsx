@@ -252,6 +252,84 @@ describe('PathTimeline', () => {
     expect(screen.getByText('Setup')).toBeInTheDocument()
   })
 
+  it('shows subsection headings when lessonGroups has multiple titled groups', () => {
+    const entries = [makeEntry({ courseId: 'c1' })]
+    const infoMap = new Map([
+      ['c1', makeCourseInfo({ completionPct: 45, videoCount: 2 })],
+    ])
+    const v1 = {
+      id: 'v1',
+      courseId: 'c1',
+      filename: 'a.mp4',
+      duration: 60,
+      order: 0,
+      path: '',
+      format: 'mp4' as const,
+      fileHandle: null,
+    }
+    const v2 = {
+      id: 'v2',
+      courseId: 'c1',
+      filename: 'b.mp4',
+      duration: 60,
+      order: 1,
+      path: '',
+      format: 'mp4' as const,
+      fileHandle: null,
+    }
+    const lessonGroups = new Map([
+      [
+        'c1',
+        [
+          { title: 'Module A', videos: [v1], pdfs: [] },
+          { title: 'Module B', videos: [v2], pdfs: [] },
+        ],
+      ],
+    ])
+    render(
+      <MemoryRouter>
+        <PathTimeline
+          {...defaultProps}
+          entries={entries}
+          courseInfoMap={infoMap}
+          lessonGroupsByCourse={lessonGroups}
+        />
+      </MemoryRouter>
+    )
+    expect(screen.getByText('Module A')).toBeInTheDocument()
+    expect(screen.getByText('Module B')).toBeInTheDocument()
+  })
+
+  it('hides inner subsection heading for a single untitled lesson group', () => {
+    const entries = [makeEntry({ courseId: 'c1' })]
+    const infoMap = new Map([
+      ['c1', makeCourseInfo({ completionPct: 45, videoCount: 1 })],
+    ])
+    const v1 = {
+      id: 'v1',
+      courseId: 'c1',
+      filename: 'solo.mp4',
+      duration: 60,
+      order: 0,
+      path: '',
+      format: 'mp4' as const,
+      fileHandle: null,
+    }
+    const lessonGroups = new Map([['c1', [{ title: '', videos: [v1], pdfs: [] }]]])
+    render(
+      <MemoryRouter>
+        <PathTimeline
+          {...defaultProps}
+          entries={entries}
+          courseInfoMap={infoMap}
+          lessonGroupsByCourse={lessonGroups}
+        />
+      </MemoryRouter>
+    )
+    expect(screen.queryByRole('heading', { level: 4 })).not.toBeInTheDocument()
+    expect(screen.getByText('solo')).toBeInTheDocument()
+  })
+
   it('completed module can be toggled open to show lesson rows', () => {
     const entries = [makeEntry({ courseId: 'c1' })]
     const infoMap = new Map([

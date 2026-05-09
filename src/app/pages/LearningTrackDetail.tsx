@@ -19,7 +19,8 @@ import { useLoadCourseThumbnails } from '@/app/hooks/useLoadCourseThumbnails'
 import { staggerContainer, fadeUp } from '@/lib/motion'
 import { toast } from 'sonner'
 import { db } from '@/db'
-import type { PathCourseInfo, ImportedVideo, VideoProgress } from '@/data/types'
+import { buildGroupedCurriculum, type ChapterGroup } from '@/lib/curriculumGrouping'
+import type { PathCourseInfo, ImportedVideo, ImportedPdf, VideoProgress, YouTubeCourseChapter } from '@/data/types'
 
 export function LearningTrackDetail() {
   const { trackId } = useParams<{ trackId: string }>()
@@ -31,6 +32,8 @@ export function LearningTrackDetail() {
   const [isReady, setIsReady] = useState(false)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [videosByCourse, setVideosByCourse] = useState<Map<string, ImportedVideo[]>>(new Map())
+  const [pdfsByCourse, setPdfsByCourse] = useState<Map<string, ImportedPdf[]>>(new Map())
+  const [chaptersByCourse, setChaptersByCourse] = useState<Map<string, YouTubeCourseChapter[]>>(new Map())
   const [videoProgressMap, setVideoProgressMap] = useState<Map<string, VideoProgress>>(new Map())
 
   // Load all data on mount — uses requestAnimationFrame after Promise resolution
@@ -113,6 +116,30 @@ export function LearningTrackDetail() {
         })
         return map
       }),
+      Promise.all(
+        courseIds.map(courseId => db.importedPdfs.where('courseId').equals(courseId).toArray())
+      ).then(results => {
+        const map = new Map<string, ImportedPdf[]>()
+        courseIds.forEach((courseId, i) => {
+          map.set(courseId, results[i])
+        })
+        return map
+      }),
+      Promise.all(
+        courseIds.map(courseId =>
+          db.youtubeChapters
+            .where('courseId')
+            .equals(courseId)
+            .sortBy('order')
+            .catch(() => [] as YouTubeCourseChapter[])
+        )
+      ).then(results => {
+        const map = new Map<string, YouTubeCourseChapter[]>()
+        courseIds.forEach((courseId, i) => {
+          map.set(courseId, results[i])
+        })
+        return map
+      }),
       db.progress.toArray().then(records => {
         const map = new Map<string, VideoProgress>()
         for (const r of records) {
@@ -121,9 +148,11 @@ export function LearningTrackDetail() {
         return map
       }),
     ])
-      .then(([videos, progMap]) => {
+      .then(([videoMap, pdfsMap, chaptersMap, progMap]) => {
         if (!ignore) {
-          setVideosByCourse(videos)
+          setVideosByCourse(videoMap)
+          setPdfsByCourse(pdfsMap)
+          setChaptersByCourse(chaptersMap)
           setVideoProgressMap(progMap)
         }
       })
@@ -176,6 +205,26 @@ export function LearningTrackDetail() {
 
     return map
   }, [importedCourses, authors, pathProgress.courseProgress, courseEntries])
+
+  /** Chapter/folder groups per course — matches CourseOverview syllabus grouping for track syllabus expanders. */
+  const lessonGroupsByCourse = useMemo(() => {
+    const map = new Map<string, ChapterGroup[]>()
+    for (const [courseId, videos] of videosByCourse) {
+      if (videos.length === 0) continue
+      const course = importedCourses.find(c => c.id === courseId)
+      const preferYoutube = (course?.source ?? 'local') === 'youtube'
+      map.set(
+        courseId,
+        buildGroupedCurriculum({
+          videos,
+          pdfs: pdfsByCourse.get(courseId) ?? [],
+          chapters: chaptersByCourse.get(courseId) ?? [],
+          preferChapterGrouping: preferYoutube,
+        })
+      )
+    }
+    return map
+  }, [videosByCourse, pdfsByCourse, chaptersByCourse, importedCourses])
 
   // Derived data
   const completedEntries = useMemo(
@@ -354,6 +403,7 @@ export function LearningTrackDetail() {
                       onCourseClick={courseId => navigate(`/courses/${courseId}`)}
                       autoScrollToCurrent
                       videosByCourse={videosByCourse}
+                      lessonGroupsByCourse={lessonGroupsByCourse}
                       videoProgressMap={videoProgressMap}
                     />
                   </div>
