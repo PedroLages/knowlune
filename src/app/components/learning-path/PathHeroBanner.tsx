@@ -20,6 +20,8 @@ interface PathHeroBannerProps {
   currentCourseId: string | null
   /** The courseId of the first course in the path */
   firstCourseId: string | null
+  /** Optional: navigate directly to a specific lesson within the CTA course */
+  targetLessonId?: string
   /** Back link URL (defaults to "/learning-paths" for backward compatibility) */
   backUrl?: string
   /** Back link label (defaults to "Back to Learning Paths" for backward compatibility) */
@@ -36,6 +38,7 @@ export function PathHeroBanner({
   thumbnailUrls,
   currentCourseId,
   firstCourseId,
+  targetLessonId,
   backUrl = '/learning-paths',
   backLabel = 'Back to Learning Paths',
   onEdit,
@@ -136,7 +139,11 @@ export function PathHeroBanner({
           {/* CTA button */}
           {ctaCourseId && (
             <Link
-              to={`/courses/${ctaCourseId}`}
+              to={
+                targetLessonId
+                  ? `/courses/${ctaCourseId}/lessons/${targetLessonId}`
+                  : `/courses/${ctaCourseId}`
+              }
               className="inline-flex items-center gap-2 bg-card text-brand hover:bg-brand-soft hover:text-brand-soft-foreground shadow-lg rounded-xl font-bold px-6 py-3 transition-colors"
             >
               <PlayCircle className="size-5" aria-hidden="true" />

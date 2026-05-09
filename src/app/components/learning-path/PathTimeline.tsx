@@ -312,7 +312,7 @@ function CourseTimelineEntry({
   const status = isCompleted ? 'completed' : isInProgress ? 'in-progress' : 'locked'
   const statusLabel = isCompleted ? 'Completed' : isInProgress ? 'Up Next' : 'Locked'
   const entryRef = useRef<HTMLDivElement>(null)
-  const [isExpanded, setIsExpanded] = useState(isInProgress)
+  const [isExpanded, setIsExpanded] = useState(false)
 
   const groupsWithVideos = lessonGroups?.filter(g => g.videos.length > 0) ?? []
   const videoCount = info?.videoCount ?? videos?.length ?? 0
