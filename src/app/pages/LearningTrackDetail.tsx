@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { useParams, Link, useNavigate } from 'react-router'
 import { motion, useReducedMotion } from 'motion/react'
 import { BookOpen, Trophy, ArrowLeft, AlertCircle, RotateCcw } from 'lucide-react'
@@ -210,6 +210,16 @@ export function LearningTrackDetail() {
     }
   }, [pathProgress, manualCompletionsNotInAuto])
 
+  // Dismiss any active undo toast on unmount to prevent stale closures
+  const activeToastRef = useRef<string | number | null>(null)
+  useEffect(() => {
+    return () => {
+      if (activeToastRef.current !== null) {
+        toast.dismiss(activeToastRef.current)
+      }
+    }
+  }, [])
+
   // Toggle manual completion for a module entry
   const handleMarkComplete = useCallback(
     (entryId: string) => {
@@ -225,23 +235,11 @@ export function LearningTrackDetail() {
           },
           duration: 5000,
         })
-        // Dismiss the undo toast when navigating away so the stale closure
-        // doesn't reference an unmounted component's undoComplete
         activeToastRef.current = toastId
       }
     },
     [manuallyCompletedIds, markComplete, undoComplete]
   )
-
-  // Dismiss any active undo toast on unmount to prevent stale closures
-  const activeToastRef = useRef<string | number | null>(null)
-  useEffect(() => {
-    return () => {
-      if (activeToastRef.current !== null) {
-        toast.dismiss(activeToastRef.current)
-      }
-    }
-  }, [])
 
   // Build course info lookup — uses real progress data
   const courseInfo = useMemo(() => {
