@@ -266,12 +266,12 @@ describe('LearningPathDetail', () => {
     })
   })
 
-  it('"Import Course" button uses brand-outline variant and has Download icon', async () => {
+  it('"Import" button in actions card uses brand-outline variant and has Download icon', async () => {
     renderPage()
     await waitFor(() => {
       const btn = screen.getByTestId('import-course-button')
       expect(btn).toBeInTheDocument()
-      expect(btn.textContent).toContain('Import Course')
+      expect(btn.textContent).toContain('Import')
     })
   })
 
@@ -372,18 +372,15 @@ describe('LearningPathDetail', () => {
     )
   })
 
-  it('renders the timeline heading and summary stats', async () => {
+  it('renders the syllabus card heading and course count', async () => {
     renderPage()
 
     await waitFor(() => {
-      // Timeline heading replaces the old "Courses" heading
-      expect(screen.getByRole('heading', { name: 'Course Timeline' })).toBeInTheDocument()
+      // Syllabus heading replaces the old "Course Timeline" heading
+      expect(screen.getByRole('heading', { name: 'Syllabus' })).toBeInTheDocument()
     })
 
-    // Header shows course count
-    expect(screen.getByText('1 courses')).toBeInTheDocument()
-
-    // The PathSummaryPanel renders with progress data
-    expect(screen.getByTestId('path-summary-panel')).toBeInTheDocument()
+    // Syllabus card shows course count
+    expect(screen.getByText('1 Courses')).toBeInTheDocument()
   })
 })

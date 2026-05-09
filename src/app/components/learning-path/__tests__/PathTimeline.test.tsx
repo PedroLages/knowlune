@@ -152,4 +152,28 @@ describe('PathTimeline', () => {
     render(<PathTimeline {...defaultProps} entries={entries} />)
     expect(screen.getByText('Unknown Course')).toBeInTheDocument()
   })
+
+  it('skipEntryId excludes the matching entry from rendering', () => {
+    const entries = [
+      makeEntry({ courseId: 'c1', position: 1 }),
+      makeEntry({ courseId: 'c2', position: 2 }),
+      makeEntry({ courseId: 'c3', position: 3 }),
+    ]
+    const infoMap = new Map([
+      ['c1', makeCourseInfo({ name: 'Course One' })],
+      ['c2', makeCourseInfo({ name: 'Course Two' })],
+      ['c3', makeCourseInfo({ name: 'Course Three' })],
+    ])
+    render(
+      <PathTimeline
+        {...defaultProps}
+        entries={entries}
+        courseInfoMap={infoMap}
+        skipEntryId="c2"
+      />
+    )
+    expect(screen.getByText('Course One')).toBeInTheDocument()
+    expect(screen.queryByText('Course Two')).not.toBeInTheDocument()
+    expect(screen.getByText('Course Three')).toBeInTheDocument()
+  })
 })

@@ -4,6 +4,7 @@ const SIZES = {
   sm: { size: 48, stroke: 3, fontSize: 'text-[10px]' },
   md: { size: 72, stroke: 3, fontSize: 'text-xs' },
   lg: { size: 96, stroke: 4, fontSize: 'text-lg' },
+  xl: { size: 128, stroke: 6, fontSize: 'text-2xl' },
 } as const
 
 interface PathProgressRingProps {

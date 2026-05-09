@@ -28,12 +28,13 @@ import {
   Download,
   AlertCircle,
   LayoutTemplate,
-  Check,
+  Trophy,
 } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
 import { Badge } from '@/app/components/ui/badge'
 import { Card, CardContent } from '@/app/components/ui/card'
 import { Skeleton } from '@/app/components/ui/skeleton'
+import { cn } from '@/app/components/ui/utils'
 import {
   Dialog,
   DialogContent,
@@ -712,81 +713,58 @@ export function LearningPathDetail() {
                 </motion.section>
               )}
 
-              {/* Completed Courses Strip */}
-              {completedEntries.length > 0 && (
-                <motion.section variants={itemVariants}>
-                  <h2 className="text-xl font-bold mb-6 px-2">Completed Courses</h2>
-                  <div className="flex overflow-x-auto gap-4 pb-4 scrollbar-thin">
-                    {completedEntries.map(entry => {
-                      const info = courseInfo.get(entry.courseId)
-                      return (
-                        <div
-                          key={entry.courseId}
-                          className="min-w-[180px] bg-card p-4 rounded-2xl shadow-sm border border-border flex-shrink-0"
-                        >
-                          <div className="relative w-full h-24 rounded-xl overflow-hidden mb-3 bg-muted">
-                            {thumbnailUrls[entry.courseId] ? (
-                              <img
-                                src={thumbnailUrls[entry.courseId]}
-                                alt=""
-                                className="w-full h-full object-cover"
-                                loading="lazy"
-                              />
-                            ) : (
-                              <div className="w-full h-full flex items-center justify-center">
-                                <BookOpen
-                                  className="size-6 text-muted-foreground"
-                                  aria-hidden="true"
-                                />
-                              </div>
-                            )}
-                            <div className="absolute top-2 right-2 bg-success text-success-foreground rounded-full p-0.5">
-                              <Check className="size-3.5" aria-hidden="true" />
-                            </div>
-                          </div>
-                          <h4 className="font-bold text-sm leading-tight line-clamp-2">
-                            {info?.name || 'Unknown Course'}
-                          </h4>
-                        </div>
-                      )
-                    })}
+
+              {/* Path Complete Banner */}
+              {!currentEntry && courseEntries.length > 0 && (
+                <motion.div variants={itemVariants}>
+                  <div className="bg-success-soft border border-success/20 rounded-2xl p-4 flex items-center gap-3">
+                    <Trophy className="w-5 h-5 text-success flex-shrink-0" aria-hidden="true" />
+                    <p className="text-sm font-medium text-success">All courses completed!</p>
                   </div>
-                </motion.section>
+                </motion.div>
               )}
 
-              {/* Timeline */}
-              {!showReorderList && (
-                <motion.section variants={itemVariants}>
-                  <h2 className="text-xl font-bold mb-4">Course Timeline</h2>
-                  <PathTimeline
-                    entries={courseEntries.map(e => ({
-                      ...e,
-                      info: courseInfo.get(e.courseId),
-                      thumbnailUrl: thumbnailUrls[e.courseId],
-                    }))}
-                    courseInfoMap={courseInfo}
-                    thumbnailUrls={thumbnailUrls}
-                    gapEntries={courseEntries.filter(e => e.courseId === '')}
-                    onGapResolve={resolution => {
-                      const gapEntry = courseEntries.find(e => e.id === resolution.entryId)
-                      const searchTerm = extractGapSearchTerm(gapEntry?.justification)
+              {/* Syllabus Card */}
+              <motion.section variants={itemVariants}>
+                <div className="bg-card rounded-2xl shadow-sm border border-border p-6 lg:p-8">
+                  {/* Card header */}
+                  <div className="flex items-center justify-between mb-8">
+                    <h2 className="font-display text-2xl font-bold">Syllabus</h2>
+                    <span className="text-muted-foreground text-sm">{courseEntries.length} Courses</span>
+                  </div>
 
-                      if (resolution.type === 'import') {
-                        handleImportClick({
-                          gapEntryId: resolution.entryId,
-                          searchTerm,
-                        })
-                      } else if (resolution.type === 'match' || resolution.type === 'replace') {
-                        setResolvingGapEntryId(resolution.entryId)
-                        setPickerOpen(true)
-                      }
-                    }}
-                    onCourseClick={courseId => navigate(`/courses/${courseId}`)}
-                    autoScrollToCurrent
-                    simplified={isMobile}
-                  />
-                </motion.section>
-              )}
+                  {/* Timeline */}
+                  {!showReorderList && (
+                    <PathTimeline
+                      entries={courseEntries.map(e => ({
+                        ...e,
+                        info: courseInfo.get(e.courseId),
+                        thumbnailUrl: thumbnailUrls[e.courseId],
+                      }))}
+                      courseInfoMap={courseInfo}
+                      gapEntries={courseEntries.filter(e => e.courseId === '')}
+                      onGapResolve={resolution => {
+                        const gapEntry = courseEntries.find(e => e.id === resolution.entryId)
+                        const searchTerm = extractGapSearchTerm(gapEntry?.justification)
+
+                        if (resolution.type === 'import') {
+                          handleImportClick({
+                            gapEntryId: resolution.entryId,
+                            searchTerm,
+                          })
+                        } else if (resolution.type === 'match' || resolution.type === 'replace') {
+                          setResolvingGapEntryId(resolution.entryId)
+                          setPickerOpen(true)
+                        }
+                      }}
+                      onCourseClick={courseId => navigate(`/courses/${courseId}`)}
+                      autoScrollToCurrent
+                      simplified={isMobile}
+                      skipEntryId={currentEntry?.courseId}
+                    />
+                  )}
+                </div>
+              </motion.section>
 
               {/* Gap entry summary between timeline and reorder list */}
               {gapCount > 0 && !showReorderList && (
@@ -907,53 +885,82 @@ export function LearningPathDetail() {
               )}
             </div>
 
-            {/* Right Column (1/3, sticky): Progress Sidebar + Control Center */}
+            {/* Right Column (1/3, sticky): Progress Sidebar + Actions + ControlCenter */}
             <aside className="lg:col-span-1 space-y-6 lg:sticky lg:top-24 lg:self-start">
               {/* Progress Sidebar */}
               <PathProgressSidebar progress={pathProgress} />
 
-              {/* Add Course collapsible panel */}
-              <Collapsible open={pickerOpen} onOpenChange={setPickerOpen} className="space-y-3">
-                <CollapsibleTrigger asChild>
-                  <Button
-                    variant="brand"
-                    data-testid="add-course-button"
-                    className="w-full"
-                    aria-expanded={pickerOpen}
-                    aria-controls="inline-course-picker-panel-sidebar"
+              {/* Actions Card: Add Course + Import side by side */}
+              <Card className="rounded-2xl border border-border shadow-sm">
+                <CardContent className="p-4 flex gap-3">
+                  <Collapsible
+                    open={pickerOpen}
+                    onOpenChange={setPickerOpen}
+                    className="flex-1"
                   >
-                    <Plus className="size-4 mr-2" aria-hidden="true" />
-                    {pickerOpen ? 'Cancel' : 'Add Course'}
+                    <CollapsibleTrigger asChild>
+                      <Button
+                        variant="brand"
+                        data-testid="add-course-button"
+                        className={cn('w-full', pickerOpen && 'bg-brand-hover ring-2 ring-brand/30')}
+                        aria-expanded={pickerOpen}
+                        aria-controls="inline-course-picker-panel-sidebar"
+                      >
+                        <Plus className="size-4 mr-2" aria-hidden="true" />
+                        Add Course
+                      </Button>
+                    </CollapsibleTrigger>
+                  </Collapsible>
+                  <Button
+                    variant="brand-outline"
+                    onClick={() => handleImportClick()}
+                    data-testid="import-course-button"
+                    className={pickerOpen ? 'hidden' : ''}
+                  >
+                    <Download className="size-4 mr-2" aria-hidden="true" />
+                    Import
                   </Button>
-                </CollapsibleTrigger>
-                <CollapsibleContent id="inline-course-picker-panel-sidebar" className="space-y-3">
-                  <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer select-none">
-                    <input
-                      type="checkbox"
-                      checked={keepPanelOpen}
-                      onChange={e => setKeepPanelOpen(e.target.checked)}
-                      className="rounded border-muted-foreground/30"
-                      data-testid="keep-panel-open-toggle"
-                    />
-                    Keep panel open
-                  </label>
-                  <InlineCoursePicker
-                    mode="singleSelect"
-                    excludeCourseIds={existingCourseIds}
-                    onAdd={handlePickerAddCourse}
-                  />
-                </CollapsibleContent>
-              </Collapsible>
+                </CardContent>
+              </Card>
 
-              <Button
-                variant="brand-outline"
-                onClick={() => handleImportClick()}
-                data-testid="import-course-button"
-                className={pickerOpen ? 'hidden' : 'w-full'}
+              {/* Inline Course Picker (expands below actions card in normal flow) */}
+              <div
+                className={`transition-all duration-300 ease-out overflow-hidden ${pickerOpen ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'}`}
               >
-                <Download className="size-4 mr-2" aria-hidden="true" />
-                Import Course
-              </Button>
+                <div className="transition-opacity duration-200 delay-100">
+                  <Card className="rounded-2xl border border-border shadow-sm">
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <h4 className="text-sm font-bold">Add Course</h4>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="size-7"
+                          onClick={() => setPickerOpen(false)}
+                          aria-label="Close course picker"
+                        >
+                          <X className="w-4 h-4" aria-hidden="true" />
+                        </Button>
+                      </div>
+                      <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer select-none mb-3">
+                        <input
+                          type="checkbox"
+                          checked={keepPanelOpen}
+                          onChange={e => setKeepPanelOpen(e.target.checked)}
+                          className="rounded border-muted-foreground/30"
+                          data-testid="keep-panel-open-toggle"
+                        />
+                        Keep panel open
+                      </label>
+                      <InlineCoursePicker
+                        mode="singleSelect"
+                        excludeCourseIds={existingCourseIds}
+                        onAdd={handlePickerAddCourse}
+                      />
+                    </CardContent>
+                  </Card>
+                </div>
+              </div>
 
               {/* ControlCenter — unified right-rail component */}
               {path && courseEntries.length > 0 && (
