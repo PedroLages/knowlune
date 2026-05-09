@@ -29,7 +29,6 @@ function makeCourseInfo(overrides: Partial<PathCourseInfo> = {}): PathCourseInfo
 describe('PathTimeline', () => {
   const defaultProps = {
     courseInfoMap: new Map<string, PathCourseInfo>(),
-    thumbnailUrls: {} as Record<string, string>,
     gapEntries: [] as LearningPathEntry[],
     onGapResolve: vi.fn() as (resolution: GapResolution) => void,
     onCourseClick: vi.fn() as (courseId: string) => void,
@@ -153,7 +152,7 @@ describe('PathTimeline', () => {
     expect(screen.getByText('Unknown Course')).toBeInTheDocument()
   })
 
-  it('skipEntryId excludes the matching entry from rendering', () => {
+  it('skipCourseId excludes the matching entry from rendering', () => {
     const entries = [
       makeEntry({ courseId: 'c1', position: 1 }),
       makeEntry({ courseId: 'c2', position: 2 }),
@@ -169,7 +168,7 @@ describe('PathTimeline', () => {
         {...defaultProps}
         entries={entries}
         courseInfoMap={infoMap}
-        skipEntryId="c2"
+        skipCourseId="c2"
       />
     )
     expect(screen.getByText('Course One')).toBeInTheDocument()

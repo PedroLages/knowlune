@@ -18,7 +18,6 @@ export interface GapResolution {
 
 interface TimelineEntry extends LearningPathEntry {
   info?: PathCourseInfo
-  thumbnailUrl?: string
 }
 
 interface PathTimelineProps {
@@ -34,7 +33,7 @@ interface PathTimelineProps {
   /** When true, renders cards without the timeline connector column */
   simplified?: boolean
   /** Optional: exclude a specific entry from rendering (for dedup with ContinueLearningBento) */
-  skipEntryId?: string
+  skipCourseId?: string
   className?: string
 }
 
@@ -368,15 +367,15 @@ export function PathTimeline({
   autoScrollToCurrent = true,
   loadingResolve,
   simplified,
-  skipEntryId,
+  skipCourseId,
   className,
 }: PathTimelineProps) {
   const gapEntryIds = useMemo(() => new Set(gapEntries.map(e => e.id)), [gapEntries])
 
   // Filter out the skipped entry (used for dedup with ContinueLearningBento)
   const filteredEntries = useMemo(
-    () => (skipEntryId ? entries.filter(e => e.courseId !== skipEntryId) : entries),
-    [entries, skipEntryId]
+    () => (skipCourseId ? entries.filter(e => e.courseId !== skipCourseId) : entries),
+    [entries, skipCourseId]
   )
 
   // When no courses have any progress data, the first non-gap entry should

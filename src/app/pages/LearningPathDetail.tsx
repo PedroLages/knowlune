@@ -739,7 +739,6 @@ export function LearningPathDetail() {
                       entries={courseEntries.map(e => ({
                         ...e,
                         info: courseInfo.get(e.courseId),
-                        thumbnailUrl: thumbnailUrls[e.courseId],
                       }))}
                       courseInfoMap={courseInfo}
                       gapEntries={courseEntries.filter(e => e.courseId === '')}
@@ -760,7 +759,7 @@ export function LearningPathDetail() {
                       onCourseClick={courseId => navigate(`/courses/${courseId}`)}
                       autoScrollToCurrent
                       simplified={isMobile}
-                      skipEntryId={currentEntry?.courseId}
+                      skipCourseId={currentEntry?.courseId}
                     />
                   )}
                 </div>
