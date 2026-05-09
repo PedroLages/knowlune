@@ -53,6 +53,8 @@ interface CurriculumComposerProps {
   mode?: 'manual' | 'ai'
   /** Pre-filled goal text for AI mode (used by AILearningPath wrapper) */
   initialGoal?: string
+  /** Base path for post-creation redirect (defaults to "/learning-paths" for backward compat). */
+  redirectBase?: string
 }
 
 /**
@@ -70,6 +72,7 @@ export function CurriculumComposer({
   onOpenChange,
   mode = 'manual',
   initialGoal = '',
+  redirectBase = '/learning-paths',
 }: CurriculumComposerProps) {
   const navigate = useNavigate()
   const createPathWithCourses = useLearningPathStore(s => s.createPathWithCourses)
@@ -247,13 +250,13 @@ export function CurriculumComposer({
       await loadPaths()
       toast.success(`Created "${aiPreview.pathName}"`)
       onOpenChange(false)
-      navigate(`/learning-paths/${path.id}`)
+      navigate(`${redirectBase}/${path.id}`)
     } catch {
       toast.error('Failed to create learning path')
     } finally {
       setIsSubmitting(false)
     }
-  }, [aiPreview, createPathWithCourses, loadPaths, onOpenChange, navigate])
+  }, [aiPreview, createPathWithCourses, loadPaths, onOpenChange, navigate, redirectBase])
 
   // --- Submit manual path ---
   const handleSubmit = useCallback(
@@ -278,14 +281,23 @@ export function CurriculumComposer({
         await loadPaths()
         toast.success(`Created "${finalName}"`)
         onOpenChange(false)
-        navigate(`/learning-paths/${path.id}`)
+        navigate(`${redirectBase}/${path.id}`)
       } catch {
         toast.error('Failed to create learning path')
       } finally {
         setIsSubmitting(false)
       }
     },
-    [name, description, selectedCourseIds, createPathWithCourses, loadPaths, onOpenChange, navigate]
+    [
+      name,
+      description,
+      selectedCourseIds,
+      createPathWithCourses,
+      loadPaths,
+      onOpenChange,
+      navigate,
+      redirectBase,
+    ]
   )
 
   const canGenerate = goal.trim().length > 0 && !isGenerating
