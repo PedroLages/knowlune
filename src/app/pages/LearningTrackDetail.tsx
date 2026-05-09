@@ -1,0 +1,260 @@
+import { useState, useEffect, useMemo } from 'react'
+import { useParams, Link, useNavigate } from 'react-router'
+import { motion, useReducedMotion } from 'motion/react'
+import { BookOpen, Trophy, ArrowLeft } from 'lucide-react'
+import { Skeleton } from '@/app/components/ui/skeleton'
+import { Card, CardContent } from '@/app/components/ui/card'
+import { EmptyState } from '@/app/components/EmptyState'
+import { DelayedFallback } from '@/app/components/DelayedFallback'
+import { PathHeroBanner } from '@/app/components/learning-path/PathHeroBanner'
+import { PathProgressSidebar } from '@/app/components/learning-path/PathProgressSidebar'
+import { ContinueLearningBento } from '@/app/components/learning-path/ContinueLearningBento'
+import { PathTimeline } from '@/app/components/learning-path/PathTimeline'
+import { useLearningPathStore } from '@/stores/useLearningPathStore'
+import { useCourseImportStore } from '@/stores/useCourseImportStore'
+import { useAuthorStore } from '@/stores/useAuthorStore'
+import { usePathProgress } from '@/app/hooks/usePathProgress'
+import { useLoadCourseThumbnails } from '@/app/hooks/useLoadCourseThumbnails'
+import { staggerContainer, fadeUp } from '@/lib/motion'
+import { toast } from 'sonner'
+import type { LearningPathEntry, PathCourseInfo } from '@/data/types'
+
+export function LearningTrackDetail() {
+  const { trackId } = useParams<{ trackId: string }>()
+  const navigate = useNavigate()
+  const { paths, entries, loadPaths, getEntriesForPath } = useLearningPathStore()
+  const { importedCourses, loadImportedCourses, thumbnailUrls, loadThumbnailUrls } =
+    useCourseImportStore()
+  const { authors, loadAuthors } = useAuthorStore()
+  const [isLoaded, setIsLoaded] = useState(false)
+
+  // Load all data on mount
+  useEffect(() => {
+    let ignore = false
+    Promise.all([loadPaths(), loadImportedCourses(), loadAuthors()])
+      .then(() => {
+        if (!ignore) setIsLoaded(true)
+      })
+      .catch(err => {
+        console.error('[LearningTrackDetail] Failed to load:', err)
+        toast.error('Failed to load track data')
+        if (!ignore) setIsLoaded(true)
+      })
+    return () => {
+      ignore = true
+    }
+  }, [loadPaths, loadImportedCourses, loadAuthors])
+
+  // Load thumbnail URLs when imported courses are available
+  useLoadCourseThumbnails(importedCourses, loadThumbnailUrls)
+
+  // Find the path
+  const path = useMemo(() => paths.find(p => p.id === trackId), [paths, trackId])
+
+  // Get sorted entries for this path
+  const courseEntries = useMemo(
+    () => (trackId ? getEntriesForPath(trackId) : []),
+    [trackId, entries, getEntriesForPath]
+  )
+
+  // Real progress tracking from contentProgress (catalog) + progress table (imported)
+  const pathProgress = usePathProgress(courseEntries)
+
+  // Build course info lookup — uses real progress data
+  const courseInfo = useMemo(() => {
+    const map = new Map<string, PathCourseInfo>()
+
+    for (const ic of importedCourses) {
+      const authorName = ic.authorId ? authors.find(a => a.id === ic.authorId)?.name : undefined
+      const cpInfo = pathProgress.courseProgress.get(ic.id)
+      map.set(ic.id, {
+        name: ic.name,
+        type: 'imported',
+        authorName,
+        completionPct: cpInfo?.completionPct ?? 0,
+      })
+    }
+
+    return map
+  }, [importedCourses, authors, pathProgress.courseProgress])
+
+  // Derived data
+  const completedEntries = useMemo(
+    () => courseEntries.filter(e => (courseInfo.get(e.courseId)?.completionPct ?? 0) >= 100),
+    [courseEntries, courseInfo]
+  )
+  const currentEntry = useMemo(
+    () =>
+      courseEntries.find(e => {
+        const pct = courseInfo.get(e.courseId)?.completionPct ?? 0
+        return pct > 0 && pct < 100
+      }) ??
+      (courseEntries.length > completedEntries.length
+        ? courseEntries[completedEntries.length]
+        : null),
+    [courseEntries, courseInfo, completedEntries.length]
+  )
+
+  // First non-gap course ID for hero CTA
+  const firstCourseId = useMemo(
+    () => courseEntries.find(e => e.courseId !== '')?.courseId ?? null,
+    [courseEntries]
+  )
+
+  // Current in-progress course ID for hero CTA
+  const currentCourseId = useMemo(() => {
+    const inProgress = currentEntry?.courseId
+    return inProgress && inProgress !== '' ? inProgress : null
+  }, [currentEntry])
+
+  // Check prefers-reduced-motion
+  const prefersReducedMotion = useReducedMotion()
+  const shouldAnimate = !prefersReducedMotion
+  const containerVariants = shouldAnimate ? staggerContainer : { hidden: {}, visible: {} }
+  const itemVariants = shouldAnimate ? fadeUp : { hidden: {}, visible: {} }
+
+  // Loading state
+  if (!isLoaded) {
+    return (
+      <DelayedFallback>
+        <div className="space-y-6 max-w-3xl mx-auto">
+          <Skeleton className="h-6 w-32" />
+          <div className="space-y-2">
+            <Skeleton className="h-8 w-64" />
+            <Skeleton className="h-5 w-96" />
+          </div>
+          {Array.from({ length: 3 }, (_, i) => (
+            <Skeleton key={i} className="h-20 w-full rounded-2xl" />
+          ))}
+        </div>
+      </DelayedFallback>
+    )
+  }
+
+  // Path not found
+  if (!path) {
+    return (
+      <div className="space-y-6">
+        <Link
+          to="/learning-tracks"
+          className="inline-flex items-center gap-2 text-brand font-medium hover:-translate-x-1 transition-transform"
+        >
+          <ArrowLeft className="size-4" aria-hidden="true" />
+          Back to Learning Tracks
+        </Link>
+        <EmptyState
+          icon={BookOpen}
+          title="Track not found"
+          description="This learning track does not exist or has been deleted."
+          actionLabel="View All Tracks"
+          onAction={() => {
+            navigate('/learning-tracks')
+          }}
+        />
+      </div>
+    )
+  }
+
+  return (
+    <>
+      {/* Full-width hero banner — breaks out of Layout main padding */}
+      <div className="-mx-4 -mt-4 sm:-mx-6 sm:-mt-6">
+        <PathHeroBanner
+          path={path}
+          courseCount={courseEntries.length}
+          completedCount={completedEntries.length}
+          pathProgress={pathProgress}
+          thumbnailUrls={thumbnailUrls}
+          currentCourseId={currentCourseId}
+          firstCourseId={firstCourseId}
+          backUrl="/learning-tracks"
+          backLabel="Back to Learning Tracks"
+        />
+      </div>
+
+      {/* Content area with negative margin to overlap hero */}
+      <div className="-mt-10 relative z-10">
+        <motion.div
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+          className="space-y-8"
+        >
+          {/* Course list section */}
+          {courseEntries.length > 0 ? (
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-[var(--content-gap)]">
+              {/* Left Column (2/3): Continue Learning + Timeline */}
+              <div className="lg:col-span-2 space-y-8">
+                {/* Continue Learning Bento Card */}
+                {currentEntry && (
+                  <motion.section variants={itemVariants}>
+                    <ContinueLearningBento
+                      entry={currentEntry}
+                      courseInfo={courseInfo.get(currentEntry.courseId)}
+                      thumbnailUrl={thumbnailUrls[currentEntry.courseId]}
+                      onViewCurriculum={() => {}}
+                    />
+                  </motion.section>
+                )}
+
+                {/* Path Complete Banner */}
+                {!currentEntry && courseEntries.length > 0 && (
+                  <motion.div variants={itemVariants}>
+                    <div className="bg-success-soft border border-success/20 rounded-2xl p-4 flex items-center gap-3">
+                      <Trophy className="w-5 h-5 text-success flex-shrink-0" aria-hidden="true" />
+                      <p className="text-sm font-medium text-success">All courses completed!</p>
+                    </div>
+                  </motion.div>
+                )}
+
+                {/* Syllabus Card */}
+                <motion.section variants={itemVariants}>
+                  <div className="bg-card rounded-2xl shadow-sm border border-border p-6 lg:p-8">
+                    {/* Card header */}
+                    <div className="flex items-center justify-between mb-8">
+                      <h2 className="font-display text-2xl font-bold">Syllabus</h2>
+                      <span className="text-muted-foreground text-sm">
+                        {courseEntries.length} {courseEntries.length === 1 ? 'Course' : 'Courses'}
+                      </span>
+                    </div>
+
+                    {/* Timeline (read-only — no drag-and-drop, no gap resolution) */}
+                    <PathTimeline
+                      entries={courseEntries.map(e => ({
+                        ...e,
+                        info: courseInfo.get(e.courseId),
+                      }))}
+                      courseInfoMap={courseInfo}
+                      gapEntries={courseEntries.filter(e => e.courseId === '')}
+                      onGapResolve={() => {}}
+                      onCourseClick={courseId => navigate(`/courses/${courseId}`)}
+                      autoScrollToCurrent
+                    />
+                  </div>
+                </motion.section>
+              </div>
+
+              {/* Right Column (1/3, sticky): Progress Sidebar */}
+              <aside className="lg:col-span-1 space-y-6 lg:sticky lg:top-24 lg:self-start">
+                <PathProgressSidebar progress={pathProgress} />
+              </aside>
+            </div>
+          ) : (
+            /* Empty path (no courses) */
+            <motion.div variants={itemVariants}>
+              <Card className="rounded-2xl shadow-sm border border-border">
+                <CardContent className="p-8 text-center">
+                  <BookOpen className="size-12 text-muted-foreground mx-auto mb-4" aria-hidden="true" />
+                  <h3 className="text-lg font-semibold mb-2">No courses yet</h3>
+                  <p className="text-muted-foreground text-sm max-w-md mx-auto">
+                    This track doesn&apos;t have any courses yet. Add courses to start tracking your progress.
+                  </p>
+                </CardContent>
+              </Card>
+            </motion.div>
+          )}
+        </motion.div>
+      </div>
+    </>
+  )
+}
