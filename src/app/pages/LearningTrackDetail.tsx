@@ -1,8 +1,9 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useParams, Link, useNavigate } from 'react-router'
 import { motion, useReducedMotion } from 'motion/react'
-import { BookOpen, Trophy, ArrowLeft } from 'lucide-react'
+import { BookOpen, Trophy, ArrowLeft, AlertCircle, RotateCcw } from 'lucide-react'
 import { Skeleton } from '@/app/components/ui/skeleton'
+import { Button } from '@/app/components/ui/button'
 import { Card, CardContent } from '@/app/components/ui/card'
 import { EmptyState } from '@/app/components/EmptyState'
 import { DelayedFallback } from '@/app/components/DelayedFallback'
@@ -26,23 +27,54 @@ export function LearningTrackDetail() {
   const { importedCourses, loadImportedCourses, thumbnailUrls, loadThumbnailUrls } =
     useCourseImportStore()
   const { authors, loadAuthors } = useAuthorStore()
-  const [isLoaded, setIsLoaded] = useState(false)
+  const [isReady, setIsReady] = useState(false)
+  const [loadError, setLoadError] = useState<string | null>(null)
 
-  // Load all data on mount
+  // Load all data on mount — uses requestAnimationFrame after Promise resolution
+  // to ensure Zustand store state has been committed by React before rendering
+  // content (avoids data race on direct URL navigation).
   useEffect(() => {
     let ignore = false
+
     Promise.all([loadPaths(), loadImportedCourses(), loadAuthors()])
       .then(() => {
-        if (!ignore) setIsLoaded(true)
+        if (!ignore) {
+          requestAnimationFrame(() => {
+            if (!ignore) setIsReady(true)
+          })
+        }
       })
       .catch(err => {
         console.error('[LearningTrackDetail] Failed to load:', err)
-        toast.error('Failed to load track data')
-        if (!ignore) setIsLoaded(true)
+        const message = err instanceof Error ? err.message : 'Failed to load track data'
+        setLoadError(message)
+        toast.error(message)
+        if (!ignore) {
+          requestAnimationFrame(() => setIsReady(true))
+        }
       })
+
     return () => {
       ignore = true
     }
+  }, [loadPaths, loadImportedCourses, loadAuthors])
+
+  // Retry handler — clears error and reloads all data
+  const handleRetry = useCallback(() => {
+    setLoadError(null)
+    setIsReady(false)
+
+    Promise.all([loadPaths(), loadImportedCourses(), loadAuthors()])
+      .then(() => {
+        requestAnimationFrame(() => setIsReady(true))
+      })
+      .catch(err => {
+        console.error('[LearningTrackDetail] Retry failed:', err)
+        const message = err instanceof Error ? err.message : 'Failed to load track data'
+        setLoadError(message)
+        toast.error(message)
+        requestAnimationFrame(() => setIsReady(true))
+      })
   }, [loadPaths, loadImportedCourses, loadAuthors])
 
   // Load thumbnail URLs when imported courses are available
@@ -75,8 +107,22 @@ export function LearningTrackDetail() {
       })
     }
 
+    // Add fallback entries for courses referenced in path entries but not in
+    // importedCourses — prevents "Unknown Course" labels when courses have been
+    // removed from the library but remain in the track.
+    for (const entry of courseEntries) {
+      if (!map.has(entry.courseId) && entry.courseId !== '') {
+        map.set(entry.courseId, {
+          name: 'Course',
+          type: entry.courseType,
+          authorName: undefined,
+          completionPct: 0,
+        })
+      }
+    }
+
     return map
-  }, [importedCourses, authors, pathProgress.courseProgress])
+  }, [importedCourses, authors, pathProgress.courseProgress, courseEntries])
 
   // Derived data
   const completedEntries = useMemo(
@@ -114,7 +160,7 @@ export function LearningTrackDetail() {
   const itemVariants = shouldAnimate ? fadeUp : { hidden: {}, visible: {} }
 
   // Loading state
-  if (!isLoaded) {
+  if (!isReady) {
     return (
       <DelayedFallback>
         <div className="space-y-6 max-w-3xl mx-auto">
@@ -128,6 +174,32 @@ export function LearningTrackDetail() {
           ))}
         </div>
       </DelayedFallback>
+    )
+  }
+
+  // Error state — critical data (paths) failed to load
+  if (loadError && !path) {
+    return (
+      <div className="space-y-6">
+        <Link
+          to="/learning-tracks"
+          className="inline-flex items-center gap-2 text-brand font-medium hover:-translate-x-1 transition-transform"
+        >
+          <ArrowLeft className="size-4" aria-hidden="true" />
+          Back to Learning Tracks
+        </Link>
+        <div className="flex flex-col items-center justify-center py-16">
+          <AlertCircle className="size-12 text-destructive mx-auto mb-4" aria-hidden="true" />
+          <h3 className="text-lg font-semibold mb-2">Failed to load track</h3>
+          <p className="text-muted-foreground text-sm mb-6 max-w-md text-center">
+            {loadError}
+          </p>
+          <Button variant="brand" onClick={handleRetry}>
+            <RotateCcw className="size-4 mr-2" aria-hidden="true" />
+            Try Again
+          </Button>
+        </div>
+      </div>
     )
   }
 
@@ -192,7 +264,6 @@ export function LearningTrackDetail() {
                       entry={currentEntry}
                       courseInfo={courseInfo.get(currentEntry.courseId)}
                       thumbnailUrl={thumbnailUrls[currentEntry.courseId]}
-                      onViewCurriculum={() => {}}
                     />
                   </motion.section>
                 )}
