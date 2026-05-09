@@ -210,14 +210,6 @@ export function ControlCenter({
     </Card>
   )
 
-  // --- Focus Session Button ---
-  const focusSessionButton = !completedAll && (
-    <Button variant="brand" className="w-full" onClick={handleStartFocusSession}>
-      <Play className="size-4 mr-2" aria-hidden="true" />
-      Start focus session
-    </Button>
-  )
-
   // --- Plan My Week Section ---
   const planMyWeekSection = (
     <div className="space-y-3">
@@ -253,57 +245,6 @@ export function ControlCenter({
     </div>
   )
 
-  // --- AI Course Ordering Section ---
-  const aiOrderingSection = entries.length >= 2 && (
-    <Card className="rounded-xl">
-      <CardContent className="p-4">
-        {isOrderSuggestionAvailable() ? (
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="ai-ordering-toggle" className="text-sm font-medium cursor-pointer">
-                AI Course Ordering
-              </Label>
-              <Switch
-                id="ai-ordering-toggle"
-                checked={aiOrderingEnabled}
-                onCheckedChange={setAiOrderingEnabled}
-                aria-label="Toggle AI course ordering"
-              />
-            </div>
-            {aiOrderingEnabled && (
-              <button
-                className="w-full text-left text-xs text-brand hover:underline font-medium flex items-center gap-1"
-                onClick={onSuggestOrder}
-                disabled={isSuggesting}
-                data-testid="suggest-order-button"
-              >
-                {isSuggesting ? (
-                  <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
-                ) : (
-                  <Sparkles className="size-3.5" aria-hidden="true" />
-                )}
-                Review suggested order
-              </button>
-            )}
-          </div>
-        ) : (
-          <Link
-            to="/settings"
-            className="flex items-center gap-3 text-left"
-            data-testid="suggest-order-settings-link"
-          >
-            <div className="size-8 rounded-full bg-muted flex items-center justify-center text-muted-foreground shrink-0">
-              <Settings className="size-4" aria-hidden="true" />
-            </div>
-            <span className="text-xs text-muted-foreground font-medium">
-              Configure AI for ordering
-            </span>
-          </Link>
-        )}
-      </CardContent>
-    </Card>
-  )
-
   // --- All Complete State ---
   const completeState = completedAll && (
     <Card className="rounded-xl border-success/20 bg-success/5">
@@ -320,17 +261,6 @@ export function ControlCenter({
         </Button>
       </CardContent>
     </Card>
-  )
-
-  // --- Study Tip ---
-  const studyTipSection = filteredTip && (
-    <div className="p-4 bg-gradient-to-br from-brand to-brand-hover rounded-xl text-brand-foreground">
-      <span className="text-[10px] font-black uppercase tracking-widest bg-white/20 px-2 py-0.5 rounded-full mb-2 inline-block">
-        Study Tip
-      </span>
-      <h4 className="font-bold text-sm mb-1 italic">&quot;{filteredTip.text}&quot;</h4>
-      <p className="text-brand-foreground/80 text-xs leading-relaxed">{filteredTip.detail}</p>
-    </div>
   )
 
   return (
