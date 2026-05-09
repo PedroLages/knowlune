@@ -6,6 +6,7 @@
  */
 
 import { useNavigate } from 'react-router'
+import { ArrowRight } from 'lucide-react'
 import { Badge } from '@/app/components/ui/badge'
 import { Button } from '@/app/components/ui/button'
 import type { ScoredTopic } from '@/stores/useKnowledgeMapStore'
@@ -83,6 +84,16 @@ export function FocusAreasPanel({ focusAreas }: FocusAreasPanelProps) {
           </li>
         ))}
       </ol>
+
+      <Button
+        variant="brand"
+        size="sm"
+        className="w-full mt-4"
+        onClick={() => void navigate('/knowledge-map')}
+      >
+        Start Smart Review Session
+        <ArrowRight className="size-3.5 ml-1" aria-hidden="true" />
+      </Button>
     </div>
   )
 }

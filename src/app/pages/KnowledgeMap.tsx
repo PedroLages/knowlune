@@ -10,10 +10,11 @@ import { useEffect, useState, useCallback } from 'react'
 import { useKnowledgeMapStore } from '@/stores/useKnowledgeMapStore'
 import type { ScoredTopic } from '@/stores/useKnowledgeMapStore'
 import { TopicTreemap } from '@/app/components/knowledge/TopicTreemap'
-import type { TreemapDataItem } from '@/app/components/knowledge/TopicTreemap'
+import type { TreemapDataItem, TreemapCategoryData } from '@/app/components/knowledge/TopicTreemap'
 import { FocusAreasPanel } from '@/app/components/knowledge/FocusAreasPanel'
 import { SuggestedActionsPanel } from '@/app/components/knowledge/SuggestedActionsPanel'
 import { TopicDetailPopover } from '@/app/components/knowledge/TopicDetailPopover'
+import { TopicDetailPanel } from '@/app/components/knowledge/TopicDetailPanel'
 import { Badge } from '@/app/components/ui/badge'
 import { Card } from '@/app/components/ui/card'
 import { Progress } from '@/app/components/ui/progress'
@@ -35,8 +36,7 @@ export function KnowledgeMap() {
   const { topics, categories, focusAreas, suggestions, isLoading, error, computeScores } =
     useKnowledgeMapStore()
   const [selectedCategory, setSelectedCategory] = useState(ALL_CATEGORIES)
-  const [popoverTopic, setPopoverTopic] = useState<string | null>(null)
-  const [clickPos, setClickPos] = useState<{ x: number; y: number } | null>(null)
+  const [selectedTopicName, setSelectedTopicName] = useState<string | null>(null)
   const isMobile = useIsMobile()
 
   useEffect(() => {
@@ -48,7 +48,29 @@ export function KnowledgeMap() {
       ? topics
       : topics.filter(t => t.category === selectedCategory)
 
-  const treemapData: TreemapDataItem[] = filteredTopics.map(t => ({
+  // Build nested treemap data grouped by category (desktop) or flat (mobile data source)
+  const nestedTreemapData: TreemapCategoryData[] = (
+    selectedCategory === ALL_CATEGORIES ? categories : categories.filter(c => c.category === selectedCategory)
+  )
+    .map(cat => {
+      const catTopics = filteredTopics.filter(t => t.category === cat.category)
+      if (catTopics.length === 0) return null
+      return {
+        name: cat.category,
+        children: catTopics.map(t => ({
+          name: t.name,
+          size: Math.max(t.courseIds.length, 1),
+          score: t.scoreResult.score,
+          tier: t.scoreResult.tier,
+          aggregateRetention: t.aggregateRetention,
+          predictedDecayDate: t.predictedDecayDate,
+        })),
+      }
+    })
+    .filter((item): item is TreemapCategoryData => item !== null)
+
+  // Also build flat data for fallback (single-category view with no children nesting needed)
+  const flatTreemapData: TreemapDataItem[] = filteredTopics.map(t => ({
     name: t.name,
     size: Math.max(t.courseIds.length, 1),
     score: t.scoreResult.score,
@@ -57,26 +79,21 @@ export function KnowledgeMap() {
     predictedDecayDate: t.predictedDecayDate,
   }))
 
+  // Use nested data when showing all categories, flat when filtered to one category
+  const treemapData =
+    selectedCategory === ALL_CATEGORIES ? nestedTreemapData : flatTreemapData
+
+  const selectedTopic = selectedTopicName
+    ? topics.find(t => t.name === selectedTopicName) ?? null
+    : null
+
   const categoryNames = [ALL_CATEGORIES, ...categories.map(c => c.category)]
 
   const handleCellClick = useCallback(
-    (name: string, event?: React.MouseEvent) => {
-      const topic = topics.find(t => t.name === name)
-      if (topic) {
-        if (event) {
-          const rect = (event.currentTarget as HTMLElement)
-            .closest('[data-treemap-container]')
-            ?.getBoundingClientRect()
-          if (rect) {
-            setClickPos({ x: event.clientX - rect.left, y: event.clientY - rect.top })
-          } else {
-            setClickPos({ x: event.clientX, y: event.clientY })
-          }
-        }
-        setPopoverTopic(prev => (prev === topic.canonicalName ? null : topic.canonicalName))
-      }
+    (name: string) => {
+      setSelectedTopicName(prev => (prev === name ? null : name))
     },
-    [topics]
+    []
   )
 
   if (isLoading) {
@@ -161,24 +178,13 @@ export function KnowledgeMap() {
                 .map(c => c.category)}
             />
           ) : (
-            <Card className="p-4">
-              {/* position:relative container so popover trigger is anchored to click position */}
-              <div
-                className="relative"
-                data-treemap-container
-                onClick={e => {
-                  // Capture position for popover anchor
-                  const rect = e.currentTarget.getBoundingClientRect()
-                  setClickPos({ x: e.clientX - rect.left, y: e.clientY - rect.top })
-                }}
-              >
+            <Card className="p-4 overflow-hidden">
+              <div className="relative">
                 <TopicTreemap data={treemapData} onCellClick={handleCellClick} />
-                {/* Popover trigger anchored at click position */}
-                {popoverTopic && clickPos && (
-                  <PopoverForTopic
-                    canonicalName={popoverTopic}
-                    anchorPos={clickPos}
-                    onClose={() => setPopoverTopic(null)}
+                {selectedTopic && (
+                  <TopicDetailPanel
+                    topic={selectedTopic}
+                    onClose={() => setSelectedTopicName(null)}
                   />
                 )}
               </div>
@@ -202,40 +208,6 @@ export function KnowledgeMap() {
         </div>
       </div>
     </div>
-  )
-}
-
-/**
- * Standalone popover that renders for a given topic.
- * Used when treemap cell is clicked on desktop.
- */
-function PopoverForTopic({
-  canonicalName,
-  anchorPos,
-  onClose,
-}: {
-  canonicalName: string
-  anchorPos: { x: number; y: number }
-  onClose: () => void
-}) {
-  const topic = useKnowledgeMapStore(s => s.getTopicByName(canonicalName))
-  if (!topic) return null
-
-  return (
-    <TopicDetailPopover topic={topic} open={true} onOpenChange={open => !open && onClose()}>
-      {/* Trigger span positioned at click coordinates to anchor the popover correctly */}
-      <span
-        // eslint-disable-next-line react-best-practices/no-inline-styles -- dynamic anchor position
-        style={{
-          position: 'absolute',
-          left: anchorPos.x,
-          top: anchorPos.y,
-          width: 1,
-          height: 1,
-          pointerEvents: 'none',
-        }}
-      />
-    </TopicDetailPopover>
   )
 }
 

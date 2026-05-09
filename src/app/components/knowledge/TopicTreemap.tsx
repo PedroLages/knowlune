@@ -24,9 +24,16 @@ export interface TreemapDataItem {
   [key: string]: unknown
 }
 
+/** Category-level wrapper for nested treemap — contains child topics */
+export interface TreemapCategoryData {
+  name: string
+  children: TreemapDataItem[]
+}
+
 interface TopicTreemapProps {
-  data: TreemapDataItem[]
-  /** Called when a treemap cell is clicked with the cell name */
+  /** Flat or nested data. Nested data renders category wrappers around topic cells. */
+  data: TreemapDataItem[] | TreemapCategoryData[]
+  /** Called when a topic cell (depth=2) is clicked with the cell name */
   onCellClick?: (name: string) => void
 }
 
@@ -202,8 +209,11 @@ const MAX_LABEL_LENGTH = 14
 
 /**
  * Custom cell renderer for Treemap.
- * Shows category/topic name + score when cell is large enough.
- * Supports click and keyboard interaction.
+ *
+ * Supports two-level nesting:
+ * - depth=1: Category wrapper — transparent fill with border, category name label, not clickable
+ * - depth=2: Topic cell — retention-gradient fill, name + score, clickable with keyboard support
+ * - Flat (no depth): Renders as topic cell (backward-compatible with widget usage)
  */
 function CustomCell(props: Record<string, unknown>) {
   const {
@@ -211,6 +221,7 @@ function CustomCell(props: Record<string, unknown>) {
     y,
     width,
     height,
+    depth,
     name,
     score,
     tier,
@@ -222,6 +233,7 @@ function CustomCell(props: Record<string, unknown>) {
     y: number
     width: number
     height: number
+    depth: number
     name: string
     score: number
     tier: KnowledgeTier
@@ -233,6 +245,45 @@ function CustomCell(props: Record<string, unknown>) {
   // Guard: Recharts passes root/parent nodes with undefined name — skip rendering them
   if (!name) return <g />
 
+  // ── Category wrapper (depth=1) ──────────────────────────────────────────
+  if (depth === 1) {
+    const showCategoryLabel = width > 80 && height > 30
+
+    return (
+      <g>
+        <rect
+          x={x}
+          y={y}
+          width={width}
+          height={height}
+          fill="transparent"
+          stroke="var(--border)"
+          strokeWidth={2}
+          strokeDasharray="6 3"
+          rx={8}
+          ry={8}
+        />
+        {showCategoryLabel && (
+          <text
+            x={x + 8}
+            y={y + 16}
+            pointerEvents="none"
+            style={{
+              fill: 'var(--muted-foreground)',
+              fontSize: 11,
+              fontWeight: 500,
+              letterSpacing: '0.05em',
+              textTransform: 'uppercase',
+            }}
+          >
+            {name}
+          </text>
+        )}
+      </g>
+    )
+  }
+
+  // ── Topic cell (depth=2 or flat) ────────────────────────────────────────
   // E62-S02: Use continuous gradient when retention is available, else discrete tier
   const fill = getRetentionColor(aggregateRetention, tier)
   const textFill = fill.startsWith('rgb') ? getTextColorForBg(fill) : getTierTextFill(tier)
@@ -337,18 +388,62 @@ function CustomCell(props: Record<string, unknown>) {
   )
 }
 
+/** Color legend for the treemap — shows the 3 knowledge tiers */
+function TreemapLegend() {
+  return (
+    <div
+      className="absolute bottom-3 right-3 flex items-center gap-3 rounded-lg border border-border bg-background/80 backdrop-blur-sm px-3 py-2 shadow-sm text-xs"
+      aria-label="Knowledge tier color legend"
+    >
+      <div className="flex items-center gap-1.5">
+        <div
+          className="size-2.5 rounded-full border border-success/50"
+          style={{ backgroundColor: 'var(--success)' }}
+        />
+        <span className="text-muted-foreground font-medium">Strong</span>
+      </div>
+      <div className="flex items-center gap-1.5">
+        <div
+          className="size-2.5 rounded-full border border-warning/50"
+          style={{ backgroundColor: 'var(--warning)' }}
+        />
+        <span className="text-muted-foreground font-medium">Fading</span>
+      </div>
+      <div className="flex items-center gap-1.5">
+        <div
+          className="size-2.5 rounded-full border border-destructive/50"
+          style={{ backgroundColor: 'var(--destructive)' }}
+        />
+        <span className="text-muted-foreground font-medium">Weak</span>
+      </div>
+    </div>
+  )
+}
+
 export function TopicTreemap({ data, onCellClick }: TopicTreemapProps) {
   if (data.length === 0) return null
 
+  // Inject onCellClick into every data item, including nested children
+  const enrichedData = data.map(item => {
+    const base = { ...item, onCellClick }
+    if ('children' in base && Array.isArray(base.children)) {
+      base.children = base.children.map(child => ({ ...child, onCellClick }))
+    }
+    return base
+  })
+
   return (
-    <ResponsiveContainer width="100%" minHeight={200} aspect={16 / 9}>
-      <Treemap
-        data={data.map(item => ({ ...item, onCellClick }))}
-        dataKey="size"
-        aspectRatio={4 / 3}
-        stroke="var(--border)"
-        content={<CustomCell />}
-      />
-    </ResponsiveContainer>
+    <div className="relative">
+      <ResponsiveContainer width="100%" minHeight={200} aspect={16 / 9}>
+        <Treemap
+          data={enrichedData}
+          dataKey="size"
+          aspectRatio={4 / 3}
+          stroke="var(--border)"
+          content={<CustomCell />}
+        />
+      </ResponsiveContainer>
+      <TreemapLegend />
+    </div>
   )
 }
