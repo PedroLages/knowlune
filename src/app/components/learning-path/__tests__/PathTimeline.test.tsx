@@ -29,7 +29,6 @@ function makeCourseInfo(overrides: Partial<PathCourseInfo> = {}): PathCourseInfo
 describe('PathTimeline', () => {
   const defaultProps = {
     courseInfoMap: new Map<string, PathCourseInfo>(),
-    thumbnailUrls: {} as Record<string, string>,
     gapEntries: [] as LearningPathEntry[],
     onGapResolve: vi.fn() as (resolution: GapResolution) => void,
     onCourseClick: vi.fn() as (courseId: string) => void,
@@ -151,5 +150,29 @@ describe('PathTimeline', () => {
     const entries = [makeEntry({ courseId: 'unknown' })]
     render(<PathTimeline {...defaultProps} entries={entries} />)
     expect(screen.getByText('Unknown Course')).toBeInTheDocument()
+  })
+
+  it('skipCourseId excludes the matching entry from rendering', () => {
+    const entries = [
+      makeEntry({ courseId: 'c1', position: 1 }),
+      makeEntry({ courseId: 'c2', position: 2 }),
+      makeEntry({ courseId: 'c3', position: 3 }),
+    ]
+    const infoMap = new Map([
+      ['c1', makeCourseInfo({ name: 'Course One' })],
+      ['c2', makeCourseInfo({ name: 'Course Two' })],
+      ['c3', makeCourseInfo({ name: 'Course Three' })],
+    ])
+    render(
+      <PathTimeline
+        {...defaultProps}
+        entries={entries}
+        courseInfoMap={infoMap}
+        skipCourseId="c2"
+      />
+    )
+    expect(screen.getByText('Course One')).toBeInTheDocument()
+    expect(screen.queryByText('Course Two')).not.toBeInTheDocument()
+    expect(screen.getByText('Course Three')).toBeInTheDocument()
   })
 })

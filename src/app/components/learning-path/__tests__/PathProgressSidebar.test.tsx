@@ -51,12 +51,12 @@ describe('PathProgressSidebar', () => {
 
   it('hides skills section when no tags provided', () => {
     render(<PathProgressSidebar progress={makeProgress()} />)
-    expect(screen.queryByText('Skills')).not.toBeInTheDocument()
+    expect(screen.queryByText("Skills you'll gain")).not.toBeInTheDocument()
   })
 
   it('hides skills section when empty tags array', () => {
     render(<PathProgressSidebar progress={makeProgress()} skillTags={[]} />)
-    expect(screen.queryByText('Skills')).not.toBeInTheDocument()
+    expect(screen.queryByText("Skills you'll gain")).not.toBeInTheDocument()
   })
 
   it('renders certificate card with trophy', () => {

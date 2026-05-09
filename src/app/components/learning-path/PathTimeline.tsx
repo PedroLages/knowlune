@@ -1,11 +1,11 @@
 import { useEffect, useRef, useMemo } from 'react'
 import { useReducedMotion } from 'motion/react'
-import { Check, Play, Lock, AlertCircle, Import, Search, Replace, PlayCircle, RotateCcw } from 'lucide-react'
+import { Check, Lock, AlertCircle, Import, Search, Replace, PlayCircle, RotateCcw, GripVertical } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
 import { Badge } from '@/app/components/ui/badge'
 import { Card, CardContent } from '@/app/components/ui/card'
 import { cn } from '@/app/components/ui/utils'
-import { CourseThumbnail } from '@/app/components/shared/CourseThumbnail'
+import { CourseTypeBadge } from '@/app/components/shared/CourseTypeBadge'
 import { extractGapSearchTerm, cleanGapJustification } from '@/data/learningPathUtils'
 import type { LearningPathEntry, PathCourseInfo } from '@/data/types'
 
@@ -18,13 +18,11 @@ export interface GapResolution {
 
 interface TimelineEntry extends LearningPathEntry {
   info?: PathCourseInfo
-  thumbnailUrl?: string
 }
 
 interface PathTimelineProps {
   entries: TimelineEntry[]
   courseInfoMap: Map<string, PathCourseInfo>
-  thumbnailUrls: Record<string, string>
   gapEntries: TimelineEntry[]
   onGapResolve: (resolution: GapResolution) => void
   onCourseClick: (courseId: string) => void
@@ -34,6 +32,8 @@ interface PathTimelineProps {
   loadingResolve?: Set<string>
   /** When true, renders cards without the timeline connector column */
   simplified?: boolean
+  /** Optional: exclude a specific entry from rendering (for dedup with ContinueLearningBento) */
+  skipCourseId?: string
   className?: string
 }
 
@@ -42,28 +42,43 @@ interface PathTimelineProps {
 /** Status circle on the timeline connector line */
 function StatusCircle({
   status,
+  simplified,
 }: {
   status: 'completed' | 'in-progress' | 'locked' | 'gap'
+  /** When true, renders a compact variant without border ring */
+  simplified?: boolean
 }) {
-  const baseClass =
-    'size-7 shrink-0 rounded-full flex items-center justify-center relative z-10'
+  const dotSize = simplified ? 'size-6' : 'size-8'
+  const borderRing = simplified ? '' : 'border-4 border-card'
+  const baseClass = cn(
+    dotSize,
+    'shrink-0 rounded-full flex items-center justify-center relative z-10',
+    borderRing
+  )
+  const iconSize = simplified ? 'size-3' : 'size-4'
 
   if (status === 'completed') {
     return (
       <div className={cn(baseClass, 'bg-success text-success-foreground')}>
-        <Check className="size-3.5" aria-hidden="true" />
+        <Check className={iconSize} aria-hidden="true" />
       </div>
     )
   }
 
   if (status === 'in-progress') {
     return (
-      <div className="relative flex items-center justify-center">
-        {/* Pulse ring */}
-        <div className="absolute inset-0 size-7 rounded-full ring-[3px] ring-brand-soft animate-pulse" />
-        <div className={cn(baseClass, 'bg-brand text-brand-foreground')}>
-          <Play className="size-3.5 fill-current" aria-hidden="true" />
-        </div>
+      <div
+        className={cn(
+          baseClass,
+          'bg-brand text-brand-foreground ring-4 ring-brand-soft'
+        )}
+      >
+        <div
+          className={cn(
+            'rounded-full bg-white animate-pulse',
+            simplified ? 'size-2' : 'size-2.5'
+          )}
+        />
       </div>
     )
   }
@@ -76,15 +91,20 @@ function StatusCircle({
           'bg-warning/20 text-warning border-2 border-dashed border-warning/50'
         )}
       >
-        <AlertCircle className="size-3.5" aria-hidden="true" />
+        <AlertCircle className={iconSize} aria-hidden="true" />
       </div>
     )
   }
 
   // Locked
   return (
-    <div className={cn(baseClass, 'bg-muted text-muted-foreground')}>
-      <Lock className="size-3.5" aria-hidden="true" />
+    <div className={cn(baseClass, 'bg-muted')}>
+      <div
+        className={cn(
+          'rounded-full bg-muted-foreground/60',
+          simplified ? 'size-2' : 'size-2.5'
+        )}
+      />
     </div>
   )
 }
@@ -110,13 +130,13 @@ function GapTimelineEntry({
       {!simplified && (
         <div className="flex flex-col items-center">
           <StatusCircle status="gap" />
-          <div className="w-[2px] flex-1 bg-gradient-to-b from-warning/50 to-warning/20" />
+          <div className="w-[2px] flex-1 bg-warning/40" />
         </div>
       )}
 
       {/* Content */}
       <div className={simplified ? 'flex-1 mb-4' : 'flex-1 pb-8'}>
-        <Card className="border-2 border-dashed border-warning/40 bg-warning/5">
+        <Card className="border-2 border-dashed border-warning/40 bg-warning/5 rounded-2xl">
           <CardContent className="p-4">
             <div className="flex items-start gap-4">
               <div className="flex-1 min-w-0">
@@ -227,7 +247,6 @@ function EntryActionButton({
 function CourseTimelineEntry({
   entry,
   info,
-  thumbUrl,
   isCompleted,
   isInProgress,
   index,
@@ -236,7 +255,6 @@ function CourseTimelineEntry({
 }: {
   entry: TimelineEntry
   info?: PathCourseInfo
-  thumbUrl?: string
   isCompleted: boolean
   isInProgress: boolean
   index: number
@@ -249,12 +267,19 @@ function CourseTimelineEntry({
   const statusLabel = isCompleted ? 'Completed' : isInProgress ? 'Up Next' : 'Locked'
 
   return (
-    <div className="flex gap-4" ref={entryRef}>
+    <div className="flex gap-3" ref={entryRef}>
       {/* Connector line column */}
       {!simplified && (
         <div className="flex flex-col items-center">
           <StatusCircle status={status} />
-          <div className="w-[2px] flex-1 bg-gradient-to-b from-brand/40 via-border to-border" />
+          <div className="w-[2px] flex-1 bg-border" />
+        </div>
+      )}
+
+      {/* Simplified mode: compact status dot */}
+      {simplified && (
+        <div className="flex-shrink-0 pt-1">
+          <StatusCircle status={status} simplified />
         </div>
       )}
 
@@ -262,9 +287,9 @@ function CourseTimelineEntry({
       <div className={simplified ? 'flex-1 min-w-0 mb-4' : 'flex-1 pb-8 min-w-0'}>
         <Card
           className={cn(
-            'cursor-pointer hover:shadow-md transition-all duration-200',
+            'rounded-2xl border hover:shadow-md transition-shadow duration-200 group cursor-pointer',
             isCompleted && 'border-success/20',
-            isInProgress && 'border-brand/20'
+            isInProgress && 'border-brand/20 ring-1 ring-brand/5'
           )}
           onClick={onClick}
           tabIndex={0}
@@ -277,52 +302,49 @@ function CourseTimelineEntry({
             }
           }}
         >
-          <CardContent className="p-5">
-            {/* Header: module number + status badge */}
-            <div className="flex items-center gap-3 mb-3">
-              <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest">
-                Module {index + 1}
-              </span>
-              <span
-                className={cn(
-                  'px-2 py-0.5 text-[10px] font-bold rounded-full uppercase tracking-wider inline-flex items-center gap-1',
-                  isCompleted && 'bg-success-soft text-success',
-                  isInProgress && 'bg-brand-soft text-brand-soft-foreground',
-                  !isCompleted && !isInProgress && 'bg-muted text-muted-foreground'
+          <CardContent className="p-6">
+            <div className="flex items-start gap-3">
+              {/* Drag handle (visual hint for reorderability) */}
+              <div className="flex-shrink-0 w-8 flex items-center justify-center self-stretch opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-muted-foreground/50">
+                <GripVertical className="size-4" aria-hidden="true" />
+              </div>
+
+              <div className="flex-1 min-w-0">
+                {/* Row 1: Module number + status badge */}
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest">
+                    Module {index + 1}
+                  </span>
+                  <span
+                    className={cn(
+                      'px-2 py-0.5 text-[10px] font-bold rounded-full uppercase tracking-wider inline-flex items-center gap-1',
+                      isCompleted && 'bg-success-soft text-success',
+                      isInProgress && 'bg-brand-soft text-brand-soft-foreground',
+                      !isCompleted && !isInProgress && 'bg-muted text-muted-foreground'
+                    )}
+                  >
+                    {isCompleted && <Check className="size-3" aria-hidden="true" />}
+                    {isInProgress && (
+                      <span className="size-1.5 rounded-full bg-brand-soft-foreground animate-pulse" />
+                    )}
+                    {statusLabel}
+                  </span>
+                </div>
+
+                {/* Row 2: Title */}
+                <h3 className="text-xl font-bold">{info?.name || 'Unknown Course'}</h3>
+
+                {/* Row 3: Metadata + Action */}
+                {!simplified && (
+                  <div className="flex items-center justify-between gap-4 mt-4">
+                    <div className="flex items-center gap-4 text-sm text-muted-foreground font-medium">
+                      <CourseTypeBadge courseType={entry.courseType} />
+                    </div>
+                    <EntryActionButton status={status} onClick={onClick} />
+                  </div>
                 )}
-              >
-                {isCompleted && <Check className="size-3" aria-hidden="true" />}
-                {isInProgress && (
-                  <span className="size-1.5 rounded-full bg-brand-soft-foreground animate-pulse" />
-                )}
-                {statusLabel}
-              </span>
+              </div>
             </div>
-
-            {/* Title */}
-            <h3 className="text-xl font-bold mb-1">{info?.name || 'Unknown Course'}</h3>
-
-            {/* Author */}
-            {info?.authorName && !simplified && (
-              <p className="text-sm text-muted-foreground mb-3">{info.authorName}</p>
-            )}
-
-            {/* Metadata row */}
-            {!simplified && (
-              <div className="flex items-center gap-6 text-sm text-muted-foreground font-medium mb-4">
-                <span className="inline-flex items-center gap-1.5">
-                  <CourseThumbnail url={thumbUrl} className="size-4 rounded" />
-                  <span>{entry.courseType === 'imported' ? 'Imported' : 'Catalog'}</span>
-                </span>
-              </div>
-            )}
-
-            {/* Action button */}
-            {!simplified && (
-              <div className="flex justify-end">
-                <EntryActionButton status={status} onClick={onClick} />
-              </div>
-            )}
           </CardContent>
         </Card>
       </div>
@@ -339,30 +361,36 @@ function CourseTimelineEntry({
 export function PathTimeline({
   entries,
   courseInfoMap,
-  thumbnailUrls,
   gapEntries,
   onGapResolve,
   onCourseClick,
   autoScrollToCurrent = true,
   loadingResolve,
   simplified,
+  skipCourseId,
   className,
 }: PathTimelineProps) {
   const gapEntryIds = useMemo(() => new Set(gapEntries.map(e => e.id)), [gapEntries])
+
+  // Filter out the skipped entry (used for dedup with ContinueLearningBento)
+  const filteredEntries = useMemo(
+    () => (skipCourseId ? entries.filter(e => e.courseId !== skipCourseId) : entries),
+    [entries, skipCourseId]
+  )
 
   // When no courses have any progress data, the first non-gap entry should
   // default to "in-progress" so the user sees a "Start Module" CTA rather
   // than all courses appearing as "Locked".
   const hasAnyProgress = useMemo(
-    () => entries.some(e => {
+    () => filteredEntries.some(e => {
       if (e.courseId === '' || gapEntryIds.has(e.id)) return false
       return (courseInfoMap.get(e.courseId)?.completionPct ?? 0) > 0
     }),
-    [entries, courseInfoMap, gapEntryIds]
+    [filteredEntries, courseInfoMap, gapEntryIds]
   )
   const firstNonGapIndex = useMemo(
-    () => entries.findIndex(e => e.courseId !== '' && !gapEntryIds.has(e.id)),
-    [entries, gapEntryIds]
+    () => filteredEntries.findIndex(e => e.courseId !== '' && !gapEntryIds.has(e.id)),
+    [filteredEntries, gapEntryIds]
   )
 
   const timelineRef = useRef<HTMLDivElement>(null)
@@ -370,9 +398,9 @@ export function PathTimeline({
 
   // Auto-scroll to the current in-progress entry on mount
   useEffect(() => {
-    if (!autoScrollToCurrent || entries.length === 0) return
+    if (!autoScrollToCurrent || filteredEntries.length === 0) return
 
-    const currentIndex = entries.findIndex(e => {
+    const currentIndex = filteredEntries.findIndex(e => {
       if (e.courseId === '' || gapEntryIds.has(e.id)) return false
       const info = courseInfoMap.get(e.courseId)
       const pct = info?.completionPct ?? 0
@@ -392,15 +420,15 @@ export function PathTimeline({
     }, 300)
 
     return () => clearTimeout(timer)
-  }, [autoScrollToCurrent, entries, courseInfoMap, gapEntryIds, prefersReducedMotion])
+  }, [autoScrollToCurrent, filteredEntries, courseInfoMap, gapEntryIds, prefersReducedMotion])
 
-  if (entries.length === 0) {
+  if (filteredEntries.length === 0) {
     return null
   }
 
   return (
     <div ref={timelineRef} className={cn('space-y-0', className)} role="list" aria-label="Timeline">
-      {entries.map((entry, i) => {
+      {filteredEntries.map((entry, i) => {
         // Gap entry — render with resolution actions
         if (entry.courseId === '' || gapEntryIds.has(entry.id)) {
           return (
@@ -416,7 +444,6 @@ export function PathTimeline({
         }
 
         const info = courseInfoMap.get(entry.courseId)
-        const thumbUrl = thumbnailUrls[entry.courseId]
         const isCompleted = (info?.completionPct ?? 0) >= 100
         const isInProgress =
           (!hasAnyProgress && i === firstNonGapIndex) ||
@@ -427,7 +454,6 @@ export function PathTimeline({
             <CourseTimelineEntry
               entry={entry}
               info={info}
-              thumbUrl={thumbUrl}
               isCompleted={isCompleted}
               isInProgress={isInProgress}
               index={i}

@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router'
 import { ControlCenter } from '@/app/components/learning-path/ControlCenter'
 import type { LearningPathEntry, PathCourseInfo } from '@/data/types'
@@ -112,9 +113,12 @@ describe('ControlCenter', () => {
     expect(screen.getByText('Intense')).toBeInTheDocument()
   })
 
-  it('renders AI course ordering toggle when available', () => {
+  it('renders AI course ordering toggle when available', async () => {
+    const user = userEvent.setup()
     renderWithRouter(<ControlCenter {...baseProps} entries={[makeEntry(), makeEntry()]} />)
     expect(screen.getByText('AI Course Ordering')).toBeInTheDocument()
+    // Open the collapsible to reveal the toggle
+    await user.click(screen.getByText('AI Course Ordering'))
     expect(screen.getByLabelText('Toggle AI course ordering')).toBeInTheDocument()
   })
 
@@ -134,8 +138,11 @@ describe('ControlCenter', () => {
     expect(screen.getByText('Explore More Paths')).toBeInTheDocument()
   })
 
-  it('renders Start focus session button when not completed', () => {
+  it('renders Start focus session button when not completed', async () => {
+    const user = userEvent.setup()
     renderWithRouter(<ControlCenter {...baseProps} />)
+    // Open the collapsible to reveal the focus session button
+    await user.click(screen.getByText('Focus Session'))
     expect(screen.getByText('Start focus session')).toBeInTheDocument()
   })
 
