@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+
+<html class="h-full bg-white" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Lumina - Learning Paths</title>
+<!-- Tailwind CSS v3 CDN -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            lumina: {
+              primary: '#0061C1',
+              sidebar: '#F8FAFC',
+              border: '#E2E8F0',
+              text: '#1E293B',
+              muted: '#64748B',
+            }
+          }
+        }
+      }
+    }
+  </script>
+<!-- Custom Styles for Specific Layout Adjustments -->
+<style data-purpose="layout-tweaks">
+    .sidebar-icon-active {
+      background-color: #ffffff;
+      box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+      color: #0061C1;
+    }
+    /* Smooth transition for circular progress */
+    .progress-ring__circle {
+      transition: stroke-dashoffset 0.35s;
+      transform: rotate(-90deg);
+      transform-origin: 50% 50%;
+    }
+  </style>
+</head>
+<body class="h-full font-sans text-lumina-text flex overflow-hidden">
+<!-- BEGIN: LeftSidebar -->
+<aside class="w-20 flex-shrink-0 border-r border-lumina-border bg-lumina-sidebar flex flex-col items-center py-6 gap-8">
+<!-- Logo -->
+<div class="mb-4">
+<svg fill="none" height="32" viewbox="0 0 32 32" width="32" xmlns="http://www.w3.org/2000/svg">
+<circle cx="16" cy="16" r="14" stroke="#0061C1" stroke-width="4"></circle>
+</svg>
+</div>
+<!-- Nav Icons -->
+<nav class="flex flex-col gap-6 flex-grow">
+<div class="p-2 cursor-pointer text-lumina-muted hover:text-lumina-primary"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg></div>
+<div class="p-2 cursor-pointer text-lumina-muted hover:text-lumina-primary"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg></div>
+<div class="p-3 sidebar-icon-active rounded-xl cursor-pointer"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M9 20l-5.447-2.724A2 2 0 012.447 15.553V7.447a2 2 0 011.106-1.789L9 3m0 17l6.553-3.276a2 2 0 001.106-1.789V5.447a2 2 0 00-1.106-1.789L9 7m0 13V7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg></div>
+<div class="p-2 cursor-pointer text-lumina-muted hover:text-lumina-primary"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg></div>
+<div class="p-2 cursor-pointer text-lumina-muted hover:text-lumina-primary"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg></div>
+<div class="p-2 cursor-pointer text-lumina-muted hover:text-lumina-primary"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg></div>
+<div class="p-2 cursor-pointer text-lumina-muted hover:text-lumina-primary"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg></div>
+</nav>
+<!-- Bottom Nav Icons -->
+<div class="flex flex-col gap-4">
+<div class="p-2 cursor-pointer text-lumina-muted hover:text-lumina-primary"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg></div>
+<div class="p-2 cursor-pointer text-lumina-muted hover:text-lumina-primary"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg></div>
+</div>
+</aside>
+<!-- END: LeftSidebar -->
+<!-- BEGIN: MainContentArea -->
+<main class="flex-grow flex flex-col h-full bg-white">
+<!-- BEGIN: TopHeader -->
+<header class="h-16 border-b border-lumina-border flex items-center justify-between px-8 bg-white z-10" data-purpose="header">
+<div class="flex-grow max-w-xl">
+<div class="relative group">
+<span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+<svg class="h-4 w-4 text-lumina-muted" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+</span>
+<input class="block w-full bg-slate-100 border-transparent rounded-lg pl-10 pr-3 py-1.5 text-sm placeholder-lumina-muted focus:outline-none focus:ring-1 focus:ring-lumina-primary focus:bg-white transition-all" placeholder="Search... ⌘ K" type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<div class="p-2 text-green-500 cursor-pointer">
+<svg class="w-6 h-6" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+</div>
+<div class="p-2 text-lumina-muted border border-lumina-border rounded-lg cursor-pointer">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m12.728 0l-.707-.707M6.343 6.343l-.707-.707M12 5a7 7 0 100 14 7 7 0 000-14z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+</div>
+<div class="relative p-2 text-lumina-muted cursor-pointer">
+<svg class="w-6 h-6" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+<span class="absolute top-2 right-2.5 block h-2 w-2 rounded-full bg-red-500 ring-2 ring-white"></span>
+</div>
+<div class="flex items-center gap-2 pl-4 border-l border-lumina-border cursor-pointer">
+<img alt="Pedro Lages" class="h-8 w-8 rounded-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAwdUtSozjysWut0sqZq49Rkyn3YZsRNUNykgMNN4zdU0bi7SCTVOSIlKmloows8W38yUkEYUhHSV_7QKUIpT_SDUF-uoG8fgScOjDX7Myuq2G667N5CJdPFxnm8qbFjI5bMAEOlz5rBdnixt68U72laM7N9JguqLWCA0YYGvBX-eGwwXsksGcckoF3sfLTsWSQ2VE_H6bvPQE4wxbxG3hBPiQ18D4XOSCs7lUV1OQrpRIgaIcnUKSsQq-ciiGpMGP4R-9iwCeSsN7D"/>
+<span class="text-sm font-semibold">Pedro Lages</span>
+<svg class="w-4 h-4 text-lumina-muted" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M19 9l-7 7-7-7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+</div>
+</div>
+</header>
+<!-- END: TopHeader -->
+<!-- BEGIN: ContentScrollable -->
+<div class="flex-grow overflow-y-auto p-8 lg:p-12">
+<!-- Title Section -->
+<div class="flex flex-col md:flex-row md:items-end justify-between mb-10 gap-6">
+<div>
+<h1 class="text-4xl font-bold tracking-tight text-slate-900">Learning Paths</h1>
+<p class="text-lumina-muted mt-2 text-lg">Organize courses into structured learning journeys</p>
+</div>
+<div class="flex items-center gap-3">
+<div class="relative w-64">
+<span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+<svg class="h-4 w-4 text-lumina-muted" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+</span>
+<input class="block w-full bg-slate-100 border-transparent rounded-lg pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-lumina-primary focus:bg-white" placeholder="Search paths..." type="text"/>
+</div>
+<button class="bg-lumina-primary text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2 hover:bg-blue-700 transition-colors shadow-sm">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M12 6v6m0 0v6m0-6h6m-6 0H6" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+            Create Path
+          </button>
+<button class="border border-lumina-primary text-lumina-primary px-4 py-2 rounded-lg font-medium flex items-center gap-2 hover:bg-blue-50 transition-colors">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+            Import Course
+          </button>
+</div>
+</div>
+<!-- BEGIN: GridContainer -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+<!-- BEGIN: DevOpsRoadmapCard -->
+<article class="bg-white border border-lumina-border rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow group" data-purpose="learning-path-card">
+<!-- Card Header / Banner -->
+<div class="h-32 bg-gradient-to-br from-indigo-500 to-purple-600 relative p-4">
+<div class="absolute top-4 right-4 bg-white/20 p-2 rounded-full cursor-pointer hover:bg-white/30 text-white">
+<svg class="w-5 h-5" fill="currentColor" viewbox="0 0 20 20"><path d="M6 10a2 2 0 11-4 0 2 2 0 014 0zM12 10a2 2 0 11-4 0 2 2 0 014 0zM16 12a2 2 0 100-4 2 2 0 000 4z"></path></svg>
+</div>
+</div>
+<!-- Card Content -->
+<div class="p-6 pt-12 relative">
+<!-- BEGIN: CircularProgress -->
+<div class="absolute left-6 bg-white rounded-full p-2 shadow-lg flex items-center justify-center w-20 h-20 -top-10">
+<div class="relative w-full h-full">
+<!-- SVG Progress Ring -->
+<svg class="w-full h-full" viewbox="0 0 100 100">
+<!-- Background Ring -->
+<circle class="text-slate-100" cx="50" cy="50" fill="transparent" r="42" stroke="currentColor" stroke-width="8"></circle>
+<!-- Progress Path (1%) -->
+<circle class="progress-ring__circle text-lumina-primary" cx="50" cy="50" fill="transparent" r="42" stroke="currentColor" stroke-dasharray="263.89" stroke-dashoffset="261.25" stroke-linecap="round" stroke-width="8"></circle>
+</svg>
+<!-- Percentage Text -->
+<div class="absolute inset-0 flex flex-col items-center justify-center">
+<span class="text-xl font-bold text-slate-800">1%</span>
+</div>
+</div>
+</div>
+<!-- END: CircularProgress -->
+<div class="mt-4">
+<span class="inline-block px-3 py-1 bg-slate-100 text-lumina-muted text-xs font-semibold rounded-full mb-3 uppercase tracking-wider">4 Courses</span>
+<h3 class="text-xl font-bold text-slate-800 mb-2">DevOps Roadmap</h3><p class="text-sm text-lumina-muted font-medium mb-6 leading-relaxed">Master the tools and practices for modern infrastructure, CI/CD pipelines, and cloud-native deployments.</p>
+<hr class="border-lumina-border mb-6"/>
+<div class="flex items-center justify-between">
+<!-- Avatars -->
+<div class="flex -space-x-3 overflow-hidden">
+<img alt="User 1" class="inline-block h-8 w-8 rounded-full ring-2 ring-white" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBi3EHuUwoTPathgVFuWTMHSVxrrCMfoViyTH8nEyMBkBsa1lomp3mrGgW7zFshw2hYQPFo7vAR2IMBAXvbyBqmU2B9mpmfXZVqjCmzAiffs5aZWJnMLoO1YIA8aH8sRUqfWFHH3VKM8Z34TszTMcDS-S3Lsr-gNzEtpmnQD9opoUvHW8-HOtzpgenAD4PTutFQjJiVIqGF9ShhFjK2VGlcWwIwaupCiLcW6jWKVjMNtUpq527Be2271xZOJR3QT11CXMgeIZ6dkR4w"/>
+<img alt="User 2" class="inline-block h-8 w-8 rounded-full ring-2 ring-white" src="https://lh3.googleusercontent.com/aida-public/AB6AXuByVXI3iZxQfMBbqCQW-w4cliZo-A_SFJd9i-hXbRNZ4algGDKTDuzEeKQsoom_xT_qGBox8LRaX4D1KqTtTBoRKbEU-DqxrQYmSupG2m6HfGyWiUlD-8mtJX-wgYWCkHemd6VgYpArbGzdK22-jLBPvnoMXG55mWTk4cbtWhDigDMk5vi7fopa7TqlhZGnhC017KcdkAkH5KRDhvabRpeag3BiR7-feqhJq6gCIvGimHjKD4ZTIIa9t4nvxl8KGmLU18MTvepLEcTO"/>
+<img alt="User 3" class="inline-block h-8 w-8 rounded-full ring-2 ring-white" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAbH-oa6iUFuNzqwOXSNYWqzI6sYtQSlfkX_hTDSQD8pbaYarBXYNlB0CQVHpUjxwa852NdzO6F3ibDcctIizvdKJRvr5dtlP2mltxscNKxgUMzL1qf6Q3uGQR9mAh7ej16zkrEkmeQUr7rDK4j37UniZQ35r-THs7uN2WLejvvxUtWtrRrw99EYfFAeY4QG6ylNN4HY0QQaPX_8YW4pHHa41LEqkqNQRHzzqqCGBhx3PSjfntpv7JPOxYQgMfbEEUIlrOKGWP0T3he"/>
+<div class="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-[10px] font-bold text-slate-600 ring-2 ring-white">
+                    +1
+                  </div>
+</div>
+<!-- Continue Button -->
+<button class="bg-lumina-primary hover:bg-blue-700 text-white px-6 py-2 rounded-xl text-sm font-bold flex items-center gap-2 transition-all group-hover:px-7">
+                  Continue
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M14 5l7 7m0 0l-7 7m7-7H3" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+</button>
+</div>
+</div>
+</div>
+</article>
+<!-- END: DevOpsRoadmapCard -->
+<!-- Repeatable Placeholder Cards for layout visual (Empty shells) -->
+<div class="bg-slate-50 border border-dashed border-slate-200 rounded-2xl h-[400px] flex flex-col items-center justify-center text-slate-300">
+<svg class="w-12 h-12 mb-2" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M12 6v6m0 0v6m0-6h6m-6 0H6" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"></path></svg>
+<span class="text-sm">Empty Slot</span>
+</div>
+<div class="bg-slate-50 border border-dashed border-slate-200 rounded-2xl h-[400px] hidden lg:flex flex-col items-center justify-center text-slate-300">
+<svg class="w-12 h-12 mb-2" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M12 6v6m0 0v6m0-6h6m-6 0H6" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"></path></svg>
+<span class="text-sm">Empty Slot</span>
+</div>
+<div class="bg-slate-50 border border-dashed border-slate-200 rounded-2xl h-[400px] hidden xl:flex flex-col items-center justify-center text-slate-300">
+<svg class="w-12 h-12 mb-2" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M12 6v6m0 0v6m0-6h6m-6 0H6" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"></path></svg>
+<span class="text-sm">Empty Slot</span>
+</div>
+</div>
+<!-- END: GridContainer -->
+</div>
+<!-- END: ContentScrollable -->
+</main>
+<!-- END: MainContentArea -->
+</body></html>

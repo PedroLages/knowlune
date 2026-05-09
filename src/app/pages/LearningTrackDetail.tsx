@@ -17,7 +17,7 @@ import { usePathProgress } from '@/app/hooks/usePathProgress'
 import { useLoadCourseThumbnails } from '@/app/hooks/useLoadCourseThumbnails'
 import { staggerContainer, fadeUp } from '@/lib/motion'
 import { toast } from 'sonner'
-import type { LearningPathEntry, PathCourseInfo } from '@/data/types'
+import type { PathCourseInfo } from '@/data/types'
 
 export function LearningTrackDetail() {
   const { trackId } = useParams<{ trackId: string }>()
