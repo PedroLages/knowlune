@@ -255,6 +255,23 @@ export function LearningTrackDetail() {
     return inProgress && inProgress !== '' ? inProgress : null
   }, [currentEntry])
 
+  // Compute the first incomplete lesson for the CTA course
+  const targetLessonId = useMemo(() => {
+    const ctaCourseId = currentCourseId ?? firstCourseId
+    if (!ctaCourseId) return undefined
+
+    const videos = videosByCourse.get(ctaCourseId)
+    if (!videos || videos.length === 0) return undefined
+
+    const sortedVideos = [...videos].sort((a, b) => a.order - b.order)
+    const firstIncomplete = sortedVideos.find(v => {
+      const prog = videoProgressMap.get(v.id)
+      return (prog?.completionPercentage ?? 0) < 90
+    })
+
+    return firstIncomplete?.id ?? sortedVideos[0]?.id
+  }, [currentCourseId, firstCourseId, videosByCourse, videoProgressMap])
+
   // Check prefers-reduced-motion
   const prefersReducedMotion = useReducedMotion()
   const shouldAnimate = !prefersReducedMotion
@@ -341,6 +358,7 @@ export function LearningTrackDetail() {
           thumbnailUrls={thumbnailUrls}
           currentCourseId={currentCourseId}
           firstCourseId={firstCourseId}
+          targetLessonId={targetLessonId}
           backUrl="/learning-tracks"
           backLabel="Back to Learning Tracks"
         />
@@ -412,7 +430,14 @@ export function LearningTrackDetail() {
 
               {/* Right Column (1/3): Progress Sidebar */}
               <aside className="lg:col-span-1 space-y-6">
-                <PathProgressSidebar progress={pathProgress} />
+                <PathProgressSidebar
+                  progress={pathProgress}
+                  difficultyLabel={path.difficultyLabel}
+                  estimatedHours={path.estimatedHours}
+                  courseCount={courseEntries.length}
+                  createdAt={path.createdAt}
+                  updatedAt={path.updatedAt}
+                />
               </aside>
             </div>
           ) : (

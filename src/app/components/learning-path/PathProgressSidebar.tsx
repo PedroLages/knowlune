@@ -1,4 +1,4 @@
-import { Clock, BookOpen } from 'lucide-react'
+import { Clock, BookOpen, BarChart3, Calendar, Pencil } from 'lucide-react'
 import { Card, CardContent } from '@/app/components/ui/card'
 import { PathProgressRing } from '@/app/components/figma/PathProgressRing'
 import { cn } from '@/app/components/ui/utils'
@@ -8,12 +8,31 @@ interface PathProgressSidebarProps {
   progress: PathProgressSummary
   skillTags?: string[]
   className?: string
+  /** Track metadata (optional — for backward compat with learning paths) */
+  difficultyLabel?: string
+  estimatedHours?: number
+  courseCount?: number
+  createdAt?: string
+  updatedAt?: string
+}
+
+function formatDate(iso: string): string {
+  return new Intl.DateTimeFormat('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  }).format(new Date(iso))
 }
 
 export function PathProgressSidebar({
   progress,
   skillTags,
   className,
+  difficultyLabel,
+  estimatedHours,
+  courseCount,
+  createdAt,
+  updatedAt,
 }: PathProgressSidebarProps) {
   const { completionPct, completedCourses, totalCourses, estimatedRemainingHours } = progress
 
@@ -22,7 +41,7 @@ export function PathProgressSidebar({
     estimatedRemainingHours > 0 ? `~${estimatedRemainingHours}h` : '0h'
 
   return (
-    <aside className={cn('sticky top-24 space-y-6', className)}>
+    <aside className={cn('space-y-6', className)}>
       {/* Progress card */}
       <Card className="rounded-2xl shadow-lg border border-border">
         <CardContent className="p-6">
@@ -86,6 +105,59 @@ export function PathProgressSidebar({
       </Card>
 
       {/* Certificate card removed — see R9 */}
+      {/* Track metadata card (only when props are provided) */}
+      {(difficultyLabel || estimatedHours != null || courseCount != null || createdAt || updatedAt) && (
+        <Card className="rounded-2xl border border-border">
+          <CardContent className="p-5">
+            <h3 className="font-display text-sm font-bold mb-4">Track Info</h3>
+            <div className="space-y-2.5 text-sm">
+              {difficultyLabel && (
+                <div className="flex items-center gap-2.5">
+                  <BarChart3 className="size-4 text-brand flex-shrink-0" aria-hidden="true" />
+                  <span className="text-muted-foreground">Difficulty</span>
+                  <span className="ml-auto font-medium text-foreground">{difficultyLabel}</span>
+                </div>
+              )}
+              {estimatedHours != null && estimatedHours > 0 && (
+                <div className="flex items-center gap-2.5">
+                  <Clock className="size-4 text-brand flex-shrink-0" aria-hidden="true" />
+                  <span className="text-muted-foreground">Est. Hours</span>
+                  <span className="ml-auto font-medium text-foreground tabular-nums">
+                    ~{estimatedHours}h
+                  </span>
+                </div>
+              )}
+              {courseCount != null && (
+                <div className="flex items-center gap-2.5">
+                  <BookOpen className="size-4 text-brand flex-shrink-0" aria-hidden="true" />
+                  <span className="text-muted-foreground">Courses</span>
+                  <span className="ml-auto font-medium text-foreground tabular-nums">
+                    {courseCount}
+                  </span>
+                </div>
+              )}
+              {createdAt && (
+                <div className="flex items-center gap-2.5">
+                  <Calendar className="size-4 text-brand flex-shrink-0" aria-hidden="true" />
+                  <span className="text-muted-foreground">Created</span>
+                  <span className="ml-auto font-medium text-foreground">
+                    {formatDate(createdAt)}
+                  </span>
+                </div>
+              )}
+              {updatedAt && updatedAt !== createdAt && (
+                <div className="flex items-center gap-2.5">
+                  <Pencil className="size-4 text-brand flex-shrink-0" aria-hidden="true" />
+                  <span className="text-muted-foreground">Updated</span>
+                  <span className="ml-auto font-medium text-foreground">
+                    {formatDate(updatedAt)}
+                  </span>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </aside>
   )
 }

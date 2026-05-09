@@ -223,7 +223,7 @@ describe('PathTimeline', () => {
     expect(screen.queryByText(/lessons/)).toBeNull()
   })
 
-  it('up-next module expands by default showing lesson rows', () => {
+  it('up-next module shows lesson rows when expanded', () => {
     const entries = [makeEntry({ courseId: 'c1' })]
     const infoMap = new Map([
       ['c1', makeCourseInfo({ completionPct: 45, videoCount: 2 })],
@@ -247,7 +247,9 @@ describe('PathTimeline', () => {
         />
       </MemoryRouter>
     )
-    // Lesson rows should be visible (expanded by default for in-progress)
+    // Modules start collapsed — lesson rows not visible until expanded
+    expect(screen.queryByText('Intro')).toBeNull()
+    fireEvent.click(screen.getByText('Test Course'))
     expect(screen.getByText('Intro')).toBeInTheDocument()
     expect(screen.getByText('Setup')).toBeInTheDocument()
   })
@@ -296,6 +298,8 @@ describe('PathTimeline', () => {
         />
       </MemoryRouter>
     )
+    // Expand the module first
+    fireEvent.click(screen.getByText('Test Course'))
     expect(screen.getByText('Module A')).toBeInTheDocument()
     expect(screen.getByText('Module B')).toBeInTheDocument()
   })
@@ -326,6 +330,8 @@ describe('PathTimeline', () => {
         />
       </MemoryRouter>
     )
+    // Expand the module first
+    fireEvent.click(screen.getByText('Test Course'))
     expect(screen.queryByRole('heading', { level: 4 })).not.toBeInTheDocument()
     expect(screen.getByText('solo')).toBeInTheDocument()
   })

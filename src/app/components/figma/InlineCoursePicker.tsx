@@ -1,5 +1,24 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
-import { Search, BookOpen, Plus, Sparkles } from 'lucide-react'
+import { Search, BookOpen, Plus, Sparkles, GripVertical, CheckCircle2 } from 'lucide-react'
+import {
+  DndContext,
+  DragOverlay,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+  type DragStartEvent,
+} from '@dnd-kit/core'
+import {
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+  useSortable,
+  arrayMove,
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 import { Input } from '@/app/components/ui/input'
 import { Button } from '@/app/components/ui/button'
 import { Badge } from '@/app/components/ui/badge'
@@ -120,22 +139,14 @@ function CourseRow({
   course,
   isSelected,
   mode,
-  selectedIndex,
-  totalSelected,
   onToggle,
   onAdd,
-  onMoveUp,
-  onMoveDown,
 }: {
   course: CoursePickerItem
   isSelected: boolean
   mode: 'multiSelect' | 'singleSelect'
-  selectedIndex: number
-  totalSelected: number
   onToggle: (courseId: string) => void
   onAdd: (courseId: string, courseType: 'imported' | 'catalog') => void
-  onMoveUp: (index: number) => void
-  onMoveDown: (index: number) => void
 }) {
   return (
     <div
@@ -167,20 +178,6 @@ function CourseRow({
           <CourseTypeBadge courseType={course.type} />
         </div>
       </div>
-
-      {/* Reorder buttons (multi-select, only for selected items) */}
-      {mode === 'multiSelect' && isSelected && (
-        <MoveUpDownButtons
-          index={selectedIndex}
-          total={totalSelected}
-          itemLabel={course.name}
-          onMoveUp={() => onMoveUp(selectedIndex)}
-          onMoveDown={() => onMoveDown(selectedIndex)}
-          orientation="horizontal"
-          size="sm"
-          data-testid={`reorder-${course.id}`}
-        />
-      )}
 
       {/* Action button */}
       {mode === 'multiSelect' ? (
@@ -248,6 +245,110 @@ function SectionHeader({ children, count }: { children: React.ReactNode; count?:
   )
 }
 
+// --- Sortable Selected Course Row (DnD) ---
+
+function SortableCourseRow({
+  course,
+  position,
+  index,
+  total,
+  onToggle,
+  onMoveUp,
+  onMoveDown,
+}: {
+  course: CoursePickerItem
+  position: number
+  index: number
+  total: number
+  onToggle: (courseId: string) => void
+  onMoveUp: (index: number) => void
+  onMoveDown: (index: number) => void
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: course.id,
+  })
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  }
+
+  return (
+    <div
+      ref={setNodeRef}
+      // eslint-disable-next-line react-best-practices/no-inline-styles -- dynamic dnd-kit value
+      style={style}
+      {...attributes}
+      className={cn(
+        'flex items-center gap-3 p-3 rounded-lg border border-brand bg-brand-soft/30',
+        isDragging && 'opacity-50 shadow-lg z-10'
+      )}
+      data-testid={`selected-course-row-${course.id}`}
+    >
+      {/* Drag handle */}
+      <button
+        className="cursor-grab touch-manipulation rounded p-1 text-muted-foreground hover:text-foreground active:cursor-grabbing"
+        aria-label={`Drag to reorder ${course.name}`}
+        data-testid={`drag-handle-${course.id}`}
+        {...listeners}
+      >
+        <GripVertical className="size-4" aria-hidden="true" />
+      </button>
+
+      {/* Numbered position badge */}
+      <span
+        className="flex size-6 shrink-0 items-center justify-center rounded-md bg-muted text-xs font-medium text-muted-foreground tabular-nums"
+        aria-label={`Position ${position}`}
+      >
+        {position}
+      </span>
+
+      {/* Thumbnail */}
+      <div className="size-8 shrink-0 rounded-md bg-muted overflow-hidden">
+        {course.thumbnailUrl ? (
+          <img src={course.thumbnailUrl} alt="" className="size-full object-cover" loading="lazy" />
+        ) : (
+          <div className="size-full flex items-center justify-center">
+            <BookOpen className="size-3.5 text-muted-foreground" aria-hidden="true" />
+          </div>
+        )}
+      </div>
+
+      {/* Info */}
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-medium truncate">{course.name}</p>
+        <div className="flex items-center gap-2 mt-0.5">
+          {course.authorName && (
+            <span className="text-xs text-muted-foreground truncate">{course.authorName}</span>
+          )}
+          <CourseTypeBadge courseType={course.type} />
+        </div>
+      </div>
+
+      {/* Deselect button */}
+      <button
+        onClick={() => onToggle(course.id)}
+        className="shrink-0 size-6 rounded border-2 border-brand bg-brand flex items-center justify-center"
+        aria-label={`Deselect ${course.name}`}
+      >
+        <CheckCircle2 className="size-4 text-brand-foreground" aria-hidden="true" />
+      </button>
+
+      {/* Keyboard reorder buttons (WCAG 2.5.7) */}
+      <MoveUpDownButtons
+        index={index}
+        total={total}
+        itemLabel={course.name}
+        onMoveUp={() => onMoveUp(index)}
+        onMoveDown={() => onMoveDown(index)}
+        orientation="horizontal"
+        size="sm"
+        data-testid={`reorder-${course.id}`}
+      />
+    </div>
+  )
+}
+
 // --- Main Component ---
 
 export function InlineCoursePicker({
@@ -269,6 +370,14 @@ export function InlineCoursePicker({
   const { authors } = useAuthorStore()
   const entries = useLearningPathStore(s => s.entries)
   const [search, setSearch] = useState('')
+
+  // Drag-and-drop sensors (follow VideoReorderList pattern)
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  )
+
+  const [dragActiveId, setDragActiveId] = useState<string | null>(null)
 
   // Reset search on mount
   useEffect(() => {
@@ -326,6 +435,37 @@ export function InlineCoursePicker({
   )
 
   const hasCourses = allCourses.length > 0
+
+  // Lookup selected CoursePickerItem objects (for the "Selected Courses" DnD section)
+  const selectedCourses = useMemo(() => {
+    return selectedCourseIds
+      .map(id => allCourses.find(c => c.id === id))
+      .filter((c): c is CoursePickerItem => c !== undefined)
+  }, [selectedCourseIds, allCourses])
+
+  // Drag handlers
+  const handleDragStart = useCallback((event: DragStartEvent) => {
+    setDragActiveId(String(event.active.id))
+  }, [])
+
+  const handleDragEnd = useCallback(
+    (event: DragEndEvent) => {
+      const { active, over } = event
+      setDragActiveId(null)
+
+      if (!over || active.id === over.id || !onSelectionChange) return
+
+      const oldIndex = selectedCourseIds.indexOf(String(active.id))
+      const newIndex = selectedCourseIds.indexOf(String(over.id))
+      if (oldIndex === -1 || newIndex === -1) return
+
+      onSelectionChange(arrayMove(selectedCourseIds, oldIndex, newIndex))
+    },
+    [selectedCourseIds, onSelectionChange]
+  )
+
+  const dragActiveCourse = dragActiveId ? selectedCourses.find(c => c.id === dragActiveId) : null
+  const dragActivePosition = dragActiveId ? selectedCourseIds.indexOf(dragActiveId) + 1 : 0
 
   // Selection state
   const handleToggle = useCallback(
@@ -440,6 +580,52 @@ export function InlineCoursePicker({
         </div>
       )}
 
+      {/* Selected Courses reorderable section (multi-select, DnD) */}
+      {mode === 'multiSelect' && selectedCourseIds.length > 0 && (
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
+        >
+          <div data-testid="selected-courses-section">
+            <SectionHeader>Selected Courses</SectionHeader>
+            <SortableContext
+              items={selectedCourseIds}
+              strategy={verticalListSortingStrategy}
+            >
+              <div className="space-y-1">
+                {selectedCourses.map((course, index) => (
+                  <SortableCourseRow
+                    key={course.id}
+                    course={course}
+                    position={index + 1}
+                    index={index}
+                    total={selectedCourseIds.length}
+                    onToggle={handleToggle}
+                    onMoveUp={handleMoveUp}
+                    onMoveDown={handleMoveDown}
+                  />
+                ))}
+              </div>
+            </SortableContext>
+          </div>
+
+          <DragOverlay>
+            {dragActiveCourse ? (
+              <div className="flex items-center gap-3 rounded-lg border border-brand bg-card px-3 py-2.5 shadow-xl">
+                <GripVertical className="size-4 text-muted-foreground" aria-hidden="true" />
+                <span className="flex size-6 shrink-0 items-center justify-center rounded-md bg-muted text-xs font-medium text-muted-foreground tabular-nums">
+                  {dragActivePosition}
+                </span>
+                <BookOpen className="size-4 text-brand" aria-hidden="true" />
+                <span className="flex-1 truncate text-sm font-medium">{dragActiveCourse.name}</span>
+              </div>
+            ) : null}
+          </DragOverlay>
+        </DndContext>
+      )}
+
       {/* Scrollable course list */}
       <div
         className="space-y-1 overflow-y-auto"
@@ -473,12 +659,8 @@ export function InlineCoursePicker({
                     course={course}
                     isSelected={selectedCourseIds.includes(course.id)}
                     mode={mode}
-                    selectedIndex={selectedCourseIds.indexOf(course.id)}
-                    totalSelected={selectedCourseIds.length}
                     onToggle={handleToggle}
                     onAdd={handleAdd}
-                    onMoveUp={handleMoveUp}
-                    onMoveDown={handleMoveDown}
                   />
                 ))}
               </div>
@@ -499,12 +681,8 @@ export function InlineCoursePicker({
                     course={course}
                     isSelected={selectedCourseIds.includes(course.id)}
                     mode={mode}
-                    selectedIndex={selectedCourseIds.indexOf(course.id)}
-                    totalSelected={selectedCourseIds.length}
                     onToggle={handleToggle}
                     onAdd={handleAdd}
-                    onMoveUp={handleMoveUp}
-                    onMoveDown={handleMoveDown}
                   />
                 ))}
               </div>
