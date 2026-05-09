@@ -218,17 +218,30 @@ export function LearningTrackDetail() {
         toast.success('Module completion undone')
       } else {
         markComplete(entryId)
-        toast.success('Module marked as complete', {
+        const toastId = toast.success('Module marked as complete', {
           action: {
             label: 'Undo',
             onClick: () => undoComplete(entryId),
           },
           duration: 5000,
         })
+        // Dismiss the undo toast when navigating away so the stale closure
+        // doesn't reference an unmounted component's undoComplete
+        activeToastRef.current = toastId
       }
     },
     [manuallyCompletedIds, markComplete, undoComplete]
   )
+
+  // Dismiss any active undo toast on unmount to prevent stale closures
+  const activeToastRef = useRef<string | number | null>(null)
+  useEffect(() => {
+    return () => {
+      if (activeToastRef.current !== null) {
+        toast.dismiss(activeToastRef.current)
+      }
+    }
+  }, [])
 
   // Build course info lookup — uses real progress data
   const courseInfo = useMemo(() => {

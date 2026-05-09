@@ -482,7 +482,7 @@ function CourseTimelineEntry({
       {/* Content */}
       <div className={simplified ? 'flex-1 min-w-0 mb-4' : 'flex-1 pb-8 min-w-0'}>
         <motion.div
-          key={`${entry.courseId}-${isLocked ? 'locked' : 'unlocked'}-${isManuallyCompleted ? 'manual' : 'auto'}`}
+          key={`${entry.courseId}-${isLocked ? 'locked' : 'unlocked'}`}
           initial={
             shouldAnimate && justUnlocked ? { opacity: 0.8, scale: 0.97 } : false
           }
