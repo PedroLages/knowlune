@@ -59,12 +59,6 @@ describe('PathProgressSidebar', () => {
     expect(screen.queryByText("Skills you'll gain")).not.toBeInTheDocument()
   })
 
-  it('renders certificate card with trophy', () => {
-    render(<PathProgressSidebar progress={makeProgress()} />)
-    expect(screen.getByText('Earn a Certificate')).toBeInTheDocument()
-    expect(screen.getByText(/Complete all modules/)).toBeInTheDocument()
-  })
-
   it('progress ring has correct aria attributes', () => {
     render(<PathProgressSidebar progress={makeProgress({ completionPct: 75 })} />)
     const progressbar = screen.getByRole('progressbar')

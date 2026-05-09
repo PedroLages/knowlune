@@ -478,6 +478,9 @@ export interface PathCourseInfo {
   type: 'imported' | 'catalog'
   authorName?: string
   completionPct: number
+  description?: string
+  videoCount?: number
+  totalDuration?: number
 }
 
 // --- Reorder History (local-only personalization) ---

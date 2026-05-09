@@ -1,13 +1,15 @@
-import { useEffect, useRef, useMemo } from 'react'
+import { useEffect, useRef, useMemo, useState } from 'react'
 import { useReducedMotion } from 'motion/react'
-import { Check, Lock, AlertCircle, Import, Search, Replace, PlayCircle, RotateCcw, GripVertical } from 'lucide-react'
+import { Link } from 'react-router'
+import { Check, Lock, AlertCircle, Import, Search, Replace, PlayCircle, RotateCcw, GripVertical, ChevronDown, Video, Clock, CheckCircle2 } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
 import { Badge } from '@/app/components/ui/badge'
 import { Card, CardContent } from '@/app/components/ui/card'
 import { cn } from '@/app/components/ui/utils'
 import { CourseTypeBadge } from '@/app/components/shared/CourseTypeBadge'
 import { extractGapSearchTerm, cleanGapJustification } from '@/data/learningPathUtils'
-import type { LearningPathEntry, PathCourseInfo } from '@/data/types'
+import { formatDuration } from '@/lib/formatDuration'
+import type { LearningPathEntry, PathCourseInfo, ImportedVideo, VideoProgress } from '@/data/types'
 
 // ---- Types ----
 
@@ -34,6 +36,10 @@ interface PathTimelineProps {
   simplified?: boolean
   /** Optional: exclude a specific entry from rendering (for dedup with ContinueLearningBento) */
   skipCourseId?: string
+  /** Optional: videos grouped by course ID for accordion lesson rows */
+  videosByCourse?: Map<string, ImportedVideo[]>
+  /** Optional: video progress map for lesson completion status */
+  videoProgressMap?: Map<string, VideoProgress>
   className?: string
 }
 
@@ -96,16 +102,52 @@ function StatusCircle({
     )
   }
 
-  // Locked
+  // Locked — hollow outline circle with less visual weight
   return (
-    <div className={cn(baseClass, 'bg-muted')}>
+    <div className={cn(baseClass, 'bg-muted/30 border border-muted-foreground/30')}>
       <div
         className={cn(
-          'rounded-full bg-muted-foreground/60',
-          simplified ? 'size-2' : 'size-2.5'
+          'rounded-full bg-muted-foreground/30',
+          simplified ? 'size-1.5' : 'size-2'
         )}
       />
     </div>
+  )
+}
+
+/** Single lesson row within an expanded module accordion */
+function LessonRow({
+  video,
+  courseId,
+  isCompleted,
+}: {
+  video: ImportedVideo
+  courseId: string
+  isCompleted: boolean
+}) {
+  const displayName = video.filename.replace(/\.\w+$/, '')
+
+  return (
+    <Link
+      to={`/courses/${courseId}/lessons/${video.id}`}
+      className="flex items-center gap-3 px-4 py-2.5 min-h-[44px] rounded-xl transition-colors hover:bg-muted/50 group"
+    >
+      {isCompleted ? (
+        <CheckCircle2 className="size-5 text-success flex-shrink-0" aria-hidden="true" />
+      ) : (
+        <Video className="size-5 text-muted-foreground flex-shrink-0" aria-hidden="true" />
+      )}
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium truncate text-foreground/80 group-hover:text-foreground transition-colors">
+          {displayName}
+        </p>
+      </div>
+      {video.duration > 0 && (
+        <span className="text-xs text-muted-foreground tabular-nums flex-shrink-0">
+          {formatDuration(video.duration)}
+        </span>
+      )}
+    </Link>
   )
 }
 
@@ -252,6 +294,8 @@ function CourseTimelineEntry({
   index,
   onClick,
   simplified,
+  videos,
+  videoProgressMap,
 }: {
   entry: TimelineEntry
   info?: PathCourseInfo
@@ -260,11 +304,93 @@ function CourseTimelineEntry({
   index: number
   onClick: () => void
   simplified?: boolean
+  videos?: ImportedVideo[]
+  videoProgressMap?: Map<string, VideoProgress>
 }) {
+  const isLocked = !isCompleted && !isInProgress
   const status = isCompleted ? 'completed' : isInProgress ? 'in-progress' : 'locked'
-  const entryRef = useRef<HTMLDivElement>(null)
-
   const statusLabel = isCompleted ? 'Completed' : isInProgress ? 'Up Next' : 'Locked'
+  const entryRef = useRef<HTMLDivElement>(null)
+  const [isExpanded, setIsExpanded] = useState(isInProgress)
+
+  const videoCount = info?.videoCount ?? videos?.length ?? 0
+  const hasContent = info?.description || videoCount > 0 || (info?.totalDuration ?? 0) > 0 || (videos && videos.length > 0)
+
+  const renderCardContent = () => (
+    <div className="flex items-start gap-3">
+      {/* Drag handle (visual hint for reorderability) */}
+      <div className="flex-shrink-0 w-8 flex items-center justify-center self-stretch opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-muted-foreground/50">
+        <GripVertical className="size-4" aria-hidden="true" />
+      </div>
+
+      <div className="flex-1 min-w-0">
+        {/* Row 1: Module number + status badge */}
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest">
+            Module {index + 1}
+          </span>
+          <span
+            className={cn(
+              'px-2 py-0.5 text-[10px] font-bold rounded-full uppercase tracking-wider inline-flex items-center gap-1',
+              isCompleted && 'bg-success-soft text-success',
+              isInProgress && 'bg-brand-soft text-brand-soft-foreground',
+              isLocked && 'bg-muted text-muted-foreground'
+            )}
+          >
+            {isCompleted && <Check className="size-3" aria-hidden="true" />}
+            {isInProgress && (
+              <span className="size-1.5 rounded-full bg-brand-soft-foreground animate-pulse" />
+            )}
+            {isLocked && <Lock className="size-3" aria-hidden="true" />}
+            {statusLabel}
+          </span>
+        </div>
+
+        {/* Row 2: Title */}
+        <h3 className="text-xl font-bold">{info?.name || 'Unknown Course'}</h3>
+
+        {/* Row 3: Description (always visible) */}
+        {info?.description && (
+          <p className="text-sm text-muted-foreground mt-2 line-clamp-2">
+            {info.description}
+          </p>
+        )}
+
+        {/* Row 4: Stats + Action button */}
+        {!simplified && (
+          <div className="flex items-center justify-between gap-4 mt-4">
+            <div className="flex items-center gap-4 text-sm text-muted-foreground font-medium">
+              <CourseTypeBadge courseType={entry.courseType} />
+              {videoCount > 0 && (
+                <span className="flex items-center gap-1.5">
+                  <Video className="size-4" aria-hidden="true" />
+                  {videoCount} {videoCount === 1 ? 'lesson' : 'lessons'}
+                </span>
+              )}
+              {(info?.totalDuration ?? 0) > 0 && (
+                <span className="flex items-center gap-1.5">
+                  <Clock className="size-4" aria-hidden="true" />
+                  {formatDuration(info!.totalDuration!)}
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-3">
+              <EntryActionButton status={status} onClick={onClick} />
+              {hasContent && !isLocked && (
+                <ChevronDown
+                  className={cn(
+                    'size-5 text-muted-foreground transition-transform duration-200 flex-shrink-0',
+                    isExpanded && 'rotate-180'
+                  )}
+                  aria-hidden="true"
+                />
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  )
 
   return (
     <div className="flex gap-3" ref={entryRef}>
@@ -287,65 +413,47 @@ function CourseTimelineEntry({
       <div className={simplified ? 'flex-1 min-w-0 mb-4' : 'flex-1 pb-8 min-w-0'}>
         <Card
           className={cn(
-            'rounded-2xl border hover:shadow-md transition-shadow duration-200 group cursor-pointer',
+            'rounded-2xl border hover:shadow-md transition-shadow duration-200 group overflow-hidden',
             isCompleted && 'border-success/20',
-            isInProgress && 'border-brand/20 ring-1 ring-brand/5'
+            isInProgress && 'border-brand/20 ring-1 ring-brand/5',
+            isLocked && 'border-border/50 opacity-60 pointer-events-none'
           )}
-          onClick={onClick}
-          tabIndex={0}
-          role="button"
-          aria-label={`Module ${index + 1}: ${info?.name || 'Course'} — ${statusLabel}`}
-          onKeyDown={e => {
-            if (e.key === 'Enter' || e.key === ' ') {
-              e.preventDefault()
-              onClick()
-            }
-          }}
+          {...(isLocked
+            ? {}
+            : {
+                role: 'button',
+                tabIndex: 0,
+                'aria-label': `Module ${index + 1}: ${info?.name || 'Course'} — ${statusLabel}`,
+                onClick: () => setIsExpanded(!isExpanded),
+                onKeyDown: (e: React.KeyboardEvent) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault()
+                    setIsExpanded(!isExpanded)
+                  }
+                },
+              })}
         >
           <CardContent className="p-6">
-            <div className="flex items-start gap-3">
-              {/* Drag handle (visual hint for reorderability) */}
-              <div className="flex-shrink-0 w-8 flex items-center justify-center self-stretch opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-muted-foreground/50">
-                <GripVertical className="size-4" aria-hidden="true" />
-              </div>
-
-              <div className="flex-1 min-w-0">
-                {/* Row 1: Module number + status badge */}
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest">
-                    Module {index + 1}
-                  </span>
-                  <span
-                    className={cn(
-                      'px-2 py-0.5 text-[10px] font-bold rounded-full uppercase tracking-wider inline-flex items-center gap-1',
-                      isCompleted && 'bg-success-soft text-success',
-                      isInProgress && 'bg-brand-soft text-brand-soft-foreground',
-                      !isCompleted && !isInProgress && 'bg-muted text-muted-foreground'
-                    )}
-                  >
-                    {isCompleted && <Check className="size-3" aria-hidden="true" />}
-                    {isInProgress && (
-                      <span className="size-1.5 rounded-full bg-brand-soft-foreground animate-pulse" />
-                    )}
-                    {statusLabel}
-                  </span>
-                </div>
-
-                {/* Row 2: Title */}
-                <h3 className="text-xl font-bold">{info?.name || 'Unknown Course'}</h3>
-
-                {/* Row 3: Metadata + Action */}
-                {!simplified && (
-                  <div className="flex items-center justify-between gap-4 mt-4">
-                    <div className="flex items-center gap-4 text-sm text-muted-foreground font-medium">
-                      <CourseTypeBadge courseType={entry.courseType} />
-                    </div>
-                    <EntryActionButton status={status} onClick={onClick} />
-                  </div>
-                )}
-              </div>
-            </div>
+            {renderCardContent()}
           </CardContent>
+
+          {/* Expanded content: lesson list (non-locked + expanded) */}
+          {!isLocked && isExpanded && videos && videos.length > 0 && (
+            <div className="border-t border-border px-6 pb-4 pt-3 space-y-1">
+              {videos.map(video => {
+                const prog = videoProgressMap?.get(video.id)
+                const isVideoCompleted = (prog?.completionPercentage ?? 0) >= 90
+                return (
+                  <LessonRow
+                    key={video.id}
+                    video={video}
+                    courseId={entry.courseId}
+                    isCompleted={isVideoCompleted}
+                  />
+                )
+              })}
+            </div>
+          )}
         </Card>
       </div>
     </div>
@@ -368,6 +476,8 @@ export function PathTimeline({
   loadingResolve,
   simplified,
   skipCourseId,
+  videosByCourse,
+  videoProgressMap,
   className,
 }: PathTimelineProps) {
   const gapEntryIds = useMemo(() => new Set(gapEntries.map(e => e.id)), [gapEntries])
@@ -459,6 +569,8 @@ export function PathTimeline({
               index={i}
               onClick={() => onCourseClick(entry.courseId)}
               simplified={simplified}
+              videos={videosByCourse?.get(entry.courseId)}
+              videoProgressMap={videoProgressMap}
             />
           </div>
         )

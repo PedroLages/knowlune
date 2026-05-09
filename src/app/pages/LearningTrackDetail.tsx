@@ -18,7 +18,8 @@ import { usePathProgress } from '@/app/hooks/usePathProgress'
 import { useLoadCourseThumbnails } from '@/app/hooks/useLoadCourseThumbnails'
 import { staggerContainer, fadeUp } from '@/lib/motion'
 import { toast } from 'sonner'
-import type { PathCourseInfo } from '@/data/types'
+import { db } from '@/db'
+import type { PathCourseInfo, ImportedVideo, VideoProgress } from '@/data/types'
 
 export function LearningTrackDetail() {
   const { trackId } = useParams<{ trackId: string }>()
@@ -29,6 +30,8 @@ export function LearningTrackDetail() {
   const { authors, loadAuthors } = useAuthorStore()
   const [isReady, setIsReady] = useState(false)
   const [loadError, setLoadError] = useState<string | null>(null)
+  const [videosByCourse, setVideosByCourse] = useState<Map<string, ImportedVideo[]>>(new Map())
+  const [videoProgressMap, setVideoProgressMap] = useState<Map<string, VideoProgress>>(new Map())
 
   // Load all data on mount — uses requestAnimationFrame after Promise resolution
   // to ensure Zustand store state has been committed by React before rendering
@@ -89,6 +92,50 @@ export function LearningTrackDetail() {
     [trackId, entries, getEntriesForPath]
   )
 
+  // Load videos and progress for all courses in the path (for lesson accordions)
+  useEffect(() => {
+    if (!isReady || courseEntries.length === 0) return
+
+    const courseIds = courseEntries.map(e => e.courseId).filter(Boolean)
+    if (courseIds.length === 0) return
+
+    let ignore = false
+
+    Promise.all([
+      Promise.all(
+        courseIds.map(courseId =>
+          db.importedVideos.where('courseId').equals(courseId).sortBy('order')
+        )
+      ).then(results => {
+        const map = new Map<string, ImportedVideo[]>()
+        courseIds.forEach((courseId, i) => {
+          if (results[i].length > 0) map.set(courseId, results[i])
+        })
+        return map
+      }),
+      db.progress.toArray().then(records => {
+        const map = new Map<string, VideoProgress>()
+        for (const r of records) {
+          if (r.videoId) map.set(r.videoId, r)
+        }
+        return map
+      }),
+    ])
+      .then(([videos, progMap]) => {
+        if (!ignore) {
+          setVideosByCourse(videos)
+          setVideoProgressMap(progMap)
+        }
+      })
+      .catch(err => {
+        console.error('[LearningTrackDetail] Failed to load videos:', err)
+      })
+
+    return () => {
+      ignore = true
+    }
+  }, [isReady, courseEntries])
+
   // Real progress tracking from contentProgress (catalog) + progress table (imported)
   const pathProgress = usePathProgress(courseEntries)
 
@@ -104,6 +151,9 @@ export function LearningTrackDetail() {
         type: 'imported',
         authorName,
         completionPct: cpInfo?.completionPct ?? 0,
+        description: ic.description,
+        videoCount: ic.videoCount,
+        totalDuration: ic.totalDuration,
       })
     }
 
@@ -117,6 +167,9 @@ export function LearningTrackDetail() {
           type: entry.courseType,
           authorName: undefined,
           completionPct: 0,
+          description: undefined,
+          videoCount: 0,
+          totalDuration: 0,
         })
       }
     }
@@ -300,13 +353,15 @@ export function LearningTrackDetail() {
                       onGapResolve={() => {}}
                       onCourseClick={courseId => navigate(`/courses/${courseId}`)}
                       autoScrollToCurrent
+                      videosByCourse={videosByCourse}
+                      videoProgressMap={videoProgressMap}
                     />
                   </div>
                 </motion.section>
               </div>
 
-              {/* Right Column (1/3, sticky): Progress Sidebar */}
-              <aside className="lg:col-span-1 space-y-6 lg:sticky lg:top-24 lg:self-start">
+              {/* Right Column (1/3): Progress Sidebar */}
+              <aside className="lg:col-span-1 space-y-6">
                 <PathProgressSidebar progress={pathProgress} />
               </aside>
             </div>

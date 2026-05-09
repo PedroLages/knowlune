@@ -1,7 +1,8 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
+import { MemoryRouter } from 'react-router'
 import { PathTimeline } from '@/app/components/learning-path/PathTimeline'
-import type { LearningPathEntry, PathCourseInfo } from '@/data/types'
+import type { LearningPathEntry, PathCourseInfo, ImportedVideo } from '@/data/types'
 import type { GapResolution } from '@/app/components/learning-path/PathTimeline'
 
 function makeEntry(overrides: Partial<LearningPathEntry> = {}): LearningPathEntry {
@@ -101,7 +102,7 @@ describe('PathTimeline', () => {
     expect(screen.getByText('Completed')).toBeInTheDocument()
   })
 
-  it('calls onCourseClick when a course entry is clicked', () => {
+  it('calls onCourseClick when action button is clicked', () => {
     const onCourseClick = vi.fn()
     const entries = [makeEntry({ courseId: 'c1' })]
     const infoMap = new Map([['c1', makeCourseInfo({ name: 'Clickable' })]])
@@ -113,8 +114,172 @@ describe('PathTimeline', () => {
         onCourseClick={onCourseClick}
       />
     )
-    fireEvent.click(screen.getByText('Clickable'))
+    fireEvent.click(screen.getByText('Start Module'))
     expect(onCourseClick).toHaveBeenCalledWith('c1')
+  })
+
+  it('locked card is not interactive', () => {
+    const entries = [
+      makeEntry({ courseId: 'c1', position: 1 }),
+      makeEntry({ courseId: 'c2', position: 2 }),
+    ]
+    const infoMap = new Map([
+      ['c1', makeCourseInfo({ completionPct: 0 })],
+      ['c2', makeCourseInfo({ completionPct: 0 })],
+    ])
+    const onCourseClick = vi.fn()
+    render(
+      <PathTimeline
+        {...defaultProps}
+        entries={entries}
+        courseInfoMap={infoMap}
+        onCourseClick={onCourseClick}
+      />
+    )
+    // Second entry is locked — should not have role="button"
+    const listItems = screen.getAllByRole('listitem')
+    const lockedItem = listItems[1]
+    expect(lockedItem.querySelector('[role="button"]')).toBeNull()
+    expect(lockedItem.querySelector('[tabindex]')).toBeNull()
+  })
+
+  it('locked badge shows Lock icon', () => {
+    const entries = [
+      makeEntry({ courseId: 'c1', position: 1 }),
+      makeEntry({ courseId: 'c2', position: 2 }),
+    ]
+    const infoMap = new Map([
+      ['c1', makeCourseInfo({ completionPct: 0 })],
+      ['c2', makeCourseInfo({ completionPct: 0 })],
+    ])
+    render(
+      <PathTimeline
+        {...defaultProps}
+        entries={entries}
+        courseInfoMap={infoMap}
+      />
+    )
+    // Second entry badge should contain "Locked" with a Lock icon
+    const lockedBadges = screen.getAllByText('Locked')
+    expect(lockedBadges.length).toBeGreaterThanOrEqual(1)
+  })
+
+  it('Completed badge shows checkmark icon and Up Next badge shows pulsing dot', () => {
+    const entries = [
+      makeEntry({ courseId: 'c1', position: 1 }),
+      makeEntry({ courseId: 'c2', position: 2 }),
+    ]
+    const infoMap = new Map([
+      ['c1', makeCourseInfo({ completionPct: 100 })],
+      ['c2', makeCourseInfo({ completionPct: 45 })],
+    ])
+    render(
+      <PathTimeline
+        {...defaultProps}
+        entries={entries}
+        courseInfoMap={infoMap}
+      />
+    )
+    expect(screen.getByText('Completed')).toBeInTheDocument()
+    expect(screen.getByText('Up Next')).toBeInTheDocument()
+  })
+
+  it('displays description, video count, and duration when available', () => {
+    const entries = [makeEntry({ courseId: 'c1' })]
+    const infoMap = new Map([
+      [
+        'c1',
+        makeCourseInfo({
+          completionPct: 0,
+          description: 'Learn the basics of React',
+          videoCount: 5,
+          totalDuration: 7200,
+        }),
+      ],
+    ])
+    render(
+      <PathTimeline
+        {...defaultProps}
+        entries={entries}
+        courseInfoMap={infoMap}
+      />
+    )
+    expect(screen.getByText('Learn the basics of React')).toBeInTheDocument()
+    expect(screen.getByText(/5 lessons/)).toBeInTheDocument()
+  })
+
+  it('hides stats row when values are zero or missing', () => {
+    const entries = [makeEntry({ courseId: 'c1' })]
+    const infoMap = new Map([
+      ['c1', makeCourseInfo({ completionPct: 0, videoCount: 0, totalDuration: 0 })],
+    ])
+    render(
+      <PathTimeline
+        {...defaultProps}
+        entries={entries}
+        courseInfoMap={infoMap}
+      />
+    )
+    expect(screen.queryByText(/lessons/)).toBeNull()
+  })
+
+  it('up-next module expands by default showing lesson rows', () => {
+    const entries = [makeEntry({ courseId: 'c1' })]
+    const infoMap = new Map([
+      ['c1', makeCourseInfo({ completionPct: 45, videoCount: 2 })],
+    ])
+    const videos = new Map([
+      [
+        'c1',
+        [
+          { id: 'v1', courseId: 'c1', filename: 'Intro.mp4', duration: 120, order: 1 },
+          { id: 'v2', courseId: 'c1', filename: 'Setup.mp4', duration: 180, order: 2 },
+        ] as ImportedVideo[],
+      ],
+    ])
+    render(
+      <MemoryRouter>
+        <PathTimeline
+          {...defaultProps}
+          entries={entries}
+          courseInfoMap={infoMap}
+          videosByCourse={videos}
+        />
+      </MemoryRouter>
+    )
+    // Lesson rows should be visible (expanded by default for in-progress)
+    expect(screen.getByText('Intro')).toBeInTheDocument()
+    expect(screen.getByText('Setup')).toBeInTheDocument()
+  })
+
+  it('completed module can be toggled open to show lesson rows', () => {
+    const entries = [makeEntry({ courseId: 'c1' })]
+    const infoMap = new Map([
+      ['c1', makeCourseInfo({ completionPct: 100, videoCount: 1 })],
+    ])
+    const videos = new Map([
+      [
+        'c1',
+        [
+          { id: 'v1', courseId: 'c1', filename: 'Recap.mp4', duration: 90, order: 1 },
+        ] as ImportedVideo[],
+      ],
+    ])
+    render(
+      <MemoryRouter>
+        <PathTimeline
+          {...defaultProps}
+          entries={entries}
+          courseInfoMap={infoMap}
+          videosByCourse={videos}
+        />
+      </MemoryRouter>
+    )
+    // Completed module starts collapsed — lesson not visible
+    expect(screen.queryByText('Recap')).toBeNull()
+    // Click the card header to expand
+    fireEvent.click(screen.getByText('Test Course'))
+    expect(screen.getByText('Recap')).toBeInTheDocument()
   })
 
   it('renders gap entries with resolve buttons', () => {

@@ -1,4 +1,4 @@
-import { Award, Clock, BookOpen, Trophy } from 'lucide-react'
+import { Clock, BookOpen } from 'lucide-react'
 import { Card, CardContent } from '@/app/components/ui/card'
 import { PathProgressRing } from '@/app/components/figma/PathProgressRing'
 import { cn } from '@/app/components/ui/utils'
@@ -85,25 +85,7 @@ export function PathProgressSidebar({
         </CardContent>
       </Card>
 
-      {/* Certificate card */}
-      <Card className="bg-gradient-to-br from-foreground to-foreground/80 border-0 overflow-hidden relative" data-testid="certificate-card">
-        {/* Background trophy decoration */}
-        <div className="absolute -right-4 -top-4 opacity-10 pointer-events-none" aria-hidden="true">
-          <Trophy className="w-24 h-24 text-background" />
-        </div>
-        <CardContent className="p-5 relative z-10">
-          <div className="size-10 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center mb-3">
-            <Award className="size-5 text-gold" aria-hidden="true" />
-          </div>
-          <h3 className="text-sm font-bold text-background mb-1">Earn a Certificate</h3>
-          <p className="text-xs text-background/70 leading-relaxed mb-3">
-            Complete all modules to unlock your personalized certificate of completion.
-          </p>
-          <span className="text-xs font-bold text-gold inline-flex items-center gap-1 hover:text-gold-soft-foreground transition-colors">
-            View details &rarr;
-          </span>
-        </CardContent>
-      </Card>
+      {/* Certificate card removed — see R9 */}
     </aside>
   )
 }
