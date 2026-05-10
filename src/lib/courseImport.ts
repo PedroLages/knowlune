@@ -475,7 +475,7 @@ function applyManifestVideoOrder(
   // First pass: match videos to manifest lessons in manifest order
   for (const lesson of flatLessons) {
     const video = videos.find(
-      v => v.filename === lesson.filename && !matchedVideoIds.has(v.id)
+      v => v.filename.toLowerCase().trim() === lesson.filename.toLowerCase().trim() && !matchedVideoIds.has(v.id)
     )
     if (!video) {
       console.warn(
