@@ -37,6 +37,7 @@ import {
   persistScannedCourse,
 } from '@/lib/courseImport'
 import type { BulkScanResult, ScannedCourse } from '@/lib/courseImport'
+import { readTrackManifest } from '@/lib/trackManifestImport'
 import { showDirectoryPicker } from '@/lib/fileSystem'
 import { detectAuthorFromFolderName, matchOrCreateAuthor } from '@/lib/authorDetection'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
@@ -191,6 +192,19 @@ export function BulkImportDialog({
         toast.error('No sub-folders found. Select a parent folder that contains course folders.')
         setIsLoadingFolders(false)
         return
+      }
+
+      // Reorder sub-directories by track-manifest.json positions if a manifest exists
+      const manifestResult = await readTrackManifest(parentHandle)
+      if (manifestResult.ok) {
+        const positionByFolder = new Map(
+          manifestResult.manifest.track.courses.map((c, i) => [c.folder, i])
+        )
+        subDirs.sort((a, b) => {
+          const posA = positionByFolder.get(a.name) ?? Infinity
+          const posB = positionByFolder.get(b.name) ?? Infinity
+          return posA - posB
+        })
       }
 
       // Detect author from parent folder name (e.g., "Chase Hughes - The Operative Kit")
