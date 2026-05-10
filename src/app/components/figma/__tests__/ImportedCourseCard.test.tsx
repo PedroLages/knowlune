@@ -475,7 +475,7 @@ describe('ImportedCourseCard', () => {
     it('paused: continue resumes course and navigates', async () => {
       mockUpdateCourseStatus.mockResolvedValueOnce(undefined)
       const user = userEvent.setup()
-      renderCard({ id: 'c-p', status: 'paused', completionPercent: 10 })
+      renderCard({ id: 'c-p', status: 'paused' })
       await user.click(screen.getByTestId('continue-course-btn'))
       expect(mockUpdateCourseStatus).toHaveBeenCalledWith('c-p', 'active')
       expect(mockNavigate).toHaveBeenCalledWith('/courses/c-p/overview')
@@ -483,7 +483,7 @@ describe('ImportedCourseCard', () => {
 
     it('active: continue navigates without changing status', async () => {
       const user = userEvent.setup()
-      renderCard({ id: 'c-a', status: 'active', completionPercent: 22 })
+      renderCard({ id: 'c-a', status: 'active' })
       await user.click(screen.getByTestId('continue-course-btn'))
       expect(mockUpdateCourseStatus).not.toHaveBeenCalled()
       expect(mockNavigate).toHaveBeenCalledWith('/courses/c-a/overview')
@@ -494,7 +494,7 @@ describe('ImportedCourseCard', () => {
       mockImportError = 'disk full'
       mockUpdateCourseStatus.mockResolvedValueOnce(undefined)
       const user = userEvent.setup()
-      renderCard({ id: 'c-e', status: 'paused', completionPercent: 5 })
+      renderCard({ id: 'c-e', status: 'paused' })
       await user.click(screen.getByTestId('continue-course-btn'))
       expect(toast.error).toHaveBeenCalledWith('disk full')
       expect(mockNavigate).not.toHaveBeenCalled()

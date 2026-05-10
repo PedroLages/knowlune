@@ -630,7 +630,6 @@ describe('removeImportedCourses (bulk delete)', () => {
     useCourseImportStore.setState({ importedCourses: [course1, course2] })
 
     // Spy on removeImportedCourse so course2's deletion appears to fail
-    const originalRemove = useCourseImportStore.getState().removeImportedCourse
     vi.spyOn(useCourseImportStore.getState(), 'removeImportedCourse')
       .mockImplementation(async (id: string) => {
         if (id === course2.id) {
@@ -679,8 +678,8 @@ describe('removeImportedCourses (bulk delete)', () => {
       await useCourseImportStore.getState().addImportedCourse(course1)
     })
 
-    let capturedOnUndo: (() => Promise<void>) | undefined
-    vi.mocked(toastWithUndo).mockImplementation((opts: { onUndo: () => Promise<void> }) => {
+    let capturedOnUndo: (() => void) | undefined
+    vi.mocked(toastWithUndo).mockImplementation((opts: { onUndo: () => void }) => {
       capturedOnUndo = opts.onUndo
     })
 
@@ -720,8 +719,8 @@ describe('removeImportedCourses (bulk delete)', () => {
         }))
       })
 
-    let capturedOnUndo: (() => Promise<void>) | undefined
-    vi.mocked(toastWithUndo).mockImplementation((opts: { onUndo: () => Promise<void> }) => {
+    let capturedOnUndo: (() => void) | undefined
+    vi.mocked(toastWithUndo).mockImplementation((opts: { onUndo: () => void }) => {
       capturedOnUndo = opts.onUndo
     })
 

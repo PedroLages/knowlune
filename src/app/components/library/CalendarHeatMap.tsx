@@ -87,7 +87,7 @@ export const CalendarHeatMap = memo(function CalendarHeatMap({
           data-testid="calendar-heatmap-day-labels"
           aria-hidden="true"
         >
-          {columns[0]?.map((cell, i) => (
+          {columns[0]?.map((cell, _i) => (
             <div
               key={cell.date}
               className="flex h-3 min-w-7 items-center justify-end text-[7px] leading-none text-muted-foreground"
