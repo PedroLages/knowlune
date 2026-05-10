@@ -28,7 +28,6 @@ import { useImportWizardTrigger } from '@/app/hooks/useImportWizardTrigger'
 import { useLoadCourseThumbnails } from '@/app/hooks/useLoadCourseThumbnails'
 import { staggerContainer, fadeUp } from '@/lib/motion'
 import type { LearningPath, LearningPathEntry } from '@/data/types'
-import { toast } from 'sonner'
 
 // --- Track Card ---
 
