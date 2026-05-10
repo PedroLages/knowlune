@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
+import { useStableCallback } from '@/app/hooks/useStableCallback'
 import {
   Dialog,
   DialogContent,
@@ -89,7 +90,7 @@ export function BulkImportDialog({
   onOpenChange,
   onSingleImport,
   onYouTubeImport,
-  onComplete,
+  onComplete: onCompleteProp,
 }: BulkImportDialogProps) {
   const [step, setStep] = useState<DialogStep>('choose')
   const [folders, setFolders] = useState<FolderEntry[]>([])
@@ -106,9 +107,8 @@ export function BulkImportDialog({
   )
   const abortRef = useRef(false)
 
-  // Ref for onComplete callback to avoid stale closure issues
-  const onCompleteRef = useRef(onComplete)
-  onCompleteRef.current = onComplete
+  // useStableCallback avoids stale closure issues with the onComplete prop
+  const onComplete = useStableCallback(onCompleteProp ?? (() => {}))
 
   // Sync dialog open state with progress store so overlay hides while dialog is showing progress
   useEffect(() => {
@@ -149,7 +149,7 @@ export function BulkImportDialog({
             .map(i => i.scannedCourse?.id)
             .filter((id): id is string => !!id)
           if (ids.length > 0) {
-            onCompleteRef.current?.(ids)
+            onComplete(ids)
           }
         }
         resetDialog()
