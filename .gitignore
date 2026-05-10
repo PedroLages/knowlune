@@ -91,6 +91,9 @@ library-snapshot.yml
 .mcp.json
 .claude/state/review-story/consolidated-findings-*.json
 
+# DeepSec (security scanning tool)
+.deepsec/
+
 # Compound Engineering local config (machine-specific)
 .compound-engineering/
 # CE plugin review/run artifacts (repo-relative .context path)
