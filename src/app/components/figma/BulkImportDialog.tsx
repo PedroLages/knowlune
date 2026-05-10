@@ -106,6 +106,15 @@ export function BulkImportDialog({
     new Map()
   )
   const abortRef = useRef(false)
+  const completedSuccessfullyRef = useRef(false)
+
+  // Track when the dialog actually transitions through the results step,
+  // so onComplete only fires when the import flow genuinely completed.
+  useEffect(() => {
+    if (step === 'results') {
+      completedSuccessfullyRef.current = true
+    }
+  }, [step])
 
   // useStableCallback avoids stale closure issues with the onComplete prop
   const onComplete = useStableCallback(onCompleteProp ?? (() => {}))
@@ -137,13 +146,15 @@ export function BulkImportDialog({
     }
     setCoverPreviewUrls(new Map())
     abortRef.current = false
+    completedSuccessfullyRef.current = false
   }, [coverPreviewUrls])
 
   const handleOpenChange = useCallback(
     (nextOpen: boolean) => {
       if (!nextOpen) {
-        // Fire onComplete when closing from results step with successful imports
-        if (step === 'results') {
+        // Fire onComplete only when the dialog actually transitioned through the results step
+        // (avoiding false positives if the dialog is closed externally)
+        if (completedSuccessfullyRef.current) {
           const ids = importItems
             .filter(i => i.status === 'success')
             .map(i => i.scannedCourse?.id)

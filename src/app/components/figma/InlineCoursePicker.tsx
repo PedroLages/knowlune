@@ -707,7 +707,7 @@ export function InlineCoursePicker({
       </div>
 
       {/* Footer actions */}
-      <div className="flex items-center gap-2 pt-1">
+      <div className="flex items-center gap-2 pt-1 flex-wrap">
         {mode === 'multiSelect' && selectedCourseIds.length > 0 && !hideConfirmButton && (
           <Button
             variant="brand"
