@@ -54,7 +54,7 @@ interface CurriculumComposerProps {
   mode?: 'manual' | 'ai'
   /** Pre-filled goal text for AI mode (used by AILearningPath wrapper) */
   initialGoal?: string
-  /** Base path for post-creation redirect (defaults to "/learning-paths" for backward compat). */
+  /** Base path for post-creation redirect (defaults to "/learning-tracks"). */
   redirectBase?: string
 }
 
@@ -73,7 +73,7 @@ export function CurriculumComposer({
   onOpenChange,
   mode = 'manual',
   initialGoal = '',
-  redirectBase = '/learning-paths',
+  redirectBase = '/learning-tracks',
 }: CurriculumComposerProps) {
   const navigate = useNavigate()
   const createPathWithCourses = useLearningPathStore(s => s.createPathWithCourses)

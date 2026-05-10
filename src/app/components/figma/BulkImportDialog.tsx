@@ -37,7 +37,8 @@ import {
   persistScannedCourse,
 } from '@/lib/courseImport'
 import type { BulkScanResult, ScannedCourse } from '@/lib/courseImport'
-import { readTrackManifest } from '@/lib/trackManifestImport'
+import { readTrackManifest, batchImportTrackCourses } from '@/lib/trackManifestImport'
+import type { TrackManifest } from '@/lib/courseManifest'
 import { showDirectoryPicker } from '@/lib/fileSystem'
 import { detectAuthorFromFolderName, matchOrCreateAuthor } from '@/lib/authorDetection'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
@@ -82,8 +83,8 @@ interface BulkImportDialogProps {
   onOpenChange: (open: boolean) => void
   onSingleImport: () => void // Delegate to existing ImportWizardDialog
   onYouTubeImport?: () => void // Delegate to YouTubeImportDialog (E28-S05)
-  /** Called when batch import completes, with IDs of successfully imported courses */
-  onComplete?: (courseIds: string[]) => void
+  /** Called when batch import completes, with IDs of successfully imported courses and optional trackId */
+  onComplete?: (courseIds: string[], trackId?: string) => void
 }
 
 export function BulkImportDialog({
@@ -108,6 +109,15 @@ export function BulkImportDialog({
   )
   const abortRef = useRef(false)
   const completedSuccessfullyRef = useRef(false)
+  const parentHandleRef = useRef<FileSystemDirectoryHandle | null>(null)
+  const batchResultRef = useRef<{ trackId?: string; courseIds: string[] } | null>(null)
+
+  // Track manifest data for rendering the review-step header and for batch import
+  const [trackManifest, setTrackManifest] = useState<{
+    manifest: TrackManifest
+    trackName: string
+  } | null>(null)
+  const hasManifest = trackManifest !== null
 
   // Track when the dialog actually transitions through the results step,
   // so onComplete only fires when the import flow genuinely completed.
@@ -148,6 +158,9 @@ export function BulkImportDialog({
     setCoverPreviewUrls(new Map())
     abortRef.current = false
     completedSuccessfullyRef.current = false
+    parentHandleRef.current = null
+    batchResultRef.current = null
+    setTrackManifest(null)
   }, [coverPreviewUrls])
 
   const handleOpenChange = useCallback(
@@ -156,19 +169,27 @@ export function BulkImportDialog({
         // Fire onComplete only when the dialog actually transitioned through the results step
         // (avoiding false positives if the dialog is closed externally)
         if (completedSuccessfullyRef.current) {
-          const ids = importItems
-            .filter(i => i.status === 'success')
-            .map(i => i.scannedCourse?.id)
-            .filter((id): id is string => !!id)
+          const batchResult = batchResultRef.current
+          let ids: string[]
+          let trackId: string | undefined
+          if (batchResult) {
+            ids = batchResult.courseIds
+            trackId = batchResult.trackId
+          } else {
+            ids = importItems
+              .filter(i => i.status === 'success')
+              .map(i => i.scannedCourse?.id)
+              .filter((id): id is string => !!id)
+          }
           if (ids.length > 0) {
-            onComplete(ids)
+            onComplete(ids, trackId)
           }
         }
         resetDialog()
       }
       onOpenChange(nextOpen)
     },
-    [onOpenChange, resetDialog, step, importItems]
+    [onOpenChange, resetDialog, importItems]
   )
 
   const handleSingleImport = useCallback(() => {
@@ -205,6 +226,17 @@ export function BulkImportDialog({
           const posB = positionByFolder.get(b.name) ?? Infinity
           return posA - posB
         })
+
+        // Store handle and manifest for batch import
+        parentHandleRef.current = parentHandle
+        setTrackManifest({
+          manifest: manifestResult.manifest,
+          trackName: manifestResult.summary.trackName,
+        })
+      } else {
+        // No manifest found — clear any stale manifest data
+        parentHandleRef.current = null
+        setTrackManifest(null)
       }
 
       // Detect author from parent folder name (e.g., "Chase Hughes - The Operative Kit")
@@ -385,6 +417,44 @@ export function BulkImportDialog({
     abortRef.current = false
     const progressStore = useImportProgressStore.getState()
 
+    // Check if a track manifest is present — use batch import if so
+    const manifest = trackManifest?.manifest
+    const parentHandle = parentHandleRef.current
+
+    if (manifest && parentHandle) {
+      // Batch mode: delegate to batchImportTrackCourses (handles scan, persist, track creation)
+      try {
+        const result = await batchImportTrackCourses(parentHandle, manifest)
+
+        // Convert batch result to ImportItem[] for the results display
+        const items: ImportItem[] = result.courses.map(c => ({
+          folderName: c.folder,
+          handle: null as unknown as FileSystemDirectoryHandle,
+          status: c.success ? 'success' as const : 'error' as const,
+          error: c.error,
+        }))
+        setImportItems(items)
+
+        // Store result for onComplete to pass trackId
+        batchResultRef.current = {
+          trackId: result.trackId,
+          courseIds: result.courses
+            .filter(r => r.success && r.courseId)
+            .map(r => r.courseId!),
+        }
+
+        setStep('results')
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Unexpected error during batch import'
+        toast.error(`Batch import failed: ${message}`)
+        console.error('[BulkImport] batchImportTrackCourses threw:', err)
+        // Reset to review step so the user can retry or go back
+        setStep('review')
+      }
+      return
+    }
+
+    // No manifest — per-course persist loop (existing behavior, unchanged)
     const items: ImportItem[] = courses.map(c => ({
       folderName: c.name,
       handle: c.directoryHandle,
@@ -394,6 +464,7 @@ export function BulkImportDialog({
       pdfCount: c.pdfs.length,
     }))
     setImportItems(items)
+    batchResultRef.current = null
     setStep('importing')
 
     for (const item of items) {
@@ -488,7 +559,7 @@ export function BulkImportDialog({
     }
 
     setStep('results')
-  }, [scannedCourses, courseOverrides, parentAuthorId])
+  }, [scannedCourses, courseOverrides, parentAuthorId, trackManifest])
 
   // Retry a single failed item
   const handleRetry = useCallback(
@@ -609,10 +680,14 @@ export function BulkImportDialog({
               `Found ${folders.length} sub-folders. Select which ones to import.`}
             {step === 'scanning' && `Scanning ${importItems.length} folders for content...`}
             {step === 'review' &&
-              `${scannedCourses.size} courses ready. Edit details before importing.`}
+              (hasManifest && trackManifest
+                ? `${scannedCourses.size} courses ready — will be grouped under "${trackManifest.trackName}".`
+                : `${scannedCourses.size} courses ready. Edit details before importing.`)}
             {step === 'importing' && `Importing ${importItems.length} courses...`}
             {step === 'results' &&
-              `${successItems.length} of ${importItems.length} courses imported.`}
+              (batchResultRef.current?.trackId
+                ? `${successItems.length} of ${importItems.length} courses imported into track.`
+                : `${successItems.length} of ${importItems.length} courses imported.`)}
           </DialogDescription>
         </DialogHeader>
 
@@ -843,6 +918,22 @@ export function BulkImportDialog({
         {/* Step: Review course details before importing */}
         {step === 'review' && (
           <>
+            {hasManifest && trackManifest && (
+              <div
+                className="rounded-xl border border-brand/20 bg-brand-soft/50 p-3 mb-2"
+                data-testid="bulk-track-header"
+              >
+                <p className="text-xs text-brand-soft-foreground font-semibold uppercase tracking-wider">
+                  Track
+                </p>
+                <p className="text-sm font-medium text-foreground mt-0.5">
+                  {trackManifest.trackName}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  All courses will be grouped under this track after import.
+                </p>
+              </div>
+            )}
             <ScrollArea className="max-h-[50vh] min-w-0 w-full">
               <div className="flex min-w-0 flex-col gap-2 pr-3" data-testid="bulk-review-list">
                 {[...scannedCourses.values()].map(course => {

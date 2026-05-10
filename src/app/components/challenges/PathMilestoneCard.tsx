@@ -155,7 +155,7 @@ export function PathMilestoneCard({ challenge }: PathMilestoneCardProps) {
         {/* Link to path */}
         {challenge.pathId && (
           <Link
-            to={`/learning-paths/${challenge.pathId}`}
+            to={`/learning-tracks/${challenge.pathId}`}
             className="text-xs text-brand hover:text-brand-hover underline mt-1"
           >
             View Learning Path

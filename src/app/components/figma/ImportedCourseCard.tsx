@@ -320,11 +320,11 @@ export function ImportedCourseCard({
         data-preview={showPreview && videoReady ? '' : undefined}
         className={cn(
           'group cursor-default focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 outline-none rounded-lg',
-          'hover:-translate-y-0.5 motion-safe:transition-all motion-reduce:transition-none motion-reduce:hover:-translate-y-0',
-          showPreview && videoReady && 'z-10'
+          'relative hover:-translate-y-0.5 hover:z-10 hover:shadow-lg motion-safe:transition-all motion-reduce:transition-none motion-reduce:hover:-translate-y-0'
         )}
       >
-        <CardCover heightClass="aspect-video w-full">
+        <div className="group-hover:translate-y-2 motion-safe:transition-all motion-reduce:transition-none motion-reduce:group-hover:translate-y-0">
+          <CardCover heightClass="aspect-video w-full">
           {/* Background: gradient placeholder or lazy-loaded thumbnail */}
           <div
             data-testid="course-card-placeholder"
@@ -600,7 +600,7 @@ export function ImportedCourseCard({
               has clear space. */}
           {course.totalDuration != null && course.totalDuration > 0 && (
             <span
-              className="transition-opacity duration-200 group-hover:opacity-0 [@media(hover:none)]:group-hover:opacity-100 motion-reduce:transition-none"
+              className="transition-opacity duration-200 group-hover:opacity-0 group-focus-within:opacity-0 [@media(hover:none)]:group-hover:opacity-100 motion-reduce:transition-none"
             >
               <CoverCornerChip position="bottom-right" data-testid="course-card-duration">
                 <Clock className="size-3" aria-hidden="true" />
@@ -614,6 +614,7 @@ export function ImportedCourseCard({
             <CoverProgressBar progress={completionPercent} />
           </div>
         </CardCover>
+        </div>
 
         {/* Card body */}
         <div className="mt-3 px-1 min-h-32 flex flex-col">

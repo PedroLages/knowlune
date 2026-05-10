@@ -83,7 +83,7 @@ export function TemplateCard({ template, courseCount, matchCount, className }: T
             className="w-full"
             asChild
           >
-            <Link to={`/learning-paths/templates/${template.id}`}>
+            <Link to={`/learning-tracks`}>
               <Eye className="w-4 h-4 mr-1.5" />
               Preview
             </Link>

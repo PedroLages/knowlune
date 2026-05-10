@@ -187,7 +187,7 @@ function ContinueLearningPathSectionInner() {
         // detail page is a safe destination)
         navigate(`/courses/${courseId}`)
       } else {
-        navigate(`/learning-paths/${pathId}`)
+        navigate(`/learning-tracks/${pathId}`)
       }
     },
     [navigate]
