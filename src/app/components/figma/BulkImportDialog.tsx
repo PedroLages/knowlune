@@ -80,6 +80,8 @@ interface BulkImportDialogProps {
   onOpenChange: (open: boolean) => void
   onSingleImport: () => void // Delegate to existing ImportWizardDialog
   onYouTubeImport?: () => void // Delegate to YouTubeImportDialog (E28-S05)
+  /** Called when batch import completes, with IDs of successfully imported courses */
+  onComplete?: (courseIds: string[]) => void
 }
 
 export function BulkImportDialog({
@@ -87,6 +89,7 @@ export function BulkImportDialog({
   onOpenChange,
   onSingleImport,
   onYouTubeImport,
+  onComplete,
 }: BulkImportDialogProps) {
   const [step, setStep] = useState<DialogStep>('choose')
   const [folders, setFolders] = useState<FolderEntry[]>([])
@@ -102,6 +105,10 @@ export function BulkImportDialog({
     new Map()
   )
   const abortRef = useRef(false)
+
+  // Ref for onComplete callback to avoid stale closure issues
+  const onCompleteRef = useRef(onComplete)
+  onCompleteRef.current = onComplete
 
   // Sync dialog open state with progress store so overlay hides while dialog is showing progress
   useEffect(() => {
@@ -135,11 +142,21 @@ export function BulkImportDialog({
   const handleOpenChange = useCallback(
     (nextOpen: boolean) => {
       if (!nextOpen) {
+        // Fire onComplete when closing from results step with successful imports
+        if (step === 'results') {
+          const ids = importItems
+            .filter(i => i.status === 'success')
+            .map(i => i.scannedCourse?.id)
+            .filter((id): id is string => !!id)
+          if (ids.length > 0) {
+            onCompleteRef.current?.(ids)
+          }
+        }
         resetDialog()
       }
       onOpenChange(nextOpen)
     },
-    [onOpenChange, resetDialog]
+    [onOpenChange, resetDialog, step, importItems]
   )
 
   const handleSingleImport = useCallback(() => {
