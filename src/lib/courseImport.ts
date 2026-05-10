@@ -8,6 +8,8 @@ import { triggerAutoAnalysis } from '@/lib/autoAnalysis'
 import { generateCourseEmbeddingAfterImport } from '@/ai/courseEmbeddingService'
 import { unlockSidebarItem } from '@/app/hooks/useProgressiveDisclosure'
 import { triggerOllamaTagging } from '@/lib/ollamaTagging'
+import { parseCourseManifest } from '@/lib/courseManifest'
+import type { CourseManifest, ManifestModule } from '@/lib/courseManifest'
 import {
   detectAuthorFromFolderName,
   matchOrCreateAuthor,
@@ -27,7 +29,7 @@ import {
   isImageFile,
   getVideoFormat,
 } from '@/lib/fileSystem'
-import type { ImportedAuthor, ImportedCourse, ImportedVideo, ImportedPdf } from '@/data/types'
+import type { ImportedAuthor, ImportedCourse, ImportedVideo, ImportedPdf, Difficulty } from '@/data/types'
 import { toast } from 'sonner'
 
 // --- Error Types ---
@@ -122,9 +124,68 @@ export interface ScannedCourse {
   pdfs: ScannedPdf[]
   /** Image files found in the folder, candidates for cover image. */
   images: ScannedImage[]
+  /** Parsed course-manifest.json data, if present and valid. */
+  manifestData?: CourseManifest
 }
 
 // --- Scan Phase ---
+
+/**
+ * Reads and parses course-manifest.json from a directory handle.
+ * Returns undefined if the file is missing, invalid, or unreadable.
+ */
+async function readCourseManifest(
+  dirHandle: FileSystemDirectoryHandle
+): Promise<CourseManifest | undefined> {
+  try {
+    const fileHandle = await dirHandle.getFileHandle('course-manifest.json')
+    const file = await fileHandle.getFile()
+    const text = await file.text()
+    const json = JSON.parse(text)
+    const result = parseCourseManifest(json)
+    if (result.ok) {
+      return result.value
+    }
+    console.warn('[scanCourseFolder] Manifest parse errors:', result.errors)
+    return undefined
+  } catch (err) {
+    if (err instanceof DOMException && err.name === 'NotFoundError') {
+      // No manifest file — silently continue
+    } else if (err instanceof SyntaxError) {
+      console.warn('[scanCourseFolder] Manifest is not valid JSON:', err.message)
+    } else {
+      console.warn('[scanCourseFolder] Failed to read manifest:', err)
+    }
+    return undefined
+  }
+}
+
+/**
+ * Reads and parses course-manifest.json from a File array (drag-drop path).
+ */
+async function readCourseManifestFromFiles(
+  files: File[]
+): Promise<CourseManifest | undefined> {
+  const manifestFile = files.find((f) => f.name === 'course-manifest.json')
+  if (!manifestFile) return undefined
+  try {
+    const text = await manifestFile.text()
+    const json = JSON.parse(text)
+    const result = parseCourseManifest(json)
+    if (result.ok) {
+      return result.value
+    }
+    console.warn('[scanFromDroppedFiles] Manifest parse errors:', result.errors)
+    return undefined
+  } catch (err) {
+    if (err instanceof SyntaxError) {
+      console.warn('[scanFromDroppedFiles] Manifest is not valid JSON:', err.message)
+    } else {
+      console.warn('[scanFromDroppedFiles] Failed to read manifest:', err)
+    }
+    return undefined
+  }
+}
 
 /**
  * Scans a user-selected folder for course content (videos + PDFs).
@@ -302,6 +363,9 @@ export async function scanCourseFolder(): Promise<ScannedCourse> {
       fileHandle: entry.handle,
     }))
 
+    // Read course-manifest.json if present
+    const manifestData = await readCourseManifest(dirHandle)
+
     // Mark scan complete in progress store
     progressStore.completeCourse(tempCourseId)
 
@@ -313,6 +377,7 @@ export async function scanCourseFolder(): Promise<ScannedCourse> {
       videos,
       pdfs,
       images,
+      manifestData,
     }
   } catch (error) {
     if (error instanceof ImportError) {
@@ -346,6 +411,105 @@ export async function scanCourseFolder(): Promise<ScannedCourse> {
   }
 }
 
+// --- Manifest Lesson Mapping ---
+
+/**
+ * Converts a video filename into a human-readable display title.
+ * Strips the extension, replaces separators with spaces, and capitalizes words.
+ */
+function deriveTitleFromFilename(filename: string): string {
+  return filename
+    .replace(/\.[^/.]+$/, '')
+    .replace(/[-_]/g, ' ')
+    .replace(/\b\w/g, char => char.toUpperCase())
+}
+
+interface ManifestFlatLesson {
+  filename: string
+  title: string
+  moduleTitle: string
+  order: number
+}
+
+/**
+ * Flattens manifest module/lesson structure into an ordered list
+ * with sequential 1-based positions.
+ */
+function flattenManifestModules(modules: ManifestModule[]): ManifestFlatLesson[] {
+  const flat: ManifestFlatLesson[] = []
+  let order = 1
+  for (const mod of modules) {
+    for (const lesson of mod.lessons) {
+      flat.push({
+        filename: lesson.filename,
+        title: lesson.title,
+        moduleTitle: mod.title,
+        order: order++,
+      })
+    }
+  }
+  return flat
+}
+
+/**
+ * Applies manifest-defined lesson ordering, titles, and module grouping
+ * to an array of ImportedVideo records.
+ *
+ * - Videos that match a manifest lesson (by filename) get the manifest's title,
+ *   moduleTitle, and order.
+ * - Videos not in the manifest are appended after manifest-ordered videos with
+ *   filename-derived titles and sequential order.
+ * - If multiple videos match the same manifest lesson filename, the first match
+ *   wins; the rest are treated as unmatched.
+ * - Unmatched manifest lessons (no video file found) are logged as warnings.
+ */
+function applyManifestVideoOrder(
+  videos: ImportedVideo[],
+  modules: ManifestModule[]
+): ImportedVideo[] {
+  const flatLessons = flattenManifestModules(modules)
+
+  const matchedVideoIds = new Set<string>()
+  const ordered: ImportedVideo[] = []
+
+  // First pass: match videos to manifest lessons in manifest order
+  for (const lesson of flatLessons) {
+    const video = videos.find(
+      v => v.filename === lesson.filename && !matchedVideoIds.has(v.id)
+    )
+    if (!video) {
+      console.warn(
+        `[persistScannedCourse] Manifest lesson "${lesson.title}" has no matching video: ${lesson.filename}`
+      )
+      continue
+    }
+
+    matchedVideoIds.add(video.id)
+    ordered.push({
+      ...video,
+      title: lesson.title,
+      moduleTitle: lesson.moduleTitle || undefined,
+      order: lesson.order,
+    })
+  }
+
+  // Second pass: append videos not referenced in the manifest
+  // Preserve their original relative order (already alphabetical from toSortedVideos).
+  let nextOrder = flatLessons.length + 1
+  for (const video of videos) {
+    if (!matchedVideoIds.has(video.id)) {
+      ordered.push({
+        ...video,
+        title: deriveTitleFromFilename(video.filename),
+        moduleTitle: undefined,
+        order: nextOrder++,
+      })
+    }
+  }
+
+  return ordered
+}
+
 // --- Persist Phase ---
 
 /**
@@ -365,6 +529,8 @@ export async function persistScannedCourse(
     coverImageHandle?: FileSystemFileHandle
     authorId?: string
     skipStoreUpdate?: boolean
+    difficulty?: Difficulty
+    authorName?: string
   }
 ): Promise<ImportedCourse> {
   const now = new Date().toISOString()
@@ -384,6 +550,13 @@ export async function persistScannedCourse(
     height: v.height,
   }))
 
+  // Apply manifest lesson mapping (title, moduleTitle, order) when a manifest is present
+  const manifestModules = scanned.manifestData?.course.modules
+  const orderedVideos =
+    manifestModules && manifestModules.length > 0
+      ? applyManifestVideoOrder(videos, manifestModules)
+      : videos
+
   // Build ImportedPdf records (add courseId)
   const pdfs: ImportedPdf[] = scanned.pdfs.map(p => ({
     id: p.id,
@@ -394,10 +567,24 @@ export async function persistScannedCourse(
     fileHandle: p.fileHandle,
   }))
 
-  // Author detection: use explicit override, or auto-detect from folder name (AC1-AC3, AC5)
+  // Author detection: use explicit override (authorId or authorName from manifest),
+  // fall back to manifest author name, or auto-detect from folder name (AC1-AC3, AC5)
   let authorId: string | undefined = overrides?.authorId
   let detectedAuthorName: string | null = null
-  if (!authorId) {
+  const authorName = overrides?.authorName ?? scanned.manifestData?.course.author?.name
+  if (authorName) {
+    // Manifest-provided author name takes precedence — resolve via matchOrCreateAuthor
+    try {
+      const authorTitle = scanned.manifestData?.course.author?.title
+      const authorBio = scanned.manifestData?.course.author?.bio
+      const matchedId = await matchOrCreateAuthor(authorName, authorTitle || authorBio ? { title: authorTitle, bio: authorBio } : undefined)
+      if (matchedId) {
+        authorId = matchedId
+      }
+    } catch (error) {
+      console.warn('[Import] Manifest author creation failed:', error)
+    }
+  } else if (!authorId) {
     try {
       detectedAuthorName = detectAuthorFromFolderName(scanned.name)
       const matchedId = await matchOrCreateAuthor(detectedAuthorName)
@@ -411,9 +598,9 @@ export async function persistScannedCourse(
   }
 
   // Aggregate video metadata for course-level display (E1B-S02)
-  const totalDuration = videos.reduce((sum, v) => sum + (v.duration || 0), 0)
-  const totalFileSize = videos.reduce((sum, v) => sum + (v.fileSize || 0), 0)
-  const maxResolutionHeight = videos.reduce((max, v) => Math.max(max, v.height || 0), 0)
+  const totalDuration = orderedVideos.reduce((sum, v) => sum + (v.duration || 0), 0)
+  const totalFileSize = orderedVideos.reduce((sum, v) => sum + (v.fileSize || 0), 0)
+  const maxResolutionHeight = orderedVideos.reduce((max, v) => Math.max(max, v.height || 0), 0)
 
   const course: ImportedCourse = {
     id: scanned.id,
@@ -421,9 +608,10 @@ export async function persistScannedCourse(
     ...(overrides?.description ? { description: overrides.description } : {}),
     importedAt: now,
     category: overrides?.category ?? '',
+    ...(overrides?.difficulty !== undefined ? { difficulty: overrides.difficulty } : {}),
     tags: overrides?.tags ?? [],
     status: 'not-started',
-    videoCount: videos.length,
+    videoCount: orderedVideos.length,
     pdfCount: pdfs.length,
     directoryHandle: scanned.directoryHandle,
     ...(overrides?.coverImageHandle ? { coverImageHandle: overrides.coverImageHandle } : {}),
@@ -441,7 +629,7 @@ export async function persistScannedCourse(
     // The handles (directoryHandle, coverImageHandle, fileHandle) are stripped
     // from the upload payload by the table registry automatically.
     await syncableWrite('importedCourses', 'add', course as unknown as SyncableRecord)
-    for (const video of videos) {
+    for (const video of orderedVideos) {
       await syncableWrite('importedVideos', 'add', video as unknown as SyncableRecord)
     }
     for (const pdf of pdfs) {
@@ -514,14 +702,14 @@ export async function persistScannedCourse(
   // Show success toast (AC4: include author name when detected)
   const authorSuffix = detectedAuthorName ? ` by ${detectedAuthorName}` : ''
   toast.success(
-    `Imported: ${course.name}${authorSuffix} — ${videos.length} ${videos.length === 1 ? 'video' : 'videos'}, ${pdfs.length} ${pdfs.length === 1 ? 'PDF' : 'PDFs'}`
+    `Imported: ${course.name}${authorSuffix} — ${orderedVideos.length} ${orderedVideos.length === 1 ? 'video' : 'videos'}, ${pdfs.length} ${pdfs.length === 1 ? 'PDF' : 'PDFs'}`
   )
 
   // Trigger auto-analysis (fire-and-forget, consent-gated)
   triggerAutoAnalysis(course)
 
   // Trigger Ollama auto-tagging (fire-and-forget, independent of cloud AI)
-  triggerOllamaTagging(course, videos, pdfs)
+  triggerOllamaTagging(course, orderedVideos, pdfs)
 
   // Generate course embedding for ML recommendations (fire-and-forget, E52-S04)
   generateCourseEmbeddingAfterImport(course).catch(err => {
@@ -531,8 +719,8 @@ export async function persistScannedCourse(
 
   // Auto-generate thumbnail from first video at 10% mark (E1B-S04 AC1)
   // Skip if user selected a cover image in the wizard — don't overwrite their choice
-  if (!overrides?.coverImageHandle && videos.length > 0 && videos[0].fileHandle) {
-    autoGenerateThumbnail(course.id, videos[0].fileHandle).catch(() => {
+  if (!overrides?.coverImageHandle && orderedVideos.length > 0 && orderedVideos[0].fileHandle) {
+    autoGenerateThumbnail(course.id, orderedVideos[0].fileHandle).catch(() => {
       // silent-catch-ok: thumbnail generation failure is non-fatal — card shows placeholder icon (E1B-S04 AC3)
     })
   }
@@ -564,7 +752,7 @@ export async function persistScannedCourse(
   useNotificationStore.getState().create({
     type: 'import-finished',
     title: `Course imported: ${course.name}`,
-    message: `${videos.length} ${videos.length === 1 ? 'video' : 'videos'}, ${pdfs.length} ${pdfs.length === 1 ? 'PDF' : 'PDFs'} imported successfully`,
+    message: `${orderedVideos.length} ${orderedVideos.length === 1 ? 'video' : 'videos'}, ${pdfs.length} ${pdfs.length === 1 ? 'PDF' : 'PDFs'} imported successfully`,
     actionUrl: `/courses/${course.id}`,
   })
 
@@ -698,6 +886,8 @@ export async function scanCourseFolderFromHandle(
       fileHandle: entry.handle,
     }))
 
+    const manifestData = await readCourseManifest(dirHandle)
+
     return {
       status: 'success',
       course: {
@@ -708,6 +898,7 @@ export async function scanCourseFolderFromHandle(
         videos,
         pdfs,
         images,
+        manifestData,
       },
     }
   } catch (error) {
@@ -850,6 +1041,8 @@ export async function scanFromDroppedFiles(
       fileHandle: null as unknown as FileSystemFileHandle, // No handle for dropped files
     }))
 
+    const manifestData = await readCourseManifestFromFiles(files)
+
     return {
       id: crypto.randomUUID(),
       name: courseName,
@@ -858,6 +1051,7 @@ export async function scanFromDroppedFiles(
       videos,
       pdfs,
       images,
+      manifestData,
     }
   } catch (error) {
     if (error instanceof ImportError) {

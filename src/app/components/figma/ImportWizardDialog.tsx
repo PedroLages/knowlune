@@ -37,9 +37,11 @@ import {
   Plus,
   Settings,
   AlertTriangle,
+  FileJson,
 } from 'lucide-react'
 import { scanCourseFolder, scanFromDroppedFiles, persistScannedCourse } from '@/lib/courseImport'
 import type { ScannedCourse, ScannedImage } from '@/lib/courseImport'
+import type { CourseManifest } from '@/lib/courseManifest'
 import { ImportDropZone } from './ImportDropZone'
 import { useAISuggestions } from '@/ai/hooks/useAISuggestions'
 import { usePathPlacementSuggestion } from '@/ai/hooks/usePathPlacementSuggestion'
@@ -119,6 +121,21 @@ interface ImportWizardDialogProps {
   searchTerm?: string
 }
 
+const DIFFICULTY_OPTIONS: { value: string; label: string }[] = [
+  { value: 'beginner', label: 'Beginner' },
+  { value: 'intermediate', label: 'Intermediate' },
+  { value: 'advanced', label: 'Advanced' },
+  { value: 'expert', label: 'Expert' },
+]
+
+const CATEGORY_OPTIONS: { value: string; label: string }[] = [
+  { value: 'behavioral-analysis', label: 'Behavioral Analysis' },
+  { value: 'influence-authority', label: 'Influence & Authority' },
+  { value: 'confidence-mastery', label: 'Confidence Mastery' },
+  { value: 'operative-training', label: 'Operative Training' },
+  { value: 'research-library', label: 'Research Library' },
+]
+
 export function ImportWizardDialog({ open, onOpenChange, targetPathId, gapEntryId, searchTerm }: ImportWizardDialogProps) {
   const [step, setStep] = useState<WizardStep>('select')
   const [scannedCourse, setScannedCourse] = useState<ScannedCourse | null>(null)
@@ -133,7 +150,10 @@ export function ImportWizardDialog({ open, onOpenChange, targetPathId, gapEntryI
   const [isPersisting, setIsPersisting] = useState(false)
   const [aiTagsApplied, setAiTagsApplied] = useState(false)
   const [aiDescriptionApplied, setAiDescriptionApplied] = useState(false)
+  const [selectedDifficulty, setSelectedDifficulty] = useState<'beginner' | 'intermediate' | 'advanced' | 'expert' | undefined>(undefined)
+  const [selectedCategory, setSelectedCategory] = useState<string>('')
   const tagInputRef = useRef<HTMLInputElement>(null)
+  const manifestDataRef = useRef<CourseManifest | undefined>(undefined)
 
   // Path placement state (E26-S04)
   const [selectedPathId, setSelectedPathId] = useState<string | null>(null)
@@ -270,6 +290,9 @@ export function ImportWizardDialog({ open, onOpenChange, targetPathId, gapEntryI
     setIsPersisting(false)
     setAiTagsApplied(false)
     setAiDescriptionApplied(false)
+    setSelectedDifficulty(undefined)
+    setSelectedCategory('')
+    manifestDataRef.current = undefined
     setSelectedPathId(null)
     setSelectedPosition(1)
     setPathChoice('accept')
@@ -351,6 +374,21 @@ export function ImportWizardDialog({ open, onOpenChange, targetPathId, gapEntryI
     }
   }, [scannedCourse?.images]) // Only re-run when images change
 
+  // Sync coverPreviewUrl when manifest pre-selected a cover image and preview URL becomes available
+  useEffect(() => {
+    if (!selectedCoverImage || !coverPreviewUrl) {
+      if (selectedCoverImage) {
+        const url = imagePreviewUrls.get(selectedCoverImage.path)
+        if (url) setCoverPreviewUrl(url)
+      }
+      return
+    }
+    const urlForImage = imagePreviewUrls.get(selectedCoverImage.path)
+    if (urlForImage && urlForImage !== coverPreviewUrl) {
+      setCoverPreviewUrl(urlForImage)
+    }
+  }, [selectedCoverImage?.path, imagePreviewUrls, coverPreviewUrl])
+
   const handleOpenChange = useCallback(
     (nextOpen: boolean) => {
       if (!nextOpen) {
@@ -365,10 +403,28 @@ export function ImportWizardDialog({ open, onOpenChange, targetPathId, gapEntryI
     setIsScanning(true)
     try {
       const scanned = await scanCourseFolder()
+      manifestDataRef.current = scanned.manifestData
       setScannedCourse(scanned)
-      setCourseName(searchTermRef.current || scanned.name)
-      setTags([]) // Start with empty tags; AI or user will populate
-      setDescription('')
+      // Pre-fill from manifest if present (before AI effects run)
+      if (scanned.manifestData) {
+        const m = scanned.manifestData.course
+        setCourseName(searchTermRef.current || m.name)
+        setDescription(m.description ?? '')
+        setTags(m.tags ?? [])
+        setSelectedDifficulty(m.difficulty)
+        setSelectedCategory(m.category ?? '')
+        // Cover image pre-selection from manifest
+        if (m.coverImage) {
+          const match = scanned.images.find(
+            img => img.filename.toLowerCase() === m.coverImage!.toLowerCase()
+          )
+          if (match) setSelectedCoverImage(match)
+        }
+      } else {
+        setCourseName(searchTermRef.current || scanned.name)
+        setTags([])
+        setDescription('')
+      }
       setAiTagsApplied(false)
       setAiDescriptionApplied(false)
       setStep('details')
@@ -386,10 +442,26 @@ export function ImportWizardDialog({ open, onOpenChange, targetPathId, gapEntryI
     setIsScanning(true)
     try {
       const scanned = await scanFromDroppedFiles(files, 'Imported Course')
+      manifestDataRef.current = scanned.manifestData
       setScannedCourse(scanned)
-      setCourseName(searchTermRef.current || scanned.name)
-      setTags([])
-      setDescription('')
+      if (scanned.manifestData) {
+        const m = scanned.manifestData.course
+        setCourseName(searchTermRef.current || m.name)
+        setDescription(m.description ?? '')
+        setTags(m.tags ?? [])
+        setSelectedDifficulty(m.difficulty)
+        setSelectedCategory(m.category ?? '')
+        if (m.coverImage) {
+          const match = scanned.images.find(
+            img => img.filename.toLowerCase() === m.coverImage!.toLowerCase()
+          )
+          if (match) setSelectedCoverImage(match)
+        }
+      } else {
+        setCourseName(searchTermRef.current || scanned.name)
+        setTags([])
+        setDescription('')
+      }
       setAiTagsApplied(false)
       setAiDescriptionApplied(false)
       setStep('details')
@@ -415,14 +487,20 @@ export function ImportWizardDialog({ open, onOpenChange, targetPathId, gapEntryI
       const hasTags = tags.length > 0
       const hasCover = selectedCoverImage !== null
       const hasDescription = trimmedDescription.length > 0
+      const hasDifficulty = selectedDifficulty !== undefined
+      const hasCategory = selectedCategory !== ''
+      const authorName = scannedCourse.manifestData?.course.author?.name
 
       const overrides =
-        hasNameChange || hasTags || hasCover || hasDescription
+        hasNameChange || hasTags || hasCover || hasDescription || hasDifficulty || hasCategory || !!authorName
           ? {
               ...(hasNameChange ? { name: trimmedName } : {}),
               ...(hasTags ? { tags } : {}),
               ...(hasCover ? { coverImageHandle: selectedCoverImage.fileHandle } : {}),
               ...(hasDescription ? { description: trimmedDescription } : {}),
+              ...(hasDifficulty ? { difficulty: selectedDifficulty } : {}),
+              ...(hasCategory ? { category: selectedCategory } : {}),
+              ...(authorName ? { authorName } : {}),
             }
           : undefined
 
@@ -482,6 +560,8 @@ export function ImportWizardDialog({ open, onOpenChange, targetPathId, gapEntryI
     description,
     tags,
     selectedCoverImage,
+    selectedDifficulty,
+    selectedCategory,
     handleOpenChange,
     pathChoice,
     selectedPathId,
@@ -502,6 +582,9 @@ export function ImportWizardDialog({ open, onOpenChange, targetPathId, gapEntryI
     setImagePreviewUrls(new Map())
     setAiTagsApplied(false)
     setAiDescriptionApplied(false)
+    setSelectedDifficulty(undefined)
+    setSelectedCategory('')
+    manifestDataRef.current = undefined
     setStep('select')
   }, [])
 
@@ -663,6 +746,21 @@ export function ImportWizardDialog({ open, onOpenChange, targetPathId, gapEntryI
                 )}
               </div>
 
+              {/* Manifest detected banner */}
+              {scannedCourse.manifestData && (
+                <div
+                  className="rounded-xl border border-brand/20 bg-brand-soft/30 p-4"
+                  role="status"
+                  aria-live="polite"
+                  data-testid="wizard-manifest-banner"
+                >
+                  <p className="text-sm text-brand-soft-foreground flex items-center gap-2">
+                    <FileJson className="size-4 text-brand shrink-0" aria-hidden="true" />
+                    Manifest detected — fields pre-filled from course-manifest.json. You can edit any field below.
+                  </p>
+                </div>
+              )}
+
               {/* AI suggestions loading indicator */}
               {aiSuggestions.isAvailable && aiSuggestions.isLoading && (
                 <div
@@ -711,6 +809,60 @@ export function ImportWizardDialog({ open, onOpenChange, targetPathId, gapEntryI
                   rows={2}
                   className="resize-none rounded-xl"
                 />
+              </div>
+
+              {/* Difficulty & Category */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="wizard-difficulty">Difficulty</Label>
+                  <Select
+                    value={selectedDifficulty ?? ''}
+                    onValueChange={value =>
+                      setSelectedDifficulty(
+                        value === '' ? undefined : (value as 'beginner' | 'intermediate' | 'advanced' | 'expert')
+                      )
+                    }
+                  >
+                    <SelectTrigger
+                      id="wizard-difficulty"
+                      data-testid="wizard-difficulty-select"
+                      className="rounded-xl"
+                      aria-label="Select difficulty"
+                    >
+                      <SelectValue placeholder="Auto-detect" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {DIFFICULTY_OPTIONS.map(opt => (
+                        <SelectItem key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="wizard-category">Category</Label>
+                  <Select
+                    value={selectedCategory}
+                    onValueChange={value => setSelectedCategory(value)}
+                  >
+                    <SelectTrigger
+                      id="wizard-category"
+                      data-testid="wizard-category-select"
+                      className="rounded-xl"
+                      aria-label="Select category"
+                    >
+                      <SelectValue placeholder="Auto-detect" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {CATEGORY_OPTIONS.map(opt => (
+                        <SelectItem key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
 
               {/* Tag management */}

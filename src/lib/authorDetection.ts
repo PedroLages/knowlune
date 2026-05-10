@@ -60,7 +60,10 @@ export function detectAuthorFromFolderName(folderName: string): string | null {
  *
  * @returns The author ID (existing or newly created), or null if authorName is null/empty.
  */
-export async function matchOrCreateAuthor(authorName: string | null): Promise<string | null> {
+export async function matchOrCreateAuthor(
+  authorName: string | null,
+  authorDetails?: { title?: string; bio?: string }
+): Promise<string | null> {
   if (!authorName) return null
 
   const trimmed = authorName.trim()
@@ -87,6 +90,8 @@ export async function matchOrCreateAuthor(authorName: string | null): Promise<st
       isPreseeded: false,
       createdAt: now,
       updatedAt: now,
+      ...(authorDetails?.title ? { title: authorDetails.title } : {}),
+      ...(authorDetails?.bio ? { bio: authorDetails.bio } : {}),
     })
 
     return id
