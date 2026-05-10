@@ -423,26 +423,34 @@ export function BulkImportDialog({
 
     if (manifest && parentHandle) {
       // Batch mode: delegate to batchImportTrackCourses (handles scan, persist, track creation)
-      const result = await batchImportTrackCourses(parentHandle, manifest)
+      try {
+        const result = await batchImportTrackCourses(parentHandle, manifest)
 
-      // Convert batch result to ImportItem[] for the results display
-      const items: ImportItem[] = result.courses.map(c => ({
-        folderName: c.folder,
-        handle: null as unknown as FileSystemDirectoryHandle,
-        status: c.success ? 'success' as const : 'error' as const,
-        error: c.error,
-      }))
-      setImportItems(items)
+        // Convert batch result to ImportItem[] for the results display
+        const items: ImportItem[] = result.courses.map(c => ({
+          folderName: c.folder,
+          handle: null as unknown as FileSystemDirectoryHandle,
+          status: c.success ? 'success' as const : 'error' as const,
+          error: c.error,
+        }))
+        setImportItems(items)
 
-      // Store result for onComplete to pass trackId
-      batchResultRef.current = {
-        trackId: result.trackId,
-        courseIds: result.courses
-          .filter(r => r.success && r.courseId)
-          .map(r => r.courseId!),
+        // Store result for onComplete to pass trackId
+        batchResultRef.current = {
+          trackId: result.trackId,
+          courseIds: result.courses
+            .filter(r => r.success && r.courseId)
+            .map(r => r.courseId!),
+        }
+
+        setStep('results')
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Unexpected error during batch import'
+        toast.error(`Batch import failed: ${message}`)
+        console.error('[BulkImport] batchImportTrackCourses threw:', err)
+        // Reset to review step so the user can retry or go back
+        setStep('review')
       }
-
-      setStep('results')
       return
     }
 

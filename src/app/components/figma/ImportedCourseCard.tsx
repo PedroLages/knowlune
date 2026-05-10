@@ -600,7 +600,7 @@ export function ImportedCourseCard({
               has clear space. */}
           {course.totalDuration != null && course.totalDuration > 0 && (
             <span
-              className="transition-opacity duration-200 group-hover:opacity-0 [@media(hover:none)]:group-hover:opacity-100 motion-reduce:transition-none"
+              className="transition-opacity duration-200 group-hover:opacity-0 group-focus-within:opacity-0 [@media(hover:none)]:group-hover:opacity-100 motion-reduce:transition-none"
             >
               <CoverCornerChip position="bottom-right" data-testid="course-card-duration">
                 <Clock className="size-3" aria-hidden="true" />
