@@ -73,7 +73,7 @@ export function CurriculumComposer({
   onOpenChange,
   mode = 'manual',
   initialGoal = '',
-  redirectBase = '/learning-paths',
+  redirectBase = '/learning-tracks',
 }: CurriculumComposerProps) {
   const navigate = useNavigate()
   const createPathWithCourses = useLearningPathStore(s => s.createPathWithCourses)

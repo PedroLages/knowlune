@@ -52,7 +52,7 @@ export function NextInPath({
 
   const handleNavigate = () => {
     if (isLastInPath) {
-      navigate(`/learning-paths/${pathId}`)
+      navigate(`/learning-tracks/${pathId}`)
     } else if (nextCourseId) {
       const url = nextTargetLessonId
         ? `/courses/${nextCourseId}/lessons/${nextTargetLessonId}`

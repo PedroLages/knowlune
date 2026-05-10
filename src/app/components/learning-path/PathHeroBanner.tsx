@@ -41,8 +41,8 @@ export function PathHeroBanner({
   currentCourseId,
   firstCourseId,
   targetLessonId,
-  backUrl = '/learning-paths',
-  backLabel = 'Back to Learning Paths',
+  backUrl = '/learning-tracks',
+  backLabel = 'Back to Learning Tracks',
   onEdit,
   onDelete,
 }: PathHeroBannerProps) {

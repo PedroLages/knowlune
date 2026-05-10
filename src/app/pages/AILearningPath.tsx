@@ -23,7 +23,7 @@ export function AILearningPath() {
     setOpen(newOpen)
     if (!newOpen) {
       // Navigate back to learning paths when dialog is dismissed
-      navigate('/learning-paths')
+      navigate('/learning-tracks')
     }
   }
 

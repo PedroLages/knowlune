@@ -253,7 +253,7 @@ export function PathAnalyticsTab({ dateRange }: Props) {
           <Route className="size-10 text-muted-foreground/30 mb-3" aria-hidden="true" />
           <p className="text-muted-foreground">
             No learning paths yet.{' '}
-            <Link to="/learning-paths" className="text-brand underline hover:text-brand-hover">
+            <Link to="/learning-tracks" className="text-brand underline hover:text-brand-hover">
               Create a learning path
             </Link>{' '}
             to see analytics here.
@@ -392,7 +392,7 @@ export function PathAnalyticsTab({ dateRange }: Props) {
                   <tr key={row.pathId} className="border-b border-border/50 hover:bg-muted/50 transition-colors">
                     <td className="py-2.5 pr-4">
                       <Link
-                        to={`/learning-paths/${row.pathId}`}
+                        to={`/learning-tracks/${row.pathId}`}
                         className="text-brand hover:text-brand-hover underline font-medium"
                       >
                         {row.pathName}

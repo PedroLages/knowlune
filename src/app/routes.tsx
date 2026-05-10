@@ -87,15 +87,6 @@ const WebLLMTest = React.lazy(() => import('../experiments/WebLLMTest'))
 const AILearningPath = React.lazy(() =>
   import('./pages/AILearningPath').then(m => ({ default: m.AILearningPath }))
 )
-const LearningPaths = React.lazy(() =>
-  import('./pages/LearningPaths').then(m => ({ default: m.LearningPaths }))
-)
-const LearningPathDetail = React.lazy(() =>
-  import('./pages/LearningPathDetail').then(m => ({ default: m.LearningPathDetail }))
-)
-const TemplateSyllabus = React.lazy(() =>
-  import('./pages/TemplateSyllabus').then(m => ({ default: m.TemplateSyllabus }))
-)
 const LearningTracks = React.lazy(() =>
   import('./pages/LearningTracks').then(m => ({ default: m.LearningTracks }))
 )
@@ -629,28 +620,8 @@ export const router = createBrowserRouter([
             ),
           },
           {
-            path: 'learning-paths',
-            element: (
-              <SuspensePage>
-                <LearningPaths />
-              </SuspensePage>
-            ),
-          },
-          {
-            path: 'learning-paths/templates/:templateId',
-            element: (
-              <SuspensePage>
-                <TemplateSyllabus />
-              </SuspensePage>
-            ),
-          },
-          {
-            path: 'learning-paths/:pathId',
-            element: (
-              <SuspensePage>
-                <LearningPathDetail />
-              </SuspensePage>
-            ),
+            path: 'learning-paths/*',
+            element: <Navigate to="/learning-tracks" replace />,
           },
           {
             path: 'ai-learning-path',
