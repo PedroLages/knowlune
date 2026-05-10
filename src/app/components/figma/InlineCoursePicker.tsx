@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
-import { Search, BookOpen, Plus, Sparkles, GripVertical, CheckCircle2 } from 'lucide-react'
+import { Search, BookOpen, Plus, Sparkles, GripVertical, CheckCircle2, Folders } from 'lucide-react'
 import {
   DndContext,
   DragOverlay,
@@ -61,6 +61,10 @@ export interface InlineCoursePickerProps {
   showImportAction?: boolean
   /** Handler for import new course action */
   onImportCourse?: () => void
+  /** Show "Import multiple" batch action */
+  showBatchImportAction?: boolean
+  /** Handler for batch import action */
+  onBatchImport?: () => void
   /** Max height for the scrollable list */
   maxHeight?: string
   /** External loading state (e.g., while stores are being initialized) */
@@ -361,6 +365,8 @@ export function InlineCoursePicker({
   showSuggestedNext = false,
   showImportAction = false,
   onImportCourse,
+  showBatchImportAction = false,
+  onBatchImport,
   maxHeight = '400px',
   loading = false,
   hideConfirmButton = false,
@@ -724,6 +730,19 @@ export function InlineCoursePicker({
           >
             <Plus className="size-3.5 mr-1.5" aria-hidden="true" />
             Import new course
+          </Button>
+        )}
+
+        {showBatchImportAction && onBatchImport && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onBatchImport}
+            data-testid="import-multiple-action"
+            className="rounded-xl"
+          >
+            <Folders className="size-3.5 mr-1.5" aria-hidden="true" />
+            Import multiple
           </Button>
         )}
       </div>

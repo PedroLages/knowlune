@@ -24,6 +24,7 @@ import { InlineCoursePicker, suggestNameFromTags } from '@/app/components/figma/
 import { useLearningPathStore } from '@/stores/useLearningPathStore'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
 import { ImportWizardDialog } from '@/app/components/figma/ImportWizardDialog'
+import { BulkImportDialog } from '@/app/components/figma/BulkImportDialog'
 import { useIsMobile } from '@/app/hooks/useMediaQuery'
 import { useImportWizardTrigger } from '@/app/hooks/useImportWizardTrigger'
 import { PremiumGate } from '@/app/components/PremiumGate'
@@ -160,6 +161,26 @@ export function CurriculumComposer({
 
   // Handle import course action
   const handleImportCourse = useCallback(() => handleImportTrigger(null), [handleImportTrigger])
+
+  // Batch import state and handlers
+  const [batchImportOpen, setBatchImportOpen] = useState(false)
+
+  const handleBatchImport = useCallback(() => setBatchImportOpen(true), [])
+
+  const handleBatchImportComplete = useCallback(
+    (importedIds: string[]) => {
+      // Add all imported course IDs to the current selection
+      setSelectedCourseIds(prev => {
+        const unique = importedIds.filter(id => !prev.includes(id))
+        if (unique.length === 0) return prev
+        return [...prev, ...unique]
+      })
+      // Refresh imported courses to include new ones
+      // silent-catch-ok: store refresh failure is non-critical
+      loadImportedCourses().catch(() => {})
+    },
+    [loadImportedCourses]
+  )
 
   // --- AI Goal Generation ---
   const handleGenerate = useCallback(async () => {
@@ -316,6 +337,8 @@ export function CurriculumComposer({
       showSuggestedNext={false}
       showImportAction
       onImportCourse={handleImportCourse}
+      showBatchImportAction
+      onBatchImport={handleBatchImport}
       loading={importedCourses.length === 0}
       hideConfirmButton
     />
@@ -667,6 +690,14 @@ export function CurriculumComposer({
 
       {/* Import Wizard */}
       <ImportWizardDialog open={importWizardOpen} onOpenChange={setImportWizardOpen} />
+
+      {/* Batch Import Dialog */}
+      <BulkImportDialog
+        open={batchImportOpen}
+        onOpenChange={setBatchImportOpen}
+        onSingleImport={handleImportCourse}
+        onComplete={handleBatchImportComplete}
+      />
     </>
   )
 }
