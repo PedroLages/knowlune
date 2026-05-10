@@ -24,9 +24,9 @@ interface PathHeroBannerProps {
   firstCourseId: string | null
   /** Optional: navigate directly to a specific lesson within the CTA course */
   targetLessonId?: string
-  /** Back link URL (defaults to "/learning-paths" for backward compatibility) */
+  /** Back link URL (defaults to "/learning-tracks"). */
   backUrl?: string
-  /** Back link label (defaults to "Back to Learning Paths" for backward compatibility) */
+  /** Back link label (defaults to "Back to Learning Tracks"). */
   backLabel?: string
   onEdit?: () => void
   onDelete?: () => void
