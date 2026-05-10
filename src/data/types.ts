@@ -212,6 +212,11 @@ export interface ImportedVideo {
   fileSize?: number // File size in bytes (E1B-S02)
   width?: number // Video width in pixels (E1B-S02)
   height?: number // Video height in pixels (E1B-S02)
+  // Manifest fields (course-manifest.json import)
+  /** Display title from manifest (falls back to filename-derived). */
+  title?: string
+  /** Module grouping key from manifest. Empty string means no module grouping. */
+  moduleTitle?: string
   // YouTube fields (E28-S01)
   youtubeVideoId?: string // YouTube video ID (e.g., 'dQw4w9WgXcQ')
   youtubeUrl?: string // Full YouTube URL
