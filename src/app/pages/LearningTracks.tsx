@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { motion } from 'motion/react'
-import { Plus, Search, Route, Download, LayoutTemplate, ChevronDown, FolderTree, Loader2 } from 'lucide-react'
+import { Plus, Search, Route, Download, LayoutTemplate, ChevronDown } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
 import { Card, CardContent } from '@/app/components/ui/card'
 import { Badge } from '@/app/components/ui/badge'
@@ -27,18 +27,6 @@ import { useNextBestCourse } from '@/app/hooks/useNextBestCourse'
 import { useImportWizardTrigger } from '@/app/hooks/useImportWizardTrigger'
 import { useLoadCourseThumbnails } from '@/app/hooks/useLoadCourseThumbnails'
 import { staggerContainer, fadeUp } from '@/lib/motion'
-import { readTrackManifest, batchImportTrackCourses } from '@/lib/trackManifestImport'
-import type { TrackManifestSummary } from '@/lib/trackManifestImport'
-import { showDirectoryPicker } from '@/lib/fileSystem'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from '@/app/components/ui/dialog'
-import { Progress } from '@/app/components/ui/progress'
 import type { LearningPath, LearningPathEntry } from '@/data/types'
 import { toast } from 'sonner'
 
@@ -153,13 +141,6 @@ export function LearningTracks() {
   const coverDialogTriggerRef = useRef<HTMLElement | null>(null)
   const [editDialogPath, setEditDialogPath] = useState<LearningPath | null>(null)
 
-  // Batch track import state
-  const [trackImportOpen, setTrackImportOpen] = useState(false)
-  const [trackImportSummary, setTrackImportSummary] = useState<TrackManifestSummary | null>(null)
-  const [trackImportError, setTrackImportError] = useState<string | null>(null)
-  const [isImportingTrack, setIsImportingTrack] = useState(false)
-  const [trackImportProgress, setTrackImportProgress] = useState<{ current: number; total: number } | null>(null)
-
   // Import wizard trigger (singleton guard pattern)
   const {
     trigger,
@@ -170,60 +151,6 @@ export function LearningTracks() {
 
   // Header "Import Course" handler — opens wizard without a target path
   const handleHeaderImport = useCallback(() => trigger(null), [trigger])
-
-  // Refs for the batch track import flow
-  const trackImportDirHandleRef = useRef<FileSystemDirectoryHandle | null>(null)
-  const trackImportManifestRef = useRef<any>(null)
-
-  // Header "Import Track" handler — reads track-manifest.json from a parent directory
-  const handleImportTrack = useCallback(async () => {
-    setTrackImportError(null)
-    setTrackImportSummary(null)
-    try {
-      const dirHandle = await showDirectoryPicker()
-      const result = await readTrackManifest(dirHandle)
-      if (!result.ok) {
-        setTrackImportError(result.error)
-        setTrackImportOpen(true)
-        return
-      }
-      setTrackImportSummary(result.summary)
-      setTrackImportOpen(true)
-      trackImportDirHandleRef.current = dirHandle
-      trackImportManifestRef.current = result.manifest
-    } catch {
-      // User cancelled the picker — do nothing
-    }
-  }, [])
-
-  const handleConfirmTrackImport = useCallback(async () => {
-    const dirHandle = trackImportDirHandleRef.current
-    const manifest = trackImportManifestRef.current
-    if (!dirHandle || !manifest) return
-
-    setIsImportingTrack(true)
-    setTrackImportProgress({ current: 0, total: manifest.track.courses.length })
-
-    try {
-      const result = await batchImportTrackCourses(dirHandle, manifest)
-      // Update progress as courses complete
-      setTrackImportProgress({ current: result.successCount + result.failureCount, total: manifest.track.courses.length })
-      if (result.trackId) {
-        toast.success(`Track "${result.trackName}" imported with ${result.successCount} courses`)
-      }
-      setTrackImportOpen(false)
-      setTrackImportSummary(null)
-      await loadPaths()
-    } catch (err) {
-      toast.error('Track import failed')
-      console.error('[ImportTrack] Batch import failed:', err)
-    } finally {
-      setIsImportingTrack(false)
-      setTrackImportProgress(null)
-      trackImportDirHandleRef.current = null
-      trackImportManifestRef.current = null
-    }
-  }, [loadPaths])
 
   // Path card "Import Course" handler — opens wizard with that path's ID
   const handlePathImport = useCallback((pathId: string) => trigger(pathId), [trigger])
@@ -396,10 +323,6 @@ export function LearningTracks() {
             <Button variant="brand-outline" onClick={handleHeaderImport} className="px-6 py-3">
               <Download className="size-4 mr-2" aria-hidden="true" />
               Import Course
-            </Button>
-            <Button variant="brand-outline" onClick={handleImportTrack} className="px-6 py-3">
-              <FolderTree className="size-4 mr-2" aria-hidden="true" />
-              Import Track
             </Button>
           </div>
         </motion.div>
@@ -578,81 +501,6 @@ export function LearningTracks() {
         onOpenChange={setImportWizardOpen}
         targetPathId={importTargetPathId ?? undefined}
       />
-
-      {/* Track Import Dialog (Error / Confirmation) */}
-      <Dialog open={trackImportOpen} onOpenChange={v => { if (!isImportingTrack) { setTrackImportOpen(v); if (!v) setTrackImportError(null) } }}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Import Track from Manifest</DialogTitle>
-            <DialogDescription>
-              {trackImportError
-                ? 'No track-manifest.json found in the selected folder.'
-                : 'Review the track details and courses to import.'}
-            </DialogDescription>
-          </DialogHeader>
-
-          {trackImportError ? (
-            <div className="flex flex-col gap-4">
-              <div className="rounded-xl border border-destructive/20 bg-destructive/10 p-4">
-                <p className="text-sm text-destructive">{trackImportError}</p>
-              </div>
-              <DialogFooter>
-                <Button variant="brand-outline" onClick={() => { setTrackImportOpen(false); setTrackImportError(null) }}>
-                  Cancel
-                </Button>
-                <Button variant="brand" onClick={() => { setTrackImportError(null); handleImportTrack() }}>
-                  Try Another Folder
-                </Button>
-              </DialogFooter>
-            </div>
-          ) : trackImportSummary ? (
-            <div className="flex flex-col gap-4">
-              <div className="flex flex-col gap-1">
-                <p className="text-sm font-medium">{trackImportSummary.trackName}</p>
-                {trackImportSummary.trackDescription && (
-                  <p className="text-xs text-muted-foreground">{trackImportSummary.trackDescription}</p>
-                )}
-              </div>
-              <div className="rounded-xl border border-border p-3">
-                <p className="text-xs font-medium mb-2 text-muted-foreground">
-                  Course Folders ({trackImportSummary.courseFolders.length})
-                </p>
-                <ul className="space-y-1">
-                  {trackImportSummary.courseFolders.map(folder => (
-                    <li key={folder} className="text-sm flex items-center gap-2">
-                      <FolderTree className="size-3 text-muted-foreground shrink-0" aria-hidden="true" />
-                      {folder}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-              {isImportingTrack && trackImportProgress && (
-                <div className="space-y-2">
-                  <Progress value={trackImportProgress.total > 0 ? (trackImportProgress.current / trackImportProgress.total) * 100 : 0} className="h-1.5" />
-                  <p className="text-xs text-muted-foreground text-center">
-                    Importing {trackImportProgress.current} of {trackImportProgress.total} courses...
-                  </p>
-                </div>
-              )}
-              <DialogFooter>
-                <Button variant="brand-outline" onClick={() => { setTrackImportOpen(false); setTrackImportSummary(null) }} disabled={isImportingTrack}>
-                  Cancel
-                </Button>
-                <Button variant="brand" onClick={handleConfirmTrackImport} disabled={isImportingTrack}>
-                  {isImportingTrack ? (
-                    <>
-                      <Loader2 className="size-4 mr-2 animate-spin" aria-hidden="true" />
-                      Importing...
-                    </>
-                  ) : (
-                    `Import ${trackImportSummary.courseFolders.length} Courses`
-                  )}
-                </Button>
-              </DialogFooter>
-            </div>
-          ) : null}
-        </DialogContent>
-      </Dialog>
     </>
   )
 }
