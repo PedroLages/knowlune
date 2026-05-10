@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
+import { useStableCallback } from '@/app/hooks/useStableCallback'
 import {
   Dialog,
   DialogContent,
@@ -80,6 +81,8 @@ interface BulkImportDialogProps {
   onOpenChange: (open: boolean) => void
   onSingleImport: () => void // Delegate to existing ImportWizardDialog
   onYouTubeImport?: () => void // Delegate to YouTubeImportDialog (E28-S05)
+  /** Called when batch import completes, with IDs of successfully imported courses */
+  onComplete?: (courseIds: string[]) => void
 }
 
 export function BulkImportDialog({
@@ -87,6 +90,7 @@ export function BulkImportDialog({
   onOpenChange,
   onSingleImport,
   onYouTubeImport,
+  onComplete: onCompleteProp,
 }: BulkImportDialogProps) {
   const [step, setStep] = useState<DialogStep>('choose')
   const [folders, setFolders] = useState<FolderEntry[]>([])
@@ -102,6 +106,18 @@ export function BulkImportDialog({
     new Map()
   )
   const abortRef = useRef(false)
+  const completedSuccessfullyRef = useRef(false)
+
+  // Track when the dialog actually transitions through the results step,
+  // so onComplete only fires when the import flow genuinely completed.
+  useEffect(() => {
+    if (step === 'results') {
+      completedSuccessfullyRef.current = true
+    }
+  }, [step])
+
+  // useStableCallback avoids stale closure issues with the onComplete prop
+  const onComplete = useStableCallback(onCompleteProp ?? (() => {}))
 
   // Sync dialog open state with progress store so overlay hides while dialog is showing progress
   useEffect(() => {
@@ -130,16 +146,28 @@ export function BulkImportDialog({
     }
     setCoverPreviewUrls(new Map())
     abortRef.current = false
+    completedSuccessfullyRef.current = false
   }, [coverPreviewUrls])
 
   const handleOpenChange = useCallback(
     (nextOpen: boolean) => {
       if (!nextOpen) {
+        // Fire onComplete only when the dialog actually transitioned through the results step
+        // (avoiding false positives if the dialog is closed externally)
+        if (completedSuccessfullyRef.current) {
+          const ids = importItems
+            .filter(i => i.status === 'success')
+            .map(i => i.scannedCourse?.id)
+            .filter((id): id is string => !!id)
+          if (ids.length > 0) {
+            onComplete(ids)
+          }
+        }
         resetDialog()
       }
       onOpenChange(nextOpen)
     },
-    [onOpenChange, resetDialog]
+    [onOpenChange, resetDialog, step, importItems]
   )
 
   const handleSingleImport = useCallback(() => {

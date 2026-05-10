@@ -1,0 +1,13 @@
+{
+  "tags": [
+    "express",
+    "github-actions",
+    "node",
+    "react"
+  ],
+  "sentinels": [
+    "package.json"
+  ],
+  "detectedAt": "2026-05-10T00:44:25.711Z",
+  "rootPath": "/Volumes/SSD/Dev/Apps/Knowlune"
+}
