@@ -89,6 +89,7 @@ export const useCourseFilterStore = create<CourseFilterState>()(
     }),
     {
       name: STORAGE_KEY,
+      version: 1,
       storage: createJSONStorage(() => sessionStorage),
       // Only persist filter dimensions — not derived selectors or actions
       partialize: state => ({

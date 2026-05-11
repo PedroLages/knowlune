@@ -774,6 +774,7 @@ export function Courses() {
           open={filterSidebarOpen}
           onOpenChange={setFilterSidebarOpen}
           availableCourses={preTagFilteredCourses}
+          courseIdsInTracks={courseIdsInTracks}
         />
       </>
     )}

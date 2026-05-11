@@ -22,7 +22,6 @@ import { RadioGroup, RadioGroupItem } from '@/app/components/ui/radio-group'
 import { Switch } from '@/app/components/ui/switch'
 import { ScrollArea } from '@/app/components/ui/scroll-area'
 import { useCourseFilterStore } from '@/stores/useCourseFilterStore'
-import { useLearningPathStore } from '@/stores/useLearningPathStore'
 import { useMediaQuery } from '@/app/hooks/useMediaQuery'
 import { cn } from '@/app/components/ui/utils'
 import type { ImportedCourse } from '@/data/types'
@@ -33,6 +32,8 @@ interface CourseFilterSidebarProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   availableCourses: ImportedCourse[]
+  /** Pre-computed set of course IDs that belong to any learning track (from Courses.tsx). */
+  courseIdsInTracks?: Set<string>
 }
 
 /**
@@ -41,7 +42,13 @@ interface CourseFilterSidebarProps {
  * Sheet portal when filter state changes (R7 fix).
  */
 function SidebarHeaderContent({ isDrawer = false }: { isDrawer?: boolean }) {
-  const isAnyFilterActive = useCourseFilterStore(s => s.isAnyFilterActive)
+  // Subscribe to primitive values so Zustand triggers re-renders when filter
+  // state changes inside the Radix Sheet portal (R7 fix — stable function
+  // reference selector was preventing reactivity).
+  const source = useCourseFilterStore(s => s.source)
+  const showTrackCourses = useCourseFilterStore(s => s.showTrackCourses)
+  const selectedTags = useCourseFilterStore(s => s.selectedTags)
+  const isAnyActive = source !== 'all' || showTrackCourses || selectedTags.length > 0
   const clearFilter = useCourseFilterStore(s => s.clearFilter)
 
   const handleClearAll = () => {
@@ -54,7 +61,7 @@ function SidebarHeaderContent({ isDrawer = false }: { isDrawer?: boolean }) {
     return (
       <DrawerHeader className="flex flex-row items-center justify-between px-6 pt-6 pb-4">
         <DrawerTitle className="text-lg font-bold">Filters</DrawerTitle>
-        {isAnyFilterActive() && (
+        {isAnyActive && (
           <button
             onClick={handleClearAll}
             className="text-sm font-bold text-brand hover:text-brand-hover transition-colors"
@@ -70,7 +77,7 @@ function SidebarHeaderContent({ isDrawer = false }: { isDrawer?: boolean }) {
   return (
     <SheetHeader className="flex flex-row items-center justify-between px-6 pt-6 pb-4">
       <SheetTitle className="text-lg font-bold">Filters</SheetTitle>
-      {isAnyFilterActive() && (
+      {isAnyActive && (
         <button
           onClick={handleClearAll}
           className="text-sm font-bold text-brand hover:text-brand-hover transition-colors"
@@ -87,26 +94,18 @@ export function CourseFilterSidebar({
   open,
   onOpenChange,
   availableCourses,
+  courseIdsInTracks: courseIdsInTracksProp,
 }: CourseFilterSidebarProps) {
   const source = useCourseFilterStore(s => s.source)
   const showTrackCourses = useCourseFilterStore(s => s.showTrackCourses)
   const selectedTags = useCourseFilterStore(s => s.selectedTags)
   const setFilter = useCourseFilterStore(s => s.setFilter)
-  const learningPathEntries = useLearningPathStore(s => s.entries)
 
   const isMobile = useMediaQuery('(max-width: 767px)')
   const [tagExpanded, setTagExpanded] = useState(false)
 
-  // Compute distinct course IDs in any learning track
-  const courseIdsInTracks = useMemo(() => {
-    const ids = new Set<string>()
-    for (const entry of learningPathEntries) {
-      if (entry.courseType === 'imported') {
-        ids.add(entry.courseId)
-      }
-    }
-    return ids
-  }, [learningPathEntries])
+  // Use pre-computed set from parent (Courses.tsx); fall back to empty if not provided
+  const courseIdsInTracks = courseIdsInTracksProp ?? new Set<string>()
 
   // Number of courses in any learning track (unaffected by filters)
   const totalTrackCourseCount = courseIdsInTracks.size
