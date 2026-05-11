@@ -145,6 +145,37 @@ test.describe('Courses Filtering', () => {
     await expect(page.getByText('YouTube')).toBeHidden()
   })
 
+  test('tag filter OR semantics — courses matching any selected tag are shown', async ({ page }) => {
+    // Seed courses with different tags to verify OR behavior (R8)
+    const courseReact = createImportedCourse({ id: 'tag-course-1', name: 'React Course', tags: ['react'] })
+    const courseVue = createImportedCourse({ id: 'tag-course-2', name: 'Vue Course', tags: ['vue'] })
+    const courseTypeScript = createImportedCourse({ id: 'tag-course-3', name: 'TypeScript Course', tags: ['typescript'] })
+
+    await seedImportedCourses(page, [courseReact, courseVue, courseTypeScript])
+    await goToCourses(page)
+
+    // Open filter sidebar
+    await page.getByTestId('open-filter-sidebar-btn').click()
+    await expect(page.getByTestId('course-filter-sidebar')).toBeVisible()
+
+    // Select 'react' tag (click the first matching checkbox label)
+    await page.getByText('react').click()
+
+    // Select 'vue' tag
+    await page.getByText('vue').click()
+
+    // Both React Course and Vue Course should be visible
+    await expect(page.getByText('React Course')).toBeVisible()
+    await expect(page.getByText('Vue Course')).toBeVisible()
+
+    // TypeScript Course should NOT be visible (no matching tags selected)
+    await expect(page.getByText('TypeScript Course')).toBeHidden()
+
+    // Chips for both selected tags should be present
+    await expect(page.getByLabel('Remove react filter')).toBeVisible()
+    await expect(page.getByLabel('Remove vue filter')).toBeVisible()
+  })
+
   test('filter sidebar opens and closes correctly', async ({ page }) => {
     const course = createImportedCourse({ id: 'course-i', name: 'Course I', tags: [] })
     await seedImportedCourses(page, [course])
@@ -200,7 +231,7 @@ test.describe('Courses Filtering', () => {
         'knowlune-courses-filter-v1',
         JSON.stringify({
           state: { source: 'youtube', showTrackCourses: false, selectedTags: [], selectedStatuses: [] },
-          version: 0,
+          version: 1,
         })
       )
     })
@@ -231,7 +262,7 @@ test.describe('Courses Filtering', () => {
         'knowlune-courses-filter-v1',
         JSON.stringify({
           state: { source: 'youtube', showTrackCourses: false, selectedTags: [], selectedStatuses: [] },
-          version: 0,
+          version: 1,
         })
       )
     })

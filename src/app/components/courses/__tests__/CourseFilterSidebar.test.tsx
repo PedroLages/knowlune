@@ -8,13 +8,14 @@ import { useMediaQuery } from '@/app/hooks/useMediaQuery'
 const mockSetFilter = vi.fn()
 const mockClearFilter = vi.fn()
 const mockIsAnyFilterActive = vi.fn().mockReturnValue(false)
+const mockSelectedTags: string[] = []
 
 vi.mock('@/stores/useCourseFilterStore', () => ({
   useCourseFilterStore: (selector: any) => {
     const state = {
       source: 'all',
       showTrackCourses: false,
-      selectedTags: [],
+      selectedTags: mockSelectedTags,
       selectedStatuses: [],
       setFilter: mockSetFilter,
       clearFilter: mockClearFilter,
@@ -124,6 +125,7 @@ describe('CourseFilterSidebar', () => {
     mockClearFilter.mockClear()
     mockIsAnyFilterActive.mockReturnValue(false)
     mockEntries.length = 0
+    mockSelectedTags.length = 0
   })
 
   it('renders source section with All Courses and YouTube options', () => {
@@ -225,7 +227,7 @@ describe('CourseFilterSidebar', () => {
   })
 
   it('shows Clear All button when filters are active', () => {
-    mockIsAnyFilterActive.mockReturnValue(true)
+    mockSelectedTags.push('react')
 
     render(
       <CourseFilterSidebar
@@ -251,7 +253,7 @@ describe('CourseFilterSidebar', () => {
   })
 
   it('Clear All calls clearFilter for source, showTrackCourses, and selectedTags', async () => {
-    mockIsAnyFilterActive.mockReturnValue(true)
+    mockSelectedTags.push('react')
 
     const user = userEvent.setup()
     render(
@@ -325,6 +327,25 @@ describe('CourseFilterSidebar', () => {
 
     expect(screen.getByText('+3 more')).toBeInTheDocument()
   })
+
+  it('includes selected tags outside the top 12 in the visible tag list', () => {
+    // Create 15 courses each with a unique tag — tags get sorted by count (all 1)
+    // then alphabetically. Tag-0 through tag-11 are the top 12 alphabetically.
+    const manyTags = Array.from({ length: 15 }, (_, i) => [`tag-${i}`])
+    // Select a tag near the end (tag-14) that sorts outside the top 12
+    mockSelectedTags.push('tag-13')
+
+    render(
+      <CourseFilterSidebar
+        open={true}
+        onOpenChange={() => {}}
+        availableCourses={createMockCourses(manyTags)}
+      />
+    )
+
+    // The selected tag should be present in the rendered list
+    expect(screen.getByText('tag-13')).toBeInTheDocument()
+  })
 })
 
 describe('mobile (Drawer)', () => {
@@ -379,7 +400,7 @@ describe('mobile (Drawer)', () => {
   })
 
   it('shows Clear All button when filters are active in Drawer', () => {
-    mockIsAnyFilterActive.mockReturnValue(true)
+    mockSelectedTags.push('react')
 
     render(
       <CourseFilterSidebar

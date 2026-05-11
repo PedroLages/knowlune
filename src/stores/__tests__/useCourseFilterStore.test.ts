@@ -149,7 +149,7 @@ describe('useCourseFilterStore', () => {
         selectedTags: ['react'],
         selectedStatuses: ['active'],
       },
-      version: 0,
+      version: 1,
     }
     sessionStorage.setItem('knowlune-courses-filter-v1', JSON.stringify(savedState))
 
