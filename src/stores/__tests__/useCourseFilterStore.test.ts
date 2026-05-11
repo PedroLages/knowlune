@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { act } from 'react'
 import { useCourseFilterStore } from '../useCourseFilterStore'
 
