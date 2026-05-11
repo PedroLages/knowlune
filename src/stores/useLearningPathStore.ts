@@ -151,7 +151,7 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
       })
     } catch (error) {
       console.error('[LearningPathStore] Failed to load paths:', error)
-      set({ error: 'Failed to load learning paths from database' })
+      set({ error: 'Failed to load learning paths from database', isLoaded: true })
     }
   },
 
