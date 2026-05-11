@@ -16,6 +16,7 @@ interface LearningPathState {
   isGenerating: boolean
   forkGeneration: number
   error: string | null
+  isLoaded: boolean           // Guard flag — follows useBookStore.isLoaded pattern
 
   // Pending deletes (undo support)
   // Uses a plain Record for Zustand immutability tracking. Each entry holds the
@@ -130,9 +131,11 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
   isGenerating: false,
   forkGeneration: 0,
   error: null,
+  isLoaded: false,
   pendingDeletes: {},
 
   loadPaths: async () => {
+    if (get().isLoaded) return
     try {
       const paths = await db.learningPaths.toArray()
       const entries = await db.learningPathEntries.toArray()
@@ -144,6 +147,7 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
         entries,
         activePath: sorted[0] || null,
         error: null,
+        isLoaded: true,
       })
     } catch (error) {
       console.error('[LearningPathStore] Failed to load paths:', error)
