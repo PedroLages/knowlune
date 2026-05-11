@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { CourseFilterSidebar } from '@/app/components/courses/CourseFilterSidebar'
+import { useMediaQuery } from '@/app/hooks/useMediaQuery'
 
 // Mock the stores
 const mockSetFilter = vi.fn()
@@ -34,9 +35,9 @@ vi.mock('@/stores/useLearningPathStore', () => ({
   },
 }))
 
-// Mock media query for desktop by default
+// Mock media query for desktop by default — use vi.fn() so mobile tests can override
 vi.mock('@/app/hooks/useMediaQuery', () => ({
-  useMediaQuery: () => false, // false for desktop (≥768px)
+  useMediaQuery: vi.fn().mockReturnValue(false),
 }))
 
 // Mock the UI components that use Radix primitives
@@ -323,5 +324,83 @@ describe('CourseFilterSidebar', () => {
     )
 
     expect(screen.getByText('+3 more')).toBeInTheDocument()
+  })
+})
+
+describe('mobile (Drawer)', () => {
+  beforeEach(() => {
+    vi.mocked(useMediaQuery).mockReturnValue(true)
+    mockIsAnyFilterActive.mockReturnValue(false)
+    mockEntries.length = 0
+  })
+
+  it('renders Drawer instead of Sheet on mobile', () => {
+    render(
+      <CourseFilterSidebar
+        open={true}
+        onOpenChange={() => {}}
+        availableCourses={createMockCourses([['react'], ['vue']])}
+      />
+    )
+
+    // Drawer should render instead of Sheet
+    expect(screen.getByTestId('drawer')).toBeInTheDocument()
+    expect(screen.getByTestId('drawer-content')).toBeInTheDocument()
+    expect(screen.queryByTestId('sheet')).not.toBeInTheDocument()
+  })
+
+  it('renders all three filter sections inside Drawer', () => {
+    mockEntries.push({ courseId: 'course-1', courseType: 'imported' })
+
+    render(
+      <CourseFilterSidebar
+        open={true}
+        onOpenChange={() => {}}
+        availableCourses={createMockCourses([['react']])}
+      />
+    )
+
+    // All filter sections should render
+    expect(screen.getByText('Source')).toBeInTheDocument()
+    expect(screen.getByText('Learning Tracks')).toBeInTheDocument()
+    expect(screen.getByText('Tags')).toBeInTheDocument()
+  })
+
+  it('renders Filters title in Drawer header', () => {
+    render(
+      <CourseFilterSidebar
+        open={true}
+        onOpenChange={() => {}}
+        availableCourses={createMockCourses([['react']])}
+      />
+    )
+
+    expect(screen.getByText('Filters')).toBeInTheDocument()
+  })
+
+  it('shows Clear All button when filters are active in Drawer', () => {
+    mockIsAnyFilterActive.mockReturnValue(true)
+
+    render(
+      <CourseFilterSidebar
+        open={true}
+        onOpenChange={() => {}}
+        availableCourses={createMockCourses([['react']])}
+      />
+    )
+
+    expect(screen.getByTestId('sidebar-clear-all-filters')).toBeInTheDocument()
+  })
+
+  it('does not show Clear All button when no filters are active in Drawer', () => {
+    render(
+      <CourseFilterSidebar
+        open={true}
+        onOpenChange={() => {}}
+        availableCourses={createMockCourses([['react']])}
+      />
+    )
+
+    expect(screen.queryByTestId('sidebar-clear-all-filters')).not.toBeInTheDocument()
   })
 })

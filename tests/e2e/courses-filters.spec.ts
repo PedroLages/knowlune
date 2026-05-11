@@ -163,25 +163,38 @@ test.describe('Courses Filtering', () => {
     await expect(page.getByTestId('course-filter-sidebar')).toBeHidden()
   })
 
-  test('empty state with clear all filters button when filters produce zero results', async ({ page }) => {
-    // Seed a course with tags
+  test('empty state via UI interaction when filter excludes all courses', async ({ page }) => {
+    // Seed a local course (source undefined = local; no YouTube courses exist)
     const course = createImportedCourse({ id: 'course-j', name: 'Course J', tags: ['react'] })
     await seedImportedCourses(page, [course])
     await goToCourses(page)
 
-    // Open filter sidebar and select a tag that won't match any course
+    // Open filter sidebar
     await page.getByTestId('open-filter-sidebar-btn').click()
     await expect(page.getByTestId('course-filter-sidebar')).toBeVisible()
 
-    // Find the "react" tag and uncheck it — actually we need to select a non-existent tag
-    // Since we can't type into the sidebar, let's broaden assertions:
-    // We'll just verify the empty state appears when filters exclude all courses.
-    // The simplest way: enable YouTube filter (our course has source 'local')
+    // Select YouTube source filter (none of our seeded courses are YouTube)
+    await page.getByTestId('radio-item-youtube').click()
 
-    // Close sidebar first
-    await page.keyboard.press('Escape')
+    // Empty state should be visible
+    const emptyState = page.getByTestId('filtered-empty-state')
+    await expect(emptyState).toBeVisible()
+    await expect(emptyState).toContainText('No courses match the active filters')
 
-    // Set filter via sessionStorage to force empty state
+    // Click "Clear all filters"
+    await page.getByTestId('clear-all-filters-empty').click()
+
+    // Course should reappear
+    await expect(page.getByText('Course J')).toBeVisible()
+  })
+
+  test('rehydrated empty state from sessionStorage shows clear all filters button', async ({ page }) => {
+    // Seed a course
+    const course = createImportedCourse({ id: 'course-j2', name: 'Course J2', tags: ['react'] })
+    await seedImportedCourses(page, [course])
+    await goToCourses(page)
+
+    // Set filter via sessionStorage to force empty state (tests rehydration, not UI interaction)
     await page.evaluate(() => {
       sessionStorage.setItem(
         'knowlune-courses-filter-v1',
@@ -203,7 +216,7 @@ test.describe('Courses Filtering', () => {
     await page.getByTestId('clear-all-filters-empty').click()
 
     // Course should reappear
-    await expect(page.getByText('Course J')).toBeVisible()
+    await expect(page.getByText('Course J2')).toBeVisible()
   })
 
   test('sidebar trigger button shows active indicator when filters are active', async ({ page }) => {

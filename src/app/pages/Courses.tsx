@@ -159,8 +159,9 @@ export function Courses() {
     return ids
   }, [learningPathEntries])
 
-  // Filter chain: track → source → status → tags (AND composition)
-  const filteredImportedCourses = useMemo(() => {
+  // Filter chain: track → source → status (pre-tag) → tags (final) — R7 fix
+  // preTagFilteredCourses is passed to the sidebar so all tag counts remain accurate
+  const preTagFilteredCourses = useMemo(() => {
     // Apply track visibility filter (R1)
     let result = showTrackCourses
       ? importedCourses
@@ -176,18 +177,20 @@ export function Courses() {
       result = result.filter(c => selectedStatuses.includes(c.status))
     }
 
-    // Apply tag filter — OR semantics within tags, AND with other filters (R6, R8)
-    if (selectedTags.length > 0) {
-      const tagSet = new Set(selectedTags.map(t => t.toLowerCase()))
-      result = result.filter(c => c.tags.some(t => tagSet.has(t.toLowerCase())))
-    }
-
     return result
-  }, [importedCourses, courseIdsInTracks, showTrackCourses, sourceFilter, selectedStatuses, selectedTags])
+  }, [importedCourses, courseIdsInTracks, showTrackCourses, sourceFilter, selectedStatuses])
+
+  const finalFilteredCourses = useMemo(() => {
+    // Apply tag filter — OR semantics within tags, AND with other filters (R6, R8)
+    if (selectedTags.length === 0) return preTagFilteredCourses
+
+    const tagSet = new Set(selectedTags.map(t => t.toLowerCase()))
+    return preTagFilteredCourses.filter(c => c.tags.some(t => tagSet.has(t.toLowerCase())))
+  }, [preTagFilteredCourses, selectedTags])
 
   // AC1-AC4 (E1C-S05): Sort imported courses by momentum or importedAt
   const sortedImportedCourses = useMemo(() => {
-    return [...filteredImportedCourses].sort((a, b) => {
+    return [...finalFilteredCourses].sort((a, b) => {
       if (sortMode === 'momentum') {
         const scoreA = momentumMap.get(a.id)?.score ?? 0
         const scoreB = momentumMap.get(b.id)?.score ?? 0
@@ -199,7 +202,7 @@ export function Courses() {
       // AC3: "Most Recent" sorts by importedAt (newest first)
       return new Date(b.importedAt).getTime() - new Date(a.importedAt).getTime()
     })
-  }, [filteredImportedCourses, sortMode, momentumMap])
+  }, [finalFilteredCourses, sortMode, momentumMap])
 
   // Fetch per-course lesson data for the timeline view (positioned after sortedImportedCourses)
   useEffect(() => {
@@ -697,7 +700,7 @@ export function Courses() {
                     Import a course &rarr;
                   </Button>
                 </div>
-              ) : filteredImportedCourses.length === 0 ? (
+              ) : finalFilteredCourses.length === 0 ? (
                 <div
                   className="text-center py-8 text-muted-foreground"
                   data-testid="filtered-empty-state"
@@ -770,7 +773,7 @@ export function Courses() {
         <CourseFilterSidebar
           open={filterSidebarOpen}
           onOpenChange={setFilterSidebarOpen}
-          availableCourses={filteredImportedCourses}
+          availableCourses={preTagFilteredCourses}
         />
       </>
     )}

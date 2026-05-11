@@ -35,6 +35,54 @@ interface CourseFilterSidebarProps {
   availableCourses: ImportedCourse[]
 }
 
+/**
+ * SidebarHeaderContent — separate component that independently subscribes
+ * to the Zustand store so the Clear All button re-renders inside the Radix
+ * Sheet portal when filter state changes (R7 fix).
+ */
+function SidebarHeaderContent({ isDrawer = false }: { isDrawer?: boolean }) {
+  const isAnyFilterActive = useCourseFilterStore(s => s.isAnyFilterActive)
+  const clearFilter = useCourseFilterStore(s => s.clearFilter)
+
+  const handleClearAll = () => {
+    clearFilter('source')
+    clearFilter('showTrackCourses')
+    clearFilter('selectedTags')
+  }
+
+  if (isDrawer) {
+    return (
+      <DrawerHeader className="flex flex-row items-center justify-between px-6 pt-6 pb-4">
+        <DrawerTitle className="text-lg font-bold">Filters</DrawerTitle>
+        {isAnyFilterActive() && (
+          <button
+            onClick={handleClearAll}
+            className="text-sm font-bold text-brand hover:text-brand-hover transition-colors"
+            data-testid="sidebar-clear-all-filters"
+          >
+            Clear All
+          </button>
+        )}
+      </DrawerHeader>
+    )
+  }
+
+  return (
+    <SheetHeader className="flex flex-row items-center justify-between px-6 pt-6 pb-4">
+      <SheetTitle className="text-lg font-bold">Filters</SheetTitle>
+      {isAnyFilterActive() && (
+        <button
+          onClick={handleClearAll}
+          className="text-sm font-bold text-brand hover:text-brand-hover transition-colors"
+          data-testid="sidebar-clear-all-filters"
+        >
+          Clear All
+        </button>
+      )}
+    </SheetHeader>
+  )
+}
+
 export function CourseFilterSidebar({
   open,
   onOpenChange,
@@ -44,8 +92,6 @@ export function CourseFilterSidebar({
   const showTrackCourses = useCourseFilterStore(s => s.showTrackCourses)
   const selectedTags = useCourseFilterStore(s => s.selectedTags)
   const setFilter = useCourseFilterStore(s => s.setFilter)
-  const clearFilter = useCourseFilterStore(s => s.clearFilter)
-  const isAnyFilterActive = useCourseFilterStore(s => s.isAnyFilterActive)
   const learningPathEntries = useLearningPathStore(s => s.entries)
 
   const isMobile = useMediaQuery('(max-width: 767px)')
@@ -102,12 +148,6 @@ export function CourseFilterSidebar({
       ? selectedTags.filter(t => t !== tag)
       : [...selectedTags, tag]
     setFilter('selectedTags', next)
-  }
-
-  const handleClearAll = () => {
-    clearFilter('source')
-    clearFilter('showTrackCourses')
-    clearFilter('selectedTags')
   }
 
   const sidebarContent = (
@@ -252,37 +292,11 @@ export function CourseFilterSidebar({
     </div>
   )
 
-  const headerContent = (
-    <SheetHeader className="flex flex-row items-center justify-between px-6 pt-6 pb-4">
-      <SheetTitle className="text-lg font-bold">Filters</SheetTitle>
-      {isAnyFilterActive() && (
-        <button
-          onClick={handleClearAll}
-          className="text-sm font-bold text-brand hover:text-brand-hover transition-colors"
-          data-testid="sidebar-clear-all-filters"
-        >
-          Clear All
-        </button>
-      )}
-    </SheetHeader>
-  )
-
   if (isMobile) {
     return (
       <Drawer open={open} onOpenChange={onOpenChange}>
         <DrawerContent className="max-h-[85vh]">
-          <DrawerHeader className="flex flex-row items-center justify-between px-6 pt-6 pb-4">
-            <DrawerTitle className="text-lg font-bold">Filters</DrawerTitle>
-            {isAnyFilterActive() && (
-              <button
-                onClick={handleClearAll}
-                className="text-sm font-bold text-brand hover:text-brand-hover transition-colors"
-                data-testid="sidebar-clear-all-filters"
-              >
-                Clear All
-              </button>
-            )}
-          </DrawerHeader>
+          <SidebarHeaderContent isDrawer />
           {sidebarContent}
         </DrawerContent>
       </Drawer>
@@ -297,7 +311,7 @@ export function CourseFilterSidebar({
         data-testid="course-filter-sidebar"
         showCloseButton={false}
       >
-        {headerContent}
+        <SidebarHeaderContent />
         {sidebarContent}
       </SheetContent>
     </Sheet>
