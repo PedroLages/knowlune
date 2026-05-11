@@ -1,4 +1,4 @@
-import { LayoutGrid, List, Rows3 } from 'lucide-react'
+import { LayoutGrid, List, Rows3, GitBranch } from 'lucide-react'
 
 import { ToggleGroup, ToggleGroupItem } from '@/app/components/ui/toggle-group'
 import { cn } from '@/app/components/ui/utils'
@@ -12,6 +12,7 @@ const OPTIONS: ReadonlyArray<{
   { value: 'grid', label: 'Grid view', Icon: LayoutGrid },
   { value: 'list', label: 'List view', Icon: List },
   { value: 'compact', label: 'Compact view', Icon: Rows3 },
+  { value: 'timeline', label: 'Timeline view', Icon: GitBranch },
 ] as const
 
 export interface ViewModeToggleProps {
@@ -21,9 +22,8 @@ export interface ViewModeToggleProps {
 }
 
 /**
- * ViewModeToggle — three-option toggle (grid / list / compact) for the Courses
- * page. E99-S01 ships the toggle and persistence; the list/compact renderers
- * land in S03/S04 — until then all three values render the existing grid.
+ * ViewModeToggle — four-option toggle (grid / list / compact / timeline) for the Courses
+ * page. The timeline mode renders a vertical syllabus tree instead of a grid.
  *
  * Uses shadcn ToggleGroup (Radix `role="radiogroup"`) so arrow-key navigation
  * and selected-state semantics are provided for free.
@@ -37,7 +37,7 @@ export function ViewModeToggle({ value, onChange, className }: ViewModeTogglePro
       onValueChange={next => {
         // Radix emits '' when the active item is clicked again. Ignore it so
         // the component behaves as a strict radio group (one always selected).
-        if (next === 'grid' || next === 'list' || next === 'compact') {
+        if (next === 'grid' || next === 'list' || next === 'compact' || next === 'timeline') {
           onChange(next)
         }
       }}

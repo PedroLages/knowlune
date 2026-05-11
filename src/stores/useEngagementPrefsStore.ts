@@ -4,10 +4,10 @@ import { saveSettings, saveSettingsToSupabase } from '@/lib/settings'
 const STORAGE_KEY = 'levelup-engagement-prefs-v1'
 
 export type ColorScheme = 'professional' | 'vibrant' | 'clean' | 'apple'
-export type CourseViewMode = 'grid' | 'list' | 'compact'
+export type CourseViewMode = 'grid' | 'list' | 'compact' | 'timeline'
 export type CourseGridColumns = 'auto' | 2 | 3 | 4 | 5
 
-const VALID_COURSE_VIEW_MODES: CourseViewMode[] = ['grid', 'list', 'compact']
+const VALID_COURSE_VIEW_MODES: CourseViewMode[] = ['grid', 'list', 'compact', 'timeline']
 const VALID_COURSE_GRID_COLUMNS: CourseGridColumns[] = ['auto', 2, 3, 4, 5]
 
 export interface EngagementPrefs {
