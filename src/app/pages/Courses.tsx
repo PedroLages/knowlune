@@ -225,10 +225,12 @@ export function Courses() {
         setLessonGroupsByCourse(groupsByCourse)
         setTimelineIsLoading(false)
       })
-      .catch(() => {
+      .catch((error) => {
         if (!ignore) {
           setTimelineIsLoading(false)
         }
+        // silent-catch-ok: timeline data failure is non-fatal — courses still load without progress/momentum
+        console.warn('[Courses] Failed to load course timeline data:', error)
       })
 
     return () => {

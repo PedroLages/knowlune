@@ -1,8 +1,9 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { BrowserRouter } from 'react-router'
 import { CourseTimelineView } from '@/app/components/courses/CourseTimelineView'
+import { useIsMobile } from '@/app/hooks/useMediaQuery'
 import type { ImportedCourse } from '@/data/types'
 import type { ChapterGroup } from '@/lib/curriculumGrouping'
 
@@ -21,15 +22,12 @@ vi.mock('sonner', () => ({
   toast: { success: vi.fn(), error: vi.fn() },
 }))
 
-// Mock useNavigate
-const mockNavigate = vi.fn()
-vi.mock('react-router', async () => {
-  const actual = await vi.importActual('react-router')
-  return {
-    ...actual,
-    useNavigate: () => mockNavigate,
-  }
-})
+// Mock useIsMobile for desktop by default
+vi.mock('@/app/hooks/useMediaQuery', () => ({
+  useIsMobile: vi.fn(() => false),
+}))
+
+// react-router modules are used directly (Link, BrowserRouter)
 
 function makeCourse(overrides: Partial<ImportedCourse> = {}): ImportedCourse {
   const id = overrides.id ?? 'course-1'
@@ -88,6 +86,9 @@ function renderTimeline(props: Partial<Parameters<typeof CourseTimelineView>[0]>
 }
 
 describe('CourseTimelineView', () => {
+  beforeEach(() => {
+    vi.mocked(useIsMobile).mockImplementation(() => false)
+  })
   it('renders loading skeleton when isLoading is true', () => {
     renderTimeline({ isLoading: true, courses: [makeCourse()] })
     expect(screen.getByTestId('timeline-skeleton')).toBeInTheDocument()
@@ -212,6 +213,26 @@ describe('CourseTimelineView', () => {
     }
 
     expect(screen.getByText('No lessons available')).toBeInTheDocument()
+  })
+
+  it('renders in mobile/simplified mode without connector column', () => {
+    vi.mocked(useIsMobile).mockReturnValue(true)
+
+    const { container } = renderTimeline({
+      courses: [makeCourse({ id: 'c1', name: 'Mobile Course', status: 'active' })],
+      lessonGroupsByCourse: new Map([['c1', makeLessonGroups()]]),
+    })
+
+    // Course content renders in mobile mode
+    expect(screen.getByText('Mobile Course')).toBeInTheDocument()
+    expect(screen.getByText('Active')).toBeInTheDocument()
+
+    // No desktop connector column — flex-col items-center is exclusively used by connector
+    expect(container.querySelector('.flex-col.items-center')).toBeNull()
+
+    // Status dot uses compact size (size-5) instead of desktop size (size-7)
+    expect(container.querySelectorAll('.size-5').length).toBeGreaterThan(0)
+    expect(container.querySelector('.size-7')).toBeNull()
   })
 
   it('renders overflow menu with edit, delete, and status change options', async () => {

@@ -326,6 +326,7 @@ function CourseTimelineEntry({
       setDeleting(false)
     } else {
       toast.success('Course deleted')
+      setDeleting(false)
     }
   }
 
