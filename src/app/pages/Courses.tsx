@@ -14,7 +14,7 @@ import { ImportedCourseCard } from '@/app/components/figma/ImportedCourseCard'
 import { ImportedCourseCompactCard } from '@/app/components/figma/ImportedCourseCompactCard'
 import { ImportedCourseListRow } from '@/app/components/figma/ImportedCourseListRow'
 import { StatusFilter, statuses as statusFilterOptions } from '@/app/components/figma/StatusFilter'
-import { FolderOpen, BookOpen, Youtube, Trash2, X, Loader2 } from 'lucide-react'
+import { FolderOpen, BookOpen, Youtube, Trash2, X, Loader2, ListFilter } from 'lucide-react'
 import { getImportedCourseCompletionPercent } from '@/lib/progress'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
 import { useLazyStore } from '@/hooks/useLazyStore'
@@ -31,18 +31,21 @@ import { getGridClassName } from '@/app/components/courses/gridClassName'
 import { useEngagementPrefsStore } from '@/stores/useEngagementPrefsStore'
 import { Separator } from '@/app/components/ui/separator'
 import { buildGroupedCurriculum, type ChapterGroup } from '@/lib/curriculumGrouping'
+import { useCourseFilterStore } from '@/stores/useCourseFilterStore'
+import { useLearningPathStore } from '@/stores/useLearningPathStore'
+import { CourseFilterSidebar } from '@/app/components/courses/CourseFilterSidebar'
 
-import type { LearnerCourseStatus, ImportedVideo, ImportedPdf, YouTubeCourseChapter, VideoProgress } from '@/data/types'
+import type { ImportedVideo, ImportedPdf, YouTubeCourseChapter, VideoProgress } from '@/data/types'
 import type { MomentumScore } from '@/lib/momentum'
 
 type SortMode = 'recent' | 'momentum'
 
 export function Courses() {
-  const [selectedStatuses, setSelectedStatuses] = useState<LearnerCourseStatus[]>([])
   const [sortMode, setSortMode] = useState<SortMode>('recent')
   const [wizardOpen, setWizardOpen] = useState(false)
   const [bulkImportOpen, setBulkImportOpen] = useState(false)
   const [youtubeImportOpen, setYoutubeImportOpen] = useState(false)
+  const [filterSidebarOpen, setFilterSidebarOpen] = useState(false)
   const [momentumMap, setMomentumMap] = useState<Map<string, MomentumScore>>(new Map())
   const [importedCompletionMap, setImportedCompletionMap] = useState<Map<string, number>>(new Map())
   const [selectionMode, setSelectionMode] = useState(false)
@@ -63,8 +66,23 @@ export function Courses() {
   const courseGridColumns = useEngagementPrefsStore(state => state.courseGridColumns)
   const setEngagementPref = useEngagementPrefsStore(state => state.setPreference)
 
-  // Lazy-load imported courses on mount (deferred — not critical for initial app load)
+  // Course filter store
+  const selectedStatuses = useCourseFilterStore(s => s.selectedStatuses)
+  const setFilter = useCourseFilterStore(s => s.setFilter)
+  const clearAllFilters = useCourseFilterStore(s => s.clearAllFilters)
+  const sourceFilter = useCourseFilterStore(s => s.source)
+  const showTrackCourses = useCourseFilterStore(s => s.showTrackCourses)
+  const selectedTags = useCourseFilterStore(s => s.selectedTags)
+  const isAnyFilterActive = useCourseFilterStore(s => s.isAnyFilterActive)
+
+  // Learning path store — for track membership computation
+  const learningPathEntries = useLearningPathStore(s => s.entries)
+  const isLoaded = useLearningPathStore(s => s.isLoaded)
+  const loadPaths = useLearningPathStore(s => s.loadPaths)
+
+  // Lazy-load stores on mount
   useLazyStore(loadImportedCourses)
+  useLazyStore(loadPaths)
 
   useEffect(() => {
     let ignore = false
@@ -130,10 +148,42 @@ export function Courses() {
   // Keep legacy allTags for ImportedCourseCard (imported-only tags)
   const allTags = useMemo(() => getAllTags(), [getAllTags])
 
+  // Compute distinct course IDs in any learning track
+  const courseIdsInTracks = useMemo(() => {
+    const ids = new Set<string>()
+    for (const entry of learningPathEntries) {
+      if (entry.courseType === 'imported') {
+        ids.add(entry.courseId)
+      }
+    }
+    return ids
+  }, [learningPathEntries])
+
+  // Filter chain: track → source → status → tags (AND composition)
   const filteredImportedCourses = useMemo(() => {
-    if (selectedStatuses.length === 0) return importedCourses
-    return importedCourses.filter(c => selectedStatuses.includes(c.status))
-  }, [importedCourses, selectedStatuses])
+    // Apply track visibility filter (R1)
+    let result = showTrackCourses
+      ? importedCourses
+      : importedCourses.filter(c => !courseIdsInTracks.has(c.id))
+
+    // Apply source filter (R4)
+    if (sourceFilter === 'youtube') {
+      result = result.filter(c => c.source === 'youtube')
+    }
+
+    // Apply status filter
+    if (selectedStatuses.length > 0) {
+      result = result.filter(c => selectedStatuses.includes(c.status))
+    }
+
+    // Apply tag filter — OR semantics within tags, AND with other filters (R6, R8)
+    if (selectedTags.length > 0) {
+      const tagSet = new Set(selectedTags.map(t => t.toLowerCase()))
+      result = result.filter(c => c.tags.some(t => tagSet.has(t.toLowerCase())))
+    }
+
+    return result
+  }, [importedCourses, courseIdsInTracks, showTrackCourses, sourceFilter, selectedStatuses, selectedTags])
 
   // AC1-AC4 (E1C-S05): Sort imported courses by momentum or importedAt
   const sortedImportedCourses = useMemo(() => {
@@ -454,10 +504,25 @@ export function Courses() {
                 <ControlBarSection label="Filter" showDivider={false}>
                   <StatusFilter
                     selectedStatuses={selectedStatuses}
-                    onSelectedStatusesChange={setSelectedStatuses}
+                    onSelectedStatusesChange={statuses => setFilter('selectedStatuses', statuses)}
                   />
                 </ControlBarSection>
               )}
+              <ControlBarSection label="Filters">
+                <button
+                  type="button"
+                  onClick={() => setFilterSidebarOpen(true)}
+                  className="relative inline-flex items-center gap-1.5 min-h-[44px] px-3 py-2 rounded-full border border-input bg-background text-xs font-semibold text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+                  data-testid="open-filter-sidebar-btn"
+                  aria-label={isAnyFilterActive() ? 'Active filters — open filter sidebar' : 'Open filter sidebar'}
+                >
+                  <ListFilter className="size-4" aria-hidden="true" />
+                  Filters
+                  {isAnyFilterActive() && (
+                    <span className="absolute -top-0.5 -right-0.5 size-2 rounded-full bg-brand" aria-hidden="true" />
+                  )}
+                </button>
+              </ControlBarSection>
               <ControlBarSection label="Sort">
                 <Select value={sortMode} onValueChange={v => setSortMode(v as SortMode)}>
                   <SelectTrigger
@@ -513,7 +578,7 @@ export function Courses() {
               </span>
               <button
                 type="button"
-                onClick={() => setSelectedStatuses([])}
+                onClick={() => setFilter('selectedStatuses', [])}
                 className="inline-flex min-h-11 items-center px-2 text-xs text-muted-foreground hover:text-foreground underline"
                 data-testid="clear-all-filters"
               >
@@ -522,34 +587,132 @@ export function Courses() {
             </div>
           )}
 
-          {/* Your Courses Section */}
-          <div className="mb-8">
-            <h2 className="text-xl font-semibold mb-4">Your Courses</h2>
-            {importedCourses.length === 0 ? (
-              <div
-                data-testid="imported-courses-empty-state"
-                className="flex items-center gap-3 rounded-xl bg-muted/50 px-4 py-3 text-sm text-muted-foreground"
-                role="region"
-                aria-label="Import courses"
+          {/* Info message: track courses are hidden (R2) */}
+          {!showTrackCourses && courseIdsInTracks.size > 0 && (
+            <div
+              className="mb-4 flex items-center gap-2 rounded-xl bg-brand-soft px-4 py-3 text-sm text-brand-soft-foreground"
+              data-testid="track-courses-info"
+              role="status"
+            >
+              <span>
+                {courseIdsInTracks.size}{' '}
+                {courseIdsInTracks.size === 1 ? 'course is' : 'courses are'} organized in learning tracks.
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  setFilterSidebarOpen(true)
+                  setFilter('showTrackCourses', true)
+                }}
+                className="font-bold underline hover:no-underline whitespace-nowrap"
+                data-testid="show-track-courses-link"
               >
-                <FolderOpen className="size-5 shrink-0" aria-hidden="true" />
-                <span>No imported courses yet.</span>
-                <Button
-                  variant="link"
-                  size="sm"
-                  data-testid="import-first-course-cta"
-                  aria-label="Import your first course"
-                  onClick={handleOpenBulkImport}
-                  className="text-brand-soft-foreground h-auto p-0"
+                Show &rarr;
+              </button>
+            </div>
+          )}
+
+          {/* Sidebar filter chips (Unit 4 — R10) */}
+          {isAnyFilterActive() && (
+            <div
+              className="mb-4 flex items-center gap-2 flex-wrap overflow-x-auto"
+              data-testid="filter-chips-row"
+            >
+              {sourceFilter === 'youtube' && (
+                <span className="inline-flex items-center gap-1 bg-brand-soft text-brand-soft-foreground rounded-full px-3 py-1 text-xs font-bold whitespace-nowrap">
+                  YouTube
+                  <button
+                    type="button"
+                    onClick={() => setFilter('source', 'all')}
+                    className="hover:text-destructive transition-colors"
+                    aria-label="Remove YouTube filter"
+                  >
+                    <X className="size-3" />
+                  </button>
+                </span>
+              )}
+              {showTrackCourses && (
+                <span className="inline-flex items-center gap-1 bg-brand-soft text-brand-soft-foreground rounded-full px-3 py-1 text-xs font-bold whitespace-nowrap">
+                  Including tracks
+                  <button
+                    type="button"
+                    onClick={() => setFilter('showTrackCourses', false)}
+                    className="hover:text-destructive transition-colors"
+                    aria-label="Remove track filter"
+                  >
+                    <X className="size-3" />
+                  </button>
+                </span>
+              )}
+              {selectedTags.map(tag => (
+                <span
+                  key={tag}
+                  className="inline-flex items-center gap-1 bg-brand-soft text-brand-soft-foreground rounded-full px-3 py-1 text-xs font-bold whitespace-nowrap"
                 >
-                  Import a course &rarr;
-                </Button>
-              </div>
-            ) : filteredImportedCourses.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                No imported courses match your filters
-              </div>
-            ) : courseViewMode === 'timeline' ? (
+                  {tag}
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setFilter(
+                        'selectedTags',
+                        selectedTags.filter(t => t !== tag)
+                      )
+                    }
+                    className="hover:text-destructive transition-colors"
+                    aria-label={`Remove ${tag} filter`}
+                  >
+                    <X className="size-3" />
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
+
+          {/* Loading state while learning paths initialize */}
+          {!isLoaded && importedCourses.length > 0 ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="size-6 animate-spin text-muted-foreground" aria-hidden="true" />
+            </div>
+          ) : (
+            /* Your Courses Section */
+            <div className="mb-8">
+              <h2 className="text-xl font-semibold mb-4">Your Courses</h2>
+              {importedCourses.length === 0 ? (
+                <div
+                  data-testid="imported-courses-empty-state"
+                  className="flex items-center gap-3 rounded-xl bg-muted/50 px-4 py-3 text-sm text-muted-foreground"
+                  role="region"
+                  aria-label="Import courses"
+                >
+                  <FolderOpen className="size-5 shrink-0" aria-hidden="true" />
+                  <span>No imported courses yet.</span>
+                  <Button
+                    variant="link"
+                    size="sm"
+                    data-testid="import-first-course-cta"
+                    aria-label="Import your first course"
+                    onClick={handleOpenBulkImport}
+                    className="text-brand-soft-foreground h-auto p-0"
+                  >
+                    Import a course &rarr;
+                  </Button>
+                </div>
+              ) : filteredImportedCourses.length === 0 ? (
+                <div
+                  className="text-center py-8 text-muted-foreground"
+                  data-testid="filtered-empty-state"
+                >
+                  <p className="mb-3">No courses match the active filters.</p>
+                  <Button
+                    variant="brand-outline"
+                    size="sm"
+                    onClick={clearAllFilters}
+                    data-testid="clear-all-filters-empty"
+                  >
+                    Clear all filters
+                  </Button>
+                </div>
+              ) : courseViewMode === 'timeline' ? (
               <CourseTimelineView
                 courses={sortedImportedCourses}
                 completionMap={importedCompletionMap}
@@ -601,8 +764,16 @@ export function Courses() {
               />
             )}
           </div>
-        </>
-      )}
-    </div>
+        )}
+
+        {/* CourseFilterSidebar */}
+        <CourseFilterSidebar
+          open={filterSidebarOpen}
+          onOpenChange={setFilterSidebarOpen}
+          availableCourses={filteredImportedCourses}
+        />
+      </>
+    )}
+  </div>
   )
 }
