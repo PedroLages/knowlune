@@ -17,6 +17,7 @@ import {
   BookOpen,
 } from 'lucide-react'
 import { Skeleton } from '@/app/components/ui/skeleton'
+import { useIsMobile } from '@/app/hooks/useMediaQuery'
 import { Card, CardContent } from '@/app/components/ui/card'
 import { cn } from '@/app/components/ui/utils'
 import {
@@ -95,7 +96,7 @@ function StatusCircle({
       >
         <div
           className={cn(
-            'rounded-full bg-white animate-pulse',
+            'rounded-full bg-brand-foreground animate-pulse',
             simplified ? 'size-2' : 'size-2.5'
           )}
         />
@@ -309,6 +310,7 @@ function CourseTimelineEntry({
   const removeImportedCourse = useCourseImportStore(state => state.removeImportedCourse)
 
   const groupsWithVideos = lessonGroups?.filter(g => g.videos.length > 0) ?? []
+  const firstVid = lessonGroups?.flatMap(g => g.videos)[0] ?? null
 
   const statusDot = (
     <StatusCircle status={course.status} simplified={simplified} />
@@ -359,7 +361,7 @@ function CourseTimelineEntry({
       )}
 
       {/* Content */}
-      <div className={simplified ? 'flex-1 min-w-0 mb-4' : 'flex-1 pb-8 min-w-0'}>
+      <div className={simplified ? 'flex-1 min-w-0 w-full mb-4' : 'flex-1 pb-8 min-w-0'}>
         <Card
           className={cn(
             'rounded-2xl border hover:shadow-md transition-all duration-300 group overflow-hidden',
@@ -568,7 +570,7 @@ function CourseTimelineEntry({
         onOpenChange={setThumbnailPickerOpen}
         courseId={course.id}
         courseName={course.name}
-        firstVideo={null}
+        firstVideo={firstVid}
       />
     </div>
   )
@@ -590,6 +592,8 @@ export function CourseTimelineView({
   isLoading,
   allTags,
 }: CourseTimelineViewProps) {
+  const isMobile = useIsMobile()
+
   if (isLoading) {
     return <TimelineSkeleton />
   }
@@ -622,6 +626,7 @@ export function CourseTimelineView({
             lessonGroups={lessonGroupsByCourse.get(course.id)}
             videoProgressMap={progressMap}
             allTags={allTags}
+            simplified={isMobile}
           />
         </div>
       ))}

@@ -11,6 +11,8 @@
  */
 import { test, expect } from '../support/fixtures'
 import { goToCourses } from '../support/helpers/navigation'
+import { seedImportedCourses, seedImportedVideos } from '../support/helpers/indexeddb-seed'
+import { FIXED_DATE } from '../utils/test-time'
 
 test.describe('Courses Timeline View', () => {
   test('switching to timeline view displays courses in a vertical tree', async ({ page }) => {
@@ -44,17 +46,11 @@ test.describe('Courses Timeline View', () => {
     await page.getByRole('radio', { name: 'Timeline view' }).click()
     await expect(page.getByTestId('course-timeline-view')).toBeVisible()
 
-    // Apply a filter - look for status filter buttons
+    // Verify the status filter UI is rendered in timeline mode
     const statusFilter = page.getByTestId('status-filter')
-    if (await statusFilter.isVisible()) {
-      // Click the first status filter option
-      const firstFilterOption = statusFilter.locator('button, [role="checkbox"], [role="radio"]').first()
-      if (await firstFilterOption.isVisible()) {
-        await firstFilterOption.click()
-      }
-    }
+    await expect(statusFilter).toBeVisible()
 
-    // Timeline should still be visible after filtering
+    // Timeline should still be visible after verifying filter
     await expect(page.getByTestId('course-timeline-view')).toBeVisible()
   })
 
@@ -70,23 +66,56 @@ test.describe('Courses Timeline View', () => {
     await expect(sortSelect).toBeVisible()
   })
 
-  test('course entries are expandable in timeline mode', async ({ page }) => {
+  test('course entries are expandable to show lessons in timeline mode', async ({ page }) => {
+    // Seed a known course with lessons for deterministic testing
+    await page.goto('/')
+    await seedImportedCourses(page, [
+      {
+        id: 'expand-test-course',
+        name: 'Expand Test Course',
+        importedAt: FIXED_DATE,
+        category: 'Development',
+        tags: ['test'],
+        status: 'active',
+        videoCount: 2,
+        pdfCount: 0,
+      },
+    ])
+    await seedImportedVideos(page, [
+      {
+        id: 'expand-test-video-1',
+        courseId: 'expand-test-course',
+        filename: 'lesson-1.mp4',
+        path: '/lessons/lesson-1.mp4',
+        duration: 600,
+        format: 'mp4',
+        order: 1,
+        title: 'Lesson One',
+      },
+      {
+        id: 'expand-test-video-2',
+        courseId: 'expand-test-course',
+        filename: 'lesson-2.mp4',
+        path: '/lessons/lesson-2.mp4',
+        duration: 900,
+        format: 'mp4',
+        order: 2,
+        title: 'Lesson Two',
+      },
+    ])
+
     await goToCourses(page)
 
     // Switch to timeline
     await page.getByRole('radio', { name: 'Timeline view' }).click()
     await expect(page.getByTestId('course-timeline-view')).toBeVisible()
 
-    // Find a course entry card with role="button" and click it to expand
-    const courseCards = page.locator('[data-testid="course-timeline-view"] [role="button"]')
-    const count = await courseCards.count()
-    if (count > 0) {
-      await courseCards.first().click()
-      // Lesson rows should appear (they link to /courses/:courseId/lessons/:videoId)
-      const lessonLinks = page.locator('a[href*="/lessons/"]')
-      await expect(lessonLinks.first()).toBeVisible({ timeout: 5000 }).catch(() => {
-        // Course might not have lessons — that's acceptable
-      })
-    }
+    // Click the seeded course card to expand it
+    const courseCard = page.locator('[data-testid="course-timeline-view"] [role="button"]').first()
+    await courseCard.click()
+
+    // Lesson rows should appear linking to /courses/:courseId/lessons/:videoId
+    const lessonLinks = page.locator('a[href*="/lessons/"]')
+    await expect(lessonLinks.first()).toBeVisible({ timeout: 5000 })
   })
 })
