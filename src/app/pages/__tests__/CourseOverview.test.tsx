@@ -2,7 +2,13 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
 import { MotionConfig } from 'motion/react'
-import type { ImportedCourse } from '@/data/types'
+import type { ImportedCourse, ImportedVideo, VideoProgress } from '@/data/types'
+
+// Mutable state that hoisted vi.mock can reference
+const { mockVideos, mockProgressRecords } = vi.hoisted(() => ({
+  mockVideos: [] as ImportedVideo[],
+  mockProgressRecords: [] as VideoProgress[],
+}))
 
 // Mock useParams to return a fixed courseId — keep MemoryRouter real
 vi.mock('react-router', async importOriginal => {
@@ -85,7 +91,7 @@ vi.mock('@/lib/progress', () => ({
 vi.mock('@/db', () => ({
   db: {
     importedVideos: {
-      where: () => ({ equals: () => ({ sortBy: () => Promise.resolve([]) }) }),
+      where: () => ({ equals: () => ({ sortBy: () => Promise.resolve(mockVideos) }) }),
     },
     importedPdfs: {
       where: () => ({ equals: () => ({ toArray: () => Promise.resolve([]) }) }),
@@ -94,7 +100,7 @@ vi.mock('@/db', () => ({
       where: () => ({ equals: () => ({ sortBy: () => Promise.resolve([]) }) }),
     },
     progress: {
-      where: () => ({ equals: () => ({ toArray: () => Promise.resolve([]) }) }),
+      where: () => ({ equals: () => ({ toArray: () => Promise.resolve(mockProgressRecords) }) }),
     },
   },
 }))
@@ -116,15 +122,49 @@ function renderOverview() {
   )
 }
 
+// ---- Test data helpers ----
+
+function makeVideo(overrides: Partial<ImportedVideo> = {}): ImportedVideo {
+  const id = overrides.id ?? 'v1'
+  const title = overrides.title ?? 'Test Video'
+  return {
+    id,
+    courseId: 'course-1',
+    filename: `${title.toLowerCase().replace(/\s+/g, '-')}.mp4`,
+    path: overrides.path ?? `/videos/${id}.mp4`,
+    duration: 600,
+    format: 'mp4',
+    order: overrides.order ?? 0,
+    fileHandle: null,
+    title,
+    moduleTitle: overrides.moduleTitle ?? '',
+    ...overrides,
+  }
+}
+
+function makeProgress(videoId: string, completionPercentage: number): VideoProgress {
+  return { courseId: 'course-1', videoId, currentTime: 0, completionPercentage }
+}
+
+function seedTestData(videos: ImportedVideo[], progress: VideoProgress[] = []) {
+  mockVideos.length = 0
+  mockVideos.push(...videos)
+  mockProgressRecords.length = 0
+  mockProgressRecords.push(...progress)
+}
+
+// ---- Tests ----
+
 describe('CourseOverview Syllabus section', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mockVideos.length = 0
+    mockProgressRecords.length = 0
   })
 
   it('renders Syllabus heading after loading completes', async () => {
     renderOverview()
 
-    // Wait for the async content loading to resolve (Dexie queries)
     await waitFor(() => {
       expect(screen.getByText('Syllabus')).toBeInTheDocument()
     })
@@ -137,8 +177,6 @@ describe('CourseOverview Syllabus section', () => {
       expect(screen.getByText('Syllabus')).toBeInTheDocument()
     })
 
-    // The Syllabus heading only shows a lesson count when videos.length > 0
-    // The "0 of 0 lessons" text in the sidebar is a separate element — not affected
     const syllabusHeading = screen.getByText('Syllabus').closest('div')
     expect(syllabusHeading?.querySelector('.text-muted-foreground')).toBeNull()
   })
@@ -158,7 +196,91 @@ describe('CourseOverview Syllabus section', () => {
       expect(screen.getByText('Syllabus')).toBeInTheDocument()
     })
 
-    // Button only shows when videos.length > 0
     expect(screen.queryByTestId('course-overview-complete-course')).not.toBeInTheDocument()
+  })
+})
+
+describe('CourseOverview Syllabus — module EntryActionButton states', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockVideos.length = 0
+    mockProgressRecords.length = 0
+  })
+
+  it('shows "Start Module" button on an in-progress (active) module', async () => {
+    seedTestData(
+      [
+        makeVideo({ id: 'v1', order: 0, title: 'Intro', path: 'Getting Started/intro.mp4' }),
+        makeVideo({ id: 'v2', order: 1, title: 'Setup', path: 'Getting Started/setup.mp4' }),
+      ],
+      []
+    )
+
+    renderOverview()
+
+    await waitFor(() => {
+      expect(screen.getByText('Syllabus')).toBeInTheDocument()
+    })
+
+    expect(screen.getByText('Start Module')).toBeInTheDocument()
+  })
+
+  it('shows "Review" button on a completed module', async () => {
+    seedTestData(
+      [
+        makeVideo({ id: 'v1', order: 0, title: 'Intro', path: 'Getting Started/intro.mp4' }),
+        makeVideo({ id: 'v2', order: 1, title: 'Setup', path: 'Getting Started/setup.mp4' }),
+      ],
+      [
+        makeProgress('v1', 100),
+        makeProgress('v2', 95),
+      ]
+    )
+
+    renderOverview()
+
+    await waitFor(() => {
+      expect(screen.getByText('Syllabus')).toBeInTheDocument()
+    })
+
+    expect(screen.getByText('Review')).toBeInTheDocument()
+  })
+
+  it('does not show action buttons on a locked module card', async () => {
+    seedTestData(
+      [
+        makeVideo({ id: 'v1', order: 0, title: 'Intro', path: 'Module 1/intro.mp4' }),
+        makeVideo({ id: 'v2', order: 1, title: 'Setup', path: 'Module 2/setup.mp4' }),
+      ],
+      []
+    )
+
+    renderOverview()
+
+    await waitFor(() => {
+      expect(screen.getByText('Syllabus')).toBeInTheDocument()
+    })
+
+    // Module 1 is active → has Start Module
+    expect(screen.getByText('Start Module')).toBeInTheDocument()
+
+    // Module 2 is locked → no Start/Review button
+    const startButtons = screen.getAllByText('Start Module')
+    expect(startButtons).toHaveLength(1)
+  })
+
+  it('renders module number and folder-based group title on module cards', async () => {
+    seedTestData([
+      makeVideo({ id: 'v1', order: 0, title: 'Intro Video', path: 'Getting Started/intro.mp4' }),
+    ])
+
+    renderOverview()
+
+    await waitFor(() => {
+      expect(screen.getByText('Syllabus')).toBeInTheDocument()
+    })
+
+    expect(screen.getByText('Getting Started')).toBeInTheDocument()
+    expect(screen.getByText('Module 1')).toBeInTheDocument()
   })
 })
