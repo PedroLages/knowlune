@@ -103,7 +103,6 @@ vi.mock('@/app/components/figma/StudyScheduleEditor', () => ({
   StudyScheduleEditor: () => null,
 }))
 
-// Import after all mocks are set up
 // Import after all mocks are set up (vi.mock hoisted)
 import { CourseOverview } from '@/app/pages/CourseOverview'
 

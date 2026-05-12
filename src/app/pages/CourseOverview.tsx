@@ -368,7 +368,7 @@ export function CourseOverview() {
             >
               <button
                 type="button"
-                className="bg-foreground text-background hover:bg-foreground/90 px-8 py-4 rounded-full font-bold flex items-center gap-3 transition-all shadow-[0_0_30px_rgba(255,255,255,0.2)] motion-safe:hover:scale-105"
+                className="bg-foreground text-background hover:bg-foreground/90 px-8 py-4 rounded-full font-bold flex items-center gap-3 transition-all shadow-lg shadow-white/10 motion-safe:hover:scale-105"
                 data-testid="course-overview-cta"
                 onClick={() => {
                   if (ctaVariant === 'start' && course.id) {
@@ -480,11 +480,11 @@ export function CourseOverview() {
       {/* Course-level action area */}
       {course?.id && (
         <div className="max-w-5xl mx-auto px-6 mb-6">
-          {completedCount === videos.length && videos.length > 0 ? (
+          {course.status === 'completed' ? (
             <Button
               variant="outline"
               size="sm"
-              className="px-5 py-2 rounded-xl text-sm font-bold"
+              className="px-5 py-2 rounded-xl text-sm font-bold min-h-11"
               data-testid="course-overview-undo-complete"
               onClick={() => {
                 useCourseImportStore.getState().updateCourseStatus(course.id, 'active')
@@ -497,7 +497,7 @@ export function CourseOverview() {
             <Button
               variant="brand"
               size="sm"
-              className="px-5 py-2 rounded-xl text-sm font-bold"
+              className="px-5 py-2 rounded-xl text-sm font-bold min-h-11"
               data-testid="course-overview-complete-course"
               onClick={() => {
                 useCourseImportStore.getState().updateCourseStatus(course.id, 'completed')
@@ -565,6 +565,7 @@ export function CourseOverview() {
                           : {
                               role: 'button',
                               tabIndex: 0,
+                              'aria-expanded': expandedModules.has(groupIndex),
                               'aria-label': `Module ${moduleNum}: ${groupTitle} — ${moduleStatus === 'completed' ? 'Completed' : moduleStatus === 'active' ? 'Up Next' : 'Locked'}`,
                               onClick: () => toggleModule(groupIndex),
                               onKeyDown: (e: React.KeyboardEvent) => {

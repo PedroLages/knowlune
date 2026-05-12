@@ -166,7 +166,7 @@ export function EntryActionButton({
         <Button
           variant="brand"
           size="sm"
-          className="px-5 py-2 rounded-xl text-sm font-bold shadow-sm"
+          className="px-5 py-2 rounded-xl text-sm font-bold shadow-sm min-h-11"
           onClick={e => {
             e.stopPropagation()
             onClick()
@@ -198,7 +198,7 @@ export function EntryActionButton({
       <Button
         variant="outline"
         size="sm"
-        className="px-5 py-2 rounded-xl text-sm font-bold"
+        className="px-5 py-2 rounded-xl text-sm font-bold min-h-11"
         onClick={e => {
           e.stopPropagation()
           onClick()
