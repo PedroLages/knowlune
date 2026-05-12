@@ -104,7 +104,7 @@ vi.mock('@/app/components/figma/StudyScheduleEditor', () => ({
 }))
 
 // Import after all mocks are set up
-// eslint-disable-next-line import/first
+// Import after all mocks are set up (vi.mock hoisted)
 import { CourseOverview } from '@/app/pages/CourseOverview'
 
 function renderOverview() {
