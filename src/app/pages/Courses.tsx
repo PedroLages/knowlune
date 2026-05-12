@@ -1,7 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import { Card } from '@/app/components/ui/card'
 import { VirtualizedCoursesList } from '@/app/components/courses/VirtualizedCoursesList'
-import { CourseTimelineView } from '@/app/components/courses/CourseTimelineView'
 import { Button } from '@/app/components/ui/button'
 import {
   Select,
@@ -30,12 +29,10 @@ import { ControlBarSection } from '@/app/components/courses/ControlBarSection'
 import { getGridClassName } from '@/app/components/courses/gridClassName'
 import { useEngagementPrefsStore } from '@/stores/useEngagementPrefsStore'
 import { Separator } from '@/app/components/ui/separator'
-import { buildGroupedCurriculum, type ChapterGroup } from '@/lib/curriculumGrouping'
 import { useCourseFilterStore } from '@/stores/useCourseFilterStore'
 import { useLearningPathStore } from '@/stores/useLearningPathStore'
 import { CourseFilterSidebar } from '@/app/components/courses/CourseFilterSidebar'
 
-import type { ImportedVideo, ImportedPdf, YouTubeCourseChapter, VideoProgress } from '@/data/types'
 import type { MomentumScore } from '@/lib/momentum'
 
 type SortMode = 'recent' | 'momentum'
@@ -51,12 +48,6 @@ export function Courses() {
   const [selectionMode, setSelectionMode] = useState(false)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [isDeleting, setIsDeleting] = useState(false)
-
-  // Timeline view data
-  const [timelineProgressMap, setTimelineProgressMap] = useState<Map<string, VideoProgress>>(new Map())
-  const [lessonGroupsByCourse, setLessonGroupsByCourse] = useState<Map<string, ChapterGroup[]>>(new Map())
-  const [timelineIsLoading, setTimelineIsLoading] = useState(false)
-  const [timelineRefreshKey, setTimelineRefreshKey] = useState(0)
 
   const importedCourses = useCourseImportStore(state => state.importedCourses)
   const loadImportedCourses = useCourseImportStore(state => state.loadImportedCourses)
@@ -136,7 +127,6 @@ export function Courses() {
 
     const handleStudyLogUpdated = () => {
       loadCourseMetrics()
-      setTimelineRefreshKey(k => k + 1)
     }
     window.addEventListener('study-log-updated', handleStudyLogUpdated)
     return () => {
@@ -203,93 +193,6 @@ export function Courses() {
       return new Date(b.importedAt).getTime() - new Date(a.importedAt).getTime()
     })
   }, [finalFilteredCourses, sortMode, momentumMap])
-
-  // Fetch per-course lesson data for the timeline view (positioned after sortedImportedCourses)
-  useEffect(() => {
-    if (courseViewMode !== 'timeline' || sortedImportedCourses.length === 0) return
-
-    let ignore = false
-    setTimelineIsLoading(true)
-
-    const courseIds = sortedImportedCourses.map(c => c.id)
-
-    Promise.all([
-      db.importedVideos
-        .where('courseId')
-        .anyOf(courseIds)
-        .sortBy('order'),
-      db.importedPdfs
-        .where('courseId')
-        .anyOf(courseIds)
-        .toArray(),
-      db.youtubeChapters
-        .where('courseId')
-        .anyOf(courseIds)
-        .sortBy('order')
-        .catch(() => [] as YouTubeCourseChapter[]),
-      db.progress.toArray(),
-    ])
-      .then(([allVideos, allPdfs, allChapters, allProgress]) => {
-        if (ignore) return
-
-        const videosByCourse = new Map<string, ImportedVideo[]>()
-        for (const v of allVideos) {
-          const arr = videosByCourse.get(v.courseId) ?? []
-          arr.push(v)
-          videosByCourse.set(v.courseId, arr)
-        }
-
-        const pdfsByCourse = new Map<string, ImportedPdf[]>()
-        for (const p of allPdfs) {
-          const arr = pdfsByCourse.get(p.courseId) ?? []
-          arr.push(p)
-          pdfsByCourse.set(p.courseId, arr)
-        }
-
-        const chaptersByCourse = new Map<string, YouTubeCourseChapter[]>()
-        for (const ch of allChapters) {
-          const arr = chaptersByCourse.get(ch.courseId) ?? []
-          arr.push(ch)
-          chaptersByCourse.set(ch.courseId, arr)
-        }
-
-        const progMap = new Map<string, VideoProgress>()
-        for (const r of allProgress) {
-          if (r.videoId) progMap.set(r.videoId, r)
-        }
-
-        const groupsByCourse = new Map<string, ChapterGroup[]>()
-        for (const courseId of courseIds) {
-          const course = importedCourses.find(c => c.id === courseId)
-          const prefYoutube =
-            (course?.source ?? 'local') === 'youtube' && (chaptersByCourse.get(courseId)?.length ?? 0) > 0
-          groupsByCourse.set(
-            courseId,
-            buildGroupedCurriculum({
-              videos: videosByCourse.get(courseId) ?? [],
-              pdfs: pdfsByCourse.get(courseId) ?? [],
-              chapters: chaptersByCourse.get(courseId) ?? [],
-              preferChapterGrouping: prefYoutube,
-            })
-          )
-        }
-
-        setTimelineProgressMap(progMap)
-        setLessonGroupsByCourse(groupsByCourse)
-        setTimelineIsLoading(false)
-      })
-      .catch((error) => {
-        if (!ignore) {
-          setTimelineIsLoading(false)
-        }
-        // silent-catch-ok: timeline data failure is non-fatal — courses still load without progress/momentum
-        console.warn('[Courses] Failed to load course timeline data:', error)
-      })
-
-    return () => {
-      ignore = true
-    }
-  }, [courseViewMode, sortedImportedCourses, importedCourses, timelineRefreshKey])
 
   function handleOpenBulkImport() {
     setBulkImportOpen(true)
@@ -715,17 +618,7 @@ export function Courses() {
                     Clear all filters
                   </Button>
                 </div>
-              ) : courseViewMode === 'timeline' ? (
-              <CourseTimelineView
-                courses={sortedImportedCourses}
-                completionMap={importedCompletionMap}
-                momentumMap={momentumMap}
-                progressMap={timelineProgressMap}
-                lessonGroupsByCourse={lessonGroupsByCourse}
-                isLoading={timelineIsLoading}
-                allTags={allTags}
-              />
-            ) : (
+              ) : (
               <VirtualizedCoursesList
                 courses={sortedImportedCourses}
                 viewMode={courseViewMode}
