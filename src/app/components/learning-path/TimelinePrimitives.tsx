@@ -7,7 +7,6 @@ import {
   Undo2,
   CheckCircle2,
   Video,
-  Clock,
 } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
 import { cn } from '@/app/components/ui/utils'

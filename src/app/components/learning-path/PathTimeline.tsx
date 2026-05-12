@@ -7,6 +7,7 @@ import { Card, CardContent } from '@/app/components/ui/card'
 import { cn } from '@/app/components/ui/utils'
 import { extractGapSearchTerm, cleanGapJustification } from '@/data/learningPathUtils'
 import { StatusCircle, EntryActionButton, LessonRow } from '@/app/components/learning-path/TimelinePrimitives'
+import { formatDuration } from '@/lib/formatDuration'
 import type { ChapterGroup } from '@/lib/curriculumGrouping'
 import type { LearningPathEntry, PathCourseInfo, ImportedVideo, VideoProgress } from '@/data/types'
 
