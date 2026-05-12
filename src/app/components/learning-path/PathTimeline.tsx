@@ -1,13 +1,12 @@
 import { useEffect, useRef, useMemo, useState } from 'react'
 import { useReducedMotion, motion, AnimatePresence } from 'motion/react'
-import { Link } from 'react-router'
-import { Check, Lock, AlertCircle, Import, Search, Replace, PlayCircle, RotateCcw, GripVertical, ChevronDown, Video, Clock, CheckCircle2, Undo2 } from 'lucide-react'
+import { Check, Lock, AlertCircle, Import, Search, Replace, GripVertical, ChevronDown, Video, Clock } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
 import { Badge } from '@/app/components/ui/badge'
 import { Card, CardContent } from '@/app/components/ui/card'
 import { cn } from '@/app/components/ui/utils'
 import { extractGapSearchTerm, cleanGapJustification } from '@/data/learningPathUtils'
-import { formatDuration } from '@/lib/formatDuration'
+import { StatusCircle, EntryActionButton, LessonRow } from '@/app/components/learning-path/TimelinePrimitives'
 import type { ChapterGroup } from '@/lib/curriculumGrouping'
 import type { LearningPathEntry, PathCourseInfo, ImportedVideo, VideoProgress } from '@/data/types'
 
@@ -47,114 +46,6 @@ interface PathTimelineProps {
   /** Optional: called when user marks an entry complete (toggles on/off) */
   onMarkComplete?: (entryId: string) => void
   className?: string
-}
-
-// ---- Sub-components ----
-
-/** Status circle on the timeline connector line */
-function StatusCircle({
-  status,
-  simplified,
-}: {
-  status: 'completed' | 'in-progress' | 'locked' | 'gap'
-  /** When true, renders a compact variant without border ring */
-  simplified?: boolean
-}) {
-  const dotSize = simplified ? 'size-6' : 'size-8'
-  const borderRing = simplified ? '' : 'border-4 border-card'
-  const baseClass = cn(
-    dotSize,
-    'shrink-0 rounded-full flex items-center justify-center relative z-10 transition-all duration-300',
-    borderRing
-  )
-  const iconSize = simplified ? 'size-3' : 'size-4'
-
-  if (status === 'completed') {
-    return (
-      <div className={cn(baseClass, 'bg-success text-success-foreground')}>
-        <Check className={iconSize} aria-hidden="true" />
-      </div>
-    )
-  }
-
-  if (status === 'in-progress') {
-    return (
-      <div
-        className={cn(
-          baseClass,
-          'bg-brand text-brand-foreground ring-4 ring-brand-soft'
-        )}
-      >
-        <div
-          className={cn(
-            'rounded-full bg-white animate-pulse',
-            simplified ? 'size-2' : 'size-2.5'
-          )}
-        />
-      </div>
-    )
-  }
-
-  if (status === 'gap') {
-    return (
-      <div
-        className={cn(
-          baseClass,
-          'bg-warning/20 text-warning border-2 border-dashed border-warning/50'
-        )}
-      >
-        <AlertCircle className={iconSize} aria-hidden="true" />
-      </div>
-    )
-  }
-
-  // Locked — hollow outline circle with less visual weight
-  return (
-    <div className={cn(baseClass, 'bg-muted/30 border border-muted-foreground/30')}>
-      <div
-        className={cn(
-          'rounded-full bg-muted-foreground/30',
-          simplified ? 'size-1.5' : 'size-2'
-        )}
-      />
-    </div>
-  )
-}
-
-/** Single lesson row within an expanded module accordion */
-function LessonRow({
-  video,
-  courseId,
-  isCompleted,
-}: {
-  video: ImportedVideo
-  courseId: string
-  isCompleted: boolean
-}) {
-  const displayName = video.filename.replace(/\.\w+$/, '')
-
-  return (
-    <Link
-      to={`/courses/${courseId}/lessons/${video.id}`}
-      className="flex items-center gap-3 px-4 py-2.5 min-h-[44px] rounded-xl transition-colors hover:bg-muted/50 group"
-    >
-      {isCompleted ? (
-        <CheckCircle2 className="size-5 text-success flex-shrink-0" aria-hidden="true" />
-      ) : (
-        <Video className="size-5 text-muted-foreground flex-shrink-0" aria-hidden="true" />
-      )}
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium truncate text-foreground/80 group-hover:text-foreground transition-colors">
-          {displayName}
-        </p>
-      </div>
-      {video.duration > 0 && (
-        <span className="text-xs text-muted-foreground tabular-nums flex-shrink-0">
-          {formatDuration(video.duration)}
-        </span>
-      )}
-    </Link>
-  )
 }
 
 /** Gap entry card with resolution buttons */
@@ -239,89 +130,6 @@ function GapTimelineEntry({
       </div>
     </div>
   )
-}
-
-/** Action for an unlocked timeline entry: Start Module, Review, Mark Complete, or Undo */
-function EntryActionButton({
-  status,
-  isManuallyCompleted,
-  onClick,
-  onMarkComplete,
-}: {
-  status: 'completed' | 'in-progress' | 'locked'
-  isManuallyCompleted?: boolean
-  onClick: () => void
-  onMarkComplete?: () => void
-}) {
-  if (isManuallyCompleted) {
-    return (
-      <Button
-        variant="ghost"
-        size="sm"
-        className="px-3 py-2 rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground"
-        onClick={e => {
-          e.stopPropagation()
-          onMarkComplete?.()
-        }}
-      >
-        <Undo2 className="size-4 mr-1" aria-hidden="true" />
-        Undo
-      </Button>
-    )
-  }
-
-  if (status === 'in-progress') {
-    return (
-      <div className="flex items-center gap-2">
-        <Button
-          variant="brand"
-          size="sm"
-          className="px-5 py-2 rounded-xl text-sm font-bold shadow-sm"
-          onClick={e => {
-            e.stopPropagation()
-            onClick()
-          }}
-        >
-          <PlayCircle className="size-4 mr-1.5" aria-hidden="true" />
-          Start Module
-        </Button>
-        {onMarkComplete && (
-          <Button
-            variant="outline"
-            size="sm"
-            className="px-3 py-2 rounded-xl text-sm font-medium"
-            onClick={e => {
-              e.stopPropagation()
-              onMarkComplete()
-            }}
-          >
-            <CheckCircle2 className="size-4 mr-1" aria-hidden="true" />
-            Complete
-          </Button>
-        )}
-      </div>
-    )
-  }
-
-  if (status === 'completed') {
-    return (
-      <Button
-        variant="outline"
-        size="sm"
-        className="px-5 py-2 rounded-xl text-sm font-bold"
-        onClick={e => {
-          e.stopPropagation()
-          onClick()
-        }}
-      >
-        <RotateCcw className="size-4 mr-1.5" aria-hidden="true" />
-        Review
-      </Button>
-    )
-  }
-
-  // Locked state: status pill in the card header already says "Locked" — avoid duplicating it beside metadata.
-  return null
 }
 
 /** Regular course entry card on the timeline */
