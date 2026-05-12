@@ -16,12 +16,14 @@ import {
   BookOpen,
   Calendar,
   ChevronDown,
+  Check,
   Clock,
   FileText,
   Play,
   PlayCircle,
   Video,
-  CheckCircle2,
+  Undo2,
+  Lock,
 } from 'lucide-react'
 import { motion } from 'motion/react'
 import { toast } from 'sonner'
@@ -34,10 +36,11 @@ import { getLastWatchedLesson, getFirstLesson } from '@/lib/progress'
 import { Button } from '@/app/components/ui/button'
 import { Badge } from '@/app/components/ui/badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/app/components/ui/avatar'
+import { Card, CardContent } from '@/app/components/ui/card'
 import { Skeleton } from '@/app/components/ui/skeleton'
 import { cn } from '@/app/components/ui/utils'
 import { StudyScheduleEditor } from '@/app/components/figma/StudyScheduleEditor'
-import { CourseJourneyNodeIndicator } from '@/app/components/course/CourseJourneyNodeIndicator'
+import { StatusCircle, EntryActionButton, LessonRow } from '@/app/components/learning-path/TimelinePrimitives'
 import { formatClockDuration as formatDuration } from '@/lib/formatDuration'
 import { buildGroupedCurriculum } from '@/lib/curriculumGrouping'
 import { getInitials } from '@/lib/textUtils'
@@ -48,14 +51,6 @@ import type { ImportedVideo, ImportedPdf, VideoProgress, YouTubeCourseChapter } 
 // ---------------------------------------------------------------------------
 
 const COMPLETION_THRESHOLD = 90
-
-// ---------------------------------------------------------------------------
-// Utility
-// ---------------------------------------------------------------------------
-
-function stripExtension(filename: string): string {
-  return filename.replace(/\.\w+$/, '')
-}
 
 // ---------------------------------------------------------------------------
 // Component
@@ -373,7 +368,7 @@ export function CourseOverview() {
             >
               <button
                 type="button"
-                className="bg-foreground text-background hover:bg-foreground/90 px-8 py-4 rounded-full font-bold flex items-center gap-3 transition-all shadow-[0_0_30px_rgba(255,255,255,0.2)] motion-safe:hover:scale-105"
+                className="bg-foreground text-background hover:bg-foreground/90 px-8 py-4 rounded-full font-bold flex items-center gap-3 transition-all shadow-lg shadow-white/10 motion-safe:hover:scale-105"
                 data-testid="course-overview-cta"
                 onClick={() => {
                   if (ctaVariant === 'start' && course.id) {
@@ -471,19 +466,52 @@ export function CourseOverview() {
         </div>
       </motion.div>
 
-      {/* Content Area: Timeline + Sidebar */}
-      {/* Section heading above the grid so both columns align */}
-      <div className="max-w-5xl mx-auto px-6 mt-16 mb-8 flex items-center gap-3">
-        <h2 className="text-xl font-bold text-foreground">Course Journey</h2>
-        {completedCount > 0 && (
-          <Badge variant="secondary" className="text-xs">
-            {completedCount} / {videos.length} completed
-          </Badge>
-        )}
+      {/* Content Area: Syllabus + Sidebar */}
+      {/* Section heading */}
+      <div className="max-w-5xl mx-auto px-6 mt-16 mb-6 flex items-center justify-between">
+        <h2 className="font-display text-2xl font-bold text-foreground">Syllabus</h2>
+        {videos.length > 0 ? (
+          <span className="text-muted-foreground text-sm">
+            {videos.length} {videos.length === 1 ? 'lesson' : 'lessons'}
+          </span>
+        ) : null}
       </div>
 
+      {/* Course-level action area */}
+      {course?.id && (
+        <div className="max-w-5xl mx-auto px-6 mb-6">
+          {course.status === 'completed' ? (
+            <Button
+              variant="outline"
+              size="sm"
+              className="px-5 py-2 rounded-xl text-sm font-bold min-h-11"
+              data-testid="course-overview-undo-complete"
+              onClick={() => {
+                useCourseImportStore.getState().updateCourseStatus(course.id, 'active')
+              }}
+            >
+              <Undo2 className="size-4 mr-1.5" aria-hidden="true" />
+              Undo Complete
+            </Button>
+          ) : videos.length > 0 ? (
+            <Button
+              variant="brand"
+              size="sm"
+              className="px-5 py-2 rounded-xl text-sm font-bold min-h-11"
+              data-testid="course-overview-complete-course"
+              onClick={() => {
+                useCourseImportStore.getState().updateCourseStatus(course.id, 'completed')
+              }}
+            >
+              <Check className="size-4 mr-1.5" aria-hidden="true" />
+              Complete Course
+            </Button>
+          ) : null}
+        </div>
+      )}
+
       <div className="max-w-5xl mx-auto px-6 grid grid-cols-1 lg:grid-cols-3 gap-12">
-        {/* Timeline Curriculum (Left 2/3) */}
+        {/* Syllabus Timeline (Left 2/3) */}
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
@@ -491,13 +519,17 @@ export function CourseOverview() {
           className="lg:col-span-2"
           data-testid="course-overview-curriculum"
         >
-          <div className="relative border-l-2 border-muted-foreground/15 ml-4 space-y-10 pb-8">
+          <div className="space-y-0">
             {(() => {
               let moduleNum = 0
               return groupedContent.map((group, groupIndex) => {
                 if (group.videos.length === 0) return null
                 moduleNum++
-                const status = moduleStatuses[groupIndex]
+                const moduleStatus = moduleStatuses[groupIndex]
+                const timelineStatus =
+                  moduleStatus === 'completed' ? 'completed' as const
+                  : moduleStatus === 'active' ? 'in-progress' as const
+                  : 'locked' as const
                 const groupTitle =
                   group.title ||
                   (groupedContent.length > 1 ? `Section ${moduleNum}` : 'All Lessons')
@@ -507,144 +539,146 @@ export function CourseOverview() {
                 ).length
                 const groupDuration = group.videos.reduce((s, v) => s + (v.duration || 0), 0)
                 const isExpanded = expandedModules.has(groupIndex)
+                const isLocked = timelineStatus === 'locked'
 
                 return (
-                  <div key={`${group.title}-${groupIndex}`} className="relative pl-10 group/module">
-                    {/* Timeline node (~48px); -left aligns center with rail (was -left-[13px] at size-6) */}
-                    <CourseJourneyNodeIndicator
-                      status={status}
-                      className="absolute -left-[25px] top-1"
-                    />
+                  <div key={`${group.title}-${groupIndex}`} className="flex gap-3">
+                    {/* Connector line column */}
+                    <div className="flex flex-col items-center">
+                      <StatusCircle status={timelineStatus} />
+                      {groupIndex < groupedContent.length - 1 && (
+                        <div className="w-[2px] flex-1 bg-border" />
+                      )}
+                    </div>
 
                     {/* Module card */}
-                    <div
-                      className={cn(
-                        'rounded-2xl border transition-all overflow-hidden',
-                        status === 'active' &&
-                          'bg-card border-accent-violet/30 shadow-[0_0_20px_var(--accent-violet-muted)]',
-                        status === 'completed' &&
-                          'bg-card/30 border-success/15 hover:border-success/30',
-                        status === 'upcoming' &&
-                          'bg-card/30 border-muted-foreground/8 hover:border-muted-foreground/20'
-                      )}
-                    >
-                      <button
-                        type="button"
-                        onClick={() => toggleModule(groupIndex)}
-                        aria-expanded={isExpanded}
-                        className="w-full text-left p-6"
+                    <div className={cn('flex-1 pb-8 min-w-0')}>
+                      <Card
+                        className={cn(
+                          'rounded-2xl border hover:shadow-md transition-all duration-300 group overflow-hidden',
+                          timelineStatus === 'completed' && 'border-success/20',
+                          timelineStatus === 'in-progress' && 'border-brand/20 ring-1 ring-brand/5',
+                          isLocked && 'border-border/50 opacity-60 pointer-events-none'
+                        )}
+                        {...(isLocked
+                          ? {}
+                          : {
+                              role: 'button',
+                              tabIndex: 0,
+                              'aria-expanded': expandedModules.has(groupIndex),
+                              'aria-label': `Module ${moduleNum}: ${groupTitle} — ${moduleStatus === 'completed' ? 'Completed' : moduleStatus === 'active' ? 'Up Next' : 'Locked'}`,
+                              onClick: () => toggleModule(groupIndex),
+                              onKeyDown: (e: React.KeyboardEvent) => {
+                                if (e.key === 'Enter' || e.key === ' ') {
+                                  e.preventDefault()
+                                  toggleModule(groupIndex)
+                                }
+                              },
+                            })}
                       >
-                        <div className="flex justify-between items-start mb-2">
-                          <h3
-                            className={cn(
-                              'text-lg font-semibold',
-                              status === 'active' && 'text-foreground',
-                              status === 'completed' && 'text-foreground/60',
-                              status === 'upcoming' && 'text-foreground/80'
-                            )}
-                          >
-                            {groupTitle}
-                          </h3>
-                          <span className="text-[10px] font-mono text-muted-foreground bg-muted px-2 py-1 rounded">
-                            Module {moduleNum}
-                          </span>
-                        </div>
+                        <CardContent className="p-6">
+                          <div className="flex items-start gap-3">
+                            <div className="flex-1 min-w-0">
+                              {/* Row 1: Module number + status badge */}
+                              <div className="flex items-center justify-between mb-2">
+                                <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest">
+                                  Module {moduleNum}
+                                </span>
+                                <span
+                                  className={cn(
+                                    'px-2 py-0.5 text-[10px] font-bold rounded-full uppercase tracking-wider inline-flex items-center gap-1',
+                                    timelineStatus === 'completed' && 'bg-success-soft text-success',
+                                    timelineStatus === 'in-progress' && 'bg-brand-soft text-brand-soft-foreground',
+                                    isLocked && 'bg-muted text-muted-foreground'
+                                  )}
+                                >
+                                  {timelineStatus === 'completed' && <Check className="size-3" aria-hidden="true" />}
+                                  {timelineStatus === 'in-progress' && (
+                                    <span className="size-1.5 rounded-full bg-brand-soft-foreground animate-pulse" />
+                                  )}
+                                  {isLocked && <Lock className="size-3" aria-hidden="true" />}
+                                  {moduleStatus === 'completed' ? 'Completed' : moduleStatus === 'active' ? 'Up Next' : 'Locked'}
+                                </span>
+                              </div>
 
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-4 text-xs font-mono text-muted-foreground">
-                            <span className="flex items-center gap-1">
-                              <BookOpen className="size-3.5" aria-hidden="true" />
-                              {groupCompletedCount} / {groupLessonCount}{' '}
-                              {groupLessonCount === 1 ? 'lesson' : 'lessons'}
-                            </span>
-                            {groupDuration > 0 && (
-                              <span className="flex items-center gap-1">
-                                <Clock className="size-3.5" aria-hidden="true" />
-                                {formatDuration(groupDuration)}
-                              </span>
-                            )}
-                          </div>
-                          <ChevronDown
-                            className={cn(
-                              'size-5 text-muted-foreground transition-transform duration-200',
-                              isExpanded && 'rotate-180'
-                            )}
-                            aria-hidden="true"
-                          />
-                        </div>
+                              {/* Row 2: Title */}
+                              <h3 className="text-xl font-bold">{groupTitle}</h3>
 
-                        {/* Micro progress bar — hidden when no progress */}
-                        {groupCompletedCount > 0 && (
-                          <div className="w-full h-1 bg-muted rounded-full mt-4 overflow-hidden">
-                            <div
-                              className={cn(
-                                'h-full transition-all duration-500',
-                                status === 'completed' ? 'bg-success' : 'bg-accent-violet'
+                              {/* Row 3: Stats + Action button */}
+                              <div className="flex items-center justify-between gap-4 mt-4">
+                                <div className="flex items-center gap-4 text-sm text-muted-foreground font-medium">
+                                  <span className="flex items-center gap-1.5">
+                                    <Video className="size-4" aria-hidden="true" />
+                                    {groupCompletedCount} / {groupLessonCount} {groupLessonCount === 1 ? 'lesson' : 'lessons'}
+                                  </span>
+                                  {groupDuration > 0 && (
+                                    <span className="flex items-center gap-1.5">
+                                      <Clock className="size-4" aria-hidden="true" />
+                                      {formatDuration(groupDuration)}
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-3">
+                                  <EntryActionButton
+                                    status={timelineStatus}
+                                    onClick={() => {
+                                      // Navigate to the first incomplete lesson
+                                      const firstIncomplete = group.videos.find(
+                                        v => (progressMap.get(v.id)?.completionPercentage ?? 0) < COMPLETION_THRESHOLD
+                                      ) ?? group.videos[0]
+                                      navigate(`/courses/${courseId}/lessons/${firstIncomplete.id}`)
+                                    }}
+                                  />
+                                  {!isLocked && (
+                                    <ChevronDown
+                                      className={cn(
+                                        'size-5 text-muted-foreground transition-transform duration-200 flex-shrink-0',
+                                        isExpanded && 'rotate-180'
+                                      )}
+                                      aria-hidden="true"
+                                    />
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* Micro progress bar — hidden when no progress */}
+                              {groupCompletedCount > 0 && (
+                                <div className="w-full h-1 bg-muted rounded-full mt-4 overflow-hidden">
+                                  <div
+                                    className={cn(
+                                      'h-full transition-all duration-500',
+                                      timelineStatus === 'completed' ? 'bg-success' : 'bg-accent-violet'
+                                    )}
+                                    style={{
+                                      width: `${(groupCompletedCount / groupLessonCount) * 100}%`,
+                                    }}
+                                  />
+                                </div>
                               )}
-                              style={{
-                                width: `${(groupCompletedCount / groupLessonCount) * 100}%`,
-                              }}
-                            />
+                            </div>
+                          </div>
+                        </CardContent>
+
+                        {/* Expanded lesson list */}
+                        {!isLocked && isExpanded && (
+                          <div className="border-t border-border">
+                            <div className="px-6 pb-4 pt-3 space-y-3">
+                              {group.videos.map(video => {
+                                const prog = progressMap.get(video.id)
+                                const isVideoCompleted = (prog?.completionPercentage ?? 0) >= COMPLETION_THRESHOLD
+                                return (
+                                  <LessonRow
+                                    key={video.id}
+                                    video={video}
+                                    courseId={courseId!}
+                                    isCompleted={isVideoCompleted}
+                                  />
+                                )
+                              })}
+                            </div>
                           </div>
                         )}
-                      </button>
-
-                      {/* Expanded lesson list */}
-                      {isExpanded && (
-                        <div className="bg-surface-sunken border-t-2 border-muted-foreground/40 p-2">
-                          <div className="max-h-[400px] overflow-y-auto space-y-0.5 pr-1">
-                            {group.videos.map(video => {
-                              const prog = progressMap.get(video.id)
-                              const percent = prog?.completionPercentage ?? 0
-                              const isCompleted = percent >= COMPLETION_THRESHOLD
-
-                              return (
-                                <Link
-                                  key={video.id}
-                                  to={`/courses/${courseId}/lessons/${video.id}`}
-                                  className={cn(
-                                    'flex items-center gap-3 px-4 py-2.5 min-h-[44px] rounded-xl transition-colors group/lesson',
-                                    isCompleted
-                                      ? 'bg-success/5 hover:bg-success/10'
-                                      : 'hover:bg-muted/50'
-                                  )}
-                                  data-testid={`curriculum-lesson-${video.id}`}
-                                >
-                                  {isCompleted ? (
-                                    <CheckCircle2
-                                      className="size-5 text-success flex-shrink-0"
-                                      aria-hidden="true"
-                                    />
-                                  ) : (
-                                    <Video
-                                      className="size-5 text-muted-foreground flex-shrink-0"
-                                      aria-hidden="true"
-                                    />
-                                  )}
-                                  <div className="flex-1 min-w-0">
-                                    <p
-                                      className={cn(
-                                        'text-sm font-medium truncate transition-colors',
-                                        isCompleted
-                                          ? 'text-success-foreground'
-                                          : 'text-foreground/80 group-hover/lesson:text-foreground'
-                                      )}
-                                    >
-                                      {stripExtension(video.filename)}
-                                    </p>
-                                    {video.duration > 0 && (
-                                      <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
-                                        <PlayCircle className="size-3" aria-hidden="true" />
-                                        {formatDuration(video.duration)}
-                                      </p>
-                                    )}
-                                  </div>
-                                </Link>
-                              )
-                            })}
-                          </div>
-                        </div>
-                      )}
+                      </Card>
                     </div>
                   </div>
                 )

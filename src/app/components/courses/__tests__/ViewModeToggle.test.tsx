@@ -4,13 +4,12 @@ import userEvent from '@testing-library/user-event'
 import { ViewModeToggle } from '@/app/components/courses/ViewModeToggle'
 
 describe('ViewModeToggle (E99-S01)', () => {
-  it('renders all four options with accessible labels', () => {
+  it('renders all three options with accessible labels', () => {
     render(<ViewModeToggle value="grid" onChange={() => {}} />)
 
     expect(screen.getByRole('radio', { name: 'Grid view' })).toBeInTheDocument()
     expect(screen.getByRole('radio', { name: 'List view' })).toBeInTheDocument()
     expect(screen.getByRole('radio', { name: 'Compact view' })).toBeInTheDocument()
-    expect(screen.getByRole('radio', { name: 'Timeline view' })).toBeInTheDocument()
   })
 
   it('marks the active option with data-state="on" and others "off"', () => {
@@ -31,16 +30,6 @@ describe('ViewModeToggle (E99-S01)', () => {
     expect(onChange).toHaveBeenCalledWith('compact')
   })
 
-  it('calls onChange with timeline when the timeline toggle is clicked', async () => {
-    const onChange = vi.fn()
-    const user = userEvent.setup()
-    render(<ViewModeToggle value="grid" onChange={onChange} />)
-
-    await user.click(screen.getByRole('radio', { name: 'Timeline view' }))
-
-    expect(onChange).toHaveBeenCalledWith('timeline')
-  })
-
   it('does NOT call onChange with empty string when the active item is clicked', async () => {
     const onChange = vi.fn()
     const user = userEvent.setup()
@@ -53,7 +42,7 @@ describe('ViewModeToggle (E99-S01)', () => {
 
     // onChange may be called with '' filtered, so it should never be called with a non-mode value.
     for (const call of onChange.mock.calls) {
-      expect(['grid', 'list', 'compact', 'timeline']).toContain(call[0])
+      expect(['grid', 'list', 'compact']).toContain(call[0])
     }
   })
 
@@ -69,7 +58,7 @@ describe('ViewModeToggle (E99-S01)', () => {
   it('applies 44px minimum height and non-clipping min-width to each item', () => {
     render(<ViewModeToggle value="grid" onChange={() => {}} />)
 
-    for (const label of ['Grid view', 'List view', 'Compact view', 'Timeline view']) {
+    for (const label of ['Grid view', 'List view', 'Compact view']) {
       const item = screen.getByRole('radio', { name: label })
       expect(item.className).toContain('min-h-11')
       expect(item.className).toContain('min-w-max')
