@@ -504,6 +504,10 @@ export function ImportWizardDialog({ open, onOpenChange, targetPathId, gapEntryI
             }
           : undefined
 
+      // Let the global progress overlay become visible during the persist phase
+      // so the user sees per-file progress instead of a static "Importing…" button.
+      useImportProgressStore.getState().setDialogOpen(false)
+
       const importedCourse = await persistScannedCourse(scannedCourse, overrides)
 
       // Dispatch course-imported event so the InlineCoursePicker (or CurriculumComposer)
@@ -547,12 +551,15 @@ export function ImportWizardDialog({ open, onOpenChange, targetPathId, gapEntryI
           toast.error('Course imported, but failed to add to learning path')
         }
       }
-
-      handleOpenChange(false)
     } catch {
-      // silent-catch-ok: persistScannedCourse already shows error toasts
+      // persistScannedCourse already shows its own error toasts; surface a
+      // generic message here so the user sees feedback even if they missed the
+      // earlier toast. The dialog always closes (see finally) so the user
+      // isn't left staring at a frozen wizard.
+      toast.error('Course import failed. Please try again.')
     } finally {
       setIsPersisting(false)
+      handleOpenChange(false)
     }
   }, [
     scannedCourse,
