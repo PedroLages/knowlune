@@ -36,6 +36,7 @@ export interface CourseDetailsUpdate {
 
 interface CourseImportState {
   importedCourses: ImportedCourse[]
+  isCoursesLoaded: boolean
   isImporting: boolean
   importError: string | null
   importProgress: { current: number; total: number } | null
@@ -63,6 +64,7 @@ interface CourseImportState {
 
 export const useCourseImportStore = create<CourseImportState>((set, get) => ({
   importedCourses: [],
+  isCoursesLoaded: false,
   isImporting: false,
   importError: null,
   importProgress: null,
@@ -511,7 +513,7 @@ export const useCourseImportStore = create<CourseImportState>((set, get) => ({
   loadImportedCourses: async () => {
     try {
       const courses = await db.importedCourses.toArray()
-      set({ importedCourses: courses, importError: null })
+      set({ importedCourses: courses, isCoursesLoaded: true, importError: null })
       // Load thumbnail object URLs in parallel (non-blocking)
       get()
         .loadThumbnailUrls(courses.map(c => c.id))
@@ -522,7 +524,7 @@ export const useCourseImportStore = create<CourseImportState>((set, get) => ({
           )
         })
     } catch (error) {
-      set({ importError: 'Failed to load courses from database' })
+      set({ isCoursesLoaded: true, importError: 'Failed to load courses from database' })
       console.error('[Database] Failed to load courses:', error)
     }
   },

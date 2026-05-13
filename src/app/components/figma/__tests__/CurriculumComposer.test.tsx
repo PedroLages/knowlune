@@ -56,6 +56,7 @@ vi.mock('@/stores/useLearningPathStore', () => ({
 
 const courseImportState = {
   importedCourses: mockImportedCourses,
+  isCoursesLoaded: true,
   loadImportedCourses: mockLoadImportedCourses,
   thumbnailUrls: {},
 }
@@ -217,7 +218,7 @@ describe('CurriculumComposer', () => {
           { courseId: 'c2', courseType: 'imported' },
         ]
       )
-      expect(mockNavigate).toHaveBeenCalledWith('/learning-paths/new-path-1')
+      expect(mockNavigate).toHaveBeenCalledWith('/learning-tracks/new-path-1')
     })
   })
 
