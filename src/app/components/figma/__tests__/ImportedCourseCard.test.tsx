@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router'
@@ -14,6 +14,26 @@ const mockOnToggleSelect = vi.fn()
 
 // `getState()` is mutated per-test to drive error-path branches.
 let mockImportError: string | null = null
+
+// Per-test override variables for mocks — mutated in test bodies
+const mockCourseCardPreview = vi.hoisted(() => ({
+  showPreview: false,
+  videoReady: false,
+  setVideoReady: vi.fn(),
+  previewHandlers: {},
+  previewOpen: false,
+  setPreviewOpen: vi.fn(),
+  infoOpen: false,
+  setInfoOpen: vi.fn(),
+  guardNavigation: vi.fn(),
+}))
+const mockVideoFromHandle = vi.hoisted(() => ({
+  blobUrl: null,
+  error: null,
+  loading: false,
+}))
+const mockDBSortBy = vi.hoisted(() => vi.fn().mockResolvedValue([]))
+const mockDBWhere = vi.hoisted(() => vi.fn().mockReturnValue({ equals: vi.fn().mockReturnValue({ sortBy: mockDBSortBy }) }))
 
 vi.mock('react-router', async () => {
   const actual = await vi.importActual<typeof import('react-router')>('react-router')
@@ -45,21 +65,11 @@ vi.mock('@/stores/useCourseImportStore', () => ({
 }))
 
 vi.mock('@/hooks/useCourseCardPreview', () => ({
-  useCourseCardPreview: () => ({
-    showPreview: false,
-    videoReady: false,
-    setVideoReady: vi.fn(),
-    previewHandlers: {},
-    previewOpen: false,
-    setPreviewOpen: vi.fn(),
-    infoOpen: false,
-    setInfoOpen: vi.fn(),
-    guardNavigation: vi.fn(),
-  }),
+  useCourseCardPreview: () => mockCourseCardPreview,
 }))
 
 vi.mock('@/hooks/useVideoFromHandle', () => ({
-  useVideoFromHandle: () => ({ blobUrl: null, error: null, loading: false }),
+  useVideoFromHandle: () => mockVideoFromHandle,
 }))
 
 vi.mock('@/stores/useAuthorStore', () => ({
@@ -85,14 +95,14 @@ vi.mock('@/db/schema', () => ({
     importedVideos: {
       where: () => ({
         equals: () => ({
-          sortBy: () => Promise.resolve([]),
+          sortBy: mockDBSortBy,
         }),
       }),
     },
     youtubeChapters: {
       where: () => ({
         equals: () => ({
-          sortBy: () => Promise.resolve([]),
+          sortBy: vi.fn().mockResolvedValue([]),
         }),
       }),
     },
@@ -132,6 +142,19 @@ beforeEach(() => {
   mockNavigate.mockClear()
   mockRemoveImportedCourse.mockClear()
   mockImportError = null
+  mockDBSortBy.mockClear()
+  mockDBSortBy.mockResolvedValue([])
+  mockCourseCardPreview.showPreview = false
+  mockCourseCardPreview.videoReady = false
+  mockCourseCardPreview.setVideoReady = vi.fn()
+  mockCourseCardPreview.previewHandlers = {}
+  mockVideoFromHandle.blobUrl = null
+  mockVideoFromHandle.error = null
+  mockVideoFromHandle.loading = false
+})
+
+afterEach(() => {
+  vi.restoreAllMocks()
 })
 
 describe('ImportedCourseCard', () => {
@@ -652,6 +675,73 @@ describe('ImportedCourseCard', () => {
       )
       const checkbox = screen.getByRole('checkbox')
       expect(checkbox).toHaveAttribute('data-state', 'unchecked')
+    })
+  })
+
+  describe('video preview (hover)', () => {
+    it('renders video element when showPreview and previewBlobUrl are true', () => {
+      mockCourseCardPreview.showPreview = true
+      mockVideoFromHandle.blobUrl = 'blob:test'
+      const { container } = renderCard({ videoCount: 1 })
+      const video = container.querySelector('video')
+      expect(video).toBeInTheDocument()
+      expect(video).toHaveAttribute('src', 'blob:test')
+    })
+
+    it('does NOT render video when showPreview is false', () => {
+      mockCourseCardPreview.showPreview = false
+      const { container } = renderCard({ videoCount: 1 })
+      expect(container.querySelector('video')).toBeNull()
+    })
+
+    it('shows loading spinner when preview is loading', () => {
+      mockCourseCardPreview.showPreview = true
+      mockVideoFromHandle.blobUrl = null
+      mockVideoFromHandle.loading = true
+      mockVideoFromHandle.error = null
+      const { container } = renderCard({ videoCount: 1 })
+      const spinner = container.querySelector('.animate-spin')
+      expect(spinner).toBeInTheDocument()
+    })
+
+    it('shows error indicator when preview fails', () => {
+      mockCourseCardPreview.showPreview = true
+      mockVideoFromHandle.blobUrl = null
+      mockVideoFromHandle.loading = false
+      mockVideoFromHandle.error = 'permission-denied'
+      const { container } = renderCard({ videoCount: 1 })
+      const errorBadge = screen.getByRole('status')
+      expect(errorBadge).toBeInTheDocument()
+      expect(errorBadge).toHaveTextContent('Preview unavailable')
+    })
+
+    it('shows preview for not-started courses (post-Unit-1 fix)', () => {
+      mockCourseCardPreview.showPreview = true
+      mockVideoFromHandle.blobUrl = 'blob:test'
+      const { container } = renderCard({ status: 'not-started', videoCount: 1 })
+      const video = container.querySelector('video')
+      expect(video).toBeInTheDocument()
+    })
+
+    it('does NOT render video for courses with 0 videos', () => {
+      mockCourseCardPreview.showPreview = true
+      const { container } = renderCard({ videoCount: 0 })
+      expect(container.querySelector('video')).toBeNull()
+    })
+
+    it('does NOT query DB for YouTube courses', () => {
+      // YouTube courses bypass the DB query guard — verify the sortBy spy
+      // was never called, meaning the useEffect returned early.
+      mockCourseCardPreview.showPreview = true
+      renderCard({ videoCount: 5, source: 'youtube' })
+      expect(mockDBSortBy).not.toHaveBeenCalled()
+    })
+
+    it('queries DB for local courses when showPreview is true', () => {
+      // Local courses should query DB for video handles
+      mockCourseCardPreview.showPreview = true
+      renderCard({ videoCount: 5 })
+      expect(mockDBSortBy).toHaveBeenCalled()
     })
   })
 })
