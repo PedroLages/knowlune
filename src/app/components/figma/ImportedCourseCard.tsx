@@ -195,11 +195,13 @@ export function ImportedCourseCard({
         if (!vids[0]) {
           console.warn('[CourseCardPreview] No videos found for course', course.id)
           setPreviewHandle(null)
+          setVideoReady(false)
           return
         }
         if (!vids[0].fileHandle) {
           console.warn('[CourseCardPreview] First video has null fileHandle', vids[0].filename, course.id)
           setPreviewHandle(null)
+          setVideoReady(false)
           return
         }
         setPreviewHandle(vids[0].fileHandle)
@@ -207,6 +209,7 @@ export function ImportedCourseCard({
       .catch(err => {
         console.warn('[CourseCardPreview] DB query failed for course', course.id, err)
         setPreviewHandle(null)
+        setVideoReady(false)
       })
     return () => {
       cancelled = true
@@ -385,7 +388,7 @@ export function ImportedCourseCard({
             </div>
           )}
           {/* Error indicator — shown when preview cannot load */}
-          {showPreview && previewError && !previewLoading && (
+          {showPreview && previewError && !previewLoading && course.source !== 'youtube' && (
             <div className="absolute bottom-2 left-2 z-30 rounded-full px-2 py-1 bg-black/60 text-white backdrop-blur-sm border border-white/10 text-[11px] font-medium" role="status">
               Preview unavailable
             </div>
