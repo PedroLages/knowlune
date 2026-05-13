@@ -703,6 +703,33 @@ async function _getLocalRecord(
 }
 
 /**
+ * Merge local-only stripFields into a downloaded server record.
+ *
+ * stripFields (FileSystemFileHandle, Blob, etc.) are excluded from upload
+ * payloads and therefore never present in server records. When the server
+ * wins the LWW comparison, restoring them from the existing local record
+ * prevents silent data loss.
+ */
+function _mergeStripFields(
+  record: Record<string, unknown>,
+  local: Record<string, unknown>,
+  stripFields: string[]
+): Record<string, unknown> {
+  const merged = { ...record }
+  for (const field of stripFields) {
+    // updatedAt is a timestamp used by LWW/monotonic/conflict-copy strategies
+    // for the server-vs-local comparison — restoring it from local would make
+    // the server always appear older, silently no-opping every download merge.
+    if (field === 'updatedAt') continue
+    const localVal = local[field]
+    if (localVal != null) {
+      merged[field] = localVal
+    }
+  }
+  return merged
+}
+
+/**
  * Apply LWW (last-write-wins) strategy: overwrite local only when the
  * downloaded record has a strictly newer `updatedAt`.
  */
@@ -866,6 +893,14 @@ async function _applyRecord(
   }
 
   const local = await _getLocalRecord(table, entry, record)
+
+  // Preserve local-only fields (FileSystemFileHandle, FileSystemDirectoryHandle,
+  // Blob, etc.) that are stripped during upload and therefore never present in
+  // server records. When the server wins the LWW comparison, a blind put()
+  // would overwrite these with undefined.
+  if (local && entry.stripFields && entry.stripFields.length > 0) {
+    record = _mergeStripFields(record, local, entry.stripFields)
+  }
 
   switch (entry.conflictStrategy) {
     case 'lww':

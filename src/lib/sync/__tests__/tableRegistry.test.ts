@@ -221,6 +221,55 @@ describe('tableRegistry — stripFields', () => {
     const entry = getTableEntry('authors')
     expect(entry?.stripFields).toContain('photoHandle')
   })
+
+  // R3: Every table with stripFields must be covered by preservation logic.
+  // This test enumerates the complete set — adding a new stripFields table
+  // without corresponding download preservation tests will fail here.
+  // Note: syncQueue is NOT in the tableRegistry (it's a Dexie-only internal table).
+  it('exactly 7 tables have stripFields (complete coverage guard)', () => {
+    const tablesWithStrips = tableRegistry
+      .filter(e => e.stripFields && e.stripFields.length > 0)
+      .map(e => e.dexieTable)
+      .sort()
+    expect(tablesWithStrips).toEqual([
+      'audioBookmarks',
+      'authors',
+      'books',
+      'importedCourses',
+      'importedPdfs',
+      'importedVideos',
+      'studySessions',
+    ])
+  })
+
+  // R3: Each table's stripFields must match the declared contract exactly.
+  // Changing stripFields order, adding, or removing fields will fail here.
+  it('each table has the expected stripFields (no silent regressions)', () => {
+    const strips = Object.fromEntries(
+      tableRegistry
+        .filter(e => e.stripFields && e.stripFields.length > 0)
+        .map(e => [e.dexieTable, [...(e.stripFields!)].sort()])
+    )
+    expect(strips).toEqual({
+      audioBookmarks: ['updatedAt'],
+      authors: ['photoBlob', 'photoHandle'],
+      books: ['fileUrl', 'source'],
+      importedCourses: ['coverImageHandle', 'directoryHandle'],
+      importedPdfs: ['fileBlob', 'fileHandle'],
+      importedVideos: ['fileHandle'],
+      studySessions: [
+        'contentItemId',
+        'courseId',
+        'endTime',
+        'lastActivity',
+        'qualityFactors',
+        'qualityScore',
+        'sessionType',
+        'updatedAt',
+        'videosWatched',
+      ],
+    })
+  })
 })
 
 // ---------------------------------------------------------------------------
