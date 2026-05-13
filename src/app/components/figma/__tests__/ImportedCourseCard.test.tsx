@@ -28,12 +28,11 @@ const mockCourseCardPreview = vi.hoisted(() => ({
   guardNavigation: vi.fn(),
 }))
 const mockVideoFromHandle = vi.hoisted(() => ({
-  blobUrl: null,
-  error: null,
+  blobUrl: null as string | null,
+  error: null as string | null,
   loading: false,
 }))
 const mockDBSortBy = vi.hoisted(() => vi.fn().mockResolvedValue([]))
-const mockDBWhere = vi.hoisted(() => vi.fn().mockReturnValue({ equals: vi.fn().mockReturnValue({ sortBy: mockDBSortBy }) }))
 
 vi.mock('react-router', async () => {
   const actual = await vi.importActual<typeof import('react-router')>('react-router')
@@ -709,7 +708,7 @@ describe('ImportedCourseCard', () => {
       mockVideoFromHandle.blobUrl = null
       mockVideoFromHandle.loading = false
       mockVideoFromHandle.error = 'permission-denied'
-      const { container } = renderCard({ videoCount: 1 })
+      renderCard({ videoCount: 1 })
       const errorBadge = screen.getByRole('status')
       expect(errorBadge).toBeInTheDocument()
       expect(errorBadge).toHaveTextContent('Preview unavailable')
