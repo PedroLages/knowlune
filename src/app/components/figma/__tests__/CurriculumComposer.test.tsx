@@ -335,4 +335,37 @@ describe('CurriculumComposer', () => {
 
     expect(addEventListener).toHaveBeenCalledWith('course-imported', expect.any(Function))
   })
+
+  it('should show skeleton when isCoursesLoaded is false', () => {
+    const prevLoaded = courseImportState.isCoursesLoaded
+    courseImportState.isCoursesLoaded = false
+
+    render(
+      <BrowserRouter>
+        <CurriculumComposer {...defaultProps} />
+      </BrowserRouter>
+    )
+
+    // PickerSkeleton renders a skeleton — the course list area is absent
+    expect(screen.queryByTestId('inline-course-picker')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('no-courses')).not.toBeInTheDocument()
+
+    courseImportState.isCoursesLoaded = prevLoaded
+  })
+
+  it('should show No courses yet empty state when loaded with zero courses', () => {
+    const prevCourses = courseImportState.importedCourses
+    courseImportState.importedCourses = []
+
+    render(
+      <BrowserRouter>
+        <CurriculumComposer {...defaultProps} />
+      </BrowserRouter>
+    )
+
+    expect(screen.getByTestId('no-courses')).toBeInTheDocument()
+    expect(screen.getByText('No courses yet')).toBeInTheDocument()
+
+    courseImportState.importedCourses = prevCourses
+  })
 })
