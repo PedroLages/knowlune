@@ -37,6 +37,7 @@ describe('useCourseImportStore initial state', () => {
   it('should have empty initial state', () => {
     const state = useCourseImportStore.getState()
     expect(state.importedCourses).toEqual([])
+    expect(state.isCoursesLoaded).toBe(false)
     expect(state.isImporting).toBe(false)
     expect(state.importError).toBeNull()
     expect(state.importProgress).toBeNull()
@@ -150,6 +151,7 @@ describe('loadImportedCourses', () => {
     })
 
     const state = useCourseImportStore.getState()
+    expect(state.isCoursesLoaded).toBe(true)
     expect(state.importedCourses).toHaveLength(1)
     expect(state.importedCourses[0].name).toBe('Persisted Course')
   })
@@ -562,6 +564,7 @@ describe('loadImportedCourses error handling', () => {
       await useCourseImportStore.getState().loadImportedCourses()
     })
 
+    expect(useCourseImportStore.getState().isCoursesLoaded).toBe(true)
     expect(useCourseImportStore.getState().importError).toBe('Failed to load courses from database')
   })
 })

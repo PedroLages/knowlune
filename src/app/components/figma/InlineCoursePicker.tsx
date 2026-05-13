@@ -640,7 +640,21 @@ export function InlineCoursePicker({
         aria-label="Available courses"
         data-testid="course-list"
       >
-        {!hasCourses && !search.trim() ? (
+        {importedCourses.length === 0 && !search.trim() ? (
+          <div
+            className="py-10 text-center"
+            data-testid="no-courses"
+          >
+            <BookOpen
+              className="size-8 mx-auto mb-3 text-muted-foreground/60"
+              aria-hidden="true"
+            />
+            <p className="text-sm font-medium text-foreground">No courses yet</p>
+            <p className="text-sm text-muted-foreground mt-1.5">
+              Import your first course to build a learning track.
+            </p>
+          </div>
+        ) : !hasCourses && !search.trim() ? (
           <div
             className="py-8 text-center text-sm text-muted-foreground"
             data-testid="all-excluded"

@@ -80,6 +80,7 @@ export function CurriculumComposer({
   const loadPaths = useLearningPathStore(s => s.loadPaths)
   const loadImportedCourses = useCourseImportStore(s => s.loadImportedCourses)
   const importedCourses = useCourseImportStore(s => s.importedCourses)
+  const isCoursesLoaded = useCourseImportStore(s => s.isCoursesLoaded)
 
   // Manual mode state
   const [name, setName] = useState('')
@@ -339,7 +340,7 @@ export function CurriculumComposer({
       onImportCourse={handleImportCourse}
       showBatchImportAction
       onBatchImport={handleBatchImport}
-      loading={importedCourses.length === 0}
+      loading={!isCoursesLoaded}
       hideConfirmButton
     />
   )
