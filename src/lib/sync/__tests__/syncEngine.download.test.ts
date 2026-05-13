@@ -1197,6 +1197,25 @@ describe('download semaphore (MAX_CONCURRENT_DOWNLOADS)', () => {
 })
 
 describe('429 retry path', () => {
+  afterEach(async () => {
+    // Restore the default supabase.from implementation — the test overrides it
+    // with mockImplementation() to simulate 429 responses.
+    const { supabase: s } = await import('@/lib/auth/supabase')
+    vi.mocked(s!.from).mockImplementation(
+      ((table: string) => {
+        const tableResult = downloadResults[table] ?? { data: [], error: null }
+        const order = vi.fn().mockResolvedValue(tableResult)
+        const gte = vi.fn().mockReturnValue({ order })
+        const select = vi.fn().mockReturnValue({ gte, order })
+        return {
+          select,
+          upsert: vi.fn().mockResolvedValue({ error: null }),
+          insert: vi.fn().mockResolvedValue({ error: null }),
+        }
+      }) as unknown as NonNullable<typeof s>['from']
+    )
+  })
+
   it('retries up to 3 times on 429 then fires throttle toast once', async () => {
     const { toast } = await import('sonner')
     const { supabase } = await import('@/lib/auth/supabase')
@@ -1268,5 +1287,279 @@ describe('shelvesResolve deadlock guard (F1)', () => {
       tableRegistry.splice(notesIdx, 1, origNotes)
       tableRegistry.splice(cmIdx, 1, origCm)
     }
+  })
+})
+
+// ---------------------------------------------------------------------------
+// stripFields preservation in _applyRecord (E92-S06 fix)
+// ---------------------------------------------------------------------------
+
+describe('stripFields preservation in download apply', () => {
+  const defaultStudySessions = {
+    dexieTable: 'studySessions',
+    supabaseTable: 'study_sessions',
+    conflictStrategy: 'insert-only' as const,
+    priority: 0 as const,
+    fieldMap: {},
+    insertOnly: true,
+  }
+  const defaultProgress = {
+    dexieTable: 'progress',
+    supabaseTable: 'video_progress',
+    conflictStrategy: 'monotonic' as const,
+    priority: 0 as const,
+    fieldMap: {},
+    monotonicFields: ['watchedSeconds'],
+  }
+  const defaultNotes = {
+    dexieTable: 'notes',
+    supabaseTable: 'notes',
+    conflictStrategy: 'lww' as const,
+    priority: 1 as const,
+    fieldMap: {},
+  }
+  const defaultChapterMappings = {
+    dexieTable: 'chapterMappings',
+    supabaseTable: 'chapter_mappings',
+    conflictStrategy: 'lww' as const,
+    priority: 2 as const,
+    fieldMap: {
+      epubBookId: 'epub_book_id',
+      audioBookId: 'audio_book_id',
+      computedAt: 'computed_at',
+      deleted: 'deleted',
+    },
+    compoundPkFields: ['epubBookId', 'audioBookId'],
+    upsertConflictColumns: 'epub_book_id,audio_book_id,user_id',
+  }
+  const notesWithStrips = {
+    ...defaultNotes,
+    stripFields: ['fileHandle', 'directoryHandle'],
+  }
+
+  function restoreDefaultRegistry() {
+    // Fully restore the tableRegistry array to its default state.
+    tableRegistry.length = 0
+    tableRegistry.push(
+      { ...defaultStudySessions },
+      { ...defaultProgress },
+      { ...defaultNotes },
+      { ...defaultChapterMappings }
+    )
+    vi.mocked(getTableEntry).mockImplementation((name: string) => {
+      const reg: Record<string, object> = {
+        studySessions: { ...defaultStudySessions },
+        progress: { ...defaultProgress },
+        notes: { ...defaultNotes },
+        chapterMappings: { ...defaultChapterMappings },
+      }
+      return reg[name] as ReturnType<typeof getTableEntry>
+    })
+  }
+
+  function setupStripFieldsNotes() {
+    // Restore clean state first, then override notes with stripFields.
+    restoreDefaultRegistry()
+    const idx = tableRegistry.findIndex(e => e.dexieTable === 'notes')
+    if (idx >= 0) tableRegistry.splice(idx, 1, notesWithStrips)
+    vi.mocked(getTableEntry).mockImplementation((name: string) => {
+      const reg: Record<string, object> = {
+        studySessions: { ...defaultStudySessions },
+        progress: { ...defaultProgress },
+        notes: notesWithStrips,
+      }
+      return reg[name] as ReturnType<typeof getTableEntry>
+    })
+  }
+
+  beforeEach(() => {
+    setupStripFieldsNotes()
+  })
+
+  afterEach(() => {
+    restoreDefaultRegistry()
+  })
+
+  it('preserves local stripFields when server is newer (LWW server win)', async () => {
+    const fileHandle = { kind: 'file', name: 'video.mp4' } as unknown as FileSystemFileHandle
+    const directoryHandle = { kind: 'directory' } as unknown as FileSystemDirectoryHandle
+
+    mockNotesGet.mockResolvedValue({
+      id: 'n-1',
+      content: 'old title',
+      updatedAt: '2026-04-17T10:00:00Z',
+      fileHandle,
+      directoryHandle,
+    })
+    setTableRows('notes', [
+      {
+        id: 'n-1',
+        content: 'new title',
+        updatedAt: '2026-04-18T10:00:00Z',
+        updated_at: '2026-04-18T10:00:00Z',
+        // No fileHandle or directoryHandle — server never has these
+      },
+    ])
+
+    await syncEngine.fullSync()
+
+    expect(mockNotesPut).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: 'n-1',
+        content: 'new title',        // server metadata wins
+        fileHandle,                   // preserved from local
+        directoryHandle,              // preserved from local
+      })
+    )
+  })
+
+  it('inserts server record as-is when no local record exists', async () => {
+    mockNotesGet.mockResolvedValue(undefined)
+    setTableRows('notes', [
+      {
+        id: 'n-2',
+        content: 'brand new note',
+        updatedAt: '2026-04-18T10:00:00Z',
+        updated_at: '2026-04-18T10:00:00Z',
+      },
+    ])
+
+    await syncEngine.fullSync()
+
+    expect(mockNotesPut).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: 'n-2',
+        content: 'brand new note',
+      })
+    )
+    // No fileHandle should be added to a brand-new record.
+    const putArg = mockNotesPut.mock.calls[0][0] as Record<string, unknown>
+    expect(putArg).not.toHaveProperty('fileHandle')
+  })
+
+  it('keeps local when client is newer — no put, no overwrite', async () => {
+    const fileHandle = { kind: 'file' } as unknown as FileSystemFileHandle
+    mockNotesGet.mockResolvedValue({
+      id: 'n-3',
+      content: 'local content',
+      updatedAt: '2026-04-18T12:00:00Z',
+      fileHandle,
+    })
+    setTableRows('notes', [
+      {
+        id: 'n-3',
+        content: 'server content',
+        updatedAt: '2026-04-18T10:00:00Z',
+        updated_at: '2026-04-18T10:00:00Z',
+      },
+    ])
+
+    await syncEngine.fullSync()
+
+    // Client wins → no put, stripFields are naturally preserved on disk.
+    expect(mockNotesPut).not.toHaveBeenCalled()
+  })
+
+  it('does not preserve null stripFields from local (propagate server value)', async () => {
+    mockNotesGet.mockResolvedValue({
+      id: 'n-4',
+      content: 'old',
+      updatedAt: '2026-04-17T10:00:00Z',
+      fileHandle: null,        // already broken locally
+      directoryHandle: null,   // already broken locally
+    })
+    setTableRows('notes', [
+      {
+        id: 'n-4',
+        content: 'new metadata',
+        description: 'server description',
+        updatedAt: '2026-04-18T10:00:00Z',
+        updated_at: '2026-04-18T10:00:00Z',
+      },
+    ])
+
+    await syncEngine.fullSync()
+
+    expect(mockNotesPut).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: 'n-4',
+        content: 'new metadata',
+        description: 'server description',
+      })
+    )
+    const putArg = mockNotesPut.mock.calls[0][0] as Record<string, unknown>
+    // Null stripFields are skipped by the merge (localVal != null guard) and
+    // the server record never has them, so they're simply absent (undefined)
+    // rather than explicitly null. Both are falsy — callers check truthiness.
+    expect(putArg.fileHandle).toBeUndefined()
+    expect(putArg.directoryHandle).toBeUndefined()
+  })
+
+  it('preserves only truthy stripFields (mixed: one valid, one null)', async () => {
+    const fileHandle = { kind: 'file' } as unknown as FileSystemFileHandle
+    mockNotesGet.mockResolvedValue({
+      id: 'n-5',
+      content: 'old',
+      updatedAt: '2026-04-17T10:00:00Z',
+      fileHandle,               // valid
+      directoryHandle: null,   // broken
+    })
+    setTableRows('notes', [
+      {
+        id: 'n-5',
+        content: 'new content',
+        updatedAt: '2026-04-18T10:00:00Z',
+        updated_at: '2026-04-18T10:00:00Z',
+      },
+    ])
+
+    await syncEngine.fullSync()
+
+    expect(mockNotesPut).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: 'n-5',
+        content: 'new content',
+        fileHandle,              // preserved (truthy)
+      })
+    )
+    const putArg = mockNotesPut.mock.calls[0][0] as Record<string, unknown>
+    // Null stripFields are skipped — server never has them, so absent.
+    expect(putArg.directoryHandle).toBeUndefined()
+  })
+
+  it('equal timestamps — client wins tie, no put', async () => {
+    const ts = '2026-04-18T10:00:00Z'
+    const fileHandle = { kind: 'file' } as unknown as FileSystemFileHandle
+    mockNotesGet.mockResolvedValue({
+      id: 'n-6',
+      content: 'local',
+      updatedAt: ts,
+      fileHandle,
+    })
+    setTableRows('notes', [{ id: 'n-6', content: 'server', updatedAt: ts, updated_at: ts }])
+
+    await syncEngine.fullSync()
+
+    expect(mockNotesPut).not.toHaveBeenCalled()
+  })
+
+  it('no-op when table has no stripFields (notes default)', async () => {
+    // Restore default registry (notes without stripFields).
+    restoreDefaultRegistry()
+
+    mockNotesGet.mockResolvedValue({
+      id: 'n-7',
+      content: 'old',
+      updatedAt: '2026-04-17T10:00:00Z',
+    })
+    setTableRows('notes', [
+      { id: 'n-7', content: 'new', updatedAt: '2026-04-18T10:00:00Z', updated_at: '2026-04-18T10:00:00Z' },
+    ])
+
+    await syncEngine.fullSync()
+
+    expect(mockNotesPut).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'n-7', content: 'new' })
+    )
   })
 })
