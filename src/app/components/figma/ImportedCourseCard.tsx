@@ -389,7 +389,7 @@ export function ImportedCourseCard({
           )}
           {/* Error indicator — shown when preview cannot load */}
           {showPreview && previewError && !previewLoading && course.source !== 'youtube' && (
-            <div className="absolute bottom-2 left-2 z-30 rounded-full px-2 py-1 bg-black/60 text-white backdrop-blur-sm border border-white/10 text-[11px] font-medium" role="status">
+            <div className="absolute top-2 left-2 z-30 rounded-full px-2 py-1 bg-black/60 text-white backdrop-blur-sm border border-white/10 text-[11px] font-medium" role="status">
               Preview unavailable
             </div>
           )}
