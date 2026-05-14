@@ -327,9 +327,7 @@ function renderLocalGroups(
                   tabIndex={0}
                   data-testid={`file-status-${video.id}`}
                   data-status={status}
-                  className={cn(
-                    'text-sm font-medium truncate block group-hover:text-brand transition-colors'
-                  )}
+                  className="text-sm font-medium truncate block group-hover:text-brand transition-colors"
                 >
                   <HighlightedText text={humanized} query={searchQuery} />
                 </span>
@@ -397,9 +395,7 @@ function renderLocalGroups(
               <TooltipTrigger asChild>
                 <span
                   tabIndex={0}
-                  className={cn(
-                    'text-sm font-medium truncate block group-hover:text-brand transition-colors'
-                  )}
+                  className="text-sm font-medium truncate block group-hover:text-brand transition-colors"
                 >
                   <HighlightedText text={humanized} query={searchQuery} />
                 </span>
