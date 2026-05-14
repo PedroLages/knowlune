@@ -543,4 +543,116 @@ describe('PathTimeline', () => {
     fireEvent.click(screen.getByText('Undo'))
     expect(onMarkComplete).toHaveBeenCalledWith('entry-1')
   })
+
+  // ---- Edit mode tests ----
+
+  describe('edit mode', () => {
+    it('renders non-sortable CourseTimelineEntry when editable is false (default)', () => {
+      const entries = [makeEntry({ courseId: 'c1' })]
+      const infoMap = new Map([['c1', makeCourseInfo({ name: 'Normal' })]])
+      render(
+        <PathTimeline
+          {...defaultProps}
+          entries={entries}
+          courseInfoMap={infoMap}
+        />
+      )
+      // Non-edit mode: no drag handle data-testid
+      expect(screen.queryByTestId('drag-handle-c1')).not.toBeInTheDocument()
+      // Card renders normally
+      expect(screen.getByText('Normal')).toBeInTheDocument()
+    })
+
+    it('renders SortableCourseTimelineEntry inside DndContext when editable is true', () => {
+      const entries = [makeEntry({ courseId: 'c1' })]
+      const infoMap = new Map([['c1', makeCourseInfo({ name: 'Draggable' })]])
+      render(
+        <PathTimeline
+          {...defaultProps}
+          entries={entries}
+          courseInfoMap={infoMap}
+          editable
+        />
+      )
+      // Edit mode: drag handle data-testid is present
+      expect(screen.getByTestId('drag-handle-c1')).toBeInTheDocument()
+      // Card content renders
+      expect(screen.getByText('Draggable')).toBeInTheDocument()
+    })
+
+    it('does not crash with single entry in edit mode', () => {
+      const entries = [makeEntry({ courseId: 'c1' })]
+      render(
+        <PathTimeline
+          {...defaultProps}
+          entries={entries}
+          editable
+        />
+      )
+      // Single entry renders without error
+      expect(screen.getByTestId('drag-handle-c1')).toBeInTheDocument()
+    })
+
+    it('marks gap entries as non-draggable in edit mode', () => {
+      const gapEntry = makeEntry({ id: 'gap-1', courseId: '', justification: 'Missing' })
+      const entries = [
+        makeEntry({ courseId: 'c1' }),
+        gapEntry,
+        makeEntry({ courseId: 'c2' }),
+      ]
+      const infoMap = new Map([
+        ['c1', makeCourseInfo({ name: 'Course 1' })],
+        ['c2', makeCourseInfo({ name: 'Course 2' })],
+      ])
+      render(
+        <PathTimeline
+          {...defaultProps}
+          entries={entries}
+          courseInfoMap={infoMap}
+          gapEntries={[gapEntry]}
+          editable
+        />
+      )
+      // Course entries have drag handles
+      expect(screen.getByTestId('drag-handle-c1')).toBeInTheDocument()
+      expect(screen.getByTestId('drag-handle-c2')).toBeInTheDocument()
+      // Gap entry renders normally (no drag handle)
+      expect(screen.getByText('Import')).toBeInTheDocument()
+    })
+
+    it('does not show drag handles in non-editable mode even with editable prop absent', () => {
+      const entries = [makeEntry({ courseId: 'c1' })]
+      render(
+        <PathTimeline
+          {...defaultProps}
+          entries={entries}
+        />
+      )
+      expect(screen.queryByTestId('drag-handle-c1')).not.toBeInTheDocument()
+    })
+
+    it('calls onReorder when dragEnd event fires', () => {
+      const onReorder = vi.fn()
+      const entries = [
+        makeEntry({ courseId: 'c1' }),
+        makeEntry({ courseId: 'c2' }),
+      ]
+      const infoMap = new Map([
+        ['c1', makeCourseInfo({ name: 'First' })],
+        ['c2', makeCourseInfo({ name: 'Second' })],
+      ])
+      render(
+        <PathTimeline
+          {...defaultProps}
+          entries={entries}
+          courseInfoMap={infoMap}
+          editable
+          onReorder={onReorder}
+        />
+      )
+      // Drag handles visible
+      expect(screen.getByTestId('drag-handle-c1')).toBeInTheDocument()
+      expect(screen.getByTestId('drag-handle-c2')).toBeInTheDocument()
+    })
+  })
 })

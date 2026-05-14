@@ -26,7 +26,7 @@ import type { PathCourseInfo, ImportedVideo, ImportedPdf, VideoProgress, YouTube
 export function LearningTrackDetail() {
   const { trackId } = useParams<{ trackId: string }>()
   const navigate = useNavigate()
-  const { paths, entries, loadPaths, getEntriesForPath } = useLearningPathStore()
+  const { paths, entries, loadPaths, getEntriesForPath, reorderCourse } = useLearningPathStore()
   const { importedCourses, loadImportedCourses, thumbnailUrls, loadThumbnailUrls } =
     useCourseImportStore()
   const { authors, loadAuthors } = useAuthorStore()
@@ -40,6 +40,7 @@ export function LearningTrackDetail() {
   // React has committed at least one render after isReady flips to true —
   // ensures Zustand store updates (entries) are visible before deciding emptiness.
   const [entriesChecked, setEntriesChecked] = useState(false)
+  const [isEditing, setIsEditing] = useState(false)
 
   // Load all data on mount — uses requestAnimationFrame after Promise resolution
   // to ensure Zustand store state has been committed by React before rendering
@@ -526,12 +527,22 @@ export function LearningTrackDetail() {
                     {/* Card header */}
                     <div className="flex items-center justify-between mb-8">
                       <h2 className="font-display text-2xl font-bold">Syllabus</h2>
-                      <span className="text-muted-foreground text-sm">
-                        {courseEntries.length} {courseEntries.length === 1 ? 'Course' : 'Courses'}
-                      </span>
+                      <div className="flex items-center gap-3">
+                        <span className="text-muted-foreground text-sm">
+                          {courseEntries.length} {courseEntries.length === 1 ? 'Course' : 'Courses'}
+                        </span>
+                        <Button
+                          variant={isEditing ? 'brand' : 'outline'}
+                          size="sm"
+                          onClick={() => setIsEditing(!isEditing)}
+                          data-testid="edit-syllabus-button"
+                        >
+                          {isEditing ? 'Done' : 'Edit'}
+                        </Button>
+                      </div>
                     </div>
 
-                    {/* Timeline (read-only — no drag-and-drop, no gap resolution) */}
+                    {/* Timeline */}
                     <PathTimeline
                       entries={courseEntries.map(e => ({
                         ...e,
@@ -554,6 +565,10 @@ export function LearningTrackDetail() {
                       videoProgressMap={videoProgressMap}
                       manuallyCompletedIds={manuallyCompletedIds}
                       onMarkComplete={handleMarkComplete}
+                      editable={isEditing}
+                      onReorder={(fromIndex, toIndex) =>
+                        reorderCourse(trackId ?? '', fromIndex, toIndex)
+                      }
                     />
                   </div>
                 </motion.section>
