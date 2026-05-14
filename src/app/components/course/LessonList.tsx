@@ -2,7 +2,7 @@
  * LessonList — Source-agnostic lesson list with folder/chapter grouping,
  * file status badges, search/filter, and progress indicators.
  *
- * Used by UnifiedCourseDetail (E89-S04).
+ * Used by CourseOverview (local courses) and UnifiedCourseDetail (E89-S04).
  * Supports both local folder grouping and YouTube chapter grouping.
  */
 
@@ -395,6 +395,8 @@ function renderLocalGroups(
               <TooltipTrigger asChild>
                 <span
                   tabIndex={0}
+                  data-testid={`file-status-${pdf.id}`}
+                  data-status={status}
                   className="text-sm font-medium truncate block group-hover:text-brand transition-colors"
                 >
                   <HighlightedText text={humanized} query={searchQuery} />
