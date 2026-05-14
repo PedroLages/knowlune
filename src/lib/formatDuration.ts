@@ -1,14 +1,8 @@
 /**
- * Convert milliseconds to a human-readable duration string.
- *
- * @param ms Duration in milliseconds
- * @returns Formatted string like "8m 32s", "1m 5s", "45s", or "0s"
- */
-/**
- * Convert seconds to a clock-style duration string (H:MM:SS or M:SS).
+ * Clock-style formatter for durations stored in seconds (courses, syllabus rows).
  *
  * @param seconds Duration in seconds
- * @returns Formatted string like "1:02:30" or "5:09"
+ * @returns Formatted string like "1:02:30" or "5:09" (uses "0:00" when seconds <= 0)
  */
 export function formatClockDuration(seconds: number): string {
   if (seconds <= 0) return '0:00'
@@ -21,6 +15,12 @@ export function formatClockDuration(seconds: number): string {
   return `${m}:${String(s).padStart(2, '0')}`
 }
 
+/**
+ * Compact formatter for durations stored in milliseconds (quiz timers, session time).
+ *
+ * @param ms Duration in milliseconds
+ * @returns Formatted string like "8m 32s", "1m 5s", "45s", or "0s"
+ */
 export function formatDuration(ms: number): string {
   const totalSeconds = Math.floor(Math.max(0, ms) / 1000)
   const hours = Math.floor(totalSeconds / 3600)

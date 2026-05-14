@@ -24,7 +24,7 @@ import { cn } from '@/app/components/ui/utils'
 import { extractGapSearchTerm, cleanGapJustification } from '@/data/learningPathUtils'
 import { StatusCircle, EntryActionButton, LessonRow } from '@/app/components/learning-path/TimelinePrimitives'
 import { SortableCourseTimelineEntry } from '@/app/components/learning-path/SortableCourseTimelineEntry'
-import { formatDuration } from '@/lib/formatDuration'
+import { formatClockDuration } from '@/lib/formatDuration'
 import type { ChapterGroup } from '@/lib/curriculumGrouping'
 import type { LearningPathEntry, PathCourseInfo, ImportedVideo, VideoProgress } from '@/data/types'
 
@@ -271,7 +271,7 @@ function CourseTimelineEntry({
               {(info?.totalDuration ?? 0) > 0 && (
                 <span className="flex items-center gap-1.5">
                   <Clock className="size-4" aria-hidden="true" />
-                  {formatDuration(info!.totalDuration!)}
+                  {formatClockDuration(info!.totalDuration!)}
                 </span>
               )}
             </div>

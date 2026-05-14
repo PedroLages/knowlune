@@ -29,7 +29,7 @@ import {
 import { Card, CardContent } from '@/app/components/ui/card'
 import { cn } from '@/app/components/ui/utils'
 import { EntryActionButton, LessonRow } from '@/app/components/learning-path/TimelinePrimitives'
-import { formatDuration } from '@/lib/formatDuration'
+import { formatClockDuration } from '@/lib/formatDuration'
 import type { ChapterGroup } from '@/lib/curriculumGrouping'
 import type { PathCourseInfo, ImportedVideo, VideoProgress } from '@/data/types'
 import type { LearningPathEntry } from '@/data/types'
@@ -235,7 +235,7 @@ export function SortableCourseTimelineEntry({
                         {(info?.totalDuration ?? 0) > 0 && (
                           <span className="flex items-center gap-1.5">
                             <Clock className="size-4" aria-hidden="true" />
-                            {formatDuration(info!.totalDuration!)}
+                            {formatClockDuration(info!.totalDuration!)}
                           </span>
                         )}
                       </div>

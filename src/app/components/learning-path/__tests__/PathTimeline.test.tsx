@@ -206,6 +206,7 @@ describe('PathTimeline', () => {
     )
     expect(screen.getByText('Learn the basics of React')).toBeInTheDocument()
     expect(screen.getByText(/5 lessons/)).toBeInTheDocument()
+    expect(screen.getByText('2:00:00')).toBeInTheDocument()
   })
 
   it('hides stats row when values are zero or missing', () => {
@@ -252,6 +253,8 @@ describe('PathTimeline', () => {
     fireEvent.click(screen.getByText('Test Course'))
     expect(screen.getByText('Intro')).toBeInTheDocument()
     expect(screen.getByText('Setup')).toBeInTheDocument()
+    expect(screen.getByText('2:00')).toBeInTheDocument()
+    expect(screen.getByText('3:00')).toBeInTheDocument()
   })
 
   it('shows subsection headings when lessonGroups has multiple titled groups', () => {
@@ -578,6 +581,30 @@ describe('PathTimeline', () => {
       expect(screen.getByTestId('drag-handle-c1')).toBeInTheDocument()
       // Card content renders
       expect(screen.getByText('Draggable')).toBeInTheDocument()
+    })
+
+    it('shows clock-formatted aggregate duration from totalDuration seconds in edit mode', () => {
+      const entries = [makeEntry({ courseId: 'c1' })]
+      const infoMap = new Map([
+        [
+          'c1',
+          makeCourseInfo({
+            name: 'With Duration',
+            completionPct: 0,
+            videoCount: 1,
+            totalDuration: 5268,
+          }),
+        ],
+      ])
+      render(
+        <PathTimeline
+          {...defaultProps}
+          entries={entries}
+          courseInfoMap={infoMap}
+          editable
+        />
+      )
+      expect(screen.getByText('1:27:48')).toBeInTheDocument()
     })
 
     it('does not crash with single entry in edit mode', () => {

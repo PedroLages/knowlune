@@ -10,7 +10,7 @@ import {
 } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
 import { cn } from '@/app/components/ui/utils'
-import { formatDuration } from '@/lib/formatDuration'
+import { formatClockDuration } from '@/lib/formatDuration'
 import type { ImportedVideo } from '@/data/types'
 
 // ---------------------------------------------------------------------------
@@ -120,7 +120,7 @@ export function LessonRow({
       </div>
       {video.duration > 0 && (
         <span className="text-xs text-muted-foreground tabular-nums flex-shrink-0">
-          {formatDuration(video.duration)}
+          {formatClockDuration(video.duration)}
         </span>
       )}
     </Link>
