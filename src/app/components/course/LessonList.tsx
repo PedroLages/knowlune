@@ -364,7 +364,6 @@ function renderLocalGroups(
   return groups.map(group => {
     const videoItems = group.videos.map((video, videoIndex) => {
       const status = fileStatuses.get(video.id) ?? 'checking'
-      const isUnavailable = status === 'missing' || status === 'permission-denied'
       const prog = progressMap.get(video.id)
       const percent = prog?.completionPercentage ?? 0
       const isCompleted = percent >= COMPLETION_THRESHOLD
@@ -402,8 +401,7 @@ function renderLocalGroups(
                   data-testid={`file-status-${video.id}`}
                   data-status={status}
                   className={cn(
-                    'text-sm font-medium truncate block',
-                    !isUnavailable && 'group-hover:text-brand transition-colors'
+                    'text-sm font-medium truncate block group-hover:text-brand transition-colors'
                   )}
                 >
                   <HighlightedText text={humanized} query={searchQuery} />
@@ -445,28 +443,18 @@ function renderLocalGroups(
 
       return (
         <li key={video.id} data-testid={`course-content-item-video-${video.id}`}>
-          {isUnavailable ? (
-            <div
-              className="flex items-center gap-3 px-3 py-2.5 rounded-xl opacity-50 cursor-not-allowed"
-              aria-disabled="true"
-            >
-              {content}
-            </div>
-          ) : (
-            <Link
-              to={`/courses/${courseId}/lessons/${video.id}`}
-              className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-accent transition-colors group"
-            >
-              {content}
-            </Link>
-          )}
+          <Link
+            to={`/courses/${courseId}/lessons/${video.id}`}
+            className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-accent transition-colors group"
+          >
+            {content}
+          </Link>
         </li>
       )
     })
 
     const pdfItems = group.pdfs.map(pdf => {
       const status = fileStatuses.get(pdf.id) ?? 'checking'
-      const isUnavailable = status === 'missing' || status === 'permission-denied'
       const humanized = humanizeFilename(pdf.filename)
 
       const content = (
@@ -483,8 +471,7 @@ function renderLocalGroups(
                 <span
                   tabIndex={0}
                   className={cn(
-                    'text-sm font-medium truncate block',
-                    !isUnavailable && 'group-hover:text-brand transition-colors'
+                    'text-sm font-medium truncate block group-hover:text-brand transition-colors'
                   )}
                 >
                   <HighlightedText text={humanized} query={searchQuery} />
@@ -509,21 +496,12 @@ function renderLocalGroups(
 
       return (
         <li key={pdf.id} data-testid={`course-content-item-pdf-${pdf.id}`}>
-          {isUnavailable ? (
-            <div
-              className="flex items-center gap-3 px-3 py-2.5 rounded-xl opacity-50 cursor-not-allowed"
-              aria-disabled="true"
-            >
-              {content}
-            </div>
-          ) : (
-            <Link
-              to={`/courses/${courseId}/lessons/${pdf.id}`}
-              className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-accent transition-colors group"
-            >
-              {content}
-            </Link>
-          )}
+          <Link
+            to={`/courses/${courseId}/lessons/${pdf.id}`}
+            className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-accent transition-colors group"
+          >
+            {content}
+          </Link>
         </li>
       )
     })

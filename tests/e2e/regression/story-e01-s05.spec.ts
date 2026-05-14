@@ -165,7 +165,7 @@ test.describe('E01-S05: Detect Missing or Relocated Files', () => {
   })
 
   test.describe('AC3: Missing files remain visible in structure', () => {
-    test('should keep missing files in the content list with disabled state', async ({
+    test('should keep missing files in the content list as navigable links with file status badges', async ({
       page,
       indexedDB,
     }) => {
@@ -185,14 +185,18 @@ test.describe('E01-S05: Detect Missing or Relocated Files', () => {
       await expect(page.getByTestId('course-content-item-video-video-2')).toBeVisible()
       await expect(page.getByTestId('course-content-item-pdf-pdf-1')).toBeVisible()
 
-      // AND missing video items are rendered as disabled (div, not link)
+      // AND missing video items are rendered as navigable <a> links (not disabled divs)
       const videoItem = page.getByTestId('course-content-item-video-video-1')
-      const disabledDiv = videoItem.locator('[aria-disabled="true"]')
-      await expect(disabledDiv).toBeVisible()
+      const link = videoItem.locator('a')
+      await expect(link).toBeVisible()
+      await expect(link).toHaveAttribute('href', /\/courses\/course-file-detection\/lessons\/video-1/)
 
-      // AND missing items are not clickable (no link navigation)
-      const links = videoItem.locator('a')
-      await expect(links).toHaveCount(0)
+      // AND missing items show file status badge for awareness
+      const badge = page.getByTestId('file-not-found-badge-video-1')
+      await expect(badge).toBeVisible()
+
+      // AND there are no aria-disabled attributes on lesson list items
+      await expect(videoItem.locator('[aria-disabled="true"]')).toHaveCount(0)
     })
   })
 
