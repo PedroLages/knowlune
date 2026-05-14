@@ -17,7 +17,8 @@ interface PathHeroBannerProps {
   courseCount: number
   completedCount: number
   pathProgress: PathProgressSummary
-  thumbnailUrls: Record<string, string>
+  /** Course cover URLs for the avatar stack, in display order (path-scoped, pre-sliced). */
+  orderedCourseThumbnails: string[]
   /** The courseId of the current in-progress course, if any */
   currentCourseId: string | null
   /** The courseId of the first course in the path */
@@ -37,7 +38,7 @@ export function PathHeroBanner({
   courseCount,
   completedCount,
   pathProgress,
-  thumbnailUrls,
+  orderedCourseThumbnails,
   currentCourseId,
   firstCourseId,
   targetLessonId,
@@ -48,8 +49,8 @@ export function PathHeroBanner({
 }: PathHeroBannerProps) {
   const hasDropdownActions = onEdit || onDelete
 
-  // Collect up to 4 thumbnail URLs for the avatar stack
-  const avatarUrls = Object.values(thumbnailUrls).filter(Boolean).slice(0, 4)
+  const avatarUrls = orderedCourseThumbnails
+  // Course-count based overflow (may exceed visible avatar slots when some courses lack thumbnails).
   const overflowCount = Math.max(0, courseCount - 4)
 
   // Determine CTA target and label
@@ -184,7 +185,7 @@ export function PathHeroBanner({
             <div className="flex -space-x-3 overflow-hidden">
               {avatarUrls.map((url, i) => (
                 <img
-                  key={i}
+                  key={`${i}:${url}`}
                   src={url}
                   alt=""
                   className="size-10 rounded-full ring-2 ring-brand bg-muted object-cover hover:scale-110 hover:z-20 transition-transform"
