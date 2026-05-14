@@ -21,6 +21,7 @@ export function useVideoFromHandle(handle: FileSystemFileHandle | null | undefin
         if (permission !== 'granted') {
           const result = await handle!.requestPermission({ mode: 'read' })
           if (result !== 'granted') {
+            console.warn('[useVideoFromHandle] Permission denied — user declined file access')
             if (!cancelled) setState({ blobUrl: null, error: 'permission-denied', loading: false })
             return
           }
@@ -28,8 +29,9 @@ export function useVideoFromHandle(handle: FileSystemFileHandle | null | undefin
         const file = await handle!.getFile()
         objectUrl = URL.createObjectURL(file)
         if (!cancelled) setState({ blobUrl: objectUrl, error: null, loading: false })
-      } catch {
-        // silent-catch-ok — error state rendered by consuming component
+      } catch (err) {
+        // silent-catch-ok — error state rendered by consuming component; console.warn emitted for developer debugging
+        console.warn('[useVideoFromHandle] Error accessing file:', err)
         if (!cancelled) setState({ blobUrl: null, error: 'file-not-found', loading: false })
       }
     }

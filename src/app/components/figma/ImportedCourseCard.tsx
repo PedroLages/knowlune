@@ -177,10 +177,10 @@ export function ImportedCourseCard({
   const videoHandle = previewOpen && !searching && firstVideo ? firstVideo.fileHandle : undefined
   const { blobUrl, error: videoError, loading: videoLoading } = useVideoFromHandle(videoHandle)
   const activePreviewHandle = showPreview ? previewHandle : undefined
-  const { blobUrl: previewBlobUrl } = useVideoFromHandle(activePreviewHandle)
+  const { blobUrl: previewBlobUrl, loading: previewLoading, error: previewError } = useVideoFromHandle(activePreviewHandle)
 
   useEffect(() => {
-    if (!showPreview || course.videoCount === 0) {
+    if (!showPreview || course.videoCount === 0 || course.source === 'youtube') {
       setPreviewHandle(null)
       setVideoReady(false)
       return
@@ -191,14 +191,30 @@ export function ImportedCourseCard({
       .equals(course.id)
       .sortBy('order')
       .then(vids => {
-        if (!cancelled && vids[0]) {
-          setPreviewHandle(vids[0].fileHandle)
+        if (cancelled) return
+        if (!vids[0]) {
+          console.warn('[CourseCardPreview] No videos found for course', course.id)
+          setPreviewHandle(null)
+          setVideoReady(false)
+          return
         }
+        if (!vids[0].fileHandle) {
+          console.warn('[CourseCardPreview] First video has null fileHandle', vids[0].filename, course.id)
+          setPreviewHandle(null)
+          setVideoReady(false)
+          return
+        }
+        setPreviewHandle(vids[0].fileHandle)
+      })
+      .catch(err => {
+        console.warn('[CourseCardPreview] DB query failed for course', course.id, err)
+        setPreviewHandle(null)
+        setVideoReady(false)
       })
     return () => {
       cancelled = true
     }
-  }, [showPreview, course.id, course.videoCount])
+  }, [showPreview, course.id, course.videoCount, course.source])
 
   const status = course.status
   const config = statusConfig[status]
@@ -343,8 +359,8 @@ export function ImportedCourseCard({
               className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 motion-reduce:transition-none motion-reduce:group-hover:scale-100"
             />
           )}
-          {/* Inline video preview — suppressed on not-started cards so the Start Learning button has visual primacy */}
-          {showPreview && previewBlobUrl && !showPlay && (
+          {/* Inline video preview — matches legacy CourseCard behavior (no status gate) */}
+          {showPreview && previewBlobUrl && (
             // width/height attrs prevent the browser from using intrinsic video dimensions before layout.
             // This was the root cause of the pixelated/cropped preview on non-16:9 source videos.
             <video
@@ -354,7 +370,7 @@ export function ImportedCourseCard({
               autoPlay
               playsInline
               loop
-              preload="none"
+              preload="metadata"
               aria-hidden="true"
               width="100%"
               height="100%"
@@ -365,6 +381,19 @@ export function ImportedCourseCard({
               )}
             />
           )}
+          {/* Loading overlay — shown while preview is being prepared */}
+          {showPreview && previewLoading && (
+            <div className="absolute inset-0 z-10 bg-black/60 backdrop-blur-sm flex items-center justify-center">
+              <Loader2 className="size-5 text-white/80 animate-spin" aria-hidden="true" />
+            </div>
+          )}
+          {/* Error indicator — shown when preview cannot load */}
+          {showPreview && previewError && !previewLoading && course.source !== 'youtube' && (
+            <div className="absolute top-2 left-2 z-30 rounded-full px-2 py-1 bg-black/60 text-white backdrop-blur-sm border border-white/10 text-[11px] font-medium" role="status">
+              Preview unavailable
+            </div>
+          )}
+
           {/* Selection checkbox — top-left, only when selection mode is active */}
           {onToggleSelect && (
             <div className="absolute top-3 left-3 z-40" onClick={e => e.stopPropagation()}>
