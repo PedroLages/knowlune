@@ -166,8 +166,8 @@ test.describe('Learning Track — Course Reorder', () => {
     // Perform drag-and-drop using Playwright's dragTo
     await sourceHandle.dragTo(targetHandle, { force: true })
 
-    // Wait for the store to persist (reorderCourse uses async syncableWrite)
-    await page.waitForTimeout(500)
+    // Wait for the reorder to persist by verifying the visual order changed
+    await expect(page.locator('[role="list"] h3').first()).toHaveText('Course Bravo')
 
     // Click Done to exit edit mode
     await page.getByTestId('edit-syllabus-button').click()
@@ -185,5 +185,11 @@ test.describe('Learning Track — Course Reorder', () => {
     await expect(page.getByTestId(`drag-handle-${course1Id}`)).toBeVisible()
     await expect(page.getByTestId(`drag-handle-${course2Id}`)).toBeVisible()
     await expect(page.getByTestId(`drag-handle-${course3Id}`)).toBeVisible()
+
+    // Verify the persisted order is Bravo, Alpha, Charlie
+    const courseHeadings = page.locator('[role="list"] h3')
+    await expect(courseHeadings.nth(0)).toHaveText('Course Bravo')
+    await expect(courseHeadings.nth(1)).toHaveText('Course Alpha')
+    await expect(courseHeadings.nth(2)).toHaveText('Course Charlie')
   })
 })

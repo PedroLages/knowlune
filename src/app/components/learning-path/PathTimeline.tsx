@@ -3,7 +3,7 @@ import { useReducedMotion, motion, AnimatePresence } from 'motion/react'
 import {
   DndContext,
   DragOverlay,
-  closestCenter,
+  closestCorners,
   KeyboardSensor,
   PointerSensor,
   useSensor,
@@ -212,13 +212,14 @@ function CourseTimelineEntry({
     Boolean(videos?.length) ||
     groupsWithVideos.length > 0
 
+  // NOTE: This card content intentionally duplicates SortableCourseTimelineEntry's
+  // rendering rather than extracting a shared component. The two components diverge
+  // significantly in wrapper structure (motion.div vs useSortable CSS transforms)
+  // and expanded-lesson rendering paths, so a shared abstraction would introduce
+  // more complexity than the duplication costs.
+
   const renderCardContent = () => (
     <div className="flex items-start gap-3">
-      {/* Drag handle (visual hint for reorderability) */}
-      <div className="flex-shrink-0 w-8 flex items-center justify-center self-stretch opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-muted-foreground/50">
-        <GripVertical className="size-4" aria-hidden="true" />
-      </div>
-
       <div className="flex-1 min-w-0">
         {/* Row 1: Module number + status badge */}
         <div className="flex items-center justify-between mb-2">
@@ -511,7 +512,13 @@ export function PathTimeline({
       const activeCourseId = active.id as string
       const overCourseId = over.id as string
 
-      // Find indices in the full filtered entries list
+      // Find indices in the filtered entries list.
+      // NOTE: When skipCourseId is active, filteredEntries excludes the skipped
+      // course, so the indices passed to onReorder are relative to the filtered
+      // list, not the full `entries` array. If onReorder() is used upstream to
+      // update the parent's entry ordering, the caller must account for this
+      // offset — either by mapping indices back to the full list or by ensuring
+      // skipCourseId is never set when editable is true.
       const activeEntryIndex = filteredEntries.findIndex(e => e.courseId === activeCourseId)
       const overEntryIndex = filteredEntries.findIndex(e => e.courseId === overCourseId)
 
@@ -564,7 +571,7 @@ export function PathTimeline({
       <div ref={timelineRef} className={cn('space-y-0', className)} role="list" aria-label="Timeline">
         <DndContext
           sensors={sensors}
-          collisionDetection={closestCenter}
+          collisionDetection={closestCorners}
           onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
         >
