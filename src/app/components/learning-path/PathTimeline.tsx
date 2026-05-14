@@ -1,5 +1,21 @@
-import { useEffect, useRef, useMemo, useState } from 'react'
+import { useEffect, useRef, useMemo, useState, useCallback } from 'react'
 import { useReducedMotion, motion, AnimatePresence } from 'motion/react'
+import {
+  DndContext,
+  DragOverlay,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+  type DragStartEvent,
+} from '@dnd-kit/core'
+import {
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable'
 import { Check, Lock, AlertCircle, Import, Search, Replace, GripVertical, ChevronDown, Video, Clock } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
 import { Badge } from '@/app/components/ui/badge'
@@ -7,6 +23,7 @@ import { Card, CardContent } from '@/app/components/ui/card'
 import { cn } from '@/app/components/ui/utils'
 import { extractGapSearchTerm, cleanGapJustification } from '@/data/learningPathUtils'
 import { StatusCircle, EntryActionButton, LessonRow } from '@/app/components/learning-path/TimelinePrimitives'
+import { SortableCourseTimelineEntry } from '@/app/components/learning-path/SortableCourseTimelineEntry'
 import { formatDuration } from '@/lib/formatDuration'
 import type { ChapterGroup } from '@/lib/curriculumGrouping'
 import type { LearningPathEntry, PathCourseInfo, ImportedVideo, VideoProgress } from '@/data/types'
@@ -46,6 +63,10 @@ interface PathTimelineProps {
   manuallyCompletedIds?: Set<string>
   /** Optional: called when user marks an entry complete (toggles on/off) */
   onMarkComplete?: (entryId: string) => void
+  /** When true, enables edit mode with drag-and-drop reordering */
+  editable?: boolean
+  /** Called when a course entry is reordered via drag-and-drop */
+  onReorder?: (fromIndex: number, toIndex: number) => void
   className?: string
 }
 
@@ -422,6 +443,8 @@ export function PathTimeline({
   videoProgressMap,
   manuallyCompletedIds,
   onMarkComplete,
+  editable,
+  onReorder,
   className,
 }: PathTimelineProps) {
   const gapEntryIds = useMemo(() => new Set(gapEntries.map(e => e.id)), [gapEntries])
@@ -460,6 +483,45 @@ export function PathTimeline({
     return -1
   }, [filteredEntries, courseInfoMap, gapEntryIds, manuallyCompletedIds])
 
+  // Sortable infrastructure (edit mode)
+  const [activeId, setActiveId] = useState<string | null>(null)
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  )
+
+  // Sortable entry IDs — exclude gap entries
+  const sortableEntryIds = useMemo(
+    () => filteredEntries.filter(e => e.courseId !== '' && !gapEntryIds.has(e.id)).map(e => e.courseId),
+    [filteredEntries, gapEntryIds]
+  )
+
+  const handleDragStart = useCallback((event: DragStartEvent) => {
+    setActiveId(event.active.id as string)
+  }, [])
+
+  const handleDragEnd = useCallback(
+    (event: DragEndEvent) => {
+      const { active, over } = event
+      setActiveId(null)
+
+      if (!over || active.id === over.id || !onReorder) return
+
+      const activeCourseId = active.id as string
+      const overCourseId = over.id as string
+
+      // Find indices in the full filtered entries list
+      const activeEntryIndex = filteredEntries.findIndex(e => e.courseId === activeCourseId)
+      const overEntryIndex = filteredEntries.findIndex(e => e.courseId === overCourseId)
+
+      if (activeEntryIndex === -1 || overEntryIndex === -1) return
+
+      onReorder(activeEntryIndex, overEntryIndex)
+    },
+    [filteredEntries, onReorder]
+  )
+
   const timelineRef = useRef<HTMLDivElement>(null)
   const prefersReducedMotion = useReducedMotion()
 
@@ -493,6 +555,88 @@ export function PathTimeline({
     return null
   }
 
+  if (editable) {
+    // Edit mode: DndContext + SortableContext for drag-and-drop reordering
+    const activeEntry = activeId ? filteredEntries.find(e => e.courseId === activeId) : null
+    const activeInfo = activeEntry ? courseInfoMap.get(activeEntry.courseId) : null
+
+    return (
+      <div ref={timelineRef} className={cn('space-y-0', className)} role="list" aria-label="Timeline">
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
+        >
+          <SortableContext items={sortableEntryIds} strategy={verticalListSortingStrategy}>
+            {filteredEntries.map((entry, i) => {
+              // Gap entry — render outside SortableContext
+              if (entry.courseId === '' || gapEntryIds.has(entry.id)) {
+                return (
+                  <div key={entry.id || `gap-${i}`} role="listitem">
+                    <GapTimelineEntry
+                      entry={entry}
+                      onResolve={onGapResolve}
+                      isLoading={loadingResolve?.has(entry.id)}
+                      simplified={simplified}
+                    />
+                  </div>
+                )
+              }
+
+              const info = courseInfoMap.get(entry.courseId)
+              const isManuallyCompleted = manuallyCompletedIds?.has(entry.id) ?? false
+              const isCompleted = (info?.completionPct ?? 0) >= 100 || isManuallyCompleted
+              const hasRealProgress = (info?.completionPct ?? 0) > 0 && !isCompleted
+              const isInProgress =
+                (!hasAnyProgress && i === firstNonGapIndex && !isCompleted) ||
+                hasRealProgress ||
+                i === nextUnlockedIndex
+
+              return (
+                <div key={entry.courseId} role="listitem">
+                  <SortableCourseTimelineEntry
+                    entry={entry}
+                    info={info}
+                    isCompleted={isCompleted}
+                    isInProgress={isInProgress}
+                    isManuallyCompleted={isManuallyCompleted}
+                    index={i}
+                    onClick={() => onCourseClick(entry.courseId)}
+                    onMarkComplete={
+                      onMarkComplete ? () => onMarkComplete(entry.id) : undefined
+                    }
+                    simplified={simplified}
+                    videos={videosByCourse?.get(entry.courseId)}
+                    lessonGroups={lessonGroupsByCourse?.get(entry.courseId)}
+                    videoProgressMap={videoProgressMap}
+                  />
+                </div>
+              )
+            })}
+          </SortableContext>
+
+          <DragOverlay>
+            {activeEntry && activeInfo ? (
+              <div className="flex items-start gap-3 rounded-2xl border border-brand/30 bg-card px-6 py-4 shadow-xl">
+                <div className="flex-shrink-0 w-8 flex items-center justify-center self-stretch text-muted-foreground">
+                  <GripVertical className="size-4" aria-hidden="true" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-xl font-bold">{activeInfo.name || 'Unknown Course'}</h3>
+                  <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest">
+                    Module {(filteredEntries.findIndex(e => e.courseId === activeEntry.courseId)) + 1}
+                  </span>
+                </div>
+              </div>
+            ) : null}
+          </DragOverlay>
+        </DndContext>
+      </div>
+    )
+  }
+
+  // Read-only mode (existing behavior)
   return (
     <div ref={timelineRef} className={cn('space-y-0', className)} role="list" aria-label="Timeline">
       {filteredEntries.map((entry, i) => {
