@@ -3,6 +3,7 @@ title: feat: Add drag-and-drop course reordering to Learning Track Detail page
 type: feat
 status: active
 date: 2026-05-14
+deepened: 2026-05-14
 origin: docs/brainstorms/2026-05-14-learning-track-detail-reorder-requirements.md
 ---
 
@@ -22,8 +23,8 @@ The only reordering UX lives inside the creation/editing dialog. On the detail p
 
 - R1. Syllabus header gains "Edit" button to toggle edit mode
 - R2. "Edit" becomes "Done" in edit mode; "Done" persists and exits
-- R3. Entering edit mode does not auto-save
-- R4. Exiting without changes is a no-op
+- R3. Entering edit mode does not auto-save. Changes begin with the first drag action.
+- R4. Exiting edit mode without having performed any drags is a no-op.
 - R5. Each course entry becomes draggable via its GripVertical handle
 - R6. Drag handle always visible (not hover-only) during edit mode
 - R7. Reordering uses 1-based position integers via `reorderCourse(pathId, fromIndex, toIndex)`
@@ -31,9 +32,9 @@ The only reordering UX lives inside the creation/editing dialog. On the detail p
 - R9. Course cards show elevated shadow and border highlight in edit mode
 - R10. Locked/upcoming status indicators remain visible but visually softened
 - R11. @dnd-kit/sortable vertical list strategy provides smooth animations
-- R12. On "Done", new order persisted via `reorderCourse`
-- R13. On persistence failure, toast error shown and previous order restored
-- R14. No undo toast on reorder completion -- "Done" is the commitment point
+- R12. Each dragEnd event persists the new order immediately via `reorderCourse`, which handles optimistic updates and error rollback
+- R13. On persistence failure, toast error shown and previous order restored (rollback handled by `reorderCourse`'s existing catch block)
+- R14. No undo toast on reorder completion -- each dragEnd is its own commitment point, consistent with the VideoReorderDialog pattern. "Done" only exits edit mode.
 
 ## Scope Boundaries
 
@@ -50,10 +51,13 @@ The only reordering UX lives inside the creation/editing dialog. On the detail p
 
 ### Relevant Code and Patterns
 
-- **PathTimeline.tsx** (`src/app/components/learning-path/PathTimeline.tsx`): Renders syllabus timeline with `CourseTimelineEntry` (local component, lines 137-401) and `GapTimelineEntry` (lines 53-133). GripVertical element already exists at line 197 with `opacity-0 group-hover:opacity-100`.
-- **DashboardCustomizer.tsx** (`src/app/components/DashboardCustomizer.tsx`): Existing @dnd-kit sortable with `DndContext`, `SortableContext`, `verticalListSortingStrategy`, `DragOverlay`. Handle-only drag via `{...listeners}` on GripVertical.
-- **VideoReorderDialog.tsx** (`src/app/components/course/VideoReorderDialog.tsx`): Same pattern with persistence via IndexedDB write. Shows error rollback pattern.
-- **useLearningPathStore.ts** (`src/stores/useLearningPathStore.ts`): `reorderCourse(pathId, fromIndex, toIndex)` at line 594 handles optimistic update, syncableWrite persistence, and error rollback.
+- **PathTimeline.tsx** (`src/app/components/learning-path/PathTimeline.tsx`): Renders syllabus timeline with `CourseTimelineEntry` (local component) and `GapTimelineEntry`. GripVertical element already exists. Outer `<motion.div>` wrapper around Card with unlock animation (`opacity`, `scale`). **The plan must account for animation conflict between motion.div and useSortable CSS transforms** -- see Key Technical Decisions.
+
+- **DashboardCustomizer.tsx** (`src/app/components/DashboardCustomizer.tsx`): Existing @dnd-kit sortable. **Critical pattern**: `DndContext` + `SortableContext` always render together inside the conditional panel. `SortableSectionRow` calls `useSortable` unconditionally but only renders inside those contexts -- the component is never mounted outside `SortableContext`. Uses inline styles `{ transform: CSS.Transform.toString(transform), transition }` (no motion.div). Handle-only drag via `{...listeners}` on GripVertical. PointerSensor with `activationConstraint: { distance: 5 }`.
+
+- **VideoReorderDialog.tsx** (`src/app/components/course/VideoReorderDialog.tsx`): Same pattern -- `DndContext` wraps all groups, `SortableContext` wraps each group's videos. `SortableVideoRow` calls `useSortable` unconditionally but only renders inside `SortableContext`. **Persistence pattern**: live per dragEnd (not on a "Save" button) -- `onReorder` fires optimistically, then `persistVideoOrder` writes to IndexedDB, with rollback on failure via `toast.error`. Uses inline styles (no motion.div).
+
+- **useLearningPathStore.ts** (`src/stores/useLearningPathStore.ts`): `reorderCourse(pathId, fromIndex, toIndex)` handles optimistic update, syncableWrite persistence, and error rollback -- called per dragEnd in the pattern.
 
 ### Institutional Learnings
 
@@ -61,13 +65,24 @@ The only reordering UX lives inside the creation/editing dialog. On the detail p
 
 ## Key Technical Decisions
 
-- **DndContext inside PathTimeline**: When the `editable` prop is true, `PathTimeline` wraps the entries in `DndContext` + `SortableContext`. When false, renders the existing read-only layout. This keeps the edit-mode concern colocated with the timeline component rather than leaking it to the page level.
+- **DndContext always rendered when in edit mode, with sortable/non-sortable component split**: In `@dnd-kit/sortable` v10, calling `useSortable` without a `SortableContext` ancestor throws ("Could not find sortable context") -- it does not return inert refs. To avoid this, the component rendering `useSortable` must always have a `SortableContext` ancestor when mounted.
 
-- **useSortable unconditionally on CourseTimelineEntry**: Called without conditional branching -- if no DndContext ancestor exists, useSortable returns inert refs. This avoids React hook rule violations while keeping the component single.
+  **Chosen approach: component split, matching DashboardCustomizer and VideoReorderDialog patterns.**
+  
+  - Create a new `SortableCourseTimelineEntry` component that wraps the existing card content with `useSortable`, using inline styles (`CSS.Transform.toString(transform)`) for transform/transition.
+  - When `editable` is true, PathTimeline renders `SortableCourseTimelineEntry` for course entries (inside `DndContext` + `SortableContext`) and `GapTimelineEntry` unchanged (outside `SortableContext`).
+  - When `editable` is false, PathTimeline renders the existing `CourseTimelineEntry` with its `<motion.div>` wrapper unchanged.
+  - This avoids conditional hooks, matches the existing codebase pattern (neither DashboardCustomizer nor VideoReorderDialog conditionally calls hooks), and keeps the motion.div behavior for non-edit mode.
+
+  **Rejected alternative -- always render DndContext passively:** Would require making DndContext a no-op in non-edit mode (no sensor handlers, no visual feedback) while consuming DOM and layout overhead. Unnecessary complexity for no benefit.
+
+- **Live persistence per dragEnd, consistent with VideoReorderDialog**: `reorderCourse` is called on every `dragEnd` event, not just on "Done". This matches the VideoReorderDialog pattern (line 489-506 in VideoReorderDialog.tsx). `reorderCourse` already handles optimistic updates with automatic rollback on failure. "Done" only exits edit mode. Requirements R3/R12/R14 are adjusted to match this semantic (see Requirements Trace).
+
+- **Animation conflict resolved by component split**: In non-edit mode, `CourseTimelineEntry` keeps its existing `<motion.div>` wrapper for unlock animations. In edit mode, `SortableCourseTimelineEntry` uses `useSortable` with inline `CSS.Transform.toString(transform)` and no `motion.div` -- consistent with how DashboardCustomizer and VideoReorderDialog handle transforms. This eliminates the animation conflict entirely because the two approaches never coexist on the same element.
 
 - **Handle-only drag activation**: `{...listeners}` on the GripVertical button only, `setNodeRef` on the card wrapper. The card's existing `onClick` for expand/collapse continues working when clicking outside the handle.
 
-- **Gap entries excluded**: Only entries with a non-empty `courseId` are included in `SortableContext.items`. `GapTimelineEntry` remains unchanged.
+- **Gap entries excluded**: Only entries with a non-empty `courseId` are included in `SortableContext.items`. `GapTimelineEntry` remains unchanged. Gap entries render outside `SortableContext` but inside the DndContext (or outside both -- they are always non-sortable).
 
 - **Softened visuals via CSS class toggle**: In edit mode, add a modifier class to course cards that reduces opacity/contrast of lock icons and status badges. Progress data is unaffected -- the change is purely presentational.
 
@@ -76,7 +91,10 @@ The only reordering UX lives inside the creation/editing dialog. On the detail p
 ### Resolved During Planning
 
 - [R5] Drag on handle only? Yes -- consistent with DashboardCustomizer and VideoReorderDialog patterns.
-- [Technical] How to compose DndContext with PathTimeline? DndContext wraps inside PathTimeline when `editable` is true. CourseTimelineEntry uses useSortable unconditionally.
+- [Technical] How to compose DndContext with PathTimeline? Component split: sortable variant (`SortableCourseTimelineEntry`) when `editable`, existing `CourseTimelineEntry` when not. `DndContext` + `SortableContext` wrap only when `editable` is true.
+- [Technical] useSortable called without SortableContext throws in v10. How to avoid? Use the component-split approach -- `useSortable` lives only inside `SortableCourseTimelineEntry`, which is only rendered inside `SortableContext`. This matches the pattern used by `SortableSectionRow` (DashboardCustomizer) and `SortableVideoRow` (VideoReorderDialog).
+- [Technical] Animation conflict between motion.div and useSortable transforms? Resolved by the component split -- non-edit mode uses motion.div (CourseTimelineEntry), edit mode uses inline CSS transforms from useSortable (SortableCourseTimelineEntry). They never render on the same element.
+- [Technical] Live persistence per dragEnd vs batching on "Done"? Live persistence per dragEnd matches VideoReorderDialog pattern and is functionally safe since `reorderCourse` handles optimistic updates with rollback. Requirements adjusted to match.
 - [R10] How to soften progress visuals? Lower opacity on Lock icon, reduce contrast on status badge. Keep labels visible.
 
 ### Deferred to Implementation
@@ -101,7 +119,7 @@ The only reordering UX lives inside the creation/editing dialog. On the detail p
 **Approach:**
 - Add `const [isEditing, setIsEditing] = useState(false)` in `LearningTrackDetail`
 - In the syllabus card header section (lines 525-532), add an "Edit" button next to the course count. When `isEditing`, show a "Done" button (variant="brand") instead.
-- "Done" calls `handleDoneEditing` which triggers persistence, then sets `isEditing = false`
+- "Done" calls `handleDoneEditing` which sets `isEditing = false` (persistence already happened per-dragEnd -- "Done" only exits edit mode)
 - "Edit" simply sets `isEditing = true`
 - Add `editable` prop (boolean, default false) and `onReorder` callback prop to `PathTimelineProps`
 - Pass `editable={isEditing}` and `onReorder={(fromIndex, toIndex) => store.reorderCourse(pathId, fromIndex, toIndex)}` from LearningTrackDetail to PathTimeline
@@ -117,64 +135,74 @@ The only reordering UX lives inside the creation/editing dialog. On the detail p
 
 - [ ] **Unit 2: Sortable infrastructure in PathTimeline**
 
-**Goal:** When `editable` is true, wrap course entries in DndContext and SortableContext. Make CourseTimelineEntry work as a sortable item with handle-only drag activation.
+**Goal:** When `editable` is true, wrap course entries in DndContext and SortableContext. Create a sortable variant of CourseTimelineEntry that works with handle-only drag activation, avoiding the motion.div animation conflict via component split.
 
 **Requirements:** R5, R6, R7, R8, R11
 
 **Dependencies:** Unit 1
 
 **Files:**
-- Modify: `src/app/components/learning-path/PathTimeline.tsx` (DndContext wrapping, CourseTimelineEntry modifications)
+- Create: `src/app/components/learning-path/SortableCourseTimelineEntry.tsx` (new component wrapping card content with useSortable)
+- Modify: `src/app/components/learning-path/PathTimeline.tsx` (DndContext wrapping, conditional render of sortable vs non-sortable entries)
 - Test: `src/app/components/learning-path/__tests__/PathTimeline.test.tsx`
 
 **Approach:**
-- Import DndContext, DragOverlay, closestCenter, PointerSensor, KeyboardSensor, useSensor, useSensors from `@dnd-kit/core`
-- Import SortableContext, verticalListSortingStrategy, useSortable, arrayMove from `@dnd-kit/sortable`
-- Import CSS from `@dnd-kit/utilities`
-- In CourseTimelineEntry:
-  - Call `useSortable({ id: entry.courseId })` at the top level (unconditional)
-  - Apply `setNodeRef` to the outer container div
-  - Apply `{...attributes}` to the outer container div
-  - Apply `{...listeners}` to the GripVertical button only
-  - Apply CSS transform/transition from useSortable to the outer container
-  - Add `isDragging` class (`opacity-50 shadow-lg z-10`) when being dragged
-- In PathTimeline render:
-  - When `editable` is true, wrap the filteredEntries.map output in:
+- **Create `SortableCourseTimelineEntry.tsx`**, a new component that renders the same card content as `CourseTimelineEntry` but wraps it in:
+  - `useSortable({ id: entry.courseId })` at the top level (always called -- the component only renders inside SortableContext)
+  - `setNodeRef` on the Card wrapper div
+  - `{...attributes}` on the wrapper div
+  - `{...listeners}` on the GripVertical button only
+  - Transform/transition from useSortable via **inline style** (`CSS.Transform.toString(transform)`), NOT motion.div -- matching DashboardCustomizer and VideoReorderDialog patterns
+  - `isDragging` class (`opacity-50 shadow-lg z-10`) when being dragged
+  - Reuses the same shared render-card-content function/logic to avoid duplication
+- **No motion.div wrapper** in SortableCourseTimelineEntry -- this avoids the animation conflict entirely since motion.div only exists in the non-edit CourseTimelineEntry
+- In PathTimeline's render:
+  - Pre-compute the filtered entries list (as today)
+  - When `editable` is true, wrap course entries in:
     ```
     <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={...} onDragEnd={...}>
       <SortableContext items={sortableEntryIds} strategy={verticalListSortingStrategy}>
-        {filteredEntries.map(entry => ...)}
+        {filteredEntries.map(entry => {
+          if (gap entry) return <GapTimelineEntry .../>; // outside SortableContext
+          return <SortableCourseTimelineEntry .../>;
+        })}
       </SortableContext>
       <DragOverlay>{activeEntry && <DragOverlayContent ... />}</DragOverlay>
     </DndContext>
     ```
-  - `sortableEntryIds` = filtered entries with non-empty courseId (gap entries excluded via a separate code path)
-  - Gap entries still render outside SortableContext but inside the DndContext (or split the render into sortable and non-sortable sections)
-  - Handle `onDragEnd`: compute oldIndex/newIndex using active.id and over.id, find positions in the filtered entries array, call `onReorder(oldIndex, newIndex)`
+  - When `editable` is false, render unchanged (existing CourseTimelineEntry with motion.div)
+  - `sortableEntryIds` = filtered entries with non-empty courseId (gap entries excluded)
+  - Gap entries render before/after the SortableContext (or outside it) -- they keep their position fixed
+  - Handle `onDragEnd`: compute oldIndex/newIndex using active.id and over.id, find positions in the sortable entries array, call `onReorder(oldIndex, newIndex)`
   - Track activeId via state for DragOverlay
-- Create a lightweight DragOverlay component for the course card being dragged (showing course name, module number, simplified card appearance)
+- Create a lightweight DragOverlay component for the course card being dragged (simplified card: course name, module number, grip handle)
 
 **Patterns to follow:**
 - DashboardCustomizer.tsx sensor configuration: `PointerSensor` with `activationConstraint: { distance: 5 }` and `KeyboardSensor`
-- DashboardCustomizer.tsx DragOverlay pattern showing the dragged item above the list
-- VideoReorderDialog.tsx for DragOverlayContent styling
+- DashboardCustomizer.tsx's SortableSectionRow pattern: inline style for transform/transition (not motion.div), handle-only activation
+- VideoReorderDialog.tsx's DragOverlayContent styling
+- Existing CourseTimelineEntry's card content for the shared render function
 
 **Test scenarios:**
-- Happy path: CourseTimelineEntry renders normally (no DndContext ancestor) -- no errors, useSortable is inert
-- Happy path: CourseTimelineEntry renders inside DndContext -- grip handle receives listeners
+- Happy path: CourseTimelineEntry renders without errors in non-editable mode (motion.div, no useSortable) -- no regression
+- Happy path: SortableCourseTimelineEntry renders inside DndContext + SortableContext -- grip handle receives listeners, no errors
 - Edge case: Single course entry -- no-op on drag (nothing to reorder with)
 - Edge case: Gap entries are not included in SortableContext items
 - Edge case: Drag gesture with distance < 5px does not activate (PointerSensor constraint)
+- Edge case: SortableCourseTimelineEntry never errors with "Could not find sortable context" because it's always rendered inside SortableContext
 - Integration: DragEndEvent with active over target at different position computes correct fromIndex/toIndex
+- Integration: Toggling edit mode on/off alternates between CourseTimelineEntry and SortableCourseTimelineEntry without errors
 
 **Verification:**
-- CourseTimelineEntry renders without errors in both editable and non-editable modes
+- CourseTimelineEntry renders without errors in non-editable mode (no regression)
+- SortableCourseTimelineEntry renders without errors inside editable mode
 - Drag handle activates sorting via pointer drag
 - Gap entries remain fixed and non-draggable
+- No animation conflict -- motion.div only renders in non-edit mode
 
-- [ ] **Unit 3: Persistence wiring and "Done" handler**
+- [ ] **Unit 3: Persistence wiring per dragEnd event**
 
-**Goal:** Wire the PathTimeline.onReorder callback to `store.reorderCourse`, and handle the "Done" button's save-and-exit flow. Include error handling with rollback.
+**Goal:** Wire the PathTimeline.onReorder callback to `store.reorderCourse`, called on every dragEnd event (live persistence, matching VideoReorderDialog pattern). Error rollback handled by reorderCourse's existing mechanism.
 
 **Requirements:** R3, R4, R12, R13, R14
 
@@ -186,25 +214,24 @@ The only reordering UX lives inside the creation/editing dialog. On the detail p
 
 **Approach:**
 - Pass `onReorder` prop from LearningTrackDetail to PathTimeline as: `onReorder={(fromIndex, toIndex) => store.reorderCourse(trackId, fromIndex, toIndex)}`
-- In LearningTrackDetail's handleDoneEditing:
-  - `reorderCourse` is called per each drag event (so order is already updated live during drag)
-  - "Done" handler just exits edit mode: `setIsEditing(false)`
-  - If reorderCourse failed (caught via error state), show toast and optionally reset
-- PathTimeline calls `onReorder` for each dragEnd event
-- When `editable` changes from true to false without any drag events, it is a no-op (no extra persistence writes)
+- `reorderCourse` is called per each dragEnd event (live persistence, not batched on "Done") -- matching the VideoReorderDialog pattern
+- "Done" button handler just exits edit mode: `setIsEditing(false)` -- no additional persistence call
+- When no drag events occurred and "Done" is clicked (no-op scenario), no reorderCourse calls were made
+- `reorderCourse` already handles optimistic update, syncableWrite persistence, reorderHistory recording, and error rollback with toast.error -- PathTimeline's onReorder is fire-and-forget
 
 **Patterns to follow:**
-- `reorderCourse` already handles optimistic update, syncableWrite, reorderHistory recording
+- VideoReorderDialog's live-persistence pattern: reorder on dragEnd, rollback via onReorder(videos) on failure
+- `reorderCourse` for optimistic update, syncableWrite, reorderHistory recording
 - No additional toast on "Done" per R14
 
 **Test scenarios:**
-- Happy path: Dragging a course to a new position and clicking "Done" -- reorderCourse called with correct indices
-- Edge case: Entering edit mode and clicking "Done" without any drags -- no reorderCourse calls made
-- Error path: If reorderCourse throws, toast.error shown, previous order restored (handled by reorderCourse's existing catch block)
+- Happy path: Dragging a course to a new position triggers reorderCourse with correct fromIndex/toIndex
+- Integration: reorderCourse's existing error handling shows toast and restores previous order on failure
+- Edge case: Entering edit mode and clicking "Done" without any drags -- no reorderCourse calls made (verified via spy/mock)
 - Unit: onReorder prop passes through to store.reorderCourse with correct pathId
 
 **Verification:**
-- Resulting order persists in the store
+- Resulting order persists in the store after each dragEnd
 - No unnecessary writes on cancel/no-change
 
 - [ ] **Unit 4: Visual treatment for edit mode**
@@ -217,12 +244,13 @@ The only reordering UX lives inside the creation/editing dialog. On the detail p
 
 **Files:**
 - Modify: `src/app/components/learning-path/PathTimeline.tsx`
+- Modify: `src/app/components/learning-path/SortableCourseTimelineEntry.tsx`
 
 **Approach:**
-- Pass `isEditing` boolean prop to CourseTimelineEntry
+- Pass `isEditing` boolean prop to SortableCourseTimelineEntry (edit mode visual treatments apply to the sortable variant; CourseTimelineEntry is the read-only variant and unchanged)
 - **Grip handle visibility (R6):** When `isEditing`, override the GripVertical container's opacity classes: `cn('flex-shrink-0 ...', isEditing && 'opacity-100', !isEditing && 'opacity-0 group-hover:opacity-100')`
 - **Elevated shadow (R9):** When `isEditing`, add `shadow-md border-brand/20 ring-1 ring-brand/5` classes to the Card, replacing the default hover shadow
-- **Drag handle during drag:** When `isDragging` from useSortable, add `opacity-50 shadow-lg z-10` to the course card
+- **Drag handle during drag:** When `isDragging` from useSortable in SortableCourseTimelineEntry, add `opacity-50 shadow-lg z-10` to the course card
 - **Softened progress states (R10):** When `isEditing`, reduce opacity of the Lock icon in locked entries: `cn(..., isEditing && 'opacity-50')`. Optionally reduce contrast of the status badge background. Keep labels visible so users can still see module status.
 
 **Patterns to follow:**
@@ -242,7 +270,7 @@ The only reordering UX lives inside the creation/editing dialog. On the detail p
 
 - [ ] **Unit 5: Unit tests for edit mode and sortable behavior**
 
-**Goal:** Add comprehensive unit tests covering PathTimeline in edit mode, CourseTimelineEntry with useSortable, and the drag interaction contract.
+**Goal:** Add comprehensive unit tests covering PathTimeline in edit mode, SortableCourseTimelineEntry with useSortable, and the drag interaction contract.
 
 **Requirements:** All
 
@@ -256,7 +284,8 @@ The only reordering UX lives inside the creation/editing dialog. On the detail p
   - `renders Edit button in syllabus header` (if testing in page context)
   - `displays grip handle at full opacity when editable is true`
   - `displays grip handle at hover-only opacity when editable is false`
-  - `renders without error when editable is true with no DndContext` (useSortable inert)
+  - `renders SortableCourseTimelineEntry inside DndContext when editable is true` (verify DndContext + SortableContext wrapping)
+  - `renders non-sortable CourseTimelineEntry when editable is false` (no DndContext wrapper)
   - `marks gap entries as non-draggable` (they don't receive sortable data attributes)
   - `does not crash with single entry in edit mode`
 - Add tests for visual treatment:
@@ -319,9 +348,9 @@ The only reordering UX lives inside the creation/editing dialog. On the detail p
 
 | Risk | Mitigation |
 |------|------------|
-| useSortable called without DndContext ancestor might throw | Check @dnd-kit/sortable v10 behavior -- if it errors, wrap CourseTimelineEntry with a conditional that only uses useSortable when inside a DndContext (use DndContext consumer or context check). This is unlikely but worth verifying during implementation. |
+| useSortable called without SortableContext ancestor throws in v10 | Component split approach (see Key Technical Decisions): SortableCourseTimelineEntry only renders when inside DndContext+SortableContext, and non-edit mode renders CourseTimelineEntry without useSortable. useSortable is never called without an ancestor. |
 | Drag handle activation conflicts with card expand/collapse click | Handle-only activation ensures clicks on the card body (outside GripVertical) still trigger collapse/expand. Verify during unit tests. |
-| Animation-sort conflict with motion.div wrapping | CourseTimelineEntry's outer motion.div and Card useSortable transform may interact. Use transform from useSortable and disable motion animation during edit mode, or compose transforms. |
+| Animation-sort conflict between motion.div and useSortable transforms | Eliminated by component split. Non-edit mode: CourseTimelineEntry uses motion.div for unlock animations. Edit mode: SortableCourseTimelineEntry uses inline CSS transforms from useSortable (no motion.div). The two approaches never coexist on the same element. Consistent with DashboardCustomizer and VideoReorderDialog patterns. |
 | Gap entries visible in sortable item list can receive drop events | Exclude gap entries from SortableContext.items. The drag handler should only compute indices within the sortable (non-gap) entry list. |
 
 ## Documentation / Operational Notes
