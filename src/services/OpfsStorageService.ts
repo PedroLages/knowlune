@@ -73,6 +73,74 @@ class OpfsStorageService {
   }
 
   /**
+   * Write a ReadableStream to a book file in OPFS, falling back to IndexedDB
+   * when OPFS is unavailable. Supports an optional progress callback that
+   * receives the cumulative bytes written on each chunk.
+   *
+   * Returns the storage path ('indexeddb' in fallback mode, or the full
+   * OPFS path in direct mode).
+   *
+   * In fallback mode the entire stream is buffered into a Blob before writing
+   * to IndexedDB — acceptable because the alternative (crashing) is worse, and
+   * OPFS-unavailable environments are uncommon.
+   */
+  async storeStreamToBookFile(
+    bookId: string,
+    filename: string,
+    stream: ReadableStream<Uint8Array>,
+    onProgress?: (bytesWritten: number) => void
+  ): Promise<string> {
+    await this.init()
+
+    if (this._useIndexedDBFallback) {
+      const chunks: Uint8Array[] = []
+      const reader = stream.getReader()
+      let totalBytes = 0
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        chunks.push(value)
+        totalBytes += value.byteLength
+        onProgress?.(totalBytes)
+      }
+      const blob = new Blob(chunks as BlobPart[])
+      const file = new File([blob], filename, { type: 'application/octet-stream' })
+      await db.bookFiles.put({ bookId, filename, blob: file })
+      return 'indexeddb'
+    }
+
+    const opfsPath = `/${OPFS_ROOT}/${BOOKS_DIR}/${bookId}/${filename}`
+    const bookDir = await this.getBookDir(bookId)
+    const fileHandle = await bookDir.getFileHandle(filename, { create: true })
+    const writable = await fileHandle.createWritable()
+
+    if (onProgress) {
+      // Insert a TransformStream to intercept bytes for progress reporting
+      const transform = new TransformStream()
+      const transformWriter = transform.writable.getWriter()
+      const reader = stream.getReader()
+      let bytesWritten = 0
+
+      const pump = async () => {
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
+          bytesWritten += value.byteLength
+          await transformWriter.write(value)
+          onProgress(bytesWritten)
+        }
+        await transformWriter.close()
+      }
+
+      await Promise.all([pump(), transform.readable.pipeTo(writable)])
+    } else {
+      await stream.pipeTo(writable)
+    }
+
+    return opfsPath
+  }
+
+  /**
    * Read a book file. In OPFS mode, reads from the given path.
    * In fallback mode, reads from IndexedDB.
    */

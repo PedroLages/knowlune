@@ -1,12 +1,12 @@
 /**
  * DownloadManager — singleton service for offline book downloads.
  *
- * Manages streaming download from URL to OPFS with HTTP Range resume,
- * progress tracking, serialized queue, and offlinePath management.
+ * Manages streaming download from URL to OPFS (or IndexedDB fallback)
+ * via OpfsStorageService, with progress tracking, serialized queue,
+ * iterative retry loop, and offlinePath management.
  *
  * @since offline-book-downloads (2026-05-07)
  */
-
 import { db } from '@/db/schema'
 import { opfsStorageService } from '@/services/OpfsStorageService'
 import { useDownloadStore, type PendingDownloadState } from '@/stores/useDownloadStore'
@@ -194,129 +194,144 @@ class DownloadManager {
     localStorage.setItem('knowlune_storage_persist_requested', '1')
   }
 
+  /**
+   * Core download loop with iterative retry (non-recursive).
+   * Each attempt creates a fresh AbortController; on success the method
+   * returns early, on retryable failure the loop advances to the next attempt.
+   */
   private async _performDownload(book: Book): Promise<void> {
     const store = useDownloadStore.getState()
     const bookId = book.id
+    const maxRetries = 3
 
-    // Scope AbortController locally per call frame — avoids cross-retry interference
-    const controller = new AbortController()
-    this.activeController = controller
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      // Fresh controller per attempt — avoids signal cross-talk between retries
+      const controller = new AbortController()
+      this.activeController = controller
 
-    try {
-      const url = await this.resolveDownloadUrl(book)
+      try {
+        const url = await this.resolveDownloadUrl(book)
 
-      // Always fetch from scratch (no Range resume — see fix from post-merge review).
-      // Resume requires keepExistingData + seek which is incompatible with pipeTo.
-      const response = await fetch(url, { signal: controller.signal })
+        // Always fetch from scratch (no Range resume — see fix from post-merge review).
+        // Resume requires keepExistingData + seek which is incompatible with pipeTo.
+        const response = await fetch(url, { signal: controller.signal })
 
-      if (!response.body) {
-        throw new Error('Response has no readable body')
-      }
+        if (!response.body) {
+          throw new Error('Response has no readable body')
+        }
 
-      const contentLength = response.headers.get('Content-Length')
-      const totalSize = contentLength ? parseInt(contentLength, 10) : 0
+        const contentLength = response.headers.get('Content-Length')
+        const totalSize = contentLength ? parseInt(contentLength, 10) : 0
 
-      store.setDownloadState(bookId, {
-        status: 'downloading',
-        progress: 0,
-        totalSize,
-        retryCount: 0,
-      })
+        store.setDownloadState(bookId, {
+          status: 'downloading',
+          progress: 0,
+          totalSize,
+          retryCount: attempt,
+        })
 
-      const ext = book.format === 'audiobook' ? '.m4b' : '.epub'
-      // Absolute OPFS path matching OpfsStorageService convention for reader compatibility
-      const opfsPath = `/knowlune/books/${bookId}/book${ext}`
+        const ext = book.format === 'audiobook' ? '.m4b' : '.epub'
+        const filename = `book${ext}`
 
-      // Streaming write to OPFS via createWritable + pipeTo
-      const root = await navigator.storage.getDirectory()
-      const knowluneDir = await root.getDirectoryHandle('knowlune', { create: true })
-      const booksDir = await knowluneDir.getDirectoryHandle('books', { create: true })
-      const bookDir = await booksDir.getDirectoryHandle(bookId, { create: true })
-
-      const fileHandle = await bookDir.getFileHandle(`book${ext}`, { create: true })
-      const writable = await fileHandle.createWritable()
-      await response.body.pipeTo(writable)
-
-      store.setDownloadState(bookId, {
-        status: 'downloaded',
-        progress: totalSize,
-        totalSize,
-        opfsPath: opfsPath,
-      })
-
-      await db.books.update(bookId, { offlinePath: opfsPath })
-
-      // Trigger quota check after download completes
-      checkStorageQuota()
-
-      const record = store.downloads.get(bookId)
-      if (record) {
-        await db.downloads.put({
-          id: record.id,
+        // Streaming write through OpfsStorageService — handles OPFS and
+        // IndexedDB fallback transparently. The onProgress callback emits
+        // throttled byte-level progress updates via a TransformStream.
+        let lastProgressUpdate = 0
+        const opfsPath = await opfsStorageService.storeStreamToBookFile(
           bookId,
+          filename,
+          response.body,
+          (bytesWritten: number) => {
+            const now = Date.now()
+            if (now - lastProgressUpdate > 250) {
+              lastProgressUpdate = now
+              store.setDownloadState(bookId, { progress: bytesWritten, status: 'downloading' })
+            }
+          }
+        )
+
+        store.setDownloadState(bookId, {
           status: 'downloaded',
           progress: totalSize,
           totalSize,
-          opfsPath: opfsPath,
-          originalSource: book.source,
-          retryCount: 0,
-          createdAt: record.createdAt,
-          updatedAt: new Date().toISOString(),
+          opfsPath,
         })
-      }
-    } catch (err) {
-      if ((err as Error).name === 'AbortError') return
 
-      const rec = store.downloads.get(bookId)
-      const retryCount = (rec?.retryCount ?? 0) + 1
-      const maxRetries = 3
+        await db.books.update(bookId, { offlinePath: opfsPath })
 
-      if (retryCount <= maxRetries) {
-        store.setDownloadState(bookId, {
-          status: 'retrying',
-          retryCount,
-          error: (err as Error).message,
-        })
-        // Abortable retry timer — cancelDownload clears this.retryTimer
-        const delay = Math.pow(2, retryCount) * 1000
-        await new Promise<void>((resolve, reject) => {
-          this.retryTimer = setTimeout(() => {
-            this.retryTimer = null
-            resolve()
-          }, delay)
-          controller.signal.addEventListener('abort', () => {
-            if (this.retryTimer) {
-              clearTimeout(this.retryTimer)
-              this.retryTimer = null
-            }
-            reject(new DOMException('Aborted', 'AbortError'))
+        // Trigger quota check after download completes
+        checkStorageQuota()
+
+        const record = store.downloads.get(bookId)
+        if (record) {
+          await db.downloads.put({
+            id: record.id,
+            bookId,
+            status: 'downloaded',
+            progress: totalSize,
+            totalSize,
+            opfsPath,
+            originalSource: book.source,
+            retryCount: attempt,
+            createdAt: record.createdAt,
+            updatedAt: new Date().toISOString(),
           })
-        })
-        await this._performDownload(book)
-      } else {
-        store.setDownloadState(bookId, {
-          status: 'failed',
-          error: (err as Error).message,
-          retryCount,
-        })
-      }
-    } finally {
-      // Only clear if this frame's controller is still the active one
-      if (this.activeController === controller) {
-        this.activeController = null
+        }
+
+        return // Success — exit the loop and method
+      } catch (err) {
+        if ((err as Error).name === 'AbortError') return
+
+        if (attempt < maxRetries) {
+          store.setDownloadState(bookId, {
+            status: 'retrying',
+            retryCount: attempt + 1,
+            error: (err as Error).message,
+          })
+          // Abortable retry timer — cancelDownload clears this.retryTimer
+          const delay = Math.pow(2, attempt + 1) * 1000
+          await new Promise<void>((resolve, reject) => {
+            this.retryTimer = setTimeout(() => {
+              this.retryTimer = null
+              resolve()
+            }, delay)
+            controller.signal.addEventListener('abort', () => {
+              if (this.retryTimer) {
+                clearTimeout(this.retryTimer)
+                this.retryTimer = null
+              }
+              reject(new DOMException('Aborted', 'AbortError'))
+            })
+          })
+          // Loop continues to next attempt
+        } else {
+          store.setDownloadState(bookId, {
+            status: 'failed',
+            error: (err as Error).message,
+            retryCount: attempt + 1,
+          })
+        }
+      } finally {
+        // Only clear if this iteration's controller is still the active one
+        if (this.activeController === controller) {
+          this.activeController = null
+        }
       }
     }
   }
 
+  /** Iterative queue drain — processes all pending downloads in FIFO order. */
   private async _drainQueue(): Promise<void> {
     const store = useDownloadStore.getState()
-    const pending = store.getPendingDownload()
-    if (!pending) return
 
-    const book = await db.books.get(pending.bookId)
-    if (book) {
+    while (true) {
+      const pending = store.getPendingDownload()
+      if (!pending) break
+
+      const book = await db.books.get(pending.bookId)
+      if (!book) break
+
       await this._performDownload(book)
-      await this._drainQueue()
     }
   }
 }
