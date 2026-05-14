@@ -71,6 +71,9 @@ experiments/
 # ESLint cache
 .eslintcache
 
+# Claude agent embedded git worktrees (ephemeral; do not commit)
+.claude/worktrees/
+
 # Session memory (temporary session context, not version controlled)
 .claude/session-memory/current-session/
 .claude/session-memory/archived/*
