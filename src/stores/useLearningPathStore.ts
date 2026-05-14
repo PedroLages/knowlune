@@ -49,6 +49,15 @@ interface LearningPathState {
     justification?: string
   ) => Promise<void>
   removeCourseFromPath: (pathId: string, courseId: string) => Promise<void>
+  /**
+   * Reorder by drag target (aligned with `@dnd-kit/sortable`): move `activeCourseId`
+   * to the slot of `overCourseId`, preserving gap rows in-place.
+   */
+  reorderPathCourses: (
+    pathId: string,
+    activeCourseId: string,
+    overCourseId: string
+  ) => Promise<void>
   reorderCourse: (pathId: string, fromIndex: number, toIndex: number) => Promise<void>
 
   // AI generation (generates into active path)
@@ -111,6 +120,31 @@ interface LearningPathState {
     paths?: LearningPath[]
     entries?: LearningPathEntry[]
   }) => Promise<void>
+}
+
+/** Syllabus gap rows use `courseId === ''` (see PathTimeline + replaceGapEntry). */
+function isPathGapEntry(e: LearningPathEntry): boolean {
+  return e.courseId === ''
+}
+
+function arrayMoveInPlaceCopy<T>(arr: T[], from: number, to: number): T[] {
+  const next = [...arr]
+  const [item] = next.splice(from, 1)
+  next.splice(to, 0, item)
+  return next
+}
+
+/** Keep gap slots fixed; replace only real course rows with `reorderedMovables` in order. */
+function weavePathWithMovableOrder(
+  skeleton: LearningPathEntry[],
+  reorderedMovables: LearningPathEntry[]
+): LearningPathEntry[] {
+  let mi = 0
+  return skeleton.map(slot => {
+    if (isPathGapEntry(slot)) return slot
+    const src = reorderedMovables[mi++]
+    return src !== undefined ? { ...src } : slot
+  })
 }
 
 /** Resolve course IDs to names for reorder history context */
@@ -591,24 +625,35 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
     }
   },
 
-  reorderCourse: async (pathId: string, fromIndex: number, toIndex: number) => {
-    if (fromIndex === toIndex) return
+  reorderPathCourses: async (
+    pathId: string,
+    activeCourseId: string,
+    overCourseId: string
+  ) => {
+    if (!pathId || !activeCourseId || !overCourseId || activeCourseId === overCourseId) {
+      return
+    }
 
     const pathEntries = get()
       .entries.filter(e => e.pathId === pathId)
       .sort((a, b) => a.position - b.position)
 
-    const reordered = [...pathEntries]
-    const [movedEntry] = reordered.splice(fromIndex, 1)
-    reordered.splice(toIndex, 0, movedEntry)
+    const movable = pathEntries.filter(e => !isPathGapEntry(e))
+    const oldIx = movable.findIndex(e => e.courseId === activeCourseId)
+    const newIx = movable.findIndex(e => e.courseId === overCourseId)
 
-    const updated = reordered.map((entry, index) => ({
+    if (oldIx === -1 || newIx === -1) return
+
+    const movedEntry = movable[oldIx]
+    const movableReordered = arrayMoveInPlaceCopy(movable, oldIx, newIx)
+    const rebuilt = weavePathWithMovableOrder(pathEntries, movableReordered)
+
+    const updated = rebuilt.map((entry, index) => ({
       ...entry,
       position: index + 1,
       isManuallyOrdered: entry.id === movedEntry.id ? true : entry.isManuallyOrdered,
     }))
 
-    // Optimistic update
     set(state => ({
       entries: [...state.entries.filter(e => e.pathId !== pathId), ...updated],
       error: null,
@@ -627,29 +672,23 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
       set({ error: 'Failed to save reordering' })
     })
 
-    // Record reorder history for personalization (fire-and-forget, local-only)
     if (movedEntry.justification || movedEntry.isManuallyOrdered) {
       try {
-        // Determine the prior AI-suggested position from the entry's original position
         const suggestedPos = movedEntry.isManuallyOrdered ? movedEntry.position : null
-        // Resolve course name from imported courses
+
         const importedCourses = useCourseImportStore.getState().importedCourses
         const courseData = importedCourses.find(c => c.id === movedEntry.courseId)
         const courseName = courseData?.name || 'Unknown Course'
         const courseTags = courseData?.tags || []
 
-        // Capture surrounding context (up to 2 courses before/after at the NEW positions)
-        const reindexed = reordered.map((e, i) => ({ ...e, position: i + 1 }))
-        const movedPos = reindexed.find(e => e.id === movedEntry.id)?.position ?? toIndex + 1
+        const movedPos =
+          updated.find(e => e.id === movedEntry.id)?.position ??
+          movableReordered.findIndex(e => e.id === movedEntry.id) + 1
         const beforeCourses = resolvedCourseNames(
-          reindexed.filter(
-            e => e.id !== movedEntry.id && e.position < movedPos
-          ).slice(-2)
+          updated.filter(e => e.id !== movedEntry.id && e.position < movedPos).slice(-2)
         )
         const afterCourses = resolvedCourseNames(
-          reindexed.filter(
-            e => e.id !== movedEntry.id && e.position > movedPos
-          ).slice(0, 2)
+          updated.filter(e => e.id !== movedEntry.id && e.position > movedPos).slice(0, 2)
         )
 
         const historyEntry = {
@@ -665,12 +704,10 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
           movedAt: new Date().toISOString(),
         }
 
-        // Fire-and-forget to local-only table
         db.reorderHistory.add(historyEntry).catch(err => {
           console.warn('[LearningPathStore] Failed to record reorder history:', err)
         })
 
-        // Trim old entries (keep last 50, only entries < 90 days)
         db.reorderHistory
           .orderBy('movedAt')
           .reverse()
@@ -689,6 +726,28 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
         console.warn('[LearningPathStore] Failed to record reorder history:', err)
       }
     }
+  },
+
+  reorderCourse: async (pathId: string, fromIndex: number, toIndex: number) => {
+    if (fromIndex === toIndex) return
+
+    const pathEntries = get()
+      .entries.filter(e => e.pathId === pathId)
+      .sort((a, b) => a.position - b.position)
+
+    const fromEntry = pathEntries[fromIndex]
+    const toEntry = pathEntries[toIndex]
+
+    if (
+      !fromEntry?.courseId ||
+      !toEntry?.courseId ||
+      isPathGapEntry(fromEntry) ||
+      isPathGapEntry(toEntry)
+    ) {
+      return
+    }
+
+    await get().reorderPathCourses(pathId, fromEntry.courseId, toEntry.courseId)
   },
 
   generatePath: async () => {
@@ -1285,3 +1344,8 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
     }
   },
 }))
+
+if (import.meta.env.DEV && typeof window !== 'undefined' && __PLAYWRIGHT_TEST__) {
+  ;(window as unknown as { __learningPathStore__?: typeof useLearningPathStore }).__learningPathStore__ =
+    useLearningPathStore
+}

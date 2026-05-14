@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { useParams, Link, useNavigate } from 'react-router'
 import { motion, useReducedMotion } from 'motion/react'
+import { useShallow } from 'zustand/react/shallow'
 import { BookOpen, Trophy, ArrowLeft, AlertCircle, RotateCcw } from 'lucide-react'
 import { Skeleton } from '@/app/components/ui/skeleton'
 import { Button } from '@/app/components/ui/button'
@@ -27,7 +28,9 @@ import type { PathCourseInfo, ImportedVideo, ImportedPdf, VideoProgress, YouTube
 export function LearningTrackDetail() {
   const { trackId } = useParams<{ trackId: string }>()
   const navigate = useNavigate()
-  const { paths, entries, loadPaths, getEntriesForPath, reorderCourse } = useLearningPathStore()
+  const paths = useLearningPathStore(s => s.paths)
+  const loadPaths = useLearningPathStore(s => s.loadPaths)
+  const reorderPathCourses = useLearningPathStore(s => s.reorderPathCourses)
   const { importedCourses, loadImportedCourses, thumbnailUrls, loadThumbnailUrls } =
     useCourseImportStore()
   const { authors, loadAuthors } = useAuthorStore()
@@ -106,10 +109,18 @@ export function LearningTrackDetail() {
     }
   }, [isReady, path])
 
-  // Get sorted entries for this path
-  const courseEntries = useMemo(
-    () => (trackId ? getEntriesForPath(trackId) : []),
-    [trackId, entries, getEntriesForPath]
+  const courseEntries = useLearningPathStore(
+    useShallow(
+      useCallback(
+        state =>
+          trackId
+            ? state.entries
+                .filter(e => e.pathId === trackId)
+                .sort((a, b) => a.position - b.position)
+            : [],
+        [trackId]
+      )
+    )
   )
 
   const heroCourseThumbnails = useMemo(
@@ -572,8 +583,8 @@ export function LearningTrackDetail() {
                       manuallyCompletedIds={manuallyCompletedIds}
                       onMarkComplete={handleMarkComplete}
                       editable={isEditing}
-                      onReorder={(fromIndex, toIndex) =>
-                        reorderCourse(trackId ?? '', fromIndex, toIndex)
+                      onReorderByCourseId={(activeCourseId, overCourseId) =>
+                        reorderPathCourses(trackId ?? '', activeCourseId, overCourseId)
                       }
                     />
                   </div>

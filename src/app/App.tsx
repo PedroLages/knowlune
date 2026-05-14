@@ -103,6 +103,7 @@ export default function App() {
             {import.meta.env.PROD && <PWAUpdatePrompt />}
             <PWAInstallBanner />
             {process.env.NODE_ENV === 'development' &&
+              !__PLAYWRIGHT_TEST__ &&
               createPortal(<Agentation />, document.body)}
           </SyncUXShell>
         </MotionConfig>

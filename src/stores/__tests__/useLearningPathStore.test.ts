@@ -396,6 +396,76 @@ describe('reorderCourse', () => {
     const entries = useLearningPathStore.getState().getEntriesForPath(pathId)
     expect(entries[0].courseId).toBe('c1')
   })
+
+  it('reorderPathCourses keeps gap slots fixed when moving among real courses', async () => {
+    await act(async () => {
+      await useLearningPathStore.getState().createPath('Path')
+    })
+    const pathId = useLearningPathStore.getState().paths[0].id
+
+    await act(async () => {
+      await useLearningPathStore.getState().addCourseToPath(pathId, 'c1', 'imported')
+      await useLearningPathStore.getState().addCourseToPath(pathId, 'c2', 'imported')
+      await useLearningPathStore.getState().addCourseToPath(pathId, 'c3', 'imported')
+    })
+
+    await db.learningPathEntries.where('pathId').equals(pathId).delete()
+
+    const fixed = new Date().toISOString()
+    await db.learningPathEntries.bulkPut([
+      {
+        id: 'e-gap-reorder-1',
+        pathId,
+        courseId: 'c1',
+        courseType: 'imported',
+        position: 1,
+        isManuallyOrdered: false,
+      },
+      {
+        id: 'e-gap-reorder-gap',
+        pathId,
+        courseId: '',
+        courseType: 'imported',
+        position: 2,
+        justification: 'gap',
+        isManuallyOrdered: false,
+      },
+      {
+        id: 'e-gap-reorder-2',
+        pathId,
+        courseId: 'c2',
+        courseType: 'imported',
+        position: 3,
+        isManuallyOrdered: false,
+      },
+      {
+        id: 'e-gap-reorder-3',
+        pathId,
+        courseId: 'c3',
+        courseType: 'imported',
+        position: 4,
+        isManuallyOrdered: false,
+      },
+    ])
+    await db.learningPaths.update(pathId, { updatedAt: fixed })
+
+    const pathRows = await db.learningPathEntries.where('pathId').equals(pathId).toArray()
+    useLearningPathStore.setState(state => ({
+      entries: [...state.entries.filter(e => e.pathId !== pathId), ...pathRows],
+    }))
+
+    await act(async () => {
+      await useLearningPathStore.getState().reorderPathCourses(pathId, 'c3', 'c1')
+    })
+
+    const entries = useLearningPathStore.getState().getEntriesForPath(pathId)
+    expect(entries.map(e => e.courseId)).toEqual(['c3', '', 'c1', 'c2'])
+    expect(entries[0].position).toBe(1)
+    expect(entries[1].position).toBe(2)
+    expect(entries[2].position).toBe(3)
+    expect(entries[3].position).toBe(4)
+    expect(entries[0].isManuallyOrdered).toBe(true)
+  })
 })
 
 describe('clearPath', () => {

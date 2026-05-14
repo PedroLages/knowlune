@@ -41,8 +41,9 @@ interface FileSystemDirectoryHandle extends FileSystemHandle {
   resolve(possibleDescendant: FileSystemHandle): Promise<string[] | null>
 }
 
-// Build-time constant injected by Vite define (see vite.config.ts)
+// Build-time constants injected by Vite define (see vite.config.ts)
 declare const __APP_VERSION__: string
+declare const __PLAYWRIGHT_TEST__: boolean
 
 interface Window {
   showDirectoryPicker(options?: { mode?: 'read' | 'readwrite' }): Promise<FileSystemDirectoryHandle>
