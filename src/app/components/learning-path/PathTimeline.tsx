@@ -65,7 +65,12 @@ interface PathTimelineProps {
   onMarkComplete?: (entryId: string) => void
   /** When true, enables edit mode with drag-and-drop reordering */
   editable?: boolean
-  /** Called when a course entry is reordered via drag-and-drop */
+  /**
+   * Preferred drag-end callback: course IDs match `@dnd-kit/sortable` and stay
+   * correct when gap rows exist between modules.
+   */
+  onReorderByCourseId?: (activeCourseId: string, overCourseId: string) => void
+  /** Legacy index-based reorder (skips calling when `onReorderByCourseId` is set) */
   onReorder?: (fromIndex: number, toIndex: number) => void
   className?: string
 }
@@ -446,6 +451,7 @@ export function PathTimeline({
   onMarkComplete,
   editable,
   onReorder,
+  onReorderByCourseId,
   className,
 }: PathTimelineProps) {
   const gapEntryIds = useMemo(() => new Set(gapEntries.map(e => e.id)), [gapEntries])
@@ -507,26 +513,24 @@ export function PathTimeline({
       const { active, over } = event
       setActiveId(null)
 
-      if (!over || active.id === over.id || !onReorder) return
+      if (!over || active.id === over.id || (!onReorder && !onReorderByCourseId)) return
 
       const activeCourseId = active.id as string
       const overCourseId = over.id as string
 
-      // Find indices in the filtered entries list.
-      // NOTE: When skipCourseId is active, filteredEntries excludes the skipped
-      // course, so the indices passed to onReorder are relative to the filtered
-      // list, not the full `entries` array. If onReorder() is used upstream to
-      // update the parent's entry ordering, the caller must account for this
-      // offset — either by mapping indices back to the full list or by ensuring
-      // skipCourseId is never set when editable is true.
+      if (onReorderByCourseId) {
+        onReorderByCourseId(activeCourseId, overCourseId)
+        return
+      }
+
       const activeEntryIndex = filteredEntries.findIndex(e => e.courseId === activeCourseId)
       const overEntryIndex = filteredEntries.findIndex(e => e.courseId === overCourseId)
 
-      if (activeEntryIndex === -1 || overEntryIndex === -1) return
+      if (activeEntryIndex === -1 || overEntryIndex === -1 || !onReorder) return
 
       onReorder(activeEntryIndex, overEntryIndex)
     },
-    [filteredEntries, onReorder]
+    [filteredEntries, onReorder, onReorderByCourseId]
   )
 
   const timelineRef = useRef<HTMLDivElement>(null)
@@ -575,7 +579,12 @@ export function PathTimeline({
           onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
         >
-          <SortableContext items={sortableEntryIds} strategy={verticalListSortingStrategy}>
+          {/* Key by ordered IDs so programmatic store reorders reset sortable internals (otherwise useSortable can keep stale transforms while entry order props update). */}
+          <SortableContext
+            key={sortableEntryIds.join('|')}
+            items={sortableEntryIds}
+            strategy={verticalListSortingStrategy}
+          >
             {filteredEntries.map((entry, i) => {
               // Gap entry — render outside SortableContext
               if (entry.courseId === '' || gapEntryIds.has(entry.id)) {

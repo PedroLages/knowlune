@@ -171,14 +171,21 @@ class OpfsStorageService {
         const metaText = await metaRecord.blob.text()
         const meta = JSON.parse(metaText)
         const totalChunks: number = meta.totalChunks ?? 0
+
+        // Pre-index chunk records by filename for O(1) lookup per chunk
+        const chunkMap = new Map<string, Blob>()
+        for (const r of records) {
+          if (r.filename.endsWith('.meta')) continue
+          chunkMap.set(r.filename, r.blob)
+        }
+
+        const originalFilename = metaRecord.filename.replace(/\.meta$/, '')
         const blobs: Blob[] = []
         for (let i = 0; i < totalChunks; i++) {
           const paddedIdx = String(i).padStart(6, '0')
-          const chunk = records.find(r => r.filename.endsWith(`.part.${paddedIdx}`))
-          if (chunk) blobs.push(chunk.blob)
+          const blob = chunkMap.get(`${originalFilename}.part.${paddedIdx}`)
+          if (blob) blobs.push(blob)
         }
-        // Derive original filename from .meta record name
-        const originalFilename = metaRecord.filename.replace(/\.meta$/, '')
         if (blobs.length === 0) return null
         return new File(blobs as BlobPart[], originalFilename)
       }

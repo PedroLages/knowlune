@@ -245,11 +245,14 @@ test.describe('full download flow (AC8)', () => {
     await expect(downloadBtn).toBeVisible({ timeout: 10_000 })
     await downloadBtn.click()
 
-    // After clicking, the button should show downloading state
-    // (The actual download flow is async; it may take a moment to transition)
-    await expect(
-      page.getByRole('button', { name: /Downloading/i })
-    ).toBeVisible({ timeout: 15_000 })
+    // After clicking, the button should transition through downloading to completed.
+    // Use toPass to handle fast downloads where 'Downloading' is briefly visible
+    // or already completed by the time we check.
+    await expect(async () => {
+      const downloadingVisible = await page.getByRole('button', { name: /Downloading/i }).isVisible()
+      const offlineVisible = await page.getByRole('button', { name: /Available offline/i }).isVisible()
+      expect(downloadingVisible || offlineVisible).toBeTruthy()
+    }).toPass({ timeout: 20_000 })
 
     // Eventually the download completes and shows "Available offline"
     await expect(

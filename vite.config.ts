@@ -481,6 +481,8 @@ function testModeCspPlugin(): Plugin {
 export default defineConfig({
   define: {
     __APP_VERSION__: JSON.stringify(pkg.version),
+    /** True when Playwright starts the dev server (`PLAYWRIGHT_TEST=1`); skips dev-only overlays. */
+    __PLAYWRIGHT_TEST__: JSON.stringify(process.env.PLAYWRIGHT_TEST === '1'),
   },
   plugins: [
   // The React and Tailwind plugins are both required for Make, even if
