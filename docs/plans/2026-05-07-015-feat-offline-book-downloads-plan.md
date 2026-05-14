@@ -3,6 +3,7 @@ title: "feat: Offline book & audiobook downloads"
 type: feat
 status: active
 date: 2026-05-07
+deepened: 2026-05-14
 origin: docs/brainstorms/2026-05-07-offline-book-downloads-requirements.md
 ---
 
@@ -243,13 +244,13 @@ The `DownloadManager` tests mock three external systems. The existing `OpfsStora
 
 ---
 
-### Unit 2: Download UI — Actions & Progress Indicators
+### Unit 2: Download UI — Actions, Progress Indicators & Offline Error CTA
 
-- [ ] **Unit 2: Download UI — Actions & Progress Indicators**
+- [ ] **Unit 2: Download UI — Actions, Progress Indicators & Offline Error CTA**
 
-**Goal:** Add download trigger buttons to BookDetailHero and BookContextMenu, with progress indicators and downloaded-state badges on book cards and the detail page.
+**Goal:** Add download trigger buttons to BookDetailHero and BookContextMenu, with progress indicators and downloaded-state badges on book cards and the detail page. Also add a "Download for Offline" call-to-action shown when a remote book fails to open due to no connectivity (R15).
 
-**Requirements:** R1, R5, R10
+**Requirements:** R1, R5, R10, R15
 
 **Dependencies:** Unit 1
 
@@ -291,6 +292,14 @@ The `DownloadManager` tests mock three external systems. The existing `OpfsStora
   - At mobile (<640px): badge is 20x20px max
   - Tapping the card still navigates to book detail (badge is decorative; download state detail is on the detail page)
   - Use `useIsDownloaded(bookId)` and `useDownloadState(bookId)` selectors
+- **Offline connectivity error CTA (R15):**
+  - When a remote book fails to load in the reader/player due to `navigator.onLine === false` or a network error (fetch timeout, `TypeError: Failed to fetch`), show an inline error state in BookDetailHero with:
+    - Descriptive message: "No internet connection — this book requires online access. Download it now to read offline."
+    - Primary CTA button: "Download for Offline" that triggers `downloadManager.startDownload(book)` and navigates to the download progress UI
+    - Secondary link: "Browse Downloaded Books" linking to the library with `?downloaded=true` filter
+  - If the book is already downloaded (`book.offlinePath` set), the connectivity error does not appear — the reader/player reads from OPFS directly
+  - Detect connectivity loss at the reader/player entry point (`BookContentService.getEpubContent()` for EPUBs, `useAudioPlayer.loadChapter()` for audiobooks). Catch network errors from the fetch/stream attempt and check `navigator.onLine` — if offline, present the CTA instead of a generic error
+  - The CTA is only shown for remote books (`book.source.type === 'remote'`) that are not yet downloaded. Already-downloaded books, local imports, and fileHandle books are unaffected
 - Toast notifications:
   - Download started: info toast with book title
   - Download complete: success toast with "Available offline"
@@ -322,6 +331,10 @@ The `DownloadManager` tests mock three external systems. The existing `OpfsStora
 - Edge case: cancel download mid-progress → UI reverts to "Download" button
 - Edge case: rapid double-tap on Download → second tap enqueues (serialized)
 - Edge case: retrying (2/3) → progress ring shows pulsing indicator with "Retrying..." label
+- Edge case: offline reader error → "No internet connection" error with "Download for Offline" CTA shown (R15)
+- Edge case: offline but book already downloaded → no error CTA, reader reads from OPFS normally (R15)
+- Edge case: remote book load fails (network error) while online → generic error shown, not the offline CTA (connectivity-specific CTA only when offline)
+- Edge case: user taps "Download for Offline" from offline CTA → download is queued (starts when back online via resume mechanism)
 - Edge case: mobile viewport (375px) → DownloadButton is compact icon-only, doesn't wrap action row
 - Edge case: keyboard navigation → Tab to DownloadButton, Enter to activate, Escape to cancel confirmation dialog
 
@@ -330,6 +343,8 @@ The `DownloadManager` tests mock three external systems. The existing `OpfsStora
 - Progress indicator updates in real-time during download
 - Downloaded badge appears on book card after completion
 - Remove download flow works end-to-end (confirmation → removal → UI update)
+- Offline connectivity error shows "Download for Offline" CTA for remote, undownloaded books (R15)
+- Already-downloaded books open normally when offline (no error CTA)
 
 ---
 
