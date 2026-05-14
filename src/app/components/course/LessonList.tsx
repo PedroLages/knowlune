@@ -41,6 +41,7 @@ import type { ImportedVideo, ImportedPdf, VideoProgress, YouTubeCourseChapter } 
 import type { FileStatus } from '@/lib/fileVerification'
 import { humanizeFilename } from '@/lib/courseAdapter'
 import type { ContentCapabilities } from '@/lib/courseAdapter'
+import { ChapterGroup, groupByFolder, groupByChapter } from '@/lib/curriculumGrouping'
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -62,11 +63,6 @@ function formatDuration(seconds: number): string {
     return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
   }
   return `${m}:${String(s).padStart(2, '0')}`
-}
-
-function getFolderName(path: string): string {
-  const parts = path.split('/')
-  return parts.length > 1 ? parts[0] : ''
 }
 
 function formatFolderCount(videoCount: number, pdfCount: number): string {
@@ -130,12 +126,6 @@ function HighlightedText({ text, query }: { text: string; query: string }) {
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
-
-interface ChapterGroup {
-  title: string
-  videos: ImportedVideo[]
-  pdfs: ImportedPdf[]
-}
 
 export interface LessonListProps {
   courseId: string
@@ -287,69 +277,6 @@ export function LessonList({
 }
 
 // ---------------------------------------------------------------------------
-// Grouping functions
-// ---------------------------------------------------------------------------
-
-function groupByFolder(videos: ImportedVideo[], pdfs: ImportedPdf[] = []): ChapterGroup[] {
-  const videoGroups = new Map<string, ImportedVideo[]>()
-  const pdfGroups = new Map<string, ImportedPdf[]>()
-
-  for (const video of videos) {
-    const folder = getFolderName(video.path)
-    if (!videoGroups.has(folder)) videoGroups.set(folder, [])
-    videoGroups.get(folder)!.push(video)
-  }
-
-  for (const pdf of pdfs) {
-    const folder = getFolderName(pdf.path)
-    if (!pdfGroups.has(folder)) pdfGroups.set(folder, [])
-    pdfGroups.get(folder)!.push(pdf)
-  }
-
-  // Merge all folder names from both videos and PDFs
-  const allFolders = new Set([...videoGroups.keys(), ...pdfGroups.keys()])
-  return Array.from(allFolders)
-    .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
-    .map(title => ({
-      title,
-      videos: videoGroups.get(title) ?? [],
-      pdfs: pdfGroups.get(title) ?? [],
-    }))
-}
-
-function groupByChapter(videos: ImportedVideo[], chapters: YouTubeCourseChapter[]): ChapterGroup[] {
-  if (chapters.length === 0) {
-    return [{ title: '', videos, pdfs: [] }]
-  }
-
-  const videoChapterMap = new Map<string, string>()
-  for (const ch of chapters) {
-    if (!videoChapterMap.has(ch.videoId)) {
-      videoChapterMap.set(ch.videoId, ch.title)
-    }
-  }
-
-  const groups: ChapterGroup[] = []
-  let currentTitle = ''
-  let currentVideos: ImportedVideo[] = []
-
-  for (const video of videos) {
-    const chTitle = videoChapterMap.get(video.youtubeVideoId ?? '') ?? ''
-    if (chTitle !== currentTitle && currentVideos.length > 0) {
-      groups.push({ title: currentTitle, videos: currentVideos, pdfs: [] })
-      currentVideos = []
-    }
-    currentTitle = chTitle
-    currentVideos.push(video)
-  }
-  if (currentVideos.length > 0) {
-    groups.push({ title: currentTitle, videos: currentVideos, pdfs: [] })
-  }
-
-  return groups
-}
-
-// ---------------------------------------------------------------------------
 // Render helpers
 // ---------------------------------------------------------------------------
 
@@ -364,7 +291,6 @@ function renderLocalGroups(
   return groups.map(group => {
     const videoItems = group.videos.map((video, videoIndex) => {
       const status = fileStatuses.get(video.id) ?? 'checking'
-      const isUnavailable = status === 'missing' || status === 'permission-denied'
       const prog = progressMap.get(video.id)
       const percent = prog?.completionPercentage ?? 0
       const isCompleted = percent >= COMPLETION_THRESHOLD
@@ -401,10 +327,7 @@ function renderLocalGroups(
                   tabIndex={0}
                   data-testid={`file-status-${video.id}`}
                   data-status={status}
-                  className={cn(
-                    'text-sm font-medium truncate block',
-                    !isUnavailable && 'group-hover:text-brand transition-colors'
-                  )}
+                  className="text-sm font-medium truncate block group-hover:text-brand transition-colors"
                 >
                   <HighlightedText text={humanized} query={searchQuery} />
                 </span>
@@ -445,28 +368,18 @@ function renderLocalGroups(
 
       return (
         <li key={video.id} data-testid={`course-content-item-video-${video.id}`}>
-          {isUnavailable ? (
-            <div
-              className="flex items-center gap-3 px-3 py-2.5 rounded-xl opacity-50 cursor-not-allowed"
-              aria-disabled="true"
-            >
-              {content}
-            </div>
-          ) : (
-            <Link
-              to={`/courses/${courseId}/lessons/${video.id}`}
-              className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-accent transition-colors group"
-            >
-              {content}
-            </Link>
-          )}
+          <Link
+            to={`/courses/${courseId}/lessons/${video.id}`}
+            className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-accent transition-colors group"
+          >
+            {content}
+          </Link>
         </li>
       )
     })
 
     const pdfItems = group.pdfs.map(pdf => {
       const status = fileStatuses.get(pdf.id) ?? 'checking'
-      const isUnavailable = status === 'missing' || status === 'permission-denied'
       const humanized = humanizeFilename(pdf.filename)
 
       const content = (
@@ -482,10 +395,7 @@ function renderLocalGroups(
               <TooltipTrigger asChild>
                 <span
                   tabIndex={0}
-                  className={cn(
-                    'text-sm font-medium truncate block',
-                    !isUnavailable && 'group-hover:text-brand transition-colors'
-                  )}
+                  className="text-sm font-medium truncate block group-hover:text-brand transition-colors"
                 >
                   <HighlightedText text={humanized} query={searchQuery} />
                 </span>
@@ -509,21 +419,12 @@ function renderLocalGroups(
 
       return (
         <li key={pdf.id} data-testid={`course-content-item-pdf-${pdf.id}`}>
-          {isUnavailable ? (
-            <div
-              className="flex items-center gap-3 px-3 py-2.5 rounded-xl opacity-50 cursor-not-allowed"
-              aria-disabled="true"
-            >
-              {content}
-            </div>
-          ) : (
-            <Link
-              to={`/courses/${courseId}/lessons/${pdf.id}`}
-              className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-accent transition-colors group"
-            >
-              {content}
-            </Link>
-          )}
+          <Link
+            to={`/courses/${courseId}/lessons/${pdf.id}`}
+            className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-accent transition-colors group"
+          >
+            {content}
+          </Link>
         </li>
       )
     })
