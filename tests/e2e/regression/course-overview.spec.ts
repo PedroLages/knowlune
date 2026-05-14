@@ -341,10 +341,10 @@ test.describe('CourseOverview — curriculum', () => {
 })
 
 // ---------------------------------------------------------------------------
-// Sequential course — locked modules
+// Nonlinear module access — all modules reachable
 // ---------------------------------------------------------------------------
 
-test.describe('CourseOverview — sequential course locking', () => {
+test.describe('CourseOverview — nonlinear module access', () => {
   async function seedSequentialCourse(page: import('@playwright/test').Page) {
     await navigateAndWait(page, '/')
     await seedIndexedDBStore(page, DB_NAME, 'courses', [buildSequentialCourse()] as Record<
@@ -354,7 +354,7 @@ test.describe('CourseOverview — sequential course locking', () => {
     await seedAuthors(page, [buildTestAuthor()])
   }
 
-  test('first module shows number, not lock icon', async ({ page }) => {
+  test('first module shows Up Next badge, not lock icon', async ({ page }) => {
     await seedSequentialCourse(page)
     await navigateAndWait(page, '/courses/test-course-sequential/overview')
 
@@ -362,15 +362,14 @@ test.describe('CourseOverview — sequential course locking', () => {
     await expect(page.getByText('Foundations of Behavioral Analysis')).toBeVisible()
   })
 
-  test('second module of sequential course shows locked state', async ({ page }) => {
+  test('second module is expandable and shows lesson links (nonlinear access)', async ({ page }) => {
     await seedSequentialCourse(page)
     await navigateAndWait(page, '/courses/test-course-sequential/overview')
 
-    // Expand the second module
+    // Expand the second module — now fully interactive, no pointer-events lock
     await page.getByText('Advanced Techniques').click()
 
-    // Locked lessons should have muted text styling (text-muted-foreground/50)
-    // The lesson title should still be visible but with reduced opacity class
+    // The lesson link should be visible and navigable
     const lessonText = page.getByText('Advanced Deception Detection')
     await expect(lessonText).toBeVisible()
   })

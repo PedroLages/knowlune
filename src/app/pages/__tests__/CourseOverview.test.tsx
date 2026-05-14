@@ -246,7 +246,7 @@ describe('CourseOverview Syllabus — module EntryActionButton states', () => {
     expect(screen.getByText('Review')).toBeInTheDocument()
   })
 
-  it('does not show action buttons on a locked module card', async () => {
+  it('shows Start Module on both incomplete modules (nonlinear access)', async () => {
     seedTestData(
       [
         makeVideo({ id: 'v1', order: 0, title: 'Intro', path: 'Module 1/intro.mp4' }),
@@ -261,12 +261,31 @@ describe('CourseOverview Syllabus — module EntryActionButton states', () => {
       expect(screen.getByText('Syllabus')).toBeInTheDocument()
     })
 
-    // Module 1 is active → has Start Module
-    expect(screen.getByText('Start Module')).toBeInTheDocument()
-
-    // Module 2 is locked → no Start/Review button
+    // Both modules are incomplete → both have Start Module (no locking)
     const startButtons = screen.getAllByText('Start Module')
-    expect(startButtons).toHaveLength(1)
+    expect(startButtons).toHaveLength(2)
+  })
+
+  it('shows "Up Next" badge on first incomplete module and "Open" badge on later modules', async () => {
+    seedTestData(
+      [
+        makeVideo({ id: 'v1', order: 0, title: 'Intro', path: 'Module 1/intro.mp4' }),
+        makeVideo({ id: 'v2', order: 1, title: 'Setup', path: 'Module 2/setup.mp4' }),
+      ],
+      []
+    )
+
+    renderOverview()
+
+    await waitFor(() => {
+      expect(screen.getByText('Syllabus')).toBeInTheDocument()
+    })
+
+    // First incomplete module shows Up Next
+    expect(screen.getByText('Up Next')).toBeInTheDocument()
+    // Later incomplete module shows Open (not Locked)
+    expect(screen.getByText('Open')).toBeInTheDocument()
+    expect(screen.queryByText('Locked')).not.toBeInTheDocument()
   })
 
   it('renders module number and folder-based group title on module cards', async () => {

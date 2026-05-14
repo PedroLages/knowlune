@@ -22,7 +22,7 @@ export function StatusCircle({
   status,
   simplified,
 }: {
-  status: 'completed' | 'in-progress' | 'locked' | 'gap'
+  status: 'completed' | 'in-progress' | 'available' | 'locked' | 'gap'
   /** When true, renders a compact variant without border ring */
   simplified?: boolean
 }) {
@@ -57,6 +57,14 @@ export function StatusCircle({
             simplified ? 'size-2' : 'size-2.5'
           )}
         />
+      </div>
+    )
+  }
+
+  if (status === 'available') {
+    return (
+      <div className={cn(baseClass, 'bg-muted/80 border border-muted-foreground/25')}>
+        <div className={cn('rounded-full bg-muted-foreground/40', simplified ? 'size-1.5' : 'size-2')} />
       </div>
     )
   }
@@ -138,7 +146,7 @@ export function EntryActionButton({
   onClick,
   onMarkComplete,
 }: {
-  status: 'completed' | 'in-progress' | 'locked'
+  status: 'completed' | 'in-progress' | 'available' | 'locked'
   isManuallyCompleted?: boolean
   onClick: () => void
   onMarkComplete?: () => void
@@ -160,7 +168,7 @@ export function EntryActionButton({
     )
   }
 
-  if (status === 'in-progress') {
+  if (status === 'in-progress' || status === 'available') {
     return (
       <div className="flex items-center gap-2">
         <Button

@@ -23,7 +23,6 @@ import {
   PlayCircle,
   Video,
   Undo2,
-  Lock,
 } from 'lucide-react'
 import { motion } from 'motion/react'
 import { toast } from 'sonner'
@@ -529,7 +528,7 @@ export function CourseOverview() {
                 const timelineStatus =
                   moduleStatus === 'completed' ? 'completed' as const
                   : moduleStatus === 'active' ? 'in-progress' as const
-                  : 'locked' as const
+                  : 'available' as const
                 const groupTitle =
                   group.title ||
                   (groupedContent.length > 1 ? `Section ${moduleNum}` : 'All Lessons')
@@ -539,7 +538,8 @@ export function CourseOverview() {
                 ).length
                 const groupDuration = group.videos.reduce((s, v) => s + (v.duration || 0), 0)
                 const isExpanded = expandedModules.has(groupIndex)
-                const isLocked = timelineStatus === 'locked'
+                const ariaStatusLabel =
+                  moduleStatus === 'completed' ? 'Completed' : moduleStatus === 'active' ? 'Up Next' : 'Open'
 
                 return (
                   <div key={`${group.title}-${groupIndex}`} className="flex gap-3">
@@ -557,24 +557,19 @@ export function CourseOverview() {
                         className={cn(
                           'rounded-2xl border hover:shadow-md transition-all duration-300 group overflow-hidden',
                           timelineStatus === 'completed' && 'border-success/20',
-                          timelineStatus === 'in-progress' && 'border-brand/20 ring-1 ring-brand/5',
-                          isLocked && 'border-border/50 opacity-60 pointer-events-none'
+                          timelineStatus === 'in-progress' && 'border-brand/20 ring-1 ring-brand/5'
                         )}
-                        {...(isLocked
-                          ? {}
-                          : {
-                              role: 'button',
-                              tabIndex: 0,
-                              'aria-expanded': expandedModules.has(groupIndex),
-                              'aria-label': `Module ${moduleNum}: ${groupTitle} — ${moduleStatus === 'completed' ? 'Completed' : moduleStatus === 'active' ? 'Up Next' : 'Locked'}`,
-                              onClick: () => toggleModule(groupIndex),
-                              onKeyDown: (e: React.KeyboardEvent) => {
-                                if (e.key === 'Enter' || e.key === ' ') {
-                                  e.preventDefault()
-                                  toggleModule(groupIndex)
-                                }
-                              },
-                            })}
+                        role="button"
+                        tabIndex={0}
+                        aria-expanded={isExpanded}
+                        aria-label={`Module ${moduleNum}: ${groupTitle} — ${ariaStatusLabel}`}
+                        onClick={() => toggleModule(groupIndex)}
+                        onKeyDown={(e: React.KeyboardEvent) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault()
+                            toggleModule(groupIndex)
+                          }
+                        }}
                       >
                         <CardContent className="p-6">
                           <div className="flex items-start gap-3">
@@ -589,15 +584,14 @@ export function CourseOverview() {
                                     'px-2 py-0.5 text-[10px] font-bold rounded-full uppercase tracking-wider inline-flex items-center gap-1',
                                     timelineStatus === 'completed' && 'bg-success-soft text-success',
                                     timelineStatus === 'in-progress' && 'bg-brand-soft text-brand-soft-foreground',
-                                    isLocked && 'bg-muted text-muted-foreground'
+                                    timelineStatus === 'available' && 'bg-muted text-muted-foreground'
                                   )}
                                 >
                                   {timelineStatus === 'completed' && <Check className="size-3" aria-hidden="true" />}
                                   {timelineStatus === 'in-progress' && (
                                     <span className="size-1.5 rounded-full bg-brand-soft-foreground animate-pulse" />
                                   )}
-                                  {isLocked && <Lock className="size-3" aria-hidden="true" />}
-                                  {moduleStatus === 'completed' ? 'Completed' : moduleStatus === 'active' ? 'Up Next' : 'Locked'}
+                                  {moduleStatus === 'completed' ? 'Completed' : moduleStatus === 'active' ? 'Up Next' : 'Open'}
                                 </span>
                               </div>
 
@@ -629,15 +623,13 @@ export function CourseOverview() {
                                       navigate(`/courses/${courseId}/lessons/${firstIncomplete.id}`)
                                     }}
                                   />
-                                  {!isLocked && (
-                                    <ChevronDown
-                                      className={cn(
-                                        'size-5 text-muted-foreground transition-transform duration-200 flex-shrink-0',
-                                        isExpanded && 'rotate-180'
-                                      )}
-                                      aria-hidden="true"
-                                    />
-                                  )}
+                                  <ChevronDown
+                                    className={cn(
+                                      'size-5 text-muted-foreground transition-transform duration-200 flex-shrink-0',
+                                      isExpanded && 'rotate-180'
+                                    )}
+                                    aria-hidden="true"
+                                  />
                                 </div>
                               </div>
 
@@ -660,7 +652,7 @@ export function CourseOverview() {
                         </CardContent>
 
                         {/* Expanded lesson list */}
-                        {!isLocked && isExpanded && (
+                        {isExpanded && (
                           <div className="border-t border-border">
                             <div className="px-6 pb-4 pt-3 space-y-3">
                               {group.videos.map(video => {
