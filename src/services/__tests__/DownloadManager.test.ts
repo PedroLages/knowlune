@@ -76,18 +76,44 @@ vi.mock('@/services/OpfsStorageService', () => ({
 }))
 
 // ---------------------------------------------------------------------------
-// Mock Zustand download store
+// Reactive mock for Zustand download store
 // ---------------------------------------------------------------------------
+// The mock store state is reactive: setDownloadState updates the internal
+// downloads Map, and hasActiveDownload / getPendingDownload read from it,
+// so queue-drain and active-download guards reflect real state changes.
 
-const mockStoreState = {
-  downloads: new Map<string, unknown>(),
-  setDownloadState: vi.fn(),
-  removeDownloadState: vi.fn(),
-  hasActiveDownload: vi.fn().mockReturnValue(false),
-  getPendingDownload: vi.fn().mockReturnValue(null),
-  hydrate: vi.fn(),
-  setHydrated: vi.fn(),
+function createMockStoreState() {
+  const downloads = new Map<string, unknown>()
+
+  return {
+    downloads,
+    setDownloadState: vi.fn((bookId: string, state: Record<string, unknown>) => {
+      const existing = downloads.get(bookId) || {}
+      downloads.set(bookId, { ...existing, ...state })
+    }),
+    removeDownloadState: vi.fn((bookId: string) => {
+      downloads.delete(bookId)
+    }),
+    hasActiveDownload: vi.fn(() => {
+      for (const rec of downloads.values()) {
+        const r = rec as Record<string, unknown>
+        if (r.status === 'downloading' || r.status === 'retrying') return true
+      }
+      return false
+    }),
+    getPendingDownload: vi.fn(() => {
+      for (const rec of downloads.values()) {
+        const r = rec as Record<string, unknown>
+        if (r.status === 'pending') return r
+      }
+      return null
+    }),
+    hydrate: vi.fn(),
+    setHydrated: vi.fn(),
+  }
 }
+
+let mockStoreState = createMockStoreState()
 
 vi.mock('@/stores/useDownloadStore', () => ({
   useDownloadStore: {
@@ -154,14 +180,8 @@ beforeEach(async () => {
     checkStorageQuota: mockCheckStorageQuota,
   }))
 
-  // Reset mock store state
-  mockStoreState.downloads = new Map()
-  mockStoreState.setDownloadState = vi.fn()
-  mockStoreState.removeDownloadState = vi.fn()
-  mockStoreState.hasActiveDownload = vi.fn().mockReturnValue(false)
-  mockStoreState.getPendingDownload = vi.fn().mockReturnValue(null)
-  mockStoreState.hydrate = vi.fn()
-  mockStoreState.setHydrated = vi.fn()
+  // Reset mock store state with a fresh reactive instance
+  mockStoreState = createMockStoreState()
 
   // Reset mock functions
   mockStoreStreamToBookFile.mockReset()
@@ -251,7 +271,15 @@ describe('DownloadManager', () => {
     })
 
     it('enqueues as pending when another download is active', async () => {
-      mockStoreState.hasActiveDownload = vi.fn().mockReturnValue(true)
+      // Seed an active download so the reactive mock detects it
+      mockStoreState.downloads.set('other-book', {
+        id: 'dl-active',
+        bookId: 'other-book',
+        status: 'downloading',
+        progress: 100,
+        totalSize: 1000,
+        retryCount: 0,
+      })
 
       await downloadManager.startDownload(MOCK_BOOK)
 
@@ -366,6 +394,75 @@ describe('DownloadManager', () => {
         expect.any(Object),
         expect.any(Function),
       )
+    })
+
+    it('processes queued downloads in FIFO order', async () => {
+      const book1 = { ...MOCK_BOOK, id: 'book-1' }
+      const book2 = {
+        ...MOCK_BOOK,
+        id: 'book-2',
+        sourceUrl: 'https://example.com/book2.epub',
+      }
+      const book3 = {
+        ...MOCK_BOOK,
+        id: 'book-3',
+        sourceUrl: 'https://example.com/book3.epub',
+      }
+
+      // Mock fetch so _performDownload succeeds for all books
+      const mockFetch = vi.fn().mockResolvedValue({
+        ok: true,
+        body: new ReadableStream({
+          start(controller) {
+            controller.enqueue(new Uint8Array([1]))
+            controller.close()
+          },
+        }),
+        headers: new Map([['Content-Length', '100']]),
+      })
+      vi.stubGlobal('fetch', mockFetch)
+      vi.stubGlobal('crypto', { randomUUID: () => 'test-uuid' })
+      vi.stubGlobal('localStorage', {
+        getItem: vi.fn().mockReturnValue('1'),
+        setItem: vi.fn(),
+      })
+
+      // Seed two pending downloads already in the store (book-2, book-3)
+      mockStoreState.downloads.set('book-2', {
+        id: 'dl-2',
+        bookId: 'book-2',
+        status: 'pending',
+        progress: 0,
+        totalSize: 0,
+        retryCount: 0,
+      })
+      mockStoreState.downloads.set('book-3', {
+        id: 'dl-3',
+        bookId: 'book-3',
+        status: 'pending',
+        progress: 0,
+        totalSize: 0,
+        retryCount: 0,
+      })
+
+      // Mock db.books.get to resolve pending bookIds to Book objects
+      const { db } = await import('@/db/schema')
+      vi.mocked(db.books.get).mockImplementation(async (id: string) => {
+        if (id === 'book-2') return book2 as any
+        if (id === 'book-3') return book3 as any
+        return null
+      })
+
+      await downloadManager.startDownload(book1)
+
+      // Extract the order books entered 'downloading' status
+      const calls = mockStoreState.setDownloadState.mock.calls
+      const downloadingCalls = calls.filter(
+        (c: unknown[]) => (c[1] as Record<string, unknown>)?.status === 'downloading',
+      )
+      const bookIds = downloadingCalls.map((c: unknown[]) => c[0])
+
+      expect(bookIds).toEqual(['book-1', 'book-2', 'book-3'])
     })
   })
 

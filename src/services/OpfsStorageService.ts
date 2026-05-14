@@ -80,9 +80,10 @@ class OpfsStorageService {
    * Returns the storage path ('indexeddb' in fallback mode, or the full
    * OPFS path in direct mode).
    *
-   * In fallback mode the entire stream is buffered into a Blob before writing
-   * to IndexedDB — acceptable because the alternative (crashing) is worse, and
-   * OPFS-unavailable environments are uncommon.
+   * In fallback mode the stream is written to IndexedDB incrementally as
+   * individual chunk records (book.epub.part.NNNNNN) to avoid buffering the
+   * entire file in memory. A metadata record (book.epub.meta) tracks the
+   * total chunk count for reassembly on read.
    */
   async storeStreamToBookFile(
     bookId: string,
@@ -93,19 +94,32 @@ class OpfsStorageService {
     await this.init()
 
     if (this._useIndexedDBFallback) {
-      const chunks: Uint8Array[] = []
       const reader = stream.getReader()
       let totalBytes = 0
+      let chunkIndex = 0
+
       while (true) {
         const { done, value } = await reader.read()
         if (done) break
-        chunks.push(value)
+        // Write each chunk to IDB as a separate record — no in-memory buffering
+        const paddedIdx = String(chunkIndex).padStart(6, '0')
+        await db.bookFiles.put({
+          bookId,
+          filename: `${filename}.part.${paddedIdx}`,
+          blob: new Blob([value]),
+        })
+        chunkIndex++
         totalBytes += value.byteLength
         onProgress?.(totalBytes)
       }
-      const blob = new Blob(chunks as BlobPart[])
-      const file = new File([blob], filename, { type: 'application/octet-stream' })
-      await db.bookFiles.put({ bookId, filename, blob: file })
+
+      // Write metadata record with total chunk count for reassembly
+      await db.bookFiles.put({
+        bookId,
+        filename: `${filename}.meta`,
+        blob: new Blob([JSON.stringify({ totalChunks: chunkIndex })]),
+      })
+
       return 'indexeddb'
     }
 
@@ -150,6 +164,26 @@ class OpfsStorageService {
     if (this._useIndexedDBFallback) {
       const records = await db.bookFiles.where('bookId').equals(bookId).toArray()
       if (records.length === 0) return null
+
+      // Check for chunked format (has .meta fingerprint)
+      const metaRecord = records.find(r => r.filename.endsWith('.meta'))
+      if (metaRecord) {
+        const metaText = await metaRecord.blob.text()
+        const meta = JSON.parse(metaText)
+        const totalChunks: number = meta.totalChunks ?? 0
+        const blobs: Blob[] = []
+        for (let i = 0; i < totalChunks; i++) {
+          const paddedIdx = String(i).padStart(6, '0')
+          const chunk = records.find(r => r.filename.endsWith(`.part.${paddedIdx}`))
+          if (chunk) blobs.push(chunk.blob)
+        }
+        // Derive original filename from .meta record name
+        const originalFilename = metaRecord.filename.replace(/\.meta$/, '')
+        if (blobs.length === 0) return null
+        return new File(blobs as BlobPart[], originalFilename)
+      }
+
+      // Legacy single-record format (pre-chunked migration)
       const record = records[0]
       return new File([record.blob], record.filename)
     }

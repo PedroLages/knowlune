@@ -322,14 +322,18 @@ class DownloadManager {
 
   /** Iterative queue drain — processes all pending downloads in FIFO order. */
   private async _drainQueue(): Promise<void> {
-    const store = useDownloadStore.getState()
-
     while (true) {
+      const store = useDownloadStore.getState()
       const pending = store.getPendingDownload()
       if (!pending) break
 
       const book = await db.books.get(pending.bookId)
       if (!book) break
+
+      // TOCTOU guard: re-confirm the download is still pending after the
+      // await — a concurrent cancelDownload could have removed or paused it.
+      const currentState = useDownloadStore.getState().downloads.get(pending.bookId)
+      if (!currentState || currentState.status !== 'pending') continue
 
       await this._performDownload(book)
     }
