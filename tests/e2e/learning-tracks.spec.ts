@@ -185,6 +185,29 @@ test.describe('Learning Tracks — search', () => {
     await expect(page.getByText('Angular Track')).not.toBeVisible()
   })
 
+  test('search finds tracks by description text not present in title', async ({ page }) => {
+    await goToLearningTracks(page)
+
+    const uniqueDesc = 'lt-desc-visibility-xyz'
+    const paths = [
+      createLearningPath({
+        id: 'lt-desc-search',
+        name: 'Alpha Navigation Track',
+        description: `${uniqueDesc} extra terms for search`,
+      }),
+    ]
+
+    await clearLearningPath(page)
+    await seedPaths(page, paths)
+    await page.reload({ waitUntil: 'load' })
+
+    await expect(page.getByText(uniqueDesc)).not.toBeVisible()
+
+    await page.getByPlaceholder('Search tracks...').fill(uniqueDesc)
+
+    await expect(page.getByText('Alpha Navigation Track')).toBeVisible()
+  })
+
   test('search with no results shows empty search state', async ({ page }) => {
     await goToLearningTracks(page)
 
@@ -205,6 +228,29 @@ test.describe('Learning Tracks — search', () => {
 // ---------------------------------------------------------------------------
 
 test.describe('Learning Tracks — navigation', () => {
+  test('list hides description while detail hero still shows it', async ({ page }) => {
+    await goToLearningTracks(page)
+
+    const uniqueDesc = 'lt-desc-visibility-xyz'
+    const paths = [
+      createLearningPath({
+        id: 'lt-desc-vis',
+        name: 'Beta Navigation Track',
+        description: uniqueDesc,
+      }),
+    ]
+
+    await clearLearningPath(page)
+    await seedPaths(page, paths)
+    await page.reload({ waitUntil: 'load' })
+
+    await expect(page.getByText(uniqueDesc)).not.toBeVisible()
+
+    await page.getByText('Beta Navigation Track').click()
+    await expect(page).toHaveURL(/\/learning-tracks\/lt-desc-vis/)
+    await expect(page.getByText(uniqueDesc)).toBeVisible()
+  })
+
   test('clicking a track card navigates to its detail page', async ({ page }) => {
     await goToLearningTracks(page)
 
