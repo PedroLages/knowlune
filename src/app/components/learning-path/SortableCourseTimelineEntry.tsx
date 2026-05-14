@@ -180,6 +180,7 @@ export function SortableCourseTimelineEntry({
               <div className="flex items-start gap-3">
                 {/* Drag handle */}
                 <button
+                  type="button"
                   className="flex-shrink-0 w-8 flex items-center justify-center self-stretch cursor-grab touch-manipulation rounded p-1 text-muted-foreground hover:text-foreground active:cursor-grabbing opacity-100 transition-opacity duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
                   aria-label={`Drag to reorder module ${index + 1}`}
                   data-testid={`drag-handle-${entry.courseId}`}
