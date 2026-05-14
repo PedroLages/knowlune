@@ -14,6 +14,22 @@ export interface ManifestModule {
   lessons: ManifestLesson[]
 }
 
+/** Full author shape shared by course-manifest.json and track-manifest.json. */
+export interface ManifestAuthor {
+  name: string
+  title?: string
+  shortBio?: string
+  bio?: string
+  avatar?: string
+  specialties?: string[]
+  yearsExperience?: number
+  education?: string
+  website?: string
+  linkedin?: string
+  twitter?: string
+  featuredQuote?: string
+}
+
 export interface CourseManifest {
   version: string
   course: {
@@ -22,12 +38,7 @@ export interface CourseManifest {
     category?: CourseCategory
     difficulty?: Difficulty
     tags: string[]
-    author?: {
-      name: string
-      title?: string
-      bio?: string
-      avatar?: string
-    }
+    author?: ManifestAuthor
     modules?: ManifestModule[]
     track?: {
       name: string
@@ -48,6 +59,7 @@ export interface TrackManifest {
     name: string
     description?: string
     difficulty?: Difficulty
+    author?: ManifestAuthor
     courses: TrackManifestCourse[]
   }
 }
@@ -170,6 +182,66 @@ function parseModule(
   }
 }
 
+// ── Author parser (shared by course + track manifests) ────────
+
+function asPositiveInteger(value: unknown): number | undefined {
+  if (typeof value !== 'number' || !Number.isInteger(value) || value < 0) return undefined
+  return value
+}
+
+function parseManifestAuthor(
+  value: unknown,
+  parentPath: string
+): ManifestAuthor | ManifestError[] {
+  const errors: ManifestError[] = []
+
+  if (!isRecord(value)) {
+    return [{ path: parentPath, message: 'Author must be an object with a "name" field' }]
+  }
+
+  const name = validateNonEmptyString(value.name, `${parentPath}.name`)
+  if (!name) {
+    errors.push({ path: `${parentPath}.name`, message: 'Author name must be a non-empty string' })
+  }
+
+  let specialties: string[] | undefined
+  if (value.specialties !== undefined) {
+    const parsed = asStringArray(value.specialties)
+    if (parsed) {
+      specialties = parsed
+    } else {
+      errors.push({ path: `${parentPath}.specialties`, message: 'Specialties must be an array of strings' })
+    }
+  }
+
+  let yearsExperience: number | undefined
+  if (value.yearsExperience !== undefined) {
+    const parsed = asPositiveInteger(value.yearsExperience)
+    if (parsed !== undefined) {
+      yearsExperience = parsed
+    } else {
+      errors.push({ path: `${parentPath}.yearsExperience`, message: 'Years of experience must be a non-negative integer' })
+    }
+  }
+
+  if (errors.length > 0) return errors
+
+  return {
+    name: name!,
+    title: asOptionalString(value.title),
+    shortBio: asOptionalString(value.shortBio),
+    bio: asOptionalString(value.bio),
+    avatar: asOptionalString(value.avatar),
+    specialties,
+    yearsExperience,
+    education: asOptionalString(value.education),
+    website: asOptionalString(value.website),
+    linkedin: asOptionalString(value.linkedin),
+    twitter: asOptionalString(value.twitter),
+    featuredQuote: asOptionalString(value.featuredQuote),
+  }
+}
+
 // ── Course manifest parser ────────────────────────────────────
 
 export function parseCourseManifest(json: unknown): ParseResult<CourseManifest> {
@@ -248,25 +320,13 @@ export function parseCourseManifest(json: unknown): ParseResult<CourseManifest> 
   }
 
   // Author
-  let author: CourseManifest['course']['author'] | undefined
+  let author: ManifestAuthor | undefined
   if (course.author !== undefined) {
-    if (isRecord(course.author)) {
-      const authorName = validateNonEmptyString(course.author.name, 'course.author.name')
-      if (authorName) {
-        author = {
-          name: authorName,
-          title: asOptionalString(course.author.title),
-          bio: asOptionalString(course.author.bio),
-          avatar: asOptionalString(course.author.avatar),
-        }
-      } else {
-        errors.push({
-          path: 'course.author.name',
-          message: 'Author name must be a non-empty string',
-        })
-      }
+    const result = parseManifestAuthor(course.author, 'course.author')
+    if (Array.isArray(result)) {
+      errors.push(...result)
     } else {
-      errors.push({ path: 'course.author', message: 'Author must be an object with a "name" field' })
+      author = result
     }
   }
 
@@ -409,6 +469,17 @@ export function parseTrackManifest(json: unknown): ParseResult<TrackManifest> {
     }
   }
 
+  // Author
+  let author: ManifestAuthor | undefined
+  if (track.author !== undefined) {
+    const result = parseManifestAuthor(track.author, 'track.author')
+    if (Array.isArray(result)) {
+      errors.push(...result)
+    } else {
+      author = result
+    }
+  }
+
   // Courses array
   if (!Array.isArray(track.courses)) {
     errors.push({ path: 'track.courses', message: 'Track courses must be an array' })
@@ -455,6 +526,7 @@ export function parseTrackManifest(json: unknown): ParseResult<TrackManifest> {
         name: name!,
         description,
         difficulty,
+        author,
         courses,
       },
     },

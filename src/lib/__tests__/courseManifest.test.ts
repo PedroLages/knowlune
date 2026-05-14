@@ -246,6 +246,71 @@ describe('parseCourseManifest', () => {
     expect(authError).toBeDefined()
   })
 
+  it('parses a full 12-field author in course manifest', () => {
+    const result = parseCourseManifest({
+      version: '1.0',
+      course: {
+        name: 'Test',
+        author: {
+          name: 'Chase Hughes',
+          title: 'Behavior Expert',
+          shortBio: 'Author and speaker',
+          bio: 'Chase Hughes is a leading expert in behavioral analysis.',
+          avatar: 'https://example.com/photo.jpg',
+          specialties: ['behavioral-analysis', 'influence'],
+          yearsExperience: 20,
+          education: 'Harvard University',
+          website: 'https://chasehughes.com',
+          linkedin: 'https://linkedin.com/in/chasehughes',
+          twitter: 'https://twitter.com/chasehughes',
+          featuredQuote: 'Behavior is a language.',
+        },
+      },
+    })
+
+    expect(result.ok).toBe(true)
+    if (!result.ok) throw new Error('Expected ok result')
+    const author = result.value.course.author!
+    expect(author.name).toBe('Chase Hughes')
+    expect(author.title).toBe('Behavior Expert')
+    expect(author.shortBio).toBe('Author and speaker')
+    expect(author.bio).toBe('Chase Hughes is a leading expert in behavioral analysis.')
+    expect(author.avatar).toBe('https://example.com/photo.jpg')
+    expect(author.specialties).toEqual(['behavioral-analysis', 'influence'])
+    expect(author.yearsExperience).toBe(20)
+    expect(author.education).toBe('Harvard University')
+    expect(author.website).toBe('https://chasehughes.com')
+    expect(author.linkedin).toBe('https://linkedin.com/in/chasehughes')
+    expect(author.twitter).toBe('https://twitter.com/chasehughes')
+    expect(author.featuredQuote).toBe('Behavior is a language.')
+  })
+
+  it('parses legacy 4-field course author (backward compatible)', () => {
+    const result = parseCourseManifest({
+      version: '1.0',
+      course: {
+        name: 'Test',
+        author: {
+          name: 'Chase Hughes',
+          title: 'Behavior Expert',
+          bio: 'Leading expert.',
+          avatar: 'https://example.com/photo.jpg',
+        },
+      },
+    })
+
+    expect(result.ok).toBe(true)
+    if (!result.ok) throw new Error('Expected ok result')
+    const author = result.value.course.author!
+    expect(author.name).toBe('Chase Hughes')
+    expect(author.title).toBe('Behavior Expert')
+    expect(author.bio).toBe('Leading expert.')
+    expect(author.avatar).toBe('https://example.com/photo.jpg')
+    // New fields should be undefined
+    expect(author.shortBio).toBeUndefined()
+    expect(author.specialties).toBeUndefined()
+  })
+
   it('accepts empty modules array as valid (no module structure)', () => {
     const result = parseCourseManifest({
       version: '1.0',
@@ -527,5 +592,144 @@ describe('parseTrackManifest', () => {
     expect(result.ok).toBe(false)
     if (result.ok) throw new Error('Expected error result')
     expect(result.errors.some((e) => e.path === 'track')).toBe(true)
+  })
+
+  // ── Track author ─────────────────────────────────────────────
+
+  it('parses a full 12-field author in track manifest', () => {
+    const result = parseTrackManifest({
+      version: '1.0',
+      track: {
+        name: 'Behavioral Design Mastery',
+        author: {
+          name: 'Chase Hughes',
+          title: 'Behavior Expert',
+          shortBio: 'Author and speaker',
+          bio: 'Chase Hughes is a leading expert in behavioral analysis.',
+          avatar: 'https://example.com/photo.jpg',
+          specialties: ['behavioral-analysis', 'influence'],
+          yearsExperience: 20,
+          education: 'Harvard University',
+          website: 'https://chasehughes.com',
+          linkedin: 'https://linkedin.com/in/chasehughes',
+          twitter: 'https://twitter.com/chasehughes',
+          featuredQuote: 'Behavior is a language.',
+        },
+        courses: [{ folder: '01-basics', position: 1 }],
+      },
+    })
+
+    expect(result.ok).toBe(true)
+    if (!result.ok) throw new Error('Expected ok result')
+    const author = result.value.track.author!
+    expect(author.name).toBe('Chase Hughes')
+    expect(author.title).toBe('Behavior Expert')
+    expect(author.shortBio).toBe('Author and speaker')
+    expect(author.bio).toBe('Chase Hughes is a leading expert in behavioral analysis.')
+    expect(author.avatar).toBe('https://example.com/photo.jpg')
+    expect(author.specialties).toEqual(['behavioral-analysis', 'influence'])
+    expect(author.yearsExperience).toBe(20)
+    expect(author.education).toBe('Harvard University')
+    expect(author.website).toBe('https://chasehughes.com')
+    expect(author.linkedin).toBe('https://linkedin.com/in/chasehughes')
+    expect(author.twitter).toBe('https://twitter.com/chasehughes')
+    expect(author.featuredQuote).toBe('Behavior is a language.')
+  })
+
+  it('parses track author with name only', () => {
+    const result = parseTrackManifest({
+      version: '1.0',
+      track: {
+        name: 'Test Track',
+        author: { name: 'Jane Doe' },
+        courses: [{ folder: 'x', position: 1 }],
+      },
+    })
+
+    expect(result.ok).toBe(true)
+    if (!result.ok) throw new Error('Expected ok result')
+    expect(result.value.track.author!.name).toBe('Jane Doe')
+    expect(result.value.track.author!.title).toBeUndefined()
+  })
+
+  it('rejects track author missing name', () => {
+    const result = parseTrackManifest({
+      version: '1.0',
+      track: {
+        name: 'Test',
+        author: { title: 'No Name' },
+        courses: [{ folder: 'x', position: 1 }],
+      },
+    })
+
+    expect(result.ok).toBe(false)
+    if (result.ok) throw new Error('Expected error result')
+    expect(result.errors.some((e) => e.path === 'track.author.name')).toBe(true)
+  })
+
+  it('rejects track author with specialties as non-array', () => {
+    const result = parseTrackManifest({
+      version: '1.0',
+      track: {
+        name: 'Test',
+        author: { name: 'Jane', specialties: 'not-an-array' },
+        courses: [{ folder: 'x', position: 1 }],
+      },
+    })
+
+    expect(result.ok).toBe(false)
+    if (result.ok) throw new Error('Expected error result')
+    expect(result.errors.some((e) => e.path === 'track.author.specialties')).toBe(true)
+  })
+
+  it('rejects track author with yearsExperience as non-number', () => {
+    const result = parseTrackManifest({
+      version: '1.0',
+      track: {
+        name: 'Test',
+        author: { name: 'Jane', yearsExperience: 'twenty' },
+        courses: [{ folder: 'x', position: 1 }],
+      },
+    })
+
+    expect(result.ok).toBe(false)
+    if (result.ok) throw new Error('Expected error result')
+    expect(result.errors.some((e) => e.path === 'track.author.yearsExperience')).toBe(true)
+  })
+
+  it('parses track author with website/linkedin/twitter social links', () => {
+    const result = parseTrackManifest({
+      version: '1.0',
+      track: {
+        name: 'Test',
+        author: {
+          name: 'Jane',
+          website: 'https://jane.com',
+          linkedin: 'https://linkedin.com/in/jane',
+          twitter: 'https://twitter.com/jane',
+        },
+        courses: [{ folder: 'x', position: 1 }],
+      },
+    })
+
+    expect(result.ok).toBe(true)
+    if (!result.ok) throw new Error('Expected ok result')
+    expect(result.value.track.author!.website).toBe('https://jane.com')
+    expect(result.value.track.author!.linkedin).toBe('https://linkedin.com/in/jane')
+    expect(result.value.track.author!.twitter).toBe('https://twitter.com/jane')
+  })
+
+  it('returns undefined author when track manifest has no author', () => {
+    const result = parseTrackManifest({
+      version: '1.0',
+      track: {
+        name: 'Test',
+        courses: [{ folder: 'x', position: 1 }],
+      },
+    })
+
+    expect(result.ok).toBe(true)
+    if (!result.ok) throw new Error('Expected ok result')
+    expect(result.value.track.author).toBeUndefined()
   })
 })

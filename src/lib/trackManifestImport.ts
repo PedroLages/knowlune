@@ -1,13 +1,15 @@
 import { parseTrackManifest } from '@/lib/courseManifest'
-import type { TrackManifest } from '@/lib/courseManifest'
+import type { TrackManifest, ManifestAuthor } from '@/lib/courseManifest'
 import { scanCourseFolderFromHandle, persistScannedCourse } from '@/lib/courseImport'
 import type { BulkScanResult } from '@/lib/courseImport'
 import { useLearningPathStore } from '@/stores/useLearningPathStore'
+import { useAuthorStore } from '@/stores/useAuthorStore'
 import { toast } from 'sonner'
 
 export interface TrackManifestSummary {
   trackName: string
   trackDescription?: string
+  trackAuthor?: ManifestAuthor
   courseFolders: string[]
 }
 
@@ -52,6 +54,7 @@ export async function readTrackManifest(
       summary: {
         trackName: manifest.track.name,
         trackDescription: manifest.track.description,
+        trackAuthor: manifest.track.author,
         courseFolders: manifest.track.courses.map(c => c.folder),
       },
     }
@@ -130,7 +133,37 @@ export async function batchImportTrackCourses(
   const successCount = results.filter(r => r.success).length
   const failureCount = results.length - successCount
 
-  // Phase 2: Create or match track and add courses
+  // Phase 2: Create or link author from manifest
+  const trackAuthor = manifest.track.author
+  if (trackAuthor) {
+    try {
+      await useAuthorStore.getState().addAuthor({
+        name: trackAuthor.name,
+        title: trackAuthor.title,
+        shortBio: trackAuthor.shortBio,
+        bio: trackAuthor.bio,
+        photoUrl: trackAuthor.avatar,
+        specialties: trackAuthor.specialties,
+        yearsExperience: trackAuthor.yearsExperience,
+        education: trackAuthor.education,
+        socialLinks: trackAuthor.website || trackAuthor.linkedin || trackAuthor.twitter
+          ? {
+              website: trackAuthor.website,
+              linkedin: trackAuthor.linkedin,
+              twitter: trackAuthor.twitter,
+            }
+          : undefined,
+        featuredQuote: trackAuthor.featuredQuote,
+        courseIds: results
+          .filter(r => r.success && r.courseId)
+          .map(r => r.courseId!),
+      })
+    } catch (err) {
+      toast.warning('Failed to create author from manifest — continuing with track import')
+    }
+  }
+
+  // Phase 3: Create or match track and add courses
   if (successCount === 0) {
     toast.error('No courses were imported — track was not created')
     return {
