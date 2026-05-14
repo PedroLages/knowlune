@@ -17,6 +17,7 @@ import { useAuthorStore } from '@/stores/useAuthorStore'
 import { usePathProgress } from '@/app/hooks/usePathProgress'
 import { useLoadCourseThumbnails } from '@/app/hooks/useLoadCourseThumbnails'
 import { useManualModuleCompletion } from '@/app/hooks/useManualModuleCompletion'
+import { getPathCourseThumbnailUrls } from '@/lib/learningPathThumbnails'
 import { staggerContainer, fadeUp } from '@/lib/motion'
 import { toast } from 'sonner'
 import { db } from '@/db'
@@ -109,6 +110,11 @@ export function LearningTrackDetail() {
   const courseEntries = useMemo(
     () => (trackId ? getEntriesForPath(trackId) : []),
     [trackId, entries, getEntriesForPath]
+  )
+
+  const heroCourseThumbnails = useMemo(
+    () => getPathCourseThumbnailUrls(courseEntries, thumbnailUrls, 4),
+    [courseEntries, thumbnailUrls]
   )
 
   // Load videos and progress for all courses in the path (for lesson accordions)
@@ -473,7 +479,7 @@ export function LearningTrackDetail() {
           courseCount={courseEntries.length}
           completedCount={completedEntries.length}
           pathProgress={enhancedProgress}
-          thumbnailUrls={thumbnailUrls}
+          orderedCourseThumbnails={heroCourseThumbnails}
           currentCourseId={currentCourseId}
           firstCourseId={firstCourseId}
           targetLessonId={targetLessonId}

@@ -27,6 +27,7 @@ import { useNextBestCourse } from '@/app/hooks/useNextBestCourse'
 import { useImportWizardTrigger } from '@/app/hooks/useImportWizardTrigger'
 import { useLoadCourseThumbnails } from '@/app/hooks/useLoadCourseThumbnails'
 import { staggerContainer, fadeUp } from '@/lib/motion'
+import { getPathCourseThumbnailUrls } from '@/lib/learningPathThumbnails'
 import type { LearningPath, LearningPathEntry } from '@/data/types'
 
 // --- Track Card ---
@@ -204,18 +205,14 @@ export function LearningTracks() {
     return stats
   }, [paths, entries, pathProgressMap])
 
-  // Build thumbnail lists per path (first 4 course thumbnails)
+  // Build thumbnail lists per path (first 4 course thumbnails, syllabus order)
   const pathThumbnails = useMemo(() => {
     const map = new Map<string, string[]>()
     for (const path of paths) {
-      const pathEntries = entries.filter(e => e.pathId === path.id)
-      const thumbs: string[] = []
-      for (const entry of pathEntries) {
-        if (thumbs.length >= 4) break
-        const url = thumbnailUrls[entry.courseId]
-        if (url) thumbs.push(url)
-      }
-      map.set(path.id, thumbs)
+      const pathEntries = entries
+        .filter(e => e.pathId === path.id)
+        .sort((a, b) => a.position - b.position)
+      map.set(path.id, getPathCourseThumbnailUrls(pathEntries, thumbnailUrls, 4))
     }
     return map
   }, [paths, entries, thumbnailUrls])

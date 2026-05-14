@@ -38,7 +38,7 @@ function renderHero(props: Partial<Parameters<typeof PathHeroBanner>[0]> = {}) {
         courseCount={3}
         completedCount={1}
         pathProgress={makeProgress()}
-        thumbnailUrls={{}}
+        orderedCourseThumbnails={[]}
         currentCourseId={null}
         firstCourseId={null}
         {...props}
@@ -56,11 +56,11 @@ describe('PathHeroBanner', () => {
     expect(screen.getByText('Learn React from scratch')).toBeInTheDocument()
   })
 
-  it('renders back link to learning paths', () => {
+  it('renders back link to learning tracks listing', () => {
     renderHero()
-    const link = screen.getByText('Back to Learning Paths')
+    const link = screen.getByText('Back to Learning Tracks')
     expect(link).toBeInTheDocument()
-    expect(link.closest('a')).toHaveAttribute('href', '/learning-paths')
+    expect(link.closest('a')).toHaveAttribute('href', '/learning-tracks')
   })
 
   it('renders course count in metadata', () => {
@@ -123,29 +123,42 @@ describe('PathHeroBanner', () => {
     expect(screen.queryByText('Continue Learning')).not.toBeInTheDocument()
   })
 
-  it('renders avatar stack from thumbnail URLs', () => {
+  it('renders avatar stack from ordered course thumbnails', () => {
     const { container } = renderHero({
-      thumbnailUrls: { 'c1': 'https://example.com/1.jpg', 'c2': 'https://example.com/2.jpg' },
+      orderedCourseThumbnails: ['https://example.com/1.jpg', 'https://example.com/2.jpg'],
       courseCount: 2,
     })
     const imgs = container.querySelectorAll('img')
     expect(imgs).toHaveLength(2)
   })
 
+  it('renders avatar images in prop order', () => {
+    const { container } = renderHero({
+      orderedCourseThumbnails: [
+        'https://example.com/second.jpg',
+        'https://example.com/first.jpg',
+      ],
+      courseCount: 2,
+    })
+    const imgs = [...container.querySelectorAll('img')]
+    expect(imgs[0]).toHaveAttribute('src', 'https://example.com/second.jpg')
+    expect(imgs[1]).toHaveAttribute('src', 'https://example.com/first.jpg')
+  })
+
   it('renders placeholder icon when no thumbnails', () => {
-    renderHero({ thumbnailUrls: {}, courseCount: 3 })
+    renderHero({ orderedCourseThumbnails: [], courseCount: 3 })
     // Should show BookOpen placeholder
     expect(document.querySelector('.lucide-book-open')).toBeInTheDocument()
   })
 
   it('renders overflow count for more than 4 courses', () => {
     renderHero({
-      thumbnailUrls: {
-        'c1': 'https://example.com/1.jpg',
-        'c2': 'https://example.com/2.jpg',
-        'c3': 'https://example.com/3.jpg',
-        'c4': 'https://example.com/4.jpg',
-      },
+      orderedCourseThumbnails: [
+        'https://example.com/1.jpg',
+        'https://example.com/2.jpg',
+        'https://example.com/3.jpg',
+        'https://example.com/4.jpg',
+      ],
       courseCount: 7,
     })
     expect(screen.getByText('+3')).toBeInTheDocument()
