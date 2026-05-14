@@ -29,7 +29,6 @@ import { motion } from 'motion/react'
 import { toast } from 'sonner'
 import { db } from '@/db'
 import { useCourseAdapter } from '@/hooks/useCourseAdapter'
-import { useFileStatusVerification } from '@/hooks/useFileStatusVerification'
 import { useAuthorStore } from '@/stores/useAuthorStore'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
 import { useLazyStore } from '@/hooks/useLazyStore'
@@ -41,7 +40,6 @@ import { Card, CardContent } from '@/app/components/ui/card'
 import { Skeleton } from '@/app/components/ui/skeleton'
 import { cn } from '@/app/components/ui/utils'
 import { StudyScheduleEditor } from '@/app/components/figma/StudyScheduleEditor'
-import { LessonList } from '@/app/components/course/LessonList'
 import { StatusCircle, EntryActionButton, LessonRow } from '@/app/components/learning-path/TimelinePrimitives'
 import { formatClockDuration as formatDuration } from '@/lib/formatDuration'
 import { buildGroupedCurriculum } from '@/lib/curriculumGrouping'
@@ -96,8 +94,6 @@ export function CourseOverview() {
 
   // Accordion state
   const [expandedModules, setExpandedModules] = useState<Set<number>>(new Set([0]))
-
-  const fileStatuses = useFileStatusVerification(videos, pdfs)
 
   // Schedule editor state
   const [scheduleEditorOpen, setScheduleEditorOpen] = useState(false)
@@ -795,30 +791,6 @@ export function CourseOverview() {
           </div>
         </motion.div>
       </div>
-
-      {capabilities &&
-        !capabilities.requiresNetwork &&
-        (videos.length > 0 || pdfs.length > 0) && (
-          <motion.div
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4, delay: 0.35 }}
-            className="max-w-5xl mx-auto px-6 mt-12"
-          >
-            <h2 className="text-sm font-bold text-muted-foreground uppercase tracking-widest mb-4">
-              Course files
-            </h2>
-            <LessonList
-              courseId={courseId!}
-              videos={videos}
-              pdfs={pdfs}
-              capabilities={capabilities}
-              fileStatuses={fileStatuses}
-              progressMap={progressMap}
-              chapters={chapters}
-            />
-          </motion.div>
-        )}
     </div>
   )
 }
