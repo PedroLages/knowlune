@@ -79,7 +79,6 @@ function TrackCard({
     <motion.div variants={fadeUp}>
       <LearningPathCard
         pathName={path.name}
-        description={path.description}
         completionPct={completionPct}
         courseCount={courseCount}
         courseThumbnails={courseThumbnails}
