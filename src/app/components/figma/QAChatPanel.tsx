@@ -286,10 +286,10 @@ export function QAChatPanel({ open: controlledOpen, onOpenChange: controlledOnOp
 
   // Chat content (shared between Sheet and Popover)
   const chatContent = (
-    <div className="flex h-full flex-col">
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
       {/* Loading state - AI settings check */}
       {aiChecking && (
-        <div className="rounded-lg border border-muted bg-muted/40 p-4 text-sm text-muted-foreground">
+        <div className="shrink-0 rounded-lg border border-muted bg-muted/40 p-4 text-sm text-muted-foreground">
           <div className="flex items-start gap-2">
             <Loader2 className="size-5 shrink-0 animate-spin" />
             <div>
@@ -302,7 +302,7 @@ export function QAChatPanel({ open: controlledOpen, onOpenChange: controlledOnOp
 
       {/* Error state - Q&A unavailable */}
       {!aiChecking && !aiAvailable && (
-        <div className="rounded-lg border border-warning bg-warning-soft p-4 text-sm text-warning">
+        <div className="shrink-0 rounded-lg border border-warning bg-warning-soft p-4 text-sm text-warning">
           <div className="flex items-start gap-2">
             <AlertCircle className="size-5 shrink-0" />
             <div>
@@ -320,7 +320,7 @@ export function QAChatPanel({ open: controlledOpen, onOpenChange: controlledOnOp
 
       {/* Error state - no notes */}
       {aiAvailable && notesLoaded && !hasNotes && (
-        <div className="rounded-lg border border-info bg-info-soft p-4 text-sm text-info">
+        <div className="shrink-0 rounded-lg border border-info bg-info-soft p-4 text-sm text-info">
           <div className="flex items-start gap-2">
             <BookOpen className="size-5 shrink-0" />
             <div>
@@ -334,14 +334,14 @@ export function QAChatPanel({ open: controlledOpen, onOpenChange: controlledOnOp
       )}
 
       {declinedProvider && (
-        <div className="mb-2">
+        <div className="mb-2 shrink-0">
           <AIConsentDeclinedBanner providerId={declinedProvider} />
         </div>
       )}
 
       {/* Active error */}
       {error && (
-        <div className="rounded-lg border border-destructive bg-destructive-soft p-4 text-sm text-destructive">
+        <div className="shrink-0 rounded-lg border border-destructive bg-destructive-soft p-4 text-sm text-destructive">
           <div className="flex items-start gap-2">
             <AlertCircle className="size-5 shrink-0" />
             <div>
@@ -486,7 +486,7 @@ export function QAChatPanel({ open: controlledOpen, onOpenChange: controlledOnOp
       </div>
 
       {/* Input area with multiline textarea */}
-      <div className="border-t p-4">
+      <div className="shrink-0 border-t p-4">
         <div className="flex gap-2">
           <div className="relative flex-1">
             <textarea
@@ -542,7 +542,7 @@ export function QAChatPanel({ open: controlledOpen, onOpenChange: controlledOnOp
             )}
           </Button>
         </div>
-        <p className="mt-2 text-xs text-muted-foreground">
+        <p className="mt-2 text-xs text-muted-foreground" data-testid="qa-panel-keyboard-hint">
           Press <kbd className="px-1 py-0.5 bg-muted rounded text-[10px]">Enter</kbd> to send,{' '}
           <kbd className="px-1 py-0.5 bg-muted rounded text-[10px]">Shift + Enter</kbd> for new line
         </p>
@@ -576,8 +576,12 @@ export function QAChatPanel({ open: controlledOpen, onOpenChange: controlledOnOp
           ) : (
             <SheetTrigger asChild>{triggerButton}</SheetTrigger>
           )}
-          <SheetContent side="bottom" className="h-[90vh]">
-            <SheetHeader className="mb-4">
+          <SheetContent
+            side="bottom"
+            className="flex h-[90vh] min-h-0 flex-col gap-0 overflow-hidden p-0"
+            data-testid="qa-panel-shell"
+          >
+            <SheetHeader className="mb-4 shrink-0">
               <div className="flex items-center justify-between">
                 <SheetTitle>Ask AI</SheetTitle>
                 {messages.length > 0 && (
@@ -612,9 +616,9 @@ export function QAChatPanel({ open: controlledOpen, onOpenChange: controlledOnOp
           ) : (
             <PopoverTrigger asChild>{triggerButton}</PopoverTrigger>
           )}
-          <PopoverContent className="h-[600px] w-[400px] p-0" align="end">
-            <div className="flex h-full flex-col">
-              <div className="flex items-center justify-between border-b px-4 py-3">
+          <PopoverContent className="h-[600px] w-[400px] overflow-hidden p-0" align="end">
+            <div className="flex h-full flex-col overflow-hidden" data-testid="qa-panel-shell">
+              <div className="flex shrink-0 items-center justify-between border-b px-4 py-3">
                 <h3 className="font-semibold">Ask AI</h3>
                 <div className="flex items-center gap-1">
                   {messages.length > 0 && (

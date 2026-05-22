@@ -50,6 +50,7 @@ vi.mock('@/lib/compliance/consentService', async () => {
 vi.mock('@/lib/noteQA', () => ({
   retrieveRelevantNotes: vi.fn(),
   generateQAAnswer: vi.fn(),
+  getNoteDisplayName: vi.fn(() => ({ name: 'Test Note', isFallback: false })),
 }))
 
 vi.mock('@/ai/llm/factory', () => ({
@@ -74,12 +75,15 @@ function renderPanel() {
       <QAChatPanel />
     </MemoryRouter>
   )
-  fireEvent.click(screen.getByTitle('Ask AI about your notes'))
+  fireEvent.click(screen.getByTestId('qa-panel-trigger'))
 }
 
 describe('QAChatPanel', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    if (!Element.prototype.scrollIntoView) {
+      Element.prototype.scrollIntoView = vi.fn()
+    }
     mockCount.mockResolvedValue(1)
     useQAChatStore.getState().clearHistory()
     vi.mocked(grantConsent).mockResolvedValue({ success: true })
@@ -185,9 +189,7 @@ describe('QAChatPanel', () => {
 
     const input = screen.getByPlaceholderText('Ask about your notes...')
     fireEvent.change(input, { target: { value: 'Test question?' } })
-    const sendBtn = input.parentElement?.querySelector('button')
-    expect(sendBtn).toBeTruthy()
-    fireEvent.click(sendBtn!)
+    fireEvent.click(screen.getByTestId('qa-panel-send'))
 
     await waitFor(() => {
       expect(screen.getByRole('dialog')).toBeInTheDocument()
@@ -203,5 +205,42 @@ describe('QAChatPanel', () => {
         provider_id: 'gemini',
       })
     })
+  })
+
+  it('renders keyboard hint with Enter and Shift shortcuts when panel is open', async () => {
+    renderPanel()
+
+    await waitFor(() => {
+      expect(screen.getByTestId('qa-panel-keyboard-hint')).toBeInTheDocument()
+    })
+
+    const hint = screen.getByTestId('qa-panel-keyboard-hint')
+    expect(hint).toHaveTextContent('Enter')
+    expect(hint).toHaveTextContent('Shift')
+  })
+
+  it('renders kbd elements for both keyboard shortcuts in the hint', async () => {
+    renderPanel()
+
+    await waitFor(() => {
+      expect(screen.getByTestId('qa-panel-keyboard-hint')).toBeInTheDocument()
+    })
+
+    const hint = screen.getByTestId('qa-panel-keyboard-hint')
+    const kbdElements = hint.querySelectorAll('kbd')
+    expect(kbdElements).toHaveLength(2)
+    expect(kbdElements[0]).toHaveTextContent('Enter')
+    expect(kbdElements[1]).toHaveTextContent('Shift + Enter')
+  })
+
+  it('shows input and keyboard hint together when AI is available', async () => {
+    renderPanel()
+
+    await waitFor(() => {
+      expect(screen.getByTestId('qa-panel-input')).not.toBeDisabled()
+    })
+
+    expect(screen.getByTestId('qa-panel-input')).toBeInTheDocument()
+    expect(screen.getByTestId('qa-panel-keyboard-hint')).toBeInTheDocument()
   })
 })
