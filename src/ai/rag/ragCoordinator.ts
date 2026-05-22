@@ -9,6 +9,7 @@ import { generateEmbeddings } from '../workers/coordinator'
 import { vectorStorePersistence } from '../vector-store'
 import { db } from '@/db'
 import { stripHtml } from '@/lib/textUtils'
+import { withTimeout } from '@/lib/promiseUtils'
 import type { RetrievedContext, RAGConfig } from './types'
 import { DEFAULT_RAG_CONFIG } from './types'
 
@@ -50,17 +51,11 @@ export class RAGCoordinator {
     }
 
     // Add timeout to prevent indefinite hang
-    const timeoutPromise = new Promise<never>((_, reject) =>
-      setTimeout(
-        () => reject(new Error('RAG timeout: embedding generation took too long')),
-        RAG_TIMEOUT
-      )
-    )
-
-    const [queryEmbedding] = (await Promise.race([
+    const [queryEmbedding] = (await withTimeout(
       generateEmbeddings([cleanQuery]),
-      timeoutPromise,
-    ])) as [Float32Array]
+      RAG_TIMEOUT,
+      'RAG timeout: embedding generation took too long'
+    )) as [Float32Array]
     const embeddingTime = performance.now() - embeddingStart
 
     // 2. Vector similarity search

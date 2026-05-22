@@ -10,6 +10,7 @@
  */
 
 import { getAIConfiguration, getDecryptedApiKey, isFeatureEnabled } from '@/lib/aiConfiguration'
+import { withTimeout } from '@/lib/promiseUtils'
 import { apiUrl } from '@/lib/apiBaseUrl'
 import { stripHtml } from '@/lib/textUtils'
 import './noteOrganizer.types'
@@ -143,12 +144,6 @@ async function fetchOrganizationProposals(
 
   const prompt = buildPrompt(sanitizedNotes)
 
-  // Create timeout promise
-  let timeoutId!: ReturnType<typeof setTimeout>
-  const timeoutPromise = new Promise<never>((_, reject) => {
-    timeoutId = setTimeout(() => reject(new Error('AI request timed out')), timeout)
-  })
-
   const fetchPromise = fetch(apiUrl('ai-generate'), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -163,8 +158,7 @@ async function fetchOrganizationProposals(
   })
 
   try {
-    const response = await Promise.race([fetchPromise, timeoutPromise])
-    clearTimeout(timeoutId)
+    const response = await withTimeout(fetchPromise, timeout, 'AI request timed out')
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}))

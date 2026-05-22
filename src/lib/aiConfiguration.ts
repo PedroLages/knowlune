@@ -18,6 +18,7 @@ import { PROVIDER_DEFAULTS, FEATURE_DEFAULTS } from './modelDefaults'
 import type { DiscoveredModel } from './modelDiscovery'
 import { getFreeTierDefaultModel } from './modelDiscovery.static'
 import { checkCredential, storeCredentialWithStatus, readCredentialWithStatus } from './vaultCredentials'
+import { withTimeout } from './promiseUtils'
 
 // Re-export for convenience — consumers can import from aiConfiguration
 export type { AIFeatureId, AIProviderId, FeatureModelConfig } from './modelDefaults'
@@ -660,18 +661,6 @@ export async function getDecryptedApiKeyForProvider(
   }
 
   return decryptedResult
-}
-
-/**
- * Wraps a promise with a timeout using Promise.race (ES2015 compatible).
- * If the timeout fires first, the returned promise rejects with the given
- * error message as a base Error.
- */
-function withTimeout<T>(promise: Promise<T>, ms: number, timeoutMessage: string): Promise<T> {
-  return Promise.race([
-    promise,
-    new Promise<T>((_, reject) => setTimeout(() => reject(new Error(timeoutMessage)), ms)),
-  ])
 }
 
 /**

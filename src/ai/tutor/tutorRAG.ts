@@ -12,6 +12,7 @@ import { db } from '@/db'
 import { generateEmbeddings } from '@/ai/workers/coordinator'
 import { cosineSimilarity } from '@/lib/vectorMath'
 import { stripHtml } from '@/lib/textUtils'
+import { withTimeout } from '@/lib/promiseUtils'
 import type { TranscriptEmbedding } from '@/data/types'
 
 /** Similarity boost for chunks within PROXIMITY_WINDOW seconds of playhead */
@@ -79,15 +80,11 @@ export async function retrieveTutorContext(
 
   try {
     // Generate query embedding with timeout
-    let timeoutId: ReturnType<typeof setTimeout>
-    const timeoutPromise = new Promise<never>((_, reject) => {
-      timeoutId = setTimeout(() => reject(new Error('RAG timeout')), RAG_TIMEOUT)
-    })
-
-    const [queryEmbedding] = (await Promise.race([
+    const [queryEmbedding] = (await withTimeout(
       generateEmbeddings([cleanQuery]),
-      timeoutPromise,
-    ]).finally(() => clearTimeout(timeoutId))) as [Float32Array]
+      RAG_TIMEOUT,
+      'RAG timeout'
+    )) as [Float32Array]
 
     // Fetch transcript embeddings from IndexedDB
     const transcriptEmbeddings = await db.transcriptEmbeddings

@@ -10,6 +10,7 @@
 import type { ImportedCourse } from '@/data/types'
 import { getAIConfiguration, getDecryptedApiKey } from '@/lib/aiConfiguration'
 import { apiUrl } from '@/lib/apiBaseUrl'
+import { withTimeout } from '@/lib/promiseUtils'
 
 /** A single entry in the generated path — either a matched course or a gap */
 export interface GoalPathEntry {
@@ -295,12 +296,6 @@ Instructions:
 
 IMPORTANT: Return ONLY the JSON object, no markdown code blocks, no extra text.`
 
-  // Create timeout promise with cleanup
-  let timeoutId!: NodeJS.Timeout | number
-  const timeoutPromise = new Promise<never>((_, reject) => {
-    timeoutId = setTimeout(() => reject(new Error('AI request timed out')), timeout)
-  })
-
   // Create fetch promise
   const fetchPromise = fetch(apiUrl('ai-generate'), {
     method: 'POST',
@@ -319,10 +314,7 @@ IMPORTANT: Return ONLY the JSON object, no markdown code blocks, no extra text.`
 
   try {
     // Race between fetch and timeout
-    const response = await Promise.race([fetchPromise, timeoutPromise])
-
-    // Clear timeout if fetch wins
-    clearTimeout(timeoutId)
+    const response = await withTimeout(fetchPromise, timeout, 'AI request timed out')
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}))
