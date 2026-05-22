@@ -106,7 +106,7 @@ class OpfsStorageService {
         await db.bookFiles.put({
           bookId,
           filename: `${filename}.part.${paddedIdx}`,
-          blob: new Blob([value]),
+          blob: new Blob([value as BlobPart]),
         })
         chunkIndex++
         totalBytes += value.byteLength

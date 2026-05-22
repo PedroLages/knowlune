@@ -11,6 +11,12 @@ import { LLMError } from '../types'
 import type { LLMMessage } from '../types'
 import { apiUrl } from '@/lib/apiBaseUrl'
 
+// Mock getAPIKeyHealth to return 'ok' by default (prevents pre-flight check from blocking)
+const mockGetAPIKeyHealth = vi.fn().mockReturnValue('ok')
+vi.mock('@/lib/aiConfiguration', () => ({
+  getAPIKeyHealth: (...args: unknown[]) => mockGetAPIKeyHealth(...args),
+}))
+
 // Mock useAuthStore to provide access_token for Authorization header
 vi.mock('@/stores/useAuthStore', () => ({
   useAuthStore: {
@@ -177,7 +183,9 @@ describe('ProxyLLMClient', () => {
       } catch (error) {
         expect(error).toBeInstanceOf(LLMError)
         expect((error as LLMError).code).toBe('RATE_LIMITED')
-        expect((error as LLMError).message).toContain('Rate limit exceeded')
+        expect((error as LLMError).message).toBe(
+          'Too many requests. Wait a moment and try again.'
+        )
         expect((error as LLMError).providerId).toBe('openai')
       }
     })
@@ -196,6 +204,9 @@ describe('ProxyLLMClient', () => {
       } catch (error) {
         expect(error).toBeInstanceOf(LLMError)
         expect((error as LLMError).code).toBe('AUTH_REQUIRED')
+        expect((error as LLMError).message).toBe(
+          'Your API key was rejected by openai. Check that it\'s valid and has credits.'
+        )
       }
     })
 
@@ -230,10 +241,11 @@ describe('ProxyLLMClient', () => {
       } catch (error) {
         expect(error).toBeInstanceOf(LLMError)
         expect((error as LLMError).code).toBe('UNKNOWN')
+        expect((error as LLMError).message).toBe('AI error: Server error')
       }
     })
 
-    it('should fallback to statusText when JSON parse fails on error response', async () => {
+    it('should fallback to AI error prefix when JSON parse fails on error response', async () => {
       ;(global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         ok: false,
         status: 502,
@@ -248,7 +260,7 @@ describe('ProxyLLMClient', () => {
         expect.unreachable('Should have thrown')
       } catch (error) {
         expect(error).toBeInstanceOf(LLMError)
-        expect((error as LLMError).message).toContain('Bad Gateway')
+        expect((error as LLMError).message).toBe('AI error: Bad Gateway')
       }
     })
 
@@ -279,7 +291,9 @@ describe('ProxyLLMClient', () => {
       } catch (error) {
         expect(error).toBeInstanceOf(LLMError)
         expect((error as LLMError).code).toBe('TIMEOUT')
-        expect((error as LLMError).message).toBe('Request timed out')
+        expect((error as LLMError).message).toBe(
+          'AI request timed out. The model may be overloaded. Try again.'
+        )
       }
     })
 
@@ -294,11 +308,110 @@ describe('ProxyLLMClient', () => {
       } catch (error) {
         expect(error).toBeInstanceOf(LLMError)
         expect((error as LLMError).code).toBe('NETWORK_ERROR')
-        expect((error as LLMError).message).toContain('Failed to fetch')
+        expect((error as LLMError).message).toBe(
+          'Cannot reach the AI service. Check your internet connection.'
+        )
       }
     })
 
-    it('should propagate LLMError from proxy error event in stream', async () => {
+    // =========================================================================
+    // Categorized Edge Function errors (2026-05-22 fix)
+    // =========================================================================
+
+    it('pre-flight: throws categorized message when key health is undecryptable (no network request)', async () => {
+      mockGetAPIKeyHealth.mockReturnValueOnce('undecryptable')
+
+      try {
+        await collectChunks(client.streamCompletion(defaultMessages))
+        expect.unreachable('Should have thrown')
+      } catch (error) {
+        expect(error).toBeInstanceOf(LLMError)
+        expect((error as LLMError).code).toBe('AUTH_ERROR')
+        expect((error as LLMError).message).toBe(
+          'Your API key for openai was lost because the encryption key was reset. Go to Settings > Integrations & Data to re-enter it.'
+        )
+      }
+
+      // fetch should NOT have been called — pre-flight prevents the network request
+      expect(global.fetch).not.toHaveBeenCalled()
+    })
+
+    it('maps "No API key available" to user-facing message', async () => {
+      ;(global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+        ok: false,
+        status: 400,
+        statusText: 'Bad Request',
+        json: async () => ({ error: 'No API key available for provider: openai' }),
+      })
+
+      try {
+        await collectChunks(client.streamCompletion(defaultMessages))
+        expect.unreachable('Should have thrown')
+      } catch (error) {
+        expect(error).toBeInstanceOf(LLMError)
+        expect((error as LLMError).message).toBe(
+          'No API key configured for openai. Add your API key in Settings → Integrations & Data.'
+        )
+      }
+    })
+
+    it('maps "Provider not configured" to user-facing message', async () => {
+      ;(global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+        ok: false,
+        status: 400,
+        statusText: 'Bad Request',
+        json: async () => ({ error: 'Provider not configured' }),
+      })
+
+      try {
+        await collectChunks(client.streamCompletion(defaultMessages))
+        expect.unreachable('Should have thrown')
+      } catch (error) {
+        expect(error).toBeInstanceOf(LLMError)
+        expect((error as LLMError).message).toBe(
+          'The AI provider is not configured on the server. Contact support if this persists.'
+        )
+      }
+    })
+
+    it('maps "Model not found" to user-facing message mentioning the model name', async () => {
+      const clientWithModel = new ProxyLLMClient('anthropic', 'sk-ant-key', 'claude-opus-4')
+      ;(global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+        ok: false,
+        status: 400,
+        statusText: 'Bad Request',
+        json: async () => ({ error: 'Model not found' }),
+      })
+
+      try {
+        await collectChunks(clientWithModel.streamCompletion(defaultMessages))
+        expect.unreachable('Should have thrown')
+      } catch (error) {
+        expect(error).toBeInstanceOf(LLMError)
+        expect((error as LLMError).message).toBe(
+          "The model 'claude-opus-4' is not available. Try a different model in Settings → Integrations & Data."
+        )
+      }
+    })
+
+    it('passes through unknown error with "AI error: " prefix', async () => {
+      ;(global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+        ok: false,
+        status: 503,
+        statusText: 'Service Unavailable',
+        json: async () => ({ error: 'Upstream provider timeout' }),
+      })
+
+      try {
+        await collectChunks(client.streamCompletion(defaultMessages))
+        expect.unreachable('Should have thrown')
+      } catch (error) {
+        expect(error).toBeInstanceOf(LLMError)
+        expect((error as LLMError).message).toBe('AI error: Upstream provider timeout')
+      }
+    })
+
+    it('propagates LLMError from proxy error event in stream', async () => {
       const sseChunks = ['data: {"error":"Provider returned 500"}\n\n']
 
       ;(global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
@@ -460,7 +573,7 @@ describe('ProxyLLMClient', () => {
         expect.unreachable('Should have thrown')
       } catch (error) {
         expect(error).toBeInstanceOf(LLMError)
-        expect((error as LLMError).message).toContain('Service Unavailable')
+        expect((error as LLMError).message).toBe('AI error: 503 Server error')
       }
     })
   })

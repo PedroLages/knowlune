@@ -57,10 +57,13 @@ vi.mock('@/stores/useLessonChromeStore', () => ({
     }),
 }))
 
+vi.mock('@/app/hooks/useLessonItemCompletionStatus', () => ({
+  useLessonItemCompletionStatus: () => mockItemStatus,
+}))
+
 vi.mock('@/stores/useContentProgressStore', () => ({
   useContentProgressStore: (selector: (s: Record<string, unknown>) => unknown) =>
     selector({
-      getItemStatus: () => mockItemStatus,
       setItemStatus,
       loadCourseProgress: vi.fn(),
     }),

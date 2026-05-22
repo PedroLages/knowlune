@@ -26,6 +26,7 @@ import {
 import { useProgressiveDisclosure } from '@/app/hooks/useProgressiveDisclosure'
 import { useLessonChromeStore } from '@/stores/useLessonChromeStore'
 import { useContentProgressStore } from '@/stores/useContentProgressStore'
+import { useLessonItemCompletionStatus } from '@/app/hooks/useLessonItemCompletionStatus'
 import { useAuthStore, selectIsGuestMode } from '@/stores/useAuthStore'
 import { toast } from 'sonner'
 import type { CompletionStatus } from '@/data/types'
@@ -65,20 +66,15 @@ function LessonDrawerContent({
   const isReadingMode = useLessonChromeStore(s => s.isReadingMode)
   const toggleReadingMode = useLessonChromeStore(s => s.toggleReadingMode)
 
-  const getItemStatus = useContentProgressStore(s => s.getItemStatus)
   const setItemStatus = useContentProgressStore(s => s.setItemStatus)
   const loadCourseProgress = useContentProgressStore(s => s.loadCourseProgress)
+  const currentStatus = useLessonItemCompletionStatus(courseId, lessonId)
 
   useEffect(() => {
     if (courseId) {
       loadCourseProgress(courseId)
     }
   }, [courseId, loadCourseProgress])
-
-  const currentStatus: CompletionStatus =
-    courseId && lessonId
-      ? getItemStatus(courseId, lessonId)
-      : 'not-started'
 
   const isCompleted = currentStatus === 'completed'
 
@@ -236,20 +232,18 @@ export function BottomNav({ mode = 'standard', courseId, lessonId, onFeedbackCli
   const hasNotes = useLessonChromeStore(s => s.hasNotes)
 
   // Completion state (for lesson mode primary slots)
-  const getItemStatus = useContentProgressStore(s => s.getItemStatus)
   const setItemStatus = useContentProgressStore(s => s.setItemStatus)
   const loadCourseProgress = useContentProgressStore(s => s.loadCourseProgress)
+  const completionStatus = useLessonItemCompletionStatus(
+    mode === 'lesson' ? courseId : undefined,
+    mode === 'lesson' ? lessonId : undefined
+  )
 
   useEffect(() => {
     if (mode === 'lesson' && courseId) {
       loadCourseProgress(courseId)
     }
   }, [mode, courseId, loadCourseProgress])
-
-  const completionStatus: CompletionStatus =
-    mode === 'lesson' && courseId && lessonId
-      ? getItemStatus(courseId, lessonId)
-      : 'not-started'
 
   const isLessonCompleted = completionStatus === 'completed'
 

@@ -251,6 +251,9 @@ describe('OllamaLLMClient', () => {
         expect(error).toBeInstanceOf(LLMError)
         expect((error as LLMError).code).toBe('TIMEOUT')
         expect((error as LLMError).providerId).toBe('ollama')
+        expect((error as LLMError).message).toBe(
+          'Ollama request timed out. The model may still be loading into memory.'
+        )
       }
     })
 
@@ -265,8 +268,9 @@ describe('OllamaLLMClient', () => {
       } catch (error) {
         expect(error).toBeInstanceOf(LLMError)
         expect((error as LLMError).code).toBe('NETWORK_ERROR')
-        expect((error as LLMError).message).toContain('Cannot reach Ollama')
-        expect((error as LLMError).message).toContain('192.168.2.200:11434')
+        expect((error as LLMError).message).toBe(
+          'Ollama is not running. Start Ollama and verify the server URL in Settings.'
+        )
       }
     })
 

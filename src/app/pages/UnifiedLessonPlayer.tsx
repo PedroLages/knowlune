@@ -172,7 +172,10 @@ export function UnifiedLessonPlayer() {
 
   // Progress store for marking lessons complete on video end
   const setItemStatus = useContentProgressStore(s => s.setItemStatus)
-  const getItemStatus = useContentProgressStore(s => s.getItemStatus)
+  const getItemStatus = useCallback(
+    (c: string, l: string) => useContentProgressStore.getState().getItemStatus(c, l),
+    []
+  )
   const loadCourseProgress = useContentProgressStore(s => s.loadCourseProgress)
 
   // Ensure course progress is loaded so getItemStatus has data for checkCourseCompletion.
@@ -225,6 +228,28 @@ export function UnifiedLessonPlayer() {
     setIsMiniPlayerDismissed: state.setIsMiniPlayerDismissed,
     setLocalVideoBlobUrl: state.setLocalVideoBlobUrl,
   })
+
+  const handlePlayStateChange = useCallback(
+    (playing: boolean) => {
+      miniPlayer.handlePlayStateChange(playing)
+      if (!playing || !courseId || !lessonId || !adapter) return
+      if (state.isPdf) return
+      const sourceType = adapter.getSource()
+      if (sourceType === 'youtube') return
+      if (!state.lessonTypeResolved) return
+      const st = useContentProgressStore.getState().getItemStatus(courseId, lessonId)
+      if (st !== 'not-started') return
+      void useContentProgressStore.getState().setItemStatus(courseId, lessonId, 'in-progress', [])
+    },
+    [
+      miniPlayer.handlePlayStateChange,
+      courseId,
+      lessonId,
+      adapter,
+      state.isPdf,
+      state.lessonTypeResolved,
+    ]
+  )
 
   // Frame capture for NoteEditor
   const { handleCaptureFrame } = useFrameCapture({
@@ -426,7 +451,7 @@ export function UnifiedLessonPlayer() {
           onSeekComplete={state.handleSeekComplete}
           onFocusNotes={state.handleFocusNotes}
           onVisibilityChange={miniPlayer.handleVideoVisibilityChange}
-          onPlayStateChange={miniPlayer.handlePlayStateChange}
+          onPlayStateChange={handlePlayStateChange}
           onBlobUrlReady={state.setLocalVideoBlobUrl}
           theaterMode={isTheater}
           onTheaterModeToggle={toggleTheater}

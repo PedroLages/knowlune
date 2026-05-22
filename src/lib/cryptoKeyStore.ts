@@ -71,6 +71,21 @@ export async function saveCryptoKey(key: CryptoKey): Promise<void> {
   })
 }
 
+/**
+ * Check whether the persisted encryption key is available in IndexedDB.
+ *
+ * Returns false if IndexedDB is inaccessible (private browsing, storage pressure,
+ * cleared database) or the key record doesn't exist. Safe to call — never throws.
+ */
+export async function isCryptoKeyAvailable(): Promise<boolean> {
+  try {
+    const key = await loadCryptoKey()
+    return key !== null
+  } catch {
+    return false
+  }
+}
+
 /** Remove the persisted key (for testing or explicit key rotation). */
 export async function deleteCryptoKey(): Promise<void> {
   const db = await getDB()

@@ -17,7 +17,8 @@ import type { AIFeatureId, AIProviderId, FeatureModelConfig } from './modelDefau
 import { PROVIDER_DEFAULTS, FEATURE_DEFAULTS } from './modelDefaults'
 import type { DiscoveredModel } from './modelDiscovery'
 import { getFreeTierDefaultModel } from './modelDiscovery.static'
-import { checkCredential, storeCredential, readCredentialWithStatus } from './vaultCredentials'
+import { checkCredential, storeCredentialWithStatus, readCredentialWithStatus } from './vaultCredentials'
+import { withTimeout } from './promiseUtils'
 
 // Re-export for convenience — consumers can import from aiConfiguration
 export type { AIFeatureId, AIProviderId, FeatureModelConfig } from './modelDefaults'
@@ -123,6 +124,22 @@ export interface AIConfigurationSettings {
    */
   budgetMode?: boolean
   /**
+   * Timestamp (ISO string) when the encryption key was lost, causing the
+   * stored ciphertext to become undecryptable. Set by `getDecryptedApiKeyForProvider`
+   * when local decryption fails and Vault recovery is unavailable.
+   * Cleared when the key is successfully re-entered or Vault self-heals.
+   * Used by `getAPIKeyHealth()` to report `'undecryptable'` status.
+   */
+  keyLostAt?: string
+  /**
+   * Timestamp (ISO string) when the most recent Vault backup write failed.
+   * Set by `saveProviderApiKey()` when the Supabase Vault write times out or
+   * returns an error. The key is still saved locally but the user should be
+   * warned that it won't survive browser storage clearance.
+   * Cleared on the next successful `saveProviderApiKey()` call.
+   */
+  vaultBackupFailedAt?: string
+  /**
    * E2E test-only plaintext API key bypass (DEV mode only)
    * @internal Only works when import.meta.env.DEV = true
    * Production builds ignore this field for security
@@ -137,6 +154,15 @@ export type NoteQAUnavailableReason =
   | 'missing-ollama-url'
   /** Availability check threw or rejected (e.g. unexpected storage/crypto failure) */
   | 'availability-check-failed'
+
+/** Health status for a provider's stored API key on this device. */
+export type APIKeyHealth =
+  /** Key is stored, decryptable, and usable */
+  | 'ok'
+  /** No key has ever been saved for this provider */
+  | 'missing'
+  /** Encrypted data exists but the encryption key was lost (IndexedDB cleared) */
+  | 'undecryptable'
 
 export type NoteQAAvailability =
   | {
@@ -596,6 +622,12 @@ export async function getDecryptedApiKeyForProvider(
           decryptedResult = vaultSecret
           try {
             await reEncryptProviderKeyLocally(provider, vaultSecret)
+            // Vault self-heal succeeded — clear keyLostAt so getAPIKeyHealth returns 'ok'
+            const updatedConfig = getAIConfiguration()
+            if (updatedConfig.keyLostAt) {
+              updatedConfig.keyLostAt = undefined
+              localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedConfig))
+            }
           } catch (reEncryptError) {
             console.warn(
               `Failed to re-encrypt Vault key for ${provider}:`,
@@ -606,6 +638,23 @@ export async function getDecryptedApiKeyForProvider(
       } catch (error) {
         console.warn(`Vault fallback failed for ${provider}:`, error) // silent-catch-ok: logged
       }
+    }
+    // After Vault recovery attempt: if we still have no key but encrypted data
+    // exists, mark the key as lost so getAPIKeyHealth() reports 'undecryptable'
+    if (!decryptedResult && hasEncryptedData) {
+      const staleConfig = getAIConfiguration()
+      if (!staleConfig.keyLostAt) {
+        staleConfig.keyLostAt = new Date().toISOString()
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(staleConfig))
+      }
+    }
+  } else if (config.keyLostAt) {
+    // Decryption succeeded — clear any stale keyLostAt marker (user re-entered
+    // the key or Vault recovered it in a previous call)
+    const freshConfig = getAIConfiguration()
+    if (freshConfig.keyLostAt) {
+      freshConfig.keyLostAt = undefined
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(freshConfig))
     }
   }
 
@@ -620,6 +669,10 @@ export async function getDecryptedApiKeyForProvider(
  * Dispatches the `ai-configuration-updated` custom event for cross-tab sync.
  * Does NOT modify the legacy `apiKeyEncrypted` field — that is preserved as-is.
  *
+ * Unlike the legacy fire-and-forget behavior, this function now AWAITS the
+ * Vault write with a 5-second timeout. If the Vault write fails or times out,
+ * the key is still saved locally but the caller can surface a warning.
+ *
  * @param provider - Provider to store the key for
  * @param apiKey - Plaintext API key (will be encrypted before storage)
  * @returns Updated configuration state
@@ -627,31 +680,52 @@ export async function getDecryptedApiKeyForProvider(
  * Security note: The plaintext key is never persisted or logged.
  *
  * @example
- * await saveProviderApiKey('anthropic', 'sk-ant-...')
+ * const result = await saveProviderApiKey('anthropic', 'sk-ant-...')
+ * // result is the updated config; check result.keyLostAt for Vault failure
  */
 export async function saveProviderApiKey(
   provider: AIProviderId,
   apiKey: string
 ): Promise<AIConfigurationSettings> {
-  // Store in Supabase Vault (cross-device, encrypted at rest)
-  // Fire-and-forget with error logging — localStorage is fallback
-  storeCredential('ai-provider', provider, apiKey).catch(err => {
-    console.warn('[aiConfiguration] Vault store failed for provider', provider, err)
-  })
+  let vaultFailed = false
+
+  // Store in Supabase Vault with 5-second timeout
+  try {
+    const vaultResult = await withTimeout(
+      storeCredentialWithStatus('ai-provider', provider, apiKey),
+      5_000,
+      'Cloud backup timed out'
+    )
+    if (!vaultResult.ok) {
+      vaultFailed = true
+      console.warn(
+        '[aiConfiguration] Vault store failed for provider',
+        provider,
+        ':',
+        vaultResult.message ?? vaultResult.reason
+      )
+    }
+  } catch (vaultError) {
+    vaultFailed = true
+    const vaultMessage = vaultError instanceof Error ? vaultError.message : 'Cloud backup failed'
+    console.warn('[aiConfiguration] Vault store failed for provider', provider, ':', vaultMessage)
+    // Key is still saved locally — no throw
+  }
 
   const encrypted = await encryptData(apiKey)
   const current = getAIConfiguration()
 
-  // Remove from localStorage providerKeys after Vault store is initiated
-  // (Vault write is fire-and-forget; localStorage encrypted copy remains as device-local fallback)
   const updatedProviderKeys: Partial<Record<AIProviderId, EncryptedData>> = {
     ...current.providerKeys,
     [provider]: encrypted,
   }
 
+  // Clear any stale keyLostAt marker since the key has been re-entered
   const updated: AIConfigurationSettings = {
     ...current,
     providerKeys: updatedProviderKeys,
+    keyLostAt: undefined,
+    vaultBackupFailedAt: vaultFailed ? new Date().toISOString() : undefined,
   }
 
   localStorage.setItem(STORAGE_KEY, JSON.stringify(updated))
@@ -860,6 +934,41 @@ export async function getNoteQAAvailability(): Promise<NoteQAAvailability> {
     available: false,
     reason: hasStoredKey ? 'unreadable-provider-key' : 'missing-provider-key',
   }
+}
+
+/**
+ * Checks the health of a stored API key for a specific provider on this device.
+ *
+ * Returns the health status without making network requests (reads localStorage
+ * and uses the `keyLostAt` timestamp set by `getDecryptedApiKeyForProvider`).
+ *
+ * @param provider - Provider to check
+ * @returns Health status: 'ok' | 'missing' | 'undecryptable'
+ */
+export function getAPIKeyHealth(provider: AIProviderId): APIKeyHealth {
+  const config = getAIConfiguration()
+
+  // Ollama uses server URL, not API key
+  if (provider === 'ollama') {
+    return config.ollamaSettings?.serverUrl ? 'ok' : 'missing'
+  }
+
+  const hasProviderKey = !!config.providerKeys?.[provider]
+  const isLegacyProvider = provider === config.provider && !!config.apiKeyEncrypted
+  const hasStoredKeyData = hasProviderKey || isLegacyProvider
+
+  if (!hasStoredKeyData) {
+    return 'missing'
+  }
+
+  // If keyLostAt is set, the encrypted data exists but the encryption key was lost
+  if (config.keyLostAt) {
+    // Check if the key is currently being recovered from Vault
+    // (we can't definitively check Vault synchronously, but keyLostAt signals the loss)
+    return 'undecryptable'
+  }
+
+  return 'ok'
 }
 
 /**

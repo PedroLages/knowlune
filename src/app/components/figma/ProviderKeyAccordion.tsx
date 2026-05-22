@@ -36,6 +36,7 @@ import {
   deleteProviderApiKey,
   getAIConfiguration,
   getDecryptedApiKeyForProvider,
+  getAPIKeyHealth,
   saveProviderApiKey,
   testAIConnection,
   type AIProviderId,
@@ -150,6 +151,15 @@ export function ProviderKeyAccordion({ onConfigChanged }: ProviderKeyAccordionPr
         setKeyInputs(prev => ({ ...prev, [providerId]: '' }))
         setSuccesses(prev => ({ ...prev, [providerId]: true }))
         setTimeout(() => setSuccesses(prev => ({ ...prev, [providerId]: false })), 3000)
+
+        // Check for Vault backup failure
+        const savedConfig = getAIConfiguration()
+        if (savedConfig.vaultBackupFailedAt) {
+          toast.warning(
+            'API key saved locally but cloud backup failed. The key will be lost if browser storage is cleared.'
+          )
+        }
+
         await refreshStatuses()
         onConfigChanged()
         toast.success(`${provider.name} API key saved`)
@@ -207,9 +217,9 @@ export function ProviderKeyAccordion({ onConfigChanged }: ProviderKeyAccordionPr
                     <Badge
                       variant={status.isConnected ? 'default' : 'outline'}
                       className={cn(
-                        'ml-2 text-[10px]',
+                        'ml-2 text-xs',
                         status.isConnected
-                          ? 'bg-success/15 text-success border-success/30'
+                          ? 'bg-success text-success-foreground'
                           : 'bg-muted text-muted-foreground'
                       )}
                       data-testid={`provider-status-${providerId}`}
@@ -219,6 +229,24 @@ export function ProviderKeyAccordion({ onConfigChanged }: ProviderKeyAccordionPr
                       {status.isLegacy && ' (legacy)'}
                     </Badge>
                   )}
+                  {/* Key health indicator — detects lost CryptoKey */}
+                  {!status?.isConnected && status?.hasKey && (() => {
+                    const health = getAPIKeyHealth(providerId)
+                    const isLost = health === 'undecryptable'
+                    return (
+                      <span
+                        className={cn(
+                          'size-2 rounded-full',
+                          isLost ? 'bg-warning' : 'bg-muted-foreground/50'
+                        )}
+                        title={isLost ? 'Key needs re-entry — encryption key was reset' : undefined}
+                        data-testid={`provider-health-${providerId}`}
+                        aria-label={
+                          isLost ? 'Encryption key lost — re-enter API key' : undefined
+                        }
+                      />
+                    )
+                  })()}
                   {/* E97-S05 AC3: Vault sync status badge */}
                   {vaultStatus && (
                     <CredentialSyncStatusBadge
