@@ -15,16 +15,17 @@
  */
 
 import { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo } from 'react'
-import { MessageCircle, Send, AlertCircle, BookOpen, X, Loader2 } from 'lucide-react'
+import { MessageCircle, Send, AlertCircle, BookOpen, X, Loader2, Trash2, StopCircle } from 'lucide-react'
 import { Link } from 'react-router'
 import { Button } from '@/app/components/ui/button'
-import { Input } from '@/app/components/ui/input'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/app/components/ui/sheet'
 import { Popover, PopoverContent, PopoverTrigger } from '@/app/components/ui/popover'
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/app/components/ui/tooltip'
-import { ScrollArea } from '@/app/components/ui/scroll-area'
+import { ScrollArea, ScrollBar } from '@/app/components/ui/scroll-area'
 import { useQAChatStore } from '@/stores/useQAChatStore'
 import { retrieveRelevantNotes, generateQAAnswer, getNoteDisplayName } from '@/lib/noteQA'
+import { formatTimestamp } from '@/lib/format'
+import { classifyQuery, GREETING_RESPONSE, buildMetaResponse } from '@/lib/chatQueryClassifier'
 import { trackAIUsage } from '@/lib/aiEventTracking'
 import { db } from '@/db'
 import { useMediaQuery } from '@/app/hooks/useMediaQuery'
@@ -43,6 +44,14 @@ export interface QAChatPanelProps {
   tooltipLabel?: string
 }
 
+const MAX_TEXTAREA_HEIGHT = 5 * 24
+
+const SUGGESTED_PROMPTS = [
+  'Summarize my recent notes',
+  "What are key concepts I've studied?",
+  'Find notes about React',
+] as const
+
 export function QAChatPanel({ open: controlledOpen, onOpenChange: controlledOnOpenChange, tooltipLabel }: QAChatPanelProps = {}) {
   const [internalOpen, setInternalOpen] = useState(false)
   const isOpen = controlledOpen ?? internalOpen
@@ -51,6 +60,9 @@ export function QAChatPanel({ open: controlledOpen, onOpenChange: controlledOnOp
   const [hasNotes, setHasNotes] = useState(false)
   const [notesLoaded, setNotesLoaded] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
+  const scrollToBottomRef = useRef<HTMLDivElement>(null)
+  const abortControllerRef = useRef<AbortController | null>(null)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   const {
     messages,
@@ -102,13 +114,15 @@ export function QAChatPanel({ open: controlledOpen, onOpenChange: controlledOnOp
     }
   }, [])
 
-  // Auto-scroll to bottom when messages change (layout effect avoids visible scroll jank before paint)
+  // Auto-scroll to bottom when messages change using sentinel div (more reliable than scrollTop)
   useLayoutEffect(() => {
-    const viewport = scrollRef.current?.querySelector('[data-slot="scroll-area-viewport"]') as HTMLElement | null
-    if (viewport) {
-      viewport.scrollTop = viewport.scrollHeight
+    if (scrollToBottomRef.current) {
+      const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+      scrollToBottomRef.current.scrollIntoView({
+        behavior: prefersReducedMotion ? 'auto' : 'smooth',
+      })
     }
-  }, [messages])
+  }, [messages, isGenerating])
 
   const runQAPipeline = useCallback(
     async (query: string, startTime: number) => {
@@ -128,11 +142,25 @@ export function QAChatPanel({ open: controlledOpen, onOpenChange: controlledOnOp
       const answerId = addAnswer('', [], retrievedNotes)
       let fullAnswer = ''
 
-      const generator = generateQAAnswer(query, retrievedNotes, { resolved })
+      // Create AbortController for stopping generation
+      const controller = new AbortController()
+      abortControllerRef.current = controller
+      const signal = controller.signal
 
-      for await (const chunk of generator) {
-        fullAnswer += chunk
-        updateAnswer(answerId, fullAnswer)
+      const generator = generateQAAnswer(query, retrievedNotes, { resolved, signal })
+
+      try {
+        for await (const chunk of generator) {
+          fullAnswer += chunk
+          updateAnswer(answerId, fullAnswer)
+        }
+      } finally {
+        // Only clear the ref if we still own the controller (guard against
+        // the race where a previous stream's finally block nulls out a
+        // newly created controller after a stop-and-re-send).
+        if (abortControllerRef.current === controller) {
+          abortControllerRef.current = null
+        }
       }
 
       trackAIUsage('qa', {
@@ -171,16 +199,44 @@ export function QAChatPanel({ open: controlledOpen, onOpenChange: controlledOnOp
     }
   }
 
-  const handleSendMessage = async () => {
-    const query = inputValue.trim()
+  const handleSendMessage = async (explicitQuery?: string) => {
+    const query = (explicitQuery ?? inputValue).trim()
     if (!query || isGenerating) return
 
     lastQueryRef.current = query
     setInputValue('')
     setError(null)
     addQuestion(query)
-    setGenerating(true)
 
+    // Classify the query to determine routing
+    const category = classifyQuery(query)
+
+    // Greeting — canned reply, no RAG
+    if (category === 'greeting') {
+      addAnswer(GREETING_RESPONSE, [], [])
+      return
+    }
+
+    // Meta question — note inventory, no RAG
+    if (category === 'meta') {
+      try {
+        const noteCount = await db.notes.count()
+        const coursesWithNotes = await db.notes.orderBy('courseId').uniqueKeys()
+        const courseNames: string[] = []
+        for (const courseId of coursesWithNotes.slice(0, 5)) {
+          const course = await db.importedCourses.get(courseId as string)
+          if (course?.name) courseNames.push(course.name)
+        }
+        const metaReply = buildMetaResponse(noteCount, coursesWithNotes.length, courseNames)
+        addAnswer(metaReply, [], [])
+      } catch {
+        addAnswer("I couldn't look up your note inventory right now. Try asking me a specific question!", [], [])
+      }
+      return
+    }
+
+    // Search query — full RAG pipeline
+    setGenerating(true)
     const startTime = Date.now()
 
     try {
@@ -203,11 +259,29 @@ export function QAChatPanel({ open: controlledOpen, onOpenChange: controlledOnOp
     }
   }
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
+  const handleKeyPress = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
       handleSendMessage()
+      // Reset textarea height after send. Skip rAF height recalc to avoid
+      // reading scrollHeight = 0 on React 19's async scheduling boundary
+      // (setInputValue('') hasn't flushed to DOM yet at this point).
+      const textarea = textareaRef.current
+      if (textarea) {
+        textarea.style.height = 'auto'
+      }
+      return
     }
+    // Auto-expand on any other key
+    requestAnimationFrame(() => {
+      const textarea = textareaRef.current
+      if (textarea) {
+        textarea.style.height = 'auto'
+        if (textarea.scrollHeight > 0) {
+          textarea.style.height = `${Math.min(textarea.scrollHeight, MAX_TEXTAREA_HEIGHT)}px`
+        }
+      }
+    })
   }
 
   // Chat content (shared between Sheet and Popover)
@@ -278,104 +352,199 @@ export function QAChatPanel({ open: controlledOpen, onOpenChange: controlledOnOp
         </div>
       )}
 
-      {/* Messages */}
-      {/* eslint-disable-next-line @typescript-eslint/no-explicit-any -- ScrollArea ref type mismatch */}
-      <ScrollArea className="flex-1 px-4" ref={scrollRef as any}>
-        <div className="space-y-4 py-4">
-          {messages.length === 0 && aiAvailable && notesLoaded && hasNotes && (
-            <div className="text-center text-muted-foreground">
-              <MessageCircle className="mx-auto size-12 opacity-20" />
-              <p className="mt-2 text-sm">Ask a question about your notes</p>
-              <p className="mt-1 text-xs opacity-70">
-                I'll search your notes and provide answers with citations
-              </p>
-            </div>
-          )}
-
-          {messages.map(msg => (
-            <div key={msg.id} className={msg.type === 'question' ? 'text-right' : 'text-left'}>
-              {/* Question (user) */}
-              {msg.type === 'question' && (
-                <div className="inline-block max-w-[80%] min-w-0 rounded-lg bg-brand px-4 py-2 text-sm text-brand-foreground break-words [overflow-wrap:anywhere]">
-                  {msg.content}
-                </div>
-              )}
-
-              {/* Answer (AI) */}
-              {msg.type === 'answer' && (
-                <div className="inline-block max-w-[90%] rounded-lg border bg-muted px-4 py-3 text-sm">
-                  <div className="whitespace-pre-wrap break-words [overflow-wrap:anywhere]">{msg.content}</div>
-
-                  {/* Citations */}
-                  {msg.retrievedNotes && msg.retrievedNotes.length > 0 && (
-                    <div className="mt-3 space-y-1 border-t pt-2 text-xs text-muted-foreground">
-                      <p className="font-medium">Sources:</p>
-                      {msg.retrievedNotes.map((retrieved, idx) => (
-                        <Link
-                          key={retrieved.note.id}
-                          to={`/courses/${retrieved.note.courseId}/lessons/${retrieved.note.videoId}${retrieved.note.timestamp ? `?t=${Math.floor(retrieved.note.timestamp)}` : ''}`}
-                          className="block text-brand hover:underline"
-                        >
-                          [{idx + 1}] {getNoteDisplayName(retrieved)}
-                          {retrieved.note.timestamp &&
-                            ` (${Math.floor(retrieved.note.timestamp)}s)`}
-                          {' — '}
-                          {(retrieved.similarity * 100).toFixed(0)}% match
-                        </Link>
-                      ))}
-                    </div>
+      {/* Messages - with min-h-0 to enable proper scrolling */}
+      <div className="min-h-0 flex-1">
+        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any -- ScrollArea ref type mismatch */}
+        <ScrollArea className="h-full px-4" ref={scrollRef as any} aria-live="polite">
+          <div className="space-y-4 py-4">
+            {messages.length === 0 && aiAvailable && notesLoaded && hasNotes && (
+              <div className="flex flex-col items-center justify-center px-4 py-8 text-center">
+                <MessageCircle className="mx-auto mb-3 size-10 text-muted-foreground/40" strokeWidth={1.5} />
+                <h3 className="mb-1 text-base font-medium text-foreground">Ask me anything about your notes!</h3>
+                <p className="mb-6 text-xs text-muted-foreground">
+                  I'll search your notes and provide answers with citations
+                </p>
+                <div className="flex flex-wrap justify-center gap-2">
+                  {SUGGESTED_PROMPTS.map(
+                    prompt => (
+                      <button
+                        key={prompt}
+                        type="button"
+                        onClick={() => {
+                          setInputValue(prompt)
+                          handleSendMessage(prompt)
+                        }}
+                        className="rounded-full border border-border bg-background px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:border-brand hover:text-brand"
+                      >
+                        {prompt}
+                      </button>
+                    ),
                   )}
                 </div>
-              )}
-            </div>
-          ))}
+              </div>
+            )}
 
-          {/* Loading indicator */}
-          {isGenerating && (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Loader2 className="size-4 animate-spin" />
-              <span>Thinking...</span>
-            </div>
-          )}
-        </div>
-      </ScrollArea>
+            {messages.map(msg => (
+              <div key={msg.id} className={msg.type === 'question' ? 'text-right' : 'text-left'}>
+                {/* Question (user) */}
+                {msg.type === 'question' && (
+                  <div>
+                    <div className="inline-block max-w-[80%] min-w-0 rounded-lg bg-brand px-4 py-2 text-sm text-brand-foreground break-words [overflow-wrap:anywhere]">
+                      {msg.content}
+                    </div>
+                    <div className="mt-0.5 text-[10px] text-muted-foreground/60">
+                      {new Date(msg.timestamp).toLocaleTimeString('en-US', {
+                        hour: 'numeric',
+                        minute: '2-digit',
+                      })}
+                    </div>
+                  </div>
+                )}
 
-      {/* Input */}
+                {/* Answer (AI) */}
+                {msg.type === 'answer' && (
+                  <div>
+                    {/* Check if this is an empty-result reply from RAG (distinct styling) */}
+                    {msg.content.startsWith('No relevant notes found') || msg.content.includes("I don't have notes covering") ? (
+                      <div className="inline-block max-w-[90%] rounded-lg border border-muted bg-muted/20 px-4 py-3 text-sm text-muted-foreground">
+                        <div className="flex items-start gap-2">
+                          <AlertCircle className="mt-0.5 size-4 shrink-0 text-muted-foreground/60" />
+                          <div className="whitespace-pre-wrap break-words [overflow-wrap:anywhere]">{msg.content}</div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="inline-block max-w-[90%] rounded-lg border bg-muted px-4 py-3 text-sm">
+                        <div className="whitespace-pre-wrap break-words [overflow-wrap:anywhere]">{msg.content}</div>
+
+                        {/* Sources section - human-readable citations */}
+                        {msg.retrievedNotes && msg.retrievedNotes.length > 0 && (
+                          <div className="mt-3 space-y-1 border-t pt-2 text-xs text-muted-foreground">
+                            <p className="font-medium">Sources:</p>
+                            {msg.retrievedNotes.map((retrieved, idx) => {
+                              const { name: displayName, isFallback: isNameFallback } = getNoteDisplayName(retrieved)
+                              const sourceLabel = isNameFallback
+                                ? `Note from ${retrieved.note.courseId}`
+                                : displayName
+                              return (
+                                <Link
+                                  key={retrieved.note.id}
+                                  to={`/courses/${retrieved.note.courseId}/lessons/${retrieved.note.videoId}${retrieved.note.timestamp ? `?t=${Math.floor(retrieved.note.timestamp)}` : ''}`}
+                                  className="block text-brand hover:underline"
+                                >
+                                  <span className="inline-flex items-center justify-center size-4 mr-1 text-[10px] font-medium bg-accent text-accent-foreground rounded">
+                                    {idx + 1}
+                                  </span>
+                                  {sourceLabel}
+                                  {retrieved.note.timestamp != null && retrieved.note.timestamp >= 0 &&
+                                    ` (${formatTimestamp(retrieved.note.timestamp)})`}
+                                </Link>
+                              )
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    <div className="mt-0.5 text-[10px] text-muted-foreground/60">
+                      {new Date(msg.timestamp).toLocaleTimeString('en-US', {
+                        hour: 'numeric',
+                        minute: '2-digit',
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
+
+            {/* Loading indicator with Stop button */}
+            {isGenerating && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Loader2 className="size-4 animate-spin" />
+                <span>Thinking...</span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    abortControllerRef.current?.abort()
+                    setGenerating(false)
+                  }}
+                  className="ml-auto h-6 gap-1 px-2 text-xs text-muted-foreground hover:text-destructive"
+                  aria-label="Stop generating"
+                  data-testid="qa-panel-stop"
+                >
+                  <StopCircle className="size-3" />
+                  Stop
+                </Button>
+              </div>
+            )}
+          </div>
+
+          {/* Sentinel div for auto-scroll */}
+          <div ref={scrollToBottomRef} />
+
+          <ScrollBar />
+        </ScrollArea>
+      </div>
+
+      {/* Input area with multiline textarea */}
       <div className="border-t p-4">
         <div className="flex gap-2">
-          <Input
-            value={inputValue}
-            onChange={e => setInputValue(e.target.value)}
-            onKeyPress={handleKeyPress}
-            placeholder={
-              aiChecking
-                ? 'Checking AI settings...'
-                : aiAvailable && !notesLoaded
-                  ? 'Checking notes...'
-                  : aiAvailable && hasNotes
-                    ? 'Ask about your notes...'
-                    : !aiAvailable
-                      ? 'Configure Q&A in Settings'
-                      : 'No notes available'
-            }
-            disabled={aiChecking || !aiAvailable || !hasNotes || isGenerating}
-            aria-busy={aiChecking}
-            aria-label="Ask a question about your notes"
-            data-testid="qa-panel-input"
-            className="flex-1"
-          />
+          <div className="relative flex-1">
+            <textarea
+              ref={textareaRef}
+              value={inputValue}
+              onChange={e => {
+                setInputValue(e.target.value)
+                // Auto-expand
+                const textarea = textareaRef.current
+                if (textarea) {
+                  textarea.style.height = 'auto'
+                  if (textarea.scrollHeight > 0) {
+                    textarea.style.height = `${Math.min(textarea.scrollHeight, MAX_TEXTAREA_HEIGHT)}px`
+                  }
+                }
+              }}
+              onKeyDown={handleKeyPress}
+              placeholder={
+                aiChecking
+                  ? 'Checking AI settings...'
+                  : aiAvailable && !notesLoaded
+                    ? 'Checking notes...'
+                    : aiAvailable && hasNotes
+                      ? 'Ask about your notes...'
+                      : !aiAvailable
+                        ? 'Configure Q&A in Settings'
+                        : 'No notes available'
+              }
+              disabled={aiChecking || !aiAvailable || !hasNotes || isGenerating}
+              aria-busy={aiChecking}
+              aria-label="Ask a question about your notes"
+              data-testid="qa-panel-input"
+              rows={1}
+              className="min-h-12 w-full px-4 py-3 rounded-xl border border-input
+                         bg-background text-foreground placeholder:text-muted-foreground
+                         focus:outline-none focus:ring-2 focus:ring-brand
+                         disabled:opacity-50 disabled:cursor-not-allowed
+                         resize-none overflow-y-auto text-sm"
+            />
+          </div>
           <Button
-            onClick={handleSendMessage}
+            onClick={() => void handleSendMessage()}
             disabled={!inputValue.trim() || aiChecking || !aiAvailable || !hasNotes || isGenerating}
             size="icon"
             aria-label="Send question"
             data-testid="qa-panel-send"
+            className="h-12 w-12 shrink-0"
           >
-            <Send className="size-4" />
+            {isGenerating ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <Send className="size-4" />
+            )}
           </Button>
         </div>
         <p className="mt-2 text-xs text-muted-foreground">
-          Answers from your notes (local search, session-only history)
+          Press <kbd className="px-1 py-0.5 bg-muted rounded text-[10px]">Enter</kbd> to send,{' '}
+          <kbd className="px-1 py-0.5 bg-muted rounded text-[10px]">Shift + Enter</kbd> for new line
         </p>
       </div>
     </div>
@@ -409,7 +578,24 @@ export function QAChatPanel({ open: controlledOpen, onOpenChange: controlledOnOp
           )}
           <SheetContent side="bottom" className="h-[90vh]">
             <SheetHeader className="mb-4">
-              <SheetTitle>Ask AI</SheetTitle>
+              <div className="flex items-center justify-between">
+                <SheetTitle>Ask AI</SheetTitle>
+                {messages.length > 0 && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="size-8"
+                    onClick={() => {
+                      abortControllerRef.current?.abort()
+                      useQAChatStore.getState().clearHistory()
+                    }}
+                    aria-label="Clear chat history"
+                    data-testid="qa-panel-clear"
+                  >
+                    <Trash2 className="size-4" />
+                  </Button>
+                )}
+              </div>
             </SheetHeader>
             {chatContent}
           </SheetContent>
@@ -430,16 +616,33 @@ export function QAChatPanel({ open: controlledOpen, onOpenChange: controlledOnOp
             <div className="flex h-full flex-col">
               <div className="flex items-center justify-between border-b px-4 py-3">
                 <h3 className="font-semibold">Ask AI</h3>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="size-6"
-                  onClick={() => setIsOpen(false)}
-                  aria-label="Close Ask AI panel"
-                  data-testid="qa-panel-close"
-                >
-                  <X className="size-4" />
-                </Button>
+                <div className="flex items-center gap-1">
+                  {messages.length > 0 && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="size-6"
+                      onClick={() => {
+                        abortControllerRef.current?.abort()
+                        useQAChatStore.getState().clearHistory()
+                      }}
+                      aria-label="Clear chat history"
+                      data-testid="qa-panel-clear"
+                    >
+                      <Trash2 className="size-4" />
+                    </Button>
+                  )}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="size-6"
+                    onClick={() => setIsOpen(false)}
+                    aria-label="Close Ask AI panel"
+                    data-testid="qa-panel-close"
+                  >
+                    <X className="size-4" />
+                  </Button>
+                </div>
               </div>
               {chatContent}
             </div>
