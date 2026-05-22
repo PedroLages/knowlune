@@ -9,6 +9,7 @@ import { test, expect } from '../../support/fixtures'
 import { createImportedCourse } from '../../support/fixtures/factories/imported-course-factory'
 import { goToCourses, navigateAndWait } from '../../support/helpers/navigation'
 import { seedIndexedDBStore } from '../../support/helpers/seed-helpers'
+import { configureGeminiNoteQA } from '../../support/helpers/note-qa-test-helpers'
 import type { Page } from '@playwright/test'
 
 // ---------------------------------------------------------------------------
@@ -110,35 +111,6 @@ async function seedCourseAndReload(
 /** Navigate to imported course detail page. */
 async function goToImportedCourseDetail(page: Page, courseId: string): Promise<void> {
   await navigateAndWait(page, `/courses/${courseId}`)
-}
-
-async function configureGeminiNoteQA(page: Page): Promise<void> {
-  await page.evaluate(async () => {
-    const { saveAIConfiguration, saveProviderApiKey } = await import('/src/lib/aiConfiguration.ts')
-
-    await saveProviderApiKey(
-      'gemini',
-      'AIzanotPRODUCTIONneverE2Eonly_knownfakekey000000000000000000'
-    )
-    await saveAIConfiguration({
-      provider: 'openai',
-      connectionStatus: 'unconfigured',
-      consentSettings: {
-        videoSummary: true,
-        noteQA: true,
-        learningPath: true,
-        knowledgeGaps: true,
-        noteOrganization: true,
-        analytics: true,
-      },
-      featureModels: {
-        noteQA: {
-          provider: 'gemini',
-          model: 'gemini-3-flash-preview',
-        },
-      },
-    })
-  })
 }
 
 // ===========================================================================
