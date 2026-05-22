@@ -352,11 +352,10 @@ export function QAChatPanel({ open: controlledOpen, onOpenChange: controlledOnOp
         </div>
       )}
 
-      {/* Messages - with min-h-0 to enable proper scrolling */}
-      <div className="min-h-0 flex-1">
-        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any -- ScrollArea ref type mismatch */}
-        <ScrollArea className="h-full px-4" ref={scrollRef as any} aria-live="polite">
-          <div className="space-y-4 py-4">
+      {/* Messages — h-0 flex-1 forces shrink; ScrollArea is the only growing scroll region */}
+      {/* eslint-disable-next-line @typescript-eslint/no-explicit-any -- ScrollArea ref type mismatch */}
+      <ScrollArea className="h-0 min-h-0 flex-1 px-4" ref={scrollRef as any} aria-live="polite">
+        <div className="space-y-4 py-4">
             {messages.length === 0 && aiAvailable && notesLoaded && hasNotes && (
               <div className="flex flex-col items-center justify-center px-4 py-8 text-center">
                 <MessageCircle className="mx-auto mb-3 size-10 text-muted-foreground/40" strokeWidth={1.5} />
@@ -482,8 +481,7 @@ export function QAChatPanel({ open: controlledOpen, onOpenChange: controlledOnOp
           <div ref={scrollToBottomRef} />
 
           <ScrollBar />
-        </ScrollArea>
-      </div>
+      </ScrollArea>
 
       {/* Input area with multiline textarea */}
       <div className="shrink-0 border-t p-4">
@@ -578,30 +576,34 @@ export function QAChatPanel({ open: controlledOpen, onOpenChange: controlledOnOp
           )}
           <SheetContent
             side="bottom"
-            className="flex h-[90vh] min-h-0 flex-col gap-0 overflow-hidden p-0"
-            data-testid="qa-panel-shell"
+            className="flex h-[90vh] max-h-[90vh] min-h-0 flex-col gap-0 overflow-hidden p-0"
           >
-            <SheetHeader className="mb-4 shrink-0">
-              <div className="flex items-center justify-between">
-                <SheetTitle>Ask AI</SheetTitle>
-                {messages.length > 0 && (
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="size-8"
-                    onClick={() => {
-                      abortControllerRef.current?.abort()
-                      useQAChatStore.getState().clearHistory()
-                    }}
-                    aria-label="Clear chat history"
-                    data-testid="qa-panel-clear"
-                  >
-                    <Trash2 className="size-4" />
-                  </Button>
-                )}
-              </div>
-            </SheetHeader>
-            {chatContent}
+            <div
+              className="flex min-h-0 flex-1 flex-col overflow-hidden"
+              data-testid="qa-panel-shell"
+            >
+              <SheetHeader className="mb-0 shrink-0 border-b px-4 py-3">
+                <div className="flex items-center justify-between">
+                  <SheetTitle>Ask AI</SheetTitle>
+                  {messages.length > 0 && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="size-8"
+                      onClick={() => {
+                        abortControllerRef.current?.abort()
+                        useQAChatStore.getState().clearHistory()
+                      }}
+                      aria-label="Clear chat history"
+                      data-testid="qa-panel-clear"
+                    >
+                      <Trash2 className="size-4" />
+                    </Button>
+                  )}
+                </div>
+              </SheetHeader>
+              {chatContent}
+            </div>
           </SheetContent>
         </Sheet>
       ) : (
