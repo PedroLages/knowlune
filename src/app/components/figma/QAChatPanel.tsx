@@ -44,6 +44,14 @@ export interface QAChatPanelProps {
   tooltipLabel?: string
 }
 
+const MAX_TEXTAREA_HEIGHT = 5 * 24
+
+const SUGGESTED_PROMPTS = [
+  'Summarize my recent notes',
+  "What are key concepts I've studied?",
+  'Find notes about React',
+] as const
+
 export function QAChatPanel({ open: controlledOpen, onOpenChange: controlledOnOpenChange, tooltipLabel }: QAChatPanelProps = {}) {
   const [internalOpen, setInternalOpen] = useState(false)
   const isOpen = controlledOpen ?? internalOpen
@@ -109,7 +117,10 @@ export function QAChatPanel({ open: controlledOpen, onOpenChange: controlledOnOp
   // Auto-scroll to bottom when messages change using sentinel div (more reliable than scrollTop)
   useLayoutEffect(() => {
     if (scrollToBottomRef.current) {
-      scrollToBottomRef.current.scrollIntoView({ behavior: 'smooth' })
+      const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+      scrollToBottomRef.current.scrollIntoView({
+        behavior: prefersReducedMotion ? 'auto' : 'smooth',
+      })
     }
   }, [messages, isGenerating])
 
@@ -132,8 +143,9 @@ export function QAChatPanel({ open: controlledOpen, onOpenChange: controlledOnOp
       let fullAnswer = ''
 
       // Create AbortController for stopping generation
-      abortControllerRef.current = new AbortController()
-      const signal = abortControllerRef.current.signal
+      const controller = new AbortController()
+      abortControllerRef.current = controller
+      const signal = controller.signal
 
       const generator = generateQAAnswer(query, retrievedNotes, { resolved, signal })
 
@@ -143,7 +155,12 @@ export function QAChatPanel({ open: controlledOpen, onOpenChange: controlledOnOp
           updateAnswer(answerId, fullAnswer)
         }
       } finally {
-        abortControllerRef.current = null
+        // Only clear the ref if we still own the controller (guard against
+        // the race where a previous stream's finally block nulls out a
+        // newly created controller after a stop-and-re-send).
+        if (abortControllerRef.current === controller) {
+          abortControllerRef.current = null
+        }
       }
 
       trackAIUsage('qa', {
@@ -182,8 +199,8 @@ export function QAChatPanel({ open: controlledOpen, onOpenChange: controlledOnOp
     }
   }
 
-  const handleSendMessage = async () => {
-    const query = inputValue.trim()
+  const handleSendMessage = async (explicitQuery?: string) => {
+    const query = (explicitQuery ?? inputValue).trim()
     if (!query || isGenerating) return
 
     lastQueryRef.current = query
@@ -246,19 +263,23 @@ export function QAChatPanel({ open: controlledOpen, onOpenChange: controlledOnOp
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
       handleSendMessage()
-      // Reset textarea height after send
+      // Reset textarea height after send. Skip rAF height recalc to avoid
+      // reading scrollHeight = 0 on React 19's async scheduling boundary
+      // (setInputValue('') hasn't flushed to DOM yet at this point).
       const textarea = textareaRef.current
       if (textarea) {
         textarea.style.height = 'auto'
       }
+      return
     }
-    // Auto-expand on any key
+    // Auto-expand on any other key
     requestAnimationFrame(() => {
       const textarea = textareaRef.current
       if (textarea) {
         textarea.style.height = 'auto'
-        const maxHeight = 5 * 24
-        textarea.style.height = `${Math.min(textarea.scrollHeight, maxHeight)}px`
+        if (textarea.scrollHeight > 0) {
+          textarea.style.height = `${Math.min(textarea.scrollHeight, MAX_TEXTAREA_HEIGHT)}px`
+        }
       }
     })
   }
@@ -334,7 +355,7 @@ export function QAChatPanel({ open: controlledOpen, onOpenChange: controlledOnOp
       {/* Messages - with min-h-0 to enable proper scrolling */}
       <div className="min-h-0 flex-1">
         {/* eslint-disable-next-line @typescript-eslint/no-explicit-any -- ScrollArea ref type mismatch */}
-        <ScrollArea className="h-full px-4" ref={scrollRef as any}>
+        <ScrollArea className="h-full px-4" ref={scrollRef as any} aria-live="polite">
           <div className="space-y-4 py-4">
             {messages.length === 0 && aiAvailable && notesLoaded && hasNotes && (
               <div className="flex flex-col items-center justify-center px-4 py-8 text-center">
@@ -344,12 +365,15 @@ export function QAChatPanel({ open: controlledOpen, onOpenChange: controlledOnOp
                   I'll search your notes and provide answers with citations
                 </p>
                 <div className="flex flex-wrap justify-center gap-2">
-                  {['Summarize my recent notes', "What are key concepts I've studied?", 'Find notes about React'].map(
+                  {SUGGESTED_PROMPTS.map(
                     prompt => (
                       <button
                         key={prompt}
                         type="button"
-                        onClick={() => setInputValue(prompt)}
+                        onClick={() => {
+                          setInputValue(prompt)
+                          handleSendMessage(prompt)
+                        }}
                         className="rounded-full border border-border bg-background px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:border-brand hover:text-brand"
                       >
                         {prompt}
@@ -397,11 +421,9 @@ export function QAChatPanel({ open: controlledOpen, onOpenChange: controlledOnOp
                           <div className="mt-3 space-y-1 border-t pt-2 text-xs text-muted-foreground">
                             <p className="font-medium">Sources:</p>
                             {msg.retrievedNotes.map((retrieved, idx) => {
-                              const displayName = getNoteDisplayName(retrieved)
-                              const isNameFallback =
-                                displayName === `${retrieved.note.courseId}/${retrieved.note.videoId}`
+                              const { name: displayName, isFallback: isNameFallback } = getNoteDisplayName(retrieved)
                               const sourceLabel = isNameFallback
-                                ? 'Note from this lesson'
+                                ? `Note from ${retrieved.note.courseId}`
                                 : displayName
                               return (
                                 <Link
@@ -476,8 +498,9 @@ export function QAChatPanel({ open: controlledOpen, onOpenChange: controlledOnOp
                 const textarea = textareaRef.current
                 if (textarea) {
                   textarea.style.height = 'auto'
-                  const maxHeight = 5 * 24
-                  textarea.style.height = `${Math.min(textarea.scrollHeight, maxHeight)}px`
+                  if (textarea.scrollHeight > 0) {
+                    textarea.style.height = `${Math.min(textarea.scrollHeight, MAX_TEXTAREA_HEIGHT)}px`
+                  }
                 }
               }}
               onKeyDown={handleKeyPress}
@@ -505,7 +528,7 @@ export function QAChatPanel({ open: controlledOpen, onOpenChange: controlledOnOp
             />
           </div>
           <Button
-            onClick={handleSendMessage}
+            onClick={() => void handleSendMessage()}
             disabled={!inputValue.trim() || aiChecking || !aiAvailable || !hasNotes || isGenerating}
             size="icon"
             aria-label="Send question"

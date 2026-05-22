@@ -538,26 +538,34 @@ describe('noteQA', () => {
         courseName: 'React Basics',
         videoFilename: 'hooks-overview.mp4',
       })
-      expect(getNoteDisplayName(retrieved)).toBe('hooks-overview.mp4 — React Basics')
+      const result = getNoteDisplayName(retrieved)
+      expect(result.name).toBe('hooks-overview.mp4 — React Basics')
+      expect(result.isFallback).toBe(false)
     })
 
     it('falls back to raw courseId/videoId when names are missing', () => {
       const retrieved = makeRetrievedNote({ courseId: 'uuid-1', videoId: 'uuid-2' })
-      expect(getNoteDisplayName(retrieved)).toBe('uuid-1/uuid-2')
+      const result = getNoteDisplayName(retrieved)
+      expect(result.name).toBe('uuid-1/uuid-2')
+      expect(result.isFallback).toBe(true)
     })
 
     it('falls back when only courseName is present', () => {
       const retrieved = makeRetrievedNote({ courseId: 'uuid-1', videoId: 'uuid-2' }, 0.9, {
         courseName: 'React Basics',
       })
-      expect(getNoteDisplayName(retrieved)).toBe('uuid-1/uuid-2')
+      const result = getNoteDisplayName(retrieved)
+      expect(result.name).toBe('uuid-1/uuid-2')
+      expect(result.isFallback).toBe(true)
     })
 
     it('falls back when only videoFilename is present', () => {
       const retrieved = makeRetrievedNote({ courseId: 'uuid-1', videoId: 'uuid-2' }, 0.9, {
         videoFilename: 'hooks-overview.mp4',
       })
-      expect(getNoteDisplayName(retrieved)).toBe('uuid-1/uuid-2')
+      const result = getNoteDisplayName(retrieved)
+      expect(result.name).toBe('uuid-1/uuid-2')
+      expect(result.isFallback).toBe(true)
     })
   })
 

@@ -40,11 +40,11 @@ export interface RetrievedNote {
   videoFilename?: string
 }
 
-export function getNoteDisplayName(retrieved: RetrievedNote): string {
+export function getNoteDisplayName(retrieved: RetrievedNote): { name: string; isFallback: boolean } {
   if (retrieved.videoFilename && retrieved.courseName) {
-    return `${retrieved.videoFilename} — ${retrieved.courseName}`
+    return { name: `${retrieved.videoFilename} — ${retrieved.courseName}`, isFallback: false }
   }
-  return `${retrieved.note.courseId}/${retrieved.note.videoId}`
+  return { name: `${retrieved.note.courseId}/${retrieved.note.videoId}`, isFallback: true }
 }
 
 /**
@@ -199,7 +199,7 @@ export async function* generateQAAnswer(
   const notesContext = contextNotes
     .map((retrieved, index) => {
       const { note } = retrieved
-      const displayName = getNoteDisplayName(retrieved)
+      const displayName = getNoteDisplayName(retrieved).name
       const timestamp = note.timestamp ? ` (at ${formatTimestamp(note.timestamp)})` : ''
       return `[Note ${index + 1}] ${displayName}${timestamp}\n${note.content}`
     })
@@ -267,9 +267,9 @@ export function extractCitations(answerText: string, retrievedNotes: RetrievedNo
       answerText.includes(courseVideoPattern) || answerText.includes(note.courseId)
 
     // Match structured human-readable display name (only when both parts available)
-    const displayName = getNoteDisplayName(retrieved)
+    const { name: displayName, isFallback } = getNoteDisplayName(retrieved)
     const displayMatch =
-      displayName !== courseVideoPattern && answerText.includes(displayName)
+      !isFallback && answerText.includes(displayName)
 
     if (idMatch || displayMatch) {
       citedNoteIds.push(note.id)
