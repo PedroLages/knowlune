@@ -282,7 +282,7 @@ export function extractCitations(answerText: string, retrievedNotes: RetrievedNo
 /**
  * Format timestamp (seconds) as MM:SS
  */
-export function formatTimestamp(seconds: number): string {
+function formatTimestamp(seconds: number): string {
   const minutes = Math.floor(seconds / 60)
   const secs = Math.floor(seconds % 60)
   return `${minutes}:${secs.toString().padStart(2, '0')}`
