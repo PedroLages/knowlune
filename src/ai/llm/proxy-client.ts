@@ -12,11 +12,55 @@ import { BaseLLMClient } from './client'
 import type { LLMMessage, LLMStreamChunk } from './types'
 import { LLMError, LLM_REQUEST_TIMEOUT } from './types'
 import type { AIProviderId } from '@/lib/aiConfiguration'
+import { getAPIKeyHealth } from '@/lib/aiConfiguration'
 import { apiUrl } from '@/lib/apiBaseUrl'
 import { useAuthStore } from '@/stores/useAuthStore'
 
 /** Local proxy endpoint for streaming completions */
 const PROXY_STREAM_URL = apiUrl('ai-stream')
+
+/**
+ * Categorizes an Edge Function error into a user-facing message.
+ *
+ * Maps structured error responses from the `ai-stream` Edge Function into
+ * actionable messages the user can act on (re-enter key, change model, etc.).
+ */
+function categorizeProxyError(
+  status: number,
+  body: { error?: string } | null,
+  providerId: AIProviderId,
+  model?: string
+): string {
+  const msg = body?.error ?? ''
+  const modelName = model || 'selected'
+
+  // HTTP status-based
+  if (status === 401 || /invalid.*api.?key/i.test(msg)) {
+    return `Your API key was rejected by ${providerId}. Check that it's valid and has credits.`
+  }
+  if (status === 429 || /rate.?.?limit/i.test(msg)) {
+    return 'Too many requests. Wait a moment and try again.'
+  }
+
+  // Content-based
+  if (/no api key available/i.test(msg)) {
+    return `No API key configured for ${providerId}. Add your API key in Settings → Integrations & Data.`
+  }
+  if (/provider not configured/i.test(msg)) {
+    return 'The AI provider is not configured on the server. Contact support if this persists.'
+  }
+  if (/model not found/i.test(msg)) {
+    return `The model '${modelName}' is not available. Try a different model in Settings → Integrations & Data.`
+  }
+  if (/fetch failed|econnrefused|networkerror/i.test(msg)) {
+    return 'Cannot reach the AI service. Check your internet connection.'
+  }
+
+  // Fallthrough
+  return msg
+    ? `AI error: ${msg}`
+    : `AI error: ${status} ${status >= 500 ? 'Server error' : 'Request failed'}`
+}
 
 /**
  * LLM client that proxies requests through the local Express server.
@@ -40,6 +84,17 @@ export class ProxyLLMClient extends BaseLLMClient {
 
   async *streamCompletion(messages: LLMMessage[]): AsyncGenerator<LLMStreamChunk, void, unknown> {
     try {
+      // Pre-flight check: if the local encryption key was lost, the stored API key
+      // is undecryptable. Surface this immediately without a network round-trip.
+      const keyHealth = getAPIKeyHealth(this.providerId)
+      if (keyHealth === 'undecryptable') {
+        throw new LLMError(
+          `Your API key for ${this.providerId} was lost because the encryption key was reset. Go to Settings > Integrations & Data to re-enter it.`,
+          'AUTH_ERROR',
+          this.providerId
+        )
+      }
+
       // Include JWT from auth store for server-side middleware validation
       const accessToken = useAuthStore.getState().session?.access_token
       const headers: Record<string, string> = { 'Content-Type': 'application/json' }
@@ -65,11 +120,13 @@ export class ProxyLLMClient extends BaseLLMClient {
       if (!response.ok) {
         const errorCode = this.mapHttpStatusToLLMErrorCode(response.status)
         const errorData = await response.json().catch(() => ({ error: response.statusText }))
-        throw new LLMError(
-          `AI proxy error: ${errorData.error || response.statusText}`,
-          errorCode,
-          this.providerId
+        const userMessage = categorizeProxyError(
+          response.status,
+          errorData,
+          this.providerId,
+          this.model
         )
+        throw new LLMError(userMessage, errorCode, this.providerId)
       }
 
       if (!response.body) {
@@ -103,11 +160,24 @@ export class ProxyLLMClient extends BaseLLMClient {
       if (error instanceof LLMError) throw error
 
       if ((error as Error).name === 'AbortError') {
-        throw new LLMError('Request timed out', 'TIMEOUT', this.providerId)
+        throw new LLMError(
+          'AI request timed out. The model may be overloaded. Try again.',
+          'TIMEOUT',
+          this.providerId
+        )
+      }
+
+      const fetchMessage = (error as Error).message
+      if (/fetch failed|econnrefused|networkerror|failed to fetch/i.test(fetchMessage)) {
+        throw new LLMError(
+          'Cannot reach the AI service. Check your internet connection.',
+          'NETWORK_ERROR',
+          this.providerId
+        )
       }
 
       throw new LLMError(
-        `Proxy request failed: ${(error as Error).message}`,
+        `AI error: ${fetchMessage || 'Unknown error'}`,
         'NETWORK_ERROR',
         this.providerId
       )

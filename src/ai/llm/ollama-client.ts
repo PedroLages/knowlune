@@ -103,6 +103,16 @@ export class OllamaLLMClient extends BaseLLMClient {
       if (!response.ok) {
         const errorCode = this.mapHttpStatusToLLMErrorCode(response.status)
         const errorText = await response.text().catch(() => response.statusText)
+
+        // Specific 404: model not found
+        if (response.status === 404) {
+          throw new LLMError(
+            `Model not found in Ollama. Pull it with 'ollama pull ${this.model}'.`,
+            errorCode,
+            'ollama'
+          )
+        }
+
         throw new LLMError(
           `Ollama API error (${response.status}): ${errorText}`,
           errorCode,
@@ -156,14 +166,22 @@ export class OllamaLLMClient extends BaseLLMClient {
       if (error instanceof LLMError) throw error
 
       if ((error as Error).name === 'AbortError') {
-        throw new LLMError('Ollama request timed out', 'TIMEOUT', 'ollama')
+        throw new LLMError(
+          'Ollama request timed out. The model may still be loading into memory.',
+          'TIMEOUT',
+          'ollama'
+        )
       }
 
       // Provide helpful error messages for common Ollama issues
       const message = (error as Error).message
-      if (message.includes('Failed to fetch') || message.includes('NetworkError')) {
+      if (
+        message.includes('Failed to fetch') ||
+        message.includes('NetworkError') ||
+        message.includes('ECONNREFUSED')
+      ) {
         throw new LLMError(
-          `Cannot reach Ollama at ${this.serverUrl}. Is the server running?`,
+          'Ollama is not running. Start Ollama and verify the server URL in Settings.',
           'NETWORK_ERROR',
           'ollama'
         )
