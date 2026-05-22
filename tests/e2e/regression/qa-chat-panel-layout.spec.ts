@@ -10,9 +10,8 @@ import { test, expect } from '../../support/fixtures'
 import type { Page, Locator } from '@playwright/test'
 import { createImportedCourse } from '../../support/fixtures/factories/imported-course-factory'
 import { goToCourses, navigateAndWait } from '../../support/helpers/navigation'
-import { seedIndexedDBStore } from '../../support/helpers/seed-helpers'
-
-const DB_NAME = 'ElearningDB'
+import { configureGeminiNoteQA } from '../../support/helpers/note-qa-test-helpers'
+import { seedImportedVideos, seedNotes } from '../../support/helpers/seed-helpers'
 
 const TEST_COURSE = createImportedCourse({
   id: 'course-react-101',
@@ -39,76 +38,14 @@ const TEST_VIDEOS: ImportedVideoTestData[] = [
   },
 ]
 
-async function seedImportedVideos(page: Page, videos: ImportedVideoTestData[]): Promise<void> {
-  await page.evaluate(
-    async ({ dbName, data }) => {
-      return new Promise<void>((resolve, reject) => {
-        const request = indexedDB.open(dbName)
-        request.onsuccess = () => {
-          const db = request.result
-          if (!db.objectStoreNames.contains('importedVideos')) {
-            db.close()
-            reject(new Error('Store "importedVideos" not found'))
-            return
-          }
-          const tx = db.transaction('importedVideos', 'readwrite')
-          const store = tx.objectStore('importedVideos')
-          for (const item of data) {
-            store.put(item)
-          }
-          tx.oncomplete = () => {
-            db.close()
-            resolve()
-          }
-          tx.onerror = () => {
-            db.close()
-            reject(tx.error)
-          }
-        }
-        request.onerror = () => reject(request.error)
-      })
-    },
-    { dbName: DB_NAME, data: videos }
-  )
-}
-
-async function configureGeminiNoteQA(page: Page): Promise<void> {
-  await page.evaluate(async () => {
-    const { saveAIConfiguration, saveProviderApiKey } = await import('/src/lib/aiConfiguration.ts')
-
-    await saveProviderApiKey(
-      'gemini',
-      'AIzanotPRODUCTIONneverE2Eonly_knownfakekey000000000000000000'
-    )
-    await saveAIConfiguration({
-      provider: 'openai',
-      connectionStatus: 'unconfigured',
-      consentSettings: {
-        videoSummary: true,
-        noteQA: true,
-        learningPath: true,
-        knowledgeGaps: true,
-        noteOrganization: true,
-        analytics: true,
-      },
-      featureModels: {
-        noteQA: {
-          provider: 'gemini',
-          model: 'gemini-3-flash-preview',
-        },
-      },
-    })
-  })
-}
-
 async function seedLessonPlayerWithNotes(
   page: Page,
   indexedDB: { seedImportedCourses: (c: ReturnType<typeof createImportedCourse>[]) => Promise<void> }
 ): Promise<void> {
   await goToCourses(page)
   await indexedDB.seedImportedCourses([TEST_COURSE])
-  await seedImportedVideos(page, TEST_VIDEOS)
-  await seedIndexedDBStore(page, DB_NAME, 'notes', [
+  await seedImportedVideos(page, TEST_VIDEOS as unknown as Record<string, unknown>[])
+  await seedNotes(page, [
     {
       id: 'note-gemini-qa',
       courseId: 'course-react-101',
