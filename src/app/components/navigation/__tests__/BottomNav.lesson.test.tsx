@@ -33,7 +33,6 @@ const mockToggleTheater = vi.fn()
 const mockToggleReadingMode = vi.fn()
 const mockSetItemStatus = vi.fn().mockResolvedValue(undefined)
 const mockLoadCourseProgress = vi.fn().mockResolvedValue(undefined)
-const mockGetItemStatus = vi.fn(() => mockItemStatus)
 
 // Track store state for selector-based mocks
 const lessonChromeState = {
@@ -55,10 +54,16 @@ vi.mock('@/stores/useLessonChromeStore', () => ({
     selector(lessonChromeState as unknown as Record<string, unknown>),
 }))
 
+vi.mock('@/app/hooks/useLessonItemCompletionStatus', () => ({
+  useLessonItemCompletionStatus: (courseId?: string, lessonId?: string) => {
+    if (!courseId || !lessonId) return 'not-started'
+    return mockItemStatus as 'not-started' | 'in-progress' | 'completed'
+  },
+}))
+
 vi.mock('@/stores/useContentProgressStore', () => ({
   useContentProgressStore: (selector: (s: Record<string, unknown>) => unknown) =>
     selector({
-      getItemStatus: mockGetItemStatus,
       setItemStatus: mockSetItemStatus,
       loadCourseProgress: mockLoadCourseProgress,
     }),
@@ -118,7 +123,6 @@ describe('BottomNav lesson mode', () => {
     mockToggleReadingMode.mockClear()
     mockSetItemStatus.mockClear()
     mockLoadCourseProgress.mockClear()
-    mockGetItemStatus.mockReturnValue(mockItemStatus)
   })
 
   // -- Standard mode -----------------------------------------------------------
@@ -148,7 +152,6 @@ describe('BottomNav lesson mode', () => {
 
   it('shows "Done" label when lesson is completed', () => {
     mockItemStatus = 'completed'
-    mockGetItemStatus.mockReturnValue('completed')
 
     renderBottomNav({ mode: 'lesson', courseId: 'course-1', lessonId: 'lesson-1' })
 
@@ -200,7 +203,6 @@ describe('BottomNav lesson mode', () => {
 
   it('marks lesson complete when Completion button is clicked (from not-started)', async () => {
     mockItemStatus = 'not-started'
-    mockGetItemStatus.mockReturnValue('not-started')
 
     renderBottomNav({ mode: 'lesson', courseId: 'course-1', lessonId: 'lesson-1' })
 
@@ -213,7 +215,6 @@ describe('BottomNav lesson mode', () => {
 
   it('marks lesson not-started when Completion button is clicked (from completed)', async () => {
     mockItemStatus = 'completed'
-    mockGetItemStatus.mockReturnValue('completed')
 
     renderBottomNav({ mode: 'lesson', courseId: 'course-1', lessonId: 'lesson-1' })
 

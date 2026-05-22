@@ -14,6 +14,7 @@ import { toast } from 'sonner'
 import { db } from '@/db'
 import { useOnlineStatus } from '@/app/hooks/useOnlineStatus'
 import { useContentProgressStore } from '@/stores/useContentProgressStore'
+import { useLessonItemCompletionStatus } from '@/app/hooks/useLessonItemCompletionStatus'
 import { YouTubePlayer } from '@/app/components/youtube/YouTubePlayer'
 import type { YouTubePlayerHandle } from '@/app/components/youtube/YouTubePlayer'
 import { YouTubeUnembeddableFallback } from '@/app/components/youtube/YouTubeUnembeddableFallback'
@@ -96,10 +97,8 @@ export function YouTubeVideoContent({
   }, [loadVideo])
 
   // Content progress for auto-complete
-  const getItemStatus = useContentProgressStore(s => s.getItemStatus)
   const setItemStatus = useContentProgressStore(s => s.setItemStatus)
-
-  const currentStatus = getItemStatus(courseId, lessonId)
+  const currentStatus = useLessonItemCompletionStatus(courseId, lessonId)
 
   const handleAutoComplete = useCallback(async () => {
     if (currentStatus !== 'completed') {

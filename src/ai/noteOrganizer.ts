@@ -178,7 +178,6 @@ async function fetchOrganizationProposals(
 
     return parseResponse(content, indexToNoteId, notes)
   } catch (error) {
-    clearTimeout(timeoutId)
 
     if (error instanceof DOMException && error.name === 'AbortError') {
       throw new Error('Note organization was cancelled')

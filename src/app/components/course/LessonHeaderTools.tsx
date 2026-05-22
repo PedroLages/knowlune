@@ -40,6 +40,7 @@ import { Tooltip, TooltipTrigger, TooltipContent } from '@/app/components/ui/too
 import { PomodoroTimer } from '@/app/components/figma/PomodoroTimer'
 import { useLessonChromeStore } from '@/stores/useLessonChromeStore'
 import { useContentProgressStore } from '@/stores/useContentProgressStore'
+import { useLessonItemCompletionStatus } from '@/app/hooks/useLessonItemCompletionStatus'
 import { useCourseRoute } from '@/app/hooks/useCourseRoute'
 import { useAuthStore, selectIsGuestMode } from '@/stores/useAuthStore'
 import type { CompletionStatus } from '@/data/types'
@@ -90,20 +91,18 @@ export function LessonHeaderTools() {
   const setQAPanelOpen = useLessonChromeStore(s => s.setQAPanelOpen)
 
   // Completion state
-  const getItemStatus = useContentProgressStore(s => s.getItemStatus)
   const setItemStatus = useContentProgressStore(s => s.setItemStatus)
   const loadCourseProgress = useContentProgressStore(s => s.loadCourseProgress)
+  const currentStatus = useLessonItemCompletionStatus(
+    courseId ?? undefined,
+    lessonId ?? undefined
+  )
 
   useEffect(() => {
     if (courseId) {
       loadCourseProgress(courseId)
     }
   }, [courseId, loadCourseProgress])
-
-  const currentStatus: CompletionStatus =
-    courseId && lessonId
-      ? getItemStatus(courseId, lessonId)
-      : 'not-started'
 
   const StatusIcon = STATUS_ICONS[currentStatus]
 

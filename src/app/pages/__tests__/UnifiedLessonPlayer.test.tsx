@@ -34,12 +34,21 @@ const mockSetItemStatus = vi.fn().mockResolvedValue(undefined)
 const mockGetItemStatus = vi.fn().mockReturnValue('not-started')
 
 vi.mock('@/stores/useContentProgressStore', () => ({
-  useContentProgressStore: (selector: (state: Record<string, unknown>) => unknown) =>
-    selector({
-      setItemStatus: mockSetItemStatus,
-      getItemStatus: mockGetItemStatus,
-      loadCourseProgress: vi.fn(),
-    }),
+  useContentProgressStore: Object.assign(
+    (selector: (state: Record<string, unknown>) => unknown) =>
+      selector({
+        setItemStatus: mockSetItemStatus,
+        getItemStatus: mockGetItemStatus,
+        loadCourseProgress: vi.fn(),
+      }),
+    {
+      getState: () => ({
+        setItemStatus: mockSetItemStatus,
+        getItemStatus: mockGetItemStatus,
+        loadCourseProgress: vi.fn(),
+      }),
+    }
+  ),
 }))
 
 vi.mock('@/stores/useCourseImportStore', () => ({
@@ -146,9 +155,22 @@ vi.mock('@/app/components/celebrations/CompletionModal', () => ({
     ) : null,
 }))
 vi.mock('@/app/components/course/LocalVideoContent', () => ({
-  LocalVideoContent: ({ onEnded }: { onEnded: () => void }) => (
+  LocalVideoContent: ({
+    onEnded,
+    onPlayStateChange,
+  }: {
+    onEnded: () => void
+    onPlayStateChange?: (playing: boolean) => void
+  }) => (
     <div data-testid="local-video">
-      <button data-testid="trigger-ended" onClick={onEnded}>
+      <button
+        type="button"
+        data-testid="trigger-playing"
+        onClick={() => onPlayStateChange?.(true)}
+      >
+        Play
+      </button>
+      <button type="button" data-testid="trigger-ended" onClick={onEnded}>
         End Video
       </button>
     </div>
@@ -346,5 +368,41 @@ describe('UnifiedLessonPlayer — E54-S01 callbacks', () => {
     // (it may still be called by the lesson metadata useEffect, but not by showCelebration)
     // The key assertion is that we removed the duplicate call
     expect(mockAdapter.getLessons).not.toHaveBeenCalled()
+  })
+
+  it('sets lesson to in-progress on first local play when status is not-started', async () => {
+    mockGetItemStatus.mockReturnValue('not-started')
+
+    renderPlayer()
+    await screen.findByTestId('local-video')
+
+    mockSetItemStatus.mockClear()
+
+    await act(async () => {
+      screen.getByTestId('trigger-playing').click()
+    })
+
+    await waitFor(() => {
+      expect(mockSetItemStatus).toHaveBeenCalledWith('test-course', 'lesson-1', 'in-progress', [])
+    })
+  })
+
+  it('does not set in-progress on play when lesson is already completed', async () => {
+    mockGetItemStatus.mockReturnValue('completed')
+    mockSetItemStatus.mockClear()
+
+    renderPlayer()
+    await screen.findByTestId('local-video')
+
+    await act(async () => {
+      screen.getByTestId('trigger-playing').click()
+    })
+
+    expect(mockSetItemStatus).not.toHaveBeenCalledWith(
+      'test-course',
+      'lesson-1',
+      'in-progress',
+      []
+    )
   })
 })

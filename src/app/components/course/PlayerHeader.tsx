@@ -20,6 +20,7 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useContentProgressStore } from '@/stores/useContentProgressStore'
+import { useLessonItemCompletionStatus } from '@/app/hooks/useLessonItemCompletionStatus'
 import { PomodoroTimer } from '@/app/components/figma/PomodoroTimer'
 import { Button } from '@/app/components/ui/button'
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/app/components/ui/tooltip'
@@ -87,17 +88,15 @@ export function PlayerHeader({
   onToggleReadingMode,
   isReadingMode = false,
 }: PlayerHeaderProps) {
-  const getItemStatus = useContentProgressStore(s => s.getItemStatus)
   const setItemStatus = useContentProgressStore(s => s.setItemStatus)
   const loadCourseProgress = useContentProgressStore(s => s.loadCourseProgress)
+  const currentStatus = useLessonItemCompletionStatus(courseId, lessonId)
 
   useEffect(() => {
     if (courseId) {
       loadCourseProgress(courseId)
     }
   }, [courseId, loadCourseProgress])
-
-  const currentStatus = getItemStatus(courseId, lessonId)
   const StatusIcon = STATUS_ICONS[currentStatus]
 
   const handleStatusChange = useCallback(

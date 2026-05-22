@@ -29,7 +29,6 @@ import {
   DEFAULTS,
   _reEncryptProviderKeyLocallyForTesting,
   type AIConfigurationSettings,
-  type APIKeyHealth,
 } from '@/lib/aiConfiguration'
 import type { DiscoveredModel } from '@/lib/modelDiscovery'
 
