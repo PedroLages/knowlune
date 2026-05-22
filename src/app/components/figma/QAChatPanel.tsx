@@ -60,7 +60,6 @@ export function QAChatPanel({ open: controlledOpen, onOpenChange: controlledOnOp
   const [hasNotes, setHasNotes] = useState(false)
   const [notesLoaded, setNotesLoaded] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
-  const scrollToBottomRef = useRef<HTMLDivElement>(null)
   const abortControllerRef = useRef<AbortController | null>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
@@ -114,13 +113,11 @@ export function QAChatPanel({ open: controlledOpen, onOpenChange: controlledOnOp
     }
   }, [])
 
-  // Auto-scroll to bottom when messages change using sentinel div (more reliable than scrollTop)
+  // Auto-scroll to bottom when messages change (viewport scroll avoids scrollIntoView layout shifts)
   useLayoutEffect(() => {
-    if (scrollToBottomRef.current) {
-      const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-      scrollToBottomRef.current.scrollIntoView({
-        behavior: prefersReducedMotion ? 'auto' : 'smooth',
-      })
+    const viewport = scrollRef.current?.querySelector('[data-slot="scroll-area-viewport"]')
+    if (viewport instanceof HTMLElement) {
+      viewport.scrollTop = viewport.scrollHeight
     }
   }, [messages, isGenerating])
 
@@ -478,14 +475,11 @@ export function QAChatPanel({ open: controlledOpen, onOpenChange: controlledOnOp
             )}
           </div>
 
-          {/* Sentinel div for auto-scroll */}
-          <div ref={scrollToBottomRef} />
-
           <ScrollBar />
       </ScrollArea>
 
       {/* Input area with multiline textarea — grid row 2, never shrinks */}
-      <div className={`border-t p-4 ${isMobile ? 'pb-[max(1rem,env(safe-area-inset-bottom))]' : ''}`}>
+      <div className="border-t p-4">
         <div className="flex gap-2">
           <div className="relative flex-1">
             <textarea
@@ -579,7 +573,7 @@ export function QAChatPanel({ open: controlledOpen, onOpenChange: controlledOnOp
           <SheetContent
             side="bottom"
             showCloseButton={false}
-            className="flex !h-[90dvh] max-h-[90dvh] min-h-0 flex-col gap-0 overflow-hidden p-0"
+            className="flex !h-[90dvh] max-h-[90dvh] min-h-0 flex-col gap-0 overflow-hidden p-0 pb-[env(safe-area-inset-bottom,0px)] data-[state=open]:duration-0 data-[state=closed]:duration-0"
           >
             <div
               className="flex h-full min-h-0 flex-col overflow-hidden"
