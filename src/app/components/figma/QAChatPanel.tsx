@@ -286,7 +286,7 @@ export function QAChatPanel({ open: controlledOpen, onOpenChange: controlledOnOp
 
   // Chat content (shared between Sheet and Popover)
   const chatContent = (
-    <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+    <div className="flex h-0 min-h-0 flex-1 flex-col overflow-hidden">
       {/* Loading state - AI settings check */}
       {aiChecking && (
         <div className="shrink-0 rounded-lg border border-muted bg-muted/40 p-4 text-sm text-muted-foreground">
@@ -352,9 +352,10 @@ export function QAChatPanel({ open: controlledOpen, onOpenChange: controlledOnOp
         </div>
       )}
 
-      {/* Messages — h-0 flex-1 forces shrink; ScrollArea is the only growing scroll region */}
+      <div className="grid h-0 min-h-0 flex-1 grid-rows-[minmax(0,1fr)_auto] overflow-hidden">
+      {/* Messages — grid row 1; only this region scrolls */}
       {/* eslint-disable-next-line @typescript-eslint/no-explicit-any -- ScrollArea ref type mismatch */}
-      <ScrollArea className="h-0 min-h-0 flex-1 px-4" ref={scrollRef as any} aria-live="polite">
+      <ScrollArea className="h-full min-h-0 overflow-hidden px-4" ref={scrollRef as any} aria-live="polite">
         <div className="space-y-4 py-4">
             {messages.length === 0 && aiAvailable && notesLoaded && hasNotes && (
               <div className="flex flex-col items-center justify-center px-4 py-8 text-center">
@@ -483,8 +484,8 @@ export function QAChatPanel({ open: controlledOpen, onOpenChange: controlledOnOp
           <ScrollBar />
       </ScrollArea>
 
-      {/* Input area with multiline textarea */}
-      <div className="shrink-0 border-t p-4">
+      {/* Input area with multiline textarea — grid row 2, never shrinks */}
+      <div className={`border-t p-4 ${isMobile ? 'pb-[max(1rem,env(safe-area-inset-bottom))]' : ''}`}>
         <div className="flex gap-2">
           <div className="relative flex-1">
             <textarea
@@ -540,10 +541,11 @@ export function QAChatPanel({ open: controlledOpen, onOpenChange: controlledOnOp
             )}
           </Button>
         </div>
-        <p className="mt-2 text-xs text-muted-foreground" data-testid="qa-panel-keyboard-hint">
+        <p className="mt-1.5 text-xs text-muted-foreground" data-testid="qa-panel-keyboard-hint">
           Press <kbd className="px-1 py-0.5 bg-muted rounded text-[10px]">Enter</kbd> to send,{' '}
           <kbd className="px-1 py-0.5 bg-muted rounded text-[10px]">Shift + Enter</kbd> for new line
         </p>
+      </div>
       </div>
     </div>
   )
@@ -576,13 +578,14 @@ export function QAChatPanel({ open: controlledOpen, onOpenChange: controlledOnOp
           )}
           <SheetContent
             side="bottom"
-            className="flex h-[90vh] max-h-[90vh] min-h-0 flex-col gap-0 overflow-hidden p-0"
+            showCloseButton={false}
+            className="flex !h-[90dvh] max-h-[90dvh] min-h-0 flex-col gap-0 overflow-hidden p-0"
           >
             <div
-              className="flex min-h-0 flex-1 flex-col overflow-hidden"
+              className="flex h-full min-h-0 flex-col overflow-hidden"
               data-testid="qa-panel-shell"
             >
-              <SheetHeader className="mb-0 shrink-0 border-b px-4 py-3">
+              <SheetHeader className="mb-0 shrink-0 gap-0 border-b px-4 py-3">
                 <div className="flex items-center justify-between">
                   <SheetTitle>Ask AI</SheetTitle>
                   {messages.length > 0 && (
