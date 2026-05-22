@@ -194,8 +194,9 @@ export async function* generateQAAnswer(
     return
   }
 
-  // Format notes as context for LLM
-  const notesContext = retrievedNotes
+  // Format notes as context for LLM — limit to top 3 to prevent over-summarization
+  const contextNotes = retrievedNotes.slice(0, 3)
+  const notesContext = contextNotes
     .map((retrieved, index) => {
       const { note } = retrieved
       const displayName = getNoteDisplayName(retrieved)
@@ -208,11 +209,15 @@ export async function* generateQAAnswer(
   const systemPrompt = `You are a helpful study assistant. Answer questions based ONLY on the provided notes.
 
 Rules:
-- Keep answers concise (50-200 words)
-- Always cite sources by mentioning the course/video filename (e.g., "According to your note from hooks-overview.mp4 — React Basics...")
+- Keep answers concise (50-200 words). Use 2-4 short paragraphs maximum.
+- Use bullet points only when listing 3+ distinct items.
+- If the user asks a broad question, ask a clarifying question instead of summarizing everything.
+- Do not enumerate every note or produce a catalog of topics. Only answer the specific question asked.
+- Always cite sources using the [N] notation (e.g., "According to [1], hooks let you use state...").
 - If notes don't contain relevant info, say "I don't have notes covering that topic."
-- Focus on key concepts and practical insights
-- Do not make up information outside the provided notes`
+- Focus on key concepts and practical insights.
+- Do not make up information outside the provided notes.
+- Do not include raw IDs, UUIDs, or similarity scores in your answer. Use human-readable source names only.`
 
   const userPrompt = `Context (from user's notes):
 
@@ -277,7 +282,7 @@ export function extractCitations(answerText: string, retrievedNotes: RetrievedNo
 /**
  * Format timestamp (seconds) as MM:SS
  */
-function formatTimestamp(seconds: number): string {
+export function formatTimestamp(seconds: number): string {
   const minutes = Math.floor(seconds / 60)
   const secs = Math.floor(seconds % 60)
   return `${minutes}:${secs.toString().padStart(2, '0')}`
