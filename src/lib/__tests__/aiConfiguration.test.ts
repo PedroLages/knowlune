@@ -13,10 +13,12 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import {
   getAIConfiguration,
   saveAIConfiguration,
+  saveProviderApiKey,
   isFeatureEnabled,
   isAIAvailable,
   getNoteQAAvailability,
   getDecryptedApiKeyForProvider,
+  getAPIKeyHealth,
   isBudgetMode,
   filterFreeModels,
   resolveFeatureModel,
@@ -27,6 +29,7 @@ import {
   DEFAULTS,
   _reEncryptProviderKeyLocallyForTesting,
   type AIConfigurationSettings,
+  type APIKeyHealth,
 } from '@/lib/aiConfiguration'
 import type { DiscoveredModel } from '@/lib/modelDiscovery'
 
@@ -48,6 +51,7 @@ vi.mock('@/lib/crypto', () => ({
 const vaultMocks = vi.hoisted(() => ({
   readCredential: vi.fn(),
   storeCredential: vi.fn().mockResolvedValue(undefined),
+  storeCredentialWithStatus: vi.fn().mockResolvedValue({ ok: true }),
   checkCredential: vi.fn(),
   readCredentialWithStatus: vi.fn(),
 }))
@@ -1176,6 +1180,158 @@ describe('aiConfiguration.ts', () => {
         expect(result).toBeNull()
         expect(vaultMocks.readCredentialWithStatus).toHaveBeenCalledTimes(1)
       })
+    })
+  })
+
+  // ===========================================================================
+  // getAPIKeyHealth (2026-05-22 fix)
+  // ===========================================================================
+
+  describe('getAPIKeyHealth', () => {
+    beforeEach(() => {
+      vaultMocks.storeCredentialWithStatus.mockResolvedValue({ ok: true })
+    })
+
+    it('returns "ok" for a provider with a decryptable key', () => {
+      localStorage.setItem(
+        'ai-configuration',
+        JSON.stringify({
+          ...DEFAULTS,
+          providerKeys: {
+            gemini: { iv: 'mock-iv', encryptedData: 'encrypted:AIza-test-key' },
+          },
+        })
+      )
+
+      expect(getAPIKeyHealth('gemini')).toBe('ok')
+    })
+
+    it('returns "missing" when no key has ever been saved', () => {
+      localStorage.setItem('ai-configuration', JSON.stringify(DEFAULTS))
+
+      expect(getAPIKeyHealth('anthropic')).toBe('missing')
+    })
+
+    it('returns "undecryptable" when keyLostAt is set', () => {
+      localStorage.setItem(
+        'ai-configuration',
+        JSON.stringify({
+          ...DEFAULTS,
+          providerKeys: {
+            gemini: { iv: 'mock-iv', encryptedData: 'encrypted:AIza-key' },
+          },
+          keyLostAt: new Date().toISOString(),
+        })
+      )
+
+      expect(getAPIKeyHealth('gemini')).toBe('undecryptable')
+    })
+
+    it('returns "ok" for ollama with configured server URL', () => {
+      localStorage.setItem(
+        'ai-configuration',
+        JSON.stringify({
+          ...DEFAULTS,
+          provider: 'ollama',
+          ollamaSettings: { serverUrl: 'http://localhost:11434', directConnection: false },
+        })
+      )
+
+      expect(getAPIKeyHealth('ollama')).toBe('ok')
+    })
+
+    it('returns "missing" for ollama without server URL', () => {
+      localStorage.setItem(
+        'ai-configuration',
+        JSON.stringify({
+          ...DEFAULTS,
+          provider: 'ollama',
+        })
+      )
+
+      expect(getAPIKeyHealth('ollama')).toBe('missing')
+    })
+
+    it('returns "ok" for legacy global apiKeyEncrypted when provider matches', () => {
+      localStorage.setItem(
+        'ai-configuration',
+        JSON.stringify({
+          ...DEFAULTS,
+          provider: 'openai',
+          apiKeyEncrypted: { iv: 'mock-iv', encryptedData: 'encrypted:sk-test' },
+        })
+      )
+
+      expect(getAPIKeyHealth('openai')).toBe('ok')
+    })
+
+    it('transitions to "ok" after keyLostAt is cleared by saveProviderApiKey', async () => {
+      // Simulate initial state with keyLostAt
+      localStorage.setItem(
+        'ai-configuration',
+        JSON.stringify({
+          ...DEFAULTS,
+          providerKeys: {
+            openai: { iv: 'mock-iv', encryptedData: 'encrypted:sk-test' },
+          },
+          keyLostAt: new Date().toISOString(),
+        })
+      )
+
+      expect(getAPIKeyHealth('openai')).toBe('undecryptable')
+
+      // Re-enter the key — clears keyLostAt
+      await saveProviderApiKey('openai', 'sk-test-new-key')
+
+      expect(getAPIKeyHealth('openai')).toBe('ok')
+    })
+  })
+
+  // ===========================================================================
+  // saveProviderApiKey — Vault write status (2026-05-22 fix)
+  // ===========================================================================
+
+  describe('saveProviderApiKey with Vault status', () => {
+    beforeEach(() => {
+      vaultMocks.storeCredentialWithStatus.mockReset()
+    })
+
+    it('saves key locally and sets vaultBackupFailedAt when Vault write fails', async () => {
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+      vaultMocks.storeCredentialWithStatus.mockResolvedValue({ ok: false, reason: 'unauthenticated' })
+
+      await saveProviderApiKey('openai', 'sk-test-key')
+
+      const stored = JSON.parse(localStorage.getItem('ai-configuration')!)
+      expect(stored.providerKeys.openai).toBeDefined()
+      expect(stored.providerKeys.openai.encryptedData).toBe('encrypted:sk-test-key')
+      expect(stored.vaultBackupFailedAt).toBeDefined()
+
+      warnSpy.mockRestore()
+    })
+
+    it('saves key locally and does NOT set vaultBackupFailedAt when Vault succeeds', async () => {
+      vaultMocks.storeCredentialWithStatus.mockResolvedValue({ ok: true })
+
+      await saveProviderApiKey('anthropic', 'sk-ant-test-key')
+
+      const stored = JSON.parse(localStorage.getItem('ai-configuration')!)
+      expect(stored.providerKeys.anthropic).toBeDefined()
+      expect(stored.vaultBackupFailedAt).toBeUndefined()
+    })
+
+    it('clears vaultBackupFailedAt on subsequent successful Vault write', async () => {
+      // First call: Vault fails
+      vaultMocks.storeCredentialWithStatus.mockResolvedValueOnce({ ok: false, reason: 'unauthenticated' })
+
+      await saveProviderApiKey('openai', 'sk-test-key')
+      expect(getAIConfiguration().vaultBackupFailedAt).toBeDefined()
+
+      // Second call: Vault succeeds
+      vaultMocks.storeCredentialWithStatus.mockResolvedValueOnce({ ok: true })
+
+      await saveProviderApiKey('openai', 'sk-test-key-2')
+      expect(getAIConfiguration().vaultBackupFailedAt).toBeUndefined()
     })
   })
 

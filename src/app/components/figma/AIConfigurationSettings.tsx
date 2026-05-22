@@ -491,6 +491,41 @@ export function AIConfigurationSettings() {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
+        {/* AI Status Summary — computed from current config */}
+        {!isOllama && (
+          <div
+            className={cn(
+              'flex items-center gap-2 rounded-lg border p-3 text-sm',
+              settings.connectionStatus === 'connected'
+                ? 'border-success/30 bg-success/5 text-success'
+                : settings.connectionStatus === 'error'
+                  ? 'border-destructive/30 bg-destructive/5 text-destructive'
+                  : 'border-warning/30 bg-warning/5 text-warning'
+            )}
+            data-testid="ai-status-summary"
+            role="status"
+          >
+            <span
+              className={cn(
+                'size-2.5 rounded-full shrink-0',
+                settings.connectionStatus === 'connected'
+                  ? 'bg-success'
+                  : settings.connectionStatus === 'error'
+                    ? 'bg-destructive'
+                    : 'bg-warning'
+              )}
+              aria-hidden="true"
+            />
+            <span>
+              {settings.connectionStatus === 'connected'
+                ? 'AI Ready — configured provide(s) are reachable'
+                : settings.connectionStatus === 'error'
+                  ? 'AI Unavailable — check provider connection'
+                  : 'AI Needs Setup — configure an API key to get started'}
+            </span>
+          </div>
+        )}
+
         {/* Budget Mode Toggle */}
         <div
           className={cn(

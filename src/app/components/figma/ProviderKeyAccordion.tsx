@@ -36,6 +36,7 @@ import {
   deleteProviderApiKey,
   getAIConfiguration,
   getDecryptedApiKeyForProvider,
+  getAPIKeyHealth,
   saveProviderApiKey,
   testAIConnection,
   type AIProviderId,
@@ -150,6 +151,15 @@ export function ProviderKeyAccordion({ onConfigChanged }: ProviderKeyAccordionPr
         setKeyInputs(prev => ({ ...prev, [providerId]: '' }))
         setSuccesses(prev => ({ ...prev, [providerId]: true }))
         setTimeout(() => setSuccesses(prev => ({ ...prev, [providerId]: false })), 3000)
+
+        // Check for Vault backup failure
+        const savedConfig = getAIConfiguration()
+        if (savedConfig.vaultBackupFailedAt) {
+          toast.warning(
+            'API key saved locally but cloud backup failed. The key will be lost if browser storage is cleared.'
+          )
+        }
+
         await refreshStatuses()
         onConfigChanged()
         toast.success(`${provider.name} API key saved`)
@@ -218,6 +228,28 @@ export function ProviderKeyAccordion({ onConfigChanged }: ProviderKeyAccordionPr
                       {/* AC4: Show legacy indicator */}
                       {status.isLegacy && ' (legacy)'}
                     </Badge>
+                  )}
+                  {/* Key health indicator — detects lost CryptoKey */}
+                  {!status?.isConnected && status?.hasKey && (
+                    <span
+                      className={cn(
+                        'size-2 rounded-full',
+                        getAPIKeyHealth(providerId) === 'undecryptable'
+                          ? 'bg-warning'
+                          : 'bg-muted-foreground/50'
+                      )}
+                      title={
+                        getAPIKeyHealth(providerId) === 'undecryptable'
+                          ? 'Key needs re-entry — encryption key was reset'
+                          : undefined
+                      }
+                      data-testid={`provider-health-${providerId}`}
+                      aria-label={
+                        getAPIKeyHealth(providerId) === 'undecryptable'
+                          ? 'Encryption key lost — re-enter API key'
+                          : undefined
+                      }
+                    />
                   )}
                   {/* E97-S05 AC3: Vault sync status badge */}
                   {vaultStatus && (
