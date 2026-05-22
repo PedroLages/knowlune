@@ -447,7 +447,8 @@ describe('DownloadManager', () => {
 
       // Mock db.books.get to resolve pending bookIds to Book objects
       const { db } = await import('@/db/schema')
-      vi.mocked(db.books.get).mockImplementation(async (_equalityCriterias: { [key: string]: any }) => {
+      vi.mocked(db.books.get).mockImplementation(async (equalityCriterias: { [key: string]: any }) => {
+        const id = Object.values(equalityCriterias)[0] as string
         if (id === 'book-2') return book2 as any
         if (id === 'book-3') return book3 as any
         return null
