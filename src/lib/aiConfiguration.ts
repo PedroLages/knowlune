@@ -163,8 +163,6 @@ export type APIKeyHealth =
   | 'missing'
   /** Encrypted data exists but the encryption key was lost (IndexedDB cleared) */
   | 'undecryptable'
-  /** Key is available only from Vault — local encryption key was lost but Vault is recovering it */
-  | 'vault-only'
 
 export type NoteQAAvailability =
   | {
@@ -945,7 +943,7 @@ export async function getNoteQAAvailability(): Promise<NoteQAAvailability> {
  * and uses the `keyLostAt` timestamp set by `getDecryptedApiKeyForProvider`).
  *
  * @param provider - Provider to check
- * @returns Health status: 'ok' | 'missing' | 'undecryptable' | 'vault-only'
+ * @returns Health status: 'ok' | 'missing' | 'undecryptable'
  */
 export function getAPIKeyHealth(provider: AIProviderId): APIKeyHealth {
   const config = getAIConfiguration()

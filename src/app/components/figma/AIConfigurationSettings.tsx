@@ -58,6 +58,7 @@ import {
   testAIConnection,
   getDecryptedApiKeyForProvider,
   getConfiguredProviderIds,
+  getAPIKeyHealth,
   AI_PROVIDERS,
   type AIConfigurationSettings as AIConfigSettings,
   type AIProviderId,
@@ -452,6 +453,17 @@ export function AIConfigurationSettings() {
 
   const isConnected = settings.connectionStatus === 'connected'
   const hasError = settings.connectionStatus === 'error'
+
+  // Check if any provider's stored API key has become undecryptable (e.g., IndexedDB
+  // cleared the CryptoKey). This can happen while connectionStatus still shows 'connected'.
+  const hasUndecryptableApiKey = !isOllama &&
+    Array.from(
+      new Set<AIProviderId>([
+        settings.provider,
+        ...(Object.keys(settings.providerKeys ?? {}) as AIProviderId[]),
+      ])
+    ).some(pid => getAPIKeyHealth(pid) === 'undecryptable')
+
   // AC3: Show consent/override sections when ANY provider has a configured key
   // hasAnyProviderKey is loaded asynchronously via useEffect above
   const showFeatureSettings = isConnected || hasAnyProviderKey
@@ -496,11 +508,13 @@ export function AIConfigurationSettings() {
           <div
             className={cn(
               'flex items-center gap-2 rounded-lg border p-3 text-sm',
-              settings.connectionStatus === 'connected'
-                ? 'border-success/30 bg-success/5 text-success'
-                : settings.connectionStatus === 'error'
-                  ? 'border-destructive/30 bg-destructive/5 text-destructive'
-                  : 'border-warning/30 bg-warning/5 text-warning'
+              hasUndecryptableApiKey
+                ? 'border-warning/30 bg-warning/5 text-warning'
+                : settings.connectionStatus === 'connected'
+                  ? 'border-success/30 bg-success/5 text-success'
+                  : settings.connectionStatus === 'error'
+                    ? 'border-destructive/30 bg-destructive/5 text-destructive'
+                    : 'border-warning/30 bg-warning/5 text-warning'
             )}
             data-testid="ai-status-summary"
             role="status"
@@ -508,20 +522,24 @@ export function AIConfigurationSettings() {
             <span
               className={cn(
                 'size-2.5 rounded-full shrink-0',
-                settings.connectionStatus === 'connected'
-                  ? 'bg-success'
-                  : settings.connectionStatus === 'error'
-                    ? 'bg-destructive'
-                    : 'bg-warning'
+                hasUndecryptableApiKey
+                  ? 'bg-warning'
+                  : settings.connectionStatus === 'connected'
+                    ? 'bg-success'
+                    : settings.connectionStatus === 'error'
+                      ? 'bg-destructive'
+                      : 'bg-warning'
               )}
               aria-hidden="true"
             />
             <span>
-              {settings.connectionStatus === 'connected'
-                ? 'AI Ready — configured provide(s) are reachable'
-                : settings.connectionStatus === 'error'
-                  ? 'AI Unavailable — check provider connection'
-                  : 'AI Needs Setup — configure an API key to get started'}
+              {hasUndecryptableApiKey
+                ? 'AI Needs Reconfiguration — encryption key was reset, please re-enter your API key(s)'
+                : settings.connectionStatus === 'connected'
+                  ? 'AI Ready — configured provider(s) are reachable'
+                  : settings.connectionStatus === 'error'
+                    ? 'AI Unavailable — check provider connection'
+                    : 'AI Needs Setup — configure an API key to get started'}
             </span>
           </div>
         )}

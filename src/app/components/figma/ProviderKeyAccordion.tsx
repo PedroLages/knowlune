@@ -217,9 +217,9 @@ export function ProviderKeyAccordion({ onConfigChanged }: ProviderKeyAccordionPr
                     <Badge
                       variant={status.isConnected ? 'default' : 'outline'}
                       className={cn(
-                        'ml-2 text-[10px]',
+                        'ml-2 text-xs',
                         status.isConnected
-                          ? 'bg-success/15 text-success border-success/30'
+                          ? 'bg-success text-success-foreground'
                           : 'bg-muted text-muted-foreground'
                       )}
                       data-testid={`provider-status-${providerId}`}
@@ -230,27 +230,23 @@ export function ProviderKeyAccordion({ onConfigChanged }: ProviderKeyAccordionPr
                     </Badge>
                   )}
                   {/* Key health indicator — detects lost CryptoKey */}
-                  {!status?.isConnected && status?.hasKey && (
-                    <span
-                      className={cn(
-                        'size-2 rounded-full',
-                        getAPIKeyHealth(providerId) === 'undecryptable'
-                          ? 'bg-warning'
-                          : 'bg-muted-foreground/50'
-                      )}
-                      title={
-                        getAPIKeyHealth(providerId) === 'undecryptable'
-                          ? 'Key needs re-entry — encryption key was reset'
-                          : undefined
-                      }
-                      data-testid={`provider-health-${providerId}`}
-                      aria-label={
-                        getAPIKeyHealth(providerId) === 'undecryptable'
-                          ? 'Encryption key lost — re-enter API key'
-                          : undefined
-                      }
-                    />
-                  )}
+                  {!status?.isConnected && status?.hasKey && (() => {
+                    const health = getAPIKeyHealth(providerId)
+                    const isLost = health === 'undecryptable'
+                    return (
+                      <span
+                        className={cn(
+                          'size-2 rounded-full',
+                          isLost ? 'bg-warning' : 'bg-muted-foreground/50'
+                        )}
+                        title={isLost ? 'Key needs re-entry — encryption key was reset' : undefined}
+                        data-testid={`provider-health-${providerId}`}
+                        aria-label={
+                          isLost ? 'Encryption key lost — re-enter API key' : undefined
+                        }
+                      />
+                    )
+                  })()}
                   {/* E97-S05 AC3: Vault sync status badge */}
                   {vaultStatus && (
                     <CredentialSyncStatusBadge
