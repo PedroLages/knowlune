@@ -139,7 +139,6 @@ export function UnifiedLessonPlayer() {
   const notesOpen = useLessonChromeStore(s => s.notesOpen)
   const openNotesWithFocus = useLessonChromeStore(s => s.openNotesWithFocus)
   const focusNotesEditor = useLessonChromeStore(s => s.focusNotesEditor)
-  const toggleNotesWithFocus = useLessonChromeStore(s => s.toggleNotesWithFocus)
   const closeNotesPanel = useLessonChromeStore(s => s.resetNotesPanelOnLessonChange)
 
   // B3: Sync hasNotes to the store so indicator dots in LessonHeaderTools / BottomNav work.
