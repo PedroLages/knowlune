@@ -140,6 +140,50 @@ describe('usePomodoroTimer', () => {
     expect(result.current.timeRemaining).toBe(5)
   })
 
+  it('startBreak transitions from break/stopped to break/running', () => {
+    const { result } = renderHook(() =>
+      usePomodoroTimer({
+        focusDuration: 2,
+        breakDuration: 5,
+        autoStartBreak: false,
+      })
+    )
+    act(() => result.current.start())
+    act(() => vi.advanceTimersByTime(2000))
+
+    // Break is pending
+    expect(result.current.phase).toBe('break')
+    expect(result.current.status).toBe('stopped')
+
+    act(() => result.current.startBreak())
+    expect(result.current.phase).toBe('break')
+    expect(result.current.status).toBe('running')
+    expect(result.current.timeRemaining).toBe(5)
+  })
+
+  it('startBreak countdown completes break phase and transitions to idle', () => {
+    const onBreakComplete = vi.fn()
+    const { result } = renderHook(() =>
+      usePomodoroTimer({
+        focusDuration: 2,
+        breakDuration: 3,
+        autoStartBreak: false,
+        autoStartFocus: false,
+        onBreakComplete,
+      })
+    )
+    act(() => result.current.start())
+    act(() => vi.advanceTimersByTime(2000)) // focus done
+
+    act(() => result.current.startBreak()) // manually start break
+    act(() => vi.advanceTimersByTime(3000)) // break done
+
+    expect(onBreakComplete).toHaveBeenCalledTimes(1)
+    expect(result.current.completedSessions).toBe(1)
+    expect(result.current.phase).toBe('idle')
+    expect(result.current.status).toBe('stopped')
+  })
+
   it('auto-start focus enabled: restarts focus after break completes', () => {
     const { result } = renderHook(() =>
       usePomodoroTimer({
