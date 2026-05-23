@@ -113,6 +113,8 @@ interface NoteEditorProps {
   onVideoSeek?: (seconds: number) => void
   onCaptureFrame?: () => Promise<CapturedFrame | null>
   compact?: boolean
+  /** When true, stretch vertically inside a flex parent (desktop side panel). */
+  fillHeight?: boolean
   className?: string
   /** Callback when save status changes (for parent toolbar indicators). */
   onSaveStatusChange?: (status: 'idle' | 'saved') => void
@@ -161,6 +163,7 @@ export function NoteEditor({
   onVideoSeek,
   onCaptureFrame,
   compact = false,
+  fillHeight = false,
   className,
   onSaveStatusChange,
 }: NoteEditorProps) {
@@ -617,11 +620,21 @@ export function NoteEditor({
 
   if (!editor) return null
 
+  const editorBody = (
+    <TableContextMenu editor={editor}>
+      <EditorContent editor={editor} />
+    </TableContextMenu>
+  )
+
   return (
     <div
       ref={editorContainerRef}
       data-testid="note-editor"
-      className={cn('bg-card rounded-2xl shadow-sm overflow-hidden', className)}
+      className={cn(
+        'bg-card rounded-2xl shadow-sm overflow-hidden',
+        fillHeight && 'flex flex-col flex-1 min-h-0 h-full',
+        className
+      )}
     >
       {/* Toolbar */}
       <TooltipProvider>
@@ -631,7 +644,8 @@ export function NoteEditor({
           data-testid="note-editor-toolbar"
           className={cn(
             'flex items-center gap-1 px-4 py-2 border-b border-border bg-muted/30 flex-wrap',
-            !compact && 'sm:flex-nowrap sm:overflow-x-auto'
+            !compact && 'sm:flex-nowrap sm:overflow-x-auto',
+            fillHeight && 'shrink-0'
           )}
         >
           {/* Inline formatting group */}
@@ -990,7 +1004,9 @@ export function NoteEditor({
 
       {/* Find/Replace panel (between toolbar and editor) */}
       {findReplaceOpen && (
-        <FindReplacePanel editor={editor} onClose={() => setFindReplaceOpen(false)} />
+        <div className={cn(fillHeight && 'shrink-0')}>
+          <FindReplacePanel editor={editor} onClose={() => setFindReplaceOpen(false)} />
+        </div>
       )}
 
       {/* Hidden file input for image uploads */}
@@ -1023,12 +1039,24 @@ export function NoteEditor({
       </DragHandle>
 
       {/* Editor */}
-      <TableContextMenu editor={editor}>
-        <EditorContent editor={editor} />
-      </TableContextMenu>
+      {fillHeight ? (
+        <div
+          data-testid="note-editor-body"
+          className="flex-1 min-h-0 overflow-y-auto"
+        >
+          {editorBody}
+        </div>
+      ) : (
+        editorBody
+      )}
 
       {/* Status bar */}
-      <div className="flex items-center justify-between px-5 py-2 border-t border-border text-xs text-muted-foreground">
+      <div
+        className={cn(
+          'flex items-center justify-between px-5 py-2 border-t border-border text-xs text-muted-foreground',
+          fillHeight && 'shrink-0'
+        )}
+      >
         <span data-testid="note-word-count">
           {wordCount} {wordCount === 1 ? 'word' : 'words'}
         </span>
