@@ -148,4 +148,50 @@ describe('NoteEditor fillHeight', () => {
     expect(screen.getByTestId('note-editor-toolbar')).toBeInTheDocument()
     expect(screen.getByTestId('note-word-count')).toBeInTheDocument()
   })
+
+  describe('compact fillHeight toolbar structure', () => {
+    it('renders trailing action cluster when compact and fillHeight', () => {
+      render(<NoteEditor courseId="c1" lessonId="l1" compact fillHeight />)
+
+      const cluster = screen.getByTestId('note-editor-toolbar-actions')
+      expect(cluster).toBeInTheDocument()
+      expect(cluster.className).toContain('ml-auto')
+    })
+
+    it('contains Add Timestamp and Download buttons in trailing action cluster', () => {
+      render(<NoteEditor courseId="c1" lessonId="l1" compact fillHeight />)
+
+      const cluster = screen.getByTestId('note-editor-toolbar-actions')
+      const timestampBtn = cluster.querySelector('[aria-label="Add Timestamp"]')
+      const downloadBtn = cluster.querySelector('[aria-label="Download note as Markdown"]')
+      expect(timestampBtn).toBeInTheDocument()
+      expect(downloadBtn).toBeInTheDocument()
+    })
+
+    it('adds min-w-0 and w-full to toolbar root when compact && fillHeight', () => {
+      render(<NoteEditor courseId="c1" lessonId="l1" compact fillHeight />)
+
+      const toolbar = screen.getByTestId('note-editor-toolbar')
+      expect(toolbar.className).toContain('min-w-0')
+      expect(toolbar.className).toContain('w-full')
+    })
+
+    it('does not add panel-specific classes when fillHeight is false', () => {
+      render(<NoteEditor courseId="c1" lessonId="l1" compact />)
+
+      const toolbar = screen.getByTestId('note-editor-toolbar')
+      expect(toolbar.className).not.toContain('min-w-0')
+      expect(toolbar.className).not.toContain('w-full')
+    })
+
+    it('keeps h-11 on Add Timestamp and Download buttons for touch targets', () => {
+      render(<NoteEditor courseId="c1" lessonId="l1" compact fillHeight />)
+
+      const cluster = screen.getByTestId('note-editor-toolbar-actions')
+      const timestampBtn = cluster.querySelector('[aria-label="Add Timestamp"]')
+      const downloadBtn = cluster.querySelector('[aria-label="Download note as Markdown"]')
+      expect(timestampBtn?.className).toContain('h-11')
+      expect(downloadBtn?.className).toContain('h-11')
+    })
+  })
 })
