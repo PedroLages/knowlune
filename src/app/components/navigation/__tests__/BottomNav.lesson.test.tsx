@@ -28,7 +28,7 @@ let mockIsTheater = false
 let mockIsReadingMode = false
 let mockItemStatus = 'not-started'
 
-const mockToggleNotes = vi.fn()
+const mockToggleNotesWithFocus = vi.fn()
 const mockToggleTheater = vi.fn()
 const mockToggleReadingMode = vi.fn()
 const mockSetItemStatus = vi.fn().mockResolvedValue(undefined)
@@ -37,7 +37,7 @@ const mockLoadCourseProgress = vi.fn().mockResolvedValue(undefined)
 // Track store state for selector-based mocks
 const lessonChromeState = {
   get notesOpen() { return mockNotesOpen },
-  get toggleNotes() { return mockToggleNotes },
+  get toggleNotesWithFocus() { return mockToggleNotesWithFocus },
   get hasNotes() { return mockHasNotes },
   get isTheater() { return mockIsTheater },
   get toggleTheater() { return mockToggleTheater },
@@ -118,7 +118,7 @@ describe('BottomNav lesson mode', () => {
     mockIsReadingMode = false
     mockItemStatus = 'not-started'
 
-    mockToggleNotes.mockClear()
+    mockToggleNotesWithFocus.mockClear()
     mockToggleTheater.mockClear()
     mockToggleReadingMode.mockClear()
     mockSetItemStatus.mockClear()
@@ -173,7 +173,7 @@ describe('BottomNav lesson mode', () => {
     renderBottomNav({ mode: 'lesson', courseId: 'course-1', lessonId: 'lesson-1' })
 
     fireEvent.click(screen.getByTestId('bottomnav-notes-toggle'))
-    expect(mockToggleNotes).toHaveBeenCalledTimes(1)
+    expect(mockToggleNotesWithFocus).toHaveBeenCalledTimes(1)
   })
 
   it('shows notes indicator dot when hasNotes is true and notes are closed', () => {

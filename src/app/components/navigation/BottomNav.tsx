@@ -133,7 +133,7 @@ function LessonDrawerContent({
             <button
               type="button"
               onClick={() => {
-                useLessonChromeStore.getState().toggleNotes()
+                useLessonChromeStore.getState().toggleNotesWithFocus()
                 onClose()
               }}
               data-testid="drawer-notes-toggle"
@@ -228,7 +228,7 @@ export function BottomNav({ mode = 'standard', courseId, lessonId, onFeedbackCli
 
   // Lesson chrome state (for lesson mode primary slots)
   const notesOpen = useLessonChromeStore(s => s.notesOpen)
-  const toggleNotes = useLessonChromeStore(s => s.toggleNotes)
+  const toggleNotesWithFocus = useLessonChromeStore(s => s.toggleNotesWithFocus)
   const hasNotes = useLessonChromeStore(s => s.hasNotes)
 
   // Completion state (for lesson mode primary slots)
@@ -279,9 +279,10 @@ export function BottomNav({ mode = 'standard', courseId, lessonId, onFeedbackCli
       {/* Notes */}
       <button
         type="button"
-        onClick={toggleNotes}
+        onClick={toggleNotesWithFocus}
         aria-label="Toggle notes"
         aria-expanded={notesOpen}
+        aria-controls="lesson-notes-panel"
         data-testid="bottomnav-notes-toggle"
         className={cn(
           'flex flex-col items-center justify-center gap-1 flex-1 h-14 transition-colors duration-150',

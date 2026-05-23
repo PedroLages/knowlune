@@ -82,7 +82,7 @@ export function LessonHeaderTools() {
   const isReadingMode = useLessonChromeStore(s => s.isReadingMode)
   const toggleReadingMode = useLessonChromeStore(s => s.toggleReadingMode)
   const notesOpen = useLessonChromeStore(s => s.notesOpen)
-  const toggleNotes = useLessonChromeStore(s => s.toggleNotes)
+  const toggleNotesWithFocus = useLessonChromeStore(s => s.toggleNotesWithFocus)
   const hasNotes = useLessonChromeStore(s => s.hasNotes)
   const autoPlay = useLessonChromeStore(s => s.autoPlay)
   const toggleAutoPlay = useLessonChromeStore(s => s.toggleAutoPlay)
@@ -242,8 +242,9 @@ export function LessonHeaderTools() {
       <Button
         variant="outline"
         size="sm"
-        onClick={toggleNotes}
+        onClick={toggleNotesWithFocus}
         aria-expanded={notesOpen}
+        aria-controls="lesson-notes-panel"
         className="flex gap-1.5"
         data-testid="notes-toggle"
       >
