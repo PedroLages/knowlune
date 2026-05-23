@@ -46,6 +46,18 @@ test.describe('AC1: Desktop resizable split', () => {
 
     const handle = page.locator('[data-separator]')
     await expect(handle).toBeVisible()
+
+    // Fill-height: editor card bottom aligns with panel shell
+    const panel = page.locator('#lesson-notes-panel')
+    const editor = page.locator('#lesson-notes-panel [data-testid="note-editor"]')
+    await expect(panel).toBeVisible()
+    await expect(editor).toBeVisible()
+    const panelBox = await panel.boundingBox()
+    const editorBox = await editor.boundingBox()
+    expect(panelBox).toBeTruthy()
+    expect(editorBox).toBeTruthy()
+    expect(panelBox!.y + panelBox!.height - (editorBox!.y + editorBox!.height)).toBeLessThanOrEqual(8)
+    expect(editorBox!.height).toBeGreaterThan(250)
   })
 
   test('drag handle resizes the panels', async ({ page }) => {

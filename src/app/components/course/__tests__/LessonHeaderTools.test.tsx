@@ -32,7 +32,7 @@ let mockAutoPlay: boolean
 
 const toggleTheater = vi.fn()
 const toggleReadingMode = vi.fn()
-const toggleNotes = vi.fn()
+const toggleNotesWithFocus = vi.fn()
 const setHasNotes = vi.fn()
 const setItemStatus = vi.fn()
 const toggleAutoPlay = vi.fn()
@@ -49,7 +49,7 @@ vi.mock('@/stores/useLessonChromeStore', () => ({
       isReadingMode: mockIsReadingMode,
       toggleReadingMode,
       notesOpen: mockNotesOpen,
-      toggleNotes,
+      toggleNotesWithFocus,
       hasNotes: mockHasNotes,
       setHasNotes,
       autoPlay: mockAutoPlay,
@@ -120,7 +120,7 @@ describe('LessonHeaderTools', () => {
 
     toggleTheater.mockClear()
     toggleReadingMode.mockClear()
-    toggleNotes.mockClear()
+    toggleNotesWithFocus.mockClear()
     setHasNotes.mockClear()
     setItemStatus.mockClear()
     toggleAutoPlay.mockClear()
@@ -166,10 +166,10 @@ describe('LessonHeaderTools', () => {
 
   // -- Notes toggle -----------------------------------------------------------
 
-  it('calls toggleNotes when notes button is clicked', () => {
+  it('calls toggleNotesWithFocus when notes button is clicked', () => {
     render(<LessonHeaderTools />)
     fireEvent.click(screen.getByTestId('notes-toggle'))
-    expect(toggleNotes).toHaveBeenCalledTimes(1)
+    expect(toggleNotesWithFocus).toHaveBeenCalledTimes(1)
   })
 
   it('sets aria-expanded on notes button based on notesOpen', () => {

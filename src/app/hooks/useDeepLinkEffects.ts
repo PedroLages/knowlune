@@ -3,9 +3,7 @@
  *
  * Supports:
  * - `?t=<seconds>` — seek video to a specific timestamp
- * - `?panel=notes` — open the notes panel (desktop) or switch to notes tab (mobile)
- *
- * Ported from the classic LessonPlayer's inline useEffect calls.
+ * - `?panel=notes` — open the notes panel (desktop) or switch to notes tab (mobile/tablet)
  */
 
 import { useEffect } from 'react'
@@ -13,18 +11,19 @@ import { useSearchParams } from 'react-router'
 
 interface DeepLinkSetters {
   setSeekToTime: (time: number | undefined) => void
-  setNotesOpen: (open: boolean) => void
   setFocusTab: (tab: string | null) => void
+  isDesktop: boolean
+  openNotesWithFocus: () => void
 }
 
 export function useDeepLinkEffects({
   setSeekToTime,
-  setNotesOpen,
   setFocusTab,
+  isDesktop,
+  openNotesWithFocus,
 }: DeepLinkSetters): void {
   const [searchParams] = useSearchParams()
 
-  // ?t=<seconds> — seek video to timestamp
   const seekParam = searchParams.get('t')
   useEffect(() => {
     if (seekParam) {
@@ -35,12 +34,14 @@ export function useDeepLinkEffects({
     }
   }, [seekParam, setSeekToTime])
 
-  // ?panel=notes — open notes panel (desktop) or switch to notes tab (mobile)
   const panelParam = searchParams.get('panel')
   useEffect(() => {
     if (panelParam === 'notes') {
-      setNotesOpen(true)
-      setFocusTab('notes')
+      if (isDesktop) {
+        openNotesWithFocus()
+      } else {
+        setFocusTab('notes')
+      }
     }
-  }, [panelParam, setNotesOpen, setFocusTab])
+  }, [panelParam, isDesktop, openNotesWithFocus, setFocusTab])
 }

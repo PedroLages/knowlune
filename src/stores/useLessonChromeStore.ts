@@ -64,10 +64,21 @@ export interface LessonChromeState {
 
   /** Whether the notes panel is open. */
   notesOpen: boolean
-  /** Toggle the notes panel open/closed. */
+  /** Deferred TipTap focus after panel open (desktop side panel). */
+  pendingNoteFocus: boolean
+  /** Toggle the notes panel open/closed (no focus grooming). */
   toggleNotes: () => void
-  /** Set the notes panel open/closed to a specific value (used for deep-linking, theater mode close). */
+  /** Set the notes panel open/closed to a specific value (used for theater mode close). */
   setNotesOpen: (open: boolean) => void
+  /** Open notes panel and defer editor focus (desktop). */
+  openNotesWithFocus: () => void
+  /** Re-request editor focus when panel is already open (desktop N key). */
+  focusNotesEditor: () => void
+  /** Toggle panel; opening sets deferred focus, closing clears it. */
+  toggleNotesWithFocus: () => void
+  clearPendingNoteFocus: () => void
+  /** Close panel and clear deferred focus (lesson navigation, theater). */
+  resetNotesPanelOnLessonChange: () => void
   /** Whether the current lesson has notes content. */
   hasNotes: boolean
   /** Set whether the current lesson has notes content. */
@@ -131,6 +142,7 @@ export const useLessonChromeStore = create<LessonChromeState>((set, get) => ({
   },
 
   notesOpen: false,
+  pendingNoteFocus: false,
 
   toggleNotes: () => {
     set(s => ({ notesOpen: !s.notesOpen }))
@@ -138,6 +150,34 @@ export const useLessonChromeStore = create<LessonChromeState>((set, get) => ({
 
   setNotesOpen: (open: boolean) => {
     set({ notesOpen: open })
+  },
+
+  openNotesWithFocus: () => {
+    set({ notesOpen: true, pendingNoteFocus: true })
+  },
+
+  focusNotesEditor: () => {
+    const { notesOpen } = get()
+    if (notesOpen) {
+      set({ pendingNoteFocus: true })
+    }
+  },
+
+  toggleNotesWithFocus: () => {
+    const { notesOpen } = get()
+    if (notesOpen) {
+      set({ notesOpen: false, pendingNoteFocus: false })
+    } else {
+      set({ notesOpen: true, pendingNoteFocus: true })
+    }
+  },
+
+  clearPendingNoteFocus: () => {
+    set({ pendingNoteFocus: false })
+  },
+
+  resetNotesPanelOnLessonChange: () => {
+    set({ notesOpen: false, pendingNoteFocus: false })
   },
 
   hasNotes: false,
@@ -189,6 +229,7 @@ export const useLessonChromeStore = create<LessonChromeState>((set, get) => ({
       isTheater: false,
       isReadingMode: false,
       notesOpen: false,
+      pendingNoteFocus: false,
       hasNotes: false,
       qaPanelOpen: false,
       mobileNotesPanel: 'closed',

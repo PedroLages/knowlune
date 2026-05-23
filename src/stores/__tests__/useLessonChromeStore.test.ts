@@ -413,6 +413,51 @@ describe('full reset includes mobileNotesPanel', () => {
   })
 })
 
+describe('notes focus API', () => {
+  beforeEach(() => {
+    act(() => {
+      useLessonChromeStore.getState().reset()
+    })
+  })
+
+  it('openNotesWithFocus sets notesOpen and pendingNoteFocus', () => {
+    act(() => {
+      useLessonChromeStore.getState().openNotesWithFocus()
+    })
+    const s = useLessonChromeStore.getState()
+    expect(s.notesOpen).toBe(true)
+    expect(s.pendingNoteFocus).toBe(true)
+  })
+
+  it('focusNotesEditor sets pendingNoteFocus when panel is open', () => {
+    act(() => {
+      useLessonChromeStore.getState().openNotesWithFocus()
+      useLessonChromeStore.getState().clearPendingNoteFocus()
+      useLessonChromeStore.getState().focusNotesEditor()
+    })
+    expect(useLessonChromeStore.getState().pendingNoteFocus).toBe(true)
+  })
+
+  it('toggleNotesWithFocus opens with focus when closed', () => {
+    act(() => {
+      useLessonChromeStore.getState().toggleNotesWithFocus()
+    })
+    const s = useLessonChromeStore.getState()
+    expect(s.notesOpen).toBe(true)
+    expect(s.pendingNoteFocus).toBe(true)
+  })
+
+  it('resetNotesPanelOnLessonChange closes panel and clears focus', () => {
+    act(() => {
+      useLessonChromeStore.getState().openNotesWithFocus()
+      useLessonChromeStore.getState().resetNotesPanelOnLessonChange()
+    })
+    const s = useLessonChromeStore.getState()
+    expect(s.notesOpen).toBe(false)
+    expect(s.pendingNoteFocus).toBe(false)
+  })
+})
+
 describe('integration: useTheaterMode hook', () => {
   it('should return the same isTheater value as store selector', async () => {
     const { renderHook } = await import('@testing-library/react')

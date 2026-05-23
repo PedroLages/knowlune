@@ -135,12 +135,11 @@ export function UnifiedLessonPlayer() {
     announcement: readingModeAnnouncement,
   } = useReadingMode(isLesson)
 
-  // B2: Use store-based notesOpen so LessonHeaderTools / BottomNav toggles actually
-  // control the notes panel. pendingNoteFocus stays local since the store does not
-  // manage focus grooming.
+  // B2: Use store-based notesOpen so LessonHeaderTools / BottomNav toggles control the panel.
   const notesOpen = useLessonChromeStore(s => s.notesOpen)
-  const toggleNotes = useLessonChromeStore(s => s.toggleNotes)
-  const setNotesOpenStore = useLessonChromeStore(s => s.setNotesOpen)
+  const openNotesWithFocus = useLessonChromeStore(s => s.openNotesWithFocus)
+  const focusNotesEditor = useLessonChromeStore(s => s.focusNotesEditor)
+  const closeNotesPanel = useLessonChromeStore(s => s.resetNotesPanelOnLessonChange)
 
   // B3: Sync hasNotes to the store so indicator dots in LessonHeaderTools / BottomNav work.
   // useNoteStore.notes is replaced by NotesTab's loadNotesByLesson() on lesson change.
@@ -187,6 +186,23 @@ export function UnifiedLessonPlayer() {
 
   // All local state: auto-advance, celebration, video time, mini-player, metadata, notes, etc.
   const state = useLessonPlayerState(adapter, lessonId)
+
+  const handleFocusNotes = useCallback(() => {
+    if (isDesktop) {
+      if (notesOpen) {
+        focusNotesEditor()
+      } else {
+        openNotesWithFocus()
+      }
+    } else {
+      state.handleFocusNotes()
+    }
+  }, [isDesktop, notesOpen, focusNotesEditor, openNotesWithFocus, state.handleFocusNotes])
+
+  // Close notes panel when navigating to a different lesson (R5b)
+  useEffect(() => {
+    closeNotesPanel()
+  }, [lessonId, closeNotesPanel])
 
   // Track celebration modal open state in a ref for the ESC key handler.
   // Using a ref avoids re-registering the document-level keydown listener
@@ -262,8 +278,9 @@ export function UnifiedLessonPlayer() {
   // Deep-linking: ?t=<seconds> and ?panel=notes
   useDeepLinkEffects({
     setSeekToTime: state.setSeekToTime,
-    setNotesOpen: setNotesOpenStore,
     setFocusTab: state.setFocusTab,
+    isDesktop,
+    openNotesWithFocus,
   })
 
   // Scroll-to-top + title focus on lesson change
@@ -299,7 +316,7 @@ export function UnifiedLessonPlayer() {
   // Theater mode: close notes panel when entering theater
   useEffect(() => {
     if (isTheater) {
-      useLessonChromeStore.getState().setNotesOpen(false)
+      useLessonChromeStore.getState().resetNotesPanelOnLessonChange()
     }
   }, [isTheater])
 
@@ -449,7 +466,7 @@ export function UnifiedLessonPlayer() {
           onTimeUpdate={state.handleTimeUpdate}
           seekToTime={state.seekToTime}
           onSeekComplete={state.handleSeekComplete}
-          onFocusNotes={state.handleFocusNotes}
+          onFocusNotes={handleFocusNotes}
           onVisibilityChange={miniPlayer.handleVideoVisibilityChange}
           onPlayStateChange={handlePlayStateChange}
           onBlobUrlReady={state.setLocalVideoBlobUrl}
@@ -654,17 +671,17 @@ export function UnifiedLessonPlayer() {
               minSize="25%"
             >
               {notesOpen && (
-                <NotesPanel
-                  courseId={courseId!}
-                  lessonId={lessonId!}
-                  currentTime={state.currentTime}
-                  onSeek={state.handleTranscriptSeek}
-                  onClose={toggleNotes}
-                  onCaptureFrame={handleCaptureFrame}
-                  pendingFocus={state.pendingNoteFocus}
-                  onFocusComplete={() => state.setPendingNoteFocus(false)}
-                  isTheater={isTheater}
-                />
+                <div className="h-full min-h-0 flex flex-col">
+                  <NotesPanel
+                    courseId={courseId!}
+                    lessonId={lessonId!}
+                    currentTime={state.currentTime}
+                    onSeek={state.handleTranscriptSeek}
+                    onClose={closeNotesPanel}
+                    onCaptureFrame={handleCaptureFrame}
+                    isTheater={isTheater}
+                  />
+                </div>
               )}
             </ResizablePanel>
           </ResizablePanelGroup>
