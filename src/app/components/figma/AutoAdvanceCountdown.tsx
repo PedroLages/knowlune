@@ -104,13 +104,12 @@ export function AutoAdvanceCountdown({
       role="status"
       aria-live="polite"
       className={[
-        'fixed inset-0 z-50 flex items-center justify-center',
+        'fixed inset-0 z-50 flex items-center justify-center outline-none',
         'motion-safe:transition-all motion-safe:duration-200 motion-safe:ease-out',
         isExiting
-          ? 'motion-safe:opacity-0'
-          : 'motion-safe:opacity-100',
+          ? 'motion-safe:opacity-0 bg-transparent'
+          : 'motion-safe:opacity-100 bg-black/50',
       ].join(' ')}
-      style={{ backgroundColor: isExiting ? 'transparent' : 'rgba(0,0,0,0.5)' }}
       onKeyDown={e => {
         if (e.key === 'Escape') {
           e.stopPropagation()
@@ -121,7 +120,7 @@ export function AutoAdvanceCountdown({
       {/* Card */}
       <div
         className={[
-          'flex flex-col items-center gap-6 rounded-2xl bg-card p-8 shadow-lg',
+          'flex flex-col items-center gap-6 rounded-2xl bg-card p-8 shadow-lg max-w-[calc(100vw-2rem)]',
           'motion-safe:transition-all motion-safe:duration-200 motion-safe:ease-out',
           isExiting
             ? 'motion-safe:scale-95 motion-safe:opacity-0'
