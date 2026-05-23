@@ -940,13 +940,37 @@ export function NoteEditor({
                       <Link2 className="size-4 mr-2" />
                       Link
                     </DropdownMenuItem>
+
+                    {/* Trailing actions in compact mode — prevents toolbar overflow at narrow panel widths */}
+                    {onCaptureFrame && (
+                      <DropdownMenuItem onClick={handleCaptureFrame}>
+                        <Camera className="size-4 mr-2" />
+                        Capture video frame
+                      </DropdownMenuItem>
+                    )}
+                    <DropdownMenuItem onClick={insertTimestamp}>
+                      <Clock className="size-4 mr-2" />
+                      Add Timestamp
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => {
+                        const html = editor.getHTML()
+                        const { content, filename } = exportSingleNoteAsMarkdown(html)
+                        downloadAsFile(content, filename, 'text/markdown')
+                      }}
+                      disabled={editor.isEmpty}
+                    >
+                      <Download className="size-4 mr-2" />
+                      Download as Markdown
+                    </DropdownMenuItem>
                   </>
                 )}
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
 
-          {/* Trailing action cluster */}
+          {/* Trailing action cluster — hidden in compact mode (shown in overflow menu) */}
+          {!compact && (
           <div
             data-testid="note-editor-toolbar-actions"
             className="ml-auto flex shrink-0 items-center gap-1"
@@ -1006,6 +1030,7 @@ export function NoteEditor({
               <TooltipContent>Download note as Markdown</TooltipContent>
             </Tooltip>
           </div>
+          )}
         </div>
       </TooltipProvider>
 
