@@ -1304,7 +1304,8 @@ html.spacious {
  * `transform: translateZ(0)` composes without conflict.
  * -------------------------------------------------------------------------- */
 html[data-theater-mode='true'] [data-slot='dialog-overlay'],
-html[data-theater-mode='true'] [data-slot='dialog-content'] {
+html[data-theater-mode='true'] [data-slot='dialog-content'],
+html[data-theater-mode='true'] [data-slot='countdown-overlay'] {
   z-index: 60;
   transform: translateZ(0);
 }

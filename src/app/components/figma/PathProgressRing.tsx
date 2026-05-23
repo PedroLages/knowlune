@@ -7,6 +7,12 @@ const SIZES = {
   xl: { size: 128, stroke: 6, fontSize: 'text-2xl' },
 } as const
 
+// Static mapping to avoid Tailwind v4 JIT purging of runtime-constructed class strings
+const DURATION_CLASSES = {
+  500: 'duration-500',
+  1000: 'duration-1000',
+} as const
+
 interface PathProgressRingProps {
   /** Completion percentage 0-100 */
   percentage: number
@@ -14,6 +20,10 @@ interface PathProgressRingProps {
   size?: keyof typeof SIZES | number
   /** Override the default stroke width (defaults to 3 for numeric sizes, or SIZES preset) */
   strokeWidth?: number
+  /** Override the stroke color className (defaults to semantic color logic) */
+  strokeColor?: string
+  /** Transition duration in ms for stroke-dashoffset animation (defaults to 500). Use static mapping. */
+  transitionDurationMs?: number
   /** Additional className for the container */
   className?: string
   /** Override the center content (defaults to percentage text) */
@@ -28,6 +38,8 @@ export function PathProgressRing({
   percentage,
   size = 'md',
   strokeWidth,
+  strokeColor,
+  transitionDurationMs = 500,
   className,
   children,
 }: PathProgressRingProps) {
@@ -42,12 +54,12 @@ export function PathProgressRing({
 
   const isCompleted = percentage >= 100
 
-  // Pick stroke color based on status
-  const strokeClass = isCompleted
+  // Pick stroke color: explicit strokeColor prop overrides semantic logic
+  const strokeClass = strokeColor ?? (isCompleted
     ? 'stroke-success'
     : percentage > 0
       ? 'stroke-brand'
-      : 'stroke-muted-foreground/30'
+      : 'stroke-muted-foreground/30')
 
   // Use butt linecap for very low percentages to avoid a floating-dot appearance
   const lineCap = percentage > 0 && percentage < 3 ? 'butt' : 'round'
@@ -85,7 +97,7 @@ export function PathProgressRing({
           strokeDasharray={circumference}
           strokeDashoffset={offset}
           strokeLinecap={lineCap}
-          className={cn(strokeClass, 'transition-[stroke-dashoffset] duration-500')}
+          className={cn(strokeClass, 'transition-[stroke-dashoffset]', DURATION_CLASSES[transitionDurationMs as keyof typeof DURATION_CLASSES] ?? 'duration-500')}
         />
       </svg>
       {/* Center content */}
