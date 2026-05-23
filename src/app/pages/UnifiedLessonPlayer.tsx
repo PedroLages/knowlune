@@ -508,16 +508,14 @@ export function UnifiedLessonPlayer() {
         {state.lessonTitle.replace(/\.\w{2,4}$/, '')}
       </h1>
 
-      {/* Auto-advance countdown */}
+      {/* Auto-advance countdown — fixed overlay, no spacing wrapper needed */}
       {state.showAutoAdvance && nextLesson && (
-        <div className="mb-5">
-          <AutoAdvanceCountdown
-            seconds={5}
-            nextLessonTitle={nextLesson.title}
-            onAdvance={completion.handleAutoAdvance}
-            onCancel={completion.handleCancelAutoAdvance}
-          />
-        </div>
+        <AutoAdvanceCountdown
+          seconds={5}
+          nextLessonTitle={nextLesson.title}
+          onAdvance={completion.handleAutoAdvance}
+          onCancel={completion.handleCancelAutoAdvance}
+        />
       )}
 
       {/* Lesson description/tags — only shown when there's actual content */}
