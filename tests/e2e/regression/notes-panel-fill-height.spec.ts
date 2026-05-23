@@ -23,34 +23,48 @@ function boxesOverlap(a: BoundingBox, b: BoundingBox): boolean {
 
 async function assertToolbarActionsContained(page: PageParam) {
   const toolbar = page.locator('#lesson-notes-panel [data-testid="note-editor-toolbar"]')
-  const timstampBtn = page.locator(
-    '#lesson-notes-panel [aria-label="Add Timestamp"]'
-  )
-  const downloadBtn = page.locator(
-    '#lesson-notes-panel [aria-label="Download note as Markdown"]'
-  )
-
   await expect(toolbar).toBeVisible()
-  await expect(timstampBtn).toBeVisible()
-  await expect(downloadBtn).toBeVisible()
 
   const toolbarBox = await toolbar.boundingBox()
-  const tsBox = await timstampBtn.boundingBox()
-  const dlBox = await downloadBtn.boundingBox()
   expect(toolbarBox).toBeTruthy()
-  expect(tsBox).toBeTruthy()
-  expect(dlBox).toBeTruthy()
 
-  // Timestamp and Download do not overlap
-  expect(boxesOverlap(tsBox!, dlBox)).toBe(false)
+  // In compact mode, trailing actions live in the overflow dropdown — no cluster in toolbar
+  const cluster = page.locator('#lesson-notes-panel [data-testid="note-editor-toolbar-actions"]')
+  if (await cluster.count()) {
+    // Non-compact mode: buttons are in toolbar cluster, verify no overlap
+    const timstampBtn = page.locator('#lesson-notes-panel [data-testid="note-editor-toolbar-actions"] [aria-label="Add Timestamp"]')
+    const downloadBtn = page.locator('#lesson-notes-panel [data-testid="note-editor-toolbar-actions"] [aria-label="Download note as Markdown"]')
 
-  // Both buttons are fully inside the toolbar
-  const toolbarRight = toolbarBox!.x + toolbarBox!.width
-  const toolbarBottom = toolbarBox!.y + toolbarBox!.height
-  expect(tsBox!.x + tsBox!.width).toBeLessThanOrEqual(toolbarRight + 2)
-  expect(tsBox!.y + tsBox!.height).toBeLessThanOrEqual(toolbarBottom + 2)
-  expect(dlBox!.x + dlBox!.width).toBeLessThanOrEqual(toolbarRight + 2)
-  expect(dlBox!.y + dlBox!.height).toBeLessThanOrEqual(toolbarBottom + 2)
+    await expect(timstampBtn).toBeVisible()
+    await expect(downloadBtn).toBeVisible()
+
+    const tsBox = await timstampBtn.boundingBox()
+    const dlBox = await downloadBtn.boundingBox()
+    expect(tsBox).toBeTruthy()
+    expect(dlBox).toBeTruthy()
+
+    expect(boxesOverlap(tsBox!, dlBox)).toBe(false)
+
+    const toolbarRight = toolbarBox!.x + toolbarBox!.width
+    const toolbarBottom = toolbarBox!.y + toolbarBox!.height
+    expect(tsBox!.x + tsBox!.width).toBeLessThanOrEqual(toolbarRight + 2)
+    expect(tsBox!.y + tsBox!.height).toBeLessThanOrEqual(toolbarBottom + 2)
+    expect(dlBox!.x + dlBox!.width).toBeLessThanOrEqual(toolbarRight + 2)
+    expect(dlBox!.y + dlBox!.height).toBeLessThanOrEqual(toolbarBottom + 2)
+  } else {
+    // Compact mode: trailing actions are in overflow dropdown — open it and verify
+    const overflowTrigger = page.locator('#lesson-notes-panel [aria-label="More formatting options"]')
+    await expect(overflowTrigger).toBeVisible()
+    await overflowTrigger.click()
+
+    const timestampItem = page.getByRole('menuitem', { name: /Add Timestamp/ })
+    const downloadItem = page.getByRole('menuitem', { name: /Download as Markdown/ })
+    await expect(timestampItem).toBeVisible()
+    await expect(downloadItem).toBeVisible()
+
+    // Close dropdown by pressing Escape
+    await page.keyboard.press('Escape')
+  }
 }
 
 async function assertNotesPanelFitsViewport(page: PageParam) {
@@ -259,7 +273,9 @@ test.describe('E2E-6b: timestamp insertion', () => {
     await page.getByTestId('notes-toggle').click()
     await expect(page.locator('#lesson-notes-panel')).toBeVisible()
 
-    await page.locator('#lesson-notes-panel [aria-label="Add Timestamp"]').click()
+    // In compact mode, Add Timestamp is in the overflow dropdown
+    await page.locator('#lesson-notes-panel [aria-label="More formatting options"]').click()
+    await page.getByRole('menuitem', { name: /Add Timestamp/ }).click()
 
     const editorHtml = await page
       .locator('#lesson-notes-panel .ProseMirror')
@@ -271,15 +287,18 @@ test.describe('E2E-6b: timestamp insertion', () => {
 test.describe('E2E-6c: frame capture smoke', () => {
   test.use({ viewport: { width: 1280, height: 800 } })
 
-  test('@slow capture button visible after panel open', async ({ page }) => {
+  test('@slow capture button available in overflow dropdown', async ({ page }) => {
     test.skip(!!process.env.CI, 'Optional nightly — frame capture timing varies in CI')
 
     await goToLessonPlayer(page)
     await page.getByTestId('notes-toggle').click()
 
-    const captureBtn = page.locator('#lesson-notes-panel [aria-label="Capture video frame"]')
-    await expect(captureBtn).toBeVisible({ timeout: TIMEOUTS.LONG })
-    await expect(captureBtn).toBeEnabled()
+    // In compact mode, Capture Frame is in the overflow dropdown
+    await page.locator('#lesson-notes-panel [aria-label="More formatting options"]').click()
+    const captureItem = page.getByRole('menuitem', { name: /Capture video frame/ })
+    await expect(captureItem).toBeVisible({ timeout: TIMEOUTS.LONG })
+    await expect(captureItem).toBeEnabled()
+    await page.keyboard.press('Escape')
   })
 })
 
@@ -315,33 +334,34 @@ test.describe('Toolbar geometry regression (R1, R2)', () => {
     await assertNotesPanelFitsViewport(page)
   })
 
-  test('E2E-9c: toolbar actions contained with capture frame visible', async ({ page }) => {
+  test('E2E-9c: toolbar actions accessible in overflow dropdown', async ({ page }) => {
     await goToLessonPlayer(page)
     await page.getByTestId('notes-toggle').click()
     await expect(page.locator('#lesson-notes-panel')).toBeVisible()
 
-    // Only run assertions if capture frame button is present
-    const captureBtn = page.locator('#lesson-notes-panel [aria-label="Capture video frame"]')
-    if (await captureBtn.count()) {
-      const downloadBtn = page.locator(
-        '#lesson-notes-panel [aria-label="Download note as Markdown"]'
-      )
-      const tsBtn = page.locator('#lesson-notes-panel [aria-label="Add Timestamp"]')
-      await expect(captureBtn).toBeVisible()
-      await expect(tsBtn).toBeVisible()
-      await expect(downloadBtn).toBeVisible()
+    // In compact mode, all trailing actions are in the overflow dropdown
+    const overflowBtn = page.locator('#lesson-notes-panel [aria-label="More formatting options"]')
+    await expect(overflowBtn).toBeVisible()
+    await overflowBtn.click()
 
-      const cBox = await captureBtn.boundingBox()
-      const tsBox = await tsBtn.boundingBox()
-      const dlBox = await downloadBtn.boundingBox()
-      expect(cBox).toBeTruthy()
-      expect(tsBox).toBeTruthy()
-      expect(dlBox).toBeTruthy()
+    // Verify all trailing actions are present in dropdown
+    const timestampItem = page.getByRole('menuitem', { name: /Add Timestamp/ })
+    const downloadItem = page.getByRole('menuitem', { name: /Download as Markdown/ })
+    await expect(timestampItem).toBeVisible()
+    await expect(downloadItem).toBeVisible()
 
-      // None of the three buttons overlap
-      expect(boxesOverlap(cBox!, tsBox!)).toBe(false)
-      expect(boxesOverlap(tsBox!, dlBox!)).toBe(false)
-      expect(boxesOverlap(cBox!, dlBox!)).toBe(false)
-    }
+    // Capture frame may or may not be present (depends on onCaptureFrame prop)
+    await page.keyboard.press('Escape')
+
+    // Toolbar itself should not overflow — the wide buttons are now in dropdown
+    const toolbar = page.locator('#lesson-notes-panel [data-testid="note-editor-toolbar"]')
+    const toolbarBox = await toolbar.boundingBox()
+    expect(toolbarBox).toBeTruthy()
+
+    // Toolbar fits within the notes panel
+    const panel = page.locator('#lesson-notes-panel')
+    const panelBox = await panel.boundingBox()
+    expect(panelBox).toBeTruthy()
+    expect(toolbarBox!.x + toolbarBox!.width).toBeLessThanOrEqual(panelBox!.x + panelBox!.width + 2)
   })
 })

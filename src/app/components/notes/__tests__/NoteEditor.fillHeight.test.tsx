@@ -150,16 +150,22 @@ describe('NoteEditor fillHeight', () => {
   })
 
   describe('compact fillHeight toolbar structure', () => {
-    it('renders trailing action cluster when compact and fillHeight', () => {
+    it('hides trailing action cluster in compact mode (actions go to overflow dropdown)', () => {
       render(<NoteEditor courseId="c1" lessonId="l1" compact fillHeight />)
+
+      expect(screen.queryByTestId('note-editor-toolbar-actions')).not.toBeInTheDocument()
+    })
+
+    it('renders trailing action cluster when NOT compact', () => {
+      render(<NoteEditor courseId="c1" lessonId="l1" fillHeight />)
 
       const cluster = screen.getByTestId('note-editor-toolbar-actions')
       expect(cluster).toBeInTheDocument()
       expect(cluster.className).toContain('ml-auto')
     })
 
-    it('contains Add Timestamp and Download buttons in trailing action cluster', () => {
-      render(<NoteEditor courseId="c1" lessonId="l1" compact fillHeight />)
+    it('contains Add Timestamp and Download buttons in trailing cluster when not compact', () => {
+      render(<NoteEditor courseId="c1" lessonId="l1" fillHeight />)
 
       const cluster = screen.getByTestId('note-editor-toolbar-actions')
       const timestampBtn = cluster.querySelector('[aria-label="Add Timestamp"]')
@@ -184,8 +190,8 @@ describe('NoteEditor fillHeight', () => {
       expect(toolbar.className).not.toContain('w-full')
     })
 
-    it('keeps h-11 on Add Timestamp and Download buttons for touch targets', () => {
-      render(<NoteEditor courseId="c1" lessonId="l1" compact fillHeight />)
+    it('keeps h-11 on Add Timestamp and Download buttons in non-compact trailing cluster', () => {
+      render(<NoteEditor courseId="c1" lessonId="l1" fillHeight />)
 
       const cluster = screen.getByTestId('note-editor-toolbar-actions')
       const timestampBtn = cluster.querySelector('[aria-label="Add Timestamp"]')
