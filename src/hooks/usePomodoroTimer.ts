@@ -12,6 +12,7 @@ export interface PomodoroState {
 
 export interface PomodoroActions {
   start: () => void
+  startBreak: () => void
   pause: () => void
   resume: () => void
   reset: () => void
@@ -180,6 +181,10 @@ export function usePomodoroTimer(
     startCountdown(focusDurationRef.current, 'focus')
   }, [startCountdown])
 
+  const startBreak = useCallback(() => {
+    startCountdown(breakDurationRef.current, 'break')
+  }, [startCountdown])
+
   const pause = useCallback(() => {
     if (intervalRef.current === null) return
     clearTimer()
@@ -247,6 +252,7 @@ export function usePomodoroTimer(
     timeRemaining,
     completedSessions,
     start,
+    startBreak,
     pause,
     resume,
     reset,
