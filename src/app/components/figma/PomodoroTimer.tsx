@@ -55,7 +55,7 @@ export function PomodoroTimer({ tooltipLabel }: PomodoroTimerProps) {
     playChime(prefs.notificationVolume, prefs.notificationSound)
   }, [prefs.notificationVolume, prefs.notificationSound])
 
-  const { phase, status, timeRemaining, completedSessions, start, pause, resume, reset, skip } =
+  const { phase, status, timeRemaining, completedSessions, start, startBreak, pause, resume, reset, skip } =
     usePomodoroTimer({
       focusDuration: prefs.focusDuration * 60,
       breakDuration: prefs.breakDuration * 60,
@@ -183,7 +183,7 @@ export function PomodoroTimer({ tooltipLabel }: PomodoroTimerProps) {
                 <Button
                   variant="brand"
                   size="sm"
-                  onClick={phase === 'break' ? skip : start}
+                  onClick={phase === 'break' ? startBreak : start}
                   aria-label={phase === 'break' ? 'Start break' : 'Start focus timer'}
                   data-testid="pomodoro-start-phase"
                 >

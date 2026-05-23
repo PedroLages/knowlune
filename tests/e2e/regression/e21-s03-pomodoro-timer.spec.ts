@@ -213,6 +213,16 @@ test.describe('E21-S03: Pomodoro Focus Timer', () => {
     // Should show break phase but stopped (not running)
     await expect(page.getByTestId('pomodoro-phase')).toHaveText('Break Time')
     // Should show a start button for break instead of pause
-    await expect(page.getByTestId('pomodoro-start-phase')).toBeVisible()
+    const startBreakBtn = page.getByTestId('pomodoro-start-phase')
+    await expect(startBreakBtn).toBeVisible()
+
+    // Click "Start Break" — should start the break countdown, not skip it
+    await startBreakBtn.click()
+
+    // Break should now be running (pause button visible, not start-phase button)
+    await expect(page.getByTestId('pomodoro-pause')).toBeVisible()
+    await expect(page.getByTestId('pomodoro-start-phase')).not.toBeVisible()
+    // Phase should still be "Break Time" (not jumped to idle/focus)
+    await expect(page.getByTestId('pomodoro-phase')).toHaveText('Break Time')
   })
 })
