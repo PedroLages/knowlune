@@ -44,7 +44,7 @@ export interface CompletionFlowParams {
 
 export interface CompletionFlowResult {
   checkCourseCompletion: (lessonsArr: LessonItem[]) => boolean
-  showCelebration: () => void
+  showCelebration: () => boolean
   handleVideoEnded: () => Promise<void>
   handleYouTubeAutoComplete: () => void
   handleAutoAdvance: () => void
@@ -93,12 +93,13 @@ export function useCompletionFlow(params: CompletionFlowParams): CompletionFlowR
    * Individual lesson completions no longer trigger the modal.
    */
   const showCelebration = useCallback(
-    () => {
+    (): boolean => {
       const isCourseComplete = lessons.length > 0 && checkCourseCompletion(lessons)
-      if (!isCourseComplete) return
+      if (!isCourseComplete) return false
       setCelebrationType('course')
       setCelebrationTitle(courseName ?? 'Course')
       setCelebrationOpen(true)
+      return true
     },
     [
       lessons,
@@ -122,12 +123,13 @@ export function useCompletionFlow(params: CompletionFlowParams): CompletionFlowR
       return // Don't show celebration or auto-advance if persistence failed
     }
 
-    // Show celebration modal (only on full course completion)
-    showCelebration()
+    // Show celebration modal (only on full course completion) — guard auto-advance countdown
+    // so they never render simultaneously (celebration modal already has "Continue" button)
+    const celebrationShown = showCelebration()
 
-    // Trigger auto-advance countdown only when auto-play is enabled
+    // Trigger auto-advance countdown only when auto-play is enabled AND celebration did not fire
     const autoPlay = readAutoPlay()
-    if (nextLesson && autoPlay) {
+    if (nextLesson && autoPlay && !celebrationShown) {
       setShowAutoAdvance(true)
     }
   }, [
@@ -140,11 +142,12 @@ export function useCompletionFlow(params: CompletionFlowParams): CompletionFlowR
   ])
 
   // Handle YouTube auto-complete (>90% watched) — status already persisted by YouTubeVideoContent,
-  // so we only need to show celebration and trigger auto-advance countdown.
+  // so we only need to show celebration and trigger auto-advance countdown
+  // (guarded so celebration and countdown never render simultaneously).
   const handleYouTubeAutoComplete = useCallback(() => {
-    showCelebration()
+    const celebrationShown = showCelebration()
     const autoPlay = readAutoPlay()
-    if (nextLesson && autoPlay) {
+    if (nextLesson && autoPlay && !celebrationShown) {
       setShowAutoAdvance(true)
     }
   }, [showCelebration, nextLesson, setShowAutoAdvance])
@@ -166,9 +169,9 @@ export function useCompletionFlow(params: CompletionFlowParams): CompletionFlowR
   const handleManualStatusChange = useCallback(
     (status: CompletionStatus) => {
       if (status === 'completed') {
-        showCelebration()
+        const celebrationShown = showCelebration()
         const autoPlay = readAutoPlay()
-        if (nextLesson && autoPlay) {
+        if (nextLesson && autoPlay && !celebrationShown) {
           setShowAutoAdvance(true)
         }
       }
