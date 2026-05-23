@@ -77,7 +77,7 @@ async function assertNotesPanelFitsViewport(page: PageParam) {
   }
 }
 
-const LESSON_URL = '/courses/operative-six/op6-introduction'
+const LESSON_URL = '/courses/operative-six/lessons/op6-introduction'
 
 type PageParam = Parameters<typeof navigateAndWait>[0]
 
