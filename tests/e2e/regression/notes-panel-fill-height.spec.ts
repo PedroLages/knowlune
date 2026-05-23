@@ -8,6 +8,75 @@ import { navigateAndWait } from '../../support/helpers/navigation'
 import { closeSidebar } from '../../support/fixtures/constants/sidebar-constants'
 import { TIMEOUTS } from '../../utils/constants'
 
+interface BoundingBox {
+  x: number
+  y: number
+  width: number
+  height: number
+}
+
+function boxesOverlap(a: BoundingBox, b: BoundingBox): boolean {
+  const intersectionWidth = Math.max(0, Math.min(a.x + a.width, b.x + b.width) - Math.max(a.x, b.x))
+  const intersectionHeight = Math.max(0, Math.min(a.y + a.height, b.y + b.height) - Math.max(a.y, b.y))
+  return intersectionWidth > 0 && intersectionHeight > 0
+}
+
+async function assertToolbarActionsContained(page: PageParam) {
+  const toolbar = page.locator('#lesson-notes-panel [data-testid="note-editor-toolbar"]')
+  const timstampBtn = page.locator(
+    '#lesson-notes-panel [aria-label="Add Timestamp"]'
+  )
+  const downloadBtn = page.locator(
+    '#lesson-notes-panel [aria-label="Download note as Markdown"]'
+  )
+
+  await expect(toolbar).toBeVisible()
+  await expect(timstampBtn).toBeVisible()
+  await expect(downloadBtn).toBeVisible()
+
+  const toolbarBox = await toolbar.boundingBox()
+  const tsBox = await timstampBtn.boundingBox()
+  const dlBox = await downloadBtn.boundingBox()
+  expect(toolbarBox).toBeTruthy()
+  expect(tsBox).toBeTruthy()
+  expect(dlBox).toBeTruthy()
+
+  // Timestamp and Download do not overlap
+  expect(boxesOverlap(tsBox!, dlBox)).toBe(false)
+
+  // Both buttons are fully inside the toolbar
+  const toolbarRight = toolbarBox!.x + toolbarBox!.width
+  const toolbarBottom = toolbarBox!.y + toolbarBox!.height
+  expect(tsBox!.x + tsBox!.width).toBeLessThanOrEqual(toolbarRight + 2)
+  expect(tsBox!.y + tsBox!.height).toBeLessThanOrEqual(toolbarBottom + 2)
+  expect(dlBox!.x + dlBox!.width).toBeLessThanOrEqual(toolbarRight + 2)
+  expect(dlBox!.y + dlBox!.height).toBeLessThanOrEqual(toolbarBottom + 2)
+}
+
+async function assertNotesPanelFitsViewport(page: PageParam) {
+  const panel = page.locator('#lesson-notes-panel')
+  await expect(panel).toBeVisible()
+
+  const panelBox = await panel.boundingBox()
+  expect(panelBox).toBeTruthy()
+
+  const viewportHeight = page.viewportSize()?.height ?? 800
+  expect(panelBox!.y + panelBox!.height).toBeLessThanOrEqual(viewportHeight + 2)
+
+  const toolbar = page.locator('#lesson-notes-panel [data-testid="note-editor-toolbar"]')
+  await expect(toolbar).toBeVisible()
+  const toolbarBox = await toolbar.boundingBox()
+  expect(toolbarBox).toBeTruthy()
+
+  // Toolbar bottom edge is above editor body top edge
+  const editorBody = page.locator('#lesson-notes-panel [data-testid="note-editor-body"]')
+  if (await editorBody.count()) {
+    const editorBodyBox = await editorBody.boundingBox()
+    expect(editorBodyBox).toBeTruthy()
+    expect(toolbarBox!.y + toolbarBox!.height).toBeLessThanOrEqual(editorBodyBox!.y + 2)
+  }
+}
+
 const LESSON_URL = '/courses/operative-six/op6-introduction'
 
 type PageParam = Parameters<typeof navigateAndWait>[0]
@@ -211,5 +280,68 @@ test.describe('E2E-6c: frame capture smoke', () => {
     const captureBtn = page.locator('#lesson-notes-panel [aria-label="Capture video frame"]')
     await expect(captureBtn).toBeVisible({ timeout: TIMEOUTS.LONG })
     await expect(captureBtn).toBeEnabled()
+  })
+})
+
+test.describe('Toolbar geometry regression (R1, R2)', () => {
+  test.use({ viewport: { width: 1280, height: 800 } })
+
+  test('E2E-9a: toolbar actions contained at default panel width', async ({ page }) => {
+    await goToLessonPlayer(page)
+    await page.getByTestId('notes-toggle').click()
+    await expect(page.locator('#lesson-notes-panel')).toBeVisible()
+
+    await assertToolbarActionsContained(page)
+    await assertNotesPanelFitsViewport(page)
+  })
+
+  test('E2E-9b: toolbar actions contained at minimum panel width', async ({ page }) => {
+    await goToLessonPlayer(page)
+    await page.getByTestId('notes-toggle').click()
+    await expect(page.locator('#lesson-notes-panel')).toBeVisible()
+
+    // Drag resizer to minimum panel width
+    const handle = page.locator('[data-separator]')
+    const box = await handle.boundingBox()
+    expect(box).toBeTruthy()
+
+    // Drag far enough left to hit ~25% min width
+    await page.mouse.move(box!.x + box!.width / 2, box!.y + box!.height / 2)
+    await page.mouse.down()
+    await page.mouse.move(box!.x - 280, box!.y + box!.height / 2, { steps: 8 })
+    await page.mouse.up()
+
+    await assertToolbarActionsContained(page)
+    await assertNotesPanelFitsViewport(page)
+  })
+
+  test('E2E-9c: toolbar actions contained with capture frame visible', async ({ page }) => {
+    await goToLessonPlayer(page)
+    await page.getByTestId('notes-toggle').click()
+    await expect(page.locator('#lesson-notes-panel')).toBeVisible()
+
+    // Only run assertions if capture frame button is present
+    const captureBtn = page.locator('#lesson-notes-panel [aria-label="Capture video frame"]')
+    if (await captureBtn.count()) {
+      const downloadBtn = page.locator(
+        '#lesson-notes-panel [aria-label="Download note as Markdown"]'
+      )
+      const tsBtn = page.locator('#lesson-notes-panel [aria-label="Add Timestamp"]')
+      await expect(captureBtn).toBeVisible()
+      await expect(tsBtn).toBeVisible()
+      await expect(downloadBtn).toBeVisible()
+
+      const cBox = await captureBtn.boundingBox()
+      const tsBox = await tsBtn.boundingBox()
+      const dlBox = await downloadBtn.boundingBox()
+      expect(cBox).toBeTruthy()
+      expect(tsBox).toBeTruthy()
+      expect(dlBox).toBeTruthy()
+
+      // None of the three buttons overlap
+      expect(boxesOverlap(cBox!, tsBox!)).toBe(false)
+      expect(boxesOverlap(tsBox!, dlBox!)).toBe(false)
+      expect(boxesOverlap(cBox!, dlBox!)).toBe(false)
+    }
   })
 })

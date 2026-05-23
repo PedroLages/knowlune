@@ -55,7 +55,7 @@ export function NotesPanel({
       id="lesson-notes-panel"
       data-testid="lesson-notes-panel"
       className={cn(
-        'sticky top-0 self-start w-full flex flex-col h-full min-h-0 overflow-hidden',
+        'w-full flex flex-col h-full min-h-0 overflow-hidden',
         isTheater ? 'max-h-[calc(100svh-1rem)]' : 'max-h-[calc(100svh-3rem)]'
       )}
     >
