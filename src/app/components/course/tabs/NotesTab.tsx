@@ -10,6 +10,7 @@ import { Skeleton } from '@/app/components/ui/skeleton'
 import { Badge } from '@/app/components/ui/badge'
 import { Popover, PopoverContent, PopoverTrigger } from '@/app/components/ui/popover'
 import { Button } from '@/app/components/ui/button'
+import { cn } from '@/app/components/ui/utils'
 import { NoteEditor } from '@/app/components/notes/NoteEditor'
 import { useNoteStore } from '@/stores/useNoteStore'
 import {
@@ -32,6 +33,8 @@ export interface NotesTabProps {
   onCaptureFrame?: () => Promise<CapturedFrame | null>
   /** Callback when save status changes (for parent toolbar "Saved" indicator). */
   onSaveStatusChange?: (status: 'idle' | 'saved') => void
+  /** When true, stretch editor to fill available vertical space (desktop side panel). */
+  fillHeight?: boolean
 }
 
 export function NotesTab({
@@ -41,6 +44,7 @@ export function NotesTab({
   currentTime,
   onCaptureFrame,
   onSaveStatusChange,
+  fillHeight = false,
 }: NotesTabProps) {
   const notes = useNoteStore(s => s.notes)
   const loadNotesByLesson = useNoteStore(s => s.loadNotesByLesson)
@@ -165,6 +169,15 @@ export function NotesTab({
   )
 
   if (isLoading) {
+    if (fillHeight) {
+      return (
+        <div className="flex flex-col flex-1 min-h-0 p-4">
+          <Skeleton className="h-4 w-32 shrink-0" />
+          <Skeleton className="flex-1 min-h-[250px] w-full mt-3" />
+        </div>
+      )
+    }
+
     return (
       <div className="p-4 space-y-3">
         <Skeleton className="h-4 w-32" />
@@ -174,10 +187,10 @@ export function NotesTab({
   }
 
   return (
-    <div className="h-full overflow-auto">
+    <div className={fillHeight ? 'flex flex-col flex-1 min-h-0' : 'h-full overflow-auto'}>
       {/* Inline note link suggestions badge */}
       {pendingNoteLinkSuggestions.length > 0 && (
-        <div className="px-5 pt-3">
+        <div className={cn('px-5 pt-3', fillHeight && 'shrink-0')}>
           <Popover>
             <PopoverTrigger asChild>
               <Badge
@@ -256,6 +269,8 @@ export function NotesTab({
         onCaptureFrame={onCaptureFrame}
         onSaveStatusChange={onSaveStatusChange}
         compact
+        fillHeight={fillHeight}
+        className={fillHeight ? 'flex-1 min-h-0' : undefined}
       />
     </div>
   )

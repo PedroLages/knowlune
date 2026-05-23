@@ -3,19 +3,17 @@
  *
  * Renders inside a ResizablePanel (controlled by UnifiedLessonPlayer) and provides:
  * - Close button header
- * - Scrollable NotesTab with frame capture support
- * - Deferred focus: when `pendingFocus` is true, focuses the TipTap editor
+ * - Fill-height NotesTab with frame capture support
+ * - Deferred focus: when store `pendingNoteFocus` is true, focuses the TipTap editor
  *   after the panel animation completes
- *
- * Ported from the classic LessonPlayer's inline notes panel.
  */
 
 import { useEffect } from 'react'
 import { X } from 'lucide-react'
-import { ScrollArea } from '@/app/components/ui/scroll-area'
 import { Button } from '@/app/components/ui/button'
 import { NotesTab } from './tabs/NotesTab'
 import { cn } from '@/app/components/ui/utils'
+import { useLessonChromeStore } from '@/stores/useLessonChromeStore'
 import type { CapturedFrame } from '@/lib/frame-capture'
 
 interface NotesPanelProps {
@@ -25,10 +23,6 @@ interface NotesPanelProps {
   onSeek?: (time: number) => void
   onClose: () => void
   onCaptureFrame?: () => Promise<CapturedFrame | null>
-  /** When true, focus the TipTap editor after mount/animation */
-  pendingFocus: boolean
-  /** Called after focus is applied so parent can clear the pending flag */
-  onFocusComplete: () => void
   /** Theater mode — stretches panel to full viewport height */
   isTheater?: boolean
 }
@@ -40,30 +34,33 @@ export function NotesPanel({
   onSeek,
   onClose,
   onCaptureFrame,
-  pendingFocus,
-  onFocusComplete,
   isTheater,
 }: NotesPanelProps) {
-  // Deferred focus: focus the ProseMirror editor after panel animation
+  const pendingFocus = useLessonChromeStore(s => s.pendingNoteFocus)
+  const clearPendingNoteFocus = useLessonChromeStore(s => s.clearPendingNoteFocus)
+
   useEffect(() => {
     if (!pendingFocus) return
-    // .ProseMirror is TipTap-specific — scoped to avoid matching other contenteditable elements
     requestAnimationFrame(() => {
-      const editor = document.querySelector('.ProseMirror[contenteditable="true"]') as HTMLElement
+      const editor = document.querySelector(
+        '#lesson-notes-panel .ProseMirror[contenteditable="true"]'
+      ) as HTMLElement | null
       editor?.focus()
-      onFocusComplete()
+      clearPendingNoteFocus()
     })
-  }, [pendingFocus, onFocusComplete])
+  }, [pendingFocus, clearPendingNoteFocus])
 
   return (
-    <ScrollArea
+    <div
+      id="lesson-notes-panel"
+      data-testid="lesson-notes-panel"
       className={cn(
-        'sticky top-0 h-full',
-        isTheater ? 'max-h-[calc(100svh-1rem)]' : 'max-h-[60svh]'
+        'sticky top-0 self-start w-full flex flex-col h-full min-h-0 overflow-hidden',
+        isTheater ? 'max-h-[calc(100svh-1rem)]' : 'max-h-[calc(100svh-3rem)]'
       )}
     >
-      <div className="p-4">
-        <div className="flex items-center justify-between mb-3">
+      <div className="flex flex-col flex-1 min-h-0 p-4">
+        <div className="flex items-center justify-between mb-3 shrink-0">
           <h3 className="text-sm font-semibold">Notes</h3>
           <Button
             variant="ghost"
@@ -81,8 +78,9 @@ export function NotesPanel({
           onSeek={onSeek}
           currentTime={currentTime}
           onCaptureFrame={onCaptureFrame}
+          fillHeight
         />
       </div>
-    </ScrollArea>
+    </div>
   )
 }
