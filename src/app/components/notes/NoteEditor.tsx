@@ -645,7 +645,8 @@ export function NoteEditor({
           className={cn(
             'flex items-center gap-1 px-4 py-2 border-b border-border bg-muted/30 flex-wrap',
             !compact && 'sm:flex-nowrap sm:overflow-x-auto',
-            fillHeight && 'shrink-0'
+            fillHeight && 'shrink-0',
+            compact && fillHeight && 'min-w-0 w-full'
           )}
         >
           {/* Inline formatting group */}
@@ -945,60 +946,66 @@ export function NoteEditor({
             </DropdownMenu>
           </div>
 
-          {/* Capture Frame button */}
-          {onCaptureFrame && (
+          {/* Trailing action cluster */}
+          <div
+            data-testid="note-editor-toolbar-actions"
+            className="ml-auto flex shrink-0 items-center gap-1"
+          >
+            {/* Capture Frame button */}
+            {onCaptureFrame && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    onClick={handleCaptureFrame}
+                    className={cn(
+                      'inline-flex items-center justify-center size-11 rounded-md text-sm transition-colors cursor-pointer',
+                      'hover:bg-accent hover:text-accent-foreground',
+                      'focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-1'
+                    )}
+                    aria-label="Capture video frame"
+                  >
+                    <Camera className="size-4" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>Capture video frame</TooltipContent>
+              </Tooltip>
+            )}
+
+            {/* Timestamp button */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={insertTimestamp}
+              className="h-11 px-3 text-xs"
+              aria-label="Add Timestamp"
+            >
+              <Clock className="size-3.5 mr-1.5" />
+              Add Timestamp
+            </Button>
+
+            {/* Download note as Markdown */}
             <Tooltip>
               <TooltipTrigger asChild>
-                <button
-                  type="button"
-                  onClick={handleCaptureFrame}
-                  className={cn(
-                    'inline-flex items-center justify-center size-11 rounded-md text-sm transition-colors cursor-pointer ml-auto',
-                    'hover:bg-accent hover:text-accent-foreground',
-                    'focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-1'
-                  )}
-                  aria-label="Capture video frame"
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-11 px-3 text-xs"
+                  aria-label="Download note as Markdown"
+                  disabled={editor.isEmpty}
+                  onClick={() => {
+                    const html = editor.getHTML()
+                    const { content, filename } = exportSingleNoteAsMarkdown(html)
+                    downloadAsFile(content, filename, 'text/markdown')
+                  }}
                 >
-                  <Camera className="size-4" />
-                </button>
+                  <Download className="size-3.5 mr-1.5" />
+                  Download
+                </Button>
               </TooltipTrigger>
-              <TooltipContent>Capture video frame</TooltipContent>
+              <TooltipContent>Download note as Markdown</TooltipContent>
             </Tooltip>
-          )}
-
-          {/* Timestamp button */}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={insertTimestamp}
-            className={cn('h-11 px-3 text-xs', !onCaptureFrame && 'ml-auto')}
-            aria-label="Add Timestamp"
-          >
-            <Clock className="size-3.5 mr-1.5" />
-            Add Timestamp
-          </Button>
-
-          {/* Download note as Markdown */}
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-11 px-3 text-xs"
-                aria-label="Download note as Markdown"
-                disabled={editor.isEmpty}
-                onClick={() => {
-                  const html = editor.getHTML()
-                  const { content, filename } = exportSingleNoteAsMarkdown(html)
-                  downloadAsFile(content, filename, 'text/markdown')
-                }}
-              >
-                <Download className="size-3.5 mr-1.5" />
-                Download
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Download note as Markdown</TooltipContent>
-          </Tooltip>
+          </div>
         </div>
       </TooltipProvider>
 
