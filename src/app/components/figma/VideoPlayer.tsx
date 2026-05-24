@@ -969,7 +969,6 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
         <video
           ref={videoRef}
           src={src}
-          title={title}
           className="h-full w-full object-contain"
           preload="metadata"
           playsInline
