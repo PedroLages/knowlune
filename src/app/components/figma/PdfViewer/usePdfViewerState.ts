@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import type { DocumentProps } from 'react-pdf'
 type PDFDocumentProxy = Parameters<NonNullable<DocumentProps['onLoadSuccess']>>[0]
 import { ZOOM_PRESETS, ZOOM_LABELS, type ZoomMode, type ScrollMode } from './types'
+import { exitFullscreenIfActive } from '@/lib/fullscreen'
 
 export function usePdfViewerState(
   initialPage: number,
@@ -240,7 +241,7 @@ export function usePdfViewerState(
     const el = containerRef.current
     if (!el) return
     if (document.fullscreenElement) {
-      document.exitFullscreen()
+      exitFullscreenIfActive()
     } else {
       el.requestFullscreen()
     }

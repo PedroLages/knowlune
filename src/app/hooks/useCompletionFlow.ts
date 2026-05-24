@@ -11,6 +11,7 @@ import { useCallback } from 'react'
 import { useLessonChromeStore } from '@/stores/useLessonChromeStore'
 import type { NavigateFunction } from 'react-router'
 import { toast } from 'sonner'
+import { exitFullscreenIfActive } from '@/lib/fullscreen'
 import type { LessonItem } from '@/lib/courseAdapter'
 import type { CelebrationType } from '@/app/components/celebrations/CompletionModal'
 import type { CompletionStatus, Module } from '@/data/types'
@@ -116,9 +117,7 @@ export function useCompletionFlow(params: CompletionFlowParams): CompletionFlowR
     if (!courseId || !lessonId) return
 
     // Exit fullscreen so the countdown overlay and celebration modal are visible
-    if (document.fullscreenElement) {
-      document.exitFullscreen().catch(() => {})
-    }
+    exitFullscreenIfActive()
 
     // Mark the lesson as completed
     try {
@@ -151,9 +150,7 @@ export function useCompletionFlow(params: CompletionFlowParams): CompletionFlowR
   // (guarded so celebration and countdown never render simultaneously).
   const handleYouTubeAutoComplete = useCallback(() => {
     // Exit fullscreen so the countdown overlay is visible
-    if (document.fullscreenElement) {
-      document.exitFullscreen().catch(() => {})
-    }
+    exitFullscreenIfActive()
 
     const celebrationShown = showCelebration()
     const autoPlay = readAutoPlay()
@@ -180,9 +177,7 @@ export function useCompletionFlow(params: CompletionFlowParams): CompletionFlowR
     (status: CompletionStatus) => {
       if (status === 'completed') {
         // Exit fullscreen so the countdown overlay is visible
-        if (document.fullscreenElement) {
-          document.exitFullscreen().catch(() => {})
-        }
+        exitFullscreenIfActive()
 
         const celebrationShown = showCelebration()
         const autoPlay = readAutoPlay()
