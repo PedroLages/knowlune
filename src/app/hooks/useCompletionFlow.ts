@@ -11,6 +11,7 @@ import { useCallback } from 'react'
 import { useLessonChromeStore } from '@/stores/useLessonChromeStore'
 import type { NavigateFunction } from 'react-router'
 import { toast } from 'sonner'
+import { exitFullscreenIfActive } from '@/lib/fullscreen'
 import type { LessonItem } from '@/lib/courseAdapter'
 import type { CelebrationType } from '@/app/components/celebrations/CompletionModal'
 import type { CompletionStatus, Module } from '@/data/types'
@@ -111,9 +112,12 @@ export function useCompletionFlow(params: CompletionFlowParams): CompletionFlowR
     ]
   )
 
-  // Handle video ended — mark complete, show celebration, trigger auto-advance
+  // Handle video ended — exit fullscreen, mark complete, show celebration, trigger auto-advance
   const handleVideoEnded = useCallback(async () => {
     if (!courseId || !lessonId) return
+
+    // Exit fullscreen so the countdown overlay and celebration modal are visible
+    exitFullscreenIfActive()
 
     // Mark the lesson as completed
     try {
@@ -141,10 +145,13 @@ export function useCompletionFlow(params: CompletionFlowParams): CompletionFlowR
     setShowAutoAdvance,
   ])
 
-  // Handle YouTube auto-complete (>90% watched) — status already persisted by YouTubeVideoContent,
-  // so we only need to show celebration and trigger auto-advance countdown
+  // Handle YouTube auto-complete (>90% watched) — exit fullscreen, then show celebration
+  // and trigger auto-advance countdown
   // (guarded so celebration and countdown never render simultaneously).
   const handleYouTubeAutoComplete = useCallback(() => {
+    // Exit fullscreen so the countdown overlay is visible
+    exitFullscreenIfActive()
+
     const celebrationShown = showCelebration()
     const autoPlay = readAutoPlay()
     if (nextLesson && autoPlay && !celebrationShown) {
@@ -169,6 +176,9 @@ export function useCompletionFlow(params: CompletionFlowParams): CompletionFlowR
   const handleManualStatusChange = useCallback(
     (status: CompletionStatus) => {
       if (status === 'completed') {
+        // Exit fullscreen so the countdown overlay is visible
+        exitFullscreenIfActive()
+
         const celebrationShown = showCelebration()
         const autoPlay = readAutoPlay()
         if (nextLesson && autoPlay && !celebrationShown) {

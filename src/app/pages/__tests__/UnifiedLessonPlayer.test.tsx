@@ -30,6 +30,11 @@ const MOCK_LESSONS = [
 vi.mock('@/db', () => ({ db: {} }))
 vi.mock('@/db/schema', () => ({ db: {} }))
 
+const mockExitFullscreenIfActive = vi.hoisted(() => vi.fn())
+vi.mock('@/lib/fullscreen', () => ({
+  exitFullscreenIfActive: mockExitFullscreenIfActive,
+}))
+
 const mockSetItemStatus = vi.fn().mockResolvedValue(undefined)
 const mockGetItemStatus = vi.fn().mockReturnValue('not-started')
 
@@ -177,7 +182,17 @@ vi.mock('@/app/components/course/LocalVideoContent', () => ({
   ),
 }))
 vi.mock('@/app/components/course/YouTubeVideoContent', () => ({
-  YouTubeVideoContent: () => <div>YT</div>,
+  YouTubeVideoContent: ({ onAutoComplete }: { onAutoComplete?: () => void }) => (
+    <div data-testid="youtube-content">
+      <button
+        type="button"
+        data-testid="trigger-yt-complete"
+        onClick={onAutoComplete}
+      >
+        YT Auto Complete
+      </button>
+    </div>
+  ),
 }))
 vi.mock('@/app/components/course/BelowVideoTabs', () => ({
   BelowVideoTabs: () => <div data-testid="below-video-tabs">Below Video Tabs</div>,
@@ -231,6 +246,7 @@ describe('UnifiedLessonPlayer — E54-S01 callbacks', () => {
     vi.clearAllMocks()
     mockSetItemStatus.mockResolvedValue(undefined)
     mockGetItemStatus.mockReturnValue('not-started')
+    mockAdapter.getSource.mockReturnValue('local')
     // Reset autoPlay to default after tests that toggle it — Zustand store
     // is a singleton so state leaks between tests without explicit reset.
     useLessonChromeStore.setState({ autoPlay: true })
@@ -404,5 +420,51 @@ describe('UnifiedLessonPlayer — E54-S01 callbacks', () => {
       'in-progress',
       []
     )
+  })
+
+  it('calls exitFullscreenIfActive when local video ends (handleVideoEnded)', async () => {
+    renderPlayer()
+    const endButton = await screen.findByTestId('trigger-ended')
+
+    await act(async () => {
+      endButton.click()
+    })
+
+    await waitFor(() => {
+      expect(mockSetItemStatus).toHaveBeenCalled()
+    })
+
+    expect(mockExitFullscreenIfActive).toHaveBeenCalled()
+  })
+
+  it('calls exitFullscreenIfActive when YouTube video auto-completes (handleYouTubeAutoComplete)', async () => {
+    mockAdapter.getSource.mockReturnValue('youtube')
+    renderPlayer()
+
+    const triggerButton = await screen.findByTestId('trigger-yt-complete')
+
+    await act(async () => {
+      triggerButton.click()
+    })
+
+    expect(mockExitFullscreenIfActive).toHaveBeenCalled()
+  })
+
+  it('calls exitFullscreenIfActive even when not in fullscreen (no-op safe)', async () => {
+    // jsdom default: fullscreenElement is always null.
+    // Verifies the handler calls exitFullscreenIfActive regardless of
+    // fullscreen state; the internal guard is tested in fullscreen.test.ts.
+    renderPlayer()
+    const endButton = await screen.findByTestId('trigger-ended')
+
+    await act(async () => {
+      endButton.click()
+    })
+
+    await waitFor(() => {
+      expect(mockSetItemStatus).toHaveBeenCalled()
+    })
+
+    expect(mockExitFullscreenIfActive).toHaveBeenCalled()
   })
 })
