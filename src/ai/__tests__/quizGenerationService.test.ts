@@ -4,7 +4,7 @@
  * Tests the 4-stage quiz generation pipeline with factory-level mocks.
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
 // --- Hoisted mocks ---
 
@@ -29,12 +29,12 @@ const {
   mockChaptersSortBy: vi.fn(),
   mockDigest: vi.fn(),
   mockSyncableWrite: vi.fn(),
-  mockResolveFeatureModel: vi.fn(() => ({
-    provider: 'anthropic' as const,
+  mockResolveFeatureModel: vi.fn<() => { provider: string; model: string }>(() => ({
+    provider: 'anthropic',
     model: 'claude-haiku-4-5',
   })),
-  mockGetOllamaServerUrl: vi.fn(() => null),
-  mockGetOllamaSelectedModel: vi.fn(() => null),
+  mockGetOllamaServerUrl: vi.fn<() => string | null>(() => null),
+  mockGetOllamaSelectedModel: vi.fn<() => string | null>(() => null),
   mockStreamCompletion: vi.fn(),
   mockAssertAIFeatureConsent: vi.fn(async () => {}),
   mockGetLLMClient: vi.fn(),
@@ -223,13 +223,15 @@ function mockValidOllamaNativeResponse() {
 }
 
 beforeEach(() => {
-  // Re-apply global crypto stub (afterEach unstubs all globals)
+  vi.clearAllMocks()
+  resetMockDefaults()
+  // Re-apply global crypto stub (afterEach unstubs all globals).
+  // IMPORTANT: resetMockDefaults() must run before stubGlobal so the
+  // digest mock implementation is in place when crypto is stubbed.
   vi.stubGlobal('crypto', {
     subtle: { digest: mockDigest },
     randomUUID: () => 'test-uuid-1234',
   })
-  vi.clearAllMocks()
-  resetMockDefaults()
   mockQuizzesWhere.mockResolvedValue([])
   mockQuizzesPut.mockResolvedValue(undefined)
   mockChaptersSortBy.mockResolvedValue([])

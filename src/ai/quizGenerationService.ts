@@ -368,10 +368,16 @@ async function callLLMForQuizChunk(
     const content = await collectStreamWithTimeout(stream, GENERATION_TIMEOUT_MS, signal)
     return content || null
   } catch (error) {
-    if ((error as Error).name === 'AbortError' || signal?.aborted) {
+    const errMsg = (error as Error).message || ''
+    if (
+      (error as Error).name === 'AbortError' ||
+      signal?.aborted ||
+      errMsg.includes('timed out') ||
+      errMsg.includes('aborted')
+    ) {
       console.warn(LOG_PREFIX, 'Request timed out or was cancelled')
     } else {
-      console.warn(LOG_PREFIX, 'LLM call failed:', (error as Error).message)
+      console.warn(LOG_PREFIX, 'LLM call failed:', errMsg)
     }
     return null
   }
