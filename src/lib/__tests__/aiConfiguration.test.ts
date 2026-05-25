@@ -77,6 +77,7 @@ describe('aiConfiguration.ts', () => {
         consentSettings: {
           videoSummary: true,
           noteQA: false,
+          quizGeneration: true,
           learningPath: true,
           knowledgeGaps: true,
           noteOrganization: false,
@@ -185,6 +186,7 @@ describe('aiConfiguration.ts', () => {
         consentSettings: {
           videoSummary: true,
           noteQA: true,
+          quizGeneration: false,
           learningPath: false,
           knowledgeGaps: true,
           noteOrganization: true,
@@ -212,6 +214,7 @@ describe('aiConfiguration.ts', () => {
         consentSettings: {
           videoSummary: true,
           noteQA: false,
+          quizGeneration: true,
           learningPath: true,
           knowledgeGaps: false,
           noteOrganization: true,
@@ -232,6 +235,7 @@ describe('aiConfiguration.ts', () => {
         consentSettings: {
           videoSummary: false,
           noteQA: false,
+          quizGeneration: false,
           learningPath: false,
           knowledgeGaps: false,
           noteOrganization: false,

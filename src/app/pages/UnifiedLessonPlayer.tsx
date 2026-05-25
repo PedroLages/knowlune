@@ -549,7 +549,7 @@ export function UnifiedLessonPlayer() {
       <div className="mt-4">
         <GenerateQuizButton
           isGenerating={quizGen.isGenerating}
-          ollamaAvailable={quizGen.ollamaAvailable}
+          aiAvailable={quizGen.aiAvailable}
           checkingAvailability={quizGen.checkingAvailability}
           cachedQuiz={quizGen.cachedQuiz}
           onGenerate={quizGen.generate}

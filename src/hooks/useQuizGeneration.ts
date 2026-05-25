@@ -10,9 +10,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { toast } from 'sonner'
 import { generateQuizForLesson, type QuizGenerationResult } from '@/ai/quizGenerationService'
-import { isAIAvailable } from '@/lib/aiConfiguration'
-import { testOllamaConnection } from '@/lib/ollamaHealthCheck'
-import { getAIConfiguration, getOllamaSelectedModel } from '@/lib/aiConfiguration'
+import { getQuizGenerationAvailability } from '@/lib/aiConfiguration'
 import { db } from '@/db'
 import type { Quiz } from '@/types/quiz'
 import type { BloomsLevel } from '@/ai/quizPrompts'
@@ -32,13 +30,13 @@ export interface UseQuizGenerationReturn {
   cachedQuiz: Quiz | null
   /** All quizzes for this lesson (for accessing previous versions) */
   allQuizzes: Quiz[]
-  /** Whether Ollama is available for quiz generation */
-  ollamaAvailable: boolean
+  /** Whether AI is available for quiz generation */
+  aiAvailable: boolean
   /** Whether availability check is still in progress */
   checkingAvailability: boolean
 }
 
-/** Ollama availability re-check interval (30 seconds) */
+/** AI availability re-check interval (30 seconds) */
 const HEALTH_CHECK_INTERVAL_MS = 30_000
 
 export function useQuizGeneration(
@@ -50,9 +48,10 @@ export function useQuizGeneration(
   const [error, setError] = useState<string | null>(null)
   const [cachedQuiz, setCachedQuiz] = useState<Quiz | null>(null)
   const [allQuizzes, setAllQuizzes] = useState<Quiz[]>([])
-  const [ollamaAvailable, setOllamaAvailable] = useState(false)
+  const [aiAvailable, setAiAvailable] = useState(false)
   const [checkingAvailability, setCheckingAvailability] = useState(true)
   const abortRef = useRef<AbortController | null>(null)
+  const isFirstCheckRef = useRef(true)
 
   // Check for cached quizzes on mount (load all for this lesson)
   useEffect(() => {
@@ -91,45 +90,30 @@ export function useQuizGeneration(
     }
   }, [lessonId])
 
-  // Check Ollama availability on mount and on interval
+  // Check AI availability on mount and on interval
   useEffect(() => {
     let ignore = false
     let intervalId: ReturnType<typeof setInterval> | null = null
 
     async function checkAvailability() {
-      // Quick check: is AI configured at all?
-      if (!isAIAvailable()) {
-        if (!ignore) {
-          setOllamaAvailable(false)
-          setCheckingAvailability(false)
-        }
-        return
-      }
-
-      const config = getAIConfiguration()
-      if (config.provider !== 'ollama' || !config.ollamaSettings?.serverUrl) {
-        if (!ignore) {
-          setOllamaAvailable(false)
-          setCheckingAvailability(false)
-        }
-        return
-      }
-
       try {
-        const result = await testOllamaConnection(
-          config.ollamaSettings.serverUrl,
-          config.ollamaSettings.directConnection,
-          getOllamaSelectedModel() ?? undefined
-        )
+        const result = await getQuizGenerationAvailability()
         if (!ignore) {
-          setOllamaAvailable(result.success)
-          setCheckingAvailability(false)
+          if (isFirstCheckRef.current) {
+            // First check: always clear checking state regardless of result
+            setCheckingAvailability(false)
+            isFirstCheckRef.current = false
+          }
+          setAiAvailable(result.available)
         }
       } catch {
-        // silent-catch-ok: Ollama offline is expected, button shows disabled state
+        // silent-catch-ok: availability check failure shows disabled state
         if (!ignore) {
-          setOllamaAvailable(false)
-          setCheckingAvailability(false)
+          setAiAvailable(false)
+          if (isFirstCheckRef.current) {
+            setCheckingAvailability(false)
+            isFirstCheckRef.current = false
+          }
         }
       }
     }
@@ -227,7 +211,7 @@ export function useQuizGeneration(
     regenerate: regenerateQuiz,
     cachedQuiz,
     allQuizzes,
-    ollamaAvailable,
+    aiAvailable,
     checkingAvailability,
   }
 }

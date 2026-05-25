@@ -53,6 +53,8 @@ export interface ConsentSettings {
   videoSummary: boolean
   /** Allow Q&A from note content */
   noteQA: boolean
+  /** Allow AI quiz generation from lesson transcripts */
+  quizGeneration: boolean
   /** Allow AI-generated learning path recommendations */
   learningPath: boolean
   /** Allow knowledge gap detection from study patterns */
@@ -155,6 +157,129 @@ export type NoteQAUnavailableReason =
   /** Availability check threw or rejected (e.g. unexpected storage/crypto failure) */
   | 'availability-check-failed'
 
+export type QuizGenerationUnavailableReason =
+  | 'feature-disabled'
+  | 'missing-provider-key'
+  | 'unreadable-provider-key'
+  | 'missing-ollama-url'
+  | 'ollama-offline'
+  | 'availability-check-failed'
+
+export type QuizGenerationAvailability =
+  | {
+      available: true
+      provider: AIProviderId
+      providerName: string
+      model?: string
+    }
+  | {
+      available: false
+      reason: QuizGenerationUnavailableReason
+      provider: AIProviderId
+      providerName: string
+      model?: string
+    }
+
+/**
+ * Checks whether quiz generation can use its resolved provider.
+ *
+ * Consent fallback behavior: If `quizGeneration` is absent from stored settings
+ * (existing users), falls back to the stored `noteQA` value rather than DEFAULTS.
+ * New installations will have `quizGeneration: true` from DEFAULTS.
+ *
+ * For Ollama: performs an HTTP reachability check (Ollama is a local server that
+ * can go offline). For cloud providers: checks API key existence via
+ * `getDecryptedApiKeyForProvider`.
+ */
+export async function getQuizGenerationAvailability(): Promise<QuizGenerationAvailability> {
+  const resolved = resolveFeatureModel('quizGeneration')
+  const providerName = AI_PROVIDERS[resolved.provider]?.name || resolved.provider
+  const base = {
+    provider: resolved.provider,
+    providerName,
+    model: resolved.model,
+  }
+
+  // Consent fallback: check stored quizGeneration; if absent, fall back to noteQA
+  const storedConfig = getAIConfiguration()
+  const hasExplicitQuizConsent = storedConfig.consentSettings.quizGeneration !== undefined
+  const consentGranted = hasExplicitQuizConsent
+    ? storedConfig.consentSettings.quizGeneration === true
+    : storedConfig.consentSettings.noteQA === true
+
+  if (!consentGranted) {
+    return {
+      ...base,
+      available: false,
+      reason: 'feature-disabled',
+    }
+  }
+
+  if (resolved.provider === 'ollama') {
+    const serverUrl = getOllamaServerUrl()
+    if (!serverUrl) {
+      return {
+        ...base,
+        available: false,
+        reason: 'missing-ollama-url',
+      }
+    }
+
+    try {
+      const { testOllamaConnection } = await import('./ollamaHealthCheck')
+      const result = await testOllamaConnection(
+        serverUrl,
+        storedConfig.ollamaSettings?.directConnection ?? false
+      )
+      if (result.success) {
+        return {
+          ...base,
+          available: true,
+        }
+      }
+      return {
+        ...base,
+        available: false,
+        reason: 'ollama-offline',
+      }
+    } catch {
+      return {
+        ...base,
+        available: false,
+        reason: 'ollama-offline',
+      }
+    }
+  }
+
+  const hasProviderKey = !!storedConfig.providerKeys?.[resolved.provider]
+  const hasLegacyEncrypted =
+    resolved.provider === storedConfig.provider && !!storedConfig.apiKeyEncrypted
+  const hasStoredKey = hasProviderKey || hasLegacyEncrypted
+  let apiKey: string | null = null
+  try {
+    apiKey = await getDecryptedApiKeyForProvider(resolved.provider)
+  } catch {
+    return {
+      ...base,
+      available: false,
+      reason: hasStoredKey ? 'unreadable-provider-key' : 'availability-check-failed',
+    }
+  }
+
+  if (apiKey) {
+    return {
+      ...base,
+      available: true,
+    }
+  }
+
+  return {
+    ...base,
+    available: false,
+    reason: hasStoredKey ? 'unreadable-provider-key' : 'missing-provider-key',
+  }
+}
+
 /** Health status for a provider's stored API key on this device. */
 export type APIKeyHealth =
   /** Key is stored, decryptable, and usable */
@@ -189,6 +314,7 @@ export const DEFAULTS: AIConfigurationSettings = {
   consentSettings: {
     videoSummary: true,
     noteQA: true,
+    quizGeneration: true,
     learningPath: true,
     knowledgeGaps: true,
     noteOrganization: true,

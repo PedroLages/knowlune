@@ -4,21 +4,12 @@ import { renderHook, act, waitFor } from '@testing-library/react'
 const {
   mockToastError,
   mockGenerateQuizForLesson,
-  mockIsAIAvailable,
-  mockGetAIConfiguration,
-  mockGetOllamaSelectedModel,
-  mockTestOllamaConnection,
+  mockGetQuizGenerationAvailability,
   mockQuizzesWhere,
 } = vi.hoisted(() => ({
   mockToastError: vi.fn(),
   mockGenerateQuizForLesson: vi.fn(),
-  mockIsAIAvailable: vi.fn(() => false),
-  mockGetAIConfiguration: vi.fn(() => ({
-    provider: 'ollama',
-    ollamaSettings: { serverUrl: 'http://localhost:11434', directConnection: false },
-  })),
-  mockGetOllamaSelectedModel: vi.fn(() => 'llama3'),
-  mockTestOllamaConnection: vi.fn(),
+  mockGetQuizGenerationAvailability: vi.fn(),
   mockQuizzesWhere: vi.fn(() => ({
     equals: vi.fn(() => ({
       toArray: vi.fn(() => Promise.resolve([])),
@@ -33,13 +24,7 @@ vi.mock('@/ai/quizGenerationService', () => ({
 }))
 
 vi.mock('@/lib/aiConfiguration', () => ({
-  isAIAvailable: () => mockIsAIAvailable(),
-  getAIConfiguration: () => mockGetAIConfiguration(),
-  getOllamaSelectedModel: () => mockGetOllamaSelectedModel(),
-}))
-
-vi.mock('@/lib/ollamaHealthCheck', () => ({
-  testOllamaConnection: (...args: unknown[]) => mockTestOllamaConnection(...args),
+  getQuizGenerationAvailability: (...args: unknown[]) => mockGetQuizGenerationAvailability(...args),
 }))
 
 vi.mock('@/db', () => ({
@@ -55,7 +40,12 @@ import { useQuizGeneration } from '../useQuizGeneration'
 describe('useQuizGeneration', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mockIsAIAvailable.mockReturnValue(false)
+    mockGetQuizGenerationAvailability.mockResolvedValue({
+      available: true,
+      provider: 'anthropic',
+      providerName: 'Anthropic',
+      model: 'claude-haiku-4-5',
+    })
     mockQuizzesWhere.mockReturnValue({
       equals: vi.fn(() => ({
         toArray: vi.fn(() => Promise.resolve([])),
@@ -76,21 +66,29 @@ describe('useQuizGeneration', () => {
     expect(result.current.allQuizzes).toEqual([])
   })
 
-  it('sets ollamaAvailable=false when AI is not available', async () => {
-    mockIsAIAvailable.mockReturnValue(false)
+  it('sets aiAvailable=true when AI provider is available', async () => {
+    mockGetQuizGenerationAvailability.mockResolvedValue({
+      available: true,
+      provider: 'anthropic',
+      providerName: 'Anthropic',
+      model: 'claude-haiku-4-5',
+    })
+
     const { result } = renderHook(() => useQuizGeneration('lesson-1', 'course-1'))
 
     await waitFor(() => {
       expect(result.current.checkingAvailability).toBe(false)
     })
-    expect(result.current.ollamaAvailable).toBe(false)
+    expect(result.current.aiAvailable).toBe(true)
   })
 
-  it('sets ollamaAvailable=false when provider is not ollama', async () => {
-    mockIsAIAvailable.mockReturnValue(true)
-    mockGetAIConfiguration.mockReturnValue({
-      provider: 'openai' as const,
-      ollamaSettings: undefined as unknown as { serverUrl: string; directConnection: boolean },
+  it('sets aiAvailable=false when AI provider is not available', async () => {
+    mockGetQuizGenerationAvailability.mockResolvedValue({
+      available: false,
+      reason: 'missing-provider-key',
+      provider: 'anthropic',
+      providerName: 'Anthropic',
+      model: 'claude-haiku-4-5',
     })
 
     const { result } = renderHook(() => useQuizGeneration('lesson-1', 'course-1'))
@@ -98,39 +96,18 @@ describe('useQuizGeneration', () => {
     await waitFor(() => {
       expect(result.current.checkingAvailability).toBe(false)
     })
-    expect(result.current.ollamaAvailable).toBe(false)
+    expect(result.current.aiAvailable).toBe(false)
   })
 
-  it('checks ollama connection when configured', async () => {
-    mockIsAIAvailable.mockReturnValue(true)
-    mockGetAIConfiguration.mockReturnValue({
-      provider: 'ollama',
-      ollamaSettings: { serverUrl: 'http://localhost:11434', directConnection: false },
-    })
-    mockTestOllamaConnection.mockResolvedValue({ success: true })
+  it('handles availability check failure gracefully', async () => {
+    mockGetQuizGenerationAvailability.mockRejectedValue(new Error('Check failed'))
 
     const { result } = renderHook(() => useQuizGeneration('lesson-1', 'course-1'))
 
     await waitFor(() => {
       expect(result.current.checkingAvailability).toBe(false)
     })
-    expect(result.current.ollamaAvailable).toBe(true)
-  })
-
-  it('handles ollama connection failure gracefully', async () => {
-    mockIsAIAvailable.mockReturnValue(true)
-    mockGetAIConfiguration.mockReturnValue({
-      provider: 'ollama',
-      ollamaSettings: { serverUrl: 'http://localhost:11434', directConnection: false },
-    })
-    mockTestOllamaConnection.mockRejectedValue(new Error('Connection refused'))
-
-    const { result } = renderHook(() => useQuizGeneration('lesson-1', 'course-1'))
-
-    await waitFor(() => {
-      expect(result.current.checkingAvailability).toBe(false)
-    })
-    expect(result.current.ollamaAvailable).toBe(false)
+    expect(result.current.aiAvailable).toBe(false)
   })
 
   it('loads cached quizzes on mount', async () => {

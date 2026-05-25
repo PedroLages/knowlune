@@ -90,6 +90,7 @@ function isPrivateNetworkUrl(url: string): boolean {
 const FEATURE_LABELS: Record<keyof ConsentSettings, string> = {
   videoSummary: 'AI Video Summaries',
   noteQA: 'Q&A from Notes',
+  quizGeneration: 'AI Quiz Generation',
   learningPath: 'Learning Path Generation',
   knowledgeGaps: 'Knowledge Gap Detection',
   noteOrganization: 'AI Note Organization',

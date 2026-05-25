@@ -61,6 +61,7 @@ const DEFAULT_CONFIG = {
   consentSettings: {
     videoSummary: true,
     noteQA: true,
+    quizGeneration: true,
     learningPath: true,
     knowledgeGaps: true,
     noteOrganization: true,
