@@ -1375,6 +1375,29 @@ describe('aiConfiguration.ts', () => {
       })
     })
 
+    it('returns available for fresh install (no stored consent settings)', async () => {
+      // Fresh install: ai-configuration exists but has no consentSettings field,
+      // so getStoredRawConsentSettings() returns null → falls back to DEFAULTS
+      localStorage.setItem(
+        'ai-configuration',
+        JSON.stringify({
+          provider: 'gemini',
+          connectionStatus: 'connected',
+          providerKeys: {
+            gemini: { iv: 'mock-iv', encryptedData: 'encrypted:AIza-test-key' },
+          },
+          featureModels: {
+            quizGeneration: { provider: 'gemini', model: 'gemini-3-flash-preview' },
+          },
+        })
+      )
+
+      await expect(getQuizGenerationAvailability()).resolves.toMatchObject({
+        available: true,
+        provider: 'gemini',
+      })
+    })
+
     it('returns feature-disabled when quizGeneration consent is false', async () => {
       localStorage.setItem(
         'ai-configuration',
