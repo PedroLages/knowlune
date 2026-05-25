@@ -12,7 +12,7 @@ argument-hint: "[idea | docs/plans/*-plan.md | docs/brainstorms/*-requirements.m
 
 Drives a single unit of work end-to-end through the Compound Engineering pipeline with one hard human gate at **plan approval**. Terminal state: **PR created + auto-merged** (via `gh pr merge --merge --admin`). `ce:compound` runs automatically post-merge.
 
-**Status:** v5 — post-merge cleanup (checkout main + pull + commit artifacts + delete branch). Builds on v4 (epic-loop runner, auto-merge PR, auto-run compound, `--autopilot`).
+**Status:** v6 — permanent `ui-ux-pro-max` parallel review for UI diffs (design-intelligence skill that caught dead consent-fallback code ce:review missed). Builds on v5 (post-merge cleanup: checkout main + pull + commit artifacts + delete branch).
 
 ## Usage
 
@@ -512,7 +512,7 @@ After the loop exits green (or escalated), append residual LOW/NIT to `docs/know
 
 **Optional `--cross-model`:** run Knowlune's `code-review` subagent (via Task, not `/ce-review`) in parallel with step 1 of Round 1 only. Merge findings before evaluating counts. Not re-run on R2/R3.
 
-**Parallel `/design-review` for UI diffs (v3):** if `modifiedFiles` contains `src/**/*.tsx`, `src/**/*.css`, `src/app/pages/**`, or `src/app/components/**`, dispatch `design-review-dispatcher` (opus) in parallel with step 1 of Round 1 only. Merge its findings into the R1 fixer input. See [autonomy-boundary.md § 2.3b](references/autonomy-boundary.md#23b-parallel-design-review-dispatch-phase-2-alongside-cereview) and [sub-agent-prompts.md § 15](references/sub-agent-prompts.md#15-design-review-dispatcher-v3). Playwright unavailable → log warning, continue with `/ce:review` only.
+**Parallel `/design-review` for UI diffs (v3):** if `modifiedFiles` contains `src/**/*.tsx`, `src/**/*.css`, `src/app/pages/**`, or `src/app/components/**`, dispatch both `design-review-dispatcher` (opus) and `ui-ux-pro-max-dispatcher` (opus) in parallel with step 1 of Round 1 only. Merge their findings into the R1 fixer input. `design-review` uses Playwright MCP for live browser testing; `ui-ux-pro-max` is a design-intelligence skill that analyzes code patterns, accessibility rules, and visual hierarchy without needing screenshots — it catches dead-code and structural issues Playwright can't see. See [autonomy-boundary.md § 2.3b](references/autonomy-boundary.md#23b-parallel-design-review-dispatch-phase-2-alongside-cereview) and [sub-agent-prompts.md § 15](references/sub-agent-prompts.md#15-design-review-dispatcher-v3) and [sub-agent-prompts.md § 18](references/sub-agent-prompts.md#18-ui-ux-pro-max-dispatcher-v6). Either skill unavailable → log warning, continue with remaining reviews only. Both re-run on R2/R3 alongside `/ce:review` if UI files were modified in a fix round.
 
 ### 2.4 Demo-reel classifier → conditional capture
 
@@ -722,3 +722,4 @@ Run `scripts/finalize-ce-run.sh <tracking-path> [--json]`:
 - **v1 (this file):** bare idea | plan path → pipeline → PR. Plan gate hard. Review loop zero-tolerance. Demo-reel conditional. Compound reminder. `--cross-model` flag.
 - **v2 (Unit 2 full + Unit 6):** adaptive classifier adds ideation/brainstorm/bug/story-file entries. Persistent tracking file. Resume semantics. `--headless` JSON mode.
 - **v3 (Units 7–8, this file):** `episodic-memory:search-conversations` at Phase 0.5. `/techdebt` pre-review dedup scan at Phase 2.1.5. `/design-review` parallel dispatch at Phase 2.3b for UI diffs. `/checkpoint` at Phase 2.6 boundaries (fire-and-forget). `superpowers:systematic-debugging` on bug path at Phase 0.6. `--autopilot` flag auto-answers cosmetic prompts only (plan gate + R3 gate remain hard — see [autonomy-boundary.md](references/autonomy-boundary.md)). Expanded eval coverage.
+- **v6 (this file):** `ui-ux-pro-max` permanent parallel dispatch for UI diffs at Phase 2.3b alongside `design-review`. Design-intelligence skill analyzes code patterns, accessibility, visual hierarchy without needing screenshots. Caught dead consent-fallback code in quiz-gen run that ce:review missed — different lenses catch different bugs. Re-runs on R2/R3 if UI files modified in fix round.

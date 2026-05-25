@@ -71,25 +71,30 @@ Five skills, five phase insertions. Each one is **additive** — failure of a su
 
 **Tracking file:** Append `supportingSkills.techdebt: {duplicatesFound, autoExtracted, filesChanged}` to frontmatter.
 
-### 2.3b Parallel design-review dispatch (Phase 2, alongside /ce:review)
+### 2.3b Parallel design-review + ui-ux-pro-max dispatch (Phase 2, alongside /ce:review)
 
 **When:** During Round 1 of the review loop, in parallel with `ce-review-dispatcher`.
 
-**Why:** `/ce:review` is code-focused (logic, tests, types). Knowlune's `/design-review` agent uses Playwright MCP to actually open the app, click through the changed UI, and test accessibility + responsive design. Running them in parallel gives cross-perspective coverage; findings merge before the fix loop evaluates counts.
+**Why:** Three complementary lenses on UI changes:
+- `/ce:review` is code-focused (logic, tests, types). 
+- Knowlune's `/design-review` agent uses Playwright MCP to open the app, click through changed UI, test accessibility + responsive design, and verify computed styles.
+- `/ui-ux-pro-max` is a design-intelligence skill that analyzes code patterns, accessibility rules, and visual hierarchy without needing screenshots. It catches dead code paths in UI logic and misleading documentation that neither Playwright nor code review detect.
+
+**Evidence:** In the quiz-gen multi-provider refactor run, `ui-ux-pro-max` found the dead consent-fallback code (`getAIConfiguration()` always pre-merged DEFAULTS before the check) — the exact logic 2 plan-deepening rounds designed. `ce:review` (10+ code personas) and `design-review` (Playwright browser testing) both missed it.
 
 **Precondition:** Only fires if `modifiedFiles` from Phase 2.1 contains any of: `src/**/*.tsx`, `src/**/*.css`, `src/app/pages/**`, `src/app/components/**`.
 
-**Dispatch:** `design-review-dispatcher` sub-agent (model: opus — UI judgment needs deep reasoning), see prompt §15.
+**Dispatch:** `design-review-dispatcher` (opus) and `ui-ux-pro-max-dispatcher` (opus) in parallel, see prompts §15 and §19.
 
-**Runs:** Only on **Round 1** of the review loop. Subsequent rounds don't re-dispatch design-review (too expensive — each run opens a browser). If R1 design findings require fixes, they go into the R1 fixer pass along with `/ce:review` findings.
+**Runs:** Round 1 of the review loop. Both re-run on R2/R3 if UI files were modified in a fix round (e.g., touch target fixes, ARIA changes trigger re-verification).
 
-**Returns:** `{findings: [{id, severity, screenshotPath, description, suggestedFix}], reportPath: "docs/reviews/design/..."}`.
+**Returns:** `design-review` → `{findings: [{id, severity, screenshotPath, description, suggestedFix}], reportPath}`. `ui-ux-pro-max` → `{passed, blockers, high, medium, low, findings: [{severity, description, element, suggestion}]}`.
 
-**Merge:** Coordinator concatenates `/ce:review` and `/design-review` findings arrays, then evaluates the severity bar. Fixer receives the union in Round 1.
+**Merge:** Coordinator concatenates `/ce:review`, `/design-review`, and `ui-ux-pro-max` findings arrays, then evaluates the severity bar. Fixer receives the union in Round 1.
 
-**Failure behavior:** Playwright MCP unavailable, dev server fails to start, browser crashes → log warning, continue with `/ce:review` findings only. Never halts.
+**Failure behavior:** Playwright unavailable → `design-review` logs warning, continues. `ui-ux-pro-max` skill unavailable → logs warning. Either failure never halts; pipeline continues with remaining reviews.
 
-**Tracking file:** Append `supportingSkills.designReview: {reportPath, findingsCount}` to frontmatter.
+**Tracking file:** Append `supportingSkills.designReview: {reportPath, findingsCount}` and `supportingSkills.uiUxProMax: {passed, findingsCount}` to frontmatter.
 
 ### Phase boundary checkpoints (via /checkpoint)
 
@@ -143,12 +148,13 @@ Each supporting skill adds token cost:
 | episodic-memory | ~5–15k | Every run, Phase 0.5 |
 | techdebt | ~30–100k | Every run with code changes, Phase 2.1.5 |
 | design-review | ~50–150k | UI diffs only, R1 parallel |
+| ui-ux-pro-max | ~30–80k | UI diffs only, R1 parallel |
 | checkpoint | ~2–5k per boundary | 5–6 boundaries per run |
 | systematic-debugging | ~20–60k | Bug input only |
 
 **Baseline v2:** ~500k–1M tokens per run.
-**v3 with all supporting skills:** +100–350k tokens, stays under 1.5M.
-**v3 with `--autopilot` and no UI:** +10–50k tokens, close to v2 baseline.
+**v6 with all supporting skills:** +130–430k tokens, stays under 1.5M.
+**v6 with `--autopilot` and no UI:** +10–50k tokens, close to v2 baseline.
 
 **Mitigation:** Every supporting skill respects per-phase timeout. If a skill takes >90s, coordinator moves on and logs `supporting-skill: <name> timed out`.
 

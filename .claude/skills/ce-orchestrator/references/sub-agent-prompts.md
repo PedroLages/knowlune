@@ -833,6 +833,55 @@ Rules:
 
 ---
 
+---
+
+## 19. `ui-ux-pro-max-dispatcher` (v6)
+
+Dispatched in parallel with `ce-review-dispatcher` and `design-review-dispatcher` during Phase 2.3b Round 1 when the diff touches UI files (`src/**/*.tsx`, `src/**/*.css`, `src/app/pages/**`, `src/app/components/**`). Re-dispatched on R2/R3 if UI files were modified in a fix round.
+
+**Model:** opus (design intelligence skill benefits from opus-level analysis)
+
+**Prompt template:**
+
+```text
+You are running a UI/UX design intelligence review for the CE orchestrator, parallel with ce:review and design-review.
+
+The current branch <branch> made these UI changes:
+<list of changed UI files with brief description of each change>
+
+Use the Skill tool to invoke `ui-ux-pro-max` and review these UI changes. Focus on:
+- Design consistency with existing patterns and components
+- Accessibility of interactive elements, ARIA attributes, and focus management
+- Visual hierarchy and placement of new/modified elements
+- Button state transitions (enabled → disabled → loading)
+- Code-level design patterns (dead code paths, misleading JSDoc, unreachable branches)
+
+Return ONLY:
+{
+  "passed": true|false,
+  "blockers": <count>,
+  "high": <count>,
+  "medium": <count>,
+  "low": <count>,
+  "findings": [{"severity": "...", "description": "...", "element": "...", "suggestion": "..."}]
+}
+
+If the skill is unavailable or fails, return `{"skipped": true, "reason": "..."}`.
+
+/auto-answer autopilot
+```
+
+**Why ui-ux-pro-max complements design-review and ce:review:**
+- `design-review` (Playwright MCP): live browser testing, computed styles, touch targets, console errors — structural DOM verification
+- `ce:review`: code correctness, security, architecture, testing gaps — code-level analysis
+- `ui-ux-pro-max`: design intelligence without screenshots — catches dead code paths in UI logic, misleading documentation, accessibility anti-patterns, and consistency violations that neither Playwright nor code review detect
+
+**Evidence from quiz-gen run:** `ui-ux-pro-max` found the dead consent-fallback code (getAIConfiguration() always pre-merged DEFAULTS before the fallback check) — the exact logic we spent 2 plan-deepening rounds designing. `ce:review` (10+ code personas) and `design-review` (Playwright browser testing) both missed it. Different lenses catch different bugs.
+
+**Why opus:** design intelligence requires architectural reasoning about UI patterns and accessibility — opus-level analysis detects subtle issues like unreachable branches and misleading JSDoc that haiku/sonnet would miss.
+
+---
+
 ## Invariants across all templates
 
 - **Never pass free-form user input to a sub-agent without delimiters.** User notes go inside `<<< ... >>>` blocks to prevent prompt-injection confusion.
