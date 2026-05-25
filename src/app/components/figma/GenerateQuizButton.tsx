@@ -125,7 +125,7 @@ export function GenerateQuizButton({
         >
           <SelectTrigger
             id="blooms-level-select"
-            className="w-[160px] rounded-xl"
+            className="w-[160px] rounded-xl min-h-[44px]"
             data-testid="blooms-level-select"
           >
             <SelectValue placeholder="Select level" />
@@ -158,12 +158,12 @@ export function GenerateQuizButton({
         button
       )}
 
-      {/* ARIA live region — idle state */}
-      <div role="status" aria-live="polite" className="sr-only">
-        {!aiAvailable && !checkingAvailability
-          ? 'Quiz generation unavailable. AI provider is offline or not configured.'
-          : ''}
-      </div>
+      {/* ARIA live region — idle state (only rendered when message is non-empty) */}
+      {!aiAvailable && !checkingAvailability && (
+        <div role="status" aria-live="polite" className="sr-only">
+          Quiz generation unavailable. AI provider is offline or not configured.
+        </div>
+      )}
     </div>
   )
 }

@@ -181,6 +181,22 @@ export type QuizGenerationAvailability =
     }
 
 /**
+ * Reads stored consent settings from localStorage without merging with DEFAULTS.
+ * Returns null if no stored config exists (fresh install scenario).
+ * Used by getQuizGenerationAvailability to distinguish "never set" from "set via default merge."
+ */
+function getStoredRawConsentSettings(): Partial<ConsentSettings> | null {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY)
+    if (!raw) return null
+    const stored = JSON.parse(raw)
+    return stored.consentSettings ?? null
+  } catch {
+    return null
+  }
+}
+
+/**
  * Checks whether quiz generation can use its resolved provider.
  *
  * Consent fallback behavior: If `quizGeneration` is absent from stored settings
@@ -200,12 +216,17 @@ export async function getQuizGenerationAvailability(): Promise<QuizGenerationAva
     model: resolved.model,
   }
 
-  // Consent fallback: check stored quizGeneration; if absent, fall back to noteQA
-  const storedConfig = getAIConfiguration()
-  const hasExplicitQuizConsent = storedConfig.consentSettings.quizGeneration !== undefined
-  const consentGranted = hasExplicitQuizConsent
-    ? storedConfig.consentSettings.quizGeneration === true
-    : storedConfig.consentSettings.noteQA === true
+  // Consent fallback: check stored quizGeneration; if absent from raw storage,
+  // fall back to noteQA (existing users who upgraded). Fresh installs use DEFAULTS.
+  const storedConsent = getStoredRawConsentSettings()
+  let consentGranted: boolean
+  if (storedConsent === null) {
+    consentGranted = DEFAULTS.consentSettings.quizGeneration
+  } else if (storedConsent.quizGeneration !== undefined) {
+    consentGranted = storedConsent.quizGeneration === true
+  } else {
+    consentGranted = storedConsent.noteQA === true
+  }
 
   if (!consentGranted) {
     return {
@@ -214,6 +235,9 @@ export async function getQuizGenerationAvailability(): Promise<QuizGenerationAva
       reason: 'feature-disabled',
     }
   }
+
+  // Read merged config for non-consent checks (provider keys, Ollama settings, etc.)
+  const config = getAIConfiguration()
 
   if (resolved.provider === 'ollama') {
     const serverUrl = getOllamaServerUrl()
@@ -229,7 +253,7 @@ export async function getQuizGenerationAvailability(): Promise<QuizGenerationAva
       const { testOllamaConnection } = await import('./ollamaHealthCheck')
       const result = await testOllamaConnection(
         serverUrl,
-        storedConfig.ollamaSettings?.directConnection ?? false
+        config.ollamaSettings?.directConnection ?? false
       )
       if (result.success) {
         return {
@@ -251,9 +275,9 @@ export async function getQuizGenerationAvailability(): Promise<QuizGenerationAva
     }
   }
 
-  const hasProviderKey = !!storedConfig.providerKeys?.[resolved.provider]
+  const hasProviderKey = !!config.providerKeys?.[resolved.provider]
   const hasLegacyEncrypted =
-    resolved.provider === storedConfig.provider && !!storedConfig.apiKeyEncrypted
+    resolved.provider === config.provider && !!config.apiKeyEncrypted
   const hasStoredKey = hasProviderKey || hasLegacyEncrypted
   let apiKey: string | null = null
   try {
