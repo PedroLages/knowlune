@@ -53,6 +53,8 @@ export interface ConsentSettings {
   videoSummary: boolean
   /** Allow Q&A from note content */
   noteQA: boolean
+  /** Allow AI quiz generation from lesson transcripts */
+  quizGeneration: boolean
   /** Allow AI-generated learning path recommendations */
   learningPath: boolean
   /** Allow knowledge gap detection from study patterns */
@@ -155,6 +157,153 @@ export type NoteQAUnavailableReason =
   /** Availability check threw or rejected (e.g. unexpected storage/crypto failure) */
   | 'availability-check-failed'
 
+export type QuizGenerationUnavailableReason =
+  | 'feature-disabled'
+  | 'missing-provider-key'
+  | 'unreadable-provider-key'
+  | 'missing-ollama-url'
+  | 'ollama-offline'
+  | 'availability-check-failed'
+
+export type QuizGenerationAvailability =
+  | {
+      available: true
+      provider: AIProviderId
+      providerName: string
+      model?: string
+    }
+  | {
+      available: false
+      reason: QuizGenerationUnavailableReason
+      provider: AIProviderId
+      providerName: string
+      model?: string
+    }
+
+/**
+ * Reads stored consent settings from localStorage without merging with DEFAULTS.
+ * Returns null if no stored config exists (fresh install scenario).
+ * Used by getQuizGenerationAvailability to distinguish "never set" from "set via default merge."
+ */
+function getStoredRawConsentSettings(): Partial<ConsentSettings> | null {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY)
+    if (!raw) return null
+    const stored = JSON.parse(raw)
+    return stored.consentSettings ?? null
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Checks whether quiz generation can use its resolved provider.
+ *
+ * Consent fallback behavior: If `quizGeneration` is absent from stored settings
+ * (existing users), falls back to the stored `noteQA` value rather than DEFAULTS.
+ * New installations will have `quizGeneration: true` from DEFAULTS.
+ *
+ * For Ollama: performs an HTTP reachability check (Ollama is a local server that
+ * can go offline). For cloud providers: checks API key existence via
+ * `getDecryptedApiKeyForProvider`.
+ */
+export async function getQuizGenerationAvailability(): Promise<QuizGenerationAvailability> {
+  const resolved = resolveFeatureModel('quizGeneration')
+  const providerName = AI_PROVIDERS[resolved.provider]?.name || resolved.provider
+  const base = {
+    provider: resolved.provider,
+    providerName,
+    model: resolved.model,
+  }
+
+  // Consent fallback: check stored quizGeneration; if absent from raw storage,
+  // fall back to noteQA (existing users who upgraded). Fresh installs use DEFAULTS.
+  const storedConsent = getStoredRawConsentSettings()
+  let consentGranted: boolean
+  if (storedConsent === null) {
+    consentGranted = DEFAULTS.consentSettings.quizGeneration
+  } else if (storedConsent.quizGeneration !== undefined) {
+    consentGranted = storedConsent.quizGeneration === true
+  } else {
+    consentGranted = storedConsent.noteQA === true
+  }
+
+  if (!consentGranted) {
+    return {
+      ...base,
+      available: false,
+      reason: 'feature-disabled',
+    }
+  }
+
+  // Read merged config for non-consent checks (provider keys, Ollama settings, etc.)
+  const config = getAIConfiguration()
+
+  if (resolved.provider === 'ollama') {
+    const serverUrl = getOllamaServerUrl()
+    if (!serverUrl) {
+      return {
+        ...base,
+        available: false,
+        reason: 'missing-ollama-url',
+      }
+    }
+
+    try {
+      const { testOllamaConnection } = await import('./ollamaHealthCheck')
+      const result = await testOllamaConnection(
+        serverUrl,
+        config.ollamaSettings?.directConnection ?? false
+      )
+      if (result.success) {
+        return {
+          ...base,
+          available: true,
+        }
+      }
+      return {
+        ...base,
+        available: false,
+        reason: 'ollama-offline',
+      }
+    } catch {
+      return {
+        ...base,
+        available: false,
+        reason: 'ollama-offline',
+      }
+    }
+  }
+
+  const hasProviderKey = !!config.providerKeys?.[resolved.provider]
+  const hasLegacyEncrypted =
+    resolved.provider === config.provider && !!config.apiKeyEncrypted
+  const hasStoredKey = hasProviderKey || hasLegacyEncrypted
+  let apiKey: string | null = null
+  try {
+    apiKey = await getDecryptedApiKeyForProvider(resolved.provider)
+  } catch {
+    return {
+      ...base,
+      available: false,
+      reason: hasStoredKey ? 'unreadable-provider-key' : 'availability-check-failed',
+    }
+  }
+
+  if (apiKey) {
+    return {
+      ...base,
+      available: true,
+    }
+  }
+
+  return {
+    ...base,
+    available: false,
+    reason: hasStoredKey ? 'unreadable-provider-key' : 'missing-provider-key',
+  }
+}
+
 /** Health status for a provider's stored API key on this device. */
 export type APIKeyHealth =
   /** Key is stored, decryptable, and usable */
@@ -189,6 +338,7 @@ export const DEFAULTS: AIConfigurationSettings = {
   consentSettings: {
     videoSummary: true,
     noteQA: true,
+    quizGeneration: true,
     learningPath: true,
     knowledgeGaps: true,
     noteOrganization: true,

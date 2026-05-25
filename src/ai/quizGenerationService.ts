@@ -3,13 +3,16 @@
  *
  * Orchestrates the 4-stage pipeline: Chunk -> Generate -> Validate -> Store
  *
- * Uses the same `callOllamaChat` pattern as courseTagger.ts — stateless async
- * functions that never throw, returning null/empty on failure.
+ * Uses the multi-provider LLM client factory (`getLLMClient`) for AI calls,
+ * supporting any configured provider (OpenAI, Anthropic, Ollama, etc.).
  *
  * Pipeline:
- *   1. Check cache (transcriptHash match → return existing quiz)
+ *   1. Check cache (transcriptHash match -> return existing quiz)
  *   2. Chunk transcript (chapters or fixed 5-minute windows)
- *   3. Generate questions per chunk via Ollama structured output
+ *   3. Generate questions per chunk via LLM
+ *      - For Ollama: preserves native /api/chat endpoint with `format` schema
+ *        enforcement (local models rely on this for valid structured output)
+ *      - For cloud providers: uses streaming LLM client with JSON fallback parsing
  *   4. Validate with Zod, retry failures up to 2 times
  *   5. Store quiz in Dexie with auto-generated metadata
  *
@@ -17,13 +20,9 @@
  */
 
 import { db } from '@/db/schema'
-import {
-  getOllamaServerUrl,
-  getOllamaSelectedModel,
-  isOllamaDirectConnection,
-  isFeatureEnabled,
-} from '@/lib/aiConfiguration'
-import { apiUrl } from '@/lib/apiBaseUrl'
+import { getOllamaServerUrl, getOllamaSelectedModel } from '@/lib/aiConfiguration'
+import { resolveFeatureModel } from '@/lib/aiConfiguration'
+import type { FeatureModelConfig } from '@/lib/aiConfiguration'
 import { syncableWrite, type SyncableRecord } from '@/lib/sync/syncableWrite'
 import { trackAIUsage } from '@/lib/aiEventTracking'
 import { chunkTranscript, type TranscriptChunk } from './quizChunker'
@@ -36,6 +35,13 @@ import {
 } from './quizPrompts'
 import { runQualityControl } from './quizQualityControl'
 import type { Quiz, Question } from '@/types/quiz'
+import { getLLMClient, assertAIFeatureConsent } from '@/ai/llm/factory'
+import type { LLMClient } from '@/ai/llm/client'
+import type { LLMMessage } from '@/ai/llm/types'
+import { collectStreamWithTimeout } from '@/ai/llm/streamUtils'
+import { LLMError } from '@/ai/llm/types'
+import { ConsentError } from '@/ai/lib/ConsentError'
+import { ProviderReconsentError } from '@/ai/lib/ProviderReconsentError'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -119,16 +125,26 @@ export async function generateQuizForLesson(
     })
   }
 
-  // Check AI consent
-  if (!isFeatureEnabled('noteQA')) {
-    return { quiz: null, cached: false, error: 'AI quiz generation requires noteQA consent' }
-  }
+  // Resolve feature model and assert consent
+  let resolved: FeatureModelConfig
+  let client: LLMClient
 
-  // Check Ollama config
-  const ollamaConfig = getOllamaConfig()
-  if (!ollamaConfig) {
-    emitTracking('error', { errorCode: 'ollama_not_configured' })
-    return { quiz: null, cached: false, error: 'Ollama not configured' }
+  try {
+    resolved = resolveFeatureModel('quizGeneration')
+    await assertAIFeatureConsent('quizGeneration', resolved)
+    client = await getLLMClient('quizGeneration', { resolved })
+  } catch (error) {
+    if (error instanceof ConsentError) {
+      return { quiz: null, cached: false, error: 'Quiz generation unavailable. AI features must be enabled in Settings.' }
+    }
+    if (error instanceof ProviderReconsentError) {
+      return { quiz: null, cached: false, error: 'Provider consent required. Please review your AI provider settings.' }
+    }
+    if (error instanceof LLMError && error.code === 'AUTH_ERROR') {
+      return { quiz: null, cached: false, error: 'AI provider not configured for quiz generation.' }
+    }
+    emitTracking('error', { errorCode: 'ai_setup_failed' })
+    return { quiz: null, cached: false, error: 'AI provider not configured for quiz generation.' }
   }
 
   // Fetch transcript for hash computation
@@ -171,7 +187,8 @@ export async function generateQuizForLesson(
     }
 
     const questions = await generateQuestionsForChunk(
-      ollamaConfig,
+      client,
+      resolved,
       chunk,
       bloomsLevel,
       questionsPerChunk,
@@ -203,7 +220,8 @@ export async function generateQuizForLesson(
   }
 
   // Stage 4: Store quiz
-  const quiz = buildQuiz(lessonId, allQuestions, transcriptHash, bloomsLevel, ollamaConfig.model)
+  const modelId = `${resolved.provider}/${resolved.model}`
+  const quiz = buildQuiz(lessonId, allQuestions, transcriptHash, bloomsLevel, modelId)
 
   try {
     // E96-S02: route through syncableWrite so the generated quiz is enqueued
@@ -240,80 +258,6 @@ export async function generateQuizForLesson(
 }
 
 // ---------------------------------------------------------------------------
-// Ollama Chat (same pattern as courseTagger.ts)
-// ---------------------------------------------------------------------------
-
-/**
- * Send a chat request to Ollama and return the raw content string.
- * Returns null on any failure (never throws).
- */
-async function callOllamaChat(
-  ollamaConfig: { url: string; model: string },
-  systemPrompt: string,
-  userPrompt: string,
-  signal?: AbortSignal
-): Promise<string | null> {
-  if (signal?.aborted) {
-    console.warn(LOG_PREFIX, 'Request already aborted')
-    return null
-  }
-
-  const controller = new AbortController()
-  const timeoutId = setTimeout(() => controller.abort(), GENERATION_TIMEOUT_MS)
-
-  if (signal) {
-    signal.addEventListener('abort', () => controller.abort(), { once: true })
-  }
-
-  try {
-    const useDirectConnection = isOllamaDirectConnection()
-    const fetchUrl = useDirectConnection ? `${ollamaConfig.url}/api/chat` : apiUrl('ai-ollama/chat')
-
-    const requestBody: Record<string, unknown> = {
-      model: ollamaConfig.model,
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userPrompt },
-      ],
-      format: QUIZ_RESPONSE_SCHEMA,
-      stream: false,
-      options: { temperature: 0.3, num_predict: 4000 },
-    }
-
-    if (!useDirectConnection) {
-      requestBody.ollamaServerUrl = ollamaConfig.url
-    }
-
-    const response = await fetch(fetchUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(requestBody),
-      signal: controller.signal,
-    })
-
-    if (!response.ok) {
-      console.warn(LOG_PREFIX, `Ollama returned ${response.status}`)
-      return null
-    }
-
-    const data = (await response.json()) as {
-      message?: { content?: string }
-    }
-
-    return data.message?.content ?? null
-  } catch (error) {
-    if ((error as Error).name === 'AbortError') {
-      console.warn(LOG_PREFIX, 'Request timed out or was cancelled')
-    } else {
-      console.warn(LOG_PREFIX, 'Failed:', (error as Error).message)
-    }
-    return null
-  } finally {
-    clearTimeout(timeoutId)
-  }
-}
-
-// ---------------------------------------------------------------------------
 // Question Generation + Validation
 // ---------------------------------------------------------------------------
 
@@ -321,14 +265,20 @@ async function callOllamaChat(
  * Generate, validate, and QC questions for a single transcript chunk.
  * Retries up to MAX_RETRIES times on validation or QC failure.
  *
+ * Provider-aware: For Ollama, uses the native /api/chat endpoint with
+ * `format: QUIZ_RESPONSE_SCHEMA` for structured output enforcement.
+ * For cloud providers, uses the streaming LLM client with prompt-based
+ * JSON instruction and parseAndValidate() fallback parsing.
+ *
  * Pipeline per attempt:
- * 1. Call LLM for raw questions
+ * 1. Call LLM for raw questions (provider-aware path)
  * 2. Parse + Zod validate
  * 3. Run deterministic QC (duplicate detection, answer uniqueness, grounding)
  * 4. If QC rejects all questions, retry; otherwise return valid subset
  */
 async function generateQuestionsForChunk(
-  ollamaConfig: { url: string; model: string },
+  client: LLMClient,
+  resolved: FeatureModelConfig,
   chunk: TranscriptChunk,
   bloomsLevel: BloomsLevel,
   questionCount: number,
@@ -337,7 +287,14 @@ async function generateQuestionsForChunk(
   const { systemPrompt, userPrompt } = buildQuizPrompt(chunk, bloomsLevel, questionCount)
 
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
-    const content = await callOllamaChat(ollamaConfig, systemPrompt, userPrompt, signal)
+    let content: string | null
+
+    if (resolved.provider === 'ollama') {
+      content = await callOllamaNativeForQuizChunk(resolved, systemPrompt, userPrompt, signal)
+    } else {
+      content = await callLLMForQuizChunk(client, systemPrompt, userPrompt, signal)
+    }
+
     if (!content) {
       if (attempt < MAX_RETRIES) {
         console.warn(
@@ -384,6 +341,125 @@ async function generateQuestionsForChunk(
 }
 
 /**
+ * Call the streaming LLM client for a quiz chunk and collect the response.
+ *
+ * Uses `client.streamCompletion()` to send the prompts and
+ * `collectStreamWithTimeout()` to gather the full response.
+ * Returns null on any failure (never throws).
+ */
+async function callLLMForQuizChunk(
+  client: LLMClient,
+  systemPrompt: string,
+  userPrompt: string,
+  signal?: AbortSignal
+): Promise<string | null> {
+  if (signal?.aborted) {
+    console.warn(LOG_PREFIX, 'Request already aborted')
+    return null
+  }
+
+  try {
+    const messages: LLMMessage[] = [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: userPrompt },
+    ]
+
+    const stream = client.streamCompletion(messages)
+    const content = await collectStreamWithTimeout(stream, GENERATION_TIMEOUT_MS, signal)
+    return content || null
+  } catch (error) {
+    const errMsg = (error as Error).message || ''
+    if (
+      (error as Error).name === 'AbortError' ||
+      signal?.aborted ||
+      errMsg.includes('timed out') ||
+      errMsg.includes('aborted')
+    ) {
+      console.warn(LOG_PREFIX, 'Request timed out or was cancelled')
+    } else {
+      console.warn(LOG_PREFIX, 'LLM call failed:', errMsg)
+    }
+    return null
+  }
+}
+
+/**
+ * Call Ollama's native /api/chat endpoint for a quiz chunk.
+ *
+ * Uses the `format: QUIZ_RESPONSE_SCHEMA` parameter for structured JSON output
+ * enforcement, which local Ollama models (especially llama3.2) rely on for
+ * valid structured output. Cloud providers use prompt-based JSON instruction
+ * instead (via callLLMForQuizChunk).
+ *
+ * Returns null on any failure (never throws).
+ */
+async function callOllamaNativeForQuizChunk(
+  resolved: FeatureModelConfig,
+  systemPrompt: string,
+  userPrompt: string,
+  signal?: AbortSignal
+): Promise<string | null> {
+  if (signal?.aborted) {
+    console.warn(LOG_PREFIX, 'Request already aborted')
+    return null
+  }
+
+  const serverUrl = getOllamaServerUrl()
+  if (!serverUrl) {
+    console.warn(LOG_PREFIX, 'Ollama server URL not configured')
+    return null
+  }
+
+  const model = resolved.model || getOllamaSelectedModel() || 'llama3.2'
+  const normalizedUrl = serverUrl.replace(/\/+$/, '')
+
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), GENERATION_TIMEOUT_MS)
+
+  if (signal) {
+    signal.addEventListener('abort', () => controller.abort(), { once: true })
+  }
+
+  try {
+    const response = await fetch(`${normalizedUrl}/api/chat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt },
+        ],
+        format: QUIZ_RESPONSE_SCHEMA,
+        stream: false,
+        options: { temperature: 0.3, num_predict: 4000 },
+      }),
+      signal: controller.signal,
+    })
+
+    if (!response.ok) {
+      console.warn(LOG_PREFIX, `Ollama returned ${response.status}`)
+      return null
+    }
+
+    const data = (await response.json()) as {
+      message?: { content?: string }
+    }
+
+    return data.message?.content ?? null
+  } catch (error) {
+    if ((error as Error).name === 'AbortError') {
+      console.warn(LOG_PREFIX, 'Request timed out or was cancelled')
+    } else {
+      console.warn(LOG_PREFIX, 'Failed:', (error as Error).message)
+    }
+    return null
+  } finally {
+    clearTimeout(timeoutId)
+  }
+}
+
+/**
  * Parse LLM response content and validate against QuizResponseSchema.
  */
 function parseAndValidate(content: string): GeneratedQuestion[] | null {
@@ -416,19 +492,6 @@ function parseAndValidate(content: string): GeneratedQuestion[] | null {
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-/**
- * Get Ollama configuration. Returns null if not configured.
- */
-function getOllamaConfig(): { url: string; model: string } | null {
-  const serverUrl = getOllamaServerUrl()
-  if (!serverUrl) return null
-
-  return {
-    url: serverUrl.replace(/\/+$/, ''),
-    model: getOllamaSelectedModel() || 'llama3.2',
-  }
-}
 
 /**
  * Compute SHA-256 hash of a string using Web Crypto API.

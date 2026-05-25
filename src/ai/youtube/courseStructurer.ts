@@ -15,6 +15,7 @@
  */
 
 import { getLLMClient } from '@/ai/llm/factory'
+import { collectStreamWithTimeout } from '@/ai/llm/streamUtils'
 import type { LLMMessage } from '@/ai/llm/types'
 import type { VideoChapter } from '@/lib/youtubeRuleBasedGrouping'
 
@@ -172,61 +173,6 @@ function buildUserPrompt(videos: StructuringVideo[]): string {
     .join('\n')
 
   return `Organize these ${videos.length} videos into chapters:\n\n${videoList}`
-}
-
-/**
- * Collect all chunks from a streaming completion into a single string,
- * with a timeout and abort signal.
- */
-async function collectStreamWithTimeout(
-  stream: AsyncGenerator<{ content: string }, void, unknown>,
-  timeoutMs: number,
-  signal?: AbortSignal
-): Promise<string> {
-  return new Promise<string>((resolve, reject) => {
-    let content = ''
-    let done = false
-    const timeoutId = setTimeout(() => {
-      if (!done) {
-        done = true
-        reject(new Error('AI structuring request timed out.'))
-      }
-    }, timeoutMs)
-
-    const onAbort = () => {
-      if (!done) {
-        done = true
-        clearTimeout(timeoutId)
-        reject(new Error('AI structuring was cancelled.'))
-      }
-    }
-
-    signal?.addEventListener('abort', onAbort, { once: true })
-
-    async function consume() {
-      try {
-        for await (const chunk of stream) {
-          if (done) break
-          content += chunk.content
-        }
-        if (!done) {
-          done = true
-          clearTimeout(timeoutId)
-          resolve(content)
-        }
-      } catch (err) {
-        if (!done) {
-          done = true
-          clearTimeout(timeoutId)
-          reject(err)
-        }
-      } finally {
-        signal?.removeEventListener('abort', onAbort)
-      }
-    }
-
-    consume()
-  })
 }
 
 /**

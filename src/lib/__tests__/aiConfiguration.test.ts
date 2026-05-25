@@ -18,6 +18,7 @@ import {
   isAIAvailable,
   getNoteQAAvailability,
   getDecryptedApiKeyForProvider,
+  getQuizGenerationAvailability,
   getAPIKeyHealth,
   isBudgetMode,
   filterFreeModels,
@@ -29,6 +30,7 @@ import {
   DEFAULTS,
   _reEncryptProviderKeyLocallyForTesting,
   type AIConfigurationSettings,
+  type ConsentSettings,
 } from '@/lib/aiConfiguration'
 import type { DiscoveredModel } from '@/lib/modelDiscovery'
 
@@ -57,6 +59,11 @@ const vaultMocks = vi.hoisted(() => ({
 
 vi.mock('@/lib/vaultCredentials', () => vaultMocks)
 
+const ollamaMock = vi.hoisted(() => ({
+  testOllamaConnection: vi.fn(),
+}))
+vi.mock('@/lib/ollamaHealthCheck', () => ollamaMock)
+
 describe('aiConfiguration.ts', () => {
   beforeEach(() => {
     // Clear localStorage before each test
@@ -77,6 +84,7 @@ describe('aiConfiguration.ts', () => {
         consentSettings: {
           videoSummary: true,
           noteQA: false,
+          quizGeneration: true,
           learningPath: true,
           knowledgeGaps: true,
           noteOrganization: false,
@@ -185,6 +193,7 @@ describe('aiConfiguration.ts', () => {
         consentSettings: {
           videoSummary: true,
           noteQA: true,
+          quizGeneration: false,
           learningPath: false,
           knowledgeGaps: true,
           noteOrganization: true,
@@ -212,6 +221,7 @@ describe('aiConfiguration.ts', () => {
         consentSettings: {
           videoSummary: true,
           noteQA: false,
+          quizGeneration: true,
           learningPath: true,
           knowledgeGaps: false,
           noteOrganization: true,
@@ -232,6 +242,7 @@ describe('aiConfiguration.ts', () => {
         consentSettings: {
           videoSummary: false,
           noteQA: false,
+          quizGeneration: false,
           learningPath: false,
           knowledgeGaps: false,
           noteOrganization: false,
@@ -1331,6 +1342,169 @@ describe('aiConfiguration.ts', () => {
 
       await saveProviderApiKey('openai', 'sk-test-key-2')
       expect(getAIConfiguration().vaultBackupFailedAt).toBeUndefined()
+    })
+  })
+
+  // ===========================================================================
+  // getQuizGenerationAvailability — consent fallback, Ollama reachability, key health
+  // ===========================================================================
+
+  describe('getQuizGenerationAvailability', () => {
+    beforeEach(() => {
+      ollamaMock.testOllamaConnection.mockReset()
+    })
+
+    it('returns available when quizGeneration consent is true and provider has a key', async () => {
+      localStorage.setItem(
+        'ai-configuration',
+        JSON.stringify({
+          ...DEFAULTS,
+          consentSettings: { ...DEFAULTS.consentSettings, quizGeneration: true },
+          providerKeys: {
+            gemini: { iv: 'mock-iv', encryptedData: 'encrypted:AIza-test-key' },
+          },
+          featureModels: {
+            quizGeneration: { provider: 'gemini', model: 'gemini-3-flash-preview' },
+          },
+        })
+      )
+
+      await expect(getQuizGenerationAvailability()).resolves.toMatchObject({
+        available: true,
+        provider: 'gemini',
+      })
+    })
+
+    it('returns available for fresh install (no stored consent settings)', async () => {
+      // Fresh install: ai-configuration exists but has no consentSettings field,
+      // so getStoredRawConsentSettings() returns null → falls back to DEFAULTS
+      localStorage.setItem(
+        'ai-configuration',
+        JSON.stringify({
+          provider: 'gemini',
+          connectionStatus: 'connected',
+          providerKeys: {
+            gemini: { iv: 'mock-iv', encryptedData: 'encrypted:AIza-test-key' },
+          },
+          featureModels: {
+            quizGeneration: { provider: 'gemini', model: 'gemini-3-flash-preview' },
+          },
+        })
+      )
+
+      await expect(getQuizGenerationAvailability()).resolves.toMatchObject({
+        available: true,
+        provider: 'gemini',
+      })
+    })
+
+    it('returns feature-disabled when quizGeneration consent is false', async () => {
+      localStorage.setItem(
+        'ai-configuration',
+        JSON.stringify({
+          ...DEFAULTS,
+          consentSettings: { ...DEFAULTS.consentSettings, quizGeneration: false },
+        })
+      )
+
+      await expect(getQuizGenerationAvailability()).resolves.toMatchObject({
+        available: false,
+        reason: 'feature-disabled',
+      })
+    })
+
+    it('falls back to noteQA when quizGeneration is absent and noteQA is true', async () => {
+      // Simulate existing user who upgraded — quizGeneration is not in stored config
+      localStorage.setItem(
+        'ai-configuration',
+        JSON.stringify({
+          ...DEFAULTS,
+          consentSettings: {
+            videoSummary: true,
+            noteQA: true,
+            learningPath: true,
+            knowledgeGaps: true,
+            noteOrganization: true,
+            analytics: true,
+          } as unknown as ConsentSettings,
+          providerKeys: {
+            gemini: { iv: 'mock-iv', encryptedData: 'encrypted:AIza-test-key' },
+          },
+          featureModels: {
+            quizGeneration: { provider: 'gemini', model: 'gemini-3-flash-preview' },
+          },
+        })
+      )
+
+      await expect(getQuizGenerationAvailability()).resolves.toMatchObject({
+        available: true,
+        provider: 'gemini',
+      })
+    })
+
+    it('falls back to noteQA and returns feature-disabled when noteQA is also false', async () => {
+      localStorage.setItem(
+        'ai-configuration',
+        JSON.stringify({
+          ...DEFAULTS,
+          consentSettings: {
+            videoSummary: true,
+            noteQA: false,
+            learningPath: true,
+            knowledgeGaps: true,
+            noteOrganization: true,
+            analytics: true,
+          } as unknown as ConsentSettings,
+        })
+      )
+
+      await expect(getQuizGenerationAvailability()).resolves.toMatchObject({
+        available: false,
+        reason: 'feature-disabled',
+      })
+    })
+
+    it('returns ollama-offline when ollama provider is unreachable', async () => {
+      localStorage.setItem(
+        'ai-configuration',
+        JSON.stringify({
+          ...DEFAULTS,
+          provider: 'ollama',
+          consentSettings: { ...DEFAULTS.consentSettings, quizGeneration: true },
+          ollamaSettings: { serverUrl: 'http://localhost:11434', directConnection: false },
+          featureModels: {
+            quizGeneration: { provider: 'ollama', model: 'llama3.2:latest' },
+          },
+        })
+      )
+
+      ollamaMock.testOllamaConnection.mockResolvedValue({ success: false, message: 'Connection refused' })
+
+      await expect(getQuizGenerationAvailability()).resolves.toMatchObject({
+        available: false,
+        reason: 'ollama-offline',
+        provider: 'ollama',
+      })
+    })
+
+    it('returns missing-provider-key when cloud provider has no stored key', async () => {
+      localStorage.setItem(
+        'ai-configuration',
+        JSON.stringify({
+          ...DEFAULTS,
+          provider: 'gemini',
+          consentSettings: { ...DEFAULTS.consentSettings, quizGeneration: true },
+          featureModels: {
+            quizGeneration: { provider: 'gemini', model: 'gemini-3-flash-preview' },
+          },
+        })
+      )
+
+      await expect(getQuizGenerationAvailability()).resolves.toMatchObject({
+        available: false,
+        reason: 'missing-provider-key',
+        provider: 'gemini',
+      })
     })
   })
 

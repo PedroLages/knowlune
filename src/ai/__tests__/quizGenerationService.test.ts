@@ -1,10 +1,10 @@
 /**
  * Unit Tests: quizGenerationService.ts
  *
- * Tests the 4-stage quiz generation pipeline with mocked Ollama and Dexie.
+ * Tests the 4-stage quiz generation pipeline with factory-level mocks.
  */
 
-import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
 // --- Hoisted mocks ---
 
@@ -13,29 +13,46 @@ const {
   mockQuizzesWhere,
   mockQuizzesPut,
   mockChaptersSortBy,
-  mockFetch,
   mockDigest,
   mockSyncableWrite,
+  mockResolveFeatureModel,
+  mockGetOllamaServerUrl,
+  mockGetOllamaSelectedModel,
+  mockStreamCompletion,
+  mockAssertAIFeatureConsent,
+  mockGetLLMClient,
+  mockIsFeatureEnabled,
 } = vi.hoisted(() => ({
   mockTranscriptFirst: vi.fn(),
   mockQuizzesWhere: vi.fn(),
   mockQuizzesPut: vi.fn(),
   mockChaptersSortBy: vi.fn(),
-  mockFetch: vi.fn(),
-  mockDigest: vi.fn().mockResolvedValue(new ArrayBuffer(32)),
+  mockDigest: vi.fn(),
   mockSyncableWrite: vi.fn(),
+  mockResolveFeatureModel: vi.fn<() => { provider: string; model: string }>(() => ({
+    provider: 'anthropic',
+    model: 'claude-haiku-4-5',
+  })),
+  mockGetOllamaServerUrl: vi.fn<() => string | null>(() => null),
+  mockGetOllamaSelectedModel: vi.fn<() => string | null>(() => null),
+  mockStreamCompletion: vi.fn(),
+  mockAssertAIFeatureConsent: vi.fn(async () => {}),
+  mockGetLLMClient: vi.fn(),
+  mockIsFeatureEnabled: vi.fn(() => true),
 }))
 
 vi.mock('@/lib/aiConfiguration', () => ({
-  getOllamaServerUrl: vi.fn(),
-  getOllamaSelectedModel: vi.fn(),
-  isOllamaDirectConnection: vi.fn(() => false),
-  isFeatureEnabled: vi.fn(() => true),
+  resolveFeatureModel: mockResolveFeatureModel,
+  getOllamaServerUrl: mockGetOllamaServerUrl,
+  getOllamaSelectedModel: mockGetOllamaSelectedModel,
+  isFeatureEnabled: mockIsFeatureEnabled,
 }))
 
-// E96-S02: quiz persistence now routes through syncableWrite. Forward calls
-// to mockQuizzesPut so existing assertions that inspect the stored quiz
-// payload keep working.
+vi.mock('@/ai/llm/factory', () => ({
+  getLLMClient: mockGetLLMClient,
+  assertAIFeatureConsent: mockAssertAIFeatureConsent,
+}))
+
 vi.mock('@/lib/sync/syncableWrite', () => ({
   syncableWrite: mockSyncableWrite,
 }))
@@ -72,24 +89,61 @@ vi.stubGlobal('crypto', {
   randomUUID: () => 'test-uuid-1234',
 })
 
-vi.stubGlobal('fetch', mockFetch)
-
 import { generateQuizForLesson } from '../quizGenerationService'
-import { getOllamaServerUrl, getOllamaSelectedModel, isFeatureEnabled } from '@/lib/aiConfiguration'
+import { ConsentError } from '@/ai/lib/ConsentError'
+import { LLMError } from '@/ai/llm/types'
 
 // --- Test Helpers ---
 
-function configureOllama() {
-  ;(getOllamaServerUrl as Mock).mockReturnValue('http://localhost:11434')
-  ;(getOllamaSelectedModel as Mock).mockReturnValue('llama3.2')
-  ;(isFeatureEnabled as Mock).mockReturnValue(true)
+/** Creates an async generator that yields stream chunks */
+async function* createMockStream(
+  chunks: string[]
+): AsyncGenerator<{ content: string; finishReason?: 'stop' | 'length' }, void, unknown> {
+  for (const content of chunks) {
+    yield { content }
+  }
+}
+
+/** Reset all mock implementations to default working state */
+function resetMockDefaults() {
+  mockDigest.mockImplementation(async () => new ArrayBuffer(32))
+  mockResolveFeatureModel.mockReturnValue({
+    provider: 'anthropic',
+    model: 'claude-haiku-4-5',
+  })
+  mockGetOllamaServerUrl.mockReturnValue(null)
+  mockGetOllamaSelectedModel.mockReturnValue(null)
+  mockAssertAIFeatureConsent.mockResolvedValue(undefined)
+  mockGetLLMClient.mockImplementation(async () => ({
+    streamCompletion: mockStreamCompletion,
+    getProviderId: () => 'anthropic',
+  }))
+  mockStreamCompletion.mockReset()
+  mockIsFeatureEnabled.mockReturnValue(true)
+}
+
+function configureAIProvider(provider: 'anthropic' | 'ollama' = 'anthropic') {
+  if (provider === 'ollama') {
+    mockResolveFeatureModel.mockReturnValue({
+      provider: 'ollama',
+      model: 'llama3.2',
+    })
+    mockGetOllamaServerUrl.mockReturnValue('http://localhost:11434')
+    mockGetOllamaSelectedModel.mockReturnValue('llama3.2')
+  } else {
+    mockResolveFeatureModel.mockReturnValue({
+      provider: 'anthropic',
+      model: 'claude-haiku-4-5',
+    })
+    mockGetOllamaServerUrl.mockReturnValue(null)
+    mockGetOllamaSelectedModel.mockReturnValue(null)
+  }
 }
 
 function mockTranscript(
   fullText = 'The React library uses a virtual DOM for efficient rendering of UI components on the web.'
 ) {
   const words = fullText.split(' ')
-  // Create enough cues to make a valid chunk
   const cues = []
   for (let i = 0; i < words.length; i += 5) {
     cues.push({
@@ -105,52 +159,88 @@ function mockTranscript(
   })
 }
 
-function mockValidLLMResponse() {
-  // Questions reference words from the mock transcript (word0..word299) so the
-  // transcript-grounding QC check (30% min term ratio) passes.
-  mockFetch.mockResolvedValue({
-    ok: true,
-    json: () =>
-      Promise.resolve({
-        message: {
-          content: JSON.stringify({
-            questions: [
-              {
-                text: 'What is word0 related to in the context of word1?',
-                type: 'multiple-choice',
-                options: ['word2', 'word3', 'word4', 'word5'],
-                correctAnswer: 'word2',
-                explanation: 'word0 and word1 are key terms.',
-                bloomsLevel: 'remember',
-              },
-              {
-                text: 'Is word6 a type of word7?',
-                type: 'true-false',
-                options: ['True', 'False'],
-                correctAnswer: 'True',
-                explanation: 'word6 is indeed a type of word7.',
-                bloomsLevel: 'remember',
-              },
-            ],
-          }),
-        },
+/** Set up mock stream that yields valid quiz JSON for cloud provider tests */
+function mockValidStreamResponse() {
+  mockStreamCompletion.mockReturnValue(
+    createMockStream([
+      JSON.stringify({
+        questions: [
+          {
+            text: 'What is word0 related to in the context of word1?',
+            type: 'multiple-choice',
+            options: ['word2', 'word3', 'word4', 'word5'],
+            correctAnswer: 'word2',
+            explanation: 'word0 and word1 are key terms.',
+            bloomsLevel: 'remember',
+          },
+          {
+            text: 'Is word6 a type of word7?',
+            type: 'true-false',
+            options: ['True', 'False'],
+            correctAnswer: 'True',
+            explanation: 'word6 is indeed a type of word7.',
+            bloomsLevel: 'remember',
+          },
+        ],
       }),
-  })
+    ])
+  )
+}
+
+/** Set up mock fetch for Ollama native API path */
+function mockValidOllamaNativeResponse() {
+  vi.stubGlobal(
+    'fetch',
+    vi.fn().mockResolvedValue({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          message: {
+            content: JSON.stringify({
+              questions: [
+                {
+                  text: 'What is word0 related to in the context of word1?',
+                  type: 'multiple-choice',
+                  options: ['word2', 'word3', 'word4', 'word5'],
+                  correctAnswer: 'word2',
+                  explanation: 'word0 and word1 are key terms.',
+                  bloomsLevel: 'remember',
+                },
+                {
+                  text: 'Is word6 a type of word7?',
+                  type: 'true-false',
+                  options: ['True', 'False'],
+                  correctAnswer: 'True',
+                  explanation: 'word6 is indeed a type of word7.',
+                  bloomsLevel: 'remember',
+                },
+              ],
+            }),
+          },
+        }),
+    })
+  )
 }
 
 beforeEach(() => {
   vi.clearAllMocks()
+  resetMockDefaults()
+  // Re-apply global crypto stub (afterEach unstubs all globals).
+  // IMPORTANT: resetMockDefaults() must run before stubGlobal so the
+  // digest mock implementation is in place when crypto is stubbed.
+  vi.stubGlobal('crypto', {
+    subtle: { digest: mockDigest },
+    randomUUID: () => 'test-uuid-1234',
+  })
   mockQuizzesWhere.mockResolvedValue([])
   mockQuizzesPut.mockResolvedValue(undefined)
   mockChaptersSortBy.mockResolvedValue([])
+
   // E96-S02: forward syncableWrite('quizzes', 'put', quiz) calls onto
   // mockQuizzesPut(quiz) so existing assertions on the stored payload keep
   // working without rewriting each test.
   mockSyncableWrite.mockImplementation(
     async (table: string, operation: string, record: unknown) => {
-      // Only forward `quizzes` writes onto `mockQuizzesPut`. E96-S03 added
-      // `trackAIUsage` calls that route through syncableWrite for the
-      // `aiUsageEvents` table — those MUST NOT increment the quiz-put counter.
       if (table === 'quizzes' && (operation === 'put' || operation === 'add')) {
         await mockQuizzesPut(record)
       }
@@ -158,20 +248,25 @@ beforeEach(() => {
   )
 })
 
+afterEach(() => {
+  vi.unstubAllGlobals()
+})
+
 describe('generateQuizForLesson', () => {
-  it('returns error when AI consent is not given', async () => {
-    ;(isFeatureEnabled as Mock).mockReturnValue(false)
-    configureOllama()
-    ;(isFeatureEnabled as Mock).mockReturnValue(false)
+  it('returns error when consent is not granted (ConsentError)', async () => {
+    mockAssertAIFeatureConsent.mockRejectedValue(new ConsentError('ai_tutor'))
+    configureAIProvider('anthropic')
 
     const result = await generateQuizForLesson('vid1', 'course1')
     expect(result.quiz).toBeNull()
-    expect(result.error).toContain('consent')
+    expect(result.error).toContain('Settings')
   })
 
-  it('returns error when Ollama is not configured', async () => {
-    ;(isFeatureEnabled as Mock).mockReturnValue(true)
-    ;(getOllamaServerUrl as Mock).mockReturnValue(null)
+  it('returns error when AI provider is not configured (AUTH_ERROR)', async () => {
+    mockGetLLMClient.mockRejectedValue(
+      new LLMError('No API key configured', 'AUTH_ERROR', 'anthropic')
+    )
+    configureAIProvider('anthropic')
 
     const result = await generateQuizForLesson('vid1', 'course1')
     expect(result.quiz).toBeNull()
@@ -179,7 +274,7 @@ describe('generateQuizForLesson', () => {
   })
 
   it('returns error when no transcript found', async () => {
-    configureOllama()
+    configureAIProvider('anthropic')
     mockTranscriptFirst.mockResolvedValue(null)
 
     const result = await generateQuizForLesson('vid1', 'course1')
@@ -188,13 +283,17 @@ describe('generateQuizForLesson', () => {
   })
 
   it('returns cached quiz when transcriptHash matches', async () => {
-    configureOllama()
+    configureAIProvider('anthropic')
     mockTranscript()
+
+    const expectedHash = Array.from(new Uint8Array(new ArrayBuffer(32)))
+      .map(b => b.toString(16).padStart(2, '0'))
+      .join('')
 
     const cachedQuiz = {
       id: 'cached-quiz',
       lessonId: 'vid1',
-      transcriptHash: '0'.repeat(64), // SHA-256 of zeroed buffer
+      transcriptHash: expectedHash,
       questions: [
         {
           id: 'q1',
@@ -207,20 +306,33 @@ describe('generateQuizForLesson', () => {
         },
       ],
     }
-    mockQuizzesWhere.mockResolvedValue([cachedQuiz])
+    mockQuizzesWhere.mockImplementation(() => Promise.resolve([cachedQuiz]))
 
     const result = await generateQuizForLesson('vid1', 'course1')
     expect(result.cached).toBe(true)
     expect(result.quiz).toBeTruthy()
-    expect(mockFetch).not.toHaveBeenCalled()
+    expect(result.error).toBeUndefined()
+    expect(mockStreamCompletion).not.toHaveBeenCalled()
   })
 
-  it('generates quiz via LLM when no cache hit', async () => {
-    configureOllama()
-    // Need enough words for a chunk (minimum ~250 words)
+  it('generates quiz via LLM factory for cloud provider', async () => {
+    configureAIProvider('anthropic')
     const longText = Array.from({ length: 300 }, (_, i) => `word${i}`).join(' ')
     mockTranscript(longText)
-    mockValidLLMResponse()
+    mockValidStreamResponse()
+
+    const result = await generateQuizForLesson('vid1', 'course1')
+    expect(result.quiz).toBeTruthy()
+    expect(result.cached).toBe(false)
+    expect(result.quiz!.questions.length).toBeGreaterThan(0)
+    expect(mockQuizzesPut).toHaveBeenCalledTimes(1)
+  })
+
+  it('generates quiz via Ollama native API path', async () => {
+    configureAIProvider('ollama')
+    const longText = Array.from({ length: 300 }, (_, i) => `word${i}`).join(' ')
+    mockTranscript(longText)
+    mockValidOllamaNativeResponse()
 
     const result = await generateQuizForLesson('vid1', 'course1')
     expect(result.quiz).toBeTruthy()
@@ -230,52 +342,41 @@ describe('generateQuizForLesson', () => {
   })
 
   it('retries on LLM validation failure', async () => {
-    configureOllama()
+    configureAIProvider('anthropic')
     const longText = Array.from({ length: 300 }, (_, i) => `word${i}`).join(' ')
     mockTranscript(longText)
 
     // First call returns invalid JSON, second returns valid
-    mockFetch
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve({ message: { content: '{"invalid": true}' } }),
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            message: {
-              content: JSON.stringify({
-                questions: [
-                  {
-                    text: 'Q1?',
-                    type: 'true-false',
-                    options: ['True', 'False'],
-                    correctAnswer: 'True',
-                    explanation: 'Explanation.',
-                    bloomsLevel: 'remember',
-                  },
-                ],
-              }),
-            },
+    mockStreamCompletion
+      .mockReturnValueOnce(createMockStream(['{"invalid": true}']))
+      .mockReturnValueOnce(
+        createMockStream([
+          JSON.stringify({
+            questions: [
+              {
+                text: 'Q1?',
+                type: 'true-false',
+                options: ['True', 'False'],
+                correctAnswer: 'True',
+                explanation: 'Explanation.',
+                bloomsLevel: 'remember',
+              },
+            ],
           }),
-      })
+        ])
+      )
 
     const result = await generateQuizForLesson('vid1', 'course1')
     expect(result.quiz).toBeTruthy()
-    expect(mockFetch).toHaveBeenCalledTimes(2) // 1 fail + 1 success
+    expect(mockStreamCompletion).toHaveBeenCalledTimes(2)
   })
 
   it('returns error when all retries fail', async () => {
-    configureOllama()
+    configureAIProvider('anthropic')
     const longText = Array.from({ length: 300 }, (_, i) => `word${i}`).join(' ')
     mockTranscript(longText)
 
-    // All calls return invalid JSON
-    mockFetch.mockResolvedValue({
-      ok: true,
-      json: () => Promise.resolve({ message: { content: 'not json' } }),
-    })
+    mockStreamCompletion.mockReturnValue(createMockStream(['not json']))
 
     const result = await generateQuizForLesson('vid1', 'course1')
     expect(result.quiz).toBeNull()
@@ -283,16 +384,16 @@ describe('generateQuizForLesson', () => {
   })
 
   it('respects bloom level option', async () => {
-    configureOllama()
+    configureAIProvider('anthropic')
     const longText = Array.from({ length: 300 }, (_, i) => `word${i}`).join(' ')
     mockTranscript(longText)
-    mockValidLLMResponse()
+    mockValidStreamResponse()
 
     await generateQuizForLesson('vid1', 'course1', { bloomsLevel: 'apply' })
 
-    // Check that the fetch was called with a prompt containing 'apply'
-    const fetchCall = mockFetch.mock.calls[0]
-    const body = JSON.parse(fetchCall[1].body)
-    expect(body.messages[0].content).toContain('apply')
+    // Check that the stream was called with a prompt containing 'apply'
+    const streamCall = mockStreamCompletion.mock.calls[0]
+    const messages = streamCall[0]
+    expect(messages[0].content).toContain('apply')
   })
 })

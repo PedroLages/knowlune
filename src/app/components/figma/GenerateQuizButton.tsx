@@ -35,8 +35,8 @@ import type { Quiz } from '@/types/quiz'
 interface GenerateQuizButtonProps {
   /** Whether quiz generation is in progress */
   isGenerating: boolean
-  /** Whether the Ollama server is available */
-  ollamaAvailable: boolean
+  /** Whether the AI provider is available for quiz generation */
+  aiAvailable: boolean
   /** Whether availability is still being checked */
   checkingAvailability: boolean
   /** Previously cached quiz (shows "Regenerate" if present) */
@@ -55,7 +55,7 @@ const BLOOMS_OPTIONS: { value: BloomsLevel; label: string }[] = [
 
 export function GenerateQuizButton({
   isGenerating,
-  ollamaAvailable,
+  aiAvailable,
   checkingAvailability,
   cachedQuiz,
   onGenerate,
@@ -63,7 +63,7 @@ export function GenerateQuizButton({
 }: GenerateQuizButtonProps) {
   const [bloomsLevel, setBloomsLevel] = useState<BloomsLevel>('remember')
 
-  const isDisabled = !ollamaAvailable || checkingAvailability || isGenerating
+  const isDisabled = !aiAvailable || checkingAvailability || isGenerating
   // Only show "Regenerate" label/icon when onRegenerate handler is provided.
   // When cachedQuiz exists but onRegenerate is undefined, onGenerate returns
   // the cached quiz — so we keep the "Generate Quiz" label to avoid confusion.
@@ -125,7 +125,7 @@ export function GenerateQuizButton({
         >
           <SelectTrigger
             id="blooms-level-select"
-            className="w-[160px] rounded-xl"
+            className="w-[160px] rounded-xl min-h-[44px]"
             data-testid="blooms-level-select"
           >
             <SelectValue placeholder="Select level" />
@@ -141,7 +141,7 @@ export function GenerateQuizButton({
       </div>
 
       {/* Button with tooltip when disabled */}
-      {!ollamaAvailable && !checkingAvailability ? (
+      {!aiAvailable && !checkingAvailability ? (
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
@@ -150,7 +150,7 @@ export function GenerateQuizButton({
               </span>
             </TooltipTrigger>
             <TooltipContent>
-              <p>Quiz generation unavailable — Ollama server is offline</p>
+              <p>Quiz generation unavailable — AI provider is offline or not configured</p>
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
@@ -158,12 +158,12 @@ export function GenerateQuizButton({
         button
       )}
 
-      {/* ARIA live region — idle state */}
-      <div role="status" aria-live="polite" className="sr-only">
-        {!ollamaAvailable && !checkingAvailability
-          ? 'Quiz generation unavailable. Ollama server is offline.'
-          : ''}
-      </div>
+      {/* ARIA live region — idle state (only rendered when message is non-empty) */}
+      {!aiAvailable && !checkingAvailability && (
+        <div role="status" aria-live="polite" className="sr-only">
+          Quiz generation unavailable. AI provider is offline or not configured.
+        </div>
+      )}
     </div>
   )
 }
