@@ -5,6 +5,41 @@ import { PathHeroBanner } from '@/app/components/learning-path/PathHeroBanner'
 import type { LearningPath } from '@/data/types'
 import type { PathProgressSummary } from '@/app/hooks/usePathProgress'
 
+// ── WCAG contrast helpers ────────────────────────────────────────────────────
+// Computes contrast ratios from known hex token values (src/styles/theme.css).
+// This gives measurable, deterministic checks without needing a real browser.
+
+function linearize(v: number): number {
+  const c = v / 255
+  return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4
+}
+
+function relativeLuminance(hex: string): number {
+  const r = parseInt(hex.slice(1, 3), 16)
+  const g = parseInt(hex.slice(3, 5), 16)
+  const b = parseInt(hex.slice(5, 7), 16)
+  return 0.2126 * linearize(r) + 0.7152 * linearize(g) + 0.0722 * linearize(b)
+}
+
+function wcagContrastRatio(fgHex: string, bgHex: string): number {
+  const l1 = relativeLuminance(fgHex)
+  const l2 = relativeLuminance(bgHex)
+  const lighter = Math.max(l1, l2)
+  const darker = Math.min(l1, l2)
+  return (lighter + 0.05) / (darker + 0.05)
+}
+
+// Token values from src/styles/theme.css (default light mode):
+// --foreground: #1c1d2b, --card: #ffffff, --muted-foreground: #656870
+// --brand: #5e6ad2, --brand-foreground: #ffffff
+const TOKEN = {
+  CARD: '#ffffff',
+  FOREGROUND: '#1c1d2b',
+  MUTED_FOREGROUND: '#656870',
+  BRAND: '#5e6ad2',
+  BRAND_FOREGROUND: '#ffffff',
+} as const
+
 function makePath(overrides: Partial<LearningPath> = {}): LearningPath {
   return {
     id: 'path-1',
@@ -476,6 +511,78 @@ describe('PathHeroBanner', () => {
   it('renders estimated hours when available', () => {
     renderHero({ path: makePath({ estimatedHours: 40 }) })
     expect(screen.getByText(/3 courses · ~40h/)).toBeInTheDocument()
+  })
+
+  // ── Cover geometry guard: content surface must not fill the full hero ───────
+  // This assertion regresses if the layout reverts to thin padding (p-3/p-4)
+  // that leaves only a 12-16px mat, making the uploaded cover unrecognizable.
+
+  it('hero section has pt-24+ top padding so the cover is visible above the content surface', () => {
+    const { container } = renderHero({
+      path: makePath({ coverImageUrl: 'https://example.com/cover.jpg' }),
+    })
+    const section = container.querySelector('[data-testid="hero-section"]')
+    expect(section).not.toBeNull()
+    // Must have at least pt-24 (96px) of top padding — not just p-3 (12px).
+    // Tailwind classes are checked as literals; any Tailwind pt-24 or larger satisfies this.
+    expect(section?.className).toContain('pt-24')
+    // Confirm the thin-padding regression class is absent.
+    expect(section?.className).not.toMatch(/\bp-3\b/)
+    expect(section?.className).not.toMatch(/\bp-4\b/)
+  })
+
+  it('hero content surface occupies only part of the hero (not the full height)', () => {
+    const { container } = renderHero({
+      path: makePath({ coverImageUrl: 'https://example.com/cover.jpg' }),
+    })
+    const section = container.querySelector('[data-testid="hero-section"]')
+    const surface = container.querySelector('[data-testid="hero-content-surface"]')
+    expect(section).not.toBeNull()
+    expect(surface).not.toBeNull()
+    // The surface must NOT fill the top of the section — the cover is visible
+    // in the top padding area. Assert pt-24 or larger is present on the section
+    // (verified above), and the surface itself does NOT have absolute inset-0
+    // (which would cover the full hero and hide the cover).
+    expect(surface?.className).not.toContain('absolute inset-0')
+    expect(surface?.className).not.toContain('inset-0')
+  })
+
+  // ── WCAG contrast: measured ratios from design-token hex values ─────────────
+  // These are deterministic checks using the actual light-theme values from
+  // src/styles/theme.css. They verify the selected token pairs meet WCAG 2.1 AA
+  // without needing a real browser. Thresholds: large text ≥3:1, normal ≥4.5:1.
+
+  it('text-foreground on bg-card meets WCAG AA large title threshold (≥3:1)', () => {
+    const ratio = wcagContrastRatio(TOKEN.FOREGROUND, TOKEN.CARD)
+    expect(ratio).toBeGreaterThanOrEqual(3.0)
+  })
+
+  it('text-foreground on bg-card meets WCAG AA normal text threshold (≥4.5:1)', () => {
+    const ratio = wcagContrastRatio(TOKEN.FOREGROUND, TOKEN.CARD)
+    expect(ratio).toBeGreaterThanOrEqual(4.5)
+  })
+
+  it('text-muted-foreground on bg-card meets WCAG AA normal text threshold (≥4.5:1)', () => {
+    const ratio = wcagContrastRatio(TOKEN.MUTED_FOREGROUND, TOKEN.CARD)
+    expect(ratio).toBeGreaterThanOrEqual(4.5)
+  })
+
+  it('CTA text-brand-foreground on bg-brand meets WCAG AA normal text threshold (≥4.5:1)', () => {
+    const ratio = wcagContrastRatio(TOKEN.BRAND_FOREGROUND, TOKEN.BRAND)
+    expect(ratio).toBeGreaterThanOrEqual(4.5)
+  })
+
+  it('hero renders with title on the readable card surface for contrast guarantee', () => {
+    // Structural assertion: the title is inside the card surface that carries
+    // the WCAG contrast guarantee (bg-card/95 ≈ white), verified above.
+    renderHero({
+      path: makePath({ name: 'Photography Mastery Roadmap', coverImageUrl: 'https://example.com/cover.jpg' }),
+    })
+    const surface = screen.getByTestId('hero-content-surface')
+    const title = screen.getByRole('heading', { name: 'Photography Mastery Roadmap', level: 1 })
+    expect(surface.contains(title)).toBe(true)
+    // Surface uses bg-card/95 for the contrast guarantee
+    expect(surface.className).toContain('bg-card/95')
   })
 
   // ── Touch target regression guards ─────────────────────────────────

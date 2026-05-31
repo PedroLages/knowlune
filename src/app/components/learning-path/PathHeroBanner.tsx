@@ -97,10 +97,13 @@ export function PathHeroBanner({
 return (
     <section
       className={cn(
-        // Thin frame padding so the uploaded cover (or gradient) stays visible
-        // around the readable content surface, like matted cover art.
-        'relative overflow-hidden rounded-[28px] border border-border/50 bg-card shadow-card-ambient p-3 sm:p-4'
+        // Large top padding exposes the uploaded cover above the content surface,
+        // making it recognizable as the primary full-cover image layer.
+        // Thin left/right/bottom padding creates a slim mat frame around the card.
+        'relative overflow-hidden rounded-[28px] border border-border/50 bg-card shadow-card-ambient',
+        'pt-24 sm:pt-36 px-3 sm:px-4 pb-3 sm:pb-4'
       )}
+      data-testid="hero-section"
     >
       {/* Primary cover image — full-cover, sharp, and recognizable (not a
           decorative blur). Promoted to opacity-100 once the image is loaded. */}
@@ -120,11 +123,12 @@ return (
         />
       )}
 
-      {/* Targeted scrim over the visible cover — lighter at top-left so the
-          cover stays composed, deeper toward bottom-right for cohesion. The
-          contrast guarantee is carried by the content surface, not the scrim. */}
+      {/* Targeted scrim over the visible cover — transparent at the top so the
+          cover remains fully visible and recognizable in the uncovered portion,
+          subtly darker toward the bottom where the content surface starts.
+          Contrast is carried by the content surface (bg-card/95), not the scrim. */}
       {showCoverImage && (
-        <div className="absolute inset-0 bg-gradient-to-br from-background/15 via-background/45 to-background/80" />
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-background/50" />
       )}
 
       {/* Fallback gradient (no cover image, pending, or failed) */}

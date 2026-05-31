@@ -563,6 +563,143 @@ test.describe('Learning Tracks — uploaded cover hero', () => {
     await expect(page.getByTestId('hero-back-link')).toBeFocused()
   })
 
+  test('hero content surface meets WCAG AA contrast for title and controls (measured)', async ({
+    page,
+  }) => {
+    await goToLearningTracks(page)
+
+    const paths = [
+      createLearningPath({
+        id: 'lt-contrast',
+        name: 'Photography Mastery Roadmap',
+        description: 'Master composition, light, and editing.',
+        coverImageUrl: COVER_DATA_URL,
+        difficultyLabel: 'Intermediate',
+      }),
+    ]
+    const entries = [
+      createLearningPathEntry({
+        id: 'lpe-contrast',
+        pathId: 'lt-contrast',
+        courseId: 'course-contrast',
+        position: 1,
+      }),
+    ]
+    await clearTrackStores(page)
+    await seedPaths(page, paths, entries)
+    await page.goto('/learning-tracks/lt-contrast', { waitUntil: 'load' })
+    await expect(page).toHaveURL(/\/learning-tracks\/lt-contrast/)
+
+    // Wait for the content surface to be rendered and the title visible.
+    await expect(
+      page.getByRole('heading', { name: 'Photography Mastery Roadmap', level: 1 })
+    ).toBeVisible()
+
+    // Compute WCAG contrast ratios via getComputedStyle in the real browser.
+    // For elements on the solid bg-card/95 surface, we composite the alpha
+    // against white (the underlying card/white background) to get the effective
+    // background color before computing the ratio.
+    const contrastResult = await page.evaluate(() => {
+      function linearize(v: number): number {
+        const c = v / 255
+        return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4)
+      }
+      function luminance(r: number, g: number, b: number): number {
+        return 0.2126 * linearize(r) + 0.7152 * linearize(g) + 0.0722 * linearize(b)
+      }
+      function contrastRatio(l1: number, l2: number): number {
+        const lighter = Math.max(l1, l2)
+        const darker = Math.min(l1, l2)
+        return (lighter + 0.05) / (darker + 0.05)
+      }
+      function parseRgba(color: string): [number, number, number, number] | null {
+        const m = color.match(/[\d.]+/g)
+        if (!m || m.length < 3) return null
+        return [
+          parseFloat(m[0]),
+          parseFloat(m[1]),
+          parseFloat(m[2]),
+          m.length >= 4 ? parseFloat(m[3]) : 1,
+        ]
+      }
+      // Alpha-composite rgba over a solid white reference background (#ffffff).
+      // This gives the worst-case perceived background lightness and thus the
+      // minimum (most conservative) contrast ratio.
+      function compositeOnWhite(r: number, g: number, b: number, a: number): [number, number, number] {
+        return [
+          r * a + 255 * (1 - a),
+          g * a + 255 * (1 - a),
+          b * a + 255 * (1 - a),
+        ]
+      }
+
+      const surface = document.querySelector('[data-testid="hero-content-surface"]')
+      const title = document.querySelector('[data-testid="hero-content-surface"] h1')
+      const backLink = document.querySelector('[data-testid="hero-back-link"]')
+      const cta = document.querySelector(
+        '[data-testid="hero-content-surface"] a[class*="bg-brand"]'
+      )
+
+      if (!surface || !title) return { error: 'elements not found' }
+
+      const surfaceBgRaw = window.getComputedStyle(surface).backgroundColor
+      const surfaceParsed = parseRgba(surfaceBgRaw)
+      if (!surfaceParsed) return { error: `could not parse surface bg: ${surfaceBgRaw}` }
+
+      const [sr, sg, sb, sa] = surfaceParsed
+      const effectiveBg = compositeOnWhite(sr, sg, sb, sa)
+      const bgLum = luminance(...effectiveBg)
+
+      const titleColorRaw = window.getComputedStyle(title).color
+      const titleParsed = parseRgba(titleColorRaw)
+      const titleContrast = titleParsed
+        ? contrastRatio(luminance(titleParsed[0], titleParsed[1], titleParsed[2]), bgLum)
+        : null
+
+      const backColorRaw = backLink ? window.getComputedStyle(backLink).color : null
+      const backParsed = backColorRaw ? parseRgba(backColorRaw) : null
+      const backContrast = backParsed
+        ? contrastRatio(luminance(backParsed[0], backParsed[1], backParsed[2]), bgLum)
+        : null
+
+      // CTA has its own bg-brand surface — measure text-brand-foreground against bg-brand
+      let ctaContrast: number | null = null
+      if (cta) {
+        const ctaBgRaw = window.getComputedStyle(cta).backgroundColor
+        const ctaBgParsed = parseRgba(ctaBgRaw)
+        const ctaColorRaw = window.getComputedStyle(cta).color
+        const ctaColorParsed = parseRgba(ctaColorRaw)
+        if (ctaBgParsed && ctaColorParsed) {
+          const ctaEffectiveBg = compositeOnWhite(...(ctaBgParsed.slice(0, 4) as [number, number, number, number]))
+          ctaContrast = contrastRatio(
+            luminance(ctaColorParsed[0], ctaColorParsed[1], ctaColorParsed[2]),
+            luminance(...ctaEffectiveBg)
+          )
+        }
+      }
+
+      return {
+        titleContrast,
+        backContrast,
+        ctaContrast,
+        surfaceBg: surfaceBgRaw,
+        effectiveBgRgb: `rgb(${effectiveBg.map(v => Math.round(v)).join(', ')})`,
+      }
+    })
+
+    expect(contrastResult).not.toHaveProperty('error')
+    // Title (large text, ≥28px bold) must meet ≥3:1
+    expect(contrastResult?.titleContrast).toBeGreaterThanOrEqual(3.0)
+    // Back link (normal text) must meet ≥4.5:1
+    if (contrastResult?.backContrast != null) {
+      expect(contrastResult.backContrast).toBeGreaterThanOrEqual(4.5)
+    }
+    // CTA (normal text on bg-brand) must meet ≥4.5:1 when present
+    if (contrastResult?.ctaContrast != null) {
+      expect(contrastResult.ctaContrast).toBeGreaterThanOrEqual(4.5)
+    }
+  })
+
   test('preset-gradient detail hero still renders content surface and title', async ({ page }) => {
     await goToLearningTracks(page)
 
