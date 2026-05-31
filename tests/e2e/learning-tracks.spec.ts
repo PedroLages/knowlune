@@ -12,11 +12,34 @@
  * - Invalid trackId shows not-found state
  */
 import { test, expect } from '../support/fixtures'
-import { seedIndexedDBStore, clearLearningPath } from '../support/helpers/seed-helpers'
+import {
+  seedIndexedDBStore,
+  clearLearningPath,
+  clearIndexedDBStore,
+} from '../support/helpers/seed-helpers'
 import { navigateAndWait } from '../support/helpers/navigation'
 import { FIXED_DATE, getRelativeDate } from '../utils/test-time'
 
 const DB_NAME = 'ElearningDB'
+
+/**
+ * A small transparent-ish 2x2 PNG data URL used as a deterministic cover image
+ * fixture. Avoids relying on remote image availability while still exercising
+ * the uploaded-cover hero branch (an <img> with a real, loadable src).
+ */
+const COVER_DATA_URL =
+  'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAEklEQVR42mP8z/C/noEIwDiqEAByQgg+gQ3l9wAAAABJRU5ErkJggg=='
+
+/**
+ * Clear the learning-track stores plus the imported-content stores that the
+ * detail page reads. `clearLearningPath` only clears the `learningPaths` store,
+ * so entries and videos must be cleared explicitly to keep tests isolated.
+ */
+async function clearTrackStores(page: import('@playwright/test').Page): Promise<void> {
+  await clearLearningPath(page)
+  await clearIndexedDBStore(page, DB_NAME, 'learningPathEntries')
+  await clearIndexedDBStore(page, DB_NAME, 'importedVideos')
+}
 
 // ---------------------------------------------------------------------------
 // Test data factories
@@ -331,5 +354,376 @@ test.describe('Learning Tracks — invalid track', () => {
 
     await expect(page.getByText('Track not found')).toBeVisible()
     await expect(page.getByRole('button', { name: 'View All Tracks' })).toBeVisible()
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Back-link & CTA navigation regression (R5, R6, R7)
+//
+// The reported bug: "Back to Learning Tracks" sometimes routed to a course
+// detail page. Source already passes backUrl="/learning-tracks", so this
+// suite is a permanent regression guard across direct entry, mobile hit
+// areas, and back-link/CTA separation rather than a one-off fix.
+// ---------------------------------------------------------------------------
+
+test.describe('Learning Tracks — back-link & CTA navigation regression', () => {
+  test('direct-load detail page: back link navigates to /learning-tracks', async ({ page }) => {
+    await goToLearningTracks(page)
+
+    const paths = [createLearningPath({ id: 'lt-direct', name: 'Direct Entry Track' })]
+    await clearTrackStores(page)
+    await seedPaths(page, paths)
+
+    // Enter the detail page directly (not via the list) to exercise
+    // direct-entry router state.
+    await page.goto('/learning-tracks/lt-direct', { waitUntil: 'load' })
+    await expect(page).toHaveURL(/\/learning-tracks\/lt-direct/)
+
+    const backLink = page.getByTestId('hero-back-link')
+    await expect(backLink).toBeVisible()
+    await expect(backLink).toHaveAttribute('href', '/learning-tracks')
+
+    await backLink.click()
+    await expect(page).toHaveURL('/learning-tracks')
+  })
+
+  test('mobile viewport: back link tap navigates to /learning-tracks', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 812 })
+    await goToLearningTracks(page)
+
+    const paths = [createLearningPath({ id: 'lt-mobile', name: 'Mobile Track' })]
+    await clearTrackStores(page)
+    await seedPaths(page, paths)
+    await page.goto('/learning-tracks/lt-mobile', { waitUntil: 'load' })
+    await expect(page).toHaveURL(/\/learning-tracks\/lt-mobile/)
+
+    const backLink = page.getByTestId('hero-back-link')
+    await expect(backLink).toBeVisible()
+
+    // Tap the visible back-link text, not just a testid locator, to catch any
+    // hit-area overlap with an adjacent CTA at narrow widths.
+    await backLink.getByText('Back to Learning Tracks').click()
+    await expect(page).toHaveURL('/learning-tracks')
+  })
+
+  test('hero CTA stays separate from back link and routes to the course lesson', async ({
+    page,
+  }) => {
+    await goToLearningTracks(page)
+
+    const paths = [createLearningPath({ id: 'lt-cta', name: 'CTA Track' })]
+    const entries = [
+      createLearningPathEntry({
+        id: 'lpe-cta',
+        pathId: 'lt-cta',
+        courseId: 'course-cta',
+        position: 1,
+      }),
+    ]
+    const videos = [
+      {
+        id: 'video-cta-1',
+        courseId: 'course-cta',
+        filename: 'intro.mp4',
+        path: 'course-cta/intro.mp4',
+        duration: 600,
+        format: 'mp4',
+        order: 0,
+        fileHandle: null,
+        title: 'Intro Lesson',
+      },
+    ]
+
+    await clearTrackStores(page)
+    await seedPaths(page, paths, entries)
+    await seedIndexedDBStore(page, DB_NAME, 'importedVideos', videos)
+    await page.goto('/learning-tracks/lt-cta', { waitUntil: 'load' })
+    await expect(page).toHaveURL(/\/learning-tracks\/lt-cta/)
+
+    // Back link and CTA are distinct, independently-targeted controls.
+    const backLink = page.getByTestId('hero-back-link')
+    await expect(backLink).toHaveAttribute('href', '/learning-tracks')
+
+    const cta = page.getByRole('link', { name: 'Start Learning' })
+    // Once videos load, the CTA resolves to the first lesson of the course.
+    await expect(cta).toHaveAttribute('href', '/courses/course-cta/lessons/video-cta-1')
+
+    await cta.click()
+    await expect(page).toHaveURL('/courses/course-cta/lessons/video-cta-1')
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Uploaded cover hero — readability, responsiveness, accessibility
+// (R1, R2, R3, R7)
+// ---------------------------------------------------------------------------
+
+test.describe('Learning Tracks — uploaded cover hero', () => {
+  test('detail hero shows a visible cover image with readable content', async ({ page }) => {
+    await goToLearningTracks(page)
+
+    const paths = [
+      createLearningPath({
+        id: 'lt-cover',
+        name: 'Photography Mastery Roadmap',
+        description: 'Master composition, light, and editing.',
+        coverImageUrl: COVER_DATA_URL,
+        difficultyLabel: 'Intermediate',
+      }),
+    ]
+    await clearTrackStores(page)
+    await seedPaths(page, paths)
+    await page.goto('/learning-tracks/lt-cover', { waitUntil: 'load' })
+    await expect(page).toHaveURL(/\/learning-tracks\/lt-cover/)
+
+    // The uploaded cover renders as a visible, full-cover, sharp image layer
+    // (promoted to opacity-100 after load) rather than a decorative blur.
+    const cover = page.getByTestId('hero-cover-image')
+    await expect(cover).toBeVisible()
+    await expect(cover).toHaveClass(/opacity-100/)
+    await expect(cover).toHaveClass(/object-cover/)
+
+    // Content sits on an explicit readable surface and stays visible over the
+    // uploaded cover.
+    await expect(page.getByTestId('hero-content-surface')).toBeVisible()
+    await expect(
+      page.getByRole('heading', { name: 'Photography Mastery Roadmap', level: 1 })
+    ).toBeVisible()
+    await expect(page.getByText('Master composition, light, and editing.')).toBeVisible()
+    await expect(page.getByTestId('hero-back-link')).toBeVisible()
+
+    // Capture the hero for visual verification of the premium quality bar.
+    await page
+      .locator('section:has([data-testid="hero-content-surface"])')
+      .screenshot({ path: 'test-results/hero-cover-desktop.png' })
+  })
+
+  test('mobile cover hero keeps title and back link readable without overflow', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 375, height: 812 })
+    await goToLearningTracks(page)
+
+    const paths = [
+      createLearningPath({
+        id: 'lt-cover-m',
+        name: 'Photography Mastery Roadmap',
+        coverImageUrl: COVER_DATA_URL,
+      }),
+    ]
+    await clearTrackStores(page)
+    await seedPaths(page, paths)
+    await page.goto('/learning-tracks/lt-cover-m', { waitUntil: 'load' })
+
+    await expect(
+      page.getByRole('heading', { name: 'Photography Mastery Roadmap', level: 1 })
+    ).toBeVisible()
+    const backLink = page.getByTestId('hero-back-link')
+    await expect(backLink).toBeVisible()
+
+    // No horizontal overflow at 375px.
+    const overflow = await page.evaluate(() => {
+      const el = document.scrollingElement || document.documentElement
+      return el.scrollWidth - el.clientWidth
+    })
+    expect(overflow).toBeLessThanOrEqual(1)
+
+    // Back link still navigates to the listing on mobile.
+    await backLink.click()
+    await expect(page).toHaveURL('/learning-tracks')
+  })
+
+  test('back link and CTA meet the 44x44 touch-target minimum', async ({ page }) => {
+    await goToLearningTracks(page)
+
+    const paths = [
+      createLearningPath({ id: 'lt-tap', name: 'Tap Track', coverImageUrl: COVER_DATA_URL }),
+    ]
+    const entries = [
+      createLearningPathEntry({ id: 'lpe-tap', pathId: 'lt-tap', courseId: 'course-tap', position: 1 }),
+    ]
+    await clearTrackStores(page)
+    await seedPaths(page, paths, entries)
+    await page.goto('/learning-tracks/lt-tap', { waitUntil: 'load' })
+
+    const backBox = await page.getByTestId('hero-back-link').boundingBox()
+    expect(backBox).not.toBeNull()
+    expect(backBox!.height).toBeGreaterThanOrEqual(44)
+    expect(backBox!.width).toBeGreaterThanOrEqual(44)
+
+    const cta = page.getByRole('link', { name: 'Start Learning' })
+    await expect(cta).toBeVisible()
+    const ctaBox = await cta.boundingBox()
+    expect(ctaBox).not.toBeNull()
+    expect(ctaBox!.height).toBeGreaterThanOrEqual(44)
+    expect(ctaBox!.width).toBeGreaterThanOrEqual(44)
+
+    // Back link is keyboard-focusable (global focus-visible outline applies).
+    await page.getByTestId('hero-back-link').focus()
+    await expect(page.getByTestId('hero-back-link')).toBeFocused()
+  })
+
+  test('hero content surface meets WCAG AA contrast for title and controls (measured)', async ({
+    page,
+  }) => {
+    await goToLearningTracks(page)
+
+    const paths = [
+      createLearningPath({
+        id: 'lt-contrast',
+        name: 'Photography Mastery Roadmap',
+        description: 'Master composition, light, and editing.',
+        coverImageUrl: COVER_DATA_URL,
+        difficultyLabel: 'Intermediate',
+      }),
+    ]
+    const entries = [
+      createLearningPathEntry({
+        id: 'lpe-contrast',
+        pathId: 'lt-contrast',
+        courseId: 'course-contrast',
+        position: 1,
+      }),
+    ]
+    await clearTrackStores(page)
+    await seedPaths(page, paths, entries)
+    await page.goto('/learning-tracks/lt-contrast', { waitUntil: 'load' })
+    await expect(page).toHaveURL(/\/learning-tracks\/lt-contrast/)
+
+    // Wait for the content surface to be rendered and the title visible.
+    await expect(
+      page.getByRole('heading', { name: 'Photography Mastery Roadmap', level: 1 })
+    ).toBeVisible()
+
+    // Compute WCAG contrast ratios via getComputedStyle in the real browser.
+    // For elements on the solid bg-card/95 surface, we composite the alpha
+    // against white (the underlying card/white background) to get the effective
+    // background color before computing the ratio.
+    const contrastResult = await page.evaluate(() => {
+      function linearize(v: number): number {
+        const c = v / 255
+        return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4)
+      }
+      function luminance(r: number, g: number, b: number): number {
+        return 0.2126 * linearize(r) + 0.7152 * linearize(g) + 0.0722 * linearize(b)
+      }
+      function contrastRatio(l1: number, l2: number): number {
+        const lighter = Math.max(l1, l2)
+        const darker = Math.min(l1, l2)
+        return (lighter + 0.05) / (darker + 0.05)
+      }
+      /**
+       * Parse any CSS color string (rgb/rgba/color()/oklab/oklch/hex/named) into
+       * sRGB 0-255 components by rendering through a 1x1 canvas.  This delegates
+       * all color-space conversion to the browser engine and avoids hand-rolling
+       * regex logic that breaks for modern color() / oklch() / oklab() syntax
+       * where channels are already in the 0-1 range.
+       */
+      function parseColor(color: string): [number, number, number, number] | null {
+        const canvas = document.createElement('canvas')
+        canvas.width = 1
+        canvas.height = 1
+        const ctx = canvas.getContext('2d')
+        if (!ctx) return null
+        // Transparent baseline — lets us detect fully transparent inputs
+        ctx.clearRect(0, 0, 1, 1)
+        ctx.fillStyle = color
+        ctx.fillRect(0, 0, 1, 1)
+        const d = ctx.getImageData(0, 0, 1, 1).data
+        // ImageData channels are always 0-255; alpha is also 0-255 so normalize
+        return [d[0], d[1], d[2], d[3] / 255]
+      }
+      // Alpha-composite rgba over a solid white reference background (#ffffff).
+      // This gives the worst-case perceived background lightness and thus the
+      // minimum (most conservative) contrast ratio.
+      function compositeOnWhite(r: number, g: number, b: number, a: number): [number, number, number] {
+        return [
+          r * a + 255 * (1 - a),
+          g * a + 255 * (1 - a),
+          b * a + 255 * (1 - a),
+        ]
+      }
+
+      const surface = document.querySelector('[data-testid="hero-content-surface"]')
+      const title = document.querySelector('[data-testid="hero-content-surface"] h1')
+      const backLink = document.querySelector('[data-testid="hero-back-link"]')
+      const cta = document.querySelector(
+        '[data-testid="hero-content-surface"] a[class*="bg-brand"]'
+      )
+
+      if (!surface || !title) return { error: 'elements not found' }
+
+      const surfaceBgRaw = window.getComputedStyle(surface).backgroundColor
+      const surfaceParsed = parseColor(surfaceBgRaw)
+      if (!surfaceParsed) return { error: `could not parse surface bg: ${surfaceBgRaw}` }
+
+      const [sr, sg, sb, sa] = surfaceParsed
+      const effectiveBg = compositeOnWhite(sr, sg, sb, sa)
+      const bgLum = luminance(...effectiveBg)
+
+      const titleColorRaw = window.getComputedStyle(title).color
+      const titleParsed = parseColor(titleColorRaw)
+      const titleContrast = titleParsed
+        ? contrastRatio(luminance(titleParsed[0], titleParsed[1], titleParsed[2]), bgLum)
+        : null
+
+      const backColorRaw = backLink ? window.getComputedStyle(backLink).color : null
+      const backParsed = backColorRaw ? parseColor(backColorRaw) : null
+      const backContrast = backParsed
+        ? contrastRatio(luminance(backParsed[0], backParsed[1], backParsed[2]), bgLum)
+        : null
+
+      // CTA has its own bg-brand surface — measure text-brand-foreground against bg-brand
+      let ctaContrast: number | null = null
+      if (cta) {
+        const ctaBgRaw = window.getComputedStyle(cta).backgroundColor
+        const ctaBgParsed = parseColor(ctaBgRaw)
+        const ctaColorRaw = window.getComputedStyle(cta).color
+        const ctaColorParsed = parseColor(ctaColorRaw)
+        if (ctaBgParsed && ctaColorParsed) {
+          const ctaEffectiveBg = compositeOnWhite(...(ctaBgParsed.slice(0, 4) as [number, number, number, number]))
+          ctaContrast = contrastRatio(
+            luminance(ctaColorParsed[0], ctaColorParsed[1], ctaColorParsed[2]),
+            luminance(...ctaEffectiveBg)
+          )
+        }
+      }
+
+      return {
+        titleContrast,
+        backContrast,
+        ctaContrast,
+        surfaceBg: surfaceBgRaw,
+        effectiveBgRgb: `rgb(${effectiveBg.map(v => Math.round(v)).join(', ')})`,
+      }
+    })
+
+    expect(contrastResult).not.toHaveProperty('error')
+    // Title (large text, ≥28px bold) must meet ≥3:1
+    expect(contrastResult?.titleContrast).toBeGreaterThanOrEqual(3.0)
+    // Back link (normal text) must meet ≥4.5:1
+    if (contrastResult?.backContrast != null) {
+      expect(contrastResult.backContrast).toBeGreaterThanOrEqual(4.5)
+    }
+    // CTA (normal text on bg-brand) must meet ≥4.5:1 when present
+    if (contrastResult?.ctaContrast != null) {
+      expect(contrastResult.ctaContrast).toBeGreaterThanOrEqual(4.5)
+    }
+  })
+
+  test('preset-gradient detail hero still renders content surface and title', async ({ page }) => {
+    await goToLearningTracks(page)
+
+    const paths = [
+      createLearningPath({ id: 'lt-preset', name: 'Preset Track', coverPreset: 'cyan-blue' }),
+    ]
+    await clearTrackStores(page)
+    await seedPaths(page, paths)
+    await page.goto('/learning-tracks/lt-preset', { waitUntil: 'load' })
+
+    // No uploaded cover, but the readable surface treatment is consistent.
+    await expect(page.getByTestId('hero-cover-image')).toHaveCount(0)
+    await expect(page.getByTestId('hero-content-surface')).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Preset Track', level: 1 })).toBeVisible()
   })
 })

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useCallback } from 'react'
 import { Link } from 'react-router'
 import { ArrowLeft, Clock, PlayCircle, BookOpen, Pencil, Trash2, MoreHorizontal } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
@@ -69,42 +69,66 @@ export function PathHeroBanner({
   const ctaCourseId = currentCourseId ?? firstCourseId
   const ctaLabel = pathProgress.completionPct > 0 ? 'Continue Learning' : 'Start Learning'
 
-  // --- Cover image state machine: pending -> loaded -> failed ---
-  const [imageState, setImageState] = useState<'pending' | 'loaded' | 'failed'>(() =>
-    path.coverImageUrl ? 'pending' : 'loaded'
+  // --- Cover image load state, keyed by the image URL ---
+  // The URL string is the image identity: tracking which URL has loaded/failed
+  // self-resets the pending state when `coverImageUrl` changes, and stays
+  // stable across non-image metadata changes (title, description, updatedAt).
+  const coverUrl = path.coverImageUrl
+  const [loadedUrl, setLoadedUrl] = useState<string | null>(null)
+  const [failedUrl, setFailedUrl] = useState<string | null>(null)
+
+  const showCoverImage = !!coverUrl && loadedUrl === coverUrl
+  const coverFailed = !!coverUrl && failedUrl === coverUrl
+
+  // Cached covers and data URLs can finish loading before React attaches the
+  // onLoad handler, which would otherwise leave a valid cover stuck hidden.
+  // A ref lets us promote an already-complete image on mount. Failures are
+  // still handled by onError (an undecoded image simply stays on the fallback).
+  const handleCoverRef = useCallback(
+    (node: HTMLImageElement | null) => {
+      if (!node || !coverUrl) return
+      if (node.complete && node.naturalWidth > 0) {
+        setLoadedUrl(coverUrl)
+      }
+    },
+    [coverUrl]
   )
-
-  // Reset state when coverImageUrl changes (new URL = new image identity)
-  useEffect(() => {
-    setImageState(path.coverImageUrl ? 'pending' : 'loaded')
-  }, [path.coverImageUrl])
-
-  const showCoverImage = imageState === 'loaded' && !!path.coverImageUrl
 
 return (
     <section
       className={cn(
-        'relative overflow-hidden rounded-3xl border border-border/50 bg-card shadow-card-ambient'
+        // Large top padding exposes the uploaded cover above the content surface,
+        // making it recognizable as the primary full-cover image layer.
+        // Thin left/right/bottom padding creates a slim mat frame around the card.
+        'relative overflow-hidden rounded-[28px] border border-border/50 bg-card shadow-card-ambient',
+        'pt-24 sm:pt-36 px-3 sm:px-4 pb-3 sm:pb-4'
       )}
+      data-testid="hero-section"
     >
-      {/* Cover image as blurred atmospheric background */}
-      {path.coverImageUrl && imageState !== 'failed' && (
+      {/* Primary cover image — full-cover, sharp, and recognizable (not a
+          decorative blur). Promoted to opacity-100 once the image is loaded. */}
+      {coverUrl && !coverFailed && (
         <img
-          key={path.coverImageUrl}
-          src={path.coverImageUrl}
+          key={coverUrl}
+          ref={handleCoverRef}
+          src={coverUrl}
           alt=""
           className={cn(
             'absolute inset-0 h-full w-full object-cover motion-safe:transition-opacity motion-safe:duration-300 ease-out',
-            showCoverImage ? 'opacity-20 blur-2xl scale-110' : 'opacity-0'
+            showCoverImage ? 'opacity-100' : 'opacity-0'
           )}
-          onLoad={() => setImageState('loaded')}
-          onError={() => setImageState('failed')}
+          onLoad={() => setLoadedUrl(coverUrl)}
+          onError={() => setFailedUrl(coverUrl)}
+          data-testid="hero-cover-image"
         />
       )}
 
-      {/* Gradient scrim over blurred image */}
+      {/* Targeted scrim over the visible cover — transparent at the top so the
+          cover remains fully visible and recognizable in the uncovered portion,
+          subtly darker toward the bottom where the content surface starts.
+          Contrast is carried by the content surface (bg-card/95), not the scrim. */}
       {showCoverImage && (
-        <div className="absolute inset-0 bg-gradient-to-br from-background/60 via-background/70 to-background/90" />
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-background/50" />
       )}
 
       {/* Fallback gradient (no cover image, pending, or failed) */}
@@ -120,13 +144,19 @@ return (
         </>
       )}
 
-      {imageState === 'failed' && (
+      {coverFailed && (
         <div className="sr-only" aria-live="polite" role="status">
           Cover image could not be loaded
         </div>
       )}
-      {/* Content */}
-      <div className="relative z-10 p-4 sm:p-8">
+
+      {/* Readable content surface — present in every cover state so text and
+          controls keep guaranteed contrast over arbitrary bright/dark/busy
+          covers as well as the preset/default gradients. */}
+      <div
+        className="relative z-10 rounded-[22px] border border-border/50 bg-card/95 shadow-card-ambient backdrop-blur-md p-4 sm:p-8"
+        data-testid="hero-content-surface"
+      >
         {/* Back link + Dropdown row */}
         <div className="flex items-start justify-between mb-6">
           <Link
@@ -202,7 +232,8 @@ return (
 
         {/* CTA + Avatar stack row */}
         <div className="flex flex-wrap items-center gap-6">
-          {/* CTA button */}
+          {/* CTA button — brand-filled for guaranteed contrast on the card
+              surface (>=4.5:1 against bg-card). */}
           {ctaCourseId && (
             <Link
               to={
@@ -210,7 +241,7 @@ return (
                   ? `/courses/${ctaCourseId}/lessons/${targetLessonId}`
                   : `/courses/${ctaCourseId}`
               }
-              className="inline-flex items-center gap-2 bg-card text-brand hover:bg-brand-soft hover:text-brand-soft-foreground shadow-lg rounded-xl font-bold px-6 py-3 min-h-[44px] motion-safe:transition-colors"
+              className="inline-flex items-center gap-2 bg-brand text-brand-foreground hover:bg-brand-hover shadow-lg rounded-xl font-bold px-6 py-3 min-h-[44px] motion-safe:transition-colors"
             >
               <PlayCircle className="size-5" aria-hidden="true" />
               {ctaLabel}
