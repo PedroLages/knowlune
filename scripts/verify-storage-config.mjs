@@ -121,7 +121,6 @@ See docs/deployment/supabase-storage-setup.md for details.`
   console.log(`[3/3] Checking RLS policies for "${BUCKET_ID}"...`)
 
   try {
-    const projectRef = new URL(url).hostname.split('.')[0]
     // Try to query pg_policies via PostgREST (may not be available on all projects)
     const policyUrl = `${url}/rest/v1/pg_policies?schemaname=eq.storage&tablename=eq.objects&select=policyname,cmd,roles`
 
