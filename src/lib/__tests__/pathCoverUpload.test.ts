@@ -6,12 +6,20 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
-const { PATH_ID, USER_ID, mockGetUser, mockUpload, mockRemove, mockGetPublicUrl, mockStorageFrom } =
+const { PATH_ID, USER_ID, mockGetUser, mockGetSession, mockRefreshSession, mockUpload, mockRemove, mockGetPublicUrl, mockStorageFrom } =
   vi.hoisted(() => {
     const uid = 'user-uuid-1'
     const pid = 'path-abc'
     const mockGetUser = vi.fn().mockResolvedValue({
       data: { user: { id: uid } },
+      error: null,
+    })
+    const mockGetSession = vi.fn().mockResolvedValue({
+      data: { session: { access_token: 'valid-token', expires_at: Math.floor(Date.now() / 1000) + 3600 } },
+      error: null,
+    })
+    const mockRefreshSession = vi.fn().mockResolvedValue({
+      data: { session: { access_token: 'refreshed-token', expires_at: Math.floor(Date.now() / 1000) + 3600 } },
       error: null,
     })
     const mockUpload = vi.fn().mockResolvedValue({ error: null })
@@ -30,6 +38,8 @@ const { PATH_ID, USER_ID, mockGetUser, mockUpload, mockRemove, mockGetPublicUrl,
       PATH_ID: pid,
       USER_ID: uid,
       mockGetUser,
+      mockGetSession,
+      mockRefreshSession,
       mockUpload,
       mockRemove,
       mockGetPublicUrl,
@@ -39,7 +49,7 @@ const { PATH_ID, USER_ID, mockGetUser, mockUpload, mockRemove, mockGetPublicUrl,
 
 vi.mock('@/lib/auth/supabase', () => ({
   supabase: {
-    auth: { getUser: mockGetUser },
+    auth: { getUser: mockGetUser, getSession: mockGetSession, refreshSession: mockRefreshSession },
     storage: { from: mockStorageFrom },
   },
 }))
@@ -79,6 +89,14 @@ describe('pathCoverUpload', () => {
     vi.clearAllMocks()
     mockGetUser.mockResolvedValue({
       data: { user: { id: USER_ID } },
+      error: null,
+    })
+    mockGetSession.mockResolvedValue({
+      data: { session: { access_token: 'valid-token', expires_at: Math.floor(Date.now() / 1000) + 3600 } },
+      error: null,
+    })
+    mockRefreshSession.mockResolvedValue({
+      data: { session: { access_token: 'refreshed-token', expires_at: Math.floor(Date.now() / 1000) + 3600 } },
       error: null,
     })
     mockUpload.mockResolvedValue({ error: null })
@@ -172,6 +190,72 @@ describe('pathCoverUpload', () => {
     it('rejects unsupported image types before upload', async () => {
       const file = new File([new Uint8Array([1])], 'doc.pdf', { type: 'application/pdf' })
       await expect(uploadPathCover(file, PATH_ID)).rejects.toThrow(/Unsupported image format/)
+      expect(mockUpload).not.toHaveBeenCalled()
+    })
+
+    it('maps 401 to authorized message about session expiry', async () => {
+      stubImageAndCanvas()
+      mockUpload.mockResolvedValueOnce({ error: { message: 'JWT expired', statusCode: 401 } })
+
+      const file = new File([new Uint8Array([1])], 'cover.png', { type: 'image/png' })
+      await expect(uploadPathCover(file, PATH_ID)).rejects.toThrow(/Session expired/)
+    })
+
+    it('maps 403 to forbidden message about server configuration', async () => {
+      stubImageAndCanvas()
+      mockUpload.mockResolvedValueOnce({ error: { message: 'insufficient permissions', statusCode: 403 } })
+
+      const file = new File([new Uint8Array([1])], 'cover.png', { type: 'image/png' })
+      await expect(uploadPathCover(file, PATH_ID)).rejects.toThrow(/server configuration issue/)
+    })
+
+    it('maps 404 to not-configured message', async () => {
+      stubImageAndCanvas()
+      mockUpload.mockResolvedValueOnce({ error: { message: 'bucket not found', statusCode: 404 } })
+
+      const file = new File([new Uint8Array([1])], 'cover.png', { type: 'image/png' })
+      await expect(uploadPathCover(file, PATH_ID)).rejects.toThrow(/Cover storage not configured/)
+    })
+
+    it('maps 413 to too-large message', async () => {
+      stubImageAndCanvas()
+      mockUpload.mockResolvedValueOnce({ error: { message: 'request too large', statusCode: 413 } })
+
+      const file = new File([new Uint8Array([1])], 'cover.png', { type: 'image/png' })
+      await expect(uploadPathCover(file, PATH_ID)).rejects.toThrow(/under 2 MB/)
+    })
+
+    it('throws AUTH_REQUIRED when getSession returns no session', async () => {
+      mockGetSession.mockResolvedValueOnce({ data: { session: null }, error: null })
+
+      const file = new File([new Uint8Array([1])], 'cover.png', { type: 'image/png' })
+      await expect(uploadPathCover(file, PATH_ID)).rejects.toThrow(/Sign in required/)
+      expect(mockUpload).not.toHaveBeenCalled()
+    })
+
+    it('refreshes session when token is near expiry', async () => {
+      stubImageAndCanvas()
+      // Session near expiry (within 30s)
+      mockGetSession.mockResolvedValueOnce({
+        data: { session: { access_token: 'expiring-token', expires_at: Math.floor(Date.now() / 1000) + 5 } },
+        error: null,
+      })
+
+      const file = new File([new Uint8Array([1])], 'cover.png', { type: 'image/png' })
+      await uploadPathCover(file, PATH_ID)
+
+      expect(mockRefreshSession).toHaveBeenCalled()
+    })
+
+    it('throws AUTH_REQUIRED when session refresh fails', async () => {
+      mockGetSession.mockResolvedValueOnce({
+        data: { session: { access_token: 'expiring-token', expires_at: Math.floor(Date.now() / 1000) + 5 } },
+        error: null,
+      })
+      mockRefreshSession.mockResolvedValueOnce({ data: { session: null }, error: new Error('refresh failed') })
+
+      const file = new File([new Uint8Array([1])], 'cover.png', { type: 'image/png' })
+      await expect(uploadPathCover(file, PATH_ID)).rejects.toThrow(/Sign in required/)
       expect(mockUpload).not.toHaveBeenCalled()
     })
   })

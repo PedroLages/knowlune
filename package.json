@@ -43,7 +43,8 @@
     "lighthouse": "lhci autorun",
     "lighthouse:collect": "lhci collect",
     "lighthouse:assert": "lhci assert",
-    "lighthouse:upload": "lhci upload"
+    "lighthouse:upload": "lhci upload",
+    "verify:storage": "node scripts/verify-storage-config.mjs"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.44",
