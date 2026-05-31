@@ -1892,3 +1892,28 @@ issues:
   scheduled_for: null
   fixed_by: null
   notes: "Pre-existing app pattern. Suggestion: add timeout to store hydration to prevent indefinite loading state."
+
+# Added 2026-06-01 — learning-track-detail-hero-ui R3 residuals
+- id: KI-099
+  type: test
+  summary: "parseColor() in learning-tracks E2E silently falls back to black on unparseable CSS color"
+  file: "tests/e2e/learning-tracks.spec.ts"
+  severity: low
+  discovered_by: ce-review-R3-learning-track-detail-hero-ui
+  discovered_on: 2026-06-01
+  status: open
+  scheduled_for: null
+  fixed_by: null
+  notes: "NIT — optional hardening. parseColor() currently returns black (0,0,0) for any CSS value it cannot parse, which makes contrast assertions silently pass against a wrong baseline. Prefer returning null and failing the test explicitly. Non-blocking: current same-engine round-trip is verified green. Plan: 2026-05-31-002-feat-learning-track-detail-hero-ui-plan.md."
+
+- id: KI-100
+  type: test
+  summary: "Measured-contrast E2E uses class-coupled CTA selector a[class*='bg-brand'] — breaks silently if class changes"
+  file: "tests/e2e/learning-tracks.spec.ts"
+  severity: low
+  discovered_by: ui-ux-review-R3-learning-track-detail-hero-ui
+  discovered_on: 2026-06-01
+  status: open
+  scheduled_for: null
+  fixed_by: null
+  notes: "NIT — optional stable selector. The measured-contrast assertion locates the hero CTA via a[class*='bg-brand'], which no-ops silently if the Tailwind class is renamed. Prefer a stable data-testid such as data-testid='hero-cta' and update the locator to [data-testid='hero-cta']. Non-blocking: class is stable today. Plan: 2026-05-31-002-feat-learning-track-detail-hero-ui-plan.md."
