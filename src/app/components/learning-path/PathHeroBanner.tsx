@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useCallback } from 'react'
 import { Link } from 'react-router'
 import { ArrowLeft, Clock, PlayCircle, BookOpen, Pencil, Trash2, MoreHorizontal } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
@@ -69,17 +69,30 @@ export function PathHeroBanner({
   const ctaCourseId = currentCourseId ?? firstCourseId
   const ctaLabel = pathProgress.completionPct > 0 ? 'Continue Learning' : 'Start Learning'
 
-  // --- Cover image state machine: pending -> loaded -> failed ---
-  const [imageState, setImageState] = useState<'pending' | 'loaded' | 'failed'>(() =>
-    path.coverImageUrl ? 'pending' : 'loaded'
+  // --- Cover image load state, keyed by the image URL ---
+  // The URL string is the image identity: tracking which URL has loaded/failed
+  // self-resets the pending state when `coverImageUrl` changes, and stays
+  // stable across non-image metadata changes (title, description, updatedAt).
+  const coverUrl = path.coverImageUrl
+  const [loadedUrl, setLoadedUrl] = useState<string | null>(null)
+  const [failedUrl, setFailedUrl] = useState<string | null>(null)
+
+  const showCoverImage = !!coverUrl && loadedUrl === coverUrl
+  const coverFailed = !!coverUrl && failedUrl === coverUrl
+
+  // Cached covers and data URLs can finish loading before React attaches the
+  // onLoad handler, which would otherwise leave a valid cover stuck hidden.
+  // A ref lets us promote an already-complete image on mount. Failures are
+  // still handled by onError (an undecoded image simply stays on the fallback).
+  const handleCoverRef = useCallback(
+    (node: HTMLImageElement | null) => {
+      if (!node || !coverUrl) return
+      if (node.complete && node.naturalWidth > 0) {
+        setLoadedUrl(coverUrl)
+      }
+    },
+    [coverUrl]
   )
-
-  // Reset state when coverImageUrl changes (new URL = new image identity)
-  useEffect(() => {
-    setImageState(path.coverImageUrl ? 'pending' : 'loaded')
-  }, [path.coverImageUrl])
-
-  const showCoverImage = imageState === 'loaded' && !!path.coverImageUrl
 
 return (
     <section
@@ -90,18 +103,19 @@ return (
       )}
     >
       {/* Primary cover image — full-cover, sharp, and recognizable (not a
-          decorative blur). Promoted to opacity-100 only after onLoad. */}
-      {path.coverImageUrl && imageState !== 'failed' && (
+          decorative blur). Promoted to opacity-100 once the image is loaded. */}
+      {coverUrl && !coverFailed && (
         <img
-          key={path.coverImageUrl}
-          src={path.coverImageUrl}
+          key={coverUrl}
+          ref={handleCoverRef}
+          src={coverUrl}
           alt=""
           className={cn(
             'absolute inset-0 h-full w-full object-cover motion-safe:transition-opacity motion-safe:duration-300 ease-out',
             showCoverImage ? 'opacity-100' : 'opacity-0'
           )}
-          onLoad={() => setImageState('loaded')}
-          onError={() => setImageState('failed')}
+          onLoad={() => setLoadedUrl(coverUrl)}
+          onError={() => setFailedUrl(coverUrl)}
           data-testid="hero-cover-image"
         />
       )}
@@ -126,7 +140,7 @@ return (
         </>
       )}
 
-      {imageState === 'failed' && (
+      {coverFailed && (
         <div className="sr-only" aria-live="polite" role="status">
           Cover image could not be loaded
         </div>
