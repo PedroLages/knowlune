@@ -452,3 +452,130 @@ test.describe('Learning Tracks — back-link & CTA navigation regression', () =>
     await expect(page).toHaveURL('/courses/course-cta/lessons/video-cta-1')
   })
 })
+
+// ---------------------------------------------------------------------------
+// Uploaded cover hero — readability, responsiveness, accessibility
+// (R1, R2, R3, R7)
+// ---------------------------------------------------------------------------
+
+test.describe('Learning Tracks — uploaded cover hero', () => {
+  test('detail hero shows a visible cover image with readable content', async ({ page }) => {
+    await goToLearningTracks(page)
+
+    const paths = [
+      createLearningPath({
+        id: 'lt-cover',
+        name: 'Photography Mastery Roadmap',
+        description: 'Master composition, light, and editing.',
+        coverImageUrl: COVER_DATA_URL,
+        difficultyLabel: 'Intermediate',
+      }),
+    ]
+    await clearTrackStores(page)
+    await seedPaths(page, paths)
+    await page.goto('/learning-tracks/lt-cover', { waitUntil: 'load' })
+    await expect(page).toHaveURL(/\/learning-tracks\/lt-cover/)
+
+    // The uploaded cover renders as a visible, full-cover, sharp image layer
+    // (promoted to opacity-100 after load) rather than a decorative blur.
+    const cover = page.getByTestId('hero-cover-image')
+    await expect(cover).toBeVisible()
+    await expect(cover).toHaveClass(/opacity-100/)
+    await expect(cover).toHaveClass(/object-cover/)
+
+    // Content sits on an explicit readable surface and stays visible over the
+    // uploaded cover.
+    await expect(page.getByTestId('hero-content-surface')).toBeVisible()
+    await expect(
+      page.getByRole('heading', { name: 'Photography Mastery Roadmap', level: 1 })
+    ).toBeVisible()
+    await expect(page.getByText('Master composition, light, and editing.')).toBeVisible()
+    await expect(page.getByTestId('hero-back-link')).toBeVisible()
+
+    // Capture the hero for visual verification of the premium quality bar.
+    await page
+      .locator('section:has([data-testid="hero-content-surface"])')
+      .screenshot({ path: 'test-results/hero-cover-desktop.png' })
+  })
+
+  test('mobile cover hero keeps title and back link readable without overflow', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 375, height: 812 })
+    await goToLearningTracks(page)
+
+    const paths = [
+      createLearningPath({
+        id: 'lt-cover-m',
+        name: 'Photography Mastery Roadmap',
+        coverImageUrl: COVER_DATA_URL,
+      }),
+    ]
+    await clearTrackStores(page)
+    await seedPaths(page, paths)
+    await page.goto('/learning-tracks/lt-cover-m', { waitUntil: 'load' })
+
+    await expect(
+      page.getByRole('heading', { name: 'Photography Mastery Roadmap', level: 1 })
+    ).toBeVisible()
+    const backLink = page.getByTestId('hero-back-link')
+    await expect(backLink).toBeVisible()
+
+    // No horizontal overflow at 375px.
+    const overflow = await page.evaluate(() => {
+      const el = document.scrollingElement || document.documentElement
+      return el.scrollWidth - el.clientWidth
+    })
+    expect(overflow).toBeLessThanOrEqual(1)
+
+    // Back link still navigates to the listing on mobile.
+    await backLink.click()
+    await expect(page).toHaveURL('/learning-tracks')
+  })
+
+  test('back link and CTA meet the 44x44 touch-target minimum', async ({ page }) => {
+    await goToLearningTracks(page)
+
+    const paths = [
+      createLearningPath({ id: 'lt-tap', name: 'Tap Track', coverImageUrl: COVER_DATA_URL }),
+    ]
+    const entries = [
+      createLearningPathEntry({ id: 'lpe-tap', pathId: 'lt-tap', courseId: 'course-tap', position: 1 }),
+    ]
+    await clearTrackStores(page)
+    await seedPaths(page, paths, entries)
+    await page.goto('/learning-tracks/lt-tap', { waitUntil: 'load' })
+
+    const backBox = await page.getByTestId('hero-back-link').boundingBox()
+    expect(backBox).not.toBeNull()
+    expect(backBox!.height).toBeGreaterThanOrEqual(44)
+    expect(backBox!.width).toBeGreaterThanOrEqual(44)
+
+    const cta = page.getByRole('link', { name: 'Start Learning' })
+    await expect(cta).toBeVisible()
+    const ctaBox = await cta.boundingBox()
+    expect(ctaBox).not.toBeNull()
+    expect(ctaBox!.height).toBeGreaterThanOrEqual(44)
+    expect(ctaBox!.width).toBeGreaterThanOrEqual(44)
+
+    // Back link is keyboard-focusable (global focus-visible outline applies).
+    await page.getByTestId('hero-back-link').focus()
+    await expect(page.getByTestId('hero-back-link')).toBeFocused()
+  })
+
+  test('preset-gradient detail hero still renders content surface and title', async ({ page }) => {
+    await goToLearningTracks(page)
+
+    const paths = [
+      createLearningPath({ id: 'lt-preset', name: 'Preset Track', coverPreset: 'cyan-blue' }),
+    ]
+    await clearTrackStores(page)
+    await seedPaths(page, paths)
+    await page.goto('/learning-tracks/lt-preset', { waitUntil: 'load' })
+
+    // No uploaded cover, but the readable surface treatment is consistent.
+    await expect(page.getByTestId('hero-cover-image')).toHaveCount(0)
+    await expect(page.getByTestId('hero-content-surface')).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Preset Track', level: 1 })).toBeVisible()
+  })
+})
