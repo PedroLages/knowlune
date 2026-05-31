@@ -9,9 +9,21 @@ import {
   DropdownMenuTrigger,
 } from '@/app/components/ui/dropdown-menu'
 import { cn } from '@/app/components/ui/utils'
-import { PRESET_GRADIENT_MAP } from '@/data/pathCoverGradients'
+
 import type { LearningPath } from '@/data/types'
 import type { PathProgressSummary } from '@/app/hooks/usePathProgress'
+
+// Named gradient class strings (literal, for Tailwind v4 JIT scanning)
+const GRADIENT_COVER_CLASSES: Record<string, string> = {
+  'cyan-blue': 'bg-gradient-to-br from-cyan-400 to-blue-600',
+  'emerald-green': 'bg-gradient-to-br from-emerald-400 to-green-600',
+  'purple-indigo': 'bg-gradient-to-br from-purple-500 to-indigo-700',
+  'orange-blue': 'bg-gradient-to-br from-orange-400 to-blue-500',
+  'pink-purple': 'bg-gradient-to-br from-pink-400 to-purple-600',
+  'amber-orange': 'bg-gradient-to-br from-amber-400 to-orange-600',
+  'teal-cyan': 'bg-gradient-to-br from-teal-400 to-cyan-600',
+  'rose-red': 'bg-gradient-to-br from-rose-400 to-red-600',
+}
 
 interface PathHeroBannerProps {
   path: LearningPath
@@ -50,7 +62,6 @@ export function PathHeroBanner({
 }: PathHeroBannerProps) {
   const hasDropdownActions = onEdit || onDelete
 
-  const avatarUrls = orderedCourseThumbnails
   // Course-count based overflow (may exceed visible avatar slots when some courses lack thumbnails).
   const overflowCount = Math.max(0, courseCount - 4)
 
@@ -70,16 +81,10 @@ export function PathHeroBanner({
 
   const showCoverImage = imageState === 'loaded' && !!path.coverImageUrl
 
-  // Fallback gradient: preset when available on no-cover state, otherwise default brand gradient
-  const fallbackGradient =
-    !showCoverImage && path.coverPreset && PRESET_GRADIENT_MAP[path.coverPreset]
-      ? PRESET_GRADIENT_MAP[path.coverPreset]
-      : null
-
-  return (
+return (
     <section
       className={cn(
-        'relative overflow-hidden rounded-[28px] border border-border/50 bg-card shadow-card-ambient'
+        'relative overflow-hidden rounded-3xl border border-border/50 bg-card shadow-card-ambient'
       )}
     >
       {/* Cover image as blurred atmospheric background */}
@@ -89,7 +94,7 @@ export function PathHeroBanner({
           src={path.coverImageUrl}
           alt=""
           className={cn(
-            'absolute inset-0 h-full w-full object-cover transition-opacity duration-500',
+            'absolute inset-0 h-full w-full object-cover motion-safe:transition-opacity motion-safe:duration-300',
             showCoverImage ? 'opacity-20 blur-2xl scale-110' : 'opacity-0'
           )}
           onLoad={() => setImageState('loaded')}
@@ -105,24 +110,23 @@ export function PathHeroBanner({
       {/* Fallback gradient (no cover image, pending, or failed) */}
       {!showCoverImage && (
         <>
-          {fallbackGradient && (
-            <div className={`absolute inset-0 bg-gradient-to-br ${fallbackGradient}`} />
-          )}
-          {!fallbackGradient && (
-            <div className="absolute inset-0 bg-gradient-to-br from-brand to-brand-hover" />
-          )}
+          <div className={cn('absolute inset-0',
+            path.coverPreset && GRADIENT_COVER_CLASSES[path.coverPreset]
+              ? GRADIENT_COVER_CLASSES[path.coverPreset]
+              : 'bg-gradient-to-br from-brand to-brand-hover'
+          )} />
           {/* Radial highlight overlay */}
           <div className="absolute inset-0 opacity-20 bg-[radial-gradient(circle_at_50%_120%,rgba(255,255,255,0.8),transparent)]" />
         </>
       )}
 
       {/* Content */}
-      <div className="relative p-4 sm:p-8">
+      <div className="relative z-10 p-4 sm:p-8">
         {/* Back link + Dropdown row */}
         <div className="flex items-start justify-between mb-6">
           <Link
             to={backUrl}
-            className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+            className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground/90 hover:text-foreground motion-safe:transition-colors min-h-[44px] py-2"
             data-testid="hero-back-link"
           >
             <ArrowLeft className="size-4" aria-hidden="true" />
@@ -170,7 +174,7 @@ export function PathHeroBanner({
               {path.difficultyLabel}
             </span>
           )}
-          <span className="flex items-center gap-1.5 text-muted-foreground text-sm font-medium">
+          <span className="flex items-center gap-1.5 text-muted-foreground/90 text-sm font-medium">
             <Clock className="size-3.5" aria-hidden="true" />
             {courseCount} {courseCount === 1 ? 'course' : 'courses'}
             {path.estimatedHours != null && path.estimatedHours > 0 && (
@@ -186,7 +190,7 @@ export function PathHeroBanner({
 
         {/* Description */}
         {path.description && (
-          <p className="text-base sm:text-lg leading-relaxed text-muted-foreground max-w-2xl mb-8">
+          <p className="text-base sm:text-lg leading-relaxed text-muted-foreground/90 max-w-2xl mb-8">
             {path.description}
           </p>
         )}
@@ -211,22 +215,22 @@ export function PathHeroBanner({
           {/* Avatar stack */}
           {courseCount > 0 && (
             <div className="flex -space-x-3 overflow-hidden">
-              {avatarUrls.map((url, i) => (
+              {orderedCourseThumbnails.map((url, i) => (
                 <img
                   key={`${i}:${url}`}
                   src={url}
                   alt=""
-                  className="size-10 rounded-full ring-2 ring-border bg-muted object-cover hover:scale-110 hover:z-20 transition-transform"
+                  className="size-10 rounded-full ring-2 ring-border bg-muted object-cover hover:scale-110 hover:z-20 motion-safe:transition-transform"
                   loading="lazy"
                 />
               ))}
-              {avatarUrls.length === 0 && (
+              {orderedCourseThumbnails.length === 0 && (
                 <div className="size-10 rounded-full ring-2 ring-border bg-muted flex items-center justify-center">
-                  <BookOpen className="size-4 text-muted-foreground" aria-hidden="true" />
+                  <BookOpen className="size-4 text-muted-foreground/90" aria-hidden="true" />
                 </div>
               )}
               {overflowCount > 0 && (
-                <div className="size-10 rounded-full ring-2 ring-border bg-muted border-2 border-border flex items-center justify-center text-xs font-bold text-muted-foreground">
+                <div className="size-10 rounded-full ring-2 ring-border bg-muted border-2 border-border flex items-center justify-center text-xs font-bold text-muted-foreground/90">
                   +{overflowCount}
                 </div>
               )}
@@ -235,7 +239,7 @@ export function PathHeroBanner({
 
           {/* Progress indicator */}
           {courseCount > 0 && (
-            <span className="text-muted-foreground text-sm font-medium">
+            <span className="text-muted-foreground/90 text-sm font-medium">
               {completedCount} of {courseCount} completed
             </span>
           )}

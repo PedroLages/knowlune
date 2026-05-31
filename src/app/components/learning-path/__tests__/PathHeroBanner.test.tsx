@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, fireEvent } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
 import { PathHeroBanner } from '@/app/components/learning-path/PathHeroBanner'
 import type { LearningPath } from '@/data/types'
@@ -183,7 +183,7 @@ describe('PathHeroBanner', () => {
     })
     // The hero section should have the card-surface structure
     const section = container.querySelector('section')
-    expect(section?.className).toContain('rounded-[28px]')
+    expect(section?.className).toContain('rounded-3xl')
     expect(section?.className).toContain('bg-card')
     expect(section?.className).toContain('shadow-card-ambient')
   })
@@ -224,6 +224,89 @@ describe('PathHeroBanner', () => {
     const section = container.querySelector('section')
     // Should have the card surface with default gradient behind it
     expect(section?.className).toContain('bg-card')
+  })
+
+
+  // ── Cover image onError / onLoad transitions ──────────────────────
+
+  it('transitions from pending to loaded when img fires onLoad', () => {
+    renderHero({
+      path: makePath({ coverImageUrl: 'https://example.com/cover.jpg' }),
+    })
+
+    const img = document.querySelector('img[src="https://example.com/cover.jpg"]')
+    expect(img).toBeInTheDocument()
+
+    // Before onLoad: img at opacity-0
+    expect(img?.className).toContain('opacity-0')
+
+    // Fire the onLoad event
+    fireEvent.load(img!)
+
+    // After onLoad: img should have loaded state classes
+    expect(img?.className).toContain('opacity-20')
+    expect(img?.className).toContain('blur-2xl')
+    expect(img?.className).toContain('scale-110')
+  })
+
+  it('removes img from DOM onError and shows fallback gradient', () => {
+    const { container } = renderHero({
+      path: makePath({
+        coverImageUrl: 'https://example.com/cover.jpg',
+        coverPreset: 'cyan-blue',
+      }),
+    })
+
+    // Before: img is present
+    const img = document.querySelector('img[src="https://example.com/cover.jpg"]')
+    expect(img).toBeInTheDocument()
+
+    // Fire onError
+    fireEvent.error(img!)
+
+    // After: img removed from DOM
+    expect(document.querySelector('img[src="https://example.com/cover.jpg"]')).not.toBeInTheDocument()
+
+    // Fallback gradient should be present
+    const gradientDiv = container.querySelector('.bg-gradient-to-br')
+    expect(gradientDiv).toBeInTheDocument()
+  })
+
+  it('falls back to brand gradient when coverImageUrl errors and no coverPreset set', () => {
+    const { container } = renderHero({
+      path: makePath({
+        coverImageUrl: 'https://example.com/cover.jpg',
+        coverPreset: undefined,
+      }),
+    })
+
+    const img = document.querySelector('img[src="https://example.com/cover.jpg"]')
+    expect(img).toBeInTheDocument()
+
+    fireEvent.error(img!)
+
+    // Fallback gradient should be visible
+    const gradientDiv = container.querySelector('.bg-gradient-to-br')
+    expect(gradientDiv).toBeInTheDocument()
+  })
+
+  it('renders aria-live polite region when image fails to load', () => {
+    renderHero({
+      path: makePath({
+        coverImageUrl: 'https://example.com/cover.jpg',
+      }),
+    })
+
+    const img = document.querySelector('img[src="https://example.com/cover.jpg"]')
+    expect(img).toBeInTheDocument()
+
+    // Fire onError to trigger the failed state
+    fireEvent.error(img!)
+
+    // aria-live polite region should be rendered
+    const liveRegion = document.querySelector('[aria-live="polite"]')
+    expect(liveRegion).toBeInTheDocument()
+    expect(liveRegion?.textContent).toContain('could not be loaded')
   })
 
   // ── Avatar stack ───────────────────────────────────────────────────
