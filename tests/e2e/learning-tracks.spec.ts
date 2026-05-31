@@ -612,15 +612,26 @@ test.describe('Learning Tracks — uploaded cover hero', () => {
         const darker = Math.min(l1, l2)
         return (lighter + 0.05) / (darker + 0.05)
       }
-      function parseRgba(color: string): [number, number, number, number] | null {
-        const m = color.match(/[\d.]+/g)
-        if (!m || m.length < 3) return null
-        return [
-          parseFloat(m[0]),
-          parseFloat(m[1]),
-          parseFloat(m[2]),
-          m.length >= 4 ? parseFloat(m[3]) : 1,
-        ]
+      /**
+       * Parse any CSS color string (rgb/rgba/color()/oklab/oklch/hex/named) into
+       * sRGB 0-255 components by rendering through a 1x1 canvas.  This delegates
+       * all color-space conversion to the browser engine and avoids hand-rolling
+       * regex logic that breaks for modern color() / oklch() / oklab() syntax
+       * where channels are already in the 0-1 range.
+       */
+      function parseColor(color: string): [number, number, number, number] | null {
+        const canvas = document.createElement('canvas')
+        canvas.width = 1
+        canvas.height = 1
+        const ctx = canvas.getContext('2d')
+        if (!ctx) return null
+        // Transparent baseline — lets us detect fully transparent inputs
+        ctx.clearRect(0, 0, 1, 1)
+        ctx.fillStyle = color
+        ctx.fillRect(0, 0, 1, 1)
+        const d = ctx.getImageData(0, 0, 1, 1).data
+        // ImageData channels are always 0-255; alpha is also 0-255 so normalize
+        return [d[0], d[1], d[2], d[3] / 255]
       }
       // Alpha-composite rgba over a solid white reference background (#ffffff).
       // This gives the worst-case perceived background lightness and thus the
@@ -643,7 +654,7 @@ test.describe('Learning Tracks — uploaded cover hero', () => {
       if (!surface || !title) return { error: 'elements not found' }
 
       const surfaceBgRaw = window.getComputedStyle(surface).backgroundColor
-      const surfaceParsed = parseRgba(surfaceBgRaw)
+      const surfaceParsed = parseColor(surfaceBgRaw)
       if (!surfaceParsed) return { error: `could not parse surface bg: ${surfaceBgRaw}` }
 
       const [sr, sg, sb, sa] = surfaceParsed
@@ -651,13 +662,13 @@ test.describe('Learning Tracks — uploaded cover hero', () => {
       const bgLum = luminance(...effectiveBg)
 
       const titleColorRaw = window.getComputedStyle(title).color
-      const titleParsed = parseRgba(titleColorRaw)
+      const titleParsed = parseColor(titleColorRaw)
       const titleContrast = titleParsed
         ? contrastRatio(luminance(titleParsed[0], titleParsed[1], titleParsed[2]), bgLum)
         : null
 
       const backColorRaw = backLink ? window.getComputedStyle(backLink).color : null
-      const backParsed = backColorRaw ? parseRgba(backColorRaw) : null
+      const backParsed = backColorRaw ? parseColor(backColorRaw) : null
       const backContrast = backParsed
         ? contrastRatio(luminance(backParsed[0], backParsed[1], backParsed[2]), bgLum)
         : null
@@ -666,9 +677,9 @@ test.describe('Learning Tracks — uploaded cover hero', () => {
       let ctaContrast: number | null = null
       if (cta) {
         const ctaBgRaw = window.getComputedStyle(cta).backgroundColor
-        const ctaBgParsed = parseRgba(ctaBgRaw)
+        const ctaBgParsed = parseColor(ctaBgRaw)
         const ctaColorRaw = window.getComputedStyle(cta).color
-        const ctaColorParsed = parseRgba(ctaColorRaw)
+        const ctaColorParsed = parseColor(ctaColorRaw)
         if (ctaBgParsed && ctaColorParsed) {
           const ctaEffectiveBg = compositeOnWhite(...(ctaBgParsed.slice(0, 4) as [number, number, number, number]))
           ctaContrast = contrastRatio(
