@@ -22,7 +22,8 @@ const DIAGNOSTIC = {
   REPLACE_REMOVE_FAILED: 'Failed to replace existing cover. Please try again.',
   REPLACE_RETRY_FAILED: 'Cover upload failed after clearing old cover. Please try again.',
   STORAGE_ERROR: 'Cover upload failed. Check your connection and try again.',
-  STORAGE_UNAUTHORIZED: 'Not authorized to upload covers. Try signing out and back in.',
+  STORAGE_UNAUTHORIZED: 'Session expired. Try signing out and back in.',
+  STORAGE_FORBIDDEN: 'Cover uploads are not enabled for your account yet. This is a server configuration issue.',
   STORAGE_NOT_FOUND: 'Cover storage not configured. Please contact support.',
   STORAGE_TOO_LARGE: 'Image is too large. Use an image under 2 MB.',
   NETWORK_ERROR: 'Network error during upload. Check your connection.',
@@ -104,6 +105,34 @@ async function getUserId(): Promise<string> {
 }
 
 /**
+ * Session preflight: ensure a fresh session token before Storage requests.
+ *
+ * Checks the current session and refreshes if expired or within a 30-second
+ * skew window to avoid 401s from token staleness between auth check and
+ * the Storage API call.
+ */
+async function ensureFreshSession(): Promise<void> {
+  if (!supabase) {
+    throw new Error(DIAGNOSTIC.CONFIG_ERROR)
+  }
+
+  const { data, error } = await supabase.auth.getSession()
+  if (error || !data.session) {
+    throw new Error(DIAGNOSTIC.AUTH_REQUIRED)
+  }
+
+  // Refresh if token is expired or within 30 seconds of expiry
+  const nowSec = Date.now() / 1000
+  const expiresAt = data.session.expires_at ?? 0
+  if (expiresAt < nowSec + 30) {
+    const { error: refreshError } = await supabase.auth.refreshSession()
+    if (refreshError) {
+      throw new Error(DIAGNOSTIC.AUTH_REQUIRED)
+    }
+  }
+}
+
+/**
  * Upload a cover image file to Supabase Storage and return the public URL.
  *
  * Processing steps:
@@ -123,6 +152,9 @@ export async function uploadPathCover(file: File, pathId: string): Promise<strin
 
   // Get authenticated user ID for path-scoped storage key
   const userId = await getUserId()
+
+  // Session preflight: ensure fresh session token for Storage request
+  await ensureFreshSession()
 
   // Validate file type
   const supportedFormats = ['image/jpeg', 'image/png', 'image/webp']
@@ -185,8 +217,10 @@ export async function uploadPathCover(file: File, pathId: string): Promise<strin
       // Map Supabase HTTP status codes to specific user-facing diagnostics
       const status = Number(error.statusCode)
       let diagnostic: string = DIAGNOSTIC.STORAGE_ERROR
-      if (status === 401 || status === 403) {
+      if (status === 401) {
         diagnostic = DIAGNOSTIC.STORAGE_UNAUTHORIZED
+      } else if (status === 403) {
+        diagnostic = DIAGNOSTIC.STORAGE_FORBIDDEN
       } else if (status === 404) {
         diagnostic = DIAGNOSTIC.STORAGE_NOT_FOUND
       } else if (status === 413) {
