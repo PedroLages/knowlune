@@ -174,18 +174,36 @@ describe('PathHeroBanner', () => {
 
   // ── Cover image states ─────────────────────────────────────────────
 
-  it('shows blurred cover image when coverImageUrl is provided', () => {
+  it('renders the premium hero shell with a readable content surface', () => {
     const { container } = renderHero({
       path: makePath({
         coverImageUrl: 'https://example.com/cover.jpg',
         coverPreset: 'cyan-blue',
       }),
     })
-    // The hero section should have the card-surface structure
+    // The hero section should have the premium card shell structure
     const section = container.querySelector('section')
-    expect(section?.className).toContain('rounded-3xl')
+    expect(section?.className).toContain('rounded-[28px]')
     expect(section?.className).toContain('bg-card')
     expect(section?.className).toContain('shadow-card-ambient')
+
+    // Content sits on an explicit readable surface in every cover state.
+    const surface = screen.getByTestId('hero-content-surface')
+    expect(surface.className).toContain('bg-card/95')
+  })
+
+  it('renders the uploaded cover as a sharp full-cover image, not a decorative blur', () => {
+    renderHero({
+      path: makePath({ coverImageUrl: 'https://example.com/cover.jpg' }),
+    })
+    const img = screen.getByTestId('hero-cover-image')
+    fireEvent.load(img)
+    // Primary cover layer must be a visible, sharp, full-cover image.
+    expect(img.className).toContain('object-cover')
+    expect(img.className).toContain('opacity-100')
+    // It must NOT be reduced to the rejected blurred-atmosphere treatment.
+    expect(img.className).not.toContain('blur-2xl')
+    expect(img.className).not.toContain('opacity-20')
   })
 
   it('shows fallback preset gradient when coverImageUrl exists but has not loaded', () => {
@@ -237,16 +255,15 @@ describe('PathHeroBanner', () => {
     const img = document.querySelector('img[src="https://example.com/cover.jpg"]')
     expect(img).toBeInTheDocument()
 
-    // Before onLoad: img at opacity-0
+    // Before onLoad: img at opacity-0 (pending — fallback surface stays active)
     expect(img?.className).toContain('opacity-0')
 
     // Fire the onLoad event
     fireEvent.load(img!)
 
-    // After onLoad: img should have loaded state classes
-    expect(img?.className).toContain('opacity-20')
-    expect(img?.className).toContain('blur-2xl')
-    expect(img?.className).toContain('scale-110')
+    // After onLoad: img is promoted to a fully visible sharp cover layer
+    expect(img?.className).toContain('opacity-100')
+    expect(img?.className).not.toContain('opacity-0')
   })
 
   it('removes img from DOM onError and shows fallback gradient', () => {
@@ -307,6 +324,86 @@ describe('PathHeroBanner', () => {
     const liveRegion = document.querySelector('[aria-live="polite"]')
     expect(liveRegion).toBeInTheDocument()
     expect(liveRegion?.textContent).toContain('could not be loaded')
+  })
+
+  // ── Cover image identity & load-state reset (R3, R4) ───────────────
+
+  it('resets to pending and remounts the img when coverImageUrl changes', () => {
+    const { rerender } = render(
+      <MemoryRouter>
+        <PathHeroBanner
+          path={makePath({ coverImageUrl: 'https://example.com/a.jpg' })}
+          courseCount={3}
+          completedCount={1}
+          pathProgress={makeProgress()}
+          orderedCourseThumbnails={[]}
+          currentCourseId={null}
+          firstCourseId={null}
+        />
+      </MemoryRouter>
+    )
+
+    fireEvent.load(screen.getByTestId('hero-cover-image'))
+    expect(screen.getByTestId('hero-cover-image').className).toContain('opacity-100')
+
+    // New cover URL = new image identity → React remounts and re-enters pending
+    rerender(
+      <MemoryRouter>
+        <PathHeroBanner
+          path={makePath({ coverImageUrl: 'https://example.com/b.jpg' })}
+          courseCount={3}
+          completedCount={1}
+          pathProgress={makeProgress()}
+          orderedCourseThumbnails={[]}
+          currentCourseId={null}
+          firstCourseId={null}
+        />
+      </MemoryRouter>
+    )
+
+    const imgB = screen.getByTestId('hero-cover-image')
+    expect(imgB).toHaveAttribute('src', 'https://example.com/b.jpg')
+    expect(imgB.className).toContain('opacity-0')
+  })
+
+  it('does NOT reset cover image state when non-image metadata changes', () => {
+    const url = 'https://example.com/stable.jpg'
+    const { rerender } = render(
+      <MemoryRouter>
+        <PathHeroBanner
+          path={makePath({ name: 'Original', coverImageUrl: url, updatedAt: '2026-01-01T00:00:00Z' })}
+          courseCount={3}
+          completedCount={1}
+          pathProgress={makeProgress()}
+          orderedCourseThumbnails={[]}
+          currentCourseId={null}
+          firstCourseId={null}
+        />
+      </MemoryRouter>
+    )
+
+    fireEvent.load(screen.getByTestId('hero-cover-image'))
+    expect(screen.getByTestId('hero-cover-image').className).toContain('opacity-100')
+
+    // Change title + updatedAt but keep the same coverImageUrl → stays loaded.
+    rerender(
+      <MemoryRouter>
+        <PathHeroBanner
+          path={makePath({ name: 'Renamed', coverImageUrl: url, updatedAt: '2026-09-09T00:00:00Z' })}
+          courseCount={3}
+          completedCount={1}
+          pathProgress={makeProgress()}
+          orderedCourseThumbnails={[]}
+          currentCourseId={null}
+          firstCourseId={null}
+        />
+      </MemoryRouter>
+    )
+
+    expect(screen.getByText('Renamed')).toBeInTheDocument()
+    const img = screen.getByTestId('hero-cover-image')
+    expect(img.className).toContain('opacity-100')
+    expect(img.className).not.toContain('opacity-0')
   })
 
   // ── Avatar stack ───────────────────────────────────────────────────
@@ -389,5 +486,17 @@ describe('PathHeroBanner', () => {
     })
     const ctaLink = screen.getByText('Start Learning').closest('a')
     expect(ctaLink?.className).toContain('min-h-[44px]')
+  })
+
+  it('CTA is brand-filled for contrast on the content surface', () => {
+    renderHero({
+      firstCourseId: 'course-1',
+    })
+    const ctaLink = screen.getByText('Start Learning').closest('a')
+    // Brand fill guarantees >=4.5:1 against the bg-card content surface, where
+    // the old bg-card CTA (designed for a gradient backdrop) would vanish.
+    expect(ctaLink?.className).toContain('bg-brand')
+    expect(ctaLink?.className).toContain('text-brand-foreground')
+    expect(ctaLink?.className).not.toContain('bg-card')
   })
 })

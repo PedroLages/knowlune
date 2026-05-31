@@ -84,10 +84,13 @@ export function PathHeroBanner({
 return (
     <section
       className={cn(
-        'relative overflow-hidden rounded-3xl border border-border/50 bg-card shadow-card-ambient'
+        // Thin frame padding so the uploaded cover (or gradient) stays visible
+        // around the readable content surface, like matted cover art.
+        'relative overflow-hidden rounded-[28px] border border-border/50 bg-card shadow-card-ambient p-3 sm:p-4'
       )}
     >
-      {/* Cover image as blurred atmospheric background */}
+      {/* Primary cover image — full-cover, sharp, and recognizable (not a
+          decorative blur). Promoted to opacity-100 only after onLoad. */}
       {path.coverImageUrl && imageState !== 'failed' && (
         <img
           key={path.coverImageUrl}
@@ -95,16 +98,19 @@ return (
           alt=""
           className={cn(
             'absolute inset-0 h-full w-full object-cover motion-safe:transition-opacity motion-safe:duration-300 ease-out',
-            showCoverImage ? 'opacity-20 blur-2xl scale-110' : 'opacity-0'
+            showCoverImage ? 'opacity-100' : 'opacity-0'
           )}
           onLoad={() => setImageState('loaded')}
           onError={() => setImageState('failed')}
+          data-testid="hero-cover-image"
         />
       )}
 
-      {/* Gradient scrim over blurred image */}
+      {/* Targeted scrim over the visible cover — lighter at top-left so the
+          cover stays composed, deeper toward bottom-right for cohesion. The
+          contrast guarantee is carried by the content surface, not the scrim. */}
       {showCoverImage && (
-        <div className="absolute inset-0 bg-gradient-to-br from-background/60 via-background/70 to-background/90" />
+        <div className="absolute inset-0 bg-gradient-to-br from-background/15 via-background/45 to-background/80" />
       )}
 
       {/* Fallback gradient (no cover image, pending, or failed) */}
@@ -125,8 +131,14 @@ return (
           Cover image could not be loaded
         </div>
       )}
-      {/* Content */}
-      <div className="relative z-10 p-4 sm:p-8">
+
+      {/* Readable content surface — present in every cover state so text and
+          controls keep guaranteed contrast over arbitrary bright/dark/busy
+          covers as well as the preset/default gradients. */}
+      <div
+        className="relative z-10 rounded-[22px] border border-border/50 bg-card/95 shadow-card-ambient backdrop-blur-md p-4 sm:p-8"
+        data-testid="hero-content-surface"
+      >
         {/* Back link + Dropdown row */}
         <div className="flex items-start justify-between mb-6">
           <Link
@@ -202,7 +214,8 @@ return (
 
         {/* CTA + Avatar stack row */}
         <div className="flex flex-wrap items-center gap-6">
-          {/* CTA button */}
+          {/* CTA button — brand-filled for guaranteed contrast on the card
+              surface (>=4.5:1 against bg-card). */}
           {ctaCourseId && (
             <Link
               to={
@@ -210,7 +223,7 @@ return (
                   ? `/courses/${ctaCourseId}/lessons/${targetLessonId}`
                   : `/courses/${ctaCourseId}`
               }
-              className="inline-flex items-center gap-2 bg-card text-brand hover:bg-brand-soft hover:text-brand-soft-foreground shadow-lg rounded-xl font-bold px-6 py-3 min-h-[44px] motion-safe:transition-colors"
+              className="inline-flex items-center gap-2 bg-brand text-brand-foreground hover:bg-brand-hover shadow-lg rounded-xl font-bold px-6 py-3 min-h-[44px] motion-safe:transition-colors"
             >
               <PlayCircle className="size-5" aria-hidden="true" />
               {ctaLabel}
