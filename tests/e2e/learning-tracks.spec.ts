@@ -12,11 +12,34 @@
  * - Invalid trackId shows not-found state
  */
 import { test, expect } from '../support/fixtures'
-import { seedIndexedDBStore, clearLearningPath } from '../support/helpers/seed-helpers'
+import {
+  seedIndexedDBStore,
+  clearLearningPath,
+  clearIndexedDBStore,
+} from '../support/helpers/seed-helpers'
 import { navigateAndWait } from '../support/helpers/navigation'
 import { FIXED_DATE, getRelativeDate } from '../utils/test-time'
 
 const DB_NAME = 'ElearningDB'
+
+/**
+ * A small transparent-ish 2x2 PNG data URL used as a deterministic cover image
+ * fixture. Avoids relying on remote image availability while still exercising
+ * the uploaded-cover hero branch (an <img> with a real, loadable src).
+ */
+const COVER_DATA_URL =
+  'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAEklEQVR42mP8z/C/noEIwDiqEAByQgg+gQ3l9wAAAABJRU5ErkJggg=='
+
+/**
+ * Clear the learning-track stores plus the imported-content stores that the
+ * detail page reads. `clearLearningPath` only clears the `learningPaths` store,
+ * so entries and videos must be cleared explicitly to keep tests isolated.
+ */
+async function clearTrackStores(page: import('@playwright/test').Page): Promise<void> {
+  await clearLearningPath(page)
+  await clearIndexedDBStore(page, DB_NAME, 'learningPathEntries')
+  await clearIndexedDBStore(page, DB_NAME, 'importedVideos')
+}
 
 // ---------------------------------------------------------------------------
 // Test data factories
@@ -331,5 +354,101 @@ test.describe('Learning Tracks — invalid track', () => {
 
     await expect(page.getByText('Track not found')).toBeVisible()
     await expect(page.getByRole('button', { name: 'View All Tracks' })).toBeVisible()
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Back-link & CTA navigation regression (R5, R6, R7)
+//
+// The reported bug: "Back to Learning Tracks" sometimes routed to a course
+// detail page. Source already passes backUrl="/learning-tracks", so this
+// suite is a permanent regression guard across direct entry, mobile hit
+// areas, and back-link/CTA separation rather than a one-off fix.
+// ---------------------------------------------------------------------------
+
+test.describe('Learning Tracks — back-link & CTA navigation regression', () => {
+  test('direct-load detail page: back link navigates to /learning-tracks', async ({ page }) => {
+    await goToLearningTracks(page)
+
+    const paths = [createLearningPath({ id: 'lt-direct', name: 'Direct Entry Track' })]
+    await clearTrackStores(page)
+    await seedPaths(page, paths)
+
+    // Enter the detail page directly (not via the list) to exercise
+    // direct-entry router state.
+    await page.goto('/learning-tracks/lt-direct', { waitUntil: 'load' })
+    await expect(page).toHaveURL(/\/learning-tracks\/lt-direct/)
+
+    const backLink = page.getByTestId('hero-back-link')
+    await expect(backLink).toBeVisible()
+    await expect(backLink).toHaveAttribute('href', '/learning-tracks')
+
+    await backLink.click()
+    await expect(page).toHaveURL('/learning-tracks')
+  })
+
+  test('mobile viewport: back link tap navigates to /learning-tracks', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 812 })
+    await goToLearningTracks(page)
+
+    const paths = [createLearningPath({ id: 'lt-mobile', name: 'Mobile Track' })]
+    await clearTrackStores(page)
+    await seedPaths(page, paths)
+    await page.goto('/learning-tracks/lt-mobile', { waitUntil: 'load' })
+    await expect(page).toHaveURL(/\/learning-tracks\/lt-mobile/)
+
+    const backLink = page.getByTestId('hero-back-link')
+    await expect(backLink).toBeVisible()
+
+    // Tap the visible back-link text, not just a testid locator, to catch any
+    // hit-area overlap with an adjacent CTA at narrow widths.
+    await backLink.getByText('Back to Learning Tracks').click()
+    await expect(page).toHaveURL('/learning-tracks')
+  })
+
+  test('hero CTA stays separate from back link and routes to the course lesson', async ({
+    page,
+  }) => {
+    await goToLearningTracks(page)
+
+    const paths = [createLearningPath({ id: 'lt-cta', name: 'CTA Track' })]
+    const entries = [
+      createLearningPathEntry({
+        id: 'lpe-cta',
+        pathId: 'lt-cta',
+        courseId: 'course-cta',
+        position: 1,
+      }),
+    ]
+    const videos = [
+      {
+        id: 'video-cta-1',
+        courseId: 'course-cta',
+        filename: 'intro.mp4',
+        path: 'course-cta/intro.mp4',
+        duration: 600,
+        format: 'mp4',
+        order: 0,
+        fileHandle: null,
+        title: 'Intro Lesson',
+      },
+    ]
+
+    await clearTrackStores(page)
+    await seedPaths(page, paths, entries)
+    await seedIndexedDBStore(page, DB_NAME, 'importedVideos', videos)
+    await page.goto('/learning-tracks/lt-cta', { waitUntil: 'load' })
+    await expect(page).toHaveURL(/\/learning-tracks\/lt-cta/)
+
+    // Back link and CTA are distinct, independently-targeted controls.
+    const backLink = page.getByTestId('hero-back-link')
+    await expect(backLink).toHaveAttribute('href', '/learning-tracks')
+
+    const cta = page.getByRole('link', { name: 'Start Learning' })
+    // Once videos load, the CTA resolves to the first lesson of the course.
+    await expect(cta).toHaveAttribute('href', '/courses/course-cta/lessons/video-cta-1')
+
+    await cta.click()
+    await expect(page).toHaveURL('/courses/course-cta/lessons/video-cta-1')
   })
 })
