@@ -94,7 +94,7 @@ return (
           src={path.coverImageUrl}
           alt=""
           className={cn(
-            'absolute inset-0 h-full w-full object-cover motion-safe:transition-opacity motion-safe:duration-300',
+            'absolute inset-0 h-full w-full object-cover motion-safe:transition-opacity motion-safe:duration-300 ease-out',
             showCoverImage ? 'opacity-20 blur-2xl scale-110' : 'opacity-0'
           )}
           onLoad={() => setImageState('loaded')}
@@ -120,13 +120,18 @@ return (
         </>
       )}
 
+      {imageState === 'failed' && (
+        <div className="sr-only" aria-live="polite" role="status">
+          Cover image could not be loaded
+        </div>
+      )}
       {/* Content */}
       <div className="relative z-10 p-4 sm:p-8">
         {/* Back link + Dropdown row */}
         <div className="flex items-start justify-between mb-6">
           <Link
             to={backUrl}
-            className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground/90 hover:text-foreground motion-safe:transition-colors min-h-[44px] py-2"
+            className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground motion-safe:transition-colors min-h-[44px] py-2"
             data-testid="hero-back-link"
           >
             <ArrowLeft className="size-4" aria-hidden="true" />
@@ -174,7 +179,7 @@ return (
               {path.difficultyLabel}
             </span>
           )}
-          <span className="flex items-center gap-1.5 text-muted-foreground/90 text-sm font-medium">
+          <span className="flex items-center gap-1.5 text-muted-foreground text-sm font-medium">
             <Clock className="size-3.5" aria-hidden="true" />
             {courseCount} {courseCount === 1 ? 'course' : 'courses'}
             {path.estimatedHours != null && path.estimatedHours > 0 && (
@@ -190,7 +195,7 @@ return (
 
         {/* Description */}
         {path.description && (
-          <p className="text-base sm:text-lg leading-relaxed text-muted-foreground/90 max-w-2xl mb-8">
+          <p className="text-base sm:text-lg leading-relaxed text-muted-foreground max-w-2xl mb-8">
             {path.description}
           </p>
         )}
@@ -205,7 +210,7 @@ return (
                   ? `/courses/${ctaCourseId}/lessons/${targetLessonId}`
                   : `/courses/${ctaCourseId}`
               }
-              className="inline-flex items-center gap-2 bg-card text-brand hover:bg-brand-soft hover:text-brand-soft-foreground shadow-lg rounded-xl font-bold px-6 py-3 min-h-[44px] transition-colors"
+              className="inline-flex items-center gap-2 bg-card text-brand hover:bg-brand-soft hover:text-brand-soft-foreground shadow-lg rounded-xl font-bold px-6 py-3 min-h-[44px] motion-safe:transition-colors"
             >
               <PlayCircle className="size-5" aria-hidden="true" />
               {ctaLabel}
@@ -226,11 +231,11 @@ return (
               ))}
               {orderedCourseThumbnails.length === 0 && (
                 <div className="size-10 rounded-full ring-2 ring-border bg-muted flex items-center justify-center">
-                  <BookOpen className="size-4 text-muted-foreground/90" aria-hidden="true" />
+                  <BookOpen className="size-4 text-muted-foreground" aria-hidden="true" />
                 </div>
               )}
               {overflowCount > 0 && (
-                <div className="size-10 rounded-full ring-2 ring-border bg-muted border-2 border-border flex items-center justify-center text-xs font-bold text-muted-foreground/90">
+                <div className="size-10 rounded-full ring-2 ring-border bg-muted border-2 border-border flex items-center justify-center text-xs font-bold text-muted-foreground">
                   +{overflowCount}
                 </div>
               )}
@@ -239,7 +244,7 @@ return (
 
           {/* Progress indicator */}
           {courseCount > 0 && (
-            <span className="text-muted-foreground/90 text-sm font-medium">
+            <span className="text-muted-foreground text-sm font-medium">
               {completedCount} of {courseCount} completed
             </span>
           )}
