@@ -1,14 +1,15 @@
 /**
- * E2E tests: learning path detail page hero redesign.
+ * E2E tests: learning track detail page hero.
  *
- * Verifies the new hero banner and progress sidebar render correctly
- * after the visual restructuring.
+ * Verifies the hero banner renders correctly after the visual restructuring.
+ * Note: This file was migrated from `/learning-paths/` to `/learning-tracks/`
+ * route namespace. Legacy tests now live in learning-tracks.spec.ts.
  */
 import { test, expect } from '../support/fixtures'
 import { seedIndexedDBStore } from '../support/helpers/seed-helpers'
 import { FIXED_DATE } from '../utils/test-time'
 
-test.describe('Learning Path Detail — Hero Redesign', () => {
+test.describe('Learning Track Detail — Hero Redesign', () => {
   const pathId = 'e2e-hero-path-1'
   const course1Id = 'e2e-hero-course-1'
   const course2Id = 'e2e-hero-course-2'
@@ -42,7 +43,7 @@ test.describe('Learning Path Detail — Hero Redesign', () => {
       },
     ])
 
-    // Seed learning path
+    // Seed learning track
     await seedIndexedDBStore(page, 'ElearningDB', 'learningPaths', [
       {
         id: pathId,
@@ -81,7 +82,7 @@ test.describe('Learning Path Detail — Hero Redesign', () => {
   })
 
   test('hero banner renders with title, description, and metadata', async ({ page }) => {
-    await page.goto(`/learning-paths/${pathId}`)
+    await page.goto(`/learning-tracks/${pathId}`)
     await page.waitForLoadState('load')
 
     // Hero title
@@ -97,19 +98,19 @@ test.describe('Learning Path Detail — Hero Redesign', () => {
     await expect(page.getByText(/2 courses/)).toBeVisible()
   })
 
-  test('hero back link navigates to learning paths listing', async ({ page }) => {
-    await page.goto(`/learning-paths/${pathId}`)
+  test('hero back link navigates to learning tracks listing', async ({ page }) => {
+    await page.goto(`/learning-tracks/${pathId}`)
     await page.waitForLoadState('load')
 
-    const backLink = page.getByText('Back to Learning Paths')
+    const backLink = page.getByText('Back to Learning Tracks')
     await expect(backLink).toBeVisible()
     await backLink.click()
 
-    await expect(page).toHaveURL(/\/learning-paths/)
+    await expect(page).toHaveURL('/learning-tracks')
   })
 
   test('hero CTA links to first course when not started', async ({ page }) => {
-    await page.goto(`/learning-paths/${pathId}`)
+    await page.goto(`/learning-tracks/${pathId}`)
     await page.waitForLoadState('load')
 
     const cta = page.getByText('Start Learning')
@@ -121,7 +122,7 @@ test.describe('Learning Path Detail — Hero Redesign', () => {
   })
 
   test('progress sidebar renders with ring and stats', async ({ page }) => {
-    await page.goto(`/learning-paths/${pathId}`)
+    await page.goto(`/learning-tracks/${pathId}`)
     await page.waitForLoadState('load')
 
     // Progress ring
@@ -138,7 +139,7 @@ test.describe('Learning Path Detail — Hero Redesign', () => {
   })
 
   test('certificate card renders in sidebar', async ({ page }) => {
-    await page.goto(`/learning-paths/${pathId}`)
+    await page.goto(`/learning-tracks/${pathId}`)
     await page.waitForLoadState('load')
 
     await expect(page.getByText('Earn a Certificate')).toBeVisible()
@@ -161,14 +162,14 @@ test.describe('Learning Path Detail — Hero Redesign', () => {
     await seedIndexedDBStore(page, 'ElearningDB', 'learningPathEntries', [])
     await page.reload()
 
-    await page.goto('/learning-paths/e2e-forked-path')
+    await page.goto('/learning-tracks/e2e-forked-path')
     await page.waitForLoadState('load')
 
     await expect(page.getByText('This path was created from a template')).toBeVisible()
   })
 
   test('dropdown menu appears in hero when path has actions', async ({ page }) => {
-    await page.goto(`/learning-paths/${pathId}`)
+    await page.goto(`/learning-tracks/${pathId}`)
     await page.waitForLoadState('load')
 
     const actionsBtn = page.getByLabel('Actions for Full-Stack Developer Path')

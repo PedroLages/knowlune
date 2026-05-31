@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, fireEvent } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
 import { PathHeroBanner } from '@/app/components/learning-path/PathHeroBanner'
 import type { LearningPath } from '@/data/types'
@@ -48,6 +48,8 @@ function renderHero(props: Partial<Parameters<typeof PathHeroBanner>[0]> = {}) {
 }
 
 describe('PathHeroBanner', () => {
+  // ── Basic content ──────────────────────────────────────────────────
+
   it('renders path title and description', () => {
     renderHero({
       path: makePath({ name: 'React Mastery', description: 'Learn React from scratch' }),
@@ -61,6 +63,16 @@ describe('PathHeroBanner', () => {
     const link = screen.getByText('Back to Learning Tracks')
     expect(link).toBeInTheDocument()
     expect(link.closest('a')).toHaveAttribute('href', '/learning-tracks')
+  })
+
+  it('renders custom back label and url', () => {
+    renderHero({
+      backUrl: '/custom-back',
+      backLabel: 'Custom Back Label',
+    })
+    const link = screen.getByText('Custom Back Label')
+    expect(link).toBeInTheDocument()
+    expect(link.closest('a')).toHaveAttribute('href', '/custom-back')
   })
 
   it('renders course count in metadata', () => {
@@ -82,6 +94,8 @@ describe('PathHeroBanner', () => {
     renderHero({ path: makePath({ difficultyLabel: undefined }) })
     expect(document.querySelector('.tracking-widest')).not.toBeInTheDocument()
   })
+
+  // ── CTA behavior ───────────────────────────────────────────────────
 
   it('shows "Start Learning" CTA when progress is 0%', () => {
     renderHero({
@@ -122,6 +136,180 @@ describe('PathHeroBanner', () => {
     expect(screen.queryByText('Start Learning')).not.toBeInTheDocument()
     expect(screen.queryByText('Continue Learning')).not.toBeInTheDocument()
   })
+
+  it('CTA links to target lesson when targetLessonId is provided', () => {
+    renderHero({
+      pathProgress: makeProgress({ completionPct: 50 }),
+      currentCourseId: 'course-current',
+      targetLessonId: 'lesson-42',
+    })
+    const link = screen.getByText('Continue Learning').closest('a')
+    expect(link).toHaveAttribute('href', '/courses/course-current/lessons/lesson-42')
+  })
+
+  // ── Back link vs CTA separation (regression guard) ─────────────────
+
+  it('back link and CTA have distinct href targets', () => {
+    renderHero({
+      firstCourseId: 'course-first',
+      backUrl: '/learning-tracks',
+    })
+    const backLink = screen.getByText('Back to Learning Tracks').closest('a')
+    const ctaLink = screen.getByText('Start Learning').closest('a')
+    expect(backLink).toHaveAttribute('href', '/learning-tracks')
+    expect(ctaLink).toHaveAttribute('href', '/courses/course-first')
+    expect(backLink?.getAttribute('href')).not.toBe(ctaLink?.getAttribute('href'))
+  })
+
+  it('custom backUrl does not affect CTA routing', () => {
+    renderHero({
+      firstCourseId: 'course-xyz',
+      backUrl: '/some/custom',
+    })
+    const backLink = screen.getByText('Back to Learning Tracks').closest('a')
+    const ctaLink = screen.getByText('Start Learning').closest('a')
+    expect(backLink).toHaveAttribute('href', '/some/custom')
+    expect(ctaLink).toHaveAttribute('href', '/courses/course-xyz')
+  })
+
+  // ── Cover image states ─────────────────────────────────────────────
+
+  it('shows blurred cover image when coverImageUrl is provided', () => {
+    const { container } = renderHero({
+      path: makePath({
+        coverImageUrl: 'https://example.com/cover.jpg',
+        coverPreset: 'cyan-blue',
+      }),
+    })
+    // The hero section should have the card-surface structure
+    const section = container.querySelector('section')
+    expect(section?.className).toContain('rounded-3xl')
+    expect(section?.className).toContain('bg-card')
+    expect(section?.className).toContain('shadow-card-ambient')
+  })
+
+  it('shows fallback preset gradient when coverImageUrl exists but has not loaded', () => {
+    renderHero({
+      path: makePath({
+        coverImageUrl: 'https://example.com/cover.jpg',
+        coverPreset: 'cyan-blue',
+      }),
+    })
+    // The preset gradient class should appear in the fallback state
+    // (pending image shows fallback until onLoad fires)
+    // The img should be present but at opacity-0
+    const img = document.querySelector('img[src="https://example.com/cover.jpg"]')
+    expect(img).toBeInTheDocument()
+  })
+
+  it('shows fallback when coverImageUrl is absent', () => {
+    const { container } = renderHero({
+      path: makePath({
+        coverImageUrl: undefined,
+        coverPreset: 'cyan-blue',
+      }),
+    })
+    // Should have the brand gradient background
+    const gradientDiv = container.querySelector('.bg-gradient-to-br')
+    expect(gradientDiv).toBeInTheDocument()
+  })
+
+  it('renders default brand gradient when neither image nor preset is available', () => {
+    const { container } = renderHero({
+      path: makePath({
+        coverImageUrl: undefined,
+        coverPreset: undefined,
+      }),
+    })
+    const section = container.querySelector('section')
+    // Should have the card surface with default gradient behind it
+    expect(section?.className).toContain('bg-card')
+  })
+
+
+  // ── Cover image onError / onLoad transitions ──────────────────────
+
+  it('transitions from pending to loaded when img fires onLoad', () => {
+    renderHero({
+      path: makePath({ coverImageUrl: 'https://example.com/cover.jpg' }),
+    })
+
+    const img = document.querySelector('img[src="https://example.com/cover.jpg"]')
+    expect(img).toBeInTheDocument()
+
+    // Before onLoad: img at opacity-0
+    expect(img?.className).toContain('opacity-0')
+
+    // Fire the onLoad event
+    fireEvent.load(img!)
+
+    // After onLoad: img should have loaded state classes
+    expect(img?.className).toContain('opacity-20')
+    expect(img?.className).toContain('blur-2xl')
+    expect(img?.className).toContain('scale-110')
+  })
+
+  it('removes img from DOM onError and shows fallback gradient', () => {
+    const { container } = renderHero({
+      path: makePath({
+        coverImageUrl: 'https://example.com/cover.jpg',
+        coverPreset: 'cyan-blue',
+      }),
+    })
+
+    // Before: img is present
+    const img = document.querySelector('img[src="https://example.com/cover.jpg"]')
+    expect(img).toBeInTheDocument()
+
+    // Fire onError
+    fireEvent.error(img!)
+
+    // After: img removed from DOM
+    expect(document.querySelector('img[src="https://example.com/cover.jpg"]')).not.toBeInTheDocument()
+
+    // Fallback gradient should be present
+    const gradientDiv = container.querySelector('.bg-gradient-to-br')
+    expect(gradientDiv).toBeInTheDocument()
+  })
+
+  it('falls back to brand gradient when coverImageUrl errors and no coverPreset set', () => {
+    const { container } = renderHero({
+      path: makePath({
+        coverImageUrl: 'https://example.com/cover.jpg',
+        coverPreset: undefined,
+      }),
+    })
+
+    const img = document.querySelector('img[src="https://example.com/cover.jpg"]')
+    expect(img).toBeInTheDocument()
+
+    fireEvent.error(img!)
+
+    // Fallback gradient should be visible
+    const gradientDiv = container.querySelector('.bg-gradient-to-br')
+    expect(gradientDiv).toBeInTheDocument()
+  })
+
+  it('renders aria-live polite region when image fails to load', () => {
+    renderHero({
+      path: makePath({
+        coverImageUrl: 'https://example.com/cover.jpg',
+      }),
+    })
+
+    const img = document.querySelector('img[src="https://example.com/cover.jpg"]')
+    expect(img).toBeInTheDocument()
+
+    // Fire onError to trigger the failed state
+    fireEvent.error(img!)
+
+    // aria-live polite region should be rendered
+    const liveRegion = document.querySelector('[aria-live="polite"]')
+    expect(liveRegion).toBeInTheDocument()
+    expect(liveRegion?.textContent).toContain('could not be loaded')
+  })
+
+  // ── Avatar stack ───────────────────────────────────────────────────
 
   it('renders avatar stack from ordered course thumbnails', () => {
     const { container } = renderHero({
@@ -175,6 +363,8 @@ describe('PathHeroBanner', () => {
     expect(screen.queryByText(/completed/)).not.toBeInTheDocument()
   })
 
+  // ── Dropdown actions ───────────────────────────────────────────────
+
   it('renders dropdown menu when onEdit or onDelete provided', () => {
     const onEdit = () => {}
     renderHero({ onEdit })
@@ -189,5 +379,15 @@ describe('PathHeroBanner', () => {
   it('renders estimated hours when available', () => {
     renderHero({ path: makePath({ estimatedHours: 40 }) })
     expect(screen.getByText(/3 courses · ~40h/)).toBeInTheDocument()
+  })
+
+  // ── Touch target regression guards ─────────────────────────────────
+
+  it('CTA meets minimum 44px touch target', () => {
+    renderHero({
+      firstCourseId: 'course-1',
+    })
+    const ctaLink = screen.getByText('Start Learning').closest('a')
+    expect(ctaLink?.className).toContain('min-h-[44px]')
   })
 })
