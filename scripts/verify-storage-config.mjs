@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+/* global URL, fetch */
 
 /**
  * verify-storage-config.mjs
