@@ -109,7 +109,7 @@ interface NoteEditorProps {
   noteId?: string
   initialContent?: string
   currentVideoTime?: number
-  onSave?: (content: string, tags: string[]) => void
+  onSave?: (content: string, tags: string[]) => Promise<void> | void
   onVideoSeek?: (seconds: number) => void
   onCaptureFrame?: () => Promise<CapturedFrame | null>
   compact?: boolean
@@ -184,6 +184,8 @@ export function NoteEditor({
   const maxWaitRef = useRef<ReturnType<typeof setTimeout>>(undefined)
   const fadeTimeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined)
   const lastSavedContentRef = useRef(initialContent)
+  const pendingSaveContentRef = useRef<string | null>(null)
+  const hasEverSavedRef = useRef(!!noteId)
 
   // Latest-ref pattern to avoid stale closures
   const onSaveRef = useRef(onSave)
@@ -202,11 +204,35 @@ export function NoteEditor({
   const doSave = useCallback((html: string) => {
     // Avoid duplicate saves of identical content
     if (html === lastSavedContentRef.current) return
-    lastSavedContentRef.current = html
+
+    // Track this content as pending so unmount cleanup doesn't duplicate the save
+    pendingSaveContentRef.current = html
 
     const text = html.replace(/<[^>]*>/g, ' ')
     const tags = extractTags(text)
-    onSaveRef.current?.(html, tags)
+    const result = onSaveRef.current?.(html, tags)
+
+    // If the save is async, only update lastSavedContentRef after it completes.
+    // This prevents a race where the component unmounts before the Dexie write
+    // finishes, causing the unmount cleanup to skip the save.
+    if (result && typeof result.then === 'function') {
+      result
+        .then(() => {
+          if (pendingSaveContentRef.current === html) {
+            lastSavedContentRef.current = html
+            pendingSaveContentRef.current = null
+          }
+        })
+        .catch(() => {
+          toast.error('Failed to save note')
+          if (pendingSaveContentRef.current === html) {
+            pendingSaveContentRef.current = null
+          }
+        })
+    } else {
+      // Synchronous save — update ref immediately
+      lastSavedContentRef.current = html
+    }
 
     // Show "Saved" indicator
     setSaveStatus('saved')
@@ -392,6 +418,15 @@ export function NoteEditor({
       setWordCount(ed.storage.characterCount.words())
       const html = ed.getHTML()
 
+      // Eager-first-save: persist new notes immediately on first content change.
+      // This ensures the note reaches Dexie before any potential unmount,
+      // even from causes other than tab switching (navigation, page refresh, etc.).
+      if (!hasEverSavedRef.current) {
+        hasEverSavedRef.current = true
+        doSave(html)
+        return
+      }
+
       // Debounced save: 3 seconds after last keystroke
       clearTimeout(saveTimeoutRef.current)
       saveTimeoutRef.current = setTimeout(() => {
@@ -521,7 +556,7 @@ export function NoteEditor({
     return () => container.removeEventListener('keydown', handleKeyDown)
   }, [handleCaptureFrame])
 
-  // Force save on unmount
+  // Force save on unmount with error visibility
   useEffect(() => {
     return () => {
       clearTimeout(saveTimeoutRef.current)
@@ -530,10 +565,20 @@ export function NoteEditor({
       const ed = editorRef.current
       if (ed && !ed.isDestroyed) {
         const html = ed.getHTML()
-        if (html !== lastSavedContentRef.current) {
+        if (html !== lastSavedContentRef.current && html !== pendingSaveContentRef.current) {
           const text = html.replace(/<[^>]*>/g, ' ')
           const tags = extractTags(text)
-          onSaveRef.current?.(html, tags)
+          try {
+            const result = onSaveRef.current?.(html, tags)
+            // Handle async promise rejection (fire-and-forget, can't await in cleanup)
+            if (result && typeof result.then === 'function') {
+              result.catch(() => {
+                toast.error('Failed to save note before leaving the page')
+              })
+            }
+          } catch {
+            toast.error('Failed to save note before leaving the page')
+          }
         }
       }
     }
