@@ -21,6 +21,7 @@ import {
   GraduationCap,
 } from 'lucide-react'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/app/components/ui/tabs'
+import { cn } from '@/app/components/ui/utils'
 import { Button } from '@/app/components/ui/button'
 import { useMediaQuery } from '@/app/hooks/useMediaQuery'
 import { useLessonChromeStore } from '@/stores/useLessonChromeStore'
@@ -250,12 +251,14 @@ export function BelowVideoTabs({
         data-testid="below-video-tabs"
       >
         <TabsList variant="brand-pill">
-          {!hideNotesTab && (
-            <TabsTrigger value="notes" variant="brand-pill">
-              <PencilLine className="size-3.5" aria-hidden="true" />
-              Notes
-            </TabsTrigger>
-          )}
+          <TabsTrigger
+            value="notes"
+            variant="brand-pill"
+            className={cn(hideNotesTab && 'hidden')}
+          >
+            <PencilLine className="size-3.5" aria-hidden="true" />
+            Notes
+          </TabsTrigger>
           {!isPdf && (
             <TabsTrigger value="bookmarks" variant="brand-pill">
               <Bookmark className="size-3.5" aria-hidden="true" />
@@ -288,8 +291,7 @@ export function BelowVideoTabs({
           )}
         </TabsList>
 
-        {!hideNotesTab && (
-          <TabsContent value="notes" className="mt-4">
+          <TabsContent value="notes" forceMount className={cn('mt-4', hideNotesTab && 'hidden')}>
             <div className="bg-card rounded-2xl shadow-sm overflow-hidden">
               {isMobile && (
                 <div className="flex items-center justify-between px-4 py-2 border-b">
@@ -327,7 +329,6 @@ export function BelowVideoTabs({
               )}
             </div>
           </TabsContent>
-        )}
 
         {!isPdf && (
           <TabsContent value="bookmarks" className="mt-4">

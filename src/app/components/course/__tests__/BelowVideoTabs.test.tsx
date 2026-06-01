@@ -89,6 +89,22 @@ function renderTabs(
   )
 }
 
+function renderTabsWithHideNotesTab(hideNotesTab: boolean) {
+  const adapter = createMockAdapter()
+  return render(
+    <MemoryRouter>
+      <BelowVideoTabs
+        courseId="course-1"
+        lessonId="lesson-1"
+        adapter={adapter as never}
+        currentTime={42}
+        onSeek={vi.fn()}
+        hideNotesTab={hideNotesTab}
+      />
+    </MemoryRouter>
+  )
+}
+
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
@@ -190,6 +206,90 @@ describe('BelowVideoTabs', () => {
       </MemoryRouter>
     )
 
+    expect(screen.getByTestId('notes-tab-content')).toBeInTheDocument()
+  })
+
+  // ---------------------------------------------------------------------------
+  // forceMount: NotesTab stays mounted across tab switches
+  // ---------------------------------------------------------------------------
+
+  it('keeps NotesTab mounted when switching to another tab (forceMount)', async () => {
+    const user = userEvent.setup()
+    renderTabs()
+
+    // Initially Notes tab is active
+    expect(screen.getByTestId('notes-tab-content')).toBeInTheDocument()
+
+    // Switch to Bookmarks tab
+    const tabList = screen.getByRole('tablist')
+    await user.click(within(tabList).getByText('Bookmarks'))
+
+    // NotesTab should remain in the DOM due to forceMount
+    expect(screen.getByTestId('notes-tab-content')).toBeInTheDocument()
+
+    // Switch to another tab and back
+    await user.click(within(tabList).getByText('Notes'))
+
+    // NotesTab is still present
+    expect(screen.getByTestId('notes-tab-content')).toBeInTheDocument()
+  })
+
+  it('keeps NotesTab mounted across all tab cycles', async () => {
+    const user = userEvent.setup()
+    renderTabs({ capabilities: { hasTranscript: true } })
+
+    expect(screen.getByTestId('notes-tab-content')).toBeInTheDocument()
+
+    // Cycle through all tabs — NotesTab should always be present
+    const tabList = screen.getByRole('tablist')
+
+    await user.click(within(tabList).getByText('Bookmarks'))
+    expect(screen.getByTestId('notes-tab-content')).toBeInTheDocument()
+
+    await user.click(within(tabList).getByText('Transcript'))
+    expect(screen.getByTestId('notes-tab-content')).toBeInTheDocument()
+
+    await user.click(within(tabList).getByText('AI Summary'))
+    expect(screen.getByTestId('notes-tab-content')).toBeInTheDocument()
+
+    // Switch back to Notes
+    await user.click(within(tabList).getByText('Notes'))
+    expect(screen.getByTestId('notes-tab-content')).toBeInTheDocument()
+  })
+
+  // ---------------------------------------------------------------------------
+  // hideNotesTab: CSS-based hiding (always mounted, visually hidden)
+  // ---------------------------------------------------------------------------
+
+  it('shows Notes TabsTrigger by default (no hidden class)', () => {
+    renderTabs()
+    const notesTrigger = screen.getByRole('tab', { name: /notes/i })
+    expect(notesTrigger).not.toHaveClass('hidden')
+  })
+
+  it('applies hidden class to Notes TabsTrigger when hideNotesTab is true', () => {
+    renderTabsWithHideNotesTab(true)
+    const notesTrigger = screen.getByRole('tab', { name: /notes/i, hidden: true })
+    expect(notesTrigger).toHaveClass('hidden')
+  })
+
+  it('applies hidden class to Notes TabsContent when hideNotesTab is true', () => {
+    renderTabsWithHideNotesTab(true)
+    const notesContent = screen.getByTestId('notes-tab-content')
+    const tabsContent = notesContent.closest('[data-slot="tabs-content"]')
+    expect(tabsContent).toHaveClass('hidden')
+  })
+
+  it('does not apply hidden class to Notes TabsContent when hideNotesTab is false', () => {
+    renderTabsWithHideNotesTab(false)
+    const notesContent = screen.getByTestId('notes-tab-content')
+    const tabsContent = notesContent.closest('[data-slot="tabs-content"]')
+    expect(tabsContent).not.toHaveClass('hidden')
+  })
+
+  it('keeps NotesTab in DOM when hideNotesTab is true', () => {
+    renderTabsWithHideNotesTab(true)
+    // NotesTab content should still be in DOM even though hidden
     expect(screen.getByTestId('notes-tab-content')).toBeInTheDocument()
   })
 })
