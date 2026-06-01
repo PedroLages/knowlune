@@ -53,7 +53,9 @@ export function PathProgressSidebar({
             <PathProgressRing percentage={completionPct} size="xl" strokeWidth={6}>
               <div className="text-center" aria-live="polite" aria-atomic="true">
                 <span className="block text-2xl font-extrabold text-foreground">
-                  {Math.round(completionPct)}%
+                  {completionPct > 0 && Math.round(completionPct) === 0
+                    ? '< 1'
+                    : Math.round(completionPct)}%
                 </span>
                 <span className="block text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
                   Complete

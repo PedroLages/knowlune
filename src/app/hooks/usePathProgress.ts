@@ -145,13 +145,13 @@ export function usePathProgress(entries: LearningPathEntry[]): PathProgressSumma
       }
     }
 
-    const remainingLessons = totalLessonsCount - totalCompletedLessons
+    const clampedRemaining = Math.max(0, totalLessonsCount - totalCompletedLessons)
     const overallPct =
       totalLessonsCount > 0
         ? Math.round((totalCompletedLessons / totalLessonsCount) * 100)
         : 0
     const estimatedRemainingHours =
-      Math.round(((remainingLessons * MINUTES_PER_LESSON) / 60) * 10) / 10
+      Math.round(((clampedRemaining * MINUTES_PER_LESSON) / 60) * 10) / 10
 
     setSummary({
       completionPct: overallPct,
@@ -302,8 +302,8 @@ export function useMultiPathProgress(
       }
 
       const overallPct = totalLessons > 0 ? Math.round((totalCompleted / totalLessons) * 100) : 0
-      const remaining = totalLessons - totalCompleted
-      const estimatedRemainingHours = Math.round(((remaining * MINUTES_PER_LESSON) / 60) * 10) / 10
+      const clampedRemaining = Math.max(0, totalLessons - totalCompleted)
+      const estimatedRemainingHours = Math.round(((clampedRemaining * MINUTES_PER_LESSON) / 60) * 10) / 10
 
       result.set(pathId, {
         completionPct: overallPct,

@@ -217,14 +217,16 @@ export function LearningTrackDetail() {
     return count
   }, [courseEntries, pathProgress.courseProgress, manuallyCompletedIds])
 
-  // Enhanced progress that includes manual completions
+  // Enhanced progress that includes manual completions.
+  // completionPct from the hook is lesson-level and correct; the previous override
+  // with (completedCourses / totalCourses) * 100 incorrectly left the ring at 0 %
+  // for the entire first course. Only completedCourses is adjusted here.
   const enhancedProgress = useMemo(() => {
     const completedCourses = pathProgress.completedCourses + manualCompletionsNotInAuto
-    const totalCourses = Math.max(pathProgress.totalCourses, 1)
     return {
       ...pathProgress,
       completedCourses,
-      completionPct: (completedCourses / totalCourses) * 100,
+      totalCourses: Math.max(pathProgress.totalCourses, 1),
     }
   }, [pathProgress, manualCompletionsNotInAuto])
 
