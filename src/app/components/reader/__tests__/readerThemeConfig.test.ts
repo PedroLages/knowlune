@@ -11,6 +11,7 @@ import {
   useAppColorScheme,
 } from '../readerThemeConfig'
 import type { ReaderColors, ReaderChromeClasses, ColorScheme } from '../readerThemeConfig'
+import { hexContrast } from '../../../../../tests/utils/wcag-contrast'
 import { getSettings } from '@/lib/settings'
 
 vi.mock('@/lib/settings', () => ({
@@ -138,29 +139,6 @@ describe('getReaderThemeColors — runtime guard', () => {
 })
 
 describe('WCAG AA contrast ratios', () => {
-  /** Linearize an sRGB channel (0-255 -> 0-1) */
-  function linearize(c: number): number {
-    const s = c / 255
-    return s <= 0.04045 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4)
-  }
-
-  /** Relative luminance per WCAG 2.1 */
-  function luminance(hex: string): number {
-    const r = parseInt(hex.slice(1, 3), 16)
-    const g = parseInt(hex.slice(3, 5), 16)
-    const b = parseInt(hex.slice(5, 7), 16)
-    return 0.2126 * linearize(r) + 0.7152 * linearize(g) + 0.0722 * linearize(b)
-  }
-
-  /** Contrast ratio per WCAG 2.1 */
-  function contrastRatio(hex1: string, hex2: string): number {
-    const l1 = luminance(hex1)
-    const l2 = luminance(hex2)
-    const lighter = Math.max(l1, l2)
-    const darker = Math.min(l1, l2)
-    return (lighter + 0.05) / (darker + 0.05)
-  }
-
   const themes = ['white', 'sepia', 'gray', 'dark', 'black'] as const
   const schemes: ColorScheme[] = ['professional', 'vibrant', 'clean']
 
@@ -168,7 +146,7 @@ describe('WCAG AA contrast ratios', () => {
     for (const scheme of schemes) {
       it(`${theme}/${scheme} has contrast ratio >= 4.5:1`, () => {
         const colors = getReaderThemeColors(theme, scheme)
-        const ratio = contrastRatio(colors.background, colors.foreground)
+        const ratio = hexContrast(colors.background, colors.foreground)
         expect(ratio).toBeGreaterThanOrEqual(4.5)
       })
     }

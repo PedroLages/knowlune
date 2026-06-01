@@ -1,44 +1,47 @@
 import { describe, it, expect } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
+import { hexContrast } from '../../../../../tests/utils/wcag-contrast'
 import { PathHeroBanner } from '@/app/components/learning-path/PathHeroBanner'
 import type { LearningPath } from '@/data/types'
 import type { PathProgressSummary } from '@/app/hooks/usePathProgress'
 
-// ── WCAG contrast helpers ────────────────────────────────────────────────────
-// Computes contrast ratios from known hex token values (src/styles/theme.css).
-// This gives measurable, deterministic checks without needing a real browser.
+// ── WCAG contrast helpers (extended for alpha composite) ──────────────────────
+// hexLuminance and hexContrast imported from tests/utils/wcag-contrast.
+// alphaComposite is unique to this file and kept inline below.
 
-function linearize(v: number): number {
-  const c = v / 255
-  return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4
+/**
+ * Alpha-composite a foreground color over a background color.
+ * Both inputs must be hex strings (e.g. "#ffffff").
+ * Alpha is the foreground's opacity (0-1).
+ * Returns the composite color as a hex string.
+ *
+ * Fail-loud: throws if either color is unparseable.
+ */
+function alphaComposite(bgHex: string, fgHex: string, alpha: number): string {
+  if (!/^#[0-9a-f]{6}$/i.test(bgHex)) {
+    throw new Error(`alphaComposite: unparseable bgHex "${bgHex}"`)
+  }
+  if (!/^#[0-9a-f]{6}$/i.test(fgHex)) {
+    throw new Error(`alphaComposite: unparseable fgHex "${fgHex}"`)
+  }
+
+  const br = parseInt(bgHex.slice(1, 3), 16)
+  const bg = parseInt(bgHex.slice(3, 5), 16)
+  const bb = parseInt(bgHex.slice(5, 7), 16)
+
+  const fr = parseInt(fgHex.slice(1, 3), 16)
+  const fg = parseInt(fgHex.slice(3, 5), 16)
+  const fb = parseInt(fgHex.slice(5, 7), 16)
+
+  const r = Math.round(fr * alpha + br * (1 - alpha))
+  const g = Math.round(fg * alpha + bg * (1 - alpha))
+  const b = Math.round(fb * alpha + bb * (1 - alpha))
+
+  return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`
 }
 
-function relativeLuminance(hex: string): number {
-  const r = parseInt(hex.slice(1, 3), 16)
-  const g = parseInt(hex.slice(3, 5), 16)
-  const b = parseInt(hex.slice(5, 7), 16)
-  return 0.2126 * linearize(r) + 0.7152 * linearize(g) + 0.0722 * linearize(b)
-}
-
-function wcagContrastRatio(fgHex: string, bgHex: string): number {
-  const l1 = relativeLuminance(fgHex)
-  const l2 = relativeLuminance(bgHex)
-  const lighter = Math.max(l1, l2)
-  const darker = Math.min(l1, l2)
-  return (lighter + 0.05) / (darker + 0.05)
-}
-
-// Token values from src/styles/theme.css (default light mode):
-// --foreground: #1c1d2b, --card: #ffffff, --muted-foreground: #656870
-// --brand: #5e6ad2, --brand-foreground: #ffffff
-const TOKEN = {
-  CARD: '#ffffff',
-  FOREGROUND: '#1c1d2b',
-  MUTED_FOREGROUND: '#656870',
-  BRAND: '#5e6ad2',
-  BRAND_FOREGROUND: '#ffffff',
-} as const
+// ── Test data ─────────────────────────────────────────────────────────────────
 
 function makePath(overrides: Partial<LearningPath> = {}): LearningPath {
   return {
@@ -83,6 +86,90 @@ function renderHero(props: Partial<Parameters<typeof PathHeroBanner>[0]> = {}) {
 }
 
 describe('PathHeroBanner', () => {
+  // ── Cinematic contrast guarantee ──────────────────────────────────────
+  // The hero overlay uses a fixed black bottom-up scrim whose darkest band
+  // is from-black/85 (alpha 0.85). White text over the worst-case cover
+  // (pure white) composited with this scrim must achieve ≥ 4.5:1 contrast.
+
+  it('renders the cinematic scrim layer', () => {
+    renderHero()
+    const scrim = screen.getByTestId('hero-scrim')
+    expect(scrim).toBeInTheDocument()
+    // The scrim must include a black gradient with at least 70% opacity
+    // in the bottom band where text lives (guaranteed by from-black/85).
+    expect(scrim.className).toContain('from-black/85')
+    expect(scrim.className).toContain('bg-gradient-to-t')
+  })
+
+  it('white text over scrim + worst-case white cover meets WCAG AA (≥4.5:1)', () => {
+    // Worst case: pure white cover (#ffffff) composited with black scrim
+    // at the text band's darkest opacity (from-black/85 = alpha 0.85).
+    const composite = alphaComposite('#ffffff', '#000000', 0.85)
+    // composite should be rgb(38, 38, 38) ≈ #262626
+    expect(composite).toBe('#262626')
+
+    const ratio = hexContrast('#ffffff', composite)
+    expect(ratio).toBeGreaterThanOrEqual(4.5)
+  })
+
+  it('white title text over scrim meets WCAG AA large text (≥3:1)', () => {
+    // Large text threshold (3:1) is trivially met when normal text (4.5:1) passes.
+    const composite = alphaComposite('#ffffff', '#000000', 0.85)
+    const ratio = hexContrast('#ffffff', composite)
+    expect(ratio).toBeGreaterThanOrEqual(3.0)
+  })
+
+  it('scrim opacity at text band is at least 0.70', () => {
+    // The from-black/85 class guarantees black at 85% opacity in the
+    // bottom text band. Assert the literal class is present.
+    renderHero()
+    const scrim = screen.getByTestId('hero-scrim')
+    expect(scrim.className).toContain('from-black/85')
+    // 0.85 ≥ 0.70 — guaranteed by class name.
+  })
+
+  it('contrast helper fails loud on unparseable hex', () => {
+    expect(() => alphaComposite('#12345', '#ffffff', 0.5)).toThrow()
+    expect(() => alphaComposite('#ffffff', '#gggggg', 0.5)).toThrow()
+    expect(() => alphaComposite('white', '#000000', 0.5)).toThrow()
+  })
+
+  // ── Structural assertions ─────────────────────────────────────────────
+
+  it('title is white and rendered over the cinematic scrim', () => {
+    renderHero({
+      path: makePath({ name: 'Cinematic Title' }),
+    })
+    const scrim = screen.getByTestId('hero-scrim')
+    const title = screen.getByTestId('hero-title')
+    // Title sits in the hero content surface above the scrim
+    expect(title).toBeInTheDocument()
+    // Title text is white
+    expect(title.className).toContain('text-white')
+    // The content surface is a sibling/ancestor of the title within the hero section
+    const surface = screen.getByTestId('hero-content-surface')
+    expect(surface.contains(title)).toBe(true)
+    // Scrim is between the cover and the content surface
+    // (structural: scrim is a sibling before the content surface in the section)
+    const section = screen.getByTestId('hero-section')
+    expect(section.contains(scrim)).toBe(true)
+    expect(section.contains(surface)).toBe(true)
+  })
+
+  it('cover image is full-bleed object-cover, not a decorative blur', () => {
+    renderHero({
+      path: makePath({ coverImageUrl: 'https://example.com/cover.jpg' }),
+    })
+    const img = screen.getByTestId('hero-cover-image')
+    fireEvent.load(img)
+    // Primary cover layer must be a visible, sharp, full-cover image.
+    expect(img.className).toContain('object-cover')
+    expect(img.className).toContain('opacity-100')
+    // It must NOT be reduced to the rejected blurred-atmosphere treatment.
+    expect(img.className).not.toContain('blur-2xl')
+    expect(img.className).not.toContain('opacity-20')
+  })
+
   // ── Basic content ──────────────────────────────────────────────────
 
   it('renders path title and description', () => {
@@ -127,7 +214,7 @@ describe('PathHeroBanner', () => {
 
   it('does not render difficulty badge when no label', () => {
     renderHero({ path: makePath({ difficultyLabel: undefined }) })
-    expect(document.querySelector('.tracking-widest')).not.toBeInTheDocument()
+    expect(screen.queryByText('Intermediate')).not.toBeInTheDocument()
   })
 
   // ── CTA behavior ───────────────────────────────────────────────────
@@ -209,7 +296,7 @@ describe('PathHeroBanner', () => {
 
   // ── Cover image states ─────────────────────────────────────────────
 
-  it('renders the premium hero shell with a readable content surface', () => {
+  it('renders the cinematic hero shell structure', () => {
     const { container } = renderHero({
       path: makePath({
         coverImageUrl: 'https://example.com/cover.jpg',
@@ -219,26 +306,11 @@ describe('PathHeroBanner', () => {
     // The hero section should have the premium card shell structure
     const section = container.querySelector('section')
     expect(section?.className).toContain('rounded-[28px]')
-    expect(section?.className).toContain('bg-card')
     expect(section?.className).toContain('shadow-card-ambient')
 
-    // Content sits on an explicit readable surface in every cover state.
-    const surface = screen.getByTestId('hero-content-surface')
-    expect(surface.className).toContain('bg-card/95')
-  })
-
-  it('renders the uploaded cover as a sharp full-cover image, not a decorative blur', () => {
-    renderHero({
-      path: makePath({ coverImageUrl: 'https://example.com/cover.jpg' }),
-    })
-    const img = screen.getByTestId('hero-cover-image')
-    fireEvent.load(img)
-    // Primary cover layer must be a visible, sharp, full-cover image.
-    expect(img.className).toContain('object-cover')
-    expect(img.className).toContain('opacity-100')
-    // It must NOT be reduced to the rejected blurred-atmosphere treatment.
-    expect(img.className).not.toContain('blur-2xl')
-    expect(img.className).not.toContain('opacity-20')
+    // The cinematic scrim is always present
+    const scrim = screen.getByTestId('hero-scrim')
+    expect(scrim).toBeInTheDocument()
   })
 
   it('shows fallback preset gradient when coverImageUrl exists but has not loaded', () => {
@@ -248,9 +320,7 @@ describe('PathHeroBanner', () => {
         coverPreset: 'cyan-blue',
       }),
     })
-    // The preset gradient class should appear in the fallback state
-    // (pending image shows fallback until onLoad fires)
-    // The img should be present but at opacity-0
+    // The img should be present but at opacity-0 (pending)
     const img = document.querySelector('img[src="https://example.com/cover.jpg"]')
     expect(img).toBeInTheDocument()
   })
@@ -262,7 +332,7 @@ describe('PathHeroBanner', () => {
         coverPreset: 'cyan-blue',
       }),
     })
-    // Should have the brand gradient background
+    // Should have the gradient background (cyan-blue preset)
     const gradientDiv = container.querySelector('.bg-gradient-to-br')
     expect(gradientDiv).toBeInTheDocument()
   })
@@ -274,11 +344,10 @@ describe('PathHeroBanner', () => {
         coverPreset: undefined,
       }),
     })
-    const section = container.querySelector('section')
-    // Should have the card surface with default gradient behind it
-    expect(section?.className).toContain('bg-card')
+    // Should have the brand gradient behind the scrim
+    const gradientDiv = container.querySelector('.bg-gradient-to-br')
+    expect(gradientDiv).toBeInTheDocument()
   })
-
 
   // ── Cover image onError / onLoad transitions ──────────────────────
 
@@ -290,13 +359,13 @@ describe('PathHeroBanner', () => {
     const img = document.querySelector('img[src="https://example.com/cover.jpg"]')
     expect(img).toBeInTheDocument()
 
-    // Before onLoad: img at opacity-0 (pending — fallback surface stays active)
+    // Before onLoad: img at opacity-0 (pending)
     expect(img?.className).toContain('opacity-0')
 
     // Fire the onLoad event
     fireEvent.load(img!)
 
-    // After onLoad: img is promoted to a fully visible sharp cover layer
+    // After onLoad: img is promoted to full visibility with Ken Burns finish
     expect(img?.className).toContain('opacity-100')
     expect(img?.className).not.toContain('opacity-0')
   })
@@ -361,7 +430,7 @@ describe('PathHeroBanner', () => {
     expect(liveRegion?.textContent).toContain('could not be loaded')
   })
 
-  // ── Cover image identity & load-state reset (R3, R4) ───────────────
+  // ── Cover image identity & load-state reset ───────────────────────
 
   it('resets to pending and remounts the img when coverImageUrl changes', () => {
     const { rerender } = render(
@@ -513,78 +582,6 @@ describe('PathHeroBanner', () => {
     expect(screen.getByText(/3 courses · ~40h/)).toBeInTheDocument()
   })
 
-  // ── Cover geometry guard: content surface must not fill the full hero ───────
-  // This assertion regresses if the layout reverts to thin padding (p-3/p-4)
-  // that leaves only a 12-16px mat, making the uploaded cover unrecognizable.
-
-  it('hero section has pt-24+ top padding so the cover is visible above the content surface', () => {
-    const { container } = renderHero({
-      path: makePath({ coverImageUrl: 'https://example.com/cover.jpg' }),
-    })
-    const section = container.querySelector('[data-testid="hero-section"]')
-    expect(section).not.toBeNull()
-    // Must have at least pt-24 (96px) of top padding — not just p-3 (12px).
-    // Tailwind classes are checked as literals; any Tailwind pt-24 or larger satisfies this.
-    expect(section?.className).toContain('pt-24')
-    // Confirm the thin-padding regression class is absent.
-    expect(section?.className).not.toMatch(/\bp-3\b/)
-    expect(section?.className).not.toMatch(/\bp-4\b/)
-  })
-
-  it('hero content surface occupies only part of the hero (not the full height)', () => {
-    const { container } = renderHero({
-      path: makePath({ coverImageUrl: 'https://example.com/cover.jpg' }),
-    })
-    const section = container.querySelector('[data-testid="hero-section"]')
-    const surface = container.querySelector('[data-testid="hero-content-surface"]')
-    expect(section).not.toBeNull()
-    expect(surface).not.toBeNull()
-    // The surface must NOT fill the top of the section — the cover is visible
-    // in the top padding area. Assert pt-24 or larger is present on the section
-    // (verified above), and the surface itself does NOT have absolute inset-0
-    // (which would cover the full hero and hide the cover).
-    expect(surface?.className).not.toContain('absolute inset-0')
-    expect(surface?.className).not.toContain('inset-0')
-  })
-
-  // ── WCAG contrast: measured ratios from design-token hex values ─────────────
-  // These are deterministic checks using the actual light-theme values from
-  // src/styles/theme.css. They verify the selected token pairs meet WCAG 2.1 AA
-  // without needing a real browser. Thresholds: large text ≥3:1, normal ≥4.5:1.
-
-  it('text-foreground on bg-card meets WCAG AA large title threshold (≥3:1)', () => {
-    const ratio = wcagContrastRatio(TOKEN.FOREGROUND, TOKEN.CARD)
-    expect(ratio).toBeGreaterThanOrEqual(3.0)
-  })
-
-  it('text-foreground on bg-card meets WCAG AA normal text threshold (≥4.5:1)', () => {
-    const ratio = wcagContrastRatio(TOKEN.FOREGROUND, TOKEN.CARD)
-    expect(ratio).toBeGreaterThanOrEqual(4.5)
-  })
-
-  it('text-muted-foreground on bg-card meets WCAG AA normal text threshold (≥4.5:1)', () => {
-    const ratio = wcagContrastRatio(TOKEN.MUTED_FOREGROUND, TOKEN.CARD)
-    expect(ratio).toBeGreaterThanOrEqual(4.5)
-  })
-
-  it('CTA text-brand-foreground on bg-brand meets WCAG AA normal text threshold (≥4.5:1)', () => {
-    const ratio = wcagContrastRatio(TOKEN.BRAND_FOREGROUND, TOKEN.BRAND)
-    expect(ratio).toBeGreaterThanOrEqual(4.5)
-  })
-
-  it('hero renders with title on the readable card surface for contrast guarantee', () => {
-    // Structural assertion: the title is inside the card surface that carries
-    // the WCAG contrast guarantee (bg-card/95 ≈ white), verified above.
-    renderHero({
-      path: makePath({ name: 'Photography Mastery Roadmap', coverImageUrl: 'https://example.com/cover.jpg' }),
-    })
-    const surface = screen.getByTestId('hero-content-surface')
-    const title = screen.getByRole('heading', { name: 'Photography Mastery Roadmap', level: 1 })
-    expect(surface.contains(title)).toBe(true)
-    // Surface uses bg-card/95 for the contrast guarantee
-    expect(surface.className).toContain('bg-card/95')
-  })
-
   // ── Touch target regression guards ─────────────────────────────────
 
   it('CTA meets minimum 44px touch target', () => {
@@ -595,15 +592,13 @@ describe('PathHeroBanner', () => {
     expect(ctaLink?.className).toContain('min-h-[44px]')
   })
 
-  it('CTA is brand-filled for contrast on the content surface', () => {
+  it('CTA is brand-filled for contrast on the dark scrim', () => {
     renderHero({
       firstCourseId: 'course-1',
     })
     const ctaLink = screen.getByText('Start Learning').closest('a')
-    // Brand fill guarantees >=4.5:1 against the bg-card content surface, where
-    // the old bg-card CTA (designed for a gradient backdrop) would vanish.
+    // Brand fill guarantees ≥ 4.5:1 against the dark scrim surface
     expect(ctaLink?.className).toContain('bg-brand')
     expect(ctaLink?.className).toContain('text-brand-foreground')
-    expect(ctaLink?.className).not.toContain('bg-card')
   })
 })

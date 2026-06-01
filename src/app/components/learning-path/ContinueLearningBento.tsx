@@ -47,7 +47,12 @@ export function ContinueLearningBento({
     trackId && trackName ? { fromTrack: { trackId, trackName } } : undefined
 
   return (
-    <div className={cn('rounded-xl border border-border bg-card overflow-hidden', className)}>
+    <div
+      className={cn(
+        'rounded-[24px] border border-border/50 bg-card overflow-hidden shadow-card-ambient',
+        className
+      )}
+    >
       <div className="flex flex-col md:flex-row min-h-[200px] relative">
         {/* Gradient overlay across the entire card */}
         <div className="absolute inset-0 pointer-events-none" aria-hidden="true">
@@ -55,17 +60,18 @@ export function ContinueLearningBento({
         </div>
 
         {/* Left: Thumbnail with play overlay */}
-        <div className="md:w-2/5 relative bg-muted overflow-hidden">
+        <div className="md:w-2/5 relative bg-muted overflow-hidden group">
           {thumbnailUrl ? (
             <div className="relative h-full">
               <img
                 src={thumbnailUrl}
                 alt=""
-                className="h-full w-full object-cover"
+                className="h-full w-full object-cover group-hover:scale-105 motion-reduce:group-hover:scale-100 motion-safe:transition-transform motion-safe:duration-300"
                 loading="lazy"
               />
+              {/* Deeper gradient overlay for cinematic feel */}
               <div
-                className="absolute inset-0 bg-gradient-to-br from-brand-soft/30 to-transparent pointer-events-none"
+                className="absolute inset-0 bg-gradient-to-br from-brand-soft/40 via-transparent to-black/30 pointer-events-none"
                 aria-hidden="true"
               />
             </div>
@@ -74,24 +80,24 @@ export function ContinueLearningBento({
               <BookOpen className="size-16 text-brand/40" aria-hidden="true" />
             </div>
           )}
-          {/* Centered play button overlay */}
+          {/* Centered play button overlay with brand glow */}
           <div className="absolute inset-0 flex items-center justify-center">
             <Link
               to={lessonPath}
               state={linkState}
-              className="size-16 rounded-full bg-brand/90 flex items-center justify-center text-brand-foreground shadow-lg hover:bg-brand hover:scale-105 transition-all duration-200 group"
+              className="group size-16 rounded-full bg-brand flex items-center justify-center text-brand-foreground shadow-[0_0_20px_color-mix(in_oklch,var(--brand)_30%,transparent)] hover:shadow-[0_0_30px_color-mix(in_oklch,var(--brand)_45%,transparent)] hover:bg-brand hover:scale-110 motion-reduce:hover:scale-100 motion-safe:transition-all motion-safe:duration-200"
               aria-label={`Continue ${courseInfo?.name || 'course'}`}
             >
               <Play
-                className="size-7 ml-0.5 fill-current group-hover:scale-110 transition-transform"
+                className="size-7 ml-0.5 fill-current group-hover:scale-110 motion-safe:transition-transform motion-safe:duration-200"
                 aria-hidden="true"
               />
             </Link>
           </div>
         </div>
 
-        {/* Right: Course info and actions */}
-        <div className="md:w-3/5 p-6 flex flex-col justify-between relative z-10">
+        {/* Right: Course info and actions — subtle glass surface */}
+        <div className="md:w-3/5 p-6 flex flex-col justify-between relative z-10 bg-card/50 backdrop-blur-sm">
           <div>
             <h3 className="text-xl md:text-2xl font-bold mb-1">
               {courseInfo?.name || 'Unknown Course'}
@@ -112,7 +118,7 @@ export function ContinueLearningBento({
             </div>
             <div className="w-full bg-muted h-2 rounded-full mb-6">
               <div
-                className="bg-brand h-full rounded-full transition-all duration-300"
+                className="bg-brand h-full rounded-full motion-safe:transition-all motion-safe:duration-300"
                 style={{ width: `${pct}%` }}
               />
             </div>

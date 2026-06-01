@@ -67,11 +67,16 @@ describe('ContinueLearningBento', () => {
     expect(screen.getByText('50% complete')).toBeInTheDocument()
   })
 
-  it('renders remaining percentage', () => {
+  it('renders progress bar with correct width from completion percentage', () => {
     renderWithRouter(
       <ContinueLearningBento entry={baseEntry} courseInfo={{ ...baseCourseInfo, completionPct: 30 }} />
     )
-    expect(screen.getByText('70% remaining')).toBeInTheDocument()
+    // Progress bar width reflects completion percentage
+    const progressBar = document.querySelector('.bg-brand.h-full.rounded-full')
+    expect(progressBar).toBeInTheDocument()
+    expect(progressBar).toHaveStyle({ width: '30%' })
+    // Completion text shows the percentage
+    expect(screen.getByText('30% complete')).toBeInTheDocument()
   })
 
   it('handles missing thumbnail without crashing', () => {
