@@ -7,7 +7,8 @@
  * @see E89-S05
  */
 
-import { useCallback } from 'react'
+import { useCallback, useMemo } from 'react'
+import { useLocation } from 'react-router'
 import { useLessonChromeStore } from '@/stores/useLessonChromeStore'
 import type { NavigateFunction } from 'react-router'
 import { toast } from 'sonner'
@@ -72,6 +73,23 @@ export function useCompletionFlow(params: CompletionFlowParams): CompletionFlowR
     setShowAutoAdvance,
     setShowCourseSuggestion,
   } = params
+
+  const location = useLocation()
+  // Stable reference to fromTrack — avoids re-creating callbacks on every location object change.
+  const fromTrack = useMemo(() => {
+    const state = location.state
+    if (typeof state !== 'object' || state === null) return undefined
+    const s = state as Record<string, unknown>
+    if (
+      typeof s.fromTrack === 'object' &&
+      s.fromTrack !== null &&
+      typeof (s.fromTrack as Record<string, unknown>).trackId === 'string' &&
+      typeof (s.fromTrack as Record<string, unknown>).trackName === 'string'
+    ) {
+      return s.fromTrack as { trackId: string; trackName: string }
+    }
+    return undefined
+  }, [location.state])
 
   /**
    * Compute whether all lessons in the course are completed (including the current one).
@@ -163,10 +181,13 @@ export function useCompletionFlow(params: CompletionFlowParams): CompletionFlowR
     if (nextLesson && courseId) {
       const autoPlay = readAutoPlay()
       navigate(`/courses/${courseId}/lessons/${nextLesson.id}`, {
-        state: autoPlay ? { autoPlay: true } : undefined,
+        state: {
+          ...(autoPlay ? { autoPlay: true } : {}),
+          ...(fromTrack ? { fromTrack } : {}),
+        },
       })
     }
-  }, [nextLesson, courseId, navigate])
+  }, [nextLesson, courseId, navigate, fromTrack])
 
   const handleCancelAutoAdvance = useCallback(() => {
     setShowAutoAdvance(false)
@@ -195,10 +216,13 @@ export function useCompletionFlow(params: CompletionFlowParams): CompletionFlowR
     if (nextLesson && courseId) {
       const autoPlay = readAutoPlay()
       navigate(`/courses/${courseId}/lessons/${nextLesson.id}`, {
-        state: autoPlay ? { autoPlay: true } : undefined,
+        state: {
+          ...(autoPlay ? { autoPlay: true } : {}),
+          ...(fromTrack ? { fromTrack } : {}),
+        },
       })
     }
-  }, [nextLesson, courseId, navigate, setCelebrationOpen])
+  }, [nextLesson, courseId, navigate, setCelebrationOpen, fromTrack])
 
   // Handle celebration modal open/close — triggers course suggestion on course completion dismiss
   const handleCelebrationOpenChange = useCallback(

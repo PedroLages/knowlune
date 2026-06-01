@@ -44,6 +44,10 @@ interface PathHeroBannerProps {
   backLabel?: string
   onEdit?: () => void
   onDelete?: () => void
+  /** Track context — when present, the CTA link carries fromTrack state so the
+   *  Layout back-link shows "← {trackName}" on the lesson player page. */
+  trackId?: string
+  trackName?: string
 }
 
 export function PathHeroBanner({
@@ -59,6 +63,8 @@ export function PathHeroBanner({
   backLabel = 'Back to Learning Tracks',
   onEdit,
   onDelete,
+  trackId,
+  trackName,
 }: PathHeroBannerProps) {
   const hasDropdownActions = onEdit || onDelete
 
@@ -101,7 +107,7 @@ return (
         // making it recognizable as the primary full-cover image layer.
         // Thin left/right/bottom padding creates a slim mat frame around the card.
         'relative overflow-hidden rounded-[28px] border border-border/50 bg-card shadow-card-ambient',
-        'pt-24 sm:pt-36 px-3 sm:px-4 pb-3 sm:pb-4'
+        'pt-16 sm:pt-24 px-3 sm:px-4 pb-3 sm:pb-4'
       )}
       data-testid="hero-section"
     >
@@ -241,6 +247,7 @@ return (
                   ? `/courses/${ctaCourseId}/lessons/${targetLessonId}`
                   : `/courses/${ctaCourseId}`
               }
+              state={trackId && trackName ? { fromTrack: { trackId, trackName } } : undefined}
               className="inline-flex items-center gap-2 bg-brand text-brand-foreground hover:bg-brand-hover shadow-lg rounded-xl font-bold px-6 py-3 min-h-[44px] motion-safe:transition-colors"
             >
               <PlayCircle className="size-5" aria-hidden="true" />

@@ -12,6 +12,14 @@ interface ContinueLearningBentoProps {
   targetLessonId?: string
   onViewCurriculum?: () => void
   className?: string
+  /** Track context — when present, lesson/course links carry fromTrack state so
+   *  the Layout back-link shows "← {trackName}" on the lesson player. */
+  trackId?: string
+  trackName?: string
+  /** Position of this course within the track (1-based). */
+  coursePosition?: number
+  /** Total number of courses in the track. */
+  totalCourses?: number
 }
 
 /**
@@ -26,11 +34,17 @@ export function ContinueLearningBento({
   targetLessonId,
   onViewCurriculum,
   className,
+  trackId,
+  trackName,
+  coursePosition,
+  totalCourses,
 }: ContinueLearningBentoProps) {
   const pct = courseInfo?.completionPct ?? 0
   const lessonPath = targetLessonId
     ? `/courses/${entry.courseId}/lessons/${targetLessonId}`
     : `/courses/${entry.courseId}`
+  const linkState =
+    trackId && trackName ? { fromTrack: { trackId, trackName } } : undefined
 
   return (
     <div className={cn('rounded-xl border border-border bg-card overflow-hidden', className)}>
@@ -64,6 +78,7 @@ export function ContinueLearningBento({
           <div className="absolute inset-0 flex items-center justify-center">
             <Link
               to={lessonPath}
+              state={linkState}
               className="size-16 rounded-full bg-brand/90 flex items-center justify-center text-brand-foreground shadow-lg hover:bg-brand hover:scale-105 transition-all duration-200 group"
               aria-label={`Continue ${courseInfo?.name || 'course'}`}
             >
@@ -85,11 +100,15 @@ export function ContinueLearningBento({
               <p className="text-sm text-muted-foreground mb-3">{courseInfo.authorName}</p>
             )}
             <div className="flex items-center gap-3 text-sm text-muted-foreground mb-4">
+              {coursePosition != null && totalCourses != null ? (
+                <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-semibold">
+                  Course {coursePosition} of {totalCourses}
+                </span>
+              ) : null}
               <span className="flex items-center gap-1.5">
                 <Clock className="size-4 text-brand" aria-hidden="true" />
-                {100 - pct}% remaining
+                <span className="text-brand font-medium">{pct}% complete</span>
               </span>
-              <span className="text-brand font-medium">{pct}% complete</span>
             </div>
             <div className="w-full bg-muted h-2 rounded-full mb-6">
               <div
@@ -100,7 +119,7 @@ export function ContinueLearningBento({
           </div>
           <div className="flex flex-wrap gap-3">
             <Button variant="brand" asChild>
-              <Link to={lessonPath}>
+              <Link to={lessonPath} state={linkState}>
                 Continue lesson
                 <ArrowRight className="size-4 ml-2" aria-hidden="true" />
               </Link>

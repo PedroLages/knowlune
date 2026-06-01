@@ -217,14 +217,16 @@ export function LearningTrackDetail() {
     return count
   }, [courseEntries, pathProgress.courseProgress, manuallyCompletedIds])
 
-  // Enhanced progress that includes manual completions
+  // Enhanced progress that includes manual completions.
+  // completionPct from the hook is lesson-level and correct; the previous override
+  // with (completedCourses / totalCourses) * 100 incorrectly left the ring at 0 %
+  // for the entire first course. Only completedCourses is adjusted here.
   const enhancedProgress = useMemo(() => {
     const completedCourses = pathProgress.completedCourses + manualCompletionsNotInAuto
-    const totalCourses = Math.max(pathProgress.totalCourses, 1)
     return {
       ...pathProgress,
       completedCourses,
-      completionPct: (completedCourses / totalCourses) * 100,
+      totalCourses: Math.max(pathProgress.totalCourses, 1),
     }
   }, [pathProgress, manualCompletionsNotInAuto])
 
@@ -496,6 +498,8 @@ export function LearningTrackDetail() {
           targetLessonId={targetLessonId}
           backUrl="/learning-tracks"
           backLabel="Back to Learning Tracks"
+          trackId={trackId}
+          trackName={path.name}
         />
       </div>
 
@@ -524,6 +528,10 @@ export function LearningTrackDetail() {
                       courseInfo={courseInfo.get(currentEntry.courseId)}
                       thumbnailUrl={thumbnailUrls[currentEntry.courseId]}
                       targetLessonId={currentEntryTargetLessonId}
+                      trackId={trackId}
+                      trackName={path.name}
+                      coursePosition={courseEntries.indexOf(currentEntry) + 1}
+                      totalCourses={courseEntries.length}
                     />
                   </motion.section>
                 )}
@@ -549,7 +557,7 @@ export function LearningTrackDetail() {
                           {courseEntries.length} {courseEntries.length === 1 ? 'Course' : 'Courses'}
                         </span>
                         <Button
-                          variant={isEditing ? 'brand' : 'outline'}
+                          variant={isEditing ? 'brand' : 'ghost'}
                           size="sm"
                           onClick={() => setIsEditing(!isEditing)}
                           data-testid="edit-syllabus-button"
@@ -570,10 +578,11 @@ export function LearningTrackDetail() {
                       onGapResolve={() => {}}
                       onCourseClick={courseId => {
                         const lessonId = firstLessonByCourse.get(courseId)
+                        const fromTrackState = { fromTrack: { trackId: trackId ?? '', trackName: path.name } }
                         if (lessonId) {
-                          navigate(`/courses/${courseId}/lessons/${lessonId}`)
+                          navigate(`/courses/${courseId}/lessons/${lessonId}`, { state: fromTrackState })
                         } else {
-                          navigate(`/courses/${courseId}`)
+                          navigate(`/courses/${courseId}`, { state: fromTrackState })
                         }
                       }}
                       autoScrollToCurrent
