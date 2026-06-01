@@ -166,6 +166,7 @@ export function PathHeroBanner({
       <div
         className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/45 to-black/5"
         data-testid="hero-scrim"
+        aria-hidden="true"
       />
 
       {/* Faint left vignette for the title column — adds depth while keeping
@@ -249,7 +250,7 @@ export function PathHeroBanner({
 
           {/* Title — white with drop-shadow for readability */}
           <h1
-            className="text-[28px] sm:text-[36px] lg:text-[44px] font-display font-extrabold tracking-tight text-white drop-shadow mb-3 sm:mb-4"
+            className="text-[28px] sm:text-[36px] lg:text-[44px] font-display font-extrabold tracking-tight text-white drop-shadow-[0_4px_8px_rgba(0,0,0,0.5)] mb-3 sm:mb-4"
             data-testid="hero-title"
           >
             {path.name}
@@ -289,7 +290,7 @@ export function PathHeroBanner({
                     key={`${i}:${url}`}
                     src={url}
                     alt=""
-                    className="size-10 rounded-full ring-2 ring-white/30 bg-black/30 object-cover hover:scale-110 hover:z-20 motion-safe:transition-transform"
+                    className="size-10 rounded-full ring-2 ring-white/30 bg-black/30 object-cover hover:scale-110 hover:z-20 motion-safe:transition-transform cursor-pointer"
                     loading="lazy"
                   />
                 ))}

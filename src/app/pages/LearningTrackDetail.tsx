@@ -486,7 +486,9 @@ export function LearningTrackDetail() {
 
   return (
     <>
-      {/* Full-width hero banner — breaks out of Layout main padding */}
+      {/* Full-width hero banner — breaks out of Layout main padding.
+          These -mx values cancel the Layout's main-content padding (p-4 sm:p-6).
+          If Layout padding changes, update these values to prevent horizontal scroll. */}
       <div className="-mx-4 -mt-4 sm:-mx-6 sm:-mt-6">
         <PathHeroBanner
           path={path}
@@ -505,7 +507,7 @@ export function LearningTrackDetail() {
       </div>
 
       {/* Content area with negative margin to overlap hero */}
-      <div className="-mt-10 relative z-10">
+      <div className="-mt-8 sm:-mt-10 lg:-mt-12 relative z-10">
         {/* Cover-derived ambient atmosphere — decorative glow behind cards */}
         <PathCinematicAtmosphere
           coverUrl={path.coverImageUrl}
