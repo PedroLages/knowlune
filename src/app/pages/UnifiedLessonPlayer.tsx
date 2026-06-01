@@ -105,9 +105,14 @@ export function UnifiedLessonPlayer() {
   // Clear autoPlay state after consuming it (prevents re-trigger on refresh).
   // Scoped to parseLocationFlag only — using shouldAutoPlay (the OR-combined
   // value) would loop forever when storeAutoPlay is true since {} is truthy.
+  // Spread existing state so fromTrack and other session flags are preserved;
+  // only the autoPlay key is removed.
   useEffect(() => {
     if (parseLocationFlag(location.state, 'autoPlay') && location.state) {
-      navigate(location.pathname, { replace: true, state: {} })
+      navigate(location.pathname, {
+        replace: true,
+        state: { ...location.state, autoPlay: undefined },
+      })
     }
   }, [location.pathname, location.state, navigate])
 
@@ -589,7 +594,11 @@ export function UnifiedLessonPlayer() {
           {prevLesson ? (
             <Button
               variant="outline"
-              onClick={() => navigate(`/courses/${courseId}/lessons/${prevLesson.id}`)}
+              onClick={() =>
+                navigate(`/courses/${courseId}/lessons/${prevLesson.id}`, {
+                  state: { ...location.state },
+                })
+              }
             >
               <ChevronLeft className="mr-1 size-4" aria-hidden="true" />
               Previous
@@ -600,7 +609,11 @@ export function UnifiedLessonPlayer() {
           {nextLesson ? (
             <Button
               variant="brand"
-              onClick={() => navigate(`/courses/${courseId}/lessons/${nextLesson.id}`)}
+              onClick={() =>
+                navigate(`/courses/${courseId}/lessons/${nextLesson.id}`, {
+                  state: { ...location.state },
+                })
+              }
             >
               Next
               <ChevronRight className="ml-1 size-4" aria-hidden="true" />

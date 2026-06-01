@@ -496,6 +496,8 @@ export function LearningTrackDetail() {
           targetLessonId={targetLessonId}
           backUrl="/learning-tracks"
           backLabel="Back to Learning Tracks"
+          trackId={trackId}
+          trackName={path.name}
         />
       </div>
 
@@ -524,6 +526,10 @@ export function LearningTrackDetail() {
                       courseInfo={courseInfo.get(currentEntry.courseId)}
                       thumbnailUrl={thumbnailUrls[currentEntry.courseId]}
                       targetLessonId={currentEntryTargetLessonId}
+                      trackId={trackId}
+                      trackName={path.name}
+                      coursePosition={courseEntries.indexOf(currentEntry) + 1}
+                      totalCourses={courseEntries.length}
                     />
                   </motion.section>
                 )}
@@ -570,10 +576,11 @@ export function LearningTrackDetail() {
                       onGapResolve={() => {}}
                       onCourseClick={courseId => {
                         const lessonId = firstLessonByCourse.get(courseId)
+                        const fromTrackState = { fromTrack: { trackId: trackId ?? '', trackName: path.name } }
                         if (lessonId) {
-                          navigate(`/courses/${courseId}/lessons/${lessonId}`)
+                          navigate(`/courses/${courseId}/lessons/${lessonId}`, { state: fromTrackState })
                         } else {
-                          navigate(`/courses/${courseId}`)
+                          navigate(`/courses/${courseId}`, { state: fromTrackState })
                         }
                       }}
                       autoScrollToCurrent

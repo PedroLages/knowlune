@@ -26,10 +26,32 @@ export interface CourseRouteInfo {
   lessonId: string | null
   /** Resolved course name from the import store, 'Course' fallback, or null when not on a course page */
   courseName: string | null
+  /** Track context set by LearningTrackDetail when navigating to a course/lesson.
+   *  Present only when the user entered the course from a learning track in this session.
+   *  Lost on hard refresh (intentional — matches all other location.state flags). */
+  fromTrack?: { trackId: string; trackName: string }
+}
+
+/** Narrow an unknown location.state to the fromTrack shape, returning undefined on mismatch. */
+function readFromTrack(
+  state: unknown
+): { trackId: string; trackName: string } | undefined {
+  if (typeof state !== 'object' || state === null) return undefined
+  const s = state as Record<string, unknown>
+  if (
+    typeof s.fromTrack === 'object' &&
+    s.fromTrack !== null &&
+    typeof (s.fromTrack as Record<string, unknown>).trackId === 'string' &&
+    typeof (s.fromTrack as Record<string, unknown>).trackName === 'string'
+  ) {
+    return s.fromTrack as { trackId: string; trackName: string }
+  }
+  return undefined
 }
 
 export function useCourseRoute(): CourseRouteInfo {
-  const { pathname } = useLocation()
+  const location = useLocation()
+  const { pathname } = location
   const importedCourses = useCourseImportStore(s => s.importedCourses)
 
   // Split pathname and drop the leading empty segment from the initial '/'
@@ -62,5 +84,7 @@ export function useCourseRoute(): CourseRouteInfo {
     ? (course?.name ?? 'Course')
     : null
 
-  return { isLessonRoute, isCourseRoute, courseId, lessonId, courseName }
+  const fromTrack = readFromTrack(location.state)
+
+  return { isLessonRoute, isCourseRoute, courseId, lessonId, courseName, fromTrack }
 }
