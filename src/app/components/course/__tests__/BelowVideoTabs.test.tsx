@@ -19,7 +19,18 @@ import { MemoryRouter } from 'react-router'
 // ---------------------------------------------------------------------------
 
 vi.mock('@/app/components/course/tabs/NotesTab', () => ({
-  NotesTab: () => <div data-testid="notes-tab-content">Notes Content</div>,
+  NotesTab: ({ courseId, lessonId }: {
+    courseId: string;
+    lessonId: string;
+  }) => (
+    <div
+      data-testid="notes-tab-content"
+      data-course-id={courseId}
+      data-lesson-id={lessonId}
+    >
+      Notes Content
+    </div>
+  ),
 }))
 
 vi.mock('@/app/components/course/tabs/LessonBookmarksTab', () => ({
@@ -291,5 +302,71 @@ describe('BelowVideoTabs', () => {
     renderTabsWithHideNotesTab(true)
     // NotesTab content should still be in DOM even though hidden
     expect(screen.getByTestId('notes-tab-content')).toBeInTheDocument()
+  })
+
+  // ---------------------------------------------------------------------------
+  // forceMount: NotesTab receives correct lesson context for Dexie loading
+  // ---------------------------------------------------------------------------
+
+  it('passes correct courseId and lessonId to NotesTab on initial mount', () => {
+    renderTabs()
+    const content = screen.getByTestId('notes-tab-content')
+    expect(content).toHaveAttribute('data-course-id', 'course-1')
+    expect(content).toHaveAttribute('data-lesson-id', 'lesson-1')
+  })
+
+  it('updates NotesTab lessonId when lesson changes (preserving mount)', () => {
+    const adapter = createMockAdapter()
+    const { rerender } = render(
+      <MemoryRouter>
+        <BelowVideoTabs
+          courseId="course-1"
+          lessonId="lesson-1"
+          adapter={adapter as never}
+          currentTime={42}
+          onSeek={vi.fn()}
+        />
+      </MemoryRouter>
+    )
+
+    // NotesTab is mounted with initial lesson
+    expect(screen.getByTestId('notes-tab-content')).toHaveAttribute('data-lesson-id', 'lesson-1')
+
+    // Re-render with new lesson
+    rerender(
+      <MemoryRouter>
+        <BelowVideoTabs
+          courseId="course-1"
+          lessonId="lesson-2"
+          adapter={adapter as never}
+          currentTime={42}
+          onSeek={vi.fn()}
+        />
+      </MemoryRouter>
+    )
+
+    // NotesTab should still be mounted (forceMount) with updated lessonId
+    expect(screen.getByTestId('notes-tab-content')).toHaveAttribute('data-lesson-id', 'lesson-2')
+  })
+
+  it('keeps NotesTab mounted and receiving correct lesson context across tab switches', async () => {
+    const user = userEvent.setup()
+    renderTabs({ capabilities: { hasTranscript: true } })
+
+    // NotesTab is mounted with initial lesson context
+    expect(screen.getByTestId('notes-tab-content')).toHaveAttribute('data-lesson-id', 'lesson-1')
+
+    // Switch to bookmarks tab
+    const tabList = screen.getByRole('tablist')
+    await user.click(within(tabList).getByText('Bookmarks'))
+
+    // NotesTab still mounted with correct lesson context
+    expect(screen.getByTestId('notes-tab-content')).toHaveAttribute('data-lesson-id', 'lesson-1')
+
+    // Switch to transcript
+    await user.click(within(tabList).getByText('Transcript'))
+
+    // NotesTab still mounted with correct lesson context
+    expect(screen.getByTestId('notes-tab-content')).toHaveAttribute('data-lesson-id', 'lesson-1')
   })
 })

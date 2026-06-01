@@ -255,6 +255,7 @@ export function BelowVideoTabs({
             value="notes"
             variant="brand-pill"
             className={cn(hideNotesTab && 'hidden')}
+            aria-selected={activeTab === 'notes' && !hideNotesTab ? true : undefined}
           >
             <PencilLine className="size-3.5" aria-hidden="true" />
             Notes
@@ -291,7 +292,12 @@ export function BelowVideoTabs({
           )}
         </TabsList>
 
-          <TabsContent value="notes" forceMount className={cn('mt-4', hideNotesTab && 'hidden')}>
+          <TabsContent
+            value="notes"
+            forceMount
+            className={cn('mt-4', hideNotesTab && 'hidden', 'data-[state=inactive]:hidden')}
+            aria-hidden={activeTab !== 'notes'}
+          >
             <div className="bg-card rounded-2xl shadow-sm overflow-hidden">
               {isMobile && (
                 <div className="flex items-center justify-between px-4 py-2 border-b">

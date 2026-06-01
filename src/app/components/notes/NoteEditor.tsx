@@ -109,7 +109,7 @@ interface NoteEditorProps {
   noteId?: string
   initialContent?: string
   currentVideoTime?: number
-  onSave?: (content: string, tags: string[]) => void
+  onSave?: (content: string, tags: string[]) => Promise<void> | void
   onVideoSeek?: (seconds: number) => void
   onCaptureFrame?: () => Promise<CapturedFrame | null>
   compact?: boolean
@@ -184,6 +184,7 @@ export function NoteEditor({
   const maxWaitRef = useRef<ReturnType<typeof setTimeout>>(undefined)
   const fadeTimeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined)
   const lastSavedContentRef = useRef(initialContent)
+  const pendingSaveContentRef = useRef<string | null>(null)
   const hasEverSavedRef = useRef(!!noteId)
 
   // Latest-ref pattern to avoid stale closures
@@ -203,11 +204,35 @@ export function NoteEditor({
   const doSave = useCallback((html: string) => {
     // Avoid duplicate saves of identical content
     if (html === lastSavedContentRef.current) return
-    lastSavedContentRef.current = html
+
+    // Track this content as pending so unmount cleanup doesn't duplicate the save
+    pendingSaveContentRef.current = html
 
     const text = html.replace(/<[^>]*>/g, ' ')
     const tags = extractTags(text)
-    onSaveRef.current?.(html, tags)
+    const result = onSaveRef.current?.(html, tags)
+
+    // If the save is async, only update lastSavedContentRef after it completes.
+    // This prevents a race where the component unmounts before the Dexie write
+    // finishes, causing the unmount cleanup to skip the save.
+    if (result instanceof Promise) {
+      result
+        .then(() => {
+          if (pendingSaveContentRef.current === html) {
+            lastSavedContentRef.current = html
+            pendingSaveContentRef.current = null
+          }
+        })
+        .catch(() => {
+          toast.error('Failed to save note')
+          if (pendingSaveContentRef.current === html) {
+            pendingSaveContentRef.current = null
+          }
+        })
+    } else {
+      // Synchronous save — update ref immediately
+      lastSavedContentRef.current = html
+    }
 
     // Show "Saved" indicator
     setSaveStatus('saved')
@@ -540,14 +565,14 @@ export function NoteEditor({
       const ed = editorRef.current
       if (ed && !ed.isDestroyed) {
         const html = ed.getHTML()
-        if (html !== lastSavedContentRef.current) {
+        if (html !== lastSavedContentRef.current && html !== pendingSaveContentRef.current) {
           const text = html.replace(/<[^>]*>/g, ' ')
           const tags = extractTags(text)
           try {
             const result = onSaveRef.current?.(html, tags)
             // Handle async promise rejection (fire-and-forget, can't await in cleanup)
-            if (result && typeof (result as unknown as Promise<void>).catch === 'function') {
-              ;(result as unknown as Promise<void>).catch(() => {
+            if (result instanceof Promise) {
+              result.catch(() => {
                 toast.error('Failed to save note before leaving the page')
               })
             }
