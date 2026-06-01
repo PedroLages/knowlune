@@ -1,33 +1,14 @@
 import { describe, it, expect } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
+import { hexContrast } from '../../../../../tests/utils/wcag-contrast'
 import { PathHeroBanner } from '@/app/components/learning-path/PathHeroBanner'
 import type { LearningPath } from '@/data/types'
 import type { PathProgressSummary } from '@/app/hooks/usePathProgress'
 
 // ── WCAG contrast helpers (extended for alpha composite) ──────────────────────
-// Computes contrast ratios from known hex values and alpha composites.
-// This gives measurable, deterministic checks without needing a real browser.
-
-function linearize(v: number): number {
-  const c = v / 255
-  return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4
-}
-
-function relativeLuminance(hex: string): number {
-  const r = parseInt(hex.slice(1, 3), 16)
-  const g = parseInt(hex.slice(3, 5), 16)
-  const b = parseInt(hex.slice(5, 7), 16)
-  return 0.2126 * linearize(r) + 0.7152 * linearize(g) + 0.0722 * linearize(b)
-}
-
-function wcagContrastRatio(fgHex: string, bgHex: string): number {
-  const l1 = relativeLuminance(fgHex)
-  const l2 = relativeLuminance(bgHex)
-  const lighter = Math.max(l1, l2)
-  const darker = Math.min(l1, l2)
-  return (lighter + 0.05) / (darker + 0.05)
-}
+// hexLuminance and hexContrast imported from tests/utils/wcag-contrast.
+// alphaComposite is unique to this file and kept inline below.
 
 /**
  * Alpha-composite a foreground color over a background color.
@@ -127,14 +108,14 @@ describe('PathHeroBanner', () => {
     // composite should be rgb(38, 38, 38) ≈ #262626
     expect(composite).toBe('#262626')
 
-    const ratio = wcagContrastRatio('#ffffff', composite)
+    const ratio = hexContrast('#ffffff', composite)
     expect(ratio).toBeGreaterThanOrEqual(4.5)
   })
 
   it('white title text over scrim meets WCAG AA large text (≥3:1)', () => {
     // Large text threshold (3:1) is trivially met when normal text (4.5:1) passes.
     const composite = alphaComposite('#ffffff', '#000000', 0.85)
-    const ratio = wcagContrastRatio('#ffffff', composite)
+    const ratio = hexContrast('#ffffff', composite)
     expect(ratio).toBeGreaterThanOrEqual(3.0)
   })
 
