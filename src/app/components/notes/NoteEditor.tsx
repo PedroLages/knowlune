@@ -215,7 +215,7 @@ export function NoteEditor({
     // If the save is async, only update lastSavedContentRef after it completes.
     // This prevents a race where the component unmounts before the Dexie write
     // finishes, causing the unmount cleanup to skip the save.
-    if (result instanceof Promise) {
+    if (result && typeof result.then === 'function') {
       result
         .then(() => {
           if (pendingSaveContentRef.current === html) {
@@ -571,7 +571,7 @@ export function NoteEditor({
           try {
             const result = onSaveRef.current?.(html, tags)
             // Handle async promise rejection (fire-and-forget, can't await in cleanup)
-            if (result instanceof Promise) {
+            if (result && typeof result.then === 'function') {
               result.catch(() => {
                 toast.error('Failed to save note before leaving the page')
               })

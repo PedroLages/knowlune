@@ -255,7 +255,6 @@ export function BelowVideoTabs({
             value="notes"
             variant="brand-pill"
             className={cn(hideNotesTab && 'hidden')}
-            aria-selected={activeTab === 'notes' && !hideNotesTab ? true : undefined}
           >
             <PencilLine className="size-3.5" aria-hidden="true" />
             Notes
