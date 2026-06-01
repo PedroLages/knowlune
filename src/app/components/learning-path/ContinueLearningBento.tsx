@@ -66,7 +66,7 @@ export function ContinueLearningBento({
               <img
                 src={thumbnailUrl}
                 alt=""
-                className="h-full w-full object-cover group-hover:scale-105 motion-safe:transition-transform motion-safe:duration-300"
+                className="h-full w-full object-cover group-hover:scale-105 motion-reduce:group-hover:scale-100 motion-safe:transition-transform motion-safe:duration-300"
                 loading="lazy"
               />
               {/* Deeper gradient overlay for cinematic feel */}
@@ -85,7 +85,7 @@ export function ContinueLearningBento({
             <Link
               to={lessonPath}
               state={linkState}
-              className="group size-16 rounded-full bg-brand flex items-center justify-center text-brand-foreground shadow-[0_0_20px_color-mix(in_oklch,var(--brand)_30%,transparent)] hover:shadow-[0_0_30px_color-mix(in_oklch,var(--brand)_45%,transparent)] hover:bg-brand hover:scale-110 motion-safe:transition-all motion-safe:duration-200"
+              className="group size-16 rounded-full bg-brand flex items-center justify-center text-brand-foreground shadow-[0_0_20px_color-mix(in_oklch,var(--brand)_30%,transparent)] hover:shadow-[0_0_30px_color-mix(in_oklch,var(--brand)_45%,transparent)] hover:bg-brand hover:scale-110 motion-reduce:hover:scale-100 motion-safe:transition-all motion-safe:duration-200"
               aria-label={`Continue ${courseInfo?.name || 'course'}`}
             >
               <Play

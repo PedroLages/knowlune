@@ -274,7 +274,7 @@ export function PathHeroBanner({
                     : `/courses/${ctaCourseId}`
                 }
                 state={trackId && trackName ? { fromTrack: { trackId, trackName } } : undefined}
-                className="inline-flex items-center gap-2 bg-brand text-brand-foreground hover:bg-brand-hover shadow-lg rounded-xl font-bold px-6 py-3 min-h-[44px] motion-safe:transition-all motion-safe:duration-200 hover:shadow-xl hover:-translate-y-0.5"
+                className="inline-flex items-center gap-2 bg-brand text-brand-foreground hover:bg-brand-hover shadow-lg rounded-xl font-bold px-6 py-3 min-h-[44px] motion-safe:transition-all motion-safe:duration-200 hover:shadow-xl hover:-translate-y-0.5 motion-reduce:hover:translate-y-0"
                 data-testid="hero-cta"
               >
                 <PlayCircle className="size-5" aria-hidden="true" />
@@ -290,7 +290,7 @@ export function PathHeroBanner({
                     key={`${i}:${url}`}
                     src={url}
                     alt=""
-                    className="size-10 rounded-full ring-2 ring-white/30 bg-black/30 object-cover hover:scale-110 hover:z-20 motion-safe:transition-transform cursor-pointer"
+                    className="size-10 rounded-full ring-2 ring-white/30 bg-black/30 object-cover hover:scale-110 motion-reduce:hover:scale-100 hover:z-20 motion-safe:transition-transform"
                     loading="lazy"
                   />
                 ))}
