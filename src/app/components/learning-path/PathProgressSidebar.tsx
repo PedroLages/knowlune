@@ -42,14 +42,19 @@ export function PathProgressSidebar({
 
   return (
     <aside className={cn('space-y-6', className)}>
-      {/* Progress card */}
-      <Card className="rounded-2xl shadow-lg border border-border">
+      {/* Progress card — cinematic glass surface */}
+      <Card className="rounded-[24px] border border-border/50 bg-card shadow-card-ambient">
         <CardContent className="p-6">
           {/* Your Progress heading */}
           <h3 className="font-display text-lg font-bold mb-6">Your Progress</h3>
 
-          {/* Progress ring */}
-          <div className="flex justify-center mb-6">
+          {/* Progress ring with soft brand glow wrapper */}
+          <div className="flex justify-center mb-6 relative">
+            {/* Ambient glow behind the ring */}
+            <div
+              className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 size-36 rounded-full bg-brand/5 blur-2xl pointer-events-none"
+              aria-hidden="true"
+            />
             <PathProgressRing percentage={completionPct} size="xl" strokeWidth={6}>
               <div className="text-center" aria-live="polite" aria-atomic="true">
                 <span className="block text-2xl font-extrabold text-foreground">
@@ -84,7 +89,7 @@ export function PathProgressSidebar({
 
           {/* Divider */}
           {skillTags && skillTags.length > 0 && (
-            <hr className="my-6 border-border" />
+            <hr className="my-6 border-border/50" />
           )}
 
           {/* Skills tags */}
@@ -95,7 +100,7 @@ export function PathProgressSidebar({
                 {skillTags.map(tag => (
                   <span
                     key={tag}
-                    className="px-2 py-1 bg-muted border border-border rounded-md text-xs font-bold text-muted-foreground"
+                    className="px-2 py-1 bg-muted border border-border/50 rounded-md text-xs font-bold text-muted-foreground"
                   >
                     {tag}
                   </span>
@@ -109,7 +114,7 @@ export function PathProgressSidebar({
       {/* Certificate card removed — see R9 */}
       {/* Track metadata card (only when props are provided) */}
       {(difficultyLabel || estimatedHours != null || courseCount != null || createdAt || updatedAt) && (
-        <Card className="rounded-2xl border border-border">
+        <Card className="rounded-[24px] border border-border/50 bg-card shadow-card-ambient">
           <CardContent className="p-5">
             <h3 className="font-display text-sm font-bold mb-4">Track Info</h3>
             <div className="space-y-2.5 text-sm">

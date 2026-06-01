@@ -9,6 +9,7 @@ import { Card, CardContent } from '@/app/components/ui/card'
 import { EmptyState } from '@/app/components/EmptyState'
 import { DelayedFallback } from '@/app/components/DelayedFallback'
 import { PathHeroBanner } from '@/app/components/learning-path/PathHeroBanner'
+import { PathCinematicAtmosphere } from '@/app/components/learning-path/PathCinematicAtmosphere'
 import { PathProgressSidebar } from '@/app/components/learning-path/PathProgressSidebar'
 import { ContinueLearningBento } from '@/app/components/learning-path/ContinueLearningBento'
 import { PathTimeline } from '@/app/components/learning-path/PathTimeline'
@@ -505,6 +506,12 @@ export function LearningTrackDetail() {
 
       {/* Content area with negative margin to overlap hero */}
       <div className="-mt-10 relative z-10">
+        {/* Cover-derived ambient atmosphere — decorative glow behind cards */}
+        <PathCinematicAtmosphere
+          coverUrl={path.coverImageUrl}
+          coverPreset={path.coverPreset}
+        />
+
         <motion.div
           variants={containerVariants}
           initial="hidden"
@@ -546,9 +553,14 @@ export function LearningTrackDetail() {
                   </motion.div>
                 )}
 
-                {/* Syllabus Card */}
+                {/* Syllabus Card — cinematic glass surface */}
                 <motion.section variants={itemVariants}>
-                  <div className="bg-card rounded-2xl shadow-sm border border-border p-6 lg:p-8">
+                  <div className="bg-card rounded-[24px] shadow-card-ambient border border-border/50 p-6 lg:p-8 relative overflow-hidden">
+                    {/* Cover-tinted top accent bar */}
+                    <div
+                      className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-brand/60 to-brand/20 pointer-events-none"
+                      aria-hidden="true"
+                    />
                     {/* Card header */}
                     <div className="flex items-center justify-between mb-8">
                       <h2 className="font-display text-2xl font-bold">Syllabus</h2>
