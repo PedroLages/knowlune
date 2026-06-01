@@ -6,6 +6,8 @@ module: learning-tracks
 problem_type: best_practice
 component: frontend
 severity: medium
+superseded_by:
+  - docs/solutions/best-practices/learning-track-detail-cinematic-redesign-implementation-lessons-2026-06-01.md
 applies_when:
   - "Rendering user-uploaded cover images behind hero text that must stay readable over arbitrary bright/dark/busy artwork"
   - "Asserting real WCAG contrast in Playwright instead of relying on toBeVisible() or design-token assumptions"
@@ -33,6 +35,8 @@ tags:
 ---
 
 # Learning Track Hero: Readable Uploaded Covers, Cached-Image Load State, and Measured WCAG Contrast in Tests
+
+> **Superseded:** The contrast-carrier mechanism documented here (solid `bg-card/95` surface) has been superseded by a fixed dark scrim approach on the cinematic redesign. See [learning-track-detail-cinematic-redesign-implementation-lessons-2026-06-01.md](learning-track-detail-cinematic-redesign-implementation-lessons-2026-06-01.md) for the updated mechanism. The *requirements* from this doc (recognizable cover, measured contrast, cached-image ref promotion, stable testids, fail-loud helpers) and the *non-contrast guidance* (canvas color parsing, image ref promotion, data-testid hardening) remain current and are preserved in the new approach.
 
 ## Context
 
