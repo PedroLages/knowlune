@@ -107,7 +107,7 @@ return (
         // making it recognizable as the primary full-cover image layer.
         // Thin left/right/bottom padding creates a slim mat frame around the card.
         'relative overflow-hidden rounded-[28px] border border-border/50 bg-card shadow-card-ambient',
-        'pt-24 sm:pt-36 px-3 sm:px-4 pb-3 sm:pb-4'
+        'pt-16 sm:pt-24 px-3 sm:px-4 pb-3 sm:pb-4'
       )}
       data-testid="hero-section"
     >

@@ -557,7 +557,7 @@ export function LearningTrackDetail() {
                           {courseEntries.length} {courseEntries.length === 1 ? 'Course' : 'Courses'}
                         </span>
                         <Button
-                          variant={isEditing ? 'brand' : 'outline'}
+                          variant={isEditing ? 'brand' : 'ghost'}
                           size="sm"
                           onClick={() => setIsEditing(!isEditing)}
                           data-testid="edit-syllabus-button"
