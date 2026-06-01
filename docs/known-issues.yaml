@@ -1917,3 +1917,53 @@ issues:
   scheduled_for: null
   fixed_by: null
   notes: "NIT — optional stable selector. The measured-contrast assertion locates the hero CTA via a[class*='bg-brand'], which no-ops silently if the Tailwind class is renamed. Prefer a stable data-testid such as data-testid='hero-cta' and update the locator to [data-testid='hero-cta']. Non-blocking: class is stable today. Plan: 2026-05-31-002-feat-learning-track-detail-hero-ui-plan.md."
+
+- id: ki-2026-06-01-001
+  severity: low
+  source: ce-review-r1
+  file: src/app/pages/LearningTrackDetail.tsx
+  issue: "onCourseClick uses trackId ?? '' to build fromTrack state. If trackId is undefined, writes fromTrack: { trackId: '', trackName } creating a back-link to /learning-tracks/ (listing) instead of the specific track."
+  suggestedFix: "Guard on trackId truthy: const fromTrackState = trackId ? { fromTrack: { trackId, trackName: path.name } } : undefined"
+  plan: docs/plans/2026-06-01-001-fix-learning-track-detail-navigation-ux-plan.md
+  status: open
+  createdAt: "2026-06-01"
+
+- id: ki-2026-06-01-002
+  severity: low
+  source: ce-review-r1-ui
+  file: src/app/components/Layout.tsx
+  issue: "ArrowLeft icon in fromTrack back-link missing aria-hidden=true. Can be announced by screen readers before aria-label override takes effect."
+  suggestedFix: "Add aria-hidden=\"true\" to <ArrowLeft> in fromTrack branch, matching pattern elsewhere in codebase."
+  plan: docs/plans/2026-06-01-001-fix-learning-track-detail-navigation-ux-plan.md
+  status: open
+  createdAt: "2026-06-01"
+
+- id: ki-2026-06-01-003
+  severity: low
+  source: ce-review-r1-ui
+  file: src/app/components/Layout.tsx
+  issue: "fromTrack.trackName interpolated into aria-label with no empty-string guard. Blank path name in DB produces aria-label='Back to ' — incomplete label for AT users."
+  suggestedFix: "aria-label={`Back to ${fromTrack.trackName || 'learning track'}`}"
+  plan: docs/plans/2026-06-01-001-fix-learning-track-detail-navigation-ux-plan.md
+  status: open
+  createdAt: "2026-06-01"
+
+- id: ki-2026-06-01-004
+  severity: nit
+  source: ce-review-r1
+  file: src/app/hooks/useCourseRoute.ts
+  issue: "readFromTrack narrowing guard is duplicated verbatim in useCourseRoute.ts and useCompletionFlow.ts. Shape change requires dual update."
+  suggestedFix: "Extract to src/lib/locationState.ts: export function readFromTrack(state: unknown)"
+  plan: docs/plans/2026-06-01-001-fix-learning-track-detail-navigation-ux-plan.md
+  status: open
+  createdAt: "2026-06-01"
+
+- id: ki-2026-06-01-005
+  severity: nit
+  source: ce-review-r1
+  file: src/app/pages/UnifiedLessonPlayer.tsx
+  issue: "Prev/Next spread full location.state including autoPlay. In narrow window before replace-effect fires, fast click could propagate autoPlay to adjacent lesson."
+  suggestedFix: "Explicitly strip autoPlay when forwarding: const { autoPlay: _a, ...restState } = location.state ?? {}; navigate(..., { state: restState })"
+  plan: docs/plans/2026-06-01-001-fix-learning-track-detail-navigation-ux-plan.md
+  status: open
+  createdAt: "2026-06-01"
