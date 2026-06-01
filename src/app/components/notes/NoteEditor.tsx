@@ -184,6 +184,7 @@ export function NoteEditor({
   const maxWaitRef = useRef<ReturnType<typeof setTimeout>>(undefined)
   const fadeTimeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined)
   const lastSavedContentRef = useRef(initialContent)
+  const hasEverSavedRef = useRef(!!noteId)
 
   // Latest-ref pattern to avoid stale closures
   const onSaveRef = useRef(onSave)
@@ -392,6 +393,15 @@ export function NoteEditor({
       setWordCount(ed.storage.characterCount.words())
       const html = ed.getHTML()
 
+      // Eager-first-save: persist new notes immediately on first content change.
+      // This ensures the note reaches Dexie before any potential unmount,
+      // even from causes other than tab switching (navigation, page refresh, etc.).
+      if (!hasEverSavedRef.current) {
+        hasEverSavedRef.current = true
+        doSave(html)
+        return
+      }
+
       // Debounced save: 3 seconds after last keystroke
       clearTimeout(saveTimeoutRef.current)
       saveTimeoutRef.current = setTimeout(() => {
@@ -521,7 +531,7 @@ export function NoteEditor({
     return () => container.removeEventListener('keydown', handleKeyDown)
   }, [handleCaptureFrame])
 
-  // Force save on unmount
+  // Force save on unmount with error visibility
   useEffect(() => {
     return () => {
       clearTimeout(saveTimeoutRef.current)
@@ -533,7 +543,17 @@ export function NoteEditor({
         if (html !== lastSavedContentRef.current) {
           const text = html.replace(/<[^>]*>/g, ' ')
           const tags = extractTags(text)
-          onSaveRef.current?.(html, tags)
+          try {
+            const result = onSaveRef.current?.(html, tags)
+            // Handle async promise rejection (fire-and-forget, can't await in cleanup)
+            if (result && typeof (result as unknown as Promise<void>).catch === 'function') {
+              ;(result as unknown as Promise<void>).catch(() => {
+                toast.error('Failed to save note before leaving the page')
+              })
+            }
+          } catch {
+            toast.error('Failed to save note before leaving the page')
+          }
         }
       }
     }
