@@ -24,6 +24,8 @@ import { staggerContainer, fadeUp } from '@/lib/motion'
 import { toast } from 'sonner'
 import { db } from '@/db'
 import { buildGroupedCurriculum, type ChapterGroup } from '@/lib/curriculumGrouping'
+import { useContentProgressStore } from '@/stores/useContentProgressStore'
+import { findFirstIncompleteLesson } from '@/lib/resumeLearning'
 import type { PathCourseInfo, ImportedVideo, ImportedPdf, VideoProgress, YouTubeCourseChapter } from '@/data/types'
 
 export function LearningTrackDetail() {
@@ -41,6 +43,9 @@ export function LearningTrackDetail() {
   const [pdfsByCourse, setPdfsByCourse] = useState<Map<string, ImportedPdf[]>>(new Map())
   const [chaptersByCourse, setChaptersByCourse] = useState<Map<string, YouTubeCourseChapter[]>>(new Map())
   const [videoProgressMap, setVideoProgressMap] = useState<Map<string, VideoProgress>>(new Map())
+  const statusMap = useContentProgressStore(s => s.statusMap)
+  const loadCourseProgress = useContentProgressStore(s => s.loadCourseProgress)
+  const [loadedCourseIds, setLoadedCourseIds] = useState<Set<string>>(new Set())
   // Prevents "No courses yet" flash during initial load by waiting until
   // React has committed at least one render after isReady flips to true —
   // ensures Zustand store updates (entries) are visible before deciding emptiness.
@@ -198,6 +203,26 @@ export function LearningTrackDetail() {
       ignore = true
     }
   }, [isReady, courseEntries])
+
+  // Load contentProgress for all courses in the path (primary resume-point source)
+  useEffect(() => {
+    if (!isReady || courseEntries.length === 0) return
+
+    const courseIds = courseEntries.map(e => e.courseId).filter(Boolean)
+    const loadingSet = new Set<string>()
+
+    async function loadContentProgress() {
+      const batchSize = 10
+      for (let i = 0; i < courseIds.length; i += batchSize) {
+        const batch = courseIds.slice(i, i + batchSize)
+        await Promise.allSettled(batch.map(id => loadCourseProgress(id)))
+        batch.forEach(id => loadingSet.add(id))
+        setLoadedCourseIds(new Set(loadingSet))
+      }
+    }
+
+    loadContentProgress()
+  }, [isReady, courseEntries, loadCourseProgress])
 
   // Real progress tracking from contentProgress (catalog) + progress table (imported)
   const pathProgress = usePathProgress(courseEntries)
@@ -361,54 +386,69 @@ export function LearningTrackDetail() {
     return inProgress && inProgress !== '' ? inProgress : null
   }, [currentEntry])
 
-  // Compute the first incomplete lesson for the CTA course
+  // Compute the first incomplete lesson for the CTA course.
+  // Uses contentProgress (statusMap) as primary source, with legacy progress table fallback.
+  // Returns undefined during contentProgress loading to preserve skeleton/spinner state.
   const targetLessonId = useMemo(() => {
     const ctaCourseId = currentCourseId ?? firstCourseId
     if (!ctaCourseId) return undefined
 
-    const videos = videosByCourse.get(ctaCourseId)
-    if (!videos || videos.length === 0) return undefined
+    const videos = videosByCourse.get(ctaCourseId) ?? []
+    const pdfs = pdfsByCourse.get(ctaCourseId) ?? []
 
-    const sortedVideos = [...videos].sort((a, b) => a.order - b.order)
-    const firstIncomplete = sortedVideos.find(v => {
-      const prog = videoProgressMap.get(v.id)
-      return (prog?.completionPercentage ?? 0) < 90
-    })
+    // If no lessons at all, return undefined (nothing to navigate to)
+    if (videos.length === 0 && pdfs.length === 0) return undefined
 
-    return firstIncomplete?.id ?? sortedVideos[0]?.id
-  }, [currentCourseId, firstCourseId, videosByCourse, videoProgressMap])
+    // If contentProgress hasn't loaded yet for this course, return undefined
+    // (loading sentinel — UI preserves skeleton/spinner)
+    if (!loadedCourseIds.has(ctaCourseId)) return undefined
 
-  // First lesson for the ContinueLearningBento's current entry
+    const progressList = [...videoProgressMap.values()].filter(p => p.courseId === ctaCourseId)
+
+    return findFirstIncompleteLesson(ctaCourseId, statusMap, progressList, videos, pdfs)
+      ?? videos[0]?.id ?? pdfs[0]?.id
+  }, [currentCourseId, firstCourseId, videosByCourse, pdfsByCourse, videoProgressMap, statusMap, loadedCourseIds])
+
+  // First lesson for the ContinueLearningBento's current entry.
+  // Uses contentProgress (statusMap) as primary source, with legacy progress table fallback.
   const currentEntryTargetLessonId = useMemo(() => {
     const courseId = currentEntry?.courseId
     if (!courseId) return undefined
 
-    const videos = videosByCourse.get(courseId)
-    if (!videos || videos.length === 0) return undefined
+    const videos = videosByCourse.get(courseId) ?? []
+    const pdfs = pdfsByCourse.get(courseId) ?? []
 
-    const sortedVideos = [...videos].sort((a, b) => a.order - b.order)
-    const firstIncomplete = sortedVideos.find(v => {
-      const prog = videoProgressMap.get(v.id)
-      return (prog?.completionPercentage ?? 0) < 90
-    })
+    // If no lessons at all, return undefined
+    if (videos.length === 0 && pdfs.length === 0) return undefined
 
-    return firstIncomplete?.id ?? sortedVideos[0]?.id
-  }, [currentEntry, videosByCourse, videoProgressMap])
+    // If contentProgress hasn't loaded yet for this course, return undefined
+    // (loading sentinel — preserves skeleton/spinner)
+    if (!loadedCourseIds.has(courseId)) return undefined
 
-  // Map of courseId → first incomplete lesson ID, for PathTimeline navigation
+    const progressList = [...videoProgressMap.values()].filter(p => p.courseId === courseId)
+
+    return findFirstIncompleteLesson(courseId, statusMap, progressList, videos, pdfs)
+      ?? videos[0]?.id ?? pdfs[0]?.id
+  }, [currentEntry, videosByCourse, pdfsByCourse, videoProgressMap, statusMap, loadedCourseIds])
+
+  // Map of courseId → first incomplete lesson ID, for PathTimeline navigation.
+  // Uses contentProgress (statusMap) as primary source, with legacy progress table fallback.
+  // Courses without loaded contentProgress are skipped (no entry in the map) — the
+  // PathTimeline's onCourseClick navigates to the course overview in that case.
   const firstLessonByCourse = useMemo(() => {
     const map = new Map<string, string>()
     for (const [courseId, videos] of videosByCourse) {
-      if (videos.length === 0) continue
-      const sortedVideos = [...videos].sort((a, b) => a.order - b.order)
-      const firstIncomplete = sortedVideos.find(v => {
-        const prog = videoProgressMap.get(v.id)
-        return (prog?.completionPercentage ?? 0) < 90
-      })
-      map.set(courseId, firstIncomplete?.id ?? sortedVideos[0].id)
+      if (!loadedCourseIds.has(courseId)) continue
+      const pdfs = pdfsByCourse.get(courseId) ?? []
+      const progressList = [...videoProgressMap.values()].filter(p => p.courseId === courseId)
+      const lessonId = findFirstIncompleteLesson(courseId, statusMap, progressList, videos, pdfs)
+        ?? videos[0]?.id ?? pdfs[0]?.id
+      if (lessonId) {
+        map.set(courseId, lessonId)
+      }
     }
     return map
-  }, [videosByCourse, videoProgressMap])
+  }, [videosByCourse, pdfsByCourse, videoProgressMap, statusMap, loadedCourseIds])
 
   // Check prefers-reduced-motion
   const prefersReducedMotion = useReducedMotion()
