@@ -15,7 +15,8 @@ import { useCourseImportStore } from '@/stores/useCourseImportStore'
 import { useContentProgressStore } from '@/stores/useContentProgressStore'
 import { useMultiPathProgress } from '@/app/hooks/usePathProgress'
 import { PROGRESS_UPDATED_EVENT } from '@/lib/progress'
-import type { LearningPathEntry, ImportedCourse, CompletionStatus } from '@/data/types'
+import { findFirstIncompleteLesson as findFirstIncompleteLessonShared } from '@/lib/resumeLearning'
+import type { LearningPathEntry, ImportedCourse, CompletionStatus, ImportedVideo, ImportedPdf, VideoProgress } from '@/data/types'
 
 export type NextBestAction = 'resume' | 'start' | 'complete' | null
 
@@ -61,44 +62,24 @@ async function getFirstLessonId(courseId: string): Promise<string | null> {
 }
 
 /**
- * Find the first incomplete lesson for a course by scanning the statusMap.
- * Falls back to getFirstLessonId() if all entries are completed or missing.
+ * Find the first incomplete lesson for a course using the shared dual-source utility.
+ * Queries Dexie for videos, PDFs, and legacy progress, then delegates to the
+ * synchronous `findFirstIncompleteLesson` from `resumeLearning.ts`.
  */
-async function findFirstIncompleteLesson(
+async function findFirstIncompleteLessonWithFallback(
   courseId: string,
   statusMap: Record<string, CompletionStatus>
 ): Promise<string | null> {
   try {
-    const prefix = `${courseId}:`
-    const lessonEntries: Array<{ id: string; status: CompletionStatus }> = []
+    const [videos, pdfs, progressList] = await Promise.all([
+      db.importedVideos.where('courseId').equals(courseId).sortBy('order') as Promise<ImportedVideo[]>,
+      db.importedPdfs.where('courseId').equals(courseId).toArray() as Promise<ImportedPdf[]>,
+      db.progress.where('courseId').equals(courseId).toArray() as Promise<VideoProgress[]>,
+    ])
 
-    for (const [key, status] of Object.entries(statusMap)) {
-      if (key.startsWith(prefix)) {
-        const itemId = key.slice(prefix.length)
-        lessonEntries.push({ id: itemId, status })
-      }
-    }
-
-    if (lessonEntries.length > 0) {
-      // Load video ordering for a stable sort
-      const videos = await db.importedVideos
-        .where('courseId')
-        .equals(courseId)
-        .sortBy('order')
-      const videoOrderMap = new Map(videos.map(v => [v.id, v.order]))
-
-      const sorted = lessonEntries.sort(
-        (a, b) => (videoOrderMap.get(a.id) ?? 999) - (videoOrderMap.get(b.id) ?? 999)
-      )
-
-      const incomplete = sorted.find(e => e.status !== 'completed')
-      if (incomplete) return incomplete.id
-    }
-
-    // All complete or no entries in statusMap — fall back to first lesson
-    return getFirstLessonId(courseId)
+    return findFirstIncompleteLessonShared(courseId, statusMap, progressList, videos, pdfs)
   } catch (err) {
-    console.error('[findFirstIncompleteLesson] failed for course', courseId, err)
+    console.error('[findFirstIncompleteLessonWithFallback] failed for course', courseId, err)
     return getFirstLessonId(courseId)
   }
 }
@@ -118,11 +99,17 @@ async function computeNextBestCourse(
   sortedEntries: LearningPathEntry[],
   courseProgress: Map<string, { courseId: string; completionPct: number }> | undefined,
   importedCourses: ImportedCourse[],
-  statusMap: Record<string, CompletionStatus>
+  statusMap: Record<string, CompletionStatus>,
+  progressReady: boolean
 ): Promise<NextBestCourseResult> {
   if (sortedEntries.length === 0 || !courseProgress || courseProgress.size === 0) {
     return INITIAL_RESULT
   }
+
+  // Loading gating: wait for contentProgress to be populated before computing
+  // resume targets. Without this, an empty statusMap causes findFirstIncompleteLesson
+  // to return the first lesson instead of the correct incomplete lesson.
+  if (!progressReady) return INITIAL_RESULT
 
   // Pass 1: Find the first in-progress course (resume)
   for (const entry of sortedEntries) {
@@ -131,19 +118,22 @@ async function computeNextBestCourse(
 
     if (cp.completionPct > 0 && cp.completionPct < 100) {
       const course = importedCourses.find(c => c.id === entry.courseId) ?? null
-      const targetLessonId = await findFirstIncompleteLesson(entry.courseId, statusMap)
+      const targetLessonId = await findFirstIncompleteLessonWithFallback(entry.courseId, statusMap)
       return { entry, course, action: 'resume' as const, targetLessonId }
     }
   }
 
-  // Pass 2: Find the first unstarted course (start)
+  // Pass 2: Find the first unstarted course (start).
+  // Uses findFirstIncompleteLessonWithFallback instead of getFirstLessonId so that
+  // courses with contentProgress data (but empty legacy progress table, yielding
+  // completionPct: 0) still navigate to the correct incomplete lesson.
   for (const entry of sortedEntries) {
     const cp = courseProgress.get(entry.courseId)
     if (!cp) continue
 
     if (cp.completionPct === 0) {
       const course = importedCourses.find(c => c.id === entry.courseId) ?? null
-      const targetLessonId = await getFirstLessonId(entry.courseId)
+      const targetLessonId = await findFirstIncompleteLessonWithFallback(entry.courseId, statusMap)
       return { entry, course, action: 'start' as const, targetLessonId }
     }
   }
@@ -164,6 +154,7 @@ export function useNextBestCourse(pathId: string): NextBestCourseResult {
   const allEntries = useLearningPathStore(s => s.entries)
   const importedCourses = useCourseImportStore(s => s.importedCourses)
   const statusMap = useContentProgressStore(s => s.statusMap)
+  const loadCourseProgress = useContentProgressStore(s => s.loadCourseProgress)
 
   // Derive sorted entries for this path
   const sortedEntries = useMemo(
@@ -190,15 +181,47 @@ export function useNextBestCourse(pathId: string): NextBestCourseResult {
   // Track cancellation across both effects
   const cancelledRef = useRef(false)
 
+  // Loading-gating state: prevents incorrect resume targets before contentProgress loads
+  const [contentProgressReady, setContentProgressReady] = useState(false)
+
   // State for the result (targetLessonId is async-resolved)
   const [result, setResult] = useState<NextBestCourseResult>(INITIAL_RESULT)
+
+  // Eagerly load contentProgress for all courses in this path so that statusMap
+  // is populated before the resume-point computation runs.
+  useEffect(() => {
+    if (sortedEntries.length === 0) return
+
+    const courseIds = sortedEntries.map(e => e.courseId).filter(Boolean)
+    setContentProgressReady(false)
+
+    let ignore = false
+
+    async function loadAll() {
+      const batchSize = 10
+      for (let i = 0; i < courseIds.length; i += batchSize) {
+        if (ignore) return
+        const batch = courseIds.slice(i, i + batchSize)
+        await Promise.allSettled(batch.map(id => loadCourseProgress(id)))
+      }
+      if (!ignore) {
+        setContentProgressReady(true)
+      }
+    }
+
+    loadAll()
+
+    return () => {
+      ignore = true
+    }
+  }, [sortedEntries, loadCourseProgress])
 
   // Shared stable callback wrapping computeNextBestCourse
   const runCompute = useCallback(() => {
     const currentCancelled = { current: false }
     cancelledRef.current = false
 
-    computeNextBestCourse(sortedEntries, courseProgress, importedCourses, statusMap).then(
+    computeNextBestCourse(sortedEntries, courseProgress, importedCourses, statusMap, contentProgressReady).then(
       nextResult => {
         if (!cancelledRef.current && !currentCancelled.current) {
           setResult(nextResult)
@@ -210,7 +233,7 @@ export function useNextBestCourse(pathId: string): NextBestCourseResult {
       currentCancelled.current = true
       cancelledRef.current = true
     }
-  }, [sortedEntries, courseProgress, importedCourses, statusMap])
+  }, [sortedEntries, courseProgress, importedCourses, statusMap, contentProgressReady])
 
   // Main effect: recompute when dependencies change
   useEffect(() => {
@@ -221,7 +244,7 @@ export function useNextBestCourse(pathId: string): NextBestCourseResult {
   // Reactivity: recompute when PROGRESS_UPDATED_EVENT fires
   useEffect(() => {
     const handleProgressUpdate = () => {
-      computeNextBestCourse(sortedEntries, courseProgress, importedCourses, statusMap).then(
+      computeNextBestCourse(sortedEntries, courseProgress, importedCourses, statusMap, contentProgressReady).then(
         nextResult => {
           if (!cancelledRef.current) {
             setResult(nextResult)
@@ -234,7 +257,7 @@ export function useNextBestCourse(pathId: string): NextBestCourseResult {
     return () => {
       window.removeEventListener(PROGRESS_UPDATED_EVENT, handleProgressUpdate)
     }
-  }, [sortedEntries, courseProgress, importedCourses, statusMap])
+  }, [sortedEntries, courseProgress, importedCourses, statusMap, contentProgressReady])
 
   return result
 }

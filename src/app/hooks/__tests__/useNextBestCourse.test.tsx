@@ -108,7 +108,10 @@ vi.mock('@/stores/useCourseImportStore', () => ({
 
 vi.mock('@/stores/useContentProgressStore', () => ({
   useContentProgressStore: (selector: (s: Record<string, unknown>) => unknown) => {
-    const store = { statusMap: mockStatusMapStore }
+    const store = {
+      statusMap: mockStatusMapStore,
+      loadCourseProgress: async () => {},
+    }
     return selector(store as unknown as Record<string, unknown>)
   },
 }))
@@ -163,6 +166,14 @@ vi.mock('@/db', () => ({
       where: () => ({
         equals: () => ({
           sortBy: async () => [],
+          toArray: async () => [],
+        }),
+      }),
+    },
+    progress: {
+      where: () => ({
+        equals: () => ({
+          toArray: async () => [],
         }),
       }),
     },
