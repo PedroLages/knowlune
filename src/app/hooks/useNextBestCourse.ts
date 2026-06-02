@@ -195,16 +195,25 @@ export function useNextBestCourse(pathId: string): NextBestCourseResult {
     const courseIds = sortedEntries.map(e => e.courseId).filter(Boolean)
     setContentProgressReady(false)
 
+    let ignore = false
+
     async function loadAll() {
       const batchSize = 10
       for (let i = 0; i < courseIds.length; i += batchSize) {
+        if (ignore) return
         const batch = courseIds.slice(i, i + batchSize)
         await Promise.allSettled(batch.map(id => loadCourseProgress(id)))
       }
-      setContentProgressReady(true)
+      if (!ignore) {
+        setContentProgressReady(true)
+      }
     }
 
     loadAll()
+
+    return () => {
+      ignore = true
+    }
   }, [sortedEntries, loadCourseProgress])
 
   // Shared stable callback wrapping computeNextBestCourse

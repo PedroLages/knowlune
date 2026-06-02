@@ -211,17 +211,26 @@ export function LearningTrackDetail() {
     const courseIds = courseEntries.map(e => e.courseId).filter(Boolean)
     const loadingSet = new Set<string>()
 
+    let ignore = false
+
     async function loadContentProgress() {
       const batchSize = 10
       for (let i = 0; i < courseIds.length; i += batchSize) {
+        if (ignore) return
         const batch = courseIds.slice(i, i + batchSize)
         await Promise.allSettled(batch.map(id => loadCourseProgress(id)))
         batch.forEach(id => loadingSet.add(id))
-        setLoadedCourseIds(new Set(loadingSet))
+        if (!ignore) {
+          setLoadedCourseIds(new Set(loadingSet))
+        }
       }
     }
 
     loadContentProgress()
+
+    return () => {
+      ignore = true
+    }
   }, [isReady, courseEntries, loadCourseProgress])
 
   // Real progress tracking from contentProgress (catalog) + progress table (imported)
