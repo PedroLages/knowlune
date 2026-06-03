@@ -76,7 +76,7 @@ describe('PathTimeline', () => {
     expect(screen.getAllByText('Locked').length).toBeGreaterThanOrEqual(1)
   })
 
-  it('shows Up Next badge for in-progress entries', () => {
+  it('shows In Progress badge for in-progress entries with real progress', () => {
     const entries = [makeEntry({ courseId: 'c1' })]
     const infoMap = new Map([['c1', makeCourseInfo({ completionPct: 45 })]])
     render(
@@ -86,7 +86,7 @@ describe('PathTimeline', () => {
         courseInfoMap={infoMap}
       />
     )
-    expect(screen.getByText('Up Next')).toBeInTheDocument()
+    expect(screen.getByText('In Progress')).toBeInTheDocument()
   })
 
   it('shows Completed badge for finished entries', () => {
@@ -164,7 +164,7 @@ describe('PathTimeline', () => {
     expect(lockedBadges.length).toBeGreaterThanOrEqual(1)
   })
 
-  it('Completed badge shows checkmark icon and Up Next badge shows pulsing dot', () => {
+  it('Completed badge shows checkmark icon and In Progress badge shows pulsing dot', () => {
     const entries = [
       makeEntry({ courseId: 'c1', position: 1 }),
       makeEntry({ courseId: 'c2', position: 2 }),
@@ -181,7 +181,7 @@ describe('PathTimeline', () => {
       />
     )
     expect(screen.getByText('Completed')).toBeInTheDocument()
-    expect(screen.getByText('Up Next')).toBeInTheDocument()
+    expect(screen.getByText('In Progress')).toBeInTheDocument()
   })
 
   it('displays description, video count, and duration when available', () => {

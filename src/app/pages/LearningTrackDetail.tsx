@@ -9,7 +9,6 @@ import { Card, CardContent } from '@/app/components/ui/card'
 import { EmptyState } from '@/app/components/EmptyState'
 import { DelayedFallback } from '@/app/components/DelayedFallback'
 import { PathHeroBanner } from '@/app/components/learning-path/PathHeroBanner'
-import { PathCinematicAtmosphere } from '@/app/components/learning-path/PathCinematicAtmosphere'
 import { PathProgressSidebar } from '@/app/components/learning-path/PathProgressSidebar'
 import { ContinueLearningBento } from '@/app/components/learning-path/ContinueLearningBento'
 import { PathTimeline } from '@/app/components/learning-path/PathTimeline'
@@ -555,14 +554,8 @@ export function LearningTrackDetail() {
         />
       </div>
 
-      {/* Content area with negative margin to overlap hero */}
-      <div className="-mt-8 sm:-mt-10 lg:-mt-12 relative z-10">
-        {/* Cover-derived ambient atmosphere — decorative glow behind cards */}
-        <PathCinematicAtmosphere
-          coverUrl={path.coverImageUrl}
-          coverPreset={path.coverPreset}
-        />
-
+      {/* Content area with reduced negative margin to subtly overlap hero (preserves cinematic feel while keeping CTA clear) */}
+      <div className="-mt-6 sm:-mt-8 lg:-mt-10 relative z-10">
         <motion.div
           variants={containerVariants}
           initial="hidden"

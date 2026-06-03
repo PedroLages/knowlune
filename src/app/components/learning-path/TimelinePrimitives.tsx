@@ -139,15 +139,18 @@ export function LessonRow({
 // EntryActionButton
 // ---------------------------------------------------------------------------
 
-/** Action for an unlocked timeline entry: Start Module, Review, Mark Complete, or Undo */
+/** Action for an unlocked timeline entry: Continue/Start Module, Review, Mark Complete, or Undo */
 export function EntryActionButton({
   status,
   isManuallyCompleted,
+  hasRealProgress,
   onClick,
   onMarkComplete,
 }: {
   status: 'completed' | 'in-progress' | 'available' | 'locked'
   isManuallyCompleted?: boolean
+  /** When true, the module has real progress (1-99%) — shows "Continue Module" instead of "Start Module" */
+  hasRealProgress?: boolean
   onClick: () => void
   onMarkComplete?: () => void
 }) {
@@ -181,7 +184,7 @@ export function EntryActionButton({
           }}
         >
           <PlayCircle className="size-4 mr-1.5" aria-hidden="true" />
-          Start Module
+          {hasRealProgress ? 'Continue Module' : 'Start Module'}
         </Button>
         {onMarkComplete && (
           <Button

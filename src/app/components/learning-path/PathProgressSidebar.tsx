@@ -38,7 +38,7 @@ export function PathProgressSidebar({
 
   // Format hours for display
   const formattedTime =
-    estimatedRemainingHours > 0 ? `~${estimatedRemainingHours}h` : '0h'
+    estimatedRemainingHours > 0 ? `~${Math.round(estimatedRemainingHours)}h` : '0h'
 
   return (
     <aside className={cn('space-y-6', className)}>

@@ -185,7 +185,7 @@ export function PathHeroBanner({
       {/* Layer 3 — Overlay content (relative z-10, text-white).
           Anchored to the bottom of the tall stage, above the dark scrim.
           All text is white on the dark scrim for guaranteed WCAG contrast. */}
-      <div className="relative z-10 p-4 sm:p-6 lg:p-8" data-testid="hero-content-surface">
+      <div className="relative z-10 p-4 sm:p-6 lg:p-8 pb-8 sm:pb-10 lg:pb-12" data-testid="hero-content-surface">
         {/* Top row: Back link (left) + Dropdown (right) */}
         <div className="flex items-start justify-between mb-4 sm:mb-6">
           <Link

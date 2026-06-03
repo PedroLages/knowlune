@@ -39,6 +39,8 @@ interface SortableCourseTimelineEntryProps {
   info?: PathCourseInfo
   isCompleted: boolean
   isInProgress: boolean
+  /** When true, the module has real progress (1-99%) — shows "In Progress" label and "Continue Module" button */
+  hasRealProgress?: boolean
   isManuallyCompleted?: boolean
   index: number
   onClick: () => void
@@ -54,6 +56,7 @@ export function SortableCourseTimelineEntry({
   info,
   isCompleted,
   isInProgress,
+  hasRealProgress,
   isManuallyCompleted,
   index,
   onClick,
@@ -70,7 +73,7 @@ export function SortableCourseTimelineEntry({
     : isCompleted
       ? 'Completed'
       : isInProgress
-        ? 'Up Next'
+        ? hasRealProgress ? 'In Progress' : 'Up Next'
         : 'Locked'
   const prevLockedRef = useRef(isLocked)
   const justUnlocked = prevLockedRef.current && !isLocked
@@ -243,6 +246,7 @@ export function SortableCourseTimelineEntry({
                         <EntryActionButton
                           status={status}
                           isManuallyCompleted={isManuallyCompleted}
+                          hasRealProgress={hasRealProgress}
                           onClick={onClick}
                           onMarkComplete={onMarkComplete}
                         />

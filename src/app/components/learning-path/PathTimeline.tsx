@@ -165,6 +165,7 @@ function CourseTimelineEntry({
   info,
   isCompleted,
   isInProgress,
+  hasRealProgress,
   isManuallyCompleted,
   index,
   onClick,
@@ -178,6 +179,8 @@ function CourseTimelineEntry({
   info?: PathCourseInfo
   isCompleted: boolean
   isInProgress: boolean
+  /** When true, the module has real progress (1-99%) — shows "In Progress" label and "Continue Module" button */
+  hasRealProgress?: boolean
   isManuallyCompleted?: boolean
   index: number
   onClick: () => void
@@ -194,7 +197,7 @@ function CourseTimelineEntry({
     : isCompleted
       ? 'Completed'
       : isInProgress
-        ? 'Up Next'
+        ? hasRealProgress ? 'In Progress' : 'Up Next'
         : 'Locked'
   const entryRef = useRef<HTMLDivElement>(null)
   const [isExpanded, setIsExpanded] = useState(false)
@@ -279,6 +282,7 @@ function CourseTimelineEntry({
               <EntryActionButton
                 status={status}
                 isManuallyCompleted={isManuallyCompleted}
+                hasRealProgress={hasRealProgress}
                 onClick={onClick}
                 onMarkComplete={onMarkComplete}
               />
@@ -616,6 +620,7 @@ export function PathTimeline({
                     info={info}
                     isCompleted={isCompleted}
                     isInProgress={isInProgress}
+                    hasRealProgress={hasRealProgress}
                     isManuallyCompleted={isManuallyCompleted}
                     index={i}
                     onClick={() => onCourseClick(entry.courseId)}
@@ -686,6 +691,7 @@ export function PathTimeline({
               info={info}
               isCompleted={isCompleted}
               isInProgress={isInProgress}
+              hasRealProgress={hasRealProgress}
               isManuallyCompleted={isManuallyCompleted}
               index={i}
               onClick={() => onCourseClick(entry.courseId)}
