@@ -1,6 +1,7 @@
 ---
 title: "Learning Track Detail Cinematic Redesign: Fixed Dark Scrim Contrast Guarantee"
 date: 2026-06-01
+last_updated: 2026-06-03
 category: docs/solutions/best-practices
 module: learning-tracks
 problem_type: best_practice
@@ -27,6 +28,7 @@ related_docs:
   - docs/solutions/best-practices/learning-track-detail-hero-thumbnails-2026-05-14.md
   - docs/solutions/best-practices/wcag-22-aggregator-suite-patterns.md
   - docs/solutions/best-practices/tailwind-v4-jit-class-literal-resolver-2026-04-25.md
+  - docs/solutions/best-practices/learning-track-detail-ux-fix-implementation-lessons-2026-06-03.md
 ---
 
 # Learning Track Detail Cinematic Redesign: Fixed Dark Scrim Contrast Guarantee
@@ -42,6 +44,12 @@ This redesign **supersedes that mechanism** while preserving the same requiremen
 Along the way, the work produced four reusable, repo-agnostic lessons: the fixed-dark-scrim contrast guarantee, a page-scoped atmosphere pattern adapted from the audiobook player, shared WCAG contrast helpers extracted from component tests, and a techdebt spin-off that made those helpers available to E2E specs as well.
 
 ## Guidance
+
+**Supersession note (2026-06-03):** This doc's guidance on the negative overlap value and the
+`PathCinematicAtmosphere` component was partially superseded by PR #590
+(`learning-track-detail-ux-fix-implementation-lessons-2026-06-03.md`). The overlap was reduced
+(invariant: overlap <= hero bottom padding below the CTA row) and the atmosphere was removed per
+user request. The fixed dark scrim and WCAG contrast guidance below remains fully current.
 
 ### 1. Carry contrast on a fixed black scrim, not a theme-token surface
 
@@ -134,6 +142,8 @@ export function PathCinematicAtmosphere({ coverUrl, coverPreset }: PathCinematic
 
 The `eslint-disable react-best-practices/no-inline-styles` exception is needed here for the dynamic cover-URL background image -- matching the same exception `AudiobookPlayerAtmosphere` already carries.
 
+**Supersession note (2026-06-03):** `PathCinematicAtmosphere` was removed entirely by PR #590 (clean deletion: component file + import + render call, one commit). No other consumers existed. The `relative z-10` on the content wrapper was preserved.
+
 ### 3. Extract shared WCAG contrast helpers as a dedicated utility module
 
 During the techdebt phase (commit `1327a674`), the WCAG contrast helper functions that lived inline in `PathHeroBanner.test.tsx` were extracted into a shared module at `tests/utils/wcag-contrast.ts`. These pure functions compute relative luminance and contrast ratio from hex color strings and work in any test context (vitest, Playwright Node.js side).
@@ -179,6 +189,8 @@ Key structural choices:
 - Content anchored to bottom via `flex flex-col justify-end`
 - Full-width breakout: `-mx-4 -mt-4 sm:-mx-6 sm:-mt-6` cancels the Layout's main-content padding
 - Negative overlap: `-mt-8 sm:-mt-10 lg:-mt-12` overlaps the content area onto the hero's lower edge
+
+**Supersession note (2026-06-03):** The overlap was reduced by PR #590. The hero's bottom content padding was increased by 8px at each breakpoint (`pb-8 sm:pb-10 lg:pb-12` -> `pb-10 sm:pb-12 lg:pb-14`) to guarantee the invariant: content overlap <= hero bottom padding below the CTA row. The negative margin value was preserved; only the padding increased. E2E bounding-box tests at 1440/768/375px verify the invariant.
 
 ### 6. Use `data-testid` locators for all contrast assertions
 
