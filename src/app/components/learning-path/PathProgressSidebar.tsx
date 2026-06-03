@@ -60,7 +60,8 @@ export function PathProgressSidebar({
                 <span className="block text-2xl font-extrabold text-foreground">
                   {completionPct > 0 && Math.round(completionPct) === 0
                     ? '< 1'
-                    : Math.round(completionPct)}%
+                    : Math.round(completionPct)}
+                  %
                 </span>
                 <span className="block text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
                   Complete
@@ -88,9 +89,7 @@ export function PathProgressSidebar({
           </div>
 
           {/* Divider */}
-          {skillTags && skillTags.length > 0 && (
-            <hr className="my-6 border-border/50" />
-          )}
+          {skillTags && skillTags.length > 0 && <hr className="my-6 border-border/50" />}
 
           {/* Skills tags */}
           {skillTags && skillTags.length > 0 && (
@@ -113,7 +112,11 @@ export function PathProgressSidebar({
 
       {/* Certificate card removed — see R9 */}
       {/* Track metadata card (only when props are provided) */}
-      {(difficultyLabel || estimatedHours != null || courseCount != null || createdAt || updatedAt) && (
+      {(difficultyLabel ||
+        estimatedHours != null ||
+        courseCount != null ||
+        createdAt ||
+        updatedAt) && (
         <Card className="rounded-[24px] border border-border/50 bg-card shadow-card-ambient">
           <CardContent className="p-5">
             <h3 className="font-display text-sm font-bold mb-4">Track Info</h3>

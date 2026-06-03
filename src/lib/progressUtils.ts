@@ -1,5 +1,11 @@
 /**
  * Progress utility functions — shared helpers for course progress calculations.
+ *
+ * NOTE: The `isCourseInProgress` function is consumed by both PathTimeline
+ * (syllabus status badges) and RoadmapListView (progress indicators on track
+ * cards). Any future changes to the "in progress" semantics (e.g., adding a
+ * minimum threshold, time-based decay, or new status values) must be validated
+ * against both surfaces to ensure consistent behavior.
  */
 
 /**
@@ -11,7 +17,7 @@
  */
 export function isCourseInProgress(
   completionPct: number | undefined | null,
-  isCompleted: boolean,
+  isCompleted: boolean
 ): boolean {
   return (completionPct ?? 0) > 0 && !isCompleted
 }

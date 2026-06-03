@@ -25,7 +25,13 @@ import { db } from '@/db'
 import { buildGroupedCurriculum, type ChapterGroup } from '@/lib/curriculumGrouping'
 import { useContentProgressStore } from '@/stores/useContentProgressStore'
 import { findFirstIncompleteLesson } from '@/lib/resumeLearning'
-import type { PathCourseInfo, ImportedVideo, ImportedPdf, VideoProgress, YouTubeCourseChapter } from '@/data/types'
+import type {
+  PathCourseInfo,
+  ImportedVideo,
+  ImportedPdf,
+  VideoProgress,
+  YouTubeCourseChapter,
+} from '@/data/types'
 
 export function LearningTrackDetail() {
   const { trackId } = useParams<{ trackId: string }>()
@@ -40,7 +46,9 @@ export function LearningTrackDetail() {
   const [loadError, setLoadError] = useState<string | null>(null)
   const [videosByCourse, setVideosByCourse] = useState<Map<string, ImportedVideo[]>>(new Map())
   const [pdfsByCourse, setPdfsByCourse] = useState<Map<string, ImportedPdf[]>>(new Map())
-  const [chaptersByCourse, setChaptersByCourse] = useState<Map<string, YouTubeCourseChapter[]>>(new Map())
+  const [chaptersByCourse, setChaptersByCourse] = useState<Map<string, YouTubeCourseChapter[]>>(
+    new Map()
+  )
   const [videoProgressMap, setVideoProgressMap] = useState<Map<string, VideoProgress>>(new Map())
   const statusMap = useContentProgressStore(s => s.statusMap)
   const loadCourseProgress = useContentProgressStore(s => s.loadCourseProgress)
@@ -236,8 +244,11 @@ export function LearningTrackDetail() {
   const pathProgress = usePathProgress(courseEntries)
 
   // Manual module completion (localStorage-backed, per-track)
-  const { completedIds: manuallyCompletedIds, markComplete, undoComplete } =
-    useManualModuleCompletion(trackId ?? '')
+  const {
+    completedIds: manuallyCompletedIds,
+    markComplete,
+    undoComplete,
+  } = useManualModuleCompletion(trackId ?? '')
 
   // Count manually completed entries not already counted in auto-progress
   const manualCompletionsNotInAuto = useMemo(() => {
@@ -358,8 +369,7 @@ export function LearningTrackDetail() {
     () =>
       courseEntries.filter(
         e =>
-          (courseInfo.get(e.courseId)?.completionPct ?? 0) >= 100 ||
-          manuallyCompletedIds.has(e.id)
+          (courseInfo.get(e.courseId)?.completionPct ?? 0) >= 100 || manuallyCompletedIds.has(e.id)
       ),
     [courseEntries, courseInfo, manuallyCompletedIds]
   )
@@ -375,9 +385,10 @@ export function LearningTrackDetail() {
         return pct > 0 && pct < 100 && !manuallyCompletedIds.has(e.id)
       }) ??
       (courseEntries.length > completedEntries.length
-        ? courseEntries.find(
-            e => e.courseId !== '' && !manuallyCompletedIds.has(e.id) && !completedEntryIds.has(e.id)
-          ) ?? null
+        ? (courseEntries.find(
+            e =>
+              e.courseId !== '' && !manuallyCompletedIds.has(e.id) && !completedEntryIds.has(e.id)
+          ) ?? null)
         : null),
     [courseEntries, courseInfo, completedEntries, completedEntryIds, manuallyCompletedIds]
   )
@@ -413,9 +424,20 @@ export function LearningTrackDetail() {
 
     const progressList = [...videoProgressMap.values()].filter(p => p.courseId === ctaCourseId)
 
-    return findFirstIncompleteLesson(ctaCourseId, statusMap, progressList, videos, pdfs)
-      ?? videos[0]?.id ?? pdfs[0]?.id
-  }, [currentCourseId, firstCourseId, videosByCourse, pdfsByCourse, videoProgressMap, statusMap, loadedCourseIds])
+    return (
+      findFirstIncompleteLesson(ctaCourseId, statusMap, progressList, videos, pdfs) ??
+      videos[0]?.id ??
+      pdfs[0]?.id
+    )
+  }, [
+    currentCourseId,
+    firstCourseId,
+    videosByCourse,
+    pdfsByCourse,
+    videoProgressMap,
+    statusMap,
+    loadedCourseIds,
+  ])
 
   // First lesson for the ContinueLearningBento's current entry.
   // Uses contentProgress (statusMap) as primary source, with legacy progress table fallback.
@@ -435,8 +457,11 @@ export function LearningTrackDetail() {
 
     const progressList = [...videoProgressMap.values()].filter(p => p.courseId === courseId)
 
-    return findFirstIncompleteLesson(courseId, statusMap, progressList, videos, pdfs)
-      ?? videos[0]?.id ?? pdfs[0]?.id
+    return (
+      findFirstIncompleteLesson(courseId, statusMap, progressList, videos, pdfs) ??
+      videos[0]?.id ??
+      pdfs[0]?.id
+    )
   }, [currentEntry, videosByCourse, pdfsByCourse, videoProgressMap, statusMap, loadedCourseIds])
 
   // Map of courseId → first incomplete lesson ID, for PathTimeline navigation.
@@ -449,8 +474,10 @@ export function LearningTrackDetail() {
       if (!loadedCourseIds.has(courseId)) continue
       const pdfs = pdfsByCourse.get(courseId) ?? []
       const progressList = [...videoProgressMap.values()].filter(p => p.courseId === courseId)
-      const lessonId = findFirstIncompleteLesson(courseId, statusMap, progressList, videos, pdfs)
-        ?? videos[0]?.id ?? pdfs[0]?.id
+      const lessonId =
+        findFirstIncompleteLesson(courseId, statusMap, progressList, videos, pdfs) ??
+        videos[0]?.id ??
+        pdfs[0]?.id
       if (lessonId) {
         map.set(courseId, lessonId)
       }
@@ -496,9 +523,7 @@ export function LearningTrackDetail() {
         <div className="flex flex-col items-center justify-center py-16">
           <AlertCircle className="size-12 text-destructive mx-auto mb-4" aria-hidden="true" />
           <h3 className="text-lg font-semibold mb-2">Failed to load track</h3>
-          <p className="text-muted-foreground text-sm mb-6 max-w-md text-center">
-            {loadError}
-          </p>
+          <p className="text-muted-foreground text-sm mb-6 max-w-md text-center">{loadError}</p>
           <Button variant="brand" onClick={handleRetry}>
             <RotateCcw className="size-4 mr-2" aria-hidden="true" />
             Try Again
@@ -563,11 +588,9 @@ export function LearningTrackDetail() {
           className="space-y-8"
         >
           {/* Course list section */}
-          {!entriesChecked ? (
-            /* Brief hold during initial load — prevents flash of empty state
+          {!entriesChecked ? /* Brief hold during initial load — prevents flash of empty state
                before Zustand store entries are visible in this render cycle */
-            null
-          ) : courseEntries.length > 0 ? (
+          null : courseEntries.length > 0 ? (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-[var(--content-gap)]">
               {/* Left Column (2/3): Continue Learning + Timeline */}
               <div className="lg:col-span-2 space-y-8">
@@ -634,9 +657,13 @@ export function LearningTrackDetail() {
                       onGapResolve={() => {}}
                       onCourseClick={courseId => {
                         const lessonId = firstLessonByCourse.get(courseId)
-                        const fromTrackState = { fromTrack: { trackId: trackId ?? '', trackName: path.name } }
+                        const fromTrackState = {
+                          fromTrack: { trackId: trackId ?? '', trackName: path.name },
+                        }
                         if (lessonId) {
-                          navigate(`/courses/${courseId}/lessons/${lessonId}`, { state: fromTrackState })
+                          navigate(`/courses/${courseId}/lessons/${lessonId}`, {
+                            state: fromTrackState,
+                          })
                         } else {
                           navigate(`/courses/${courseId}`, { state: fromTrackState })
                         }
@@ -673,10 +700,14 @@ export function LearningTrackDetail() {
             <motion.div variants={itemVariants}>
               <Card className="rounded-2xl shadow-sm border border-border">
                 <CardContent className="p-8 text-center">
-                  <BookOpen className="size-12 text-muted-foreground mx-auto mb-4" aria-hidden="true" />
+                  <BookOpen
+                    className="size-12 text-muted-foreground mx-auto mb-4"
+                    aria-hidden="true"
+                  />
                   <h3 className="text-lg font-semibold mb-2">No courses yet</h3>
                   <p className="text-muted-foreground text-sm max-w-md mx-auto">
-                    This track doesn&apos;t have any courses yet. Add courses to start tracking your progress.
+                    This track doesn&apos;t have any courses yet. Add courses to start tracking your
+                    progress.
                   </p>
                 </CardContent>
               </Card>

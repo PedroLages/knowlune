@@ -1,13 +1,5 @@
 import { Link } from 'react-router'
-import {
-  Check,
-  AlertCircle,
-  PlayCircle,
-  RotateCcw,
-  Undo2,
-  CheckCircle2,
-  Video,
-} from 'lucide-react'
+import { Check, AlertCircle, PlayCircle, RotateCcw, Undo2, CheckCircle2, Video } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
 import { cn } from '@/app/components/ui/utils'
 import { formatClockDuration } from '@/lib/formatDuration'
@@ -45,17 +37,9 @@ export function StatusCircle({
 
   if (status === 'in-progress') {
     return (
-      <div
-        className={cn(
-          baseClass,
-          'bg-brand text-brand-foreground ring-4 ring-brand-soft'
-        )}
-      >
+      <div className={cn(baseClass, 'bg-brand text-brand-foreground ring-4 ring-brand-soft')}>
         <div
-          className={cn(
-            'rounded-full bg-white animate-pulse',
-            simplified ? 'size-2' : 'size-2.5'
-          )}
+          className={cn('rounded-full bg-white animate-pulse', simplified ? 'size-2' : 'size-2.5')}
         />
       </div>
     )
@@ -64,7 +48,9 @@ export function StatusCircle({
   if (status === 'available') {
     return (
       <div className={cn(baseClass, 'bg-muted/80 border border-muted-foreground/25')}>
-        <div className={cn('rounded-full bg-muted-foreground/40', simplified ? 'size-1.5' : 'size-2')} />
+        <div
+          className={cn('rounded-full bg-muted-foreground/40', simplified ? 'size-1.5' : 'size-2')}
+        />
       </div>
     )
   }
@@ -86,10 +72,7 @@ export function StatusCircle({
   return (
     <div className={cn(baseClass, 'bg-muted/30 border border-muted-foreground/30')}>
       <div
-        className={cn(
-          'rounded-full bg-muted-foreground/30',
-          simplified ? 'size-1.5' : 'size-2'
-        )}
+        className={cn('rounded-full bg-muted-foreground/30', simplified ? 'size-1.5' : 'size-2')}
       />
     </div>
   )

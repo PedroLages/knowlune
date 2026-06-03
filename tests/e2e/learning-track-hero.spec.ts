@@ -8,7 +8,7 @@
  * learning-tracks.spec.ts and learning-track-reorder.spec.ts.
  */
 import { test, expect } from '../support/fixtures'
-import { seedIndexedDBStore, clearLearningPath } from '../support/helpers/seed-helpers'
+import { seedIndexedDBStore, clearLearningPath, clearIndexedDBStore } from '../support/helpers/seed-helpers'
 import { navigateAndWait } from '../support/helpers/navigation'
 import { FIXED_DATE, getRelativeDate } from '../utils/test-time'
 
@@ -311,4 +311,79 @@ test.describe('Learning Tracks — cinematic hero', () => {
       expect(parsed[2]).toBeGreaterThan(150) // Blue channel is dominant
     }
   })
+
+  // ── Bounding box overlap ──────────────────────────────────────
+
+  const BBOX_VIEWPORTS = [
+    { width: 1440, height: 900, label: 'desktop (1440px)' },
+    { width: 768, height: 1024, label: 'tablet (768px)' },
+    { width: 375, height: 812, label: 'mobile (375px)' },
+  ]
+
+  for (const vp of BBOX_VIEWPORTS) {
+    test(`bounding box at ${vp.label}: hero-cta does not overlap continue-learning card`, async ({
+      page,
+    }) => {
+      const pathId = vp.width === 1440 ? 'lt-bbox-d' : vp.width === 768 ? 'lt-bbox-t' : 'lt-bbox-m'
+      const courseId = 'c-bbox'
+
+      // Seed path with one course
+      const entries = [createLearningPathEntry({ pathId, courseId, position: 1 })]
+      const paths = [createLearningPath({ id: pathId, name: `Bounding Box Track ${vp.label}` })]
+      await clearLearningPath(page)
+      await clearIndexedDBStore(page, DB_NAME, 'importedCourses')
+      await clearIndexedDBStore(page, DB_NAME, 'progress')
+      await seedPaths(page, paths, entries)
+
+      // Seed imported course so usePathProgress can calculate completionPct
+      await seedIndexedDBStore(page, DB_NAME, 'importedCourses', [
+        {
+          id: courseId,
+          name: 'Bounding Box Course',
+          importedAt: FIXED_DATE,
+          category: 'technology',
+          tags: [],
+          status: 'active',
+          videoCount: 5,
+          pdfCount: 0,
+        },
+      ])
+
+      // Seed 2 of 5 videos as completed → 40% → ContinueLearningBento renders
+      await seedIndexedDBStore(page, DB_NAME, 'progress', [
+        { courseId, videoId: 'v-bbox-1', completedAt: FIXED_DATE },
+        { courseId, videoId: 'v-bbox-2', completedAt: FIXED_DATE },
+      ])
+
+      await page.setViewportSize({ width: vp.width, height: vp.height })
+      await page.goto(`/learning-tracks/${pathId}`, { waitUntil: 'load' })
+
+      // Wait for both elements to be visible
+      await expect(page.getByTestId('hero-cta')).toBeVisible()
+      await expect(page.getByTestId('continue-learning-card')).toBeVisible()
+
+      // Get bounding boxes
+      const heroCtaBox = await page.getByTestId('hero-cta').boundingBox()
+      const continueCardBox = await page.getByTestId('continue-learning-card').boundingBox()
+
+      expect(heroCtaBox, `hero-cta bounding box at ${vp.label}`).not.toBeNull()
+      expect(continueCardBox, `continue-learning-card bounding box at ${vp.label}`).not.toBeNull()
+
+      // Assert: hero-cta bottom <= Continue card top (no overlap)
+      const ctaBottom = heroCtaBox!.y + heroCtaBox!.height
+      const cardTop = continueCardBox!.y
+      expect(
+        ctaBottom,
+        `hero-cta bottom (${Math.round(ctaBottom)}px) should be <= continue card top (${Math.round(cardTop)}px) at ${vp.label}`
+      ).toBeLessThanOrEqual(cardTop)
+
+      // Assert: no horizontal overflow
+      const scrollWidth = await page.evaluate(() => document.documentElement.scrollWidth)
+      const innerWidth = await page.evaluate(() => window.innerWidth)
+      expect(
+        scrollWidth,
+        `scrollWidth (${scrollWidth}px) <= innerWidth (${innerWidth}px) + 2 at ${vp.label}`
+      ).toBeLessThanOrEqual(innerWidth + 2)
+    })
+  }
 })
