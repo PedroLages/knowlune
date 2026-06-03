@@ -25,6 +25,7 @@ import { extractGapSearchTerm, cleanGapJustification } from '@/data/learningPath
 import { StatusCircle, EntryActionButton, LessonRow } from '@/app/components/learning-path/TimelinePrimitives'
 import { SortableCourseTimelineEntry } from '@/app/components/learning-path/SortableCourseTimelineEntry'
 import { formatClockDuration } from '@/lib/formatDuration'
+import { isCourseInProgress } from '@/lib/progressUtils'
 import type { ChapterGroup } from '@/lib/curriculumGrouping'
 import type { LearningPathEntry, PathCourseInfo, ImportedVideo, VideoProgress } from '@/data/types'
 
@@ -607,7 +608,7 @@ export function PathTimeline({
               const info = courseInfoMap.get(entry.courseId)
               const isManuallyCompleted = manuallyCompletedIds?.has(entry.id) ?? false
               const isCompleted = (info?.completionPct ?? 0) >= 100 || isManuallyCompleted
-              const hasRealProgress = (info?.completionPct ?? 0) > 0 && !isCompleted
+              const hasRealProgress = isCourseInProgress(info?.completionPct, isCompleted)
               const isInProgress =
                 (!hasAnyProgress && i === firstNonGapIndex && !isCompleted) ||
                 hasRealProgress ||
@@ -678,7 +679,7 @@ export function PathTimeline({
         const info = courseInfoMap.get(entry.courseId)
         const isManuallyCompleted = manuallyCompletedIds?.has(entry.id) ?? false
         const isCompleted = (info?.completionPct ?? 0) >= 100 || isManuallyCompleted
-        const hasRealProgress = (info?.completionPct ?? 0) > 0 && !isCompleted
+        const hasRealProgress = isCourseInProgress(info?.completionPct, isCompleted)
         const isInProgress =
           (!hasAnyProgress && i === firstNonGapIndex && !isCompleted) ||
           hasRealProgress ||

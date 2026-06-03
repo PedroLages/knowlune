@@ -13,6 +13,7 @@ import { Badge } from '@/app/components/ui/badge'
 import { Card, CardContent } from '@/app/components/ui/card'
 import { cn } from '@/app/components/ui/utils'
 import { CourseTypeBadge } from '@/app/components/shared/CourseTypeBadge'
+import { isCourseInProgress } from '@/lib/progressUtils'
 import { extractGapSearchTerm, cleanGapJustification } from '@/data/learningPathUtils'
 import type { LearningPathEntry, PathCourseInfo } from '@/data/types'
 
@@ -146,7 +147,7 @@ export function RoadmapListView({
         const info = courseInfoMap.get(entry.courseId)
         const thumbUrl = thumbnailUrls[entry.courseId]
         const isCompleted = (info?.completionPct ?? 0) >= 100
-        const isInProgress = (info?.completionPct ?? 0) > 0 && !isCompleted
+        const isInProgress = isCourseInProgress(info?.completionPct, isCompleted)
 
         return (
           <div key={entry.courseId} role="listitem">
