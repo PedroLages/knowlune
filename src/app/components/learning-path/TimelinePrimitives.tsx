@@ -39,7 +39,7 @@ export function StatusCircle({
     return (
       <div className={cn(baseClass, 'bg-brand text-brand-foreground ring-4 ring-brand-soft')}>
         <div
-          className={cn('rounded-full bg-white animate-pulse', simplified ? 'size-2' : 'size-2.5')}
+          className={cn('rounded-full bg-white motion-safe:animate-pulse', simplified ? 'size-2' : 'size-2.5')}
         />
       </div>
     )

@@ -59,9 +59,8 @@ export function PathProgressSidebar({
               <div className="text-center" aria-live="polite" aria-atomic="true">
                 <span className="block text-2xl font-extrabold text-foreground">
                   {completionPct > 0 && Math.round(completionPct) === 0
-                    ? '< 1'
-                    : Math.round(completionPct)}
-                  %
+                    ? '< 1%'
+                    : `${Math.round(completionPct)}%`}
                 </span>
                 <span className="block text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
                   Complete
