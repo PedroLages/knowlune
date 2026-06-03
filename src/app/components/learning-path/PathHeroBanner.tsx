@@ -1,6 +1,14 @@
 import { useState, useCallback } from 'react'
 import { Link } from 'react-router'
-import { ArrowLeft, Clock, PlayCircle, BookOpen, Pencil, Trash2, MoreHorizontal } from 'lucide-react'
+import {
+  ArrowLeft,
+  Clock,
+  PlayCircle,
+  BookOpen,
+  Pencil,
+  Trash2,
+  MoreHorizontal,
+} from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
 import {
   DropdownMenu,
@@ -134,9 +142,7 @@ export function PathHeroBanner({
           className={cn(
             'absolute inset-0 h-full w-full object-cover',
             'motion-safe:transition-[transform,opacity] motion-safe:duration-700 motion-safe:ease-out',
-            showCoverImage
-              ? 'opacity-100 motion-safe:scale-100'
-              : 'opacity-0 motion-safe:scale-105'
+            showCoverImage ? 'opacity-100 motion-safe:scale-100' : 'opacity-0 motion-safe:scale-105'
           )}
           onLoad={() => setLoadedUrl(coverUrl)}
           onError={() => setFailedUrl(coverUrl)}
@@ -149,11 +155,14 @@ export function PathHeroBanner({
           sitting under the same scrim as the cover. */}
       {!showCoverImage && (
         <>
-          <div className={cn('absolute inset-0',
-            path.coverPreset && GRADIENT_COVER_CLASSES[path.coverPreset]
-              ? GRADIENT_COVER_CLASSES[path.coverPreset]
-              : 'bg-gradient-to-br from-brand to-brand-hover'
-          )} />
+          <div
+            className={cn(
+              'absolute inset-0',
+              path.coverPreset && GRADIENT_COVER_CLASSES[path.coverPreset]
+                ? GRADIENT_COVER_CLASSES[path.coverPreset]
+                : 'bg-gradient-to-br from-brand to-brand-hover'
+            )}
+          />
           {/* Radial highlight overlay */}
           <div className="absolute inset-0 opacity-20 bg-[radial-gradient(circle_at_50%_120%,rgba(255,255,255,0.8),transparent)]" />
         </>
@@ -185,7 +194,10 @@ export function PathHeroBanner({
       {/* Layer 3 — Overlay content (relative z-10, text-white).
           Anchored to the bottom of the tall stage, above the dark scrim.
           All text is white on the dark scrim for guaranteed WCAG contrast. */}
-      <div className="relative z-10 p-4 sm:p-6 lg:p-8" data-testid="hero-content-surface">
+      <div
+        className="relative z-10 p-4 sm:p-6 lg:p-8 pb-10 sm:pb-12 lg:pb-14"
+        data-testid="hero-content-surface"
+      >
         {/* Top row: Back link (left) + Dropdown (right) */}
         <div className="flex items-start justify-between mb-4 sm:mb-6">
           <Link
@@ -243,7 +255,9 @@ export function PathHeroBanner({
               <Clock className="size-3.5" aria-hidden="true" />
               {courseCount} {courseCount === 1 ? 'course' : 'courses'}
               {path.estimatedHours != null && path.estimatedHours > 0 && (
-                <>{' · '}~{path.estimatedHours}h</>
+                <>
+                  {' · '}~{path.estimatedHours}h
+                </>
               )}
             </span>
           </div>

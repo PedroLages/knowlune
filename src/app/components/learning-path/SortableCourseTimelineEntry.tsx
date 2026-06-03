@@ -18,14 +18,7 @@ import { useRef, useState, useEffect } from 'react'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { AnimatePresence, motion } from 'motion/react'
-import {
-  Check,
-  Lock,
-  GripVertical,
-  ChevronDown,
-  Video,
-  Clock,
-} from 'lucide-react'
+import { Check, Lock, GripVertical, ChevronDown, Video, Clock } from 'lucide-react'
 import { Card, CardContent } from '@/app/components/ui/card'
 import { cn } from '@/app/components/ui/utils'
 import { EntryActionButton, LessonRow } from '@/app/components/learning-path/TimelinePrimitives'
@@ -39,6 +32,8 @@ interface SortableCourseTimelineEntryProps {
   info?: PathCourseInfo
   isCompleted: boolean
   isInProgress: boolean
+  /** When true, the module has real progress (1-99%) — shows "In Progress" label and "Continue Module" button */
+  hasRealProgress?: boolean
   isManuallyCompleted?: boolean
   index: number
   onClick: () => void
@@ -54,6 +49,7 @@ export function SortableCourseTimelineEntry({
   info,
   isCompleted,
   isInProgress,
+  hasRealProgress,
   isManuallyCompleted,
   index,
   onClick,
@@ -70,7 +66,9 @@ export function SortableCourseTimelineEntry({
     : isCompleted
       ? 'Completed'
       : isInProgress
-        ? 'Up Next'
+        ? hasRealProgress
+          ? 'In Progress'
+          : 'Up Next'
         : 'Locked'
   const prevLockedRef = useRef(isLocked)
   const justUnlocked = prevLockedRef.current && !isLocked
@@ -90,14 +88,7 @@ export function SortableCourseTimelineEntry({
     prevLockedRef.current = isLocked
   }, [isLocked])
 
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: entry.courseId,
   })
 
@@ -120,9 +111,7 @@ export function SortableCourseTimelineEntry({
             )}
             aria-label={statusLabel}
           >
-            {status === 'completed' && (
-              <Check className="size-2.5 text-white" aria-hidden="true" />
-            )}
+            {status === 'completed' && <Check className="size-2.5 text-white" aria-hidden="true" />}
           </span>
           <div className="w-[2px] flex-1 bg-border" />
         </div>
@@ -205,7 +194,7 @@ export function SortableCourseTimelineEntry({
                     >
                       {isCompleted && <Check className="size-3" aria-hidden="true" />}
                       {isInProgress && (
-                        <span className="size-1.5 rounded-full bg-brand-soft-foreground animate-pulse" />
+                        <span className="size-1.5 rounded-full bg-brand-soft-foreground motion-safe:animate-pulse" />
                       )}
                       {isLocked && <Lock className="size-3 opacity-50" aria-hidden="true" />}
                       {statusLabel}
@@ -243,6 +232,7 @@ export function SortableCourseTimelineEntry({
                         <EntryActionButton
                           status={status}
                           isManuallyCompleted={isManuallyCompleted}
+                          hasRealProgress={hasRealProgress}
                           onClick={onClick}
                           onMarkComplete={onMarkComplete}
                         />
@@ -274,14 +264,16 @@ export function SortableCourseTimelineEntry({
                 >
                   <div className="px-6 pb-4 pt-3 space-y-3">
                     {(() => {
-                      const singleUngrouped = groupsWithVideos.length === 1 && groupsWithVideos[0].title === ''
+                      const singleUngrouped =
+                        groupsWithVideos.length === 1 && groupsWithVideos[0].title === ''
                       return groupsWithVideos.map((group, gi) => (
                         <div key={`${group.title}-${gi}`} className="space-y-1">
-                          {!singleUngrouped && (groupsWithVideos.length > 1 || group.title !== '') && (
-                            <h4 className="px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                              {group.title || 'Lessons'}
-                            </h4>
-                          )}
+                          {!singleUngrouped &&
+                            (groupsWithVideos.length > 1 || group.title !== '') && (
+                              <h4 className="px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                                {group.title || 'Lessons'}
+                              </h4>
+                            )}
                           {group.videos.map(video => {
                             const prog = videoProgressMap?.get(video.id)
                             const isVideoCompleted = (prog?.completionPercentage ?? 0) >= 90

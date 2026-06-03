@@ -1,18 +1,10 @@
-import {
-  Check,
-  Play,
-  Lock,
-  AlertCircle,
-  Import,
-  BookOpen,
-  Search,
-  Replace,
-} from 'lucide-react'
+import { Check, Play, Lock, AlertCircle, Import, BookOpen, Search, Replace } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
 import { Badge } from '@/app/components/ui/badge'
 import { Card, CardContent } from '@/app/components/ui/card'
 import { cn } from '@/app/components/ui/utils'
 import { CourseTypeBadge } from '@/app/components/shared/CourseTypeBadge'
+import { isCourseInProgress } from '@/lib/progressUtils'
 import { extractGapSearchTerm, cleanGapJustification } from '@/data/learningPathUtils'
 import type { LearningPathEntry, PathCourseInfo } from '@/data/types'
 
@@ -146,7 +138,7 @@ export function RoadmapListView({
         const info = courseInfoMap.get(entry.courseId)
         const thumbUrl = thumbnailUrls[entry.courseId]
         const isCompleted = (info?.completionPct ?? 0) >= 100
-        const isInProgress = (info?.completionPct ?? 0) > 0 && !isCompleted
+        const isInProgress = isCourseInProgress(info?.completionPct, isCompleted)
 
         return (
           <div key={entry.courseId} role="listitem">
@@ -190,7 +182,12 @@ export function RoadmapListView({
                   {/* Thumbnail */}
                   <div className="size-12 shrink-0 rounded-lg bg-muted overflow-hidden">
                     {thumbUrl ? (
-                      <img src={thumbUrl} alt="" className="size-full object-cover" loading="lazy" />
+                      <img
+                        src={thumbUrl}
+                        alt=""
+                        className="size-full object-cover"
+                        loading="lazy"
+                      />
                     ) : (
                       <div className="size-full flex items-center justify-center">
                         <BookOpen className="size-5 text-muted-foreground" aria-hidden="true" />

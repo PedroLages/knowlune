@@ -48,6 +48,7 @@ export function ContinueLearningBento({
 
   return (
     <div
+      data-testid="continue-learning-card"
       className={cn(
         'rounded-[24px] border border-border/50 bg-card overflow-hidden shadow-card-ambient',
         className

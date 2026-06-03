@@ -16,15 +16,31 @@ import {
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable'
-import { Check, Lock, AlertCircle, Import, Search, Replace, GripVertical, ChevronDown, Video, Clock } from 'lucide-react'
+import {
+  Check,
+  Lock,
+  AlertCircle,
+  Import,
+  Search,
+  Replace,
+  GripVertical,
+  ChevronDown,
+  Video,
+  Clock,
+} from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
 import { Badge } from '@/app/components/ui/badge'
 import { Card, CardContent } from '@/app/components/ui/card'
 import { cn } from '@/app/components/ui/utils'
 import { extractGapSearchTerm, cleanGapJustification } from '@/data/learningPathUtils'
-import { StatusCircle, EntryActionButton, LessonRow } from '@/app/components/learning-path/TimelinePrimitives'
+import {
+  StatusCircle,
+  EntryActionButton,
+  LessonRow,
+} from '@/app/components/learning-path/TimelinePrimitives'
 import { SortableCourseTimelineEntry } from '@/app/components/learning-path/SortableCourseTimelineEntry'
 import { formatClockDuration } from '@/lib/formatDuration'
+import { isCourseInProgress } from '@/lib/progressUtils'
 import type { ChapterGroup } from '@/lib/curriculumGrouping'
 import type { LearningPathEntry, PathCourseInfo, ImportedVideo, VideoProgress } from '@/data/types'
 
@@ -165,6 +181,7 @@ function CourseTimelineEntry({
   info,
   isCompleted,
   isInProgress,
+  hasRealProgress,
   isManuallyCompleted,
   index,
   onClick,
@@ -178,6 +195,8 @@ function CourseTimelineEntry({
   info?: PathCourseInfo
   isCompleted: boolean
   isInProgress: boolean
+  /** When true, the module has real progress (1-99%) — shows "In Progress" label and "Continue Module" button */
+  hasRealProgress?: boolean
   isManuallyCompleted?: boolean
   index: number
   onClick: () => void
@@ -194,7 +213,9 @@ function CourseTimelineEntry({
     : isCompleted
       ? 'Completed'
       : isInProgress
-        ? 'Up Next'
+        ? hasRealProgress
+          ? 'In Progress'
+          : 'Up Next'
         : 'Locked'
   const entryRef = useRef<HTMLDivElement>(null)
   const [isExpanded, setIsExpanded] = useState(false)
@@ -241,7 +262,7 @@ function CourseTimelineEntry({
           >
             {isCompleted && <Check className="size-3" aria-hidden="true" />}
             {isInProgress && (
-              <span className="size-1.5 rounded-full bg-brand-soft-foreground animate-pulse" />
+              <span className="size-1.5 rounded-full bg-brand-soft-foreground motion-safe:animate-pulse" />
             )}
             {isLocked && <Lock className="size-3" aria-hidden="true" />}
             {statusLabel}
@@ -253,9 +274,7 @@ function CourseTimelineEntry({
 
         {/* Row 3: Description (always visible) */}
         {info?.description && (
-          <p className="text-sm text-muted-foreground mt-2 line-clamp-2">
-            {info.description}
-          </p>
+          <p className="text-sm text-muted-foreground mt-2 line-clamp-2">{info.description}</p>
         )}
 
         {/* Row 4: Stats + Action button */}
@@ -279,6 +298,7 @@ function CourseTimelineEntry({
               <EntryActionButton
                 status={status}
                 isManuallyCompleted={isManuallyCompleted}
+                hasRealProgress={hasRealProgress}
                 onClick={onClick}
                 onMarkComplete={onMarkComplete}
               />
@@ -319,84 +339,38 @@ function CourseTimelineEntry({
       <div className={simplified ? 'flex-1 min-w-0 mb-4' : 'flex-1 pb-8 min-w-0'}>
         <motion.div
           key={`${entry.courseId}-${isLocked ? 'locked' : 'unlocked'}`}
-          initial={
-            shouldAnimate && justUnlocked ? { opacity: 0.8, scale: 0.97 } : false
-          }
+          initial={shouldAnimate && justUnlocked ? { opacity: 0.8, scale: 0.97 } : false}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
         >
-        <Card
-          className={cn(
-            'rounded-2xl border hover:shadow-md transition-all duration-300 group overflow-hidden',
-            isCompleted && 'border-success/20',
-            isInProgress && 'border-brand/20 ring-1 ring-brand/5',
-            isLocked && 'border-border/50 opacity-60 pointer-events-none',
-            justUnlocked && shouldAnimate && 'shadow-brand/10 shadow-lg'
-          )}
-          {...(isLocked
-            ? {}
-            : {
-                role: 'button',
-                tabIndex: 0,
-                'aria-label': `Module ${index + 1}: ${info?.name || 'Course'} — ${statusLabel}`,
-                onClick: () => setIsExpanded(!isExpanded),
-                onKeyDown: (e: React.KeyboardEvent) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault()
-                    setIsExpanded(!isExpanded)
-                  }
-                },
-              })}
-        >
-          <CardContent className="p-6">
-            {renderCardContent()}
-          </CardContent>
-
-          {/* Expanded content: grouped lessons (preferred) or flat list */}
-          <AnimatePresence initial={false}>
-            {!isLocked && isExpanded && groupsWithVideos.length > 0 && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: 'auto', opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
-                className="overflow-hidden border-t border-border"
-              >
-                <div className="px-6 pb-4 pt-3 space-y-3">
-              {(() => {
-                const singleUngrouped = groupsWithVideos.length === 1 && groupsWithVideos[0].title === ''
-                return groupsWithVideos.map((group, gi) => (
-                  <div key={`${group.title}-${gi}`} className="space-y-1">
-                    {!singleUngrouped && (groupsWithVideos.length > 1 || group.title !== '') && (
-                      <h4 className="px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                        {group.title || 'Lessons'}
-                      </h4>
-                    )}
-                    {group.videos.map(video => {
-                      const prog = videoProgressMap?.get(video.id)
-                      const isVideoCompleted = (prog?.completionPercentage ?? 0) >= 90
-                      return (
-                        <LessonRow
-                          key={video.id}
-                          video={video}
-                          courseId={entry.courseId}
-                          isCompleted={isVideoCompleted}
-                        />
-                      )
-                    })}
-                  </div>
-                ))
-              })()}
-                </div>
-              </motion.div>
+          <Card
+            className={cn(
+              'rounded-2xl border hover:shadow-md transition-all duration-300 group overflow-hidden',
+              isCompleted && 'border-success/20',
+              isInProgress && 'border-brand/20 ring-1 ring-brand/5',
+              isLocked && 'border-border/50 opacity-60 pointer-events-none',
+              justUnlocked && shouldAnimate && 'shadow-brand/10 shadow-lg'
             )}
-          </AnimatePresence>
-          <AnimatePresence initial={false}>
-            {!isLocked &&
-              isExpanded &&
-              groupsWithVideos.length === 0 &&
-              videos &&
-              videos.length > 0 && (
+            {...(isLocked
+              ? {}
+              : {
+                  role: 'button',
+                  tabIndex: 0,
+                  'aria-label': `Module ${index + 1}: ${info?.name || 'Course'} — ${statusLabel}`,
+                  onClick: () => setIsExpanded(!isExpanded),
+                  onKeyDown: (e: React.KeyboardEvent) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault()
+                      setIsExpanded(!isExpanded)
+                    }
+                  },
+                })}
+          >
+            <CardContent className="p-6">{renderCardContent()}</CardContent>
+
+            {/* Expanded content: grouped lessons (preferred) or flat list */}
+            <AnimatePresence initial={false}>
+              {!isLocked && isExpanded && groupsWithVideos.length > 0 && (
                 <motion.div
                   initial={{ height: 0, opacity: 0 }}
                   animate={{ height: 'auto', opacity: 1 }}
@@ -404,24 +378,68 @@ function CourseTimelineEntry({
                   transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
                   className="overflow-hidden border-t border-border"
                 >
-                  <div className="px-6 pb-4 pt-3 space-y-1">
-                {videos.map(video => {
-                  const prog = videoProgressMap?.get(video.id)
-                  const isVideoCompleted = (prog?.completionPercentage ?? 0) >= 90
-                  return (
-                    <LessonRow
-                      key={video.id}
-                      video={video}
-                      courseId={entry.courseId}
-                      isCompleted={isVideoCompleted}
-                    />
-                  )
-                })}
+                  <div className="px-6 pb-4 pt-3 space-y-3">
+                    {(() => {
+                      const singleUngrouped =
+                        groupsWithVideos.length === 1 && groupsWithVideos[0].title === ''
+                      return groupsWithVideos.map((group, gi) => (
+                        <div key={`${group.title}-${gi}`} className="space-y-1">
+                          {!singleUngrouped &&
+                            (groupsWithVideos.length > 1 || group.title !== '') && (
+                              <h4 className="px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                                {group.title || 'Lessons'}
+                              </h4>
+                            )}
+                          {group.videos.map(video => {
+                            const prog = videoProgressMap?.get(video.id)
+                            const isVideoCompleted = (prog?.completionPercentage ?? 0) >= 90
+                            return (
+                              <LessonRow
+                                key={video.id}
+                                video={video}
+                                courseId={entry.courseId}
+                                isCompleted={isVideoCompleted}
+                              />
+                            )
+                          })}
+                        </div>
+                      ))
+                    })()}
                   </div>
                 </motion.div>
               )}
-          </AnimatePresence>
-        </Card>
+            </AnimatePresence>
+            <AnimatePresence initial={false}>
+              {!isLocked &&
+                isExpanded &&
+                groupsWithVideos.length === 0 &&
+                videos &&
+                videos.length > 0 && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 'auto', opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+                    className="overflow-hidden border-t border-border"
+                  >
+                    <div className="px-6 pb-4 pt-3 space-y-1">
+                      {videos.map(video => {
+                        const prog = videoProgressMap?.get(video.id)
+                        const isVideoCompleted = (prog?.completionPercentage ?? 0) >= 90
+                        return (
+                          <LessonRow
+                            key={video.id}
+                            video={video}
+                            courseId={entry.courseId}
+                            isCompleted={isVideoCompleted}
+                          />
+                        )
+                      })}
+                    </div>
+                  </motion.div>
+                )}
+            </AnimatePresence>
+          </Card>
         </motion.div>
       </div>
     </div>
@@ -466,10 +484,11 @@ export function PathTimeline({
   // default to "in-progress" so the user sees a "Start Module" CTA rather
   // than all courses appearing as "Locked".
   const hasAnyProgress = useMemo(
-    () => filteredEntries.some(e => {
-      if (e.courseId === '' || gapEntryIds.has(e.id)) return false
-      return (courseInfoMap.get(e.courseId)?.completionPct ?? 0) > 0
-    }),
+    () =>
+      filteredEntries.some(e => {
+        if (e.courseId === '' || gapEntryIds.has(e.id)) return false
+        return (courseInfoMap.get(e.courseId)?.completionPct ?? 0) > 0
+      }),
     [filteredEntries, courseInfoMap, gapEntryIds]
   )
   const firstNonGapIndex = useMemo(
@@ -500,7 +519,8 @@ export function PathTimeline({
 
   // Sortable entry IDs — exclude gap entries
   const sortableEntryIds = useMemo(
-    () => filteredEntries.filter(e => e.courseId !== '' && !gapEntryIds.has(e.id)).map(e => e.courseId),
+    () =>
+      filteredEntries.filter(e => e.courseId !== '' && !gapEntryIds.has(e.id)).map(e => e.courseId),
     [filteredEntries, gapEntryIds]
   )
 
@@ -555,7 +575,10 @@ export function PathTimeline({
       if (!container) return
       const rows = container.querySelectorAll('[role="listitem"]')
       if (rows[currentIndex]) {
-        rows[currentIndex].scrollIntoView({ behavior: prefersReducedMotion ? 'instant' : 'smooth', block: 'center' })
+        rows[currentIndex].scrollIntoView({
+          behavior: prefersReducedMotion ? 'instant' : 'smooth',
+          block: 'center',
+        })
       }
     }, 300)
 
@@ -572,7 +595,12 @@ export function PathTimeline({
     const activeInfo = activeEntry ? courseInfoMap.get(activeEntry.courseId) : null
 
     return (
-      <div ref={timelineRef} className={cn('space-y-0', className)} role="list" aria-label="Timeline">
+      <div
+        ref={timelineRef}
+        className={cn('space-y-0', className)}
+        role="list"
+        aria-label="Timeline"
+      >
         <DndContext
           sensors={sensors}
           collisionDetection={closestCorners}
@@ -603,7 +631,7 @@ export function PathTimeline({
               const info = courseInfoMap.get(entry.courseId)
               const isManuallyCompleted = manuallyCompletedIds?.has(entry.id) ?? false
               const isCompleted = (info?.completionPct ?? 0) >= 100 || isManuallyCompleted
-              const hasRealProgress = (info?.completionPct ?? 0) > 0 && !isCompleted
+              const hasRealProgress = isCourseInProgress(info?.completionPct, isCompleted)
               const isInProgress =
                 (!hasAnyProgress && i === firstNonGapIndex && !isCompleted) ||
                 hasRealProgress ||
@@ -616,12 +644,11 @@ export function PathTimeline({
                     info={info}
                     isCompleted={isCompleted}
                     isInProgress={isInProgress}
+                    hasRealProgress={hasRealProgress}
                     isManuallyCompleted={isManuallyCompleted}
                     index={i}
                     onClick={() => onCourseClick(entry.courseId)}
-                    onMarkComplete={
-                      onMarkComplete ? () => onMarkComplete(entry.id) : undefined
-                    }
+                    onMarkComplete={onMarkComplete ? () => onMarkComplete(entry.id) : undefined}
                     simplified={simplified}
                     videos={videosByCourse?.get(entry.courseId)}
                     lessonGroups={lessonGroupsByCourse?.get(entry.courseId)}
@@ -641,7 +668,7 @@ export function PathTimeline({
                 <div className="flex-1 min-w-0">
                   <h3 className="text-xl font-bold">{activeInfo.name || 'Unknown Course'}</h3>
                   <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest">
-                    Module {(filteredEntries.findIndex(e => e.courseId === activeEntry.courseId)) + 1}
+                    Module {filteredEntries.findIndex(e => e.courseId === activeEntry.courseId) + 1}
                   </span>
                 </div>
               </div>
@@ -673,7 +700,7 @@ export function PathTimeline({
         const info = courseInfoMap.get(entry.courseId)
         const isManuallyCompleted = manuallyCompletedIds?.has(entry.id) ?? false
         const isCompleted = (info?.completionPct ?? 0) >= 100 || isManuallyCompleted
-        const hasRealProgress = (info?.completionPct ?? 0) > 0 && !isCompleted
+        const hasRealProgress = isCourseInProgress(info?.completionPct, isCompleted)
         const isInProgress =
           (!hasAnyProgress && i === firstNonGapIndex && !isCompleted) ||
           hasRealProgress ||
@@ -686,12 +713,11 @@ export function PathTimeline({
               info={info}
               isCompleted={isCompleted}
               isInProgress={isInProgress}
+              hasRealProgress={hasRealProgress}
               isManuallyCompleted={isManuallyCompleted}
               index={i}
               onClick={() => onCourseClick(entry.courseId)}
-              onMarkComplete={
-                onMarkComplete ? () => onMarkComplete(entry.id) : undefined
-              }
+              onMarkComplete={onMarkComplete ? () => onMarkComplete(entry.id) : undefined}
               simplified={simplified}
               videos={videosByCourse?.get(entry.courseId)}
               lessonGroups={lessonGroupsByCourse?.get(entry.courseId)}

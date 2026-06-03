@@ -45,7 +45,7 @@ export function PathSummaryPanel({ progress, className }: PathSummaryPanelProps)
     {
       icon: Flame,
       label: 'Remaining',
-      value: estimatedRemainingHours > 0 ? `~${estimatedRemainingHours}h` : '0h',
+      value: estimatedRemainingHours > 0 ? `~${Math.round(estimatedRemainingHours)}h` : '0h',
     },
   ]
 
