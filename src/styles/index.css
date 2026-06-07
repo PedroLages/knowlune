@@ -48,6 +48,43 @@ html {
   outline: none;
 }
 
+/* Lists
+ * Tailwind Preflight resets list markers to none, and @tailwindcss/typography
+ * is not installed, so the `prose` classes don't restore them. These scoped
+ * rules give bullet/ordered lists visible markers + indentation in both the
+ * editable editor and the read-only renderer (both carry the .tiptap class).
+ * The task-list selectors below are more specific and intentionally override
+ * these to keep checklists marker-less. */
+.tiptap ul,
+.tiptap ol {
+  padding-left: 1.5rem;
+  margin: 0.5rem 0;
+}
+.tiptap ul {
+  list-style: disc;
+}
+.tiptap ol {
+  list-style: decimal;
+}
+.tiptap li {
+  margin: 0.25rem 0;
+}
+.tiptap li > p {
+  margin: 0;
+}
+.tiptap ul ul {
+  list-style: circle;
+}
+.tiptap ul ul ul {
+  list-style: square;
+}
+.tiptap ol ol {
+  list-style: lower-alpha;
+}
+.tiptap ol ol ol {
+  list-style: lower-roman;
+}
+
 /* Task list checkboxes */
 .tiptap ul[data-type='taskList'] {
   list-style: none;
@@ -357,14 +394,22 @@ html.reduce-motion .reduced-motion-fade {
 
 /* ── Auth callback entry animation ── */
 @keyframes fadeSlideUp {
-  from { opacity: 0; transform: translateY(12px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 .anim-fade-slide-up {
   animation: fadeSlideUp 0.4s ease-out both;
 }
 @media (prefers-reduced-motion: reduce) {
-  .anim-fade-slide-up { animation: none; }
+  .anim-fade-slide-up {
+    animation: none;
+  }
 }
 
 /* WCAG 2.4.11 — Focus Not Obscured (E66-S03)
