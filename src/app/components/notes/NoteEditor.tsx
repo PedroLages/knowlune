@@ -12,6 +12,7 @@ import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight'
 import Image from '@tiptap/extension-image'
 import { FileHandler } from '@tiptap/extension-file-handler'
 import Youtube from '@tiptap/extension-youtube'
+import { Markdown } from '@tiptap/markdown'
 import { Details, DetailsContent, DetailsSummary } from '@tiptap/extension-details'
 import Color from '@tiptap/extension-color'
 import { TextStyle } from '@tiptap/extension-text-style'
@@ -96,6 +97,7 @@ import { formatTimestamp } from '@/lib/format'
 import { exportSingleNoteAsMarkdown } from '@/lib/noteExport'
 import { downloadAsFile } from '@/lib/download'
 import { FrameCaptureExtension } from './frame-capture'
+import { PasteMarkdown } from './paste-markdown'
 import type { CapturedFrame } from '@/lib/frame-capture'
 import type { PatchableNodeView, NodeViewRendererProps, ViewMutationRecord } from '@/types/tiptap'
 
@@ -301,6 +303,8 @@ export function NoteEditor({
         },
         codeBlock: false,
       }),
+      Markdown,
+      PasteMarkdown,
       Placeholder.configure({
         placeholder:
           'Write your notes for this lesson\u2026 Use the toolbar to format, or click Add Timestamp to link to a video moment.',
