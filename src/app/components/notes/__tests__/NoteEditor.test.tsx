@@ -136,6 +136,12 @@ vi.mock('../TableContextMenu', () => ({ TableContextMenu: ({ children }: { child
 // Frame capture extension
 vi.mock('../frame-capture', () => ({ FrameCaptureExtension: {} }))
 
+// Markdown extension
+vi.mock('@tiptap/markdown', () => ({ Markdown: chainableExt() }))
+
+// Paste markdown extension
+vi.mock('../paste-markdown', () => ({ PasteMarkdown: {} }))
+
 // External utilities
 vi.mock('@/lib/format', () => ({ formatTimestamp: () => '00:00' }))
 vi.mock('@/lib/noteExport', () => ({ exportSingleNoteAsMarkdown: () => ({ content: '', filename: '' }) }))
