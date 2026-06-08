@@ -137,7 +137,7 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
   const [justBookmarked, setJustBookmarked] = useState(false)
   const [isBuffering, setIsBuffering] = useState(false)
   const [hasError, setHasError] = useState(false)
-  const [, setBufferedRanges] = useState<Array<{ start: number; end: number }>>([])
+  const [bufferedRanges, setBufferedRanges] = useState<Array<{ start: number; end: number }>>([])
 
   type SeekOverlayState = { direction: 'left' | 'right'; amount: number; id: number } | null
   const [seekOverlay, setSeekOverlay] = useState<SeekOverlayState>(null)
@@ -1140,6 +1140,7 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
               </span>
               <ChapterProgressBar
                 src={src}
+                buffered={bufferedRanges}
                 progress={progress}
                 duration={duration}
                 chapters={chapters}
