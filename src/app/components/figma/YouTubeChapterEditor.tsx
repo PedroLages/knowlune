@@ -454,7 +454,7 @@ export function YouTubeChapterEditor({
       )}
 
       {/* Chapter list */}
-      <ScrollArea className="max-h-[50vh]" data-testid="chapter-list">
+      <ScrollArea className="max-h-[45vh]" data-testid="chapter-list">
         <DndContext
           sensors={sensors}
           collisionDetection={closestCenter}
@@ -494,9 +494,9 @@ export function YouTubeChapterEditor({
 
           <DragOverlay>
             {activeVideo && (
-              <div className="flex items-center gap-2 rounded-xl border border-brand/30 bg-card px-3 py-2 shadow-xl">
-                <GripVertical className="size-4 text-muted-foreground" aria-hidden="true" />
-                <span className="text-sm font-medium truncate">
+              <div className="flex items-center gap-2 rounded-xl border border-brand/30 bg-card px-3 py-2 shadow-xl max-w-md">
+                <GripVertical className="size-4 text-muted-foreground shrink-0" aria-hidden="true" />
+                <span className="text-sm font-medium truncate min-w-0">
                   {activeVideo.metadata?.title || activeVideo.videoId}
                 </span>
               </div>

@@ -223,7 +223,7 @@ export function YouTubeCourseDetailsForm({
               role="radiogroup"
               aria-label="Select course cover image"
             >
-              {thumbnailVideos.slice(0, 8).map(video => {
+              {thumbnailVideos.map(video => {
                 const isSelected = formData.selectedThumbnailVideoId === video.videoId
                 return (
                   <button
