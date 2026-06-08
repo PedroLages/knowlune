@@ -1,5 +1,7 @@
+import { useRef, useState, useCallback, useMemo } from 'react'
 import type { Chapter } from '@/data/types'
 import { formatTimestamp as formatTime } from '@/lib/format'
+import { ScrubPreview } from './ScrubPreview'
 
 interface ChapterProgressBarProps {
   progress: number // 0–100
@@ -10,6 +12,10 @@ interface ChapterProgressBarProps {
   onBookmarkSeek?: (time: number) => void
   loopStart?: number | null
   loopEnd?: number | null
+  /** Video source URL for the scrub preview thumbnail (Unit 3) */
+  src: string
+  /** Buffered ranges for the "loaded" indicator bar (Unit 5) */
+  buffered?: Array<{ start: number; end: number }>
 }
 
 export function ChapterProgressBar({
@@ -21,7 +27,12 @@ export function ChapterProgressBar({
   onBookmarkSeek,
   loopStart,
   loopEnd,
+  src,
+  buffered,
 }: ChapterProgressBarProps) {
+  const trackRef = useRef<HTMLDivElement | null>(null)
+  const [hover, setHover] = useState<{ time: number; x: number } | null>(null)
+
   const handleChapterClick = (e: React.MouseEvent, time: number) => {
     e.stopPropagation()
     if (duration > 0) {
@@ -29,10 +40,71 @@ export function ChapterProgressBar({
     }
   }
 
+  // ---- hover geometry ------------------------------------------------------
+
+  const updateHover = useCallback(
+    (clientX: number) => {
+      const rect = trackRef.current?.getBoundingClientRect()
+      if (!rect || rect.width <= 0 || duration <= 0) return
+      const relX = clientX - rect.left
+      const pct = Math.max(0, Math.min(relX / rect.width, 1))
+      setHover({ time: pct * duration, x: relX })
+    },
+    [duration]
+  )
+
+  const clearHover = useCallback(() => setHover(null), [])
+
+  const handleMouseMove = useCallback(
+    (e: React.MouseEvent) => updateHover(e.clientX),
+    [updateHover]
+  )
+
+  const handleTouchMove = useCallback(
+    (e: React.TouchEvent) => {
+      if (e.touches.length > 0) updateHover(e.touches[0].clientX)
+    },
+    [updateHover]
+  )
+
+  // Resolve chapter title for the hovered time
+  const hoverChapterTitle = useMemo(() => {
+    if (!hover || !chapters || chapters.length === 0) return undefined
+    let title: string | undefined
+    for (const ch of chapters) {
+      if (ch.time <= hover.time) title = ch.title
+      else break
+    }
+    return title
+  }, [hover, chapters])
+
   return (
-    <div className="relative flex-1 py-3 -my-3 group/progress">
+    <div
+      ref={trackRef}
+      className="relative flex-1 py-3 -my-3 group/progress"
+      onMouseMove={handleMouseMove}
+      onMouseLeave={clearHover}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={clearHover}
+      onTouchCancel={clearHover}
+    >
       {/* Visual track — pointer-events-none so range input below handles seeking */}
       <div className="relative w-full h-1 group-hover/progress:h-3 transition-[height] duration-150 bg-white/30 rounded-full pointer-events-none">
+        {/* Buffered ("loaded") indicator — rendered behind the fill bar */}
+        {buffered && duration > 0 &&
+          buffered.map((range, i) => (
+            <div
+              key={i}
+              data-testid="buffered-range"
+              className="absolute inset-y-0 bg-white/20 rounded-full"
+              style={{
+                left: `${(range.start / duration) * 100}%`,
+                width: `${((range.end - range.start) / duration) * 100}%`,
+              }}
+              aria-hidden="true"
+            />
+          ))}
+
         {/* Fill bar */}
         <div
           className="absolute inset-y-0 left-0 bg-white rounded-full"
@@ -123,6 +195,18 @@ export function ChapterProgressBar({
         className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
         onChange={e => onSeek(parseFloat(e.target.value))}
       />
+
+      {/* Scrub preview tooltip — shown while hovering the track */}
+      {hover && duration > 0 && (
+        <ScrubPreview
+          src={src}
+          time={hover.time}
+          x={hover.x}
+          trackWidth={trackRef.current?.getBoundingClientRect().width ?? 0}
+          duration={duration}
+          chapterTitle={hoverChapterTitle}
+        />
+      )}
     </div>
   )
 }

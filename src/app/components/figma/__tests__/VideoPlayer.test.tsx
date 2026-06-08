@@ -37,8 +37,23 @@ import { VideoPlayer } from '../VideoPlayer'
 // ---------------------------------------------------------------------------
 
 vi.mock('../ChapterProgressBar', () => ({
-  ChapterProgressBar: ({ progress, onSeek }: { progress: number; onSeek: (p: number) => void }) => (
-    <div data-testid="chapter-progress-bar" data-progress={progress}>
+  ChapterProgressBar: ({
+    progress,
+    onSeek,
+    src,
+    buffered,
+  }: {
+    progress: number
+    onSeek: (p: number) => void
+    src: string
+    buffered?: Array<{ start: number; end: number }>
+  }) => (
+    <div
+      data-testid="chapter-progress-bar"
+      data-progress={progress}
+      data-src={src}
+      data-buffered-count={buffered?.length ?? 0}
+    >
       <input
         data-testid="progress-input"
         type="range"
@@ -869,6 +884,37 @@ describe('VideoPlayer', () => {
 
       const bar = screen.getByTestId('chapter-progress-bar')
       expect(bar.getAttribute('data-progress')).toBe('0')
+    })
+
+    it('passes src to ChapterProgressBar for scrub preview', () => {
+      renderPlayer({ src: 'test-video.mp4' })
+
+      const bar = screen.getByTestId('chapter-progress-bar')
+      expect(bar.getAttribute('data-src')).toBe('test-video.mp4')
+    })
+
+    it('passes buffered ranges to ChapterProgressBar on progress event', () => {
+      renderPlayer()
+      fireLoadedMetadata(100)
+
+      const video = getVideo()
+
+      // Simulate buffered data
+      Object.defineProperty(video, 'buffered', {
+        configurable: true,
+        value: {
+          length: 1,
+          start: () => 0,
+          end: () => 50,
+        },
+      })
+
+      act(() => {
+        fireEvent(video, new Event('progress'))
+      })
+
+      const bar = screen.getByTestId('chapter-progress-bar')
+      expect(bar.getAttribute('data-buffered-count')).toBe('1')
     })
 
     it('seeks when progress bar value changes', () => {
