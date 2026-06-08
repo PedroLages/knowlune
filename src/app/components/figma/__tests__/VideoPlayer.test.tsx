@@ -37,8 +37,16 @@ import { VideoPlayer } from '../VideoPlayer'
 // ---------------------------------------------------------------------------
 
 vi.mock('../ChapterProgressBar', () => ({
-  ChapterProgressBar: ({ progress, onSeek }: { progress: number; onSeek: (p: number) => void }) => (
-    <div data-testid="chapter-progress-bar" data-progress={progress}>
+  ChapterProgressBar: ({
+    progress,
+    onSeek,
+    src,
+  }: {
+    progress: number
+    onSeek: (p: number) => void
+    src: string
+  }) => (
+    <div data-testid="chapter-progress-bar" data-progress={progress} data-src={src}>
       <input
         data-testid="progress-input"
         type="range"
@@ -869,6 +877,13 @@ describe('VideoPlayer', () => {
 
       const bar = screen.getByTestId('chapter-progress-bar')
       expect(bar.getAttribute('data-progress')).toBe('0')
+    })
+
+    it('passes src to ChapterProgressBar for scrub preview', () => {
+      renderPlayer({ src: 'test-video.mp4' })
+
+      const bar = screen.getByTestId('chapter-progress-bar')
+      expect(bar.getAttribute('data-src')).toBe('test-video.mp4')
     })
 
     it('seeks when progress bar value changes', () => {

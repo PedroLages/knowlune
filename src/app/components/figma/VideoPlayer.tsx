@@ -1139,6 +1139,7 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
                 {formatTime(currentTime)}
               </span>
               <ChapterProgressBar
+                src={src}
                 progress={progress}
                 duration={duration}
                 chapters={chapters}
