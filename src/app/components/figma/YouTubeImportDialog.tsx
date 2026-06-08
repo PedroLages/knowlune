@@ -331,7 +331,7 @@ export function YouTubeImportDialog({ open, onOpenChange }: YouTubeImportDialogP
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent
-        className="sm:max-w-3xl"
+        className="sm:max-w-3xl max-h-[90vh] flex flex-col"
         data-testid="youtube-import-dialog"
         aria-describedby="youtube-import-description"
       >
@@ -352,8 +352,10 @@ export function YouTubeImportDialog({ open, onOpenChange }: YouTubeImportDialogP
           </DialogDescription>
         </DialogHeader>
 
-        {/* Step Indicator */}
-        <StepIndicator currentStep={store.currentStep} />
+        {/* Scrollable step content area — flex-1 with min-h-0 enables internal scrolling */}
+        <div className="flex-1 min-h-0 overflow-y-auto">
+          {/* Step Indicator */}
+          <StepIndicator currentStep={store.currentStep} />
 
         {/* Step 1: URL Input */}
         {store.currentStep === 1 && (
@@ -560,6 +562,8 @@ export function YouTubeImportDialog({ open, onOpenChange }: YouTubeImportDialogP
             />
           </div>
         )}
+
+        </div>{/* End scrollable step content */}
 
         {/* Footer Navigation */}
         <DialogFooter className="flex-row justify-between sm:justify-between">
