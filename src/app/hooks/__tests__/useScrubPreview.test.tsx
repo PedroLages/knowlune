@@ -30,9 +30,9 @@ function installMediaStubs() {
 
 function uninstallMediaStubs() {
   // Restore original descriptors — jsdom provides "not implemented" stubs
-  delete (HTMLMediaElement.prototype as Record<string, unknown>).play
-  delete (HTMLMediaElement.prototype as Record<string, unknown>).pause
-  delete (HTMLMediaElement.prototype as Record<string, unknown>).load
+  delete (HTMLMediaElement.prototype as unknown as Record<string, unknown>).play
+  delete (HTMLMediaElement.prototype as unknown as Record<string, unknown>).pause
+  delete (HTMLMediaElement.prototype as unknown as Record<string, unknown>).load
 }
 
 /** Minimal component that wires useScrubPreview to DOM elements */

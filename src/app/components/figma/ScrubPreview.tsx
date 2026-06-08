@@ -28,7 +28,7 @@ export function ScrubPreview({
   time,
   x,
   trackWidth,
-  duration,
+  duration: _duration,
   chapterTitle,
 }: ScrubPreviewProps) {
   const { videoRef, canvasRef, requestFrameAt, thumbnailAvailable } = useScrubPreview(src)

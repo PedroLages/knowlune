@@ -23,7 +23,7 @@ interface ScrubPreviewAPI {
  *  - If `requestFrameAt` is called while the video is seeking, the previous
  *    pending target is silently replaced — only the latest matters.
  */
-export function useScrubPreview(src: string): ScrubPreviewAPI {
+export function useScrubPreview(_src: string): ScrubPreviewAPI {
   const videoElRef = useRef<HTMLVideoElement | null>(null)
   const canvasElRef = useRef<HTMLCanvasElement | null>(null)
   const seekingRef = useRef(false)
