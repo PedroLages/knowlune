@@ -22,6 +22,7 @@ import {
 } from 'lucide-react'
 import type { CaptionTrack, Chapter } from '@/data/types'
 import { ChapterProgressBar } from './ChapterProgressBar'
+import type { StoryboardProp } from './ScrubPreview'
 import { Button } from '@/app/components/ui/button'
 import {
   DropdownMenu,
@@ -67,6 +68,8 @@ interface VideoPlayerProps {
    * The isMuted state stays in sync with the actual fallback path.
    */
   autoplay?: boolean
+  /** Storyboard sprite sheet for instant scrub previews (optional) */
+  storyboard?: StoryboardProp
 }
 
 export interface VideoPlayerHandle {
@@ -115,6 +118,7 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
     onLoadCaptions,
     onFocusNotes,
     autoplay = false,
+    storyboard,
   },
   ref
 ) {
@@ -1149,6 +1153,7 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
                 onBookmarkSeek={onBookmarkSeek}
                 loopStart={loopStart}
                 loopEnd={loopEnd}
+                storyboard={storyboard}
               />
               <button
                 className="text-white text-xs font-medium min-w-[45px] text-right hover:text-white/80 transition-colors cursor-pointer"

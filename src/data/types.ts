@@ -309,6 +309,21 @@ export interface CourseThumbnail {
   createdAt: string // ISO 8601
 }
 
+/** Per-video storyboard sprite sheet for instant scrub previews (local-only, not synced) */
+export interface VideoStoryboard {
+  videoId: string // Primary key (matches ImportedVideo.id)
+  courseId: string // Secondary index for bulk cleanup
+  blob: Blob // JPEG/WebP sprite sheet
+  columns: number // Grid columns
+  rows: number // Grid rows
+  tileWidth: number // px per tile
+  tileHeight: number // px per tile
+  interval: number // Seconds between frames
+  frameCount: number // Total frames in the sheet
+  duration: number // Video duration at generation time
+  createdAt: string // ISO 8601
+}
+
 export interface StudySession {
   id: string // UUID
   courseId: string // Parent course

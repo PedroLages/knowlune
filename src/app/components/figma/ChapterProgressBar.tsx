@@ -1,7 +1,7 @@
 import { useRef, useState, useCallback, useMemo } from 'react'
 import type { Chapter } from '@/data/types'
 import { formatTimestamp as formatTime } from '@/lib/format'
-import { ScrubPreview } from './ScrubPreview'
+import { ScrubPreview, type StoryboardProp } from './ScrubPreview'
 
 interface ChapterProgressBarProps {
   progress: number // 0–100
@@ -16,6 +16,8 @@ interface ChapterProgressBarProps {
   src: string
   /** Buffered ranges for the "loaded" indicator bar (Unit 5) */
   buffered?: Array<{ start: number; end: number }>
+  /** Storyboard sprite sheet for instant hover previews (optional) */
+  storyboard?: StoryboardProp
 }
 
 export function ChapterProgressBar({
@@ -29,6 +31,7 @@ export function ChapterProgressBar({
   loopEnd,
   src,
   buffered,
+  storyboard,
 }: ChapterProgressBarProps) {
   const trackRef = useRef<HTMLDivElement | null>(null)
   const [hover, setHover] = useState<{ time: number; x: number } | null>(null)
@@ -196,15 +199,19 @@ export function ChapterProgressBar({
         onChange={e => onSeek(parseFloat(e.target.value))}
       />
 
-      {/* Scrub preview tooltip — shown while hovering the track */}
-      {hover && duration > 0 && (
+      {/* Scrub preview — offscreen video stays mounted (warm) for zero
+          first-hover latency. Tooltip visibility and frame requests are
+          gated on hover state via the `visible` prop. */}
+      {duration > 0 && (
         <ScrubPreview
           src={src}
-          time={hover.time}
-          x={hover.x}
+          time={hover?.time ?? 0}
+          x={hover?.x ?? 0}
           trackWidth={trackRef.current?.getBoundingClientRect().width ?? 0}
           duration={duration}
           chapterTitle={hoverChapterTitle}
+          visible={hover !== null}
+          storyboard={storyboard}
         />
       )}
     </div>
