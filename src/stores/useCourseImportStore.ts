@@ -11,6 +11,7 @@ import {
   loadCourseThumbnailUrl,
   deleteCourseThumbnail,
 } from '@/lib/thumbnailService'
+import { deleteVideoStoryboardsForCourse } from '@/lib/videoStoryboard'
 import type { ThumbnailSource } from '@/data/types'
 import type { AutoAnalysisStatus } from '@/lib/autoAnalysis'
 import { refreshCourseEmbeddingIfChanged } from '@/ai/courseEmbeddingService'
@@ -134,6 +135,7 @@ export const useCourseImportStore = create<CourseImportState>((set, get) => ({
         }
         await syncableWrite('importedCourses', 'delete', courseId)
         await deleteCourseThumbnail(courseId)
+        await deleteVideoStoryboardsForCourse(courseId)
       })
 
       // Revoke thumbnail object URL to free memory

@@ -16,6 +16,11 @@ import {
   detectAuthorPhoto,
 } from '@/lib/authorDetection'
 import { autoGenerateThumbnail } from '@/lib/autoThumbnail'
+import {
+  generateStoryboard,
+  saveVideoStoryboard,
+  loadVideoStoryboard,
+} from '@/lib/videoStoryboard'
 import { loadThumbnailFromFile, saveCourseThumbnail } from '@/lib/thumbnailService'
 import {
   showDirectoryPicker,
@@ -744,6 +749,31 @@ export async function persistScannedCourse(
     autoGenerateThumbnail(course.id, orderedVideos[0].fileHandle).catch(() => {
       // silent-catch-ok: thumbnail generation failure is non-fatal — card shows placeholder icon (E1B-S04 AC3)
     })
+  }
+
+  // Background storyboard generation for local videos (fire-and-forget, sequential).
+  // Skips YouTube videos; skips videos that already have a storyboard (idempotent).
+  // Failure is non-fatal — live extraction (Phase 1) serves previews until lazy backfill.
+  const localVideos = orderedVideos.filter(v => !v.youtubeVideoId && v.fileHandle)
+  if (localVideos.length > 0) {
+    // Fire-and-forget — don't block the import wizard on storyboard generation
+    void (async () => {
+      for (const vid of localVideos) {
+        try {
+          const existing = await loadVideoStoryboard(vid.id)
+          if (existing) {
+            URL.revokeObjectURL(existing.url)
+            continue // Already generated — skip
+          }
+          const result = await generateStoryboard(vid.fileHandle!)
+          if (result) {
+            await saveVideoStoryboard(vid.id, course.id, result)
+          }
+        } catch {
+          // silent-catch-ok: storyboard generation is non-fatal
+        }
+      }
+    })()
   }
 
   // Persist user-selected cover image to courseThumbnails table so card renders it

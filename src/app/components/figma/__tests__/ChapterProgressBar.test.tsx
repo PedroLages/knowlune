@@ -10,8 +10,8 @@ import { ChapterProgressBar } from '../ChapterProgressBar'
 // Renders minimal markup so we can assert its presence and props indirectly.
 
 vi.mock('../ScrubPreview', () => ({
-  ScrubPreview: ({ time, x, chapterTitle }: { time: number; x: number; chapterTitle?: string }) => (
-    <div data-testid="scrub-preview" data-time={time} data-x={x} data-chapter={chapterTitle ?? ''} />
+  ScrubPreview: ({ time, x, chapterTitle, visible }: { time: number; x: number; chapterTitle?: string; visible?: boolean }) => (
+    <div data-testid="scrub-preview" data-time={time} data-x={x} data-chapter={chapterTitle ?? ''} data-visible={visible === false ? 'false' : 'true'} />
   ),
 }))
 
@@ -120,16 +120,21 @@ describe('ChapterProgressBar', () => {
 
   // ---- interaction: mouse leave --------------------------------------------
 
-  it('hides preview on mouse leave', () => {
+  it('sets visible=false on mouse leave (preview stays mounted for warm video)', () => {
     const restore = stubTrackRect(400, 0)
     renderBar()
 
     const wrapper = document.querySelector('[class*="group/progress"]')!
     fireEvent.mouseMove(wrapper, { clientX: 200 })
-    expect(screen.getByTestId('scrub-preview')).toBeInTheDocument()
+    const previewOn = screen.getByTestId('scrub-preview')
+    expect(previewOn).toBeInTheDocument()
+    expect(previewOn.dataset.visible).toBe('true')
 
     fireEvent.mouseLeave(wrapper)
-    expect(screen.queryByTestId('scrub-preview')).not.toBeInTheDocument()
+    // Preview stays in the DOM (offscreen video kept warm) but with visible=false
+    const previewOff = screen.getByTestId('scrub-preview')
+    expect(previewOff).toBeInTheDocument()
+    expect(previewOff.dataset.visible).toBe('false')
 
     restore()
   })

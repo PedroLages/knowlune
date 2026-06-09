@@ -47,6 +47,7 @@ import type {
   UserConsent,
   AbsSeries,
   AbsCollection,
+  VideoStoryboard,
 } from '@/data/types'
 import type { Quiz, QuizAttempt } from '@/types/quiz'
 import { CHECKPOINT_VERSION, CHECKPOINT_SCHEMA, SEARCH_FRECENCY_INDEXES } from './checkpoint'
@@ -168,6 +169,8 @@ export type ElearningDatabase = Dexie & {
   absCollections: EntityTable<AbsCollection, 'id'>
   // v64 (offline downloads): per-device download state, local-only.
   downloads: Table<import('@/services/DownloadManager').DownloadRecord>
+  // v65 (video storyboards): pre-generated scrub-preview sprite sheets, local-only.
+  videoStoryboards: EntityTable<VideoStoryboard, 'videoId'>
 }
 
 /**
@@ -1726,6 +1729,19 @@ function _declareLegacyMigrations(database: Dexie): void {
     })
     .upgrade(async _tx => {
       // No backfill. Table is new; populated on first download.
+    })
+
+  // v65: Video storyboard sprite sheets for instant scrub previews.
+  // Local-only: NOT added to SYNCABLE_TABLES — regenerable from local file.
+  // Indexed by courseId for bulk cleanup on course delete.
+  database
+    .version(65)
+    .stores({
+      videoStoryboards: 'videoId, courseId',
+    })
+    .upgrade(async _tx => {
+      // No backfill. Table is new; storyboards populate lazily on first play
+      // (or background-generate after import).
     })
 } // end _declareLegacyMigrations
 

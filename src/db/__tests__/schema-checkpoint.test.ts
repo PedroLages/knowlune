@@ -28,8 +28,8 @@ function extractSchema(db: Dexie): Record<string, string> {
 }
 
 describe('Dexie migration checkpoint', () => {
-  it('CHECKPOINT_VERSION should be 61', () => {
-    expect(CHECKPOINT_VERSION).toBe(61)
+  it('CHECKPOINT_VERSION should be 65', () => {
+    expect(CHECKPOINT_VERSION).toBe(65)
   })
 
   it('CHECKPOINT_SCHEMA should define all expected tables', () => {
@@ -49,6 +49,9 @@ describe('Dexie migration checkpoint', () => {
     // readingStreakCache added in v56 (E95-S04)
     // userConsents added in v58 (E119-S07)
     // absSeries/absCollections added in v60 (fix E-ABS-QA)
+    // reorderHistory added in v63 (AI-first path building)
+    // downloads added in v64 (offline downloads)
+    // videoStoryboards added in v65 (scrub-preview storyboard sprite sheets)
     const expectedTables = [
       'absCollections',
       'absSeries',
@@ -71,6 +74,7 @@ describe('Dexie migration checkpoint', () => {
       'courseEmbeddings',
       'courseReminders',
       'courseThumbnails',
+      'downloads',
       'embeddings',
       'entitlements',
       'flashcards',
@@ -90,6 +94,7 @@ describe('Dexie migration checkpoint', () => {
       'quizzes',
       'readingQueue',
       'readingStreakCache',
+      'reorderHistory',
       'reviewRecords',
       'screenshots',
       'searchFrecency',
@@ -101,6 +106,7 @@ describe('Dexie migration checkpoint', () => {
       'transcriptEmbeddings',
       'userConsents',
       'videoCaptions',
+      'videoStoryboards',
       'vocabularyItems',
       'youtubeChapters',
       'youtubeTranscripts',

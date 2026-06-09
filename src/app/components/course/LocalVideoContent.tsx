@@ -19,6 +19,12 @@ import { Button } from '@/app/components/ui/button'
 import { Skeleton } from '@/app/components/ui/skeleton'
 import { DelayedFallback } from '@/app/components/DelayedFallback'
 import { addBookmark, getLessonBookmarks, formatBookmarkTimestamp } from '@/lib/bookmarks'
+import {
+  loadVideoStoryboard,
+  generateStoryboard,
+  saveVideoStoryboard,
+} from '@/lib/videoStoryboard'
+import type { StoryboardProp } from '@/app/components/figma/ScrubPreview'
 import type { ImportedVideo, VideoBookmark } from '@/data/types'
 
 interface LocalVideoContentProps {
@@ -77,6 +83,8 @@ export const LocalVideoContent = forwardRef<VideoPlayerHandle, LocalVideoContent
     const [loadError, setLoadError] = useState<string | null>(null)
     const [dexieLoading, setDexieLoading] = useState(false)
     const [permissionPending, setPermissionPending] = useState(false)
+    const [storyboard, setStoryboard] = useState<StoryboardProp | undefined>(undefined)
+    const storyboardUrlRef = useRef<string | null>(null)
 
     const loadVideo = useCallback(() => {
       if (!lessonId) {
@@ -116,7 +124,71 @@ export const LocalVideoContent = forwardRef<VideoPlayerHandle, LocalVideoContent
 
     const { blobUrl, error, loading } = useVideoFromHandle(video?.fileHandle)
 
-    // Caption loading and persistence
+    // Storyboard: load existing sprite sheet, lazily generate if missing
+    useEffect(() => {
+      let ignore = false
+
+      async function loadOrGenerate() {
+        if (!video) return
+
+        // Try loading an existing storyboard first
+        const existing = await loadVideoStoryboard(video.id)
+        if (ignore) {
+          // Clean up the object URL we just created
+          if (existing?.url) URL.revokeObjectURL(existing.url)
+          return
+        }
+
+        if (existing) {
+          setStoryboard(existing)
+          storyboardUrlRef.current = existing.url
+          return
+        }
+
+        // No existing storyboard — generate lazily in the background.
+        // Live extraction (Phase 1) serves previews until it completes.
+        if (video.fileHandle) {
+          generateStoryboard(video.fileHandle)
+            .then(result => {
+              if (ignore || !result) return
+              return saveVideoStoryboard(video.id, video.courseId, result).then(() => result)
+            })
+            .then(result => {
+              if (ignore || !result) return
+              const url = URL.createObjectURL(result.blob)
+              const sb: StoryboardProp = {
+                url,
+                columns: result.columns,
+                rows: result.rows,
+                tileWidth: result.tileWidth,
+                tileHeight: result.tileHeight,
+                interval: result.interval,
+                frameCount: result.frameCount,
+              }
+              if (!ignore) {
+                setStoryboard(sb)
+                storyboardUrlRef.current = url
+              } else {
+                URL.revokeObjectURL(url)
+              }
+            })
+            .catch(() => {
+              // silent-catch-ok: generation failure is non-fatal — live extraction fallback
+            })
+        }
+      }
+
+      loadOrGenerate()
+
+      return () => {
+        ignore = true
+        // Revoke previous storyboard URL on cleanup
+        if (storyboardUrlRef.current) {
+          URL.revokeObjectURL(storyboardUrlRef.current)
+          storyboardUrlRef.current = null
+        }
+      }
+    }, [video])
     const { userCaptions, handleLoadCaptions } = useCaptionLoader(courseId, lessonId)
 
     // Bookmarks: load from Dexie and provide add callback for VideoPlayer's B key shortcut
@@ -418,6 +490,7 @@ export const LocalVideoContent = forwardRef<VideoPlayerHandle, LocalVideoContent
           theaterMode={theaterMode}
           onTheaterModeToggle={onTheaterModeToggle}
           autoplay={autoplay}
+          storyboard={storyboard}
         />
       </div>
     )
