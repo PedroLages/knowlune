@@ -628,6 +628,89 @@ describe('VideoPlayer', () => {
       renderPlayer()
       expect(screen.getByTestId('speed-menu-trigger')).toHaveTextContent('1x')
     })
+
+    it('does not pause video when changing speed via dropdown while playing', async () => {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+      renderPlayer()
+      fireLoadedMetadata()
+
+      // Start playing
+      await user.click(screen.getByRole('button', { name: 'Play' }))
+      expect(playMock).toHaveBeenCalledTimes(1)
+      pauseMock.mockClear()
+
+      // Open speed menu
+      await user.click(screen.getByTestId('speed-menu-trigger'))
+
+      // Click a different speed option
+      const speedOption = screen.getByText('1.5x')
+      await user.click(speedOption)
+
+      // Video should still be playing — pause should NOT have been called
+      expect(pauseMock).not.toHaveBeenCalled()
+    })
+
+    it('does not start playing when changing speed while paused', async () => {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+      renderPlayer()
+      fireLoadedMetadata()
+
+      // Ensure initially paused
+      expect(screen.getByRole('button', { name: 'Play' })).toBeInTheDocument()
+      playMock.mockClear()
+
+      // Open speed menu
+      await user.click(screen.getByTestId('speed-menu-trigger'))
+
+      // Click a speed option
+      const speedOption = screen.getByText('1.5x')
+      await user.click(speedOption)
+
+      // Video should remain paused — play should NOT have been called
+      expect(playMock).not.toHaveBeenCalled()
+    })
+
+    it('clicking the speed trigger button does not toggle play/pause', async () => {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+      renderPlayer()
+      fireLoadedMetadata()
+
+      // Start playing
+      await user.click(screen.getByRole('button', { name: 'Play' }))
+      expect(playMock).toHaveBeenCalledTimes(1)
+      pauseMock.mockClear()
+
+      // Click the speed trigger to open the dropdown
+      await user.click(screen.getByTestId('speed-menu-trigger'))
+
+      // Video should still be playing — pause should NOT have been called
+      expect(pauseMock).not.toHaveBeenCalled()
+    })
+
+    it('keyboard shortcuts > and < change speed without pausing', async () => {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+      renderPlayer()
+      fireLoadedMetadata()
+
+      // Start playing
+      await user.click(screen.getByRole('button', { name: 'Play' }))
+      expect(playMock).toHaveBeenCalledTimes(1)
+      pauseMock.mockClear()
+
+      // Use > to increase speed
+      await user.keyboard('>')
+      expect(screen.getByTestId('speed-menu-trigger')).toHaveTextContent('1.25x')
+
+      // Video should still be playing — pause should NOT have been called
+      expect(pauseMock).not.toHaveBeenCalled()
+
+      // Use < to decrease speed
+      await user.keyboard('<')
+      expect(screen.getByTestId('speed-menu-trigger')).toHaveTextContent('1x')
+
+      // Video should still be playing
+      expect(pauseMock).not.toHaveBeenCalled()
+    })
   })
 
   // -------------------------------------------------------------------------
