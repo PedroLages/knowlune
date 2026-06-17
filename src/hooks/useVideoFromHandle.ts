@@ -34,7 +34,9 @@ export function useVideoFromHandle(
       const fileHandle = handle as FileSystemFileHandle
       // Keep the previous blobUrl alive during load — never nullify it,
       // so the <video> element always has a valid src.
-      setState(prev => ({ ...prev, loading: true }))
+      // Clear any stale error from a previous intermediate state so the
+      // consuming component doesn't flash an error during this load attempt.
+      setState(prev => ({ ...prev, loading: true, error: null }))
       try {
         const permission = await fileHandle.queryPermission({ mode: 'read' })
         if (permission !== 'granted') {
@@ -69,8 +71,12 @@ export function useVideoFromHandle(
           URL.revokeObjectURL(newUrl)
         }
       } catch (err) {
-        // silent-catch-ok — error state rendered by consuming component; console.warn emitted for developer debugging
-        console.warn('[useVideoFromHandle] Error accessing file:', err)
+        // silent-catch-ok — error state rendered by consuming component (LocalVideoContent
+        // shows "Video file not found" UI). Log details for diagnosis (Unraid remount,
+        // permission expiry, file moved, etc.).
+        const message = err instanceof Error ? err.message : String(err)
+        const name = err instanceof DOMException ? `DOMException(${err.name})` : (err instanceof Error ? err.name : 'Unknown')
+        console.warn(`[useVideoFromHandle] ${name}: ${message}`, err)
         if (!cancelled) setState(prev => ({ ...prev, error: 'file-not-found', loading: false }))
       }
     }
