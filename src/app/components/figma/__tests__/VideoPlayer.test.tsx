@@ -714,6 +714,90 @@ describe('VideoPlayer', () => {
   })
 
   // -------------------------------------------------------------------------
+  // Speed menu overflow behavior
+  // -------------------------------------------------------------------------
+  describe('speed menu overflow behavior', () => {
+    it('renders speed menu within the video player container (container prop passthrough)', async () => {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+      renderPlayer()
+      fireLoadedMetadata()
+
+      // Open speed menu
+      await user.click(screen.getByTestId('speed-menu-trigger'))
+
+      // Speed option should be rendered inside the video player container via portal
+      const container = screen.getByTestId('video-player-container')
+      const speedOption = screen.getByText('1.5x')
+      expect(container.contains(speedOption)).toBe(true)
+    })
+
+    it('adds overflow-visible class to container when speed menu opens', async () => {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+      renderPlayer()
+      fireLoadedMetadata()
+
+      const container = screen.getByTestId('video-player-container')
+
+      // Initially overflow-hidden
+      expect(container).toHaveClass('overflow-hidden')
+      expect(container).not.toHaveClass('overflow-visible')
+
+      // Open speed menu
+      await user.click(screen.getByTestId('speed-menu-trigger'))
+
+      // Should switch to overflow-visible
+      expect(container).toHaveClass('overflow-visible')
+      expect(container).not.toHaveClass('overflow-hidden')
+    })
+
+    it('restores overflow-hidden when speed menu closes via selecting a speed', async () => {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+      renderPlayer()
+      fireLoadedMetadata()
+
+      const container = screen.getByTestId('video-player-container')
+
+      // Open speed menu
+      await user.click(screen.getByTestId('speed-menu-trigger'))
+      expect(container).toHaveClass('overflow-visible')
+
+      // Select a speed to close the menu
+      await user.click(screen.getByText('1.5x'))
+
+      // Should restore overflow-hidden
+      expect(container).toHaveClass('overflow-hidden')
+      expect(container).not.toHaveClass('overflow-visible')
+    })
+
+    it('keeps overflow-hidden when speed menu opens during fullscreen', async () => {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+      renderPlayer()
+      fireLoadedMetadata()
+
+      const container = screen.getByTestId('video-player-container')
+      container.requestFullscreen = vi.fn().mockResolvedValue(undefined)
+
+      // Enter fullscreen
+      await user.click(screen.getByRole('button', { name: 'Enter fullscreen' }))
+
+      // Simulate fullscreen change event
+      Object.defineProperty(document, 'fullscreenElement', {
+        value: container,
+        configurable: true,
+      })
+      fireEvent(document, new Event('fullscreenchange'))
+
+      // Container should have overflow-hidden (fullscreen takes precedence)
+      expect(container).toHaveClass('overflow-hidden')
+
+      // Open speed menu — should still be overflow-hidden because fullscreen > speed menu
+      await user.click(screen.getByTestId('speed-menu-trigger'))
+      expect(container).toHaveClass('overflow-hidden')
+      expect(container).not.toHaveClass('overflow-visible')
+    })
+  })
+
+  // -------------------------------------------------------------------------
   // Error state
   // -------------------------------------------------------------------------
   describe('error state', () => {
@@ -999,7 +1083,7 @@ describe('VideoPlayer', () => {
     })
 
     it('f toggles fullscreen', () => {
-      const requestFullscreen = vi.fn()
+      const requestFullscreen = vi.fn().mockResolvedValue(undefined)
       renderPlayer()
       fireLoadedMetadata()
 

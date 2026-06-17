@@ -1364,7 +1364,7 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
                       {playbackSpeed}x
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent side="top" align="end" className="w-32" container={containerRef.current}>
+                  <DropdownMenuContent side="top" align="end" className="w-32" container={containerRef.current ?? undefined}>
                     <DropdownMenuLabel className="text-xs font-semibold">Speed</DropdownMenuLabel>
                     <DropdownMenuRadioGroup
                       value={String(playbackSpeed)}
