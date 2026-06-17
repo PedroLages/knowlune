@@ -646,6 +646,9 @@ describe('VideoPlayer', () => {
       const speedOption = screen.getByText('1.5x')
       await user.click(speedOption)
 
+      // Speed trigger should reflect the selected speed
+      expect(screen.getByTestId('speed-menu-trigger')).toHaveTextContent('1.5x')
+
       // Video should still be playing — pause should NOT have been called
       expect(pauseMock).not.toHaveBeenCalled()
     })
@@ -665,6 +668,9 @@ describe('VideoPlayer', () => {
       // Click a speed option
       const speedOption = screen.getByText('1.5x')
       await user.click(speedOption)
+
+      // Speed trigger should reflect the selected speed
+      expect(screen.getByTestId('speed-menu-trigger')).toHaveTextContent('1.5x')
 
       // Video should remain paused — play should NOT have been called
       expect(playMock).not.toHaveBeenCalled()

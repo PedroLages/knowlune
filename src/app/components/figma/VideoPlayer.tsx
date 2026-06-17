@@ -996,6 +996,9 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
       data-testid="video-player-container"
       className={cn(
         'relative w-full h-full rounded-2xl bg-black group focus:outline-none',
+        // overflow-toggle: When speed menu is open outside fullscreen, allow dropdown
+        // overflow-visibility. In fullscreen the browser handles overflow naturally so
+        // keep overflow-hidden. This avoids clipping the portaled dropdown menu.
         (!speedMenuOpen || isFullscreen) ? 'overflow-hidden' : 'overflow-visible',
         // Hide cursor when playing and controls auto-hide (YouTube-style)
         isPlaying && !showControls && 'cursor-none'
