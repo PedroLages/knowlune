@@ -387,6 +387,15 @@ describe('VideoPlayer', () => {
       expect(video.currentTime).toBe(30)
     })
 
+    it('calls onDurationChange when metadata loads', () => {
+      const onDurationChange = vi.fn()
+      renderPlayer({ onDurationChange })
+      const video = getVideo()
+      Object.defineProperty(video, 'duration', { get: () => 120, configurable: true })
+      fireEvent.loadedMetadata(video)
+      expect(onDurationChange).toHaveBeenCalledWith(120)
+    })
+
     it('does NOT restore position on second loadedmetadata', () => {
       renderPlayer({ initialPosition: 30 })
       const video = getVideo()
@@ -699,7 +708,7 @@ describe('VideoPlayer', () => {
       ).toBeInTheDocument()
     })
 
-    it('calls onRecoveryNeeded with currentTime for error code 2 (MEDIA_ERR_NETWORK)', () => {
+    it('calls onRecoveryNeeded with currentTime for error code 2 (MEDIA_ERR_NETWORK) and shows recovery spinner', () => {
       const onRecoveryNeeded = vi.fn()
       renderPlayer({ onRecoveryNeeded })
       fireLoadedMetadata(120)
@@ -718,6 +727,10 @@ describe('VideoPlayer', () => {
       fireEvent.error(video)
 
       expect(onRecoveryNeeded).toHaveBeenCalledWith(45)
+      // Should NOT show error overlay — automatic recovery
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+      // Should show recovery spinner
+      expect(screen.getByText('Recovering...')).toBeInTheDocument()
     })
 
     it('does NOT call onRecoveryNeeded for non-network errors (code 3)', () => {
@@ -758,7 +771,7 @@ describe('VideoPlayer', () => {
       expect(loadMock).toHaveBeenCalled()
     })
 
-    it('error code 2 retry shows recovery spinner instead of calling load()', async () => {
+    it('error code 2 without onRecoveryNeeded shows error overlay and calls load() on retry', async () => {
       const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
       renderPlayer()
       fireLoadedMetadata()
@@ -770,12 +783,14 @@ describe('VideoPlayer', () => {
       })
       fireEvent.error(video)
 
+      // Should show error overlay (not recovery spinner)
+      expect(screen.getByRole('alert')).toBeInTheDocument()
+      expect(screen.queryByText('Recovering...')).not.toBeInTheDocument()
+
       await user.click(screen.getByRole('button', { name: /retry/i }))
 
-      // Should show recovery spinner
-      expect(screen.getByText('Recovering...')).toBeInTheDocument()
-      // Should NOT call load() — network errors wait for blob URL regeneration
-      expect(loadMock).not.toHaveBeenCalled()
+      // Should call load() — no onRecoveryNeeded, so fall back to video.load()
+      expect(loadMock).toHaveBeenCalled()
     })
   })
 

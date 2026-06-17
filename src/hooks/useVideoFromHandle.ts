@@ -30,10 +30,6 @@ export function useVideoFromHandle(
           }
         }
         const file = await handle!.getFile()
-        // Revoke any previous blob URL before creating a new one to prevent memory leaks
-        if (objectUrl) {
-          URL.revokeObjectURL(objectUrl)
-        }
         objectUrl = URL.createObjectURL(file)
         if (!cancelled) setState({ blobUrl: objectUrl, error: null, loading: false })
       } catch (err) {

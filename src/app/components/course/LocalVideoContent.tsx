@@ -239,18 +239,26 @@ export const LocalVideoContent = forwardRef<VideoPlayerHandle, LocalVideoContent
     // Resume position: load saved playback position from Dexie progress table.
     // Determines whether to show a resume dialog or skip directly to playback.
     useEffect(() => {
+      recoveryPositionRef.current = undefined
       hasShownResumeDialog.current = false
       setIsLoadingPosition(true)
       setResumeDialogOpen(false)
       setSavedRecord(null)
       setResolvedInitialPosition(undefined)
       let ignore = false
+      const timeoutId = setTimeout(() => {
+        if (!ignore) {
+          ignore = true
+          setIsLoadingPosition(false)
+        }
+      }, 10_000)
 
       db.progress
         .where('[courseId+videoId]')
         .equals([courseId, lessonId])
         .first()
         .then(record => {
+          clearTimeout(timeoutId)
           if (ignore) return
           setIsLoadingPosition(false)
 
@@ -265,6 +273,7 @@ export const LocalVideoContent = forwardRef<VideoPlayerHandle, LocalVideoContent
           }
         })
         .catch(() => {
+          clearTimeout(timeoutId)
           // silent-catch-ok — resume is non-critical; proceed without dialog
           if (!ignore) {
             setIsLoadingPosition(false)
@@ -272,6 +281,7 @@ export const LocalVideoContent = forwardRef<VideoPlayerHandle, LocalVideoContent
         })
 
       return () => {
+        clearTimeout(timeoutId)
         ignore = true
       }
     }, [courseId, lessonId, autoplay])
@@ -286,20 +296,23 @@ export const LocalVideoContent = forwardRef<VideoPlayerHandle, LocalVideoContent
     }, [savedRecord])
 
     // Handle resume dialog choice: "Start from Beginning" — writes tombstone
-    const handleStartOver = useCallback(() => {
+    const handleStartOver = useCallback(async () => {
       // Write tombstone record with currentTime=0 so the dialog won't reappear
-      syncableWrite('progress', 'put', {
-        courseId,
-        videoId: lessonId,
-        currentTime: 0,
-        completionPercentage: 0,
-      }).catch(() => {
-        // silent-catch-ok — tombstone write is non-critical
-      })
+      try {
+        await syncableWrite('progress', 'put', {
+          courseId,
+          videoId: lessonId,
+          currentTime: 0,
+          completionPercentage: 0,
+          durationSeconds: duration,
+        })
+      } catch {
+        toast.error('Failed to save video position reset')
+      }
       setResolvedInitialPosition(undefined)
       setResumeDialogOpen(false)
       hasShownResumeDialog.current = true
-    }, [courseId, lessonId])
+    }, [courseId, lessonId, duration])
 
     // Handle dialog dismiss (Escape/outside click) — preserves position
     const handleDismissDialog = useCallback((open: boolean) => {
@@ -321,9 +334,7 @@ export const LocalVideoContent = forwardRef<VideoPlayerHandle, LocalVideoContent
       onPlayStateChange?.(playing)
     }, [onPlayStateChange])
 
-    const handleDurationChange = useCallback((dur: number) => {
-      setDuration(dur)
-    }, [])
+    // setDuration is reference-stable from useState, so no wrapper needed
 
     const handleBookmarkAdd = useCallback(
       async (timestamp: number) => {
@@ -552,7 +563,7 @@ export const LocalVideoContent = forwardRef<VideoPlayerHandle, LocalVideoContent
           data-testid="local-video-wrapper"
           className="relative h-full"
         >
-          <div className="absolute inset-0 flex items-center justify-center bg-black/5 rounded-xl">
+          <div className="absolute inset-0 flex items-center justify-center bg-black/5 rounded-xl" role="status" aria-live="polite">
             <div className="size-10 rounded-full border-4 border-brand/30 border-t-brand animate-spin" />
           </div>
         </div>
@@ -593,15 +604,15 @@ export const LocalVideoContent = forwardRef<VideoPlayerHandle, LocalVideoContent
               </DialogDescription>
             </DialogHeader>
             <DialogFooter className="flex gap-2 sm:gap-0">
+              <Button variant="brand" onClick={handleResume}>
+                Resume from {savedRecord && formatTimestamp(Math.floor(savedRecord.currentTime))}
+              </Button>
               <Button
                 variant="outline"
                 onClick={handleStartOver}
                 aria-description="Clears saved progress and restarts the video"
               >
                 Start from Beginning
-              </Button>
-              <Button variant="brand" onClick={handleResume}>
-                Resume from {savedRecord && formatTimestamp(Math.floor(savedRecord.currentTime))}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -623,8 +634,6 @@ export const LocalVideoContent = forwardRef<VideoPlayerHandle, LocalVideoContent
             ref={ref}
             src={blobUrl}
             title={video.filename}
-            courseId={courseId}
-            lessonId={lessonId}
             initialPosition={autoplay ? undefined : (recoveryPositionRef.current ?? resolvedInitialPosition)}
             captions={userCaptions ? [userCaptions] : undefined}
             chapters={video.chapters}
@@ -639,7 +648,7 @@ export const LocalVideoContent = forwardRef<VideoPlayerHandle, LocalVideoContent
             onFocusNotes={onFocusNotes}
             onRecoveryNeeded={handleRecoveryNeeded}
             onPlayStateChange={handleLocalPlayStateChange}
-            onDurationChange={handleDurationChange}
+            onDurationChange={setDuration}
             theaterMode={theaterMode}
             onTheaterModeToggle={onTheaterModeToggle}
             autoplay={autoplay}

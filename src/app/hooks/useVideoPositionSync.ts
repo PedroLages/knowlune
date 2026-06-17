@@ -113,7 +113,7 @@ export function useVideoPositionSync({
     }
   }, [savePosition])
 
-  // Save on visibilitychange (tab background/page hide) and beforeunload
+  // Save on visibilitychange (tab background/page hide)
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.hidden) {
@@ -122,15 +122,8 @@ export function useVideoPositionSync({
     }
     document.addEventListener('visibilitychange', handleVisibilityChange)
 
-    // Fire-and-forget fallback for page teardown
-    const handleBeforeUnload = () => {
-      savePosition()
-    }
-    window.addEventListener('beforeunload', handleBeforeUnload)
-
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange)
-      window.removeEventListener('beforeunload', handleBeforeUnload)
     }
   }, [savePosition])
 }

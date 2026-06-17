@@ -277,6 +277,13 @@ function CourseTimelineEntry({
           <p className="text-sm text-muted-foreground mt-2 line-clamp-2">{info.description}</p>
         )}
 
+        {/* Row 3b: Notes from manifest (justification) */}
+        {entry.justification && (
+          <p className="text-xs text-muted-foreground/70 mt-1.5 italic leading-relaxed">
+            {entry.justification}
+          </p>
+        )}
+
         {/* Row 4: Stats + Action button */}
         {!simplified && (
           <div className="flex items-center justify-between gap-4 mt-4">

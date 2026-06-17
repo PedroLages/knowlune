@@ -134,6 +134,31 @@ describe('useVideoPositionSync', () => {
 
   // --- Edge cases ---
 
+  it('saves position on visibilitychange when document becomes hidden', async () => {
+    renderPositionSync({
+      ...DEFAULT_PARAMS,
+      isPlaying: true,
+      currentTime: 50,
+      duration: 120,
+    })
+
+    mockSyncableWrite.mockClear()
+
+    // Simulate tab becoming hidden
+    Object.defineProperty(document, 'hidden', { value: true, configurable: true })
+    document.dispatchEvent(new Event('visibilitychange'))
+
+    await vi.waitFor(() => {
+      expect(mockSyncableWrite).toHaveBeenCalledWith('progress', 'put', expect.objectContaining({
+        currentTime: 50,
+        completionPercentage: 42,
+      }))
+    })
+
+    // Cleanup
+    Object.defineProperty(document, 'hidden', { value: false, configurable: true })
+  })
+
   it('does NOT save when currentTime is 0', () => {
     const { rerender } = renderPositionSync({
       ...DEFAULT_PARAMS,

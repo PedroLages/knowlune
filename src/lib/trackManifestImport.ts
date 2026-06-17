@@ -191,6 +191,7 @@ export async function batchImportTrackCourses(
       .map(r => ({
         courseId: r.courseId!,
         courseType: 'imported' as const,
+        justification: positions.find(p => p.folder === r.folder)?.notes,
       }))
     await store.batchAddCoursesToPath(trackId, coursesToAdd)
     toast.info(`Added ${coursesToAdd.length} courses to existing track "${trackName}"`)
@@ -201,6 +202,7 @@ export async function batchImportTrackCourses(
       .map(r => ({
         courseId: r.courseId!,
         courseType: 'imported' as const,
+        justification: positions.find(p => p.folder === r.folder)?.notes,
       }))
 
     const newPath = await store.createPathWithCourses(trackName, trackDescription, courses)

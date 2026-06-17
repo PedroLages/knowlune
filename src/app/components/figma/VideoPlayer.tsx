@@ -45,8 +45,6 @@ interface VideoPlayerProps {
   captions?: CaptionTrack[]
   chapters?: Chapter[]
   seekToTime?: number
-  courseId?: string
-  lessonId?: string
   poster?: string
   onTimeUpdate?: (currentTime: number) => void
   /** Called when the video metadata loads and duration is known. */
@@ -103,6 +101,12 @@ const CAPTION_FONT_SIZE_OPTIONS: { value: CaptionFontSize; label: string }[] = [
   { value: 'large', label: 'Large' },
 ]
 
+const ERROR_MESSAGES: Record<number, string> = {
+  1: 'An error occurred. Please try again.',
+  2: 'Playback interrupted — the video source became unavailable. This can happen when the file connection is lost. Retrying will attempt to reload the video.',
+  3: 'Playback error — the video file may be corrupted or in an unsupported format.',
+}
+
 export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(function VideoPlayer(
   {
     src,
@@ -111,8 +115,6 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
     captions,
     chapters,
     seekToTime,
-    courseId: _courseId,
-    lessonId: _lessonId,
     onTimeUpdate,
     onEnded,
     onSeekComplete,
@@ -535,25 +537,24 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
   // Error handler with type detection
   const handleVideoError = () => {
     const code = videoRef.current?.error?.code ?? null
-    setErrorCode(code)
-    setHasError(true)
 
-    const messages: Record<number, string> = {
-      1: 'An error occurred. Please try again.',
-      2: 'Playback interrupted — the video source became unavailable. This can happen when the file connection is lost. Retrying will attempt to reload the video.',
-      3: 'Playback error — the video file may be corrupted or in an unsupported format.',
-    }
-
+    const message = ERROR_MESSAGES[code ?? -1] ?? ''
     console.warn(
       `[VideoPlayer] Video error — code: ${code ?? 'unknown'}${code === 2 ? ' (MEDIA_ERR_NETWORK)' : code === 3 ? ' (MEDIA_ERR_DECODE)' : ''}`,
-      messages[code ?? -1] ?? ''
+      message
     )
 
-    // Network errors (code 2) require blob URL regeneration — notify parent
+    // Network errors (code 2) with recovery handler — automatic recovery
     if (code === 2 && onRecoveryNeeded) {
       const currentPos = videoRef.current?.currentTime ?? 0
       onRecoveryNeeded(currentPos)
+      setIsRecovering(true)
+      return // Skip error overlay — automatic recovery handles it
     }
+
+    // All other errors (or code 2 without onRecoveryNeeded): show error overlay
+    setErrorCode(code)
+    setHasError(true)
   }
 
   // Seek with overlay animation
@@ -1076,22 +1077,12 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
             </p>
             <Button
               variant="outline"
-              size="sm"
-              className="text-white border-white/40 hover:bg-white/10"
+              className="text-white border-white/40 hover:bg-white/10 h-11"
               onClick={() => {
                 setHasError(false)
                 setErrorCode(null)
-                // Non-network errors: reset position flag before reloading so
-                // initialPosition is re-applied on the new blob URL
-                if (errorCode !== 2) {
-                  hasRestoredPosition.current = false
-                }
-                if (errorCode === 2) {
-                  // Network error: show recovery spinner while blob URL regenerates
-                  setIsRecovering(true)
-                } else {
-                  videoRef.current?.load()
-                }
+                hasRestoredPosition.current = false
+                videoRef.current?.load()
               }}
             >
               Retry
@@ -1101,7 +1092,7 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
 
         {/* Recovery spinner — shown between Retry click and blob URL arrival */}
         {isRecovering && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 text-white gap-3 z-10">
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 text-white gap-3 z-10" role="status" aria-live="polite">
             <div className="size-10 rounded-full border-4 border-white/30 border-t-white animate-spin" />
             <p className="text-sm">Recovering...</p>
           </div>

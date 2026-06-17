@@ -467,10 +467,15 @@ function flattenManifestModules(modules: ManifestModule[]): ManifestFlatLesson[]
  * - If multiple videos match the same manifest lesson filename, the first match
  *   wins; the rest are treated as unmatched.
  * - Unmatched manifest lessons (no video file found) are logged as warnings.
+ *
+ * When `strict` is true (default), unmatched videos are EXCLUDED — only files
+ * explicitly listed in the manifest are imported. This lets you skip unwanted
+ * lessons by writing a course-manifest.json that lists only what to include.
  */
 function applyManifestVideoOrder(
   videos: ImportedVideo[],
-  modules: ManifestModule[]
+  modules: ManifestModule[],
+  strict = true
 ): ImportedVideo[] {
   const flatLessons = flattenManifestModules(modules)
 
@@ -498,18 +503,23 @@ function applyManifestVideoOrder(
     })
   }
 
-  // Second pass: append videos not referenced in the manifest
-  // Preserve their original relative order (already alphabetical from toSortedVideos).
-  let nextOrder = flatLessons.length + 1
-  for (const video of videos) {
-    if (!matchedVideoIds.has(video.id)) {
-      ordered.push({
-        ...video,
-        title: deriveTitleFromFilename(video.filename),
-        moduleTitle: undefined,
-        order: nextOrder++,
-      })
+  // Second pass: append videos not referenced in the manifest (skip when strict)
+  if (!strict) {
+    let nextOrder = flatLessons.length + 1
+    for (const video of videos) {
+      if (!matchedVideoIds.has(video.id)) {
+        ordered.push({
+          ...video,
+          title: deriveTitleFromFilename(video.filename),
+          moduleTitle: undefined,
+          order: nextOrder++,
+        })
+      }
     }
+  } else if (videos.length > matchedVideoIds.size) {
+    console.log(
+      `[persistScannedCourse] Skipped ${videos.length - matchedVideoIds.size} video(s) not listed in course-manifest.json`
+    )
   }
 
   return ordered
