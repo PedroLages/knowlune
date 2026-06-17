@@ -906,7 +906,7 @@ describe('VideoPlayer', () => {
       expect(screen.getByText('Recovering...')).toBeInTheDocument()
     })
 
-    it('does NOT call onRecoveryNeeded for non-network errors (code 3)', () => {
+    it('calls onRecoveryNeeded for decode errors (code 3)', () => {
       const onRecoveryNeeded = vi.fn()
       renderPlayer({ onRecoveryNeeded })
       fireLoadedMetadata()
@@ -918,7 +918,7 @@ describe('VideoPlayer', () => {
       })
       fireEvent.error(video)
 
-      expect(onRecoveryNeeded).not.toHaveBeenCalled()
+      expect(onRecoveryNeeded).toHaveBeenCalledWith(0)
     })
 
     it('error overlay has role="alert" and aria-live="assertive"', () => {

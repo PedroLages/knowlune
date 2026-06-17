@@ -551,7 +551,7 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
     )
 
     // Network errors (code 2) with recovery handler — automatic recovery
-    if (code === 2 && onRecoveryNeeded) {
+    if ((code === 2 || code === 3) && onRecoveryNeeded) {
       const currentPos = videoRef.current?.currentTime ?? 0
       // F013: Guard against NaN/Infinity before dispatching recovery
       if (!isFinite(currentPos)) {
@@ -562,7 +562,7 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
       }
       setIsPlaying(false)
       onRecoveryNeeded(currentPos)
-      return // Skip error overlay — automatic recovery handles it
+      return // Skip error overlay — auto-recovery regenerates the blob URL
     }
 
     // All other errors (or code 2 without onRecoveryNeeded): show error overlay
@@ -1092,13 +1092,22 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
               variant="outline"
               className="text-white border-white/40 hover:bg-white/10 h-11"
               onClick={() => {
-                // F002: Capture current error-time position before load() resets the element
+                // F002: Capture current error-time position before regeneration.
+                // When onRecoveryNeeded is provided, trigger blob URL regeneration
+                // (resolves revoked/corrupted source URLs). Falls back to reloading
+                // the same src for standalone VideoPlayer usage without a recovery
+                // handler. retryPositionRef is set for both paths — it's harmless
+                // when recoveryPositionRef handles position via initialPosition.
                 const currentPos = videoRef.current?.currentTime
                 retryPositionRef.current = currentPos != null && isFinite(currentPos) ? currentPos : null
                 setHasError(false)
                 setErrorCode(null)
                 hasRestoredPosition.current = false
-                videoRef.current?.load()
+                if (onRecoveryNeeded) {
+                  onRecoveryNeeded(currentPos ?? 0)
+                } else {
+                  videoRef.current?.load()
+                }
               }}
             >
               Retry

@@ -99,6 +99,10 @@ describe('useVideoFromHandle', () => {
 
     unmount()
 
+    // Revocation is deferred to a macrotask (setTimeout 0) so it only fires
+    // on genuine unmount, not on useEffect dependency-change re-runs.
+    await new Promise(r => setTimeout(r, 10))
+
     expect(revokeObjectURLSpy).toHaveBeenCalledWith('blob:mock-url')
   })
 
