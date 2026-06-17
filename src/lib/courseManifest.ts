@@ -51,6 +51,8 @@ export interface CourseManifest {
 export interface TrackManifestCourse {
   folder: string
   position: number
+  /** Optional notes stored as LearningPathEntry.justification during import. */
+  notes?: string
 }
 
 export interface TrackManifest {
@@ -509,8 +511,9 @@ export function parseTrackManifest(json: unknown): ParseResult<TrackManifest> {
         message: 'Course position must be a positive integer >= 1',
       })
     }
+    const notes = asOptionalString(entry.notes)
     if (folder) {
-      courses.push({ folder, position: entry.position as number })
+      courses.push({ folder, position: entry.position as number, notes })
     }
   }
 

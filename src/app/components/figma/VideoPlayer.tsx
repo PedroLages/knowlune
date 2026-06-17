@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState, forwardRef, useImperativeHandle } from 'react'
+import { useRef, useEffect, useState, forwardRef, useImperativeHandle, useCallback } from 'react'
 import {
   Play,
   Pause,
@@ -45,10 +45,10 @@ interface VideoPlayerProps {
   captions?: CaptionTrack[]
   chapters?: Chapter[]
   seekToTime?: number
-  courseId?: string
-  lessonId?: string
   poster?: string
   onTimeUpdate?: (currentTime: number) => void
+  /** Called when the video metadata loads and duration is known. */
+  onDurationChange?: (duration: number) => void
   onEnded?: () => void
   onSeekComplete?: () => void
   onBookmarkAdd?: (timestamp: number) => void
@@ -60,6 +60,12 @@ interface VideoPlayerProps {
   onLoadCaptions?: (file: File) => void
   onFocusNotes?: () => void
   /**
+   * Called when a network/media error occurs that requires source regeneration.
+   * Receives the current playback time so the caller can restore position on
+   * the new blob URL. Used together with retryKey in useVideoFromHandle.
+   */
+  onRecoveryNeeded?: (currentTime: number) => void
+  /**
    * When true, autoplay the video as soon as it can play — preferring
    * audio-on. Used for preview surfaces (e.g. the course card preview
    * dialog) where the user initiated playback via a prior click gesture.
@@ -70,6 +76,13 @@ interface VideoPlayerProps {
   autoplay?: boolean
   /** Storyboard sprite sheet for instant scrub previews (optional) */
   storyboard?: StoryboardProp
+  /**
+   * When true, renders the recovery spinner overlay over the video element.
+   * Used by LocalVideoContent to persist the spinner across VideoPlayer
+   * mount/unmount during blob URL regeneration. Internal state is insufficient
+   * because the recovery flow un-mounts VideoPlayer while the new blob URL loads.
+   */
+  showRecoveryOverlay?: boolean
 }
 
 export interface VideoPlayerHandle {
@@ -95,6 +108,12 @@ const CAPTION_FONT_SIZE_OPTIONS: { value: CaptionFontSize; label: string }[] = [
   { value: 'large', label: 'Large' },
 ]
 
+const ERROR_MESSAGES: Record<number, string> = {
+  1: 'An error occurred. Please try again.',
+  2: 'Playback interrupted — the video source became unavailable. This can happen when the file connection is lost. Retrying will attempt to reload the video.',
+  3: 'Playback error — the video file may be corrupted or in an unsupported format.',
+}
+
 export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(function VideoPlayer(
   {
     src,
@@ -103,8 +122,6 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
     captions,
     chapters,
     seekToTime,
-    courseId: _courseId,
-    lessonId: _lessonId,
     onTimeUpdate,
     onEnded,
     onSeekComplete,
@@ -117,8 +134,11 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
     onTheaterModeToggle,
     onLoadCaptions,
     onFocusNotes,
+    onDurationChange,
+    onRecoveryNeeded,
     autoplay = false,
     storyboard,
+    showRecoveryOverlay = false,
   },
   ref
 ) {
@@ -133,6 +153,10 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
   const seekOverlayTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const lastTapRef = useRef<{ time: number; x: number } | null>(null)
   const touchActiveRef = useRef(false)
+  // Captures the error-time currentTime so the manual Retry button (error overlay)
+  // can seek back to the exact position after videoRef.current?.load() resets the element.
+  // handleLoadedMetadata reads and clears this ref.
+  const retryPositionRef = useRef<number | null>(null)
 
   useImperativeHandle(ref, () => ({
     getVideoElement: () => videoRef.current,
@@ -141,6 +165,7 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
   const [justBookmarked, setJustBookmarked] = useState(false)
   const [isBuffering, setIsBuffering] = useState(false)
   const [hasError, setHasError] = useState(false)
+  const [errorCode, setErrorCode] = useState<number | null>(null)
   const [bufferedRanges, setBufferedRanges] = useState<Array<{ start: number; end: number }>>([])
 
   type SeekOverlayState = { direction: 'left' | 'right'; amount: number; id: number } | null
@@ -208,10 +233,12 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
   const [loopStart, setLoopStart] = useState<number | null>(null)
   const [loopEnd, setLoopEnd] = useState<number | null>(null)
 
-  // Reset position flag, error state, and loop markers when source changes
+  // Reset position flag, error state, recovery state, and loop markers when source changes
   useEffect(() => {
     hasRestoredPosition.current = false
     setHasError(false)
+    setErrorCode(null)
+    retryPositionRef.current = null
     // Clear loop state so stale markers don't persist across lessons
     loopStartRef.current = null
     loopEndRef.current = null
@@ -244,20 +271,6 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
     }
   }, [autoplay, src])
 
-  // PiP enter/leave listeners
-  useEffect(() => {
-    const video = videoRef.current
-    if (!video) return
-    const onEnter = () => setIsPiP(true)
-    const onLeave = () => setIsPiP(false)
-    video.addEventListener('enterpictureinpicture', onEnter)
-    video.addEventListener('leavepictureinpicture', onLeave)
-    return () => {
-      video.removeEventListener('enterpictureinpicture', onEnter)
-      video.removeEventListener('leavepictureinpicture', onLeave)
-    }
-  }, [])
-
   // Apply playback speed to video
   useEffect(() => {
     if (videoRef.current) {
@@ -284,11 +297,18 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
     }
   }, [seekToTime, onSeekComplete])
 
-  // Restore initial position
+  // Restore initial position and report duration
   const handleLoadedMetadata = () => {
     if (videoRef.current) {
-      setDuration(videoRef.current.duration)
-      if (initialPosition && !hasRestoredPosition.current) {
+      const dur = videoRef.current.duration
+      setDuration(dur)
+      onDurationChange?.(dur)
+      // F002: Manual Retry position takes precedence — seek back to error-time position
+      if (retryPositionRef.current !== null) {
+        videoRef.current.currentTime = retryPositionRef.current
+        retryPositionRef.current = null
+        hasRestoredPosition.current = true
+      } else if (initialPosition && !hasRestoredPosition.current) {
         videoRef.current.currentTime = initialPosition
         hasRestoredPosition.current = true
       }
@@ -375,11 +395,15 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
 
     if (!isFullscreen) {
       if (containerRef.current.requestFullscreen) {
-        containerRef.current.requestFullscreen()
+        containerRef.current.requestFullscreen().catch(() => {
+          /* silent-catch-ok: fullscreen may be rejected by browser policy */
+        })
       }
     } else {
       if (document.exitFullscreen) {
-        document.exitFullscreen()
+        document.exitFullscreen().catch(() => {
+          /* silent-catch-ok: exit fullscreen may be rejected */
+        })
       }
     }
   }
@@ -488,11 +512,11 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
 
   // ARIA announcement helper — clears after 3s so screen readers
   // have time to process and the next announcement triggers a fresh change
-  const announce = (message: string) => {
+  const announce = useCallback((message: string) => {
     clearTimeout(announceTimeoutRef.current)
     setAnnouncement(message)
     announceTimeoutRef.current = setTimeout(() => setAnnouncement(''), 3000)
-  }
+  }, [])
 
   // Buffering handlers (200ms debounce to avoid flicker on fast seeks)
   const handleWaiting = () => {
@@ -516,8 +540,35 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
     setBufferedRanges(ranges)
   }
 
-  // Error handler
-  const handleVideoError = () => setHasError(true)
+  // Error handler with type detection
+  const handleVideoError = () => {
+    const code = videoRef.current?.error?.code ?? null
+
+    const message = ERROR_MESSAGES[code ?? -1] ?? ''
+    console.warn(
+      `[VideoPlayer] Video error — code: ${code ?? 'unknown'}${code === 2 ? ' (MEDIA_ERR_NETWORK)' : code === 3 ? ' (MEDIA_ERR_DECODE)' : ''}`,
+      message
+    )
+
+    // Network errors (code 2) with recovery handler — automatic recovery
+    if (code === 2 && onRecoveryNeeded) {
+      const currentPos = videoRef.current?.currentTime ?? 0
+      // F013: Guard against NaN/Infinity before dispatching recovery
+      if (!isFinite(currentPos)) {
+        console.warn('[VideoPlayer] Invalid recovery position; showing error overlay instead')
+        setErrorCode(code)
+        setHasError(true)
+        return
+      }
+      setIsPlaying(false)
+      onRecoveryNeeded(currentPos)
+      return // Skip error overlay — automatic recovery handles it
+    }
+
+    // All other errors (or code 2 without onRecoveryNeeded): show error overlay
+    setErrorCode(code)
+    setHasError(true)
+  }
 
   // Seek with overlay animation
   const seekWithOverlay = (seconds: number) => {
@@ -1024,20 +1075,38 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
         )}
 
         {/* Error Overlay */}
-        {hasError && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 text-white gap-3 z-10">
-            <p className="text-sm">An error occurred. Please try again.</p>
+        {hasError && !showRecoveryOverlay && (
+          <div
+            className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 text-white gap-3 z-10"
+            role="alert"
+            aria-live="assertive"
+          >
+            <p className="text-sm px-4 text-center">
+              {ERROR_MESSAGES[errorCode ?? -1] ?? 'An error occurred. Please try again.'}
+            </p>
             <Button
               variant="outline"
-              size="sm"
-              className="text-white border-white/40 hover:bg-white/10"
+              className="text-white border-white/40 hover:bg-white/10 h-11"
               onClick={() => {
+                // F002: Capture current error-time position before load() resets the element
+                const currentPos = videoRef.current?.currentTime
+                retryPositionRef.current = currentPos != null && isFinite(currentPos) ? currentPos : null
                 setHasError(false)
+                setErrorCode(null)
+                hasRestoredPosition.current = false
                 videoRef.current?.load()
               }}
             >
               Retry
             </Button>
+          </div>
+        )}
+
+        {/* Recovery spinner — shown between Retry click and blob URL arrival */}
+        {showRecoveryOverlay && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 text-white gap-3 z-10" role="status" aria-live="polite">
+            <div className="size-10 rounded-full border-4 border-white/30 border-t-white animate-spin" />
+            <p className="text-sm">Recovering...</p>
           </div>
         )}
 
@@ -1363,7 +1432,7 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
                     size="icon"
                     className={cn(
                       'size-11 text-white hover:bg-white/20 hover:text-white transition-colors duration-150',
-                      justBookmarked && 'bg-yellow-500/30 text-yellow-300 hover:bg-yellow-500/40'
+                      justBookmarked && 'bg-warning/30 text-warning hover:bg-warning/40'
                     )}
                     onClick={handleAddBookmark}
                     aria-label="Add bookmark at current time"

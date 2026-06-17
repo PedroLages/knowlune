@@ -107,7 +107,7 @@ export type ElearningDatabase = Dexie & {
   importedCourses: EntityTable<ImportedCourse, 'id'>
   importedVideos: EntityTable<ImportedVideo, 'id'>
   importedPdfs: EntityTable<ImportedPdf, 'id'>
-  progress: EntityTable<VideoProgress, 'courseId'>
+  progress: Table<VideoProgress, [string, string]>
   bookmarks: EntityTable<VideoBookmark, 'id'>
   notes: EntityTable<Note, 'id'>
   screenshots: EntityTable<Screenshot, 'id'>

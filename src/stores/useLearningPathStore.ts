@@ -91,11 +91,11 @@ interface LearningPathState {
   createPathWithCourses: (
     name: string,
     description: string | undefined,
-    courses: Array<{ courseId: string; courseType: 'imported' | 'catalog' }>
+    courses: Array<{ courseId: string; courseType: 'imported' | 'catalog'; justification?: string }>
   ) => Promise<LearningPath>
   batchAddCoursesToPath: (
     pathId: string,
-    courses: Array<{ courseId: string; courseType: 'imported' | 'catalog' }>
+    courses: Array<{ courseId: string; courseType: 'imported' | 'catalog'; justification?: string }>
   ) => Promise<void>
 
   // Template operations
@@ -1066,7 +1066,7 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
   createPathWithCourses: async (
     name: string,
     description: string | undefined,
-    courses: Array<{ courseId: string; courseType: 'imported' | 'catalog' }>
+    courses: Array<{ courseId: string; courseType: 'imported' | 'catalog'; justification?: string }>
   ) => {
     const now = new Date().toISOString()
     const path: LearningPath = {
@@ -1096,6 +1096,7 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
       courseId: c.courseId,
       courseType: c.courseType,
       position: i + 1,
+      justification: c.justification,
       isManuallyOrdered: false,
     }))
 
@@ -1132,7 +1133,7 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
 
   batchAddCoursesToPath: async (
     pathId: string,
-    courses: Array<{ courseId: string; courseType: 'imported' | 'catalog' }>
+    courses: Array<{ courseId: string; courseType: 'imported' | 'catalog'; justification?: string }>
   ) => {
     const existingEntries = get().entries.filter(e => e.pathId === pathId)
     const existingCourseIds = new Set(existingEntries.map(e => e.courseId))
@@ -1154,6 +1155,7 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
       courseId: c.courseId,
       courseType: c.courseType,
       position: nextPosition + i,
+      justification: c.justification,
       isManuallyOrdered: false,
     }))
 

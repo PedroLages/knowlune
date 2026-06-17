@@ -14,11 +14,22 @@ import { toast } from 'sonner'
 import { db } from '@/db/schema'
 import { useVideoFromHandle } from '@/hooks/useVideoFromHandle'
 import { useCaptionLoader } from '@/app/hooks/useCaptionLoader'
+import { useVideoPositionSync } from '@/app/hooks/useVideoPositionSync'
 import { VideoPlayer, type VideoPlayerHandle } from '@/app/components/figma/VideoPlayer'
 import { Button } from '@/app/components/ui/button'
 import { Skeleton } from '@/app/components/ui/skeleton'
 import { DelayedFallback } from '@/app/components/DelayedFallback'
-import { addBookmark, getLessonBookmarks, formatBookmarkTimestamp } from '@/lib/bookmarks'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/app/components/ui/dialog'
+import { addBookmark, getLessonBookmarks } from '@/lib/bookmarks'
+import { formatTimestamp } from '@/lib/format'
+import { syncableWrite } from '@/lib/sync/syncableWrite'
 import {
   loadVideoStoryboard,
   generateStoryboard,
@@ -86,6 +97,26 @@ export const LocalVideoContent = forwardRef<VideoPlayerHandle, LocalVideoContent
     const [storyboard, setStoryboard] = useState<StoryboardProp | undefined>(undefined)
     const storyboardUrlRef = useRef<string | null>(null)
 
+    // Smart error recovery: retryKey forces blob URL regeneration
+    const [retryKey, setRetryKey] = useState(0)
+    const recoveryPositionRef = useRef<number | undefined>(undefined)
+    // F008: Recovery overlay state persists across VideoPlayer mount/unmount during retry.
+    // Set when handleRecoveryNeeded fires, cleared when blob URL loading completes.
+    const [showRecoveryOverlay, setShowRecoveryOverlay] = useState(false)
+
+    // Position sync: local tracking for useVideoPositionSync
+    const [currentTime, setCurrentTime] = useState(0)
+    const [isPlaying, setIsPlaying] = useState(false)
+    const [duration, setDuration] = useState(0)
+    useVideoPositionSync({ courseId, lessonId, currentTime, duration, isPlaying, autoplay })
+
+    // Resume dialog state
+    const [isLoadingPosition, setIsLoadingPosition] = useState(true)
+    const [resumeDialogOpen, setResumeDialogOpen] = useState(false)
+    const [savedRecord, setSavedRecord] = useState<{ currentTime: number; completionPercentage: number } | null>(null)
+    const [resolvedInitialPosition, setResolvedInitialPosition] = useState<number | undefined>(undefined)
+    const hasShownResumeDialog = useRef(false)
+
     const loadVideo = useCallback(() => {
       if (!lessonId) {
         setVideo(null)
@@ -122,7 +153,15 @@ export const LocalVideoContent = forwardRef<VideoPlayerHandle, LocalVideoContent
       return loadVideo()
     }, [loadVideo])
 
-    const { blobUrl, error, loading } = useVideoFromHandle(video?.fileHandle)
+    const { blobUrl, error, loading } = useVideoFromHandle(video?.fileHandle, retryKey)
+
+    // F008: Clear recovery overlay once blob URL loading completes (URL arrived or error).
+    // Prevents the spinner from showing indefinitely if blob generation fails.
+    useEffect(() => {
+      if (!loading && showRecoveryOverlay) {
+        setShowRecoveryOverlay(false)
+      }
+    }, [loading, showRecoveryOverlay])
 
     // Storyboard: load existing sprite sheet, lazily generate if missing
     useEffect(() => {
@@ -208,42 +247,112 @@ export const LocalVideoContent = forwardRef<VideoPlayerHandle, LocalVideoContent
       }
     }, [courseId, lessonId])
 
-    // Resume position: load saved playback position from Dexie progress table
-    const [savedPosition, setSavedPosition] = useState<number | undefined>(undefined)
-    const hasShownResumeToast = useRef(false)
-
+    // Resume position: load saved playback position from Dexie progress table.
+    // Determines whether to show a resume dialog or skip directly to playback.
     useEffect(() => {
-      hasShownResumeToast.current = false
-      setSavedPosition(undefined)
+      recoveryPositionRef.current = undefined
+      hasShownResumeDialog.current = false
+      setIsLoadingPosition(true)
+      setResumeDialogOpen(false)
+      setSavedRecord(null)
+      setResolvedInitialPosition(undefined)
       let ignore = false
+      const timeoutId = setTimeout(() => {
+        if (!ignore) {
+          ignore = true
+          setIsLoadingPosition(false)
+        }
+      }, 10_000)
 
       db.progress
         .where('[courseId+videoId]')
         .equals([courseId, lessonId])
         .first()
         .then(record => {
-          if (!ignore && record && record.currentTime > 5) {
-            setSavedPosition(record.currentTime)
+          clearTimeout(timeoutId)
+          if (ignore) return
+          setIsLoadingPosition(false)
+
+          if (
+            record &&
+            record.currentTime > 5 &&
+            record.completionPercentage < 95 &&
+            !autoplay
+          ) {
+            setSavedRecord(record)
+            setResumeDialogOpen(true)
           }
         })
         .catch(() => {
-          // silent-catch-ok — resume is non-critical
+          clearTimeout(timeoutId)
+          // silent-catch-ok — resume is non-critical; proceed without dialog
+          if (!ignore) {
+            setIsLoadingPosition(false)
+          }
         })
 
       return () => {
+        clearTimeout(timeoutId)
         ignore = true
       }
-    }, [courseId, lessonId])
+    }, [courseId, lessonId, autoplay])
 
-    // Show resume toast once when position is restored
-    useEffect(() => {
-      if (savedPosition && savedPosition > 5 && !hasShownResumeToast.current && !autoplay) {
-        hasShownResumeToast.current = true
-        toast(`Resuming from ${formatBookmarkTimestamp(Math.floor(savedPosition))}`, {
-          duration: 2000,
-        })
+    // Handle resume dialog choice: "Resume from X:XX"
+    const handleResume = useCallback(() => {
+      if (savedRecord) {
+        setResolvedInitialPosition(savedRecord.currentTime)
       }
-    }, [savedPosition])
+      setResumeDialogOpen(false)
+      hasShownResumeDialog.current = true
+    }, [savedRecord])
+
+    // Handle resume dialog choice: "Start from Beginning" — writes tombstone
+    const handleStartOver = useCallback(async () => {
+      // Write tombstone record with currentTime=0 so the dialog won't reappear
+      try {
+        // F003: Read existing record and spread it so currentPage, durationSeconds,
+        // and updatedAt are preserved from the previous session (same pattern as
+        // PdfContent.tsx lines 214-224).
+        const existing = await db.progress
+          .where('[courseId+videoId]')
+          .equals([courseId, lessonId])
+          .first()
+
+        await syncableWrite('progress', 'put', {
+          ...(existing ?? { currentTime: 0, completionPercentage: 0 }),
+          durationSeconds: existing?.durationSeconds ?? duration,
+          courseId,
+          videoId: lessonId,
+          currentTime: 0,
+          completionPercentage: 0,
+        })
+      } catch {
+        toast.error('Failed to save video position reset')
+      }
+      setResolvedInitialPosition(undefined)
+      setResumeDialogOpen(false)
+      hasShownResumeDialog.current = true
+    }, [courseId, lessonId, duration])
+
+    // Handle dialog dismiss (Escape/outside click) — preserves position
+    const handleDismissDialog = useCallback(() => {
+      setResolvedInitialPosition(undefined)
+      setResumeDialogOpen(false)
+      hasShownResumeDialog.current = true
+    }, [])
+
+    // Local play state and time tracking for position sync
+    const handleLocalTimeUpdate = useCallback((time: number) => {
+      setCurrentTime(time)
+      onTimeUpdate?.(time)
+    }, [onTimeUpdate])
+
+    const handleLocalPlayStateChange = useCallback((playing: boolean) => {
+      setIsPlaying(playing)
+      onPlayStateChange?.(playing)
+    }, [onPlayStateChange])
+
+    // setDuration is reference-stable from useState, so no wrapper needed
 
     const handleBookmarkAdd = useCallback(
       async (timestamp: number) => {
@@ -257,6 +366,23 @@ export const LocalVideoContent = forwardRef<VideoPlayerHandle, LocalVideoContent
         }
       },
       [courseId, lessonId]
+    )
+
+    // Smart error recovery: when VideoPlayer detects a network error,
+    // it calls onRecoveryNeeded with the current playback position.
+    // We store that position and increment retryKey to force blob URL
+    // regeneration via the hook's dependency change.
+    const handleRecoveryNeeded = useCallback(
+      (currentTime: number) => {
+        if (!isFinite(currentTime)) {
+          console.warn('[LocalVideoContent] Invalid recovery position:', currentTime)
+          return
+        }
+        recoveryPositionRef.current = currentTime
+        setShowRecoveryOverlay(true)
+        setRetryKey(k => k + 1)
+      },
+      []
     )
 
     // Notify parent when blob URL is ready (E91-S04 mini-player)
@@ -370,6 +496,22 @@ export const LocalVideoContent = forwardRef<VideoPlayerHandle, LocalVideoContent
       )
     }
 
+    // F009: Recovery overlay takes precedence over loading skeleton during blob URL regeneration
+    if (showRecoveryOverlay && loading) {
+      return (
+        <div
+          ref={videoWrapperRef}
+          data-testid="local-video-wrapper"
+          className="relative h-full"
+        >
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 text-white gap-3 z-10" role="status" aria-live="polite">
+            <div className="size-10 rounded-full border-4 border-white/30 border-t-white animate-spin" />
+            <p className="text-sm">Recovering...</p>
+          </div>
+        </div>
+      )
+    }
+
     // Loading state
     if (video === undefined || loading) {
       return (
@@ -443,7 +585,25 @@ export const LocalVideoContent = forwardRef<VideoPlayerHandle, LocalVideoContent
     }
 
     // Video playback
-    if (!blobUrl) return null
+    if (!blobUrl) {
+      // F008: During recovery, render the spinner here so it persists across
+      // VideoPlayer mount/unmount while the new blob URL is being generated.
+      if (showRecoveryOverlay) {
+        return (
+          <div
+            ref={videoWrapperRef}
+            data-testid="local-video-wrapper"
+            className="relative h-full"
+          >
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 text-white gap-3 z-10" role="status" aria-live="polite">
+              <div className="size-10 rounded-full border-4 border-white/30 border-t-white animate-spin" />
+              <p className="text-sm">Recovering...</p>
+            </div>
+          </div>
+        )
+      }
+      return null
+    }
 
     // Map bookmarks to the shape VideoPlayer expects for timeline markers
     const bookmarkMarkers = bookmarks.map(b => ({
@@ -452,12 +612,69 @@ export const LocalVideoContent = forwardRef<VideoPlayerHandle, LocalVideoContent
       label: b.label || '',
     }))
 
+    // Show spinner while position is being fetched (gates VideoPlayer mount)
+    if (isLoadingPosition) {
+      return (
+        <div
+          ref={videoWrapperRef}
+          data-testid="local-video-wrapper"
+          className="relative h-full"
+        >
+          <div className="absolute inset-0 flex items-center justify-center bg-black/5 rounded-xl" role="status" aria-live="polite">
+            <div className="size-10 rounded-full border-4 border-brand/30 border-t-brand animate-spin" />
+          </div>
+        </div>
+      )
+    }
+
+    // The resume dialog gates VideoPlayer mounting so initialPosition is settled
+    // before the <video> element mounts, preventing the timing race where
+    // hasRestoredPosition is set to true with undefined initialPosition.
+    const shouldShowDialog = resumeDialogOpen && !hasShownResumeDialog.current
+    const showVideoPlayer = !shouldShowDialog
+
     return (
       <div
         ref={videoWrapperRef}
         data-testid="local-video-wrapper"
         className="relative h-full group/video"
       >
+        {/* Resume dialog — shown on mount when saved position exists */}
+        <Dialog
+          open={shouldShowDialog}
+          onOpenChange={open => {
+            if (!open) handleDismissDialog()
+          }}
+        >
+          <DialogContent
+            className="sm:max-w-md"
+            role="alertdialog"
+            aria-labelledby="resume-dialog-title"
+            aria-describedby="resume-dialog-description"
+          >
+            <DialogHeader>
+              <DialogTitle id="resume-dialog-title">Resume video?</DialogTitle>
+              <DialogDescription id="resume-dialog-description">
+                You were watching this video at{' '}
+                {savedRecord && formatTimestamp(Math.floor(savedRecord.currentTime))}.
+                Would you like to resume or start from the beginning?
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter className="flex gap-2 sm:gap-0">
+              <Button variant="brand" onClick={handleResume}>
+                Resume from {savedRecord && formatTimestamp(Math.floor(savedRecord.currentTime))}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={handleStartOver}
+                aria-description="Clears saved progress and restarts the video"
+              >
+                Start from Beginning
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
         <Button
           variant="ghost"
           size="icon"
@@ -468,30 +685,34 @@ export const LocalVideoContent = forwardRef<VideoPlayerHandle, LocalVideoContent
         >
           <Camera className="size-4" aria-hidden="true" />
         </Button>
-        <VideoPlayer
-          ref={ref}
-          src={blobUrl}
-          title={video.filename}
-          courseId={courseId}
-          lessonId={lessonId}
-          initialPosition={autoplay ? undefined : savedPosition}
-          captions={userCaptions ? [userCaptions] : undefined}
-          chapters={video.chapters}
-          onLoadCaptions={handleLoadCaptions}
-          onEnded={onEnded}
-          onTimeUpdate={onTimeUpdate}
-          seekToTime={seekToTime}
-          onSeekComplete={onSeekComplete}
-          onBookmarkAdd={handleBookmarkAdd}
-          onBookmarkSeek={onBookmarkSeek}
-          bookmarks={bookmarkMarkers}
-          onFocusNotes={onFocusNotes}
-          onPlayStateChange={onPlayStateChange}
-          theaterMode={theaterMode}
-          onTheaterModeToggle={onTheaterModeToggle}
-          autoplay={autoplay}
-          storyboard={storyboard}
-        />
+
+        {showVideoPlayer && (
+          <VideoPlayer
+            ref={ref}
+            src={blobUrl}
+            title={video.filename}
+            initialPosition={autoplay ? undefined : (recoveryPositionRef.current ?? resolvedInitialPosition)}
+            captions={userCaptions ? [userCaptions] : undefined}
+            chapters={video.chapters}
+            onLoadCaptions={handleLoadCaptions}
+            onEnded={onEnded}
+            onTimeUpdate={handleLocalTimeUpdate}
+            seekToTime={seekToTime}
+            onSeekComplete={onSeekComplete}
+            onBookmarkAdd={handleBookmarkAdd}
+            onBookmarkSeek={onBookmarkSeek}
+            bookmarks={bookmarkMarkers}
+            onFocusNotes={onFocusNotes}
+            onRecoveryNeeded={handleRecoveryNeeded}
+            onPlayStateChange={handleLocalPlayStateChange}
+            onDurationChange={setDuration}
+            theaterMode={theaterMode}
+            onTheaterModeToggle={onTheaterModeToggle}
+            autoplay={autoplay}
+            storyboard={storyboard}
+            showRecoveryOverlay={showRecoveryOverlay}
+          />
+        )}
       </div>
     )
   }

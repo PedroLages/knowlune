@@ -470,6 +470,24 @@ describe('parseTrackManifest', () => {
     expect(result.value.track.courses[2]).toEqual({ folder: '03-capstone-project', position: 3 })
   })
 
+  it('parses course notes field', () => {
+    const result = parseTrackManifest({
+      version: '1.0',
+      track: {
+        name: 'Test Track',
+        courses: [
+          { folder: 'c1', position: 1, notes: 'Skip post-processing; use field sections only' },
+          { folder: 'c2', position: 2 },
+        ],
+      },
+    })
+
+    expect(result.ok).toBe(true)
+    if (!result.ok) throw new Error('Expected ok result')
+    expect(result.value.track.courses[0].notes).toBe('Skip post-processing; use field sections only')
+    expect(result.value.track.courses[1].notes).toBeUndefined()
+  })
+
   it('parses a minimal track manifest (name + courses only)', () => {
     const result = parseTrackManifest({
       version: '1.0',

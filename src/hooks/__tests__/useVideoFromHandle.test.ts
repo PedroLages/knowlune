@@ -14,9 +14,12 @@ function makeHandle(overrides: Partial<FileSystemFileHandle> = {}): FileSystemFi
   } as unknown as FileSystemFileHandle
 }
 
+let createObjectURLSpy: ReturnType<typeof vi.spyOn>
+let revokeObjectURLSpy: ReturnType<typeof vi.spyOn>
+
 beforeEach(() => {
-  vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:mock-url')
-  vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {})
+  createObjectURLSpy = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:mock-url')
+  revokeObjectURLSpy = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {})
 })
 
 afterEach(() => {
@@ -45,7 +48,7 @@ describe('useVideoFromHandle', () => {
 
     expect(result.current.blobUrl).toBe('blob:mock-url')
     expect(result.current.error).toBeNull()
-    expect(URL.createObjectURL).toHaveBeenCalledOnce()
+    expect(createObjectURLSpy).toHaveBeenCalledOnce()
   })
 
   it('requests permission when not yet granted and succeeds', async () => {
@@ -73,7 +76,7 @@ describe('useVideoFromHandle', () => {
 
     expect(result.current.error).toBe('permission-denied')
     expect(result.current.blobUrl).toBeNull()
-    expect(URL.createObjectURL).not.toHaveBeenCalled()
+    expect(createObjectURLSpy).not.toHaveBeenCalled()
   })
 
   it('returns file-not-found error when getFile throws', async () => {
@@ -96,7 +99,7 @@ describe('useVideoFromHandle', () => {
 
     unmount()
 
-    expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:mock-url')
+    expect(revokeObjectURLSpy).toHaveBeenCalledWith('blob:mock-url')
   })
 
   it('revokes previous blob URL when handle changes', async () => {
@@ -112,6 +115,25 @@ describe('useVideoFromHandle', () => {
 
     rerender({ h: handle2 })
 
-    await waitFor(() => expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:mock-url'))
+    await waitFor(() => expect(revokeObjectURLSpy).toHaveBeenCalledWith('blob:mock-url'))
+  })
+
+  it('regenerates blob URL when retryKey changes', async () => {
+    const handle = makeHandle()
+    type TestProps = { h: FileSystemFileHandle; rk?: number }
+    const { result, rerender } = renderHook<ReturnType<typeof useVideoFromHandle>, TestProps>(
+      ({ h, rk }) => useVideoFromHandle(h, rk),
+      { initialProps: { h: handle } }
+    )
+
+    await waitFor(() => expect(result.current.loading).toBe(false))
+    expect(result.current.blobUrl).toBe('blob:mock-url')
+
+    // Increment retryKey — should revoke old blob URL and create a new one
+    createObjectURLSpy.mockClear()
+    rerender({ h: handle, rk: 1 })
+
+    await waitFor(() => expect(createObjectURLSpy).toHaveBeenCalledTimes(1))
+    expect(result.current.blobUrl).toBe('blob:mock-url')
   })
 })

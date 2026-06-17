@@ -23,5 +23,6 @@
   "tailwindCSS.experimental.classRegex": [
     ["cn\\(([^)]*)\\)", "[\"'`]([^\"'`]*).*?[\"'`]"]
   ],
-  "claudeCode.initialPermissionMode": "plan"
+  "claudeCode.initialPermissionMode": "plan",
+  "todo-tree.ripgrep": "/opt/homebrew/bin/rg"
 }

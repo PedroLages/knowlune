@@ -387,6 +387,15 @@ describe('VideoPlayer', () => {
       expect(video.currentTime).toBe(30)
     })
 
+    it('calls onDurationChange when metadata loads', () => {
+      const onDurationChange = vi.fn()
+      renderPlayer({ onDurationChange })
+      const video = getVideo()
+      Object.defineProperty(video, 'duration', { get: () => 120, configurable: true })
+      fireEvent.loadedMetadata(video)
+      expect(onDurationChange).toHaveBeenCalledWith(120)
+    })
+
     it('does NOT restore position on second loadedmetadata', () => {
       renderPlayer({ initialPosition: 30 })
       const video = getVideo()
@@ -644,6 +653,143 @@ describe('VideoPlayer', () => {
       fireEvent.error(getVideo())
 
       await user.click(screen.getByRole('button', { name: /retry/i }))
+      expect(loadMock).toHaveBeenCalled()
+    })
+
+    it('shows network-specific message for error code 2 (MEDIA_ERR_NETWORK)', () => {
+      renderPlayer()
+      const video = getVideo()
+      Object.defineProperty(video, 'error', {
+        configurable: true,
+        value: { code: 2 },
+      })
+      fireEvent.error(video)
+      expect(
+        screen.getByText(/Playback interrupted/)
+      ).toBeInTheDocument()
+    })
+
+    it('shows decode-specific message for error code 3 (MEDIA_ERR_DECODE)', () => {
+      renderPlayer()
+      const video = getVideo()
+      Object.defineProperty(video, 'error', {
+        configurable: true,
+        value: { code: 3 },
+      })
+      fireEvent.error(video)
+      expect(
+        screen.getByText(/file may be corrupted/)
+      ).toBeInTheDocument()
+    })
+
+    it('shows generic message for error code 1 (MEDIA_ERR_ABORTED)', () => {
+      renderPlayer()
+      const video = getVideo()
+      Object.defineProperty(video, 'error', {
+        configurable: true,
+        value: { code: 1 },
+      })
+      fireEvent.error(video)
+      expect(
+        screen.getByText('An error occurred. Please try again.')
+      ).toBeInTheDocument()
+    })
+
+    it('shows generic message for unknown / null error code', () => {
+      renderPlayer()
+      const video = getVideo()
+      Object.defineProperty(video, 'error', {
+        configurable: true,
+        value: { code: 999 },
+      })
+      fireEvent.error(video)
+      expect(
+        screen.getByText('An error occurred. Please try again.')
+      ).toBeInTheDocument()
+    })
+
+    it('calls onRecoveryNeeded with currentTime for error code 2 (MEDIA_ERR_NETWORK) and shows recovery spinner', () => {
+      const onRecoveryNeeded = vi.fn()
+      renderPlayer({ onRecoveryNeeded, showRecoveryOverlay: true })
+      fireLoadedMetadata(120)
+
+      const video = getVideo()
+      Object.defineProperty(video, 'error', {
+        configurable: true,
+        value: { code: 2 },
+      })
+      Object.defineProperty(video, 'currentTime', {
+        value: 45,
+        writable: true,
+        configurable: true,
+      })
+      fireEvent.timeUpdate(video)
+      fireEvent.error(video)
+
+      expect(onRecoveryNeeded).toHaveBeenCalledWith(45)
+      // Should NOT show error overlay — automatic recovery
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+      // Should show recovery spinner
+      expect(screen.getByText('Recovering...')).toBeInTheDocument()
+    })
+
+    it('does NOT call onRecoveryNeeded for non-network errors (code 3)', () => {
+      const onRecoveryNeeded = vi.fn()
+      renderPlayer({ onRecoveryNeeded })
+      fireLoadedMetadata()
+
+      const video = getVideo()
+      Object.defineProperty(video, 'error', {
+        configurable: true,
+        value: { code: 3 },
+      })
+      fireEvent.error(video)
+
+      expect(onRecoveryNeeded).not.toHaveBeenCalled()
+    })
+
+    it('error overlay has role="alert" and aria-live="assertive"', () => {
+      renderPlayer()
+      fireEvent.error(getVideo())
+      const overlay = screen.getByRole('alert')
+      expect(overlay).toHaveAttribute('aria-live', 'assertive')
+    })
+
+    it('error code 3 retry resets hasRestoredPosition and calls load()', async () => {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+      renderPlayer()
+      fireLoadedMetadata()
+
+      const video = getVideo()
+      Object.defineProperty(video, 'error', {
+        configurable: true,
+        value: { code: 3 },
+      })
+      fireEvent.error(video)
+
+      await user.click(screen.getByRole('button', { name: /retry/i }))
+      expect(loadMock).toHaveBeenCalled()
+    })
+
+    it('error code 2 without onRecoveryNeeded shows error overlay and calls load() on retry', async () => {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+      renderPlayer()
+      fireLoadedMetadata()
+
+      const video = getVideo()
+      Object.defineProperty(video, 'error', {
+        configurable: true,
+        value: { code: 2 },
+      })
+      fireEvent.error(video)
+
+      // Should show error overlay (not recovery spinner)
+      expect(screen.getByRole('alert')).toBeInTheDocument()
+      expect(screen.queryByText('Recovering...')).not.toBeInTheDocument()
+
+      await user.click(screen.getByRole('button', { name: /retry/i }))
+
+      // Should call load() — no onRecoveryNeeded, so fall back to video.load()
       expect(loadMock).toHaveBeenCalled()
     })
   })
