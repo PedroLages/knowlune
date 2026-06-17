@@ -251,6 +251,7 @@ describe('LocalVideoContent resume dialog', () => {
       videoId: 'lesson-1',
       currentTime: 0,
       completionPercentage: 0,
+      durationSeconds: 0,
     })
 
     // Dialog should close and VideoPlayer should render
