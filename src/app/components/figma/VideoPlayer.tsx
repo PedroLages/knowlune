@@ -995,7 +995,11 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
       ref={containerRef}
       data-testid="video-player-container"
       className={cn(
-        'relative w-full h-full overflow-hidden rounded-2xl bg-black group focus:outline-none',
+        'relative w-full h-full rounded-2xl bg-black group focus:outline-none',
+        // overflow-toggle: When speed menu is open outside fullscreen, allow dropdown
+        // overflow-visibility. In fullscreen the browser handles overflow naturally so
+        // keep overflow-hidden. This avoids clipping the portaled dropdown menu.
+        (!speedMenuOpen || isFullscreen) ? 'overflow-hidden' : 'overflow-visible',
         // Hide cursor when playing and controls auto-hide (YouTube-style)
         isPlaying && !showControls && 'cursor-none'
       )}
@@ -1124,7 +1128,8 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
             if (
               target.closest('button') ||
               target.closest('input') ||
-              target.closest('[data-controls]')
+              target.closest('[data-controls]') ||
+              target.closest('[role="menu"]')
             )
               return
             togglePlayPause()
@@ -1362,7 +1367,7 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
                       {playbackSpeed}x
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent side="top" align="end" className="w-32">
+                  <DropdownMenuContent side="top" align="end" className="w-32" container={containerRef.current ?? undefined}>
                     <DropdownMenuLabel className="text-xs font-semibold">Speed</DropdownMenuLabel>
                     <DropdownMenuRadioGroup
                       value={String(playbackSpeed)}
