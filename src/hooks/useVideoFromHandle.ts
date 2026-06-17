@@ -79,21 +79,31 @@ export function useVideoFromHandle(
 
     return () => {
       cancelled = true
-      // On genuine unmount (no dependency change), clean up the active URL.
-      // We defer to a macrotask: if a new effect has started by then (dep
-      // change), its load() will handle URL lifecycle. If not, we're truly
-      // unmounting and should release the blob memory.
-      const urlAtCleanup = activeUrlRef.current
-      if (urlAtCleanup) {
+      // On dependency change, the new effect's load() will atomically revoke
+      // the old URL inside the setState updater when the new URL is ready.
+      // On genuine unmount, the empty-deps useEffect below handles cleanup.
+    }
+  }, [handle, retryKey])
+
+  // Separate empty-deps effect: cleanup only runs on genuine unmount.
+  // On unmount both cleanups fire (main effect sets cancelled=true, this
+  // one revokes the active URL). On dependency change only the main
+  // effect's cleanup fires — this effect does not re-run.
+  // The macrotask defer is Strict Mode safe: the second mount will set
+  // a new activeUrlRef before the first mount's timeout fires.
+  useEffect(() => {
+    return () => {
+      const url = activeUrlRef.current
+      if (url) {
         setTimeout(() => {
-          if (activeUrlRef.current === urlAtCleanup) {
-            URL.revokeObjectURL(urlAtCleanup)
+          if (activeUrlRef.current === url) {
+            URL.revokeObjectURL(url)
             activeUrlRef.current = null
           }
         }, 0)
       }
     }
-  }, [handle, retryKey])
+  }, [])
 
   return state
 }

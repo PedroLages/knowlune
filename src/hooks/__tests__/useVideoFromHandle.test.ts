@@ -16,9 +16,13 @@ function makeHandle(overrides: Partial<FileSystemFileHandle> = {}): FileSystemFi
 
 let createObjectURLSpy: ReturnType<typeof vi.spyOn>
 let revokeObjectURLSpy: ReturnType<typeof vi.spyOn>
+let createCallCount: number
 
 beforeEach(() => {
-  createObjectURLSpy = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:mock-url')
+  createCallCount = 0
+  createObjectURLSpy = vi
+    .spyOn(URL, 'createObjectURL')
+    .mockImplementation(() => `blob:mock-url-${++createCallCount}`)
   revokeObjectURLSpy = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {})
 })
 
@@ -46,7 +50,7 @@ describe('useVideoFromHandle', () => {
 
     await waitFor(() => expect(result.current.loading).toBe(false))
 
-    expect(result.current.blobUrl).toBe('blob:mock-url')
+    expect(result.current.blobUrl).toBe('blob:mock-url-1')
     expect(result.current.error).toBeNull()
     expect(createObjectURLSpy).toHaveBeenCalledOnce()
   })
@@ -61,7 +65,7 @@ describe('useVideoFromHandle', () => {
     await waitFor(() => expect(result.current.loading).toBe(false))
 
     expect(handle.requestPermission).toHaveBeenCalledWith({ mode: 'read' })
-    expect(result.current.blobUrl).toBe('blob:mock-url')
+    expect(result.current.blobUrl).toBe('blob:mock-url-1')
     expect(result.current.error).toBeNull()
   })
 
@@ -95,7 +99,7 @@ describe('useVideoFromHandle', () => {
     const handle = makeHandle()
     const { result, unmount } = renderHook(() => useVideoFromHandle(handle))
 
-    await waitFor(() => expect(result.current.blobUrl).toBe('blob:mock-url'))
+    await waitFor(() => expect(result.current.blobUrl).toBe('blob:mock-url-1'))
 
     unmount()
 
@@ -103,7 +107,7 @@ describe('useVideoFromHandle', () => {
     // on genuine unmount, not on useEffect dependency-change re-runs.
     await new Promise(r => setTimeout(r, 10))
 
-    expect(revokeObjectURLSpy).toHaveBeenCalledWith('blob:mock-url')
+    expect(revokeObjectURLSpy).toHaveBeenCalledWith('blob:mock-url-1')
   })
 
   it('revokes previous blob URL when handle changes', async () => {
@@ -115,11 +119,11 @@ describe('useVideoFromHandle', () => {
       { initialProps: { h: handle1 } }
     )
 
-    await waitFor(() => expect(result.current.blobUrl).toBe('blob:mock-url'))
+    await waitFor(() => expect(result.current.blobUrl).toBe('blob:mock-url-1'))
 
     rerender({ h: handle2 })
 
-    await waitFor(() => expect(revokeObjectURLSpy).toHaveBeenCalledWith('blob:mock-url'))
+    await waitFor(() => expect(revokeObjectURLSpy).toHaveBeenCalledWith('blob:mock-url-1'))
   })
 
   it('regenerates blob URL when retryKey changes', async () => {
@@ -131,13 +135,13 @@ describe('useVideoFromHandle', () => {
     )
 
     await waitFor(() => expect(result.current.loading).toBe(false))
-    expect(result.current.blobUrl).toBe('blob:mock-url')
+    expect(result.current.blobUrl).toBe('blob:mock-url-1')
 
     // Increment retryKey — should revoke old blob URL and create a new one
     createObjectURLSpy.mockClear()
     rerender({ h: handle, rk: 1 })
 
     await waitFor(() => expect(createObjectURLSpy).toHaveBeenCalledTimes(1))
-    expect(result.current.blobUrl).toBe('blob:mock-url')
+    expect(result.current.blobUrl).toBe('blob:mock-url-2')
   })
 })
