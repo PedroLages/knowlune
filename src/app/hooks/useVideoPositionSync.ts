@@ -53,6 +53,14 @@ export function useVideoPositionSync({
   const snapRef = useRef({ courseId, lessonId, currentTime, duration, autoplay })
   snapRef.current = { courseId, lessonId, currentTime, duration, autoplay }
 
+  // F007: Stable fields (completedAt, currentPage) read once from Dexie and
+  // spread from refs on periodic saves instead of querying db each time.
+  const stableRefs = useRef<{ completedAt: string | null; currentPage: number | null }>({
+    completedAt: null,
+    currentPage: null,
+  })
+  const stableLoadedRef = useRef(false)
+
   // Generational cancel: increment when courseId/lessonId change to discard stale saves
   const generationRef = useRef(0)
   const prevIdsRef = useRef({ courseId, lessonId })
@@ -60,6 +68,9 @@ export function useVideoPositionSync({
   if (prevIdsRef.current.courseId !== courseId || prevIdsRef.current.lessonId !== lessonId) {
     generationRef.current++
     prevIdsRef.current = { courseId, lessonId }
+    // Reset stable field cache when courseId/lessonId change
+    stableLoadedRef.current = false
+    stableRefs.current = { completedAt: null, currentPage: null }
   }
 
   /** Persist current playback position and progress to Dexie via syncableWrite. */
@@ -75,27 +86,39 @@ export function useVideoPositionSync({
     if (!dur || !isFinite(dur) || dur <= 0) return
 
     try {
-      // Read existing record to spread and preserve currentPage
-      const existing = await db.progress
-        .where('[courseId+videoId]')
-        .equals([cId, lId])
-        .first()
+      // F007: Read stable fields once, spread from refs on periodic saves
+      if (!stableLoadedRef.current) {
+        const existing = await db.progress
+          .where('[courseId+videoId]')
+          .equals([cId, lId])
+          .first()
 
-      // Generational cancel: discard if courseId/lessonId changed mid-read
-      if (gen !== generationRef.current) return
+        if (existing) {
+          stableRefs.current = {
+            completedAt: existing.completedAt ?? null,
+            currentPage: existing.currentPage ?? null,
+          }
+        }
+        stableLoadedRef.current = true
+        // Generational cancel: discard if courseId/lessonId changed mid-read
+        if (gen !== generationRef.current) return
+      }
 
       const completionPercentage = Math.min(100, Math.round((time / dur) * 100))
 
       await syncableWrite('progress', 'put', {
-        ...(existing ?? { currentTime: 0, completionPercentage: 0 }),
         courseId: cId,
         videoId: lId,
         currentTime: time,
         completionPercentage,
         durationSeconds: dur,
+        // Spread stable fields from refs so each periodic save doesn't re-query Dexie
+        ...(stableRefs.current.completedAt !== null ? { completedAt: stableRefs.current.completedAt } : {}),
+        ...(stableRefs.current.currentPage !== null ? { currentPage: stableRefs.current.currentPage } : {}),
       })
-    } catch {
-      // silent-catch-ok — position save is non-critical
+    } catch (err) {
+      // silent-catch-ok — position save is non-critical; console.warn emitted for developer debugging
+      console.warn('[useVideoPositionSync] Failed to save position:', err)
     }
   }, [])
 

@@ -710,7 +710,7 @@ describe('VideoPlayer', () => {
 
     it('calls onRecoveryNeeded with currentTime for error code 2 (MEDIA_ERR_NETWORK) and shows recovery spinner', () => {
       const onRecoveryNeeded = vi.fn()
-      renderPlayer({ onRecoveryNeeded })
+      renderPlayer({ onRecoveryNeeded, showRecoveryOverlay: true })
       fireLoadedMetadata(120)
 
       const video = getVideo()

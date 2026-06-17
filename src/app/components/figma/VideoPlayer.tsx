@@ -560,6 +560,7 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
         setHasError(true)
         return
       }
+      setIsPlaying(false)
       onRecoveryNeeded(currentPos)
       return // Skip error overlay — automatic recovery handles it
     }
@@ -1081,18 +1082,15 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
             aria-live="assertive"
           >
             <p className="text-sm px-4 text-center">
-              {errorCode === 2
-                ? 'Playback interrupted — the video source became unavailable. This can happen when the file connection is lost. Retrying will attempt to reload the video.'
-                : errorCode === 3
-                  ? 'Playback error — the video file may be corrupted or in an unsupported format.'
-                  : 'An error occurred. Please try again.'}
+              {ERROR_MESSAGES[errorCode ?? -1] ?? 'An error occurred. Please try again.'}
             </p>
             <Button
               variant="outline"
               className="text-white border-white/40 hover:bg-white/10 h-11"
               onClick={() => {
                 // F002: Capture current error-time position before load() resets the element
-                retryPositionRef.current = videoRef.current?.currentTime ?? null
+                const currentPos = videoRef.current?.currentTime
+                retryPositionRef.current = currentPos != null && isFinite(currentPos) ? currentPos : null
                 setHasError(false)
                 setErrorCode(null)
                 hasRestoredPosition.current = false

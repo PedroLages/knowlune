@@ -496,6 +496,22 @@ export const LocalVideoContent = forwardRef<VideoPlayerHandle, LocalVideoContent
       )
     }
 
+    // F009: Recovery overlay takes precedence over loading skeleton during blob URL regeneration
+    if (showRecoveryOverlay && loading) {
+      return (
+        <div
+          ref={videoWrapperRef}
+          data-testid="local-video-wrapper"
+          className="relative h-full"
+        >
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 text-white gap-3 z-10" role="status" aria-live="polite">
+            <div className="size-10 rounded-full border-4 border-white/30 border-t-white animate-spin" />
+            <p className="text-sm">Recovering...</p>
+          </div>
+        </div>
+      )
+    }
+
     // Loading state
     if (video === undefined || loading) {
       return (
