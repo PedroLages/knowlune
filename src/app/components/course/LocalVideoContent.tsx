@@ -100,12 +100,15 @@ export const LocalVideoContent = forwardRef<VideoPlayerHandle, LocalVideoContent
     // Smart error recovery: retryKey forces blob URL regeneration
     const [retryKey, setRetryKey] = useState(0)
     const recoveryPositionRef = useRef<number | undefined>(undefined)
+    // F008: Recovery overlay state persists across VideoPlayer mount/unmount during retry.
+    // Set when handleRecoveryNeeded fires, cleared when blob URL loading completes.
+    const [showRecoveryOverlay, setShowRecoveryOverlay] = useState(false)
 
     // Position sync: local tracking for useVideoPositionSync
     const [currentTime, setCurrentTime] = useState(0)
     const [isPlaying, setIsPlaying] = useState(false)
     const [duration, setDuration] = useState(0)
-    useVideoPositionSync({ courseId, lessonId, currentTime, duration, isPlaying })
+    useVideoPositionSync({ courseId, lessonId, currentTime, duration, isPlaying, autoplay })
 
     // Resume dialog state
     const [isLoadingPosition, setIsLoadingPosition] = useState(true)
@@ -151,6 +154,14 @@ export const LocalVideoContent = forwardRef<VideoPlayerHandle, LocalVideoContent
     }, [loadVideo])
 
     const { blobUrl, error, loading } = useVideoFromHandle(video?.fileHandle, retryKey)
+
+    // F008: Clear recovery overlay once blob URL loading completes (URL arrived or error).
+    // Prevents the spinner from showing indefinitely if blob generation fails.
+    useEffect(() => {
+      if (!loading && showRecoveryOverlay) {
+        setShowRecoveryOverlay(false)
+      }
+    }, [loading, showRecoveryOverlay])
 
     // Storyboard: load existing sprite sheet, lazily generate if missing
     useEffect(() => {
@@ -299,12 +310,21 @@ export const LocalVideoContent = forwardRef<VideoPlayerHandle, LocalVideoContent
     const handleStartOver = useCallback(async () => {
       // Write tombstone record with currentTime=0 so the dialog won't reappear
       try {
+        // F003: Read existing record and spread it so currentPage, durationSeconds,
+        // and updatedAt are preserved from the previous session (same pattern as
+        // PdfContent.tsx lines 214-224).
+        const existing = await db.progress
+          .where('[courseId+videoId]')
+          .equals([courseId, lessonId])
+          .first()
+
         await syncableWrite('progress', 'put', {
+          ...(existing ?? { currentTime: 0, completionPercentage: 0 }),
+          durationSeconds: existing?.durationSeconds ?? duration,
           courseId,
           videoId: lessonId,
           currentTime: 0,
           completionPercentage: 0,
-          durationSeconds: duration,
         })
       } catch {
         toast.error('Failed to save video position reset')
@@ -315,12 +335,10 @@ export const LocalVideoContent = forwardRef<VideoPlayerHandle, LocalVideoContent
     }, [courseId, lessonId, duration])
 
     // Handle dialog dismiss (Escape/outside click) — preserves position
-    const handleDismissDialog = useCallback((open: boolean) => {
-      if (!open) {
-        setResolvedInitialPosition(undefined)
-        setResumeDialogOpen(false)
-        hasShownResumeDialog.current = true
-      }
+    const handleDismissDialog = useCallback(() => {
+      setResolvedInitialPosition(undefined)
+      setResumeDialogOpen(false)
+      hasShownResumeDialog.current = true
     }, [])
 
     // Local play state and time tracking for position sync
@@ -356,7 +374,12 @@ export const LocalVideoContent = forwardRef<VideoPlayerHandle, LocalVideoContent
     // regeneration via the hook's dependency change.
     const handleRecoveryNeeded = useCallback(
       (currentTime: number) => {
+        if (!isFinite(currentTime)) {
+          console.warn('[LocalVideoContent] Invalid recovery position:', currentTime)
+          return
+        }
         recoveryPositionRef.current = currentTime
+        setShowRecoveryOverlay(true)
         setRetryKey(k => k + 1)
       },
       []
@@ -546,7 +569,25 @@ export const LocalVideoContent = forwardRef<VideoPlayerHandle, LocalVideoContent
     }
 
     // Video playback
-    if (!blobUrl) return null
+    if (!blobUrl) {
+      // F008: During recovery, render the spinner here so it persists across
+      // VideoPlayer mount/unmount while the new blob URL is being generated.
+      if (showRecoveryOverlay) {
+        return (
+          <div
+            ref={videoWrapperRef}
+            data-testid="local-video-wrapper"
+            className="relative h-full"
+          >
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 text-white gap-3 z-10" role="status" aria-live="polite">
+              <div className="size-10 rounded-full border-4 border-white/30 border-t-white animate-spin" />
+              <p className="text-sm">Recovering...</p>
+            </div>
+          </div>
+        )
+      }
+      return null
+    }
 
     // Map bookmarks to the shape VideoPlayer expects for timeline markers
     const bookmarkMarkers = bookmarks.map(b => ({
@@ -586,7 +627,7 @@ export const LocalVideoContent = forwardRef<VideoPlayerHandle, LocalVideoContent
         <Dialog
           open={shouldShowDialog}
           onOpenChange={open => {
-            if (!open) handleDismissDialog(false)
+            if (!open) handleDismissDialog()
           }}
         >
           <DialogContent
@@ -653,6 +694,7 @@ export const LocalVideoContent = forwardRef<VideoPlayerHandle, LocalVideoContent
             onTheaterModeToggle={onTheaterModeToggle}
             autoplay={autoplay}
             storyboard={storyboard}
+            showRecoveryOverlay={showRecoveryOverlay}
           />
         )}
       </div>

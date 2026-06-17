@@ -2,6 +2,12 @@
  * useVideoPositionSync — persists video playback position to Dexie during playback,
  * on pause, and on unmount. Follows the useAudiobookPositionSync pattern.
  *
+ * F010: Sync uses LWW (last-writer-wins) via syncableWrite, which routes to
+ * Supabase upsert_video_progress() with monotonic-write on watchedSeconds.
+ * For two-tab conflicts, the last save wins — position data is a linear
+ * value, so merge is unnecessary: the most recent write always represents
+ * the user's true position.
+ *
  * @module useVideoPositionSync
  * @since E93-S07
  */
@@ -18,6 +24,11 @@ export interface UseVideoPositionSyncParams {
   duration: number
   /** Whether the video is currently playing. */
   isPlaying: boolean
+  /**
+   * When true, position data is NOT persisted. Prevents preview/autoplay
+   * sessions from overwriting real progress data with inaccurate positions.
+   */
+  autoplay?: boolean
 }
 
 /**
@@ -33,18 +44,14 @@ export function useVideoPositionSync({
   currentTime,
   duration,
   isPlaying,
+  autoplay = false,
 }: UseVideoPositionSyncParams): void {
-  // All reactive values stored in refs so savePosition can be fully stable.
-  // Ref-based approach ensures even stale cleanup calls (from effect re-runs
-  // due to deps changes) read the latest values.
-  const courseIdRef = useRef(courseId)
-  courseIdRef.current = courseId
-  const lessonIdRef = useRef(lessonId)
-  lessonIdRef.current = lessonId
-  const currentTimeRef = useRef(currentTime)
-  currentTimeRef.current = currentTime
-  const durationRef = useRef(duration)
-  durationRef.current = duration
+  // All reactive values stored in a single composite ref so savePosition can be
+  // fully stable. Ref-based approach ensures even stale cleanup calls (from
+  // effect re-runs due to deps changes) read the latest values. F012: Single
+  // composite ref replaces four individual useRef calls.
+  const snapRef = useRef({ courseId, lessonId, currentTime, duration, autoplay })
+  snapRef.current = { courseId, lessonId, currentTime, duration, autoplay }
 
   // Generational cancel: increment when courseId/lessonId change to discard stale saves
   const generationRef = useRef(0)
@@ -58,10 +65,10 @@ export function useVideoPositionSync({
   /** Persist current playback position and progress to Dexie via syncableWrite. */
   const savePosition = useCallback(async () => {
     const gen = generationRef.current
-    const cId = courseIdRef.current
-    const lId = lessonIdRef.current
-    const time = currentTimeRef.current
-    const dur = durationRef.current
+    const { courseId: cId, lessonId: lId, currentTime: time, duration: dur, autoplay: ap } = snapRef.current
+
+    // F007: Don't persist position for preview/autoplay sessions
+    if (ap) return
 
     // Guard against 0-position saves
     if (!time || !isFinite(time) || time <= 0) return

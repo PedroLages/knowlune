@@ -43,6 +43,10 @@ export function useVideoFromHandle(
 
     return () => {
       cancelled = true
+      // F009: Blob URL revoke is intentionally immediate on cleanup — LocalVideoContent's
+      // `if (!blobUrl) return null` guard handles the VideoPlayer unmount during
+      // retry/transition, so there is no stale URL being consumed. The null return
+      // ensures VideoPlayer unmounts before the URL is revoked.
       if (objectUrl) URL.revokeObjectURL(objectUrl) // AC-6: cleanup on unmount
     }
   }, [handle, retryKey])

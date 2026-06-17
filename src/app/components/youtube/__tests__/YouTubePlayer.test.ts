@@ -29,7 +29,7 @@ describe('YouTube progress persistence', () => {
     }
 
     await db.progress.put(record)
-    const stored = await db.progress.get({ courseId: 'yt-course-1', videoId: 'lesson-uuid-1' })
+    const stored = await db.progress.get(['yt-course-1', 'lesson-uuid-1'])
     expect(stored).toBeDefined()
     expect(stored!.currentTime).toBe(120)
     expect(stored!.completionPercentage).toBe(40)
@@ -51,7 +51,7 @@ describe('YouTube progress persistence', () => {
       completionPercentage: 80,
     })
 
-    const stored = await db.progress.get({ courseId: 'yt-course-1', videoId: 'lesson-uuid-1' })
+    const stored = await db.progress.get(['yt-course-1', 'lesson-uuid-1'])
     expect(stored!.currentTime).toBe(240)
     expect(stored!.completionPercentage).toBe(80)
   })
@@ -66,7 +66,7 @@ describe('YouTube progress persistence', () => {
       completedAt: now,
     })
 
-    const stored = await db.progress.get({ courseId: 'yt-course-1', videoId: 'lesson-uuid-1' })
+    const stored = await db.progress.get(['yt-course-1', 'lesson-uuid-1'])
     expect(stored!.completedAt).toBe(now)
     expect(stored!.completionPercentage).toBe(90)
   })
@@ -79,7 +79,7 @@ describe('YouTube progress persistence', () => {
       completionPercentage: 89,
     })
 
-    const stored = await db.progress.get({ courseId: 'yt-course-1', videoId: 'lesson-uuid-1' })
+    const stored = await db.progress.get(['yt-course-1', 'lesson-uuid-1'])
     expect(stored!.completedAt).toBeUndefined()
   })
 
@@ -110,7 +110,7 @@ describe('YouTube progress persistence', () => {
       completionPercentage: 50,
     })
 
-    const stored = await db.progress.get({ courseId: 'yt-course-1', videoId: 'lesson-uuid-1' })
+    const stored = await db.progress.get(['yt-course-1', 'lesson-uuid-1'])
     expect(stored!.currentTime).toBe(150)
   })
 })
