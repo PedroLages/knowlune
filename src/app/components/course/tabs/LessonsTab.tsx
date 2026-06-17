@@ -604,14 +604,10 @@ export function LessonsTab({ courseId, lessonId, adapter, onFocusMaterials }: Le
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(() => new Set(activePaths))
 
   // When active lesson changes folder, auto-expand the full chain
+  // and auto-collapse all folders that are not ancestors of the current lesson.
+  // Uses replace (not merge) so only the current section's folder chain stays open.
   useEffect(() => {
-    if (activePaths.length > 0) {
-      setExpandedFolders(prev => {
-        const next = new Set(prev)
-        for (const p of activePaths) next.add(p)
-        return next
-      })
-    }
+    setExpandedFolders(new Set(activePaths))
   }, [activePaths.join(',')])
 
   const toggleFolder = useCallback((folderPath: string) => {
