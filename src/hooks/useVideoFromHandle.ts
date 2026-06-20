@@ -81,7 +81,7 @@ export function useVideoFromHandle(
           // confirmed and about to be stored. The updater runs synchronously
           // inside setState, so the <video> element never observes a gap.
           setState(prev => {
-            if (prev.blobUrl && prev.blobUrl !== newUrl) {
+            if (prev.blobUrl) {
               URL.revokeObjectURL(prev.blobUrl)
             }
             return { blobUrl: newUrl, error: null, loading: false }

@@ -171,7 +171,7 @@ describe('useVideoFromHandle', () => {
     expect(result.current.blobUrl).toBe('blob:mock-url-2')
   })
 
-  it('revokes previous blob URL via helper when transitioning from valid to undefined', async () => {
+  it('revokes previous blob URL when transitioning from valid to undefined', async () => {
     const handle = makeHandle()
     const { result, rerender } = renderHook(
       ({ h }: { h: FileSystemFileHandle | null | undefined }) => useVideoFromHandle(h),
@@ -190,7 +190,7 @@ describe('useVideoFromHandle', () => {
     expect(result.current.blobUrl).toBeNull()
   })
 
-  it('revokes previous blob URL via helper when transitioning from valid to null', async () => {
+  it('revokes previous blob URL when transitioning from valid to null', async () => {
     const handle = makeHandle()
     const { result, rerender } = renderHook(
       ({ h }: { h: FileSystemFileHandle | null | undefined }) => useVideoFromHandle(h),
