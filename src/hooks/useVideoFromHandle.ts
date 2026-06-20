@@ -2,6 +2,10 @@ import { useState, useEffect, useRef } from 'react'
 
 type Result = { blobUrl: string | null; error: string | null; loading: boolean }
 
+function revokePreviousBlobUrl(prev: { blobUrl: string | null }): void {
+  if (prev.blobUrl) URL.revokeObjectURL(prev.blobUrl)
+}
+
 /**
  * Creates a blob URL from a FileSystemFileHandle for local video playback.
  *
@@ -25,7 +29,7 @@ export function useVideoFromHandle(
       // Clean up any previous blob URL since the consuming component shows a
       // skeleton (not the video) while loading is true.
       setState(prev => {
-        if (prev.blobUrl) URL.revokeObjectURL(prev.blobUrl)
+        revokePreviousBlobUrl(prev)
         return { blobUrl: null, loading: true, error: null }
       })
       return
@@ -36,7 +40,7 @@ export function useVideoFromHandle(
       // file handle. Show the file-not-found error so the user can
       // locate or reimport the file.
       setState(prev => {
-        if (prev.blobUrl) URL.revokeObjectURL(prev.blobUrl)
+        revokePreviousBlobUrl(prev)
         return { blobUrl: null, error: 'file-not-found', loading: false }
       })
       return

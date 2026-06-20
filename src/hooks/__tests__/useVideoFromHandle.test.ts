@@ -45,6 +45,31 @@ describe('useVideoFromHandle', () => {
     expect(result.current.loading).toBe(true)
   })
 
+  it('does not set file-not-found error when transitioning from undefined to valid handle', async () => {
+    const handle = makeHandle()
+    const { result, rerender } = renderHook(
+      ({ h }: { h: FileSystemFileHandle | null | undefined }) => useVideoFromHandle(h),
+      { initialProps: { h: undefined as FileSystemFileHandle | null | undefined } }
+    )
+
+    // Phase 1: undefined handle
+    expect(result.current.loading).toBe(true)
+    expect(result.current.error).toBeNull()
+    expect(result.current.blobUrl).toBeNull()
+
+    // Phase 2: transition to valid handle — error must never be 'file-not-found'
+    rerender({ h: handle })
+
+    // Immediately after rerender, the sync part of load() sets error to null,
+    // so 'file-not-found' should never appear at any observable state
+    expect(result.current.error).not.toBe('file-not-found')
+
+    // Phase 3: final success state
+    await waitFor(() => expect(result.current.loading).toBe(false))
+    expect(result.current.error).toBeNull()
+    expect(result.current.blobUrl).toBe('blob:mock-url-1')
+  })
+
   it('creates blob URL when permission is already granted', async () => {
     const handle = makeHandle()
     const { result } = renderHook(() => useVideoFromHandle(handle))
