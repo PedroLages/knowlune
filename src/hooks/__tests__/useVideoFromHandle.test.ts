@@ -38,10 +38,11 @@ describe('useVideoFromHandle', () => {
     expect(result.current.loading).toBe(false)
   })
 
-  it('returns error when handle is undefined', () => {
+  it('returns loading state when handle is undefined (not yet available)', () => {
     const { result } = renderHook(() => useVideoFromHandle(undefined))
-    expect(result.current.error).toBe('file-not-found')
+    expect(result.current.error).toBeNull()
     expect(result.current.blobUrl).toBeNull()
+    expect(result.current.loading).toBe(true)
   })
 
   it('creates blob URL when permission is already granted', async () => {
