@@ -185,6 +185,7 @@ export function VirtualizedGrid<T>({
               className="absolute left-0 w-full"
               style={{
                 top: `${virtualRow.start}px`,
+                paddingBottom: `${gap}px`,
               }}
             >
               <div

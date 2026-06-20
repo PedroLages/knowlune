@@ -610,7 +610,7 @@ describe('removeImportedCourses (bulk delete)', () => {
     vi.clearAllMocks()
   })
 
-  it('deletes multiple courses sequentially', async () => {
+  it('deletes multiple courses', async () => {
     const course1 = makeCourse({ name: 'Course One' })
     const course2 = makeCourse({ name: 'Course Two' })
     await act(async () => {
