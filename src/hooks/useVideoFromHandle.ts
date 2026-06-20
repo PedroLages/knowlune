@@ -32,6 +32,7 @@ export function useVideoFromHandle(
         revokePreviousBlobUrl(prev)
         return { blobUrl: null, loading: true, error: null }
       })
+      activeUrlRef.current = null
       return
     }
 
@@ -43,6 +44,7 @@ export function useVideoFromHandle(
         revokePreviousBlobUrl(prev)
         return { blobUrl: null, error: 'file-not-found', loading: false }
       })
+      activeUrlRef.current = null
       return
     }
 
@@ -64,7 +66,7 @@ export function useVideoFromHandle(
             console.warn('[useVideoFromHandle] Permission denied — user declined file access')
             if (!cancelled) {
               setState(prev => {
-                if (prev.blobUrl) URL.revokeObjectURL(prev.blobUrl)
+                revokePreviousBlobUrl(prev)
                 return { blobUrl: null, error: 'permission-denied', loading: false }
               })
             }
