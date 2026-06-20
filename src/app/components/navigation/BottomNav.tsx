@@ -18,7 +18,7 @@ import { cn } from '@/app/components/ui/utils'
 import {
   getPrimaryNav,
   getOverflowNav,
-  getIsActive,
+  resolveNavActive,
   navigationGroups,
   primaryNavPaths,
   settingsItem,
@@ -223,7 +223,7 @@ export function BottomNav({ mode = 'standard', courseId, lessonId, onFeedbackCli
 
   // Check if any overflow item is active
   const isMoreActive = overflowNav.some(item =>
-    getIsActive(item, location.pathname, location.search)
+    resolveNavActive(item, location.pathname, location.search, location.state)
   )
 
   // Lesson chrome state (for lesson mode primary slots)
@@ -353,7 +353,7 @@ export function BottomNav({ mode = 'standard', courseId, lessonId, onFeedbackCli
               {/* Primary Navigation Items */}
               {primaryNav.map(item => {
                 const Icon = item.icon
-                const active = getIsActive(item, location.pathname, location.search)
+                const active = resolveNavActive(item, location.pathname, location.search, location.state)
                 const href = item.tab ? `${item.path}?tab=${item.tab}` : item.path
 
                 return (
@@ -420,7 +420,7 @@ export function BottomNav({ mode = 'standard', courseId, lessonId, onFeedbackCli
                       <ul className="space-y-1">
                         {items.map(item => {
                           const Icon = item.icon
-                          const active = getIsActive(item, location.pathname, location.search)
+                          const active = resolveNavActive(item, location.pathname, location.search, location.state)
                           const href = item.tab ? `${item.path}?tab=${item.tab}` : item.path
                           return (
                             <li key={item.tab ? `${item.path}?tab=${item.tab}` : item.path}>
@@ -451,7 +451,7 @@ export function BottomNav({ mode = 'standard', courseId, lessonId, onFeedbackCli
                     {(() => {
                       const item = settingsItem
                       const Icon = item.icon
-                      const active = getIsActive(item, location.pathname, location.search)
+                      const active = resolveNavActive(item, location.pathname, location.search, location.state)
                       const href = item.path
                       return (
                         <li key={href}>

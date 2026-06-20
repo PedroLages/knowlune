@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { navigationGroups, getPrimaryNav, getOverflowNav } from '../navigation'
+import { navigationGroups, getPrimaryNav, getOverflowNav, getIsActive, resolveNavActive } from '../navigation'
 
 describe('navigationGroups', () => {
   it('has exactly 3 groups: Library, Study, Track', () => {
@@ -12,7 +12,7 @@ describe('navigationGroups', () => {
     expect(library.items.map(i => i.name)).toEqual([
       'Overview',
       'Courses',
-      'Learning Paths',
+      'Learning Tracks',
       'Books',
       'Authors',
     ])
@@ -72,7 +72,7 @@ describe('getOverflowNav', () => {
     const names = overflow.map(i => i.name)
     // 20 total group items (5+9+6) + 1 Settings = 21 - 4 primary = 17 overflow
     expect(overflow).toHaveLength(17)
-    expect(names).toContain('Learning Paths')
+    expect(names).toContain('Learning Tracks')
     expect(names).toContain('Authors')
     expect(names).toContain('Settings')
     expect(names).toContain('Learning Path')
@@ -86,5 +86,61 @@ describe('getOverflowNav', () => {
     expect(names).not.toContain('My Courses')
     expect(names).not.toContain('Courses')
     expect(names).not.toContain('Notes')
+  })
+})
+
+describe('getIsActive', () => {
+  it('matches exact path for root', () => {
+    expect(getIsActive({ path: '/' }, '/', '')).toBe(true)
+    expect(getIsActive({ path: '/' }, '/courses', '')).toBe(false)
+  })
+
+  it('uses prefix matching for non-root paths', () => {
+    expect(getIsActive({ path: '/courses' }, '/courses', '')).toBe(true)
+    expect(getIsActive({ path: '/courses' }, '/courses/123', '')).toBe(true)
+    expect(getIsActive({ path: '/courses' }, '/courses/123/lessons/456', '')).toBe(true)
+    expect(getIsActive({ path: '/courses' }, '/learning-tracks', '')).toBe(false)
+    expect(getIsActive({ path: '/learning-tracks' }, '/courses/123', '')).toBe(false)
+  })
+
+  it('matches /learning-tracks and sub-routes', () => {
+    expect(getIsActive({ path: '/learning-tracks' }, '/learning-tracks', '')).toBe(true)
+    expect(getIsActive({ path: '/learning-tracks' }, '/learning-tracks/abc', '')).toBe(true)
+  })
+})
+
+describe('resolveNavActive', () => {
+  const noState = undefined
+  const withTrack = { fromTrack: { trackId: 't1', trackName: 'My Track' } }
+  const invalidTrack = { fromTrack: { trackId: 123 } } // wrong shape
+
+  it('delegates to getIsActive when no fromTrack state', () => {
+    expect(resolveNavActive({ path: '/courses' }, '/courses/123', '', noState)).toBe(true)
+    expect(resolveNavActive({ path: '/learning-tracks' }, '/learning-tracks/abc', '', noState)).toBe(true)
+    expect(resolveNavActive({ path: '/overview' }, '/overview', '', noState)).toBe(true)
+  })
+
+  it('delegates to getIsActive when fromTrack shape is invalid', () => {
+    expect(resolveNavActive({ path: '/courses' }, '/courses/123', '', invalidTrack)).toBe(true)
+    expect(resolveNavActive({ path: '/learning-tracks' }, '/learning-tracks/abc', '', invalidTrack)).toBe(true)
+  })
+
+  it('forces /learning-tracks active when fromTrack is present', () => {
+    // On a course page arrived from a track — Learning Tracks should highlight
+    expect(resolveNavActive({ path: '/learning-tracks' }, '/courses/123', '', withTrack)).toBe(true)
+    expect(resolveNavActive({ path: '/learning-tracks' }, '/courses/123/lessons/456', '', withTrack)).toBe(true)
+  })
+
+  it('forces /courses inactive when fromTrack is present', () => {
+    // On a course page arrived from a track — Courses should NOT highlight
+    expect(resolveNavActive({ path: '/courses' }, '/courses/123', '', withTrack)).toBe(false)
+    expect(resolveNavActive({ path: '/courses' }, '/courses/123/lessons/456', '', withTrack)).toBe(false)
+  })
+
+  it('does not affect unrelated nav items when fromTrack is present', () => {
+    expect(resolveNavActive({ path: '/overview' }, '/overview', '', withTrack)).toBe(true)
+    expect(resolveNavActive({ path: '/overview' }, '/courses/123', '', withTrack)).toBe(false)
+    expect(resolveNavActive({ path: '/library' }, '/library', '', withTrack)).toBe(true)
+    expect(resolveNavActive({ path: '/library' }, '/overview', '', withTrack)).toBe(false)
   })
 })

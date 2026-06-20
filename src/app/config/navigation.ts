@@ -22,6 +22,7 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 import type { DisclosureKey } from '@/app/hooks/useProgressiveDisclosure'
+import { readFromTrack } from '@/app/hooks/useCourseRoute'
 
 export interface NavigationItem {
   name: string
@@ -46,6 +47,29 @@ export function getIsActive(
     return pathname === item.path && (searchMatch || isDefaultTab)
   }
   return item.path === '/' ? pathname === '/' : pathname.startsWith(item.path)
+}
+
+/**
+ * Resolves nav active state, overriding getIsActive when the user is viewing a
+ * course through a learning track lens (location.state.fromTrack is present).
+ *
+ * When fromTrack exists:
+ *   - /learning-tracks is forced active (track context takes priority)
+ *   - /courses is forced inactive (we're in a track, not browsing all courses)
+ */
+export function resolveNavActive(
+  item: Pick<NavigationItem, 'path' | 'tab'>,
+  pathname: string,
+  search: string,
+  state: unknown,
+): boolean {
+  const base = getIsActive(item, pathname, search)
+  const fromTrack = readFromTrack(state)
+  if (!fromTrack) return base
+  // When viewing a course through a track lens, reroute nav highlighting
+  if (item.path === '/learning-tracks') return true
+  if (item.path === '/courses') return false
+  return base
 }
 
 export interface NavigationGroup {

@@ -33,7 +33,7 @@ export interface CourseRouteInfo {
 }
 
 /** Narrow an unknown location.state to the fromTrack shape, returning undefined on mismatch. */
-function readFromTrack(
+export function readFromTrack(
   state: unknown
 ): { trackId: string; trackName: string } | undefined {
   if (typeof state !== 'object' || state === null) return undefined
