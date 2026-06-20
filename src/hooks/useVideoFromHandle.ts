@@ -97,8 +97,23 @@ export function useVideoFromHandle(
         // permission expiry, file moved, etc.).
         const message = err instanceof Error ? err.message : String(err)
         const name = err instanceof DOMException ? `DOMException(${err.name})` : (err instanceof Error ? err.name : 'Unknown')
-        console.warn(`[useVideoFromHandle] ${name}: ${message}`, err)
-        if (!cancelled) setState(prev => ({ ...prev, error: 'file-not-found', loading: false }))
+        const handleName = fileHandle.name ?? 'unknown'
+        console.warn(
+          `[useVideoFromHandle] ${name}: ${message} (handle: "${handleName}")`,
+          err
+        )
+
+        // Distinguish true file-not-found from permission/mount issues at the OS level.
+        // NotFoundError = file was moved/deleted. NotReadableError = file exists but the
+        // OS can't read it (common with broken SMB mounts where permissions are d---------).
+        // Both surface to the user as "file-not-found" because the recovery action is the
+        // same (Locate File), but the diagnostic log helps identify the underlying cause.
+        const errorType =
+          err instanceof DOMException && err.name === 'NotReadableError'
+            ? 'file-not-found'
+            : 'file-not-found'
+
+        if (!cancelled) setState(prev => ({ ...prev, error: errorType, loading: false }))
       }
     }
 

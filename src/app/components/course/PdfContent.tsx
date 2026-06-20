@@ -162,12 +162,41 @@ export function PdfContent({ courseId, lessonId }: PdfContentProps) {
         ],
         multiple: false,
       })
-      await db.importedPdfs.update(lessonId, { fileHandle })
+
+      // Verify the handle is usable before persisting — catches OS-level
+      // issues (e.g. broken SMB mount with d--------- permissions).
+      try {
+        await fileHandle.getFile()
+      } catch (verifyErr) {
+        const vname =
+          verifyErr instanceof DOMException
+            ? `DOMException(${verifyErr.name})`
+            : String(verifyErr)
+        console.warn(
+          `[PdfContent:handleLocateFile] New handle for "${fileHandle.name}" cannot be read: ${vname}`,
+          verifyErr
+        )
+        toast.error(
+          'Cannot access the selected file. The network share may have a permissions issue. Check that the SMB mount is accessible in Finder.'
+        )
+        return
+      }
+
+      const updatedCount = await db.importedPdfs.update(lessonId, { fileHandle })
+      if (updatedCount === 0) {
+        console.warn(
+          `[PdfContent:handleLocateFile] Dexie update returned 0 — no record found for lessonId "${lessonId}"`
+        )
+        toast.error('Could not save file location. The lesson record was not found.')
+        return
+      }
+
       const updated = await db.importedPdfs.get(lessonId)
       setPdf(updated ?? null)
       setFileError(null)
+      toast.success(`Located: ${fileHandle.name}`)
     } catch {
-      // silent-catch-ok: User cancelled the picker
+      // silent-catch-ok: User cancelled the picker (AbortError) or unsupported browser
     }
   }, [lessonId])
 
