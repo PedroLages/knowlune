@@ -40,7 +40,7 @@ import { useCourseReminders } from '@/app/hooks/useCourseReminders'
 import { useIsMobile, useIsTablet, useIsDesktop } from '@/app/hooks/useMediaQuery'
 import { Sheet, SheetContent, SheetTitle } from './ui/sheet'
 import { Tooltip, TooltipTrigger, TooltipContent } from './ui/tooltip'
-import { navigationGroups, settingsItem, getIsActive } from '@/app/config/navigation'
+import { navigationGroups, settingsItem, resolveNavActive } from '@/app/config/navigation'
 import type { NavigationItem, NavigationGroup } from '@/app/config/navigation'
 import { useProgressiveDisclosure } from '@/app/hooks/useProgressiveDisclosure'
 import { getSettings } from '@/lib/settings'
@@ -88,7 +88,7 @@ function NavLink({
   onNavigate?: () => void
 }) {
   const location = useLocation()
-  const isActive = getIsActive(item, location.pathname, location.search)
+  const isActive = resolveNavActive(item, location.pathname, location.search, location.state)
   const Icon = item.icon
 
   const link = (
