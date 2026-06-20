@@ -2,6 +2,10 @@ import { useState, useEffect, useRef } from 'react'
 
 type Result = { blobUrl: string | null; error: string | null; loading: boolean }
 
+function revokePreviousBlobUrl(prev: { blobUrl: string | null }): void {
+  if (prev.blobUrl) URL.revokeObjectURL(prev.blobUrl)
+}
+
 /**
  * Creates a blob URL from a FileSystemFileHandle for local video playback.
  *
@@ -19,11 +23,28 @@ export function useVideoFromHandle(
   const activeUrlRef = useRef<string | null>(null)
 
   useEffect(() => {
-    if (!handle) {
+    if (handle === undefined) {
+      // Handle not yet available (e.g., Dexie still loading the video record).
+      // Show loading state instead of error — the handle may become valid soon.
+      // Clean up any previous blob URL since the consuming component shows a
+      // skeleton (not the video) while loading is true.
       setState(prev => {
-        if (prev.blobUrl) URL.revokeObjectURL(prev.blobUrl)
+        revokePreviousBlobUrl(prev)
+        return { blobUrl: null, loading: true, error: null }
+      })
+      activeUrlRef.current = null
+      return
+    }
+
+    if (handle === null) {
+      // Handle explicitly null — the video record exists but has no
+      // file handle. Show the file-not-found error so the user can
+      // locate or reimport the file.
+      setState(prev => {
+        revokePreviousBlobUrl(prev)
         return { blobUrl: null, error: 'file-not-found', loading: false }
       })
+      activeUrlRef.current = null
       return
     }
 
@@ -45,7 +66,7 @@ export function useVideoFromHandle(
             console.warn('[useVideoFromHandle] Permission denied — user declined file access')
             if (!cancelled) {
               setState(prev => {
-                if (prev.blobUrl) URL.revokeObjectURL(prev.blobUrl)
+                revokePreviousBlobUrl(prev)
                 return { blobUrl: null, error: 'permission-denied', loading: false }
               })
             }
@@ -60,7 +81,7 @@ export function useVideoFromHandle(
           // confirmed and about to be stored. The updater runs synchronously
           // inside setState, so the <video> element never observes a gap.
           setState(prev => {
-            if (prev.blobUrl && prev.blobUrl !== newUrl) {
+            if (prev.blobUrl) {
               URL.revokeObjectURL(prev.blobUrl)
             }
             return { blobUrl: newUrl, error: null, loading: false }

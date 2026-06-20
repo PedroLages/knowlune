@@ -38,10 +38,36 @@ describe('useVideoFromHandle', () => {
     expect(result.current.loading).toBe(false)
   })
 
-  it('returns error when handle is undefined', () => {
+  it('returns loading state when handle is undefined (not yet available)', () => {
     const { result } = renderHook(() => useVideoFromHandle(undefined))
-    expect(result.current.error).toBe('file-not-found')
+    expect(result.current.error).toBeNull()
     expect(result.current.blobUrl).toBeNull()
+    expect(result.current.loading).toBe(true)
+  })
+
+  it('does not set file-not-found error when transitioning from undefined to valid handle', async () => {
+    const handle = makeHandle()
+    const { result, rerender } = renderHook(
+      ({ h }: { h: FileSystemFileHandle | null | undefined }) => useVideoFromHandle(h),
+      { initialProps: { h: undefined as FileSystemFileHandle | null | undefined } }
+    )
+
+    // Phase 1: undefined handle
+    expect(result.current.loading).toBe(true)
+    expect(result.current.error).toBeNull()
+    expect(result.current.blobUrl).toBeNull()
+
+    // Phase 2: transition to valid handle — error must never be 'file-not-found'
+    rerender({ h: handle })
+
+    // Immediately after rerender, the sync part of load() sets error to null,
+    // so 'file-not-found' should never appear at any observable state
+    expect(result.current.error).not.toBe('file-not-found')
+
+    // Phase 3: final success state
+    await waitFor(() => expect(result.current.loading).toBe(false))
+    expect(result.current.error).toBeNull()
+    expect(result.current.blobUrl).toBe('blob:mock-url-1')
   })
 
   it('creates blob URL when permission is already granted', async () => {
@@ -143,5 +169,43 @@ describe('useVideoFromHandle', () => {
 
     await waitFor(() => expect(createObjectURLSpy).toHaveBeenCalledTimes(1))
     expect(result.current.blobUrl).toBe('blob:mock-url-2')
+  })
+
+  it('revokes previous blob URL when transitioning from valid to undefined', async () => {
+    const handle = makeHandle()
+    const { result, rerender } = renderHook(
+      ({ h }: { h: FileSystemFileHandle | null | undefined }) => useVideoFromHandle(h),
+      { initialProps: { h: handle as FileSystemFileHandle | null | undefined } }
+    )
+
+    await waitFor(() => expect(result.current.blobUrl).toBe('blob:mock-url-1'))
+
+    rerender({ h: undefined })
+
+    // The undefined branch calls revokePreviousBlobUrl(prev) synchronously
+    // inside the setState updater, which must revoke the old blob URL.
+    await waitFor(() => expect(revokeObjectURLSpy).toHaveBeenCalledWith('blob:mock-url-1'))
+    expect(result.current.loading).toBe(true)
+    expect(result.current.error).toBeNull()
+    expect(result.current.blobUrl).toBeNull()
+  })
+
+  it('revokes previous blob URL when transitioning from valid to null', async () => {
+    const handle = makeHandle()
+    const { result, rerender } = renderHook(
+      ({ h }: { h: FileSystemFileHandle | null | undefined }) => useVideoFromHandle(h),
+      { initialProps: { h: handle as FileSystemFileHandle | null | undefined } }
+    )
+
+    await waitFor(() => expect(result.current.blobUrl).toBe('blob:mock-url-1'))
+
+    rerender({ h: null })
+
+    // The null branch calls revokePreviousBlobUrl(prev) synchronously
+    // inside the setState updater, which must revoke the old blob URL.
+    await waitFor(() => expect(revokeObjectURLSpy).toHaveBeenCalledWith('blob:mock-url-1'))
+    expect(result.current.error).toBe('file-not-found')
+    expect(result.current.loading).toBe(false)
+    expect(result.current.blobUrl).toBeNull()
   })
 })
