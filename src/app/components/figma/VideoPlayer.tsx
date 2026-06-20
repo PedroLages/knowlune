@@ -157,6 +157,9 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
   // can seek back to the exact position after videoRef.current?.load() resets the element.
   // handleLoadedMetadata reads and clears this ref.
   const retryPositionRef = useRef<number | null>(null)
+  // Guard against infinite decode-error → skip → error loops.
+  // Reset on src change so each new source gets a fresh skip budget.
+  const decodeSkipAttemptRef = useRef(0)
 
   useImperativeHandle(ref, () => ({
     getVideoElement: () => videoRef.current,
@@ -239,6 +242,7 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
     setHasError(false)
     setErrorCode(null)
     retryPositionRef.current = null
+    decodeSkipAttemptRef.current = 0
     // Clear loop state so stale markers don't persist across lessons
     loopStartRef.current = null
     loopEndRef.current = null
@@ -542,17 +546,63 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
 
   // Error handler with type detection
   const handleVideoError = () => {
-    const code = videoRef.current?.error?.code ?? null
+    const video = videoRef.current
+    const code = video?.error?.code ?? null
+    const currentPos = video?.currentTime ?? 0
+    const dur = video?.duration ?? 0
+    const bufferedEnd =
+      video && video.buffered.length > 0
+        ? video.buffered.end(video.buffered.length - 1)
+        : 0
 
-    const message = ERROR_MESSAGES[code ?? -1] ?? ''
+    // Diagnostic log: capture error context for root-cause analysis.
+    // Includes estimated byte-offset for correlating with file corruption.
+    const codeLabel =
+      code === 1 ? 'MEDIA_ERR_ABORTED' :
+      code === 2 ? 'MEDIA_ERR_NETWORK' :
+      code === 3 ? 'MEDIA_ERR_DECODE' :
+      code === 4 ? 'MEDIA_ERR_SRC_NOT_SUPPORTED' :
+      `UNKNOWN(${code})`
     console.warn(
-      `[VideoPlayer] Video error — code: ${code ?? 'unknown'}${code === 2 ? ' (MEDIA_ERR_NETWORK)' : code === 3 ? ' (MEDIA_ERR_DECODE)' : ''}`,
-      message
+      `[VideoPlayer] ${codeLabel} | file="${title ?? 'unknown'}" | ` +
+      `currentTime=${currentPos.toFixed(1)}s | duration=${dur.toFixed(1)}s | ` +
+      `bufferedEnd=${bufferedEnd.toFixed(1)}s | src=${src?.substring(0, 60)}...`
     )
 
-    // Network errors (code 2) with recovery handler — automatic recovery
-    if ((code === 2 || code === 3) && onRecoveryNeeded) {
-      const currentPos = videoRef.current?.currentTime ?? 0
+    // MEDIA_ERR_DECODE (code 3): source file corruption at a specific byte offset.
+    // Blob URL regeneration won't fix this — the corruption is in the file itself.
+    // Try skipping past the bad frame before escalating to full recovery.
+    if (code === 3) {
+      if (decodeSkipAttemptRef.current >= 3) {
+        console.warn('[VideoPlayer] MEDIA_ERR_DECODE: 3 skip attempts exhausted — showing error overlay')
+        setErrorCode(code)
+        setHasError(true)
+        return
+      }
+      decodeSkipAttemptRef.current++
+      // Use the larger of error-time position and buffered end as the skip origin.
+      // Chromium may reset currentTime to 0 during a decode error, but buffered
+      // ranges often still reflect the actual playback position.
+      const skipOrigin = Math.max(currentPos, bufferedEnd, 0)
+      const skipTo = skipOrigin + 2 * decodeSkipAttemptRef.current
+      if (isFinite(skipTo) && dur > 0 && skipTo < dur - 0.5) {
+        console.warn(
+          `[VideoPlayer] MEDIA_ERR_DECODE: attempt ${decodeSkipAttemptRef.current}/3 — ` +
+          `skipping from ${skipOrigin.toFixed(1)}s to ${skipTo.toFixed(1)}s`
+        )
+        video!.currentTime = skipTo
+        return
+      }
+      // Can't skip further — show error overlay
+      console.warn('[VideoPlayer] MEDIA_ERR_DECODE: cannot skip past (near end of video) — showing error overlay')
+      setErrorCode(code)
+      setHasError(true)
+      return
+    }
+
+    // MEDIA_ERR_NETWORK (code 2): blob URL may have become invalid (SMB hiccup,
+    // permission expiry, etc.). Automatic recovery regenerates the blob URL.
+    if (code === 2 && onRecoveryNeeded) {
       // F013: Guard against NaN/Infinity before dispatching recovery
       if (!isFinite(currentPos)) {
         console.warn('[VideoPlayer] Invalid recovery position; showing error overlay instead')
@@ -1049,7 +1099,6 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
           onProgress={handleProgress}
           onError={handleVideoError}
           onClick={togglePlayPause}
-          crossOrigin="anonymous"
         >
           {captions?.map((caption, index) => (
             <track

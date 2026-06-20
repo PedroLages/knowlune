@@ -96,6 +96,10 @@ export const LocalVideoContent = forwardRef<VideoPlayerHandle, LocalVideoContent
     const [permissionPending, setPermissionPending] = useState(false)
     const [storyboard, setStoryboard] = useState<StoryboardProp | undefined>(undefined)
     const storyboardUrlRef = useRef<string | null>(null)
+    // Tracks the last known-good playback position from timeupdate events.
+    // Used during error recovery to avoid losing the position when the browser
+    // resets currentTime to 0 during a decode error (Chromium behavior).
+    const lastKnownTimeRef = useRef(0)
 
     // Smart error recovery: retryKey forces blob URL regeneration
     const [retryKey, setRetryKey] = useState(0)
@@ -344,6 +348,12 @@ export const LocalVideoContent = forwardRef<VideoPlayerHandle, LocalVideoContent
     // Local play state and time tracking for position sync
     const handleLocalTimeUpdate = useCallback((time: number) => {
       setCurrentTime(time)
+      // Track last known-good position for robust error recovery.
+      // During a MEDIA_ERR_DECODE Chromium may reset video.currentTime to 0
+      // before the error handler fires — this ref preserves the true position.
+      if (isFinite(time) && time > 0) {
+        lastKnownTimeRef.current = time
+      }
       onTimeUpdate?.(time)
     }, [onTimeUpdate])
 
@@ -372,13 +382,34 @@ export const LocalVideoContent = forwardRef<VideoPlayerHandle, LocalVideoContent
     // it calls onRecoveryNeeded with the current playback position.
     // We store that position and increment retryKey to force blob URL
     // regeneration via the hook's dependency change.
+    //
+    // Uses lastKnownTimeRef as a safety net: Chromium may reset
+    // video.currentTime to 0 during a MEDIA_ERR_DECODE before the error
+    // handler fires, so the error-time position from VideoPlayer can be
+    // stale/zero. The last-known-good position from timeupdate events
+    // always reflects the true playback position.
     const handleRecoveryNeeded = useCallback(
       (currentTime: number) => {
-        if (!isFinite(currentTime)) {
-          console.warn('[LocalVideoContent] Invalid recovery position:', currentTime)
+        // Prefer the last known-good position over the error-time position,
+        // since the browser may reset currentTime during decode errors.
+        const lastGood = lastKnownTimeRef.current
+        const recoveryPos =
+          isFinite(lastGood) && lastGood > 0 && (lastGood > currentTime || currentTime === 0)
+            ? lastGood
+            : currentTime
+
+        if (!isFinite(recoveryPos)) {
+          console.warn('[LocalVideoContent] Invalid recovery position:', recoveryPos)
           return
         }
-        recoveryPositionRef.current = currentTime
+
+        console.warn(
+          `[LocalVideoContent] Recovery triggered | ` +
+          `errorTime=${currentTime.toFixed(1)}s lastGood=${lastGood.toFixed(1)}s ` +
+          `→ recoveryPos=${recoveryPos.toFixed(1)}s`
+        )
+
+        recoveryPositionRef.current = recoveryPos
         setShowRecoveryOverlay(true)
         setRetryKey(k => k + 1)
       },
