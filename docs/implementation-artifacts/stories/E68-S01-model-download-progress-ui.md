@@ -3,7 +3,7 @@ story_id: E68-S01
 story_name: 'Model Download Progress UI'
 status: ready-for-dev
 reviewed: in-progress
-review_started: 2026-06-21
+review_started: 2026-06-22
 review_gates_passed: []
 ---
 
