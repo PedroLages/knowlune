@@ -1,4 +1,4 @@
-import { generateEmbeddings } from './workers/coordinator'
+import { generateEmbeddings, warmUpEmbeddingModel } from './workers/coordinator'
 import { vectorStorePersistence } from './vector-store'
 import { stripHtml } from '@/lib/textUtils'
 import type { Note } from '@/data/types'
@@ -27,9 +27,15 @@ export class EmbeddingPipeline {
           return
         }
         const embeddingProvider = getAIConfiguration().provider
-        const providerGranted = await isGrantedForProvider(userId, CONSENT_PURPOSES.AI_EMBEDDINGS, embeddingProvider)
+        const providerGranted = await isGrantedForProvider(
+          userId,
+          CONSENT_PURPOSES.AI_EMBEDDINGS,
+          embeddingProvider
+        )
         if (!providerGranted) {
-          console.info('[EmbeddingPipeline] Skipping indexNote: provider consent not granted for current provider.')
+          console.info(
+            '[EmbeddingPipeline] Skipping indexNote: provider consent not granted for current provider.'
+          )
           return
         }
       } else {
@@ -50,6 +56,18 @@ export class EmbeddingPipeline {
     for (const note of notes) {
       await this.indexNote(note)
     }
+  }
+
+  /**
+   * Pre-warm the embedding model so the first real indexNote() call is instant.
+   * Sends a no-op embed request that triggers model download/cache without
+   * persisting anything to the vector store.
+   *
+   * Best-effort: failures are silently ignored. Caller (App.tsx) gates on
+   * deviceMemory >= 4GB.
+   */
+  async warmUp(): Promise<void> {
+    await warmUpEmbeddingModel()
   }
 
   /** Remove embedding for a deleted note. */

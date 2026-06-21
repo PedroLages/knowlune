@@ -5,7 +5,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { coordinator, generateEmbeddings } from '../coordinator'
+import { coordinator, generateEmbeddings, warmUpEmbeddingModel } from '../coordinator'
 
 // ============================================================================
 // Mock Worker implementation
@@ -251,5 +251,151 @@ describe('WorkerCoordinator', () => {
     await expect(coordinator.executeTask('embed', { texts: ['test'] })).rejects.toThrow(
       'Web Workers are not supported'
     )
+  })
+
+  // E68-S01: Download progress events dispatched as CustomEvent
+  // AC5: Real Transformers.js progress_callback events lack a requestId,
+  // so the test must NOT include requestId in the progress message.
+  it('E68-S01: dispatches model-download-progress CustomEvent from worker progress messages (no requestId)', async () => {
+    class ProgressReportingWorker extends EventTarget {
+      onmessage: ((event: MessageEvent) => void) | null = null
+      onerror: ((event: ErrorEvent) => void) | null = null
+
+      constructor(
+        public url: string | URL,
+        public options?: WorkerOptions
+      ) {
+        super()
+      }
+
+      postMessage(message: unknown): void {
+        const request = message as { requestId: string; type: string }
+
+        // First send a progress update WITHOUT requestId, mimicking real
+        // Transformers.js progress_callback behaviour (AC5).
+        setTimeout(() => {
+          this.dispatchEvent(
+            new MessageEvent('message', {
+              data: {
+                // NOTE: no requestId — real progress_callback lacks it
+                type: 'download-progress',
+                status: 'progress',
+                progress: 42,
+                file: 'model.onnx',
+                loaded: 4200000,
+                total: 10000000,
+              },
+            })
+          )
+        }, 5)
+
+        // Then send success response with requestId
+        setTimeout(() => {
+          const payload = (request as unknown as { payload: { texts: string[] } }).payload
+          const embeddings = payload.texts.map(() => new Float32Array(384))
+
+          this.dispatchEvent(
+            new MessageEvent('message', {
+              data: {
+                requestId: request.requestId,
+                type: 'success',
+                result: { embeddings },
+              },
+            })
+          )
+        }, 10)
+      }
+
+      terminate(): void {}
+      addEventListener(type: string, listener: EventListener): void {
+        super.addEventListener(type, listener)
+      }
+      removeEventListener(type: string, listener: EventListener): void {
+        super.removeEventListener(type, listener)
+      }
+    }
+
+    global.Worker = ProgressReportingWorker as unknown as typeof Worker
+
+    const progressSpy = vi.fn()
+    window.addEventListener('model-download-progress', progressSpy)
+
+    await generateEmbeddings(['test progress'])
+
+    // Should have received the progress event despite lacking requestId
+    // (routeWorkerMessage checks isDownloadProgress BEFORE the requestId guard)
+    expect(progressSpy).toHaveBeenCalledTimes(1)
+    const eventArg = progressSpy.mock.calls[0][0] as CustomEvent
+    expect(eventArg.detail).toMatchObject({
+      progress: 42,
+      status: 'progress',
+      file: 'model.onnx',
+    })
+
+    window.removeEventListener('model-download-progress', progressSpy)
+  })
+
+  // E68-S01: warmUp() sends an embed request with a single space
+  it('E68-S01: warmUpEmbeddingModel sends a no-op embed request', async () => {
+    const spy = vi.spyOn(MockWorker.prototype, 'postMessage')
+
+    await warmUpEmbeddingModel()
+
+    // Worker should have received one message — verify by scanning all calls
+    // instead of only checking the first, to stay resilient if warmUp ever
+    // adds retry logic.
+    expect(spy).toHaveBeenCalledTimes(1)
+    const messages = spy.mock.calls.map(call => call[0]) as Array<{
+      type: string
+      payload: { texts: string[] }
+    }>
+    const embedMessage = messages.find(m => m.type === 'embed' && m.payload?.texts?.includes(' '))
+    expect(embedMessage).toBeDefined()
+    expect(embedMessage!.payload.texts).toEqual([' '])
+
+    spy.mockRestore()
+  })
+
+  // E68-S01: warmUp() does not throw on error
+  it('E68-S01: warmUpEmbeddingModel handles errors gracefully', async () => {
+    class FailingWorker extends EventTarget {
+      onmessage: ((event: MessageEvent) => void) | null = null
+      onerror: ((event: ErrorEvent) => void) | null = null
+
+      constructor(
+        public url: string | URL,
+        public options?: WorkerOptions
+      ) {
+        super()
+      }
+
+      postMessage(message: unknown): void {
+        const request = message as { requestId: string }
+
+        // Respond with error to trigger the catch in warmUp
+        setTimeout(() => {
+          this.dispatchEvent(
+            new MessageEvent('message', {
+              data: {
+                requestId: request.requestId,
+                type: 'error',
+                error: 'Model download failed',
+              },
+            })
+          )
+        }, 5)
+      }
+      terminate(): void {}
+      addEventListener(type: string, listener: EventListener): void {
+        super.addEventListener(type, listener)
+      }
+      removeEventListener(type: string, listener: EventListener): void {
+        super.removeEventListener(type, listener)
+      }
+    }
+    global.Worker = FailingWorker as unknown as typeof Worker
+
+    // Should not throw — warm up is best-effort
+    await expect(warmUpEmbeddingModel()).resolves.toBeUndefined()
   })
 })

@@ -19,8 +19,9 @@ import type {
   TaskOptions,
   EmbedResult,
   SearchResult,
+  WorkerProgressUpdate,
 } from './types'
-import { isSuccessResponse, isErrorResponse } from './types'
+import { isSuccessResponse, isErrorResponse, isDownloadProgress } from './types'
 import { supportsWorkers } from '@/ai/lib/workerCapabilities'
 
 // ============================================================================
@@ -124,15 +125,48 @@ class WorkerCoordinator {
   /**
    * Route incoming worker message to the correct pending request by requestId.
    * Set once per worker in spawnWorker — replaces per-request event listeners.
+   *
+   * IMPORTANT: isDownloadProgress is checked BEFORE the requestId guard because
+   * Transformers.js progress_callback events do not carry a requestId (the worker
+   * adds it, but we defensively handle the case where it might be missing).
    */
   private routeWorkerMessage(event: MessageEvent): void {
     const response = event.data as WorkerResponse<unknown>
+
+    // Check download-progress FIRST since progress events from Transformers.js
+    // may not have a requestId (defensive — the worker wrapper adds it, but
+    // we route by type rather than by requestId for progress messages).
+    if (isDownloadProgress(response)) {
+      this.handleWorkerProgress(response as WorkerProgressUpdate)
+      return
+    }
+
     if (!response?.requestId) return
 
     if (isSuccessResponse(response)) {
       this.resolvePendingRequest(response.requestId, response.result)
     } else if (isErrorResponse(response)) {
       this.rejectPendingRequest(response.requestId, new Error(response.error))
+    }
+  }
+
+  /**
+   * Handle download progress notification from a worker.
+   * Dispatches a CustomEvent for the UI progress toast to consume.
+   */
+  private handleWorkerProgress(update: WorkerProgressUpdate): void {
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(
+        new CustomEvent('model-download-progress', {
+          detail: {
+            progress: update.progress,
+            status: update.status,
+            file: update.file,
+            loaded: update.loaded,
+            total: update.total,
+          },
+        })
+      )
     }
   }
 
@@ -351,6 +385,26 @@ class WorkerCoordinator {
   }
 
   /**
+   * Pre-warm the embedding model by sending a no-op embed request.
+   * The worker lazy-loads the model on the first request, so a single-space
+   * embed triggers the 23MB download without polluting the vector store.
+   *
+   * Best-effort: failures are silently ignored. Gated on deviceMemory >= 4GB
+   * in the caller (App.tsx), but the coordinator does not enforce this.
+   */
+  async warmUp(): Promise<void> {
+    try {
+      await this.executeTask(
+        'embed',
+        { texts: [' '] },
+        { timeout: 60_000 } // Model download can take 30s+
+      )
+    } catch {
+      // Best-effort — silently ignore warm-up failures
+    }
+  }
+
+  /**
    * Get worker ID from task type.
    */
   private getWorkerId(type: WorkerRequestType): string {
@@ -446,4 +500,9 @@ export async function searchSimilarNotes(
 
 export async function loadVectorIndex(vectors: Record<string, Float32Array>): Promise<void> {
   await coordinator.executeTask('load-index', { vectors })
+}
+
+/** Pre-warm the embedding model. See WorkerCoordinator.warmUp(). */
+export async function warmUpEmbeddingModel(): Promise<void> {
+  await coordinator.warmUp()
 }
