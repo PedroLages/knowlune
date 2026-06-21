@@ -469,6 +469,9 @@ if (typeof window !== 'undefined') {
 }
 
 // Free memory when tab is hidden (tab switch, minimize, etc.)
+// TODO(68-3): This kills in-progress model downloads on tab hide, requiring a
+// full re-download on return. 68-3 will add crash telemetry + Safari-specific
+// fallback to resume downloads instead of restarting from zero.
 if (typeof document !== 'undefined') {
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) {
