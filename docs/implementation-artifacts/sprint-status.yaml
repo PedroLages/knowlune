@@ -784,7 +784,7 @@ development_status:
   epic-68: in-progress
   68-1-model-download-progress-and-warmup: done  # replaces 68-1 + 68-3: progress toast + idle warm-up
   68-2-cache-api-validation-and-openai-fallback: done  # replaces 68-2 + 68-4 + 68-5 + 68-6: minimal EmbeddingProvider seam + OpenAI fallback
-  68-3-worker-crash-telemetry-and-safari-fallback: backlog  # replaces 68-7: structured crash payloads + module-worker fallback
+  68-3-worker-crash-telemetry-and-safari-fallback: ready-for-dev  # replaces 68-7: structured crash payloads + module-worker fallback
   epic-68-retrospective: optional
 
   # ──────────────────────────────────────────────────
