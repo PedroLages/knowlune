@@ -8,9 +8,11 @@
  * progress-tracking logic.
  *
  * Design decisions:
- * - Uses toast.loading() for the indeterminate state (no progress info yet),
- *   then switches to a regular toast with a progress bar once determinate
- *   progress is available.
+ * - Always uses toast() (never toast.loading()) so the Skip action button
+ *   and close button persist across indeterminate-to-determinate transitions.
+ *   Sonner cannot update a loading toast's action buttons.
+ * - Uses a Loader2 spinner in the description for indeterminate state and a
+ *   Progress bar for determinate state, both within the same toast type.
  * - Debounces intermediate progress updates to 500ms so rapid file chunks
  *   don't cause visual thrashing (Transformers.js fires per-file progress).
  * - Gates the 15s first-progress timeout on the same warm-up conditions as
@@ -19,7 +21,8 @@
  * - Starts a 120s download stall timeout on the first progress event: if no
  *   'done' event arrives within 120s, the toast transitions to an error.
  * - Subscribes to the 'worker-crash' CustomEvent to surface worker failures
- *   immediately, bypassing the stall timeout.
+ *   immediately, bypassing the stall timeout. Guards against false positives
+ *   by checking toastIdRef.current — only fires when a toast is visible.
  * - Shows a success toast ("AI search ready!") on completion.
  * - Returns null (no DOM output) — Sonner renders the toast globally.
  */
