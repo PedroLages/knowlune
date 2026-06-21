@@ -153,13 +153,46 @@ async function initializePipeline(requestId: string): Promise<any> {
 
       // Configure environment before first pipeline() call
       env.allowLocalModels = false
-      env.backends.onnx.wasm.numThreads = 1 // CRITICAL: Limit to 1 thread per worker
 
-      embeddingPipeline = await pipeline(
-        'feature-extraction',
-        'Xenova/all-MiniLM-L6-v2', // 384-dim, 23MB model (defaults to WASM/CPU)
-        { progress_callback: onPipelineProgress }
-      )
+      // ONNX backend initialization: wrap in try/catch to report specific
+      // failure reasons. Common failure modes:
+      // - Low memory / OOM: WASM backend allocation fails
+      // - Cache API unavailable: model binaries can't be loaded
+      // - Browser-incompatible WASM: older Firefox, Safari private browsing
+      try {
+        env.backends.onnx.wasm.numThreads = 1 // CRITICAL: Limit to 1 thread per worker
+      } catch (onnxError) {
+        throw Object.assign(
+          new Error('ONNX backend initialization failed'),
+          { reason: 'onnx-backend-failed', cause: onnxError }
+        )
+      }
+
+      let pipelineInstance: any
+      try {
+        pipelineInstance = await pipeline(
+          'feature-extraction',
+          'Xenova/all-MiniLM-L6-v2', // 384-dim, 23MB model (defaults to WASM/CPU)
+          { progress_callback: onPipelineProgress }
+        )
+      } catch (pipelineError) {
+        // Determine the root cause for telemetry
+        // @ts-expect-error - adding custom reason for telemetry
+        const reason: string = pipelineError?.message?.includes('ONNX') ||
+          pipelineError?.message?.includes('wasm') ||
+          pipelineError?.message?.includes('WebAssembly')
+          ? 'onnx-backend-failed'
+          : pipelineError?.message?.includes('cache') ||
+            pipelineError?.message?.includes('Cache')
+          ? 'cache-unavailable'
+          : 'model-load-failed'
+        throw Object.assign(
+          new Error('Pipeline initialization failed'),
+          { reason, cause: pipelineError }
+        )
+      }
+
+      embeddingPipeline = pipelineInstance
 
       // Integrity verification: run a quick inference to confirm the model
       // loaded correctly and produces the expected 384-dim output. This catches
