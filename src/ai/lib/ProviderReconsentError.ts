@@ -22,11 +22,11 @@ import type { ConsentPurpose } from '@/lib/compliance/consentService'
 export class ProviderReconsentError extends Error {
   constructor(
     public readonly purpose: ConsentPurpose,
-    public readonly providerId: string,
+    public readonly providerId: string
   ) {
     super(
       `Consent required for provider "${providerId}" on purpose "${purpose}". ` +
-        `The AI provider has changed since your last consent. Please review and accept the updated provider in Settings → Privacy & Consent.`,
+        `The AI provider has changed since your last consent. Please review and accept the updated provider in Settings → Privacy & Consent.`
     )
     this.name = 'ProviderReconsentError'
     // Restore prototype chain for instanceof checks across compilation targets.

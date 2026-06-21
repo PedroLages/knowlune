@@ -7,15 +7,20 @@ const mocks = vi.hoisted(() => {
   let initialized = true
   let user: { id: string } | null = null
   return {
-    setInitialized: (v: boolean) => { initialized = v },
-    setUser: (u: { id: string } | null) => { user = u },
+    setInitialized: (v: boolean) => {
+      initialized = v
+    },
+    setUser: (u: { id: string } | null) => {
+      user = u
+    },
     getState: () => ({ initialized, user }),
   }
 })
 
 vi.mock('@/stores/useAuthStore', () => ({
-  useAuthStore: (selector: (state: { initialized: boolean; user: { id: string } | null }) => unknown) =>
-    selector(mocks.getState()),
+  useAuthStore: (
+    selector: (state: { initialized: boolean; user: { id: string } | null }) => unknown
+  ) => selector(mocks.getState()),
   selectIsGuestMode: (state: { initialized: boolean; user: { id: string } | null }) =>
     state.initialized && state.user === null && sessionStorage.getItem('knowlune-guest') === 'true',
 }))

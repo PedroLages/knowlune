@@ -231,10 +231,7 @@ describe('CourseOverview Syllabus — module EntryActionButton states', () => {
         makeVideo({ id: 'v1', order: 0, title: 'Intro', path: 'Getting Started/intro.mp4' }),
         makeVideo({ id: 'v2', order: 1, title: 'Setup', path: 'Getting Started/setup.mp4' }),
       ],
-      [
-        makeProgress('v1', 100),
-        makeProgress('v2', 95),
-      ]
+      [makeProgress('v1', 100), makeProgress('v2', 95)]
     )
 
     renderOverview()

@@ -17,38 +17,34 @@ import { supportsWorkers } from '@/ai/lib/workerCapabilities'
 
 // ─── Mocks — vi.hoisted ensures they are available before vi.mock runs ───────
 
-const {
-  mockToast,
-  mockToastDismiss,
-  mockToastError,
-  mockToastSuccess,
-  resetNextId,
-} = vi.hoisted(() => {
-  let nextId = 1
-  // Must return a truthy ID so the component can track/reference toasts
-  const mockToast = vi.fn((_message: string, options?: Record<string, unknown>) => {
-    // If called with an id, return it (update path)
-    if (options?.id) return options.id as string | number
-    // Otherwise return a new unique ID (creation path)
-    return `toast-${nextId++}`
-  })
+const { mockToast, mockToastDismiss, mockToastError, mockToastSuccess, resetNextId } = vi.hoisted(
+  () => {
+    let nextId = 1
+    // Must return a truthy ID so the component can track/reference toasts
+    const mockToast = vi.fn((_message: string, options?: Record<string, unknown>) => {
+      // If called with an id, return it (update path)
+      if (options?.id) return options.id as string | number
+      // Otherwise return a new unique ID (creation path)
+      return `toast-${nextId++}`
+    })
 
-  const mockToastDismiss = vi.fn()
-  const mockToastError = vi.fn()
-  const mockToastSuccess = vi.fn()
+    const mockToastDismiss = vi.fn()
+    const mockToastError = vi.fn()
+    const mockToastSuccess = vi.fn()
 
-  function resetNextId() {
-    nextId = 1
+    function resetNextId() {
+      nextId = 1
+    }
+
+    return {
+      mockToast,
+      mockToastDismiss,
+      mockToastError,
+      mockToastSuccess,
+      resetNextId,
+    }
   }
-
-  return {
-    mockToast,
-    mockToastDismiss,
-    mockToastError,
-    mockToastSuccess,
-    resetNextId,
-  }
-})
+)
 
 vi.mock('sonner', () => ({
   toast: Object.assign(mockToast, {

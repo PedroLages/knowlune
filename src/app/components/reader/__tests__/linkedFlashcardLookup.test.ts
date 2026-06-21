@@ -49,7 +49,9 @@ describe('loadLinkedFlashcard', () => {
   it('returns null without lookup when the highlight has no flashcardId', async () => {
     const getFlashcard = vi.fn().mockResolvedValue(flashcard)
 
-    await expect(loadLinkedFlashcard({ ...highlight, flashcardId: undefined }, getFlashcard)).resolves.toBeNull()
+    await expect(
+      loadLinkedFlashcard({ ...highlight, flashcardId: undefined }, getFlashcard)
+    ).resolves.toBeNull()
     expect(getFlashcard).not.toHaveBeenCalled()
   })
 })

@@ -143,9 +143,7 @@ describe('setMediaSession', () => {
     }
     setMediaSession(updatedTrack)
 
-    expect(MediaMetadata).toHaveBeenLastCalledWith(
-      expect.objectContaining({ title: 'Chapter 2' })
-    )
+    expect(MediaMetadata).toHaveBeenLastCalledWith(expect.objectContaining({ title: 'Chapter 2' }))
   })
 
   it('no-ops when mediaSession is unavailable', () => {
@@ -216,7 +214,10 @@ describe('clearMediaSession', () => {
       const lastCall = [...mockSession.setActionHandler.mock.calls]
         .reverse()
         .find(([a]) => a === action)
-      expect(lastCall?.[1], `handler for "${action}" should be null after clearMediaSession`).toBeNull()
+      expect(
+        lastCall?.[1],
+        `handler for "${action}" should be null after clearMediaSession`
+      ).toBeNull()
     }
   })
 

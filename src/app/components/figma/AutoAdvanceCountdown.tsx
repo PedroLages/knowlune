@@ -106,9 +106,7 @@ export function AutoAdvanceCountdown({
       className={[
         'fixed inset-0 z-50 flex items-center justify-center outline-none',
         'motion-safe:transition-all motion-safe:duration-200 motion-safe:ease-out',
-        isExiting
-          ? 'motion-safe:opacity-0 bg-transparent'
-          : 'motion-safe:opacity-100 bg-black/50',
+        isExiting ? 'motion-safe:opacity-0 bg-transparent' : 'motion-safe:opacity-100 bg-black/50',
       ].join(' ')}
       onKeyDown={e => {
         if (e.key === 'Escape') {
@@ -147,19 +145,10 @@ export function AutoAdvanceCountdown({
 
         {/* Buttons */}
         <div className="flex flex-col sm:flex-row gap-2 w-full">
-          <Button
-            variant="outline"
-            className="flex-1"
-            onClick={handleCancel}
-            autoFocus
-          >
+          <Button variant="outline" className="flex-1" onClick={handleCancel} autoFocus>
             Cancel
           </Button>
-          <Button
-            variant="brand"
-            className="flex-1"
-            onClick={handleAdvance}
-          >
+          <Button variant="brand" className="flex-1" onClick={handleAdvance}>
             <Play className="mr-2 size-4" aria-hidden="true" />
             Play Now
           </Button>

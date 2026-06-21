@@ -245,7 +245,10 @@ describe('scanDirectory', () => {
       const dirHandle = createMockDirectoryHandle('empty', [])
 
       const results: { handle: FileSystemFileHandle; path: string }[] = []
-      for await (const entry of scanDirectory(dirHandle, '', { includeImages: true, maxDepth: 0 })) {
+      for await (const entry of scanDirectory(dirHandle, '', {
+        includeImages: true,
+        maxDepth: 0,
+      })) {
         results.push(entry)
       }
 

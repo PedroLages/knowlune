@@ -17,7 +17,8 @@
 
 export type QueryCategory = 'greeting' | 'meta' | 'search'
 
-const greetingPattern = /^(hi|hello( there)?|hey|greetings|good (morning|afternoon|evening)|thanks|thank you|bye|see you)[!.\s]*$/i
+const greetingPattern =
+  /^(hi|hello( there)?|hey|greetings|good (morning|afternoon|evening)|thanks|thank you|bye|see you)[!.\s]*$/i
 
 const metaPatterns = [
   /do i have (any )?notes/i,
@@ -89,7 +90,7 @@ export const GREETING_RESPONSE =
 export function buildMetaResponse(
   noteCount: number,
   courseCount: number,
-  courseNames: string[],
+  courseNames: string[]
 ): string {
   const courseList =
     courseNames.length > 0

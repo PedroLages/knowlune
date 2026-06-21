@@ -269,9 +269,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
           }
           let showQualityDialog = false
           try {
-            showQualityDialog = await isCourseFullyCompleteForSessionQuality(
-              closedSession.courseId
-            )
+            showQualityDialog = await isCourseFullyCompleteForSessionQuality(closedSession.courseId)
           } catch (err) {
             console.error('[SessionStore] Course completion check for quality dialog failed:', err)
           }

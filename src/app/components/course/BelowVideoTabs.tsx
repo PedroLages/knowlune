@@ -251,11 +251,7 @@ export function BelowVideoTabs({
         data-testid="below-video-tabs"
       >
         <TabsList variant="brand-pill">
-          <TabsTrigger
-            value="notes"
-            variant="brand-pill"
-            className={cn(hideNotesTab && 'hidden')}
-          >
+          <TabsTrigger value="notes" variant="brand-pill" className={cn(hideNotesTab && 'hidden')}>
             <PencilLine className="size-3.5" aria-hidden="true" />
             Notes
           </TabsTrigger>
@@ -291,49 +287,49 @@ export function BelowVideoTabs({
           )}
         </TabsList>
 
-          <TabsContent
-            value="notes"
-            forceMount
-            className={cn('mt-4', hideNotesTab && 'hidden', 'data-[state=inactive]:hidden')}
-            aria-hidden={activeTab !== 'notes'}
-          >
-            <div className="bg-card rounded-2xl shadow-sm overflow-hidden">
-              {isMobile && (
-                <div className="flex items-center justify-between px-4 py-2 border-b">
-                  <span className="text-xs font-medium text-muted-foreground">Notes</span>
-                  <Button
-                    ref={fullscreenTriggerRef}
-                    variant="ghost"
-                    size="icon"
-                    className="size-8"
-                    onClick={() => {
-                      setMobileNotesPanel('fullscreen')
-                      setIsNotesFullscreen(true)
-                    }}
-                    aria-label="Open notes in fullscreen"
-                    data-testid="notes-fullscreen-button"
-                  >
-                    <Maximize2 className="size-3.5" aria-hidden="true" />
-                  </Button>
-                </div>
-              )}
-              {/* On mobile, NotesTab content is rendered in the FloatingNotesPanel.
+        <TabsContent
+          value="notes"
+          forceMount
+          className={cn('mt-4', hideNotesTab && 'hidden', 'data-[state=inactive]:hidden')}
+          aria-hidden={activeTab !== 'notes'}
+        >
+          <div className="bg-card rounded-2xl shadow-sm overflow-hidden">
+            {isMobile && (
+              <div className="flex items-center justify-between px-4 py-2 border-b">
+                <span className="text-xs font-medium text-muted-foreground">Notes</span>
+                <Button
+                  ref={fullscreenTriggerRef}
+                  variant="ghost"
+                  size="icon"
+                  className="size-8"
+                  onClick={() => {
+                    setMobileNotesPanel('fullscreen')
+                    setIsNotesFullscreen(true)
+                  }}
+                  aria-label="Open notes in fullscreen"
+                  data-testid="notes-fullscreen-button"
+                >
+                  <Maximize2 className="size-3.5" aria-hidden="true" />
+                </Button>
+              </div>
+            )}
+            {/* On mobile, NotesTab content is rendered in the FloatingNotesPanel.
                   Here we show a brief message. The actual editor is in the floating panel. */}
-              {isMobile ? (
-                <div className="p-4 text-sm text-muted-foreground text-center">
-                  Notes are open in the floating panel below the video.
-                </div>
-              ) : (
-                <NotesTab
-                  courseId={courseId}
-                  lessonId={lessonId}
-                  onSeek={onSeek}
-                  currentTime={currentTime}
-                  onCaptureFrame={onCaptureFrame}
-                />
-              )}
-            </div>
-          </TabsContent>
+            {isMobile ? (
+              <div className="p-4 text-sm text-muted-foreground text-center">
+                Notes are open in the floating panel below the video.
+              </div>
+            ) : (
+              <NotesTab
+                courseId={courseId}
+                lessonId={lessonId}
+                onSeek={onSeek}
+                currentTime={currentTime}
+                onCaptureFrame={onCaptureFrame}
+              />
+            )}
+          </div>
+        </TabsContent>
 
         {!isPdf && (
           <TabsContent value="bookmarks" className="mt-4">

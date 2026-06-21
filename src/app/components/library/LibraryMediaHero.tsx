@@ -161,4 +161,3 @@ export function LibraryMediaHero({
     </section>
   )
 }
-

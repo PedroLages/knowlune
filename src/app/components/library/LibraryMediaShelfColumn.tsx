@@ -53,7 +53,10 @@ function SeriesTile({ group }: { group: RecentSeriesGroup }) {
   const coverUrls = [cover0, cover1, cover2].filter(Boolean) as string[]
 
   return (
-    <div className={cn('group cursor-default', LIBRARY_SHELF_CARD_WIDTH_CLASS)} data-testid="media-series-tile">
+    <div
+      className={cn('group cursor-default', LIBRARY_SHELF_CARD_WIDTH_CLASS)}
+      data-testid="media-series-tile"
+    >
       <div className="relative aspect-square overflow-hidden rounded-2xl bg-muted shadow-card-ambient">
         {coverUrls.length > 0 ? (
           <div className="absolute inset-0 grid grid-cols-2 grid-rows-2 gap-0.5 p-0.5">
@@ -96,10 +99,7 @@ export function LibraryMediaShelfColumn({ onEdit }: { onEdit: (book: Book) => vo
 
   const modeBooks = useMemo(() => getModeBooks(books, filters, mode), [books, filters, mode])
 
-  const abBooks = useMemo(
-    () => modeBooks.filter(b => b.format === 'audiobook'),
-    [modeBooks]
-  )
+  const abBooks = useMemo(() => modeBooks.filter(b => b.format === 'audiobook'), [modeBooks])
   const ebBooks = useMemo(
     () => modeBooks.filter(b => b.format === 'epub' || b.format === 'pdf'),
     [modeBooks]
@@ -164,12 +164,11 @@ export function LibraryMediaShelfColumn({ onEdit }: { onEdit: (book: Book) => vo
             }
             data-testid="media-shelf-recent-series"
           >
-            {[
-              ...getAudiobookRecentSeriesShelf(abBooks),
-              ...getEbookRecentSeriesShelf(ebBooks),
-            ].map(group => (
-              <SeriesTile key={group.name.toLowerCase()} group={group} />
-            ))}
+            {[...getAudiobookRecentSeriesShelf(abBooks), ...getEbookRecentSeriesShelf(ebBooks)].map(
+              group => (
+                <SeriesTile key={group.name.toLowerCase()} group={group} />
+              )
+            )}
           </LibraryMediaShelfRow>
         )}
         {(abBooks.length > 0 || ebBooks.length > 0) && (
@@ -177,19 +176,17 @@ export function LibraryMediaShelfColumn({ onEdit }: { onEdit: (book: Book) => vo
             icon={Compass}
             title="Discover"
             count={
-              getAudiobookDiscoverShelf(abBooks).length +
-              getEbookDiscoverShelf(ebBooks).length
+              getAudiobookDiscoverShelf(abBooks).length + getEbookDiscoverShelf(ebBooks).length
             }
             data-testid="media-shelf-discover"
           >
-            {[
-              ...getAudiobookDiscoverShelf(abBooks),
-              ...getEbookDiscoverShelf(ebBooks),
-            ].map(book => (
-              <BookContextMenu key={book.id} book={book} onEdit={() => onEdit(book)}>
-                <BookTile book={book} variant="small" />
-              </BookContextMenu>
-            ))}
+            {[...getAudiobookDiscoverShelf(abBooks), ...getEbookDiscoverShelf(ebBooks)].map(
+              book => (
+                <BookContextMenu key={book.id} book={book} onEdit={() => onEdit(book)}>
+                  <BookTile book={book} variant="small" />
+                </BookContextMenu>
+              )
+            )}
           </LibraryRail>
         )}
         {(abBooks.length > 0 || ebBooks.length > 0) && (
@@ -197,19 +194,17 @@ export function LibraryMediaShelfColumn({ onEdit }: { onEdit: (book: Book) => vo
             icon={Repeat2}
             label="Listen & Read Again"
             count={
-              getAudiobookListenAgainShelf(abBooks).length +
-              getEbookReadAgainShelf(ebBooks).length
+              getAudiobookListenAgainShelf(abBooks).length + getEbookReadAgainShelf(ebBooks).length
             }
             data-testid="media-shelf-again"
           >
-            {[
-              ...getAudiobookListenAgainShelf(abBooks),
-              ...getEbookReadAgainShelf(ebBooks),
-            ].map(book => (
-              <BookContextMenu key={book.id} book={book} onEdit={() => onEdit(book)}>
-                <RecentBookCard book={book} tone="muted" />
-              </BookContextMenu>
-            ))}
+            {[...getAudiobookListenAgainShelf(abBooks), ...getEbookReadAgainShelf(ebBooks)].map(
+              book => (
+                <BookContextMenu key={book.id} book={book} onEdit={() => onEdit(book)}>
+                  <RecentBookCard book={book} tone="muted" />
+                </BookContextMenu>
+              )
+            )}
           </LibraryMediaShelfRow>
         )}
       </div>
@@ -241,7 +236,9 @@ export function LibraryMediaShelfColumn({ onEdit }: { onEdit: (book: Book) => vo
         icon={mode === 'audiobooks' ? Headphones : BookOpen}
         title={mode === 'audiobooks' ? 'Continue Listening' : 'Continue Reading'}
         count={shelves.continue.length}
-        subtitle={mode === 'audiobooks' ? 'Pick up where you left off' : 'Jump back into your latest pages'}
+        subtitle={
+          mode === 'audiobooks' ? 'Pick up where you left off' : 'Jump back into your latest pages'
+        }
         data-testid="media-shelf-continue"
       >
         {shelves.continue.map(book => (

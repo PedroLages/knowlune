@@ -37,9 +37,7 @@ describe('writeNoticeAck', () => {
 
     await writeNoticeAck('2026-04-23.1')
 
-    expect(mockInsert).toHaveBeenCalledWith(
-      expect.objectContaining({ user_id: 'user-abc-123' }),
-    )
+    expect(mockInsert).toHaveBeenCalledWith(expect.objectContaining({ user_id: 'user-abc-123' }))
   })
 
   it('includes document_id, version, and acknowledged_at in the insert payload', async () => {
@@ -57,9 +55,7 @@ describe('writeNoticeAck', () => {
   it('throws when user is not authenticated', async () => {
     mockGetUser.mockResolvedValue({ data: { user: null } })
 
-    await expect(writeNoticeAck('2026-04-23.1')).rejects.toThrow(
-      /no authenticated user/,
-    )
+    await expect(writeNoticeAck('2026-04-23.1')).rejects.toThrow(/no authenticated user/)
     expect(mockInsert).not.toHaveBeenCalled()
   })
 

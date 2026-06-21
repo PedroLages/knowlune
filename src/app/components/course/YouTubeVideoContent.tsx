@@ -237,10 +237,7 @@ export function YouTubeVideoContent({
       {/* Video player */}
       <div className="flex-1 min-w-0">
         {isUnembeddable ? (
-          <YouTubeUnembeddableFallback
-            videoId={youtubeVideoId}
-            reason={video.unembeddableReason}
-          />
+          <YouTubeUnembeddableFallback videoId={youtubeVideoId} reason={video.unembeddableReason} />
         ) : (
           <YouTubePlayer
             videoId={youtubeVideoId}

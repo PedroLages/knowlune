@@ -58,7 +58,9 @@ describe('LinkedFlashcardPanel', () => {
   it('shows a retryable error state when lookup fails', async () => {
     const user = userEvent.setup()
     const onRetry = vi.fn()
-    render(<LinkedFlashcardPanel open flashcard={null} isError onClose={vi.fn()} onRetry={onRetry} />)
+    render(
+      <LinkedFlashcardPanel open flashcard={null} isError onClose={vi.fn()} onRetry={onRetry} />
+    )
 
     expect(screen.getByTestId('linked-flashcard-error')).toHaveTextContent(
       'Could not load linked flashcard'

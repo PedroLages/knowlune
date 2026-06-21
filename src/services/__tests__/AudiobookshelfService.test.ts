@@ -321,9 +321,7 @@ describe('AudiobookshelfService.getStreamUrl', () => {
   it('returns direct stream URL with token query param', () => {
     const url = getStreamUrl(TEST_URL, 'item-1', TEST_API_KEY)
 
-    expect(url).toBe(
-      `${TEST_URL}/api/items/item-1/play?token=${encodeURIComponent(TEST_API_KEY)}`
-    )
+    expect(url).toBe(`${TEST_URL}/api/items/item-1/play?token=${encodeURIComponent(TEST_API_KEY)}`)
     expect(url).not.toContain('/api/abs/proxy')
   })
 
@@ -371,9 +369,7 @@ describe('AudiobookshelfService.getStreamUrlFromSession', () => {
   it('constructs direct URL from relative contentUrl with token query param', () => {
     const url = getStreamUrlFromSession(TEST_URL, TEST_API_KEY, '/s/item/item-1/book.m4b')
 
-    expect(url).toBe(
-      `${TEST_URL}/s/item/item-1/book.m4b?token=${encodeURIComponent(TEST_API_KEY)}`
-    )
+    expect(url).toBe(`${TEST_URL}/s/item/item-1/book.m4b?token=${encodeURIComponent(TEST_API_KEY)}`)
     expect(url).not.toContain('/api/abs/proxy')
   })
 
@@ -384,9 +380,7 @@ describe('AudiobookshelfService.getStreamUrlFromSession', () => {
       'https://abs.example.com:13378/s/item/item-1/book.m4b'
     )
 
-    expect(url).toBe(
-      `${TEST_URL}/s/item/item-1/book.m4b?token=${encodeURIComponent(TEST_API_KEY)}`
-    )
+    expect(url).toBe(`${TEST_URL}/s/item/item-1/book.m4b?token=${encodeURIComponent(TEST_API_KEY)}`)
     expect(url).not.toContain('/api/abs/proxy')
   })
 
@@ -417,17 +411,13 @@ describe('AudiobookshelfService.getCoverUrl', () => {
   it('returns direct cover URL with token query param', () => {
     const url = getCoverUrl(TEST_URL, 'item-1', TEST_API_KEY)
 
-    expect(url).toBe(
-      `${TEST_URL}/api/items/item-1/cover?token=${encodeURIComponent(TEST_API_KEY)}`
-    )
+    expect(url).toBe(`${TEST_URL}/api/items/item-1/cover?token=${encodeURIComponent(TEST_API_KEY)}`)
     expect(url).not.toContain('/api/abs/proxy')
   })
 
   it('strips trailing slash from base URL', () => {
     const url = getCoverUrl(`${TEST_URL}/`, 'item-1', TEST_API_KEY)
-    expect(url).toBe(
-      `${TEST_URL}/api/items/item-1/cover?token=${encodeURIComponent(TEST_API_KEY)}`
-    )
+    expect(url).toBe(`${TEST_URL}/api/items/item-1/cover?token=${encodeURIComponent(TEST_API_KEY)}`)
   })
 
   it('omits token query param when apiKey is undefined', () => {

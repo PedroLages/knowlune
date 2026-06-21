@@ -49,10 +49,7 @@ type PositionParams = {
 }
 
 function renderPositionSync(params: PositionParams) {
-  return renderHook(
-    (p: PositionParams) => useVideoPositionSync(p),
-    { initialProps: params }
-  )
+  return renderHook((p: PositionParams) => useVideoPositionSync(p), { initialProps: params })
 }
 
 describe('useVideoPositionSync', () => {
@@ -105,10 +102,14 @@ describe('useVideoPositionSync', () => {
       expect(mockSyncableWrite).toHaveBeenCalledTimes(1)
     })
 
-    expect(mockSyncableWrite).toHaveBeenCalledWith('progress', 'put', expect.objectContaining({
-      currentTime: 10,
-      completionPercentage: 8,
-    }))
+    expect(mockSyncableWrite).toHaveBeenCalledWith(
+      'progress',
+      'put',
+      expect.objectContaining({
+        currentTime: 10,
+        completionPercentage: 8,
+      })
+    )
 
     vi.useRealTimers()
   })
@@ -125,10 +126,14 @@ describe('useVideoPositionSync', () => {
     unmount()
 
     await vi.waitFor(() => {
-      expect(mockSyncableWrite).toHaveBeenCalledWith('progress', 'put', expect.objectContaining({
-        currentTime: 50,
-        completionPercentage: 42,
-      }))
+      expect(mockSyncableWrite).toHaveBeenCalledWith(
+        'progress',
+        'put',
+        expect.objectContaining({
+          currentTime: 50,
+          completionPercentage: 42,
+        })
+      )
     })
   })
 
@@ -149,10 +154,14 @@ describe('useVideoPositionSync', () => {
     document.dispatchEvent(new Event('visibilitychange'))
 
     await vi.waitFor(() => {
-      expect(mockSyncableWrite).toHaveBeenCalledWith('progress', 'put', expect.objectContaining({
-        currentTime: 50,
-        completionPercentage: 42,
-      }))
+      expect(mockSyncableWrite).toHaveBeenCalledWith(
+        'progress',
+        'put',
+        expect.objectContaining({
+          currentTime: 50,
+          completionPercentage: 42,
+        })
+      )
     })
 
     // Cleanup
@@ -246,9 +255,13 @@ describe('useVideoPositionSync', () => {
     })
 
     await vi.waitFor(() => {
-      expect(mockSyncableWrite).toHaveBeenCalledWith('progress', 'put', expect.objectContaining({
-        completionPercentage: 100,
-      }))
+      expect(mockSyncableWrite).toHaveBeenCalledWith(
+        'progress',
+        'put',
+        expect.objectContaining({
+          completionPercentage: 100,
+        })
+      )
     })
   })
 
@@ -305,9 +318,7 @@ describe('useVideoPositionSync', () => {
     await act(() => vi.advanceTimersByTimeAsync(200))
 
     // All saves should be for course-2, not course-1
-    const calls = mockSyncableWrite.mock.calls.filter(
-      c => c[0] === 'progress' && c[1] === 'put'
-    )
+    const calls = mockSyncableWrite.mock.calls.filter(c => c[0] === 'progress' && c[1] === 'put')
 
     for (const call of calls) {
       expect(call[2]).not.toMatchObject({ courseId: 'course-1' })

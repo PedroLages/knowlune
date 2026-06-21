@@ -50,10 +50,7 @@ export function LibraryRail({
   if (isChildrenEmpty(children)) return null
 
   return (
-    <section
-      className="group/rail mb-8"
-      data-testid={testId ?? 'library-rail'}
-    >
+    <section className="group/rail mb-8" data-testid={testId ?? 'library-rail'}>
       <RailHeader
         icon={icon}
         title={title}

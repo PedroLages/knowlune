@@ -33,9 +33,7 @@ const __dirname = dirname(__filename)
  */
 function parseInventoryPurposeKeys(markdown: string): Set<string> {
   // Extract only the "Consent Purposes" section of the document.
-  const consentSectionMatch = markdown.match(
-    /### Consent Purposes.*?\n([\s\S]*?)(?=\n###|\n---)/,
-  )
+  const consentSectionMatch = markdown.match(/### Consent Purposes.*?\n([\s\S]*?)(?=\n###|\n---)/)
   const section = consentSectionMatch ? consentSectionMatch[1] : markdown
 
   const keys = new Set<string>()
@@ -58,10 +56,7 @@ function parseInventoryPurposeKeys(markdown: string): Set<string> {
 // ---------------------------------------------------------------------------
 
 describe('E119-S07 AC-6: consent-inventory.md ↔ CONSENT_PURPOSES parity', () => {
-  const inventoryPath = resolve(
-    __dirname,
-    '../../../../docs/compliance/consent-inventory.md',
-  )
+  const inventoryPath = resolve(__dirname, '../../../../docs/compliance/consent-inventory.md')
 
   let inventoryKeys: Set<string>
   let serviceKeys: Set<string>

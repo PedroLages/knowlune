@@ -73,7 +73,9 @@ export function EditPathDialog({ open, onOpenChange, path }: EditPathDialogProps
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Edit Path</DialogTitle>
-          <DialogDescription>Update the name and description of your learning path.</DialogDescription>
+          <DialogDescription>
+            Update the name and description of your learning path.
+          </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-2">

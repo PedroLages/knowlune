@@ -35,7 +35,10 @@ export interface BatchImportResult {
  */
 export async function readTrackManifest(
   parentDirHandle: FileSystemDirectoryHandle
-): Promise<{ ok: true; summary: TrackManifestSummary; manifest: TrackManifest } | { ok: false; error: string }> {
+): Promise<
+  | { ok: true; summary: TrackManifestSummary; manifest: TrackManifest }
+  | { ok: false; error: string }
+> {
   try {
     const fileHandle = await parentDirHandle.getFileHandle('track-manifest.json')
     const file = await fileHandle.getFile()
@@ -66,7 +69,10 @@ export async function readTrackManifest(
     if (err instanceof SyntaxError) {
       return { ok: false, error: 'track-manifest.json is not valid JSON.' }
     }
-    return { ok: false, error: `Failed to read track-manifest.json: ${err instanceof Error ? err.message : 'Unknown error'}` }
+    return {
+      ok: false,
+      error: `Failed to read track-manifest.json: ${err instanceof Error ? err.message : 'Unknown error'}`,
+    }
   }
 }
 
@@ -152,17 +158,16 @@ export async function batchImportTrackCourses(
         specialties: trackAuthor.specialties,
         yearsExperience: trackAuthor.yearsExperience,
         education: trackAuthor.education,
-        socialLinks: trackAuthor.website || trackAuthor.linkedin || trackAuthor.twitter
-          ? {
-              website: trackAuthor.website,
-              linkedin: trackAuthor.linkedin,
-              twitter: trackAuthor.twitter,
-            }
-          : undefined,
+        socialLinks:
+          trackAuthor.website || trackAuthor.linkedin || trackAuthor.twitter
+            ? {
+                website: trackAuthor.website,
+                linkedin: trackAuthor.linkedin,
+                twitter: trackAuthor.twitter,
+              }
+            : undefined,
         featuredQuote: trackAuthor.featuredQuote,
-        courseIds: results
-          .filter(r => r.success && r.courseId)
-          .map(r => r.courseId!),
+        courseIds: results.filter(r => r.success && r.courseId).map(r => r.courseId!),
       })
     } catch (err) {
       toast.warning('Failed to create author from manifest — continuing with track import')
@@ -186,9 +191,7 @@ export async function batchImportTrackCourses(
 
   // Check if a track with this name already exists
   let trackId: string
-  const existingPath = store.paths.find(
-    p => p.name.toLowerCase() === trackName.toLowerCase()
-  )
+  const existingPath = store.paths.find(p => p.name.toLowerCase() === trackName.toLowerCase())
 
   if (existingPath) {
     trackId = existingPath.id
@@ -224,8 +227,9 @@ export async function batchImportTrackCourses(
 
     // getState() returns the live Zustand snapshot — never use the stale
     // `store` variable captured above for entry index lookups.
-    const currentEntries = useLearningPathStore.getState().entries
-      .filter(e => e.pathId === trackId)
+    const currentEntries = useLearningPathStore
+      .getState()
+      .entries.filter(e => e.pathId === trackId)
       .sort((a, b) => a.position - b.position)
 
     const entryIndex = currentEntries.findIndex(e => e.courseId === result.courseId)

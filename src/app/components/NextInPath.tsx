@@ -87,9 +87,7 @@ export function NextInPath({
             {isLastInPath ? 'Path Complete' : 'Next in Path'}
           </p>
           <h3 className="text-sm font-semibold truncate">
-            {isLastInPath
-              ? `${courseName} finished!`
-              : pathName}
+            {isLastInPath ? `${courseName} finished!` : pathName}
           </h3>
           <p className="text-xs text-muted-foreground mt-0.5">
             {isLastInPath

@@ -55,15 +55,25 @@ export function PomodoroTimer({ tooltipLabel }: PomodoroTimerProps) {
     playChime(prefs.notificationVolume, prefs.notificationSound)
   }, [prefs.notificationVolume, prefs.notificationSound])
 
-  const { phase, status, timeRemaining, completedSessions, start, startBreak, pause, resume, reset, skip } =
-    usePomodoroTimer({
-      focusDuration: prefs.focusDuration * 60,
-      breakDuration: prefs.breakDuration * 60,
-      onFocusComplete: handleFocusComplete,
-      onBreakComplete: handleBreakComplete,
-      autoStartBreak: prefs.autoStartBreak,
-      autoStartFocus: prefs.autoStartFocus,
-    })
+  const {
+    phase,
+    status,
+    timeRemaining,
+    completedSessions,
+    start,
+    startBreak,
+    pause,
+    resume,
+    reset,
+    skip,
+  } = usePomodoroTimer({
+    focusDuration: prefs.focusDuration * 60,
+    breakDuration: prefs.breakDuration * 60,
+    onFocusComplete: handleFocusComplete,
+    onBreakComplete: handleBreakComplete,
+    autoStartBreak: prefs.autoStartBreak,
+    autoStartFocus: prefs.autoStartFocus,
+  })
 
   // Reload preferences on mount (in case they changed from another tab)
   useEffect(() => {

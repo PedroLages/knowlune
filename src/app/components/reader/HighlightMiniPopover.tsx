@@ -19,7 +19,10 @@ import {
   type HighlightMiniPopoverAnchor,
 } from '@/app/components/reader/highlightMiniPopoverPosition'
 
-export type { HighlightMiniPopoverAnchor, MiniPopoverClampOptions } from '@/app/components/reader/highlightMiniPopoverPosition'
+export type {
+  HighlightMiniPopoverAnchor,
+  MiniPopoverClampOptions,
+} from '@/app/components/reader/highlightMiniPopoverPosition'
 export { clampMiniPopoverPosition } from '@/app/components/reader/highlightMiniPopoverPosition'
 
 const COLORS: { id: HighlightColor; bg: string; label: string }[] = [
@@ -185,30 +188,29 @@ export function HighlightMiniPopover({
     </div>
   )
 
-  const flashcardButton =
-    highlight.flashcardId ? (
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={onViewFlashcard}
-        className="size-10 sm:size-8 text-brand shrink-0 cursor-pointer"
-        aria-label="View linked flashcard"
-        data-testid="mini-popover-view-flashcard"
-      >
-        <Layers className="size-5 sm:size-4" aria-hidden="true" />
-      </Button>
-    ) : (
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={onCreateFlashcard}
-        className="size-10 sm:size-8 text-muted-foreground shrink-0 cursor-pointer"
-        aria-label="Create flashcard from highlight"
-        data-testid="mini-popover-create-flashcard"
-      >
-        <Layers className="size-5 sm:size-4" aria-hidden="true" />
-      </Button>
-    )
+  const flashcardButton = highlight.flashcardId ? (
+    <Button
+      variant="ghost"
+      size="icon"
+      onClick={onViewFlashcard}
+      className="size-10 sm:size-8 text-brand shrink-0 cursor-pointer"
+      aria-label="View linked flashcard"
+      data-testid="mini-popover-view-flashcard"
+    >
+      <Layers className="size-5 sm:size-4" aria-hidden="true" />
+    </Button>
+  ) : (
+    <Button
+      variant="ghost"
+      size="icon"
+      onClick={onCreateFlashcard}
+      className="size-10 sm:size-8 text-muted-foreground shrink-0 cursor-pointer"
+      aria-label="Create flashcard from highlight"
+      data-testid="mini-popover-create-flashcard"
+    >
+      <Layers className="size-5 sm:size-4" aria-hidden="true" />
+    </Button>
+  )
 
   const viewToolbarRow = (
     <div className="flex items-center gap-1 min-w-0">
@@ -264,17 +266,19 @@ export function HighlightMiniPopover({
   const viewBodyMobile = (
     <div className="space-y-3">
       <div className="flex items-start gap-2 min-w-0">
-        <p className="text-xs text-foreground line-clamp-3 flex-1 min-w-0">{highlight.textAnchor}</p>
+        <p className="text-xs text-foreground line-clamp-3 flex-1 min-w-0">
+          {highlight.textAnchor}
+        </p>
       </div>
       {highlight.note && (
         <div className="flex items-start gap-1.5 pl-5 min-w-0">
           <StickyNote className="size-3 text-muted-foreground mt-0.5 shrink-0" aria-hidden="true" />
-          <p className="text-xs text-muted-foreground italic line-clamp-3 min-w-0">{highlight.note}</p>
+          <p className="text-xs text-muted-foreground italic line-clamp-3 min-w-0">
+            {highlight.note}
+          </p>
         </div>
       )}
-      <div className="border-t border-border/50 pt-2">
-        {colorSwatches}
-      </div>
+      <div className="border-t border-border/50 pt-2">{colorSwatches}</div>
       <div className="flex flex-wrap items-center gap-2 border-t border-border/50 pt-2">
         <Button
           variant="ghost"
@@ -366,7 +370,12 @@ export function HighlightMiniPopover({
         data-testid="mini-popover-note-input"
       />
       <div className="flex gap-2 justify-end">
-        <Button variant="ghost" size="sm" onClick={() => setMode('view')} className="h-9 sm:h-7 text-xs">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => setMode('view')}
+          className="h-9 sm:h-7 text-xs"
+        >
           Cancel
         </Button>
         <Button

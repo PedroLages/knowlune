@@ -208,7 +208,11 @@ export function ActivityHeatmap({ compact = false }: ActivityHeatmapProps) {
     return (
       <div
         data-testid="activity-heatmap-skeleton"
-        className={compact ? 'h-10 bg-muted/50 rounded-lg animate-pulse' : 'h-32 bg-muted/50 rounded-xl animate-pulse'}
+        className={
+          compact
+            ? 'h-10 bg-muted/50 rounded-lg animate-pulse'
+            : 'h-32 bg-muted/50 rounded-xl animate-pulse'
+        }
         aria-busy="true"
         aria-label="Loading activity heatmap"
       />
@@ -222,22 +226,22 @@ export function ActivityHeatmap({ compact = false }: ActivityHeatmapProps) {
     <div data-testid="activity-heatmap">
       {/* Header — hidden in compact mode */}
       {!compact && (
-      <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
-        <div>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            {totalActiveDays} active day{totalActiveDays !== 1 ? 's' : ''} in the past year
-          </p>
+        <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
+          <div>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {totalActiveDays} active day{totalActiveDays !== 1 ? 's' : ''} in the past year
+            </p>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowTable(v => !v)}
+            aria-pressed={showTable}
+            className="text-xs min-h-[44px]"
+          >
+            {showTable ? 'View as grid' : 'View as table'}
+          </Button>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setShowTable(v => !v)}
-          aria-pressed={showTable}
-          className="text-xs min-h-[44px]"
-        >
-          {showTable ? 'View as grid' : 'View as table'}
-        </Button>
-      </div>
       )}
 
       {showTable ? (
@@ -313,7 +317,11 @@ export function ActivityHeatmap({ compact = false }: ActivityHeatmapProps) {
                   <div
                     key={`month-${colIdx}`}
                     aria-hidden="true"
-                    className={compact ? 'text-[8px] text-muted-foreground h-3 flex items-end px-0.5 leading-none' : 'text-[10px] text-muted-foreground h-4 flex items-end px-0.5 leading-none'}
+                    className={
+                      compact
+                        ? 'text-[8px] text-muted-foreground h-3 flex items-end px-0.5 leading-none'
+                        : 'text-[10px] text-muted-foreground h-4 flex items-end px-0.5 leading-none'
+                    }
                   >
                     {label?.label ?? ''}
                   </div>
@@ -325,7 +333,11 @@ export function ActivityHeatmap({ compact = false }: ActivityHeatmapProps) {
                   {/* Day label (show Mon, Wed, Fri only — odd rows) */}
                   <div
                     aria-hidden="true"
-                    className={compact ? 'text-[8px] text-muted-foreground pr-1 h-[12px] flex items-center justify-end leading-none' : 'text-[10px] text-muted-foreground pr-2 h-[14px] flex items-center justify-end leading-none'}
+                    className={
+                      compact
+                        ? 'text-[8px] text-muted-foreground pr-1 h-[12px] flex items-center justify-end leading-none'
+                        : 'text-[10px] text-muted-foreground pr-2 h-[14px] flex items-center justify-end leading-none'
+                    }
                   >
                     {dayIdx % 2 === 1 ? DAY_LABELS[dayIdx] : ''}
                   </div>
@@ -357,7 +369,9 @@ export function ActivityHeatmap({ compact = false }: ActivityHeatmapProps) {
                             role="img"
                             aria-label={ariaLabel}
                             className={cn(
-                              compact ? 'w-3 h-3 rounded-[2px]' : 'aspect-square w-full rounded-[3px]',
+                              compact
+                                ? 'w-3 h-3 rounded-[2px]'
+                                : 'aspect-square w-full rounded-[3px]',
                               'motion-safe:transition-[transform,box-shadow] motion-safe:duration-150',
                               'motion-safe:hover:scale-110 motion-safe:hover:shadow-md',
                               'focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring',
@@ -383,17 +397,23 @@ export function ActivityHeatmap({ compact = false }: ActivityHeatmapProps) {
           </TooltipProvider>
 
           {/* Legend */}
-          <div className={cn(
-            'flex flex-wrap items-center gap-x-4 gap-y-1 mt-3 text-muted-foreground',
-            compact ? 'text-[8px]' : 'text-[10px]'
-          )}>
+          <div
+            className={cn(
+              'flex flex-wrap items-center gap-x-4 gap-y-1 mt-3 text-muted-foreground',
+              compact ? 'text-[8px]' : 'text-[10px]'
+            )}
+          >
             <span>Less</span>
             <div className="flex items-center gap-1">
               {([0, 1, 2, 3, 4] as HeatmapLevel[]).map(level => (
                 <Tooltip key={level}>
                   <TooltipTrigger asChild>
                     <div
-                      className={cn('rounded-[3px] cursor-help', compact ? 'size-2' : 'size-3', LEVEL_CLASSES[level])}
+                      className={cn(
+                        'rounded-[3px] cursor-help',
+                        compact ? 'size-2' : 'size-3',
+                        LEVEL_CLASSES[level]
+                      )}
                       aria-label={LEGEND_LABELS[level]}
                     />
                   </TooltipTrigger>
@@ -405,10 +425,10 @@ export function ActivityHeatmap({ compact = false }: ActivityHeatmapProps) {
             </div>
             <span>More</span>
             {!compact && (
-            <span className="ml-auto flex items-center gap-1.5">
-              <div className="size-3 rounded-[3px] ring-2 ring-brand ring-offset-1 ring-offset-card" />
-              Today
-            </span>
+              <span className="ml-auto flex items-center gap-1.5">
+                <div className="size-3 rounded-[3px] ring-2 ring-brand ring-offset-1 ring-offset-card" />
+                Today
+              </span>
             )}
           </div>
 

@@ -42,9 +42,7 @@ const testPath: LearningPath = {
 function renderDialog(open = true, pathOverrides: Partial<LearningPath> = {}) {
   const onOpenChange = vi.fn()
   const path = { ...testPath, ...pathOverrides }
-  render(
-    <PathCoverDialog open={open} onOpenChange={onOpenChange} path={path} />
-  )
+  render(<PathCoverDialog open={open} onOpenChange={onOpenChange} path={path} />)
   return { onOpenChange, path }
 }
 

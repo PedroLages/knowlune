@@ -97,7 +97,9 @@ export function ProviderReconsentModal({
               </p>
 
               <div>
-                <p className="text-foreground mb-1 font-medium">Data transferred to this provider:</p>
+                <p className="text-foreground mb-1 font-medium">
+                  Data transferred to this provider:
+                </p>
                 <p>{providerMeta.dataCategories}</p>
               </div>
 
@@ -106,8 +108,8 @@ export function ProviderReconsentModal({
                   <p className="text-foreground font-medium">Privacy notice updated</p>
                   <p className="mt-1">
                     Our privacy notice has also been updated
-                    {noticeVersion ? ` (version ${noticeVersion})` : ''}.
-                    Your acceptance below covers both the new provider and the updated notice.
+                    {noticeVersion ? ` (version ${noticeVersion})` : ''}. Your acceptance below
+                    covers both the new provider and the updated notice.
                   </p>
                 </div>
               )}

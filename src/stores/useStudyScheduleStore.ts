@@ -171,11 +171,11 @@ export const useStudyScheduleStore = create<StudyScheduleState>((set, get) => ({
     return get().schedules.filter(s => s.courseId === courseId && (!enabledOnly || s.enabled))
   },
 
-  getSchedulesForPath: (pathId) => {
+  getSchedulesForPath: pathId => {
     return get().schedules.filter(s => s.learningPathId === pathId)
   },
 
-  addSchedules: async (schedules) => {
+  addSchedules: async schedules => {
     const created: StudySchedule[] = []
     const failed: Array<{
       input: Omit<StudySchedule, 'id' | 'createdAt' | 'updatedAt'>

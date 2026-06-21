@@ -116,81 +116,81 @@ export function UpgradeCTA({ featureLabel, error = null, isStale = false }: Upgr
       role="region"
       aria-label={`Upgrade required for ${featureLabel}`}
     >
-        <CardContent className="flex flex-col items-center gap-4 p-6 text-center">
-          <div className="rounded-full bg-gold-muted p-3">
-            <Crown className="size-6 text-gold" aria-hidden="true" />
-          </div>
+      <CardContent className="flex flex-col items-center gap-4 p-6 text-center">
+        <div className="rounded-full bg-gold-muted p-3">
+          <Crown className="size-6 text-gold" aria-hidden="true" />
+        </div>
 
-          <div className="space-y-1">
-            <h3 className="text-base font-display font-semibold">Premium Feature</h3>
-            <p className="text-sm text-muted-foreground">
-              {isStale
-                ? 'Your subscription status is outdated. Connect to the internet to verify your access.'
-                : error
-                  ? error
-                  : `Upgrade to Premium to unlock ${featureLabel}.`}
-            </p>
-          </div>
-
-          <Button
-            variant="brand"
-            className="w-full max-w-xs min-h-[44px] gap-2"
-            onClick={handleUpgrade}
-            disabled={isCheckoutLoading}
-            aria-label={
-              canStartTrial
-                ? `Start free trial to unlock ${featureLabel}`
-                : `Subscribe to unlock ${featureLabel}`
-            }
-            aria-busy={isCheckoutLoading}
-          >
-            {isCheckoutLoading && (
-              <Loader2 className="size-4 motion-safe:animate-spin" aria-hidden="true" />
-            )}
-            {isCheckoutLoading
-              ? 'Starting checkout...'
-              : canStartTrial
-                ? 'Start Free Trial'
-                : hadTrial
-                  ? 'Subscribe'
-                  : 'Upgrade to Premium'}
-          </Button>
-          {/* AC1: Trial info text when eligible */}
-          {user && canStartTrial && (
-            <p className="text-xs text-muted-foreground">
-              14-day free trial. No charge until trial ends.
-            </p>
-          )}
-
-          {/* AC5: Resubscribe option for cancelled subscriptions */}
-          {isStale && (
-            <p className="text-xs text-muted-foreground">
-              If your subscription has expired, you can resubscribe by upgrading above.
-            </p>
-          )}
-
-          {/* E19-S07: Legal links for checkout flow */}
-          <p className="text-xs text-muted-foreground">
-            By upgrading you agree to our{' '}
-            <a
-              href="/privacy"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-brand-soft-foreground hover:underline focus-visible:underline focus-visible:outline-none"
-            >
-              Privacy Policy
-            </a>{' '}
-            and{' '}
-            <a
-              href="/terms"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-brand-soft-foreground hover:underline focus-visible:underline focus-visible:outline-none"
-            >
-              Terms of Service
-            </a>
+        <div className="space-y-1">
+          <h3 className="text-base font-display font-semibold">Premium Feature</h3>
+          <p className="text-sm text-muted-foreground">
+            {isStale
+              ? 'Your subscription status is outdated. Connect to the internet to verify your access.'
+              : error
+                ? error
+                : `Upgrade to Premium to unlock ${featureLabel}.`}
           </p>
-        </CardContent>
+        </div>
+
+        <Button
+          variant="brand"
+          className="w-full max-w-xs min-h-[44px] gap-2"
+          onClick={handleUpgrade}
+          disabled={isCheckoutLoading}
+          aria-label={
+            canStartTrial
+              ? `Start free trial to unlock ${featureLabel}`
+              : `Subscribe to unlock ${featureLabel}`
+          }
+          aria-busy={isCheckoutLoading}
+        >
+          {isCheckoutLoading && (
+            <Loader2 className="size-4 motion-safe:animate-spin" aria-hidden="true" />
+          )}
+          {isCheckoutLoading
+            ? 'Starting checkout...'
+            : canStartTrial
+              ? 'Start Free Trial'
+              : hadTrial
+                ? 'Subscribe'
+                : 'Upgrade to Premium'}
+        </Button>
+        {/* AC1: Trial info text when eligible */}
+        {user && canStartTrial && (
+          <p className="text-xs text-muted-foreground">
+            14-day free trial. No charge until trial ends.
+          </p>
+        )}
+
+        {/* AC5: Resubscribe option for cancelled subscriptions */}
+        {isStale && (
+          <p className="text-xs text-muted-foreground">
+            If your subscription has expired, you can resubscribe by upgrading above.
+          </p>
+        )}
+
+        {/* E19-S07: Legal links for checkout flow */}
+        <p className="text-xs text-muted-foreground">
+          By upgrading you agree to our{' '}
+          <a
+            href="/privacy"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-brand-soft-foreground hover:underline focus-visible:underline focus-visible:outline-none"
+          >
+            Privacy Policy
+          </a>{' '}
+          and{' '}
+          <a
+            href="/terms"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-brand-soft-foreground hover:underline focus-visible:underline focus-visible:outline-none"
+          >
+            Terms of Service
+          </a>
+        </p>
+      </CardContent>
     </Card>
   )
 }

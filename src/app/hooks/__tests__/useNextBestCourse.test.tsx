@@ -117,10 +117,28 @@ vi.mock('@/stores/useContentProgressStore', () => ({
 }))
 
 // Mock useMultiPathProgress
-const mockCourseProgressMap = new Map<string, import('@/app/hooks/usePathProgress').CourseProgressInfo>()
-mockCourseProgressMap.set('course-1', { courseId: 'course-1', completionPct: 40, completedLessons: 2, totalLessons: 5 } as CourseProgressInfo)
-mockCourseProgressMap.set('course-2', { courseId: 'course-2', completionPct: 0, completedLessons: 0, totalLessons: 3 } as CourseProgressInfo)
-mockCourseProgressMap.set('course-3', { courseId: 'course-3', completionPct: 0, completedLessons: 0, totalLessons: 0 } as CourseProgressInfo)
+const mockCourseProgressMap = new Map<
+  string,
+  import('@/app/hooks/usePathProgress').CourseProgressInfo
+>()
+mockCourseProgressMap.set('course-1', {
+  courseId: 'course-1',
+  completionPct: 40,
+  completedLessons: 2,
+  totalLessons: 5,
+} as CourseProgressInfo)
+mockCourseProgressMap.set('course-2', {
+  courseId: 'course-2',
+  completionPct: 0,
+  completedLessons: 0,
+  totalLessons: 3,
+} as CourseProgressInfo)
+mockCourseProgressMap.set('course-3', {
+  courseId: 'course-3',
+  completionPct: 0,
+  completedLessons: 0,
+  totalLessons: 0,
+} as CourseProgressInfo)
 
 const mockPathProgressSummary: PathProgressSummary = {
   completionPct: 20,
@@ -217,9 +235,24 @@ describe('useNextBestCourse', () => {
   it('returns the first unstarted entry when no courses are in progress', async () => {
     // Set all course-1 progress to 100% (completed), course-2 still 0%
     const completedProgressMap = new Map<string, CourseProgressInfo>()
-    completedProgressMap.set('course-1', { courseId: 'course-1', completionPct: 100, completedLessons: 5, totalLessons: 5 } as CourseProgressInfo)
-    completedProgressMap.set('course-2', { courseId: 'course-2', completionPct: 0, completedLessons: 0, totalLessons: 3 } as CourseProgressInfo)
-    completedProgressMap.set('course-3', { courseId: 'course-3', completionPct: 0, completedLessons: 0, totalLessons: 0 } as CourseProgressInfo)
+    completedProgressMap.set('course-1', {
+      courseId: 'course-1',
+      completionPct: 100,
+      completedLessons: 5,
+      totalLessons: 5,
+    } as CourseProgressInfo)
+    completedProgressMap.set('course-2', {
+      courseId: 'course-2',
+      completionPct: 0,
+      completedLessons: 0,
+      totalLessons: 3,
+    } as CourseProgressInfo)
+    completedProgressMap.set('course-3', {
+      courseId: 'course-3',
+      completionPct: 0,
+      completedLessons: 0,
+      totalLessons: 0,
+    } as CourseProgressInfo)
 
     const completedSummary: PathProgressSummary = {
       ...mockPathProgressSummary,
@@ -245,9 +278,24 @@ describe('useNextBestCourse', () => {
 
   it('returns complete action when all courses are at 100%', async () => {
     const allCompleteProgress = new Map<string, CourseProgressInfo>()
-    allCompleteProgress.set('course-1', { courseId: 'course-1', completionPct: 100, completedLessons: 5, totalLessons: 5 } as CourseProgressInfo)
-    allCompleteProgress.set('course-2', { courseId: 'course-2', completionPct: 100, completedLessons: 3, totalLessons: 3 } as CourseProgressInfo)
-    allCompleteProgress.set('course-3', { courseId: 'course-3', completionPct: 100, completedLessons: 0, totalLessons: 0 } as CourseProgressInfo)
+    allCompleteProgress.set('course-1', {
+      courseId: 'course-1',
+      completionPct: 100,
+      completedLessons: 5,
+      totalLessons: 5,
+    } as CourseProgressInfo)
+    allCompleteProgress.set('course-2', {
+      courseId: 'course-2',
+      completionPct: 100,
+      completedLessons: 3,
+      totalLessons: 3,
+    } as CourseProgressInfo)
+    allCompleteProgress.set('course-3', {
+      courseId: 'course-3',
+      completionPct: 100,
+      completedLessons: 0,
+      totalLessons: 0,
+    } as CourseProgressInfo)
 
     const completeSummary: PathProgressSummary = {
       ...mockPathProgressSummary,
@@ -294,7 +342,12 @@ describe('useNextBestCourse', () => {
 
   it('handles single course path — returns resume for in-progress', async () => {
     const singleProgressMap = new Map<string, CourseProgressInfo>()
-    singleProgressMap.set('course-1', { courseId: 'course-1', completionPct: 50, completedLessons: 2, totalLessons: 5 } as CourseProgressInfo)
+    singleProgressMap.set('course-1', {
+      courseId: 'course-1',
+      completionPct: 50,
+      completedLessons: 2,
+      totalLessons: 5,
+    } as CourseProgressInfo)
 
     const singleSummary: PathProgressSummary = {
       ...mockPathProgressSummary,
@@ -317,7 +370,12 @@ describe('useNextBestCourse', () => {
 
   it('handles single course path — returns complete for finished', async () => {
     const finishedProgress = new Map<string, CourseProgressInfo>()
-    finishedProgress.set('course-1', { courseId: 'course-1', completionPct: 100, completedLessons: 5, totalLessons: 5 } as CourseProgressInfo)
+    finishedProgress.set('course-1', {
+      courseId: 'course-1',
+      completionPct: 100,
+      completedLessons: 5,
+      totalLessons: 5,
+    } as CourseProgressInfo)
 
     const finishedSummary: PathProgressSummary = {
       ...mockPathProgressSummary,
@@ -375,9 +433,24 @@ describe('useNextBestCourse', () => {
 
     // Simulate progress change: course-1 completes, course-2 is now the target
     const updatedProgress = new Map<string, CourseProgressInfo>()
-    updatedProgress.set('course-1', { courseId: 'course-1', completionPct: 100, completedLessons: 5, totalLessons: 5 } as CourseProgressInfo)
-    updatedProgress.set('course-2', { courseId: 'course-2', completionPct: 0, completedLessons: 0, totalLessons: 3 } as CourseProgressInfo)
-    updatedProgress.set('course-3', { courseId: 'course-3', completionPct: 0, completedLessons: 0, totalLessons: 0 } as CourseProgressInfo)
+    updatedProgress.set('course-1', {
+      courseId: 'course-1',
+      completionPct: 100,
+      completedLessons: 5,
+      totalLessons: 5,
+    } as CourseProgressInfo)
+    updatedProgress.set('course-2', {
+      courseId: 'course-2',
+      completionPct: 0,
+      completedLessons: 0,
+      totalLessons: 3,
+    } as CourseProgressInfo)
+    updatedProgress.set('course-3', {
+      courseId: 'course-3',
+      completionPct: 0,
+      completedLessons: 0,
+      totalLessons: 0,
+    } as CourseProgressInfo)
 
     const updatedSummary: PathProgressSummary = {
       ...mockPathProgressSummary,

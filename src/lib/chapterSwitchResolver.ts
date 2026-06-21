@@ -242,11 +242,7 @@ export function resolveAudioPositionFromEpub(
     return null
   }
 
-  const chapterPct = clamp(
-    (currentPct - chapterStartPct) / (chapterEndPct - chapterStartPct),
-    0,
-    1
-  )
+  const chapterPct = clamp((currentPct - chapterStartPct) / (chapterEndPct - chapterStartPct), 0, 1)
 
   const audioStart = audioChapterStartSeconds(audioBook, entry.audioChapterIndex)
   const audioEnd = audioChapterEndSeconds(audioBook, entry.audioChapterIndex, audioElementDuration)

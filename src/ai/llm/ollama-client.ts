@@ -236,14 +236,11 @@ export class OllamaLLMClient extends BaseLLMClient {
         if (accessToken) {
           headers['Authorization'] = `Bearer ${accessToken}`
         }
-        response = await fetch(
-          apiUrl('ai-ollama/tags', { serverUrl: normalizedUrl }),
-          {
-            method: 'GET',
-            headers,
-            signal: AbortSignal.timeout(15_000),
-          }
-        )
+        response = await fetch(apiUrl('ai-ollama/tags', { serverUrl: normalizedUrl }), {
+          method: 'GET',
+          headers,
+          signal: AbortSignal.timeout(15_000),
+        })
       }
 
       if (!response.ok) {

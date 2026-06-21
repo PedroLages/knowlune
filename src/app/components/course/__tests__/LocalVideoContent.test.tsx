@@ -62,7 +62,9 @@ vi.mock('@/app/hooks/useCaptionLoader', () => ({
 vi.mock('@/lib/bookmarks', () => ({
   addBookmark: vi.fn().mockResolvedValue(undefined),
   getLessonBookmarks: vi.fn().mockResolvedValue([]),
-  formatBookmarkTimestamp: vi.fn((s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`),
+  formatBookmarkTimestamp: vi.fn(
+    (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`
+  ),
 }))
 
 // Mock videoStoryboard utilities

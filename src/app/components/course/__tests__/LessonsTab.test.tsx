@@ -13,7 +13,11 @@ beforeAll(() => {
     ) => void
   }
 })
-import { LessonsTab, formatLessonDuration, LESSON_SEARCH_THRESHOLD } from '@/app/components/course/tabs/LessonsTab'
+import {
+  LessonsTab,
+  formatLessonDuration,
+  LESSON_SEARCH_THRESHOLD,
+} from '@/app/components/course/tabs/LessonsTab'
 import { useContentProgressStore } from '@/stores/useContentProgressStore'
 import type { CourseAdapter, LessonItem, MaterialGroup } from '@/lib/courseAdapter'
 
@@ -173,7 +177,12 @@ describe('formatLessonDuration', () => {
 describe('MaterialGroupRow - companion PDFs', () => {
   it('auto-expands groups with companion materials on first load', async () => {
     const video = makeLesson({ id: 'vid-1', title: 'Video Lesson', type: 'video' })
-    const pdf = makeLesson({ id: 'pdf-1', title: 'Companion PDF', type: 'pdf', duration: undefined })
+    const pdf = makeLesson({
+      id: 'pdf-1',
+      title: 'Companion PDF',
+      type: 'pdf',
+      duration: undefined,
+    })
     const adapter = makeAdapter([makeGroup(video, [pdf])])
 
     render(
@@ -220,14 +229,17 @@ describe('MaterialGroupRow - companion PDFs', () => {
     await screen.findByText('Solo Video')
 
     // No collapse toggle for groups without materials
-    expect(
-      screen.queryByTestId('materials-collapse-vid-1')
-    ).toBeNull()
+    expect(screen.queryByTestId('materials-collapse-vid-1')).toBeNull()
   })
 
   it('allows manual collapse of an auto-expanded material group', async () => {
     const video = makeLesson({ id: 'vid-1', title: 'Video Lesson', type: 'video' })
-    const pdf = makeLesson({ id: 'pdf-1', title: 'Companion PDF', type: 'pdf', duration: undefined })
+    const pdf = makeLesson({
+      id: 'pdf-1',
+      title: 'Companion PDF',
+      type: 'pdf',
+      duration: undefined,
+    })
     const adapter = makeAdapter([makeGroup(video, [pdf])])
 
     render(
@@ -302,9 +314,7 @@ describe('Standalone PDFs (R4 regression)', () => {
     )
 
     await screen.findByText('Solo PDF')
-    expect(
-      screen.queryByTestId('materials-collapse-standalone-pdf')
-    ).toBeNull()
+    expect(screen.queryByTestId('materials-collapse-standalone-pdf')).toBeNull()
   })
 })
 

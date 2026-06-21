@@ -183,13 +183,10 @@ export function DashboardCustomizer({
   // E66-S01: Move Up/Down focus refs and handlers (WCAG 2.5.7)
   const moveUpRefs = useRef<Map<DashboardSectionId, HTMLButtonElement | null>>(new Map())
   const moveDownRefs = useRef<Map<DashboardSectionId, HTMLButtonElement | null>>(new Map())
-  const registerMoveUpRef = useCallback(
-    (id: DashboardSectionId, el: HTMLButtonElement | null) => {
-      if (el) moveUpRefs.current.set(id, el)
-      else moveUpRefs.current.delete(id)
-    },
-    []
-  )
+  const registerMoveUpRef = useCallback((id: DashboardSectionId, el: HTMLButtonElement | null) => {
+    if (el) moveUpRefs.current.set(id, el)
+    else moveUpRefs.current.delete(id)
+  }, [])
   const registerMoveDownRef = useCallback(
     (id: DashboardSectionId, el: HTMLButtonElement | null) => {
       if (el) moveDownRefs.current.set(id, el)

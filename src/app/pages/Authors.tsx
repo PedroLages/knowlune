@@ -279,7 +279,10 @@ function AuthorCard({
             {/* Avatar */}
             <Avatar className="size-20 mb-3 ring-2 ring-border/50 group-hover:ring-brand/30 transition-all">
               <AvatarImage {...getAvatarSrc(author.avatar, 80)} alt={author.name} />
-              <AvatarFallback className="text-lg font-semibold bg-brand/10 text-brand" aria-hidden="true">
+              <AvatarFallback
+                className="text-lg font-semibold bg-brand/10 text-brand"
+                aria-hidden="true"
+              >
                 {getInitials(author.name)}
               </AvatarFallback>
             </Avatar>
@@ -321,7 +324,12 @@ function AuthorCard({
               </div>
             )}
             {/* Stats Row — pushed to bottom via flex-grow when no specialties */}
-            <div className={cn('flex items-center justify-center gap-6 text-sm text-muted-foreground', author.specialties.length === 0 && 'mt-auto')}>
+            <div
+              className={cn(
+                'flex items-center justify-center gap-6 text-sm text-muted-foreground',
+                author.specialties.length === 0 && 'mt-auto'
+              )}
+            >
               <div className="flex items-center gap-1.5" data-testid="author-course-count">
                 <BookOpen className="size-4 text-brand" aria-hidden="true" />
                 <span className="tabular-nums font-medium">{author.courseCount}</span>
@@ -415,7 +423,10 @@ function FeaturedAuthorProfile({
             {/* Large Avatar */}
             <Avatar className="size-24 sm:size-32 shrink-0 ring-2 ring-border/50 self-center sm:self-start">
               <AvatarImage {...getAvatarSrc(author.avatar, 128)} alt={author.name} />
-              <AvatarFallback className="text-2xl font-semibold bg-brand/10 text-brand" aria-hidden="true">
+              <AvatarFallback
+                className="text-2xl font-semibold bg-brand/10 text-brand"
+                aria-hidden="true"
+              >
                 {getInitials(author.name)}
               </AvatarFallback>
             </Avatar>

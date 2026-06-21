@@ -112,9 +112,7 @@ function LessonDrawerContent({
               data-testid="drawer-completion-toggle"
               className={cn(
                 'flex items-center gap-3 px-4 py-3 rounded-xl transition-colors duration-150 w-full',
-                isCompleted
-                  ? 'text-success'
-                  : 'text-foreground hover:bg-accent active:bg-accent'
+                isCompleted ? 'text-success' : 'text-foreground hover:bg-accent active:bg-accent'
               )}
             >
               {isCompleted ? (
@@ -211,7 +209,12 @@ function LessonDrawerContent({
   )
 }
 
-export function BottomNav({ mode = 'standard', courseId, lessonId, onFeedbackClick }: BottomNavProps = {}) {
+export function BottomNav({
+  mode = 'standard',
+  courseId,
+  lessonId,
+  onFeedbackClick,
+}: BottomNavProps = {}) {
   const location = useLocation()
   const [moreOpen, setMoreOpen] = useState(false)
   const { isVisible } = useProgressiveDisclosure()
@@ -353,7 +356,12 @@ export function BottomNav({ mode = 'standard', courseId, lessonId, onFeedbackCli
               {/* Primary Navigation Items */}
               {primaryNav.map(item => {
                 const Icon = item.icon
-                const active = resolveNavActive(item, location.pathname, location.search, location.state)
+                const active = resolveNavActive(
+                  item,
+                  location.pathname,
+                  location.search,
+                  location.state
+                )
                 const href = item.tab ? `${item.path}?tab=${item.tab}` : item.path
 
                 return (
@@ -420,7 +428,12 @@ export function BottomNav({ mode = 'standard', courseId, lessonId, onFeedbackCli
                       <ul className="space-y-1">
                         {items.map(item => {
                           const Icon = item.icon
-                          const active = resolveNavActive(item, location.pathname, location.search, location.state)
+                          const active = resolveNavActive(
+                            item,
+                            location.pathname,
+                            location.search,
+                            location.state
+                          )
                           const href = item.tab ? `${item.path}?tab=${item.tab}` : item.path
                           return (
                             <li key={item.tab ? `${item.path}?tab=${item.tab}` : item.path}>
@@ -451,7 +464,12 @@ export function BottomNav({ mode = 'standard', courseId, lessonId, onFeedbackCli
                     {(() => {
                       const item = settingsItem
                       const Icon = item.icon
-                      const active = resolveNavActive(item, location.pathname, location.search, location.state)
+                      const active = resolveNavActive(
+                        item,
+                        location.pathname,
+                        location.search,
+                        location.state
+                      )
                       const href = item.path
                       return (
                         <li key={href}>

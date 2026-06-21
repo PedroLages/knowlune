@@ -29,13 +29,7 @@ describe('VirtualizedCoursesList (E99-S05)', () => {
   describe('bypass below threshold', () => {
     it('renders all list rows in a plain <ul> when courses.length < 30', () => {
       const courses = makeCourses(5)
-      render(
-        <VirtualizedCoursesList
-          courses={courses}
-          viewMode="list"
-          renderItem={renderRow}
-        />
-      )
+      render(<VirtualizedCoursesList courses={courses} viewMode="list" renderItem={renderRow} />)
 
       const list = screen.getByRole('list', { name: '5 courses' })
       expect(list.tagName).toBe('UL')
@@ -62,11 +56,7 @@ describe('VirtualizedCoursesList (E99-S05)', () => {
 
     it('uses singular "course" label when count is 1', () => {
       render(
-        <VirtualizedCoursesList
-          courses={makeCourses(1)}
-          viewMode="list"
-          renderItem={renderRow}
-        />
+        <VirtualizedCoursesList courses={makeCourses(1)} viewMode="list" renderItem={renderRow} />
       )
 
       expect(screen.getByRole('list', { name: '1 course' })).toBeInTheDocument()
@@ -74,11 +64,7 @@ describe('VirtualizedCoursesList (E99-S05)', () => {
 
     it('exactly 29 courses still bypasses', () => {
       render(
-        <VirtualizedCoursesList
-          courses={makeCourses(29)}
-          viewMode="list"
-          renderItem={renderRow}
-        />
+        <VirtualizedCoursesList courses={makeCourses(29)} viewMode="list" renderItem={renderRow} />
       )
 
       // All 29 rows in DOM
@@ -89,13 +75,7 @@ describe('VirtualizedCoursesList (E99-S05)', () => {
   describe('virtualization at or above threshold', () => {
     it('exactly 30 courses activates virtualized list mode', () => {
       const courses = makeCourses(30)
-      render(
-        <VirtualizedCoursesList
-          courses={courses}
-          viewMode="list"
-          renderItem={renderRow}
-        />
-      )
+      render(<VirtualizedCoursesList courses={courses} viewMode="list" renderItem={renderRow} />)
 
       // The container is a focusable scroll container with role=list
       const container = screen.getByRole('list', { name: '30 courses' })
@@ -106,13 +86,7 @@ describe('VirtualizedCoursesList (E99-S05)', () => {
 
     it('100 courses in list mode does not mount all rows (only visible window)', () => {
       const courses = makeCourses(100)
-      render(
-        <VirtualizedCoursesList
-          courses={courses}
-          viewMode="list"
-          renderItem={renderRow}
-        />
-      )
+      render(<VirtualizedCoursesList courses={courses} viewMode="list" renderItem={renderRow} />)
 
       // jsdom has no real scroll viewport, so virtualizer renders zero or a
       // tiny window — the invariant we care about is "<<100", which proves
@@ -143,13 +117,7 @@ describe('VirtualizedCoursesList (E99-S05)', () => {
 
     it('renders empty container when courses array is empty', () => {
       // Empty arrays bypass via the threshold path
-      render(
-        <VirtualizedCoursesList
-          courses={[]}
-          viewMode="list"
-          renderItem={renderRow}
-        />
-      )
+      render(<VirtualizedCoursesList courses={[]} viewMode="list" renderItem={renderRow} />)
 
       const list = screen.getByRole('list', { name: '0 courses' })
       expect(list).toBeInTheDocument()
@@ -160,13 +128,7 @@ describe('VirtualizedCoursesList (E99-S05)', () => {
   describe('ARIA semantics', () => {
     it('each rendered row carries aria-posinset and aria-setsize', () => {
       const courses = makeCourses(5)
-      render(
-        <VirtualizedCoursesList
-          courses={courses}
-          viewMode="list"
-          renderItem={renderRow}
-        />
-      )
+      render(<VirtualizedCoursesList courses={courses} viewMode="list" renderItem={renderRow} />)
 
       const items = screen.getAllByRole('listitem')
       expect(items[0]).toHaveAttribute('aria-posinset', '1')

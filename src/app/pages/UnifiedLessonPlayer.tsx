@@ -151,16 +151,16 @@ export function UnifiedLessonPlayer() {
   const noteStoreNotes = useNoteStore(s => s.notes)
   useEffect(() => {
     if (!courseId || !lessonId) return
-    const hasContent = noteStoreNotes.some(
-      n => n.courseId === courseId && n.videoId === lessonId
-    )
+    const hasContent = noteStoreNotes.some(n => n.courseId === courseId && n.videoId === lessonId)
     useLessonChromeStore.getState().setHasNotes(hasContent)
   }, [noteStoreNotes, courseId, lessonId])
   const notesPanelRef = usePanelRef()
   const videoPlayerRef = useRef<VideoPlayerHandle>(null)
   const titleRef = useRef<HTMLHeadingElement>(null)
   const videoContainerRef = useRef<HTMLDivElement>(null)
-  const [floatingPanelPortalTarget, setFloatingPanelPortalTarget] = useState<HTMLDivElement | null>(null)
+  const [floatingPanelPortalTarget, setFloatingPanelPortalTarget] = useState<HTMLDivElement | null>(
+    null
+  )
   const floatingPanelPortalRef = useCallback((node: HTMLDivElement | null) => {
     if (node) setFloatingPanelPortalTarget(node)
   }, [])
@@ -378,7 +378,7 @@ export function UnifiedLessonPlayer() {
       pathName: pathContext.pathName,
       courseName,
       isLastInPath,
-      nextCourseId: !isLastInPath ? nextBest.entry?.courseId ?? null : null,
+      nextCourseId: !isLastInPath ? (nextBest.entry?.courseId ?? null) : null,
       nextTargetLessonId: !isLastInPath ? nextBest.targetLessonId : null,
       pathId: pathContext.pathId,
     }
@@ -459,28 +459,28 @@ export function UnifiedLessonPlayer() {
           )}
           data-testid="video-container"
         >
-        <LessonContentRenderer
-          ref={videoPlayerRef}
-          courseId={courseId!}
-          lessonId={lessonId!}
-          lessonTypeResolved={state.lessonTypeResolved}
-          isPdf={state.isPdf}
-          sourceType={source}
-          onEnded={completion.handleVideoEnded}
-          onAutoComplete={completion.handleYouTubeAutoComplete}
-          onTimeUpdate={state.handleTimeUpdate}
-          seekToTime={state.seekToTime}
-          onSeekComplete={state.handleSeekComplete}
-          onFocusNotes={handleFocusNotes}
-          onVisibilityChange={miniPlayer.handleVideoVisibilityChange}
-          onPlayStateChange={handlePlayStateChange}
-          onBlobUrlReady={state.setLocalVideoBlobUrl}
-          theaterMode={isTheater}
-          onTheaterModeToggle={toggleTheater}
-          onBookmarkSeek={state.handleTranscriptSeek}
-          autoplay={shouldAutoPlay}
-        />
-      </div>
+          <LessonContentRenderer
+            ref={videoPlayerRef}
+            courseId={courseId!}
+            lessonId={lessonId!}
+            lessonTypeResolved={state.lessonTypeResolved}
+            isPdf={state.isPdf}
+            sourceType={source}
+            onEnded={completion.handleVideoEnded}
+            onAutoComplete={completion.handleYouTubeAutoComplete}
+            onTimeUpdate={state.handleTimeUpdate}
+            seekToTime={state.seekToTime}
+            onSeekComplete={state.handleSeekComplete}
+            onFocusNotes={handleFocusNotes}
+            onVisibilityChange={miniPlayer.handleVideoVisibilityChange}
+            onPlayStateChange={handlePlayStateChange}
+            onBlobUrlReady={state.setLocalVideoBlobUrl}
+            theaterMode={isTheater}
+            onTheaterModeToggle={toggleTheater}
+            onBookmarkSeek={state.handleTranscriptSeek}
+            autoplay={shouldAutoPlay}
+          />
+        </div>
 
         {/* Portal target for FloatingNotesPanel — sibling to video container,
             positioned absolutely over it. Rendered outside overflow-hidden

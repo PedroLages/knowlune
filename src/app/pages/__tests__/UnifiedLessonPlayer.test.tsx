@@ -76,9 +76,11 @@ vi.mock('@/stores/useCourseImportStore', () => ({
 
 const mockAdapter = {
   getLessons: vi.fn().mockResolvedValue(MOCK_LESSONS),
-  getLesson: vi.fn().mockImplementation((id: string) =>
-    Promise.resolve(MOCK_LESSONS.find(l => l.id === id) ?? null)
-  ),
+  getLesson: vi
+    .fn()
+    .mockImplementation((id: string) =>
+      Promise.resolve(MOCK_LESSONS.find(l => l.id === id) ?? null)
+    ),
   getSource: vi.fn().mockReturnValue('local'),
   getCapabilities: vi.fn().mockReturnValue({
     hasVideo: true,
@@ -168,11 +170,7 @@ vi.mock('@/app/components/course/LocalVideoContent', () => ({
     onPlayStateChange?: (playing: boolean) => void
   }) => (
     <div data-testid="local-video">
-      <button
-        type="button"
-        data-testid="trigger-playing"
-        onClick={() => onPlayStateChange?.(true)}
-      >
+      <button type="button" data-testid="trigger-playing" onClick={() => onPlayStateChange?.(true)}>
         Play
       </button>
       <button type="button" data-testid="trigger-ended" onClick={onEnded}>
@@ -184,11 +182,7 @@ vi.mock('@/app/components/course/LocalVideoContent', () => ({
 vi.mock('@/app/components/course/YouTubeVideoContent', () => ({
   YouTubeVideoContent: ({ onAutoComplete }: { onAutoComplete?: () => void }) => (
     <div data-testid="youtube-content">
-      <button
-        type="button"
-        data-testid="trigger-yt-complete"
-        onClick={onAutoComplete}
-      >
+      <button type="button" data-testid="trigger-yt-complete" onClick={onAutoComplete}>
         YT Auto Complete
       </button>
     </div>
@@ -414,12 +408,7 @@ describe('UnifiedLessonPlayer — E54-S01 callbacks', () => {
       screen.getByTestId('trigger-playing').click()
     })
 
-    expect(mockSetItemStatus).not.toHaveBeenCalledWith(
-      'test-course',
-      'lesson-1',
-      'in-progress',
-      []
-    )
+    expect(mockSetItemStatus).not.toHaveBeenCalledWith('test-course', 'lesson-1', 'in-progress', [])
   })
 
   it('calls exitFullscreenIfActive when local video ends (handleVideoEnded)', async () => {

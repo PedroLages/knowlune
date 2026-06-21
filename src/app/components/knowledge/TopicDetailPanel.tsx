@@ -76,9 +76,8 @@ export function TopicDetailPanel({ topic, onClose }: TopicDetailPanelProps) {
   const { scoreResult, daysSinceLastEngagement, suggestedActions } = topic
   const { score, tier, factors, effectiveWeights, confidence } = scoreResult
 
-  const decayInfo = topic.aggregateRetention !== null
-    ? formatDecayLabel(topic.predictedDecayDate)
-    : null
+  const decayInfo =
+    topic.aggregateRetention !== null ? formatDecayLabel(topic.predictedDecayDate) : null
 
   function handleAction(action: SuggestedAction) {
     const courseId = topic.courseIds[0]
@@ -135,7 +134,10 @@ export function TopicDetailPanel({ topic, onClose }: TopicDetailPanelProps) {
             </Badge>
           )}
           {tier === 'strong' && (
-            <Badge variant="outline" className="text-xs font-semibold uppercase tracking-wider border-success text-success">
+            <Badge
+              variant="outline"
+              className="text-xs font-semibold uppercase tracking-wider border-success text-success"
+            >
               Solid Mastery
             </Badge>
           )}
@@ -149,11 +151,7 @@ export function TopicDetailPanel({ topic, onClose }: TopicDetailPanelProps) {
           </div>
 
           <div className="space-y-1.5">
-            <ScoreRow
-              label="Quiz score"
-              weight={effectiveWeights.quiz}
-              value={factors.quizScore}
-            />
+            <ScoreRow label="Quiz score" weight={effectiveWeights.quiz} value={factors.quizScore} />
             <ScoreRow
               label="Flashcard retention"
               weight={effectiveWeights.flashcard}
@@ -247,8 +245,7 @@ function ScoreRow({
   return (
     <div className="flex justify-between text-xs">
       <span className="text-muted-foreground">
-        {label}{' '}
-        <span className="opacity-60">({formatWeight(weight)})</span>
+        {label} <span className="opacity-60">({formatWeight(weight)})</span>
       </span>
       <span className="font-medium">{formatPercent(value)}</span>
     </div>

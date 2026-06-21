@@ -39,7 +39,11 @@ import { Card, CardContent } from '@/app/components/ui/card'
 import { Skeleton } from '@/app/components/ui/skeleton'
 import { cn } from '@/app/components/ui/utils'
 import { StudyScheduleEditor } from '@/app/components/figma/StudyScheduleEditor'
-import { StatusCircle, EntryActionButton, LessonRow } from '@/app/components/learning-path/TimelinePrimitives'
+import {
+  StatusCircle,
+  EntryActionButton,
+  LessonRow,
+} from '@/app/components/learning-path/TimelinePrimitives'
 import { formatClockDuration as formatDuration } from '@/lib/formatDuration'
 import { buildGroupedCurriculum } from '@/lib/curriculumGrouping'
 import { getInitials } from '@/lib/textUtils'
@@ -331,8 +335,8 @@ export function CourseOverview() {
           >
             {course.name}
           </motion.h1>
-          {authorName && (
-            authorData?.id ? (
+          {authorName &&
+            (authorData?.id ? (
               <Link
                 to={`/authors/${authorData.id}`}
                 className="inline-flex items-center justify-center gap-2.5 text-lg text-muted-foreground font-light hover:text-foreground transition-colors"
@@ -355,8 +359,7 @@ export function CourseOverview() {
                 </Avatar>
                 <p className="text-lg text-muted-foreground font-light">By {authorName}</p>
               </div>
-            )
-          )}
+            ))}
 
           {ctaLabel && ctaLessonId && (
             <motion.div
@@ -526,9 +529,11 @@ export function CourseOverview() {
                 moduleNum++
                 const moduleStatus = moduleStatuses[groupIndex]
                 const timelineStatus =
-                  moduleStatus === 'completed' ? 'completed' as const
-                  : moduleStatus === 'active' ? 'in-progress' as const
-                  : 'available' as const
+                  moduleStatus === 'completed'
+                    ? ('completed' as const)
+                    : moduleStatus === 'active'
+                      ? ('in-progress' as const)
+                      : ('available' as const)
                 const groupTitle =
                   group.title ||
                   (groupedContent.length > 1 ? `Section ${moduleNum}` : 'All Lessons')
@@ -539,7 +544,11 @@ export function CourseOverview() {
                 const groupDuration = group.videos.reduce((s, v) => s + (v.duration || 0), 0)
                 const isExpanded = expandedModules.has(groupIndex)
                 const ariaStatusLabel =
-                  moduleStatus === 'completed' ? 'Completed' : moduleStatus === 'active' ? 'Up Next' : 'Open'
+                  moduleStatus === 'completed'
+                    ? 'Completed'
+                    : moduleStatus === 'active'
+                      ? 'Up Next'
+                      : 'Open'
 
                 return (
                   <div key={`${group.title}-${groupIndex}`} className="flex gap-3">
@@ -582,16 +591,25 @@ export function CourseOverview() {
                                 <span
                                   className={cn(
                                     'px-2 py-0.5 text-[10px] font-bold rounded-full uppercase tracking-wider inline-flex items-center gap-1',
-                                    timelineStatus === 'completed' && 'bg-success-soft text-success',
-                                    timelineStatus === 'in-progress' && 'bg-brand-soft text-brand-soft-foreground',
-                                    timelineStatus === 'available' && 'bg-muted text-muted-foreground'
+                                    timelineStatus === 'completed' &&
+                                      'bg-success-soft text-success',
+                                    timelineStatus === 'in-progress' &&
+                                      'bg-brand-soft text-brand-soft-foreground',
+                                    timelineStatus === 'available' &&
+                                      'bg-muted text-muted-foreground'
                                   )}
                                 >
-                                  {timelineStatus === 'completed' && <Check className="size-3" aria-hidden="true" />}
+                                  {timelineStatus === 'completed' && (
+                                    <Check className="size-3" aria-hidden="true" />
+                                  )}
                                   {timelineStatus === 'in-progress' && (
                                     <span className="size-1.5 rounded-full bg-brand-soft-foreground animate-pulse" />
                                   )}
-                                  {moduleStatus === 'completed' ? 'Completed' : moduleStatus === 'active' ? 'Up Next' : 'Open'}
+                                  {moduleStatus === 'completed'
+                                    ? 'Completed'
+                                    : moduleStatus === 'active'
+                                      ? 'Up Next'
+                                      : 'Open'}
                                 </span>
                               </div>
 
@@ -603,7 +621,8 @@ export function CourseOverview() {
                                 <div className="flex items-center gap-4 text-sm text-muted-foreground font-medium">
                                   <span className="flex items-center gap-1.5">
                                     <Video className="size-4" aria-hidden="true" />
-                                    {groupCompletedCount} / {groupLessonCount} {groupLessonCount === 1 ? 'lesson' : 'lessons'}
+                                    {groupCompletedCount} / {groupLessonCount}{' '}
+                                    {groupLessonCount === 1 ? 'lesson' : 'lessons'}
                                   </span>
                                   {groupDuration > 0 && (
                                     <span className="flex items-center gap-1.5">
@@ -617,9 +636,12 @@ export function CourseOverview() {
                                     status={timelineStatus}
                                     onClick={() => {
                                       // Navigate to the first incomplete lesson
-                                      const firstIncomplete = group.videos.find(
-                                        v => (progressMap.get(v.id)?.completionPercentage ?? 0) < COMPLETION_THRESHOLD
-                                      ) ?? group.videos[0]
+                                      const firstIncomplete =
+                                        group.videos.find(
+                                          v =>
+                                            (progressMap.get(v.id)?.completionPercentage ?? 0) <
+                                            COMPLETION_THRESHOLD
+                                        ) ?? group.videos[0]
                                       navigate(`/courses/${courseId}/lessons/${firstIncomplete.id}`)
                                     }}
                                   />
@@ -639,7 +661,9 @@ export function CourseOverview() {
                                   <div
                                     className={cn(
                                       'h-full transition-all duration-500',
-                                      timelineStatus === 'completed' ? 'bg-success' : 'bg-accent-violet'
+                                      timelineStatus === 'completed'
+                                        ? 'bg-success'
+                                        : 'bg-accent-violet'
                                     )}
                                     style={{
                                       width: `${(groupCompletedCount / groupLessonCount) * 100}%`,
@@ -657,7 +681,8 @@ export function CourseOverview() {
                             <div className="px-6 pb-4 pt-3 space-y-3">
                               {group.videos.map(video => {
                                 const prog = progressMap.get(video.id)
-                                const isVideoCompleted = (prog?.completionPercentage ?? 0) >= COMPLETION_THRESHOLD
+                                const isVideoCompleted =
+                                  (prog?.completionPercentage ?? 0) >= COMPLETION_THRESHOLD
                                 return (
                                   <LessonRow
                                     key={video.id}

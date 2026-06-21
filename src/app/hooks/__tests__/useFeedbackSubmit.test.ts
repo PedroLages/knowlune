@@ -8,8 +8,7 @@ const FIXED_DATE = new Date('2026-04-21T10:00:00Z')
 
 // Mock the auth store
 vi.mock('@/stores/useAuthStore', () => ({
-  useAuthStore: (selector: (s: { user: null }) => unknown) =>
-    selector({ user: null }),
+  useAuthStore: (selector: (s: { user: null }) => unknown) => selector({ user: null }),
 }))
 
 const bugFields: FeedbackFormFields = {
@@ -78,10 +77,7 @@ describe('useFeedbackSubmit', () => {
 
   it('transitions to success when token present and API returns 201', async () => {
     vi.stubEnv('VITE_GITHUB_FEEDBACK_TOKEN', 'test-token')
-    vi.stubGlobal(
-      'fetch',
-      vi.fn().mockResolvedValue({ ok: true, status: 201 } as Response)
-    )
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, status: 201 } as Response))
 
     const { result } = renderHook(() => useFeedbackSubmit())
 
@@ -95,10 +91,7 @@ describe('useFeedbackSubmit', () => {
 
   it('transitions to error with fallback text when API fails', async () => {
     vi.stubEnv('VITE_GITHUB_FEEDBACK_TOKEN', 'test-token')
-    vi.stubGlobal(
-      'fetch',
-      vi.fn().mockResolvedValue({ ok: false, status: 500 } as Response)
-    )
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 500 } as Response))
 
     const { result } = renderHook(() => useFeedbackSubmit())
 

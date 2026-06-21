@@ -45,9 +45,7 @@ export function PathProgressRing({
 }: PathProgressRingProps) {
   // Resolve config: numeric size computes directly, string preset uses SIZES lookup
   const config =
-    typeof size === 'number'
-      ? { size, stroke: strokeWidth ?? 3, fontSize: 'text-xs' }
-      : SIZES[size]
+    typeof size === 'number' ? { size, stroke: strokeWidth ?? 3, fontSize: 'text-xs' } : SIZES[size]
   const radius = (config.size - config.stroke * 2) / 2
   const circumference = 2 * Math.PI * radius
   const offset = circumference - (Math.min(percentage, 100) / 100) * circumference
@@ -55,11 +53,13 @@ export function PathProgressRing({
   const isCompleted = percentage >= 100
 
   // Pick stroke color: explicit strokeColor prop overrides semantic logic
-  const strokeClass = strokeColor ?? (isCompleted
-    ? 'stroke-success'
-    : percentage > 0
-      ? 'stroke-brand'
-      : 'stroke-muted-foreground/30')
+  const strokeClass =
+    strokeColor ??
+    (isCompleted
+      ? 'stroke-success'
+      : percentage > 0
+        ? 'stroke-brand'
+        : 'stroke-muted-foreground/30')
 
   // Use butt linecap for very low percentages to avoid a floating-dot appearance
   const lineCap = percentage > 0 && percentage < 3 ? 'butt' : 'round'
@@ -97,7 +97,12 @@ export function PathProgressRing({
           strokeDasharray={circumference}
           strokeDashoffset={offset}
           strokeLinecap={lineCap}
-          className={cn(strokeClass, 'transition-[stroke-dashoffset]', DURATION_CLASSES[transitionDurationMs as keyof typeof DURATION_CLASSES] ?? 'duration-500')}
+          className={cn(
+            strokeClass,
+            'transition-[stroke-dashoffset]',
+            DURATION_CLASSES[transitionDurationMs as keyof typeof DURATION_CLASSES] ??
+              'duration-500'
+          )}
         />
       </svg>
       {/* Center content */}

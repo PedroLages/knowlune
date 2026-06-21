@@ -386,7 +386,9 @@ describe('PathHeroBanner', () => {
     fireEvent.error(img!)
 
     // After: img removed from DOM
-    expect(document.querySelector('img[src="https://example.com/cover.jpg"]')).not.toBeInTheDocument()
+    expect(
+      document.querySelector('img[src="https://example.com/cover.jpg"]')
+    ).not.toBeInTheDocument()
 
     // Fallback gradient should be present
     const gradientDiv = container.querySelector('.bg-gradient-to-br')
@@ -475,7 +477,11 @@ describe('PathHeroBanner', () => {
     const { rerender } = render(
       <MemoryRouter>
         <PathHeroBanner
-          path={makePath({ name: 'Original', coverImageUrl: url, updatedAt: '2026-01-01T00:00:00Z' })}
+          path={makePath({
+            name: 'Original',
+            coverImageUrl: url,
+            updatedAt: '2026-01-01T00:00:00Z',
+          })}
           courseCount={3}
           completedCount={1}
           pathProgress={makeProgress()}
@@ -493,7 +499,11 @@ describe('PathHeroBanner', () => {
     rerender(
       <MemoryRouter>
         <PathHeroBanner
-          path={makePath({ name: 'Renamed', coverImageUrl: url, updatedAt: '2026-09-09T00:00:00Z' })}
+          path={makePath({
+            name: 'Renamed',
+            coverImageUrl: url,
+            updatedAt: '2026-09-09T00:00:00Z',
+          })}
           courseCount={3}
           completedCount={1}
           pathProgress={makeProgress()}
@@ -523,10 +533,7 @@ describe('PathHeroBanner', () => {
 
   it('renders avatar images in prop order', () => {
     const { container } = renderHero({
-      orderedCourseThumbnails: [
-        'https://example.com/second.jpg',
-        'https://example.com/first.jpg',
-      ],
+      orderedCourseThumbnails: ['https://example.com/second.jpg', 'https://example.com/first.jpg'],
       courseCount: 2,
     })
     const imgs = [...container.querySelectorAll('img')]

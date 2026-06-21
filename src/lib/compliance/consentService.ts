@@ -89,7 +89,7 @@ export async function isGranted(userId: string, purpose: string): Promise<boolea
   if (!VALID_PURPOSES.has(purpose)) {
     console.warn(
       `[consentService] isGranted called with unknown purpose "${purpose}". ` +
-        `Failing closed. Valid purposes: ${[...VALID_PURPOSES].join(', ')}`,
+        `Failing closed. Valid purposes: ${[...VALID_PURPOSES].join(', ')}`
     )
     return false
   }
@@ -108,7 +108,7 @@ export async function isGranted(userId: string, purpose: string): Promise<boolea
   } catch (err) {
     console.error(
       `[consentService] isGranted failed for purpose "${purpose}": ${String(err)}. ` +
-        `Failing closed.`,
+        `Failing closed.`
     )
     return false
   }
@@ -125,9 +125,7 @@ export async function listForUser(userId: string): Promise<UserConsent[]> {
   try {
     return await db.userConsents.where('userId').equals(userId).toArray()
   } catch (err) {
-    console.error(
-      `[consentService] listForUser failed for user "${userId}": ${String(err)}`,
-    )
+    console.error(`[consentService] listForUser failed for user "${userId}": ${String(err)}`)
     return []
   }
 }
@@ -148,7 +146,7 @@ export async function listForUser(userId: string): Promise<UserConsent[]> {
 export async function isGrantedForProvider(
   userId: string,
   purpose: string,
-  providerId: string,
+  providerId: string
 ): Promise<boolean> {
   // First check the base purpose consent using the canonical isGranted guard.
   // This handles unknown-purpose, DB-error, and withdrawn cases in one place.
@@ -166,7 +164,7 @@ export async function isGrantedForProvider(
     // If somehow it's missing now (race condition), fail closed.
     if (!row) {
       console.warn(
-        `[consentService] isGrantedForProvider: row vanished for purpose "${purpose}" after isGranted passed.`,
+        `[consentService] isGrantedForProvider: row vanished for purpose "${purpose}" after isGranted passed.`
       )
       return false
     }
@@ -180,9 +178,7 @@ export async function isGrantedForProvider(
 
     return grantedProvider === providerId
   } catch (err) {
-    console.error(
-      `[consentService] isGrantedForProvider failed: ${String(err)}. Failing closed.`,
-    )
+    console.error(`[consentService] isGrantedForProvider failed: ${String(err)}. Failing closed.`)
     return false
   }
 }

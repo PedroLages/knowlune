@@ -489,7 +489,8 @@ describe('E119-S03: erasure cascade — registry probe and drift guard', () => {
       vi.clearAllMocks()
       mockGetState.mockReturnValue({
         session: {
-          access_token: 'header.' + btoa(JSON.stringify({ iat: Math.floor(Date.now() / 1000) })) + '.sig',
+          access_token:
+            'header.' + btoa(JSON.stringify({ iat: Math.floor(Date.now() / 1000) })) + '.sig',
           token_type: 'bearer',
         },
         user: { id: 'user-1', email: 'test@example.com', created_at: '2026-01-01' },

@@ -157,9 +157,15 @@ export function AIAnalyticsTab() {
   useEffect(() => {
     let ignore = false
     getAIUsageStats('monthly')
-      .then(stats => { if (!ignore) setMonthlyStats(stats) })
-      .catch(err => { console.error('[AIAnalyticsTab] Failed to load monthly stats:', err) })
-    return () => { ignore = true }
+      .then(stats => {
+        if (!ignore) setMonthlyStats(stats)
+      })
+      .catch(err => {
+        console.error('[AIAnalyticsTab] Failed to load monthly stats:', err)
+      })
+    return () => {
+      ignore = true
+    }
   }, [retryCount])
 
   // Period status announcement for screen readers (single region instead of 5)
@@ -237,7 +243,11 @@ export function AIAnalyticsTab() {
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
         <HeroStat label="Total AI Used" value={String(stats?.totalEvents ?? '—')} icon={Zap} />
         <HeroStat label="Most Used" value={mostUsedLabel} icon={Star} />
-        <HeroStat label="This Month" value={String(monthlyStats?.totalEvents ?? '—')} icon={Calendar} />
+        <HeroStat
+          label="This Month"
+          value={String(monthlyStats?.totalEvents ?? '—')}
+          icon={Calendar}
+        />
       </div>
 
       {/* Period toggle */}

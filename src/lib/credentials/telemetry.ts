@@ -25,6 +25,6 @@ export function emitTelemetry(
 ): void {
   // Intentional: using console.info so it shows in prod logs but is visually
   // distinct from warnings/errors. Swap to a real analytics client later.
-   
+
   console.info(`[telemetry] ${event}`, payload)
 }

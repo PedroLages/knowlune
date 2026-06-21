@@ -27,36 +27,24 @@ export function PathMilestoneCard({ challenge }: PathMilestoneCardProps) {
   const isCompleted = !!challenge.completedAt
 
   // Find the highest achieved milestone
-  const highestMilestone = CHALLENGE_MILESTONES.filter(
-    t => progressPercent >= t
-  ).pop()
+  const highestMilestone = CHALLENGE_MILESTONES.filter(t => progressPercent >= t).pop()
 
   // Find the next milestone to achieve
-  const nextMilestone = CHALLENGE_MILESTONES.find(
-    t => progressPercent < t
-  )
+  const nextMilestone = CHALLENGE_MILESTONES.find(t => progressPercent < t)
 
-  const milestoneConfig = highestMilestone
-    ? getPathMilestoneTierConfig(highestMilestone)
-    : null
+  const milestoneConfig = highestMilestone ? getPathMilestoneTierConfig(highestMilestone) : null
 
   const MilestoneIcon = milestoneConfig?.icon ?? Route
 
   return (
-    <Card
-      className={cn(
-        isCompleted && 'border-warning/60 bg-warning/5'
-      )}
-    >
+    <Card className={cn(isCompleted && 'border-warning/60 bg-warning/5')}>
       <CardContent className="flex flex-col gap-3 p-5">
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-center gap-2.5">
             <div
               className={cn(
                 'flex size-10 items-center justify-center rounded-lg',
-                isCompleted
-                  ? 'bg-warning/10 text-warning'
-                  : 'bg-brand/10 text-brand'
+                isCompleted ? 'bg-warning/10 text-warning' : 'bg-brand/10 text-brand'
               )}
             >
               {isCompleted ? (
@@ -66,9 +54,7 @@ export function PathMilestoneCard({ challenge }: PathMilestoneCardProps) {
               )}
             </div>
             <div>
-              <h3 className="text-sm font-semibold leading-tight">
-                {challenge.name}
-              </h3>
+              <h3 className="text-sm font-semibold leading-tight">{challenge.name}</h3>
               <p className="text-muted-foreground text-xs">
                 {highestMilestone
                   ? getPathMilestoneTierConfig(highestMilestone).label
@@ -79,10 +65,7 @@ export function PathMilestoneCard({ challenge }: PathMilestoneCardProps) {
           </div>
           <Badge
             variant={isCompleted ? 'default' : 'outline'}
-            className={cn(
-              'shrink-0 text-xs',
-              isCompleted && 'bg-warning hover:bg-warning/90'
-            )}
+            className={cn('shrink-0 text-xs', isCompleted && 'bg-warning hover:bg-warning/90')}
           >
             {isCompleted ? 'Completed' : 'Path Progress'}
           </Badge>
@@ -118,17 +101,13 @@ export function PathMilestoneCard({ challenge }: PathMilestoneCardProps) {
                 <Icon
                   className={cn(
                     'size-3.5',
-                    achieved
-                      ? config.textColor
-                      : 'text-muted-foreground/30'
+                    achieved ? config.textColor : 'text-muted-foreground/30'
                   )}
                 />
                 <span
                   className={cn(
                     'text-[10px] font-medium',
-                    achieved
-                      ? config.textColor
-                      : 'text-muted-foreground/40'
+                    achieved ? config.textColor : 'text-muted-foreground/40'
                   )}
                 >
                   {threshold}%
@@ -141,15 +120,12 @@ export function PathMilestoneCard({ challenge }: PathMilestoneCardProps) {
         {/* Next milestone hint */}
         {!isCompleted && nextMilestone && (
           <p className="text-muted-foreground text-xs">
-            Next: {getPathMilestoneTierConfig(nextMilestone).label} at{' '}
-            {nextMilestone}%
+            Next: {getPathMilestoneTierConfig(nextMilestone).label} at {nextMilestone}%
           </p>
         )}
 
         {isCompleted && (
-          <p className="text-muted-foreground text-xs">
-            Completed &middot; All milestones reached
-          </p>
+          <p className="text-muted-foreground text-xs">Completed &middot; All milestones reached</p>
         )}
 
         {/* Link to path */}

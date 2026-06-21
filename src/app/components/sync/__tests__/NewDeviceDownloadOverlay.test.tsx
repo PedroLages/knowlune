@@ -244,9 +244,7 @@ describe('NewDeviceDownloadOverlay', () => {
     resetProgress({ processed: 10, total: 10, done: true })
     const onClose1 = vi.fn()
     const onClose2 = vi.fn()
-    const { rerender } = render(
-      <NewDeviceDownloadOverlay open userId={USER} onClose={onClose1} />,
-    )
+    const { rerender } = render(<NewDeviceDownloadOverlay open userId={USER} onClose={onClose1} />)
 
     // Advance less than SUCCESS_CLOSE_DELAY_MS (250 ms), then rerender with
     // a NEW onClose identity (simulating an inline `() => {...}` from the
@@ -273,19 +271,11 @@ describe('NewDeviceDownloadOverlay', () => {
   describe('watchdogMs prop', () => {
     it('watchdogMs={50}: watchdog fires within ~100ms without fake timers', async () => {
       resetStore('hydrating-p3p4')
-      render(
-        <NewDeviceDownloadOverlay
-          open
-          userId={USER}
-          onClose={vi.fn()}
-          watchdogMs={50}
-        />,
-      )
+      render(<NewDeviceDownloadOverlay open userId={USER} onClose={vi.fn()} watchdogMs={50} />)
       // Small real wait — no vi.advanceTimersByTime(60_000) needed.
-      await waitFor(
-        () => expect(useDownloadStatusStore.getState().status).toBe('error'),
-        { timeout: 500 },
-      )
+      await waitFor(() => expect(useDownloadStatusStore.getState().status).toBe('error'), {
+        timeout: 500,
+      })
       expect(useDownloadStatusStore.getState().lastError).toMatch(/Taking longer/)
     })
 
@@ -299,14 +289,7 @@ describe('NewDeviceDownloadOverlay', () => {
     it('watchdogMs={0}: ?? preserves 0 — watchdog fires on next tick (would be silently defaulted if || were used)', () => {
       vi.useFakeTimers()
       resetStore('hydrating-p3p4')
-      render(
-        <NewDeviceDownloadOverlay
-          open
-          userId={USER}
-          onClose={vi.fn()}
-          watchdogMs={0}
-        />,
-      )
+      render(<NewDeviceDownloadOverlay open userId={USER} onClose={vi.fn()} watchdogMs={0} />)
 
       // Advance a single tick. With `??` the setTimeout(..., 0) fires now.
       // With `||` the store would stay in 'hydrating-p3p4' (60_000 default).
@@ -322,9 +305,7 @@ describe('NewDeviceDownloadOverlay', () => {
     it('no watchdogMs prop: default 60_000 ms path still applies', () => {
       vi.useFakeTimers()
       resetStore('hydrating-p3p4')
-      render(
-        <NewDeviceDownloadOverlay open userId={USER} onClose={vi.fn()} />,
-      )
+      render(<NewDeviceDownloadOverlay open userId={USER} onClose={vi.fn()} />)
       // Advance shy of default to confirm no early fire.
       act(() => {
         vi.advanceTimersByTime(59_999)
@@ -343,9 +324,7 @@ describe('NewDeviceDownloadOverlay', () => {
     resetStore('complete')
     resetProgress({ processed: 10, total: 10, done: true })
     const onClose = vi.fn()
-    const { unmount } = render(
-      <NewDeviceDownloadOverlay open userId={USER} onClose={onClose} />,
-    )
+    const { unmount } = render(<NewDeviceDownloadOverlay open userId={USER} onClose={onClose} />)
 
     act(() => {
       vi.advanceTimersByTime(100)

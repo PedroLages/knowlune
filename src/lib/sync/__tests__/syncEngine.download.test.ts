@@ -1185,9 +1185,15 @@ describe('download semaphore (MAX_CONCURRENT_DOWNLOADS)', () => {
       })
       const gte = vi.fn().mockReturnValue({ order })
       const select = vi.fn().mockReturnValue({ gte, order })
-      return { select, upsert: vi.fn().mockResolvedValue({ error: null }), insert: vi.fn().mockResolvedValue({ error: null }) }
+      return {
+        select,
+        upsert: vi.fn().mockResolvedValue({ error: null }),
+        insert: vi.fn().mockResolvedValue({ error: null }),
+      }
     })
-    vi.mocked(supabase!.from).mockImplementation(slowFrom as unknown as NonNullable<typeof supabase>['from'])
+    vi.mocked(supabase!.from).mockImplementation(
+      slowFrom as unknown as NonNullable<typeof supabase>['from']
+    )
 
     await syncEngine.fullSync()
 
@@ -1201,19 +1207,17 @@ describe('429 retry path', () => {
     // Restore the default supabase.from implementation — the test overrides it
     // with mockImplementation() to simulate 429 responses.
     const { supabase: s } = await import('@/lib/auth/supabase')
-    vi.mocked(s!.from).mockImplementation(
-      ((table: string) => {
-        const tableResult = downloadResults[table] ?? { data: [], error: null }
-        const order = vi.fn().mockResolvedValue(tableResult)
-        const gte = vi.fn().mockReturnValue({ order })
-        const select = vi.fn().mockReturnValue({ gte, order })
-        return {
-          select,
-          upsert: vi.fn().mockResolvedValue({ error: null }),
-          insert: vi.fn().mockResolvedValue({ error: null }),
-        }
-      }) as unknown as NonNullable<typeof s>['from']
-    )
+    vi.mocked(s!.from).mockImplementation(((table: string) => {
+      const tableResult = downloadResults[table] ?? { data: [], error: null }
+      const order = vi.fn().mockResolvedValue(tableResult)
+      const gte = vi.fn().mockReturnValue({ order })
+      const select = vi.fn().mockReturnValue({ gte, order })
+      return {
+        select,
+        upsert: vi.fn().mockResolvedValue({ error: null }),
+        insert: vi.fn().mockResolvedValue({ error: null }),
+      }
+    }) as unknown as NonNullable<typeof s>['from'])
   })
 
   it('retries up to 3 times on 429 then fires throttle toast once', async () => {
@@ -1231,7 +1235,11 @@ describe('429 retry path', () => {
       })
       const gte = vi.fn().mockReturnValue({ order })
       const select = vi.fn().mockReturnValue({ gte, order })
-      return { select, upsert: vi.fn().mockResolvedValue({ error: null }), insert: vi.fn().mockResolvedValue({ error: null }) }
+      return {
+        select,
+        upsert: vi.fn().mockResolvedValue({ error: null }),
+        insert: vi.fn().mockResolvedValue({ error: null }),
+      }
     })
     vi.mocked(supabase!.from).mockImplementation(
       from429 as unknown as NonNullable<typeof supabase>['from']
@@ -1406,9 +1414,9 @@ describe('stripFields preservation in download apply', () => {
     expect(mockNotesPut).toHaveBeenCalledWith(
       expect.objectContaining({
         id: 'n-1',
-        content: 'new title',        // server metadata wins
-        fileHandle,                   // preserved from local
-        directoryHandle,              // preserved from local
+        content: 'new title', // server metadata wins
+        fileHandle, // preserved from local
+        directoryHandle, // preserved from local
       })
     )
   })
@@ -1465,8 +1473,8 @@ describe('stripFields preservation in download apply', () => {
       id: 'n-4',
       content: 'old',
       updatedAt: '2026-04-17T10:00:00Z',
-      fileHandle: null,        // already broken locally
-      directoryHandle: null,   // already broken locally
+      fileHandle: null, // already broken locally
+      directoryHandle: null, // already broken locally
     })
     setTableRows('notes', [
       {
@@ -1501,8 +1509,8 @@ describe('stripFields preservation in download apply', () => {
       id: 'n-5',
       content: 'old',
       updatedAt: '2026-04-17T10:00:00Z',
-      fileHandle,               // valid
-      directoryHandle: null,   // broken
+      fileHandle, // valid
+      directoryHandle: null, // broken
     })
     setTableRows('notes', [
       {
@@ -1519,7 +1527,7 @@ describe('stripFields preservation in download apply', () => {
       expect.objectContaining({
         id: 'n-5',
         content: 'new content',
-        fileHandle,              // preserved (truthy)
+        fileHandle, // preserved (truthy)
       })
     )
     const putArg = mockNotesPut.mock.calls[0][0] as Record<string, unknown>
@@ -1553,7 +1561,12 @@ describe('stripFields preservation in download apply', () => {
       updatedAt: '2026-04-17T10:00:00Z',
     })
     setTableRows('notes', [
-      { id: 'n-7', content: 'new', updatedAt: '2026-04-18T10:00:00Z', updated_at: '2026-04-18T10:00:00Z' },
+      {
+        id: 'n-7',
+        content: 'new',
+        updatedAt: '2026-04-18T10:00:00Z',
+        updated_at: '2026-04-18T10:00:00Z',
+      },
     ])
 
     await syncEngine.fullSync()

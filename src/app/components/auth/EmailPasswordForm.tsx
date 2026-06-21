@@ -117,7 +117,10 @@ export function EmailPasswordForm({ mode, onSuccess, idPrefix = 'auth' }: EmailP
         >
           <button
             type="button"
-            onClick={() => { setValidationError(null); setError(null) }}
+            onClick={() => {
+              setValidationError(null)
+              setError(null)
+            }}
             className="absolute right-2 top-2 rounded p-0.5 hover:bg-destructive/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
             aria-label="Dismiss error"
           >
@@ -170,7 +173,9 @@ export function EmailPasswordForm({ mode, onSuccess, idPrefix = 'auth' }: EmailP
             autoComplete={isSignUp ? 'new-password' : 'current-password'}
             aria-invalid={displayError?.toLowerCase().includes('password') || undefined}
             aria-describedby={
-              displayError?.toLowerCase().includes('password') ? errorId : `${idPrefix}-password-hint`
+              displayError?.toLowerCase().includes('password')
+                ? errorId
+                : `${idPrefix}-password-hint`
             }
             className="min-h-[44px] pr-10"
           />
@@ -180,7 +185,11 @@ export function EmailPasswordForm({ mode, onSuccess, idPrefix = 'auth' }: EmailP
             className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center justify-center size-[44px] text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring rounded"
             aria-label={showPassword ? 'Hide password' : 'Show password'}
           >
-            {showPassword ? <EyeOff className="size-4" aria-hidden="true" /> : <Eye className="size-4" aria-hidden="true" />}
+            {showPassword ? (
+              <EyeOff className="size-4" aria-hidden="true" />
+            ) : (
+              <Eye className="size-4" aria-hidden="true" />
+            )}
           </button>
         </div>
         <p id={`${idPrefix}-password-hint`} className="text-xs text-muted-foreground">
@@ -221,7 +230,11 @@ export function EmailPasswordForm({ mode, onSuccess, idPrefix = 'auth' }: EmailP
               className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center justify-center size-[44px] text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring rounded"
               aria-label={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'}
             >
-              {showConfirmPassword ? <EyeOff className="size-4" aria-hidden="true" /> : <Eye className="size-4" aria-hidden="true" />}
+              {showConfirmPassword ? (
+                <EyeOff className="size-4" aria-hidden="true" />
+              ) : (
+                <Eye className="size-4" aria-hidden="true" />
+              )}
             </button>
           </div>
         </div>

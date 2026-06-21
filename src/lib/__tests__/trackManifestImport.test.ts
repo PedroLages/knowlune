@@ -37,7 +37,10 @@ function mockFileHandle(name: string): FileSystemFileHandle {
   return { kind: 'file', name } as unknown as FileSystemFileHandle
 }
 
-function mockDirHandle(name: string, children?: Map<string, FileSystemDirectoryHandle>): FileSystemDirectoryHandle {
+function mockDirHandle(
+  name: string,
+  children?: Map<string, FileSystemDirectoryHandle>
+): FileSystemDirectoryHandle {
   return {
     kind: 'directory',
     name,
@@ -77,9 +80,7 @@ function makeStagedCourse(id: string, folderName: string): StagedImportedCourse 
     id,
     name: folderName,
     directoryHandle: mockDirHandle(folderName),
-    videos: [
-      { id: `${id}-v1`, title: 'Lesson 1', fileHandle: mockFileHandle('lesson1.mp4') },
-    ],
+    videos: [{ id: `${id}-v1`, title: 'Lesson 1', fileHandle: mockFileHandle('lesson1.mp4') }],
     pdfs: [],
     images: [],
     importedAt: new Date().toISOString(),
@@ -223,8 +224,8 @@ describe('batchImportTrackCourses — duplicate handling (Unit 1)', () => {
     expect(trackEntries).toHaveLength(2)
 
     // No warning toast for the duplicate course (it was found successfully)
-    const duplicateWarnings = toastMocks.warning.mock.calls.filter(
-      (args: string[]) => args[0]?.includes('already imported')
+    const duplicateWarnings = toastMocks.warning.mock.calls.filter((args: string[]) =>
+      args[0]?.includes('already imported')
     )
     expect(duplicateWarnings).toHaveLength(0)
   })
@@ -264,9 +265,7 @@ describe('batchImportTrackCourses — duplicate handling (Unit 1)', () => {
     expect(ghostResult!.error).toBe('Course not found in database')
 
     // Warning toast should fire
-    expect(toastMocks.warning).toHaveBeenCalledWith(
-      expect.stringContaining(FOLDER)
-    )
+    expect(toastMocks.warning).toHaveBeenCalledWith(expect.stringContaining(FOLDER))
 
     // The real course still succeeds
     expect(result.successCount).toBe(1)
@@ -275,10 +274,12 @@ describe('batchImportTrackCourses — duplicate handling (Unit 1)', () => {
 
   it('preserves existing behavior for new (non-duplicate) courses', async () => {
     // All courses scan as new
-    mockScanCourseFolderFromHandle.mockImplementation(async (handle: FileSystemDirectoryHandle) => ({
-      status: 'success' as const,
-      course: makeStagedCourse(`new-${handle.name}`, handle.name),
-    }))
+    mockScanCourseFolderFromHandle.mockImplementation(
+      async (handle: FileSystemDirectoryHandle) => ({
+        status: 'success' as const,
+        course: makeStagedCourse(`new-${handle.name}`, handle.name),
+      })
+    )
 
     mockPersistScannedCourse.mockImplementation(async (course: StagedImportedCourse) => ({
       ...course,
@@ -351,10 +352,12 @@ describe('batchImportTrackCourses — duplicate handling (Unit 1)', () => {
 
 describe('batchImportTrackCourses — reorder loop (Unit 2)', () => {
   it('produces correct manifest order when all courses are new and in-order', async () => {
-    mockScanCourseFolderFromHandle.mockImplementation(async (handle: FileSystemDirectoryHandle) => ({
-      status: 'success' as const,
-      course: makeStagedCourse(`new-${handle.name}`, handle.name),
-    }))
+    mockScanCourseFolderFromHandle.mockImplementation(
+      async (handle: FileSystemDirectoryHandle) => ({
+        status: 'success' as const,
+        course: makeStagedCourse(`new-${handle.name}`, handle.name),
+      })
+    )
 
     mockPersistScannedCourse.mockImplementation(async (course: StagedImportedCourse) => ({
       ...course,
@@ -396,10 +399,12 @@ describe('batchImportTrackCourses — reorder loop (Unit 2)', () => {
   })
 
   it('handles sparse manifest positions (gap scenario)', async () => {
-    mockScanCourseFolderFromHandle.mockImplementation(async (handle: FileSystemDirectoryHandle) => ({
-      status: 'success' as const,
-      course: makeStagedCourse(`new-${handle.name}`, handle.name),
-    }))
+    mockScanCourseFolderFromHandle.mockImplementation(
+      async (handle: FileSystemDirectoryHandle) => ({
+        status: 'success' as const,
+        course: makeStagedCourse(`new-${handle.name}`, handle.name),
+      })
+    )
 
     mockPersistScannedCourse.mockImplementation(async (course: StagedImportedCourse) => ({
       ...course,
@@ -442,10 +447,12 @@ describe('batchImportTrackCourses — reorder loop (Unit 2)', () => {
   })
 
   it('handles consecutive reorders without stale indices', async () => {
-    mockScanCourseFolderFromHandle.mockImplementation(async (handle: FileSystemDirectoryHandle) => ({
-      status: 'success' as const,
-      course: makeStagedCourse(`new-${handle.name}`, handle.name),
-    }))
+    mockScanCourseFolderFromHandle.mockImplementation(
+      async (handle: FileSystemDirectoryHandle) => ({
+        status: 'success' as const,
+        course: makeStagedCourse(`new-${handle.name}`, handle.name),
+      })
+    )
 
     mockPersistScannedCourse.mockImplementation(async (course: StagedImportedCourse) => ({
       ...course,
@@ -488,10 +495,12 @@ describe('batchImportTrackCourses — reorder loop (Unit 2)', () => {
   })
 
   it('stale-index regression: 3+ reorders produce correct final positions', async () => {
-    mockScanCourseFolderFromHandle.mockImplementation(async (handle: FileSystemDirectoryHandle) => ({
-      status: 'success' as const,
-      course: makeStagedCourse(`new-${handle.name}`, handle.name),
-    }))
+    mockScanCourseFolderFromHandle.mockImplementation(
+      async (handle: FileSystemDirectoryHandle) => ({
+        status: 'success' as const,
+        course: makeStagedCourse(`new-${handle.name}`, handle.name),
+      })
+    )
 
     mockPersistScannedCourse.mockImplementation(async (course: StagedImportedCourse) => ({
       ...course,
@@ -591,10 +600,12 @@ describe('batchImportTrackCourses — reorder loop (Unit 2)', () => {
     await seedExistingCourse('idb', 'b')
     await seedExistingCourse('idc', 'c')
 
-    mockScanCourseFolderFromHandle.mockImplementation(async (handle: FileSystemDirectoryHandle) => ({
-      status: 'duplicate' as const,
-      folderName: handle.name,
-    }))
+    mockScanCourseFolderFromHandle.mockImplementation(
+      async (handle: FileSystemDirectoryHandle) => ({
+        status: 'duplicate' as const,
+        folderName: handle.name,
+      })
+    )
 
     const manifest = makeManifest([
       { folder: 'a', position: 1 },
@@ -635,10 +646,12 @@ describe('batchImportTrackCourses — reorder loop (Unit 2)', () => {
     await seedExistingCourse('new-id', 'new-course')
 
     // Both courses appear as duplicates (already imported)
-    mockScanCourseFolderFromHandle.mockImplementation(async (handle: FileSystemDirectoryHandle) => ({
-      status: 'duplicate' as const,
-      folderName: handle.name,
-    }))
+    mockScanCourseFolderFromHandle.mockImplementation(
+      async (handle: FileSystemDirectoryHandle) => ({
+        status: 'duplicate' as const,
+        folderName: handle.name,
+      })
+    )
 
     const manifest = makeManifest([
       { folder: 'existing-course', position: 1 },

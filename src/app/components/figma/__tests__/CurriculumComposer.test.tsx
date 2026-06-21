@@ -50,7 +50,16 @@ vi.mock('@/stores/useLearningPathStore', () => ({
       }
       return selector ? selector(state) : state
     },
-    { getState: () => ({ createPathWithCourses: mockCreatePathWithCourses, paths: [], loadPaths: mockLoadPaths, entries: [], createPath: vi.fn(), addCourseToPath: vi.fn() }) }
+    {
+      getState: () => ({
+        createPathWithCourses: mockCreatePathWithCourses,
+        paths: [],
+        loadPaths: mockLoadPaths,
+        entries: [],
+        createPath: vi.fn(),
+        addCourseToPath: vi.fn(),
+      }),
+    }
   ),
 }))
 

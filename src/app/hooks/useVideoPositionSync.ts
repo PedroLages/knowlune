@@ -76,7 +76,13 @@ export function useVideoPositionSync({
   /** Persist current playback position and progress to Dexie via syncableWrite. */
   const savePosition = useCallback(async () => {
     const gen = generationRef.current
-    const { courseId: cId, lessonId: lId, currentTime: time, duration: dur, autoplay: ap } = snapRef.current
+    const {
+      courseId: cId,
+      lessonId: lId,
+      currentTime: time,
+      duration: dur,
+      autoplay: ap,
+    } = snapRef.current
 
     // F007: Don't persist position for preview/autoplay sessions
     if (ap) return
@@ -88,10 +94,7 @@ export function useVideoPositionSync({
     try {
       // F007: Read stable fields once, spread from refs on periodic saves
       if (!stableLoadedRef.current) {
-        const existing = await db.progress
-          .where('[courseId+videoId]')
-          .equals([cId, lId])
-          .first()
+        const existing = await db.progress.where('[courseId+videoId]').equals([cId, lId]).first()
 
         if (existing) {
           stableRefs.current = {
@@ -113,8 +116,12 @@ export function useVideoPositionSync({
         completionPercentage,
         durationSeconds: dur,
         // Spread stable fields from refs so each periodic save doesn't re-query Dexie
-        ...(stableRefs.current.completedAt !== null ? { completedAt: stableRefs.current.completedAt } : {}),
-        ...(stableRefs.current.currentPage !== null ? { currentPage: stableRefs.current.currentPage } : {}),
+        ...(stableRefs.current.completedAt !== null
+          ? { completedAt: stableRefs.current.completedAt }
+          : {}),
+        ...(stableRefs.current.currentPage !== null
+          ? { currentPage: stableRefs.current.currentPage }
+          : {}),
       })
     } catch (err) {
       // silent-catch-ok — position save is non-critical; console.warn emitted for developer debugging

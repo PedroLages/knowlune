@@ -11,10 +11,7 @@
 import type { LearningPath, LearningPathEntry } from '@/data/types'
 import type { UserPreferences } from '@/hooks/useUserPreferences'
 import { formatPreferencesForPrompt } from '@/hooks/useUserPreferences'
-import {
-  suggestPathPlacement,
-  type PathPlacementSuggestion,
-} from './suggestPlacement'
+import { suggestPathPlacement, type PathPlacementSuggestion } from './suggestPlacement'
 import { getAIConfiguration, getDecryptedApiKey } from '@/lib/aiConfiguration'
 import { apiUrl } from '@/lib/apiBaseUrl'
 
@@ -183,7 +180,8 @@ IMPORTANT: Return ONLY the JSON object, no markdown code blocks, no extra text.`
       pathId: parsed.pathId || null,
       pathName: parsed.pathName || null,
       position: Math.max(1, parsed.position || 1),
-      justification: parsed.justification || 'AI suggested this placement based on your preferences.',
+      justification:
+        parsed.justification || 'AI suggested this placement based on your preferences.',
     }
   } catch (error) {
     clearTimeout(timeoutId)

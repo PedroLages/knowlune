@@ -193,7 +193,9 @@ export function ProviderKeyAccordion({ onConfigChanged }: ProviderKeyAccordionPr
           const success = successes[providerId] ?? false
 
           // E97-S05 AC3: Vault/local/missing status for this provider
-          const vaultStatus = credentialStatusByKey[`ai-provider:${providerId}`] as CredentialStatus | undefined
+          const vaultStatus = credentialStatusByKey[`ai-provider:${providerId}`] as
+            | CredentialStatus
+            | undefined
 
           return (
             <AccordionItem
@@ -230,23 +232,25 @@ export function ProviderKeyAccordion({ onConfigChanged }: ProviderKeyAccordionPr
                     </Badge>
                   )}
                   {/* Key health indicator — detects lost CryptoKey */}
-                  {!status?.isConnected && status?.hasKey && (() => {
-                    const health = getAPIKeyHealth(providerId)
-                    const isLost = health === 'undecryptable'
-                    return (
-                      <span
-                        className={cn(
-                          'size-2 rounded-full',
-                          isLost ? 'bg-warning' : 'bg-muted-foreground/50'
-                        )}
-                        title={isLost ? 'Key needs re-entry — encryption key was reset' : undefined}
-                        data-testid={`provider-health-${providerId}`}
-                        aria-label={
-                          isLost ? 'Encryption key lost — re-enter API key' : undefined
-                        }
-                      />
-                    )
-                  })()}
+                  {!status?.isConnected &&
+                    status?.hasKey &&
+                    (() => {
+                      const health = getAPIKeyHealth(providerId)
+                      const isLost = health === 'undecryptable'
+                      return (
+                        <span
+                          className={cn(
+                            'size-2 rounded-full',
+                            isLost ? 'bg-warning' : 'bg-muted-foreground/50'
+                          )}
+                          title={
+                            isLost ? 'Key needs re-entry — encryption key was reset' : undefined
+                          }
+                          data-testid={`provider-health-${providerId}`}
+                          aria-label={isLost ? 'Encryption key lost — re-enter API key' : undefined}
+                        />
+                      )
+                    })()}
                   {/* E97-S05 AC3: Vault sync status badge */}
                   {vaultStatus && (
                     <CredentialSyncStatusBadge

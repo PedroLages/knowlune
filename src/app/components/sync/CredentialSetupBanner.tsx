@@ -19,21 +19,10 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { useLiveRegion } from '@/app/hooks/useLiveRegion'
-import {
-  KeyRound,
-  Globe,
-  Headphones,
-  X,
-  HelpCircle,
-  AlertTriangle,
-} from 'lucide-react'
+import { KeyRound, Globe, Headphones, X, HelpCircle, AlertTriangle } from 'lucide-react'
 import { Alert, AlertTitle, AlertDescription } from '@/app/components/ui/alert'
 import { Button } from '@/app/components/ui/button'
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/app/components/ui/popover'
+import { Popover, PopoverContent, PopoverTrigger } from '@/app/components/ui/popover'
 import { useMissingCredentials } from '@/app/hooks/useMissingCredentials'
 import { useAuthStore } from '@/stores/useAuthStore'
 import type { MissingCredential } from '@/lib/credentials/credentialStatus'
@@ -77,34 +66,22 @@ interface RowProps {
 
 function MissingCredentialRow({ entry, onNavigate }: RowProps) {
   const Icon =
-    entry.kind === 'ai-provider'
-      ? KeyRound
-      : entry.kind === 'opds-catalog'
-        ? Globe
-        : Headphones
+    entry.kind === 'ai-provider' ? KeyRound : entry.kind === 'opds-catalog' ? Globe : Headphones
 
   function handleAction() {
     if (entry.kind === 'ai-provider') {
       // Section-level navigation — no focus param for AI (R2 / plan Unit 5)
       onNavigate('/settings?section=integrations')
     } else if (entry.kind === 'opds-catalog') {
-      window.dispatchEvent(
-        new CustomEvent('open-opds-settings', { detail: { focusId: entry.id } })
-      )
+      window.dispatchEvent(new CustomEvent('open-opds-settings', { detail: { focusId: entry.id } }))
     } else {
-      window.dispatchEvent(
-        new CustomEvent('open-abs-settings', { detail: { focusId: entry.id } })
-      )
+      window.dispatchEvent(new CustomEvent('open-abs-settings', { detail: { focusId: entry.id } }))
     }
   }
 
-  const label =
-    entry.kind === 'ai-provider'
-      ? 'AI provider keys need setup'
-      : entry.displayName
+  const label = entry.kind === 'ai-provider' ? 'AI provider keys need setup' : entry.displayName
 
-  const buttonLabel =
-    entry.kind === 'ai-provider' ? 'Set up' : 'Re-enter'
+  const buttonLabel = entry.kind === 'ai-provider' ? 'Set up' : 'Re-enter'
 
   return (
     <div className="flex items-center justify-between gap-2 py-1">
@@ -216,17 +193,15 @@ export function CredentialSetupBanner() {
                   <div className="space-y-2">
                     <p className="font-semibold text-sm">Why don't credentials sync?</p>
                     <p className="text-sm text-muted-foreground">
-                      Credentials (API keys, passwords) are stored per-device in Supabase Vault
-                      for security. They are not transmitted through the regular sync pipeline —
-                      you re-enter them once per device and they are then available on that device.
+                      Credentials (API keys, passwords) are stored per-device in Supabase Vault for
+                      security. They are not transmitted through the regular sync pipeline — you
+                      re-enter them once per device and they are then available on that device.
                     </p>
                     <p className="text-sm text-muted-foreground">
-                      Ollama uses a server URL rather than a Vault credential, so it syncs
-                      normally through your settings.
+                      Ollama uses a server URL rather than a Vault credential, so it syncs normally
+                      through your settings.
                     </p>
-                    <p className="text-xs text-muted-foreground">
-                      Help article coming soon.
-                    </p>
+                    <p className="text-xs text-muted-foreground">Help article coming soon.</p>
                   </div>
                 </PopoverContent>
               </Popover>

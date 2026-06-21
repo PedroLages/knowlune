@@ -457,7 +457,8 @@ export function AIConfigurationSettings() {
 
   // Check if any provider's stored API key has become undecryptable (e.g., IndexedDB
   // cleared the CryptoKey). This can happen while connectionStatus still shows 'connected'.
-  const hasUndecryptableApiKey = !isOllama &&
+  const hasUndecryptableApiKey =
+    !isOllama &&
     Array.from(
       new Set<AIProviderId>([
         settings.provider,

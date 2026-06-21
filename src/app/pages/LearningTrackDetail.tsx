@@ -588,9 +588,9 @@ export function LearningTrackDetail() {
           className="space-y-8"
         >
           {/* Course list section */}
-          {!entriesChecked ? /* Brief hold during initial load — prevents flash of empty state
-               before Zustand store entries are visible in this render cycle */
-          null : courseEntries.length > 0 ? (
+          {!entriesChecked /* Brief hold during initial load — prevents flash of empty state
+               before Zustand store entries are visible in this render cycle */ ? null : courseEntries.length >
+            0 ? (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-[var(--content-gap)]">
               {/* Left Column (2/3): Continue Learning + Timeline */}
               <div className="lg:col-span-2 space-y-8">

@@ -19,20 +19,21 @@ export interface RailViewportProps {
   className?: string
 }
 
-export const RailViewport = forwardRef<HTMLDivElement, RailViewportProps>(
-  function RailViewport({ children, snap = true, 'data-testid': testId, className }, ref) {
-    return (
-      <div
-        ref={ref}
-        className={cn(
-          'flex gap-4 overflow-x-auto pt-2 pb-2 -mx-2 px-2 scroll-smooth scrollbar-none',
-          snap && 'snap-x snap-mandatory',
-          className
-        )}
-        data-testid={testId ?? 'rail-viewport'}
-      >
-        {children}
-      </div>
-    )
-  }
-)
+export const RailViewport = forwardRef<HTMLDivElement, RailViewportProps>(function RailViewport(
+  { children, snap = true, 'data-testid': testId, className },
+  ref
+) {
+  return (
+    <div
+      ref={ref}
+      className={cn(
+        'flex gap-4 overflow-x-auto pt-2 pb-2 -mx-2 px-2 scroll-smooth scrollbar-none',
+        snap && 'snap-x snap-mandatory',
+        className
+      )}
+      data-testid={testId ?? 'rail-viewport'}
+    >
+      {children}
+    </div>
+  )
+})

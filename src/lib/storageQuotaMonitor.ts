@@ -23,7 +23,7 @@ import { TOAST_DURATION } from '@/lib/toastConfig'
 // --- Constants ---
 
 /** Graduated quota thresholds */
-const THRESHOLD_INFO = 0.70   // 70% — informational
+const THRESHOLD_INFO = 0.7 // 70% — informational
 const THRESHOLD_WARNING = 0.85 // 85% — action recommended
 const THRESHOLD_CRITICAL = 0.95 // 95% — immediate action needed
 
@@ -103,7 +103,10 @@ export async function checkStorageQuota(): Promise<void> {
  * - 95% (critical): persistent error toast with Settings link
  * Throttled to prevent duplicate toasts at the same severity level.
  */
-function showQuotaWarning(estimate: StorageEstimate, severity: 'info' | 'warning' | 'critical'): void {
+function showQuotaWarning(
+  estimate: StorageEstimate,
+  severity: 'info' | 'warning' | 'critical'
+): void {
   const now = Date.now()
   if (lastQuotaWarningAt > now) {
     lastQuotaWarningAt = 0
@@ -144,10 +147,7 @@ function showQuotaWarning(estimate: StorageEstimate, severity: 'info' | 'warning
       }
     )
   } else {
-    toast.info(
-      `Storage ${percent}% used ${detail}.`,
-      { duration: 5000 }
-    )
+    toast.info(`Storage ${percent}% used ${detail}.`, { duration: 5000 })
   }
 }
 

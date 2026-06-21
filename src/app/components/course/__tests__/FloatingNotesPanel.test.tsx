@@ -50,11 +50,7 @@ function makeTouch(clientY: number): Touch {
 }
 
 /** Helper: dispatch a native TouchEvent on an element (bubbles to React root) */
-function fireTouch(
-  target: Element,
-  type: 'touchstart' | 'touchmove' | 'touchend',
-  touch: Touch
-) {
+function fireTouch(target: Element, type: 'touchstart' | 'touchmove' | 'touchend', touch: Touch) {
   const touches = type !== 'touchend' ? [touch] : []
   const event = new TouchEvent(type, {
     touches,
@@ -111,11 +107,7 @@ describe('FloatingNotesPanel', () => {
   describe('closed state (pill)', () => {
     it('renders floating pill when panel is closed and notes exist', () => {
       const { baseElement } = render(
-        <FloatingNotesPanel
-          courseId="course-1"
-          lessonId="lesson-1"
-          portalTarget={portalTarget}
-        />
+        <FloatingNotesPanel courseId="course-1" lessonId="lesson-1" portalTarget={portalTarget} />
       )
 
       expect(baseElement.querySelector('[data-testid="floating-notes-pill"]')).toBeTruthy()
@@ -130,11 +122,7 @@ describe('FloatingNotesPanel', () => {
       })
 
       const { baseElement } = render(
-        <FloatingNotesPanel
-          courseId="course-1"
-          lessonId="lesson-1"
-          portalTarget={portalTarget}
-        />
+        <FloatingNotesPanel courseId="course-1" lessonId="lesson-1" portalTarget={portalTarget} />
       )
 
       const pill = baseElement.querySelector('[data-testid="floating-notes-pill"]')
@@ -143,11 +131,7 @@ describe('FloatingNotesPanel', () => {
 
     it('pill click sets store state to expanded', () => {
       const { baseElement } = render(
-        <FloatingNotesPanel
-          courseId="course-1"
-          lessonId="lesson-1"
-          portalTarget={portalTarget}
-        />
+        <FloatingNotesPanel courseId="course-1" lessonId="lesson-1" portalTarget={portalTarget} />
       )
 
       const pill = baseElement.querySelector('[data-testid="floating-notes-pill"]') as HTMLElement
@@ -164,11 +148,7 @@ describe('FloatingNotesPanel', () => {
       })
 
       const { baseElement } = render(
-        <FloatingNotesPanel
-          courseId="course-1"
-          lessonId="lesson-1"
-          portalTarget={portalTarget}
-        />
+        <FloatingNotesPanel courseId="course-1" lessonId="lesson-1" portalTarget={portalTarget} />
       )
 
       // No non-empty notes, panel is closed — pill should be absent
@@ -177,11 +157,7 @@ describe('FloatingNotesPanel', () => {
 
     it('has accessible ARIA label on pill', () => {
       const { baseElement } = render(
-        <FloatingNotesPanel
-          courseId="course-1"
-          lessonId="lesson-1"
-          portalTarget={portalTarget}
-        />
+        <FloatingNotesPanel courseId="course-1" lessonId="lesson-1" portalTarget={portalTarget} />
       )
 
       const pill = baseElement.querySelector('[data-testid="floating-notes-pill"]')
@@ -200,11 +176,7 @@ describe('FloatingNotesPanel', () => {
       useNoteStore.setState({ isLoading: false })
 
       const { baseElement } = render(
-        <FloatingNotesPanel
-          courseId="course-1"
-          lessonId="lesson-1"
-          portalTarget={portalTarget}
-        />
+        <FloatingNotesPanel courseId="course-1" lessonId="lesson-1" portalTarget={portalTarget} />
       )
 
       expect(baseElement.querySelector('[data-testid="floating-notes-panel"]')).toBeTruthy()
@@ -215,14 +187,12 @@ describe('FloatingNotesPanel', () => {
 
     it('collapse button sets store state to closed', () => {
       const { baseElement } = render(
-        <FloatingNotesPanel
-          courseId="course-1"
-          lessonId="lesson-1"
-          portalTarget={portalTarget}
-        />
+        <FloatingNotesPanel courseId="course-1" lessonId="lesson-1" portalTarget={portalTarget} />
       )
 
-      const collapseBtn = baseElement.querySelector('[data-testid="floating-notes-collapse"]') as HTMLElement
+      const collapseBtn = baseElement.querySelector(
+        '[data-testid="floating-notes-collapse"]'
+      ) as HTMLElement
       act(() => {
         collapseBtn.click()
       })
@@ -232,14 +202,12 @@ describe('FloatingNotesPanel', () => {
 
     it('maximize button sets store state to fullscreen', () => {
       const { baseElement } = render(
-        <FloatingNotesPanel
-          courseId="course-1"
-          lessonId="lesson-1"
-          portalTarget={portalTarget}
-        />
+        <FloatingNotesPanel courseId="course-1" lessonId="lesson-1" portalTarget={portalTarget} />
       )
 
-      const maximizeBtn = baseElement.querySelector('[data-testid="floating-notes-maximize"]') as HTMLElement
+      const maximizeBtn = baseElement.querySelector(
+        '[data-testid="floating-notes-maximize"]'
+      ) as HTMLElement
       act(() => {
         maximizeBtn.click()
       })
@@ -249,11 +217,7 @@ describe('FloatingNotesPanel', () => {
 
     it('has role=dialog and ARIA label', () => {
       const { baseElement } = render(
-        <FloatingNotesPanel
-          courseId="course-1"
-          lessonId="lesson-1"
-          portalTarget={portalTarget}
-        />
+        <FloatingNotesPanel courseId="course-1" lessonId="lesson-1" portalTarget={portalTarget} />
       )
 
       const panel = baseElement.querySelector('[data-testid="floating-notes-panel"]')
@@ -263,11 +227,7 @@ describe('FloatingNotesPanel', () => {
 
     it('shows "Saved" indicator via aria-live region', () => {
       const { baseElement } = render(
-        <FloatingNotesPanel
-          courseId="course-1"
-          lessonId="lesson-1"
-          portalTarget={portalTarget}
-        />
+        <FloatingNotesPanel courseId="course-1" lessonId="lesson-1" portalTarget={portalTarget} />
       )
 
       const liveRegion = baseElement.querySelector('[aria-live="polite"]')
@@ -283,11 +243,7 @@ describe('FloatingNotesPanel', () => {
       })
 
       const { baseElement } = render(
-        <FloatingNotesPanel
-          courseId="course-1"
-          lessonId="lesson-1"
-          portalTarget={portalTarget}
-        />
+        <FloatingNotesPanel courseId="course-1" lessonId="lesson-1" portalTarget={portalTarget} />
       )
 
       // Neither pill nor panel should render
@@ -299,11 +255,7 @@ describe('FloatingNotesPanel', () => {
   describe('portal target edge cases', () => {
     it('renders nothing when portal target is null', () => {
       const { baseElement } = render(
-        <FloatingNotesPanel
-          courseId="course-1"
-          lessonId="lesson-1"
-          portalTarget={null}
-        />
+        <FloatingNotesPanel courseId="course-1" lessonId="lesson-1" portalTarget={null} />
       )
 
       expect(baseElement.querySelector('[data-testid="floating-notes-pill"]')).toBeFalsy()
@@ -332,7 +284,9 @@ describe('FloatingNotesPanel', () => {
     })
 
     function getHandle(baseElement: HTMLElement): HTMLElement {
-      const handle = baseElement.querySelector('[data-testid="floating-notes-handle"]') as HTMLElement
+      const handle = baseElement.querySelector(
+        '[data-testid="floating-notes-handle"]'
+      ) as HTMLElement
       expect(handle).toBeTruthy()
       vi.spyOn(handle, 'getBoundingClientRect').mockReturnValue(HANDLE_RECT)
       return handle
@@ -340,11 +294,7 @@ describe('FloatingNotesPanel', () => {
 
     it('closes panel on swipe down >= 48px within handle region', () => {
       const { baseElement } = render(
-        <FloatingNotesPanel
-          courseId="course-1"
-          lessonId="lesson-1"
-          portalTarget={portalTarget}
-        />
+        <FloatingNotesPanel courseId="course-1" lessonId="lesson-1" portalTarget={portalTarget} />
       )
       const handle = getHandle(baseElement)
 
@@ -368,11 +318,7 @@ describe('FloatingNotesPanel', () => {
 
     it('does nothing when touch starts outside handle region', () => {
       const { baseElement } = render(
-        <FloatingNotesPanel
-          courseId="course-1"
-          lessonId="lesson-1"
-          portalTarget={portalTarget}
-        />
+        <FloatingNotesPanel courseId="course-1" lessonId="lesson-1" portalTarget={portalTarget} />
       )
       const handle = getHandle(baseElement)
 
@@ -396,11 +342,7 @@ describe('FloatingNotesPanel', () => {
 
     it('does not close panel when swipe is < 48px', () => {
       const { baseElement } = render(
-        <FloatingNotesPanel
-          courseId="course-1"
-          lessonId="lesson-1"
-          portalTarget={portalTarget}
-        />
+        <FloatingNotesPanel courseId="course-1" lessonId="lesson-1" portalTarget={portalTarget} />
       )
       const handle = getHandle(baseElement)
 

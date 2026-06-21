@@ -41,7 +41,13 @@ export function enableTestMode(): void {
 export class RemoteEpubError extends Error {
   constructor(
     message: string,
-    public readonly code: 'network' | 'auth' | 'not-found' | 'server' | 'timeout' | 'unsupported-format',
+    public readonly code:
+      | 'network'
+      | 'auth'
+      | 'not-found'
+      | 'server'
+      | 'timeout'
+      | 'unsupported-format',
     public readonly hasCachedVersion: boolean = false
   ) {
     super(message)

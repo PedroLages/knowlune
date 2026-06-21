@@ -111,24 +111,21 @@ export function useCompletionFlow(params: CompletionFlowParams): CompletionFlowR
    * Show the celebration modal ONLY when the entire course is completed.
    * Individual lesson completions no longer trigger the modal.
    */
-  const showCelebration = useCallback(
-    (): boolean => {
-      const isCourseComplete = lessons.length > 0 && checkCourseCompletion(lessons)
-      if (!isCourseComplete) return false
-      setCelebrationType('course')
-      setCelebrationTitle(courseName ?? 'Course')
-      setCelebrationOpen(true)
-      return true
-    },
-    [
-      lessons,
-      checkCourseCompletion,
-      courseName,
-      setCelebrationType,
-      setCelebrationTitle,
-      setCelebrationOpen,
-    ]
-  )
+  const showCelebration = useCallback((): boolean => {
+    const isCourseComplete = lessons.length > 0 && checkCourseCompletion(lessons)
+    if (!isCourseComplete) return false
+    setCelebrationType('course')
+    setCelebrationTitle(courseName ?? 'Course')
+    setCelebrationOpen(true)
+    return true
+  }, [
+    lessons,
+    checkCourseCompletion,
+    courseName,
+    setCelebrationType,
+    setCelebrationTitle,
+    setCelebrationOpen,
+  ])
 
   // Handle video ended — exit fullscreen, mark complete, show celebration, trigger auto-advance
   const handleVideoEnded = useCallback(async () => {
@@ -154,14 +151,7 @@ export function useCompletionFlow(params: CompletionFlowParams): CompletionFlowR
     if (nextLesson && autoPlay && !celebrationShown) {
       setShowAutoAdvance(true)
     }
-  }, [
-    courseId,
-    lessonId,
-    setItemStatus,
-    showCelebration,
-    nextLesson,
-    setShowAutoAdvance,
-  ])
+  }, [courseId, lessonId, setItemStatus, showCelebration, nextLesson, setShowAutoAdvance])
 
   // Handle YouTube auto-complete (>90% watched) — exit fullscreen, then show celebration
   // and trigger auto-advance countdown

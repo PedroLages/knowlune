@@ -57,7 +57,7 @@ beforeEach(() => {
   vi.clearAllMocks()
   vi.mocked(useAuthorStore).mockImplementation(
     (selector?: (state: typeof defaultStoreReturn) => unknown) =>
-      selector ? selector(defaultStoreReturn) : defaultStoreReturn,
+      selector ? selector(defaultStoreReturn) : defaultStoreReturn
   )
 })
 

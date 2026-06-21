@@ -96,7 +96,12 @@ describe('calculatePathMilestoneProgress', () => {
   it('returns 0 for path with only catalog entries', async () => {
     await db.learningPathEntries.bulkPut([
       makeEntry({ courseId: 'catalog-1', courseType: 'catalog' }),
-      makeEntry({ id: crypto.randomUUID(), courseId: 'catalog-2', courseType: 'catalog', position: 2 }),
+      makeEntry({
+        id: crypto.randomUUID(),
+        courseId: 'catalog-2',
+        courseType: 'catalog',
+        position: 2,
+      }),
     ])
 
     const result = await calculatePathMilestoneProgress('path-1')
@@ -109,10 +114,34 @@ describe('calculatePathMilestoneProgress', () => {
 
     // Seed 2 of 4 videos as completed
     await db.progress.bulkPut([
-      { courseId: 'course-1', videoId: 'vid-1', currentTime: 300, completionPercentage: 100, completedAt: new Date().toISOString() },
-      { courseId: 'course-1', videoId: 'vid-2', currentTime: 300, completionPercentage: 100, completedAt: new Date().toISOString() },
-      { courseId: 'course-1', videoId: 'vid-3', currentTime: 0, completionPercentage: 0, completedAt: undefined },
-      { courseId: 'course-1', videoId: 'vid-4', currentTime: 0, completionPercentage: 0, completedAt: undefined },
+      {
+        courseId: 'course-1',
+        videoId: 'vid-1',
+        currentTime: 300,
+        completionPercentage: 100,
+        completedAt: new Date().toISOString(),
+      },
+      {
+        courseId: 'course-1',
+        videoId: 'vid-2',
+        currentTime: 300,
+        completionPercentage: 100,
+        completedAt: new Date().toISOString(),
+      },
+      {
+        courseId: 'course-1',
+        videoId: 'vid-3',
+        currentTime: 0,
+        completionPercentage: 0,
+        completedAt: undefined,
+      },
+      {
+        courseId: 'course-1',
+        videoId: 'vid-4',
+        currentTime: 0,
+        completionPercentage: 0,
+        completedAt: undefined,
+      },
     ])
 
     const result = await calculatePathMilestoneProgress('path-1')
@@ -125,10 +154,34 @@ describe('calculatePathMilestoneProgress', () => {
 
     // Seed all 4 videos as completed
     await db.progress.bulkPut([
-      { courseId: 'course-1', videoId: 'vid-1', currentTime: 300, completionPercentage: 100, completedAt: new Date().toISOString() },
-      { courseId: 'course-1', videoId: 'vid-2', currentTime: 300, completionPercentage: 100, completedAt: new Date().toISOString() },
-      { courseId: 'course-1', videoId: 'vid-3', currentTime: 300, completionPercentage: 100, completedAt: new Date().toISOString() },
-      { courseId: 'course-1', videoId: 'vid-4', currentTime: 300, completionPercentage: 100, completedAt: new Date().toISOString() },
+      {
+        courseId: 'course-1',
+        videoId: 'vid-1',
+        currentTime: 300,
+        completionPercentage: 100,
+        completedAt: new Date().toISOString(),
+      },
+      {
+        courseId: 'course-1',
+        videoId: 'vid-2',
+        currentTime: 300,
+        completionPercentage: 100,
+        completedAt: new Date().toISOString(),
+      },
+      {
+        courseId: 'course-1',
+        videoId: 'vid-3',
+        currentTime: 300,
+        completionPercentage: 100,
+        completedAt: new Date().toISOString(),
+      },
+      {
+        courseId: 'course-1',
+        videoId: 'vid-4',
+        currentTime: 300,
+        completionPercentage: 100,
+        completedAt: new Date().toISOString(),
+      },
     ])
 
     const result = await calculatePathMilestoneProgress('path-1')
@@ -144,10 +197,34 @@ describe('calculatePathMilestoneProgress', () => {
 
     // Seed 3 of 4 imported videos as completed
     await db.progress.bulkPut([
-      { courseId: 'course-1', videoId: 'vid-1', currentTime: 300, completionPercentage: 100, completedAt: new Date().toISOString() },
-      { courseId: 'course-1', videoId: 'vid-2', currentTime: 300, completionPercentage: 100, completedAt: new Date().toISOString() },
-      { courseId: 'course-1', videoId: 'vid-3', currentTime: 300, completionPercentage: 100, completedAt: new Date().toISOString() },
-      { courseId: 'course-1', videoId: 'vid-4', currentTime: 0, completionPercentage: 0, completedAt: undefined },
+      {
+        courseId: 'course-1',
+        videoId: 'vid-1',
+        currentTime: 300,
+        completionPercentage: 100,
+        completedAt: new Date().toISOString(),
+      },
+      {
+        courseId: 'course-1',
+        videoId: 'vid-2',
+        currentTime: 300,
+        completionPercentage: 100,
+        completedAt: new Date().toISOString(),
+      },
+      {
+        courseId: 'course-1',
+        videoId: 'vid-3',
+        currentTime: 300,
+        completionPercentage: 100,
+        completedAt: new Date().toISOString(),
+      },
+      {
+        courseId: 'course-1',
+        videoId: 'vid-4',
+        currentTime: 0,
+        completionPercentage: 0,
+        completedAt: undefined,
+      },
     ])
 
     const result = await calculatePathMilestoneProgress('path-1')

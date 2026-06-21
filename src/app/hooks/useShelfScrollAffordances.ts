@@ -66,7 +66,7 @@ export function useShelfScrollAffordances(
           boundImages.delete(img)
         }
       }
-      root.querySelectorAll('img').forEach((node) => {
+      root.querySelectorAll('img').forEach(node => {
         if (!(node instanceof HTMLImageElement)) return
         if (boundImages.has(node)) return
         boundImages.add(node)
@@ -89,7 +89,7 @@ export function useShelfScrollAffordances(
       el.removeEventListener('scroll', onScroll)
       window.removeEventListener('resize', onScroll)
       ro.disconnect()
-      boundImages.forEach((img) => {
+      boundImages.forEach(img => {
         img.removeEventListener('load', onImageLayout)
         img.removeEventListener('error', onImageLayout)
       })

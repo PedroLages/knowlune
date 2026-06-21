@@ -800,10 +800,7 @@ export function setMediaSession(track: MediaTrack, handlers: MediaSessionHandler
       : [],
   })
 
-  const trySet = (
-    action: MediaSessionAction,
-    handler: MediaSessionActionHandler | null
-  ) => {
+  const trySet = (action: MediaSessionAction, handler: MediaSessionActionHandler | null) => {
     try {
       navigator.mediaSession!.setActionHandler(action, handler)
     } catch {
@@ -831,7 +828,13 @@ export function clearMediaSession(): void {
 
   navigator.mediaSession.metadata = null
   const actions: MediaSessionAction[] = [
-    'play', 'pause', 'seekbackward', 'seekforward', 'previoustrack', 'nexttrack', 'seekto',
+    'play',
+    'pause',
+    'seekbackward',
+    'seekforward',
+    'previoustrack',
+    'nexttrack',
+    'seekto',
   ]
   for (const action of actions) {
     try {

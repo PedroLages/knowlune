@@ -277,7 +277,10 @@ export const useKnowledgeMapStore = create<KnowledgeMapState>((set, get) => ({
             lastEngagementByCourse.set(card.courseId, card.last_review)
           }
         }
-        if (card.last_review && (!globalLastEngagement || card.last_review > globalLastEngagement)) {
+        if (
+          card.last_review &&
+          (!globalLastEngagement || card.last_review > globalLastEngagement)
+        ) {
           globalLastEngagement = card.last_review
         }
       }

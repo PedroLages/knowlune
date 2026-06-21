@@ -96,10 +96,7 @@ export function StorageIndicator({
         <span className="text-xs text-muted-foreground">
           {bookCount} {bookCount === 1 ? 'book' : 'books'}
           {totalBookCount !== undefined && totalBookCount !== bookCount && (
-            <span
-              className="ml-1 text-muted-foreground/80"
-              data-testid="storage-indicator-total"
-            >
+            <span className="ml-1 text-muted-foreground/80" data-testid="storage-indicator-total">
               ({totalBookCount} total across all sources)
             </span>
           )}{' '}

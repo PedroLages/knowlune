@@ -16,7 +16,14 @@ import { useContentProgressStore } from '@/stores/useContentProgressStore'
 import { useMultiPathProgress } from '@/app/hooks/usePathProgress'
 import { PROGRESS_UPDATED_EVENT } from '@/lib/progress'
 import { findFirstIncompleteLesson as findFirstIncompleteLessonShared } from '@/lib/resumeLearning'
-import type { LearningPathEntry, ImportedCourse, CompletionStatus, ImportedVideo, ImportedPdf, VideoProgress } from '@/data/types'
+import type {
+  LearningPathEntry,
+  ImportedCourse,
+  CompletionStatus,
+  ImportedVideo,
+  ImportedPdf,
+  VideoProgress,
+} from '@/data/types'
 
 export type NextBestAction = 'resume' | 'start' | 'complete' | null
 
@@ -42,16 +49,10 @@ export interface NextBestCourseResult {
  */
 async function getFirstLessonId(courseId: string): Promise<string | null> {
   try {
-    const videos = await db.importedVideos
-      .where('courseId')
-      .equals(courseId)
-      .sortBy('order')
+    const videos = await db.importedVideos.where('courseId').equals(courseId).sortBy('order')
     if (videos.length > 0) return videos[0].id
 
-    const pdfs = await db.importedPdfs
-      .where('courseId')
-      .equals(courseId)
-      .sortBy('filename')
+    const pdfs = await db.importedPdfs.where('courseId').equals(courseId).sortBy('filename')
     if (pdfs.length > 0) return pdfs[0].id
 
     return null
@@ -72,7 +73,9 @@ async function findFirstIncompleteLessonWithFallback(
 ): Promise<string | null> {
   try {
     const [videos, pdfs, progressList] = await Promise.all([
-      db.importedVideos.where('courseId').equals(courseId).sortBy('order') as Promise<ImportedVideo[]>,
+      db.importedVideos.where('courseId').equals(courseId).sortBy('order') as Promise<
+        ImportedVideo[]
+      >,
       db.importedPdfs.where('courseId').equals(courseId).toArray() as Promise<ImportedPdf[]>,
       db.progress.where('courseId').equals(courseId).toArray() as Promise<VideoProgress[]>,
     ])
@@ -158,10 +161,7 @@ export function useNextBestCourse(pathId: string): NextBestCourseResult {
 
   // Derive sorted entries for this path
   const sortedEntries = useMemo(
-    () =>
-      allEntries
-        .filter(e => e.pathId === pathId)
-        .sort((a, b) => a.position - b.position),
+    () => allEntries.filter(e => e.pathId === pathId).sort((a, b) => a.position - b.position),
     [allEntries, pathId]
   )
 
@@ -221,13 +221,17 @@ export function useNextBestCourse(pathId: string): NextBestCourseResult {
     const currentCancelled = { current: false }
     cancelledRef.current = false
 
-    computeNextBestCourse(sortedEntries, courseProgress, importedCourses, statusMap, contentProgressReady).then(
-      nextResult => {
-        if (!cancelledRef.current && !currentCancelled.current) {
-          setResult(nextResult)
-        }
+    computeNextBestCourse(
+      sortedEntries,
+      courseProgress,
+      importedCourses,
+      statusMap,
+      contentProgressReady
+    ).then(nextResult => {
+      if (!cancelledRef.current && !currentCancelled.current) {
+        setResult(nextResult)
       }
-    )
+    })
 
     return () => {
       currentCancelled.current = true
@@ -244,13 +248,17 @@ export function useNextBestCourse(pathId: string): NextBestCourseResult {
   // Reactivity: recompute when PROGRESS_UPDATED_EVENT fires
   useEffect(() => {
     const handleProgressUpdate = () => {
-      computeNextBestCourse(sortedEntries, courseProgress, importedCourses, statusMap, contentProgressReady).then(
-        nextResult => {
-          if (!cancelledRef.current) {
-            setResult(nextResult)
-          }
+      computeNextBestCourse(
+        sortedEntries,
+        courseProgress,
+        importedCourses,
+        statusMap,
+        contentProgressReady
+      ).then(nextResult => {
+        if (!cancelledRef.current) {
+          setResult(nextResult)
         }
-      )
+      })
     }
 
     window.addEventListener(PROGRESS_UPDATED_EVENT, handleProgressUpdate)

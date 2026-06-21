@@ -136,9 +136,7 @@ export function PathAnalyticsTab({ dateRange }: Props) {
 
             // Sum active duration (seconds -> hours)
             hoursSpent =
-              Math.round(
-                (sessions.reduce((sum, s) => sum + s.duration, 0) / 3600) * 10
-              ) / 10
+              Math.round((sessions.reduce((sum, s) => sum + s.duration, 0) / 3600) * 10) / 10
 
             // Find last activity
             if (sessions.length > 0) {
@@ -271,8 +269,17 @@ export function PathAnalyticsTab({ dateRange }: Props) {
           <CardTitle className="text-base">Path Completion Distribution</CardTitle>
         </CardHeader>
         <CardContent>
-          <ChartContainer config={stackedBarConfig} className="h-[200px] w-full" aria-label="Stacked bar chart showing path completion distribution across 0-25%, 25-50%, 50-75%, and 75-100% buckets" role="img">
-            <BarChart data={stackedBarData} layout="vertical" margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
+          <ChartContainer
+            config={stackedBarConfig}
+            className="h-[200px] w-full"
+            aria-label="Stacked bar chart showing path completion distribution across 0-25%, 25-50%, 50-75%, and 75-100% buckets"
+            role="img"
+          >
+            <BarChart
+              data={stackedBarData}
+              layout="vertical"
+              margin={{ top: 0, right: 0, left: 0, bottom: 0 }}
+            >
               <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.3} horizontal={false} />
               <XAxis type="number" tickLine={false} axisLine={false} allowDecimals={false} />
               <YAxis type="category" dataKey="name" hide />
@@ -302,10 +309,16 @@ export function PathAnalyticsTab({ dateRange }: Props) {
         <CardContent>
           {cumulativeHoursData.length === 0 ? (
             <p className="text-sm text-muted-foreground py-8 text-center">
-              No study hours recorded{(dateRange.from || dateRange.to) ? ' in this date range' : ' yet'}.
+              No study hours recorded
+              {dateRange.from || dateRange.to ? ' in this date range' : ' yet'}.
             </p>
           ) : (
-            <ChartContainer config={cumulativeHoursConfig} className="h-[250px] w-full" aria-label="Line chart showing study hours per learning path" role="img">
+            <ChartContainer
+              config={cumulativeHoursConfig}
+              className="h-[250px] w-full"
+              aria-label="Line chart showing study hours per learning path"
+              role="img"
+            >
               <LineChart data={cumulativeHoursData}>
                 <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.3} />
                 <XAxis
@@ -389,7 +402,10 @@ export function PathAnalyticsTab({ dateRange }: Props) {
               </thead>
               <tbody>
                 {sortedRows.map(row => (
-                  <tr key={row.pathId} className="border-b border-border/50 hover:bg-muted/50 transition-colors">
+                  <tr
+                    key={row.pathId}
+                    className="border-b border-border/50 hover:bg-muted/50 transition-colors"
+                  >
                     <td className="py-2.5 pr-4">
                       <Link
                         to={`/learning-tracks/${row.pathId}`}
@@ -440,7 +456,12 @@ function SortableTh({
   sortDir: 'asc' | 'desc'
   onSort: (key: keyof PathRow) => void
 }) {
-  const ariaSort = currentSort === sortKey ? (sortDir === 'asc' ? 'ascending' as const : 'descending' as const) : 'none' as const
+  const ariaSort =
+    currentSort === sortKey
+      ? sortDir === 'asc'
+        ? ('ascending' as const)
+        : ('descending' as const)
+      : ('none' as const)
   return (
     <th className="py-2.5 pr-4 text-left" aria-sort={ariaSort}>
       <button

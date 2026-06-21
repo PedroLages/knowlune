@@ -357,213 +357,213 @@ export function YouTubeImportDialog({ open, onOpenChange }: YouTubeImportDialogP
           {/* Step Indicator */}
           <StepIndicator currentStep={store.currentStep} />
 
-        {/* Step 1: URL Input */}
-        {store.currentStep === 1 && (
-          <div className="space-y-4 py-2">
-            <div className="space-y-2">
-              <label htmlFor="youtube-url-input" className="text-sm font-medium text-foreground">
-                YouTube URLs
-              </label>
-              <Textarea
-                id="youtube-url-input"
-                placeholder={
-                  'Paste YouTube video or playlist URLs here (one per line)\n\nhttps://youtube.com/watch?v=...\nhttps://youtube.com/playlist?list=...'
-                }
-                value={store.urlInput}
-                onChange={e => handleUrlChange(e.target.value)}
-                className={`min-h-[140px] resize-none font-mono text-sm ${
-                  store.feedbackType === 'error'
-                    ? 'border-destructive focus-visible:ring-destructive'
-                    : ''
-                }`}
-                data-testid="youtube-url-textarea"
-                aria-describedby="url-feedback"
-                autoFocus
+          {/* Step 1: URL Input */}
+          {store.currentStep === 1 && (
+            <div className="space-y-4 py-2">
+              <div className="space-y-2">
+                <label htmlFor="youtube-url-input" className="text-sm font-medium text-foreground">
+                  YouTube URLs
+                </label>
+                <Textarea
+                  id="youtube-url-input"
+                  placeholder={
+                    'Paste YouTube video or playlist URLs here (one per line)\n\nhttps://youtube.com/watch?v=...\nhttps://youtube.com/playlist?list=...'
+                  }
+                  value={store.urlInput}
+                  onChange={e => handleUrlChange(e.target.value)}
+                  className={`min-h-[140px] resize-none font-mono text-sm ${
+                    store.feedbackType === 'error'
+                      ? 'border-destructive focus-visible:ring-destructive'
+                      : ''
+                  }`}
+                  data-testid="youtube-url-textarea"
+                  aria-describedby="url-feedback"
+                  autoFocus
+                />
+              </div>
+
+              {/* Validation Feedback */}
+              {store.feedbackMessage && (
+                <p
+                  id="url-feedback"
+                  data-testid="url-feedback"
+                  className={`text-sm font-medium ${
+                    store.feedbackType === 'success'
+                      ? 'text-success'
+                      : store.feedbackType === 'warning'
+                        ? 'text-warning'
+                        : store.feedbackType === 'error'
+                          ? 'text-destructive'
+                          : 'text-muted-foreground'
+                  }`}
+                >
+                  {store.feedbackType === 'success' && (
+                    <CheckCircle2
+                      className="inline-block size-4 mr-1.5 align-text-bottom"
+                      aria-hidden="true"
+                    />
+                  )}
+                  {store.feedbackType === 'warning' && (
+                    <AlertTriangle
+                      className="inline-block size-4 mr-1.5 align-text-bottom"
+                      aria-hidden="true"
+                    />
+                  )}
+                  {store.feedbackMessage}
+                </p>
+              )}
+
+              {/* Playlist Choice Prompt */}
+              {playlistPrompt && (
+                <div
+                  className="rounded-xl border border-brand-soft bg-brand-soft/20 p-4 space-y-3"
+                  data-testid="playlist-choice-prompt"
+                  role="alert"
+                >
+                  <p className="text-sm text-foreground">This video is part of a playlist.</p>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="brand"
+                      size="sm"
+                      className="rounded-xl min-h-[44px]"
+                      onClick={() => handlePlaylistChoice('full-playlist')}
+                      data-testid="choice-full-playlist"
+                    >
+                      <ListVideo className="size-4 mr-1.5" aria-hidden="true" />
+                      Import full playlist
+                    </Button>
+                    <Button
+                      variant="brand-outline"
+                      size="sm"
+                      className="rounded-xl min-h-[44px]"
+                      onClick={() => handlePlaylistChoice('single-video')}
+                      data-testid="choice-single-video"
+                    >
+                      <Play className="size-4 mr-1.5" aria-hidden="true" />
+                      Import this video only
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Step 2: Metadata Preview */}
+          {store.currentStep === 2 && (
+            <div className="space-y-4 py-2">
+              {/* Loading state with progress bar */}
+              {store.isFetchingMetadata && (
+                <div className="space-y-2">
+                  <Progress
+                    value={fetchProgress}
+                    className="h-2"
+                    showLabel
+                    labelFormat={() =>
+                      `Fetching video info... ${store.metadataFetchedCount} of ${store.metadataTotal}`
+                    }
+                  />
+                </div>
+              )}
+
+              {/* Unavailable videos banner */}
+              {unavailableCount > 0 && (
+                <div
+                  className="flex items-center gap-2 rounded-xl border border-warning/30 bg-warning/5 px-4 py-2.5 text-sm text-warning"
+                  role="alert"
+                  data-testid="unavailable-banner"
+                >
+                  <AlertTriangle className="size-4 shrink-0" aria-hidden="true" />
+                  {unavailableCount} {unavailableCount === 1 ? 'video is' : 'videos are'}{' '}
+                  unavailable (private or deleted)
+                </div>
+              )}
+
+              {/* Video list with scroll shadows */}
+              <ScrollArea
+                className="max-h-[50vh] [mask-image:linear-gradient(to_bottom,transparent_0,black_16px,black_calc(100%-16px),transparent_100%)]"
+                data-testid="video-preview-list"
+              >
+                <div className="space-y-2 pr-3" role="list" aria-label="Video preview list">
+                  {store.isFetchingMetadata &&
+                  store.videos.filter(v => v.status === 'pending').length > 0
+                    ? /* Skeleton placeholders */
+                      store.videos
+                        .filter(v => v.status === 'pending')
+                        .map(v => <VideoRowSkeleton key={v.videoId} />)
+                    : null}
+
+                  {activeVideos.map(video => (
+                    <VideoPreviewRow
+                      key={video.videoId}
+                      video={video}
+                      onRemove={() => store.removeVideo(video.videoId)}
+                      onSaveAsLinkOnly={value => store.setSaveAsLinkOnly(video.videoId, value)}
+                    />
+                  ))}
+                </div>
+              </ScrollArea>
+
+              {/* Active video count */}
+              {!store.isFetchingMetadata && activeVideos.length > 0 && (
+                <p className="text-sm text-muted-foreground text-center">
+                  {activeVideos.length} {activeVideos.length === 1 ? 'video' : 'videos'} in import
+                  list
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* Step 3: Organize — Chapter Editor (E28-S06, E28-S07 AI) */}
+          {store.currentStep === 3 && (
+            <div className="py-2 space-y-3">
+              {/* AI structuring loading state (E28-S07) */}
+              {isAIStructuring && (
+                <div
+                  className="flex items-center gap-3 rounded-xl bg-brand-soft px-4 py-3"
+                  role="status"
+                  aria-busy="true"
+                  aria-label="AI is analyzing video metadata"
+                  data-testid="ai-structuring-loading"
+                >
+                  <Sparkles
+                    className="size-4 text-brand-soft-foreground motion-safe:animate-pulse"
+                    aria-hidden="true"
+                  />
+                  <p className="text-sm text-brand-soft-foreground font-medium">
+                    AI is analyzing video metadata and organizing your course...
+                  </p>
+                  <Loader2
+                    className="size-4 text-brand-soft-foreground ml-auto motion-safe:animate-spin"
+                    aria-hidden="true"
+                  />
+                </div>
+              )}
+
+              <YouTubeChapterEditor
+                chapters={store.chapters}
+                videos={activeVideos}
+                onChaptersChange={store.setChapters}
+                showAiBanner={!isPremium || !isAIAvailable()}
+                aiBannerMessage={aiBannerMessage}
               />
             </div>
+          )}
 
-            {/* Validation Feedback */}
-            {store.feedbackMessage && (
-              <p
-                id="url-feedback"
-                data-testid="url-feedback"
-                className={`text-sm font-medium ${
-                  store.feedbackType === 'success'
-                    ? 'text-success'
-                    : store.feedbackType === 'warning'
-                      ? 'text-warning'
-                      : store.feedbackType === 'error'
-                        ? 'text-destructive'
-                        : 'text-muted-foreground'
-                }`}
-              >
-                {store.feedbackType === 'success' && (
-                  <CheckCircle2
-                    className="inline-block size-4 mr-1.5 align-text-bottom"
-                    aria-hidden="true"
-                  />
-                )}
-                {store.feedbackType === 'warning' && (
-                  <AlertTriangle
-                    className="inline-block size-4 mr-1.5 align-text-bottom"
-                    aria-hidden="true"
-                  />
-                )}
-                {store.feedbackMessage}
-              </p>
-            )}
-
-            {/* Playlist Choice Prompt */}
-            {playlistPrompt && (
-              <div
-                className="rounded-xl border border-brand-soft bg-brand-soft/20 p-4 space-y-3"
-                data-testid="playlist-choice-prompt"
-                role="alert"
-              >
-                <p className="text-sm text-foreground">This video is part of a playlist.</p>
-                <div className="flex gap-2">
-                  <Button
-                    variant="brand"
-                    size="sm"
-                    className="rounded-xl min-h-[44px]"
-                    onClick={() => handlePlaylistChoice('full-playlist')}
-                    data-testid="choice-full-playlist"
-                  >
-                    <ListVideo className="size-4 mr-1.5" aria-hidden="true" />
-                    Import full playlist
-                  </Button>
-                  <Button
-                    variant="brand-outline"
-                    size="sm"
-                    className="rounded-xl min-h-[44px]"
-                    onClick={() => handlePlaylistChoice('single-video')}
-                    data-testid="choice-single-video"
-                  >
-                    <Play className="size-4 mr-1.5" aria-hidden="true" />
-                    Import this video only
-                  </Button>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Step 2: Metadata Preview */}
-        {store.currentStep === 2 && (
-          <div className="space-y-4 py-2">
-            {/* Loading state with progress bar */}
-            {store.isFetchingMetadata && (
-              <div className="space-y-2">
-                <Progress
-                  value={fetchProgress}
-                  className="h-2"
-                  showLabel
-                  labelFormat={() =>
-                    `Fetching video info... ${store.metadataFetchedCount} of ${store.metadataTotal}`
-                  }
-                />
-              </div>
-            )}
-
-            {/* Unavailable videos banner */}
-            {unavailableCount > 0 && (
-              <div
-                className="flex items-center gap-2 rounded-xl border border-warning/30 bg-warning/5 px-4 py-2.5 text-sm text-warning"
-                role="alert"
-                data-testid="unavailable-banner"
-              >
-                <AlertTriangle className="size-4 shrink-0" aria-hidden="true" />
-                {unavailableCount} {unavailableCount === 1 ? 'video is' : 'videos are'} unavailable
-                (private or deleted)
-              </div>
-            )}
-
-            {/* Video list with scroll shadows */}
-            <ScrollArea
-              className="max-h-[50vh] [mask-image:linear-gradient(to_bottom,transparent_0,black_16px,black_calc(100%-16px),transparent_100%)]"
-              data-testid="video-preview-list"
-            >
-              <div className="space-y-2 pr-3" role="list" aria-label="Video preview list">
-                {store.isFetchingMetadata &&
-                store.videos.filter(v => v.status === 'pending').length > 0
-                  ? /* Skeleton placeholders */
-                    store.videos
-                      .filter(v => v.status === 'pending')
-                      .map(v => <VideoRowSkeleton key={v.videoId} />)
-                  : null}
-
-                {activeVideos.map(video => (
-                  <VideoPreviewRow
-                    key={video.videoId}
-                    video={video}
-                    onRemove={() => store.removeVideo(video.videoId)}
-                    onSaveAsLinkOnly={value => store.setSaveAsLinkOnly(video.videoId, value)}
-                  />
-                ))}
-              </div>
-            </ScrollArea>
-
-            {/* Active video count */}
-            {!store.isFetchingMetadata && activeVideos.length > 0 && (
-              <p className="text-sm text-muted-foreground text-center">
-                {activeVideos.length} {activeVideos.length === 1 ? 'video' : 'videos'} in import
-                list
-              </p>
-            )}
-          </div>
-        )}
-
-        {/* Step 3: Organize — Chapter Editor (E28-S06, E28-S07 AI) */}
-        {store.currentStep === 3 && (
-          <div className="py-2 space-y-3">
-            {/* AI structuring loading state (E28-S07) */}
-            {isAIStructuring && (
-              <div
-                className="flex items-center gap-3 rounded-xl bg-brand-soft px-4 py-3"
-                role="status"
-                aria-busy="true"
-                aria-label="AI is analyzing video metadata"
-                data-testid="ai-structuring-loading"
-              >
-                <Sparkles
-                  className="size-4 text-brand-soft-foreground motion-safe:animate-pulse"
-                  aria-hidden="true"
-                />
-                <p className="text-sm text-brand-soft-foreground font-medium">
-                  AI is analyzing video metadata and organizing your course...
-                </p>
-                <Loader2
-                  className="size-4 text-brand-soft-foreground ml-auto motion-safe:animate-spin"
-                  aria-hidden="true"
-                />
-              </div>
-            )}
-
-            <YouTubeChapterEditor
-              chapters={store.chapters}
-              videos={activeVideos}
-              onChaptersChange={store.setChapters}
-              showAiBanner={!isPremium || !isAIAvailable()}
-              aiBannerMessage={aiBannerMessage}
-            />
-          </div>
-        )}
-
-        {/* Step 4: Course Details (E28-S08) */}
-        {store.currentStep === 4 && (
-          <div className="py-2">
-            <YouTubeCourseDetailsForm
-              initialName={courseDetails.name}
-              initialDescription={courseDetails.description}
-              videos={activeVideos}
-              chapters={store.chapters}
-              onChange={setCourseDetails}
-              formData={courseDetails}
-            />
-          </div>
-        )}
-
-        </div>{/* End scrollable step content */}
+          {/* Step 4: Course Details (E28-S08) */}
+          {store.currentStep === 4 && (
+            <div className="py-2">
+              <YouTubeCourseDetailsForm
+                initialName={courseDetails.name}
+                initialDescription={courseDetails.description}
+                videos={activeVideos}
+                chapters={store.chapters}
+                onChange={setCourseDetails}
+                formData={courseDetails}
+              />
+            </div>
+          )}
+        </div>
+        {/* End scrollable step content */}
 
         {/* Footer Navigation */}
         <DialogFooter className="flex-row justify-between sm:justify-between">

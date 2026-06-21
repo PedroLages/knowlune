@@ -732,9 +732,9 @@ describe('createPathWithCourses', () => {
 
     try {
       await act(async () => {
-        await useLearningPathStore.getState().createPathWithCourses('Fail', undefined, [
-          { courseId: 'c1', courseType: 'imported' },
-        ])
+        await useLearningPathStore
+          .getState()
+          .createPathWithCourses('Fail', undefined, [{ courseId: 'c1', courseType: 'imported' }])
       })
     } catch {
       // Expected to throw
@@ -816,11 +816,10 @@ describe('batchAddCoursesToPath', () => {
 
     await act(async () => {
       await expect(
-        useLearningPathStore.getState().batchAddCoursesToPath(pathId, [
-          { courseId: 'c1', courseType: 'imported' },
-        ])
+        useLearningPathStore
+          .getState()
+          .batchAddCoursesToPath(pathId, [{ courseId: 'c1', courseType: 'imported' }])
       ).rejects.toThrow('fail')
-
     })
     expect(useLearningPathStore.getState().error).toBe('Failed to add courses to learning path')
   })

@@ -31,17 +31,19 @@ interface LibraryFiltersProps {
   downloadedCount?: number
 }
 
-export function LibraryFilters({ viewToggle, downloadedOnly, onToggleDownloaded, downloadedCount }: LibraryFiltersProps = {}) {
+export function LibraryFilters({
+  viewToggle,
+  downloadedOnly,
+  onToggleDownloaded,
+  downloadedCount,
+}: LibraryFiltersProps = {}) {
   const filters = useBookStore(s => s.filters)
   const setFilter = useBookStore(s => s.setFilter)
   const books = useBookStore(s => s.books)
   const getBookCountByStatus = useBookStore(s => s.getBookCountByStatus)
   const activeSource = useBookStore(s => s.filters.source)
 
-  const counts = useMemo(
-    () => getBookCountByStatus(),
-    [books, activeSource, getBookCountByStatus]
-  )
+  const counts = useMemo(() => getBookCountByStatus(), [books, activeSource, getBookCountByStatus])
   const activeStatus = filters.status || 'all'
 
   // Filter sidebar
@@ -70,7 +72,7 @@ export function LibraryFilters({ viewToggle, downloadedOnly, onToggleDownloaded,
   }
 
   // Collapsible search
-  const [searchOpen, setSearchOpen] = useState(!!(filters.search))
+  const [searchOpen, setSearchOpen] = useState(!!filters.search)
   const inputRef = useRef<HTMLInputElement>(null)
   const [searchValue, setSearchValue] = useState(filters.search || '')
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -97,7 +99,9 @@ export function LibraryFilters({ viewToggle, downloadedOnly, onToggleDownloaded,
   }
 
   useEffect(() => {
-    return () => { if (timerRef.current) clearTimeout(timerRef.current) }
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current)
+    }
   }, [])
 
   return (
@@ -198,10 +202,7 @@ export function LibraryFilters({ viewToggle, downloadedOnly, onToggleDownloaded,
             variant="ghost"
             size="icon"
             onClick={searchOpen ? closeSearch : openSearch}
-            className={cn(
-              'size-9 rounded-xl flex-shrink-0',
-              searchOpen && 'text-brand'
-            )}
+            className={cn('size-9 rounded-xl flex-shrink-0', searchOpen && 'text-brand')}
             aria-label={searchOpen ? 'Close search' : 'Search books'}
             data-testid="library-search-toggle"
           >

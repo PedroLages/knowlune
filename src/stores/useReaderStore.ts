@@ -80,15 +80,7 @@ function loadSettings(): ReaderSettings {
           ? parsed.fontSize
           : DEFAULT_SETTINGS.fontSize,
       fontFamily: (
-        [
-          'default',
-          'literata',
-          'inter',
-          'atkinson',
-          'serif',
-          'sans',
-          'mono',
-        ] as ReaderFontFamily[]
+        ['default', 'literata', 'inter', 'atkinson', 'serif', 'sans', 'mono'] as ReaderFontFamily[]
       ).includes(parsed.fontFamily as ReaderFontFamily)
         ? (parsed.fontFamily as ReaderFontFamily)
         : DEFAULT_SETTINGS.fontFamily,

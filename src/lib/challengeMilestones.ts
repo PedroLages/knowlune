@@ -72,7 +72,7 @@ export const CHALLENGE_TIER_CONFIG: Record<25 | 50 | 75 | 100, ChallengeTierConf
  */
 export function getTierConfig<T extends Record<number, ChallengeTierConfig>>(
   tierConfigMap: T,
-  percent: number,
+  percent: number
 ): ChallengeTierConfig {
   const config = tierConfigMap[percent as 25 | 50 | 75 | 100]
   if (!config) {

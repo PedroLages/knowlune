@@ -82,8 +82,7 @@ vi.mock('@/app/hooks/useCourseRoute', () => ({
 vi.mock('@/stores/useAuthStore', () => ({
   useAuthStore: (selector: (s: Record<string, unknown>) => unknown) =>
     selector({ user: mockIsGuest ? null : { id: 'test-user' }, initialized: true }),
-  selectIsGuestMode: (s: { initialized: boolean; user: unknown }) =>
-    !s.initialized || !s.user,
+  selectIsGuestMode: (s: { initialized: boolean; user: unknown }) => !s.initialized || !s.user,
 }))
 
 vi.mock('@/app/components/figma/PomodoroTimer', () => ({
@@ -243,17 +242,13 @@ describe('LessonHeaderTools', () => {
   it('renders auto-play toggle with aria-pressed="true" when autoPlay is ON', () => {
     mockAutoPlay = true
     render(<LessonHeaderTools />)
-    expect(screen.getByTestId('autoplay-toggle').getAttribute('aria-pressed')).toBe(
-      'true',
-    )
+    expect(screen.getByTestId('autoplay-toggle').getAttribute('aria-pressed')).toBe('true')
   })
 
   it('renders auto-play toggle with aria-pressed="false" when autoPlay is OFF', () => {
     mockAutoPlay = false
     render(<LessonHeaderTools />)
-    expect(screen.getByTestId('autoplay-toggle').getAttribute('aria-pressed')).toBe(
-      'false',
-    )
+    expect(screen.getByTestId('autoplay-toggle').getAttribute('aria-pressed')).toBe('false')
   })
 
   it('calls toggleAutoPlay when auto-play button is clicked', () => {
@@ -265,16 +260,14 @@ describe('LessonHeaderTools', () => {
   it('shows "Auto-play: On" tooltip when autoPlay is ON', () => {
     mockAutoPlay = true
     render(<LessonHeaderTools />)
-    expect(screen.getByTestId('autoplay-toggle').getAttribute('aria-label')).toBe(
-      'Auto-play is on',
-    )
+    expect(screen.getByTestId('autoplay-toggle').getAttribute('aria-label')).toBe('Auto-play is on')
   })
 
   it('shows "Auto-play: Off" tooltip when autoPlay is OFF', () => {
     mockAutoPlay = false
     render(<LessonHeaderTools />)
     expect(screen.getByTestId('autoplay-toggle').getAttribute('aria-label')).toBe(
-      'Auto-play is off',
+      'Auto-play is off'
     )
   })
 })

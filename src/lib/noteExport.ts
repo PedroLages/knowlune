@@ -242,9 +242,7 @@ export function exportCombinedMarkdown(
   }
 
   // Sort modules by order, then lessons by order
-  const sortedModules = Array.from(moduleMap.values()).sort(
-    (a, b) => a.moduleOrder - b.moduleOrder
-  )
+  const sortedModules = Array.from(moduleMap.values()).sort((a, b) => a.moduleOrder - b.moduleOrder)
 
   for (const mod of sortedModules) {
     // Module header (skip for courses without modules)
@@ -319,9 +317,7 @@ export async function exportNotesZip(
     const lessonName = info?.lessonName || 'Unknown Lesson'
 
     // Build folder path per R11
-    const moduleFolder = moduleName
-      ? sanitizeFilename(moduleName)
-      : ''
+    const moduleFolder = moduleName ? sanitizeFilename(moduleName) : ''
     const lessonFolder = sanitizeFilename(lessonName)
 
     // Determine the folder prefix for dedup scope

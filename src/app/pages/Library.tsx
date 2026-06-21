@@ -156,19 +156,25 @@ export function Library() {
     if (stored && VALID_LIBRARY_TABS.has(stored)) return stored as LibraryTab
     return 'continue'
   })
-  const handleTabChange = useCallback((tab: LibraryTab) => {
-    setLibraryTab(tab)
-    try {
-      localStorage.setItem('knowlune-library-tab', tab)
-    } catch {
-      // QuotaExceeded or unavailable — tab persists in React state for this session
-    }
-    setSearchParams(prev => {
-      const next = new URLSearchParams(prev)
-      next.set('tab', tab)
-      return next
-    }, { replace: true })
-  }, [setSearchParams])
+  const handleTabChange = useCallback(
+    (tab: LibraryTab) => {
+      setLibraryTab(tab)
+      try {
+        localStorage.setItem('knowlune-library-tab', tab)
+      } catch {
+        // QuotaExceeded or unavailable — tab persists in React state for this session
+      }
+      setSearchParams(
+        prev => {
+          const next = new URLSearchParams(prev)
+          next.set('tab', tab)
+          return next
+        },
+        { replace: true }
+      )
+    },
+    [setSearchParams]
+  )
 
   const getBooksBySeries = useBookStore(s => s.getBooksBySeries)
 
@@ -467,21 +473,13 @@ export function Library() {
       hasAudiobooks &&
       hasEbooks
     ) {
-      if (
-        isAudiobookOnlyFormatFilter(format) &&
-        !prevHadEbooksRef.current &&
-        hasEbooks
-      ) {
+      if (isAudiobookOnlyFormatFilter(format) && !prevHadEbooksRef.current && hasEbooks) {
         setFilter('format', undefined)
         prevFilterFormatRef.current = format
         syncInventoryModalities()
         return
       }
-      if (
-        isEbookTabFormatFilter(format) &&
-        !prevHadAudiobooksRef.current &&
-        hasAudiobooks
-      ) {
+      if (isEbookTabFormatFilter(format) && !prevHadAudiobooksRef.current && hasAudiobooks) {
         setFilter('format', undefined)
         prevFilterFormatRef.current = format
         syncInventoryModalities()
@@ -1269,9 +1267,7 @@ export function Library() {
           </div>
 
           {/* ABS collections — always show when ABS source is active */}
-          {filters.source === 'audiobookshelf' && (
-            <CollectionsView />
-          )}
+          {filters.source === 'audiobookshelf' && <CollectionsView />}
 
           {/* Local series groups + shelf-aware empty state */}
           {filters.source !== 'audiobookshelf' &&
@@ -1325,7 +1321,9 @@ export function Library() {
                     <div className="text-3xl font-bold text-brand-soft-foreground font-display tracking-tight">
                       {finishedThisYear}
                     </div>
-                    <div className="text-sm text-muted-foreground mt-1">Books finished this year</div>
+                    <div className="text-sm text-muted-foreground mt-1">
+                      Books finished this year
+                    </div>
                   </div>
                   <div className="rounded-xl bg-card border border-border p-5 text-center shadow-card-ambient">
                     <div className="text-3xl font-bold text-brand-soft-foreground font-display tracking-tight">
@@ -1366,9 +1364,7 @@ export function Library() {
                     <BookOpen className="size-4 text-muted-foreground" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium text-foreground truncate">
-                      {book.title}
-                    </div>
+                    <div className="text-sm font-medium text-foreground truncate">{book.title}</div>
                     <div className="text-xs text-muted-foreground">
                       {book.author}
                       {book.totalPages ? ` · ${book.totalPages} pages` : ''}
@@ -1377,7 +1373,8 @@ export function Library() {
                   </div>
                   {book.rating && (
                     <span className="text-xs font-medium text-gold">
-                      {'★'.repeat(book.rating)}{'☆'.repeat(5 - book.rating)}
+                      {'★'.repeat(book.rating)}
+                      {'☆'.repeat(5 - book.rating)}
                     </span>
                   )}
                   <span className="text-xs text-muted-foreground whitespace-nowrap">

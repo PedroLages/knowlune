@@ -218,8 +218,7 @@ export function useTts(renditionRef: React.RefObject<Rendition | null>): UseTtsR
             )
           }
         }
-        ttsResumeCharRef.current =
-          chunkOffsetFull + event.charIndex + event.charLength
+        ttsResumeCharRef.current = chunkOffsetFull + event.charIndex + event.charLength
       },
       onEnd: () => {
         if (endMode === 'page-advance' && renditionRef.current) {
@@ -299,7 +298,12 @@ export function useTts(renditionRef: React.RefObject<Rendition | null>): UseTtsR
   }, [renditionRef])
 
   const speakFromOffset = useCallback(
-    (baseOffsetInFullText: number, rate: number, voiceURI: string | null, endMode: SpeakEndMode) => {
+    (
+      baseOffsetInFullText: number,
+      rate: number,
+      voiceURI: string | null,
+      endMode: SpeakEndMode
+    ) => {
       const full = fullTextRef.current
       if (baseOffsetInFullText >= full.length) {
         stopTts()

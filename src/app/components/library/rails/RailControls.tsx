@@ -61,9 +61,7 @@ export function RailControls({
       if (!el) return
 
       // Measure one tile width + gap from the first visible tile
-      const firstTile = el.querySelector(
-        '[data-rail-tile]'
-      ) as HTMLElement | null
+      const firstTile = el.querySelector('[data-rail-tile]') as HTMLElement | null
 
       let delta: number
       if (firstTile) {

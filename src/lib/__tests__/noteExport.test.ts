@@ -381,18 +381,9 @@ describe('exportCombinedMarkdown', () => {
   }
 
   const lessonMap = new Map([
-    [
-      'video-1',
-      { moduleName: 'Module A', moduleOrder: 1, lessonName: 'Lesson 1', lessonOrder: 1 },
-    ],
-    [
-      'video-2',
-      { moduleName: 'Module A', moduleOrder: 1, lessonName: 'Lesson 2', lessonOrder: 2 },
-    ],
-    [
-      'video-3',
-      { moduleName: 'Module B', moduleOrder: 2, lessonName: 'Lesson 3', lessonOrder: 1 },
-    ],
+    ['video-1', { moduleName: 'Module A', moduleOrder: 1, lessonName: 'Lesson 1', lessonOrder: 1 }],
+    ['video-2', { moduleName: 'Module A', moduleOrder: 1, lessonName: 'Lesson 2', lessonOrder: 2 }],
+    ['video-3', { moduleName: 'Module B', moduleOrder: 2, lessonName: 'Lesson 3', lessonOrder: 1 }],
   ])
 
   it('groups notes by module and lesson with ##/### headers', () => {
@@ -403,7 +394,10 @@ describe('exportCombinedMarkdown', () => {
     ]
 
     const { content, filename } = exportCombinedMarkdown(
-      notes, 'Test Course', 'test-course', lessonMap
+      notes,
+      'Test Course',
+      'test-course',
+      lessonMap
     )
 
     expect(content).toContain('## Module A')
@@ -420,9 +414,7 @@ describe('exportCombinedMarkdown', () => {
       makeNote({ id: 'n2', videoId: 'video-2' }),
     ]
 
-    const { content } = exportCombinedMarkdown(
-      notes, 'Test Course', 'test-course', lessonMap
-    )
+    const { content } = exportCombinedMarkdown(notes, 'Test Course', 'test-course', lessonMap)
 
     const parts = content.split('---')
     // Frontmatter, content, separator
@@ -436,9 +428,7 @@ describe('exportCombinedMarkdown', () => {
       makeNote({ id: 'n3', videoId: 'video-3', content: '   ' }),
     ]
 
-    const { content } = exportCombinedMarkdown(
-      notes, 'Test Course', 'test-course', lessonMap
-    )
+    const { content } = exportCombinedMarkdown(notes, 'Test Course', 'test-course', lessonMap)
 
     expect(content).toContain('Real content')
     expect(content).not.toContain('video-2')
@@ -450,9 +440,7 @@ describe('exportCombinedMarkdown', () => {
       makeNote({ id: `n${i}`, videoId: 'video-1', content: `<p>Note ${i}</p>` })
     )
 
-    const { content } = exportCombinedMarkdown(
-      notes, 'Test Course', 'test-course', lessonMap
-    )
+    const { content } = exportCombinedMarkdown(notes, 'Test Course', 'test-course', lessonMap)
 
     expect(content).toContain('WARNING')
     expect(content).toContain('51 notes')
@@ -462,7 +450,10 @@ describe('exportCombinedMarkdown', () => {
     const notes = [makeNote({ id: 'n1', videoId: 'video-1' })]
 
     const { content, filename } = exportCombinedMarkdown(
-      notes, 'Test Course', 'test-course', lessonMap
+      notes,
+      'Test Course',
+      'test-course',
+      lessonMap
     )
 
     expect(content).toContain('---')
@@ -479,9 +470,7 @@ describe('exportCombinedMarkdown', () => {
       ['v2', { moduleName: '', moduleOrder: 999, lessonName: 'Standalone 2', lessonOrder: 2 }],
     ])
 
-    const { content } = exportCombinedMarkdown(
-      noModuleNotes, 'Flat Course', 'flat-course', flatMap
-    )
+    const { content } = exportCombinedMarkdown(noModuleNotes, 'Flat Course', 'flat-course', flatMap)
 
     expect(content).toContain('## Standalone 1')
     expect(content).toContain('## Standalone 2')
@@ -503,26 +492,15 @@ describe('exportNotesZip', () => {
   }
 
   const lessonMap = new Map([
-    [
-      'video-1',
-      { moduleName: 'Module A', moduleOrder: 1, lessonName: 'Lesson 1', lessonOrder: 1 },
-    ],
-    [
-      'video-2',
-      { moduleName: 'Module A', moduleOrder: 1, lessonName: 'Lesson 2', lessonOrder: 2 },
-    ],
-    [
-      'video-3',
-      { moduleName: 'Module B', moduleOrder: 2, lessonName: 'Lesson 3', lessonOrder: 1 },
-    ],
+    ['video-1', { moduleName: 'Module A', moduleOrder: 1, lessonName: 'Lesson 1', lessonOrder: 1 }],
+    ['video-2', { moduleName: 'Module A', moduleOrder: 1, lessonName: 'Lesson 2', lessonOrder: 2 }],
+    ['video-3', { moduleName: 'Module B', moduleOrder: 2, lessonName: 'Lesson 3', lessonOrder: 1 }],
   ])
 
   it('returns a Blob and filename', async () => {
     const notes = [makeNote({ id: 'n1', videoId: 'video-1' })]
 
-    const { blob, filename } = await exportNotesZip(
-      notes, 'Test Course', 'test-course', lessonMap
-    )
+    const { blob, filename } = await exportNotesZip(notes, 'Test Course', 'test-course', lessonMap)
 
     expect(blob).toBeInstanceOf(Blob)
     expect(filename).toBe('test-course-notes.zip')
@@ -534,9 +512,7 @@ describe('exportNotesZip', () => {
       makeNote({ id: 'n2', videoId: 'video-2', content: '' }),
     ]
 
-    const { blob } = await exportNotesZip(
-      notes, 'Test Course', 'test-course', lessonMap
-    )
+    const { blob } = await exportNotesZip(notes, 'Test Course', 'test-course', lessonMap)
 
     // Verify we got a blob back
     expect(blob.size).toBeGreaterThan(0)
@@ -549,9 +525,7 @@ describe('exportNotesZip', () => {
       makeNote({ id: 'n3', videoId: 'video-3', content: '<p>Note C</p>' }),
     ]
 
-    const { blob } = await exportNotesZip(
-      notes, 'Test Course', 'test-course', lessonMap
-    )
+    const { blob } = await exportNotesZip(notes, 'Test Course', 'test-course', lessonMap)
 
     // The ZIP should contain files with proper paths
     expect(blob.size).toBeGreaterThan(0)
@@ -573,9 +547,7 @@ describe('exportNotesZip', () => {
       ['v1', { moduleName: '', moduleOrder: 999, lessonName: 'Standalone', lessonOrder: 1 }],
     ])
 
-    const { blob } = await exportNotesZip(
-      notes, 'Flat Course', 'flat-course', flatMap
-    )
+    const { blob } = await exportNotesZip(notes, 'Flat Course', 'flat-course', flatMap)
 
     const JSZip = (await import('jszip')).default
     const zip = await JSZip.loadAsync(blob)
@@ -587,9 +559,7 @@ describe('exportNotesZip', () => {
   it('each .md file includes YAML frontmatter', async () => {
     const notes = [makeNote({ id: 'n1', videoId: 'video-1', content: '<p>Test</p>' })]
 
-    const { blob } = await exportNotesZip(
-      notes, 'Test Course', 'test-course', lessonMap
-    )
+    const { blob } = await exportNotesZip(notes, 'Test Course', 'test-course', lessonMap)
 
     const JSZip = (await import('jszip')).default
     const zip = await JSZip.loadAsync(blob)
@@ -609,9 +579,7 @@ describe('exportNotesZip', () => {
       makeNote({ id: 'n2', videoId: 'video-1', content: '<p>Untitled Note</p>' }),
     ]
 
-    const { blob } = await exportNotesZip(
-      notes, 'Test Course', 'test-course', lessonMap
-    )
+    const { blob } = await exportNotesZip(notes, 'Test Course', 'test-course', lessonMap)
 
     const JSZip = (await import('jszip')).default
     const zip = await JSZip.loadAsync(blob)
@@ -633,20 +601,25 @@ describe('exportNotesZip', () => {
     const specialMap = new Map([
       [
         'video-special',
-        { moduleName: 'Module:Special', moduleOrder: 1, lessonName: 'Lesson/Special', lessonOrder: 1 },
+        {
+          moduleName: 'Module:Special',
+          moduleOrder: 1,
+          lessonName: 'Lesson/Special',
+          lessonOrder: 1,
+        },
       ],
     ])
 
-    const { blob } = await exportNotesZip(
-      notes, 'Test Course', 'test-course', specialMap
-    )
+    const { blob } = await exportNotesZip(notes, 'Test Course', 'test-course', specialMap)
 
     const JSZip = (await import('jszip')).default
     const zip = await JSZip.loadAsync(blob)
     const filePaths = Object.keys(zip.files)
 
     // No literal slashes or special chars in paths (except forward slashes for folders)
-    expect(filePaths.every(p => !p.includes(':') && !p.includes('*') && !p.includes('?'))).toBe(true)
+    expect(filePaths.every(p => !p.includes(':') && !p.includes('*') && !p.includes('?'))).toBe(
+      true
+    )
     expect(filePaths.some(p => p.includes('Module-Special'))).toBe(true)
     expect(filePaths.some(p => p.includes('Lesson-Special'))).toBe(true)
   })

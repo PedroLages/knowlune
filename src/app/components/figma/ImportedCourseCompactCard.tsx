@@ -273,10 +273,7 @@ export function ImportedCourseCompactCard({
 
           {/* Selection checkbox — top-left, only visible in selection mode */}
           {onToggleSelect && (
-            <div
-              className="absolute top-1 left-1 z-20"
-              onClick={e => e.stopPropagation()}
-            >
+            <div className="absolute top-1 left-1 z-20" onClick={e => e.stopPropagation()}>
               <div className="bg-background/80 rounded-full p-0.5">
                 <Checkbox
                   checked={selected}

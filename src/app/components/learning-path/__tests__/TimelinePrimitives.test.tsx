@@ -2,7 +2,11 @@ import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router'
-import { LessonRow, StatusCircle, EntryActionButton } from '@/app/components/learning-path/TimelinePrimitives'
+import {
+  LessonRow,
+  StatusCircle,
+  EntryActionButton,
+} from '@/app/components/learning-path/TimelinePrimitives'
 import type { ImportedVideo } from '@/data/types'
 
 function makeVideo(overrides: Partial<ImportedVideo> = {}): ImportedVideo {

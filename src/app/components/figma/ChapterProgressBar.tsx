@@ -94,7 +94,8 @@ export function ChapterProgressBar({
       {/* Visual track — pointer-events-none so range input below handles seeking */}
       <div className="relative w-full h-1 group-hover/progress:h-3 transition-[height] duration-150 bg-white/30 rounded-full pointer-events-none">
         {/* Buffered ("loaded") indicator — rendered behind the fill bar */}
-        {buffered && duration > 0 &&
+        {buffered &&
+          duration > 0 &&
           buffered.map((range, i) => (
             <div
               key={i}

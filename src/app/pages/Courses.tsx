@@ -219,9 +219,7 @@ export function Courses() {
     return map
   }, [])
 
-  const filterSummaryLabel = selectedStatuses
-    .map(s => statusLabelMap.get(s) ?? s)
-    .join(', ')
+  const filterSummaryLabel = selectedStatuses.map(s => statusLabelMap.get(s) ?? s).join(', ')
 
   // Selection mode handlers
   function handleToggleSelect(courseId: string) {
@@ -420,12 +418,19 @@ export function Courses() {
                   onClick={() => setFilterSidebarOpen(true)}
                   className="relative inline-flex items-center gap-1.5 min-h-[44px] px-3 py-2 rounded-full border border-input bg-background text-xs font-semibold text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
                   data-testid="open-filter-sidebar-btn"
-                  aria-label={isAnyFilterActive() ? 'Active filters — open filter sidebar' : 'Open filter sidebar'}
+                  aria-label={
+                    isAnyFilterActive()
+                      ? 'Active filters — open filter sidebar'
+                      : 'Open filter sidebar'
+                  }
                 >
                   <ListFilter className="size-4" aria-hidden="true" />
                   Filters
                   {isAnyFilterActive() && (
-                    <span className="absolute -top-0.5 -right-0.5 size-2 rounded-full bg-brand" aria-hidden="true" />
+                    <span
+                      className="absolute -top-0.5 -right-0.5 size-2 rounded-full bg-brand"
+                      aria-hidden="true"
+                    />
                   )}
                 </button>
               </ControlBarSection>
@@ -502,7 +507,8 @@ export function Courses() {
             >
               <span>
                 {courseIdsInTracks.size}{' '}
-                {courseIdsInTracks.size === 1 ? 'course is' : 'courses are'} organized in learning tracks.
+                {courseIdsInTracks.size === 1 ? 'course is' : 'courses are'} organized in learning
+                tracks.
               </span>
               <button
                 type="button"
@@ -619,58 +625,58 @@ export function Courses() {
                   </Button>
                 </div>
               ) : (
-              <VirtualizedCoursesList
-                courses={sortedImportedCourses}
-                viewMode={courseViewMode}
-                gridClassName={getGridClassName(
-                  courseGridColumns,
-                  courseViewMode === 'compact' ? 'compact' : 'grid'
-                )}
-                data-testid={
-                  courseViewMode === 'list' ? 'imported-courses-list' : 'imported-courses-grid'
-                }
-                renderItem={course =>
-                  courseViewMode === 'list' ? (
-                    <ImportedCourseListRow
-                      course={course}
-                      allTags={allTags}
-                      completionPercent={importedCompletionMap.get(course.id) ?? 0}
-                      selected={selectedIds.has(course.id)}
-                      onToggleSelect={selectionMode ? handleToggleSelect : undefined}
-                    />
-                  ) : courseViewMode === 'compact' ? (
-                    <ImportedCourseCompactCard
-                      course={course}
-                      allTags={allTags}
-                      completionPercent={importedCompletionMap.get(course.id) ?? 0}
-                      selected={selectedIds.has(course.id)}
-                      onToggleSelect={selectionMode ? handleToggleSelect : undefined}
-                    />
-                  ) : (
-                    <ImportedCourseCard
-                      course={course}
-                      allTags={allTags}
-                      completionPercent={importedCompletionMap.get(course.id) ?? 0}
-                      momentumScore={momentumMap.get(course.id)}
-                      selected={selectedIds.has(course.id)}
-                      onToggleSelect={selectionMode ? handleToggleSelect : undefined}
-                    />
-                  )
-                }
-              />
-            )}
-          </div>
-        )}
+                <VirtualizedCoursesList
+                  courses={sortedImportedCourses}
+                  viewMode={courseViewMode}
+                  gridClassName={getGridClassName(
+                    courseGridColumns,
+                    courseViewMode === 'compact' ? 'compact' : 'grid'
+                  )}
+                  data-testid={
+                    courseViewMode === 'list' ? 'imported-courses-list' : 'imported-courses-grid'
+                  }
+                  renderItem={course =>
+                    courseViewMode === 'list' ? (
+                      <ImportedCourseListRow
+                        course={course}
+                        allTags={allTags}
+                        completionPercent={importedCompletionMap.get(course.id) ?? 0}
+                        selected={selectedIds.has(course.id)}
+                        onToggleSelect={selectionMode ? handleToggleSelect : undefined}
+                      />
+                    ) : courseViewMode === 'compact' ? (
+                      <ImportedCourseCompactCard
+                        course={course}
+                        allTags={allTags}
+                        completionPercent={importedCompletionMap.get(course.id) ?? 0}
+                        selected={selectedIds.has(course.id)}
+                        onToggleSelect={selectionMode ? handleToggleSelect : undefined}
+                      />
+                    ) : (
+                      <ImportedCourseCard
+                        course={course}
+                        allTags={allTags}
+                        completionPercent={importedCompletionMap.get(course.id) ?? 0}
+                        momentumScore={momentumMap.get(course.id)}
+                        selected={selectedIds.has(course.id)}
+                        onToggleSelect={selectionMode ? handleToggleSelect : undefined}
+                      />
+                    )
+                  }
+                />
+              )}
+            </div>
+          )}
 
-        {/* CourseFilterSidebar */}
-        <CourseFilterSidebar
-          open={filterSidebarOpen}
-          onOpenChange={setFilterSidebarOpen}
-          availableCourses={preTagFilteredCourses}
-          courseIdsInTracks={courseIdsInTracks}
-        />
-      </>
-    )}
-  </div>
+          {/* CourseFilterSidebar */}
+          <CourseFilterSidebar
+            open={filterSidebarOpen}
+            onOpenChange={setFilterSidebarOpen}
+            availableCourses={preTagFilteredCourses}
+            courseIdsInTracks={courseIdsInTracks}
+          />
+        </>
+      )}
+    </div>
   )
 }

@@ -38,7 +38,7 @@ function renderBanner(props: Partial<Parameters<typeof LegalUpdateBanner>[0]> = 
         documentName="Privacy Notice"
         {...props}
       />
-    </MemoryRouter>,
+    </MemoryRouter>
   )
 }
 
@@ -55,10 +55,7 @@ describe('LegalUpdateBanner — mode="info" (regression)', () => {
   })
 
   it('does not show banner when effectiveDate matches localStorage', () => {
-    localStorage.setItem(
-      'knowlune-legal-effective-date-privacy',
-      'Effective 2026-04-23 (rev 1)',
-    )
+    localStorage.setItem('knowlune-legal-effective-date-privacy', 'Effective 2026-04-23 (rev 1)')
     renderBanner({ mode: 'info' })
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
@@ -69,7 +66,7 @@ describe('LegalUpdateBanner — mode="info" (regression)', () => {
     fireEvent.click(dismissBtn)
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
     expect(localStorage.getItem('knowlune-legal-effective-date-privacy')).toBe(
-      'Effective 2026-04-23 (rev 1)',
+      'Effective 2026-04-23 (rev 1)'
     )
   })
 })
@@ -128,7 +125,7 @@ describe('LegalUpdateBanner — mode="reack"', () => {
 
     await waitFor(() => {
       expect(toast.error).toHaveBeenCalledWith(
-        expect.stringContaining('Could not record your acknowledgement'),
+        expect.stringContaining('Could not record your acknowledgement')
       )
     })
 

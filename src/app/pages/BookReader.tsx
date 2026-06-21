@@ -101,7 +101,9 @@ export function BookReader() {
   const { bookId } = useParams<{ bookId: string }>()
   const navigate = useNavigate()
   const location = useLocation()
-  const resumeFromMiniPlayer = Boolean((location.state as { __fromMiniPlayer?: boolean } | null)?.__fromMiniPlayer)
+  const resumeFromMiniPlayer = Boolean(
+    (location.state as { __fromMiniPlayer?: boolean } | null)?.__fromMiniPlayer
+  )
 
   // R19: capture deep-links to the reader (e.g. /library/:bookId/read) that
   // bypass the Library landing. Skipped for palette-initiated navigations.
@@ -1059,7 +1061,10 @@ export function BookReader() {
                 }
                 initialChapterIndex={
                   startChapterIndexParamRef.current !== null
-                    ? Math.max(0, Math.min(startChapterIndexParamRef.current, book.chapters.length - 1))
+                    ? Math.max(
+                        0,
+                        Math.min(startChapterIndexParamRef.current, book.chapters.length - 1)
+                      )
                     : undefined
                 }
                 initialSeekSeconds={seekSecondsParamRef.current ?? undefined}

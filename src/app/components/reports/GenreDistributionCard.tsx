@@ -84,7 +84,6 @@ export function GenreDistributionCard() {
                 ))}
               </Pie>
               <Tooltip
-                 
                 formatter={
                   ((value: number, name: string) => [
                     `${value} ${value === 1 ? 'book' : 'books'}`,

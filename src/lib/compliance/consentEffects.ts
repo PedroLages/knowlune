@@ -108,7 +108,7 @@ export interface ConsentOperationResult {
 export async function grantConsent(
   userId: string,
   purpose: ConsentPurpose,
-  evidence?: Record<string, unknown>,
+  evidence?: Record<string, unknown>
 ): Promise<ConsentOperationResult> {
   const now = new Date().toISOString()
   try {
@@ -124,7 +124,7 @@ export async function grantConsent(
       noticeVersion: CURRENT_NOTICE_VERSION,
       // Merge new evidence fields over existing ones so that a provider_id
       // re-consent call updates provider_id without losing other evidence keys.
-      evidence: { ...(existing?.evidence as Record<string, unknown> ?? {}), ...(evidence ?? {}) },
+      evidence: { ...((existing?.evidence as Record<string, unknown>) ?? {}), ...(evidence ?? {}) },
       createdAt: existing?.createdAt ?? now,
       updatedAt: now,
     }
@@ -156,7 +156,7 @@ export async function grantConsent(
  */
 export async function withdrawConsent(
   userId: string,
-  purpose: ConsentPurpose,
+  purpose: ConsentPurpose
 ): Promise<ConsentOperationResult> {
   const now = new Date().toISOString()
 
@@ -182,7 +182,7 @@ export async function withdrawConsent(
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
     console.error(
-      `[consentEffects] withdrawConsent: failed to write withdrawnAt for purpose "${purpose}": ${message}`,
+      `[consentEffects] withdrawConsent: failed to write withdrawnAt for purpose "${purpose}": ${message}`
     )
     return { success: false, error: message }
   }
@@ -194,7 +194,7 @@ export async function withdrawConsent(
     // Step 3: Rollback — restore previous state.
     const message = err instanceof Error ? err.message : String(err)
     console.error(
-      `[consentEffects] withdrawConsent: effect failed for purpose "${purpose}", rolling back: ${message}`,
+      `[consentEffects] withdrawConsent: effect failed for purpose "${purpose}", rolling back: ${message}`
     )
     try {
       const rollbackRecord = {
@@ -212,7 +212,7 @@ export async function withdrawConsent(
     } catch (rollbackErr) {
       console.error(
         `[consentEffects] CRITICAL: rollback also failed for purpose "${purpose}":`,
-        rollbackErr,
+        rollbackErr
       )
     }
     return { success: false, error: message }
@@ -275,7 +275,7 @@ async function _effectAiEmbeddings(userId: string): Promise<void> {
     }
   } catch (err) {
     console.warn(
-      `[consentEffects] ai_embeddings: failed to freeze learner models (non-fatal): ${String(err)}`,
+      `[consentEffects] ai_embeddings: failed to freeze learner models (non-fatal): ${String(err)}`
     )
   }
 }

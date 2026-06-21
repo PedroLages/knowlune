@@ -72,10 +72,7 @@ function getProgressMeta(book: Book): string {
   return `left · ${progressLabel}`
 }
 
-const VARIANT_SIZES: Record<
-  BookTileVariant,
-  { container: string; cover: string }
-> = {
+const VARIANT_SIZES: Record<BookTileVariant, { container: string; cover: string }> = {
   small: {
     container: LIBRARY_SHELF_CARD_WIDTH_CLASS,
     cover: `${LIBRARY_SHELF_CARD_WIDTH_CLASS} aspect-square`,
@@ -171,9 +168,7 @@ export const BookTile = memo(function BookTile({
 
       {/* Title + Author + optional progress meta */}
       <div className="mt-3 px-1 text-center">
-        <p className="line-clamp-2 text-sm font-bold leading-tight text-foreground">
-          {book.title}
-        </p>
+        <p className="line-clamp-2 text-sm font-bold leading-tight text-foreground">{book.title}</p>
         {book.author && (
           <p className="mt-1 truncate text-xs text-muted-foreground">{book.author}</p>
         )}

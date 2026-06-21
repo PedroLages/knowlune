@@ -25,7 +25,11 @@ describe('parseCourseManifest', () => {
             title: 'Module 1: Foundations',
             description: 'Core concepts and terminology',
             lessons: [
-              { title: 'Welcome & Overview', filename: '01-welcome.mp4', description: 'Course introduction' },
+              {
+                title: 'Welcome & Overview',
+                filename: '01-welcome.mp4',
+                description: 'Course introduction',
+              },
               { title: 'Key Concepts', filename: '02-concepts.mp4' },
             ],
           },
@@ -46,7 +50,9 @@ describe('parseCourseManifest', () => {
     if (!result.ok) throw new Error('Expected ok result')
     expect(result.value.version).toBe('1.0')
     expect(result.value.course.name).toBe('Advanced Behavioral Design')
-    expect(result.value.course.description).toBe('A comprehensive course on behavioral design patterns.')
+    expect(result.value.course.description).toBe(
+      'A comprehensive course on behavioral design patterns.'
+    )
     expect(result.value.course.category).toBe('behavioral-analysis')
     expect(result.value.course.difficulty).toBe('advanced')
     expect(result.value.course.tags).toEqual(['psychology', 'design', 'ux'])
@@ -170,7 +176,7 @@ describe('parseCourseManifest', () => {
 
     expect(result.ok).toBe(false)
     if (result.ok) throw new Error('Expected error result')
-    expect(result.errors.some((e) => e.path === 'version')).toBe(true)
+    expect(result.errors.some(e => e.path === 'version')).toBe(true)
   })
 
   it('rejects invalid difficulty value', () => {
@@ -181,7 +187,7 @@ describe('parseCourseManifest', () => {
 
     expect(result.ok).toBe(false)
     if (result.ok) throw new Error('Expected error result')
-    const diffError = result.errors.find((e) => e.path === 'course.difficulty')
+    const diffError = result.errors.find(e => e.path === 'course.difficulty')
     expect(diffError).toBeDefined()
     expect(diffError!.message).toContain('super-expert')
   })
@@ -194,7 +200,7 @@ describe('parseCourseManifest', () => {
 
     expect(result.ok).toBe(false)
     if (result.ok) throw new Error('Expected error result')
-    const catError = result.errors.find((e) => e.path === 'course.category')
+    const catError = result.errors.find(e => e.path === 'course.category')
     expect(catError).toBeDefined()
   })
 
@@ -206,7 +212,7 @@ describe('parseCourseManifest', () => {
 
     expect(result.ok).toBe(false)
     if (result.ok) throw new Error('Expected error result')
-    const nameError = result.errors.find((e) => e.path === 'course.name')
+    const nameError = result.errors.find(e => e.path === 'course.name')
     expect(nameError).toBeDefined()
   })
 
@@ -218,7 +224,7 @@ describe('parseCourseManifest', () => {
 
     expect(result.ok).toBe(false)
     if (result.ok) throw new Error('Expected error result')
-    const nameError = result.errors.find((e) => e.path === 'course.name')
+    const nameError = result.errors.find(e => e.path === 'course.name')
     expect(nameError).toBeDefined()
   })
 
@@ -230,7 +236,7 @@ describe('parseCourseManifest', () => {
 
     expect(result.ok).toBe(false)
     if (result.ok) throw new Error('Expected error result')
-    const nameError = result.errors.find((e) => e.path === 'course.name')
+    const nameError = result.errors.find(e => e.path === 'course.name')
     expect(nameError).toBeDefined()
   })
 
@@ -242,7 +248,7 @@ describe('parseCourseManifest', () => {
 
     expect(result.ok).toBe(false)
     if (result.ok) throw new Error('Expected error result')
-    const authError = result.errors.find((e) => e.path === 'course.author.name')
+    const authError = result.errors.find(e => e.path === 'course.author.name')
     expect(authError).toBeDefined()
   })
 
@@ -344,7 +350,7 @@ describe('parseCourseManifest', () => {
 
     expect(result.ok).toBe(false)
     if (result.ok) throw new Error('Expected error result')
-    const titleError = result.errors.find((e) => e.path.includes('title'))
+    const titleError = result.errors.find(e => e.path.includes('title'))
     expect(titleError).toBeDefined()
   })
 
@@ -359,7 +365,7 @@ describe('parseCourseManifest', () => {
 
     expect(result.ok).toBe(false)
     if (result.ok) throw new Error('Expected error result')
-    const fileError = result.errors.find((e) => e.path.includes('filename'))
+    const fileError = result.errors.find(e => e.path.includes('filename'))
     expect(fileError).toBeDefined()
   })
 
@@ -371,7 +377,7 @@ describe('parseCourseManifest', () => {
 
     expect(result.ok).toBe(false)
     if (result.ok) throw new Error('Expected error result')
-    expect(result.errors.some((e) => e.path === 'course.tags')).toBe(true)
+    expect(result.errors.some(e => e.path === 'course.tags')).toBe(true)
   })
 
   // Error paths
@@ -396,7 +402,7 @@ describe('parseCourseManifest', () => {
 
     expect(result.ok).toBe(false)
     if (result.ok) throw new Error('Expected error result')
-    expect(result.errors.some((e) => e.path === 'course')).toBe(true)
+    expect(result.errors.some(e => e.path === 'course')).toBe(true)
   })
 
   it('rejects malformed module object', () => {
@@ -410,7 +416,7 @@ describe('parseCourseManifest', () => {
 
     expect(result.ok).toBe(false)
     if (result.ok) throw new Error('Expected error result')
-    expect(result.errors.some((e) => e.path.includes('modules[0]'))).toBe(true)
+    expect(result.errors.some(e => e.path.includes('modules[0]'))).toBe(true)
   })
 
   it('rejects module with missing lessons array', () => {
@@ -424,7 +430,7 @@ describe('parseCourseManifest', () => {
 
     expect(result.ok).toBe(false)
     if (result.ok) throw new Error('Expected error result')
-    expect(result.errors.some((e) => e.path.includes('lessons'))).toBe(true)
+    expect(result.errors.some(e => e.path.includes('lessons'))).toBe(true)
   })
 
   it('rejects module with empty title', () => {
@@ -438,7 +444,9 @@ describe('parseCourseManifest', () => {
 
     expect(result.ok).toBe(false)
     if (result.ok) throw new Error('Expected error result')
-    expect(result.errors.some((e) => e.path.includes('module') && e.path.includes('title'))).toBe(true)
+    expect(result.errors.some(e => e.path.includes('module') && e.path.includes('title'))).toBe(
+      true
+    )
   })
 })
 
@@ -463,7 +471,9 @@ describe('parseTrackManifest', () => {
     expect(result.ok).toBe(true)
     if (!result.ok) throw new Error('Expected ok result')
     expect(result.value.track.name).toBe('Behavioral Design Mastery')
-    expect(result.value.track.description).toBe('Master behavioral design from foundations to advanced applications.')
+    expect(result.value.track.description).toBe(
+      'Master behavioral design from foundations to advanced applications.'
+    )
     expect(result.value.track.difficulty).toBe('advanced')
     expect(result.value.track.courses).toHaveLength(3)
     expect(result.value.track.courses[0]).toEqual({ folder: '01-foundations', position: 1 })
@@ -484,7 +494,9 @@ describe('parseTrackManifest', () => {
 
     expect(result.ok).toBe(true)
     if (!result.ok) throw new Error('Expected ok result')
-    expect(result.value.track.courses[0].notes).toBe('Skip post-processing; use field sections only')
+    expect(result.value.track.courses[0].notes).toBe(
+      'Skip post-processing; use field sections only'
+    )
     expect(result.value.track.courses[1].notes).toBeUndefined()
   })
 
@@ -524,7 +536,7 @@ describe('parseTrackManifest', () => {
 
     expect(result.ok).toBe(false)
     if (result.ok) throw new Error('Expected error result')
-    expect(result.errors.some((e) => e.path === 'track.name')).toBe(true)
+    expect(result.errors.some(e => e.path === 'track.name')).toBe(true)
   })
 
   it('rejects missing courses array', () => {
@@ -535,7 +547,7 @@ describe('parseTrackManifest', () => {
 
     expect(result.ok).toBe(false)
     if (result.ok) throw new Error('Expected error result')
-    expect(result.errors.some((e) => e.path === 'track.courses')).toBe(true)
+    expect(result.errors.some(e => e.path === 'track.courses')).toBe(true)
   })
 
   it('rejects course entry missing folder', () => {
@@ -549,7 +561,7 @@ describe('parseTrackManifest', () => {
 
     expect(result.ok).toBe(false)
     if (result.ok) throw new Error('Expected error result')
-    expect(result.errors.some((e) => e.path.includes('folder'))).toBe(true)
+    expect(result.errors.some(e => e.path.includes('folder'))).toBe(true)
   })
 
   it('rejects course entry missing position', () => {
@@ -563,7 +575,7 @@ describe('parseTrackManifest', () => {
 
     expect(result.ok).toBe(false)
     if (result.ok) throw new Error('Expected error result')
-    expect(result.errors.some((e) => e.path.includes('position'))).toBe(true)
+    expect(result.errors.some(e => e.path.includes('position'))).toBe(true)
   })
 
   it('rejects empty course folder name', () => {
@@ -577,7 +589,7 @@ describe('parseTrackManifest', () => {
 
     expect(result.ok).toBe(false)
     if (result.ok) throw new Error('Expected error result')
-    expect(result.errors.some((e) => e.path.includes('folder'))).toBe(true)
+    expect(result.errors.some(e => e.path.includes('folder'))).toBe(true)
   })
 
   it('rejects invalid difficulty', () => {
@@ -592,7 +604,7 @@ describe('parseTrackManifest', () => {
 
     expect(result.ok).toBe(false)
     if (result.ok) throw new Error('Expected error result')
-    expect(result.errors.some((e) => e.path === 'track.difficulty')).toBe(true)
+    expect(result.errors.some(e => e.path === 'track.difficulty')).toBe(true)
   })
 
   // Error paths
@@ -609,7 +621,7 @@ describe('parseTrackManifest', () => {
 
     expect(result.ok).toBe(false)
     if (result.ok) throw new Error('Expected error result')
-    expect(result.errors.some((e) => e.path === 'track')).toBe(true)
+    expect(result.errors.some(e => e.path === 'track')).toBe(true)
   })
 
   // ── Track author ─────────────────────────────────────────────
@@ -682,7 +694,7 @@ describe('parseTrackManifest', () => {
 
     expect(result.ok).toBe(false)
     if (result.ok) throw new Error('Expected error result')
-    expect(result.errors.some((e) => e.path === 'track.author.name')).toBe(true)
+    expect(result.errors.some(e => e.path === 'track.author.name')).toBe(true)
   })
 
   it('rejects track author with specialties as non-array', () => {
@@ -697,7 +709,7 @@ describe('parseTrackManifest', () => {
 
     expect(result.ok).toBe(false)
     if (result.ok) throw new Error('Expected error result')
-    expect(result.errors.some((e) => e.path === 'track.author.specialties')).toBe(true)
+    expect(result.errors.some(e => e.path === 'track.author.specialties')).toBe(true)
   })
 
   it('rejects track author with yearsExperience as non-number', () => {
@@ -712,7 +724,7 @@ describe('parseTrackManifest', () => {
 
     expect(result.ok).toBe(false)
     if (result.ok) throw new Error('Expected error result')
-    expect(result.errors.some((e) => e.path === 'track.author.yearsExperience')).toBe(true)
+    expect(result.errors.some(e => e.path === 'track.author.yearsExperience')).toBe(true)
   })
 
   it('parses track author with website/linkedin/twitter social links', () => {

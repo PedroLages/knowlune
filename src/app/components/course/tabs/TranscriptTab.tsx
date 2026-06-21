@@ -104,8 +104,12 @@ export function TranscriptTab({
   const capabilities = adapter.getCapabilities()
   const isLocalVideo = !capabilities.requiresNetwork && !isPdf
 
-  const { transcribe, isTranscribing, progress, provider: whisperProvider } =
-    useWhisperTranscription()
+  const {
+    transcribe,
+    isTranscribing,
+    progress,
+    provider: whisperProvider,
+  } = useWhisperTranscription()
 
   const userId = useAuthStore(s => s.user?.id)
 
@@ -319,8 +323,8 @@ export function TranscriptTab({
               No transcript available for this video
             </p>
             <p className="text-xs text-muted-foreground/70 text-center max-w-xs">
-              Generate a transcript using on-device Whisper transcription. This
-              processes the audio locally and stores the transcript for this lesson.
+              Generate a transcript using on-device Whisper transcription. This processes the audio
+              locally and stores the transcript for this lesson.
             </p>
             <Button
               onClick={handleGenerate}
@@ -425,8 +429,7 @@ export function TranscriptTab({
                 aria-hidden="true"
               />
               <p className="text-sm text-muted-foreground">
-                Transcription requires your consent. Enable{' '}
-                <strong>Voice Transcription</strong> in{' '}
+                Transcription requires your consent. Enable <strong>Voice Transcription</strong> in{' '}
                 <a
                   href="/settings?section=privacy"
                   className="text-brand underline underline-offset-2 hover:text-brand-hover"

@@ -42,9 +42,7 @@ export function ReadingOverviewSection() {
           .filter(b => b.progress >= 1 && b.progress <= 99)
           .toArray()
 
-        inProgressBooks.sort(
-          (a, b) => (b.lastOpenedAt ?? '').localeCompare(a.lastOpenedAt ?? '')
-        )
+        inProgressBooks.sort((a, b) => (b.lastOpenedAt ?? '').localeCompare(a.lastOpenedAt ?? ''))
 
         const current = inProgressBooks[0] ?? null
 
@@ -53,20 +51,15 @@ export function ReadingOverviewSection() {
         const finishedBooks = await db.books
           .where('status')
           .equals('finished')
-          .filter(b => b.finishedAt ? new Date(b.finishedAt).getFullYear() === thisYear : false)
+          .filter(b => (b.finishedAt ? new Date(b.finishedAt).getFullYear() === thisYear : false))
           .count()
 
         // Total reading time from Dexie sessions
-        const bookSessions = await db.studySessions
-          .where('courseId')
-          .equals('')
-          .toArray()
+        const bookSessions = await db.studySessions.where('courseId').equals('').toArray()
         const totalSeconds = bookSessions.reduce((sum, s) => sum + (s.duration || 0), 0)
 
         // Recent 5 sessions with book titles
-        bookSessions.sort(
-          (a, b) => (b.startTime ?? '').localeCompare(a.startTime ?? '')
-        )
+        bookSessions.sort((a, b) => (b.startTime ?? '').localeCompare(a.startTime ?? ''))
         const recent = bookSessions.slice(0, 5)
 
         const recentWithTitles: RecentSession[] = recent.map(session => ({
@@ -93,13 +86,17 @@ export function ReadingOverviewSection() {
         }
 
         if (!cancelled) {
-          setCurrentlyReading(current ? {
-            bookId: current.id,
-            title: current.title,
-            author: current.author,
-            coverUrl: current.coverUrl,
-            progress: current.progress,
-          } : null)
+          setCurrentlyReading(
+            current
+              ? {
+                  bookId: current.id,
+                  title: current.title,
+                  author: current.author,
+                  coverUrl: current.coverUrl,
+                  progress: current.progress,
+                }
+              : null
+          )
           setBooksFinishedThisYear(finishedBooks)
           setTotalReadingMinutes(Math.round(totalSeconds / 60))
           setRecentSessions(recentWithTitles)
@@ -121,7 +118,12 @@ export function ReadingOverviewSection() {
   }, [])
 
   // Hide section for users with no reading activity
-  if (!isLoading && !currentlyReading && booksFinishedThisYear === 0 && recentSessions.length === 0) {
+  if (
+    !isLoading &&
+    !currentlyReading &&
+    booksFinishedThisYear === 0 &&
+    recentSessions.length === 0
+  ) {
     return null
   }
 
@@ -239,14 +241,12 @@ export function ReadingOverviewSection() {
           </div>
           <div className="space-y-3">
             {recentSessions.map(session => (
-              <div
-                key={session.id}
-                className="flex items-center justify-between"
-              >
+              <div key={session.id} className="flex items-center justify-between">
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-medium truncate">{session.bookTitle}</p>
                   <p className="text-xs text-muted-foreground">
-                    {formatDuration(session.duration)} &middot; {formatRelativeTime(session.startTime)}
+                    {formatDuration(session.duration)} &middot;{' '}
+                    {formatRelativeTime(session.startTime)}
                   </p>
                 </div>
                 {session.bookId && (

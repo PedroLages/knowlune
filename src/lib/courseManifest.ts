@@ -73,18 +73,11 @@ export interface ManifestError {
   message: string
 }
 
-export type ParseResult<T> =
-  | { ok: true; value: T }
-  | { ok: false; errors: ManifestError[] }
+export type ParseResult<T> = { ok: true; value: T } | { ok: false; errors: ManifestError[] }
 
 // ── Helpers ───────────────────────────────────────────────────
 
-const VALID_DIFFICULTIES: readonly string[] = [
-  'beginner',
-  'intermediate',
-  'advanced',
-  'expert',
-]
+const VALID_DIFFICULTIES: readonly string[] = ['beginner', 'intermediate', 'advanced', 'expert']
 
 const VALID_CATEGORIES: readonly string[] = [
   'behavioral-analysis',
@@ -109,14 +102,11 @@ function asOptionalString(value: unknown): string | undefined {
 
 function asStringArray(value: unknown): string[] | null {
   if (!Array.isArray(value)) return null
-  if (!value.every((v) => typeof v === 'string')) return null
+  if (!value.every(v => typeof v === 'string')) return null
   return value as string[]
 }
 
-function validateNonEmptyString(
-  value: unknown,
-  _path: string,
-): string | null {
+function validateNonEmptyString(value: unknown, _path: string): string | null {
   if (typeof value !== 'string' || value.trim().length === 0) return null
   return value.trim()
 }
@@ -130,11 +120,17 @@ function parseLesson(value: unknown, modulePath: string): ManifestLesson | Manif
   }
   const title = validateNonEmptyString(value.title, `${modulePath}.title`)
   if (!title) {
-    errors.push({ path: `${modulePath}.title`, message: 'Lesson title is required and must be a non-empty string' })
+    errors.push({
+      path: `${modulePath}.title`,
+      message: 'Lesson title is required and must be a non-empty string',
+    })
   }
   const filename = validateNonEmptyString(value.filename, `${modulePath}.filename`)
   if (!filename) {
-    errors.push({ path: `${modulePath}.filename`, message: 'Lesson filename is required and must be a non-empty string' })
+    errors.push({
+      path: `${modulePath}.filename`,
+      message: 'Lesson filename is required and must be a non-empty string',
+    })
   }
   if (errors.length > 0) return errors
   return {
@@ -144,10 +140,7 @@ function parseLesson(value: unknown, modulePath: string): ManifestLesson | Manif
   }
 }
 
-function parseModule(
-  value: unknown,
-  index: number,
-): ManifestModule | ManifestError[] {
+function parseModule(value: unknown, index: number): ManifestModule | ManifestError[] {
   const errors: ManifestError[] = []
   if (!isRecord(value)) {
     return [{ path: `course.modules[${index}]`, message: 'Module must be an object' }]
@@ -162,7 +155,9 @@ function parseModule(
   }
 
   if (!Array.isArray(value.lessons)) {
-    return [{ path: `course.modules[${index}].lessons`, message: 'Module lessons must be an array' }]
+    return [
+      { path: `course.modules[${index}].lessons`, message: 'Module lessons must be an array' },
+    ]
   }
 
   const lessons: ManifestLesson[] = []
@@ -191,10 +186,7 @@ function asPositiveInteger(value: unknown): number | undefined {
   return value
 }
 
-function parseManifestAuthor(
-  value: unknown,
-  parentPath: string
-): ManifestAuthor | ManifestError[] {
+function parseManifestAuthor(value: unknown, parentPath: string): ManifestAuthor | ManifestError[] {
   const errors: ManifestError[] = []
 
   if (!isRecord(value)) {
@@ -212,7 +204,10 @@ function parseManifestAuthor(
     if (parsed) {
       specialties = parsed
     } else {
-      errors.push({ path: `${parentPath}.specialties`, message: 'Specialties must be an array of strings' })
+      errors.push({
+        path: `${parentPath}.specialties`,
+        message: 'Specialties must be an array of strings',
+      })
     }
   }
 
@@ -222,7 +217,10 @@ function parseManifestAuthor(
     if (parsed !== undefined) {
       yearsExperience = parsed
     } else {
-      errors.push({ path: `${parentPath}.yearsExperience`, message: 'Years of experience must be a non-negative integer' })
+      errors.push({
+        path: `${parentPath}.yearsExperience`,
+        message: 'Years of experience must be a non-negative integer',
+      })
     }
   }
 
@@ -276,7 +274,10 @@ export function parseCourseManifest(json: unknown): ParseResult<CourseManifest> 
   // Name (required)
   const name = validateNonEmptyString(course.name, 'course.name')
   if (!name) {
-    errors.push({ path: 'course.name', message: 'Course name is required and must be a non-empty string' })
+    errors.push({
+      path: 'course.name',
+      message: 'Course name is required and must be a non-empty string',
+    })
   }
 
   // Description (optional)
@@ -379,8 +380,7 @@ export function parseCourseManifest(json: unknown): ParseResult<CourseManifest> 
       if (trackName) {
         track = {
           name: trackName,
-          position:
-            typeof course.track.position === 'number' ? course.track.position : undefined,
+          position: typeof course.track.position === 'number' ? course.track.position : undefined,
         }
       } else {
         errors.push({
@@ -451,7 +451,10 @@ export function parseTrackManifest(json: unknown): ParseResult<TrackManifest> {
   // Name (required)
   const name = validateNonEmptyString(track.name, 'track.name')
   if (!name) {
-    errors.push({ path: 'track.name', message: 'Track name is required and must be a non-empty string' })
+    errors.push({
+      path: 'track.name',
+      message: 'Track name is required and must be a non-empty string',
+    })
   }
 
   // Description
@@ -505,7 +508,11 @@ export function parseTrackManifest(json: unknown): ParseResult<TrackManifest> {
         message: 'Course folder name is required and must be a non-empty string',
       })
     }
-    if (typeof entry.position !== 'number' || !Number.isInteger(entry.position) || entry.position < 1) {
+    if (
+      typeof entry.position !== 'number' ||
+      !Number.isInteger(entry.position) ||
+      entry.position < 1
+    ) {
       errors.push({
         path: `track.courses[${ci}].position`,
         message: 'Course position must be a positive integer >= 1',

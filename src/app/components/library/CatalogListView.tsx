@@ -52,69 +52,72 @@ export function CatalogListView({
           {catalogs.map(catalog => {
             const credStatus = statusByKey[`opds-catalog:${catalog.id}`]
             return (
-            <li
-              key={catalog.id}
-              className="flex items-center justify-between gap-3 py-3"
-              data-testid={`opds-catalog-item-${catalog.id}`}
-            >
-              <div className="flex flex-col min-w-0">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium text-foreground truncate">{catalog.name}</span>
-                  {/* E97-S05 AC4: Vault sync status badge */}
-                  {credStatus && (
-                    <CredentialSyncStatusBadge
-                      status={credStatus}
-                      showLabel={false}
-                      data-testid={`opds-credential-status-${catalog.id}`}
-                    />
+              <li
+                key={catalog.id}
+                className="flex items-center justify-between gap-3 py-3"
+                data-testid={`opds-catalog-item-${catalog.id}`}
+              >
+                <div className="flex flex-col min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium text-foreground truncate">
+                      {catalog.name}
+                    </span>
+                    {/* E97-S05 AC4: Vault sync status badge */}
+                    {credStatus && (
+                      <CredentialSyncStatusBadge
+                        status={credStatus}
+                        showLabel={false}
+                        data-testid={`opds-credential-status-${catalog.id}`}
+                      />
+                    )}
+                  </div>
+                  <span className="text-xs text-muted-foreground truncate">{catalog.url}</span>
+                  {catalog.lastSynced && (
+                    <span className="text-xs text-muted-foreground">
+                      Last synced:{' '}
+                      {new Date(catalog.lastSynced).toLocaleDateString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric',
+                      })}
+                    </span>
                   )}
                 </div>
-                <span className="text-xs text-muted-foreground truncate">{catalog.url}</span>
-                {catalog.lastSynced && (
-                  <span className="text-xs text-muted-foreground">
-                    Last synced:{' '}
-                    {new Date(catalog.lastSynced).toLocaleDateString('en-US', {
-                      month: 'short',
-                      day: 'numeric',
-                      year: 'numeric',
-                    })}
-                  </span>
-                )}
-              </div>
-              <div className="flex items-center gap-1 shrink-0">
-                {onBrowse && (
+                <div className="flex items-center gap-1 shrink-0">
+                  {onBrowse && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => onBrowse(catalog)}
+                      className="size-11"
+                      aria-label={`Browse ${catalog.name}`}
+                      data-testid={`browse-catalog-${catalog.id}`}
+                    >
+                      <BookOpen className="size-4" />
+                    </Button>
+                  )}
                   <Button
                     variant="ghost"
                     size="icon"
-                    onClick={() => onBrowse(catalog)}
+                    onClick={() => onEdit(catalog)}
                     className="size-11"
-                    aria-label={`Browse ${catalog.name}`}
-                    data-testid={`browse-catalog-${catalog.id}`}
+                    aria-label={`Edit ${catalog.name}`}
                   >
-                    <BookOpen className="size-4" />
+                    <Pencil className="size-4" />
                   </Button>
-                )}
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => onEdit(catalog)}
-                  className="size-11"
-                  aria-label={`Edit ${catalog.name}`}
-                >
-                  <Pencil className="size-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => onDelete(catalog)}
-                  className="size-11 text-destructive hover:text-destructive"
-                  aria-label={`Remove ${catalog.name}`}
-                >
-                  <Trash2 className="size-4" />
-                </Button>
-              </div>
-            </li>
-          )})}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => onDelete(catalog)}
+                    className="size-11 text-destructive hover:text-destructive"
+                    aria-label={`Remove ${catalog.name}`}
+                  >
+                    <Trash2 className="size-4" />
+                  </Button>
+                </div>
+              </li>
+            )
+          })}
         </ul>
       )}
 

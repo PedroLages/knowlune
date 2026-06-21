@@ -57,7 +57,11 @@ describe('LibraryMediaShelfRow', () => {
     await act(async () => {
       Object.defineProperty(scroller, 'scrollWidth', { value: 300, configurable: true })
       Object.defineProperty(scroller, 'clientWidth', { value: 300, configurable: true })
-      Object.defineProperty(scroller, 'scrollLeft', { value: 0, configurable: true, writable: true })
+      Object.defineProperty(scroller, 'scrollLeft', {
+        value: 0,
+        configurable: true,
+        writable: true,
+      })
       window.dispatchEvent(new Event('resize'))
     })
 

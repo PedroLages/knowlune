@@ -41,8 +41,7 @@ export function useFeedbackSubmit(): UseFeedbackSubmitReturn {
       // Build context now (captures current URL, Sentry event id, etc.)
       const ctx = buildFeedbackContext(user, fields.mode)
       const fallback = buildFallbackText(fields, ctx)
-      const title =
-        fields.mode === 'bug' ? fields.title : (fields.title?.trim() || 'User feedback')
+      const title = fields.mode === 'bug' ? fields.title : fields.title?.trim() || 'User feedback'
       const mailto = buildMailtoHref(
         `[Knowlune ${fields.mode === 'bug' ? 'Bug' : 'Feedback'}] ${title}`,
         fallback

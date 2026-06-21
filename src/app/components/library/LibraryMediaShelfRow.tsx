@@ -19,7 +19,6 @@ export interface LibraryMediaShelfRowProps {
   'data-testid'?: string
 }
 
-
 export function LibraryMediaShelfRow({
   icon,
   label,
@@ -103,7 +102,9 @@ export function LibraryMediaShelfRow({
                 'absolute right-1 top-[38%] z-20 hidden size-12 -translate-y-1/2 items-center justify-center rounded-full bg-card/80 text-foreground shadow-sm ring-1 ring-border/10 backdrop-blur transition-opacity disabled:cursor-not-allowed disabled:opacity-35 md:flex',
                 canScrollRight ? 'opacity-100' : 'opacity-60'
               )}
-              data-testid={testId ? `${testId}-scroll-right` : 'library-media-shelf-row-scroll-right'}
+              data-testid={
+                testId ? `${testId}-scroll-right` : 'library-media-shelf-row-scroll-right'
+              }
             >
               <ChevronRight className="size-6" aria-hidden="true" />
             </button>
@@ -129,4 +130,3 @@ export function LibraryMediaShelfRow({
     </section>
   )
 }
-

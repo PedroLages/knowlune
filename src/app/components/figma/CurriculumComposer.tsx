@@ -29,13 +29,7 @@ import { useIsMobile } from '@/app/hooks/useMediaQuery'
 import { useImportWizardTrigger } from '@/app/hooks/useImportWizardTrigger'
 import { PremiumGate } from '@/app/components/PremiumGate'
 import { toast } from 'sonner'
-import {
-  Loader2,
-  Sparkles,
-  Search,
-  ArrowDownToLine,
-  Trash2,
-} from 'lucide-react'
+import { Loader2, Sparkles, Search, ArrowDownToLine, Trash2 } from 'lucide-react'
 import { cn } from '@/app/components/ui/utils'
 import type { ImportedCourse } from '@/data/types'
 import type { GoalPathEntry } from '@/ai/learningPath/generatePathFromGoal'
@@ -197,20 +191,15 @@ export function CurriculumComposer({
 
     try {
       const { generatePathFromGoal } = await import('@/ai/learningPath/generatePathFromGoal')
-      const result = await generatePathFromGoal(
-        goal.trim(),
-        importedCourses,
-        { signal: controller.signal }
-      )
+      const result = await generatePathFromGoal(goal.trim(), importedCourses, {
+        signal: controller.signal,
+      })
       if (!controller.signal.aborted) {
         setAiPreview(result)
       }
     } catch (error) {
       if (!controller.signal.aborted) {
-        const message =
-          error instanceof Error
-            ? error.message
-            : 'Failed to generate learning path'
+        const message = error instanceof Error ? error.message : 'Failed to generate learning path'
         setAiError(message)
         if (message.includes('not configured')) {
           setAiError(
@@ -586,37 +575,37 @@ export function CurriculumComposer({
   const canSubmitManual = selectedCourseIds.length > 0 && !isSubmitting
 
   // --- Buttons ---
-  const createPathButton = isAiMode && aiPreview ? (
-    <Button
-      type="button"
-      variant="brand"
-      disabled={
-        isSubmitting ||
-        aiPreview.entries.filter(e => !e.isGap && e.courseId).length === 0
-      }
-      onClick={handleSaveAIPath}
-    >
-      {isSubmitting ? (
-        <>
-          <Loader2 className="size-4 mr-2 animate-spin" aria-hidden="true" />
-          Creating...
-        </>
-      ) : (
-        'Create Path'
-      )}
-    </Button>
-  ) : (
-    <Button type="submit" variant="brand" disabled={!canSubmitManual}>
-      {isSubmitting ? (
-        <>
-          <Loader2 className="size-4 mr-2 animate-spin" aria-hidden="true" />
-          Creating...
-        </>
-      ) : (
-        'Create Path'
-      )}
-    </Button>
-  )
+  const createPathButton =
+    isAiMode && aiPreview ? (
+      <Button
+        type="button"
+        variant="brand"
+        disabled={
+          isSubmitting || aiPreview.entries.filter(e => !e.isGap && e.courseId).length === 0
+        }
+        onClick={handleSaveAIPath}
+      >
+        {isSubmitting ? (
+          <>
+            <Loader2 className="size-4 mr-2 animate-spin" aria-hidden="true" />
+            Creating...
+          </>
+        ) : (
+          'Create Path'
+        )}
+      </Button>
+    ) : (
+      <Button type="submit" variant="brand" disabled={!canSubmitManual}>
+        {isSubmitting ? (
+          <>
+            <Loader2 className="size-4 mr-2 animate-spin" aria-hidden="true" />
+            Creating...
+          </>
+        ) : (
+          'Create Path'
+        )}
+      </Button>
+    )
   const title = isAiMode ? 'AI Learning Path' : 'Create Learning Path'
   const desc = isAiMode
     ? 'Describe your learning goal and the AI will build a path for you.'

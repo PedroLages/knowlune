@@ -12,7 +12,14 @@
 
 import { memo, type KeyboardEvent } from 'react'
 import { useNavigate } from 'react-router'
-import { Headphones, BookOpen, ArrowRightLeft, Clock, CheckCircle2, DownloadCloud } from 'lucide-react'
+import {
+  Headphones,
+  BookOpen,
+  ArrowRightLeft,
+  Clock,
+  CheckCircle2,
+  DownloadCloud,
+} from 'lucide-react'
 import type { Book } from '@/data/types'
 import { getBookDestinationPath } from '@/lib/bookNavigation'
 import { BookStatusBadge } from './BookStatusBadge'

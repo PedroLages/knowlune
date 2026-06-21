@@ -30,11 +30,7 @@ import {
 import { addBookmark, getLessonBookmarks } from '@/lib/bookmarks'
 import { formatTimestamp } from '@/lib/format'
 import { syncableWrite } from '@/lib/sync/syncableWrite'
-import {
-  loadVideoStoryboard,
-  generateStoryboard,
-  saveVideoStoryboard,
-} from '@/lib/videoStoryboard'
+import { loadVideoStoryboard, generateStoryboard, saveVideoStoryboard } from '@/lib/videoStoryboard'
 import type { StoryboardProp } from '@/app/components/figma/ScrubPreview'
 import type { ImportedVideo, VideoBookmark } from '@/data/types'
 
@@ -117,8 +113,13 @@ export const LocalVideoContent = forwardRef<VideoPlayerHandle, LocalVideoContent
     // Resume dialog state
     const [isLoadingPosition, setIsLoadingPosition] = useState(true)
     const [resumeDialogOpen, setResumeDialogOpen] = useState(false)
-    const [savedRecord, setSavedRecord] = useState<{ currentTime: number; completionPercentage: number } | null>(null)
-    const [resolvedInitialPosition, setResolvedInitialPosition] = useState<number | undefined>(undefined)
+    const [savedRecord, setSavedRecord] = useState<{
+      currentTime: number
+      completionPercentage: number
+    } | null>(null)
+    const [resolvedInitialPosition, setResolvedInitialPosition] = useState<number | undefined>(
+      undefined
+    )
     const hasShownResumeDialog = useRef(false)
 
     const loadVideo = useCallback(() => {
@@ -277,12 +278,7 @@ export const LocalVideoContent = forwardRef<VideoPlayerHandle, LocalVideoContent
           if (ignore) return
           setIsLoadingPosition(false)
 
-          if (
-            record &&
-            record.currentTime > 5 &&
-            record.completionPercentage < 95 &&
-            !autoplay
-          ) {
+          if (record && record.currentTime > 5 && record.completionPercentage < 95 && !autoplay) {
             setSavedRecord(record)
             setResumeDialogOpen(true)
           }
@@ -346,21 +342,27 @@ export const LocalVideoContent = forwardRef<VideoPlayerHandle, LocalVideoContent
     }, [])
 
     // Local play state and time tracking for position sync
-    const handleLocalTimeUpdate = useCallback((time: number) => {
-      setCurrentTime(time)
-      // Track last known-good position for robust error recovery.
-      // During a MEDIA_ERR_DECODE Chromium may reset video.currentTime to 0
-      // before the error handler fires — this ref preserves the true position.
-      if (isFinite(time) && time > 0) {
-        lastKnownTimeRef.current = time
-      }
-      onTimeUpdate?.(time)
-    }, [onTimeUpdate])
+    const handleLocalTimeUpdate = useCallback(
+      (time: number) => {
+        setCurrentTime(time)
+        // Track last known-good position for robust error recovery.
+        // During a MEDIA_ERR_DECODE Chromium may reset video.currentTime to 0
+        // before the error handler fires — this ref preserves the true position.
+        if (isFinite(time) && time > 0) {
+          lastKnownTimeRef.current = time
+        }
+        onTimeUpdate?.(time)
+      },
+      [onTimeUpdate]
+    )
 
-    const handleLocalPlayStateChange = useCallback((playing: boolean) => {
-      setIsPlaying(playing)
-      onPlayStateChange?.(playing)
-    }, [onPlayStateChange])
+    const handleLocalPlayStateChange = useCallback(
+      (playing: boolean) => {
+        setIsPlaying(playing)
+        onPlayStateChange?.(playing)
+      },
+      [onPlayStateChange]
+    )
 
     // setDuration is reference-stable from useState, so no wrapper needed
 
@@ -388,33 +390,30 @@ export const LocalVideoContent = forwardRef<VideoPlayerHandle, LocalVideoContent
     // handler fires, so the error-time position from VideoPlayer can be
     // stale/zero. The last-known-good position from timeupdate events
     // always reflects the true playback position.
-    const handleRecoveryNeeded = useCallback(
-      (currentTime: number) => {
-        // Prefer the last known-good position over the error-time position,
-        // since the browser may reset currentTime during decode errors.
-        const lastGood = lastKnownTimeRef.current
-        const recoveryPos =
-          isFinite(lastGood) && lastGood > 0 && (lastGood > currentTime || currentTime === 0)
-            ? lastGood
-            : currentTime
+    const handleRecoveryNeeded = useCallback((currentTime: number) => {
+      // Prefer the last known-good position over the error-time position,
+      // since the browser may reset currentTime during decode errors.
+      const lastGood = lastKnownTimeRef.current
+      const recoveryPos =
+        isFinite(lastGood) && lastGood > 0 && (lastGood > currentTime || currentTime === 0)
+          ? lastGood
+          : currentTime
 
-        if (!isFinite(recoveryPos)) {
-          console.warn('[LocalVideoContent] Invalid recovery position:', recoveryPos)
-          return
-        }
+      if (!isFinite(recoveryPos)) {
+        console.warn('[LocalVideoContent] Invalid recovery position:', recoveryPos)
+        return
+      }
 
-        console.warn(
-          `[LocalVideoContent] Recovery triggered | ` +
+      console.warn(
+        `[LocalVideoContent] Recovery triggered | ` +
           `errorTime=${currentTime.toFixed(1)}s lastGood=${lastGood.toFixed(1)}s ` +
           `→ recoveryPos=${recoveryPos.toFixed(1)}s`
-        )
+      )
 
-        recoveryPositionRef.current = recoveryPos
-        setShowRecoveryOverlay(true)
-        setRetryKey(k => k + 1)
-      },
-      []
-    )
+      recoveryPositionRef.current = recoveryPos
+      setShowRecoveryOverlay(true)
+      setRetryKey(k => k + 1)
+    }, [])
 
     // Notify parent when blob URL is ready (E91-S04 mini-player)
     useEffect(() => {
@@ -560,12 +559,12 @@ export const LocalVideoContent = forwardRef<VideoPlayerHandle, LocalVideoContent
     // F009: Recovery overlay takes precedence over loading skeleton during blob URL regeneration
     if (showRecoveryOverlay && loading) {
       return (
-        <div
-          ref={videoWrapperRef}
-          data-testid="local-video-wrapper"
-          className="relative h-full"
-        >
-          <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 text-white gap-3 z-10" role="status" aria-live="polite">
+        <div ref={videoWrapperRef} data-testid="local-video-wrapper" className="relative h-full">
+          <div
+            className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 text-white gap-3 z-10"
+            role="status"
+            aria-live="polite"
+          >
             <div className="size-10 rounded-full border-4 border-white/30 border-t-white animate-spin" />
             <p className="text-sm">Recovering...</p>
           </div>
@@ -651,12 +650,12 @@ export const LocalVideoContent = forwardRef<VideoPlayerHandle, LocalVideoContent
       // VideoPlayer mount/unmount while the new blob URL is being generated.
       if (showRecoveryOverlay) {
         return (
-          <div
-            ref={videoWrapperRef}
-            data-testid="local-video-wrapper"
-            className="relative h-full"
-          >
-            <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 text-white gap-3 z-10" role="status" aria-live="polite">
+          <div ref={videoWrapperRef} data-testid="local-video-wrapper" className="relative h-full">
+            <div
+              className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 text-white gap-3 z-10"
+              role="status"
+              aria-live="polite"
+            >
               <div className="size-10 rounded-full border-4 border-white/30 border-t-white animate-spin" />
               <p className="text-sm">Recovering...</p>
             </div>
@@ -676,12 +675,12 @@ export const LocalVideoContent = forwardRef<VideoPlayerHandle, LocalVideoContent
     // Show spinner while position is being fetched (gates VideoPlayer mount)
     if (isLoadingPosition) {
       return (
-        <div
-          ref={videoWrapperRef}
-          data-testid="local-video-wrapper"
-          className="relative h-full"
-        >
-          <div className="absolute inset-0 flex items-center justify-center bg-black/5 rounded-xl" role="status" aria-live="polite">
+        <div ref={videoWrapperRef} data-testid="local-video-wrapper" className="relative h-full">
+          <div
+            className="absolute inset-0 flex items-center justify-center bg-black/5 rounded-xl"
+            role="status"
+            aria-live="polite"
+          >
             <div className="size-10 rounded-full border-4 border-brand/30 border-t-brand animate-spin" />
           </div>
         </div>
@@ -717,8 +716,8 @@ export const LocalVideoContent = forwardRef<VideoPlayerHandle, LocalVideoContent
               <DialogTitle id="resume-dialog-title">Resume video?</DialogTitle>
               <DialogDescription id="resume-dialog-description">
                 You were watching this video at{' '}
-                {savedRecord && formatTimestamp(Math.floor(savedRecord.currentTime))}.
-                Would you like to resume or start from the beginning?
+                {savedRecord && formatTimestamp(Math.floor(savedRecord.currentTime))}. Would you
+                like to resume or start from the beginning?
               </DialogDescription>
             </DialogHeader>
             <DialogFooter className="flex gap-2 sm:gap-0">
@@ -752,7 +751,9 @@ export const LocalVideoContent = forwardRef<VideoPlayerHandle, LocalVideoContent
             ref={ref}
             src={blobUrl}
             title={video.filename}
-            initialPosition={autoplay ? undefined : (recoveryPositionRef.current ?? resolvedInitialPosition)}
+            initialPosition={
+              autoplay ? undefined : (recoveryPositionRef.current ?? resolvedInitialPosition)
+            }
             captions={userCaptions ? [userCaptions] : undefined}
             chapters={video.chapters}
             onLoadCaptions={handleLoadCaptions}

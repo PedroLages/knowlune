@@ -195,7 +195,9 @@ export const useAuthStore = create<AuthStore>(set => ({
 
 /** Guest mode is derived — not stored — to stay in sync with sessionStorage. */
 export function selectIsGuestMode(state: Pick<AuthState, 'initialized' | 'user'>): boolean {
-  return state.initialized && state.user === null && sessionStorage.getItem('knowlune-guest') === 'true'
+  return (
+    state.initialized && state.user === null && sessionStorage.getItem('knowlune-guest') === 'true'
+  )
 }
 
 export type AuthRouteState = 'loading' | 'authenticated' | 'guest' | 'anonymous'

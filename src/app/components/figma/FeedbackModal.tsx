@@ -228,7 +228,10 @@ export function FeedbackModal({ open, onOpenChange, onSuccess }: FeedbackModalPr
                 {/* Bug title */}
                 <div className="space-y-1.5">
                   <Label htmlFor="bug-title">
-                    Title <span className="text-destructive" aria-hidden="true">*</span>
+                    Title{' '}
+                    <span className="text-destructive" aria-hidden="true">
+                      *
+                    </span>
                   </Label>
                   <Input
                     id="bug-title"
@@ -245,7 +248,10 @@ export function FeedbackModal({ open, onOpenChange, onSuccess }: FeedbackModalPr
                 {/* Bug description */}
                 <div className="space-y-1.5">
                   <Label htmlFor="bug-description">
-                    Description <span className="text-destructive" aria-hidden="true">*</span>
+                    Description{' '}
+                    <span className="text-destructive" aria-hidden="true">
+                      *
+                    </span>
                     <span className="ml-1 text-xs font-normal text-muted-foreground">
                       (min 10 chars)
                     </span>
@@ -299,7 +305,10 @@ export function FeedbackModal({ open, onOpenChange, onSuccess }: FeedbackModalPr
                 {/* Message (required) */}
                 <div className="space-y-1.5">
                   <Label htmlFor="feedback-message">
-                    Message <span className="text-destructive" aria-hidden="true">*</span>
+                    Message{' '}
+                    <span className="text-destructive" aria-hidden="true">
+                      *
+                    </span>
                   </Label>
                   <Textarea
                     id="feedback-message"

@@ -497,8 +497,7 @@ const auxiliaryEntries: readonly RetentionEntry[] = [
     period: '10y (TBC — confirm with accountant)',
     deletionMechanism: 'Manual / Stripe data retention policy',
     owner: 'Pedro',
-    notes:
-      'Anonymise Stripe customer PII at account deletion; retain records for legal compliance',
+    notes: 'Anonymise Stripe customer PII at account deletion; retain records for legal compliance',
   },
 ] as const
 
@@ -550,7 +549,7 @@ export const PURPOSE_ARTEFACTS: Record<ConsentPurpose, string[]> = {
 
 /** All artefact keys with indefinite retention (period: null) — require sign-off. */
 export const INDEFINITE_RETENTION_ARTEFACTS: string[] = RETENTION_POLICY.filter(
-  e => e.period === null,
+  e => e.period === null
 ).map(e => e.artefact)
 
 /** Look up a retention entry by artefact key. */

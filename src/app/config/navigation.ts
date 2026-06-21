@@ -61,7 +61,7 @@ export function resolveNavActive(
   item: Pick<NavigationItem, 'path' | 'tab'>,
   pathname: string,
   search: string,
-  state: unknown,
+  state: unknown
 ): boolean {
   const base = getIsActive(item, pathname, search)
   const fromTrack = readFromTrack(state)
@@ -121,7 +121,13 @@ export const navigationGroups: NavigationGroup[] = [
     items: [
       { name: 'Challenges', path: '/challenges', icon: Target, disclosureKey: 'challenge-used' },
       { name: 'Knowledge Map', path: '/knowledge-map', icon: Map },
-      { name: 'Knowledge Gaps', path: '/knowledge-gaps', icon: Brain, disclosureKey: 'ai-used', guestHidden: true },
+      {
+        name: 'Knowledge Gaps',
+        path: '/knowledge-gaps',
+        icon: Brain,
+        disclosureKey: 'ai-used',
+        guestHidden: true,
+      },
       { name: 'Retention', path: '/retention', icon: ShieldCheck, disclosureKey: 'review-used' },
       {
         name: 'Session History',

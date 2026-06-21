@@ -44,7 +44,9 @@ interface CourseImportState {
   thumbnailUrls: Record<string, string> // courseId → object URL
   autoAnalysisStatus: Record<string, AutoAnalysisStatus> // courseId → status
 
-  addImportedCourse: (course: ImportedCourse) => Promise<{ error?: { code: string; modality: string } }>
+  addImportedCourse: (
+    course: ImportedCourse
+  ) => Promise<{ error?: { code: string; modality: string } }>
   removeImportedCourse: (courseId: string) => Promise<void>
   removeImportedCourses: (courseIds: string[]) => Promise<void>
   updateCourseTags: (courseId: string, tags: string[]) => Promise<void>
@@ -130,12 +132,8 @@ export const useCourseImportStore = create<CourseImportState>((set, get) => ({
           db.importedVideos.where('courseId').equals(courseId).toArray(),
           db.importedPdfs.where('courseId').equals(courseId).toArray(),
         ])
-        const videoDeletes = childVideos.map(v =>
-          syncableWrite('importedVideos', 'delete', v.id)
-        )
-        const pdfDeletes = childPdfs.map(p =>
-          syncableWrite('importedPdfs', 'delete', p.id)
-        )
+        const videoDeletes = childVideos.map(v => syncableWrite('importedVideos', 'delete', v.id))
+        const pdfDeletes = childPdfs.map(p => syncableWrite('importedPdfs', 'delete', p.id))
         await Promise.all([
           ...videoDeletes,
           ...pdfDeletes,
@@ -214,18 +212,12 @@ export const useCourseImportStore = create<CourseImportState>((set, get) => ({
         message: `${deleted.length} ${deleted.length === 1 ? 'course' : 'courses'} deleted`,
         onUndo: async () => {
           for (const course of deleted) {
-            await syncableWrite(
-              'importedCourses',
-              'add',
-              course as unknown as SyncableRecord
-            )
+            await syncableWrite('importedCourses', 'add', course as unknown as SyncableRecord)
           }
           set(state => ({
             importedCourses: [...deleted, ...state.importedCourses],
           }))
-          toast.success(
-            `${deleted.length} ${deleted.length === 1 ? 'course' : 'courses'} restored`
-          )
+          toast.success(`${deleted.length} ${deleted.length === 1 ? 'course' : 'courses'} restored`)
         },
         duration: TOAST_DURATION.LONG,
       })

@@ -66,7 +66,10 @@ function getIframeViewportOffset(
     const r = frame.getBoundingClientRect()
     return { top: r.top, left: r.left }
   }
-  const list = rendition.getContents() as unknown as Array<{ window?: Window; iframe?: HTMLIFrameElement }>
+  const list = rendition.getContents() as unknown as Array<{
+    window?: Window
+    iframe?: HTMLIFrameElement
+  }>
   for (const c of list) {
     if (c.window === contents.window && c.iframe) {
       const r = c.iframe.getBoundingClientRect()
@@ -166,14 +169,17 @@ export function HighlightLayer({
   const [miniPopover, setMiniPopover] = useState<MiniPopoverState | null>(null)
   const [showIosBanner, setShowIosBanner] = useState(false)
 
-  const selectionToMiniAnchor = useCallback((position: HighlightPosition): HighlightMiniPopoverAnchor => {
-    const top = position.below ? position.top + HIGHLIGHT_TOOLBAR_SELECTION_GAP_PX : position.top
-    return {
-      centerX: position.left + position.width / 2,
-      top,
-      bottom: top,
-    }
-  }, [])
+  const selectionToMiniAnchor = useCallback(
+    (position: HighlightPosition): HighlightMiniPopoverAnchor => {
+      const top = position.below ? position.top + HIGHLIGHT_TOOLBAR_SELECTION_GAP_PX : position.top
+      return {
+        centerX: position.left + position.width / 2,
+        top,
+        bottom: top,
+      }
+    },
+    []
+  )
 
   // Load highlights for this book when rendition is ready
   useEffect(() => {

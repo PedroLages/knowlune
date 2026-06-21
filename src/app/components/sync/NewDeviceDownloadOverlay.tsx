@@ -78,7 +78,12 @@ export interface NewDeviceDownloadOverlayProps {
   watchdogMs?: number
 }
 
-export function NewDeviceDownloadOverlay({ open, userId, onClose, watchdogMs }: NewDeviceDownloadOverlayProps) {
+export function NewDeviceDownloadOverlay({
+  open,
+  userId,
+  onClose,
+  watchdogMs,
+}: NewDeviceDownloadOverlayProps) {
   const storeStatus = useDownloadStatusStore(s => s.status)
   const storeError = useDownloadStatusStore(s => s.lastError)
 

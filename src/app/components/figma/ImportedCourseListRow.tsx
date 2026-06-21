@@ -274,9 +274,7 @@ export function ImportedCourseListRow({
 
         {/* Tag badges — hidden on mobile, capped on desktop */}
         <div className="hidden md:flex shrink-0 max-w-48">
-          {course.tags.length > 0 && (
-            <TagBadgeList tags={course.tags} maxVisible={2} />
-          )}
+          {course.tags.length > 0 && <TagBadgeList tags={course.tags} maxVisible={2} />}
         </div>
 
         {/* Status badge */}
@@ -341,10 +339,7 @@ export function ImportedCourseListRow({
                       <Icon className="size-4" aria-hidden="true" />
                       {cfg.label}
                       {key === status && (
-                        <CheckCircle2
-                          className="size-3.5 ml-auto text-brand"
-                          aria-hidden="true"
-                        />
+                        <CheckCircle2 className="size-3.5 ml-auto text-brand" aria-hidden="true" />
                       )}
                     </DropdownMenuItem>
                   )

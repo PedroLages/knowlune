@@ -72,9 +72,13 @@ vi.mock('@tiptap/extension-details', () => ({
 vi.mock('@tiptap/extension-color', () => ({ default: {} }))
 vi.mock('@tiptap/extension-text-style', () => ({ TextStyle: {} }))
 vi.mock('@tiptap/extension-emoji', () => ({ Emoji: { configure: () => ({}) }, emojis: [] }))
-vi.mock('@tiptap/extension-table-of-contents', () => ({ TableOfContents: { configure: () => ({}) } }))
+vi.mock('@tiptap/extension-table-of-contents', () => ({
+  TableOfContents: { configure: () => ({}) },
+}))
 vi.mock('@tiptap/extension-table', () => ({ TableKit: { configure: () => ({}) } }))
-vi.mock('@tiptap/extension-drag-handle-react', () => ({ DragHandle: ({ children }: { children: React.ReactNode }) => children }))
+vi.mock('@tiptap/extension-drag-handle-react', () => ({
+  DragHandle: ({ children }: { children: React.ReactNode }) => children,
+}))
 vi.mock('lowlight', () => ({ createLowlight: () => ({}) }))
 vi.mock('highlight.js/lib/languages/javascript', () => ({ default: {} }))
 vi.mock('highlight.js/lib/languages/typescript', () => ({ default: {} }))

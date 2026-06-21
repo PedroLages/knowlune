@@ -17,7 +17,11 @@ import type { AIFeatureId, AIProviderId, FeatureModelConfig } from './modelDefau
 import { PROVIDER_DEFAULTS, FEATURE_DEFAULTS } from './modelDefaults'
 import type { DiscoveredModel } from './modelDiscovery'
 import { getFreeTierDefaultModel } from './modelDiscovery.static'
-import { checkCredential, storeCredentialWithStatus, readCredentialWithStatus } from './vaultCredentials'
+import {
+  checkCredential,
+  storeCredentialWithStatus,
+  readCredentialWithStatus,
+} from './vaultCredentials'
 import { withTimeout } from './promiseUtils'
 
 // Re-export for convenience — consumers can import from aiConfiguration
@@ -276,8 +280,7 @@ export async function getQuizGenerationAvailability(): Promise<QuizGenerationAva
   }
 
   const hasProviderKey = !!config.providerKeys?.[resolved.provider]
-  const hasLegacyEncrypted =
-    resolved.provider === config.provider && !!config.apiKeyEncrypted
+  const hasLegacyEncrypted = resolved.provider === config.provider && !!config.apiKeyEncrypted
   const hasStoredKey = hasProviderKey || hasLegacyEncrypted
   let apiKey: string | null = null
   try {
@@ -694,9 +697,7 @@ async function reEncryptProviderKeyLocally(
 const inFlightVaultReads = new Map<AIProviderId, Promise<string | null>>()
 
 /** Reads a credential from Vault with one automatic retry on transient network errors. */
-async function readVaultCredentialWithRetry(
-  provider: AIProviderId
-): Promise<string | null> {
+async function readVaultCredentialWithRetry(provider: AIProviderId): Promise<string | null> {
   const result = await readCredentialWithStatus('ai-provider', provider)
   if (result.ok) {
     return result.value
@@ -741,7 +742,10 @@ export async function getDecryptedApiKeyForProvider(
   // Fall back to legacy single-key field if provider matches global
   if (!decryptedResult && provider === config.provider && config.apiKeyEncrypted) {
     try {
-      decryptedResult = await decryptData(config.apiKeyEncrypted.iv, config.apiKeyEncrypted.encryptedData)
+      decryptedResult = await decryptData(
+        config.apiKeyEncrypted.iv,
+        config.apiKeyEncrypted.encryptedData
+      )
     } catch (error) {
       console.warn('Failed to decrypt legacy API key:', error) // silent-catch-ok: logged
     }
@@ -779,10 +783,7 @@ export async function getDecryptedApiKeyForProvider(
               localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedConfig))
             }
           } catch (reEncryptError) {
-            console.warn(
-              `Failed to re-encrypt Vault key for ${provider}:`,
-              reEncryptError
-            ) // silent-catch-ok: logged
+            console.warn(`Failed to re-encrypt Vault key for ${provider}:`, reEncryptError) // silent-catch-ok: logged
           }
         }
       } catch (error) {

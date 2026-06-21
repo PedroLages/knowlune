@@ -107,13 +107,7 @@ describe('InlineEditableField', () => {
 
   it('applies aria-label to input in edit mode', async () => {
     const user = userEvent.setup()
-    render(
-      <InlineEditableField
-        value="Hello"
-        onSave={vi.fn()}
-        ariaLabel="Edit path name: Hello"
-      />
-    )
+    render(<InlineEditableField value="Hello" onSave={vi.fn()} ariaLabel="Edit path name: Hello" />)
 
     await user.click(screen.getByText('Hello'))
     expect(screen.getByLabelText('Edit path name: Hello')).toBeInTheDocument()
@@ -128,13 +122,7 @@ describe('InlineEditableField', () => {
   })
 
   it('shows placeholder when value is empty', () => {
-    render(
-      <InlineEditableField
-        value=""
-        onSave={vi.fn()}
-        placeholder="Add a description..."
-      />
-    )
+    render(<InlineEditableField value="" onSave={vi.fn()} placeholder="Add a description..." />)
     expect(screen.getByText('Add a description...')).toBeInTheDocument()
   })
 
@@ -168,9 +156,7 @@ describe('InlineEditableField', () => {
   })
 
   it('syncs external value change when not editing', async () => {
-    const { rerender } = render(
-      <InlineEditableField value="Initial" onSave={vi.fn()} />
-    )
+    const { rerender } = render(<InlineEditableField value="Initial" onSave={vi.fn()} />)
     expect(screen.getByText('Initial')).toBeInTheDocument()
 
     rerender(<InlineEditableField value="Updated" onSave={vi.fn()} />)

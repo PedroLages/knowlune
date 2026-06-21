@@ -4,7 +4,15 @@ import { AIConsentDeclinedBanner } from '../AIConsentDeclinedBanner'
 
 // Mock react-router Link
 vi.mock('react-router', () => ({
-  Link: ({ children, to, ...rest }: { children: React.ReactNode; to: string; [key: string]: unknown }) => (
+  Link: ({
+    children,
+    to,
+    ...rest
+  }: {
+    children: React.ReactNode
+    to: string
+    [key: string]: unknown
+  }) => (
     <a href={to} {...rest}>
       {children}
     </a>

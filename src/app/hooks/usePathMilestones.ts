@@ -45,11 +45,7 @@ export function usePathMilestones({ pathId, pathName, completionPct }: UsePathMi
             name: pathName,
             type: 'pathMilestone',
             targetValue: 100,
-            deadline: new Date(
-              Date.now() + 365 * 24 * 60 * 60 * 1000
-            )
-              .toISOString()
-              .split('T')[0],
+            deadline: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
             pathId,
           })
           .catch(err => {
@@ -99,10 +95,7 @@ export function usePathMilestones({ pathId, pathName, completionPct }: UsePathMi
     }
 
     // Compute new celebrated milestones without mutating store state
-    const newCelebratedMilestones = [
-      ...challenge.celebratedMilestones,
-      ...crossedThresholds,
-    ]
+    const newCelebratedMilestones = [...challenge.celebratedMilestones, ...crossedThresholds]
 
     // Persist updated challenge
     useChallengeStore.getState().updateChallenge(challenge.id, {
@@ -114,10 +107,7 @@ export function usePathMilestones({ pathId, pathName, completionPct }: UsePathMi
     // Fire milestone toasts
     const milestoneMap = new Map<string, number[]>()
     milestoneMap.set(challenge.id, crossedThresholds)
-    const timerIds = fireMilestoneToasts(
-      milestoneMap,
-      useChallengeStore.getState().challenges
-    )
+    const timerIds = fireMilestoneToasts(milestoneMap, useChallengeStore.getState().challenges)
 
     return () => {
       timerIds.forEach(id => clearTimeout(id))

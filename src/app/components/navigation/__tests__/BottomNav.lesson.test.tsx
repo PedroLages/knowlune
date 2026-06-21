@@ -36,13 +36,27 @@ const mockLoadCourseProgress = vi.fn().mockResolvedValue(undefined)
 
 // Track store state for selector-based mocks
 const lessonChromeState = {
-  get notesOpen() { return mockNotesOpen },
-  get toggleNotesWithFocus() { return mockToggleNotesWithFocus },
-  get hasNotes() { return mockHasNotes },
-  get isTheater() { return mockIsTheater },
-  get toggleTheater() { return mockToggleTheater },
-  get isReadingMode() { return mockIsReadingMode },
-  get toggleReadingMode() { return mockToggleReadingMode },
+  get notesOpen() {
+    return mockNotesOpen
+  },
+  get toggleNotesWithFocus() {
+    return mockToggleNotesWithFocus
+  },
+  get hasNotes() {
+    return mockHasNotes
+  },
+  get isTheater() {
+    return mockIsTheater
+  },
+  get toggleTheater() {
+    return mockToggleTheater
+  },
+  get isReadingMode() {
+    return mockIsReadingMode
+  },
+  get toggleReadingMode() {
+    return mockToggleReadingMode
+  },
 }
 
 // ---------------------------------------------------------------------------
@@ -94,11 +108,13 @@ vi.mock('sonner', () => ({
 // Helper
 // ---------------------------------------------------------------------------
 
-function renderBottomNav(props: {
-  mode?: 'standard' | 'lesson'
-  courseId?: string
-  lessonId?: string
-} = {}) {
+function renderBottomNav(
+  props: {
+    mode?: 'standard' | 'lesson'
+    courseId?: string
+    lessonId?: string
+  } = {}
+) {
   return render(
     <MemoryRouter initialEntries={['/overview']}>
       <BottomNav {...props} />

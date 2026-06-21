@@ -25,8 +25,11 @@ vi.mock('sonner', () => {
 })
 
 // Import store AFTER mock is set up
-const { useAuthorStore, AUTHORS_REFRESH_FAILED_MESSAGE, resetSilentAuthorsRefreshThrottleForTests } =
-  await import('@/stores/useAuthorStore')
+const {
+  useAuthorStore,
+  AUTHORS_REFRESH_FAILED_MESSAGE,
+  resetSilentAuthorsRefreshThrottleForTests,
+} = await import('@/stores/useAuthorStore')
 
 beforeEach(async () => {
   vi.restoreAllMocks()

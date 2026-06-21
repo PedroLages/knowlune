@@ -62,7 +62,11 @@ export function VocabularyDetailsDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Close
           </Button>
-          <Button variant="outline" onClick={() => onEdit(item)} data-testid="vocabulary-details-edit">
+          <Button
+            variant="outline"
+            onClick={() => onEdit(item)}
+            data-testid="vocabulary-details-edit"
+          >
             Edit
           </Button>
           <Button
@@ -78,4 +82,3 @@ export function VocabularyDetailsDialog({
     </Dialog>
   )
 }
-

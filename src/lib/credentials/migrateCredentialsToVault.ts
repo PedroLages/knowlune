@@ -116,7 +116,7 @@ async function clearLegacyField(row: LegacyRow): Promise<void> {
     // For OPDS, clear the nested password only — keep the username and authType.
     const existing = (await db.opdsCatalogs.get(row.id)) as unknown as LegacyOpdsCatalog | undefined
     if (!existing) return
-     
+
     const { auth: legacyAuth, ...restCatalog } = existing
     const nextAuth = legacyAuth?.username ? { username: legacyAuth.username } : undefined
     const next: OpdsCatalog = nextAuth ? { ...restCatalog, auth: nextAuth } : { ...restCatalog }

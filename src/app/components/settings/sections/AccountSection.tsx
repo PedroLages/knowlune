@@ -9,11 +9,7 @@ import { useSettingsPage } from '@/app/components/settings/SettingsPageContext'
 import { toastSuccess, toastError } from '@/lib/toastHelpers'
 
 export function AccountSection() {
-  const {
-    user,
-    authSignOut,
-    checkoutStatus,
-  } = useSettingsPage()
+  const { user, authSignOut, checkoutStatus } = useSettingsPage()
 
   return (
     <div className="space-y-8">
@@ -125,7 +121,6 @@ export function AccountSection() {
           </div>
         </section>
       )}
-
     </div>
   )
 }

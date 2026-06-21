@@ -27,7 +27,9 @@ vi.mock('@/app/hooks/useBookCoverUrl', () => ({
 }))
 
 vi.mock('@/stores/useBookReviewStore', () => ({
-  useBookReviewStore: (selector: (s: { getReviewForBook: (id: string) => undefined }) => unknown) => {
+  useBookReviewStore: (
+    selector: (s: { getReviewForBook: (id: string) => undefined }) => unknown
+  ) => {
     const state = { getReviewForBook: () => undefined as undefined }
     return selector(state)
   },

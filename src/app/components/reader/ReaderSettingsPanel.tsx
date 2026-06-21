@@ -24,7 +24,13 @@ import {
 } from '@/app/components/ui/sheet'
 import { Button } from '@/app/components/ui/button'
 import { Slider } from '@/app/components/ui/slider'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/app/components/ui/select'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/app/components/ui/select'
 import { Switch } from '@/app/components/ui/switch'
 import { Label } from '@/app/components/ui/label'
 import { cn } from '@/app/components/ui/utils'
@@ -145,7 +151,7 @@ export function ReaderSettingsPanel({ open, onClose }: ReaderSettingsPanelProps)
                   data-testid={`theme-${t.id}`}
                   className={cn(
                     'group flex cursor-pointer flex-col items-center gap-2',
-                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand',
+                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand'
                   )}
                 >
                   <span
@@ -220,10 +226,7 @@ export function ReaderSettingsPanel({ open, onClose }: ReaderSettingsPanelProps)
           >
             Font family
           </p>
-          <Select
-            value={fontFamily}
-            onValueChange={val => setFontFamily(val as ReaderFontFamily)}
-          >
+          <Select value={fontFamily} onValueChange={val => setFontFamily(val as ReaderFontFamily)}>
             <SelectTrigger
               className="h-11 w-full min-w-0 cursor-pointer rounded-xl *:data-[slot=select-value]:sr-only"
               aria-labelledby="font-family-label"

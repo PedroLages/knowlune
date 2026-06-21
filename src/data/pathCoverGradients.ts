@@ -33,5 +33,6 @@ export const GRADIENT_PRESETS = [
  * Mapping from preset key to combined Tailwind gradient class string.
  * Derived from GRADIENT_PRESETS so the two can never drift apart.
  */
-export const PRESET_GRADIENT_MAP: Record<string, string> =
-  Object.fromEntries(GRADIENT_PRESETS.map(p => [p.key, `${p.from} ${p.to}`]))
+export const PRESET_GRADIENT_MAP: Record<string, string> = Object.fromEntries(
+  GRADIENT_PRESETS.map(p => [p.key, `${p.from} ${p.to}`])
+)

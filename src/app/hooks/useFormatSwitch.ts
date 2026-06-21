@@ -179,9 +179,7 @@ export function useFormatSwitch(
           // Audio → EPUB
           if (typeof context.audioCurrentTime === 'number') {
             // Confidence floor + mapping presence guard: skip intra-chapter math when low.
-            const entry = mapping.mappings.find(
-              m => m.audioChapterIndex === currentChapterIndex
-            )
+            const entry = mapping.mappings.find(m => m.audioChapterIndex === currentChapterIndex)
             if (entry && entry.confidence >= INTRA_CHAPTER_CONFIDENCE_FLOOR) {
               const ch = currentBook.chapters[currentChapterIndex]
               const next = currentBook.chapters[currentChapterIndex + 1]

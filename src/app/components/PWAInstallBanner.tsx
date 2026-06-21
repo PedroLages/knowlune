@@ -60,10 +60,8 @@ export function PWAInstallBanner() {
     const ua = navigator.userAgent
     // iPadOS 13+ reports as Macintosh with maxTouchPoints > 1
     const isIosDevice =
-      /iPhone|iPad|iPod/.test(ua) ||
-      (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1)
-    const isIosSafari =
-      isIosDevice && /Safari/.test(ua) && !/CriOS|FxiOS/.test(ua)
+      /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1)
+    const isIosSafari = isIosDevice && /Safari/.test(ua) && !/CriOS|FxiOS/.test(ua)
 
     if (isIosSafari && !isStandalone && !localStorage.getItem(IOS_DISMISSED_KEY)) {
       const timer = setTimeout(() => {

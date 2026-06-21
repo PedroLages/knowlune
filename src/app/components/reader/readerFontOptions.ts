@@ -78,8 +78,6 @@ export function getReaderFontEpubStack(family: ReaderFontFamily): string {
   return OPTION_MAP[family]?.epubFontFamily ?? 'inherit'
 }
 
-export function getReaderFontOption(
-  family: ReaderFontFamily
-): ReaderFontOption | undefined {
+export function getReaderFontOption(family: ReaderFontFamily): ReaderFontOption | undefined {
   return OPTION_MAP[family]
 }

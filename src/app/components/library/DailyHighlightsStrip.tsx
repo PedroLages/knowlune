@@ -41,9 +41,7 @@ export function DailyHighlightsStrip() {
   const [activeIndex, setActiveIndex] = useState(0)
 
   const load = useCallback(async () => {
-    const allHighlights = await db.bookHighlights
-      .filter(h => h.textAnchor.length > 40)
-      .toArray()
+    const allHighlights = await db.bookHighlights.filter(h => h.textAnchor.length > 40).toArray()
     if (allHighlights.length === 0) return
 
     const bookMap = new Map(books.map(b => [b.id, b]))
@@ -132,7 +130,9 @@ export function DailyHighlightsStrip() {
                   onClick={() => setActiveIndex(i)}
                   className={cn(
                     'size-2.5 rounded-full transition-colors shrink-0',
-                    i === activeIndex ? 'bg-brand scale-110' : 'bg-muted-foreground/40 hover:bg-muted-foreground/70'
+                    i === activeIndex
+                      ? 'bg-brand scale-110'
+                      : 'bg-muted-foreground/40 hover:bg-muted-foreground/70'
                   )}
                 />
               ))}
@@ -161,10 +161,7 @@ export function DailyHighlightsStrip() {
 
 function CinematicCard({ highlight, book }: HighlightEntry) {
   const navigate = useNavigate()
-  const coverUrlForHook = useMemo(
-    () => book.coverUrl?.trim() || undefined,
-    [book.coverUrl]
-  )
+  const coverUrlForHook = useMemo(() => book.coverUrl?.trim() || undefined, [book.coverUrl])
   const resolvedCoverUrl = useBookCoverUrl({ bookId: book.id, coverUrl: coverUrlForHook })
 
   const [coverFailed, setCoverFailed] = useState(false)
@@ -276,9 +273,7 @@ function CinematicCard({ highlight, book }: HighlightEntry) {
               })}
             </p>
             {highlight.note && (
-              <p className="text-white/50 text-xs mt-1 italic line-clamp-1">
-                {highlight.note}
-              </p>
+              <p className="text-white/50 text-xs mt-1 italic line-clamp-1">{highlight.note}</p>
             )}
           </div>
         </div>

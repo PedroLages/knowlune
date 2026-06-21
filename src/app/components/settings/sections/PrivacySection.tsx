@@ -72,7 +72,7 @@ function PrivacySectionContent({ userId }: PrivacySectionContentProps) {
         toastError.saveFailed('Failed to save consent. Please try again.')
       }
     },
-    [userId],
+    [userId]
   )
 
   const handleWithdraw = useCallback(
@@ -90,7 +90,7 @@ function PrivacySectionContent({ userId }: PrivacySectionContentProps) {
         toastError.saveFailed('Failed to withdraw consent. Please try again.')
       }
     },
-    [userId],
+    [userId]
   )
 
   return (
@@ -102,8 +102,8 @@ function PrivacySectionContent({ userId }: PrivacySectionContentProps) {
         </h4>
         <p className="px-1 text-sm text-muted-foreground mb-4">
           These optional features require your explicit consent to process personal data under GDPR
-          Article 6(1)(a). Each purpose is independent — you can enable or disable them at any
-          time. Withdrawing consent may delete associated data on this device.
+          Article 6(1)(a). Each purpose is independent — you can enable or disable them at any time.
+          Withdrawing consent may delete associated data on this device.
         </p>
 
         {loading ? (
@@ -113,11 +113,7 @@ function PrivacySectionContent({ userId }: PrivacySectionContentProps) {
             ))}
           </div>
         ) : (
-          <ConsentToggles
-            consents={consents}
-            onGrant={handleGrant}
-            onWithdraw={handleWithdraw}
-          />
+          <ConsentToggles consents={consents} onGrant={handleGrant} onWithdraw={handleWithdraw} />
         )}
       </section>
 
@@ -137,4 +133,3 @@ function PrivacySectionContent({ userId }: PrivacySectionContentProps) {
     </div>
   )
 }
-

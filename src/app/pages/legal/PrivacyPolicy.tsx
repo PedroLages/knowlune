@@ -143,28 +143,44 @@ export function PrivacyPolicy() {
             </thead>
             <tbody className="divide-y divide-border">
               <tr>
-                <td className="py-2 pr-4 leading-relaxed">Providing and maintaining the platform</td>
-                <td className="py-2 pr-4 leading-relaxed">Art 6(1)(b) — performance of a contract</td>
+                <td className="py-2 pr-4 leading-relaxed">
+                  Providing and maintaining the platform
+                </td>
+                <td className="py-2 pr-4 leading-relaxed">
+                  Art 6(1)(b) — performance of a contract
+                </td>
               </tr>
               <tr>
                 <td className="py-2 pr-4 leading-relaxed">Progress tracking and achievements</td>
-                <td className="py-2 pr-4 leading-relaxed">Art 6(1)(b) — performance of a contract</td>
+                <td className="py-2 pr-4 leading-relaxed">
+                  Art 6(1)(b) — performance of a contract
+                </td>
               </tr>
               <tr>
                 <td className="py-2 pr-4 leading-relaxed">Processing subscription payments</td>
-                <td className="py-2 pr-4 leading-relaxed">Art 6(1)(b) — performance of a contract</td>
+                <td className="py-2 pr-4 leading-relaxed">
+                  Art 6(1)(b) — performance of a contract
+                </td>
               </tr>
               <tr>
-                <td className="py-2 pr-4 leading-relaxed">Study reminders and notifications (optional)</td>
-                <td className="py-2 pr-4 leading-relaxed">Art 6(1)(a) — consent (withdrawable in Settings)</td>
+                <td className="py-2 pr-4 leading-relaxed">
+                  Study reminders and notifications (optional)
+                </td>
+                <td className="py-2 pr-4 leading-relaxed">
+                  Art 6(1)(a) — consent (withdrawable in Settings)
+                </td>
               </tr>
               <tr>
                 <td className="py-2 pr-4 leading-relaxed">Aggregated platform analytics</td>
-                <td className="py-2 pr-4 leading-relaxed">Art 6(1)(f) — legitimate interests (platform improvement)</td>
+                <td className="py-2 pr-4 leading-relaxed">
+                  Art 6(1)(f) — legitimate interests (platform improvement)
+                </td>
               </tr>
               <tr>
                 <td className="py-2 pr-4 leading-relaxed">AI-assisted features</td>
-                <td className="py-2 pr-4 leading-relaxed">Art 6(1)(b) — performance of a contract; on-device or self-hosted only</td>
+                <td className="py-2 pr-4 leading-relaxed">
+                  Art 6(1)(b) — performance of a contract; on-device or self-hosted only
+                </td>
               </tr>
             </tbody>
           </table>
@@ -198,9 +214,7 @@ export function PrivacyPolicy() {
 
       {/* Section 5 — Sub-processors (Art 13 required) */}
       <section id="sub-processors" className="scroll-mt-24 space-y-4">
-        <h2 className="font-display text-xl font-semibold text-foreground">
-          5. Sub-Processors
-        </h2>
+        <h2 className="font-display text-xl font-semibold text-foreground">5. Sub-Processors</h2>
         <p className="text-foreground leading-relaxed">
           We integrate with the following third-party sub-processors, each bound by a data
           processing agreement:
@@ -249,22 +263,26 @@ export function PrivacyPolicy() {
             <strong>Access (Art 15):</strong> Request a copy of the personal data we hold about you
           </li>
           <li>
-            <strong>Rectification (Art 16):</strong> Update or correct inaccurate personal information
+            <strong>Rectification (Art 16):</strong> Update or correct inaccurate personal
+            information
           </li>
           <li>
-            <strong>Erasure / right to be forgotten (Art 17):</strong> Request deletion of your account and associated data
+            <strong>Erasure / right to be forgotten (Art 17):</strong> Request deletion of your
+            account and associated data
           </li>
           <li>
             <strong>Restriction (Art 18):</strong> Request that we limit processing of your data
           </li>
           <li>
-            <strong>Data portability (Art 20):</strong> Export your learning data in a standard format
+            <strong>Data portability (Art 20):</strong> Export your learning data in a standard
+            format
           </li>
           <li>
             <strong>Object (Art 21):</strong> Object to processing based on legitimate interests
           </li>
           <li>
-            <strong>Withdraw consent (Art 7(3)):</strong> Opt out of optional data collection at any time via Settings
+            <strong>Withdraw consent (Art 7(3)):</strong> Opt out of optional data collection at any
+            time via Settings
           </li>
         </ul>
         <p className="text-foreground leading-relaxed">
@@ -320,9 +338,7 @@ export function PrivacyPolicy() {
         <p className="text-foreground leading-relaxed">
           The complete data retention matrix — covering all 39 sync tables, 4 Storage buckets, and
           auxiliary data stores — is maintained in{' '}
-          <code className="text-sm bg-muted px-1 py-0.5 rounded">
-            docs/compliance/retention.md
-          </code>{' '}
+          <code className="text-sm bg-muted px-1 py-0.5 rounded">docs/compliance/retention.md</code>{' '}
           in the project repository and is available on request.
         </p>
       </section>
@@ -353,9 +369,9 @@ export function PrivacyPolicy() {
             your device.
           </li>
           <li>
-            <strong>Self-hosted Ollama proxy:</strong> Queries may be routed to a self-hosted
-            Ollama server operated by Knowlune. No AI conversation data is stored on that server
-            beyond the active session.
+            <strong>Self-hosted Ollama proxy:</strong> Queries may be routed to a self-hosted Ollama
+            server operated by Knowlune. No AI conversation data is stored on that server beyond the
+            active session.
           </li>
           <li>
             <strong>No external AI providers:</strong> We do not send your learning data or AI

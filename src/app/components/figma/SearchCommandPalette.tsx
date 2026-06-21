@@ -673,8 +673,7 @@ export function SearchCommandPalette({
   // Fresh-install welcome: both empty-state rows are definitively empty.
   // Guard !scope: a HeaderSearchButton open on an empty index should not show
   // "nothing here yet" while the Courses chip is visible.
-  const showWelcomeCopy =
-    isEmptyQuery && !scope && !isLoadingEmptyState && !hasContinueLearning
+  const showWelcomeCopy = isEmptyQuery && !scope && !isLoadingEmptyState && !hasContinueLearning
   // Suppress Pages when welcome copy is visible — a 9-item nav list
   // contradicts the "nothing here yet" message.
   const showPages = !showWelcomeCopy && !scope && staticPagesFiltered.length > 0

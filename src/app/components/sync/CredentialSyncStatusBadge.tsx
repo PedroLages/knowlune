@@ -16,11 +16,7 @@
 
 import { Cloud, Smartphone, CircleDashed, CheckCircle2 } from 'lucide-react'
 import { cn } from '@/app/components/ui/utils'
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '@/app/components/ui/tooltip'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/app/components/ui/tooltip'
 import type { CredentialStatus } from '@/lib/credentials/credentialStatus'
 
 // ─── Status configuration ─────────────────────────────────────────────────
@@ -63,8 +59,7 @@ const STATUS_CONFIG: Record<CredentialStatus, StatusConfig> = {
     label: 'No credential needed',
     className: 'text-success',
     tooltipTitle: 'Anonymous access',
-    tooltipBody:
-      'This catalog does not require authentication — it is publicly accessible.',
+    tooltipBody: 'This catalog does not require authentication — it is publicly accessible.',
   },
 }
 
@@ -113,9 +108,7 @@ export function CredentialSyncStatusBadge({
           tabIndex={0}
         >
           <Icon className={cn(iconSize, 'shrink-0')} aria-hidden="true" />
-          {showLabel && (
-            <span className={cn(textSize)}>{label}</span>
-          )}
+          {showLabel && <span className={cn(textSize)}>{label}</span>}
         </span>
       </TooltipTrigger>
       <TooltipContent className="max-w-xs">

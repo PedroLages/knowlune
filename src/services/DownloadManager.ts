@@ -13,7 +13,13 @@ import { useDownloadStore, type PendingDownloadState } from '@/stores/useDownloa
 import { checkStorageQuota } from '@/lib/storageQuotaMonitor'
 import type { Book, ContentSource } from '@/data/types'
 
-export type DownloadStatus = 'pending' | 'downloading' | 'downloaded' | 'failed' | 'paused' | 'retrying'
+export type DownloadStatus =
+  | 'pending'
+  | 'downloading'
+  | 'downloaded'
+  | 'failed'
+  | 'paused'
+  | 'retrying'
 
 export interface DownloadRecord {
   id: string
@@ -54,10 +60,7 @@ class DownloadManager {
       }
 
       // Reconcile: books with offlinePath but no downloads record
-      const downloadedRecords = await db.downloads
-        .where('status')
-        .equals('downloaded')
-        .toArray()
+      const downloadedRecords = await db.downloads.where('status').equals('downloaded').toArray()
       const downloadedBookIds = new Set(downloadedRecords.map((r: DownloadRecord) => r.bookId))
 
       const allBooks = await db.books.toArray()
@@ -100,7 +103,12 @@ class DownloadManager {
 
     const hasActive = store.hasActiveDownload()
     if (hasActive) {
-      store.setDownloadState(book.id, { status: 'pending', progress: 0, totalSize: 0, retryCount: 0 })
+      store.setDownloadState(book.id, {
+        status: 'pending',
+        progress: 0,
+        totalSize: 0,
+        retryCount: 0,
+      })
       return
     }
 

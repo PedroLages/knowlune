@@ -145,32 +145,29 @@ export function useScrubPreview(_src: string): ScrubPreviewAPI {
   }, [])
 
   // ---- requestFrameAt ---------------------------------------------------
-  const requestFrameAt = useCallback(
-    (time: number) => {
-      const video = videoElRef.current
-      if (!video) return
+  const requestFrameAt = useCallback((time: number) => {
+    const video = videoElRef.current
+    if (!video) return
 
-      // Always store the latest request so metadata-retry can re-issue it
-      lastRequestedRef.current = time
+    // Always store the latest request so metadata-retry can re-issue it
+    lastRequestedRef.current = time
 
-      if (video.readyState < HTMLMediaElement.HAVE_METADATA || video.duration <= 0) {
-        // Metadata not ready yet — the loadedmetadata listener will re-issue
-        return
-      }
+    if (video.readyState < HTMLMediaElement.HAVE_METADATA || video.duration <= 0) {
+      // Metadata not ready yet — the loadedmetadata listener will re-issue
+      return
+    }
 
-      const clamped = Math.max(0, Math.min(time, video.duration))
+    const clamped = Math.max(0, Math.min(time, video.duration))
 
-      if (seekingRef.current) {
-        // Seek in flight — store as pending (overwrites any previous pending)
-        pendingTargetRef.current = clamped
-        return
-      }
+    if (seekingRef.current) {
+      // Seek in flight — store as pending (overwrites any previous pending)
+      pendingTargetRef.current = clamped
+      return
+    }
 
-      seekingRef.current = true
-      video.currentTime = clamped
-    },
-    []
-  )
+    seekingRef.current = true
+    video.currentTime = clamped
+  }, [])
 
   return { videoRef, canvasRef, requestFrameAt, thumbnailAvailable }
 }

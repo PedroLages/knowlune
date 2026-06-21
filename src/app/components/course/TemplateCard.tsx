@@ -22,7 +22,10 @@ export function TemplateCard({ template, courseCount, matchCount, className }: T
         <CardContent className="p-5">
           {/* Badge row */}
           <div className="flex items-center gap-2 mb-3">
-            <Badge variant="outline" className="text-xs border-brand-soft text-brand-soft-foreground">
+            <Badge
+              variant="outline"
+              className="text-xs border-brand-soft text-brand-soft-foreground"
+            >
               Template
             </Badge>
             {template.difficultyLabel && (
@@ -37,7 +40,9 @@ export function TemplateCard({ template, courseCount, matchCount, className }: T
           <h3 className="font-semibold text-base mb-1 line-clamp-1">{template.name}</h3>
 
           {template.description && (
-            <p className="text-sm text-muted-foreground mb-3 line-clamp-2">{template.description}</p>
+            <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
+              {template.description}
+            </p>
           )}
 
           {/* Metadata */}
@@ -48,8 +53,7 @@ export function TemplateCard({ template, courseCount, matchCount, className }: T
             </span>
             {template.estimatedHours && (
               <span className="flex items-center gap-1">
-                <Clock className="w-3.5 h-3.5" />
-                ~{template.estimatedHours}h
+                <Clock className="w-3.5 h-3.5" />~{template.estimatedHours}h
               </span>
             )}
           </div>
@@ -77,12 +81,7 @@ export function TemplateCard({ template, courseCount, matchCount, className }: T
           </div>
 
           {/* Preview button */}
-          <Button
-            variant="brand-outline"
-            size="sm"
-            className="w-full"
-            asChild
-          >
+          <Button variant="brand-outline" size="sm" className="w-full" asChild>
             <Link to={`/learning-tracks`}>
               <Eye className="w-4 h-4 mr-1.5" />
               Preview

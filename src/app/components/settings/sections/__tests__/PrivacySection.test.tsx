@@ -16,7 +16,9 @@ const mocks = vi.hoisted(() => {
     withdrawConsent: vi.fn(),
     toastSuccess: vi.fn(),
     toastErrorSaveFailed: vi.fn(),
-    setUser: (u: { id: string } | null) => { currentUser = u },
+    setUser: (u: { id: string } | null) => {
+      currentUser = u
+    },
     getUser: () => currentUser,
   }
 })

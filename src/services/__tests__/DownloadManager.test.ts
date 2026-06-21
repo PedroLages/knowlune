@@ -209,19 +209,32 @@ describe('DownloadManager', () => {
     })
 
     it('returns source.url when sourceUrl is absent', async () => {
-      const book = { ...MOCK_BOOK, sourceUrl: undefined, source: { type: 'remote', url: 'https://alt.example/book.epub' } } as unknown as Book
+      const book = {
+        ...MOCK_BOOK,
+        sourceUrl: undefined,
+        source: { type: 'remote', url: 'https://alt.example/book.epub' },
+      } as unknown as Book
       const url = await downloadManager.resolveDownloadUrl(book)
       expect(url).toBe('https://alt.example/book.epub')
     })
 
     it('returns fileUrl as fallback', async () => {
-      const book = { ...MOCK_BOOK, sourceUrl: undefined, source: { type: 'local' }, fileUrl: 'https://file.example/book.epub' } as unknown as Book
+      const book = {
+        ...MOCK_BOOK,
+        sourceUrl: undefined,
+        source: { type: 'local' },
+        fileUrl: 'https://file.example/book.epub',
+      } as unknown as Book
       const url = await downloadManager.resolveDownloadUrl(book)
       expect(url).toBe('https://file.example/book.epub')
     })
 
     it('throws when no URL is available', async () => {
-      const book = { ...MOCK_BOOK, sourceUrl: undefined, source: { type: 'local' } } as unknown as Book
+      const book = {
+        ...MOCK_BOOK,
+        sourceUrl: undefined,
+        source: { type: 'local' },
+      } as unknown as Book
       await expect(downloadManager.resolveDownloadUrl(book)).rejects.toThrow('No downloadable URL')
     })
   })
@@ -323,11 +336,14 @@ describe('DownloadManager', () => {
 
     it('handles empty response body as error with retries', async () => {
       vi.useFakeTimers()
-      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
-        ok: true,
-        body: null,
-        headers: new Map(),
-      }))
+      vi.stubGlobal(
+        'fetch',
+        vi.fn().mockResolvedValue({
+          ok: true,
+          body: null,
+          headers: new Map(),
+        })
+      )
       vi.stubGlobal('crypto', { randomUUID: () => 'test-uuid' })
 
       const promise = downloadManager.startDownload(MOCK_BOOK)
@@ -392,7 +408,7 @@ describe('DownloadManager', () => {
         'book-2',
         'book.m4b',
         expect.any(Object),
-        expect.any(Function),
+        expect.any(Function)
       )
     })
 
@@ -459,7 +475,7 @@ describe('DownloadManager', () => {
       // Extract the order books entered 'downloading' status
       const calls = mockStoreState.setDownloadState.mock.calls
       const downloadingCalls = calls.filter(
-        (c: unknown[]) => (c[1] as Record<string, unknown>)?.status === 'downloading',
+        (c: unknown[]) => (c[1] as Record<string, unknown>)?.status === 'downloading'
       )
       const bookIds = downloadingCalls.map((c: unknown[]) => c[0])
 
@@ -518,7 +534,10 @@ describe('DownloadManager', () => {
       })
 
       const { db } = await import('@/db/schema')
-      vi.mocked(db.books.get).mockResolvedValue({ ...MOCK_BOOK, offlinePath: '/knowlune/books/book-1/book.epub' } as any)
+      vi.mocked(db.books.get).mockResolvedValue({
+        ...MOCK_BOOK,
+        offlinePath: '/knowlune/books/book-1/book.epub',
+      } as any)
 
       await downloadManager.removeDownload('book-1')
 
@@ -557,7 +576,10 @@ describe('DownloadManager', () => {
       mockDeleteBookFiles.mockRejectedValue(new Error('OPFS error'))
 
       const { db } = await import('@/db/schema')
-      vi.mocked(db.books.get).mockResolvedValue({ ...MOCK_BOOK, offlinePath: '/knowlune/books/book-1/book.epub' } as any)
+      vi.mocked(db.books.get).mockResolvedValue({
+        ...MOCK_BOOK,
+        offlinePath: '/knowlune/books/book-1/book.epub',
+      } as any)
 
       await expect(downloadManager.removeDownload('book-1')).resolves.toBeUndefined()
       expect(mockStoreState.removeDownloadState).toHaveBeenCalledWith('book-1')
@@ -613,9 +635,9 @@ describe('DownloadManager', () => {
       // Mock where chain for in-flight query
       vi.mocked(db.downloads.where).mockReturnValue({
         anyOf: vi.fn().mockReturnValue({
-          toArray: vi.fn().mockResolvedValue([
-            { id: 'dl-1', bookId: 'book-1', status: 'downloading' },
-          ]),
+          toArray: vi
+            .fn()
+            .mockResolvedValue([{ id: 'dl-1', bookId: 'book-1', status: 'downloading' }]),
         }),
         equals: vi.fn().mockReturnValue({
           toArray: vi.fn().mockResolvedValue([]),
@@ -641,16 +663,26 @@ describe('DownloadManager', () => {
       vi.mocked(db.downloads.where).mockReturnValue({
         anyOf: vi.fn().mockReturnValue({ toArray: vi.fn().mockResolvedValue([]) }),
         equals: vi.fn().mockReturnValue({
-          toArray: vi.fn().mockResolvedValue([
-            { id: 'dl-2', bookId: 'book-2', status: 'downloaded' },
-          ]),
+          toArray: vi
+            .fn()
+            .mockResolvedValue([{ id: 'dl-2', bookId: 'book-2', status: 'downloaded' }]),
           delete: vi.fn().mockResolvedValue(0),
         }),
       } as any)
 
       vi.mocked(db.books.toArray).mockResolvedValue([
-        { ...MOCK_BOOK, id: 'book-1', offlinePath: '/knowlune/books/book-1/book.epub', fileSize: 1000 },
-        { ...MOCK_BOOK, id: 'book-2', offlinePath: '/knowlune/books/book-2/book.epub', fileSize: 2000 },
+        {
+          ...MOCK_BOOK,
+          id: 'book-1',
+          offlinePath: '/knowlune/books/book-1/book.epub',
+          fileSize: 1000,
+        },
+        {
+          ...MOCK_BOOK,
+          id: 'book-2',
+          offlinePath: '/knowlune/books/book-2/book.epub',
+          fileSize: 2000,
+        },
       ] as any)
 
       vi.mocked(db.downloads.toArray).mockResolvedValue([
@@ -660,10 +692,12 @@ describe('DownloadManager', () => {
       await downloadManager.initialize()
 
       // Should create a download record for book-1 (has offlinePath but no record)
-      expect(db.downloads.put).toHaveBeenCalledWith(expect.objectContaining({
-        bookId: 'book-1',
-        status: 'downloaded',
-      }))
+      expect(db.downloads.put).toHaveBeenCalledWith(
+        expect.objectContaining({
+          bookId: 'book-1',
+          status: 'downloaded',
+        })
+      )
     })
   })
 

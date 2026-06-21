@@ -43,7 +43,7 @@ vi.mock('@/app/hooks/useMediaQuery', () => ({
 
 // Mock the UI components that use Radix primitives
 vi.mock('@/app/components/ui/sheet', () => ({
-  Sheet: ({ children, open }: any) => open ? <div data-testid="sheet">{children}</div> : null,
+  Sheet: ({ children, open }: any) => (open ? <div data-testid="sheet">{children}</div> : null),
   SheetContent: ({ children, side, className }: any) => (
     <div data-testid="sheet-content" data-side={side} className={className}>
       {children}
@@ -58,7 +58,7 @@ vi.mock('@/app/components/ui/sheet', () => ({
 }))
 
 vi.mock('@/app/components/ui/drawer', () => ({
-  Drawer: ({ children, open }: any) => open ? <div data-testid="drawer">{children}</div> : null,
+  Drawer: ({ children, open }: any) => (open ? <div data-testid="drawer">{children}</div> : null),
   DrawerContent: ({ children }: any) => <div data-testid="drawer-content">{children}</div>,
   DrawerHeader: ({ children }: any) => <div data-testid="drawer-header">{children}</div>,
   DrawerTitle: ({ children }: any) => <div data-testid="drawer-title">{children}</div>,
@@ -68,8 +68,12 @@ vi.mock('@/app/components/ui/radio-group', () => ({
   RadioGroup: ({ children, value, onValueChange }: any) => (
     <div data-testid="radio-group" data-value={value}>
       {children}
-      <button data-testid="mock-radio-all" onClick={() => onValueChange('all')}>Set All</button>
-      <button data-testid="mock-radio-youtube" onClick={() => onValueChange('youtube')}>Set YouTube</button>
+      <button data-testid="mock-radio-all" onClick={() => onValueChange('all')}>
+        Set All
+      </button>
+      <button data-testid="mock-radio-youtube" onClick={() => onValueChange('youtube')}>
+        Set YouTube
+      </button>
     </div>
   ),
   RadioGroupItem: ({ value }: any) => <div data-testid={`radio-item-${value}`} />,

@@ -67,9 +67,8 @@ export function SoftBlockGate({ onAcknowledged }: SoftBlockGateProps) {
         </div>
 
         <p id="soft-block-description" className="text-sm text-muted-foreground">
-          Our Privacy Notice was updated ({effectiveDate}). Please acknowledge the updated
-          notice to continue creating and saving content. You can still browse and read
-          existing content.
+          Our Privacy Notice was updated ({effectiveDate}). Please acknowledge the updated notice to
+          continue creating and saving content. You can still browse and read existing content.
         </p>
 
         <div className="flex flex-col gap-2 pt-1">

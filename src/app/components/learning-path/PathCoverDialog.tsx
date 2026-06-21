@@ -75,22 +75,25 @@ export function PathCoverDialog({ open, onOpenChange, path, triggerRef }: PathCo
     [onOpenChange, path.coverPreset, isBusy, triggerRef, revokeObjectPreview]
   )
 
-  const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
+  const handleFileSelect = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0]
+      if (!file) return
 
-    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
-      toast.error('Unsupported format. Use JPEG, PNG, or WebP.')
-      return
-    }
+      if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+        toast.error('Unsupported format. Use JPEG, PNG, or WebP.')
+        return
+      }
 
-    revokeObjectPreview()
-    const url = URL.createObjectURL(file)
-    objectPreviewUrlRef.current = url
-    setUploadPreview(url)
-    setUploadFile(file)
-    setSelectedPreset(null)
-  }, [revokeObjectPreview])
+      revokeObjectPreview()
+      const url = URL.createObjectURL(file)
+      objectPreviewUrlRef.current = url
+      setUploadPreview(url)
+      setUploadFile(file)
+      setSelectedPreset(null)
+    },
+    [revokeObjectPreview]
+  )
 
   const handleSave = useCallback(async () => {
     setIsUploading(true)
@@ -248,11 +251,7 @@ export function PathCoverDialog({ open, onOpenChange, path, triggerRef }: PathCo
               </Label>
               <Separator className="mb-3 mt-2" />
               <div className="relative rounded-xl overflow-hidden bg-muted aspect-video">
-                <img
-                  src={path.coverImageUrl}
-                  alt=""
-                  className="w-full h-full object-cover"
-                />
+                <img src={path.coverImageUrl} alt="" className="w-full h-full object-cover" />
               </div>
             </div>
           )}

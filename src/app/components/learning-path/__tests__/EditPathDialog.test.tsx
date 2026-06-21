@@ -38,9 +38,7 @@ vi.mock('@/stores/useLearningPathStore', () => ({
 
 function renderDialog(open = true) {
   const onOpenChange = vi.fn()
-  const result = render(
-    <EditPathDialog open={open} onOpenChange={onOpenChange} path={testPath} />
-  )
+  const result = render(<EditPathDialog open={open} onOpenChange={onOpenChange} path={testPath} />)
   return { onOpenChange, result }
 }
 

@@ -180,23 +180,27 @@ export async function generateStoryboard(
         }
 
         // Export to blob
-        canvas.toBlob(blob => {
-          cleanup()
-          if (blob) {
-            resolve({
-              blob,
-              columns,
-              rows,
-              tileWidth: TILE_W,
-              tileHeight: TILE_H,
-              interval,
-              frameCount,
-              duration,
-            })
-          } else {
-            resolve(null)
-          }
-        }, 'image/jpeg', JPEG_QUALITY)
+        canvas.toBlob(
+          blob => {
+            cleanup()
+            if (blob) {
+              resolve({
+                blob,
+                columns,
+                rows,
+                tileWidth: TILE_W,
+                tileHeight: TILE_H,
+                interval,
+                frameCount,
+                duration,
+              })
+            } else {
+              resolve(null)
+            }
+          },
+          'image/jpeg',
+          JPEG_QUALITY
+        )
       }
 
       video.addEventListener('loadedmetadata', onMetadata)
@@ -268,7 +272,15 @@ export async function saveVideoStoryboard(
 /** Load a storyboard record and return an object URL for the sprite sheet */
 export async function loadVideoStoryboard(
   videoId: string
-): Promise<{ url: string; columns: number; rows: number; tileWidth: number; tileHeight: number; interval: number; frameCount: number } | null> {
+): Promise<{
+  url: string
+  columns: number
+  rows: number
+  tileWidth: number
+  tileHeight: number
+  interval: number
+  frameCount: number
+} | null> {
   const record = await db.videoStoryboards.get(videoId)
   if (!record) return null
   return {

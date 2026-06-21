@@ -18,10 +18,7 @@ import type { Rendition } from 'epubjs'
 import type { NavItem } from 'epubjs'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { useReaderStore } from '@/stores/useReaderStore'
-import {
-  getReaderThemeColors,
-  getReaderChromeClasses,
-} from './readerThemeConfig'
+import { getReaderThemeColors, getReaderChromeClasses } from './readerThemeConfig'
 import { getReaderFontEpubStack } from './readerFontOptions'
 
 /** Minimum horizontal swipe distance to trigger page turn */
@@ -235,11 +232,7 @@ export function EpubRenderer({
   // Container background matching the active reader Page Tone
   const chromeClasses = getReaderChromeClasses(theme)
   const containerBg = chromeClasses.bg
-  const readerViewportClass = scrollMode
-    ? 'max-w-[72ch]'
-    : dualPage
-      ? 'max-w-6xl'
-      : 'max-w-[44rem]'
+  const readerViewportClass = scrollMode ? 'max-w-[72ch]' : dualPage ? 'max-w-6xl' : 'max-w-[44rem]'
 
   // Memoize epubOptions — depends on scrollMode for flow switching (E114-S02)
   const epubOptions = useMemo(

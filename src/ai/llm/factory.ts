@@ -48,15 +48,19 @@ export async function assertAIFeatureConsent(
   }
 
   const resolvedModel = resolved ?? resolveFeatureModel(feature)
-  const effectiveProvider = (
+  const effectiveProvider =
     import.meta.env.DEV &&
     typeof window !== 'undefined' &&
     (window as unknown as Record<string, unknown>).__testForceProvider
-  )
-    ? (window as unknown as Record<string, string>).__testForceProvider as typeof resolvedModel.provider
-    : resolvedModel.provider
+      ? ((window as unknown as Record<string, string>)
+          .__testForceProvider as typeof resolvedModel.provider)
+      : resolvedModel.provider
 
-  const providerGranted = await isGrantedForProvider(userId, CONSENT_PURPOSES.AI_TUTOR, effectiveProvider)
+  const providerGranted = await isGrantedForProvider(
+    userId,
+    CONSENT_PURPOSES.AI_TUTOR,
+    effectiveProvider
+  )
   if (!providerGranted) {
     throw new ProviderReconsentError(CONSENT_PURPOSES.AI_TUTOR, effectiveProvider)
   }
@@ -150,16 +154,20 @@ export async function getLLMClient(
   const config = getAIConfiguration()
 
   // Allow E2E tests to override the global provider too.
-  const effectiveGlobalProvider = (
+  const effectiveGlobalProvider =
     import.meta.env.DEV &&
     typeof window !== 'undefined' &&
     (window as unknown as Record<string, unknown>).__testForceProvider
-  )
-    ? (window as unknown as Record<string, string>).__testForceProvider as typeof config.provider
-    : config.provider
+      ? ((window as unknown as Record<string, string>)
+          .__testForceProvider as typeof config.provider)
+      : config.provider
 
   // Provider re-consent guard (E119-S09): verify the global provider matches consent evidence.
-  const globalProviderGranted = await isGrantedForProvider(userId, CONSENT_PURPOSES.AI_TUTOR, effectiveGlobalProvider)
+  const globalProviderGranted = await isGrantedForProvider(
+    userId,
+    CONSENT_PURPOSES.AI_TUTOR,
+    effectiveGlobalProvider
+  )
   if (!globalProviderGranted) {
     throw new ProviderReconsentError(CONSENT_PURPOSES.AI_TUTOR, effectiveGlobalProvider)
   }

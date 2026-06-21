@@ -21,21 +21,134 @@ import { stripHtml } from '@/lib/textUtils'
 
 /** Common English stop words removed during keyword extraction. */
 const STOP_WORDS = new Set([
-  'a', 'an', 'the', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for',
-  'of', 'by', 'with', 'from', 'up', 'about', 'into', 'over', 'after',
-  'is', 'are', 'was', 'were', 'be', 'been', 'being', 'have', 'has', 'had',
-  'do', 'does', 'did', 'will', 'would', 'could', 'should', 'may', 'might',
-  'shall', 'can', 'need', 'dare', 'ought', 'used',
-  'it', 'its', 'that', 'those', 'this', 'these', 'i', 'you', 'he', 'she',
-  'we', 'they', 'me', 'him', 'her', 'us', 'them', 'my', 'your', 'his',
-  'our', 'their', 'mine', 'yours', 'hers', 'ours', 'theirs',
-  'not', 'no', 'nor', 'neither', 'never', 'none', 'nothing',
-  'so', 'very', 'too', 'quite', 'rather', 'some', 'any', 'each', 'every',
-  'all', 'both', 'few', 'more', 'most', 'other', 'such', 'only', 'own',
-  'same', 'as', 'than', 'then', 'just', 'also', 'well', 'even', 'still',
-  'already', 'yet', 'because', 'since', 'while', 'if', 'when', 'where',
-  'how', 'what', 'which', 'who', 'whom', 'why', 'whether',
-  'here', 'there', 'now', 'then', 'again', 'further', 'once',
+  'a',
+  'an',
+  'the',
+  'and',
+  'or',
+  'but',
+  'in',
+  'on',
+  'at',
+  'to',
+  'for',
+  'of',
+  'by',
+  'with',
+  'from',
+  'up',
+  'about',
+  'into',
+  'over',
+  'after',
+  'is',
+  'are',
+  'was',
+  'were',
+  'be',
+  'been',
+  'being',
+  'have',
+  'has',
+  'had',
+  'do',
+  'does',
+  'did',
+  'will',
+  'would',
+  'could',
+  'should',
+  'may',
+  'might',
+  'shall',
+  'can',
+  'need',
+  'dare',
+  'ought',
+  'used',
+  'it',
+  'its',
+  'that',
+  'those',
+  'this',
+  'these',
+  'i',
+  'you',
+  'he',
+  'she',
+  'we',
+  'they',
+  'me',
+  'him',
+  'her',
+  'us',
+  'them',
+  'my',
+  'your',
+  'his',
+  'our',
+  'their',
+  'mine',
+  'yours',
+  'hers',
+  'ours',
+  'theirs',
+  'not',
+  'no',
+  'nor',
+  'neither',
+  'never',
+  'none',
+  'nothing',
+  'so',
+  'very',
+  'too',
+  'quite',
+  'rather',
+  'some',
+  'any',
+  'each',
+  'every',
+  'all',
+  'both',
+  'few',
+  'more',
+  'most',
+  'other',
+  'such',
+  'only',
+  'own',
+  'same',
+  'as',
+  'than',
+  'then',
+  'just',
+  'also',
+  'well',
+  'even',
+  'still',
+  'already',
+  'yet',
+  'because',
+  'since',
+  'while',
+  'if',
+  'when',
+  'where',
+  'how',
+  'what',
+  'which',
+  'who',
+  'whom',
+  'why',
+  'whether',
+  'here',
+  'there',
+  'now',
+  'then',
+  'again',
+  'further',
+  'once',
 ])
 
 /** Minimum word length to consider as a unigram keyword. */
@@ -239,9 +352,7 @@ export function findSimilarBooks(hero: Book, candidates: Book[]): SimilarBook[] 
 
   // ── Tier 2: Same author ─────────────────────────────────────────────────
   if (hero.author) {
-    const authorBooks = candidates.filter(
-      b => b.author === hero.author && !seenIds.has(b.id)
-    )
+    const authorBooks = candidates.filter(b => b.author === hero.author && !seenIds.has(b.id))
 
     for (const book of authorBooks) {
       if (tryAddCandidate(book, 'author', 50) && results.length >= MAX_RESULTS) return results
@@ -261,14 +372,13 @@ export function findSimilarBooks(hero: Book, candidates: Book[]): SimilarBook[] 
       .sort((a, b) => b.score - a.score)
 
     for (const entry of scored) {
-      if (tryAddCandidate(entry.book, 'keyword', entry.score) && results.length >= MAX_RESULTS) return results
+      if (tryAddCandidate(entry.book, 'keyword', entry.score) && results.length >= MAX_RESULTS)
+        return results
     }
   }
 
   // ── Tier 4: Genre + tag overlap (supplemental) ──────────────────────────
-  const genreTagPool = candidates
-    .filter(b => !seenIds.has(b.id))
-    .slice(0, MAX_SCORING_POOL)
+  const genreTagPool = candidates.filter(b => !seenIds.has(b.id)).slice(0, MAX_SCORING_POOL)
 
   const genreTagScored = genreTagPool
     .map(book => ({
@@ -279,7 +389,8 @@ export function findSimilarBooks(hero: Book, candidates: Book[]): SimilarBook[] 
     .sort((a, b) => b.score - a.score)
 
   for (const entry of genreTagScored) {
-    if (tryAddCandidate(entry.book, 'genre-tag', entry.score) && results.length >= MAX_RESULTS) return results
+    if (tryAddCandidate(entry.book, 'genre-tag', entry.score) && results.length >= MAX_RESULTS)
+      return results
   }
 
   return results

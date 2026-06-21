@@ -517,9 +517,7 @@ export function CourseCard({
         {renderThumbnailOverlays()}
         {renderInfoButton()}
         {showDurationChip && (
-          <span
-            className="transition-opacity duration-200 group-hover:opacity-0 [@media(hover:none)]:group-hover:opacity-100 motion-reduce:transition-none"
-          >
+          <span className="transition-opacity duration-200 group-hover:opacity-0 [@media(hover:none)]:group-hover:opacity-100 motion-reduce:transition-none">
             <CoverCornerChip position="bottom-right" data-testid="course-card-duration">
               <Clock className="size-3" aria-hidden="true" />
               {course.estimatedHours}h

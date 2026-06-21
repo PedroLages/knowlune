@@ -1693,8 +1693,10 @@ function _declareLegacyMigrations(database: Dexie): void {
   // accidentally counting zombie-session orphans from prior anonymous sessions.
   // Existing rows are unaffected — Dexie treats missing fields as undefined.
   database.version(61).stores({
-    importedCourses: 'id, name, importedAt, status, *tags, source, userId, [userId+updatedAt], guestSessionId',
-    books: 'id, title, author, format, status, createdAt, lastOpenedAt, series, userId, [userId+updatedAt], guestSessionId',
+    importedCourses:
+      'id, name, importedAt, status, *tags, source, userId, [userId+updatedAt], guestSessionId',
+    books:
+      'id, title, author, format, status, createdAt, lastOpenedAt, series, userId, [userId+updatedAt], guestSessionId',
   })
 
   // v62 (template paths): Add `isTemplate` and `forkedFrom` indexed columns to

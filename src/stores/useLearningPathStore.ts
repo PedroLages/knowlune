@@ -16,7 +16,7 @@ interface LearningPathState {
   isGenerating: boolean
   forkGeneration: number
   error: string | null
-  isLoaded: boolean           // Guard flag — follows useBookStore.isLoaded pattern
+  isLoaded: boolean // Guard flag — follows useBookStore.isLoaded pattern
 
   // Pending deletes (undo support)
   // Uses a plain Record for Zustand immutability tracking. Each entry holds the
@@ -148,9 +148,7 @@ function weavePathWithMovableOrder(
 }
 
 /** Resolve course IDs to names for reorder history context */
-function resolvedCourseNames(
-  entries: LearningPathEntry[]
-): string[] {
+function resolvedCourseNames(entries: LearningPathEntry[]): string[] {
   const importedCourses = useCourseImportStore.getState().importedCourses
   return entries.map(e => {
     const course = importedCourses.find(c => c.id === e.courseId)
@@ -310,9 +308,7 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
 
     // Optimistic update
     set(state => ({
-      paths: state.paths.map(p =>
-        p.id === pathId ? { ...p, ...cover, updatedAt: now } : p
-      ),
+      paths: state.paths.map(p => (p.id === pathId ? { ...p, ...cover, updatedAt: now } : p)),
       activePath:
         state.activePath?.id === pathId
           ? { ...state.activePath, ...cover, updatedAt: now }
@@ -625,11 +621,7 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
     }
   },
 
-  reorderPathCourses: async (
-    pathId: string,
-    activeCourseId: string,
-    overCourseId: string
-  ) => {
+  reorderPathCourses: async (pathId: string, activeCourseId: string, overCourseId: string) => {
     if (!pathId || !activeCourseId || !overCourseId || activeCourseId === overCourseId) {
       return
     }
@@ -1033,10 +1025,7 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
 
     // Optimistic update — remove gap entry, add real course
     set(state => ({
-      entries: [
-        ...state.entries.filter(e => e.id !== gapEntryId),
-        replacementEntry,
-      ],
+      entries: [...state.entries.filter(e => e.id !== gapEntryId), replacementEntry],
       paths: state.paths.map(p =>
         p.id === pathId ? { ...p, updatedAt: new Date().toISOString() } : p
       ),
@@ -1046,7 +1035,11 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
     try {
       await persistWithRetry(async () => {
         await syncableWrite('learningPathEntries', 'delete', gapEntryId)
-        await syncableWrite('learningPathEntries', 'add', replacementEntry as unknown as SyncableRecord)
+        await syncableWrite(
+          'learningPathEntries',
+          'add',
+          replacementEntry as unknown as SyncableRecord
+        )
         const existingPath = await db.learningPaths.get(pathId)
         if (existingPath) {
           await syncableWrite('learningPaths', 'put', existingPath as unknown as SyncableRecord)
@@ -1215,7 +1208,11 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
     const importedCourses = useCourseImportStore.getState().importedCourses
 
     const normalize = (s: string) =>
-      s.toLowerCase().replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, ' ').trim()
+      s
+        .toLowerCase()
+        .replace(/[^a-z0-9\s]/g, '')
+        .replace(/\s+/g, ' ')
+        .trim()
 
     const importedNames = new Map<string, string>()
     for (const course of importedCourses) {
@@ -1348,6 +1345,7 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
 }))
 
 if (import.meta.env.DEV && typeof window !== 'undefined' && __PLAYWRIGHT_TEST__) {
-  ;(window as unknown as { __learningPathStore__?: typeof useLearningPathStore }).__learningPathStore__ =
-    useLearningPathStore
+  ;(
+    window as unknown as { __learningPathStore__?: typeof useLearningPathStore }
+  ).__learningPathStore__ = useLearningPathStore
 }
