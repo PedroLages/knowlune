@@ -162,10 +162,10 @@ async function initializePipeline(requestId: string): Promise<any> {
       try {
         env.backends.onnx.wasm.numThreads = 1 // CRITICAL: Limit to 1 thread per worker
       } catch (onnxError) {
-        throw Object.assign(
-          new Error('ONNX backend initialization failed'),
-          { reason: 'onnx-backend-failed', cause: onnxError }
-        )
+        throw Object.assign(new Error('ONNX backend initialization failed'), {
+          reason: 'onnx-backend-failed',
+          cause: onnxError,
+        })
       }
 
       let pipelineInstance: any
@@ -178,21 +178,17 @@ async function initializePipeline(requestId: string): Promise<any> {
       } catch (pipelineError) {
         // Determine the root cause for telemetry
         const errMsg =
-          pipelineError instanceof Error
-            ? pipelineError.message
-            : String(pipelineError)
+          pipelineError instanceof Error ? pipelineError.message : String(pipelineError)
         const reason: string =
-          errMsg.includes('ONNX') ||
-          errMsg.includes('wasm') ||
-          errMsg.includes('WebAssembly')
+          errMsg.includes('ONNX') || errMsg.includes('wasm') || errMsg.includes('WebAssembly')
             ? 'onnx-backend-failed'
             : errMsg.includes('cache') || errMsg.includes('Cache')
               ? 'cache-unavailable'
               : 'model-load-failed'
-        throw Object.assign(
-          new Error('Pipeline initialization failed'),
-          { reason, cause: pipelineError }
-        )
+        throw Object.assign(new Error('Pipeline initialization failed'), {
+          reason,
+          cause: pipelineError,
+        })
       }
 
       embeddingPipeline = pipelineInstance

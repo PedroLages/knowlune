@@ -333,7 +333,9 @@ describe('WorkerCoordinator', () => {
         // eslint-disable-next-line @typescript-eslint/no-this-alias
         workerInstance = this
       }
-      postMessage(): void { /* noop */ }
+      postMessage(): void {
+        /* noop */
+      }
       terminate(): void {}
       addEventListener(type: string, listener: EventListener): void {
         super.addEventListener(type, listener)
@@ -396,7 +398,9 @@ describe('WorkerCoordinator', () => {
         // eslint-disable-next-line @typescript-eslint/no-this-alias
         workerInstance = this
       }
-      postMessage(): void { /* noop */ }
+      postMessage(): void {
+        /* noop */
+      }
       terminate(): void {}
       addEventListener(type: string, listener: EventListener): void {
         super.addEventListener(type, listener)
@@ -473,9 +477,9 @@ describe('WorkerCoordinator', () => {
     }
     global.Worker = OnnxFailingWorker as unknown as typeof Worker
 
-    await expect(
-      coordinator.executeTask('embed', { texts: ['test'] })
-    ).rejects.toThrow('ONNX backend initialization failed')
+    await expect(coordinator.executeTask('embed', { texts: ['test'] })).rejects.toThrow(
+      'ONNX backend initialization failed'
+    )
   })
 
   // AC5: Graceful degradation without Worker support

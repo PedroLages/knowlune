@@ -28,7 +28,9 @@ vi.mock('@/stores/useAuthStore', () => {
     useAuthStore: {
       getState: () => mutableState,
     },
-    __setAuthUser: (id: string | null) => { mutableState.user = id ? { id } : null },
+    __setAuthUser: (id: string | null) => {
+      mutableState.user = id ? { id } : null
+    },
   }
 })
 
@@ -126,7 +128,9 @@ describe('EmbeddingPipeline fallback', () => {
 
     // Mock Worker constructor so supportsWorkers() returns true
     globalThis.Worker = class MockWorker {
-      constructor() { /* noop */ }
+      constructor() {
+        /* noop */
+      }
     } as unknown as typeof Worker
 
     // Mock global.fetch to prevent real network calls during OpenAI fallback

@@ -65,12 +65,10 @@ export class LocalEmbeddingProvider implements EmbeddingProvider {
       // Check that ALL critical model files are cached.
       // If any are missing, the model download will need to re-run (or fail).
       const results = await Promise.all(
-        EXPECTED_CACHE_PATTERNS.map(async (pattern) => {
+        EXPECTED_CACHE_PATTERNS.map(async pattern => {
           // caches.match returns the first cached Response matching the URL pattern.
           // We use Request with the HuggingFace URL pattern that Transformers.js uses.
-          const request = new Request(
-            `https://huggingface.co/Xenova/${pattern}`
-          )
+          const request = new Request(`https://huggingface.co/Xenova/${pattern}`)
           const match = await cache.match(request)
           return !!match
         })
@@ -78,7 +76,7 @@ export class LocalEmbeddingProvider implements EmbeddingProvider {
 
       const allPresent = results.every(Boolean)
       if (!allPresent) {
-        const missingCount = results.filter((r) => !r).length
+        const missingCount = results.filter(r => !r).length
         console.info(
           `[LocalEmbeddingProvider] Cache partial: ${missingCount}/${EXPECTED_CACHE_PATTERNS.length} model files missing`
         )

@@ -56,11 +56,7 @@ export class EmbeddingRateLimitError extends EmbeddingProviderError {
 
 export class EmbeddingDimensionError extends EmbeddingProviderError {
   constructor(provider: string, actual: number, expected: number) {
-    super(
-      `Dimension mismatch: expected ${expected}, got ${actual}`,
-      provider,
-      'dimension_mismatch'
-    )
+    super(`Dimension mismatch: expected ${expected}, got ${actual}`, provider, 'dimension_mismatch')
     this.name = 'EmbeddingDimensionError'
   }
 }
@@ -77,7 +73,7 @@ export class EmbeddingNetworkError extends EmbeddingProviderError {
 // ============================================================================
 
 async function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms))
+  return new Promise(resolve => setTimeout(resolve, ms))
 }
 
 // ============================================================================
@@ -140,7 +136,7 @@ export class OpenAIEmbeddingProvider implements EmbeddingProvider {
    */
   async embed(texts: string[]): Promise<Float32Array[]> {
     // Filter empty/whitespace texts (consistent with local provider behavior)
-    const filteredTexts = texts.map((t) => t.trim()).filter(Boolean)
+    const filteredTexts = texts.map(t => t.trim()).filter(Boolean)
     if (filteredTexts.length === 0) {
       return []
     }

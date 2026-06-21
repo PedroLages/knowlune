@@ -105,7 +105,9 @@ export class EmbeddingPipeline {
       // === Both providers failed ===
       // Note saved without embedding — graceful degradation.
       // Telemetry is logged above; the toast surface is debounced.
-      console.info('[EmbeddingPipeline] All embedding providers failed — note saved without embedding.')
+      console.info(
+        '[EmbeddingPipeline] All embedding providers failed — note saved without embedding.'
+      )
     } catch (error) {
       // Non-blocking: note saved even if embedding fails
       console.error('[EmbeddingPipeline] Failed to index note:', note.id, error)
@@ -132,8 +134,7 @@ export class EmbeddingPipeline {
       return null
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-      const reason =
-        (error as Error & { reason?: string }).reason ?? 'unknown'
+      const reason = (error as Error & { reason?: string }).reason ?? 'unknown'
 
       console.warn('[EmbeddingPipeline] Local embedding failed:', {
         provider: 'local',
@@ -183,10 +184,7 @@ export class EmbeddingPipeline {
       return null
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-      const code =
-        error instanceof EmbeddingProviderError
-          ? error.code
-          : 'unknown'
+      const code = error instanceof EmbeddingProviderError ? error.code : 'unknown'
 
       console.warn('[EmbeddingPipeline] OpenAI fallback failed:', {
         provider: 'openai',

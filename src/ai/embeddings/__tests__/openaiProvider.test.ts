@@ -120,9 +120,7 @@ describe('OpenAIEmbeddingProvider', () => {
         ok: true,
         json: async () => ({
           object: 'list',
-          data: [
-            { object: 'embedding', index: 0, embedding: new Array(384).fill(0.1) },
-          ],
+          data: [{ object: 'embedding', index: 0, embedding: new Array(384).fill(0.1) }],
           model: 'text-embedding-3-small',
           usage: { prompt_tokens: 4, total_tokens: 4 },
         }),
@@ -172,7 +170,13 @@ describe('OpenAIEmbeddingProvider', () => {
         ok: false,
         status: 401,
         statusText: 'Unauthorized',
-        json: async () => ({ error: { message: 'Incorrect API key provided', type: 'invalid_request_error', code: 'invalid_api_key' } }),
+        json: async () => ({
+          error: {
+            message: 'Incorrect API key provided',
+            type: 'invalid_request_error',
+            code: 'invalid_api_key',
+          },
+        }),
       })
 
       await expect(provider.embed(['Hello'])).rejects.toThrow(InvalidApiKeyError)
@@ -183,7 +187,9 @@ describe('OpenAIEmbeddingProvider', () => {
         ok: false,
         status: 403,
         statusText: 'Forbidden',
-        json: async () => ({ error: { message: 'Key not permitted', type: 'access_denied', code: null } }),
+        json: async () => ({
+          error: { message: 'Key not permitted', type: 'access_denied', code: null },
+        }),
       })
 
       await expect(provider.embed(['Hello'])).rejects.toThrow(InvalidApiKeyError)
@@ -195,7 +201,9 @@ describe('OpenAIEmbeddingProvider', () => {
         ok: false,
         status: 429,
         statusText: 'Too Many Requests',
-        json: async () => ({ error: { message: 'Rate limit exceeded', type: 'rate_limit', code: 'rate_limited' } }),
+        json: async () => ({
+          error: { message: 'Rate limit exceeded', type: 'rate_limit', code: 'rate_limited' },
+        }),
       }
       mockFetch
         .mockResolvedValueOnce(rateLimitResponse)
@@ -215,21 +223,23 @@ describe('OpenAIEmbeddingProvider', () => {
           ok: false,
           status: 429,
           statusText: 'Too Many Requests',
-          json: async () => ({ error: { message: 'Rate limit', type: 'rate_limit', code: 'rate_limited' } }),
+          json: async () => ({
+            error: { message: 'Rate limit', type: 'rate_limit', code: 'rate_limited' },
+          }),
         })
         .mockResolvedValueOnce({
           ok: false,
           status: 429,
           statusText: 'Too Many Requests',
-          json: async () => ({ error: { message: 'Rate limit', type: 'rate_limit', code: 'rate_limited' } }),
+          json: async () => ({
+            error: { message: 'Rate limit', type: 'rate_limit', code: 'rate_limited' },
+          }),
         })
         .mockResolvedValueOnce({
           ok: true,
           json: async () => ({
             object: 'list',
-            data: [
-              { object: 'embedding', index: 0, embedding: new Array(384).fill(0.1) },
-            ],
+            data: [{ object: 'embedding', index: 0, embedding: new Array(384).fill(0.1) }],
             model: 'text-embedding-3-small',
             usage: { prompt_tokens: 4, total_tokens: 4 },
           }),
@@ -251,7 +261,9 @@ describe('OpenAIEmbeddingProvider', () => {
         ok: false,
         status: 429,
         statusText: 'Too Many Requests',
-        json: async () => ({ error: { message: 'Rate limit', type: 'rate_limit', code: 'rate_limited' } }),
+        json: async () => ({
+          error: { message: 'Rate limit', type: 'rate_limit', code: 'rate_limited' },
+        }),
       }
       mockFetch
         .mockResolvedValueOnce(errorResponse)
@@ -280,7 +292,9 @@ describe('OpenAIEmbeddingProvider', () => {
         ok: false,
         status: 500,
         statusText: 'Internal Server Error',
-        json: async () => ({ error: { message: 'Server error', type: 'server_error', code: null } }),
+        json: async () => ({
+          error: { message: 'Server error', type: 'server_error', code: null },
+        }),
       })
 
       await expect(provider.embed(['Hello'])).rejects.toThrow(EmbeddingProviderError)
