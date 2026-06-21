@@ -134,7 +134,7 @@ export default function App() {
         <MotionConfig reducedMotion={shouldReduceMotion ? 'always' : 'never'}>
           <SyncUXShell>
             <RouterProvider router={router} />
-            <Toaster />
+            <Toaster style={{ zIndex: 51 }} />
             <EmbeddingModelProgressToast />
             <WelcomeWizard />
             {import.meta.env.PROD && <PWAUpdatePrompt />}

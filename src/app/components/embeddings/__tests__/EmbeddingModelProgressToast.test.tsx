@@ -22,7 +22,6 @@ const {
   mockToastDismiss,
   mockToastError,
   mockToastSuccess,
-  mockToastLoading,
   resetNextId,
 } = vi.hoisted(() => {
   let nextId = 1
@@ -37,9 +36,6 @@ const {
   const mockToastDismiss = vi.fn()
   const mockToastError = vi.fn()
   const mockToastSuccess = vi.fn()
-  const mockToastLoading = vi.fn((_message: string) => {
-    return `toast-${nextId++}`
-  })
 
   function resetNextId() {
     nextId = 1
@@ -50,7 +46,6 @@ const {
     mockToastDismiss,
     mockToastError,
     mockToastSuccess,
-    mockToastLoading,
     resetNextId,
   }
 })
@@ -60,7 +55,7 @@ vi.mock('sonner', () => ({
     dismiss: mockToastDismiss,
     error: mockToastError,
     success: mockToastSuccess,
-    loading: mockToastLoading,
+    loading: vi.fn(),
     info: vi.fn(),
   }),
 }))
@@ -91,7 +86,6 @@ describe('EmbeddingModelProgressToast', () => {
     mockToastDismiss.mockClear()
     mockToastError.mockClear()
     mockToastSuccess.mockClear()
-    mockToastLoading.mockClear()
     resetNextId()
 
     // Default: supportsWorkers returns true
@@ -127,37 +121,44 @@ describe('EmbeddingModelProgressToast', () => {
     expect(desc).toContain('Keyword search available')
   })
 
-  it('shows loading toast for indeterminate progress (< 0)', () => {
+  it('shows toast with spinner description for indeterminate progress (< 0)', () => {
     render(<EmbeddingModelProgressToast />)
 
     dispatchProgress({ progress: -1, status: 'progress', file: 'model.onnx' })
 
-    expect(mockToastLoading).toHaveBeenCalledTimes(1)
-    expect(mockToastLoading).toHaveBeenCalledWith('Downloading AI Model', {
-      description: 'Downloading AI model...',
-      duration: Infinity,
-    })
+    const callArgs = mockToast.mock.calls[0]
+    const toastOptions = callArgs[1]!
+    expect(callArgs[0]).toBe('Downloading AI Model')
+    expect(toastOptions.duration).toBe(Infinity)
+    // Should have a Skip action button (same toast type as determinate)
+    expect(toastOptions.action).toEqual({ label: 'Skip', onClick: expect.any(Function) })
+    // Description should be a ReactNode with loading text and spinner indicator
+    const desc = JSON.stringify(toastOptions.description)
+    expect(desc).toContain('Downloading AI model')
+    expect(desc).toContain('Keyword search available')
   })
 
-  it('transitions from loading to progress bar when determinate progress arrives', () => {
+  it('transitions from indeterminate to determinate using the same toast', () => {
     render(<EmbeddingModelProgressToast />)
 
-    // First event: indeterminate — creates a loading toast (debounce baseline set)
+    // First event: indeterminate — creates a toast with Skip button (debounce baseline set)
     dispatchProgress({ progress: -1, status: 'progress' })
-    expect(mockToastLoading).toHaveBeenCalledTimes(1)
-    const loadingId = mockToastLoading.mock.results[0]?.value
+    expect(mockToast).toHaveBeenCalledTimes(1)
+    const firstId = mockToast.mock.results[0]?.value
 
     // Advance past the 500ms debounce window so the next update goes through
     act(() => vi.advanceTimersByTime(600))
 
-    // Second event: determinate — updates the loading toast with a progress bar
+    // Second event: determinate — updates the same toast with a progress bar
     dispatchProgress({ progress: 25, status: 'progress' })
 
-    // Should have called toast() with the same ID to update the loading toast
-    expect(mockToast).toHaveBeenCalledTimes(1)
-    const updateCallArgs = mockToast.mock.calls[0]
+    // Both calls used toast() — no ID switch, Skip/Close buttons persist
+    expect(mockToast).toHaveBeenCalledTimes(2)
+    const updateCallArgs = mockToast.mock.calls[1]
     expect(updateCallArgs[0]).toBe('Downloading AI Model')
-    expect(updateCallArgs[1]!.id).toBe(loadingId)
+    expect(updateCallArgs[1]!.id).toBe(firstId)
+    // Description now has the progress bar
+    expect(JSON.stringify(updateCallArgs[1]!.description)).toContain('25')
   })
 
   it('updates the existing toast on subsequent progress events (after debounce)', () => {

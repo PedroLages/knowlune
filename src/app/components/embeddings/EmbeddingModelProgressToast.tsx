@@ -26,6 +26,7 @@
 
 import { useEffect, useRef } from 'react'
 import { toast } from 'sonner'
+import { Loader2 } from 'lucide-react'
 import { useModelDownloadProgress } from '@/ai/hooks/useModelDownloadProgress'
 import { supportsWorkers } from '@/ai/lib/workerCapabilities'
 import { Progress } from '@/app/components/ui/progress'
@@ -53,6 +54,24 @@ function buildDescription(progress: number) {
     <div>
       <div>Downloading AI model... {progress}%</div>
       <Progress value={progress} className="mt-1" showLabel={false} />
+      <div className="text-muted-foreground mt-1 text-xs">
+        Download continues in background. Keyword search available.
+      </div>
+    </div>
+  )
+}
+
+/**
+ * Build the toast description ReactNode for indeterminate progress
+ * (progress < 0). Shows a spinner indicator instead of a progress bar.
+ */
+function buildIndeterminateDescription() {
+  return (
+    <div>
+      <div className="flex items-center gap-2">
+        <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+        <span>Downloading AI model...</span>
+      </div>
       <div className="text-muted-foreground mt-1 text-xs">
         Download continues in background. Keyword search available.
       </div>
@@ -124,10 +143,30 @@ export function EmbeddingModelProgressToast() {
       }
 
       if (isIndeterminate) {
-        // Indeterminate: show a loading toast with spinner
-        toastIdRef.current = toast.loading('Downloading AI Model', {
-          description: 'Downloading AI model...',
+        // Indeterminate: show a toast with spinner in description.
+        // Uses toast() (not toast.loading()) so Skip button and close button
+        // persist when progress becomes determinate (Sonner cannot update a
+        // loading toast's action buttons).
+        toastIdRef.current = toast('Downloading AI Model', {
+          description: buildIndeterminateDescription(),
           duration: Infinity,
+          action: {
+            label: 'Skip',
+            onClick: () => {
+              if (toastIdRef.current) {
+                toast.dismiss(toastIdRef.current)
+                toastIdRef.current = null
+              }
+              if (firstProgressTimerRef.current) {
+                clearTimeout(firstProgressTimerRef.current)
+                firstProgressTimerRef.current = null
+              }
+              if (fallbackTimerRef.current) {
+                clearTimeout(fallbackTimerRef.current)
+                fallbackTimerRef.current = null
+              }
+            },
+          },
         })
       } else {
         // Determinate: show a toast with progress bar and skip button
@@ -172,7 +211,7 @@ export function EmbeddingModelProgressToast() {
     }
 
     // ---- Subsequent events ----
-    // If still indeterminate, keep the loading spinner — nothing to update
+    // If still indeterminate, keep the spinner indicator — nothing to update
     if (isIndeterminate) return
 
     // Debounce: skip updates that arrive too close together
@@ -223,8 +262,10 @@ export function EmbeddingModelProgressToast() {
   // ==========================================================================
   useEffect(() => {
     const handleWorkerCrash = (event: Event) => {
-      // Only react if we were actually waiting for a download
-      if (!warmupAttemptedRef.current || hasCompletedRef.current) return
+      // Only react if we were actually waiting for a download and
+      // a toast is visible (avoids false errors when warm-up was never
+      // attempted — happens in isolation tests and on low-memory devices)
+      if (!toastIdRef.current || !warmupAttemptedRef.current || hasCompletedRef.current) return
 
       const detail = (event as CustomEvent<{ workerId: string; error: string }>).detail
       const errorMsg = detail?.error ?? 'Unknown error'
