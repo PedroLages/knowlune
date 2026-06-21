@@ -47,7 +47,7 @@ Three new attack vectors introduced:
 
 - `.env` files: Not tracked by git (confirmed via `git ls-files --error-unmatch`)
 - `console.log` in changed files: Model name (`all-MiniLM-L6-v2`) — public information, not sensitive
-- `.mcp.json`: Contains a Google API key (`[REDACTED]`) in plaintext, but this is pre-existing and not introduced by this story's diff
+- `.mcp.json`: Contains a Google API key (redacted — pre-existing, not introduced by this story's diff)
 
 ### OWASP Coverage
 
