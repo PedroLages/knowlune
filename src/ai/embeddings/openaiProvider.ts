@@ -116,7 +116,7 @@ export class OpenAIEmbeddingProvider implements EmbeddingProvider {
   private apiKey: string
 
   constructor(apiKey: string) {
-    this.apiKey = apiKey
+    this.apiKey = apiKey.trim()
   }
 
   /**

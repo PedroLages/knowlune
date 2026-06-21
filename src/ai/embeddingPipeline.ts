@@ -172,11 +172,8 @@ export class EmbeddingPipeline {
 
     const openaiProvider: EmbeddingProvider = new OpenAIEmbeddingProvider(apiKey)
 
-    const available = await openaiProvider.isAvailable()
-    if (!available) {
-      return null
-    }
-
+    // isAvailable() is skipped here because we already verified apiKey is non-null
+    // (OpenAIEmbeddingProvider.isAvailable() only checks for a non-empty key).
     try {
       const result = await openaiProvider.embed(texts)
       if (result.length > 0 && result[0]?.length === 384) {

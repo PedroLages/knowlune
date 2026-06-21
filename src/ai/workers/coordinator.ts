@@ -357,9 +357,22 @@ class WorkerCoordinator {
 
     console.error(`[Coordinator] Worker ${workerId} crashed:`, error)
 
-    // Probe Cache API for transformers model cache availability.
-    // This is async but non-blocking for the crash path — we fire and forget
-    // so the rejection of pending requests is not delayed.
+    // Capture pending request IDs for this worker BEFORE rejecting them
+    const pendingRequestIds = Array.from(this.pendingRequests.entries())
+      .filter(([, p]) => p.workerId === workerId)
+      .map(([id]) => id)
+
+    // Reject all pending requests for this worker FIRST (before cache probe)
+    this.pendingRequests.forEach((pending, requestId) => {
+      if (pending.workerId === workerId) {
+        pending.reject(new Error('Worker crashed. Please try again.'))
+        this.pendingRequests.delete(requestId)
+      }
+    })
+
+    // Probe Cache API for transformers model cache availability (fire-and-forget
+    // after rejections — the cache probe MUST NOT delay the rejection of pending
+    // requests, which would cause caller-side timeouts).
     let cacheAvailable = false
     try {
       if (typeof caches !== 'undefined') {
@@ -380,22 +393,11 @@ class WorkerCoordinator {
             error: error?.message ?? 'Unknown error',
             provider: type === 'embed' ? 'local' : undefined,
             cacheUnavailable: !cacheAvailable,
-            requestId: Array.from(this.pendingRequests.entries())
-              .filter(([, p]) => p.workerId === workerId)
-              .map(([id]) => id)
-              .join(','),
+            requestId: pendingRequestIds.join(','),
           },
         })
       )
     }
-
-    // Reject all pending requests for this worker
-    this.pendingRequests.forEach((pending, requestId) => {
-      if (pending.workerId === workerId) {
-        pending.reject(new Error('Worker crashed. Please try again.'))
-        this.pendingRequests.delete(requestId)
-      }
-    })
   }
 
   /**

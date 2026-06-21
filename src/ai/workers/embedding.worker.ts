@@ -177,15 +177,18 @@ async function initializePipeline(requestId: string): Promise<any> {
         )
       } catch (pipelineError) {
         // Determine the root cause for telemetry
-        // @ts-expect-error - adding custom reason for telemetry
-        const reason: string = pipelineError?.message?.includes('ONNX') ||
-          pipelineError?.message?.includes('wasm') ||
-          pipelineError?.message?.includes('WebAssembly')
-          ? 'onnx-backend-failed'
-          : pipelineError?.message?.includes('cache') ||
-            pipelineError?.message?.includes('Cache')
-          ? 'cache-unavailable'
-          : 'model-load-failed'
+        const errMsg =
+          pipelineError instanceof Error
+            ? pipelineError.message
+            : String(pipelineError)
+        const reason: string =
+          errMsg.includes('ONNX') ||
+          errMsg.includes('wasm') ||
+          errMsg.includes('WebAssembly')
+            ? 'onnx-backend-failed'
+            : errMsg.includes('cache') || errMsg.includes('Cache')
+              ? 'cache-unavailable'
+              : 'model-load-failed'
         throw Object.assign(
           new Error('Pipeline initialization failed'),
           { reason, cause: pipelineError }
@@ -241,7 +244,8 @@ async function initializePipeline(requestId: string): Promise<any> {
         '[EmbeddingWorker] Model unavailable — embeddings disabled until next attempt.',
         error
       )
-      throw new Error('Unable to load AI model. Check your internet connection.')
+      // Preserve original error so the caller sees reason properties (e.g. onnx-backend-failed)
+      throw error instanceof Error ? error : new Error(String(error))
     }
   })()
 

@@ -11,7 +11,7 @@
  * - Edge case: isAvailable() with and without API key
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 
 // Module-level mock for fetch
 const mockFetch = vi.fn()
@@ -28,11 +28,16 @@ const {
 } = await import('../openaiProvider')
 
 describe('OpenAIEmbeddingProvider', () => {
-  let provider: OpenAIEmbeddingProvider
+  let provider: InstanceType<typeof OpenAIEmbeddingProvider>
 
   beforeEach(() => {
     vi.clearAllMocks()
     provider = new OpenAIEmbeddingProvider('sk-test-key-12345')
+  })
+
+  afterEach(() => {
+    // Restore global.fetch to avoid leaking mock across tests
+    global.fetch = mockFetch
   })
 
   describe('isAvailable()', () => {
@@ -155,9 +160,9 @@ describe('OpenAIEmbeddingProvider', () => {
         }),
       })
 
-      const err = await provider.embed(['Hello']).catch((e) => e)
+      const err = await provider.embed(['Hello']).catch((e: unknown) => e)
       expect(err).toBeInstanceOf(EmbeddingDimensionError)
-      expect(err.message).toBe('Dimension mismatch: expected 384, got 512')
+      expect((err as Error).message).toBe('Dimension mismatch: expected 384, got 512')
     })
   })
 
@@ -201,7 +206,9 @@ describe('OpenAIEmbeddingProvider', () => {
       await expect(provider.embed(['Hello'])).rejects.toThrow(EmbeddingRateLimitError)
     })
 
-    it('retries with exponential backoff on 429, then throws', async () => {
+    it('retries with exponential backoff on 429, then succeeds', async () => {
+      vi.useFakeTimers()
+
       // Return 429 twice, then success on third attempt
       mockFetch
         .mockResolvedValueOnce({
@@ -228,9 +235,14 @@ describe('OpenAIEmbeddingProvider', () => {
           }),
         })
 
-      const result = await provider.embed(['Hello'])
+      const resultPromise = provider.embed(['Hello'])
+      // Advance timers past all backoff delays (1s + 2s + buffer)
+      await vi.advanceTimersByTimeAsync(4000)
+      const result = await resultPromise
       expect(result).toHaveLength(1)
       expect(mockFetch).toHaveBeenCalledTimes(3) // 2 retries + 1 success
+
+      vi.useRealTimers()
     })
 
     it('throws EmbeddingRateLimitError after max retries exhausted', async () => {

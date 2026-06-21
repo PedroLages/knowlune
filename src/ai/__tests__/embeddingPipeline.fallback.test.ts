@@ -38,6 +38,14 @@ vi.mock('@/lib/aiConfiguration', () => ({
   getDecryptedApiKeyForProvider: vi.fn(),
 }))
 
+// Mock vector store to track saveEmbedding calls
+vi.mock('@/ai/vector-store', () => ({
+  vectorStorePersistence: {
+    saveEmbedding: vi.fn().mockResolvedValue(undefined),
+    removeEmbedding: vi.fn().mockResolvedValue(undefined),
+  },
+}))
+
 // Mock coordinator generateEmbeddings
 vi.mock('@/ai/workers/coordinator', () => ({
   generateEmbeddings: vi.fn(),
@@ -49,8 +57,10 @@ vi.mock('@/ai/lib/workerCapabilities', () => ({
   supportsWorkers: vi.fn().mockReturnValue(true),
 }))
 
+import { isGranted, isGrantedForProvider } from '@/lib/compliance/consentService'
 import { getAIConfiguration, getDecryptedApiKeyForProvider } from '@/lib/aiConfiguration'
 import { generateEmbeddings } from '@/ai/workers/coordinator'
+import { vectorStorePersistence } from '@/ai/vector-store'
 
 // Import after mocks
 const { EmbeddingPipeline } = await import('../embeddingPipeline')
@@ -66,7 +76,7 @@ function makeNote(overrides: Partial<{ id: string; content: string }> = {}) {
     createdAt: Date.now(),
     updatedAt: Date.now(),
     ...overrides,
-  } as import('@/data/types').Note
+  } as unknown as import('@/data/types').Note
 }
 
 // Default 384-dim vector for mock returns
@@ -77,11 +87,12 @@ function mockEmbeddingVector(): Float32Array {
 }
 
 describe('EmbeddingPipeline fallback', () => {
-  let pipeline: EmbeddingPipeline
+  let pipeline: InstanceType<typeof EmbeddingPipeline>
 
   // Store original globals
   const originalCaches = globalThis.caches
   const originalWorker = globalThis.Worker
+  const originalFetch = globalThis.fetch
 
   beforeEach(async () => {
     vi.clearAllMocks()
@@ -117,6 +128,9 @@ describe('EmbeddingPipeline fallback', () => {
     globalThis.Worker = class MockWorker {
       constructor() { /* noop */ }
     } as unknown as typeof Worker
+
+    // Mock global.fetch to prevent real network calls during OpenAI fallback
+    globalThis.fetch = vi.fn().mockRejectedValue(new Error('Network not mocked'))
   })
 
   afterEach(async () => {
@@ -127,6 +141,7 @@ describe('EmbeddingPipeline fallback', () => {
       configurable: true,
     })
     globalThis.Worker = originalWorker
+    globalThis.fetch = originalFetch
     vi.restoreAllMocks()
   })
 
@@ -139,16 +154,24 @@ describe('EmbeddingPipeline fallback', () => {
 
       // Local should have been called
       expect(generateEmbeddings).toHaveBeenCalledTimes(1)
-      // OpenAI should NOT have been called — the decrypted key provider is read
-      // only if local fails, so we verify it was never read for the fallback
-      // Note: getDecryptedApiKeyForProvider may be called by getAIConfiguration;
-      // we focus on generateEmbeddings being the sole embedding attempt
+      // OpenAI should NOT have been called — the decrypted key is only read
+      // when local fails, and saveEmbedding should have been called
+      expect(getDecryptedApiKeyForProvider).not.toHaveBeenCalled()
+      expect(vectorStorePersistence.saveEmbedding).toHaveBeenCalledTimes(1)
     })
   })
 
   describe('Edge case — local fails, OpenAI fallback succeeds', () => {
     it('reads OpenAI key when local provider fails', async () => {
       // Local fails
+      // Note: reason is set via Object.assign on the mock error, bypassing the
+      // real worker chain (embedding.worker.ts -> coordinator message routing).
+      // In production the `reason` property is stripped at the worker message
+      // boundary (postMessage serializes error.message only), so while the test
+      // validates the pipeline's reason-extraction logic, the production path
+      // always sees reason === 'unknown' at this level. This is a known gap
+      // tracked for a future story that will preserve structured error data
+      // across the worker message boundary.
       vi.mocked(generateEmbeddings).mockRejectedValue(
         Object.assign(new Error('Model not loaded'), { reason: 'onnx-backend-failed' })
       )
@@ -159,6 +182,8 @@ describe('EmbeddingPipeline fallback', () => {
       expect(generateEmbeddings).toHaveBeenCalled()
       // OpenAI key was read for fallback
       expect(getDecryptedApiKeyForProvider).toHaveBeenCalledWith('openai')
+      // saveEmbedding not called because OpenAI fetch is mocked to fail
+      expect(vectorStorePersistence.saveEmbedding).not.toHaveBeenCalled()
     })
 
     it('calls OpenAI when local provider throws onnx-backend-failed', async () => {
@@ -170,6 +195,8 @@ describe('EmbeddingPipeline fallback', () => {
 
       expect(generateEmbeddings).toHaveBeenCalled()
       expect(getDecryptedApiKeyForProvider).toHaveBeenCalledWith('openai')
+      // saveEmbedding not called because OpenAI fetch is mocked to fail
+      expect(vectorStorePersistence.saveEmbedding).not.toHaveBeenCalled()
     })
   })
 
@@ -184,6 +211,8 @@ describe('EmbeddingPipeline fallback', () => {
 
       // Should not throw
       await expect(pipeline.indexNote(makeNote())).resolves.toBeUndefined()
+      // No embedding should be saved - local failed and no OpenAI key
+      expect(vectorStorePersistence.saveEmbedding).not.toHaveBeenCalled()
     })
 
     it('returns gracefully when OpenAI key decryption fails', async () => {
@@ -193,6 +222,8 @@ describe('EmbeddingPipeline fallback', () => {
       vi.mocked(getDecryptedApiKeyForProvider).mockRejectedValue(new Error('Decryption failed'))
 
       await expect(pipeline.indexNote(makeNote())).resolves.toBeUndefined()
+      // No embedding saved because key decryption failed
+      expect(vectorStorePersistence.saveEmbedding).not.toHaveBeenCalled()
     })
   })
 
@@ -206,6 +237,8 @@ describe('EmbeddingPipeline fallback', () => {
       vi.mocked(getDecryptedApiKeyForProvider).mockResolvedValue('sk-test-key')
 
       await expect(pipeline.indexNote(makeNote())).resolves.toBeUndefined()
+      // No embedding should be saved - both providers failed
+      expect(vectorStorePersistence.saveEmbedding).not.toHaveBeenCalled()
     })
   })
 
@@ -225,6 +258,31 @@ describe('EmbeddingPipeline fallback', () => {
         '[EmbeddingPipeline] Local embedding failed:',
         expect.objectContaining({ provider: 'local', reason: 'onnx-backend-failed' })
       )
+      // No embedding saved because OpenAI key is null
+      expect(vectorStorePersistence.saveEmbedding).not.toHaveBeenCalled()
+
+      consoleWarnSpy.mockRestore()
+    })
+
+    it('logs structured telemetry when OpenAI fallback fails (AC4 clause 2)', async () => {
+      const consoleWarnSpy = vi.spyOn(console, 'warn')
+
+      // Local fails
+      vi.mocked(generateEmbeddings).mockRejectedValue(
+        Object.assign(new Error('Worker crashed'), { reason: 'onnx-backend-failed' })
+      )
+      // OpenAI key present, but fetch mock rejects — OpenAI call will fail
+      vi.mocked(getDecryptedApiKeyForProvider).mockResolvedValue('sk-test-key')
+
+      await pipeline.indexNote(makeNote())
+
+      // Should have logged OpenAI fallback failure with structured telemetry
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        '[EmbeddingPipeline] OpenAI fallback failed:',
+        expect.objectContaining({ provider: 'openai', code: 'network_error' })
+      )
+      // No embedding saved — both providers failed
+      expect(vectorStorePersistence.saveEmbedding).not.toHaveBeenCalled()
 
       consoleWarnSpy.mockRestore()
     })
@@ -232,11 +290,14 @@ describe('EmbeddingPipeline fallback', () => {
 
   describe('Consent gate integration', () => {
     it('skips embedding when user is not logged in', async () => {
-      // Set user to null via __setAuthUser helper from the mock
-      const authModule = (await import('@/stores/useAuthStore')) as {
+      // Set user to null via __setAuthUser helper from the mock.
+      // Defined inline rather than as a global type because __setAuthUser
+      // only exists in the mocked module (not the real useAuthStore).
+      interface AuthStoreMock {
         useAuthStore: { getState: () => { user: { id: string } | null } }
         __setAuthUser: (id: string | null) => void
       }
+      const authModule = (await import('@/stores/useAuthStore')) as unknown as AuthStoreMock
       authModule.__setAuthUser(null)
 
       await pipeline.indexNote(makeNote())
@@ -244,6 +305,28 @@ describe('EmbeddingPipeline fallback', () => {
       // Neither provider should be called
       expect(generateEmbeddings).not.toHaveBeenCalled()
       expect(getDecryptedApiKeyForProvider).not.toHaveBeenCalled()
+      // No embedding saved because pipeline exited early
+      expect(vectorStorePersistence.saveEmbedding).not.toHaveBeenCalled()
+    })
+
+    it('skips embedding when ai_embeddings consent is not granted', async () => {
+      vi.mocked(isGranted).mockResolvedValue(false)
+
+      await pipeline.indexNote(makeNote())
+
+      expect(generateEmbeddings).not.toHaveBeenCalled()
+      expect(getDecryptedApiKeyForProvider).not.toHaveBeenCalled()
+      expect(vectorStorePersistence.saveEmbedding).not.toHaveBeenCalled()
+    })
+
+    it('skips embedding when provider consent is not granted', async () => {
+      vi.mocked(isGrantedForProvider).mockResolvedValue(false)
+
+      await pipeline.indexNote(makeNote())
+
+      expect(generateEmbeddings).not.toHaveBeenCalled()
+      expect(getDecryptedApiKeyForProvider).not.toHaveBeenCalled()
+      expect(vectorStorePersistence.saveEmbedding).not.toHaveBeenCalled()
     })
   })
 })
