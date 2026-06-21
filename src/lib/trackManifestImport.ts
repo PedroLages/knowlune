@@ -210,31 +210,29 @@ export async function batchImportTrackCourses(
         courseType: 'imported' as const,
         justification: positions.find(p => p.folder === r.folder)?.notes,
       }))
-
     const newPath = await store.createPathWithCourses(trackName, trackDescription, courses)
-
-    // Apply manifest-specified positions via reorder.
-    // Re-read live store state each iteration — reorderCourse mutates entries,
-    // so a static snapshot captured before the loop would go stale.
-    for (const { folder, position } of positions) {
-      const result = results.find(r => r.folder === folder && r.success)
-      if (!result?.courseId) continue
-
-      // getState() returns the live Zustand snapshot — never use the stale
-      // `store` variable captured at line 185 for entry index lookups.
-      const currentEntries = useLearningPathStore.getState().entries
-        .filter(e => e.pathId === newPath.id)
-        .sort((a, b) => a.position - b.position)
-
-      const entryIndex = currentEntries.findIndex(e => e.courseId === result.courseId)
-      const targetIndex = position - 1
-      if (entryIndex >= 0 && entryIndex !== targetIndex) {
-        await store.reorderCourse(newPath.id, entryIndex, targetIndex)
-      }
-    }
-
     trackId = newPath.id
     toast.success(`Track "${trackName}" created with ${successCount} courses`)
+  }
+
+  // Apply manifest-specified positions via reorder (both new and existing tracks).
+  // Re-read live store state each iteration — reorderCourse mutates entries,
+  // so a static snapshot captured before the loop would go stale.
+  for (const { folder, position } of positions) {
+    const result = results.find(r => r.folder === folder && r.success)
+    if (!result?.courseId) continue
+
+    // getState() returns the live Zustand snapshot — never use the stale
+    // `store` variable captured above for entry index lookups.
+    const currentEntries = useLearningPathStore.getState().entries
+      .filter(e => e.pathId === trackId)
+      .sort((a, b) => a.position - b.position)
+
+    const entryIndex = currentEntries.findIndex(e => e.courseId === result.courseId)
+    const targetIndex = position - 1
+    if (entryIndex >= 0 && entryIndex !== targetIndex) {
+      await store.reorderCourse(trackId, entryIndex, targetIndex)
+    }
   }
 
   return {

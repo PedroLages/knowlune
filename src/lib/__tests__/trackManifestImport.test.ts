@@ -619,4 +619,55 @@ describe('batchImportTrackCourses — reorder loop (Unit 2)', () => {
     expect(trackEntries[1].courseId).toBe('idb')
     expect(trackEntries[2].courseId).toBe('idc')
   })
+
+  it('applies manifest positions when adding courses to an existing track', async () => {
+    // Pre-seed an existing track with some courses already in it.
+    // The manifest track name must match so the existing-track path is taken.
+    const store = useLearningPathStore.getState()
+    await store.loadPaths()
+    const existingPath = await store.createPathWithCourses('Test Track', 'pre-existing', [
+      { courseId: 'old-course-1', courseType: 'imported' as const },
+      { courseId: 'old-course-2', courseType: 'imported' as const },
+    ])
+
+    // Pre-seed courses in the DB as already-imported
+    await seedExistingCourse('existing-id', 'existing-course')
+    await seedExistingCourse('new-id', 'new-course')
+
+    // Both courses appear as duplicates (already imported)
+    mockScanCourseFolderFromHandle.mockImplementation(async (handle: FileSystemDirectoryHandle) => ({
+      status: 'duplicate' as const,
+      folderName: handle.name,
+    }))
+
+    const manifest = makeManifest([
+      { folder: 'existing-course', position: 1 },
+      { folder: 'new-course', position: 2 },
+    ])
+
+    const parentHandle = makeParentHandle(manifest.track.courses.map(c => c.folder))
+    const result = await act(async () => batchImportTrackCourses(parentHandle, manifest))
+
+    expect(result.successCount).toBe(2)
+
+    // Track should now have 4 entries: 2 pre-existing + 2 new, reordered per manifest.
+    // Fresh getState() — the test's `store` variable went stale after batchImportTrackCourses.
+    const freshState = useLearningPathStore.getState()
+    const trackEntries = freshState.entries
+      .filter(e => e.pathId === existingPath.id)
+      .sort((a, b) => a.position - b.position)
+
+    expect(trackEntries).toHaveLength(4)
+
+    // Manifest positions are absolute (1-indexed). Position 1 → index 0 (first),
+    // position 2 → index 1 (second). Pre-existing entries shift down.
+    expect(trackEntries[0].courseId).toBe('existing-id')
+    expect(trackEntries[0].position).toBe(1)
+    expect(trackEntries[1].courseId).toBe('new-id')
+    expect(trackEntries[1].position).toBe(2)
+    expect(trackEntries[2].courseId).toBe('old-course-1')
+    expect(trackEntries[2].position).toBe(3)
+    expect(trackEntries[3].courseId).toBe('old-course-2')
+    expect(trackEntries[3].position).toBe(4)
+  })
 })
