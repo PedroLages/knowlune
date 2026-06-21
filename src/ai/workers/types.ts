@@ -49,7 +49,24 @@ export interface WorkerStreamChunk {
 export interface WorkerProgressUpdate {
   requestId: string
   type: 'download-progress'
+  status: 'download' | 'progress' | 'done'
   progress: number // 0-100
+  file?: string
+  loaded?: number
+  total?: number
+}
+
+/**
+ * Progress callback payload from @xenova/transformers pipeline().
+ * Emitted during model download with per-file progress.
+ */
+export interface ProgressMessage {
+  status: 'download' | 'progress' | 'done'
+  name: string
+  file: string
+  loaded: number
+  total: number
+  progress: number
 }
 
 export type WorkerResponse<T = unknown> =
@@ -122,4 +139,8 @@ export function isErrorResponse(response: WorkerResponse): response is WorkerErr
 
 export function isStreamChunk(response: WorkerResponse): response is WorkerStreamChunk {
   return response.type === 'stream-chunk' || response.type === 'stream-end'
+}
+
+export function isDownloadProgress(response: WorkerResponse): response is WorkerProgressUpdate {
+  return response.type === 'download-progress'
 }

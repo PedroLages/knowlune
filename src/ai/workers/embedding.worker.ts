@@ -15,8 +15,10 @@ import type {
   WorkerRequest,
   WorkerSuccessResponse,
   WorkerErrorResponse,
+  WorkerProgressUpdate,
   EmbedPayload,
   EmbedResult,
+  ProgressMessage,
 } from './types'
 
 // ============================================================================
@@ -69,7 +71,58 @@ async function generateMockEmbeddings(texts: string[]): Promise<Float32Array[]> 
 let embeddingPipeline: any = null
 
 /**
+ * Tracks which requestId triggered the pipeline initialization, so that
+ * progress callbacks from Transformers.js model download are attributed to
+ * the correct request. This is set ONCE when the first embed message triggers
+ * the pipeline download, and subsequent concurrent messages share the same
+ * pipeline without overwriting this ID.
+ */
+let pipelineInitRequestId: string | null = null
+
+/**
+ * Concurrency guard: once pipeline initialization starts, subsequent callers
+ * await the same promise instead of triggering redundant model downloads.
+ */
+let pipelineInitPromise: Promise<any> | null = null
+
+/**
+ * Progress callback passed to Transformers.js pipeline() options.
+ * Forwards model download progress to the coordinator so it can dispatch
+ * a CustomEvent for the UI progress toast.
+ *
+ * Uses pipelineInitRequestId (not a per-message variable) to ensure that
+ * even if multiple embed messages arrive during model download, progress
+ * events are attributed to the request that ORIGINALLY triggered the
+ * pipeline initialization.
+ */
+function onPipelineProgress(progress: ProgressMessage): void {
+  const requestId = pipelineInitRequestId
+  if (!requestId) return
+
+  // Clamp display to 100% and handle indeterminate (total=0) case:
+  // use -1 for indeterminate so the UI shows "..." instead of "0%"
+  const progressValue =
+    progress.total > 0 ? Math.min(100, Math.round((progress.loaded / progress.total) * 100)) : -1
+
+  const progressUpdate: WorkerProgressUpdate = {
+    requestId,
+    type: 'download-progress',
+    status: progress.status === 'done' ? 'done' : 'progress',
+    progress: progressValue,
+    file: progress.file,
+    loaded: progress.loaded,
+    total: progress.total,
+  }
+
+  self.postMessage(progressUpdate)
+}
+
+/**
  * Lazy-initialise the Transformers.js pipeline on first embed request.
+ *
+ * Concurrency-guarded by pipelineInitPromise: if two messages arrive before
+ * the pipeline is ready, both await the same promise instead of triggering
+ * redundant downloads.
  *
  * Previous behaviour eagerly imported and configured @xenova/transformers at
  * module scope, which produced ~8 console errors when the model wasn't cached
@@ -77,15 +130,23 @@ let embeddingPipeline: any = null
  * ensures the worker boots silently and only attempts a download when the
  * caller actually needs embeddings.
  */
-async function initializePipeline() {
-  if (!embeddingPipeline) {
-    // Skip model fetch when offline — will retry when connection resumes
-    if (!navigator.onLine) {
-      throw new Error('Offline — skipping model download. Will retry when connection resumes.')
-    }
+async function initializePipeline(requestId: string): Promise<any> {
+  if (embeddingPipeline) return embeddingPipeline
+  if (pipelineInitPromise) return pipelineInitPromise
 
-    console.log('[EmbeddingWorker] Loading model: all-MiniLM-L6-v2')
+  // Capture which requestId triggered the first-ever pipeline init.
+  // This ensures progress callbacks are attributed correctly even when
+  // multiple messages arrive before the download completes.
+  pipelineInitRequestId = requestId
 
+  // Skip model fetch when offline — will retry when connection resumes
+  if (!navigator.onLine) {
+    throw new Error('Offline — skipping model download. Will retry when connection resumes.')
+  }
+
+  console.log('[EmbeddingWorker] Loading model: all-MiniLM-L6-v2')
+
+  pipelineInitPromise = (async () => {
     try {
       // Dynamic import keeps module-level evaluation side-effect-free
       const { pipeline, env } = await import('@xenova/transformers')
@@ -96,11 +157,52 @@ async function initializePipeline() {
 
       embeddingPipeline = await pipeline(
         'feature-extraction',
-        'Xenova/all-MiniLM-L6-v2' // 384-dim, 23MB model (defaults to WASM/CPU)
+        'Xenova/all-MiniLM-L6-v2', // 384-dim, 23MB model (defaults to WASM/CPU)
+        { progress_callback: onPipelineProgress }
       )
 
+      // Integrity verification: run a quick inference to confirm the model
+      // loaded correctly and produces the expected 384-dim output. This catches
+      // corrupted downloads, model file mismatches, or MITM-substituted models.
+      // all-MiniLM-L6-v2 is a fixed-architecture model, so the output dimension
+      // is a reliable integrity check.
+      {
+        const verifyResult = await embeddingPipeline('test', {
+          pooling: 'mean',
+          normalize: true,
+        })
+        const outputDim = verifyResult?.data?.length ?? 0
+        // For a single string input, data is a Tensor-like object; verify the
+        // flattened length matches what we expect (384-dim single vector).
+        if (outputDim !== 384) {
+          throw new Error(
+            `Model integrity check failed: expected 384-dim output, got ${outputDim}-dim. ` +
+              'The downloaded model may be corrupted or substituted.'
+          )
+        }
+        console.log('[EmbeddingWorker] Model integrity verified: 384-dim output confirmed')
+      }
+
+      // Signal completion so the UI can dismiss the progress toast
+      if (pipelineInitRequestId) {
+        const doneUpdate: WorkerProgressUpdate = {
+          requestId: pipelineInitRequestId,
+          type: 'download-progress',
+          status: 'done',
+          progress: 100,
+        }
+        self.postMessage(doneUpdate)
+      }
+
+      pipelineInitRequestId = null
+      pipelineInitPromise = null
+
       console.log('[EmbeddingWorker] Model loaded successfully')
+      return embeddingPipeline
     } catch (error) {
+      pipelineInitPromise = null
+      pipelineInitRequestId = null
+
       // Single warning instead of multiple uncaught errors (KI-028)
       console.warn(
         '[EmbeddingWorker] Model unavailable — embeddings disabled until next attempt.',
@@ -108,13 +210,13 @@ async function initializePipeline() {
       )
       throw new Error('Unable to load AI model. Check your internet connection.')
     }
-  }
+  })()
 
-  return embeddingPipeline
+  return pipelineInitPromise
 }
 
-async function generateEmbeddings(texts: string[]): Promise<Float32Array[]> {
-  const pipeline = await initializePipeline()
+async function generateEmbeddings(texts: string[], requestId: string): Promise<Float32Array[]> {
+  const pipeline = await initializePipeline(requestId)
 
   // Generate embeddings (returns Float32Array[])
   const result = await pipeline(texts, { pooling: 'mean', normalize: true })
@@ -146,8 +248,10 @@ self.onmessage = async (e: MessageEvent) => {
       throw new Error('Invalid payload: texts must be non-empty array')
     }
 
-    // Generate embeddings (Real Transformers.js)
-    const embeddings = await generateEmbeddings(texts)
+    // Generate embeddings (Real Transformers.js).
+    // Pass requestId so initializePipeline can associate progress events
+    // with the request that triggered the model download.
+    const embeddings = await generateEmbeddings(texts, requestId)
 
     const successResponse: WorkerSuccessResponse<EmbedResult> = {
       requestId,

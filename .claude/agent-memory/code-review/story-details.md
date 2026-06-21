@@ -466,3 +466,18 @@ See git history for these older reviews. Key recurring patterns captured in MEMO
 - 0 blockers, 0 high, 1 medium, 1 nit
 - M1: Format display uses audiobook/non-audiobook binary but BookFormat includes 'pdf' -- informational, not blocking
 - Positive: Clean fix commits, solid test infrastructure with 3 book profiles, pure presentation component with no async ops
+
+## E68-S01: Model Download Progress UI (Round 2)
+
+**Round 1 fixes verified:**
+
+- HIGH FIXED: First-progress timeout now gated on `supportsWorkers() && deviceMemory >= 4` (was unconditional)
+- MEDIUM FIXED: `useModelDownloadProgress` hook is now consumed by the component (line 68)
+- MEDIUM FIXED: Dead code guard in handleProgress removed during hook-integration refactor
+
+**Round 2 findings:**
+
+- BLOCKER: Flaky test (passes in full suite, fails in isolation) for "ignores worker-crash when no download was in progress". Root cause: `warmupAttemptedRef.current` set on mount (first-progress timeout effect) before warm-up actually fires. Worker-crash handler shows false error toast even when no download was attempted. Fix: guard with `if (!toastIdRef.current) return` in crash handler.
+- MEDIUM: Gate logic (`supportsWorkers() && deviceMemory >= 4`) duplicated between App.tsx and EmbeddingModelProgressToast.tsx -- divergence risk.
+- NIT: First-progress timeout (15s) starts from component mount, not from actual warm-up start (3s + requestIdleCallback delay). Effective timeout could be <3s on busy main thread.
+- Positive: Clean committed code, all previous findings addressed, proper hook consumption, comprehensive test coverage (16 tests), no hardcoded colors or sizes, good debounce pattern (500ms throttling), thorough timeout/cancel management with proper ref cleanup.

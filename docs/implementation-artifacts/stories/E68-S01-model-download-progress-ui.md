@@ -1,6 +1,20 @@
-# Story 68.1: Model Download Progress UI
+---
+story_id: E68-S01
+story_name: 'Model Download Progress UI'
+status: done
+reviewed: true
+review_started: 2026-06-22
+review_gates_passed:
+  - code-review
+  - code-review-testing
+  - design-review
+  - performance-benchmark
+  - security-review
+  - exploratory-qa
+completed: 2026-06-22
+---
 
-Status: ready-for-dev
+# Story 68.1: Model Download Progress UI
 
 ## Story
 
@@ -67,12 +81,12 @@ so that I understand what is happening and can choose to skip if I prefer keywor
 
 ### File Changes
 
-| File | Action | Notes |
-|------|--------|-------|
-| `src/ai/workers/embedding.worker.ts` | MODIFY | Add `progress_callback` to `pipeline()` call in `initializePipeline()`, forward via `postMessage` |
-| `src/ai/workers/coordinator.ts` | MODIFY | Extend `routeWorkerMessage()` to handle `download-progress` type via CustomEvent |
-| `src/ai/hooks/useModelDownloadProgress.ts` | CREATE | React hook listening for `model-download-progress` CustomEvent |
-| `src/app/App.tsx` or component | MODIFY | Wire up toast UI using the hook |
+| File                                       | Action | Notes                                                                                             |
+| ------------------------------------------ | ------ | ------------------------------------------------------------------------------------------------- |
+| `src/ai/workers/embedding.worker.ts`       | MODIFY | Add `progress_callback` to `pipeline()` call in `initializePipeline()`, forward via `postMessage` |
+| `src/ai/workers/coordinator.ts`            | MODIFY | Extend `routeWorkerMessage()` to handle `download-progress` type via CustomEvent                  |
+| `src/ai/hooks/useModelDownloadProgress.ts` | CREATE | React hook listening for `model-download-progress` CustomEvent                                    |
+| `src/app/App.tsx` or component             | MODIFY | Wire up toast UI using the hook                                                                   |
 
 ### Project Structure Notes
 

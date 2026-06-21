@@ -12,7 +12,9 @@ import { PWAInstallBanner } from '@/app/components/PWAInstallBanner'
 import { WelcomeWizard } from '@/app/components/WelcomeWizard'
 import { initErrorTracking } from '@/lib/errorTracking'
 import { vectorStorePersistence } from '@/ai/vector-store'
+import { embeddingPipeline } from '@/ai/embeddingPipeline'
 import { supportsWorkers } from '@/ai/lib/workerCapabilities'
+import { EmbeddingModelProgressToast } from '@/app/components/embeddings/EmbeddingModelProgressToast'
 import { refreshStaleMetadata } from '@/lib/youtubeMetadataRefresh'
 import { useFontScale } from '@/hooks/useFontScale'
 import { useWelcomeWizardStore } from '@/stores/useWelcomeWizardStore'
@@ -92,13 +94,48 @@ export default function App() {
     })
   }, [])
 
+  // E68-S01: Pre-warm the embedding model after a brief idle period so the first
+  // real embed request is instant. Gated on deviceMemory >= 4GB (skips warm-up
+  // on low-memory devices to avoid OOM). Uses requestIdleCallback to avoid
+  // competing with initial page render and data loading.
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (!supportsWorkers()) return
+
+      const deviceMemory = (navigator as { deviceMemory?: number }).deviceMemory
+
+      // Skip warm-up if we know the device has < 4GB RAM.
+      // If deviceMemory is undefined (unsupported browser), proceed conservatively.
+      if (deviceMemory !== undefined && deviceMemory < 4) {
+        console.log('[App] Skipping embedding warm-up: deviceMemory < 4GB')
+        return
+      }
+
+      if ('requestIdleCallback' in window) {
+        requestIdleCallback(() => {
+          embeddingPipeline.warmUp().catch(() => {
+            // Best-effort — silent catch
+          })
+        })
+      } else {
+        // Fallback for browsers without requestIdleCallback
+        embeddingPipeline.warmUp().catch(() => {
+          // Best-effort — silent catch
+        })
+      }
+    }, 3000)
+
+    return () => clearTimeout(timer)
+  }, [])
+
   return (
     <ErrorBoundary>
       <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
         <MotionConfig reducedMotion={shouldReduceMotion ? 'always' : 'never'}>
           <SyncUXShell>
             <RouterProvider router={router} />
-            <Toaster />
+            <Toaster style={{ zIndex: 51 }} />
+            <EmbeddingModelProgressToast />
             <WelcomeWizard />
             {import.meta.env.PROD && <PWAUpdatePrompt />}
             <PWAInstallBanner />
