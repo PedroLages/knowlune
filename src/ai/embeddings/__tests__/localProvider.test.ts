@@ -28,7 +28,7 @@ const { supportsWorkers } = await import('@/ai/lib/workerCapabilities')
 const { LocalEmbeddingProvider } = await import('../localProvider')
 
 describe('LocalEmbeddingProvider', () => {
-  let provider: LocalEmbeddingProvider
+  let provider: InstanceType<typeof LocalEmbeddingProvider>
 
   // Store original caches
   const originalCaches = globalThis.caches

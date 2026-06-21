@@ -275,6 +275,7 @@ describe('WorkerCoordinator', () => {
     })
 
     const taskPromise = coordinator.executeTask('embed', { texts: ['crash-test'] })
+    taskPromise.catch(() => {}) // Suppress unhandled rejection; crash event rejects before expect below
 
     await new Promise(resolve => queueMicrotask(resolve as () => void))
     await new Promise(resolve => setTimeout(resolve, 5))
@@ -352,6 +353,7 @@ describe('WorkerCoordinator', () => {
     })
 
     const taskPromise = coordinator.executeTask('embed', { texts: ['crash-test'] })
+    taskPromise.catch(() => {}) // Suppress unhandled rejection; crash event rejects before expect below
 
     await new Promise(resolve => queueMicrotask(resolve as () => void))
     await new Promise(resolve => setTimeout(resolve, 5))
@@ -413,6 +415,7 @@ describe('WorkerCoordinator', () => {
     })
 
     const taskPromise = coordinator.executeTask('embed', { texts: ['crash-test'] })
+    taskPromise.catch(() => {}) // Suppress unhandled rejection; crash event rejects before expect below
 
     await new Promise(resolve => queueMicrotask(resolve as () => void))
     await new Promise(resolve => setTimeout(resolve, 5))
