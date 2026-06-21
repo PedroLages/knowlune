@@ -94,9 +94,7 @@ describe('callExportDataFunction', () => {
   // ── Too-large path ────────────────────────────────────────────────────────
 
   it('returns ExportTooLargeResponse when Edge Function returns too-large JSON', async () => {
-    mockFetch.mockResolvedValue(
-      makeJsonResponse({ status: 'too-large', route: 'async' }, 200)
-    )
+    mockFetch.mockResolvedValue(makeJsonResponse({ status: 'too-large', route: 'async' }, 200))
 
     const result = await callExportDataFunction(TEST_ACCESS_TOKEN)
 
@@ -104,9 +102,7 @@ describe('callExportDataFunction', () => {
   })
 
   it('returns ExportTooLargeResponse when HTTP 200 but body has status too-large', async () => {
-    mockFetch.mockResolvedValue(
-      makeJsonResponse({ status: 'too-large', route: 'async' })
-    )
+    mockFetch.mockResolvedValue(makeJsonResponse({ status: 'too-large', route: 'async' }))
 
     const result = await callExportDataFunction(TEST_ACCESS_TOKEN)
 
@@ -118,7 +114,10 @@ describe('callExportDataFunction', () => {
   it('returns ExportQueuedResponse when Edge Function returns HTTP 202 with status queued', async () => {
     const requestId = '550e8400-e29b-41d4-a716-446655440000'
     mockFetch.mockResolvedValue(
-      makeJsonResponse({ status: 'queued', eta: 'within a few minutes', request_id: requestId }, 202)
+      makeJsonResponse(
+        { status: 'queued', eta: 'within a few minutes', request_id: requestId },
+        202
+      )
     )
 
     const result = await callExportDataFunction(TEST_ACCESS_TOKEN)
@@ -130,7 +129,10 @@ describe('callExportDataFunction', () => {
   it('returns ExportQueuedResponse shape has request_id and eta fields', async () => {
     const requestId = 'abc-123'
     mockFetch.mockResolvedValue(
-      makeJsonResponse({ status: 'queued', eta: 'within a few minutes', request_id: requestId }, 202)
+      makeJsonResponse(
+        { status: 'queued', eta: 'within a few minutes', request_id: requestId },
+        202
+      )
     )
 
     const result = await callExportDataFunction(TEST_ACCESS_TOKEN)
@@ -145,7 +147,10 @@ describe('callExportDataFunction', () => {
 
   it('throws with table name in message when Edge Function returns RLS error on table notes', async () => {
     mockFetch.mockResolvedValue(
-      makeJsonResponse({ error: 'RLS error on table notes: permission denied for table notes' }, 500)
+      makeJsonResponse(
+        { error: 'RLS error on table notes: permission denied for table notes' },
+        500
+      )
     )
 
     await expect(callExportDataFunction(TEST_ACCESS_TOKEN)).rejects.toThrow(/notes/)
@@ -160,9 +165,7 @@ describe('callExportDataFunction', () => {
   })
 
   it('throws when Edge Function returns 401 Unauthorized', async () => {
-    mockFetch.mockResolvedValue(
-      makeJsonResponse({ success: false, error: 'Unauthorized' }, 401)
-    )
+    mockFetch.mockResolvedValue(makeJsonResponse({ success: false, error: 'Unauthorized' }, 401))
 
     await expect(callExportDataFunction(TEST_ACCESS_TOKEN)).rejects.toThrow(/Unauthorized/)
   })
@@ -188,9 +191,7 @@ describe('callExportDataFunction', () => {
   it('preserves original error message on network failure', async () => {
     mockFetch.mockRejectedValue(new Error('Connection refused'))
 
-    await expect(callExportDataFunction(TEST_ACCESS_TOKEN)).rejects.toThrow(
-      /Connection refused/
-    )
+    await expect(callExportDataFunction(TEST_ACCESS_TOKEN)).rejects.toThrow(/Connection refused/)
   })
 
   // ── Boundary cases ────────────────────────────────────────────────────────

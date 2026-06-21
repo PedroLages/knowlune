@@ -58,19 +58,13 @@ export const BookCoverImage = memo(function BookCoverImage({
     const GlyphIcon = fallbackIcon ?? BookOpen
     return (
       <div
-        className={cn(
-          'flex h-full w-full items-center justify-center bg-muted',
-          className
-        )}
+        className={cn('flex h-full w-full items-center justify-center bg-muted', className)}
         role="img"
         aria-label={`${title || 'Book'} — cover unavailable`}
         data-testid="book-cover-fallback"
       >
         {initial ? (
-          <span
-            aria-hidden="true"
-            className="text-4xl font-semibold text-brand-soft-foreground"
-          >
+          <span aria-hidden="true" className="text-4xl font-semibold text-brand-soft-foreground">
             {initial}
           </span>
         ) : (

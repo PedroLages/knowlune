@@ -837,9 +837,7 @@ describe('VideoPlayer', () => {
         value: { code: 2 },
       })
       fireEvent.error(video)
-      expect(
-        screen.getByText(/Playback interrupted/)
-      ).toBeInTheDocument()
+      expect(screen.getByText(/Playback interrupted/)).toBeInTheDocument()
     })
 
     it('shows decode-specific message for error code 3 (MEDIA_ERR_DECODE)', () => {
@@ -850,9 +848,7 @@ describe('VideoPlayer', () => {
         value: { code: 3 },
       })
       fireEvent.error(video)
-      expect(
-        screen.getByText(/file may be corrupted/)
-      ).toBeInTheDocument()
+      expect(screen.getByText(/file may be corrupted/)).toBeInTheDocument()
     })
 
     it('shows generic message for error code 1 (MEDIA_ERR_ABORTED)', () => {
@@ -863,9 +859,7 @@ describe('VideoPlayer', () => {
         value: { code: 1 },
       })
       fireEvent.error(video)
-      expect(
-        screen.getByText('An error occurred. Please try again.')
-      ).toBeInTheDocument()
+      expect(screen.getByText('An error occurred. Please try again.')).toBeInTheDocument()
     })
 
     it('shows generic message for unknown / null error code', () => {
@@ -876,9 +870,7 @@ describe('VideoPlayer', () => {
         value: { code: 999 },
       })
       fireEvent.error(video)
-      expect(
-        screen.getByText('An error occurred. Please try again.')
-      ).toBeInTheDocument()
+      expect(screen.getByText('An error occurred. Please try again.')).toBeInTheDocument()
     })
 
     it('calls onRecoveryNeeded with currentTime for error code 2 (MEDIA_ERR_NETWORK) and shows recovery spinner', () => {

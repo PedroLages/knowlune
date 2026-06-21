@@ -441,7 +441,8 @@ export function Layout() {
     localStorage.setItem('knowlune-sidebar-collapsed-v1', JSON.stringify(sidebarCollapsed))
   }, [sidebarCollapsed])
 
-  const { isLessonRoute, isCourseRoute, courseId, lessonId, courseName, fromTrack } = useCourseRoute()
+  const { isLessonRoute, isCourseRoute, courseId, lessonId, courseName, fromTrack } =
+    useCourseRoute()
   const isLessonPlayerRoute = isLessonRoute
 
   // Reset lesson chrome store when leaving a lesson page
@@ -587,7 +588,9 @@ export function Layout() {
                 aria-label={`Back to ${fromTrack.trackName}`}
               >
                 <ArrowLeft className="size-5" />
-                <span className="hidden sm:inline truncate max-w-[200px]">{fromTrack.trackName}</span>
+                <span className="hidden sm:inline truncate max-w-[200px]">
+                  {fromTrack.trackName}
+                </span>
               </Link>
             )}
             {isCourseRoute && !fromTrack && (

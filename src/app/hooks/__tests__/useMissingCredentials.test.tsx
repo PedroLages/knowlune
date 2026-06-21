@@ -30,8 +30,7 @@ const {
 }))
 
 vi.mock('@/stores/useAuthStore', () => ({
-  useAuthStore: (selector: (s: { user: unknown }) => unknown) =>
-    selector({ user: mockUser() }),
+  useAuthStore: (selector: (s: { user: unknown }) => unknown) => selector({ user: mockUser() }),
 }))
 
 vi.mock('@/stores/useOpdsCatalogStore', () => ({
@@ -57,7 +56,10 @@ vi.mock('@/lib/aiConfiguration', () => ({
   getAIConfiguration: mockGetAIConfiguration,
 }))
 
-import { MissingCredentialsProvider, useMissingCredentials } from '@/app/hooks/useMissingCredentials'
+import {
+  MissingCredentialsProvider,
+  useMissingCredentials,
+} from '@/app/hooks/useMissingCredentials'
 
 // Wrapper that mounts the provider so useMissingCredentials can read context
 function wrapper({ children }: { children: ReactNode }) {
@@ -87,7 +89,10 @@ describe('useMissingCredentials', () => {
   it('returns loading:true immediately, then missing + statusByKey after aggregator resolves', async () => {
     mockUser.mockReturnValue({ id: 'user-1' })
     mockLastSyncAt.mockReturnValue(new Date())
-    const resolved = { missing: [{ kind: 'abs-server', id: 'srv-1', displayName: 'Home', status: 'missing' }], statusByKey: { 'abs-server:srv-1': 'missing' } }
+    const resolved = {
+      missing: [{ kind: 'abs-server', id: 'srv-1', displayName: 'Home', status: 'missing' }],
+      statusByKey: { 'abs-server:srv-1': 'missing' },
+    }
     mockAggregate.mockResolvedValue(resolved)
 
     const { result } = renderHook(() => useMissingCredentials(), { wrapper })
@@ -279,13 +284,25 @@ describe('useMissingCredentials', () => {
 
     // Toggle hidden → visible twice rapidly
     await act(async () => {
-      Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => 'hidden' })
+      Object.defineProperty(document, 'visibilityState', {
+        configurable: true,
+        get: () => 'hidden',
+      })
       document.dispatchEvent(new Event('visibilitychange'))
-      Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => 'visible' })
+      Object.defineProperty(document, 'visibilityState', {
+        configurable: true,
+        get: () => 'visible',
+      })
       document.dispatchEvent(new Event('visibilitychange'))
-      Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => 'hidden' })
+      Object.defineProperty(document, 'visibilityState', {
+        configurable: true,
+        get: () => 'hidden',
+      })
       document.dispatchEvent(new Event('visibilitychange'))
-      Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => 'visible' })
+      Object.defineProperty(document, 'visibilityState', {
+        configurable: true,
+        get: () => 'visible',
+      })
       document.dispatchEvent(new Event('visibilitychange'))
       await Promise.resolve()
       await Promise.resolve()

@@ -22,14 +22,18 @@ vi.mock('@/lib/noteExport', async () => {
   const actual = await vi.importActual<typeof import('@/lib/noteExport')>('@/lib/noteExport')
   return {
     ...actual,
-    exportCombinedMarkdown: vi.fn((notes: Note[], _courseName: string, _courseSlug: string, _map: unknown) => {
-      exportedCombinedNotes = [...notes]
-      return { content: 'mock content', filename: 'test.md' }
-    }),
-    exportNotesZip: vi.fn(async (notes: Note[], _courseName: string, _courseSlug: string, _map: unknown) => {
-      exportedZipNotes = [...notes]
-      return { blob: new Blob(['test']), filename: 'test.zip' }
-    }),
+    exportCombinedMarkdown: vi.fn(
+      (notes: Note[], _courseName: string, _courseSlug: string, _map: unknown) => {
+        exportedCombinedNotes = [...notes]
+        return { content: 'mock content', filename: 'test.md' }
+      }
+    ),
+    exportNotesZip: vi.fn(
+      async (notes: Note[], _courseName: string, _courseSlug: string, _map: unknown) => {
+        exportedZipNotes = [...notes]
+        return { blob: new Blob(['test']), filename: 'test.zip' }
+      }
+    ),
   }
 })
 
@@ -85,11 +89,7 @@ describe('CourseNotesTab export', () => {
     })
 
     const { getByTestId } = render(
-      <CourseNotesTab
-        courseId="course-1"
-        courseName="Test Course"
-        modules={[makeModule()]}
-      />
+      <CourseNotesTab courseId="course-1" courseName="Test Course" modules={[makeModule()]} />
     )
 
     expect(getByTestId('export-notes-button')).toBeTruthy()
@@ -99,11 +99,7 @@ describe('CourseNotesTab export', () => {
     useNoteStore.setState({ notes: [] })
 
     const { queryByTestId, getByText } = render(
-      <CourseNotesTab
-        courseId="course-1"
-        courseName="Test Course"
-        modules={[makeModule()]}
-      />
+      <CourseNotesTab courseId="course-1" courseName="Test Course" modules={[makeModule()]} />
     )
 
     // Empty state renders; export button is not present
@@ -117,11 +113,7 @@ describe('CourseNotesTab export', () => {
     })
 
     const { getByTestId } = render(
-      <CourseNotesTab
-        courseId="course-1"
-        courseName="Test Course"
-        modules={[makeModule()]}
-      />
+      <CourseNotesTab courseId="course-1" courseName="Test Course" modules={[makeModule()]} />
     )
 
     const btn = getByTestId('export-notes-button') as HTMLButtonElement
@@ -134,11 +126,7 @@ describe('CourseNotesTab export', () => {
     })
 
     const { getByTestId, getByText } = render(
-      <CourseNotesTab
-        courseId="course-1"
-        courseName="Test Course"
-        modules={[makeModule()]}
-      />
+      <CourseNotesTab courseId="course-1" courseName="Test Course" modules={[makeModule()]} />
     )
 
     const btn = getByTestId('export-notes-button')
@@ -163,11 +151,7 @@ describe('CourseNotesTab export filtering (integration)', () => {
 
   async function triggerExport(format: 'combined-markdown' | 'zip') {
     const { getByTestId } = render(
-      <CourseNotesTab
-        courseId="course-1"
-        courseName="Test Course"
-        modules={[makeModule()]}
-      />
+      <CourseNotesTab courseId="course-1" courseName="Test Course" modules={[makeModule()]} />
     )
 
     // Open popover
@@ -247,7 +231,12 @@ describe('CourseNotesTab export filtering (integration)', () => {
     useNoteStore.setState({
       notes: [
         makeNote({ id: 'n1', courseId: 'course-1', content: '<p>Active with content</p>' }),
-        makeNote({ id: 'n2', courseId: 'course-1', content: '<p>Deleted with content</p>', deleted: true }),
+        makeNote({
+          id: 'n2',
+          courseId: 'course-1',
+          content: '<p>Deleted with content</p>',
+          deleted: true,
+        }),
         makeNote({ id: 'n3', courseId: 'course-1', content: '' }),
       ],
     })
@@ -271,7 +260,8 @@ describe('CourseNotesTab export filtering (integration)', () => {
         makeNote({
           id: 'n-deleted-rich',
           courseId: 'course-1',
-          content: '<h2>Soft-deleted but rich</h2><p>This note has lots of valuable content but was soft-deleted by the user.</p>',
+          content:
+            '<h2>Soft-deleted but rich</h2><p>This note has lots of valuable content but was soft-deleted by the user.</p>',
           deleted: true,
         }),
       ],
@@ -302,11 +292,7 @@ describe('CourseNotesTab sorting', () => {
     })
 
     const { getByText } = render(
-      <CourseNotesTab
-        courseId="course-1"
-        courseName="Test Course"
-        modules={[makeModule()]}
-      />
+      <CourseNotesTab courseId="course-1" courseName="Test Course" modules={[makeModule()]} />
     )
 
     expect(getByText('Video Order')).toBeTruthy()
@@ -318,11 +304,7 @@ describe('CourseNotesTab sorting', () => {
     })
 
     const { getByLabelText, getByText } = render(
-      <CourseNotesTab
-        courseId="course-1"
-        courseName="Test Course"
-        modules={[makeModule()]}
-      />
+      <CourseNotesTab courseId="course-1" courseName="Test Course" modules={[makeModule()]} />
     )
 
     const sortBtn = getByLabelText('Sort notes')

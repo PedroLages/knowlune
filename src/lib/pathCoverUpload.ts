@@ -23,7 +23,8 @@ const DIAGNOSTIC = {
   REPLACE_RETRY_FAILED: 'Cover upload failed after clearing old cover. Please try again.',
   STORAGE_ERROR: 'Cover upload failed. Check your connection and try again.',
   STORAGE_UNAUTHORIZED: 'Session expired. Try signing out and back in.',
-  STORAGE_FORBIDDEN: 'Cover uploads are not enabled for your account yet. This is a server configuration issue.',
+  STORAGE_FORBIDDEN:
+    'Cover uploads are not enabled for your account yet. This is a server configuration issue.',
   STORAGE_NOT_FOUND: 'Cover storage not configured. Please contact support.',
   STORAGE_TOO_LARGE: 'Image is too large. Use an image under 2 MB.',
   NETWORK_ERROR: 'Network error during upload. Check your connection.',
@@ -194,10 +195,12 @@ export async function uploadPathCover(file: File, pathId: string): Promise<strin
     if (Number(error?.statusCode) === 409) {
       const { error: removeError } = await supabase.storage.from(BUCKET_NAME).remove([key])
       if (removeError) {
-        console.error(
-          '[PathCoverUpload] Remove failed during 409 retry:',
-          { bucket: BUCKET_NAME, key: maskedKey, statusCode: removeError.statusCode || 'unknown', message: removeError.message }
-        )
+        console.error('[PathCoverUpload] Remove failed during 409 retry:', {
+          bucket: BUCKET_NAME,
+          key: maskedKey,
+          statusCode: removeError.statusCode || 'unknown',
+          message: removeError.message,
+        })
         throw new Error(DIAGNOSTIC.REPLACE_REMOVE_FAILED)
       }
 
@@ -207,10 +210,12 @@ export async function uploadPathCover(file: File, pathId: string): Promise<strin
       })
 
       if (retryError) {
-        console.error(
-          '[PathCoverUpload] Retry upload failed after 409:',
-          { bucket: BUCKET_NAME, key: maskedKey, statusCode: retryError.statusCode || 'unknown', message: retryError.message }
-        )
+        console.error('[PathCoverUpload] Retry upload failed after 409:', {
+          bucket: BUCKET_NAME,
+          key: maskedKey,
+          statusCode: retryError.statusCode || 'unknown',
+          message: retryError.message,
+        })
         throw new Error(DIAGNOSTIC.REPLACE_RETRY_FAILED)
       }
     } else if (error) {
@@ -226,22 +231,31 @@ export async function uploadPathCover(file: File, pathId: string): Promise<strin
       } else if (status === 413) {
         diagnostic = DIAGNOSTIC.STORAGE_TOO_LARGE
       }
-      console.error(
-        '[PathCoverUpload] Upload failed:',
-        { bucket: BUCKET_NAME, key: maskedKey, statusCode: error.statusCode || 'unknown', message: error.message, diagnostic }
-      )
+      console.error('[PathCoverUpload] Upload failed:', {
+        bucket: BUCKET_NAME,
+        key: maskedKey,
+        statusCode: error.statusCode || 'unknown',
+        message: error.message,
+        diagnostic,
+      })
       throw new Error(diagnostic)
     }
   } catch (err) {
     // Re-throw errors that already carry diagnostic messages (thrown above)
-    if (err instanceof Error && Object.values(DIAGNOSTIC).includes(err.message as typeof DIAGNOSTIC[keyof typeof DIAGNOSTIC])) {
+    if (
+      err instanceof Error &&
+      Object.values(DIAGNOSTIC).includes(
+        err.message as (typeof DIAGNOSTIC)[keyof typeof DIAGNOSTIC]
+      )
+    ) {
       throw err
     }
     // Catch thrown network/fetch errors that bypass the .error pathway
-    console.error(
-      '[PathCoverUpload] Network error during upload:',
-      { bucket: BUCKET_NAME, key: maskedKey, error: err instanceof Error ? err.message : String(err) }
-    )
+    console.error('[PathCoverUpload] Network error during upload:', {
+      bucket: BUCKET_NAME,
+      key: maskedKey,
+      error: err instanceof Error ? err.message : String(err),
+    })
     throw new Error(DIAGNOSTIC.NETWORK_ERROR)
   }
 

@@ -10,7 +10,11 @@ function mockScroller(
 ) {
   Object.defineProperty(el, 'scrollWidth', { value: dims.scrollWidth, configurable: true })
   Object.defineProperty(el, 'clientWidth', { value: dims.clientWidth, configurable: true })
-  Object.defineProperty(el, 'scrollLeft', { value: dims.scrollLeft, configurable: true, writable: true })
+  Object.defineProperty(el, 'scrollLeft', {
+    value: dims.scrollLeft,
+    configurable: true,
+    writable: true,
+  })
 }
 
 describe('useShelfScrollAffordances', () => {

@@ -169,7 +169,12 @@ function ConfidenceBar({ score }: { score: number }) {
   )
 }
 
-export function LinkFormatsDialog({ book, open, onOpenChange, triggerRef }: LinkFormatsDialogProps) {
+export function LinkFormatsDialog({
+  book,
+  open,
+  onOpenChange,
+  triggerRef,
+}: LinkFormatsDialogProps) {
   const books = useBookStore(s => s.books)
   const linkBooks = useBookStore(s => s.linkBooks)
   const unlinkBooks = useBookStore(s => s.unlinkBooks)
@@ -199,7 +204,8 @@ export function LinkFormatsDialog({ book, open, onOpenChange, triggerRef }: Link
         // WCAG 2.1 SC 3.2.2 — return focus to the opening trigger after dialog closes
         const focusTarget =
           triggerRef?.current ??
-          (document.querySelector<HTMLElement>('[data-link-formats-trigger]') ?? null)
+          document.querySelector<HTMLElement>('[data-link-formats-trigger]') ??
+          null
         if (focusTarget) {
           // Defer until after Radix finishes its own focus restoration cycle
           setTimeout(() => focusTarget.focus(), 0)

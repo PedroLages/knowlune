@@ -13,10 +13,7 @@ import { describe, it, expect } from 'vitest'
 import { render } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
 import { PrivacyPolicy } from '../PrivacyPolicy'
-import {
-  CURRENT_NOTICE_VERSION,
-  formatNoticeEffectiveDate,
-} from '@/lib/compliance/noticeVersion'
+import { CURRENT_NOTICE_VERSION, formatNoticeEffectiveDate } from '@/lib/compliance/noticeVersion'
 
 // ---------------------------------------------------------------------------
 // Canonical phrases — derived from docs/compliance/privacy-notice.md.
@@ -41,7 +38,7 @@ describe('PrivacyPolicy — canonical notice sync', () => {
     const { container } = render(
       <MemoryRouter>
         <PrivacyPolicy />
-      </MemoryRouter>,
+      </MemoryRouter>
     )
     return container.textContent ?? ''
   }

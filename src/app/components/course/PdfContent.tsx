@@ -169,9 +169,7 @@ export function PdfContent({ courseId, lessonId }: PdfContentProps) {
         await fileHandle.getFile()
       } catch (verifyErr) {
         const vname =
-          verifyErr instanceof DOMException
-            ? `DOMException(${verifyErr.name})`
-            : String(verifyErr)
+          verifyErr instanceof DOMException ? `DOMException(${verifyErr.name})` : String(verifyErr)
         console.warn(
           `[PdfContent:handleLocateFile] New handle for "${fileHandle.name}" cannot be read: ${vname}`,
           verifyErr

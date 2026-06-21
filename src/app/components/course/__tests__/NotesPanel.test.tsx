@@ -9,8 +9,9 @@ vi.mock('../tabs/NotesTab', () => ({
 }))
 
 vi.mock('@/stores/useLessonChromeStore', () => ({
-  useLessonChromeStore: (selector: (s: { pendingNoteFocus: boolean; clearPendingNoteFocus: () => void }) => unknown) =>
-    selector({ pendingNoteFocus: false, clearPendingNoteFocus: vi.fn() }),
+  useLessonChromeStore: (
+    selector: (s: { pendingNoteFocus: boolean; clearPendingNoteFocus: () => void }) => unknown
+  ) => selector({ pendingNoteFocus: false, clearPendingNoteFocus: vi.fn() }),
 }))
 
 describe('NotesPanel', () => {

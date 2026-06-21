@@ -9,8 +9,7 @@ void FIXED_DATE
 
 // Mock auth store — unauthenticated user for most tests
 vi.mock('@/stores/useAuthStore', () => ({
-  useAuthStore: (selector: (s: { user: null }) => unknown) =>
-    selector({ user: null }),
+  useAuthStore: (selector: (s: { user: null }) => unknown) => selector({ user: null }),
 }))
 
 // Mock useFeedbackSubmit so we can control status
@@ -32,7 +31,9 @@ vi.mock('@/app/hooks/useFeedbackSubmit', () => ({
   }),
 }))
 
-function renderModal(props: Partial<{ open: boolean; onOpenChange: () => void; onSuccess: () => void }> = {}) {
+function renderModal(
+  props: Partial<{ open: boolean; onOpenChange: () => void; onSuccess: () => void }> = {}
+) {
   const onOpenChange = props.onOpenChange ?? vi.fn()
   const onSuccess = props.onSuccess ?? vi.fn()
   return render(
@@ -80,10 +81,7 @@ describe('FeedbackModal', () => {
       const user = userEvent.setup()
       renderModal()
       await user.type(screen.getByLabelText(/^title/i), 'A bug')
-      await user.type(
-        screen.getByLabelText(/description/i),
-        'Something broke in the app'
-      )
+      await user.type(screen.getByLabelText(/description/i), 'Something broke in the app')
       expect(screen.getByRole('button', { name: /^send$/i })).not.toBeDisabled()
     })
 
@@ -91,10 +89,7 @@ describe('FeedbackModal', () => {
       const user = userEvent.setup()
       renderModal()
       await user.type(screen.getByLabelText(/^title/i), 'My bug')
-      await user.type(
-        screen.getByLabelText(/description/i),
-        'Something broke in the app'
-      )
+      await user.type(screen.getByLabelText(/description/i), 'Something broke in the app')
       await user.click(screen.getByRole('button', { name: /^send$/i }))
       expect(mockSubmit).toHaveBeenCalledOnce()
       const fields = mockSubmit.mock.calls[0][0]
@@ -178,9 +173,7 @@ describe('FeedbackModal', () => {
       const onSuccess = vi.fn()
       const onOpenChange = vi.fn()
       mockStatus = 'success'
-      render(
-        <FeedbackModal open={true} onOpenChange={onOpenChange} onSuccess={onSuccess} />
-      )
+      render(<FeedbackModal open={true} onOpenChange={onOpenChange} onSuccess={onSuccess} />)
       await waitFor(() => {
         expect(onSuccess).toHaveBeenCalledOnce()
         expect(onOpenChange).toHaveBeenCalledWith(false)
@@ -228,9 +221,7 @@ describe('FeedbackModal', () => {
     it('form fields are cleared when modal closes and reopens', async () => {
       const user = userEvent.setup()
       const onOpenChange = vi.fn()
-      const { rerender } = render(
-        <FeedbackModal open={true} onOpenChange={onOpenChange} />
-      )
+      const { rerender } = render(<FeedbackModal open={true} onOpenChange={onOpenChange} />)
       // Fill bug title
       await user.type(screen.getByLabelText(/^title/i), 'My bug title')
       expect(screen.getByLabelText(/^title/i)).toHaveValue('My bug title')
@@ -251,9 +242,7 @@ describe('FeedbackModal', () => {
       const onSuccess = vi.fn()
       const onOpenChange = vi.fn()
       mockStatus = 'success'
-      render(
-        <FeedbackModal open={true} onOpenChange={onOpenChange} onSuccess={onSuccess} />
-      )
+      render(<FeedbackModal open={true} onOpenChange={onOpenChange} onSuccess={onSuccess} />)
       await waitFor(() => {
         expect(onOpenChange).toHaveBeenCalledWith(false)
         expect(onSuccess).toHaveBeenCalledOnce()

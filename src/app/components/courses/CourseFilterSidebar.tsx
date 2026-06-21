@@ -11,12 +11,7 @@
 
 import { useState, useMemo } from 'react'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/app/components/ui/sheet'
-import {
-  Drawer,
-  DrawerContent,
-  DrawerHeader,
-  DrawerTitle,
-} from '@/app/components/ui/drawer'
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/app/components/ui/drawer'
 import { Checkbox } from '@/app/components/ui/checkbox'
 import { RadioGroup, RadioGroupItem } from '@/app/components/ui/radio-group'
 import { Switch } from '@/app/components/ui/switch'
@@ -225,9 +220,7 @@ export function CourseFilterSidebar({
                 </div>
                 <Switch
                   checked={showTrackCourses}
-                  onCheckedChange={checked =>
-                    setFilter('showTrackCourses', checked)
-                  }
+                  onCheckedChange={checked => setFilter('showTrackCourses', checked)}
                   aria-label="Include courses in learning tracks"
                   className="data-[state=checked]:bg-brand"
                 />
@@ -244,7 +237,9 @@ export function CourseFilterSidebar({
             Tags
           </h4>
           {hasTags ? (
-            <ScrollArea className={cn(needsCollapse && !tagExpanded ? 'max-h-[300px]' : 'max-h-[400px]')}>
+            <ScrollArea
+              className={cn(needsCollapse && !tagExpanded ? 'max-h-[300px]' : 'max-h-[400px]')}
+            >
               <div className="space-y-3 pr-1">
                 {visibleTags.map(tag => (
                   <label key={tag} className="flex items-center gap-3 cursor-pointer group">

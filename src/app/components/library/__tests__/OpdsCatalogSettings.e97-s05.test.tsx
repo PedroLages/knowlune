@@ -14,7 +14,11 @@ const { mockStatusByKey, mockMissingCredentials } = vi.hoisted(() => ({
   mockMissingCredentials: vi.fn(),
 }))
 
-mockMissingCredentials.mockReturnValue({ missing: [], statusByKey: mockStatusByKey(), loading: false })
+mockMissingCredentials.mockReturnValue({
+  missing: [],
+  statusByKey: mockStatusByKey(),
+  loading: false,
+})
 
 vi.mock('@/app/hooks/useMissingCredentials', () => ({
   useMissingCredentials: () => mockMissingCredentials(),
@@ -28,8 +32,19 @@ vi.mock('@/stores/useOpdsCatalogStore', () => ({
   useOpdsCatalogStore: (selector: (s: unknown) => unknown) =>
     selector({
       catalogs: [
-        { id: 'cat-anon', name: 'Public Feed', url: 'https://pub.example.com/opds', createdAt: '2026-01-01T00:00:00Z' },
-        { id: 'cat-auth', name: 'Protected Library', url: 'https://lib.example.com/opds', auth: { username: 'user' }, createdAt: '2026-01-01T00:00:00Z' },
+        {
+          id: 'cat-anon',
+          name: 'Public Feed',
+          url: 'https://pub.example.com/opds',
+          createdAt: '2026-01-01T00:00:00Z',
+        },
+        {
+          id: 'cat-auth',
+          name: 'Protected Library',
+          url: 'https://lib.example.com/opds',
+          auth: { username: 'user' },
+          createdAt: '2026-01-01T00:00:00Z',
+        },
       ],
       loadCatalogs: vi.fn(),
       addCatalog: vi.fn(),
@@ -61,14 +76,36 @@ function renderCatalogList(statusByKey: Record<string, string> = {}) {
     <MemoryRouter>
       <CatalogListView
         catalogs={[
-          { id: 'cat-anon', name: 'Public Feed', url: 'https://pub.example.com/opds', createdAt: '2026-01-01T00:00:00Z' },
-          { id: 'cat-auth', name: 'Protected Library', url: 'https://lib.example.com/opds', auth: { username: 'user' }, createdAt: '2026-01-01T00:00:00Z' },
-          { id: 'cat-vault', name: 'Vault Library', url: 'https://vault.example.com/opds', auth: { username: 'user' }, createdAt: '2026-01-01T00:00:00Z' },
+          {
+            id: 'cat-anon',
+            name: 'Public Feed',
+            url: 'https://pub.example.com/opds',
+            createdAt: '2026-01-01T00:00:00Z',
+          },
+          {
+            id: 'cat-auth',
+            name: 'Protected Library',
+            url: 'https://lib.example.com/opds',
+            auth: { username: 'user' },
+            createdAt: '2026-01-01T00:00:00Z',
+          },
+          {
+            id: 'cat-vault',
+            name: 'Vault Library',
+            url: 'https://vault.example.com/opds',
+            auth: { username: 'user' },
+            createdAt: '2026-01-01T00:00:00Z',
+          },
         ]}
         onAdd={vi.fn()}
         onEdit={vi.fn()}
         onDelete={vi.fn()}
-        statusByKey={statusByKey as Record<string, import('@/lib/credentials/credentialStatus').CredentialStatus>}
+        statusByKey={
+          statusByKey as Record<
+            string,
+            import('@/lib/credentials/credentialStatus').CredentialStatus
+          >
+        }
       />
     </MemoryRouter>
   )

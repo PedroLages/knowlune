@@ -19,9 +19,7 @@ import type { ConsentPurpose } from '@/lib/compliance/consentService'
 
 export class ConsentError extends Error {
   constructor(public readonly purpose: ConsentPurpose) {
-    super(
-      `Consent required for purpose "${purpose}". Enable it in Settings → Privacy & Consent.`,
-    )
+    super(`Consent required for purpose "${purpose}". Enable it in Settings → Privacy & Consent.`)
     this.name = 'ConsentError'
   }
 }

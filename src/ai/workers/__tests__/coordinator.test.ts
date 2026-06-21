@@ -243,6 +243,245 @@ describe('WorkerCoordinator', () => {
     expect(coordinator.getStatus().activeWorkers).toBe(0)
   })
 
+  // AC7: Worker crash probes Cache API and surfaces cacheUnavailable flag
+  it('AC7: probes caches.has on worker crash and surfaces cacheUnavailable in CustomEvent', async () => {
+    let workerInstance: EventTarget | null = null
+
+    class CrashableWorker extends EventTarget {
+      constructor(_url: string | URL, _options?: WorkerOptions) {
+        super()
+        // eslint-disable-next-line @typescript-eslint/no-this-alias
+        workerInstance = this
+      }
+      postMessage(): void {
+        // Never responds — will be crashed via onerror
+      }
+      terminate(): void {}
+      addEventListener(type: string, listener: EventListener): void {
+        super.addEventListener(type, listener)
+      }
+      removeEventListener(type: string, listener: EventListener): void {
+        super.removeEventListener(type, listener)
+      }
+    }
+    global.Worker = CrashableWorker as unknown as typeof Worker
+
+    // Mock caches.has to return true (cache available)
+    const cacheHasSpy = vi.fn().mockResolvedValue(true)
+    Object.defineProperty(globalThis, 'caches', {
+      value: { has: cacheHasSpy },
+      writable: true,
+      configurable: true,
+    })
+
+    const taskPromise = coordinator.executeTask('embed', { texts: ['crash-test'] })
+    taskPromise.catch(() => {}) // Suppress unhandled rejection; crash event rejects before expect below
+
+    await new Promise(resolve => queueMicrotask(resolve as () => void))
+    await new Promise(resolve => setTimeout(resolve, 5))
+
+    expect(workerInstance).not.toBeNull()
+
+    // Listen for worker-crash CustomEvent
+    const crashEventSpy = vi.fn()
+    window.addEventListener('worker-crash', crashEventSpy)
+
+    // Simulate a worker crash via the error event
+    workerInstance!.dispatchEvent(
+      new ErrorEvent('error', {
+        message: 'Out of memory',
+        error: new Error('Out of memory'),
+      })
+    )
+
+    // Wait for the async crash handler including cache probe
+    await new Promise(resolve => setTimeout(resolve, 10))
+
+    await expect(taskPromise).rejects.toThrow('Worker crashed')
+    expect(coordinator.getStatus().activeWorkers).toBe(0)
+
+    // Verify caches.has was probed with the transformers cache name
+    expect(cacheHasSpy).toHaveBeenCalledWith('transformers-cache')
+
+    // Verify worker-crash event was dispatched with cacheUnavailable flag
+    expect(crashEventSpy).toHaveBeenCalledTimes(1)
+    const eventArg = crashEventSpy.mock.calls[0][0] as CustomEvent
+    expect(eventArg.detail).toMatchObject({
+      workerId: 'embed-worker',
+      cacheUnavailable: false,
+      provider: 'local',
+    })
+    expect(eventArg.detail.error).toBe('Out of memory')
+
+    window.removeEventListener('worker-crash', crashEventSpy)
+
+    // Clean up caches mock
+    Object.defineProperty(globalThis, 'caches', {
+      value: undefined,
+      writable: true,
+      configurable: true,
+    })
+  })
+
+  // AC7 variant: cache unavailable case
+  it('AC7: sets cacheUnavailable=true when caches.has returns false', async () => {
+    let workerInstance: EventTarget | null = null
+
+    class CrashableWorker extends EventTarget {
+      constructor(_url: string | URL, _options?: WorkerOptions) {
+        super()
+        // eslint-disable-next-line @typescript-eslint/no-this-alias
+        workerInstance = this
+      }
+      postMessage(): void {
+        /* noop */
+      }
+      terminate(): void {}
+      addEventListener(type: string, listener: EventListener): void {
+        super.addEventListener(type, listener)
+      }
+      removeEventListener(type: string, listener: EventListener): void {
+        super.removeEventListener(type, listener)
+      }
+    }
+    global.Worker = CrashableWorker as unknown as typeof Worker
+
+    // Mock caches.has to return false (cache unavailable)
+    const cacheHasSpy = vi.fn().mockResolvedValue(false)
+    Object.defineProperty(globalThis, 'caches', {
+      value: { has: cacheHasSpy },
+      writable: true,
+      configurable: true,
+    })
+
+    const taskPromise = coordinator.executeTask('embed', { texts: ['crash-test'] })
+    taskPromise.catch(() => {}) // Suppress unhandled rejection; crash event rejects before expect below
+
+    await new Promise(resolve => queueMicrotask(resolve as () => void))
+    await new Promise(resolve => setTimeout(resolve, 5))
+
+    const crashEventSpy = vi.fn()
+    window.addEventListener('worker-crash', crashEventSpy)
+
+    workerInstance!.dispatchEvent(
+      new ErrorEvent('error', {
+        message: 'OOM',
+        error: new Error('OOM'),
+      })
+    )
+
+    await new Promise(resolve => setTimeout(resolve, 10))
+
+    await expect(taskPromise).rejects.toThrow('Worker crashed')
+
+    // Verify cacheUnavailable is true because caches.has returned false
+    expect(crashEventSpy).toHaveBeenCalledTimes(1)
+    const eventArg = crashEventSpy.mock.calls[0][0] as CustomEvent
+    expect(eventArg.detail.cacheUnavailable).toBe(true)
+
+    window.removeEventListener('worker-crash', crashEventSpy)
+
+    Object.defineProperty(globalThis, 'caches', {
+      value: undefined,
+      writable: true,
+      configurable: true,
+    })
+  })
+
+  // AC7 variant: cache unavailable when caches is undefined
+  it('AC7: sets cacheUnavailable=true when Cache API is not available', async () => {
+    let workerInstance: EventTarget | null = null
+
+    class CrashableWorker extends EventTarget {
+      constructor(_url: string | URL, _options?: WorkerOptions) {
+        super()
+        // eslint-disable-next-line @typescript-eslint/no-this-alias
+        workerInstance = this
+      }
+      postMessage(): void {
+        /* noop */
+      }
+      terminate(): void {}
+      addEventListener(type: string, listener: EventListener): void {
+        super.addEventListener(type, listener)
+      }
+      removeEventListener(type: string, listener: EventListener): void {
+        super.removeEventListener(type, listener)
+      }
+    }
+    global.Worker = CrashableWorker as unknown as typeof Worker
+
+    // Remove caches entirely (typeof caches === 'undefined')
+    Object.defineProperty(globalThis, 'caches', {
+      value: undefined,
+      writable: true,
+      configurable: true,
+    })
+
+    const taskPromise = coordinator.executeTask('embed', { texts: ['crash-test'] })
+    taskPromise.catch(() => {}) // Suppress unhandled rejection; crash event rejects before expect below
+
+    await new Promise(resolve => queueMicrotask(resolve as () => void))
+    await new Promise(resolve => setTimeout(resolve, 5))
+
+    const crashEventSpy = vi.fn()
+    window.addEventListener('worker-crash', crashEventSpy)
+
+    workerInstance!.dispatchEvent(
+      new ErrorEvent('error', {
+        message: 'OOM',
+        error: new Error('OOM'),
+      })
+    )
+
+    await new Promise(resolve => setTimeout(resolve, 10))
+
+    await expect(taskPromise).rejects.toThrow('Worker crashed')
+
+    expect(crashEventSpy).toHaveBeenCalledTimes(1)
+    const eventArg = crashEventSpy.mock.calls[0][0] as CustomEvent
+    expect(eventArg.detail.cacheUnavailable).toBe(true)
+
+    window.removeEventListener('worker-crash', crashEventSpy)
+  })
+
+  // AC8: ONNX backend failure must report { reason: 'onnx-backend-failed' }
+  it('AC8: preserves onnx-backend-failed reason in worker error response', async () => {
+    class OnnxFailingWorker extends EventTarget {
+      constructor(_url: string | URL, _options?: WorkerOptions) {
+        super()
+      }
+      postMessage(message: unknown): void {
+        const request = message as { requestId: string }
+        // Simulate worker sending an error response carrying onnx-backend-failed
+        setTimeout(() => {
+          this.dispatchEvent(
+            new MessageEvent('message', {
+              data: {
+                requestId: request.requestId,
+                type: 'error',
+                error: 'ONNX backend initialization failed',
+                reason: 'onnx-backend-failed',
+              },
+            })
+          )
+        }, 5)
+      }
+      terminate(): void {}
+      addEventListener(type: string, listener: EventListener): void {
+        super.addEventListener(type, listener)
+      }
+      removeEventListener(type: string, listener: EventListener): void {
+        super.removeEventListener(type, listener)
+      }
+    }
+    global.Worker = OnnxFailingWorker as unknown as typeof Worker
+
+    await expect(coordinator.executeTask('embed', { texts: ['test'] })).rejects.toThrow(
+      'ONNX backend initialization failed'
+    )
+  })
+
   // AC5: Graceful degradation without Worker support
   it('AC5: throws gracefully when Worker API is unavailable', async () => {
     // @ts-expect-error simulate no Worker support

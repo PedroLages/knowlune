@@ -1,15 +1,7 @@
 import { useState, useMemo, useEffect, type ReactNode } from 'react'
 import { useParams, Link, useNavigate, useLocation } from 'react-router'
 import { recordVisit } from '@/lib/searchFrecency'
-import {
-  BookOpen,
-  Clock,
-  ExternalLink,
-  GraduationCap,
-  Users,
-  Pencil,
-  Trash2,
-} from 'lucide-react'
+import { BookOpen, Clock, ExternalLink, GraduationCap, Users, Pencil, Trash2 } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
 import { Badge } from '@/app/components/ui/badge'
 import { Card, CardContent } from '@/app/components/ui/card'
@@ -150,7 +142,10 @@ export function AuthorProfile() {
             {/* Avatar */}
             <Avatar className="size-28 sm:size-32 shrink-0 ring-2 ring-border/50 self-center sm:self-start">
               <AvatarImage {...getAvatarSrc(author.avatar, 128)} alt={author.name} />
-              <AvatarFallback className="text-2xl font-semibold bg-brand/10 text-brand" aria-hidden="true">
+              <AvatarFallback
+                className="text-2xl font-semibold bg-brand/10 text-brand"
+                aria-hidden="true"
+              >
                 {getInitials(author.name)}
               </AvatarFallback>
             </Avatar>
@@ -365,7 +360,9 @@ function DifficultyChips({ difficulties }: { difficulties: Array<Difficulty | un
   )
 }
 
-function difficultyBadgeVariant(d: Difficulty): 'default' | 'secondary' | 'destructive' | 'outline' {
+function difficultyBadgeVariant(
+  d: Difficulty
+): 'default' | 'secondary' | 'destructive' | 'outline' {
   switch (d) {
     case 'beginner':
       return 'secondary'

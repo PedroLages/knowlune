@@ -159,7 +159,9 @@ export function MyDataSummary() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium">Export My Data</p>
-              <p className="text-xs text-muted-foreground">Download all your data as a ZIP archive (GDPR Art. 15/20)</p>
+              <p className="text-xs text-muted-foreground">
+                Download all your data as a ZIP archive (GDPR Art. 15/20)
+              </p>
             </div>
             <Button
               variant="outline"

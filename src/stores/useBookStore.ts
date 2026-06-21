@@ -127,7 +127,9 @@ export const useBookStore = create<BookStoreState>((set, get) => ({
       const guestSessionId = sessionStorage.getItem('knowlune-guest-id')
       const modality = book.format === 'epub' ? 'epub' : 'audiobook'
       const existing = await db.books
-        .filter(r => r.userId === null && r.guestSessionId === guestSessionId && r.format === book.format)
+        .filter(
+          r => r.userId === null && r.guestSessionId === guestSessionId && r.format === book.format
+        )
         .count()
       if (existing >= 1) return { error: { code: 'GUEST_CAP_EXCEEDED', modality } }
     }
@@ -399,7 +401,10 @@ export const useBookStore = create<BookStoreState>((set, get) => ({
     try {
       const current = await db.books.get(bookId)
       if (current) {
-        await syncableWrite('books', 'put', { ...current, lastOpenedAt: now } as unknown as SyncableRecord)
+        await syncableWrite('books', 'put', {
+          ...current,
+          lastOpenedAt: now,
+        } as unknown as SyncableRecord)
       }
     } catch (err) {
       console.error('[BookStore] Failed to update lastOpenedAt:', err)

@@ -79,9 +79,7 @@ function StatGrid({ stats }: { stats: StatItem[] }) {
           <p className="text-[10px] font-semibold tracking-wider uppercase text-muted-foreground">
             {stat.label}
           </p>
-          <p className="mt-0.5 text-sm font-medium text-foreground truncate">
-            {stat.value}
-          </p>
+          <p className="mt-0.5 text-sm font-medium text-foreground truncate">{stat.value}</p>
         </div>
       ))}
     </div>
@@ -235,7 +233,9 @@ export function BookDetailHero({
         <div className="grid grid-cols-1 md:grid-cols-[280px_1fr] gap-8 md:gap-12">
           {/* ── Left: Cover ─────────────────────────────────────────── */}
           <div className="flex items-start justify-center md:justify-start">
-            <div className={`relative w-52 sm:w-60 md:w-full max-w-[280px] overflow-hidden rounded-xl shadow-2xl bg-muted ${book.format === 'audiobook' ? 'aspect-square' : 'aspect-[2/3]'}`}>
+            <div
+              className={`relative w-52 sm:w-60 md:w-full max-w-[280px] overflow-hidden rounded-xl shadow-2xl bg-muted ${book.format === 'audiobook' ? 'aspect-square' : 'aspect-[2/3]'}`}
+            >
               <BookCoverImage
                 src={resolvedCoverUrl}
                 title={book.title}

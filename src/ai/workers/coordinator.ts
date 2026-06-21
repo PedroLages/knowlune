@@ -339,8 +339,13 @@ class WorkerCoordinator {
   /**
    * Handle worker error (crash, OOM, etc).
    * Dispatches 'worker-crash' custom event for app-level handlers (e.g., cloud fallback).
+   *
+   * On crash, also probes the Cache API to determine whether the transformers model
+   * cache is available. The `cacheUnavailable` flag in the custom event detail helps
+   * the embedding pipeline decide whether to attempt a cloud fallback (cache unavailable
+   * suggests the model can never load in this browser session) or retry (transient crash).
    */
-  private handleWorkerError(type: WorkerRequestType, error: Error): void {
+  private async handleWorkerError(type: WorkerRequestType, error: Error): Promise<void> {
     const workerId = this.getWorkerId(type)
     const entry = this.pool.get(workerId)
     if (!entry) return
@@ -352,22 +357,47 @@ class WorkerCoordinator {
 
     console.error(`[Coordinator] Worker ${workerId} crashed:`, error)
 
-    // Dispatch custom event so other parts of the app can respond (e.g., switch to cloud fallback)
-    if (typeof window !== 'undefined') {
-      window.dispatchEvent(
-        new CustomEvent('worker-crash', {
-          detail: { workerId, error: error?.message ?? 'Unknown error' },
-        })
-      )
-    }
+    // Capture pending request IDs for this worker BEFORE rejecting them
+    const pendingRequestIds = Array.from(this.pendingRequests.entries())
+      .filter(([, p]) => p.workerId === workerId)
+      .map(([id]) => id)
 
-    // Reject all pending requests for this worker
+    // Reject all pending requests for this worker FIRST (before cache probe)
     this.pendingRequests.forEach((pending, requestId) => {
       if (pending.workerId === workerId) {
         pending.reject(new Error('Worker crashed. Please try again.'))
         this.pendingRequests.delete(requestId)
       }
     })
+
+    // Probe Cache API for transformers model cache availability (fire-and-forget
+    // after rejections — the cache probe MUST NOT delay the rejection of pending
+    // requests, which would cause caller-side timeouts).
+    let cacheAvailable = false
+    try {
+      if (typeof caches !== 'undefined') {
+        cacheAvailable = await caches.has('transformers-cache')
+      }
+    } catch (cacheError) {
+      // Cache API threw — treat as unavailable
+      console.warn('[Coordinator] Failed to probe Cache API:', cacheError)
+    }
+
+    // Dispatch custom event so other parts of the app can respond
+    // (e.g., switch to cloud fallback, show telemetry)
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(
+        new CustomEvent('worker-crash', {
+          detail: {
+            workerId,
+            error: error?.message ?? 'Unknown error',
+            provider: type === 'embed' ? 'local' : undefined,
+            cacheUnavailable: !cacheAvailable,
+            requestId: pendingRequestIds.join(','),
+          },
+        })
+      )
+    }
   }
 
   /**

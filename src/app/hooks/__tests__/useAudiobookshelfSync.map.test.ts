@@ -7,7 +7,12 @@
  * @see useAudiobookshelfSync.ts
  */
 import { describe, it, expect } from 'vitest'
-import { detectFormat, isValidSyncItem, VALID_FORMATS, mapAbsItemToBook } from '@/app/hooks/useAudiobookshelfSync'
+import {
+  detectFormat,
+  isValidSyncItem,
+  VALID_FORMATS,
+  mapAbsItemToBook,
+} from '@/app/hooks/useAudiobookshelfSync'
 import type { AbsLibraryItem, AudiobookshelfServer, Book } from '@/data/types'
 
 // ── Helpers ──────────────────────────────────────────────────────
@@ -319,11 +324,10 @@ describe('mapAbsItemToBook', () => {
 
   it('maps an audiobook to full Book shape with chapters and totalDuration', () => {
     const server = makeServer()
-    const item = makeAbsItemWithNarrators(
-      ['Jane Doe', 'John Smith'],
-      7200,
-      { id: 'audiobook-1', mediaType: 'book' }
-    )
+    const item = makeAbsItemWithNarrators(['Jane Doe', 'John Smith'], 7200, {
+      id: 'audiobook-1',
+      mediaType: 'book',
+    })
 
     const book = mapAbsItemToBook(item, server, 'test-api-key')
 

@@ -50,7 +50,9 @@ export function KnowledgeMap() {
 
   // Build nested treemap data grouped by category (desktop) or flat (mobile data source)
   const nestedTreemapData: TreemapCategoryData[] = (
-    selectedCategory === ALL_CATEGORIES ? categories : categories.filter(c => c.category === selectedCategory)
+    selectedCategory === ALL_CATEGORIES
+      ? categories
+      : categories.filter(c => c.category === selectedCategory)
   )
     .map(cat => {
       const catTopics = filteredTopics.filter(t => t.category === cat.category)
@@ -80,21 +82,17 @@ export function KnowledgeMap() {
   }))
 
   // Use nested data when showing all categories, flat when filtered to one category
-  const treemapData =
-    selectedCategory === ALL_CATEGORIES ? nestedTreemapData : flatTreemapData
+  const treemapData = selectedCategory === ALL_CATEGORIES ? nestedTreemapData : flatTreemapData
 
   const selectedTopic = selectedTopicName
-    ? topics.find(t => t.name === selectedTopicName) ?? null
+    ? (topics.find(t => t.name === selectedTopicName) ?? null)
     : null
 
   const categoryNames = [ALL_CATEGORIES, ...categories.map(c => c.category)]
 
-  const handleCellClick = useCallback(
-    (name: string) => {
-      setSelectedTopicName(prev => (prev === name ? null : name))
-    },
-    []
-  )
+  const handleCellClick = useCallback((name: string) => {
+    setSelectedTopicName(prev => (prev === name ? null : name))
+  }, [])
 
   if (isLoading) {
     return (

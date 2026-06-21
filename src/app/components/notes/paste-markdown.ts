@@ -24,13 +24,13 @@ function looksLikeMarkdown(text: string): boolean {
   // Inline markers: require at least two distinct patterns to avoid
   // false positives from a single `*` or `_` in normal prose.
   const inlinePatterns: RegExp[] = [
-    /\*\*[^*]+\*\*/,             // **bold**
-    /__[^_]+__/,                 // __bold__
-    /\*[^*]+\*/,                 // *italic*
-    /_[^_]+_/,                   // _italic_
-    /`[^`]+`/,                   // `code`
-    /\[.*\]\(.*\)/,              // [link](url)
-    /!\[.*\]\(.*\)/,             // ![image](url)
+    /\*\*[^*]+\*\*/, // **bold**
+    /__[^_]+__/, // __bold__
+    /\*[^*]+\*/, // *italic*
+    /_[^_]+_/, // _italic_
+    /`[^`]+`/, // `code`
+    /\[.*\]\(.*\)/, // [link](url)
+    /!\[.*\]\(.*\)/, // ![image](url)
   ]
 
   let inlineMatches = 0

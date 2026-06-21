@@ -49,7 +49,8 @@ vi.stubGlobal('localStorage', localStorageMock)
 vi.stubGlobal('dispatchEvent', vi.fn())
 
 // Import AFTER mocks are set up
-const { saveProviderApiKey, saveAIConfiguration, getDecryptedApiKeyForProvider } = await import('../aiConfiguration')
+const { saveProviderApiKey, saveAIConfiguration, getDecryptedApiKeyForProvider } =
+  await import('../aiConfiguration')
 const { saveYouTubeConfiguration, getDecryptedYouTubeApiKey } =
   await import('../youtubeConfiguration')
 
@@ -105,7 +106,10 @@ describe('API key persistence across page refresh', () => {
     indexedDB.deleteDatabase('CryptoKeyStore')
 
     // Vault has the plaintext key
-    vaultMocks.readCredentialWithStatus.mockResolvedValue({ ok: true, value: 'sk-will-survive-12345678' })
+    vaultMocks.readCredentialWithStatus.mockResolvedValue({
+      ok: true,
+      value: 'sk-will-survive-12345678',
+    })
 
     const decrypted = await getDecryptedApiKeyForProvider('openai')
     expect(decrypted).toBe('sk-will-survive-12345678')
@@ -133,7 +137,10 @@ describe('API key persistence across page refresh', () => {
     indexedDB.deleteDatabase('CryptoKeyStore')
 
     // First call: Vault recovers the key and re-encrypts locally
-    vaultMocks.readCredentialWithStatus.mockResolvedValue({ ok: true, value: 'sk-self-healing-12345678' })
+    vaultMocks.readCredentialWithStatus.mockResolvedValue({
+      ok: true,
+      value: 'sk-self-healing-12345678',
+    })
     const first = await getDecryptedApiKeyForProvider('openai')
     expect(first).toBe('sk-self-healing-12345678')
     expect(vaultMocks.readCredentialWithStatus).toHaveBeenCalledTimes(1)

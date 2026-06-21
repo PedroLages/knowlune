@@ -36,13 +36,14 @@ function isAudiobook(book: Book): boolean {
 }
 
 function getBookActivityTimestamp(book: Book): number {
-  return Math.max(toTimestamp(book.lastOpenedAt), toTimestamp(book.finishedAt), toTimestamp(book.createdAt))
+  return Math.max(
+    toTimestamp(book.lastOpenedAt),
+    toTimestamp(book.finishedAt),
+    toTimestamp(book.createdAt)
+  )
 }
 
-export function getContinueListeningShelf(
-  books: Book[],
-  limit = DEFAULT_CONTINUE_LIMIT
-): Book[] {
+export function getContinueListeningShelf(books: Book[], limit = DEFAULT_CONTINUE_LIMIT): Book[] {
   return books
     .filter(book => book.format === 'audiobook' && !!book.lastOpenedAt && isInProgress(book))
     .sort(sortByLastOpenedDesc)
@@ -53,7 +54,9 @@ export function getContinueReadingShelf(books: Book[], limit = DEFAULT_CONTINUE_
   return books
     .filter(
       book =>
-        (book.format === 'epub' || book.format === 'pdf') && !!book.lastOpenedAt && isInProgress(book)
+        (book.format === 'epub' || book.format === 'pdf') &&
+        !!book.lastOpenedAt &&
+        isInProgress(book)
     )
     .sort(sortByLastOpenedDesc)
     .slice(0, limit)
@@ -144,7 +147,10 @@ export function getAudiobookRecentlyAddedShelf(
     .slice(0, limit)
 }
 
-export function getEbookRecentlyAddedShelf(books: Book[], limit = DEFAULT_RECENTLY_ADDED_LIMIT): Book[] {
+export function getEbookRecentlyAddedShelf(
+  books: Book[],
+  limit = DEFAULT_RECENTLY_ADDED_LIMIT
+): Book[] {
   return books
     .filter(isEbook)
     .sort((a, b) => toTimestamp(b.createdAt) - toTimestamp(a.createdAt))

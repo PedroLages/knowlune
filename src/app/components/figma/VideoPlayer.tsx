@@ -551,22 +551,24 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
     const currentPos = video?.currentTime ?? 0
     const dur = video?.duration ?? 0
     const bufferedEnd =
-      video && video.buffered.length > 0
-        ? video.buffered.end(video.buffered.length - 1)
-        : 0
+      video && video.buffered.length > 0 ? video.buffered.end(video.buffered.length - 1) : 0
 
     // Diagnostic log: capture error context for root-cause analysis.
     // Includes estimated byte-offset for correlating with file corruption.
     const codeLabel =
-      code === 1 ? 'MEDIA_ERR_ABORTED' :
-      code === 2 ? 'MEDIA_ERR_NETWORK' :
-      code === 3 ? 'MEDIA_ERR_DECODE' :
-      code === 4 ? 'MEDIA_ERR_SRC_NOT_SUPPORTED' :
-      `UNKNOWN(${code})`
+      code === 1
+        ? 'MEDIA_ERR_ABORTED'
+        : code === 2
+          ? 'MEDIA_ERR_NETWORK'
+          : code === 3
+            ? 'MEDIA_ERR_DECODE'
+            : code === 4
+              ? 'MEDIA_ERR_SRC_NOT_SUPPORTED'
+              : `UNKNOWN(${code})`
     console.warn(
       `[VideoPlayer] ${codeLabel} | file="${title ?? 'unknown'}" | ` +
-      `currentTime=${currentPos.toFixed(1)}s | duration=${dur.toFixed(1)}s | ` +
-      `bufferedEnd=${bufferedEnd.toFixed(1)}s | src=${src?.substring(0, 60)}...`
+        `currentTime=${currentPos.toFixed(1)}s | duration=${dur.toFixed(1)}s | ` +
+        `bufferedEnd=${bufferedEnd.toFixed(1)}s | src=${src?.substring(0, 60)}...`
     )
 
     // MEDIA_ERR_DECODE (code 3): source file corruption at a specific byte offset.
@@ -574,7 +576,9 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
     // Try skipping past the bad frame before escalating to full recovery.
     if (code === 3) {
       if (decodeSkipAttemptRef.current >= 3) {
-        console.warn('[VideoPlayer] MEDIA_ERR_DECODE: 3 skip attempts exhausted — showing error overlay')
+        console.warn(
+          '[VideoPlayer] MEDIA_ERR_DECODE: 3 skip attempts exhausted — showing error overlay'
+        )
         setErrorCode(code)
         setHasError(true)
         return
@@ -588,13 +592,15 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
       if (isFinite(skipTo) && dur > 0 && skipTo < dur - 0.5) {
         console.warn(
           `[VideoPlayer] MEDIA_ERR_DECODE: attempt ${decodeSkipAttemptRef.current}/3 — ` +
-          `skipping from ${skipOrigin.toFixed(1)}s to ${skipTo.toFixed(1)}s`
+            `skipping from ${skipOrigin.toFixed(1)}s to ${skipTo.toFixed(1)}s`
         )
         video!.currentTime = skipTo
         return
       }
       // Can't skip further — show error overlay
-      console.warn('[VideoPlayer] MEDIA_ERR_DECODE: cannot skip past (near end of video) — showing error overlay')
+      console.warn(
+        '[VideoPlayer] MEDIA_ERR_DECODE: cannot skip past (near end of video) — showing error overlay'
+      )
       setErrorCode(code)
       setHasError(true)
       return
@@ -1049,7 +1055,7 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
         // overflow-toggle: When speed menu is open outside fullscreen, allow dropdown
         // overflow-visibility. In fullscreen the browser handles overflow naturally so
         // keep overflow-hidden. This avoids clipping the portaled dropdown menu.
-        (!speedMenuOpen || isFullscreen) ? 'overflow-hidden' : 'overflow-visible',
+        !speedMenuOpen || isFullscreen ? 'overflow-hidden' : 'overflow-visible',
         // Hide cursor when playing and controls auto-hide (YouTube-style)
         isPlaying && !showControls && 'cursor-none'
       )}
@@ -1148,7 +1154,8 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
                 // handler. retryPositionRef is set for both paths — it's harmless
                 // when recoveryPositionRef handles position via initialPosition.
                 const currentPos = videoRef.current?.currentTime
-                retryPositionRef.current = currentPos != null && isFinite(currentPos) ? currentPos : null
+                retryPositionRef.current =
+                  currentPos != null && isFinite(currentPos) ? currentPos : null
                 setHasError(false)
                 setErrorCode(null)
                 hasRestoredPosition.current = false
@@ -1166,7 +1173,11 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
 
         {/* Recovery spinner — shown between Retry click and blob URL arrival */}
         {showRecoveryOverlay && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 text-white gap-3 z-10" role="status" aria-live="polite">
+          <div
+            className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 text-white gap-3 z-10"
+            role="status"
+            aria-live="polite"
+          >
             <div className="size-10 rounded-full border-4 border-white/30 border-t-white animate-spin" />
             <p className="text-sm">Recovering...</p>
           </div>
@@ -1425,7 +1436,12 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
                       {playbackSpeed}x
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent side="top" align="end" className="w-32" container={containerRef.current ?? undefined}>
+                  <DropdownMenuContent
+                    side="top"
+                    align="end"
+                    className="w-32"
+                    container={containerRef.current ?? undefined}
+                  >
                     <DropdownMenuLabel className="text-xs font-semibold">Speed</DropdownMenuLabel>
                     <DropdownMenuRadioGroup
                       value={String(playbackSpeed)}
@@ -1622,7 +1638,10 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
                     <Button
                       variant="ghost"
                       size="icon"
-                      className={cn('size-11 text-white hover:bg-white/20 hover:text-white', isPiP && 'bg-white/20')}
+                      className={cn(
+                        'size-11 text-white hover:bg-white/20 hover:text-white',
+                        isPiP && 'bg-white/20'
+                      )}
                       onClick={togglePiP}
                       aria-label={isPiP ? 'Exit Picture-in-Picture' : 'Enter Picture-in-Picture'}
                       aria-pressed={isPiP}

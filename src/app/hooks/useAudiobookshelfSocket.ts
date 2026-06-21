@@ -78,9 +78,7 @@ export function useAudiobookshelfSocket({
       if (event.currentTime > localSeconds) {
         const position = { type: 'time' as const, seconds: event.currentTime }
         const totalDur = currentBook.totalDuration ?? 0
-        const p = Number.isFinite(event.progress)
-          ? Math.min(1, Math.max(0, event.progress))
-          : 0
+        const p = Number.isFinite(event.progress) ? Math.min(1, Math.max(0, event.progress)) : 0
         const progressPct =
           totalDur > 0
             ? Math.min(100, Math.round((event.currentTime / totalDur) * 100))

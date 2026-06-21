@@ -80,12 +80,8 @@ async function fetchTableRows(
  * Called independently of user hydration — templates are user-agnostic.
  * Returns `[]` on any query error (logged and swallowed).
  */
-async function fetchTemplatePaths(
-  client: SupabaseClient
-): Promise<LearningPath[]> {
-  const { data, error } = await client
-    .from('learning_path_templates')
-    .select('*')
+async function fetchTemplatePaths(client: SupabaseClient): Promise<LearningPath[]> {
+  const { data, error } = await client.from('learning_path_templates').select('*')
 
   if (error) {
     console.error('[hydrateP3P4] Template paths query failed:', error)
@@ -109,9 +105,7 @@ async function fetchTemplatePaths(
  * Fetch all template entries from the public-read `learning_path_template_entries` table.
  * Returns `[]` on any query error (logged and swallowed).
  */
-async function fetchTemplateEntries(
-  client: SupabaseClient
-): Promise<LearningPathEntry[]> {
+async function fetchTemplateEntries(client: SupabaseClient): Promise<LearningPathEntry[]> {
   const { data, error } = await client
     .from('learning_path_template_entries')
     .select('*')
@@ -130,7 +124,9 @@ async function fetchTemplateEntries(
     position: (row.position as number) || 0,
     justification: (row.justification as string)
       ? `${row.justification as string}${row.match_title ? ` [Search for: ${row.match_title}]` : ''}`
-      : (row.match_title ? `Search for: ${row.match_title as string}` : undefined),
+      : row.match_title
+        ? `Search for: ${row.match_title as string}`
+        : undefined,
     isManuallyOrdered: false,
   }))
 }

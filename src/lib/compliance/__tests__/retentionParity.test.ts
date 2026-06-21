@@ -19,7 +19,12 @@ import { describe, it, expect, beforeAll } from 'vitest'
 import { readFileSync, existsSync } from 'fs'
 import { resolve, dirname } from 'path'
 import { fileURLToPath } from 'url'
-import { RETENTION_POLICY, PURPOSE_ARTEFACTS, INDEFINITE_RETENTION_ARTEFACTS, getRetentionEntry } from '../retentionPolicy'
+import {
+  RETENTION_POLICY,
+  PURPOSE_ARTEFACTS,
+  INDEFINITE_RETENTION_ARTEFACTS,
+  getRetentionEntry,
+} from '../retentionPolicy'
 import { tableRegistry } from '../../sync/tableRegistry'
 import { CONSENT_PURPOSES } from '../consentService'
 
@@ -156,7 +161,7 @@ describe('E119-S10 AC-4: retention matrix parity', () => {
     }
     expect(
       missing,
-      `Consent purposes not mapped in PURPOSE_ARTEFACTS: ${missing.join(', ')}`,
+      `Consent purposes not mapped in PURPOSE_ARTEFACTS: ${missing.join(', ')}`
     ).toEqual([])
   })
 
@@ -171,7 +176,7 @@ describe('E119-S10 AC-4: retention matrix parity', () => {
     }
     expect(
       unknown,
-      `PURPOSE_ARTEFACTS references unknown artefacts: ${unknown.join(', ')}`,
+      `PURPOSE_ARTEFACTS references unknown artefacts: ${unknown.join(', ')}`
     ).toEqual([])
   })
 
@@ -221,7 +226,7 @@ describe('E119-S10 AC-6: indefinite-retention entries require reviewer sign-off'
     if (INDEFINITE_RETENTION_ARTEFACTS.length > 0) {
       console.warn(
         '[E119-S10 AC-6] Indefinite-retention artefacts (period: null) — require explicit reviewer sign-off:',
-        INDEFINITE_RETENTION_ARTEFACTS,
+        INDEFINITE_RETENTION_ARTEFACTS
       )
     }
 
@@ -239,9 +244,7 @@ describe('E119-S10 AC-6: indefinite-retention entries require reviewer sign-off'
   })
 
   it('INDEFINITE_RETENTION_ARTEFACTS matches RETENTION_POLICY entries with period: null', () => {
-    const expectedIndefinite = RETENTION_POLICY.filter(e => e.period === null).map(
-      e => e.artefact,
-    )
+    const expectedIndefinite = RETENTION_POLICY.filter(e => e.period === null).map(e => e.artefact)
     expect(INDEFINITE_RETENTION_ARTEFACTS).toEqual(expectedIndefinite)
   })
 })

@@ -19,7 +19,15 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/app/components/ui/collapsible'
-import { Sparkles, Loader2, AlertCircle, RotateCcw, ChevronDown, ChevronUp, Lock } from 'lucide-react'
+import {
+  Sparkles,
+  Loader2,
+  AlertCircle,
+  RotateCcw,
+  ChevronDown,
+  ChevronUp,
+  Lock,
+} from 'lucide-react'
 import { AIUnavailableBadge } from './AIUnavailableBadge'
 import { isFeatureEnabled, isAIAvailable } from '@/lib/aiConfiguration'
 import { fetchAndParseTranscript, generateVideoSummary } from '@/lib/aiSummary'
@@ -218,8 +226,7 @@ export function AISummaryPanel({ transcriptSrc }: AISummaryPanelProps) {
       >
         <Lock className="size-4 flex-shrink-0 mt-0.5 text-muted-foreground" aria-hidden="true" />
         <p className="text-sm text-muted-foreground">
-          AI features require your consent. Enable{' '}
-          <strong>AI Tutor</strong> in{' '}
+          AI features require your consent. Enable <strong>AI Tutor</strong> in{' '}
           <a
             href="/settings?section=privacy"
             className="text-brand underline underline-offset-2 hover:text-brand-hover"

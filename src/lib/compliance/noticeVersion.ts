@@ -36,7 +36,7 @@ export function parseNoticeVersion(version: string): ParsedNoticeVersion {
   const match = /^(\d{4}-\d{2}-\d{2})\.(\d+)$/.exec(version)
   if (!match) {
     throw new Error(
-      `Invalid notice version format: "${version}". Expected YYYY-MM-DD.N (e.g. "2026-04-23.1").`,
+      `Invalid notice version format: "${version}". Expected YYYY-MM-DD.N (e.g. "2026-04-23.1").`
     )
   }
   return {

@@ -93,10 +93,7 @@ export function LessonHeaderTools() {
   // Completion state
   const setItemStatus = useContentProgressStore(s => s.setItemStatus)
   const loadCourseProgress = useContentProgressStore(s => s.loadCourseProgress)
-  const currentStatus = useLessonItemCompletionStatus(
-    courseId ?? undefined,
-    lessonId ?? undefined
-  )
+  const currentStatus = useLessonItemCompletionStatus(courseId ?? undefined, lessonId ?? undefined)
 
   useEffect(() => {
     if (courseId) {
@@ -120,10 +117,7 @@ export function LessonHeaderTools() {
   )
 
   return (
-    <div
-      data-theater-hide
-      className="hidden md:flex items-center gap-2"
-    >
+    <div data-theater-hide className="hidden md:flex items-center gap-2">
       {/* Secondary tools group — visible inline on desktop, collapsed into kebab on tablet */}
       <span className="hidden lg:contents">
         <PomodoroTimer tooltipLabel="Focus Timer" />
@@ -166,9 +160,7 @@ export function LessonHeaderTools() {
               )}
             </Button>
           </TooltipTrigger>
-          <TooltipContent>
-            {isTheater ? 'Exit theater mode' : 'Enter theater mode'}
-          </TooltipContent>
+          <TooltipContent>{isTheater ? 'Exit theater mode' : 'Enter theater mode'}</TooltipContent>
         </Tooltip>
 
         {/* Auto-play toggle */}
@@ -203,17 +195,11 @@ export function LessonHeaderTools() {
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          <DropdownMenuItem
-            onSelect={toggleReadingMode}
-            data-testid="kebab-reading-mode"
-          >
+          <DropdownMenuItem onSelect={toggleReadingMode} data-testid="kebab-reading-mode">
             <BookOpen className="size-5 mr-2" aria-hidden="true" />
             {isReadingMode ? 'Exit Reading Mode' : 'Reading Mode'}
           </DropdownMenuItem>
-          <DropdownMenuItem
-            onSelect={toggleTheater}
-            data-testid="kebab-theater-mode"
-          >
+          <DropdownMenuItem onSelect={toggleTheater} data-testid="kebab-theater-mode">
             {isTheater ? (
               <Minimize2 className="size-5 mr-2" aria-hidden="true" />
             ) : (
@@ -221,17 +207,11 @@ export function LessonHeaderTools() {
             )}
             {isTheater ? 'Exit Theater' : 'Theater Mode'}
           </DropdownMenuItem>
-          <DropdownMenuItem
-            onSelect={toggleAutoPlay}
-            data-testid="kebab-autoplay"
-          >
+          <DropdownMenuItem onSelect={toggleAutoPlay} data-testid="kebab-autoplay">
             <SkipForward className="size-5 mr-2" aria-hidden="true" />
             Auto-play: {autoPlay ? 'On' : 'Off'}
           </DropdownMenuItem>
-          <DropdownMenuItem
-            onSelect={toggleQAPanel}
-            data-testid="kebab-qa-panel"
-          >
+          <DropdownMenuItem onSelect={toggleQAPanel} data-testid="kebab-qa-panel">
             <MessageCircle className="size-5 mr-2" aria-hidden="true" />
             Ask AI
           </DropdownMenuItem>

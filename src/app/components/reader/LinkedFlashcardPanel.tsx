@@ -62,7 +62,10 @@ export function LinkedFlashcardPanel({
         </SheetHeader>
 
         {isLoading ? (
-          <div className="rounded-xl border border-border bg-muted/20 p-4" data-testid="linked-flashcard-loading">
+          <div
+            className="rounded-xl border border-border bg-muted/20 p-4"
+            data-testid="linked-flashcard-loading"
+          >
             <p className="text-sm font-medium text-foreground">Loading linked flashcard...</p>
             <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
               Finding the card connected to this highlight.

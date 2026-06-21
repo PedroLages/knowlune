@@ -1003,19 +1003,22 @@ async function _doDownload(): Promise<void> {
 
       await sem.acquire()
       try {
-      // Read incremental cursor.
-      const meta = await db.syncMetadata.get(entry.dexieTable)
-      const cursor = meta?.lastSyncTimestamp ?? null
+        // Read incremental cursor.
+        const meta = await db.syncMetadata.get(entry.dexieTable)
+        const cursor = meta?.lastSyncTimestamp ?? null
 
-      // Determine the cursor column — defaults to 'updated_at'.
-      // Tables like `audio_bookmarks` have no `updated_at` column and must use
-      // `created_at` instead. The `cursorField` registry override enables this
-      // without per-table special-casing in the engine.
-      const cursorCol = entry.cursorField ?? 'updated_at'
+        // Determine the cursor column — defaults to 'updated_at'.
+        // Tables like `audio_bookmarks` have no `updated_at` column and must use
+        // `created_at` instead. The `cursorField` registry override enables this
+        // without per-table special-casing in the engine.
+        const cursorCol = entry.cursorField ?? 'updated_at'
 
-      // Run the Supabase query with 429-aware retry.
-      const { data: rows, error, throttled } = await downloadWithRetry<Record<string, unknown>[]>(
-        async () => {
+        // Run the Supabase query with 429-aware retry.
+        const {
+          data: rows,
+          error,
+          throttled,
+        } = await downloadWithRetry<Record<string, unknown>[]>(async () => {
           let query = supabase!
             .from(entry.supabaseTable)
             .select('*')
@@ -1025,163 +1028,155 @@ async function _doDownload(): Promise<void> {
           }
           const result = await query
           return { data: result.data as Record<string, unknown>[] | null, error: result.error }
-        },
-        entry.supabaseTable
-      )
+        }, entry.supabaseTable)
 
-      if (error) {
-        const errMsg =
-          (error as { message?: string }).message ?? JSON.stringify(error)
-        console.error(
-          `[syncEngine] Download error for table "${entry.supabaseTable}":`,
-          errMsg
+        if (error) {
+          const errMsg = (error as { message?: string }).message ?? JSON.stringify(error)
+          console.error(`[syncEngine] Download error for table "${entry.supabaseTable}":`, errMsg)
+          if (throttled && !throttleToasted.has(entry.supabaseTable)) {
+            throttleToasted.add(entry.supabaseTable)
+            console.warn(
+              `[syncEngine] "${entry.supabaseTable}" exhausted 429 retries this session — skipping.`
+            )
+            // F3 from R1: surface rate-limiting to the user so they know sync
+            // is paused. Deduped via throttleToasted — once per table per session.
+            toast.warning(`Sync rate-limited for ${entry.supabaseTable} — will retry on next sync`)
+          }
+          return // skip to next table
+        }
+
+        if (!rows || rows.length === 0) return
+
+        // Convert once so pre-apply hooks and the apply loop share the same shape.
+        const camelRecords: Record<string, unknown>[] = rows.map(r =>
+          toCamelCase(entry, r as Record<string, unknown>)
         )
-        if (throttled && !throttleToasted.has(entry.supabaseTable)) {
-          throttleToasted.add(entry.supabaseTable)
-          console.warn(
-            `[syncEngine] "${entry.supabaseTable}" exhausted 429 retries this session — skipping.`
-          )
-          // F3 from R1: surface rate-limiting to the user so they know sync
-          // is paused. Deduped via throttleToasted — once per table per session.
-          toast.warning(
-            `Sync rate-limited for ${entry.supabaseTable} — will retry on next sync`
-          )
-        }
-        return // skip to next table
-      }
 
-      if (!rows || rows.length === 0) return
-
-    // Convert once so pre-apply hooks and the apply loop share the same shape.
-    const camelRecords: Record<string, unknown>[] = rows.map(r =>
-      toCamelCase(entry, r as Record<string, unknown>)
-    )
-
-    // E94-S03: Default-shelf dedup hook.
-    // On `shelves` download, collapse incoming default shelves that match an
-    // existing local default by normalized name. Skipped remote rows are
-    // mapped into `syncMetadata['shelfDedupMap:{userId}']` so the subsequent
-    // `bookShelves` branch can rewrite `shelfId` references to the local id.
-    //
-    // Registry ordering invariant: `shelves` MUST appear before `bookShelves`.
-    // Documented on both entries in `tableRegistry.ts`.
-    let recordsToApply: Record<string, unknown>[] = camelRecords
-    if (entry.dexieTable === 'shelves' && _userId) {
-      try {
-        const local = (await db.shelves.toArray()) as unknown as Shelf[]
-        const incoming = camelRecords as unknown as Shelf[]
-        const { toInsert, toSkip, mergedIdMap } = dedupDefaultShelves(incoming, local)
-        if (toSkip.length > 0 || Object.keys(mergedIdMap).length > 0) {
-          console.debug(
-            `[syncEngine] defaultShelfDedup: skipped ${toSkip.length} incoming defaults, mapped ${Object.keys(mergedIdMap).length} remote → local ids.`
-          )
-          const key = `shelfDedupMap:${_userId}`
-          const existing = await db.syncMetadata.get(key)
-          const prior = (existing?.value as Record<string, string> | undefined) ?? {}
-          await db.syncMetadata.put({
-            table: key,
-            value: { ...prior, ...mergedIdMap },
-          })
-        }
-        recordsToApply = toInsert as unknown as Record<string, unknown>[]
-      } catch (err) {
-        // Fail-open on dedup: worst case is a duplicate shelf row, not data loss.
-        console.error('[syncEngine] defaultShelfDedup failed; applying unchanged:', err)
-      }
-    } else if (entry.dexieTable === 'opdsCatalogs') {
-      // E95-S05: re-nest `authUsername` → `auth: { username }` so Dexie rows
-      // keep the canonical `OpdsCatalog` shape. Supabase stores the field
-      // flat as `auth_username` (toCamelCase already produced `authUsername`
-      // at the top level); Dexie consumers expect the nested object.
-      recordsToApply = camelRecords.map(rec => {
-        const authUsername = rec['authUsername'] as string | null | undefined
-        const { authUsername: _drop, ...rest } = rec
-        void _drop
-        if (typeof authUsername === 'string' && authUsername.length > 0) {
-          return { ...rest, auth: { username: authUsername } }
-        }
-        return rest
-      })
-    } else if (entry.dexieTable === 'bookShelves' && _userId) {
-      try {
-        const key = `shelfDedupMap:${_userId}`
-        const meta = await db.syncMetadata.get(key)
-        const map = (meta?.value as Record<string, string> | undefined) ?? {}
-        if (Object.keys(map).length > 0) {
-          recordsToApply = camelRecords.map(rec => {
-            const shelfId = rec['shelfId'] as string | undefined
-            if (shelfId && map[shelfId]) {
-              return { ...rec, shelfId: map[shelfId] }
+        // E94-S03: Default-shelf dedup hook.
+        // On `shelves` download, collapse incoming default shelves that match an
+        // existing local default by normalized name. Skipped remote rows are
+        // mapped into `syncMetadata['shelfDedupMap:{userId}']` so the subsequent
+        // `bookShelves` branch can rewrite `shelfId` references to the local id.
+        //
+        // Registry ordering invariant: `shelves` MUST appear before `bookShelves`.
+        // Documented on both entries in `tableRegistry.ts`.
+        let recordsToApply: Record<string, unknown>[] = camelRecords
+        if (entry.dexieTable === 'shelves' && _userId) {
+          try {
+            const local = (await db.shelves.toArray()) as unknown as Shelf[]
+            const incoming = camelRecords as unknown as Shelf[]
+            const { toInsert, toSkip, mergedIdMap } = dedupDefaultShelves(incoming, local)
+            if (toSkip.length > 0 || Object.keys(mergedIdMap).length > 0) {
+              console.debug(
+                `[syncEngine] defaultShelfDedup: skipped ${toSkip.length} incoming defaults, mapped ${Object.keys(mergedIdMap).length} remote → local ids.`
+              )
+              const key = `shelfDedupMap:${_userId}`
+              const existing = await db.syncMetadata.get(key)
+              const prior = (existing?.value as Record<string, string> | undefined) ?? {}
+              await db.syncMetadata.put({
+                table: key,
+                value: { ...prior, ...mergedIdMap },
+              })
             }
-            return rec
+            recordsToApply = toInsert as unknown as Record<string, unknown>[]
+          } catch (err) {
+            // Fail-open on dedup: worst case is a duplicate shelf row, not data loss.
+            console.error('[syncEngine] defaultShelfDedup failed; applying unchanged:', err)
+          }
+        } else if (entry.dexieTable === 'opdsCatalogs') {
+          // E95-S05: re-nest `authUsername` → `auth: { username }` so Dexie rows
+          // keep the canonical `OpdsCatalog` shape. Supabase stores the field
+          // flat as `auth_username` (toCamelCase already produced `authUsername`
+          // at the top level); Dexie consumers expect the nested object.
+          recordsToApply = camelRecords.map(rec => {
+            const authUsername = rec['authUsername'] as string | null | undefined
+            const { authUsername: _drop, ...rest } = rec
+            void _drop
+            if (typeof authUsername === 'string' && authUsername.length > 0) {
+              return { ...rest, auth: { username: authUsername } }
+            }
+            return rest
+          })
+        } else if (entry.dexieTable === 'bookShelves' && _userId) {
+          try {
+            const key = `shelfDedupMap:${_userId}`
+            const meta = await db.syncMetadata.get(key)
+            const map = (meta?.value as Record<string, string> | undefined) ?? {}
+            if (Object.keys(map).length > 0) {
+              recordsToApply = camelRecords.map(rec => {
+                const shelfId = rec['shelfId'] as string | undefined
+                if (shelfId && map[shelfId]) {
+                  return { ...rec, shelfId: map[shelfId] }
+                }
+                return rec
+              })
+            }
+          } catch (err) {
+            console.error('[syncEngine] bookShelves remap failed; applying unchanged:', err)
+          }
+        }
+
+        // Apply each row with per-record error isolation.
+        let maxUpdatedAt: string | null = null
+
+        for (const row of rows) {
+          const rowUpdatedAt = row[cursorCol] as string | undefined
+          if (rowUpdatedAt && (maxUpdatedAt === null || rowUpdatedAt > maxUpdatedAt)) {
+            maxUpdatedAt = rowUpdatedAt
+          }
+        }
+
+        for (const record of recordsToApply) {
+          try {
+            await _applyRecord(entry, record)
+          } catch (err) {
+            console.error(`[syncEngine] Error applying record from "${entry.dexieTable}":`, err)
+            // Intentional: continue processing remaining records — one bad record
+            // should not abort the whole table.
+          }
+        }
+
+        // Advance the cursor to the max updated_at seen in this batch.
+        if (maxUpdatedAt !== null) {
+          await db.syncMetadata.put({
+            table: entry.dexieTable,
+            lastSyncTimestamp: maxUpdatedAt,
           })
         }
-      } catch (err) {
-        console.error('[syncEngine] bookShelves remap failed; applying unchanged:', err)
-      }
-    }
 
-    // Apply each row with per-record error isolation.
-    let maxUpdatedAt: string | null = null
+        // E94-S05: After row application and cursor advance, download binary assets
+        // for file-bearing tables. Non-fatal — wrapped in .catch() so a blob fetch
+        // failure never prevents the store refresh or the next table's download.
+        // Guard: _userId mirrors the upload-side guard at line ~955 in _doUpload.
+        if (STORAGE_DOWNLOAD_TABLES.has(entry.dexieTable) && _userId) {
+          await downloadStorageFilesForTable(entry.dexieTable, recordsToApply, _userId).catch(err =>
+            console.warn(`[syncEngine] Storage download failed for "${entry.dexieTable}":`, err)
+          )
+        }
 
-    for (const row of rows) {
-      const rowUpdatedAt = row[cursorCol] as string | undefined
-      if (rowUpdatedAt && (maxUpdatedAt === null || rowUpdatedAt > maxUpdatedAt)) {
-        maxUpdatedAt = rowUpdatedAt
-      }
-    }
+        // E95-S05: emit hydration telemetry for the server-connection tables so
+        // we can observe cross-device fan-out latency. Fires once per table per
+        // download cycle, only when rows actually landed (recordsToApply > 0).
+        if (
+          (entry.dexieTable === 'audiobookshelfServers' || entry.dexieTable === 'opdsCatalogs') &&
+          recordsToApply.length > 0
+        ) {
+          // Intentional: using console.info keeps this self-contained until the
+          // global analytics client lands. Matches src/lib/credentials/telemetry.ts.
 
-    for (const record of recordsToApply) {
-      try {
-        await _applyRecord(entry, record)
-      } catch (err) {
-        console.error(`[syncEngine] Error applying record from "${entry.dexieTable}":`, err)
-        // Intentional: continue processing remaining records — one bad record
-        // should not abort the whole table.
-      }
-    }
+          console.info('[telemetry] sync.server_config.hydrated', {
+            table: entry.dexieTable,
+            count: recordsToApply.length,
+          })
+        }
 
-    // Advance the cursor to the max updated_at seen in this batch.
-    if (maxUpdatedAt !== null) {
-      await db.syncMetadata.put({
-        table: entry.dexieTable,
-        lastSyncTimestamp: maxUpdatedAt,
-      })
-    }
-
-    // E94-S05: After row application and cursor advance, download binary assets
-    // for file-bearing tables. Non-fatal — wrapped in .catch() so a blob fetch
-    // failure never prevents the store refresh or the next table's download.
-    // Guard: _userId mirrors the upload-side guard at line ~955 in _doUpload.
-    if (STORAGE_DOWNLOAD_TABLES.has(entry.dexieTable) && _userId) {
-      await downloadStorageFilesForTable(entry.dexieTable, recordsToApply, _userId).catch(err =>
-        console.warn(`[syncEngine] Storage download failed for "${entry.dexieTable}":`, err)
-      )
-    }
-
-    // E95-S05: emit hydration telemetry for the server-connection tables so
-    // we can observe cross-device fan-out latency. Fires once per table per
-    // download cycle, only when rows actually landed (recordsToApply > 0).
-    if (
-      (entry.dexieTable === 'audiobookshelfServers' || entry.dexieTable === 'opdsCatalogs') &&
-      recordsToApply.length > 0
-    ) {
-      // Intentional: using console.info keeps this self-contained until the
-      // global analytics client lands. Matches src/lib/credentials/telemetry.ts.
-       
-      console.info('[telemetry] sync.server_config.hydrated', {
-        table: entry.dexieTable,
-        count: recordsToApply.length,
-      })
-    }
-
-      // Notify registered Zustand store (if any) to reload from Dexie.
-      const refreshFn = _storeRefreshRegistry.get(entry.dexieTable)
-      if (refreshFn) {
-        await refreshFn().catch(err =>
-          console.warn(`[syncEngine] Store refresh failed for "${entry.dexieTable}":`, err)
-        )
-      }
+        // Notify registered Zustand store (if any) to reload from Dexie.
+        const refreshFn = _storeRefreshRegistry.get(entry.dexieTable)
+        if (refreshFn) {
+          await refreshFn().catch(err =>
+            console.warn(`[syncEngine] Store refresh failed for "${entry.dexieTable}":`, err)
+          )
+        }
       } finally {
         sem.release()
       }

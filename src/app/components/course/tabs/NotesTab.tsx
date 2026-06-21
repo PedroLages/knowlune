@@ -118,55 +118,49 @@ export function NotesTab({
     [courseId, lessonId, existingNote, saveNote, addNote]
   )
 
-  const handleLinkNotes = useCallback(
-    async (suggestion: NoteLinkSuggestion) => {
-      await acceptNoteLinkSuggestion(suggestion, (source, target) => {
-        useNoteStore.setState(state => ({
-          notes: state.notes.map(n => {
-            if (n.id === source.id) return source
-            if (n.id === target.id) return target
-            return n
-          }),
-        }))
-      })
-      useNoteStore.setState(state => {
-        const data = state.pendingNoteLinkSuggestions
-        if (!data) return state
-        return {
-          pendingNoteLinkSuggestions: {
-            ...data,
-            suggestions: data.suggestions.filter(
-              s =>
-                s.sourceNoteId !== suggestion.sourceNoteId ||
-                s.targetNoteId !== suggestion.targetNoteId
-            ),
-          },
-        }
-      })
-    },
-    []
-  )
+  const handleLinkNotes = useCallback(async (suggestion: NoteLinkSuggestion) => {
+    await acceptNoteLinkSuggestion(suggestion, (source, target) => {
+      useNoteStore.setState(state => ({
+        notes: state.notes.map(n => {
+          if (n.id === source.id) return source
+          if (n.id === target.id) return target
+          return n
+        }),
+      }))
+    })
+    useNoteStore.setState(state => {
+      const data = state.pendingNoteLinkSuggestions
+      if (!data) return state
+      return {
+        pendingNoteLinkSuggestions: {
+          ...data,
+          suggestions: data.suggestions.filter(
+            s =>
+              s.sourceNoteId !== suggestion.sourceNoteId ||
+              s.targetNoteId !== suggestion.targetNoteId
+          ),
+        },
+      }
+    })
+  }, [])
 
-  const handleDismissSuggestion = useCallback(
-    (suggestion: NoteLinkSuggestion) => {
-      dismissNoteLinkPair(suggestion.sourceNoteId, suggestion.targetNoteId)
-      useNoteStore.setState(state => {
-        const data = state.pendingNoteLinkSuggestions
-        if (!data) return state
-        return {
-          pendingNoteLinkSuggestions: {
-            ...data,
-            suggestions: data.suggestions.filter(
-              s =>
-                s.sourceNoteId !== suggestion.sourceNoteId ||
-                s.targetNoteId !== suggestion.targetNoteId
-            ),
-          },
-        }
-      })
-    },
-    []
-  )
+  const handleDismissSuggestion = useCallback((suggestion: NoteLinkSuggestion) => {
+    dismissNoteLinkPair(suggestion.sourceNoteId, suggestion.targetNoteId)
+    useNoteStore.setState(state => {
+      const data = state.pendingNoteLinkSuggestions
+      if (!data) return state
+      return {
+        pendingNoteLinkSuggestions: {
+          ...data,
+          suggestions: data.suggestions.filter(
+            s =>
+              s.sourceNoteId !== suggestion.sourceNoteId ||
+              s.targetNoteId !== suggestion.targetNoteId
+          ),
+        },
+      }
+    })
+  }, [])
 
   if (isLoading) {
     if (fillHeight) {
@@ -200,8 +194,8 @@ export function NotesTab({
                 aria-label="View note link suggestions"
               >
                 <Link2 className="size-3" />
-                {pendingNoteLinkSuggestions.length}{' '}
-                suggestion{pendingNoteLinkSuggestions.length !== 1 ? 's' : ''}
+                {pendingNoteLinkSuggestions.length} suggestion
+                {pendingNoteLinkSuggestions.length !== 1 ? 's' : ''}
               </Badge>
             </PopoverTrigger>
             <PopoverContent align="start" className="w-80">

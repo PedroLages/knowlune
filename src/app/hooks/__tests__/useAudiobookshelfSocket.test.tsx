@@ -82,7 +82,9 @@ describe('useAudiobookshelfSocket — inbound progress', () => {
   it('updates via useBookStore only when ABS is ahead (no raw Dexie, no lastOpened write)', async () => {
     const dbUpdateSpy = vi.spyOn((await import('@/db/schema')).db.books, 'update')
     const posSpy = vi.spyOn(useBookStore.getState(), 'updateBookPosition').mockResolvedValue()
-    const openedSpy = vi.spyOn(useBookStore.getState(), 'updateBookLastOpenedAt').mockResolvedValue()
+    const openedSpy = vi
+      .spyOn(useBookStore.getState(), 'updateBookLastOpenedAt')
+      .mockResolvedValue()
 
     renderHook(() =>
       useAudiobookshelfSocket({

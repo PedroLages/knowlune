@@ -79,10 +79,18 @@ export function MissingCredentialsProvider({ children }: { children: ReactNode }
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   // Keep refs in sync with latest values
-  useEffect(() => { catalogsRef.current = catalogs }, [catalogs])
-  useEffect(() => { serversRef.current = servers }, [servers])
-  useEffect(() => { userRef.current = user }, [user])
-  useEffect(() => { lastSyncAtRef.current = lastSyncAt }, [lastSyncAt])
+  useEffect(() => {
+    catalogsRef.current = catalogs
+  }, [catalogs])
+  useEffect(() => {
+    serversRef.current = servers
+  }, [servers])
+  useEffect(() => {
+    userRef.current = user
+  }, [user])
+  useEffect(() => {
+    lastSyncAtRef.current = lastSyncAt
+  }, [lastSyncAt])
 
   /**
    * Core aggregation function. Reads current snapshot from refs so it can be

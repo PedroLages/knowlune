@@ -170,14 +170,11 @@ describe('BulkImportDialog — batch import flow (F-003)', () => {
 
     beforeEach(() => {
       mockShowDirectoryPicker.mockResolvedValue(mockDirHandle('ParentFolder'))
-      mockListSubDirectories.mockResolvedValue([
-        mockDirHandle('alpha'),
-        mockDirHandle('beta'),
-      ])
+      mockListSubDirectories.mockResolvedValue([mockDirHandle('alpha'), mockDirHandle('beta')])
       mockReadTrackManifest.mockResolvedValue(mockManifestResponse)
       // Scanning still runs before the review step — make every folder scan successfully
-      mockScanCourseFolderFromHandle.mockImplementation(
-        (handle: FileSystemDirectoryHandle) => makeScanSuccess(`id-${handle.name}`, handle.name)
+      mockScanCourseFolderFromHandle.mockImplementation((handle: FileSystemDirectoryHandle) =>
+        makeScanSuccess(`id-${handle.name}`, handle.name)
       )
       mockBatchImportTrackCourses.mockResolvedValue(successResult)
     })
@@ -292,13 +289,10 @@ describe('BulkImportDialog — batch import flow (F-003)', () => {
   describe('no manifest — per-course persist path', () => {
     beforeEach(() => {
       mockShowDirectoryPicker.mockResolvedValue(mockDirHandle('ParentFolder'))
-      mockListSubDirectories.mockResolvedValue([
-        mockDirHandle('alpha'),
-        mockDirHandle('beta'),
-      ])
+      mockListSubDirectories.mockResolvedValue([mockDirHandle('alpha'), mockDirHandle('beta')])
       mockReadTrackManifest.mockResolvedValue({ ok: false as const, error: 'No manifest' })
-      mockScanCourseFolderFromHandle.mockImplementation(
-        (handle: FileSystemDirectoryHandle) => makeScanSuccess(`id-${handle.name}`, handle.name)
+      mockScanCourseFolderFromHandle.mockImplementation((handle: FileSystemDirectoryHandle) =>
+        makeScanSuccess(`id-${handle.name}`, handle.name)
       )
       mockPersistScannedCourse.mockResolvedValue(undefined)
     })

@@ -19,7 +19,13 @@ vi.mock('@/lib/auth/supabase', () => ({
   },
 }))
 
-import { useAuthStore, mapSupabaseError, NETWORK_ERROR_MESSAGE, selectIsGuestMode, selectAuthState } from '@/stores/useAuthStore'
+import {
+  useAuthStore,
+  mapSupabaseError,
+  NETWORK_ERROR_MESSAGE,
+  selectIsGuestMode,
+  selectAuthState,
+} from '@/stores/useAuthStore'
 
 beforeEach(() => {
   vi.clearAllMocks()
@@ -309,7 +315,9 @@ describe('selectAuthState', () => {
   })
 
   it('returns "authenticated" when user is present', () => {
-    expect(selectAuthState({ initialized: true, user: { id: 'user-1' } as never })).toBe('authenticated')
+    expect(selectAuthState({ initialized: true, user: { id: 'user-1' } as never })).toBe(
+      'authenticated'
+    )
   })
 
   it('returns "guest" when initialized, no user, and guest flag set', () => {

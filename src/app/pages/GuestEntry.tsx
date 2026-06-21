@@ -44,9 +44,7 @@ export function GuestEntry() {
           <h1 className="font-display text-2xl font-bold text-foreground">
             Try Knowlune — no account needed
           </h1>
-          <p className="text-muted-foreground text-sm">
-            See what you can do before you commit.
-          </p>
+          <p className="text-muted-foreground text-sm">See what you can do before you commit.</p>
         </div>
 
         {/* Comparison table */}
@@ -54,20 +52,32 @@ export function GuestEntry() {
           <table className="w-full">
             <thead>
               <tr className="border-b bg-muted/40">
-                <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                <th
+                  scope="col"
+                  className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider"
+                >
                   Feature
                 </th>
-                <th scope="col" className="px-4 py-3 text-center text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                <th
+                  scope="col"
+                  className="px-4 py-3 text-center text-xs font-medium text-muted-foreground uppercase tracking-wider"
+                >
                   Guest
                 </th>
-                <th scope="col" className="px-4 py-3 text-center text-xs font-medium text-brand-soft-foreground uppercase tracking-wider bg-brand-soft/40">
+                <th
+                  scope="col"
+                  className="px-4 py-3 text-center text-xs font-medium text-brand-soft-foreground uppercase tracking-wider bg-brand-soft/40"
+                >
                   Account
                 </th>
               </tr>
             </thead>
             <tbody>
               {COMPARISON_ROWS.map(({ feature, guest, account }, i) => (
-                <tr key={feature} className={`border-b last:border-b-0 ${i % 2 === 1 ? 'bg-muted/20' : ''}`}>
+                <tr
+                  key={feature}
+                  className={`border-b last:border-b-0 ${i % 2 === 1 ? 'bg-muted/20' : ''}`}
+                >
                   <td className="px-4 py-3.5 text-sm font-medium text-foreground">{feature}</td>
                   <td className="px-4 py-3.5 text-center text-muted-foreground">
                     <Cell value={guest} />

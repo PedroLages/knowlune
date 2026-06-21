@@ -125,7 +125,11 @@ export function ThisWeekSection() {
         {/* Ring — 2/5 width */}
         <div className="lg:col-span-2 flex flex-col items-center justify-center">
           <div className="relative" role="img" aria-label={`${percentage}% of weekly goal`}>
-            <ChartContainer config={ringConfig} className="mx-auto h-[180px] w-full min-h-[1px]" aria-hidden="true">
+            <ChartContainer
+              config={ringConfig}
+              className="mx-auto h-[180px] w-full min-h-[1px]"
+              aria-hidden="true"
+            >
               <RadialBarChart
                 data={chartData}
                 startAngle={90}
@@ -145,7 +149,9 @@ export function ThisWeekSection() {
               </RadialBarChart>
             </ChartContainer>
             <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-              <span className={cn('text-3xl font-bold tabular-nums', getProgressTextClass(percentage))}>
+              <span
+                className={cn('text-3xl font-bold tabular-nums', getProgressTextClass(percentage))}
+              >
                 {percentage}%
               </span>
               <span className="text-xs text-muted-foreground mt-0.5">
@@ -161,7 +167,6 @@ export function ThisWeekSection() {
             {dailyData.map(day => (
               <div key={day.label} className="flex-1 flex flex-col items-center gap-1.5">
                 <div
-                   
                   className="w-full bg-brand rounded-t-[3px] motion-safe:transition-[height] motion-safe:duration-300 min-h-[2px]"
                   style={{ height: day.pct > 0 ? `${Math.max(day.pct, 4)}%` : '0px' }}
                   title={`${day.label}: ${day.minutes} min`}
@@ -177,7 +182,10 @@ export function ThisWeekSection() {
             ))}
           </div>
           <p className="text-sm text-muted-foreground text-center mt-3">
-            {activeDays} of 7 days{bestDay ? ` · Best: ${bestDay.label} ${bestDay.hours.toFixed(1)}h` : ' · No activity yet'}
+            {activeDays} of 7 days
+            {bestDay
+              ? ` · Best: ${bestDay.label} ${bestDay.hours.toFixed(1)}h`
+              : ' · No activity yet'}
           </p>
         </div>
       </div>

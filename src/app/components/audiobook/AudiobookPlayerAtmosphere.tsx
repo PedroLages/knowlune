@@ -12,10 +12,7 @@ interface AudiobookPlayerAtmosphereProps {
 
 export function AudiobookPlayerAtmosphere({ coverUrl }: AudiobookPlayerAtmosphereProps) {
   return (
-    <div
-      className="pointer-events-none fixed inset-0 z-0 overflow-hidden"
-      aria-hidden="true"
-    >
+    <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden" aria-hidden="true">
       <div className="absolute inset-0 bg-background" />
       {coverUrl && (
         <>
@@ -44,10 +41,7 @@ export function AudiobookPlayerAtmosphere({ coverUrl }: AudiobookPlayerAtmospher
           />
         </>
       )}
-      <div
-        className="absolute inset-0"
-        style={{ background: 'var(--player-atmosphere-scrim)' }}
-      />
+      <div className="absolute inset-0" style={{ background: 'var(--player-atmosphere-scrim)' }} />
       <div
         className="absolute inset-0"
         style={{ background: 'var(--player-atmosphere-vignette)' }}

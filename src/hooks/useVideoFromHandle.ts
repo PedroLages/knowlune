@@ -96,12 +96,14 @@ export function useVideoFromHandle(
         // shows "Video file not found" UI). Log details for diagnosis (Unraid remount,
         // permission expiry, file moved, etc.).
         const message = err instanceof Error ? err.message : String(err)
-        const name = err instanceof DOMException ? `DOMException(${err.name})` : (err instanceof Error ? err.name : 'Unknown')
+        const name =
+          err instanceof DOMException
+            ? `DOMException(${err.name})`
+            : err instanceof Error
+              ? err.name
+              : 'Unknown'
         const handleName = fileHandle.name ?? 'unknown'
-        console.warn(
-          `[useVideoFromHandle] ${name}: ${message} (handle: "${handleName}")`,
-          err
-        )
+        console.warn(`[useVideoFromHandle] ${name}: ${message} (handle: "${handleName}")`, err)
 
         // Distinguish true file-not-found from permission/mount issues at the OS level.
         // NotFoundError = file was moved/deleted. NotReadableError = file exists but the

@@ -14,7 +14,9 @@ describe('SpeedControl', () => {
       currentTime: 0,
       isPlaying: false,
     })
-    vi.spyOn(useBookStore.getState(), 'updateBookPlaybackSpeed').mockImplementation(async (_bookId: string, _speed: number) => {})
+    vi.spyOn(useBookStore.getState(), 'updateBookPlaybackSpeed').mockImplementation(
+      async (_bookId: string, _speed: number) => {}
+    )
   })
 
   afterEach(() => {

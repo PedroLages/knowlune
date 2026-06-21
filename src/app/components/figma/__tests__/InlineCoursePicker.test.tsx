@@ -219,11 +219,7 @@ describe('InlineCoursePicker', () => {
   describe('singleSelect mode', () => {
     it('should render Add buttons per course', () => {
       render(
-        <InlineCoursePicker
-          mode="singleSelect"
-          excludeCourseIds={new Set()}
-          onAdd={vi.fn()}
-        />
+        <InlineCoursePicker mode="singleSelect" excludeCourseIds={new Set()} onAdd={vi.fn()} />
       )
 
       const addButtons = screen.getAllByRole('button', { name: /Add/i })
@@ -232,13 +228,7 @@ describe('InlineCoursePicker', () => {
 
     it('should call onAdd with single course on click', () => {
       const onAdd = vi.fn()
-      render(
-        <InlineCoursePicker
-          mode="singleSelect"
-          excludeCourseIds={new Set()}
-          onAdd={onAdd}
-        />
-      )
+      render(<InlineCoursePicker mode="singleSelect" excludeCourseIds={new Set()} onAdd={onAdd} />)
 
       fireEvent.click(screen.getByRole('button', { name: 'Add React Fundamentals' }))
       expect(onAdd).toHaveBeenCalledWith([{ courseId: 'c1', courseType: 'imported' }])
@@ -248,11 +238,7 @@ describe('InlineCoursePicker', () => {
   describe('search', () => {
     it('should filter courses by name', () => {
       render(
-        <InlineCoursePicker
-          mode="singleSelect"
-          excludeCourseIds={new Set()}
-          onAdd={vi.fn()}
-        />
+        <InlineCoursePicker mode="singleSelect" excludeCourseIds={new Set()} onAdd={vi.fn()} />
       )
 
       fireEvent.change(screen.getByLabelText('Search courses'), {
@@ -265,11 +251,7 @@ describe('InlineCoursePicker', () => {
 
     it('should show no results message when search has no matches', () => {
       render(
-        <InlineCoursePicker
-          mode="singleSelect"
-          excludeCourseIds={new Set()}
-          onAdd={vi.fn()}
-        />
+        <InlineCoursePicker mode="singleSelect" excludeCourseIds={new Set()} onAdd={vi.fn()} />
       )
 
       fireEvent.change(screen.getByLabelText('Search courses'), {
@@ -312,7 +294,9 @@ describe('InlineCoursePicker', () => {
 
       expect(screen.getByTestId('recently-imported-section')).toBeInTheDocument()
       // c2 and c3 are unassigned, c1 is assigned
-      expect(within(screen.getByTestId('recently-imported-section')).queryByText('React Fundamentals')).not.toBeInTheDocument()
+      expect(
+        within(screen.getByTestId('recently-imported-section')).queryByText('React Fundamentals')
+      ).not.toBeInTheDocument()
     })
   })
 
@@ -352,11 +336,7 @@ describe('InlineCoursePicker', () => {
 
     it('should not show placeholder by default', () => {
       render(
-        <InlineCoursePicker
-          mode="singleSelect"
-          excludeCourseIds={new Set()}
-          onAdd={vi.fn()}
-        />
+        <InlineCoursePicker mode="singleSelect" excludeCourseIds={new Set()} onAdd={vi.fn()} />
       )
 
       expect(screen.queryByTestId('suggested-next-placeholder')).not.toBeInTheDocument()

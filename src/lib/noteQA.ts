@@ -40,7 +40,10 @@ export interface RetrievedNote {
   videoFilename?: string
 }
 
-export function getNoteDisplayName(retrieved: RetrievedNote): { name: string; isFallback: boolean } {
+export function getNoteDisplayName(retrieved: RetrievedNote): {
+  name: string
+  isFallback: boolean
+} {
   if (retrieved.videoFilename && retrieved.courseName) {
     return { name: `${retrieved.videoFilename} — ${retrieved.courseName}`, isFallback: false }
   }
@@ -67,7 +70,10 @@ export async function retrieveRelevantNotes(query: string): Promise<RetrievedNot
   try {
     const embeddingPromise = generateEmbeddings([cleanQuery])
     const timeoutPromise = new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new DOMException('Embedding generation timed out', 'TimeoutError')), 5_000),
+      setTimeout(
+        () => reject(new DOMException('Embedding generation timed out', 'TimeoutError')),
+        5_000
+      )
     )
     const embeddings = await Promise.race([embeddingPromise, timeoutPromise])
     if (embeddings.length === 0) {
@@ -164,10 +170,10 @@ async function enrichWithNames(retrievedNotes: RetrievedNote[]): Promise<Retriev
         courseName: course?.name,
         videoFilename: video?.filename,
       }
-    }),
+    })
   )
   return results.map((result, i) =>
-    result.status === 'fulfilled' ? result.value : retrievedNotes[i],
+    result.status === 'fulfilled' ? result.value : retrievedNotes[i]
   )
 }
 
@@ -263,13 +269,11 @@ export function extractCitations(answerText: string, retrievedNotes: RetrievedNo
     const { note } = retrieved
     // Match raw courseId/videoId patterns (backward compatible)
     const courseVideoPattern = `${note.courseId}/${note.videoId}`
-    const idMatch =
-      answerText.includes(courseVideoPattern) || answerText.includes(note.courseId)
+    const idMatch = answerText.includes(courseVideoPattern) || answerText.includes(note.courseId)
 
     // Match structured human-readable display name (only when both parts available)
     const { name: displayName, isFallback } = getNoteDisplayName(retrieved)
-    const displayMatch =
-      !isFallback && answerText.includes(displayName)
+    const displayMatch = !isFallback && answerText.includes(displayName)
 
     if (idMatch || displayMatch) {
       citedNoteIds.push(note.id)

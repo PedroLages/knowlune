@@ -172,11 +172,7 @@ export function InlineEditableField({
         rows={3}
         aria-label={ariaLabel || 'Edit field'}
         placeholder={placeholder}
-        className={cn(
-          commonClasses,
-          'resize-none',
-          'focus-visible:outline-none'
-        )}
+        className={cn(commonClasses, 'resize-none', 'focus-visible:outline-none')}
       />
     )
   }
@@ -193,11 +189,7 @@ export function InlineEditableField({
       maxLength={maxLength}
       aria-label={ariaLabel || 'Edit field'}
       placeholder={placeholder}
-      className={cn(
-        commonClasses,
-        'h-9',
-        'focus-visible:outline-none'
-      )}
+      className={cn(commonClasses, 'h-9', 'focus-visible:outline-none')}
     />
   )
 }

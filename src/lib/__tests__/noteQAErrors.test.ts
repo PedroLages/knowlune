@@ -28,7 +28,7 @@ describe('formatNoteQAError', () => {
 
   it('formats provider re-consent', () => {
     const msg = formatNoteQAError(
-      new ProviderReconsentError(CONSENT_PURPOSES.AI_TUTOR, 'anthropic'),
+      new ProviderReconsentError(CONSENT_PURPOSES.AI_TUTOR, 'anthropic')
     )
     expect(msg).toContain('anthropic')
     expect(msg).toMatch(/dialog/i)

@@ -132,7 +132,7 @@ export function buildIssueBody(fields: FeedbackFormFields, ctx: FeedbackContext)
  * Centralises title logic used by both buildIssuePayload and useFeedbackSubmit (mailto subject).
  */
 export function getIssueTitle(fields: FeedbackFormFields): string {
-  return fields.mode === 'bug' ? fields.title : (fields.title?.trim() || 'User feedback')
+  return fields.mode === 'bug' ? fields.title : fields.title?.trim() || 'User feedback'
 }
 
 /**
@@ -143,8 +143,7 @@ export function buildIssuePayload(
   ctx: FeedbackContext
 ): { title: string; body: string; labels: string[] } {
   const title = getIssueTitle(fields)
-  const labels =
-    fields.mode === 'bug' ? ['bug', 'beta-feedback'] : ['enhancement', 'beta-feedback']
+  const labels = fields.mode === 'bug' ? ['bug', 'beta-feedback'] : ['enhancement', 'beta-feedback']
 
   return {
     title,

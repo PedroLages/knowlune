@@ -31,7 +31,10 @@ interface DownloadStoreState {
 
   hydrate: (records: DownloadRecord[]) => void
   setHydrated: (val: boolean) => void
-  setDownloadState: (bookId: string, patch: Partial<PendingDownloadState> & { status: DownloadStatus }) => void
+  setDownloadState: (
+    bookId: string,
+    patch: Partial<PendingDownloadState> & { status: DownloadStatus }
+  ) => void
   removeDownloadState: (bookId: string) => void
   hasActiveDownload: () => boolean
   getPendingDownload: () => PendingDownloadState | null
@@ -63,7 +66,10 @@ export const useDownloadStore = create<DownloadStoreState>((set, get) => ({
 
   setHydrated: (val: boolean) => set({ hydrated: val }),
 
-  setDownloadState: (bookId: string, patch: Partial<PendingDownloadState> & { status: DownloadStatus }) => {
+  setDownloadState: (
+    bookId: string,
+    patch: Partial<PendingDownloadState> & { status: DownloadStatus }
+  ) => {
     const existing = get().downloads.get(bookId)
     const now = new Date().toISOString()
     const entry: PendingDownloadState = {

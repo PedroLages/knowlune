@@ -79,8 +79,7 @@ export function AudiobookshelfServerForm({
   const trimmedUrl = url.trim()
   const httpsRequired = trimmedUrl !== '' && isMixedContentBlocked(trimmedUrl)
   const showHttpWarning = trimmedUrl !== '' && isInsecureUrl(trimmedUrl) && !httpsRequired
-  const isCorsError =
-    testResult && !testResult.ok && testResult.message.includes('Allowed Origins')
+  const isCorsError = testResult && !testResult.ok && testResult.message.includes('Allowed Origins')
   const testPassed = testResult?.ok === true
 
   return (
@@ -222,8 +221,8 @@ export function AudiobookshelfServerForm({
         <details className="text-xs text-muted-foreground mt-0" data-testid="abs-cors-troubleshoot">
           <summary className="cursor-pointer hover:text-foreground">Troubleshooting</summary>
           <p className="mt-1">
-            In your Audiobookshelf server, go to <strong>Settings → Security → Allowed Origins</strong>{' '}
-            and add{' '}
+            In your Audiobookshelf server, go to{' '}
+            <strong>Settings → Security → Allowed Origins</strong> and add{' '}
             <code className="bg-muted px-1 py-0.5 rounded">{window.location.origin}</code>. Requires
             ABS v2.26 or newer.
           </p>

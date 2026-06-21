@@ -86,11 +86,7 @@ describe('ProviderReconsentModal', () => {
 
   it('shows notice-update section when noticeUpdatePending=true', () => {
     render(
-      <ProviderReconsentModal
-        {...defaultProps}
-        noticeUpdatePending
-        noticeVersion="2026-04-23.2"
-      />,
+      <ProviderReconsentModal {...defaultProps} noticeUpdatePending noticeVersion="2026-04-23.2" />
     )
     expect(screen.getByText(/Privacy notice updated/i)).toBeInTheDocument()
     expect(screen.getByText(/2026-04-23.2/)).toBeInTheDocument()

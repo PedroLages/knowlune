@@ -11,10 +11,7 @@
 import type { LearningPathEntry } from '@/data/types'
 import type { UserPreferences } from '@/hooks/useUserPreferences'
 import { formatPreferencesForPrompt } from '@/hooks/useUserPreferences'
-import {
-  suggestPathOrder,
-  type OrderSuggestionResult,
-} from './suggestOrder'
+import { suggestPathOrder, type OrderSuggestionResult } from './suggestOrder'
 import { getAIConfiguration, getDecryptedApiKey } from '@/lib/aiConfiguration'
 import { apiUrl } from '@/lib/apiBaseUrl'
 

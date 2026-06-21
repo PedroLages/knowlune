@@ -20,8 +20,6 @@ describe('PdfViewer smoke', () => {
       expect(screen.getByText(/unable to preview this document inline/i)).toBeInTheDocument()
     })
 
-    expect(
-      screen.getByRole('button', { name: /open in new tab/i })
-    ).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /open in new tab/i })).toBeInTheDocument()
   })
 })

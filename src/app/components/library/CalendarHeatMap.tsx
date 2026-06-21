@@ -74,7 +74,10 @@ export const CalendarHeatMap = memo(function CalendarHeatMap({
         <span className="flex shrink-0 items-center gap-0.5 sm:gap-1">
           Less
           {[0, 1, 2, 3, 4].map(level => (
-            <div key={level} className={cn('size-2.5 shrink-0 rounded-[2px]', LEVEL_CLASSES[level])} />
+            <div
+              key={level}
+              className={cn('size-2.5 shrink-0 rounded-[2px]', LEVEL_CLASSES[level])}
+            />
           ))}
           More
         </span>

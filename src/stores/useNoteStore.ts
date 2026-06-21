@@ -10,9 +10,7 @@ import {
 } from '@/lib/unifiedSearch'
 import { embeddingPipeline } from '@/ai/embeddingPipeline'
 import { supportsWorkers } from '@/ai/lib/workerCapabilities'
-import {
-  findAndReturnNoteLinkSuggestions,
-} from '@/ai/knowledgeGaps/noteLinkSuggestions'
+import { findAndReturnNoteLinkSuggestions } from '@/ai/knowledgeGaps/noteLinkSuggestions'
 import type { NoteLinkSuggestion } from '@/ai/knowledgeGaps/types'
 import { syncableWrite, type SyncableRecord } from '@/lib/sync/syncableWrite'
 
@@ -20,7 +18,11 @@ interface NoteState {
   notes: Note[]
   isLoading: boolean
   error: string | null
-  pendingNoteLinkSuggestions: { courseId: string; videoId: string; suggestions: NoteLinkSuggestion[] } | null
+  pendingNoteLinkSuggestions: {
+    courseId: string
+    videoId: string
+    suggestions: NoteLinkSuggestion[]
+  } | null
   suggestionGeneration: number
 
   loadNotes: () => Promise<void>

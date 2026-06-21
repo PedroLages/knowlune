@@ -32,7 +32,7 @@ vi.mock('@/lib/compliance/noticeVersion', () => ({
 
 vi.mock('@/lib/compliance/consentService', async () => {
   const actual = await vi.importActual<typeof import('@/lib/compliance/consentService')>(
-    '@/lib/compliance/consentService',
+    '@/lib/compliance/consentService'
   )
   return {
     ...actual,
@@ -142,7 +142,9 @@ describe('useChatQA', () => {
     })
 
     it('checks AI consent before retrieving note context', async () => {
-      vi.mocked(assertAIFeatureConsent).mockRejectedValue(new ConsentError(CONSENT_PURPOSES.AI_TUTOR))
+      vi.mocked(assertAIFeatureConsent).mockRejectedValue(
+        new ConsentError(CONSENT_PURPOSES.AI_TUTOR)
+      )
 
       const { result } = renderHook(() => useChatQA())
 
@@ -157,9 +159,7 @@ describe('useChatQA', () => {
 
     it('opens provider re-consent on ProviderReconsentError, writes provider_id on Accept, and retries', async () => {
       vi.mocked(assertAIFeatureConsent)
-        .mockRejectedValueOnce(
-          new ProviderReconsentError(CONSENT_PURPOSES.AI_TUTOR, 'gemini'),
-        )
+        .mockRejectedValueOnce(new ProviderReconsentError(CONSENT_PURPOSES.AI_TUTOR, 'gemini'))
         .mockResolvedValue({
           provider: 'gemini',
           model: 'gemini-2.0-flash',

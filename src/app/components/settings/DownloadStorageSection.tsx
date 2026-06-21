@@ -35,19 +35,18 @@ export function DownloadStorageSection() {
 
   const load = useCallback(async () => {
     try {
-      const recs = await db.downloads
-        .where('status')
-        .equals('downloaded')
-        .toArray()
+      const recs = await db.downloads.where('status').equals('downloaded').toArray()
       const bookIds = recs.map(r => r.bookId)
       const books = await db.books.bulkGet(bookIds)
       const bookMap = new Map(books.filter(Boolean).map(b => [b!.id, b!.title]))
 
-      setEntries(recs.map(r => ({
-        bookId: r.bookId,
-        title: bookMap.get(r.bookId) ?? 'Unknown book',
-        totalSize: r.totalSize || 0,
-      })))
+      setEntries(
+        recs.map(r => ({
+          bookId: r.bookId,
+          title: bookMap.get(r.bookId) ?? 'Unknown book',
+          totalSize: r.totalSize || 0,
+        }))
+      )
     } catch {
       // silent-catch-ok — section is best-effort display
     } finally {
@@ -92,7 +91,10 @@ export function DownloadStorageSection() {
       <CardContent>
         <div className="divide-y divide-border">
           {entries.map(entry => (
-            <div key={entry.bookId} className="flex items-center justify-between py-2 first:pt-0 last:pb-0">
+            <div
+              key={entry.bookId}
+              className="flex items-center justify-between py-2 first:pt-0 last:pb-0"
+            >
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-medium truncate">{entry.title}</p>
                 <p className="text-xs text-muted-foreground">

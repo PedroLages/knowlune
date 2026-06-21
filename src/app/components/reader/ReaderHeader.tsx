@@ -132,16 +132,10 @@ export function ReaderHeader({
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="z-[130] w-48">
-          <DropdownMenuItem
-            onClick={() => onTocOpen?.()}
-            data-testid="reader-menu-toc"
-          >
+          <DropdownMenuItem onClick={() => onTocOpen?.()} data-testid="reader-menu-toc">
             Table of Contents
           </DropdownMenuItem>
-          <DropdownMenuItem
-            onClick={() => onSettingsOpen?.()}
-            data-testid="reader-menu-settings"
-          >
+          <DropdownMenuItem onClick={() => onSettingsOpen?.()} data-testid="reader-menu-settings">
             Reading Settings
           </DropdownMenuItem>
           {onReadAloud && (

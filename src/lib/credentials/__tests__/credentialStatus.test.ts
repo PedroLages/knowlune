@@ -82,7 +82,9 @@ describe('aggregateCredentialStatus — happy paths', () => {
     const result = await aggregateCredentialStatus({
       catalogs: [makeOpds({ auth: { username: 'user' } })],
       servers: [makeAbs()],
-      aiConfig: makeAiConfig({ providerKeys: { openai: { encrypted: 'enc', salt: 's', iv: 'i' } as any } }),
+      aiConfig: makeAiConfig({
+        providerKeys: { openai: { encrypted: 'enc', salt: 's', iv: 'i' } as any },
+      }),
     })
 
     expect(result.missing).toHaveLength(0)
@@ -98,7 +100,9 @@ describe('aggregateCredentialStatus — happy paths', () => {
     const result = await aggregateCredentialStatus({
       catalogs: [],
       servers: [],
-      aiConfig: makeAiConfig({ providerKeys: { openai: { encrypted: 'enc', salt: 's', iv: 'i' } as any } }),
+      aiConfig: makeAiConfig({
+        providerKeys: { openai: { encrypted: 'enc', salt: 's', iv: 'i' } as any },
+      }),
     })
 
     expect(result.statusByKey['ai-provider:openai']).toBe('vault')

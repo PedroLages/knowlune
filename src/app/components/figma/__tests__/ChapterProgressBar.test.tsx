@@ -10,8 +10,24 @@ import { ChapterProgressBar } from '../ChapterProgressBar'
 // Renders minimal markup so we can assert its presence and props indirectly.
 
 vi.mock('../ScrubPreview', () => ({
-  ScrubPreview: ({ time, x, chapterTitle, visible }: { time: number; x: number; chapterTitle?: string; visible?: boolean }) => (
-    <div data-testid="scrub-preview" data-time={time} data-x={x} data-chapter={chapterTitle ?? ''} data-visible={visible === false ? 'false' : 'true'} />
+  ScrubPreview: ({
+    time,
+    x,
+    chapterTitle,
+    visible,
+  }: {
+    time: number
+    x: number
+    chapterTitle?: string
+    visible?: boolean
+  }) => (
+    <div
+      data-testid="scrub-preview"
+      data-time={time}
+      data-x={x}
+      data-chapter={chapterTitle ?? ''}
+      data-visible={visible === false ? 'false' : 'true'}
+    />
   ),
 }))
 
@@ -24,9 +40,7 @@ const defaultProps = {
   onSeek: vi.fn(),
 }
 
-function renderBar(
-  overrides: Partial<React.ComponentProps<typeof ChapterProgressBar>> = {}
-) {
+function renderBar(overrides: Partial<React.ComponentProps<typeof ChapterProgressBar>> = {}) {
   return render(<ChapterProgressBar {...defaultProps} {...overrides} />)
 }
 
@@ -36,7 +50,16 @@ function stubTrackRect(width = 400, left = 0): () => void {
   Element.prototype.getBoundingClientRect = vi.fn(function (this: Element) {
     // Only stub the track wrapper — check for the progress-bar class pattern
     if (this.classList.contains('group\\/progress') || this.className.includes('group/progress')) {
-      return { left, right: left + width, width, top: 0, bottom: 20, height: 20, x: left, y: 0 } as DOMRect
+      return {
+        left,
+        right: left + width,
+        width,
+        top: 0,
+        bottom: 20,
+        height: 20,
+        x: left,
+        y: 0,
+      } as DOMRect
     }
     return orig.call(this)
   })

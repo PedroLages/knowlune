@@ -389,9 +389,7 @@ export const useAudiobookshelfStore = create<AudiobookshelfStoreState>((set, get
       // Dexie failure must not break the in-memory render.
       try {
         const stamped = allSeries.map(s => ({ ...s, serverId, libraryId }))
-        await db.absSeries.bulkPut(
-          stamped as unknown as import('@/data/types').AbsSeries[]
-        )
+        await db.absSeries.bulkPut(stamped as unknown as import('@/data/types').AbsSeries[])
       } catch (err) {
         // silent-catch-ok — Dexie persistence is an optimization; network is authoritative.
         console.warn('[AudiobookshelfStore] Failed to persist series to Dexie:', err)

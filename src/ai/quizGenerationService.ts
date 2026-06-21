@@ -135,10 +135,18 @@ export async function generateQuizForLesson(
     client = await getLLMClient('quizGeneration', { resolved })
   } catch (error) {
     if (error instanceof ConsentError) {
-      return { quiz: null, cached: false, error: 'Quiz generation unavailable. AI features must be enabled in Settings.' }
+      return {
+        quiz: null,
+        cached: false,
+        error: 'Quiz generation unavailable. AI features must be enabled in Settings.',
+      }
     }
     if (error instanceof ProviderReconsentError) {
-      return { quiz: null, cached: false, error: 'Provider consent required. Please review your AI provider settings.' }
+      return {
+        quiz: null,
+        cached: false,
+        error: 'Provider consent required. Please review your AI provider settings.',
+      }
     }
     if (error instanceof LLMError && error.code === 'AUTH_ERROR') {
       return { quiz: null, cached: false, error: 'AI provider not configured for quiz generation.' }

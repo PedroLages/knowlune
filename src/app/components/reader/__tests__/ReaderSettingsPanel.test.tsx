@@ -69,9 +69,7 @@ describe('ReaderSettingsPanel', () => {
     render(<ReaderSettingsPanel open onClose={vi.fn()} />)
 
     await user.click(screen.getByTestId('font-family-select'))
-    await user.click(
-      screen.getByRole('option', { name: /Atkinson Hyperlegible/i })
-    )
+    await user.click(screen.getByRole('option', { name: /Atkinson Hyperlegible/i }))
 
     expect(useReaderStore.getState().fontFamily).toBe('atkinson')
 

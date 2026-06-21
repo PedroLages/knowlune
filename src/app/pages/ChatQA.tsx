@@ -29,13 +29,8 @@ import { AIConsentDeclinedBanner } from '@/app/components/compliance/AIConsentDe
  * - Citation navigation to notes
  */
 export function ChatQA() {
-  const {
-    messages,
-    isGenerating,
-    sendMessage,
-    providerReconsentModalProps,
-    declinedProvider,
-  } = useChatQA()
+  const { messages, isGenerating, sendMessage, providerReconsentModalProps, declinedProvider } =
+    useChatQA()
   const navigate = useNavigate()
   const noteQAAvailability = useNoteQAAvailability()
   const aiChecking = noteQAAvailability.status === 'checking'
@@ -138,10 +133,10 @@ export function ChatQA() {
           aiChecking
             ? 'Checking AI settings...'
             : !aiAvailable
-            ? 'Configure Q&A in Settings to ask questions'
-            : !hasNotes
-              ? 'Create notes first to use Q&A'
-              : 'Ask a question about your notes...'
+              ? 'Configure Q&A in Settings to ask questions'
+              : !hasNotes
+                ? 'Create notes first to use Q&A'
+                : 'Ask a question about your notes...'
         }
       />
 

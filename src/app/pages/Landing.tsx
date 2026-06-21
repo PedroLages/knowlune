@@ -1,6 +1,15 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router'
-import { Mail, Link2, BookOpen, Brain, Zap, ChevronDown, ChevronUp, AlertCircle } from 'lucide-react'
+import {
+  Mail,
+  Link2,
+  BookOpen,
+  Brain,
+  Zap,
+  ChevronDown,
+  ChevronUp,
+  AlertCircle,
+} from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/app/components/ui/tabs'
 import { Button } from '@/app/components/ui/button'
@@ -44,14 +53,19 @@ function AuthCard({ idPrefix = 'auth' }: { idPrefix?: string }) {
     if (err) {
       setAuthError(err)
       url.searchParams.delete('authError')
-      window.history.replaceState(null, '', url.pathname + (url.search ? url.search : '') + url.hash)
+      window.history.replaceState(
+        null,
+        '',
+        url.pathname + (url.search ? url.search : '') + url.hash
+      )
     }
   }, [])
 
   function handleSuccess() {
     const returnTo = sessionStorage.getItem(RETURN_TO_KEY)
     sessionStorage.removeItem(RETURN_TO_KEY)
-    const dest = returnTo && returnTo.startsWith('/') && !returnTo.startsWith('//') ? returnTo : '/courses'
+    const dest =
+      returnTo && returnTo.startsWith('/') && !returnTo.startsWith('//') ? returnTo : '/courses'
     navigate(dest, { replace: true })
   }
 
@@ -118,7 +132,12 @@ function AuthCard({ idPrefix = 'auth' }: { idPrefix?: string }) {
           </TabsList>
 
           <TabsContent value="email" className="mt-4">
-            <EmailPasswordForm key={resetKey} mode={mode} onSuccess={handleSuccess} idPrefix={idPrefix} />
+            <EmailPasswordForm
+              key={resetKey}
+              mode={mode}
+              onSuccess={handleSuccess}
+              idPrefix={idPrefix}
+            />
           </TabsContent>
           <TabsContent value="magic-link" className="mt-4">
             <MagicLinkForm resetKey={resetKey} />
@@ -166,7 +185,9 @@ function ValueProp({ showGuestCta }: { showGuestCta?: boolean }) {
     <div className="flex flex-col gap-8">
       <div className="space-y-2">
         <h1 className="font-display text-3xl font-bold tracking-tight text-foreground lg:text-4xl">
-          Learn smarter,<br />remember more.
+          Learn smarter,
+          <br />
+          remember more.
         </h1>
         <p className="text-base text-muted-foreground">
           Import, organise, and review everything you learn — courses, books, and videos.
@@ -215,7 +236,11 @@ function MobileValueAccordion() {
         className="flex w-full items-center justify-between px-4 py-3 text-sm font-medium text-foreground bg-muted/50 hover:bg-muted transition-colors min-h-[44px]"
       >
         Why Knowlune?
-        {open ? <ChevronUp className="size-4 text-muted-foreground" aria-hidden="true" /> : <ChevronDown className="size-4 text-muted-foreground" aria-hidden="true" />}
+        {open ? (
+          <ChevronUp className="size-4 text-muted-foreground" aria-hidden="true" />
+        ) : (
+          <ChevronDown className="size-4 text-muted-foreground" aria-hidden="true" />
+        )}
       </button>
       {open && (
         <div id="mobile-value-panel" className="px-4 pb-4 pt-2">
@@ -258,7 +283,9 @@ export function Landing() {
               <Link to="/" aria-label="Knowlune home">
                 <KnowluneLogo />
               </Link>
-              <p className="mt-1 text-xs tracking-wide text-muted-foreground">Illuminate Your Path</p>
+              <p className="mt-1 text-xs tracking-wide text-muted-foreground">
+                Illuminate Your Path
+              </p>
             </div>
             <ValueProp showGuestCta />
           </div>

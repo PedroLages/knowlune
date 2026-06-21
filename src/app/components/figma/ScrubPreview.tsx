@@ -78,10 +78,7 @@ export function ScrubPreview({
     if (!storyboard) return undefined
     const frameIndex = Math.max(
       0,
-      Math.min(
-        Math.floor(time / storyboard.interval),
-        storyboard.frameCount - 1
-      )
+      Math.min(Math.floor(time / storyboard.interval), storyboard.frameCount - 1)
     )
     const col = frameIndex % storyboard.columns
     const row = Math.floor(frameIndex / storyboard.columns)
@@ -139,12 +136,7 @@ export function ScrubPreview({
             /* Live extraction — canvas always mounted (breaks the deadlock).
                Placeholder overlays the canvas until the first frame is painted. */
             <div className="relative w-[160px] h-[90px] bg-black">
-              <canvas
-                ref={canvasRef}
-                className="block w-full h-full"
-                width={160}
-                height={90}
-              />
+              <canvas ref={canvasRef} className="block w-full h-full" width={160} height={90} />
               {!thumbnailAvailable && (
                 <div className="absolute inset-0 bg-muted flex items-center justify-center">
                   <span className="text-xs text-muted-foreground">Preview</span>

@@ -54,7 +54,10 @@ export interface ExportSuccessResponse {
 }
 
 /** Union of all possible callExportDataFunction outcomes. */
-export type ExportDataResponse = ExportSuccessResponse | ExportTooLargeResponse | ExportQueuedResponse
+export type ExportDataResponse =
+  | ExportSuccessResponse
+  | ExportTooLargeResponse
+  | ExportQueuedResponse
 
 // ---------------------------------------------------------------------------
 // Helper
@@ -89,9 +92,7 @@ function isQueued(body: unknown): body is ExportQueuedResponse {
  *
  * @param accessToken - The current Supabase session `access_token`
  */
-export async function callExportDataFunction(
-  accessToken: string
-): Promise<ExportDataResponse> {
+export async function callExportDataFunction(accessToken: string): Promise<ExportDataResponse> {
   if (!supabase) {
     throw new Error('Supabase not configured — cannot call export-data function')
   }

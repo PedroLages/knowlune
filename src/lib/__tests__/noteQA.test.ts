@@ -75,7 +75,12 @@ vi.mock('@/lib/aiConfiguration', () => ({
 }))
 
 // Import after mocks
-import { retrieveRelevantNotes, extractCitations, generateQAAnswer, getNoteDisplayName } from '../noteQA'
+import {
+  retrieveRelevantNotes,
+  extractCitations,
+  generateQAAnswer,
+  getNoteDisplayName,
+} from '../noteQA'
 import type { RetrievedNote } from '../noteQA'
 
 // ---------------------------------------------------------------------------
@@ -95,7 +100,11 @@ function makeNote(overrides: Partial<Note> = {}): Note {
   } as Note
 }
 
-function makeRetrievedNote(overrides: Partial<Note> = {}, similarity = 0.9, names?: { courseName?: string; videoFilename?: string }): RetrievedNote {
+function makeRetrievedNote(
+  overrides: Partial<Note> = {},
+  similarity = 0.9,
+  names?: { courseName?: string; videoFilename?: string }
+): RetrievedNote {
   return { note: makeNote(overrides), similarity, ...names }
 }
 
@@ -299,7 +308,11 @@ describe('noteQA', () => {
       mockGenerateEmbeddings.mockRejectedValue(new Error('Unable to load AI model'))
       mockNotesToArray.mockResolvedValue([
         makeNote({ id: 'note-1', content: 'General content.', tags: ['typescript', 'generics'] }),
-        makeNote({ id: 'note-2', content: 'General content.', courseId: 'typescript-fundamentals' }),
+        makeNote({
+          id: 'note-2',
+          content: 'General content.',
+          courseId: 'typescript-fundamentals',
+        }),
         makeNote({ id: 'note-3', content: 'Unrelated content.', tags: ['python'] }),
       ])
 
@@ -575,20 +588,29 @@ describe('noteQA', () => {
 
   describe('extractCitations with human-readable names', () => {
     it('matches on structured display name when names are resolved', () => {
-      const retrieved = makeRetrievedNote({ id: 'note-1', courseId: 'uuid-1', videoId: 'uuid-2' }, 0.9, {
-        courseName: 'React Basics',
-        videoFilename: 'hooks-overview.mp4',
-      })
-      const answer = 'According to your note from hooks-overview.mp4 — React Basics, hooks are functions.'
+      const retrieved = makeRetrievedNote(
+        { id: 'note-1', courseId: 'uuid-1', videoId: 'uuid-2' },
+        0.9,
+        {
+          courseName: 'React Basics',
+          videoFilename: 'hooks-overview.mp4',
+        }
+      )
+      const answer =
+        'According to your note from hooks-overview.mp4 — React Basics, hooks are functions.'
       const citations = extractCitations(answer, [retrieved])
       expect(citations).toEqual(['note-1'])
     })
 
     it('does NOT match courseName or videoFilename independently (prevents false positives)', () => {
-      const retrieved = makeRetrievedNote({ id: 'note-1', courseId: 'uuid-1', videoId: 'uuid-2' }, 0.9, {
-        courseName: 'Introduction',
-        videoFilename: 'overview.mp4',
-      })
+      const retrieved = makeRetrievedNote(
+        { id: 'note-1', courseId: 'uuid-1', videoId: 'uuid-2' },
+        0.9,
+        {
+          courseName: 'Introduction',
+          videoFilename: 'overview.mp4',
+        }
+      )
       // "introduction" and "overview" are common words — should not trigger a match alone
       const answer = 'This is an introduction to the course overview concepts.'
       const citations = extractCitations(answer, [retrieved])
@@ -596,10 +618,14 @@ describe('noteQA', () => {
     })
 
     it('still matches raw courseId/videoId pattern for backward compatibility', () => {
-      const retrieved = makeRetrievedNote({ id: 'note-1', courseId: 'uuid-1', videoId: 'uuid-2' }, 0.9, {
-        courseName: 'React Basics',
-        videoFilename: 'hooks-overview.mp4',
-      })
+      const retrieved = makeRetrievedNote(
+        { id: 'note-1', courseId: 'uuid-1', videoId: 'uuid-2' },
+        0.9,
+        {
+          courseName: 'React Basics',
+          videoFilename: 'hooks-overview.mp4',
+        }
+      )
       const answer = 'From uuid-1/uuid-2 we learn about hooks.'
       const citations = extractCitations(answer, [retrieved])
       expect(citations).toEqual(['note-1'])

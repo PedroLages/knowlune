@@ -22,9 +22,7 @@ export function PathMilestoneTimeline({ progressPercent }: PathMilestoneTimeline
           {CHALLENGE_MILESTONES.map((threshold, index) => {
             const achieved = progressPercent >= threshold
             const isCurrent =
-              !achieved &&
-              (index === 0 ||
-                progressPercent >= CHALLENGE_MILESTONES[index - 1])
+              !achieved && (index === 0 || progressPercent >= CHALLENGE_MILESTONES[index - 1])
             const config = getPathMilestoneTierConfig(threshold)
             const Icon = config.icon
 

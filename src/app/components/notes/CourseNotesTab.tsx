@@ -3,23 +3,11 @@ import { toast } from 'sonner'
 import { FileText, ArrowUpDown, Download, Loader2 } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
 import { Skeleton } from '@/app/components/ui/skeleton'
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/app/components/ui/popover'
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '@/app/components/ui/tooltip'
+import { Popover, PopoverContent, PopoverTrigger } from '@/app/components/ui/popover'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/app/components/ui/tooltip'
 import { NoteCard } from './NoteCard'
 import { useNoteStore } from '@/stores/useNoteStore'
-import {
-  exportCombinedMarkdown,
-  exportNotesZip,
-  type ModuleLessonMapEntry,
-} from '@/lib/noteExport'
+import { exportCombinedMarkdown, exportNotesZip, type ModuleLessonMapEntry } from '@/lib/noteExport'
 import { downloadBlob } from '@/lib/fileDownload'
 import { sanitizeFilename } from '@/lib/noteExport'
 import type { Module, Note } from '@/data/types'
@@ -95,10 +83,7 @@ export function CourseNotesTab({ courseId, courseName, modules }: CourseNotesTab
             courseSlug,
             moduleLessonMap
           )
-          downloadBlob(
-            new Blob([content], { type: 'text/markdown;charset=utf-8' }),
-            filename
-          )
+          downloadBlob(new Blob([content], { type: 'text/markdown;charset=utf-8' }), filename)
           toast.success(`Exported ${exportableNotes.length} notes as Combined Markdown`)
         } else {
           const { blob, filename } = await exportNotesZip(
@@ -290,7 +275,9 @@ export function CourseNotesTab({ courseId, courseName, modules }: CourseNotesTab
                   data-testid="export-zip"
                 >
                   <div className="text-left">
-                    <p className="text-sm font-medium">ZIP Archive (.zip, best for Obsidian import)</p>
+                    <p className="text-sm font-medium">
+                      ZIP Archive (.zip, best for Obsidian import)
+                    </p>
                     <p className="text-xs text-muted-foreground">
                       Organized by module and lesson, each note as a separate .md file with
                       frontmatter.

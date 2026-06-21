@@ -12,8 +12,7 @@ const SILENT_AUTHORS_REFRESH_TOAST_COOLDOWN_MS = 60_000
 let lastSilentAuthorsRefreshWarnAt = 0
 
 /** Shown when a background (sync) authors reload fails; matches toast copy. */
-export const AUTHORS_REFRESH_FAILED_MESSAGE =
-  'Could not refresh authors. Showing saved data.'
+export const AUTHORS_REFRESH_FAILED_MESSAGE = 'Could not refresh authors. Showing saved data.'
 
 /** Resets toast throttle between Vitest cases (production noop concern: unused outside tests). */
 export function resetSilentAuthorsRefreshThrottleForTests(): void {

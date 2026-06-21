@@ -238,7 +238,6 @@ export function SyncSection() {
   // The route guard enforces this; the early-return here is a safety net.
   if (!user) return null
 
-
   const syncNowDisabled = busy || status === 'syncing' || isOffline
   const isSyncing = busy || status === 'syncing'
 
@@ -458,4 +457,3 @@ export function SyncSection() {
     </TooltipProvider>
   )
 }
-

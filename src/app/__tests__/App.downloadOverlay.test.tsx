@@ -137,19 +137,16 @@ beforeEach(() => {
     capturedCallbacks.onUnlinkedDetected = opts?.onUnlinkedDetected
   })
 
-  vi.mocked(useAuthStore).mockImplementation(
-     
-    ((selector?: (s: unknown) => unknown) => {
-      const state = {
-        user: mockAuthUser,
-        session: null,
-        initialized: true,
-        sessionExpired: false,
-        _userInitiatedSignOut: false,
-      }
-      return selector ? selector(state) : state
-    }) as unknown as typeof useAuthStore
-  )
+  vi.mocked(useAuthStore).mockImplementation(((selector?: (s: unknown) => unknown) => {
+    const state = {
+      user: mockAuthUser,
+      session: null,
+      initialized: true,
+      sessionExpired: false,
+      _userInitiatedSignOut: false,
+    }
+    return selector ? selector(state) : state
+  }) as unknown as typeof useAuthStore)
 
   vi.mocked(shouldShowDownloadOverlay).mockResolvedValue(false)
   vi.mocked(shouldShowInitialUploadWizard).mockResolvedValue(false)

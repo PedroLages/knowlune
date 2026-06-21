@@ -38,7 +38,10 @@ export function groupByFolder(videos: ImportedVideo[], pdfs: ImportedPdf[] = [])
     }))
 }
 
-export function groupByChapter(videos: ImportedVideo[], chapters: YouTubeCourseChapter[]): ChapterGroup[] {
+export function groupByChapter(
+  videos: ImportedVideo[],
+  chapters: YouTubeCourseChapter[]
+): ChapterGroup[] {
   if (chapters.length === 0) return [{ title: '', videos, pdfs: [] }]
 
   const videoChapterMap = new Map<string, string>()

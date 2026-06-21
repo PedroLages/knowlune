@@ -66,7 +66,7 @@ interface UseProviderReconsentOptions {
 
 export function useProviderReconsent(
   userId: string | undefined,
-  options: UseProviderReconsentOptions = {},
+  options: UseProviderReconsentOptions = {}
 ): UseProviderReconsentResult {
   const onRetryRef = useRef(options.onRetry)
   useEffect(() => {
@@ -104,7 +104,7 @@ export function useProviderReconsent(
       setOpen(true)
       return true
     },
-    [userId],
+    [userId]
   )
 
   const handleAccept = useCallback(async () => {

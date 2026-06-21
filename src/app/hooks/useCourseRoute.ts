@@ -33,9 +33,7 @@ export interface CourseRouteInfo {
 }
 
 /** Narrow an unknown location.state to the fromTrack shape, returning undefined on mismatch. */
-export function readFromTrack(
-  state: unknown
-): { trackId: string; trackName: string } | undefined {
+export function readFromTrack(state: unknown): { trackId: string; trackName: string } | undefined {
   if (typeof state !== 'object' || state === null) return undefined
   const s = state as Record<string, unknown>
   if (
@@ -65,10 +63,7 @@ export function useCourseRoute(): CourseRouteInfo {
     courseId = segments[1]!
 
     // /courses/:courseId/lessons/:lessonId — exact match, nothing after
-    if (
-      segments.length === 4 &&
-      segments[2] === 'lessons'
-    ) {
+    if (segments.length === 4 && segments[2] === 'lessons') {
       lessonId = segments[3]!
     }
   }
@@ -77,12 +72,8 @@ export function useCourseRoute(): CourseRouteInfo {
   const isCourseRoute = courseId !== null
 
   // Resolve course name — synchronous lookup in the already-loaded import store
-  const course = courseId
-    ? importedCourses.find(c => c.id === courseId)
-    : null
-  const courseName = courseId
-    ? (course?.name ?? 'Course')
-    : null
+  const course = courseId ? importedCourses.find(c => c.id === courseId) : null
+  const courseName = courseId ? (course?.name ?? 'Course') : null
 
   const fromTrack = readFromTrack(location.state)
 

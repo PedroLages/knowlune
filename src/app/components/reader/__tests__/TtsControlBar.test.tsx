@@ -63,16 +63,10 @@ describe('TtsControlBar', () => {
 
     it('applies gray and black page tone classes', () => {
       const { rerender } = render(<TtsControlBar {...defaultProps} theme="gray" />)
-      expect(screen.getByTestId('tts-control-bar')).toHaveClass(
-        'bg-[#e5e5e5]/98',
-        'text-[#1f2937]'
-      )
+      expect(screen.getByTestId('tts-control-bar')).toHaveClass('bg-[#e5e5e5]/98', 'text-[#1f2937]')
 
       rerender(<TtsControlBar {...defaultProps} theme="black" />)
-      expect(screen.getByTestId('tts-control-bar')).toHaveClass(
-        'bg-[#000000]/98',
-        'text-[#f8fafc]'
-      )
+      expect(screen.getByTestId('tts-control-bar')).toHaveClass('bg-[#000000]/98', 'text-[#f8fafc]')
     })
   })
 

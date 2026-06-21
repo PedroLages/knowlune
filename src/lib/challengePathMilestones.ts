@@ -107,7 +107,12 @@ export async function calculatePathMilestoneProgress(pathId: string): Promise<nu
     completedAt: vp.completedAt ? new Date(vp.completedAt).getTime() : undefined,
   }))
 
-  return computePathCompletionPct(importedEntries, importedCourseMap, normalizedProgress, localProgress)
+  return computePathCompletionPct(
+    importedEntries,
+    importedCourseMap,
+    normalizedProgress,
+    localProgress
+  )
 }
 
 // Re-export for convenience

@@ -101,18 +101,54 @@ describe('libraryShelves (media-first helpers)', () => {
 
   it('getAudiobookListenAgainShelf returns finished audiobooks sorted by finishedAt desc', () => {
     const books: Book[] = [
-      makeBook({ id: 'a1', format: 'audiobook', status: 'finished', progress: 100, finishedAt: '2026-04-10T00:00:00.000Z' }),
-      makeBook({ id: 'a2', format: 'audiobook', status: 'finished', progress: 100, finishedAt: '2026-04-12T00:00:00.000Z' }),
-      makeBook({ id: 'e1', format: 'epub', status: 'finished', progress: 100, finishedAt: '2026-04-13T00:00:00.000Z' }),
+      makeBook({
+        id: 'a1',
+        format: 'audiobook',
+        status: 'finished',
+        progress: 100,
+        finishedAt: '2026-04-10T00:00:00.000Z',
+      }),
+      makeBook({
+        id: 'a2',
+        format: 'audiobook',
+        status: 'finished',
+        progress: 100,
+        finishedAt: '2026-04-12T00:00:00.000Z',
+      }),
+      makeBook({
+        id: 'e1',
+        format: 'epub',
+        status: 'finished',
+        progress: 100,
+        finishedAt: '2026-04-13T00:00:00.000Z',
+      }),
     ]
     expect(getAudiobookListenAgainShelf(books).map(b => b.id)).toEqual(['a2', 'a1'])
   })
 
   it('getEbookReadAgainShelf returns finished ebooks sorted by finishedAt desc', () => {
     const books: Book[] = [
-      makeBook({ id: 'p1', format: 'pdf', status: 'finished', progress: 100, finishedAt: '2026-04-10T00:00:00.000Z' }),
-      makeBook({ id: 'e1', format: 'epub', status: 'finished', progress: 100, finishedAt: '2026-04-12T00:00:00.000Z' }),
-      makeBook({ id: 'a1', format: 'audiobook', status: 'finished', progress: 100, finishedAt: '2026-04-13T00:00:00.000Z' }),
+      makeBook({
+        id: 'p1',
+        format: 'pdf',
+        status: 'finished',
+        progress: 100,
+        finishedAt: '2026-04-10T00:00:00.000Z',
+      }),
+      makeBook({
+        id: 'e1',
+        format: 'epub',
+        status: 'finished',
+        progress: 100,
+        finishedAt: '2026-04-12T00:00:00.000Z',
+      }),
+      makeBook({
+        id: 'a1',
+        format: 'audiobook',
+        status: 'finished',
+        progress: 100,
+        finishedAt: '2026-04-13T00:00:00.000Z',
+      }),
     ]
     expect(getEbookReadAgainShelf(books).map(b => b.id)).toEqual(['e1', 'p1'])
   })
@@ -151,11 +187,20 @@ describe('libraryShelves (media-first helpers)', () => {
 
   it('ebook recent series shelf filters to epub/pdf only', () => {
     const books: Book[] = [
-      makeBook({ id: 'a1', format: 'audiobook', series: 'Audio Series', lastOpenedAt: '2026-04-12T00:00:00.000Z' }),
-      makeBook({ id: 'e1', format: 'epub', series: 'E Series', lastOpenedAt: '2026-04-11T00:00:00.000Z' }),
+      makeBook({
+        id: 'a1',
+        format: 'audiobook',
+        series: 'Audio Series',
+        lastOpenedAt: '2026-04-12T00:00:00.000Z',
+      }),
+      makeBook({
+        id: 'e1',
+        format: 'epub',
+        series: 'E Series',
+        lastOpenedAt: '2026-04-11T00:00:00.000Z',
+      }),
     ]
     const groups = getEbookRecentSeriesShelf(books)
     expect(groups.map(g => g.name)).toEqual(['E Series'])
   })
 })
-

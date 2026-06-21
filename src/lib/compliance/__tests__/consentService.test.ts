@@ -24,12 +24,7 @@ vi.mock('@/db/schema', () => ({
   },
 }))
 
-import {
-  isGranted,
-  listForUser,
-  isGrantedForProvider,
-  CONSENT_PURPOSES,
-} from '../consentService'
+import { isGranted, listForUser, isGrantedForProvider, CONSENT_PURPOSES } from '../consentService'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -99,7 +94,7 @@ describe('isGranted', () => {
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
     expect(await isGranted(USER_ID, 'unknown_purpose')).toBe(false)
     expect(warnSpy).toHaveBeenCalledWith(
-      expect.stringContaining('unknown purpose "unknown_purpose"'),
+      expect.stringContaining('unknown purpose "unknown_purpose"')
     )
     warnSpy.mockRestore()
   })
@@ -108,9 +103,7 @@ describe('isGranted', () => {
     mockError(new Error('IndexedDB unavailable'))
     const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
     expect(await isGranted(USER_ID, CONSENT_PURPOSES.AI_EMBEDDINGS)).toBe(false)
-    expect(errorSpy).toHaveBeenCalledWith(
-      expect.stringContaining('Failing closed'),
-    )
+    expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('Failing closed'))
     errorSpy.mockRestore()
   })
 })
@@ -165,8 +158,12 @@ describe('isGrantedForProvider', () => {
     ])
     // Called twice: once for isGranted, once for provider check
     mockUserConsentsWhere.mockToArray
-      .mockResolvedValueOnce([makeGrantedRow(CONSENT_PURPOSES.AI_TUTOR, { evidence: { provider_id: 'openai' } })])
-      .mockResolvedValueOnce([makeGrantedRow(CONSENT_PURPOSES.AI_TUTOR, { evidence: { provider_id: 'openai' } })])
+      .mockResolvedValueOnce([
+        makeGrantedRow(CONSENT_PURPOSES.AI_TUTOR, { evidence: { provider_id: 'openai' } }),
+      ])
+      .mockResolvedValueOnce([
+        makeGrantedRow(CONSENT_PURPOSES.AI_TUTOR, { evidence: { provider_id: 'openai' } }),
+      ])
     expect(await isGrantedForProvider(USER_ID, CONSENT_PURPOSES.AI_TUTOR, 'anthropic')).toBe(false)
   })
 
@@ -174,9 +171,7 @@ describe('isGrantedForProvider', () => {
     mockUserConsentsWhere.mockToArray
       .mockResolvedValueOnce([makeGrantedRow(CONSENT_PURPOSES.AI_TUTOR)])
       .mockResolvedValueOnce([makeGrantedRow(CONSENT_PURPOSES.AI_TUTOR)])
-    expect(
-      await isGrantedForProvider(USER_ID, CONSENT_PURPOSES.AI_TUTOR, 'openai'),
-    ).toBe(false)
+    expect(await isGrantedForProvider(USER_ID, CONSENT_PURPOSES.AI_TUTOR, 'openai')).toBe(false)
   })
 
   it('returns false when base consent is withdrawn (delegates to isGranted)', async () => {
@@ -186,17 +181,13 @@ describe('isGrantedForProvider', () => {
         evidence: { provider_id: 'openai' },
       }),
     ])
-    expect(
-      await isGrantedForProvider(USER_ID, CONSENT_PURPOSES.AI_TUTOR, 'openai'),
-    ).toBe(false)
+    expect(await isGrantedForProvider(USER_ID, CONSENT_PURPOSES.AI_TUTOR, 'openai')).toBe(false)
   })
 
   it('returns false for unknown purpose (fail-closed)', async () => {
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
     expect(await isGrantedForProvider(USER_ID, 'bad_purpose', 'openai')).toBe(false)
-    expect(warnSpy).toHaveBeenCalledWith(
-      expect.stringContaining('unknown purpose "bad_purpose"'),
-    )
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('unknown purpose "bad_purpose"'))
     warnSpy.mockRestore()
   })
 })

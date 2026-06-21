@@ -13,7 +13,10 @@ import { citationExtractor } from '../rag/citationExtractor'
 import { assertAIFeatureConsent, getLLMClient } from '../llm/factory'
 import { formatNoteQAError } from '@/lib/noteQAErrors'
 import { useAuthStore } from '@/stores/useAuthStore'
-import { useProviderReconsent, type UseProviderReconsentResult } from '@/ai/hooks/useProviderReconsent'
+import {
+  useProviderReconsent,
+  type UseProviderReconsentResult,
+} from '@/ai/hooks/useProviderReconsent'
 
 interface UseChatQAResult {
   /** Conversation messages */
@@ -61,7 +64,10 @@ export function useChatQA(): UseChatQAResult {
     }),
     []
   )
-  const { handleAIError, declinedProvider, modalProps } = useProviderReconsent(userId, reconsentOptions)
+  const { handleAIError, declinedProvider, modalProps } = useProviderReconsent(
+    userId,
+    reconsentOptions
+  )
 
   const runChatPipeline = useCallback(async (query: string) => {
     const resolved = await assertAIFeatureConsent('noteQA')

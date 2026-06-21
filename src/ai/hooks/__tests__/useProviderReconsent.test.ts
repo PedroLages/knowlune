@@ -39,7 +39,7 @@ describe('useProviderReconsent', () => {
 
       act(() => {
         const handled = result.current.handleAIError(
-          new ProviderReconsentError('ai_tutor', 'openai'),
+          new ProviderReconsentError('ai_tutor', 'openai')
         )
         expect(handled).toBe(true)
       })

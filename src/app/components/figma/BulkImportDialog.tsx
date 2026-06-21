@@ -430,7 +430,7 @@ export function BulkImportDialog({
         const items: ImportItem[] = result.courses.map(c => ({
           folderName: c.folder,
           handle: null as unknown as FileSystemDirectoryHandle,
-          status: c.success ? 'success' as const : 'error' as const,
+          status: c.success ? ('success' as const) : ('error' as const),
           error: c.error,
         }))
         setImportItems(items)
@@ -438,9 +438,7 @@ export function BulkImportDialog({
         // Store result for onComplete to pass trackId
         batchResultRef.current = {
           trackId: result.trackId,
-          courseIds: result.courses
-            .filter(r => r.success && r.courseId)
-            .map(r => r.courseId!),
+          courseIds: result.courses.filter(r => r.success && r.courseId).map(r => r.courseId!),
         }
 
         setStep('results')
@@ -864,7 +862,11 @@ export function BulkImportDialog({
             </div>
 
             <ScrollArea className="max-h-[40vh] min-w-0 w-full">
-              <div className="flex min-w-0 flex-col gap-1 pr-3" role="list" aria-label="Scan progress">
+              <div
+                className="flex min-w-0 flex-col gap-1 pr-3"
+                role="list"
+                aria-label="Scan progress"
+              >
                 {importItems.map(item => (
                   <div
                     key={item.folderName}
@@ -1099,7 +1101,11 @@ export function BulkImportDialog({
             )}
 
             <ScrollArea className="max-h-[40vh] min-w-0 w-full">
-              <div className="flex min-w-0 flex-col gap-1 pr-3" role="list" aria-label="Import progress">
+              <div
+                className="flex min-w-0 flex-col gap-1 pr-3"
+                role="list"
+                aria-label="Import progress"
+              >
                 {importItems.map(item => (
                   <div
                     key={item.folderName}

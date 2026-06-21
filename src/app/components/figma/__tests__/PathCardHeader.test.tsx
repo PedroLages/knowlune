@@ -5,11 +5,7 @@ import { PathCardHeader } from '../PathCardHeader'
 describe('PathCardHeader', () => {
   it('uses preset gradient when coverPreset is set and there is no cover image', () => {
     const { container } = render(
-      <PathCardHeader
-        pathName="Any Name"
-        completionPct={50}
-        coverPreset="purple-indigo"
-      />
+      <PathCardHeader pathName="Any Name" completionPct={50} coverPreset="purple-indigo" />
     )
 
     const header = container.firstChild as HTMLElement
@@ -19,11 +15,7 @@ describe('PathCardHeader', () => {
 
   it('prefers preset over muted treatment when path is not started', () => {
     const { container } = render(
-      <PathCardHeader
-        pathName="New Path"
-        completionPct={0}
-        coverPreset="cyan-blue"
-      />
+      <PathCardHeader pathName="New Path" completionPct={0} coverPreset="cyan-blue" />
     )
 
     const header = container.firstChild as HTMLElement
@@ -32,9 +24,7 @@ describe('PathCardHeader', () => {
   })
 
   it('uses hash-based gradient when no preset and path has progress', () => {
-    const { container } = render(
-      <PathCardHeader pathName="Stable Name" completionPct={40} />
-    )
+    const { container } = render(<PathCardHeader pathName="Stable Name" completionPct={40} />)
 
     const header = container.firstChild as HTMLElement
     expect(header.className).toMatch(/bg-gradient-to-br/)
@@ -42,9 +32,7 @@ describe('PathCardHeader', () => {
   })
 
   it('uses muted gradient when not started and no preset', () => {
-    const { container } = render(
-      <PathCardHeader pathName="Fresh" completionPct={0} />
-    )
+    const { container } = render(<PathCardHeader pathName="Fresh" completionPct={0} />)
 
     const header = container.firstChild as HTMLElement
     expect(header.className).toContain('from-muted-foreground')

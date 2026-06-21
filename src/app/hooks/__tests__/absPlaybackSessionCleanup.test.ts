@@ -45,4 +45,3 @@ describe('cleanupActiveAbsPlaybackSession', () => {
     expect(svc.closePlaybackSession).not.toHaveBeenCalled()
   })
 })
-

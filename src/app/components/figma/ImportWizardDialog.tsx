@@ -136,7 +136,13 @@ const CATEGORY_OPTIONS: { value: string; label: string }[] = [
   { value: 'research-library', label: 'Research Library' },
 ]
 
-export function ImportWizardDialog({ open, onOpenChange, targetPathId, gapEntryId, searchTerm }: ImportWizardDialogProps) {
+export function ImportWizardDialog({
+  open,
+  onOpenChange,
+  targetPathId,
+  gapEntryId,
+  searchTerm,
+}: ImportWizardDialogProps) {
   const [step, setStep] = useState<WizardStep>('select')
   const [scannedCourse, setScannedCourse] = useState<ScannedCourse | null>(null)
   const [courseName, setCourseName] = useState('')
@@ -150,7 +156,9 @@ export function ImportWizardDialog({ open, onOpenChange, targetPathId, gapEntryI
   const [isPersisting, setIsPersisting] = useState(false)
   const [aiTagsApplied, setAiTagsApplied] = useState(false)
   const [aiDescriptionApplied, setAiDescriptionApplied] = useState(false)
-  const [selectedDifficulty, setSelectedDifficulty] = useState<'beginner' | 'intermediate' | 'advanced' | 'expert' | undefined>(undefined)
+  const [selectedDifficulty, setSelectedDifficulty] = useState<
+    'beginner' | 'intermediate' | 'advanced' | 'expert' | undefined
+  >(undefined)
   const [selectedCategory, setSelectedCategory] = useState<string>('')
   const tagInputRef = useRef<HTMLInputElement>(null)
   const manifestDataRef = useRef<CourseManifest | undefined>(undefined)
@@ -492,7 +500,13 @@ export function ImportWizardDialog({ open, onOpenChange, targetPathId, gapEntryI
       const authorName = scannedCourse.manifestData?.course.author?.name
 
       const overrides =
-        hasNameChange || hasTags || hasCover || hasDescription || hasDifficulty || hasCategory || !!authorName
+        hasNameChange ||
+        hasTags ||
+        hasCover ||
+        hasDescription ||
+        hasDifficulty ||
+        hasCategory ||
+        !!authorName
           ? {
               ...(hasNameChange ? { name: trimmedName } : {}),
               ...(hasTags ? { tags } : {}),
@@ -529,12 +543,9 @@ export function ImportWizardDialog({ open, onOpenChange, targetPathId, gapEntryI
         try {
           if (currentGapEntryId && currentTargetPathId) {
             // Resolve the gap entry: replace the placeholder with the newly imported course
-            await useLearningPathStore.getState().replaceGapEntry(
-              currentTargetPathId,
-              currentGapEntryId,
-              courseId,
-              'imported'
-            )
+            await useLearningPathStore
+              .getState()
+              .replaceGapEntry(currentTargetPathId, currentGapEntryId, courseId, 'imported')
             toast.success('Gap entry resolved with imported course')
           } else if (pathChoice !== 'skip') {
             if (pathChoice === 'new' && newPathName.trim()) {
@@ -763,7 +774,8 @@ export function ImportWizardDialog({ open, onOpenChange, targetPathId, gapEntryI
                 >
                   <p className="text-sm text-brand-soft-foreground flex items-center gap-2">
                     <FileJson className="size-4 text-brand shrink-0" aria-hidden="true" />
-                    Manifest detected — fields pre-filled from course-manifest.json. You can edit any field below.
+                    Manifest detected — fields pre-filled from course-manifest.json. You can edit
+                    any field below.
                   </p>
                 </div>
               )}
@@ -826,7 +838,9 @@ export function ImportWizardDialog({ open, onOpenChange, targetPathId, gapEntryI
                     value={selectedDifficulty ?? ''}
                     onValueChange={value =>
                       setSelectedDifficulty(
-                        value === '' ? undefined : (value as 'beginner' | 'intermediate' | 'advanced' | 'expert')
+                        value === ''
+                          ? undefined
+                          : (value as 'beginner' | 'intermediate' | 'advanced' | 'expert')
                       )
                     }
                   >

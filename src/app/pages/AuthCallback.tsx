@@ -85,61 +85,61 @@ export function AuthCallback() {
 
   return (
     <div
-        className="min-h-screen flex items-center justify-center p-6 bg-background"
-        role="status"
-        aria-busy={!authError}
-        aria-label={authError ? 'Sign-in failed' : 'Completing sign in'}
-      >
-        <div className="anim-fade-slide-up bg-card rounded-2xl shadow-lg p-8 flex flex-col items-center gap-6 w-full max-w-sm">
-          <KnowluneLogo className="h-7 w-auto" />
+      className="min-h-screen flex items-center justify-center p-6 bg-background"
+      role="status"
+      aria-busy={!authError}
+      aria-label={authError ? 'Sign-in failed' : 'Completing sign in'}
+    >
+      <div className="anim-fade-slide-up bg-card rounded-2xl shadow-lg p-8 flex flex-col items-center gap-6 w-full max-w-sm">
+        <KnowluneLogo className="h-7 w-auto" />
 
-          {authError ? (
-            /* ── Error state ─────────────────────────────────────── */
-            <>
-              <AlertCircle size={40} className="text-destructive" aria-hidden="true" />
+        {authError ? (
+          /* ── Error state ─────────────────────────────────────── */
+          <>
+            <AlertCircle size={40} className="text-destructive" aria-hidden="true" />
 
-              <div className="flex flex-col items-center gap-1 text-center">
-                <h1 className="font-display text-2xl font-semibold text-foreground">
-                  Sign-in failed
-                </h1>
-              </div>
+            <div className="flex flex-col items-center gap-1 text-center">
+              <h1 className="font-display text-2xl font-semibold text-foreground">
+                Sign-in failed
+              </h1>
+            </div>
 
-              <div className="w-full bg-destructive/15 border border-destructive/40 rounded-xl px-4 py-3 text-sm text-destructive text-center">
-                {authError}
-              </div>
+            <div className="w-full bg-destructive/15 border border-destructive/40 rounded-xl px-4 py-3 text-sm text-destructive text-center">
+              {authError}
+            </div>
 
-              <div className="flex flex-col gap-3 w-full">
-                <Button variant="brand" asChild className="w-full min-h-[44px]">
-                  <Link to="/">Back to sign in</Link>
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setAuthError(null)
-                    window.location.reload()
-                  }}
-                  className="w-full min-h-[44px]"
-                >
-                  Try again
-                </Button>
-              </div>
-            </>
-          ) : (
-            /* ── Loading state ───────────────────────────────────── */
-            <>
-              <Loader2 size={40} className="animate-spin text-brand" aria-hidden="true" />
+            <div className="flex flex-col gap-3 w-full">
+              <Button variant="brand" asChild className="w-full min-h-[44px]">
+                <Link to="/">Back to sign in</Link>
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setAuthError(null)
+                  window.location.reload()
+                }}
+                className="w-full min-h-[44px]"
+              >
+                Try again
+              </Button>
+            </div>
+          </>
+        ) : (
+          /* ── Loading state ───────────────────────────────────── */
+          <>
+            <Loader2 size={40} className="animate-spin text-brand" aria-hidden="true" />
 
-              <div className="flex flex-col items-center gap-2 text-center">
-                <h1 className="font-display text-2xl font-semibold text-foreground">
-                  Signing you in…
-                </h1>
-                <p className="text-sm text-muted-foreground text-center max-w-xs">
-                  Verifying your credentials and setting up your workspace.
-                </p>
-              </div>
-            </>
-          )}
-        </div>
+            <div className="flex flex-col items-center gap-2 text-center">
+              <h1 className="font-display text-2xl font-semibold text-foreground">
+                Signing you in…
+              </h1>
+              <p className="text-sm text-muted-foreground text-center max-w-xs">
+                Verifying your credentials and setting up your workspace.
+              </p>
+            </div>
+          </>
+        )}
       </div>
+    </div>
   )
 }

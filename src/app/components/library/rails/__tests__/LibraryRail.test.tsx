@@ -47,11 +47,7 @@ describe('LibraryRail', () => {
   it('shows chevron buttons for scrollable content', async () => {
     render(
       <MemoryRouter>
-        <LibraryRail
-          icon={BookOpen}
-          title="My Shelf"
-          data-testid="my-shelf"
-        >
+        <LibraryRail icon={BookOpen} title="My Shelf" data-testid="my-shelf">
           {Array.from({ length: 10 }, (_, i) => (
             <StubTile key={i} bookId={String(i)} label={`Item ${i}`} />
           ))}
@@ -69,11 +65,7 @@ describe('LibraryRail', () => {
   it('applies scrollbar-none to the viewport', () => {
     render(
       <MemoryRouter>
-        <LibraryRail
-          icon={BookOpen}
-          title="My Shelf"
-          data-testid="my-shelf"
-        >
+        <LibraryRail icon={BookOpen} title="My Shelf" data-testid="my-shelf">
           <StubTile bookId="1" label="Item 1" />
         </LibraryRail>
       </MemoryRouter>
@@ -103,11 +95,7 @@ describe('LibraryRail', () => {
   it('renders children inside snap-start wrappers', () => {
     render(
       <MemoryRouter>
-        <LibraryRail
-          icon={BookOpen}
-          title="My Shelf"
-          data-testid="my-shelf"
-        >
+        <LibraryRail icon={BookOpen} title="My Shelf" data-testid="my-shelf">
           <StubTile bookId="1" label="Item 1" />
         </LibraryRail>
       </MemoryRouter>
@@ -123,11 +111,7 @@ describe('LibraryRail', () => {
   it('renders subtitle when provided', () => {
     render(
       <MemoryRouter>
-        <LibraryRail
-          icon={BookOpen}
-          title="My Shelf"
-          subtitle="Some description"
-        >
+        <LibraryRail icon={BookOpen} title="My Shelf" subtitle="Some description">
           <StubTile bookId="1" label="Item 1" />
         </LibraryRail>
       </MemoryRouter>

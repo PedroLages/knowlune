@@ -84,12 +84,7 @@ export function useAutoPlacement(
     if (!suggestion) return
     acceptedRef.current = true
     const store = useLearningPathStore.getState()
-    store.applyPlacementSuggestion(
-      pathId,
-      courseId,
-      suggestion.position,
-      suggestion.justification
-    )
+    store.applyPlacementSuggestion(pathId, courseId, suggestion.position, suggestion.justification)
     setSuggestion(null)
     setElapsedMs(0)
   }, [suggestion, pathId, courseId])
@@ -143,9 +138,8 @@ export function useAutoPlacement(
         const pathContexts = constrained.length > 0 ? constrained : allPathContexts
 
         // Use personalized suggestPlacement if preferences are ready
-        const { personalizedSuggestPlacement } = await import(
-          '@/ai/learningPath/personalizedSuggestPlacement'
-        )
+        const { personalizedSuggestPlacement } =
+          await import('@/ai/learningPath/personalizedSuggestPlacement')
 
         const result = await personalizedSuggestPlacement(
           { name: courseName, tags: courseTags },
@@ -179,16 +173,7 @@ export function useAutoPlacement(
         clearInterval(intervalRef.current)
       }
     }
-  }, [
-    enabled,
-    pathId,
-    courseName,
-    courseTags,
-    retryCount,
-    paths,
-    getEntriesForPath,
-    preferences,
-  ])
+  }, [enabled, pathId, courseName, courseTags, retryCount, paths, getEntriesForPath, preferences])
 
   return {
     isLoading,

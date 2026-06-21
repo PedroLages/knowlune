@@ -87,11 +87,20 @@ vi.mock('@tiptap/extension-code-block-lowlight', () => ({ default: chainableExt(
 vi.mock('@tiptap/extension-image', () => ({ default: chainableExt() }))
 vi.mock('@tiptap/extension-file-handler', () => ({ FileHandler: chainableExt() }))
 vi.mock('@tiptap/extension-youtube', () => ({ default: chainableExt() }))
-vi.mock('@tiptap/extension-details', () => ({ Details: chainableExt(), DetailsContent: {}, DetailsSummary: {} }))
+vi.mock('@tiptap/extension-details', () => ({
+  Details: chainableExt(),
+  DetailsContent: {},
+  DetailsSummary: {},
+}))
 vi.mock('@tiptap/extension-color', () => ({ default: chainableExt() }))
-vi.mock('@tiptap/extension-text-style', () => ({ TextStyle: chainableExt(), default: chainableExt() }))
+vi.mock('@tiptap/extension-text-style', () => ({
+  TextStyle: chainableExt(),
+  default: chainableExt(),
+}))
 vi.mock('@tiptap/extension-emoji', () => ({ Emoji: chainableExt(), emojis: [] }))
-vi.mock('@tiptap/extension-drag-handle-react', () => ({ DragHandle: ({ children }: { children: React.ReactNode }) => <>{children}</> }))
+vi.mock('@tiptap/extension-drag-handle-react', () => ({
+  DragHandle: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+}))
 
 // Table extensions
 vi.mock('@tiptap/extension-table-of-contents', () => ({ TableOfContents: chainableExt() }))
@@ -131,7 +140,9 @@ vi.mock('../search-replace', () => ({
 // Table of Contents
 vi.mock('../TableOfContentsPanel', () => ({ TableOfContentsPanel: () => null }))
 vi.mock('../TableGridPicker', () => ({ TableGridPicker: () => null }))
-vi.mock('../TableContextMenu', () => ({ TableContextMenu: ({ children }: { children: React.ReactNode }) => <>{children}</> }))
+vi.mock('../TableContextMenu', () => ({
+  TableContextMenu: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+}))
 
 // Frame capture extension
 vi.mock('../frame-capture', () => ({ FrameCaptureExtension: {} }))
@@ -144,7 +155,9 @@ vi.mock('../paste-markdown', () => ({ PasteMarkdown: {} }))
 
 // External utilities
 vi.mock('@/lib/format', () => ({ formatTimestamp: () => '00:00' }))
-vi.mock('@/lib/noteExport', () => ({ exportSingleNoteAsMarkdown: () => ({ content: '', filename: '' }) }))
+vi.mock('@/lib/noteExport', () => ({
+  exportSingleNoteAsMarkdown: () => ({ content: '', filename: '' }),
+}))
 vi.mock('@/lib/download', () => ({ downloadAsFile: vi.fn() }))
 
 // ---------------------------------------------------------------------------
@@ -187,7 +200,9 @@ describe('NoteEditor — eager-first-save (finding 6)', () => {
     // Simulate first content change — user types something new
     act(() => {
       mockGetHtml.mockReturnValue('<p>new content</p>')
-      mockOnUpdate?.({ editor: { storage: { characterCount: { words: () => 2 } }, getHTML: mockGetHtml } } as any)
+      mockOnUpdate?.({
+        editor: { storage: { characterCount: { words: () => 2 } }, getHTML: mockGetHtml },
+      } as any)
     })
 
     // onSave should have been called immediately (no debounce wait)
@@ -197,7 +212,9 @@ describe('NoteEditor — eager-first-save (finding 6)', () => {
 
   it('does not call onSave when content matches last saved content on first update', async () => {
     const onSave = vi.fn()
-    render(<NoteEditor courseId="c1" lessonId="l1" initialContent="<p>initial</p>" onSave={onSave} />)
+    render(
+      <NoteEditor courseId="c1" lessonId="l1" initialContent="<p>initial</p>" onSave={onSave} />
+    )
 
     await vi.waitFor(() => {
       expect(mockOnCreate).not.toBeNull()
@@ -211,7 +228,9 @@ describe('NoteEditor — eager-first-save (finding 6)', () => {
     // the lesson-change effect before onUpdate fires — see lines 432-442)
     act(() => {
       mockGetHtml.mockReturnValue('<p>initial</p>')
-      mockOnUpdate?.({ editor: { storage: { characterCount: { words: () => 1 } }, getHTML: mockGetHtml } } as any)
+      mockOnUpdate?.({
+        editor: { storage: { characterCount: { words: () => 1 } }, getHTML: mockGetHtml },
+      } as any)
     })
 
     // onSave should NOT be called because content matches
@@ -233,7 +252,9 @@ describe('NoteEditor — eager-first-save (finding 6)', () => {
     // Simulate typing content with hashtags
     act(() => {
       mockGetHtml.mockReturnValue('<p>learning about #react and #typescript</p>')
-      mockOnUpdate?.({ editor: { storage: { characterCount: { words: () => 4 } }, getHTML: mockGetHtml } } as any)
+      mockOnUpdate?.({
+        editor: { storage: { characterCount: { words: () => 4 } }, getHTML: mockGetHtml },
+      } as any)
     })
 
     expect(onSave).toHaveBeenCalledTimes(1)
@@ -256,7 +277,9 @@ describe('NoteEditor — eager-first-save (finding 6)', () => {
       mockOnCreate?.({ editor: { storage: { characterCount: { words: () => 0 } } } } as any)
       // First change — eager save fires immediately
       mockGetHtml.mockReturnValue('<p>first</p>')
-      mockOnUpdate?.({ editor: { storage: { characterCount: { words: () => 1 } }, getHTML: mockGetHtml } } as any)
+      mockOnUpdate?.({
+        editor: { storage: { characterCount: { words: () => 1 } }, getHTML: mockGetHtml },
+      } as any)
     })
 
     expect(onSave).toHaveBeenCalledTimes(1)
@@ -266,7 +289,9 @@ describe('NoteEditor — eager-first-save (finding 6)', () => {
     // Second change — should be debounced, not immediate
     act(() => {
       mockGetHtml.mockReturnValue('<p>second</p>')
-      mockOnUpdate?.({ editor: { storage: { characterCount: { words: () => 1 } }, getHTML: mockGetHtml } } as any)
+      mockOnUpdate?.({
+        editor: { storage: { characterCount: { words: () => 1 } }, getHTML: mockGetHtml },
+      } as any)
     })
 
     // onSave should NOT have been called again yet (debounce hasn't fired)

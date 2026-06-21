@@ -10,7 +10,16 @@
 
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { Link } from 'react-router'
-import { Video, PlayCircle, FileText, Search, X, FolderOpen, ChevronDown, CheckCircle2 } from 'lucide-react'
+import {
+  Video,
+  PlayCircle,
+  FileText,
+  Search,
+  X,
+  FolderOpen,
+  ChevronDown,
+  CheckCircle2,
+} from 'lucide-react'
 import { Input } from '@/app/components/ui/input'
 import { Badge } from '@/app/components/ui/badge'
 import { Skeleton } from '@/app/components/ui/skeleton'
@@ -315,12 +324,7 @@ function MaterialRow({
         )}
       </span>
       <div className="flex-1 min-w-0">
-        <p
-          className={cn(
-            'text-sm truncate',
-            isCompleted && 'line-through text-muted-foreground'
-          )}
-        >
+        <p className={cn('text-sm truncate', isCompleted && 'line-through text-muted-foreground')}>
           <HighlightedLessonTitle text={material.title} query={searchQuery} />
         </p>
         {material.sourceMetadata?.pageCount ? (
@@ -412,7 +416,7 @@ function MaterialGroupRow({
       </div>
       <CollapsibleContent>
         <div className="ml-6 pl-2 border-l border-border/50 space-y-0.5">
-          {group.materials.map((material) => (
+          {group.materials.map(material => (
             <MaterialRow
               key={material.id}
               material={material}
@@ -486,18 +490,18 @@ function FolderTreeNode({
           {node.items.map(group => {
             const originalIndex = groupIndexMap.get(group.primary.id) ?? 0
             return (
-            <MaterialGroupRow
-              key={group.primary.id}
-              group={group}
-              courseId={courseId}
-              lessonId={lessonId}
-              index={originalIndex}
-              activeRef={group.primary.id === lessonId ? activeRef : undefined}
-              searchQuery={searchQuery}
-              onFocusMaterials={onFocusMaterials}
-              isExpanded={expandedMaterialGroups.has(group.primary.id)}
-              onToggleExpand={() => toggleMaterialGroup(group.primary.id)}
-            />
+              <MaterialGroupRow
+                key={group.primary.id}
+                group={group}
+                courseId={courseId}
+                lessonId={lessonId}
+                index={originalIndex}
+                activeRef={group.primary.id === lessonId ? activeRef : undefined}
+                searchQuery={searchQuery}
+                onFocusMaterials={onFocusMaterials}
+                isExpanded={expandedMaterialGroups.has(group.primary.id)}
+                onToggleExpand={() => toggleMaterialGroup(group.primary.id)}
+              />
             )
           })}
           {/* Nested subfolders */}
@@ -659,9 +663,7 @@ export function LessonsTab({ courseId, lessonId, adapter, onFocusMaterials }: Le
       // Subsequent loads (adapter reloaded): merge only new group IDs that
       // weren't present in the previous load. Never collapse groups the user
       // may have manually expanded.
-      const newIds = [...groupsWithMaterials].filter(
-        id => !prevMaterialGroupIdsRef.current.has(id)
-      )
+      const newIds = [...groupsWithMaterials].filter(id => !prevMaterialGroupIdsRef.current.has(id))
       if (newIds.length > 0) {
         setExpandedMaterialGroups(prev => {
           const next = new Set(prev)

@@ -37,8 +37,8 @@ describe('LibraryFilters', () => {
   it('stacks status row above utilities on small screens (sm:flex-row on container)', () => {
     render(<LibraryFilters viewToggle={<span data-testid="mock-view-toggle">VT</span>} />)
 
-    const statusRow = screen.getByRole('tablist', { name: /filter by reading status/i }).parentElement
-      ?.parentElement
+    const statusRow = screen.getByRole('tablist', { name: /filter by reading status/i })
+      .parentElement?.parentElement
     expect(statusRow).toHaveClass('flex-col', 'sm:flex-row')
 
     expect(screen.getByTestId('mock-view-toggle')).toBeInTheDocument()

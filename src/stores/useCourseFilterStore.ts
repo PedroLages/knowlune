@@ -81,9 +81,7 @@ export const useCourseFilterStore = create<CourseFilterState>()(
       isAnyFilterActive: () => {
         const state = get()
         return (
-          state.source !== 'all' ||
-          state.showTrackCourses === true ||
-          state.selectedTags.length > 0
+          state.source !== 'all' || state.showTrackCourses === true || state.selectedTags.length > 0
         )
       },
     }),

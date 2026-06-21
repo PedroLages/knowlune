@@ -183,9 +183,7 @@ describe('ProxyLLMClient', () => {
       } catch (error) {
         expect(error).toBeInstanceOf(LLMError)
         expect((error as LLMError).code).toBe('RATE_LIMITED')
-        expect((error as LLMError).message).toBe(
-          'Too many requests. Wait a moment and try again.'
-        )
+        expect((error as LLMError).message).toBe('Too many requests. Wait a moment and try again.')
         expect((error as LLMError).providerId).toBe('openai')
       }
     })
@@ -205,7 +203,7 @@ describe('ProxyLLMClient', () => {
         expect(error).toBeInstanceOf(LLMError)
         expect((error as LLMError).code).toBe('AUTH_REQUIRED')
         expect((error as LLMError).message).toBe(
-          'Your API key was rejected by openai. Check that it\'s valid and has credits.'
+          "Your API key was rejected by openai. Check that it's valid and has credits."
         )
       }
     })

@@ -45,13 +45,7 @@ describe('PathTimeline', () => {
   it('renders timeline entries with course names', () => {
     const entries = [makeEntry({ courseId: 'c1' })]
     const infoMap = new Map([['c1', makeCourseInfo({ name: 'Course Alpha' })]])
-    render(
-      <PathTimeline
-        {...defaultProps}
-        entries={entries}
-        courseInfoMap={infoMap}
-      />
-    )
+    render(<PathTimeline {...defaultProps} entries={entries} courseInfoMap={infoMap} />)
     expect(screen.getByText('Course Alpha')).toBeInTheDocument()
   })
 
@@ -64,13 +58,7 @@ describe('PathTimeline', () => {
       ['c1', makeCourseInfo({ completionPct: 0 })],
       ['c2', makeCourseInfo({ completionPct: 0 })],
     ])
-    render(
-      <PathTimeline
-        {...defaultProps}
-        entries={entries}
-        courseInfoMap={infoMap}
-      />
-    )
+    render(<PathTimeline {...defaultProps} entries={entries} courseInfoMap={infoMap} />)
     // First entry defaults to Up Next; second entry shows Locked
     expect(screen.getByText('Up Next')).toBeInTheDocument()
     expect(screen.getAllByText('Locked').length).toBeGreaterThanOrEqual(1)
@@ -79,26 +67,14 @@ describe('PathTimeline', () => {
   it('shows In Progress badge for in-progress entries with real progress', () => {
     const entries = [makeEntry({ courseId: 'c1' })]
     const infoMap = new Map([['c1', makeCourseInfo({ completionPct: 45 })]])
-    render(
-      <PathTimeline
-        {...defaultProps}
-        entries={entries}
-        courseInfoMap={infoMap}
-      />
-    )
+    render(<PathTimeline {...defaultProps} entries={entries} courseInfoMap={infoMap} />)
     expect(screen.getByText('In Progress')).toBeInTheDocument()
   })
 
   it('shows Completed badge for finished entries', () => {
     const entries = [makeEntry({ courseId: 'c1' })]
     const infoMap = new Map([['c1', makeCourseInfo({ completionPct: 100 })]])
-    render(
-      <PathTimeline
-        {...defaultProps}
-        entries={entries}
-        courseInfoMap={infoMap}
-      />
-    )
+    render(<PathTimeline {...defaultProps} entries={entries} courseInfoMap={infoMap} />)
     expect(screen.getByText('Completed')).toBeInTheDocument()
   })
 
@@ -152,13 +128,7 @@ describe('PathTimeline', () => {
       ['c1', makeCourseInfo({ completionPct: 0 })],
       ['c2', makeCourseInfo({ completionPct: 0 })],
     ])
-    render(
-      <PathTimeline
-        {...defaultProps}
-        entries={entries}
-        courseInfoMap={infoMap}
-      />
-    )
+    render(<PathTimeline {...defaultProps} entries={entries} courseInfoMap={infoMap} />)
     // Second entry badge should contain "Locked" with a Lock icon
     const lockedBadges = screen.getAllByText('Locked')
     expect(lockedBadges.length).toBeGreaterThanOrEqual(1)
@@ -173,13 +143,7 @@ describe('PathTimeline', () => {
       ['c1', makeCourseInfo({ completionPct: 100 })],
       ['c2', makeCourseInfo({ completionPct: 45 })],
     ])
-    render(
-      <PathTimeline
-        {...defaultProps}
-        entries={entries}
-        courseInfoMap={infoMap}
-      />
-    )
+    render(<PathTimeline {...defaultProps} entries={entries} courseInfoMap={infoMap} />)
     expect(screen.getByText('Completed')).toBeInTheDocument()
     expect(screen.getByText('In Progress')).toBeInTheDocument()
   })
@@ -197,13 +161,7 @@ describe('PathTimeline', () => {
         }),
       ],
     ])
-    render(
-      <PathTimeline
-        {...defaultProps}
-        entries={entries}
-        courseInfoMap={infoMap}
-      />
-    )
+    render(<PathTimeline {...defaultProps} entries={entries} courseInfoMap={infoMap} />)
     expect(screen.getByText('Learn the basics of React')).toBeInTheDocument()
     expect(screen.getByText(/5 lessons/)).toBeInTheDocument()
     expect(screen.getByText('2:00:00')).toBeInTheDocument()
@@ -214,21 +172,13 @@ describe('PathTimeline', () => {
     const infoMap = new Map([
       ['c1', makeCourseInfo({ completionPct: 0, videoCount: 0, totalDuration: 0 })],
     ])
-    render(
-      <PathTimeline
-        {...defaultProps}
-        entries={entries}
-        courseInfoMap={infoMap}
-      />
-    )
+    render(<PathTimeline {...defaultProps} entries={entries} courseInfoMap={infoMap} />)
     expect(screen.queryByText(/lessons/)).toBeNull()
   })
 
   it('up-next module shows lesson rows when expanded', () => {
     const entries = [makeEntry({ courseId: 'c1' })]
-    const infoMap = new Map([
-      ['c1', makeCourseInfo({ completionPct: 45, videoCount: 2 })],
-    ])
+    const infoMap = new Map([['c1', makeCourseInfo({ completionPct: 45, videoCount: 2 })]])
     const videos = new Map([
       [
         'c1',
@@ -259,9 +209,7 @@ describe('PathTimeline', () => {
 
   it('shows subsection headings when lessonGroups has multiple titled groups', () => {
     const entries = [makeEntry({ courseId: 'c1' })]
-    const infoMap = new Map([
-      ['c1', makeCourseInfo({ completionPct: 45, videoCount: 2 })],
-    ])
+    const infoMap = new Map([['c1', makeCourseInfo({ completionPct: 45, videoCount: 2 })]])
     const v1 = {
       id: 'v1',
       courseId: 'c1',
@@ -309,9 +257,7 @@ describe('PathTimeline', () => {
 
   it('hides inner subsection heading for a single untitled lesson group', () => {
     const entries = [makeEntry({ courseId: 'c1' })]
-    const infoMap = new Map([
-      ['c1', makeCourseInfo({ completionPct: 45, videoCount: 1 })],
-    ])
+    const infoMap = new Map([['c1', makeCourseInfo({ completionPct: 45, videoCount: 1 })]])
     const v1 = {
       id: 'v1',
       courseId: 'c1',
@@ -341,9 +287,7 @@ describe('PathTimeline', () => {
 
   it('completed module can be toggled open to show lesson rows', () => {
     const entries = [makeEntry({ courseId: 'c1' })]
-    const infoMap = new Map([
-      ['c1', makeCourseInfo({ completionPct: 100, videoCount: 1 })],
-    ])
+    const infoMap = new Map([['c1', makeCourseInfo({ completionPct: 100, videoCount: 1 })]])
     const videos = new Map([
       [
         'c1',
@@ -371,13 +315,7 @@ describe('PathTimeline', () => {
 
   it('renders gap entries with resolve buttons', () => {
     const gapEntry = makeEntry({ id: 'gap-1', courseId: '', justification: 'Missing course' })
-    render(
-      <PathTimeline
-        {...defaultProps}
-        entries={[gapEntry]}
-        gapEntries={[gapEntry]}
-      />
-    )
+    render(<PathTimeline {...defaultProps} entries={[gapEntry]} gapEntries={[gapEntry]} />)
     expect(screen.getByText('Import')).toBeInTheDocument()
     expect(screen.getByText('Match')).toBeInTheDocument()
     expect(screen.getByText('Replace')).toBeInTheDocument()
@@ -416,12 +354,7 @@ describe('PathTimeline', () => {
       ['c3', makeCourseInfo({ name: 'Course Three' })],
     ])
     render(
-      <PathTimeline
-        {...defaultProps}
-        entries={entries}
-        courseInfoMap={infoMap}
-        skipCourseId="c2"
-      />
+      <PathTimeline {...defaultProps} entries={entries} courseInfoMap={infoMap} skipCourseId="c2" />
     )
     expect(screen.getByText('Course One')).toBeInTheDocument()
     expect(screen.queryByText('Course Two')).not.toBeInTheDocument()
@@ -553,13 +486,7 @@ describe('PathTimeline', () => {
     it('renders non-sortable CourseTimelineEntry when editable is false (default)', () => {
       const entries = [makeEntry({ courseId: 'c1' })]
       const infoMap = new Map([['c1', makeCourseInfo({ name: 'Normal' })]])
-      render(
-        <PathTimeline
-          {...defaultProps}
-          entries={entries}
-          courseInfoMap={infoMap}
-        />
-      )
+      render(<PathTimeline {...defaultProps} entries={entries} courseInfoMap={infoMap} />)
       // Non-edit mode: no drag handle data-testid
       expect(screen.queryByTestId('drag-handle-c1')).not.toBeInTheDocument()
       // Card renders normally
@@ -569,14 +496,7 @@ describe('PathTimeline', () => {
     it('renders SortableCourseTimelineEntry inside DndContext when editable is true', () => {
       const entries = [makeEntry({ courseId: 'c1' })]
       const infoMap = new Map([['c1', makeCourseInfo({ name: 'Draggable' })]])
-      render(
-        <PathTimeline
-          {...defaultProps}
-          entries={entries}
-          courseInfoMap={infoMap}
-          editable
-        />
-      )
+      render(<PathTimeline {...defaultProps} entries={entries} courseInfoMap={infoMap} editable />)
       // Edit mode: drag handle data-testid is present
       expect(screen.getByTestId('drag-handle-c1')).toBeInTheDocument()
       // Card content renders
@@ -596,37 +516,20 @@ describe('PathTimeline', () => {
           }),
         ],
       ])
-      render(
-        <PathTimeline
-          {...defaultProps}
-          entries={entries}
-          courseInfoMap={infoMap}
-          editable
-        />
-      )
+      render(<PathTimeline {...defaultProps} entries={entries} courseInfoMap={infoMap} editable />)
       expect(screen.getByText('1:27:48')).toBeInTheDocument()
     })
 
     it('does not crash with single entry in edit mode', () => {
       const entries = [makeEntry({ courseId: 'c1' })]
-      render(
-        <PathTimeline
-          {...defaultProps}
-          entries={entries}
-          editable
-        />
-      )
+      render(<PathTimeline {...defaultProps} entries={entries} editable />)
       // Single entry renders without error
       expect(screen.getByTestId('drag-handle-c1')).toBeInTheDocument()
     })
 
     it('marks gap entries as non-draggable in edit mode', () => {
       const gapEntry = makeEntry({ id: 'gap-1', courseId: '', justification: 'Missing' })
-      const entries = [
-        makeEntry({ courseId: 'c1' }),
-        gapEntry,
-        makeEntry({ courseId: 'c2' }),
-      ]
+      const entries = [makeEntry({ courseId: 'c1' }), gapEntry, makeEntry({ courseId: 'c2' })]
       const infoMap = new Map([
         ['c1', makeCourseInfo({ name: 'Course 1' })],
         ['c2', makeCourseInfo({ name: 'Course 2' })],
@@ -649,21 +552,13 @@ describe('PathTimeline', () => {
 
     it('does not show drag handles in non-editable mode even with editable prop absent', () => {
       const entries = [makeEntry({ courseId: 'c1' })]
-      render(
-        <PathTimeline
-          {...defaultProps}
-          entries={entries}
-        />
-      )
+      render(<PathTimeline {...defaultProps} entries={entries} />)
       expect(screen.queryByTestId('drag-handle-c1')).not.toBeInTheDocument()
     })
 
     it('calls onReorder when dragEnd event fires', () => {
       const onReorder = vi.fn()
-      const entries = [
-        makeEntry({ courseId: 'c1' }),
-        makeEntry({ courseId: 'c2' }),
-      ]
+      const entries = [makeEntry({ courseId: 'c1' }), makeEntry({ courseId: 'c2' })]
       const infoMap = new Map([
         ['c1', makeCourseInfo({ name: 'First' })],
         ['c2', makeCourseInfo({ name: 'Second' })],

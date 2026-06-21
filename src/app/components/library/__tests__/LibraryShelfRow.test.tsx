@@ -283,11 +283,7 @@ describe('LibraryShelfRow', () => {
     it('disables left chevron at start and enables right when overflow exists', async () => {
       renderShelf({
         'data-testid': 'continue-listening',
-        children: [
-          <div key="a">A</div>,
-          <div key="b">B</div>,
-          <div key="c">C</div>,
-        ],
+        children: [<div key="a">A</div>, <div key="b">B</div>, <div key="c">C</div>],
       })
 
       const scroller = screen.getByTestId('continue-listening-scroller')

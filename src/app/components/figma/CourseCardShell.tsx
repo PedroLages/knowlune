@@ -7,7 +7,7 @@ import { cn } from '@/app/components/ui/utils'
 
 // Glass/scrim treatment for overlays on cover imagery. Passes 4.5:1 contrast
 // regardless of thumbnail brightness. Reused by status pill and corner chips.
- 
+
 const OVERLAY_SCRIM_CLASS = 'bg-black/60 text-white backdrop-blur-sm border border-white/10'
 
 interface CardCoverProps {

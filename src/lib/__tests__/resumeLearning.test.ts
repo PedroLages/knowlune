@@ -162,9 +162,7 @@ describe('findFirstIncompleteLesson', () => {
     })
 
     it('returns null when all PDFs are completed in statusMap', () => {
-      const pdfs: ImportedPdf[] = [
-        makePdf({ id: 'p1', filename: 'a.pdf' }),
-      ]
+      const pdfs: ImportedPdf[] = [makePdf({ id: 'p1', filename: 'a.pdf' })]
       const statusMap: Record<string, CompletionStatus> = {
         'course-1:p1': 'completed',
       }

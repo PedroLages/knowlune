@@ -68,17 +68,16 @@ describe('applyAbsProgressToBooks', () => {
   it('calls updateBookPosition and updateBookLastOpenedAt when ABS wins LWW', async () => {
     useBookStore.setState({ books: [makeAbsBook()], isLoaded: true })
     const posSpy = vi.spyOn(useBookStore.getState(), 'updateBookPosition').mockResolvedValue()
-    const openedSpy = vi.spyOn(useBookStore.getState(), 'updateBookLastOpenedAt').mockResolvedValue()
+    const openedSpy = vi
+      .spyOn(useBookStore.getState(), 'updateBookLastOpenedAt')
+      .mockResolvedValue()
 
     await applyAbsProgressToBooks(SERVER, 'api-key')
 
     expect(posSpy).toHaveBeenCalledTimes(1)
-    expect(posSpy).toHaveBeenCalledWith(
-      'book-local-1',
-      { type: 'time', seconds: 900 },
-      25,
-      { suppressErrorToast: true }
-    )
+    expect(posSpy).toHaveBeenCalledWith('book-local-1', { type: 'time', seconds: 900 }, 25, {
+      suppressErrorToast: true,
+    })
     expect(openedSpy).toHaveBeenCalledWith('book-local-1', '2026-04-27T12:00:00.000Z')
   })
 
@@ -93,7 +92,9 @@ describe('applyAbsProgressToBooks', () => {
       isLoaded: true,
     })
     const posSpy = vi.spyOn(useBookStore.getState(), 'updateBookPosition').mockResolvedValue()
-    const openedSpy = vi.spyOn(useBookStore.getState(), 'updateBookLastOpenedAt').mockResolvedValue()
+    const openedSpy = vi
+      .spyOn(useBookStore.getState(), 'updateBookLastOpenedAt')
+      .mockResolvedValue()
 
     await applyAbsProgressToBooks(SERVER, 'api-key')
 

@@ -754,7 +754,10 @@ describe('aiConfiguration.ts', () => {
 
     it('falls back to Vault when local decrypt fails and encrypted data exists', async () => {
       const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
-      vaultMocks.readCredentialWithStatus.mockResolvedValue({ ok: true, value: 'AIza-vault-recovered-key' })
+      vaultMocks.readCredentialWithStatus.mockResolvedValue({
+        ok: true,
+        value: 'AIza-vault-recovered-key',
+      })
 
       localStorage.setItem(
         'ai-configuration',
@@ -776,7 +779,10 @@ describe('aiConfiguration.ts', () => {
     it('re-encrypts locally when Vault fallback succeeds (self-healing)', async () => {
       const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
       const dispatchSpy = vi.spyOn(window, 'dispatchEvent')
-      vaultMocks.readCredentialWithStatus.mockResolvedValue({ ok: true, value: 'AIza-vault-recovered-key' })
+      vaultMocks.readCredentialWithStatus.mockResolvedValue({
+        ok: true,
+        value: 'AIza-vault-recovered-key',
+      })
 
       localStorage.setItem(
         'ai-configuration',
@@ -809,7 +815,10 @@ describe('aiConfiguration.ts', () => {
     it('self-healing: subsequent call decrypts locally without Vault', async () => {
       const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
       // First call: Vault provides the key
-      vaultMocks.readCredentialWithStatus.mockResolvedValueOnce({ ok: true, value: 'AIza-vault-recovered-key' })
+      vaultMocks.readCredentialWithStatus.mockResolvedValueOnce({
+        ok: true,
+        value: 'AIza-vault-recovered-key',
+      })
 
       localStorage.setItem(
         'ai-configuration',
@@ -865,7 +874,11 @@ describe('aiConfiguration.ts', () => {
       vi.useFakeTimers({ shouldAdvanceTime: false })
       const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
       // readCredentialWithStatus returns error on every call — retry exhausts
-      vaultMocks.readCredentialWithStatus.mockResolvedValue({ ok: false, reason: 'error', message: 'Network error' })
+      vaultMocks.readCredentialWithStatus.mockResolvedValue({
+        ok: false,
+        reason: 'error',
+        message: 'Network error',
+      })
 
       localStorage.setItem(
         'ai-configuration',
@@ -935,7 +948,10 @@ describe('aiConfiguration.ts', () => {
 
     it('falls back via legacy apiKeyEncrypted when provider matches global', async () => {
       const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
-      vaultMocks.readCredentialWithStatus.mockResolvedValue({ ok: true, value: 'sk-legacy-vault-key' })
+      vaultMocks.readCredentialWithStatus.mockResolvedValue({
+        ok: true,
+        value: 'sk-legacy-vault-key',
+      })
 
       localStorage.setItem(
         'ai-configuration',
@@ -955,7 +971,10 @@ describe('aiConfiguration.ts', () => {
 
     it('triggers Vault fallback for empty-string decryption result', async () => {
       const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
-      vaultMocks.readCredentialWithStatus.mockResolvedValue({ ok: true, value: 'AIza-vault-recovered-key' })
+      vaultMocks.readCredentialWithStatus.mockResolvedValue({
+        ok: true,
+        value: 'AIza-vault-recovered-key',
+      })
 
       // encryptedData ending in 'encrypted:' decrypts to empty string
       localStorage.setItem(
@@ -978,7 +997,10 @@ describe('aiConfiguration.ts', () => {
 
     it('deduplicates concurrent Vault reads for the same provider', async () => {
       const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
-      vaultMocks.readCredentialWithStatus.mockResolvedValue({ ok: true, value: 'AIza-vault-recovered-key' })
+      vaultMocks.readCredentialWithStatus.mockResolvedValue({
+        ok: true,
+        value: 'AIza-vault-recovered-key',
+      })
 
       localStorage.setItem(
         'ai-configuration',
@@ -1155,7 +1177,10 @@ describe('aiConfiguration.ts', () => {
       })
 
       it('returns null immediately on unauthenticated without retry', async () => {
-        vaultMocks.readCredentialWithStatus.mockResolvedValue({ ok: false, reason: 'unauthenticated' })
+        vaultMocks.readCredentialWithStatus.mockResolvedValue({
+          ok: false,
+          reason: 'unauthenticated',
+        })
 
         localStorage.setItem(
           'ai-configuration',
@@ -1308,7 +1333,10 @@ describe('aiConfiguration.ts', () => {
 
     it('saves key locally and sets vaultBackupFailedAt when Vault write fails', async () => {
       const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
-      vaultMocks.storeCredentialWithStatus.mockResolvedValue({ ok: false, reason: 'unauthenticated' })
+      vaultMocks.storeCredentialWithStatus.mockResolvedValue({
+        ok: false,
+        reason: 'unauthenticated',
+      })
 
       await saveProviderApiKey('openai', 'sk-test-key')
 
@@ -1332,7 +1360,10 @@ describe('aiConfiguration.ts', () => {
 
     it('clears vaultBackupFailedAt on subsequent successful Vault write', async () => {
       // First call: Vault fails
-      vaultMocks.storeCredentialWithStatus.mockResolvedValueOnce({ ok: false, reason: 'unauthenticated' })
+      vaultMocks.storeCredentialWithStatus.mockResolvedValueOnce({
+        ok: false,
+        reason: 'unauthenticated',
+      })
 
       await saveProviderApiKey('openai', 'sk-test-key')
       expect(getAIConfiguration().vaultBackupFailedAt).toBeDefined()
@@ -1478,7 +1509,10 @@ describe('aiConfiguration.ts', () => {
         })
       )
 
-      ollamaMock.testOllamaConnection.mockResolvedValue({ success: false, message: 'Connection refused' })
+      ollamaMock.testOllamaConnection.mockResolvedValue({
+        success: false,
+        message: 'Connection refused',
+      })
 
       await expect(getQuizGenerationAvailability()).resolves.toMatchObject({
         available: false,

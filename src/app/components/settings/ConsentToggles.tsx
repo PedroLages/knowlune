@@ -125,10 +125,7 @@ export function ConsentToggles({ consents, onGrant, onWithdraw }: ConsentToggles
                       {meta.label}
                     </label>
                     <p className="text-xs text-muted-foreground mt-0.5">{meta.description}</p>
-                    <p
-                      id={descId}
-                      className="text-xs text-muted-foreground mt-2"
-                    >
+                    <p id={descId} className="text-xs text-muted-foreground mt-2">
                       <span className="font-medium">Data used:</span> {meta.dataCategories}
                       {' · '}
                       <span className="font-medium">If withdrawn:</span> {meta.withdrawalCopy}
@@ -155,9 +152,7 @@ export function ConsentToggles({ consents, onGrant, onWithdraw }: ConsentToggles
                   </div>
                 </div>
 
-                {index < PURPOSE_ORDER.length - 1 && (
-                  <Separator className="mx-6" />
-                )}
+                {index < PURPOSE_ORDER.length - 1 && <Separator className="mx-6" />}
               </div>
             )
           })}
@@ -173,16 +168,12 @@ export function ConsentToggles({ consents, onGrant, onWithdraw }: ConsentToggles
       >
         <AlertDialogContent data-testid="withdraw-confirm-dialog">
           <AlertDialogHeader>
-            <AlertDialogTitle>
-              Withdraw consent for {currentConfirmMeta?.label}?
-            </AlertDialogTitle>
+            <AlertDialogTitle>Withdraw consent for {currentConfirmMeta?.label}?</AlertDialogTitle>
             <AlertDialogDescription asChild>
               <div className="space-y-3">
                 <p>{currentConfirmMeta?.description}</p>
                 <div className="rounded-lg bg-destructive/10 border border-destructive/20 p-3">
-                  <p className="text-sm font-medium text-destructive mb-1">
-                    What will happen:
-                  </p>
+                  <p className="text-sm font-medium text-destructive mb-1">What will happen:</p>
                   <p className="text-sm">{currentConfirmMeta?.withdrawalCopy}</p>
                 </div>
                 <p className="text-sm text-muted-foreground">

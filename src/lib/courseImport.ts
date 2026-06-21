@@ -16,11 +16,7 @@ import {
   detectAuthorPhoto,
 } from '@/lib/authorDetection'
 import { autoGenerateThumbnail } from '@/lib/autoThumbnail'
-import {
-  generateStoryboard,
-  saveVideoStoryboard,
-  loadVideoStoryboard,
-} from '@/lib/videoStoryboard'
+import { generateStoryboard, saveVideoStoryboard, loadVideoStoryboard } from '@/lib/videoStoryboard'
 import { loadThumbnailFromFile, saveCourseThumbnail } from '@/lib/thumbnailService'
 import {
   showDirectoryPicker,
@@ -34,7 +30,13 @@ import {
   isImageFile,
   getVideoFormat,
 } from '@/lib/fileSystem'
-import type { ImportedAuthor, ImportedCourse, ImportedVideo, ImportedPdf, Difficulty } from '@/data/types'
+import type {
+  ImportedAuthor,
+  ImportedCourse,
+  ImportedVideo,
+  ImportedPdf,
+  Difficulty,
+} from '@/data/types'
 import { toast } from 'sonner'
 
 // --- Error Types ---
@@ -90,9 +92,7 @@ function toSortedVideos(
   videoResults: PromiseSettledResult<VideoExtractionResult>[]
 ): ScannedVideo[] {
   return videoResults
-    .filter(
-      (r): r is PromiseFulfilledResult<VideoExtractionResult> => r.status === 'fulfilled'
-    )
+    .filter((r): r is PromiseFulfilledResult<VideoExtractionResult> => r.status === 'fulfilled')
     .sort((a, b) =>
       a.value.entry.path.localeCompare(b.value.entry.path, undefined, { numeric: true })
     )
@@ -168,10 +168,8 @@ async function readCourseManifest(
 /**
  * Reads and parses course-manifest.json from a File array (drag-drop path).
  */
-async function readCourseManifestFromFiles(
-  files: File[]
-): Promise<CourseManifest | undefined> {
-  const manifestFile = files.find((f) => f.name === 'course-manifest.json')
+async function readCourseManifestFromFiles(files: File[]): Promise<CourseManifest | undefined> {
+  const manifestFile = files.find(f => f.name === 'course-manifest.json')
   if (!manifestFile) return undefined
   try {
     const text = await manifestFile.text()
@@ -265,7 +263,10 @@ export async function scanCourseFolder(): Promise<ScannedCourse> {
       }
 
       // Root-only pass: images (cover selection should only see root-folder images)
-      for await (const entry of scanDirectory(dirHandle, '', { includeImages: true, maxDepth: 0 })) {
+      for await (const entry of scanDirectory(dirHandle, '', {
+        includeImages: true,
+        maxDepth: 0,
+      })) {
         if (useImportProgressStore.getState().cancelRequested) {
           useImportProgressStore.getState().confirmCancellation()
           throw new Error('Import cancelled by user')
@@ -485,7 +486,9 @@ function applyManifestVideoOrder(
   // First pass: match videos to manifest lessons in manifest order
   for (const lesson of flatLessons) {
     const video = videos.find(
-      v => v.filename.toLowerCase().trim() === lesson.filename.toLowerCase().trim() && !matchedVideoIds.has(v.id)
+      v =>
+        v.filename.toLowerCase().trim() === lesson.filename.toLowerCase().trim() &&
+        !matchedVideoIds.has(v.id)
     )
     if (!video) {
       console.warn(
@@ -592,7 +595,10 @@ export async function persistScannedCourse(
     try {
       const authorTitle = scanned.manifestData?.course.author?.title
       const authorBio = scanned.manifestData?.course.author?.bio
-      const matchedId = await matchOrCreateAuthor(authorName, authorTitle || authorBio ? { title: authorTitle, bio: authorBio } : undefined)
+      const matchedId = await matchOrCreateAuthor(
+        authorName,
+        authorTitle || authorBio ? { title: authorTitle, bio: authorBio } : undefined
+      )
       if (matchedId) {
         authorId = matchedId
       }
@@ -875,7 +881,10 @@ export async function scanCourseFolderFromHandle(
       }
 
       // Root-only pass: images (cover selection should only see root-folder images)
-      for await (const entry of scanDirectory(dirHandle, '', { includeImages: true, maxDepth: 0 })) {
+      for await (const entry of scanDirectory(dirHandle, '', {
+        includeImages: true,
+        maxDepth: 0,
+      })) {
         if (useImportProgressStore.getState().cancelRequested) {
           return { status: 'error', folderName: dirHandle.name, message: 'Cancelled' }
         }

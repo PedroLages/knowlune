@@ -22,10 +22,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from '@/app/components/ui/dialog'
-import {
-  useAudiobookshelfStore,
-  VaultUnauthenticatedError,
-} from '@/stores/useAudiobookshelfStore'
+import { useAudiobookshelfStore, VaultUnauthenticatedError } from '@/stores/useAudiobookshelfStore'
 import { toast } from 'sonner'
 import { testConnection, fetchLibraries } from '@/services/AudiobookshelfService'
 import { toastSuccess } from '@/lib/toastHelpers'

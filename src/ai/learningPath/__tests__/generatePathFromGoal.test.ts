@@ -4,9 +4,14 @@ let generatePathFromGoal: (typeof import('@/ai/learningPath/generatePathFromGoal
 let parseAndValidateResponse: (typeof import('@/ai/learningPath/generatePathFromGoal'))['parseAndValidateResponse']
 
 // Build minimal ImportedCourse fixtures
-function makeCourse(overrides: Partial<{
-  id: string; name: string; tags: string[]; category: string
-}> = {}): Parameters<typeof generatePathFromGoal>[1][number] {
+function makeCourse(
+  overrides: Partial<{
+    id: string
+    name: string
+    tags: string[]
+    category: string
+  }> = {}
+): Parameters<typeof generatePathFromGoal>[1][number] {
   return {
     id: overrides.id ?? 'course-1',
     name: overrides.name ?? 'Test Course',
@@ -21,12 +26,14 @@ function makeCourse(overrides: Partial<{
 }
 
 /** Build a raw AI JSON response string for testing the parser */
-function rawResponse(overrides: Partial<{
-  pathName: string
-  pathDescription: string
-  entries: Array<Record<string, unknown>>
-  rationale: string
-}> = {}) {
+function rawResponse(
+  overrides: Partial<{
+    pathName: string
+    pathDescription: string
+    entries: Array<Record<string, unknown>>
+    rationale: string
+  }> = {}
+) {
   return JSON.stringify({
     pathName: overrides.pathName ?? 'Generated Path',
     pathDescription: overrides.pathDescription ?? 'A generated learning path',
@@ -85,9 +92,8 @@ describe('generatePathFromGoal', () => {
         rationale: 'Mock rationale',
       }
 
-      ;(
-        window as unknown as { __mockGoalPathResponse: typeof mockResult }
-      ).__mockGoalPathResponse = mockResult
+      ;(window as unknown as { __mockGoalPathResponse: typeof mockResult }).__mockGoalPathResponse =
+        mockResult
 
       const result = await generatePathFromGoal('Test goal', [makeCourse({ id: 'course-1' })])
 
@@ -100,14 +106,14 @@ describe('generatePathFromGoal', () => {
 
   describe('raw text mock (unit test validation path)', () => {
     it('validates and filters unknown courseIds', async () => {
-      ;(
-        window as unknown as { __mockGoalPathRawText: string }
-      ).__mockGoalPathRawText = rawResponse({
-        entries: [
-          { courseId: 'valid-course', position: 1, justification: 'Valid', isGap: false },
-          { courseId: 'unknown-course', position: 2, justification: 'Unknown', isGap: false },
-        ],
-      })
+      ;(window as unknown as { __mockGoalPathRawText: string }).__mockGoalPathRawText = rawResponse(
+        {
+          entries: [
+            { courseId: 'valid-course', position: 1, justification: 'Valid', isGap: false },
+            { courseId: 'unknown-course', position: 2, justification: 'Unknown', isGap: false },
+          ],
+        }
+      )
 
       const result = await generatePathFromGoal('Test goal', [
         makeCourse({ id: 'valid-course', name: 'Valid Course' }),
@@ -118,14 +124,14 @@ describe('generatePathFromGoal', () => {
     })
 
     it('rejects entries missing required fields', async () => {
-      ;(
-        window as unknown as { __mockGoalPathRawText: string }
-      ).__mockGoalPathRawText = rawResponse({
-        entries: [
-          { courseId: 'course-1', position: 1, justification: 'Valid', isGap: false },
-          { courseId: 'course-2', position: 2, isGap: false }, // missing justification
-        ] as Array<Record<string, unknown>>,
-      })
+      ;(window as unknown as { __mockGoalPathRawText: string }).__mockGoalPathRawText = rawResponse(
+        {
+          entries: [
+            { courseId: 'course-1', position: 1, justification: 'Valid', isGap: false },
+            { courseId: 'course-2', position: 2, isGap: false }, // missing justification
+          ] as Array<Record<string, unknown>>,
+        }
+      )
 
       const result = await generatePathFromGoal('Test goal', [
         makeCourse({ id: 'course-1' }),
@@ -137,15 +143,15 @@ describe('generatePathFromGoal', () => {
     })
 
     it('normalizes positions to sequential 1-indexed', async () => {
-      ;(
-        window as unknown as { __mockGoalPathRawText: string }
-      ).__mockGoalPathRawText = rawResponse({
-        entries: [
-          { courseId: 'course-c', position: 10, justification: 'Third', isGap: false },
-          { courseId: 'course-a', position: 5, justification: 'First', isGap: false },
-          { gapTopic: 'Gap Topic', position: 3, justification: 'Middle', isGap: true },
-        ],
-      })
+      ;(window as unknown as { __mockGoalPathRawText: string }).__mockGoalPathRawText = rawResponse(
+        {
+          entries: [
+            { courseId: 'course-c', position: 10, justification: 'Third', isGap: false },
+            { courseId: 'course-a', position: 5, justification: 'First', isGap: false },
+            { gapTopic: 'Gap Topic', position: 3, justification: 'Middle', isGap: true },
+          ],
+        }
+      )
 
       const result = await generatePathFromGoal('Test goal', [
         makeCourse({ id: 'course-a' }),
@@ -164,14 +170,19 @@ describe('generatePathFromGoal', () => {
     })
 
     it('handles zero courses (pure gap analysis)', async () => {
-      ;(
-        window as unknown as { __mockGoalPathRawText: string }
-      ).__mockGoalPathRawText = rawResponse({
-        entries: [
-          { gapTopic: 'Python Fundamentals', position: 1, justification: 'Foundational', isGap: true },
-          { gapTopic: 'Advanced Python', position: 2, justification: 'Advanced', isGap: true },
-        ],
-      })
+      ;(window as unknown as { __mockGoalPathRawText: string }).__mockGoalPathRawText = rawResponse(
+        {
+          entries: [
+            {
+              gapTopic: 'Python Fundamentals',
+              position: 1,
+              justification: 'Foundational',
+              isGap: true,
+            },
+            { gapTopic: 'Advanced Python', position: 2, justification: 'Advanced', isGap: true },
+          ],
+        }
+      )
 
       const result = await generatePathFromGoal('Learn Python', [])
 
@@ -182,26 +193,38 @@ describe('generatePathFromGoal', () => {
     })
 
     it('generates path with matched courses and gaps', async () => {
-      ;(
-        window as unknown as { __mockGoalPathRawText: string }
-      ).__mockGoalPathRawText = rawResponse({
-        pathName: 'Python for Data Science',
-        pathDescription: 'Learn Python and data science',
-        entries: [
-          { courseId: 'course-python', position: 1, justification: 'Foundational Python', isGap: false },
-          { gapTopic: 'Statistics Basics', position: 2, justification: 'Essential for DS', isGap: true },
-          { courseId: 'course-ml', position: 3, justification: 'ML builds on stats', isGap: false },
-        ],
-        rationale: 'Structured learning path',
-      })
-
-      const result = await generatePathFromGoal(
-        'I want to become a data scientist',
-        [
-          makeCourse({ id: 'course-python', name: 'Python' }),
-          makeCourse({ id: 'course-ml', name: 'Machine Learning' }),
-        ]
+      ;(window as unknown as { __mockGoalPathRawText: string }).__mockGoalPathRawText = rawResponse(
+        {
+          pathName: 'Python for Data Science',
+          pathDescription: 'Learn Python and data science',
+          entries: [
+            {
+              courseId: 'course-python',
+              position: 1,
+              justification: 'Foundational Python',
+              isGap: false,
+            },
+            {
+              gapTopic: 'Statistics Basics',
+              position: 2,
+              justification: 'Essential for DS',
+              isGap: true,
+            },
+            {
+              courseId: 'course-ml',
+              position: 3,
+              justification: 'ML builds on stats',
+              isGap: false,
+            },
+          ],
+          rationale: 'Structured learning path',
+        }
       )
+
+      const result = await generatePathFromGoal('I want to become a data scientist', [
+        makeCourse({ id: 'course-python', name: 'Python' }),
+        makeCourse({ id: 'course-ml', name: 'Machine Learning' }),
+      ])
 
       expect(result.pathName).toBe('Python for Data Science')
       expect(result.pathDescription).toBeTruthy()
@@ -214,14 +237,14 @@ describe('generatePathFromGoal', () => {
     })
 
     it('handles all-matched case (0 gaps)', async () => {
-      ;(
-        window as unknown as { __mockGoalPathRawText: string }
-      ).__mockGoalPathRawText = rawResponse({
-        entries: [
-          { courseId: 'course-1', position: 1, justification: 'First', isGap: false },
-          { courseId: 'course-2', position: 2, justification: 'Second', isGap: false },
-        ],
-      })
+      ;(window as unknown as { __mockGoalPathRawText: string }).__mockGoalPathRawText = rawResponse(
+        {
+          entries: [
+            { courseId: 'course-1', position: 1, justification: 'First', isGap: false },
+            { courseId: 'course-2', position: 2, justification: 'Second', isGap: false },
+          ],
+        }
+      )
 
       const result = await generatePathFromGoal('Learn everything', [
         makeCourse({ id: 'course-1' }),
@@ -236,9 +259,8 @@ describe('generatePathFromGoal', () => {
 
   describe('error paths', () => {
     it('throws on invalid JSON via raw text mock', async () => {
-      ;(
-        window as unknown as { __mockGoalPathRawText: string }
-      ).__mockGoalPathRawText = 'not valid json at all'
+      ;(window as unknown as { __mockGoalPathRawText: string }).__mockGoalPathRawText =
+        'not valid json at all'
 
       await expect(
         generatePathFromGoal('Test goal', [makeCourse()], { timeout: 100 })
@@ -246,13 +268,12 @@ describe('generatePathFromGoal', () => {
     })
 
     it('throws on empty entries via raw text mock', async () => {
-      ;(
-        window as unknown as { __mockGoalPathRawText: string }
-      ).__mockGoalPathRawText = JSON.stringify({
-        pathName: 'Empty',
-        entries: [],
-        rationale: 'None',
-      })
+      ;(window as unknown as { __mockGoalPathRawText: string }).__mockGoalPathRawText =
+        JSON.stringify({
+          pathName: 'Empty',
+          entries: [],
+          rationale: 'None',
+        })
 
       await expect(
         generatePathFromGoal('Test goal', [makeCourse()], { timeout: 100 })
@@ -260,11 +281,10 @@ describe('generatePathFromGoal', () => {
     })
 
     it('throws on missing pathName via raw text mock', async () => {
-      ;(
-        window as unknown as { __mockGoalPathRawText: string }
-      ).__mockGoalPathRawText = JSON.stringify({
-        entries: [{ courseId: 'c1', position: 1, justification: 'X', isGap: false }],
-      })
+      ;(window as unknown as { __mockGoalPathRawText: string }).__mockGoalPathRawText =
+        JSON.stringify({
+          entries: [{ courseId: 'c1', position: 1, justification: 'X', isGap: false }],
+        })
 
       await expect(
         generatePathFromGoal('Test goal', [makeCourse({ id: 'c1' })], { timeout: 100 })
@@ -294,13 +314,14 @@ describe('parseAndValidateResponse', () => {
 
   it('parses JSON from markdown code block', () => {
     const validIds = new Set(['c1'])
-    const raw = '```json\n' + JSON.stringify({
-      pathName: 'From Code Block',
-      entries: [
-        { courseId: 'c1', position: 1, justification: 'Only one', isGap: false },
-      ],
-      rationale: 'OK',
-    }) + '\n```'
+    const raw =
+      '```json\n' +
+      JSON.stringify({
+        pathName: 'From Code Block',
+        entries: [{ courseId: 'c1', position: 1, justification: 'Only one', isGap: false }],
+        rationale: 'OK',
+      }) +
+      '\n```'
 
     const result = parseAndValidateResponse(raw, validIds)
     expect(result.pathName).toBe('From Code Block')
@@ -308,16 +329,18 @@ describe('parseAndValidateResponse', () => {
   })
 
   it('throws on invalid JSON', () => {
-    expect(() => parseAndValidateResponse('not valid json', new Set(['c1'])))
-      .toThrow('AI response is not valid JSON')
+    expect(() => parseAndValidateResponse('not valid json', new Set(['c1']))).toThrow(
+      'AI response is not valid JSON'
+    )
   })
 
   it('throws on missing pathName', () => {
     const raw = JSON.stringify({
       entries: [{ courseId: 'c1', position: 1, justification: 'X', isGap: false }],
     })
-    expect(() => parseAndValidateResponse(raw, new Set(['c1'])))
-      .toThrow('AI response format is invalid')
+    expect(() => parseAndValidateResponse(raw, new Set(['c1']))).toThrow(
+      'AI response format is invalid'
+    )
   })
 
   it('throws on empty entries array', () => {
@@ -326,8 +349,7 @@ describe('parseAndValidateResponse', () => {
       entries: [],
       rationale: 'None',
     })
-    expect(() => parseAndValidateResponse(raw, new Set(['c1'])))
-      .toThrow('AI response is empty')
+    expect(() => parseAndValidateResponse(raw, new Set(['c1']))).toThrow('AI response is empty')
   })
 
   it('filters entries with unknown courseIds', () => {

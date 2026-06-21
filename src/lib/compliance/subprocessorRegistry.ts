@@ -146,14 +146,14 @@ export const FIRST_PARTY_INFRA: readonly string[] = [
  * the package is not registered as a sub-processor.
  */
 export function findSubProcessorForPackage(packageName: string): SubProcessor | undefined {
-  return SUBPROCESSOR_REGISTRY.find((sp) =>
-    sp.packagePatterns.some((pattern) => {
+  return SUBPROCESSOR_REGISTRY.find(sp =>
+    sp.packagePatterns.some(pattern => {
       if (pattern.endsWith('/*')) {
         const scope = pattern.slice(0, -2) // e.g. "@supabase"
         return packageName.startsWith(scope + '/')
       }
       return packageName === pattern
-    }),
+    })
   )
 }
 

@@ -61,7 +61,9 @@ export interface AggregateInput {
  * Never throws. On checkCredential failure a credential is classified missing with
  * transient:true so the banner errs on the side of "show me".
  */
-export async function aggregateCredentialStatus(input: AggregateInput): Promise<CredentialStatusResult> {
+export async function aggregateCredentialStatus(
+  input: AggregateInput
+): Promise<CredentialStatusResult> {
   const { catalogs, servers, aiConfig } = input
   const missing: MissingCredential[] = []
   const statusByKey: Record<string, CredentialStatus> = {}
@@ -92,15 +94,14 @@ export async function aggregateCredentialStatus(input: AggregateInput): Promise<
       statusByKey[key] = 'vault'
     } else {
       const hasLocal =
-        !!(aiConfig.providerKeys?.[providerId as keyof typeof aiConfig.providerKeys]) ||
+        !!aiConfig.providerKeys?.[providerId as keyof typeof aiConfig.providerKeys] ||
         (providerId === aiConfig.provider && !!aiConfig.apiKeyEncrypted)
       statusByKey[key] = hasLocal ? 'local' : 'missing'
     }
   }
 
   const hasLocalAiKeys =
-    Object.values(aiConfig.providerKeys ?? {}).some(k => !!k) ||
-    !!aiConfig.apiKeyEncrypted
+    Object.values(aiConfig.providerKeys ?? {}).some(k => !!k) || !!aiConfig.apiKeyEncrypted
 
   if (vaultConfiguredIds.length === 0 && hasLocalAiKeys) {
     missing.push({
@@ -113,7 +114,7 @@ export async function aggregateCredentialStatus(input: AggregateInput): Promise<
 
   // ─── OPDS catalogs ──────────────────────────────────────────────────────────
   const opdsChecks = await Promise.allSettled(
-    catalogs.map(async (catalog) => {
+    catalogs.map(async catalog => {
       const isAnonymous = !catalog.auth?.username
       if (isAnonymous) {
         return { catalog, status: 'anonymous' as CredentialStatus, transient: false }
@@ -153,7 +154,7 @@ export async function aggregateCredentialStatus(input: AggregateInput): Promise<
 
   // ─── ABS servers ────────────────────────────────────────────────────────────
   const absChecks = await Promise.allSettled(
-    servers.map(async (server) => {
+    servers.map(async server => {
       try {
         const configured = await checkCredential('abs-server', server.id)
         return {

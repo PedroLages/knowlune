@@ -633,8 +633,8 @@ describe('removeImportedCourses (bulk delete)', () => {
     useCourseImportStore.setState({ importedCourses: [course1, course2] })
 
     // Spy on removeImportedCourse so course2's deletion appears to fail
-    vi.spyOn(useCourseImportStore.getState(), 'removeImportedCourse')
-      .mockImplementation(async (id: string) => {
+    vi.spyOn(useCourseImportStore.getState(), 'removeImportedCourse').mockImplementation(
+      async (id: string) => {
         if (id === course2.id) {
           // Simulate failure: do not remove from state, set error
           useCourseImportStore.setState({ importError: 'Failed to remove course' })
@@ -644,7 +644,8 @@ describe('removeImportedCourses (bulk delete)', () => {
         useCourseImportStore.setState(state => ({
           importedCourses: state.importedCourses.filter(c => c.id !== id),
         }))
-      })
+      }
+    )
 
     await act(async () => {
       await useCourseImportStore.getState().removeImportedCourses([course1.id, course2.id])
@@ -710,8 +711,8 @@ describe('removeImportedCourses (bulk delete)', () => {
     useCourseImportStore.setState({ importedCourses: [course1, course2] })
 
     // Spy so course2's deletion appears to fail
-    vi.spyOn(useCourseImportStore.getState(), 'removeImportedCourse')
-      .mockImplementation(async (id: string) => {
+    vi.spyOn(useCourseImportStore.getState(), 'removeImportedCourse').mockImplementation(
+      async (id: string) => {
         if (id === course2.id) {
           useCourseImportStore.setState({ importError: 'Failed to remove course' })
           return
@@ -720,7 +721,8 @@ describe('removeImportedCourses (bulk delete)', () => {
         useCourseImportStore.setState(state => ({
           importedCourses: state.importedCourses.filter(c => c.id !== id),
         }))
-      })
+      }
+    )
 
     let capturedOnUndo: (() => void) | undefined
     vi.mocked(toastWithUndo).mockImplementation((opts: { onUndo: () => void }) => {
@@ -757,10 +759,11 @@ describe('removeImportedCourses (bulk delete)', () => {
     useCourseImportStore.setState({ importedCourses: [course1, course2] })
 
     // Both deletions appear to fail (no courses removed from state)
-    vi.spyOn(useCourseImportStore.getState(), 'removeImportedCourse')
-      .mockImplementation(async () => {
+    vi.spyOn(useCourseImportStore.getState(), 'removeImportedCourse').mockImplementation(
+      async () => {
         useCourseImportStore.setState({ importError: 'Failed to remove course' })
-      })
+      }
+    )
 
     const { toastWithUndo } = await import('@/lib/toastHelpers')
 

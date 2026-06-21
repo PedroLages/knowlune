@@ -9,9 +9,7 @@ describe('getGridClassName (E99-S02)', () => {
   })
 
   it('caps at 2 columns for `2`', () => {
-    expect(getGridClassName(2)).toBe(
-      'grid grid-cols-1 sm:grid-cols-2 gap-[var(--content-gap)]'
-    )
+    expect(getGridClassName(2)).toBe('grid grid-cols-1 sm:grid-cols-2 gap-[var(--content-gap)]')
   })
 
   it('caps at 3 columns at lg+ for `3`', () => {
@@ -64,9 +62,7 @@ describe('getGridClassName — compact mode (E99-S04)', () => {
   })
 
   it('scales 2 → 3 columns in compact mode', () => {
-    expect(getGridClassName(2, 'compact')).toBe(
-      'grid grid-cols-2 sm:grid-cols-3 gap-3'
-    )
+    expect(getGridClassName(2, 'compact')).toBe('grid grid-cols-2 sm:grid-cols-3 gap-3')
   })
 
   it('scales 3 → 5 columns in compact mode', () => {

@@ -85,9 +85,7 @@ function PathResumeCard({
   isPrimary = false,
 }: PathCardProps) {
   return (
-    <div
-      className={`rounded-xl border border-border/50 bg-card p-4 ${isPrimary ? '' : 'mt-2'}`}
-    >
+    <div className={`rounded-xl border border-border/50 bg-card p-4 ${isPrimary ? '' : 'mt-2'}`}>
       {/* Path name (small, muted) */}
       <p className="text-xs text-muted-foreground font-medium truncate mb-1">{pathName}</p>
 
@@ -171,9 +169,7 @@ function ContinueLearningPathSectionInner() {
     }
 
     // Sort by most recently created first
-    results.sort(
-      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    )
+    results.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
 
     return results
   }, [entriesByPathMap, progressMap, paths, importedCourses])
@@ -213,9 +209,7 @@ function ContinueLearningPathSectionInner() {
         courseName={primary.info.course?.name ?? 'Unknown Course'}
         completionPct={primary.info.completionPct}
         action={primary.info.action}
-        navigateLabel={
-          primary.info.action === 'resume' ? 'Continue' : 'Start'
-        }
+        navigateLabel={primary.info.action === 'resume' ? 'Continue' : 'Start'}
         onNavigate={() =>
           handleNavigate(primary.pathId, primary.info.entry.courseId, primary.info.action)
         }
@@ -252,12 +246,8 @@ function ContinueLearningPathSectionInner() {
                   courseName={p.info.course?.name ?? 'Unknown Course'}
                   completionPct={p.info.completionPct}
                   action={p.info.action}
-                  navigateLabel={
-                    p.info.action === 'resume' ? 'Continue' : 'Start'
-                  }
-                  onNavigate={() =>
-                    handleNavigate(p.pathId, p.info.entry.courseId, p.info.action)
-                  }
+                  navigateLabel={p.info.action === 'resume' ? 'Continue' : 'Start'}
+                  onNavigate={() => handleNavigate(p.pathId, p.info.entry.courseId, p.info.action)}
                 />
               ))}
             </div>

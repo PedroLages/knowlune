@@ -389,7 +389,11 @@ export async function hydrateSettingsFromSupabase(
       }
     }
     if (s.defaultSleepTimer !== undefined) {
-      if (VALID_TIMERS.has(s.defaultSleepTimer as import('@/stores/useAudiobookPrefsStore').SleepTimerDefault)) {
+      if (
+        VALID_TIMERS.has(
+          s.defaultSleepTimer as import('@/stores/useAudiobookPrefsStore').SleepTimerDefault
+        )
+      ) {
         useAudiobookPrefsStore
           .getState()
           .setDefaultSleepTimer(
@@ -406,10 +410,16 @@ export async function hydrateSettingsFromSupabase(
     if (typeof s.showRemainingTime === 'boolean') {
       useAudiobookPrefsStore.getState().setShowRemainingTime(s.showRemainingTime)
     }
-    if (typeof s.skipBackSeconds === 'number' && (VALID_SKIP_BACK as readonly number[]).includes(s.skipBackSeconds)) {
+    if (
+      typeof s.skipBackSeconds === 'number' &&
+      (VALID_SKIP_BACK as readonly number[]).includes(s.skipBackSeconds)
+    ) {
       useAudiobookPrefsStore.getState().setSkipBackSeconds(s.skipBackSeconds)
     }
-    if (typeof s.skipForwardSeconds === 'number' && (VALID_SKIP_FORWARD as readonly number[]).includes(s.skipForwardSeconds)) {
+    if (
+      typeof s.skipForwardSeconds === 'number' &&
+      (VALID_SKIP_FORWARD as readonly number[]).includes(s.skipForwardSeconds)
+    ) {
       useAudiobookPrefsStore.getState().setSkipForwardSeconds(s.skipForwardSeconds)
     }
 

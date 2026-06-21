@@ -23,7 +23,9 @@ describe('PathProgressSidebar', () => {
   })
 
   it('renders modules completed stat', () => {
-    render(<PathProgressSidebar progress={makeProgress({ completedCourses: 3, totalCourses: 5 })} />)
+    render(
+      <PathProgressSidebar progress={makeProgress({ completedCourses: 3, totalCourses: 5 })} />
+    )
     expect(screen.getByText('3/5')).toBeInTheDocument()
   })
 
@@ -66,7 +68,9 @@ describe('PathProgressSidebar', () => {
   })
 
   it('renders 0% state correctly', () => {
-    render(<PathProgressSidebar progress={makeProgress({ completionPct: 0, completedCourses: 0 })} />)
+    render(
+      <PathProgressSidebar progress={makeProgress({ completionPct: 0, completedCourses: 0 })} />
+    )
     expect(screen.getByText('0%')).toBeInTheDocument()
     expect(screen.getByText('0/5')).toBeInTheDocument()
   })
@@ -74,7 +78,11 @@ describe('PathProgressSidebar', () => {
   it('renders 100% state correctly', () => {
     render(
       <PathProgressSidebar
-        progress={makeProgress({ completionPct: 100, completedCourses: 5, estimatedRemainingHours: 0 })}
+        progress={makeProgress({
+          completionPct: 100,
+          completedCourses: 5,
+          estimatedRemainingHours: 0,
+        })}
       />
     )
     expect(screen.getByText('100%')).toBeInTheDocument()

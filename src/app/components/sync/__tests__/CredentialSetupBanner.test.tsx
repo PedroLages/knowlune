@@ -9,11 +9,7 @@ import { MemoryRouter } from 'react-router'
 
 // ── Mocks ─────────────────────────────────────────────────────────────────
 
-const {
-  mockMissingCredentials,
-  mockAuthUser,
-  mockAnnounce,
-} = vi.hoisted(() => ({
+const { mockMissingCredentials, mockAuthUser, mockAnnounce } = vi.hoisted(() => ({
   mockMissingCredentials: vi.fn().mockReturnValue({ missing: [], statusByKey: {}, loading: false }),
   mockAuthUser: vi.fn<() => { id: string } | null>(() => ({ id: 'user-1' })),
   mockAnnounce: vi.fn(),
@@ -35,9 +31,24 @@ vi.mock('@/app/hooks/useLiveRegion', () => ({
 
 import { CredentialSetupBanner } from '../CredentialSetupBanner'
 
-const AI_ENTRY = { kind: 'ai-provider' as const, id: '__ai-section__', displayName: 'AI provider keys', status: 'missing' as const }
-const OPDS_ENTRY = { kind: 'opds-catalog' as const, id: 'cat-1', displayName: 'My Library', status: 'missing' as const }
-const ABS_ENTRY = { kind: 'abs-server' as const, id: 'srv-1', displayName: 'Home Server', status: 'missing' as const }
+const AI_ENTRY = {
+  kind: 'ai-provider' as const,
+  id: '__ai-section__',
+  displayName: 'AI provider keys',
+  status: 'missing' as const,
+}
+const OPDS_ENTRY = {
+  kind: 'opds-catalog' as const,
+  id: 'cat-1',
+  displayName: 'My Library',
+  status: 'missing' as const,
+}
+const ABS_ENTRY = {
+  kind: 'abs-server' as const,
+  id: 'srv-1',
+  displayName: 'Home Server',
+  status: 'missing' as const,
+}
 
 // Mock window.location.assign to spy on navigation
 const mockAssign = vi.fn()
@@ -60,7 +71,11 @@ beforeEach(() => {
   mockAssign.mockClear()
   mockAnnounce.mockClear()
   // Clear sessionStorage
-  try { sessionStorage.clear() } catch { /* ignore */ }
+  try {
+    sessionStorage.clear()
+  } catch {
+    /* ignore */
+  }
 })
 
 afterEach(() => {
@@ -121,11 +136,15 @@ describe('CredentialSetupBanner — action buttons', () => {
   })
 
   it('click "Re-enter" on OPDS entry → dispatches open-opds-settings CustomEvent', () => {
-    mockMissingCredentials.mockReturnValue({ missing: [OPDS_ENTRY], statusByKey: {}, loading: false })
+    mockMissingCredentials.mockReturnValue({
+      missing: [OPDS_ENTRY],
+      statusByKey: {},
+      loading: false,
+    })
     renderBanner()
 
     const events: CustomEvent[] = []
-    window.addEventListener('open-opds-settings', (e) => events.push(e as CustomEvent))
+    window.addEventListener('open-opds-settings', e => events.push(e as CustomEvent))
 
     const btn = screen.getByTestId(`credential-banner-action-opds-catalog-cat-1`)
     fireEvent.click(btn)
@@ -135,11 +154,15 @@ describe('CredentialSetupBanner — action buttons', () => {
   })
 
   it('click "Re-enter" on ABS entry → dispatches open-abs-settings CustomEvent', () => {
-    mockMissingCredentials.mockReturnValue({ missing: [ABS_ENTRY], statusByKey: {}, loading: false })
+    mockMissingCredentials.mockReturnValue({
+      missing: [ABS_ENTRY],
+      statusByKey: {},
+      loading: false,
+    })
     renderBanner()
 
     const events: CustomEvent[] = []
-    window.addEventListener('open-abs-settings', (e) => events.push(e as CustomEvent))
+    window.addEventListener('open-abs-settings', e => events.push(e as CustomEvent))
 
     const btn = screen.getByTestId(`credential-banner-action-abs-server-srv-1`)
     fireEvent.click(btn)

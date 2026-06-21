@@ -1340,4 +1340,3 @@ export interface UserConsent {
   /** ISO timestamp — last update (LWW sync cursor) */
   updatedAt: string
 }
-

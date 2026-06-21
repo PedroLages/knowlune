@@ -97,8 +97,8 @@ export function LegalUpdateBanner({
         <div className="flex-1 space-y-2">
           <p className="text-sm text-foreground">
             Our <strong>{documentName}</strong> has been updated (effective{' '}
-            <strong>{effectiveDate}</strong>). Please review and acknowledge to continue using
-            all features.
+            <strong>{effectiveDate}</strong>). Please review and acknowledge to continue using all
+            features.
           </p>
           <div className="flex items-center gap-2">
             <Button
@@ -109,7 +109,9 @@ export function LegalUpdateBanner({
               disabled={ackLoading}
               aria-disabled={ackLoading}
             >
-              {ackLoading && <Loader2 className="mr-1.5 size-3.5 animate-spin" aria-hidden="true" />}
+              {ackLoading && (
+                <Loader2 className="mr-1.5 size-3.5 animate-spin" aria-hidden="true" />
+              )}
               {ackLoading ? 'Acknowledging…' : 'Acknowledge'}
             </Button>
             <Link

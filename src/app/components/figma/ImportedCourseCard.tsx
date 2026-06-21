@@ -177,7 +177,11 @@ export function ImportedCourseCard({
   const videoHandle = previewOpen && !searching && firstVideo ? firstVideo.fileHandle : undefined
   const { blobUrl, error: videoError, loading: videoLoading } = useVideoFromHandle(videoHandle)
   const activePreviewHandle = showPreview ? previewHandle : undefined
-  const { blobUrl: previewBlobUrl, loading: previewLoading, error: previewError } = useVideoFromHandle(activePreviewHandle)
+  const {
+    blobUrl: previewBlobUrl,
+    loading: previewLoading,
+    error: previewError,
+  } = useVideoFromHandle(activePreviewHandle)
 
   useEffect(() => {
     if (!showPreview || course.videoCount === 0 || course.source === 'youtube') {
@@ -199,7 +203,11 @@ export function ImportedCourseCard({
           return
         }
         if (!vids[0].fileHandle) {
-          console.warn('[CourseCardPreview] First video has null fileHandle', vids[0].filename, course.id)
+          console.warn(
+            '[CourseCardPreview] First video has null fileHandle',
+            vids[0].filename,
+            course.id
+          )
           setPreviewHandle(null)
           setVideoReady(false)
           return
@@ -341,92 +349,95 @@ export function ImportedCourseCard({
       >
         <div className="group-hover:translate-y-2 motion-safe:transition-all motion-reduce:transition-none motion-reduce:group-hover:translate-y-0">
           <CardCover heightClass="aspect-video w-full">
-          {/* Background: gradient placeholder or lazy-loaded thumbnail */}
-          <div
-            data-testid="course-card-placeholder"
-            className="absolute inset-0 bg-gradient-to-br from-emerald-50 to-teal-100 dark:from-emerald-950/50 dark:to-teal-950/50 flex items-center justify-center"
-          >
-            {(!thumbnailUrl || !isCardVisible) && !showPreview && (
-              <FolderOpen className="size-16 text-emerald-300 dark:text-emerald-600" />
-            )}
-          </div>
-          {thumbnailUrl && !showPreview && isCardVisible && (
-            <img
-              src={thumbnailUrl}
-              alt=""
-              aria-hidden="true"
-              loading="lazy"
-              className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 motion-reduce:transition-none motion-reduce:group-hover:scale-100"
-            />
-          )}
-          {/* Inline video preview — matches legacy CourseCard behavior (no status gate) */}
-          {showPreview && previewBlobUrl && (
-            // width/height attrs prevent the browser from using intrinsic video dimensions before layout.
-            // This was the root cause of the pixelated/cropped preview on non-16:9 source videos.
-            <video
-              key={previewBlobUrl}
-              src={previewBlobUrl}
-              muted
-              autoPlay
-              playsInline
-              loop
-              preload="metadata"
-              aria-hidden="true"
-              width="100%"
-              height="100%"
-              onCanPlay={() => setVideoReady(true)}
-              className={cn(
-                'absolute inset-0 block w-full h-full object-cover pointer-events-none transition-opacity duration-500',
-                videoReady ? 'opacity-100' : 'opacity-0'
-              )}
-            />
-          )}
-          {/* Loading overlay — shown while preview is being prepared */}
-          {showPreview && previewLoading && (
-            <div className="absolute inset-0 z-10 bg-black/60 backdrop-blur-sm flex items-center justify-center">
-              <Loader2 className="size-5 text-white/80 animate-spin" aria-hidden="true" />
-            </div>
-          )}
-          {/* Error indicator — shown when preview cannot load */}
-          {showPreview && previewError && !previewLoading && course.source !== 'youtube' && (
-            <div className="absolute top-2 left-2 z-30 rounded-full px-2 py-1 bg-black/60 text-white backdrop-blur-sm border border-white/10 text-[11px] font-medium" role="status">
-              Preview unavailable
-            </div>
-          )}
-
-          {/* Selection checkbox — top-left, only when selection mode is active */}
-          {onToggleSelect && (
-            <div className="absolute top-3 left-3 z-40" onClick={e => e.stopPropagation()}>
-              <div className="bg-background/80 rounded-full p-0.5">
-                <Checkbox
-                  checked={selected}
-                  onCheckedChange={() => onToggleSelect(course.id)}
-                  aria-label={`Select ${course.name}`}
-                />
-              </div>
-            </div>
-          )}
-
-          {/* Completion/progress badge — top-left */}
-          {completionPercent === 100 ? (
+            {/* Background: gradient placeholder or lazy-loaded thumbnail */}
             <div
-              className="absolute top-3 left-3 z-30 bg-success text-success-foreground rounded-full px-3 py-1 text-xs font-bold shadow-lg flex items-center gap-1"
-              data-testid="completion-badge"
+              data-testid="course-card-placeholder"
+              className="absolute inset-0 bg-gradient-to-br from-emerald-50 to-teal-100 dark:from-emerald-950/50 dark:to-teal-950/50 flex items-center justify-center"
             >
-              <CheckCircle2 className="size-3" aria-hidden="true" />
-              Complete
+              {(!thumbnailUrl || !isCardVisible) && !showPreview && (
+                <FolderOpen className="size-16 text-emerald-300 dark:text-emerald-600" />
+              )}
             </div>
-          ) : completionPercent > 0 ? (
-            <div className="absolute top-3 left-3 z-30" data-testid="completion-ring">
-              <ProgressRing percent={completionPercent} size={40} strokeWidth={3} />
-            </div>
-          ) : null}
+            {thumbnailUrl && !showPreview && isCardVisible && (
+              <img
+                src={thumbnailUrl}
+                alt=""
+                aria-hidden="true"
+                loading="lazy"
+                className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 motion-reduce:transition-none motion-reduce:group-hover:scale-100"
+              />
+            )}
+            {/* Inline video preview — matches legacy CourseCard behavior (no status gate) */}
+            {showPreview && previewBlobUrl && (
+              // width/height attrs prevent the browser from using intrinsic video dimensions before layout.
+              // This was the root cause of the pixelated/cropped preview on non-16:9 source videos.
+              <video
+                key={previewBlobUrl}
+                src={previewBlobUrl}
+                muted
+                autoPlay
+                playsInline
+                loop
+                preload="metadata"
+                aria-hidden="true"
+                width="100%"
+                height="100%"
+                onCanPlay={() => setVideoReady(true)}
+                className={cn(
+                  'absolute inset-0 block w-full h-full object-cover pointer-events-none transition-opacity duration-500',
+                  videoReady ? 'opacity-100' : 'opacity-0'
+                )}
+              />
+            )}
+            {/* Loading overlay — shown while preview is being prepared */}
+            {showPreview && previewLoading && (
+              <div className="absolute inset-0 z-10 bg-black/60 backdrop-blur-sm flex items-center justify-center">
+                <Loader2 className="size-5 text-white/80 animate-spin" aria-hidden="true" />
+              </div>
+            )}
+            {/* Error indicator — shown when preview cannot load */}
+            {showPreview && previewError && !previewLoading && course.source !== 'youtube' && (
+              <div
+                className="absolute top-2 left-2 z-30 rounded-full px-2 py-1 bg-black/60 text-white backdrop-blur-sm border border-white/10 text-[11px] font-medium"
+                role="status"
+              >
+                Preview unavailable
+              </div>
+            )}
 
-          {/* Status dropdown — top-right.
+            {/* Selection checkbox — top-left, only when selection mode is active */}
+            {onToggleSelect && (
+              <div className="absolute top-3 left-3 z-40" onClick={e => e.stopPropagation()}>
+                <div className="bg-background/80 rounded-full p-0.5">
+                  <Checkbox
+                    checked={selected}
+                    onCheckedChange={() => onToggleSelect(course.id)}
+                    aria-label={`Select ${course.name}`}
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Completion/progress badge — top-left */}
+            {completionPercent === 100 ? (
+              <div
+                className="absolute top-3 left-3 z-30 bg-success text-success-foreground rounded-full px-3 py-1 text-xs font-bold shadow-lg flex items-center gap-1"
+                data-testid="completion-badge"
+              >
+                <CheckCircle2 className="size-3" aria-hidden="true" />
+                Complete
+              </div>
+            ) : completionPercent > 0 ? (
+              <div className="absolute top-3 left-3 z-30" data-testid="completion-ring">
+                <ProgressRing percent={completionPercent} size={40} strokeWidth={3} />
+              </div>
+            ) : null}
+
+            {/* Status dropdown — top-right.
               When status is 'active' (default on My Courses), show an icon-only
               affordance instead of the pill — every card is active, so the label
               adds noise. Other statuses render the pill with an overlay scrim. */}
-          <div className="absolute top-3 right-3 z-30">
+            <div className="absolute top-3 right-3 z-30">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <button
@@ -523,276 +534,283 @@ export function ImportedCourseCard({
               </DropdownMenu>
             </div>
 
-          {/* Info button — bottom-right, hover-revealed */}
-          <div
-            className="absolute bottom-3 right-3 z-30"
-            onClick={e => { e.preventDefault(); e.stopPropagation() }}
-          >
-            <Popover open={infoOpen} onOpenChange={setInfoOpen}>
-              <PopoverTrigger asChild>
-                <button
-                  data-testid="course-info-button"
-                  onClick={e => e.stopPropagation()}
-                  aria-label="Course details"
-                  className="rounded-full bg-black/50 backdrop-blur-sm p-1.5 text-white opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 transition-all duration-300 hover:bg-black/70 hover:scale-110 cursor-pointer focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-white outline-none"
-                >
-                  <Info className="size-4" />
-                </button>
-              </PopoverTrigger>
-              <PopoverContent side="top" className="w-72 p-4">
-                <div className="space-y-3">
-                  <div>
-                    <h4 className="font-semibold text-sm leading-tight">{course.name}</h4>
-                    <div className="flex items-center justify-between gap-2 mt-1">
-                      <p className="text-xs text-muted-foreground">
-                        Imported {new Date(course.importedAt).toLocaleDateString()}
-                      </p>
-                      <span
-                        className={cn(
-                          'inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium leading-none shrink-0',
-                          config.badgeClass
-                        )}
-                      >
-                        {config.label}
-                      </span>
+            {/* Info button — bottom-right, hover-revealed */}
+            <div
+              className="absolute bottom-3 right-3 z-30"
+              onClick={e => {
+                e.preventDefault()
+                e.stopPropagation()
+              }}
+            >
+              <Popover open={infoOpen} onOpenChange={setInfoOpen}>
+                <PopoverTrigger asChild>
+                  <button
+                    data-testid="course-info-button"
+                    onClick={e => e.stopPropagation()}
+                    aria-label="Course details"
+                    className="rounded-full bg-black/50 backdrop-blur-sm p-1.5 text-white opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 transition-all duration-300 hover:bg-black/70 hover:scale-110 cursor-pointer focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-white outline-none"
+                  >
+                    <Info className="size-4" />
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent side="top" className="w-72 p-4">
+                  <div className="space-y-3">
+                    <div>
+                      <h4 className="font-semibold text-sm leading-tight">{course.name}</h4>
+                      <div className="flex items-center justify-between gap-2 mt-1">
+                        <p className="text-xs text-muted-foreground">
+                          Imported {new Date(course.importedAt).toLocaleDateString()}
+                        </p>
+                        <span
+                          className={cn(
+                            'inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium leading-none shrink-0',
+                            config.badgeClass
+                          )}
+                        >
+                          {config.label}
+                        </span>
+                      </div>
                     </div>
-                  </div>
 
-                  <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
+                    <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
+                      {course.videoCount > 0 && (
+                        <span className="flex items-center gap-1">
+                          <Video className="size-3.5" aria-hidden="true" />
+                          {course.videoCount} {course.videoCount === 1 ? 'video' : 'videos'}
+                        </span>
+                      )}
+                      {course.totalDuration != null && course.totalDuration > 0 && (
+                        <span className="flex items-center gap-1">
+                          <Clock className="size-3.5" aria-hidden="true" />
+                          {formatCourseDuration(course.totalDuration)}
+                        </span>
+                      )}
+                      {course.pdfCount > 0 && (
+                        <span className="flex items-center gap-1">
+                          <FileText className="size-3.5" aria-hidden="true" />
+                          {course.pdfCount} {course.pdfCount === 1 ? 'PDF' : 'PDFs'}
+                        </span>
+                      )}
+                      {course.totalFileSize != null && course.totalFileSize > 0 && (
+                        <span className="text-muted-foreground">
+                          {formatFileSize(course.totalFileSize)}
+                        </span>
+                      )}
+                    </div>
+
+                    {course.tags.length > 0 && (
+                      <div className="flex flex-wrap gap-1">
+                        {course.tags.slice(0, 4).map(tag => (
+                          <Badge key={tag} variant="secondary" className="text-xs px-2 py-0.5">
+                            {tag}
+                          </Badge>
+                        ))}
+                      </div>
+                    )}
+
                     {course.videoCount > 0 && (
-                      <span className="flex items-center gap-1">
-                        <Video className="size-3.5" aria-hidden="true" />
-                        {course.videoCount} {course.videoCount === 1 ? 'video' : 'videos'}
-                      </span>
-                    )}
-                    {course.totalDuration != null && course.totalDuration > 0 && (
-                      <span className="flex items-center gap-1">
-                        <Clock className="size-3.5" aria-hidden="true" />
-                        {formatCourseDuration(course.totalDuration)}
-                      </span>
-                    )}
-                    {course.pdfCount > 0 && (
-                      <span className="flex items-center gap-1">
-                        <FileText className="size-3.5" aria-hidden="true" />
-                        {course.pdfCount} {course.pdfCount === 1 ? 'PDF' : 'PDFs'}
-                      </span>
-                    )}
-                    {course.totalFileSize != null && course.totalFileSize > 0 && (
-                      <span className="text-muted-foreground">
-                        {formatFileSize(course.totalFileSize)}
-                      </span>
+                      <Button
+                        size="sm"
+                        data-testid="course-preview-video-btn"
+                        className="w-full gap-2 hover:brightness-110 active:scale-95 transition-all"
+                        onClick={e => {
+                          e.stopPropagation()
+                          setInfoOpen(false)
+                          handlePreviewClick(e)
+                        }}
+                      >
+                        <Eye className="size-4" aria-hidden="true" />
+                        Preview First Video
+                      </Button>
                     )}
                   </div>
+                </PopoverContent>
+              </Popover>
+            </div>
 
-                  {course.tags.length > 0 && (
-                    <div className="flex flex-wrap gap-1">
-                      {course.tags.slice(0, 4).map(tag => (
-                        <Badge key={tag} variant="secondary" className="text-xs px-2 py-0.5">
-                          {tag}
-                        </Badge>
-                      ))}
-                    </div>
-                  )}
+            {/* Completion overlay */}
+            <CompletionOverlay show={isCompleted} />
 
-                  {course.videoCount > 0 && (
-                    <Button
-                      size="sm"
-                      data-testid="course-preview-video-btn"
-                      className="w-full gap-2 hover:brightness-110 active:scale-95 transition-all"
-                      onClick={e => {
-                        e.stopPropagation()
-                        setInfoOpen(false)
-                        handlePreviewClick(e)
-                      }}
-                    >
-                      <Eye className="size-4" aria-hidden="true" />
-                      Preview First Video
-                    </Button>
-                  )}
-                </div>
-              </PopoverContent>
-            </Popover>
-          </div>
+            {/* Resolution chip — bottom-left, only when ≥1080p (sub-HD is not a selling point) */}
+            {course.maxResolutionHeight != null && course.maxResolutionHeight >= 1080 && (
+              <CoverCornerChip position="bottom-left" data-testid="course-card-resolution">
+                {getResolutionLabel(course.maxResolutionHeight)}
+              </CoverCornerChip>
+            )}
 
-          {/* Completion overlay */}
-          <CompletionOverlay show={isCompleted} />
-
-          {/* Resolution chip — bottom-left, only when ≥1080p (sub-HD is not a selling point) */}
-          {course.maxResolutionHeight != null && course.maxResolutionHeight >= 1080 && (
-            <CoverCornerChip position="bottom-left" data-testid="course-card-resolution">
-              {getResolutionLabel(course.maxResolutionHeight)}
-            </CoverCornerChip>
-          )}
-
-          {/* Duration chip — bottom-right (YouTube/Vimeo convention).
+            {/* Duration chip — bottom-right (YouTube/Vimeo convention).
               Hidden on hover so the hover-revealed info button (same corner)
               has clear space. */}
-          {course.totalDuration != null && course.totalDuration > 0 && (
-            <span
-              className="transition-opacity duration-200 group-hover:opacity-0 group-focus-within:opacity-0 [@media(hover:none)]:group-hover:opacity-100 motion-reduce:transition-none"
-            >
-              <CoverCornerChip position="bottom-right" data-testid="course-card-duration">
-                <Clock className="size-3" aria-hidden="true" />
-                {formatCourseDurationCompact(course.totalDuration)}
-              </CoverCornerChip>
-            </span>
-          )}
+            {course.totalDuration != null && course.totalDuration > 0 && (
+              <span className="transition-opacity duration-200 group-hover:opacity-0 group-focus-within:opacity-0 [@media(hover:none)]:group-hover:opacity-100 motion-reduce:transition-none">
+                <CoverCornerChip position="bottom-right" data-testid="course-card-duration">
+                  <Clock className="size-3" aria-hidden="true" />
+                  {formatCourseDurationCompact(course.totalDuration)}
+                </CoverCornerChip>
+              </span>
+            )}
 
-          {/* Cover-edge progress bar */}
-          <div data-testid="completion-progress-bar" className="contents">
-            <CoverProgressBar progress={completionPercent} />
-          </div>
-        </CardCover>
+            {/* Cover-edge progress bar */}
+            <div data-testid="completion-progress-bar" className="contents">
+              <CoverProgressBar progress={completionPercent} />
+            </div>
+          </CardCover>
         </div>
 
         {/* Card body */}
         <div className="mt-3 px-1 min-h-32 flex flex-col">
-            <h3
-              data-testid="course-card-title"
-              className="font-bold text-sm leading-tight mb-1 line-clamp-2 group-hover:text-brand transition-colors"
-            >
-              {course.name}
-            </h3>
-            {/* Author + inline "+ add tag" row.
+          <h3
+            data-testid="course-card-title"
+            className="font-bold text-sm leading-tight mb-1 line-clamp-2 group-hover:text-brand transition-colors"
+          >
+            {course.name}
+          </h3>
+          {/* Author + inline "+ add tag" row.
                 When there are no tags yet (and the card is editable), the tag-add
                 affordance folds into this row as a muted text trigger — avoiding
                 the standalone "+" button under the title. Hidden at rest and
                 revealed on hover/focus so empty cards stay visually calm.
                 When tags exist, they render in their own row below with the
                 original pill-style "+" for adding more. */}
-            <div className="flex items-center gap-2 mb-1 min-h-5">
-              {authorData ? (
-                <button
-                  type="button"
-                  data-testid="course-card-author"
-                  onClick={e => {
-                    e.stopPropagation()
-                    navigate(`/authors/${authorData.id}`)
-                  }}
-                  className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-brand transition-colors w-fit"
-                >
-                  <Avatar className="size-5">
-                    <AvatarImage {...getAvatarSrc(authorData.photoUrl ?? '', 20)} alt="" />
-                    <AvatarFallback className="text-[8px]">
-                      {authorData.name
-                        .split(' ')
-                        .map(n => n[0])
-                        .join('')
-                        .toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                  <span>{authorData.name}</span>
-                </button>
-              ) : (
-                // Author row is hidden when no author is set — exposing "Unknown Author"
-                // as user-facing text reads as a bug. A visually hidden span preserves
-                // the data-testid for any tests that rely on the fallback element.
-                <span data-testid="course-card-unknown-author" className="sr-only" aria-hidden="true" />
-              )}
-              {!readOnly && course.tags.length === 0 && analysisStatus !== 'analyzing' && (
-                <>
-                  {authorData && (
-                    <span className="text-muted-foreground/40" aria-hidden="true">·</span>
-                  )}
-                  <span className="opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity duration-200 motion-reduce:transition-none">
-                    <TagEditor
-                      variant="inline"
-                      currentTags={course.tags}
-                      allTags={allTags}
-                      onAddTag={handleAddTag}
-                    />
-                  </span>
-                </>
-              )}
-            </div>
-            {(course.tags.length > 0 || analysisStatus === 'analyzing') && (
-              <div className="flex items-center gap-1.5 mt-1 mb-2">
-                <span aria-live="polite" className="contents">
-                  {analysisStatus === 'analyzing' && (
-                    <span
-                      data-testid="ai-tagging-indicator"
-                      className="text-xs text-muted-foreground animate-pulse flex items-center gap-1"
-                    >
-                      <Loader2 className="size-3 animate-spin" aria-hidden="true" />
-                      AI tagging...
-                    </span>
-                  )}
-                  {analysisStatus === 'complete' && course.tags.length > 0 && (
-                    <span className="sr-only">
-                      AI tagging complete. {course.tags.length} tags added.
-                    </span>
-                  )}
-                </span>
-                <TagBadgeList
-                  tags={course.tags}
-                  onRemove={readOnly ? undefined : handleRemoveTag}
-                  maxVisible={3}
-                />
-                {!readOnly && course.tags.length > 0 && (
-                  <TagEditor currentTags={course.tags} allTags={allTags} onAddTag={handleAddTag} />
-                )}
-              </div>
+          <div className="flex items-center gap-2 mb-1 min-h-5">
+            {authorData ? (
+              <button
+                type="button"
+                data-testid="course-card-author"
+                onClick={e => {
+                  e.stopPropagation()
+                  navigate(`/authors/${authorData.id}`)
+                }}
+                className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-brand transition-colors w-fit"
+              >
+                <Avatar className="size-5">
+                  <AvatarImage {...getAvatarSrc(authorData.photoUrl ?? '', 20)} alt="" />
+                  <AvatarFallback className="text-[8px]">
+                    {authorData.name
+                      .split(' ')
+                      .map(n => n[0])
+                      .join('')
+                      .toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+                <span>{authorData.name}</span>
+              </button>
+            ) : (
+              // Author row is hidden when no author is set — exposing "Unknown Author"
+              // as user-facing text reads as a bug. A visually hidden span preserves
+              // the data-testid for any tests that rely on the fallback element.
+              <span
+                data-testid="course-card-unknown-author"
+                className="sr-only"
+                aria-hidden="true"
+              />
             )}
-            <div className="mt-auto flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs text-muted-foreground">
-              {course.videoCount > 0 && (
-                <span data-testid="course-card-video-count" className="flex items-center gap-1">
-                  <Video className="size-4" aria-hidden="true" />
-                  <span>
-                    {course.videoCount} {course.videoCount === 1 ? 'video' : 'videos'}
-                  </span>
-                </span>
-              )}
-              {course.pdfCount > 0 && (
-                <span data-testid="course-card-pdf-count" className="flex items-center gap-1">
-                  <FileText className="size-4" aria-hidden="true" />
-                  <span>
-                    {course.pdfCount} {course.pdfCount === 1 ? 'PDF' : 'PDFs'}
-                  </span>
-                </span>
-              )}
-              {course.totalFileSize != null && course.totalFileSize > 0 && (
-                <span data-testid="course-card-file-size" className="text-muted-foreground">
-                  {formatFileSize(course.totalFileSize)}
-                </span>
-              )}
-            </div>
-
-            {/* Action buttons — always visible, no hover needed */}
-            {!readOnly && (
+            {!readOnly && course.tags.length === 0 && analysisStatus !== 'analyzing' && (
               <>
-                {showPlay && (
-                  <Button
-                    variant="brand"
-                    size="sm"
-                    data-testid="start-course-btn"
-                    onClick={startStudying}
-                    aria-label={`Start studying "${course.name}"`}
-                    className="mt-3 w-full button-press gap-2"
-                  >
-                    <PlayCircle className="size-4" aria-hidden="true" />
-                    Start Learning
-                  </Button>
+                {authorData && (
+                  <span className="text-muted-foreground/40" aria-hidden="true">
+                    ·
+                  </span>
                 )}
-                {(status === 'active' || status === 'paused') && !isCompleted && (
-                  <Button
-                    variant="brand-outline"
-                    size="sm"
-                    data-testid="continue-course-btn"
-                    aria-label={`Continue "${course.name}"`}
-                    className="mt-3 w-full button-press gap-2"
-                    onClick={handleContinueLearning}
-                  >
-                    <PlayCircle className="size-4" aria-hidden="true" />
-                    Continue Learning
-                  </Button>
-                )}
+                <span className="opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity duration-200 motion-reduce:transition-none">
+                  <TagEditor
+                    variant="inline"
+                    currentTags={course.tags}
+                    allTags={allTags}
+                    onAddTag={handleAddTag}
+                  />
+                </span>
               </>
             )}
-            {momentumScore && momentumScore.score > 0 && (
-              <div className="mt-2">
-                <MomentumBadge score={momentumScore.score} tier={momentumScore.tier} />
-              </div>
+          </div>
+          {(course.tags.length > 0 || analysisStatus === 'analyzing') && (
+            <div className="flex items-center gap-1.5 mt-1 mb-2">
+              <span aria-live="polite" className="contents">
+                {analysisStatus === 'analyzing' && (
+                  <span
+                    data-testid="ai-tagging-indicator"
+                    className="text-xs text-muted-foreground animate-pulse flex items-center gap-1"
+                  >
+                    <Loader2 className="size-3 animate-spin" aria-hidden="true" />
+                    AI tagging...
+                  </span>
+                )}
+                {analysisStatus === 'complete' && course.tags.length > 0 && (
+                  <span className="sr-only">
+                    AI tagging complete. {course.tags.length} tags added.
+                  </span>
+                )}
+              </span>
+              <TagBadgeList
+                tags={course.tags}
+                onRemove={readOnly ? undefined : handleRemoveTag}
+                maxVisible={3}
+              />
+              {!readOnly && course.tags.length > 0 && (
+                <TagEditor currentTags={course.tags} allTags={allTags} onAddTag={handleAddTag} />
+              )}
+            </div>
+          )}
+          <div className="mt-auto flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs text-muted-foreground">
+            {course.videoCount > 0 && (
+              <span data-testid="course-card-video-count" className="flex items-center gap-1">
+                <Video className="size-4" aria-hidden="true" />
+                <span>
+                  {course.videoCount} {course.videoCount === 1 ? 'video' : 'videos'}
+                </span>
+              </span>
             )}
+            {course.pdfCount > 0 && (
+              <span data-testid="course-card-pdf-count" className="flex items-center gap-1">
+                <FileText className="size-4" aria-hidden="true" />
+                <span>
+                  {course.pdfCount} {course.pdfCount === 1 ? 'PDF' : 'PDFs'}
+                </span>
+              </span>
+            )}
+            {course.totalFileSize != null && course.totalFileSize > 0 && (
+              <span data-testid="course-card-file-size" className="text-muted-foreground">
+                {formatFileSize(course.totalFileSize)}
+              </span>
+            )}
+          </div>
+
+          {/* Action buttons — always visible, no hover needed */}
+          {!readOnly && (
+            <>
+              {showPlay && (
+                <Button
+                  variant="brand"
+                  size="sm"
+                  data-testid="start-course-btn"
+                  onClick={startStudying}
+                  aria-label={`Start studying "${course.name}"`}
+                  className="mt-3 w-full button-press gap-2"
+                >
+                  <PlayCircle className="size-4" aria-hidden="true" />
+                  Start Learning
+                </Button>
+              )}
+              {(status === 'active' || status === 'paused') && !isCompleted && (
+                <Button
+                  variant="brand-outline"
+                  size="sm"
+                  data-testid="continue-course-btn"
+                  aria-label={`Continue "${course.name}"`}
+                  className="mt-3 w-full button-press gap-2"
+                  onClick={handleContinueLearning}
+                >
+                  <PlayCircle className="size-4" aria-hidden="true" />
+                  Continue Learning
+                </Button>
+              )}
+            </>
+          )}
+          {momentumScore && momentumScore.score > 0 && (
+            <div className="mt-2">
+              <MomentumBadge score={momentumScore.score} tier={momentumScore.tier} />
+            </div>
+          )}
         </div>
       </article>
 

@@ -45,7 +45,13 @@ describe('curriculumGrouping', () => {
       { id: 'ch1', courseId: 'c', videoId: 'yt1', title: 'A', startTime: 0, order: 0 },
     ]
     const videos = [
-      vid({ id: 'x', courseId: 'c', filename: 'x.mp4', youtubeVideoId: 'yt1', path: 'folder/x.mp4' }),
+      vid({
+        id: 'x',
+        courseId: 'c',
+        filename: 'x.mp4',
+        youtubeVideoId: 'yt1',
+        path: 'folder/x.mp4',
+      }),
     ]
     const pdfs: ImportedPdf[] = []
     const g = buildGroupedCurriculum({
@@ -60,7 +66,13 @@ describe('curriculumGrouping', () => {
 
   it('buildGroupedCurriculum falls back to folder grouping for YouTube without chapters', () => {
     const videos = [
-      vid({ id: 'x', courseId: 'c', filename: 'x.mp4', youtubeVideoId: 'yt1', path: 'folder/x.mp4' }),
+      vid({
+        id: 'x',
+        courseId: 'c',
+        filename: 'x.mp4',
+        youtubeVideoId: 'yt1',
+        path: 'folder/x.mp4',
+      }),
     ]
     const g = buildGroupedCurriculum({
       videos,

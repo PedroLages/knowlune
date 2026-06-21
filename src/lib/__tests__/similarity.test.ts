@@ -37,15 +37,13 @@ describe('findSimilarBooks', () => {
     const hero = makeBook({
       id: 'hero',
       title: 'Hero Book',
-      description:
-        'The art of critical thinking and logical analysis for better decisions',
+      description: 'The art of critical thinking and logical analysis for better decisions',
     })
 
     const candidate = makeBook({
       id: 'c1',
       title: 'Similar Book',
-      description:
-        'This book covers critical thinking and logical reasoning skills',
+      description: 'This book covers critical thinking and logical reasoning skills',
     })
 
     const candidates = [candidate]
@@ -247,9 +245,10 @@ describe('findSimilarBooks', () => {
         makeBook({
           id: `candidate-${i}`,
           title: `Candidate ${i}`,
-          description: i < 50
-            ? 'machine learning data science artificial intelligence'
-            : 'completely unrelated topic about cooking gardening sports',
+          description:
+            i < 50
+              ? 'machine learning data science artificial intelligence'
+              : 'completely unrelated topic about cooking gardening sports',
         })
       )
     }

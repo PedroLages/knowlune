@@ -64,9 +64,13 @@ function makeMockAdapter(groups: MaterialGroup[]): CourseAdapter {
     getCourse: vi.fn() as unknown as CourseAdapter['getCourse'],
     getSource: vi.fn().mockReturnValue('local') as unknown as CourseAdapter['getSource'],
     getLessons: vi.fn().mockResolvedValue(groups.map(g => g.primary)),
-    getLesson: vi.fn().mockImplementation((id: string) =>
-      Promise.resolve(groups.flatMap(g => [g.primary, ...g.materials]).find(m => m.id === id) ?? null)
-    ),
+    getLesson: vi
+      .fn()
+      .mockImplementation((id: string) =>
+        Promise.resolve(
+          groups.flatMap(g => [g.primary, ...g.materials]).find(m => m.id === id) ?? null
+        )
+      ),
     getGroupedLessons: vi.fn().mockResolvedValue(groups),
     getMediaUrl: vi.fn().mockResolvedValue(null),
     getTranscript: vi.fn().mockResolvedValue(null),

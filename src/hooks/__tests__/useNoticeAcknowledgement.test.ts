@@ -82,7 +82,6 @@ describe('useNoticeAcknowledgement', () => {
   })
 
   it('returns fail-open defaults before query resolves', () => {
-     
     mockLimit.mockReturnValue(new Promise(() => {})) // never resolves
     const { result } = renderHook(() => useNoticeAcknowledgement())
     expect(result.current.acknowledged).toBe(true)
@@ -128,7 +127,7 @@ describe('useNoticeAcknowledgement', () => {
     await waitFor(() => {
       expect(consoleSpy).toHaveBeenCalledWith(
         expect.stringContaining('[useNoticeAcknowledgement]'),
-        expect.any(String),
+        expect.any(String)
       )
     })
     expect(result.current.acknowledged).toBe(true)

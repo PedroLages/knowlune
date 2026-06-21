@@ -240,19 +240,13 @@ describe('submitToGitHub', () => {
   })
 
   it('returns ok: true when GitHub responds with 201', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn().mockResolvedValue({ ok: true, status: 201 } as Response)
-    )
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, status: 201 } as Response))
     const result = await submitToGitHub(payload, 'token-abc')
     expect(result.ok).toBe(true)
   })
 
   it('returns ok: false with error message on 4xx', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn().mockResolvedValue({ ok: false, status: 422 } as Response)
-    )
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 422 } as Response))
     const result = await submitToGitHub(payload, 'token-abc')
     expect(result.ok).toBe(false)
     if (!result.ok) {
@@ -273,10 +267,7 @@ describe('submitToGitHub', () => {
   })
 
   it('returns ok: false with network message on fetch error', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn().mockRejectedValue(new Error('Network error'))
-    )
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('Network error')))
     const result = await submitToGitHub(payload, 'token-abc')
     expect(result.ok).toBe(false)
     if (!result.ok) {

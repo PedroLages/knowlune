@@ -343,8 +343,8 @@ export function UnifiedCourseDetail() {
         >
           <Laptop className="size-5 shrink-0 mt-0.5" aria-hidden="true" />
           <p>
-            This course&apos;s files are stored on your Mac. To play lessons, open Knowlune on
-            the device where you imported them.
+            This course&apos;s files are stored on your Mac. To play lessons, open Knowlune on the
+            device where you imported them.
           </p>
         </div>
       )}

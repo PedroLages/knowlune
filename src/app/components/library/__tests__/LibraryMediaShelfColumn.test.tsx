@@ -138,7 +138,9 @@ describe('LibraryMediaShelfColumn', () => {
     expect(tiles.length).toBeGreaterThanOrEqual(1)
     // Progress meta should be present for denseContinue variant (only Continue shelf has this)
     expect(screen.getByTestId('book-tile-audio-continue-progress-meta')).toBeInTheDocument()
-    expect(screen.getAllByTestId('book-tile-audio-continue-audio-badge').length).toBeGreaterThanOrEqual(1)
+    expect(
+      screen.getAllByTestId('book-tile-audio-continue-audio-badge').length
+    ).toBeGreaterThanOrEqual(1)
   })
 
   it('renders BookTile for Recently Added shelf with small variant', () => {
@@ -151,7 +153,9 @@ describe('LibraryMediaShelfColumn', () => {
     // The recently added book should be a BookTile
     const recentTiles = screen.getAllByTestId('book-tile-audio-recent')
     expect(recentTiles.length).toBeGreaterThanOrEqual(1)
-    expect(screen.getAllByTestId('book-tile-audio-recent-audio-badge').length).toBeGreaterThanOrEqual(1)
+    expect(
+      screen.getAllByTestId('book-tile-audio-recent-audio-badge').length
+    ).toBeGreaterThanOrEqual(1)
     // Progress should not be present on small variant (only on Continue variant)
     expect(screen.queryByTestId('book-tile-audio-recent-progress-meta')).not.toBeInTheDocument()
   })
@@ -170,4 +174,3 @@ describe('LibraryMediaShelfColumn', () => {
     expect(await screen.findByTestId('context-menu-edit')).toBeInTheDocument()
   })
 })
-

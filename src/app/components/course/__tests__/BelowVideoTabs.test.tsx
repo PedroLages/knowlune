@@ -19,15 +19,8 @@ import { MemoryRouter } from 'react-router'
 // ---------------------------------------------------------------------------
 
 vi.mock('@/app/components/course/tabs/NotesTab', () => ({
-  NotesTab: ({ courseId, lessonId }: {
-    courseId: string;
-    lessonId: string;
-  }) => (
-    <div
-      data-testid="notes-tab-content"
-      data-course-id={courseId}
-      data-lesson-id={lessonId}
-    >
+  NotesTab: ({ courseId, lessonId }: { courseId: string; lessonId: string }) => (
+    <div data-testid="notes-tab-content" data-course-id={courseId} data-lesson-id={lessonId}>
       Notes Content
     </div>
   ),

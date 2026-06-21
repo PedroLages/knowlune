@@ -101,18 +101,14 @@ export function parseAndValidateResponse(
       !item.justification ||
       typeof item.isGap !== 'boolean'
     ) {
-      console.warn(
-        `[generatePathFromGoal] Invalid entry at index ${i}: missing required fields`
-      )
+      console.warn(`[generatePathFromGoal] Invalid entry at index ${i}: missing required fields`)
       continue
     }
 
     if (item.isGap) {
       // Gap entry: must have gapTopic
       if (!item.gapTopic || !item.gapTopic.trim()) {
-        console.warn(
-          `[generatePathFromGoal] Gap entry at index ${i}: missing gapTopic, skipping`
-        )
+        console.warn(`[generatePathFromGoal] Gap entry at index ${i}: missing gapTopic, skipping`)
         continue
       }
 
@@ -125,9 +121,7 @@ export function parseAndValidateResponse(
     } else {
       // Matched course entry: must have valid courseId from input set
       if (!item.courseId) {
-        console.warn(
-          `[generatePathFromGoal] Course entry at index ${i}: missing courseId`
-        )
+        console.warn(`[generatePathFromGoal] Course entry at index ${i}: missing courseId`)
         // Treat as gap if it has a gapTopic, otherwise skip
         if (item.gapTopic) {
           validEntries.push({
@@ -214,12 +208,13 @@ export async function generatePathFromGoal(
   const inputCourseIds = new Set(courses.map(c => c.id))
 
   // Check for test mock (E2E tests inject deterministic responses via window object)
-  const windowMock = typeof window !== 'undefined'
-    ? (window as unknown as {
-        __mockGoalPathResponse?: GeneratePathFromGoalResult
-        __mockGoalPathRawText?: string
-      })
-    : null
+  const windowMock =
+    typeof window !== 'undefined'
+      ? (window as unknown as {
+          __mockGoalPathResponse?: GeneratePathFromGoalResult
+          __mockGoalPathRawText?: string
+        })
+      : null
 
   if (windowMock?.__mockGoalPathResponse) {
     // Full mock response — returned directly (E2E mode, pre-validated)
@@ -261,9 +256,13 @@ export async function generatePathFromGoal(
 User's Learning Goal:
 "${trimmedGoal}"
 
-${hasCourses ? `Available Course Library:
-${JSON.stringify(courseMetadata, null, 2)}` : `Available Course Library:
-The user has NO courses in their library yet. You must produce a pure gap analysis — a template path of topics they should learn, with no courseId values.`}
+${
+  hasCourses
+    ? `Available Course Library:
+${JSON.stringify(courseMetadata, null, 2)}`
+    : `Available Course Library:
+The user has NO courses in their library yet. You must produce a pure gap analysis — a template path of topics they should learn, with no courseId values.`
+}
 
 Instructions:
 1. Analyze the user's goal and ${hasCourses ? 'the available courses' : 'the learning domain'}

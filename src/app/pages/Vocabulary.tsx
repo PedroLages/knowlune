@@ -455,7 +455,7 @@ export function Vocabulary() {
                             className="size-8"
                             onClick={() => handleEdit(selectedItem)}
                             aria-label="Edit selected item"
-                          data-testid="vocabulary-rail-edit"
+                            data-testid="vocabulary-rail-edit"
                           >
                             <Pencil className="size-4" />
                           </Button>
@@ -465,7 +465,7 @@ export function Vocabulary() {
                             className="size-8 text-destructive hover:text-destructive"
                             onClick={() => handleDelete(selectedItem.id)}
                             aria-label="Delete selected item"
-                          data-testid="vocabulary-rail-delete"
+                            data-testid="vocabulary-rail-delete"
                           >
                             <Trash2 className="size-4" />
                           </Button>

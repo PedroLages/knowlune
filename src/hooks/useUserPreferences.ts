@@ -45,11 +45,22 @@ const DIFFICULTY_TERMS: Record<string, number> = {
 }
 
 const FORMAT_VIDEO_TERMS = new Set([
-  'video', 'course', 'lecture', 'tutorial', 'workshop', 'training',
+  'video',
+  'course',
+  'lecture',
+  'tutorial',
+  'workshop',
+  'training',
 ])
 
 const FORMAT_TEXT_TERMS = new Set([
-  'book', 'article', 'pdf', 'document', 'guide', 'reference', 'manual',
+  'book',
+  'article',
+  'pdf',
+  'document',
+  'guide',
+  'reference',
+  'manual',
 ])
 
 function detectDifficultyFromTags(tags: string[]): number {
@@ -82,9 +93,23 @@ function detectFormatFromTags(tags: string[]): 'video' | 'text' | 'mixed' {
 }
 
 const TOPIC_BLACKLIST = new Set([
-  'beginner', 'intermediate', 'advanced', 'fundamentals', 'basic',
-  'video', 'book', 'course', 'tutorial', 'lecture', 'workshop',
-  'training', 'article', 'pdf', 'document', 'guide', 'reference',
+  'beginner',
+  'intermediate',
+  'advanced',
+  'fundamentals',
+  'basic',
+  'video',
+  'book',
+  'course',
+  'tutorial',
+  'lecture',
+  'workshop',
+  'training',
+  'article',
+  'pdf',
+  'document',
+  'guide',
+  'reference',
 ])
 
 function extractTopicsFromTags(tags: string[]): string[] {
@@ -209,14 +234,11 @@ function computePreferences(history: ReorderHistoryEntry[]): UserPreferences {
     .map(([topic]) => topic)
 
   return {
-    difficultyOrdering: difficultyCount > 0
-      ? Math.round((difficultySignal / difficultyCount) * 100) / 100
-      : 0,
+    difficultyOrdering:
+      difficultyCount > 0 ? Math.round((difficultySignal / difficultyCount) * 100) / 100 : 0,
     durationOrdering: 0, // No duration data in current model
     topicAffinity,
-    formatAffinity: formatCount > 0
-      ? Math.round((formatSignal / formatCount) * 100) / 100
-      : 0,
+    formatAffinity: formatCount > 0 ? Math.round((formatSignal / formatCount) * 100) / 100 : 0,
   }
 }
 
@@ -224,9 +246,7 @@ function computePreferences(history: ReorderHistoryEntry[]): UserPreferences {
  * Format preferences as natural language for AI prompt injection.
  * Returns an empty string if preferences are null.
  */
-export function formatPreferencesForPrompt(
-  prefs: UserPreferences | null
-): string {
+export function formatPreferencesForPrompt(prefs: UserPreferences | null): string {
   if (!prefs) return ''
 
   const lines: string[] = []

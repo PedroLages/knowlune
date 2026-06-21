@@ -75,9 +75,7 @@ describe('YouTubePlayer runtime embeddability probe', () => {
   it('runs the probe for legacy imports and keeps iframe when probe says embeddable', async () => {
     probeMock.mockResolvedValue({ embeddable: true })
 
-    render(
-      <YouTubePlayer videoId="vid-legacy-ok" courseId="course-1" lessonId="lesson-2" />
-    )
+    render(<YouTubePlayer videoId="vid-legacy-ok" courseId="course-1" lessonId="lesson-2" />)
 
     await fireIframeLoad()
     await waitFor(() => expect(probeMock).toHaveBeenCalledWith('vid-legacy-ok'))
@@ -101,9 +99,7 @@ describe('YouTubePlayer runtime embeddability probe', () => {
     )
 
     await fireIframeLoad()
-    await waitFor(() =>
-      expect(onUnembeddable).toHaveBeenCalledWith('embedding-disabled')
-    )
+    await waitFor(() => expect(onUnembeddable).toHaveBeenCalledWith('embedding-disabled'))
 
     expect(document.querySelector('iframe')).toBeNull()
     expect(screen.getByTestId('youtube-player-fallback')).toBeInTheDocument()
@@ -176,9 +172,7 @@ describe('YouTubePlayer runtime embeddability probe', () => {
     await waitFor(() => expect(probeMock).toHaveBeenCalledTimes(1))
 
     // Re-render with the same props — probedRef guard should prevent another call.
-    rerender(
-      <YouTubePlayer videoId="vid-dedupe" courseId="course-1" lessonId="lesson-6" />
-    )
+    rerender(<YouTubePlayer videoId="vid-dedupe" courseId="course-1" lessonId="lesson-6" />)
     await new Promise(r => setTimeout(r, 700))
 
     expect(probeMock).toHaveBeenCalledTimes(1)

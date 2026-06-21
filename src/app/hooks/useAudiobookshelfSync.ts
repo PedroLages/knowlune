@@ -11,7 +11,14 @@
 
 import { useCallback, useEffect, useRef, useState, type MutableRefObject } from 'react'
 import { toast } from 'sonner'
-import type { AbsProgress, AudiobookshelfServer, AbsLibraryItem, Book, BookChapter, BookFormat } from '@/data/types'
+import type {
+  AbsProgress,
+  AudiobookshelfServer,
+  AbsLibraryItem,
+  Book,
+  BookChapter,
+  BookFormat,
+} from '@/data/types'
 import * as AudiobookshelfService from '@/services/AudiobookshelfService'
 import { useBookStore } from '@/stores/useBookStore'
 import { useAudiobookshelfStore } from '@/stores/useAudiobookshelfStore'
@@ -54,9 +61,7 @@ export function isValidSyncItem(absItem: AbsLibraryItem): boolean {
  * narratorName string fallback. This helper normalizes all to string[].
  */
 export function resolveNarratorNames(absItem: AbsLibraryItem): string[] {
-  const rawNarrators = (absItem.media.metadata.narrators ?? []) as Array<
-    string | { name: string }
-  >
+  const rawNarrators = (absItem.media.metadata.narrators ?? []) as Array<string | { name: string }>
   return rawNarrators.length > 0
     ? rawNarrators.map(n => (typeof n === 'string' ? n : n.name))
     : (((absItem.media.metadata as Record<string, unknown>).narratorName as string)
@@ -141,7 +146,11 @@ export async function applyAbsProgressToBooks(
  * Callers that cannot resolve a credential pass `null`, which forces
  * cover-URL / Bearer-auth paths to omit the credential.
  */
-export function mapAbsItemToBook(absItem: AbsLibraryItem, server: AudiobookshelfServer, apiKey: string): Book {
+export function mapAbsItemToBook(
+  absItem: AbsLibraryItem,
+  server: AudiobookshelfServer,
+  apiKey: string
+): Book {
   const bookId = crypto.randomUUID()
 
   // Detect format from media metadata
@@ -373,7 +382,10 @@ export function useAudiobookshelfSync() {
           lastSyncedAt: new Date().toISOString(),
         })
 
-        toast.success(`Synced ${allMappedBooks.length} book${allMappedBooks.length !== 1 ? 's' : ''}`, { duration: 3000 })
+        toast.success(
+          `Synced ${allMappedBooks.length} book${allMappedBooks.length !== 1 ? 's' : ''}`,
+          { duration: 3000 }
+        )
         if (removedCount > 0) {
           toast.info(
             `Removed ${removedCount} book${removedCount > 1 ? 's' : ''} no longer on server`,

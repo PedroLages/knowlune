@@ -41,7 +41,7 @@ export function computePathCompletionPct(
   entries: PathCompletionEntry[],
   importedCourseMap: Map<string, PathCompletionCourse>,
   videoProgress: PathCompletionVideoProgress[],
-  localProgress: Record<string, PathCompletionLocalProgress>,
+  localProgress: Record<string, PathCompletionLocalProgress>
 ): number {
   let totalCompletedLessons = 0
   let totalLessonsCount = 0
@@ -52,7 +52,7 @@ export function computePathCompletionPct(
 
     // Count completed videos from Dexie progress table
     const completedFromDexie = videoProgress.filter(
-      vp => vp.courseId === entry.courseId && vp.completedAt,
+      vp => vp.courseId === entry.courseId && vp.completedAt
     ).length
 
     // Count completed from localStorage
@@ -62,14 +62,12 @@ export function computePathCompletionPct(
     // Take the higher of the two sources (they may overlap), capped at total
     const completedLessons = Math.min(
       Math.max(completedFromDexie, completedFromLocal),
-      totalLessons,
+      totalLessons
     )
 
     totalCompletedLessons += completedLessons
     totalLessonsCount += totalLessons
   }
 
-  return totalLessonsCount > 0
-    ? Math.round((totalCompletedLessons / totalLessonsCount) * 100)
-    : 0
+  return totalLessonsCount > 0 ? Math.round((totalCompletedLessons / totalLessonsCount) * 100) : 0
 }

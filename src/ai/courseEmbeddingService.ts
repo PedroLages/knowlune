@@ -96,7 +96,7 @@ export async function generateCourseEmbeddingAfterImport(course: ImportedCourse)
       console.info(
         '[CourseEmbedding] Skipping embedding for course',
         course.id,
-        ': ai_embeddings consent not granted.',
+        ': ai_embeddings consent not granted.'
       )
       return
     }

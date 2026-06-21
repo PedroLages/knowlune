@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest'
-import { navigationGroups, getPrimaryNav, getOverflowNav, getIsActive, resolveNavActive } from '../navigation'
+import {
+  navigationGroups,
+  getPrimaryNav,
+  getOverflowNav,
+  getIsActive,
+  resolveNavActive,
+} from '../navigation'
 
 describe('navigationGroups', () => {
   it('has exactly 3 groups: Library, Study, Track', () => {
@@ -116,25 +122,33 @@ describe('resolveNavActive', () => {
 
   it('delegates to getIsActive when no fromTrack state', () => {
     expect(resolveNavActive({ path: '/courses' }, '/courses/123', '', noState)).toBe(true)
-    expect(resolveNavActive({ path: '/learning-tracks' }, '/learning-tracks/abc', '', noState)).toBe(true)
+    expect(
+      resolveNavActive({ path: '/learning-tracks' }, '/learning-tracks/abc', '', noState)
+    ).toBe(true)
     expect(resolveNavActive({ path: '/overview' }, '/overview', '', noState)).toBe(true)
   })
 
   it('delegates to getIsActive when fromTrack shape is invalid', () => {
     expect(resolveNavActive({ path: '/courses' }, '/courses/123', '', invalidTrack)).toBe(true)
-    expect(resolveNavActive({ path: '/learning-tracks' }, '/learning-tracks/abc', '', invalidTrack)).toBe(true)
+    expect(
+      resolveNavActive({ path: '/learning-tracks' }, '/learning-tracks/abc', '', invalidTrack)
+    ).toBe(true)
   })
 
   it('forces /learning-tracks active when fromTrack is present', () => {
     // On a course page arrived from a track — Learning Tracks should highlight
     expect(resolveNavActive({ path: '/learning-tracks' }, '/courses/123', '', withTrack)).toBe(true)
-    expect(resolveNavActive({ path: '/learning-tracks' }, '/courses/123/lessons/456', '', withTrack)).toBe(true)
+    expect(
+      resolveNavActive({ path: '/learning-tracks' }, '/courses/123/lessons/456', '', withTrack)
+    ).toBe(true)
   })
 
   it('forces /courses inactive when fromTrack is present', () => {
     // On a course page arrived from a track — Courses should NOT highlight
     expect(resolveNavActive({ path: '/courses' }, '/courses/123', '', withTrack)).toBe(false)
-    expect(resolveNavActive({ path: '/courses' }, '/courses/123/lessons/456', '', withTrack)).toBe(false)
+    expect(resolveNavActive({ path: '/courses' }, '/courses/123/lessons/456', '', withTrack)).toBe(
+      false
+    )
   })
 
   it('does not affect unrelated nav items when fromTrack is present', () => {

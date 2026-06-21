@@ -954,8 +954,18 @@ describe('delete operation upload', () => {
 
   it('handles mixed batch: delete and put entries processed independently', async () => {
     vi.useFakeTimers()
-    const deleteEntry = makeEntry({ id: 1, recordId: 'rec-1', operation: 'delete', payload: { id: 'rec-1' } })
-    const putEntry = makeEntry({ id: 2, recordId: 'rec-2', operation: 'put', payload: { id: 'rec-2', content: 'hello' } })
+    const deleteEntry = makeEntry({
+      id: 1,
+      recordId: 'rec-1',
+      operation: 'delete',
+      payload: { id: 'rec-1' },
+    })
+    const putEntry = makeEntry({
+      id: 2,
+      recordId: 'rec-2',
+      operation: 'put',
+      payload: { id: 'rec-2', content: 'hello' },
+    })
     setQueueEntries([deleteEntry, putEntry])
 
     syncEngine.nudge()
@@ -963,7 +973,9 @@ describe('delete operation upload', () => {
 
     // Delete runs first, then upsert for the put.
     expect(mockDeleteIn).toHaveBeenCalledWith('id', ['rec-1'])
-    expect(mockUpsert).toHaveBeenCalledWith([{ id: 'rec-2', content: 'hello' }], { onConflict: 'id' })
+    expect(mockUpsert).toHaveBeenCalledWith([{ id: 'rec-2', content: 'hello' }], {
+      onConflict: 'id',
+    })
     // Both groups removed from queue.
     expect(mockBulkDelete).toHaveBeenCalledWith([1])
     expect(mockBulkDelete).toHaveBeenCalledWith([2])
@@ -991,7 +1003,9 @@ describe('delete operation upload', () => {
     await vi.advanceTimersByTimeAsync(201)
 
     expect(mockDeleteIn).not.toHaveBeenCalled()
-    expect(mockUpsert).toHaveBeenCalledWith([{ id: 'rec-1', content: 'hello' }], { onConflict: 'id' })
+    expect(mockUpsert).toHaveBeenCalledWith([{ id: 'rec-1', content: 'hello' }], {
+      onConflict: 'id',
+    })
     expect(mockBulkDelete).toHaveBeenCalledWith([1])
   })
 

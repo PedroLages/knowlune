@@ -1,8 +1,5 @@
 import { useEffect, useState } from 'react'
-import {
-  getNoteQAAvailability,
-  type NoteQAAvailability,
-} from '@/lib/aiConfiguration'
+import { getNoteQAAvailability, type NoteQAAvailability } from '@/lib/aiConfiguration'
 
 type NoteQAAvailabilityState =
   | { status: 'checking'; availability: null }
@@ -21,7 +18,9 @@ export function useNoteQAAvailability(): NoteQAAvailabilityState {
 
     const refresh = () => {
       const currentRun = ++runId
-      setState(prev => (prev.status === 'checking' ? prev : { status: 'checking', availability: null }))
+      setState(prev =>
+        prev.status === 'checking' ? prev : { status: 'checking', availability: null }
+      )
 
       getNoteQAAvailability()
         .then(availability => {

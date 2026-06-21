@@ -90,7 +90,9 @@ describe('BookTile', () => {
           <BookTile book={makeBook()} variant="small" />
         </MemoryRouter>
       )
-      const coverDiv = screen.getByTestId('book-tile-test-book').querySelector('[class*="[transform:translateZ(0)]"]')
+      const coverDiv = screen
+        .getByTestId('book-tile-test-book')
+        .querySelector('[class*="[transform:translateZ(0)]"]')
       expect(coverDiv).not.toBeNull()
       expect(coverDiv!.className).toContain('isolate')
     })
@@ -108,7 +110,9 @@ describe('BookTile', () => {
       // -translate-y-2 (8px lift)
       expect(coverDiv!.className).toContain('group-hover/tile:-translate-y-2')
       // Brand shadow
-      expect(coverDiv!.className).toContain('group-hover/tile:shadow-[0_10px_30px_var(--shadow-brand)]')
+      expect(coverDiv!.className).toContain(
+        'group-hover/tile:shadow-[0_10px_30px_var(--shadow-brand)]'
+      )
     })
 
     it('uses 500ms image transition (matching BookCard)', () => {
@@ -165,7 +169,10 @@ describe('BookTile', () => {
           <BookTile book={audiobook} variant="small" />
         </MemoryRouter>
       )
-      expect(screen.getByTestId('book-tile-test-book')).toHaveAttribute('aria-label', 'Play Test Book')
+      expect(screen.getByTestId('book-tile-test-book')).toHaveAttribute(
+        'aria-label',
+        'Play Test Book'
+      )
       unmount()
 
       render(
@@ -173,7 +180,10 @@ describe('BookTile', () => {
           <BookTile book={makeBook()} variant="small" />
         </MemoryRouter>
       )
-      expect(screen.getByTestId('book-tile-test-book')).toHaveAttribute('aria-label', 'Open Test Book')
+      expect(screen.getByTestId('book-tile-test-book')).toHaveAttribute(
+        'aria-label',
+        'Open Test Book'
+      )
     })
   })
 

@@ -39,7 +39,7 @@ vi.mock('@/lib/compliance/noticeVersion', () => ({
 
 vi.mock('@/lib/compliance/consentService', async () => {
   const actual = await vi.importActual<typeof import('@/lib/compliance/consentService')>(
-    '@/lib/compliance/consentService',
+    '@/lib/compliance/consentService'
   )
   return {
     ...actual,
@@ -196,9 +196,7 @@ describe('QAChatPanel', () => {
       expect(screen.getByText('AI Provider Update — New Consent Required')).toBeInTheDocument()
     })
 
-    fireEvent.click(
-      screen.getByRole('button', { name: /accept — allow data to be sent/i }),
-    )
+    fireEvent.click(screen.getByRole('button', { name: /accept — allow data to be sent/i }))
 
     await waitFor(() => {
       expect(grantConsent).toHaveBeenCalledWith('user-1', CONSENT_PURPOSES.AI_TUTOR, {

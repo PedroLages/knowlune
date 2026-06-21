@@ -33,9 +33,7 @@ const defaultProps = {
   duration: 120,
 }
 
-function renderPreview(
-  overrides: Partial<React.ComponentProps<typeof ScrubPreview>> = {}
-) {
+function renderPreview(overrides: Partial<React.ComponentProps<typeof ScrubPreview>> = {}) {
   return render(<ScrubPreview {...defaultProps} {...overrides} />)
 }
 
@@ -80,9 +78,7 @@ describe('ScrubPreview', () => {
     expect(el.style.left).toBe('80px')
 
     // x = trackWidth → should clamp to trackWidth - halfPreviewWidth
-    rerender(
-      <ScrubPreview {...defaultProps} x={400} trackWidth={400} />
-    )
+    rerender(<ScrubPreview {...defaultProps} x={400} trackWidth={400} />)
     expect(el.style.left).toBe('320px')
   })
 

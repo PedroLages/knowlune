@@ -43,8 +43,7 @@ export function ContinueLearningBento({
   const lessonPath = targetLessonId
     ? `/courses/${entry.courseId}/lessons/${targetLessonId}`
     : `/courses/${entry.courseId}`
-  const linkState =
-    trackId && trackName ? { fromTrack: { trackId, trackName } } : undefined
+  const linkState = trackId && trackName ? { fromTrack: { trackId, trackName } } : undefined
 
   return (
     <div

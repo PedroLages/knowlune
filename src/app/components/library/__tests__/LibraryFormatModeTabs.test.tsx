@@ -76,4 +76,3 @@ describe('LibraryFormatModeTabs', () => {
     expect(screen.getByTestId('library-format-mode-ebooks').textContent).toContain('(1)')
   })
 })
-

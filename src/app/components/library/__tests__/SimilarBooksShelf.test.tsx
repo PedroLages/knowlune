@@ -58,9 +58,7 @@ describe('SimilarBooksShelf', () => {
       </MemoryRouter>
     )
 
-    expect(screen.getByTestId('similar-books-shelf-scroller').className).toContain(
-      'scrollbar-none'
-    )
+    expect(screen.getByTestId('similar-books-shelf-scroller').className).toContain('scrollbar-none')
   })
 
   it('renders audiobook and epub tiles with square covers and data-rail-tile', () => {

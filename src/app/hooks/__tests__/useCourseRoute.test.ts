@@ -317,12 +317,12 @@ describe('useCourseRoute', () => {
     setStoreCourses([makeCourse({ id: 'abc123', name: 'Test' })])
 
     const testCases = [
-      '/courses/abc123/lessons/def456',             // exact match
-      '/courses/abc123/lessons/def456/quiz',         // sub-route — NOT a match
-      '/courses/abc123',                             // not a lesson
-      '/courses/abc123/lessons',                     // incomplete
-      '/overview',                                   // unrelated
-      '/courses/abc/lessons/def',                    // short IDs
+      '/courses/abc123/lessons/def456', // exact match
+      '/courses/abc123/lessons/def456/quiz', // sub-route — NOT a match
+      '/courses/abc123', // not a lesson
+      '/courses/abc123/lessons', // incomplete
+      '/overview', // unrelated
+      '/courses/abc/lessons/def', // short IDs
       '/courses/long-course-id-123/lessons/lesson-x', // longer IDs
     ]
 

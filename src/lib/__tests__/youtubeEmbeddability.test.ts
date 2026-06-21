@@ -7,10 +7,7 @@
 
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 
-import {
-  probeEmbeddability,
-  clearEmbeddabilityCache,
-} from '@/lib/youtubeEmbeddability'
+import { probeEmbeddability, clearEmbeddabilityCache } from '@/lib/youtubeEmbeddability'
 
 describe('youtubeEmbeddability', () => {
   beforeEach(() => {
@@ -19,36 +16,28 @@ describe('youtubeEmbeddability', () => {
   })
 
   it('returns embeddable: true on HTTP 200', async () => {
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-      new Response('{}', { status: 200 })
-    )
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('{}', { status: 200 }))
 
     const result = await probeEmbeddability('abc123DEF_-')
     expect(result).toEqual({ embeddable: true })
   })
 
   it('returns embedding-disabled on HTTP 401', async () => {
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-      new Response('Unauthorized', { status: 401 })
-    )
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('Unauthorized', { status: 401 }))
 
     const result = await probeEmbeddability('blocked1234')
     expect(result).toEqual({ embeddable: false, reason: 'embedding-disabled' })
   })
 
   it('returns deleted-or-private on HTTP 404', async () => {
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-      new Response('Not Found', { status: 404 })
-    )
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('Not Found', { status: 404 }))
 
     const result = await probeEmbeddability('missing1234')
     expect(result).toEqual({ embeddable: false, reason: 'deleted-or-private' })
   })
 
   it('returns reason: unknown for non-2xx/401/404 responses (e.g. 500)', async () => {
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-      new Response('Server Error', { status: 500 })
-    )
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('Server Error', { status: 500 }))
 
     const result = await probeEmbeddability('servererr01')
     expect(result).toEqual({ embeddable: false, reason: 'unknown' })
@@ -75,9 +64,7 @@ describe('youtubeEmbeddability', () => {
   })
 
   it('caches network-failure results so a second call does not re-fetch', async () => {
-    const fetchSpy = vi
-      .spyOn(globalThis, 'fetch')
-      .mockRejectedValue(new Error('network down'))
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('network down'))
 
     const first = await probeEmbeddability('netcache001')
     const second = await probeEmbeddability('netcache001')

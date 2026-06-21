@@ -26,26 +26,20 @@ function renderWithRouter(ui: React.ReactElement) {
 
 describe('ContinueLearningBento', () => {
   it('renders course name and author', () => {
-    renderWithRouter(
-      <ContinueLearningBento entry={baseEntry} courseInfo={baseCourseInfo} />
-    )
+    renderWithRouter(<ContinueLearningBento entry={baseEntry} courseInfo={baseCourseInfo} />)
     expect(screen.getByText('Test Course')).toBeInTheDocument()
     expect(screen.getByText('Test Author')).toBeInTheDocument()
   })
 
   it('renders play button with correct link', () => {
-    renderWithRouter(
-      <ContinueLearningBento entry={baseEntry} courseInfo={baseCourseInfo} />
-    )
+    renderWithRouter(<ContinueLearningBento entry={baseEntry} courseInfo={baseCourseInfo} />)
     const playLink = screen.getByLabelText('Continue Test Course')
     expect(playLink).toBeInTheDocument()
     expect(playLink).toHaveAttribute('href', '/courses/course-1')
   })
 
   it('renders continue lesson button', () => {
-    renderWithRouter(
-      <ContinueLearningBento entry={baseEntry} courseInfo={baseCourseInfo} />
-    )
+    renderWithRouter(<ContinueLearningBento entry={baseEntry} courseInfo={baseCourseInfo} />)
     expect(screen.getByText('Continue lesson')).toBeInTheDocument()
   })
 
@@ -61,15 +55,16 @@ describe('ContinueLearningBento', () => {
   })
 
   it('renders progress percentage', () => {
-    renderWithRouter(
-      <ContinueLearningBento entry={baseEntry} courseInfo={baseCourseInfo} />
-    )
+    renderWithRouter(<ContinueLearningBento entry={baseEntry} courseInfo={baseCourseInfo} />)
     expect(screen.getByText('50% complete')).toBeInTheDocument()
   })
 
   it('renders progress bar with correct width from completion percentage', () => {
     renderWithRouter(
-      <ContinueLearningBento entry={baseEntry} courseInfo={{ ...baseCourseInfo, completionPct: 30 }} />
+      <ContinueLearningBento
+        entry={baseEntry}
+        courseInfo={{ ...baseCourseInfo, completionPct: 30 }}
+      />
     )
     // Progress bar width reflects completion percentage
     const progressBar = document.querySelector('.bg-brand.h-full.rounded-full')
@@ -80,18 +75,14 @@ describe('ContinueLearningBento', () => {
   })
 
   it('handles missing thumbnail without crashing', () => {
-    renderWithRouter(
-      <ContinueLearningBento entry={baseEntry} courseInfo={baseCourseInfo} />
-    )
+    renderWithRouter(<ContinueLearningBento entry={baseEntry} courseInfo={baseCourseInfo} />)
     // Should render BookOpen fallback icon
     expect(screen.getByText('Test Course')).toBeInTheDocument()
     expect(screen.getByText('Continue lesson')).toBeInTheDocument()
   })
 
   it('handles missing course info gracefully', () => {
-    renderWithRouter(
-      <ContinueLearningBento entry={baseEntry} />
-    )
+    renderWithRouter(<ContinueLearningBento entry={baseEntry} />)
     expect(screen.getByText('Unknown Course')).toBeInTheDocument()
     expect(screen.getByText('Continue lesson')).toBeInTheDocument()
   })

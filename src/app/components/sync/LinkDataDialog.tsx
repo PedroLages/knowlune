@@ -207,8 +207,10 @@ export function LinkDataDialog({ open, userId, onResolved, guestSessionId }: Lin
                   <span className="border-brand-foreground size-4 animate-spin rounded-full border-2 border-t-transparent" />
                   {isGuestMigration ? 'Saving…' : 'Linking…'}
                 </span>
+              ) : isGuestMigration ? (
+                'Keep my progress'
               ) : (
-                isGuestMigration ? 'Keep my progress' : 'Link to my account'
+                'Link to my account'
               )}
             </Button>
             <Button

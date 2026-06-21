@@ -145,7 +145,9 @@ export function BookContextMenu({ book, children, onEdit }: BookContextMenuProps
       const result = await rescanBookChapters(book)
       toast.dismiss(dismiss)
       if (result.ok) {
-        toast.success(`Found ${result.chapters.length} chapter${result.chapters.length === 1 ? '' : 's'}`)
+        toast.success(
+          `Found ${result.chapters.length} chapter${result.chapters.length === 1 ? '' : 's'}`
+        )
       } else {
         toast.error(result.message)
       }

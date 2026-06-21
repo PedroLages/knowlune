@@ -15,12 +15,7 @@
 
 import { useState, useRef, useCallback, useEffect, useMemo } from 'react'
 import { createPortal } from 'react-dom'
-import {
-  PencilLine,
-  ChevronDown,
-  Maximize2,
-  Check,
-} from 'lucide-react'
+import { PencilLine, ChevronDown, Maximize2, Check } from 'lucide-react'
 import { NotesTab } from '@/app/components/course/tabs/NotesTab'
 import { useLessonChromeStore } from '@/stores/useLessonChromeStore'
 import { useNoteStore } from '@/stores/useNoteStore'
@@ -94,21 +89,24 @@ export function FloatingNotesPanel({
   const isSwiping = useRef(false)
   const handleRef = useRef<HTMLDivElement>(null)
 
-  const handleTouchStart = useCallback((e: React.TouchEvent) => {
-    if (mobileNotesPanel !== 'expanded') return
-    // Gate to handle region (top 20px of panel)
-    const handle = handleRef.current
-    if (!handle) return
-    const rect = handle.getBoundingClientRect()
-    const touch = e.touches[0]
-    // Allow touch anywhere in the handle bar area
-    if (touch.clientY < rect.top - 10 || touch.clientY > rect.bottom + 10) return
+  const handleTouchStart = useCallback(
+    (e: React.TouchEvent) => {
+      if (mobileNotesPanel !== 'expanded') return
+      // Gate to handle region (top 20px of panel)
+      const handle = handleRef.current
+      if (!handle) return
+      const rect = handle.getBoundingClientRect()
+      const touch = e.touches[0]
+      // Allow touch anywhere in the handle bar area
+      if (touch.clientY < rect.top - 10 || touch.clientY > rect.bottom + 10) return
 
-    isSwiping.current = true
-    touchStartY.current = touch.clientY
-    swipeDeltaRef.current = 0
-    setSwipeDelta(0)
-  }, [mobileNotesPanel])
+      isSwiping.current = true
+      touchStartY.current = touch.clientY
+      swipeDeltaRef.current = 0
+      setSwipeDelta(0)
+    },
+    [mobileNotesPanel]
+  )
 
   const handleTouchMove = useCallback((e: React.TouchEvent) => {
     if (!isSwiping.current) return
@@ -177,9 +175,7 @@ export function FloatingNotesPanel({
             'portrait:max-h-[40vh] landscape:max-h-[55vh]'
           )}
           style={{
-            transform: swipeDelta > 0
-              ? `translateY(${swipeDelta}px)`
-              : 'translateY(0)',
+            transform: swipeDelta > 0 ? `translateY(${swipeDelta}px)` : 'translateY(0)',
             paddingBottom: 'env(safe-area-inset-bottom, 0)',
           }}
           role="dialog"

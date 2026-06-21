@@ -76,7 +76,9 @@ describe('useAudiobookshelfProgressSync — fetch-on-open', () => {
   it('when ABS is ahead, updates via useBookStore (not raw Dexie)', async () => {
     const dbUpdateSpy = vi.spyOn((await import('@/db/schema')).db.books, 'update')
     const posSpy = vi.spyOn(useBookStore.getState(), 'updateBookPosition').mockResolvedValue()
-    const openedSpy = vi.spyOn(useBookStore.getState(), 'updateBookLastOpenedAt').mockResolvedValue()
+    const openedSpy = vi
+      .spyOn(useBookStore.getState(), 'updateBookLastOpenedAt')
+      .mockResolvedValue()
     const seekTo = vi.fn()
 
     renderHook(() =>

@@ -248,7 +248,7 @@ describe('tableRegistry — stripFields', () => {
     const strips = Object.fromEntries(
       tableRegistry
         .filter(e => e.stripFields && e.stripFields.length > 0)
-        .map(e => [e.dexieTable, [...(e.stripFields!)].sort()])
+        .map(e => [e.dexieTable, [...e.stripFields!].sort()])
     )
     expect(strips).toEqual({
       audioBookmarks: ['updatedAt'],
@@ -772,7 +772,8 @@ describe('getTableEntry', () => {
 
 describe('tableRegistry — CI probe-constants parity (E119-S04)', () => {
   it('probe-constants TABLE_NAMES matches ERASURE_TABLE_NAMES', async () => {
-    const { TABLE_NAMES: PROBE_TABLE_NAMES } = await import('../../../../scripts/ci/probe-constants.js')
+    const { TABLE_NAMES: PROBE_TABLE_NAMES } =
+      await import('../../../../scripts/ci/probe-constants.js')
     const { ERASURE_TABLE_NAMES } = await import('../tableRegistry')
     expect([...PROBE_TABLE_NAMES].sort()).toEqual([...ERASURE_TABLE_NAMES].sort())
   })
