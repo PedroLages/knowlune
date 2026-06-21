@@ -8,13 +8,13 @@
 
 ### AC Coverage Table
 
-| AC# | Description | Unit Test | E2E Test | Verdict |
-|-----|-------------|-----------|----------|---------|
-| 1 | Given the embedding model is not yet cached When the model download begins Then a Sonner toast appears with progress percentage And the progress updates at least every 500ms during active download | `EmbeddingModelProgressToast.test.tsx:74-85` (first event), `:99-115` (update), `:117-127` (debounce) | None | Covered |
-| 2 | Given a model download is in progress When the learner clicks a Skip or dismiss button Then the download continues in the background but the toast is dismissed And the system falls back to keyword search for immediate queries | `EmbeddingModelProgressToast.test.tsx:82-84` verifies `closeButton: true` property but no interaction test | None | Gap |
-| 3 | Given the model download completes successfully When the pipeline is ready Then a success toast appears ("AI search ready!") And the progress toast is replaced (not stacked) | `EmbeddingModelProgressToast.test.tsx:129-145` (success replaces progress toast) | None | Covered |
-| 4 | Given progress_callback reports a file with total=0 When the progress event is displayed Then the toast shows an indeterminate loading state (not "NaN%" or "0%") (EC5) | `EmbeddingModelProgressToast.test.tsx:87-97` (progress < 0 shows indeterminate) | None | Covered |
-| 5 | Given a download-progress event is sent from the worker When the coordinator receives it via postMessage Then it dispatches a CustomEvent('model-download-progress') on the window (not via pending request matching) (EC6) | `coordinator.test.ts:259-336` (CustomEvent dispatch without requestId) | None | Covered |
+| AC# | Description                                                                                                                                                                                                                       | Unit Test                                                                                                  | E2E Test | Verdict |
+| --- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- | -------- | ------- |
+| 1   | Given the embedding model is not yet cached When the model download begins Then a Sonner toast appears with progress percentage And the progress updates at least every 500ms during active download                              | `EmbeddingModelProgressToast.test.tsx:74-85` (first event), `:99-115` (update), `:117-127` (debounce)      | None     | Covered |
+| 2   | Given a model download is in progress When the learner clicks a Skip or dismiss button Then the download continues in the background but the toast is dismissed And the system falls back to keyword search for immediate queries | `EmbeddingModelProgressToast.test.tsx:82-84` verifies `closeButton: true` property but no interaction test | None     | Gap     |
+| 3   | Given the model download completes successfully When the pipeline is ready Then a success toast appears ("AI search ready!") And the progress toast is replaced (not stacked)                                                     | `EmbeddingModelProgressToast.test.tsx:129-145` (success replaces progress toast)                           | None     | Covered |
+| 4   | Given progress_callback reports a file with total=0 When the progress event is displayed Then the toast shows an indeterminate loading state (not "NaN%" or "0%") (EC5)                                                           | `EmbeddingModelProgressToast.test.tsx:87-97` (progress < 0 shows indeterminate)                            | None     | Covered |
+| 5   | Given a download-progress event is sent from the worker When the coordinator receives it via postMessage Then it dispatches a CustomEvent('model-download-progress') on the window (not via pending request matching) (EC6)       | `coordinator.test.ts:259-336` (CustomEvent dispatch without requestId)                                     | None     | Covered |
 
 **Coverage**: 4/5 ACs fully covered | 1 gap | 0 partial
 
@@ -29,7 +29,7 @@ None. Coverage gate passes at 80%.
 - **AC#2 gap (confidence: 90)**: AC#2 ("learner clicks Skip/dismiss -> download continues, falls back to keyword search") has no behavioral test. The `closeButton: true` property is verified as a static render check (`EmbeddingModelProgressToast.test.tsx:82-84`), but there is no test that:
   1. Clicking the close button dismisses the toast without cancelling the background download (event listener remains active)
   2. The system falls back to keyword search for immediate queries
-  Suggested test: **E2E spec** at `tests/e2e/e68-s01-model-download-progress.spec.ts` that renders the app, triggers a progress event, clicks the close button on the Sonner toast, and verifies the `window` event listener is still active (download continues). The keyword-search fallback aspect requires implementation beyond this story's scope and should be tracked separately.
+     Suggested test: **E2E spec** at `tests/e2e/e68-s01-model-download-progress.spec.ts` that renders the app, triggers a progress event, clicks the close button on the Sonner toast, and verifies the `window` event listener is still active (download continues). The keyword-search fallback aspect requires implementation beyond this story's scope and should be tracked separately.
 
 - **`src/ai/hooks/useModelDownloadProgress.ts` zero test coverage (confidence: 95)**: The `useModelDownloadProgress` hook created per Task 3 has zero test coverage. The `EmbeddingModelProgressToast` component does not consume this hook — it only imports the `DownloadProgressDetail` type. The hook's state machine (`idle -> downloading -> done -> error`) and cleanup behavior are untested. Suggested test: Add `src/ai/hooks/__tests__/useModelDownloadProgress.test.ts` verifying:
   - Initial state is `{ status: 'idle', progress: 0, hasStarted: false, hasCompleted: false }`
@@ -70,4 +70,5 @@ None. Coverage gate passes at 80%.
 - **Warm-up timeout interaction**: The 60s timeout on the warm-up task (`coordinator.ts:399`) is significantly longer than the default 5s. No test verifies the interaction between the App-level 3s delay, `requestIdleCallback`, and the coordinator's warm-up timeout.
 
 ---
+
 ACs: 4 covered / 5 total | Findings: 8 | Blockers: 0 | High: 4 | Medium: 4 | Nits: 2

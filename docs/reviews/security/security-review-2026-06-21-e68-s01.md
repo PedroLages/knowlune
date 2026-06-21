@@ -6,16 +6,16 @@
 
 ### Phases Executed
 
-| Phase | Name | Triggered By | Findings |
-|-------|------|-------------|----------|
-| 1 | Attack Surface | Always | 3 vectors identified |
-| 2 | Secrets Scan | Always | Clean |
-| 3 | OWASP Top 10 | Always | 6 categories checked |
-| 4 | Dependencies | package.json changed | Clean — protobufjs override is a proactive fix |
-| 5 | Auth & Access | No auth files changed | N/A |
-| 6 | STRIDE | New components/workers | 1 threat enumerated |
-| 7 | Configuration | .gitignore changed | Clean |
-| 8 | Config Security | Always-on (secrets) | Clean — pre-existing .mcp.json key outside scope |
+| Phase | Name            | Triggered By           | Findings                                         |
+| ----- | --------------- | ---------------------- | ------------------------------------------------ |
+| 1     | Attack Surface  | Always                 | 3 vectors identified                             |
+| 2     | Secrets Scan    | Always                 | Clean                                            |
+| 3     | OWASP Top 10    | Always                 | 6 categories checked                             |
+| 4     | Dependencies    | package.json changed   | Clean — protobufjs override is a proactive fix   |
+| 5     | Auth & Access   | No auth files changed  | N/A                                              |
+| 6     | STRIDE          | New components/workers | 1 threat enumerated                              |
+| 7     | Configuration   | .gitignore changed     | Clean                                            |
+| 8     | Config Security | Always-on (secrets)    | Clean — pre-existing .mcp.json key outside scope |
 
 ### Attack Surface Changes
 
@@ -51,30 +51,30 @@ Three new attack vectors introduced:
 
 ### OWASP Coverage
 
-| Category | Applicable? | Finding? | Details |
-|----------|------------|----------|---------|
-| CS1: Broken Client-Side Access Control | No | No | No new routes or auth changes |
-| CS2: Client-Side Injection (XSS) | Yes | No | All toast strings are hardcoded (safe). No `dangerouslySetInnerHTML`, `href={variable}`, or `ref.current.innerHTML`. Sonner toasts use sanitized strings only. Worker uses no eval, no dynamic code execution |
-| CS3: Sensitive Data in Client Storage | No | No | No changes to BYOK, localStorage, or IndexedDB storage of secrets |
-| CS5: Client-Side Integrity | Yes | Info | Model integrity verification (384-dim check) is basic but adequate for this architecture |
-| CS7: Client-Side Security Logging | Yes | No | `console.log` calls use only public info (model name, deviceMemory), no secrets |
-| CS9: Client-Side Communication | Yes | No | CustomEvent dispatch is same-origin only. Worker postMessage uses structured protocol with type guards and no eval |
-| A05: Security Misconfiguration | No | No | No config changes to CSP, CORS, or security headers |
-| A06: Vulnerable Components | Yes | No | protobufjs override (7.6.4) proactively fixes dependency CVEs |
-| A07: Auth Failures | No | No | No auth changes in this story |
+| Category                               | Applicable? | Finding? | Details                                                                                                                                                                                                       |
+| -------------------------------------- | ----------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| CS1: Broken Client-Side Access Control | No          | No       | No new routes or auth changes                                                                                                                                                                                 |
+| CS2: Client-Side Injection (XSS)       | Yes         | No       | All toast strings are hardcoded (safe). No `dangerouslySetInnerHTML`, `href={variable}`, or `ref.current.innerHTML`. Sonner toasts use sanitized strings only. Worker uses no eval, no dynamic code execution |
+| CS3: Sensitive Data in Client Storage  | No          | No       | No changes to BYOK, localStorage, or IndexedDB storage of secrets                                                                                                                                             |
+| CS5: Client-Side Integrity             | Yes         | Info     | Model integrity verification (384-dim check) is basic but adequate for this architecture                                                                                                                      |
+| CS7: Client-Side Security Logging      | Yes         | No       | `console.log` calls use only public info (model name, deviceMemory), no secrets                                                                                                                               |
+| CS9: Client-Side Communication         | Yes         | No       | CustomEvent dispatch is same-origin only. Worker postMessage uses structured protocol with type guards and no eval                                                                                            |
+| A05: Security Misconfiguration         | No          | No       | No config changes to CSP, CORS, or security headers                                                                                                                                                           |
+| A06: Vulnerable Components             | Yes         | No       | protobufjs override (7.6.4) proactively fixes dependency CVEs                                                                                                                                                 |
+| A07: Auth Failures                     | No          | No       | No auth changes in this story                                                                                                                                                                                 |
 
 ### STRIDE Threat Model
 
 **New component: EmbeddingModelProgressToast (`src/app/components/embeddings/EmbeddingModelProgressToast.tsx`)**
 
-| Threat | Applicable? | Assessment |
-|--------|------------|------------|
-| Spoofing | No | No identity involved |
-| Tampering | Low | Progress events from CustomEvent could be forged, but only by same-origin JS (already malicious) |
-| Repudiation | No | No audit trail needed for progress toasts |
-| Information Disclosure | No | No sensitive data in progress events |
-| Denial of Service | Low | Spamming progress events could create racing toast updates, but requires prior XSS |
-| Elevation of Privilege | No | Toast component has no auth context |
+| Threat                 | Applicable? | Assessment                                                                                       |
+| ---------------------- | ----------- | ------------------------------------------------------------------------------------------------ |
+| Spoofing               | No          | No identity involved                                                                             |
+| Tampering              | Low         | Progress events from CustomEvent could be forged, but only by same-origin JS (already malicious) |
+| Repudiation            | No          | No audit trail needed for progress toasts                                                        |
+| Information Disclosure | No          | No sensitive data in progress events                                                             |
+| Denial of Service      | Low         | Spamming progress events could create racing toast updates, but requires prior XSS               |
+| Elevation of Privilege | No          | Toast component has no auth context                                                              |
 
 ### What's Done Well
 
@@ -85,4 +85,5 @@ Three new attack vectors introduced:
 3. **Device-memory gating** (`src/app/App.tsx:105`): The warm-up is gated on `deviceMemory >= 4GB`, preventing memory exhaustion on low-resource devices. The timeout configuration (60s warm-up, 15s first-progress, 120s stall) provides appropriate defensive boundaries for the asynchronous model download flow.
 
 ---
+
 Phases: 7/8 | Findings: 1 total (informational) | Blockers: 0 | False positives filtered: 0

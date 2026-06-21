@@ -86,30 +86,30 @@ None.
 
 ## Accessibility Checklist
 
-| Check | Status | Notes |
-|-------|--------|-------|
-| Text contrast >= 4.5:1 | Pass | Toast inherits theme's contrast-verified tokens |
-| Keyboard navigation | Pass | Sonner toasts support keyboard dismissal (Escape / close button) |
-| Focus indicators visible | Pass | Theme CSS provides `focus-visible` outlines at 2px |
-| Heading hierarchy | N/A (Landing page) | Landing page headings jump from H1 to H3; pre-existing |
-| ARIA labels on icon buttons | Pass | 3 of 30 buttons have aria-labels (Welcome Wizard) |
-| Semantic HTML | Pass | Landing page uses semantic skip-links |
-| ARIA live regions | Pass | Sonner toaster uses `aria-live="polite"` |
-| Form labels associated | Pass | 11 labels for 9 inputs |
-| Dark mode contrast | Pass | Verified: toast renders with correct dark mode tokens |
-| prefers-reduced-motion | N/A | No animations in this component |
-| Touch targets >= 44x44 | Pass | 20 small touch targets found (primarily icon buttons in Welcome Wizard); pre-existing |
+| Check                       | Status             | Notes                                                                                 |
+| --------------------------- | ------------------ | ------------------------------------------------------------------------------------- |
+| Text contrast >= 4.5:1      | Pass               | Toast inherits theme's contrast-verified tokens                                       |
+| Keyboard navigation         | Pass               | Sonner toasts support keyboard dismissal (Escape / close button)                      |
+| Focus indicators visible    | Pass               | Theme CSS provides `focus-visible` outlines at 2px                                    |
+| Heading hierarchy           | N/A (Landing page) | Landing page headings jump from H1 to H3; pre-existing                                |
+| ARIA labels on icon buttons | Pass               | 3 of 30 buttons have aria-labels (Welcome Wizard)                                     |
+| Semantic HTML               | Pass               | Landing page uses semantic skip-links                                                 |
+| ARIA live regions           | Pass               | Sonner toaster uses `aria-live="polite"`                                              |
+| Form labels associated      | Pass               | 11 labels for 9 inputs                                                                |
+| Dark mode contrast          | Pass               | Verified: toast renders with correct dark mode tokens                                 |
+| prefers-reduced-motion      | N/A                | No animations in this component                                                       |
+| Touch targets >= 44x44      | Pass               | 20 small touch targets found (primarily icon buttons in Welcome Wizard); pre-existing |
 
 ---
 
 ## Responsive Design Verification
 
-| Breakpoint | Status | Notes |
-|------------|--------|-------|
-| Mobile (375px) | Pass | No horizontal scroll; toast renders at correct width |
-| Tablet (768px) | Pass | No horizontal scroll; layout reflows correctly |
-| Sidebar Collapse (1024px) | Pass | No horizontal scroll |
-| Desktop (1440px) | Pass | Full layout renders correctly; toaster is in the top-right corner |
+| Breakpoint                | Status | Notes                                                             |
+| ------------------------- | ------ | ----------------------------------------------------------------- |
+| Mobile (375px)            | Pass   | No horizontal scroll; toast renders at correct width              |
+| Tablet (768px)            | Pass   | No horizontal scroll; layout reflows correctly                    |
+| Sidebar Collapse (1024px) | Pass   | No horizontal scroll                                              |
+| Desktop (1440px)          | Pass   | Full layout renders correctly; toaster is in the top-right corner |
 
 ---
 
@@ -126,6 +126,7 @@ None.
 ## Screenshots
 
 Screenshots captured during testing are available at:
+
 - Landing page (desktop): `/tmp/landing-desktop-1440.png`
 - Landing page (mobile): `/tmp/landing-mobile-375.png`
 - Dark mode success toast: `/tmp/dark-mode-toast.png`

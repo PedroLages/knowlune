@@ -1,9 +1,9 @@
 {
-  "captured_at": "2026-06-21",
-  "commit": "84106db0",
+  "captured_at": "2026-06-22",
+  "commit": "078ddce5",
   "bundle": {
-    "total_js_bytes": 10681357,
-    "total_css_bytes": 341502,
+    "total_js_bytes": 10939567,
+    "total_css_bytes": 349694,
     "chunks": {
       "400": {
         "raw": 899,
@@ -829,38 +829,38 @@
   },
   "page_metrics": {
     "/": {
-      "fcp": 440,
+      "fcp": 374,
       "lcp": null,
       "cls": 0,
       "tbt": 0,
-      "dom_complete": 328,
-      "dom_interactive": 36,
-      "ttfb": 2,
-      "load_complete": 328,
+      "dom_complete": 291,
+      "dom_interactive": 11,
+      "ttfb": 3,
+      "load_complete": 291,
       "total_transfer_bytes": 63000,
       "resource_count": 250
     },
     "/courses": {
-      "fcp": 442,
+      "fcp": 298,
       "lcp": null,
       "cls": 0,
       "tbt": 0,
-      "dom_complete": 328,
-      "dom_interactive": 36,
-      "ttfb": 2,
-      "load_complete": 328,
+      "dom_complete": 217,
+      "dom_interactive": 8,
+      "ttfb": 3,
+      "load_complete": 217,
       "total_transfer_bytes": 63000,
       "resource_count": 250
     },
     "/my-class": {
-      "fcp": 440,
+      "fcp": 302,
       "lcp": null,
       "cls": 0,
       "tbt": 0,
-      "dom_complete": 328,
-      "dom_interactive": 37,
+      "dom_complete": 226,
+      "dom_interactive": 8,
       "ttfb": 2,
-      "load_complete": 328,
+      "load_complete": 226,
       "total_transfer_bytes": 63000,
       "resource_count": 250
     }
