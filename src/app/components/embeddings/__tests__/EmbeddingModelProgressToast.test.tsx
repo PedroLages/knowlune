@@ -11,7 +11,7 @@
  * assertions.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, act, waitFor } from '@testing-library/react'
+import { render, act } from '@testing-library/react'
 import { EmbeddingModelProgressToast } from '../EmbeddingModelProgressToast'
 import { supportsWorkers } from '@/ai/lib/workerCapabilities'
 
@@ -27,9 +27,9 @@ const {
 } = vi.hoisted(() => {
   let nextId = 1
   // Must return a truthy ID so the component can track/reference toasts
-  const mockToast = vi.fn((_message: string, options?: { id?: string | number }) => {
+  const mockToast = vi.fn((_message: string, options?: Record<string, unknown>) => {
     // If called with an id, return it (update path)
-    if (options?.id) return options.id
+    if (options?.id) return options.id as string | number
     // Otherwise return a new unique ID (creation path)
     return `toast-${nextId++}`
   })
@@ -108,14 +108,15 @@ describe('EmbeddingModelProgressToast', () => {
     dispatchProgress({ progress: 25, status: 'progress', file: 'model.onnx' })
 
     const callArgs = mockToast.mock.calls[0]
+    const toastOptions = callArgs[1]!
     expect(callArgs[0]).toBe('Downloading AI Model')
-    expect(callArgs[1].duration).toBe(Infinity)
+    expect(toastOptions.duration).toBe(Infinity)
     // Should have an action button labelled "Skip" instead of a bare close button
-    expect(callArgs[1].action).toEqual({ label: 'Skip', onClick: expect.any(Function) })
+    expect(toastOptions.action).toEqual({ label: 'Skip', onClick: expect.any(Function) })
     // Description should be a ReactNode (not a plain string)
-    expect(callArgs[1].description).toBeDefined()
+    expect(toastOptions.description).toBeDefined()
     // The description should contain the progress percentage text
-    const desc = JSON.stringify(callArgs[1].description)
+    const desc = JSON.stringify(toastOptions.description)
     expect(desc).toContain('Downloading AI model')
     expect(desc).toContain('25')
     expect(desc).toContain('%')
@@ -156,7 +157,7 @@ describe('EmbeddingModelProgressToast', () => {
     expect(mockToast).toHaveBeenCalledTimes(1)
     const updateCallArgs = mockToast.mock.calls[0]
     expect(updateCallArgs[0]).toBe('Downloading AI Model')
-    expect(updateCallArgs[1].id).toBe(loadingId)
+    expect(updateCallArgs[1]!.id).toBe(loadingId)
   })
 
   it('updates the existing toast on subsequent progress events (after debounce)', () => {
@@ -173,9 +174,9 @@ describe('EmbeddingModelProgressToast', () => {
     expect(mockToast).toHaveBeenCalledTimes(2)
     const lastCall = mockToast.mock.calls[1]
     expect(lastCall[0]).toBe('Downloading AI Model')
-    expect(lastCall[1].id).toBeDefined()
+    expect(lastCall[1]!.id).toBeDefined()
     // Updated description should reflect new progress
-    expect(JSON.stringify(lastCall[1].description)).toContain('50')
+    expect(JSON.stringify(lastCall[1]!.description)).toContain('50')
   })
 
   it('debounces rapid progress updates and only shows the first one', () => {
