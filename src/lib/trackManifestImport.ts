@@ -4,6 +4,7 @@ import { scanCourseFolderFromHandle, persistScannedCourse } from '@/lib/courseIm
 import type { BulkScanResult } from '@/lib/courseImport'
 import { useLearningPathStore } from '@/stores/useLearningPathStore'
 import { useAuthorStore } from '@/stores/useAuthorStore'
+import { db } from '@/db'
 import { toast } from 'sonner'
 
 export interface TrackManifestSummary {
@@ -103,8 +104,13 @@ export async function batchImportTrackCourses(
       const scanResult: BulkScanResult = await scanCourseFolderFromHandle(dirHandle)
 
       if (scanResult.status === 'duplicate') {
-        results.push({ folder, success: false, error: 'Already imported' })
-        toast.warning(`"${folder}" is already imported — skipped`)
+        const existingCourse = await db.importedCourses.where('name').equals(folder).first()
+        if (existingCourse) {
+          results.push({ folder, success: true, courseId: existingCourse.id })
+        } else {
+          results.push({ folder, success: false, error: 'Course not found in database' })
+          toast.warning(`"${folder}" appears to be imported but could not be found`)
+        }
         continue
       }
 
@@ -207,17 +213,20 @@ export async function batchImportTrackCourses(
 
     const newPath = await store.createPathWithCourses(trackName, trackDescription, courses)
 
-    // Apply manifest-specified positions via reorder
-    await store.loadPaths() // single refresh after createPathWithCourses
-    const allPathEntries = [...store.entries
-      .filter(e => e.pathId === newPath.id)]
-      .sort((a, b) => a.position - b.position) // match reorderCourse's internal sort
+    // Apply manifest-specified positions via reorder.
+    // Re-read live store state each iteration — reorderCourse mutates entries,
+    // so a static snapshot captured before the loop would go stale.
     for (const { folder, position } of positions) {
       const result = results.find(r => r.folder === folder && r.success)
       if (!result?.courseId) continue
-      const entryIndex = allPathEntries.findIndex(
-        e => e.courseId === result.courseId
-      )
+
+      // getState() returns the live Zustand snapshot — never use the stale
+      // `store` variable captured at line 185 for entry index lookups.
+      const currentEntries = useLearningPathStore.getState().entries
+        .filter(e => e.pathId === newPath.id)
+        .sort((a, b) => a.position - b.position)
+
+      const entryIndex = currentEntries.findIndex(e => e.courseId === result.courseId)
       const targetIndex = position - 1
       if (entryIndex >= 0 && entryIndex !== targetIndex) {
         await store.reorderCourse(newPath.id, entryIndex, targetIndex)
