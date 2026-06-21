@@ -1,9 +1,10 @@
 ---
 story_id: E68-S02
 story_name: 'Cache API Validation and OpenAI Fallback'
-status: in-progress
+status: done
 reviewed: true
 review_started: 2026-06-22
+completed: 2026-06-22
 review_gates_passed:
   - build
   - lint
@@ -17,7 +18,6 @@ review_gates_passed:
   - performance-benchmark-skipped
   - security-review
   - exploratory-qa-skipped
-completed:
 ---
 
 # Story 68.2: Cache API Validation and OpenAI Fallback
