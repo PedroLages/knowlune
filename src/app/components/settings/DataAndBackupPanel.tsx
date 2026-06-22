@@ -341,7 +341,6 @@ export function DataAndBackupPanel() {
           open={restoreDialogOpen}
           onOpenChange={setRestoreDialogOpen}
           preview={backupPreview}
-          payload={restorePayload}
           onConfirm={handleRestoreConfirm}
           isRestoring={isRestoring}
         />

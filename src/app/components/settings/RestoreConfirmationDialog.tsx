@@ -34,8 +34,6 @@ import {
   TableRow,
 } from '@/app/components/ui/table'
 import { ScrollArea } from '@/app/components/ui/scroll-area'
-import type { BackupPayload } from '@/lib/exportService'
-
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -56,8 +54,6 @@ export interface RestoreConfirmationDialogProps {
   onOpenChange: (open: boolean) => void
   /** Preview data computed from the parsed backup file */
   preview: BackupPreview
-  /** The parsed backup payload to restore (passed through to restore handler) */
-  payload: BackupPayload
   /** Called when the user confirms with the chosen safety-backup setting */
   onConfirm: (options: { createSafetyBackup: boolean }) => void
   /** Whether a restore operation is currently in progress */
@@ -85,7 +81,6 @@ export function RestoreConfirmationDialog({
   open,
   onOpenChange,
   preview,
-  payload,
   onConfirm,
   isRestoring,
 }: RestoreConfirmationDialogProps) {
