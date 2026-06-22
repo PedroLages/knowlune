@@ -1,5 +1,6 @@
 ---
-status: ready-for-review
+status: done
+completed: 2026-06-22
 reviewed: true
 review_started: 2026-06-22
 review_completed: 2026-06-22
