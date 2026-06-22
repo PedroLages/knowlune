@@ -167,7 +167,7 @@ export interface PdfMetadata {
   pageCount: number
 }
 
-export type CourseSource = 'local' | 'youtube'
+export type CourseSource = 'local' | 'youtube' | 'drive'
 
 export interface DriveFileRef {
   /** Google Drive file ID. */

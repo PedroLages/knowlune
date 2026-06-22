@@ -1193,9 +1193,20 @@ export async function importCourseFromDrive(
   const courseId = crypto.randomUUID()
   const now = new Date().toISOString()
 
-  // Only video files become lessons; non-video files are skipped
+  // Validate that all fileIds match the expected Drive format
+  const FILE_ID_RE = /^[a-zA-Z0-9_-]+$/
+  for (const f of files) {
+    if (!FILE_ID_RE.test(f.fileId)) {
+      throw new Error(`Invalid Drive fileId format: "${f.fileId}"`)
+    }
+  }
+
+  // Only video files become lessons; non-video files (PDFs, images, audio, etc.)
+  // are silently skipped. PDF records are not persisted here — that is deferred
+  // to a follow-up story (E77B-S03 or later) which will also add driveFileRef to
+  // the ImportedPdf type. Until then, pdfCount is zeroed to avoid implying
+  // records exist that were never stored.
   const videoFiles = files.filter(f => f.mimeType.startsWith('video/'))
-  const pdfFiles = files.filter(f => f.mimeType === 'application/pdf')
 
   const videos: ImportedVideo[] = videoFiles.map((f, index) => ({
     id: crypto.randomUUID(),
@@ -1220,10 +1231,10 @@ export async function importCourseFromDrive(
     tags: [],
     status: 'not-started',
     videoCount: videos.length,
-    pdfCount: pdfFiles.length,
+    pdfCount: 0, // PDF records not persisted yet (deferred to E77B-S03+)
     directoryHandle: null as unknown as FileSystemDirectoryHandle,
     sourceDriveId: folderId,
-    source: undefined, // not 'local' or 'youtube' — Drive native course
+    source: 'drive',
   }
 
   // Persist course + videos using syncableWrite for sync queue entries
