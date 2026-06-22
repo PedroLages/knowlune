@@ -2,9 +2,7 @@ import 'fake-indexeddb/auto'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import Dexie from 'dexie'
 
-let importCourseFromDrive: (
-  typeof import('@/lib/courseImport')
-)['importCourseFromDrive']
+let importCourseFromDrive: (typeof import('@/lib/courseImport'))['importCourseFromDrive']
 
 beforeEach(async () => {
   vi.clearAllMocks()
@@ -20,11 +18,13 @@ async function getDb() {
   return db
 }
 
-function makeDriveFile(overrides: Partial<{
-  fileId: string
-  name: string
-  mimeType: string
-}> = {}) {
+function makeDriveFile(
+  overrides: Partial<{
+    fileId: string
+    name: string
+    mimeType: string
+  }> = {}
+) {
   return {
     fileId: crypto.randomUUID(),
     name: 'lesson-01.mp4',
