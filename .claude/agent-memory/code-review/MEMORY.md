@@ -40,5 +40,11 @@
 - grep for each store method in src/ (excluding __tests__ and the store file) — 0 callers = BLOCKER
 - See [feedback_store_integration_gaps.md](feedback_store_integration_gaps.md)
 
+## Recurring Pattern: React Closure Staleness in finally Blocks (E77a-S03)
+- `finally` blocks reading React state from closure see values from last render, not from `setState` in the `try` block
+- With React 19 automatic batching, queued `setState` calls from `try` and `finally` are batched, so `finally` can clobber success state
+- Fix: Use local variable (e.g., `let succeeded = false`) set in `try`, checked in `finally`
+- See [react-closure-staleness-finally.md](react-closure-staleness-finally.md)
+
 ## Story-Level Details
 See [story-details.md](story-details.md) for per-story findings.

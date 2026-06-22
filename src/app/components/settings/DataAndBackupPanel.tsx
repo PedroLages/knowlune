@@ -12,7 +12,6 @@ import {
   DriveNetworkError,
 } from '@/lib/googleDriveUpload'
 import { exportAllAsJson } from '@/lib/exportService'
-import { toastError } from '@/lib/toastHelpers'
 import { TOAST_DURATION } from '@/lib/toastConfig'
 
 /**
@@ -55,6 +54,7 @@ export function DataAndBackupPanel() {
     setUploadPhase('Exporting data...')
 
     let currentPhase: 'export' | 'upload' = 'export'
+    let succeeded = false
 
     try {
       // 1. Export all data as JSON
@@ -79,6 +79,7 @@ export function DataAndBackupPanel() {
       const result = await uploadBackupToDrive(blob, filename)
 
       setUploadProgress(100)
+      succeeded = true
       setUploadPhase('Complete!')
 
       // 4. Show success toast with view link
@@ -99,23 +100,23 @@ export function DataAndBackupPanel() {
       )
     } catch (error) {
       if (error instanceof DriveQuotaError) {
-        toastError.saveFailed(error.message)
+        toast.error(error.message)
       } else if (error instanceof DrivePermissionError) {
         // Token is missing/expired/revoked — open reconnect dialog
         setReconnectOpen(true)
-        toastError.saveFailed('Google Drive access needed. Please reconnect.')
+        toast.error('Google Drive access needed. Please reconnect.')
       } else if (error instanceof DriveNetworkError) {
-        toastError.saveFailed(error.message)
+        toast.error(error.message)
       } else if (currentPhase === 'export') {
         console.error('Drive export error:', error)
-        toastError.saveFailed('Export failed. Try again?')
+        toast.error('Export failed. Try again?')
       } else {
         console.error('Drive upload error:', error)
-        toastError.saveFailed('Upload failed. Try again?')
+        toast.error('Upload failed. Try again?')
       }
     } finally {
       setIsUploading(false)
-      if (uploadPhase !== 'Complete!') {
+      if (!succeeded) {
         setUploadProgress(0)
         setUploadPhase('')
       }

@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { DataAndBackupPanel } from '@/app/components/settings/DataAndBackupPanel'
+import { toast } from 'sonner'
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -165,5 +166,84 @@ describe('DataAndBackupPanel', () => {
     await waitFor(() => {
       expect(screen.getByTestId('send-to-drive-button')).toHaveTextContent(/Reconnect/)
     })
+  })
+
+  it('shows success toast with webViewLink and progress reaches 100% (AC2)', async () => {
+    mockGetDriveToken.mockResolvedValue('valid-token')
+    mockExportAllAsJson.mockResolvedValue({
+      schemaVersion: 14,
+      exportedAt: new Date().toISOString(),
+      data: {},
+    })
+    mockUploadBackupToDrive.mockResolvedValue({
+      fileId: 'test-file-id',
+      webViewLink: 'https://drive.google.com/file/d/test/view',
+    })
+
+    const user = userEvent.setup()
+    render(<DataAndBackupPanel />)
+
+    await user.click(screen.getByTestId('send-to-drive-button'))
+
+    // Wait for upload to finish — button re-enabled and progress gone
+    await waitFor(() => {
+      expect(screen.getByTestId('send-to-drive-button')).toBeEnabled()
+    })
+
+    // Progress indicator is no longer visible (isUploading = false)
+    expect(screen.queryByTestId('drive-upload-progress')).not.toBeInTheDocument()
+
+    // toast.success was called with success content
+    expect(toast.success).toHaveBeenCalledWith(
+      expect.objectContaining({}),
+      expect.anything()
+    )
+  })
+
+  it('shows "Export failed" toast when export throws an unexpected error (AC3)', async () => {
+    mockGetDriveToken.mockResolvedValue('valid-token')
+    const exportError = new Error('Unexpected export failure')
+    mockExportAllAsJson.mockRejectedValue(exportError)
+
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    const user = userEvent.setup()
+    render(<DataAndBackupPanel />)
+
+    await user.click(screen.getByTestId('send-to-drive-button'))
+
+    await waitFor(() => {
+      expect(consoleSpy).toHaveBeenCalledWith('Drive export error:', exportError)
+    })
+
+    expect(toast.error).toHaveBeenCalledWith('Export failed. Try again?')
+
+    consoleSpy.mockRestore()
+  })
+
+  it('shows "Upload failed" toast when upload throws an unexpected error (AC9)', async () => {
+    mockGetDriveToken.mockResolvedValue('valid-token')
+    mockExportAllAsJson.mockResolvedValue({
+      schemaVersion: 14,
+      exportedAt: new Date().toISOString(),
+      data: {},
+    })
+    const uploadError = new Error('Unexpected upload failure')
+    mockUploadBackupToDrive.mockRejectedValue(uploadError)
+
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    const user = userEvent.setup()
+    render(<DataAndBackupPanel />)
+
+    await user.click(screen.getByTestId('send-to-drive-button'))
+
+    await waitFor(() => {
+      expect(consoleSpy).toHaveBeenCalledWith('Drive upload error:', uploadError)
+    })
+
+    expect(toast.error).toHaveBeenCalledWith('Upload failed. Try again?')
+
+    consoleSpy.mockRestore()
   })
 })
