@@ -17,9 +17,8 @@ so that I know whether my backup is stale and can take action.
 
 1. **Given** a backup is created locally **When** the export completes **Then** `lastLocalAt` metadata is updated with the current timestamp.
 2. **Given** a backup is uploaded to Google Drive **When** the drive upload completes **Then** `lastDriveAt` metadata is updated with the current timestamp.
-3. **Given** a backup is sent to a custom destination **When** the export completes **Then** `lastDestination` metadata is updated with the current timestamp.
-4. **Given** the user opens Settings > Data & Backup **When** the page loads **Then** the last backup timestamps are displayed for each backup type.
-5. **Given** the last backup was more than 7 days ago **When** the Data & Backup page renders **Then** a stale backup warning is shown.
+3. **Given** the user opens Settings > Data & Backup **When** the page loads **Then** the last backup timestamps are displayed for each backup type.
+4. **Given** the last backup was more than 30 days ago **When** the Data & Backup page renders **Then** a stale backup warning is shown.
 
 ## Dev Notes
 

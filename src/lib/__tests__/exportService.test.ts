@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
 // Mock db before importing module
 const mockToArray = vi.fn().mockResolvedValue([])
@@ -30,9 +30,24 @@ vi.mock('../noteExport', () => ({
   htmlToMarkdown: vi.fn().mockImplementation((html: string) => html.replace(/<[^>]*>/g, '')),
 }))
 
+// Settings mock used by updateBackupMeta tests
+let mockSettingsBackupMeta: Record<string, unknown> | undefined = undefined
+const mockSaveSettings = vi.fn()
+vi.mock('@/lib/settings', () => ({
+  getSettings: () => ({ backupMeta: mockSettingsBackupMeta }),
+  saveSettings: (...args: unknown[]) => mockSaveSettings(...args),
+}))
+
+const dispatchSpy = vi.spyOn(window, 'dispatchEvent')
+
 const { db } = await import('@/db/schema')
-const { exportAllAsJson, exportAllAsCsv, exportNotesAsMarkdown, CURRENT_SCHEMA_VERSION } =
-  await import('../exportService')
+const {
+  exportAllAsJson,
+  exportAllAsCsv,
+  exportNotesAsMarkdown,
+  updateBackupMeta,
+  CURRENT_SCHEMA_VERSION,
+} = await import('../exportService')
 const { sessionsToCSV, progressToCSV, deriveStreakDays, streakDaysToCSV } =
   await import('../csvSerializer')
 
@@ -40,6 +55,7 @@ describe('exportService', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     localStorage.clear()
+    mockSettingsBackupMeta = undefined
     // Reset default mock behavior
     mockToArray.mockResolvedValue([])
     ;(db.studySessions.toArray as ReturnType<typeof vi.fn>).mockResolvedValue([])
@@ -47,6 +63,10 @@ describe('exportService', () => {
     ;(db.notes.toArray as ReturnType<typeof vi.fn>).mockResolvedValue([])
     ;(db.importedCourses.toArray as ReturnType<typeof vi.fn>).mockResolvedValue([])
     ;(db.reviewRecords.toArray as ReturnType<typeof vi.fn>).mockResolvedValue([])
+  })
+
+  afterEach(() => {
+    mockSettingsBackupMeta = undefined
   })
 
   describe('CURRENT_SCHEMA_VERSION', () => {
@@ -625,6 +645,87 @@ describe('exportService', () => {
           typeof phase === 'string' && (phase as string).startsWith('Converting note')
       )
       expect(convertingCalls.length).toBeGreaterThanOrEqual(2)
+    })
+  })
+
+  describe('updateBackupMeta', () => {
+    it('sets lastLocalAt and lastDestination to "local" when called with "local"', () => {
+      mockSettingsBackupMeta = undefined
+
+      updateBackupMeta('local')
+
+      expect(mockSaveSettings).toHaveBeenCalledOnce()
+      const saved = mockSaveSettings.mock.calls[0][0] as { backupMeta: Record<string, unknown> }
+      expect(saved.backupMeta.lastDestination).toBe('local')
+      expect(typeof saved.backupMeta.lastLocalAt).toBe('number')
+      expect(saved.backupMeta.lastDriveAt).toBeUndefined()
+    })
+
+    it('sets lastDriveAt and lastDestination to "drive" when called with "drive"', () => {
+      mockSettingsBackupMeta = undefined
+
+      updateBackupMeta('drive')
+
+      expect(mockSaveSettings).toHaveBeenCalledOnce()
+      const saved = mockSaveSettings.mock.calls[0][0] as { backupMeta: Record<string, unknown> }
+      expect(saved.backupMeta.lastDestination).toBe('drive')
+      expect(typeof saved.backupMeta.lastDriveAt).toBe('number')
+      expect(saved.backupMeta.lastLocalAt).toBeUndefined()
+    })
+
+    it('preserves existing backupMeta fields when updating with "drive" after a local backup', () => {
+      const localTs = Date.now() - 60_000
+      mockSettingsBackupMeta = {
+        lastLocalAt: localTs,
+        lastDestination: 'local',
+      }
+
+      updateBackupMeta('drive')
+
+      expect(mockSaveSettings).toHaveBeenCalledOnce()
+      const saved = mockSaveSettings.mock.calls[0][0] as { backupMeta: Record<string, unknown> }
+      // lastLocalAt is preserved (not overwritten)
+      expect(saved.backupMeta.lastLocalAt).toBe(localTs)
+      // lastDriveAt is set to a new timestamp
+      expect(typeof saved.backupMeta.lastDriveAt).toBe('number')
+      expect(saved.backupMeta.lastDriveAt).not.toBe(localTs)
+      // lastDestination updated to drive
+      expect(saved.backupMeta.lastDestination).toBe('drive')
+    })
+
+    it('updates timestamp with current Date.now() value', () => {
+      mockSettingsBackupMeta = undefined
+      const before = Date.now()
+
+      updateBackupMeta('local')
+
+      const saved = mockSaveSettings.mock.calls[0][0] as { backupMeta: Record<string, unknown> }
+      const savedTs = saved.backupMeta.lastLocalAt as number
+      expect(savedTs).toBeGreaterThanOrEqual(before)
+      expect(savedTs).toBeLessThanOrEqual(Date.now())
+    })
+
+    it('dispatches a settingsUpdated event', () => {
+      mockSettingsBackupMeta = undefined
+      dispatchSpy.mockClear()
+
+      updateBackupMeta('local')
+
+      expect(dispatchSpy).toHaveBeenCalledWith(expect.any(Event))
+      const event = dispatchSpy.mock.calls[0][0] as Event
+      expect(event.type).toBe('settingsUpdated')
+    })
+
+    it('handles undefined backupMeta gracefully', () => {
+      mockSettingsBackupMeta = undefined
+
+      updateBackupMeta('drive')
+
+      expect(mockSaveSettings).toHaveBeenCalledOnce()
+      const saved = mockSaveSettings.mock.calls[0][0] as { backupMeta: Record<string, unknown> }
+      expect(saved.backupMeta).toBeDefined()
+      expect(saved.backupMeta.lastDestination).toBe('drive')
+      expect(typeof saved.backupMeta.lastDriveAt).toBe('number')
     })
   })
 })

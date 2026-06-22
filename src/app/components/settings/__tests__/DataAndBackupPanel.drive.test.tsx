@@ -44,10 +44,11 @@ vi.mock('@/lib/googleDriveUpload', () => {
   }
 })
 
+const mockUpdateBackupMeta = vi.fn()
 vi.mock('@/lib/exportService', () => ({
   exportAllAsJson: (onProgress?: (pct: number, phase: string) => void) =>
     mockExportAllAsJson(onProgress),
-  updateBackupMeta: vi.fn(),
+  updateBackupMeta: (...args: unknown[]) => mockUpdateBackupMeta(...args),
 }))
 
 vi.mock('@/stores/useAuthStore', () => ({
@@ -196,6 +197,9 @@ describe('DataAndBackupPanel', () => {
 
     // toast.success was called with success content
     expect(toast.success).toHaveBeenCalledWith(expect.objectContaining({}), expect.anything())
+
+    // AC2: updateBackupMeta was called with 'drive' after successful upload
+    expect(mockUpdateBackupMeta).toHaveBeenCalledWith('drive')
   })
 
   it('shows "Export failed" toast when export throws an unexpected error (AC3)', async () => {

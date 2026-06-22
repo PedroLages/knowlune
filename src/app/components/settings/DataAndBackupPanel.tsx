@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { toast } from 'sonner'
 import { Cloud, ExternalLink, Loader2, ShieldCheck } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
@@ -30,6 +30,17 @@ function formatRelativeTime(timestamp: number): string {
   }
 }
 
+/**
+ * Derive the display label and staleness info from the current backup metadata.
+ *
+ * Returns `null` when no backup has ever been recorded (show "never backed up" state).
+ * When a backup exists, returns a human-readable relative-time label with the
+ * destination name (e.g. "5 minutes ago (Drive)") and a boolean `isStale` that
+ * is `true` when the most recent backup is older than `THIRTY_DAYS_MS`.
+ *
+ * Destination fallback: prefers the explicit `lastDestination` field; when unset,
+ * picks the source with the latest timestamp.
+ */
 function getLastBackupDisplay(settings: ReturnType<typeof getSettings>): {
   label: string
   isStale: boolean
@@ -40,7 +51,11 @@ function getLastBackupDisplay(settings: ReturnType<typeof getSettings>): {
   const { lastLocalAt, lastDriveAt, lastDestination } = meta
   if (!lastLocalAt && !lastDriveAt) return null
 
-  const latestTimestamp = Math.max(lastLocalAt ?? 0, lastDriveAt ?? 0)
+  // Collect defined timestamps to avoid sentinel-0 confusion in Math.max
+  const timestamps: number[] = []
+  if (lastLocalAt !== undefined) timestamps.push(lastLocalAt)
+  if (lastDriveAt !== undefined) timestamps.push(lastDriveAt)
+  const latestTimestamp = Math.max(...timestamps)
   const isStale = Date.now() - latestTimestamp > THIRTY_DAYS_MS
 
   // Prefer the named destination; fall back to the source with the latest timestamp
@@ -74,8 +89,20 @@ export function DataAndBackupPanel() {
   const [knownTokenState, setKnownTokenState] = useState<'untested' | 'present' | 'absent'>(
     'untested'
   )
-  const settings = getSettings()
+  // Use local state so the banner reactively updates when updateBackupMeta fires
+  // a settingsUpdated event (e.g. after Drive upload completes).
+  const [settings, setSettings] = useState(getSettings())
   const display = getLastBackupDisplay(settings)
+
+  // Subscribe to settingsUpdated events — keeps the backup status banner in sync
+  // when updateBackupMeta (which bypasses the SettingsPageContext state) is called.
+  useEffect(() => {
+    function handleSettingsUpdated() {
+      setSettings(getSettings())
+    }
+    window.addEventListener('settingsUpdated', handleSettingsUpdated)
+    return () => window.removeEventListener('settingsUpdated', handleSettingsUpdated)
+  }, [])
 
   async function handleSendToDrive() {
     if (isUploading) return
@@ -180,6 +207,8 @@ export function DataAndBackupPanel() {
         data-testid="backup-status-banner"
         data-stale={display?.isStale ?? false}
         data-never={display === null}
+        role="status"
+        aria-live="polite"
       >
         <div className="flex items-start gap-3">
           <div
