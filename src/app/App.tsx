@@ -13,6 +13,7 @@ import { WelcomeWizard } from '@/app/components/WelcomeWizard'
 import { initErrorTracking } from '@/lib/errorTracking'
 import { vectorStorePersistence } from '@/ai/vector-store'
 import { embeddingPipeline } from '@/ai/embeddingPipeline'
+import { initWorkerCrashTelemetry } from '@/ai/workers/workerCrashTelemetry'
 import { supportsWorkers } from '@/ai/lib/workerCapabilities'
 import { EmbeddingModelProgressToast } from '@/app/components/embeddings/EmbeddingModelProgressToast'
 import { refreshStaleMetadata } from '@/lib/youtubeMetadataRefresh'
@@ -92,6 +93,14 @@ export default function App() {
       // silent-catch-ok — non-critical background task
       console.warn('[App] YouTube metadata refresh failed:', err)
     })
+  }, [])
+
+  // E68-S03: Initialize worker crash telemetry subscriber.
+  // Subscribes to 'worker-crash' CustomEvent and logs structured telemetry.
+  // Deduplicates repeated crashes with the same requestId.
+  useEffect(() => {
+    const unsubscribe = initWorkerCrashTelemetry()
+    return () => unsubscribe()
   }, [])
 
   // E68-S01: Pre-warm the embedding model after a brief idle period so the first
