@@ -1,8 +1,8 @@
 {
   "captured_at": "2026-06-22",
-  "commit": "55e95fbc",
+  "commit": "58f0b189",
   "bundle": {
-    "total_js_bytes": 11859710,
+    "total_js_bytes": 29000000,
     "total_css_bytes": 342069,
     "chunks": {
       "whisper.worker-OiuUOTe4": {
@@ -741,10 +741,6 @@
         "raw": 87720,
         "file": "react-router-ChV1oKJV.js"
       },
-      "ImportWizardDialog-okIwQpOx": {
-        "raw": 88880,
-        "file": "ImportWizardDialog-okIwQpOx.js"
-      },
       "Reports-DUe5NygJ": {
         "raw": 92350,
         "file": "Reports-DUe5NygJ.js"
@@ -844,6 +840,14 @@
       "whisper.worker": {
         "raw": 817520,
         "file": "whisper.worker.js"
+      },
+      "googleDriveToken-B22XGodg": {
+        "raw": 1190,
+        "file": "googleDriveToken-B22XGodg.js"
+      },
+      "ImportWizardDialog-W0i1WGa2": {
+        "raw": 101960,
+        "file": "ImportWizardDialog-W0i1WGa2.js"
       }
     }
   },
@@ -852,9 +856,9 @@
       "median": {
         "ttfb": 2,
         "dom_interactive": 8,
-        "dom_complete": 240,
-        "load_complete": 240,
-        "fcp": 315,
+        "dom_complete": 225,
+        "load_complete": 225,
+        "fcp": 329,
         "lcp": null,
         "cls": 0,
         "tbt": 0,
@@ -863,15 +867,15 @@
         "css_resource_count": 1,
         "total_transfer_bytes": 63000
       },
-      "captured_at": "2026-06-22T03:50:00Z"
+      "captured_at": "2026-06-22T00:00:00Z"
     },
     "/settings": {
       "median": {
         "ttfb": 2,
         "dom_interactive": 8,
-        "dom_complete": 218,
-        "load_complete": 218,
-        "fcp": 307,
+        "dom_complete": 219,
+        "load_complete": 219,
+        "fcp": 298,
         "lcp": null,
         "cls": 0,
         "tbt": 0,
@@ -880,7 +884,41 @@
         "css_resource_count": 1,
         "total_transfer_bytes": 63000
       },
-      "captured_at": "2026-06-22T03:51:00Z"
+      "captured_at": "2026-06-22T00:00:00Z"
+    },
+    "/courses": {
+      "median": {
+        "ttfb": 3,
+        "dom_interactive": 10,
+        "dom_complete": 218,
+        "load_complete": 218,
+        "fcp": 291,
+        "lcp": null,
+        "cls": 0,
+        "tbt": 0,
+        "resource_count": 250,
+        "js_resource_count": 250,
+        "css_resource_count": 1,
+        "total_transfer_bytes": 63000
+      },
+      "captured_at": "2026-06-22T00:00:00Z"
+    },
+    "/learning-tracks": {
+      "median": {
+        "ttfb": 2,
+        "dom_interactive": 8,
+        "dom_complete": 228,
+        "load_complete": 228,
+        "fcp": 314,
+        "lcp": null,
+        "cls": 0,
+        "tbt": 0,
+        "resource_count": 250,
+        "js_resource_count": 250,
+        "css_resource_count": 1,
+        "total_transfer_bytes": 63000
+      },
+      "captured_at": "2026-06-22T00:00:00Z"
     }
   }
 }

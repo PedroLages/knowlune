@@ -1,6 +1,8 @@
 import { supabase } from '@/lib/auth/supabase'
 import { useAuthStore } from '@/stores/useAuthStore'
 
+const DRIVE_READ_GRANTED_KEY = 'knowlune_drive_read_granted'
+
 /**
  * Get a valid Google Drive access token from the current auth session.
  *
@@ -58,3 +60,91 @@ export async function refreshDriveToken(): Promise<string | null> {
     return null
   }
 }
+
+/**
+ * Request the `drive.readonly` scope incrementally via a new OAuth flow.
+ *
+ * Called when the user wants to use the Drive folder browser but hasn't yet
+ * granted read access to their Drive. This triggers a Google consent screen
+ * redirect asking for the additional `drive.readonly` scope alongside the
+ * existing `drive.file` scope.
+ *
+ * After successful auth, the session is updated with a new `provider_token`
+ * that has both scopes, and `knowlune_drive_read_granted` is stored in
+ * localStorage so subsequent checks skip the API verification.
+ *
+ * Note: This function triggers a page redirect and does NOT return.
+ */
+export async function requestDriveReadScope(): Promise<void> {
+  if (!supabase) return
+
+  await supabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: {
+      redirectTo: `${window.location.origin}/auth/callback`,
+      scopes:
+        'email profile https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/drive.readonly',
+      queryParams: {
+        access_type: 'offline',
+        prompt: 'consent',
+      },
+    },
+  })
+  // OAuth redirects — no return
+}
+
+/**
+ * Check whether the current session has the `drive.readonly` scope.
+ *
+ * First checks a localStorage flag (set after successful incremental re-auth).
+ * If the flag is set and a valid provider_token exists, returns true without
+ * making a network call.
+ *
+ * If the flag is not set but the token exists, makes a lightweight Drive API
+ * `about.get` call to verify read access. On success, sets the flag and
+ * returns true. On 403/insufficient scopes, returns false.
+ *
+ * Returns `false` if no Drive token is available.
+ */
+export async function hasDriveReadScope(): Promise<boolean> {
+  const token = await getDriveToken()
+  if (!token) return false
+
+  // Fast path: flag was set after a previous successful verification
+  if (localStorage.getItem(DRIVE_READ_GRANTED_KEY) === 'true') {
+    return true
+  }
+
+  // Verify by making a lightweight Drive API call that requires drive.readonly
+  try {
+    const response = await fetch('https://www.googleapis.com/drive/v3/about?fields=user', {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+
+    if (response.ok) {
+      localStorage.setItem(DRIVE_READ_GRANTED_KEY, 'true')
+      return true
+    }
+
+    // 403 with insufficient scopes error
+    return false
+  } catch {
+    // Network error — assume scope not granted to avoid false positives
+    return false
+  }
+}
+
+/**
+ * Clear the `knowlune_drive_read_granted` flag from localStorage.
+ * Called on sign-out to reset the read-scope state.
+ */
+export function clearDriveReadFlag(): void {
+  localStorage.removeItem(DRIVE_READ_GRANTED_KEY)
+}
+
+/**
+ * Clear the `knowlune_drive_read_granted` flag from localStorage.
+ * Called when the user explicitly signs out so the next visit re-evaluates.
+ * @deprecated Use `clearDriveReadFlag()` instead.
+ */
+export const clearDriveReadScope = clearDriveReadFlag
