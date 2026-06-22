@@ -19,6 +19,7 @@ import {
   Check,
   Clock,
   FileText,
+  HardDrive,
   Play,
   PlayCircle,
   Video,
@@ -39,6 +40,7 @@ import { Card, CardContent } from '@/app/components/ui/card'
 import { Skeleton } from '@/app/components/ui/skeleton'
 import { cn } from '@/app/components/ui/utils'
 import { StudyScheduleEditor } from '@/app/components/figma/StudyScheduleEditor'
+import { DriveFolderBrowser } from '@/app/components/import/DriveFolderBrowser'
 import {
   StatusCircle,
   EntryActionButton,
@@ -48,6 +50,7 @@ import { formatClockDuration as formatDuration } from '@/lib/formatDuration'
 import { buildGroupedCurriculum } from '@/lib/curriculumGrouping'
 import { getInitials } from '@/lib/textUtils'
 import type { ImportedVideo, ImportedPdf, VideoProgress, YouTubeCourseChapter } from '@/data/types'
+import type { DriveFolderBrowserResult } from '@/lib/googleDriveFileService'
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -100,6 +103,10 @@ export function CourseOverview() {
 
   // Schedule editor state
   const [scheduleEditorOpen, setScheduleEditorOpen] = useState(false)
+
+  // Reconnect state
+  const [reconnectOpen, setReconnectOpen] = useState(false)
+  const [isReconnecting, setIsReconnecting] = useState(false)
 
   // Load content
   useEffect(() => {
@@ -217,6 +224,60 @@ export function CourseOverview() {
       return next
     })
   }, [])
+
+  /** Handle Drive folder reconnection: map new file IDs to existing lessons by filename. */
+  const handleReconnectFolder = useCallback(
+    async (result: DriveFolderBrowserResult) => {
+      if (!courseId || isReconnecting) return
+      setIsReconnecting(true)
+
+      try {
+        // Update the course's sourceDriveId
+        const ok = await useCourseImportStore.getState().updateCourseDetails(courseId, {
+          sourceDriveId: result.folderId,
+        })
+        if (!ok) {
+          toast.error('Failed to update Drive folder reference. Reconnect was not completed.')
+          return
+        }
+
+        // Map new Drive file IDs to existing videos by filename
+        let matchedCount = 0
+        const updatedVideos = await db.importedVideos.where('courseId').equals(courseId).toArray()
+
+        for (const video of updatedVideos) {
+          const matchingFile = result.files.find(
+            f => f.name.toLowerCase() === video.filename.toLowerCase()
+          )
+          if (matchingFile) {
+            await db.importedVideos.update(video.id, {
+              driveFileRef: {
+                fileId: matchingFile.id,
+                driveSource: 'google' as const,
+              },
+            })
+            matchedCount++
+          }
+        }
+
+        // Refresh the videos state
+        setVideos(await db.importedVideos.where('courseId').equals(courseId).sortBy('order'))
+
+        // Only count video-type files in the denominator
+        const videoFiles = result.files.filter(f => f.mimeType.startsWith('video/'))
+        toast.success(
+          `Drive folder reconnected. ${matchedCount} of ${videoFiles.length} videos matched.`
+        )
+      } catch (err) {
+        console.error('[CourseOverview] Reconnect failed:', err)
+        toast.error('Failed to reconnect Drive folder')
+      } finally {
+        setIsReconnecting(false)
+        setReconnectOpen(false)
+      }
+    },
+    [courseId, isReconnecting]
+  )
 
   // Determine module status for timeline dots (must be before early returns — Rules of Hooks)
   const moduleStatuses = useMemo(() => {
@@ -467,6 +528,36 @@ export function CourseOverview() {
           )}
         </div>
       </motion.div>
+
+      {/* Drive Source Banner */}
+      {course?.source === 'drive' && (
+        <div className="max-w-5xl mx-auto px-6 mt-8">
+          <div
+            data-testid="drive-source-banner"
+            className="flex items-start gap-3 rounded-xl border border-border bg-muted p-4 text-sm text-muted-foreground"
+          >
+            <HardDrive className="size-5 shrink-0 mt-0.5 text-brand" aria-hidden="true" />
+            <div className="flex-1 min-w-0">
+              <p className="font-medium text-foreground">Google Drive Course</p>
+              <p className="text-xs mt-0.5">
+                This course was imported from Google Drive. If files have been moved or deleted, you
+                can reconnect to a new Drive folder.
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setReconnectOpen(true)}
+              disabled={isReconnecting}
+              className="shrink-0 gap-2 min-h-[44px]"
+              aria-label="Reconnect Drive folder"
+            >
+              <HardDrive className="size-4" aria-hidden="true" />
+              {isReconnecting ? 'Reconnecting...' : 'Reconnect'}
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Content Area: Syllabus + Sidebar */}
       {/* Section heading */}
@@ -808,6 +899,12 @@ export function CourseOverview() {
           </div>
         </motion.div>
       </div>
+
+      <DriveFolderBrowser
+        open={reconnectOpen}
+        onOpenChange={setReconnectOpen}
+        onFolderSelected={handleReconnectFolder}
+      />
     </div>
   )
 }

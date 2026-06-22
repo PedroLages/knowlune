@@ -1,6 +1,6 @@
 {
   "captured_at": "2026-06-22",
-  "commit": "58f0b189",
+  "commit": "724caf7e",
   "bundle": {
     "total_js_bytes": 29000000,
     "total_css_bytes": 342069,
@@ -848,17 +848,37 @@
       "ImportWizardDialog-W0i1WGa2": {
         "raw": 101960,
         "file": "ImportWizardDialog-W0i1WGa2.js"
+      },
+      "hard-drive-Cw9Awz6W": {
+        "raw": 560,
+        "file": "hard-drive-Cw9Awz6W.js"
+      },
+      "googleDriveToken-BRXi2F_z": {
+        "raw": 2040,
+        "file": "googleDriveToken-BRXi2F_z.js"
+      },
+      "googleDriveFileService-C9BR8XxZ": {
+        "raw": 2830,
+        "file": "googleDriveFileService-C9BR8XxZ.js"
+      },
+      "CredentialSyncStatusBadge-DbhgC5mw": {
+        "raw": 4220,
+        "file": "CredentialSyncStatusBadge-DbhgC5mw.js"
+      },
+      "CourseOverview-z97qYUtj": {
+        "raw": 17510,
+        "file": "CourseOverview-z97qYUtj.js"
       }
     }
   },
   "page_metrics": {
     "/": {
       "median": {
-        "ttfb": 2,
-        "dom_interactive": 8,
-        "dom_complete": 225,
-        "load_complete": 225,
-        "fcp": 329,
+        "ttfb": 3,
+        "dom_interactive": 12,
+        "dom_complete": 221,
+        "load_complete": 221,
+        "fcp": 322,
         "lcp": null,
         "cls": 0,
         "tbt": 0,
@@ -871,11 +891,11 @@
     },
     "/settings": {
       "median": {
-        "ttfb": 2,
-        "dom_interactive": 8,
-        "dom_complete": 219,
-        "load_complete": 219,
-        "fcp": 298,
+        "ttfb": 5,
+        "dom_interactive": 13,
+        "dom_complete": 221,
+        "load_complete": 221,
+        "fcp": 330,
         "lcp": null,
         "cls": 0,
         "tbt": 0,
@@ -888,11 +908,11 @@
     },
     "/courses": {
       "median": {
-        "ttfb": 3,
-        "dom_interactive": 10,
-        "dom_complete": 218,
-        "load_complete": 218,
-        "fcp": 291,
+        "ttfb": 2,
+        "dom_interactive": 9,
+        "dom_complete": 236,
+        "load_complete": 236,
+        "fcp": 347,
         "lcp": null,
         "cls": 0,
         "tbt": 0,

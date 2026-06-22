@@ -41,8 +41,7 @@ export function DriveConfigurationSettings() {
   const hasDriveToken = !!session?.provider_token
   // Derive the connected Google email from user identities
   const googleIdentity = user?.identities?.find(id => id.provider === 'google')
-  const googleEmail: string | null =
-    googleIdentity?.identity_data?.email ?? user?.email ?? null
+  const googleEmail: string | null = googleIdentity?.identity_data?.email ?? user?.email ?? null
 
   // Check drive.readonly scope status
   useEffect(() => {
