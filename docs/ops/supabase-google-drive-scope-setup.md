@@ -89,7 +89,7 @@ const token = await getDriveToken()
 To verify the read scope specifically:
 
 ```ts
-const hasRead = await checkDriveReadScope()
+const hasRead = await hasDriveReadScope()
 // hasRead should be true after a successful incremental re-auth
 ```
 

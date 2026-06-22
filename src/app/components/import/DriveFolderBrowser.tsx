@@ -67,12 +67,15 @@ export function DriveFolderBrowser({
   useEffect(() => {
     if (!open) return
 
+    let ignore = false
+
     setStep('check-scope')
     setScopeCheckLoading(true)
     setError(null)
 
     hasDriveReadScope()
       .then(granted => {
+        if (ignore) return
         setHasScope(granted)
         if (granted) {
           setStep('browse')
@@ -80,11 +83,17 @@ export function DriveFolderBrowser({
         }
       })
       .catch(() => {
+        if (ignore) return
         setHasScope(false)
       })
       .finally(() => {
+        if (ignore) return
         setScopeCheckLoading(false)
       })
+
+    return () => {
+      ignore = true
+    }
   }, [open])
 
   const handleGrantScope = useCallback(async () => {
