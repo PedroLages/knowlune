@@ -221,7 +221,12 @@ export async function batchImportTrackCourses(
   // Apply manifest-specified positions via reorder (both new and existing tracks).
   // Re-read live store state each iteration — reorderCourse mutates entries,
   // so a static snapshot captured before the loop would go stale.
-  for (const { folder, position } of positions) {
+  //
+  // Sort positions by their manifest order to minimize moves: processing the
+  // smallest target positions first avoids shifting already-placed courses.
+  const sortedPositions = [...positions].sort((a, b) => a.position - b.position)
+
+  for (const { folder, position } of sortedPositions) {
     const result = results.find(r => r.folder === folder && r.success)
     if (!result?.courseId) continue
 
@@ -233,7 +238,10 @@ export async function batchImportTrackCourses(
       .sort((a, b) => a.position - b.position)
 
     const entryIndex = currentEntries.findIndex(e => e.courseId === result.courseId)
-    const targetIndex = position - 1
+    // Clamp target to valid range — when courses fail to import, the entries
+    // array may be shorter than the highest manifest position, which would
+    // cause reorderCourse to silently skip (out-of-bounds toEntry).
+    const targetIndex = Math.min(position - 1, currentEntries.length - 1)
     if (entryIndex >= 0 && entryIndex !== targetIndex) {
       await store.reorderCourse(trackId, entryIndex, targetIndex)
     }
