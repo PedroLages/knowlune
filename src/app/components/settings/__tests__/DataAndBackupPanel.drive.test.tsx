@@ -194,10 +194,7 @@ describe('DataAndBackupPanel', () => {
     expect(screen.queryByTestId('drive-upload-progress')).not.toBeInTheDocument()
 
     // toast.success was called with success content
-    expect(toast.success).toHaveBeenCalledWith(
-      expect.objectContaining({}),
-      expect.anything()
-    )
+    expect(toast.success).toHaveBeenCalledWith(expect.objectContaining({}), expect.anything())
   })
 
   it('shows "Export failed" toast when export throws an unexpected error (AC3)', async () => {
