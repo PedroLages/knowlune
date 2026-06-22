@@ -151,9 +151,9 @@ describe('importCourseFromDrive', () => {
       makeDriveFile({ fileId: 'invalid/fileId', name: 'bad.mp4', mimeType: 'video/mp4' }),
     ]
 
-    await expect(
-      importCourseFromDrive('folder-1', 'Bad FileIds', files)
-    ).rejects.toThrow('Invalid Drive fileId format')
+    await expect(importCourseFromDrive('folder-1', 'Bad FileIds', files)).rejects.toThrow(
+      'Invalid Drive fileId format'
+    )
 
     // Nothing should be persisted when validation fails
     const db = await getDb()
@@ -177,9 +177,9 @@ describe('importCourseFromDrive', () => {
       .mockImplementationOnce(async (...args) => realSyncableWrite(...args)) // course write
       .mockRejectedValueOnce(new Error('IndexedDB write failed')) // first video fails
 
-    await expect(
-      importCourseFromDrive('folder-1', 'Orphan Risk', files)
-    ).rejects.toThrow('IndexedDB write failed')
+    await expect(importCourseFromDrive('folder-1', 'Orphan Risk', files)).rejects.toThrow(
+      'IndexedDB write failed'
+    )
 
     // The course record was written (orphaned) — the first syncableWrite succeeded.
     // This is an expected orphan scenario that the caller must handle.
