@@ -33,6 +33,7 @@ import { YouTubeConfigurationSettings } from '@/app/components/figma/YouTubeConf
 import { WhisperSettings } from '@/app/components/settings/WhisperSettings'
 import { DataRetentionSettings } from '@/app/components/settings/DataRetentionSettings'
 import { StorageManagement } from '@/app/components/settings/StorageManagement'
+import { DataAndBackupPanel } from '@/app/components/settings/DataAndBackupPanel'
 import { useSettingsPage } from '@/app/components/settings/SettingsPageContext'
 import { useAuthStore, selectIsGuestMode } from '@/stores/useAuthStore'
 import { GatedFeatureCard } from '@/app/components/auth/GatedFeatureCard'
@@ -341,6 +342,14 @@ export function IntegrationsDataSection() {
               aria-label="Select JSON backup file to import"
               tabIndex={-1}
             />
+          </div>
+
+          <Separator />
+
+          {/* Google Drive Backup */}
+          <div className="space-y-3">
+            <h3 className="text-sm font-medium">Google Drive Backup</h3>
+            <DataAndBackupPanel />
           </div>
 
           <Separator />
