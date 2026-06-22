@@ -905,8 +905,8 @@ development_status:
   # Auth: Supabase-brokered Google OAuth (provider_token) — no parallel GIS flow.
   # Depends on: E19 (Supabase Auth), E35 (Premium gate for Drive destination)
   # ──────────────────────────────────────────────────
-  epic-77a: backlog
-  77a-1-local-backup-download-and-restore: backlog  # local .knowlune.json download + restore + safety backup
+  epic-77a: in-progress
+  77a-1-local-backup-download-and-restore: ready-for-dev  # local .knowlune.json download + restore + safety backup
   77a-2-supabase-google-oauth-drive-scope: backlog  # add drive.file scope to Supabase Google provider; token helper
   77a-3-drive-upload-destination-and-reconnect: backlog  # optional "Send to Drive" button + reconnect flow
   77a-4-backup-metadata-tracking-and-status: backlog  # lastBackupAt, stale warning in Settings > Data & Backup
