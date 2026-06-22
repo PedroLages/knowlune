@@ -8,16 +8,6 @@
  * - Integration: Crash during active embed request -> request rejects with typed error
  */
 
-/**
- * Unit tests for Worker Crash Telemetry payload shape and Safari fallback
- *
- * Covers:
- * - Happy path: Worker crash event payload contains requestId, provider, error.name
- * - Edge case: Rapid repeat crashes (same requestId) -> dedupe, single event
- * - Error path: Safari-style module worker failure -> fallback succeeds
- * - Integration: Crash during active embed request -> request rejects with typed error
- */
-
 import 'fake-indexeddb/auto'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { coordinator } from '@/ai/workers/coordinator'

@@ -247,8 +247,6 @@ class WorkerCoordinator {
    */
   private trySpawnWorker(url: URL, type: WorkerRequestType): Worker {
     let worker: Worker
-    let usedModule = true
-
     try {
       // Attempt module worker first (standard Vite output)
       worker = new Worker(url, { type: 'module' })
@@ -260,13 +258,12 @@ class WorkerCoordinator {
           '[Coordinator] Module worker not supported, falling back to classic worker:',
           firstError
         )
-        usedModule = false
         try {
           worker = new Worker(url)
         } catch (secondError) {
           // Fallback also failed — throw the original error for clearer diagnostics
           console.error('[Coordinator] Classic worker fallback also failed:', secondError)
-          throw firstError
+          throw secondError
         }
       } else {
         // Some other error, rethrow
