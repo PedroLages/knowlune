@@ -29,10 +29,7 @@ import {
 import { toastSuccess, toastError } from '@/lib/toastHelpers'
 import { CHECKPOINT_VERSION } from '@/db/checkpoint'
 
-import {
-  type BackupPayload,
-  exportAllAsBlob,
-} from '@/lib/exportService'
+import { type BackupPayload, exportAllAsBlob } from '@/lib/exportService'
 import { restoreFromBackup } from '@/lib/importService'
 import {
   RestoreConfirmationDialog,
@@ -102,9 +99,7 @@ export function DataAndBackupPanel() {
 
       toastSuccess.exported('Backup downloaded')
     } catch (error) {
-      toastError.saveFailed(
-        error instanceof Error ? error.message : 'Failed to create backup'
-      )
+      toastError.saveFailed(error instanceof Error ? error.message : 'Failed to create backup')
     } finally {
       setIsExporting(false)
     }
@@ -141,7 +136,7 @@ export function DataAndBackupPanel() {
       if (payload.schemaVersion > CHECKPOINT_VERSION) {
         toastError.invalidFile(
           `Backup was created with a newer app version (schema v${payload.schemaVersion}). ` +
-          `Please update the app before restoring.`
+            `Please update the app before restoring.`
         )
         return
       }
@@ -172,7 +167,7 @@ export function DataAndBackupPanel() {
       })
       setRestorePayload(payload)
       setRestoreDialogOpen(true)
-    } catch (parseError) {
+    } catch {
       toastError.invalidFile('a valid .knowlune.json backup')
     }
   }, [])
@@ -195,9 +190,13 @@ export function DataAndBackupPanel() {
         if (createSafetyBackup) {
           try {
             const { blob, filename } = await exportAllAsBlob()
-            downloadBlob(blob, filename.replace('.json', '-pre-restore-safety.json'))
+            const dotIndex = filename.lastIndexOf('.')
+            const baseName = dotIndex > 0 ? filename.slice(0, dotIndex) : filename
+            const extension = dotIndex > 0 ? filename.slice(dotIndex) : ''
+            downloadBlob(blob, `${baseName}-pre-restore-safety${extension}`)
           } catch (safetyError) {
             // Safety backup is best-effort — continue with restore
+            // silent-catch-ok
             console.warn('[DataAndBackupPanel] Safety backup failed:', safetyError)
           }
         }
@@ -209,7 +208,7 @@ export function DataAndBackupPanel() {
         // This is the safest approach — all stores re-read from Dexie on mount.
         toastSuccess.exported(
           `Restored ${summary.totalRecords.toLocaleString()} records across ` +
-          `${Object.keys(summary.counts).length} tables`
+            `${Object.keys(summary.counts).length} tables`
         )
 
         if (summary.warnings.length > 0) {
@@ -221,9 +220,7 @@ export function DataAndBackupPanel() {
           window.location.reload()
         }, 1500)
       } catch (error) {
-        toastError.importFailed(
-          error instanceof Error ? error.message : 'Restore failed'
-        )
+        toastError.importFailed(error instanceof Error ? error.message : 'Restore failed')
       } finally {
         setIsRestoring(false)
         setBackupPreview(null)
@@ -254,9 +251,8 @@ export function DataAndBackupPanel() {
           Backup & Restore
         </h4>
         <p className="px-1 text-sm text-muted-foreground mb-4">
-          Download a complete backup of all your data or restore from a previous
-          backup file. Backups include all courses, progress, notes, books, and
-          settings.
+          Download a complete backup of all your data or restore from a previous backup file.
+          Backups include all courses, progress, notes, books, and settings.
         </p>
 
         <Card>
@@ -307,9 +303,7 @@ export function DataAndBackupPanel() {
                       </Button>
                     </span>
                   </TooltipTrigger>
-                  <TooltipContent>
-                    Save a complete .knowlune.json backup file
-                  </TooltipContent>
+                  <TooltipContent>Save a complete .knowlune.json backup file</TooltipContent>
                 </Tooltip>
               </TooltipProvider>
 
@@ -333,9 +327,7 @@ export function DataAndBackupPanel() {
                       </Button>
                     </span>
                   </TooltipTrigger>
-                  <TooltipContent>
-                    Load data from a previously saved backup file
-                  </TooltipContent>
+                  <TooltipContent>Load data from a previously saved backup file</TooltipContent>
                 </Tooltip>
               </TooltipProvider>
             </div>

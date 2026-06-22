@@ -36,16 +36,45 @@ vi.mock('@/db/checkpoint', () => ({
 }))
 
 const MOCK_SYNCABLE_TABLES = [
-  'contentProgress', 'studySessions', 'progress', 'notes', 'bookmarks',
-  'flashcards', 'reviewRecords', 'embeddings', 'bookHighlights',
-  'vocabularyItems', 'audioBookmarks', 'audioClips', 'chatConversations',
-  'learnerModels', 'importedCourses', 'importedVideos', 'importedPdfs',
-  'authors', 'books', 'bookReviews', 'shelves', 'bookShelves',
-  'readingQueue', 'chapterMappings', 'learningPaths', 'learningPathEntries',
-  'challenges', 'courseReminders', 'notifications', 'careerPaths',
-  'pathEnrollments', 'studySchedules', 'opdsCatalogs',
-  'audiobookshelfServers', 'notificationPreferences', 'quizzes',
-  'quizAttempts', 'aiUsageEvents', 'userConsents',
+  'contentProgress',
+  'studySessions',
+  'progress',
+  'notes',
+  'bookmarks',
+  'flashcards',
+  'reviewRecords',
+  'embeddings',
+  'bookHighlights',
+  'vocabularyItems',
+  'audioBookmarks',
+  'audioClips',
+  'chatConversations',
+  'learnerModels',
+  'importedCourses',
+  'importedVideos',
+  'importedPdfs',
+  'authors',
+  'books',
+  'bookReviews',
+  'shelves',
+  'bookShelves',
+  'readingQueue',
+  'chapterMappings',
+  'learningPaths',
+  'learningPathEntries',
+  'challenges',
+  'courseReminders',
+  'notifications',
+  'careerPaths',
+  'pathEnrollments',
+  'studySchedules',
+  'opdsCatalogs',
+  'audiobookshelfServers',
+  'notificationPreferences',
+  'quizzes',
+  'quizAttempts',
+  'aiUsageEvents',
+  'userConsents',
 ]
 
 vi.mock('@/lib/sync/backfill', () => ({
@@ -53,9 +82,14 @@ vi.mock('@/lib/sync/backfill', () => ({
 }))
 
 const { db } = await import('@/db/schema')
-const { exportAllAsJson, exportAllAsCsv, exportNotesAsMarkdown, CURRENT_SCHEMA_VERSION,
-        collectBackupPayload, exportAllAsBlob } =
-  await import('../exportService')
+const {
+  exportAllAsJson,
+  exportAllAsCsv,
+  exportNotesAsMarkdown,
+  CURRENT_SCHEMA_VERSION,
+  collectBackupPayload,
+  exportAllAsBlob,
+} = await import('../exportService')
 const { sessionsToCSV, progressToCSV, deriveStreakDays, streakDaysToCSV } =
   await import('../csvSerializer')
 

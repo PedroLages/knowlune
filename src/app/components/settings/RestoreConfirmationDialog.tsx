@@ -11,6 +11,7 @@
  * @see DataAndBackupPanel for the parent component
  */
 
+import { useState } from 'react'
 import { AlertTriangle, Download, HardDrive } from 'lucide-react'
 
 import {
@@ -88,6 +89,8 @@ export function RestoreConfirmationDialog({
   onConfirm,
   isRestoring,
 }: RestoreConfirmationDialogProps) {
+  const [createSafetyBackup, setCreateSafetyBackup] = useState(true)
+
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent className="max-w-lg" aria-describedby="restore-dialog-description">
@@ -103,9 +106,8 @@ export function RestoreConfirmationDialog({
 
         <RestoreDialogBody
           preview={preview}
-          onConfirm={onConfirm}
-          isRestoring={isRestoring}
-          payload={payload}
+          createSafetyBackup={createSafetyBackup}
+          onSafetyBackupChange={setCreateSafetyBackup}
         />
 
         <AlertDialogFooter>
@@ -113,8 +115,7 @@ export function RestoreConfirmationDialog({
           <ConfirmButton
             isRestoring={isRestoring}
             onClick={() => {
-              const safetyCheckbox = document.getElementById('safety-backup') as HTMLInputElement | null
-              onConfirm({ createSafetyBackup: safetyCheckbox?.checked ?? true })
+              onConfirm({ createSafetyBackup })
             }}
           />
         </AlertDialogFooter>
@@ -129,12 +130,15 @@ export function RestoreConfirmationDialog({
 
 interface RestoreDialogBodyProps {
   preview: BackupPreview
-  onConfirm: (options: { createSafetyBackup: boolean }) => void
-  isRestoring: boolean
-  payload: BackupPayload
+  createSafetyBackup: boolean
+  onSafetyBackupChange: (checked: boolean) => void
 }
 
-function RestoreDialogBody({ preview }: RestoreDialogBodyProps) {
+function RestoreDialogBody({
+  preview,
+  createSafetyBackup,
+  onSafetyBackupChange,
+}: RestoreDialogBodyProps) {
   const displayCounts = preview.tableCounts.slice(0, 20)
   const hasMore = preview.tableCounts.length > 20
   const extraCount = preview.tableCounts.length - 20
@@ -155,19 +159,23 @@ function RestoreDialogBody({ preview }: RestoreDialogBodyProps) {
       {/* Summary stats */}
       <div className="flex gap-4 text-sm">
         <div className="flex-1 rounded-lg bg-muted p-3">
-          <p className="text-muted-foreground text-xs font-medium uppercase tracking-wider">Total Records</p>
+          <p className="text-muted-foreground text-xs font-medium uppercase tracking-wider">
+            Total Records
+          </p>
           <p className="mt-1 text-2xl font-semibold tabular-nums">
             {formatCount(preview.totalRecords)}
           </p>
         </div>
         <div className="flex-1 rounded-lg bg-muted p-3">
-          <p className="text-muted-foreground text-xs font-medium uppercase tracking-wider">Tables</p>
-          <p className="mt-1 text-2xl font-semibold tabular-nums">
-            {preview.tableCounts.length}
+          <p className="text-muted-foreground text-xs font-medium uppercase tracking-wider">
+            Tables
           </p>
+          <p className="mt-1 text-2xl font-semibold tabular-nums">{preview.tableCounts.length}</p>
         </div>
         <div className="flex-1 rounded-lg bg-muted p-3">
-          <p className="text-muted-foreground text-xs font-medium uppercase tracking-wider">Schema</p>
+          <p className="text-muted-foreground text-xs font-medium uppercase tracking-wider">
+            Schema
+          </p>
           <p className="mt-1 text-2xl font-semibold tabular-nums">
             v{preview.schemaVersion}
             {preview.requiresMigration && (
@@ -211,12 +219,16 @@ function RestoreDialogBody({ preview }: RestoreDialogBodyProps) {
 
       {/* Safety backup checkbox */}
       <div className="flex items-start gap-3 rounded-lg border border-border p-3">
-        <Checkbox id="safety-backup" defaultChecked />
+        <Checkbox
+          id="safety-backup"
+          checked={createSafetyBackup}
+          onCheckedChange={(checked) => onSafetyBackupChange(checked === true)}
+        />
         <label htmlFor="safety-backup" className="text-sm leading-snug cursor-pointer">
           <span className="font-medium">Create safety backup</span>
           <span className="text-muted-foreground block">
-            Automatically download a backup of your current data before restoring.
-            Recommended to prevent accidental data loss.
+            Automatically download a backup of your current data before restoring. Recommended to
+            prevent accidental data loss.
           </span>
         </label>
       </div>
@@ -235,12 +247,7 @@ interface ConfirmButtonProps {
  */
 function ConfirmButton({ isRestoring, onClick }: ConfirmButtonProps) {
   return (
-    <Button
-      variant="destructive"
-      disabled={isRestoring}
-      onClick={onClick}
-      className="gap-2"
-    >
+    <Button variant="destructive" disabled={isRestoring} onClick={onClick} className="gap-2">
       {isRestoring ? (
         <>
           <div

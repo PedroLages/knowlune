@@ -43,8 +43,13 @@ vi.mock('@/lib/importService', () => ({
 }))
 
 vi.mock('@/app/components/ui/spinner', () => ({
-  Spinner: ({ className, 'aria-label': ariaLabel }: { className?: string; 'aria-label'?: string }) =>
-    React.createElement('span', { className, 'aria-label': ariaLabel }, '...'),
+  Spinner: ({
+    className,
+    'aria-label': ariaLabel,
+  }: {
+    className?: string
+    'aria-label'?: string
+  }) => React.createElement('span', { className, 'aria-label': ariaLabel }, '...'),
 }))
 
 vi.mock('@/lib/toastHelpers', () => ({

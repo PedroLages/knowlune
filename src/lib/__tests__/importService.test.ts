@@ -38,16 +38,45 @@ vi.mock('@/db/checkpoint', () => ({
 }))
 
 const MOCK_SYNCABLE_TABLES = [
-  'contentProgress', 'studySessions', 'progress', 'notes', 'bookmarks',
-  'flashcards', 'reviewRecords', 'embeddings', 'bookHighlights',
-  'vocabularyItems', 'audioBookmarks', 'audioClips', 'chatConversations',
-  'learnerModels', 'importedCourses', 'importedVideos', 'importedPdfs',
-  'authors', 'books', 'bookReviews', 'shelves', 'bookShelves',
-  'readingQueue', 'chapterMappings', 'learningPaths', 'learningPathEntries',
-  'challenges', 'courseReminders', 'notifications', 'careerPaths',
-  'pathEnrollments', 'studySchedules', 'opdsCatalogs',
-  'audiobookshelfServers', 'notificationPreferences', 'quizzes',
-  'quizAttempts', 'aiUsageEvents', 'userConsents',
+  'contentProgress',
+  'studySessions',
+  'progress',
+  'notes',
+  'bookmarks',
+  'flashcards',
+  'reviewRecords',
+  'embeddings',
+  'bookHighlights',
+  'vocabularyItems',
+  'audioBookmarks',
+  'audioClips',
+  'chatConversations',
+  'learnerModels',
+  'importedCourses',
+  'importedVideos',
+  'importedPdfs',
+  'authors',
+  'books',
+  'bookReviews',
+  'shelves',
+  'bookShelves',
+  'readingQueue',
+  'chapterMappings',
+  'learningPaths',
+  'learningPathEntries',
+  'challenges',
+  'courseReminders',
+  'notifications',
+  'careerPaths',
+  'pathEnrollments',
+  'studySchedules',
+  'opdsCatalogs',
+  'audiobookshelfServers',
+  'notificationPreferences',
+  'quizzes',
+  'quizAttempts',
+  'aiUsageEvents',
+  'userConsents',
 ]
 
 vi.mock('@/lib/sync/backfill', () => ({
@@ -145,7 +174,11 @@ describe('restoreFromBackup', () => {
     vi.clearAllMocks()
     localStorage.clear()
     // Default: all table names resolve to mockTable
-    mockTable.mockImplementation((name: string) => ({ clear: mockClear, bulkPut: mockBulkPut, name }))
+    mockTable.mockImplementation((name: string) => ({
+      clear: mockClear,
+      bulkPut: mockBulkPut,
+      name,
+    }))
   })
 
   it('throws on invalid payload (null)', async () => {
@@ -153,30 +186,42 @@ describe('restoreFromBackup', () => {
   })
 
   it('throws on payload missing schemaVersion', async () => {
-    await expect(restoreFromBackup({ data: {}, settings: {} })).rejects.toThrow('Invalid backup file')
+    await expect(restoreFromBackup({ data: {}, settings: {} })).rejects.toThrow(
+      'Invalid backup file'
+    )
   })
 
   it('throws on payload missing data field', async () => {
-    await expect(
-      restoreFromBackup({ schemaVersion: 65, settings: {} })
-    ).rejects.toThrow('Invalid backup file')
+    await expect(restoreFromBackup({ schemaVersion: 65, settings: {} })).rejects.toThrow(
+      'Invalid backup file'
+    )
   })
 
   it('throws on payload missing settings field', async () => {
-    await expect(
-      restoreFromBackup({ schemaVersion: 65, data: {} })
-    ).rejects.toThrow('Invalid backup file')
+    await expect(restoreFromBackup({ schemaVersion: 65, data: {} })).rejects.toThrow(
+      'Invalid backup file'
+    )
   })
 
   it('throws when backup schema version is newer than current', async () => {
     await expect(
-      restoreFromBackup({ schemaVersion: 99, exportedAt: '2026-01-01T00:00:00Z', data: { importedCourses: [{ id: 'c1' }] }, settings: {} })
+      restoreFromBackup({
+        schemaVersion: 99,
+        exportedAt: '2026-01-01T00:00:00Z',
+        data: { importedCourses: [{ id: 'c1' }] },
+        settings: {},
+      })
     ).rejects.toThrow('newer')
   })
 
   it('throws when no restorable data found', async () => {
     await expect(
-      restoreFromBackup({ schemaVersion: 65, exportedAt: '2026-01-01T00:00:00Z', data: {}, settings: {} })
+      restoreFromBackup({
+        schemaVersion: 65,
+        exportedAt: '2026-01-01T00:00:00Z',
+        data: {},
+        settings: {},
+      })
     ).rejects.toThrow('No restorable data')
   })
 
@@ -186,7 +231,10 @@ describe('restoreFromBackup', () => {
       exportedAt: '2026-01-01T00:00:00Z',
       data: {
         importedCourses: [{ id: 'c1', name: 'Course 1' }],
-        notes: [{ id: 'n1', content: 'Note 1' }, { id: 'n2', content: 'Note 2' }],
+        notes: [
+          { id: 'n1', content: 'Note 1' },
+          { id: 'n2', content: 'Note 2' },
+        ],
         bookmarks: [],
       },
       settings: { 'app-settings': { theme: 'dark' } },
@@ -233,7 +281,9 @@ describe('restoreFromBackup', () => {
 
     await restoreFromBackup(payload)
 
-    expect(localStorage.getItem('app-settings')).toBe(JSON.stringify({ theme: 'dark', fontSize: 'large' }))
+    expect(localStorage.getItem('app-settings')).toBe(
+      JSON.stringify({ theme: 'dark', fontSize: 'large' })
+    )
   })
 
   it('clears all tables before writing new data', async () => {

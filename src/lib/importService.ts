@@ -231,7 +231,9 @@ export interface ImportSummary {
 /**
  * Validate that a parsed backup payload has the expected shape.
  */
-function isValidBackupPayload(data: unknown): data is BackupPayload & { data: Record<string, unknown[]> } {
+function isValidBackupPayload(
+  data: unknown
+): data is BackupPayload & { data: Record<string, unknown[]> } {
   if (typeof data !== 'object' || data === null) return false
   const obj = data as Record<string, unknown>
 
@@ -285,16 +287,12 @@ function tableExistsInDexie(tableName: string): boolean {
  * @returns ImportSummary with record counts and warnings
  * @throws If validation fails or the transaction aborts
  */
-export async function restoreFromBackup(
-  payload: unknown
-): Promise<ImportSummary> {
+export async function restoreFromBackup(payload: unknown): Promise<ImportSummary> {
   const warnings: string[] = []
 
   // Step 1: Validate payload structure
   if (!isValidBackupPayload(payload)) {
-    throw new Error(
-      'Invalid backup file: missing required fields (schemaVersion, data, settings)'
-    )
+    throw new Error('Invalid backup file: missing required fields (schemaVersion, data, settings)')
   }
 
   const backup = payload as BackupPayload & { data: Record<string, unknown[]> }
@@ -305,14 +303,14 @@ export async function restoreFromBackup(
   if (backup.schemaVersion > CHECKPOINT_VERSION) {
     throw new Error(
       `Backup has schema version ${backup.schemaVersion} which is newer than ` +
-      `the current version ${CHECKPOINT_VERSION}. Please update the app before restoring.`
+        `the current version ${CHECKPOINT_VERSION}. Please update the app before restoring.`
     )
   }
 
   if (wasMigrated) {
     warnings.push(
       `Backup was created with schema v${backup.schemaVersion} ` +
-      `(current: v${CHECKPOINT_VERSION}). Data will be migrated.`
+        `(current: v${CHECKPOINT_VERSION}). Data will be restored — schema version mismatch detected.`
     )
   }
 
@@ -377,9 +375,7 @@ export async function restoreFromBackup(
         resultCounts[tableName] = records.length
       } catch (writeError) {
         const msg = writeError instanceof Error ? writeError.message : String(writeError)
-        warnings.push(
-          `Failed to restore table '${tableName}': ${msg}. Table was cleared.`
-        )
+        warnings.push(`Failed to restore table '${tableName}': ${msg}. Table was cleared.`)
         resultCounts[tableName] = 0
       }
     }
