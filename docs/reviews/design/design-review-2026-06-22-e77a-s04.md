@@ -1,213 +1,138 @@
 # Design Review Report
 
 **Review Date**: 2026-06-22
-**Reviewed By**: Claude Code (design-review agent)
-**Story**: E77A-S04 — Backup metadata tracking and status
-**Changed Files**: DataAndBackupPanel.tsx, SettingsPageContext.tsx, exportService.ts, settings.ts, test files
-**Affected Pages**: `/settings?section=integrations` (Settings > Integrations & Data > Google Drive Backup)
-**Review Method**: Static code analysis (no Playwright MCP browser tools available in this session)
+**Reviewed By**: Claude Code (design-review agent via Playwright MCP)
+**Story**: E77A-S04 — Backup Metadata Tracking and Status
+**Changed Files**: `src/app/components/settings/DataAndBackupPanel.tsx`, `src/app/components/settings/SettingsPageContext.tsx`, `src/lib/exportService.ts`, `src/lib/settings.ts`, plus test and doc files
+**Affected Pages**: `/settings` -> Integrations & Data section
 
 ## Executive Summary
 
-The E77A-S04 story implements backup metadata tracking (`BackupMeta` interface) with timestamps for local and Drive backups, a three-state status banner (never/stale/recent), and integration with the existing Drive upload flow. The code shows strong design token compliance, proper error handling, and comprehensive test coverage. One critical issue was identified: the backup status banner does not refresh after a successful Drive upload because `getSettings()` is called only on initial render. Also, the component does not use the shared `useSettingsPage` context or listen for `settingsUpdated` events, both of which are established patterns in the same codebase.
+Story E77A-S04 adds backup metadata tracking (`lastLocalAt`, `lastDriveAt`, `lastDestination`) and a reactive status banner to the Integrations & Data section of the Settings page. The component handles three states (never backed up, stale backup, recent backup) with coherent visual differentiation, uses design tokens correctly (no hardcoded colors), and includes proper ARIA semantics on the banner. Two findings are worth addressing before shipping: the hover effect on cards is imperceptible, and a toast link lacks an accessible name.
 
 ## What Works Well
 
-- **Design token compliance**: All colors use theme CSS variables (`bg-surface-elevated`, `bg-brand-soft`, `text-brand`, `text-destructive`, `text-warning`, `text-muted-foreground`, `border-border`). No hardcoded color values detected.
-
-- **Three-state UX clarity**: The backup status banner clearly distinguishes three states with distinct visual treatments:
-  - "No backup yet" (amber warning icon + text) for first-time users
-  - "Last backup was X (stale)" (red destructive icon + text, >30 days)
-  - "Last backup: X (current)" (brand icon + positive copy)
-
-- **Touch accessibility**: All interactive elements use `min-h-[44px]`, meeting the WCAG 2.5.5 minimum touch target requirement.
-
-- **Comprehensive error handling**: Drive-specific errors (`DriveQuotaError`, `DrivePermissionError`, `DriveNetworkError`) are handled with specific user-facing messages, while generic export/upload failures get actionable "Try again?" guidance.
-
-- **Progress feedback**: The upload flow provides multi-stage progress feedback (export percentage, upload phase, completion confirmation) with both visual progress bar and textual phase indicator.
-
-- **Test coverage**: 8 metadata display tests covering all status banner states plus 7 Drive upload flow tests covering loading, error, and success states.
+- **Three-state backup status banner**: The "never backed up" (amber/warning), "stale" (red/destructive), and "recent" (brand/default) states are visually distinct and semantically correct. Each state has an appropriate icon container background color (`bg-warning/10`, `bg-destructive/10`, `bg-brand-soft`) and icon color (`text-warning`, `text-destructive`, `text-brand`).
+- **Accessible banner pattern**: The status banner correctly uses `role="status"` and `aria-live="polite"` to announce dynamic status changes to screen readers. Data attributes (`data-stale`, `data-never`) tie state to visual styling cleanly via Tailwind CSS.
+- **Reactive state synchronization**: The component subscribes to `settingsUpdated` window events via a `useEffect`, ensuring the backup status banner updates immediately when `updateBackupMeta()` fires (e.g., after Drive upload completes).
+- **Touch target compliance**: The "Send to Drive" button has `min-h-[44px]`, meeting the minimum 44x44px touch target requirement for mobile devices.
+- **Design token compliance**: No hardcoded colors found. All colors use theme tokens (`bg-brand-soft`, `text-warning`, `text-muted-foreground`, `bg-surface-elevated`, etc.).
+- **No console errors**: Zero console errors detected during testing.
+- **No horizontal scroll**: All breakpoints (375px, 768px, 1024px, 1440px) pass without horizontal overflow.
+- **Focus indicator visible**: "Skip to content" link has a 2px brand-colored outline on focus. Tab navigation reaches sidebar links correctly.
 
 ## Findings by Severity
 
-### Blocker (Must fix before merge)
-
-#### B1: Backup status banner remains stale after Drive upload
-
-- **Issue**: The `DataAndBackupPanel` component reads `getSettings()` on initial render (line 77), but after `handleSendToDrive` calls `updateBackupMeta('drive')` (line 132), the backup status `display` variable is never recomputed. The status banner continues to show the pre-upload state (e.g., "No backup yet") until the page is manually refreshed.
-
-- **Location**: `src/app/components/settings/DataAndBackupPanel.tsx:77-78`
-
-- **Impact**: After a successful Drive upload, the user sees a success toast but the status banner immediately below still says "No backup yet" or shows the old timestamp. This is misleading, erodes user trust in the metadata display, and means the primary visible outcome of this story is broken for the most common user flow.
-
-- **Evidence**: Other components in the same codebase already follow the established pattern of listening for `settingsUpdated` events (see `SyncSection.tsx:112-113`, `readerThemeConfig.ts:123-124`, `useSyncLifecycle.ts:321`, `Settings.tsx:65`). The `updateBackupMeta` function dispatches this event (`window.dispatchEvent(new Event('settingsUpdated'))` at exportService.ts:80), but `DataAndBackupPanel` never listens for it.
-
-- **Root cause**: The component manages its own `getSettings()` call instead of consuming the `SettingsPageContext` (which has live `settings` state) or listening for `settingsUpdated` events.
-
-- **Suggestion**: Add a `useEffect` that registers a `settingsUpdated` listener to re-read settings:
-
-  ```typescript
-  const [, forceUpdate] = useState(0)
-  useEffect(() => {
-    const handler = () => forceUpdate(n => n + 1)
-    window.addEventListener('settingsUpdated', handler)
-    return () => window.removeEventListener('settingsUpdated', handler)
-  }, [])
-  ```
-
-  Alternatively, refactor to use the `useSettingsPage()` context which already provides live settings state.
-
-- **autofix_class**: `gated_auto` — the fix is mechanical (add useEffect + listener) but affects the component's render cycle and requires user approval.
-
 ### High Priority (Should fix before merge)
 
-#### H1: Missing live region for dynamic backup status
+#### H1 — Hover state on cards is imperceptible
 
-- **Issue**: The backup status text (lines 206-233) is dynamically determined based on `settings.backupMeta`, but it does not use `aria-live="polite"`. Screen readers will not announce status changes when the metadata updates (e.g., after fixing B1 above).
+- **Issue**: Both the backup status banner and the "Send to Google Drive" card use `hover:bg-surface-elevated/80` for their hover effect. Since `--surface-elevated` resolves to pure white (`#ffffff`) in both the Professional and Clean color schemes, applying it at 80% opacity on a white background produces no perceptible visual change. Users receive no interactive feedback when hovering over these interactive cards.
+- **Location**: `DataAndBackupPanel.tsx:206` (banner) and `DataAndBackupPanel.tsx:266` (Drive card)
+- **Evidence**: Computed background on hover: `oklab(0.999994 0.0000455677 0.0000200868 / 0.8)` — essentially white at 80% opacity on a white background.
+- **Impact**: Users cannot tell these elements are interactive. Hover feedback is a fundamental interaction cue, especially for card-style elements that might be expected to be clickable.
+- **Suggestion**: Replace with a more perceptible hover effect, such as `hover:shadow-sm`, `hover:border-brand/20`, or a subtle background shift like `hover:bg-surface-sunken` or `hover:bg-muted`.
+- **Severity**: HIGH
+- **Autofix class**: `manual`
 
-- **Location**: `src/app/components/settings/DataAndBackupPanel.tsx:205`
+#### H2 — Component uses local state instead of shared context
 
-- **Impact**: Blind and low-vision users will not be informed when their backup status changes from "No backup yet" to "Last backup: 5 minutes ago (Drive)" after a successful upload. This is a WCAG 4.1.3 (Status Messages) violation.
-
-- **Suggestion**: Add `aria-live="polite"` to the outer text container (`<div className="flex-1 min-w-0">` at line 205) so dynamic content changes are announced:
-
-  ```typescript
-  <div className="flex-1 min-w-0" aria-live="polite">
-  ```
-
-- **autofix_class**: `safe_auto` — adding `aria-live="polite"` is a single attribute addition with no behavioral side effects.
-
-#### H2: Component duplicates settings state instead of using context
-
-- **Issue**: `DataAndBackupPanel` calls `getSettings()` directly (line 77) instead of using the `useSettingsPage()` context from `SettingsPageContext.tsx`. This means:
-  1. It misses settings updates from other panels (e.g., JSON export calling `updateBackupMeta('local')` at SettingsPageContext.tsx:168)
-  2. It bypasses the reactive settings state management already provided by the context
-
-- **Location**: `src/app/components/settings/DataAndBackupPanel.tsx:77`
-
-- **Impact**: The backup status banner is disconnected from the broader settings state, making it unreliable as a source of truth for backup timelines.
-
-- **Suggestion**: Replace the direct `getSettings()` call with context consumption:
-
-  ```typescript
-  const { settings } = useSettingsPage()
-  const display = getLastBackupDisplay(settings)
-  ```
-
-  Note: this may require adding `settings` to the `IntegrationsDataSection` page props or making the context available deeper. The simpler event-listener approach from B1 may be preferred for minimal refactoring.
-
-- **autofix_class**: `manual` — requires architectural decision about state management approach.
+- **Issue**: `DataAndBackupPanel` manages settings state locally by calling `getSettings()` directly into `useState`, rather than using the `useSettingsPage()` context hook that other settings section components use. While the `settingsUpdated` event listener keeps it in sync, this is an architectural divergence from the settings page's established state management pattern.
+- **Location**: `DataAndBackupPanel.tsx:94`
+- **Evidence**: `const [settings, setSettings] = useState(getSettings())` instead of `const { settings } = useSettingsPage()`.
+- **Impact**: If other components in the settings page update settings without dispatching the `settingsUpdated` event, this component will show stale data. It also duplicates settings state across the page.
+- **Suggestion**: Consider either integrating with `useSettingsPage()` or documenting why this component avoids the shared context (e.g., if it needs to be rendered outside the `SettingsPageProvider` tree).
+- **Severity**: HIGH
+- **Autofix class**: `manual`
 
 ### Medium Priority (Fix when possible)
 
-#### M1: `formatRelativeTime` could produce confusing output for ancient timestamps
+#### M1 — Toast success "View" link lacks accessible name
 
-- **Issue**: While the `!lastLocalAt && !lastDriveAt` check prevents null timestamps from reaching `formatRelativeTime`, if a timestamp of `0` (January 1, 1970) were somehow stored, the function would return "54 years ago" rather than "No backup yet".
+- **Issue**: After a successful Drive upload, the toast notification includes a `<a>View</a>` link pointing to the Drive file. The word "View" without additional context is ambiguous for screen reader users — they won't know what they're viewing or where it leads.
+- **Location**: `DataAndBackupPanel.tsx:162-173`
+- **Evidence**: `<a href={result.webViewLink} target="_blank" rel="noopener noreferrer" className="underline font-medium">View<ExternalLink ... /></a>`
+- **Impact**: Screen reader users hear only "View" without context, making the link essentially inaccessible. The `ExternalLink` icon is correctly marked `aria-hidden="true"` but doesn't compensate for the missing text context.
+- **Suggestion**: Add `aria-label="View backup file in Google Drive"` to the anchor tag to provide screen reader context.
+- **Severity**: MEDIUM
+- **Autofix class**: `safe_auto`
 
-- **Location**: `src/app/components/settings/DataAndBackupPanel.tsx:26-31`
+#### M2 — No visual success animation on backup status banner
 
-- **Impact**: Low — this would require corrupted localStorage to trigger. However, adding a guard ensures robustness against edge cases.
+- **Issue**: When a Drive upload completes and `updateBackupMeta('drive')` fires, the status banner updates its text from "No backup yet" to "Last backup: just now (Drive)". However, there is no highlight animation, pulse, or fade-in to draw the user's attention to the change. Users may miss the status update.
+- **Location**: `DataAndBackupPanel.tsx:159-164`
+- **Evidence**: The banner renders inside the component's JSX with no state-change animation. Compare with the upload progress indicator which has `animate-in fade-in slide-in-from-top-1 duration-300` classes.
+- **Impact**: Users who triggered the upload may not notice that their backup status has been updated, reducing confidence in the feature.
+- **Suggestion**: Add a brief highlight animation class to the banner (e.g., `animate-in fade-in` or a background flash) when the backup metadata changes. A React `key` prop change can trigger re-mount animations.
+- **Severity**: MEDIUM
+- **Autofix class**: `manual`
 
-- **Suggestion**: Add a minimum timestamp check in `getLastBackupDisplay`:
+#### M3 — formatRelativeTime edge case with timestamp=0
 
-  ```typescript
-  // Treat timestamps before 2020 as "no backup" (backup feature didn't exist before 2025)
-  const MIN_VALID_BACKUP_TS = 1577836800000 // 2020-01-01
-  if (latestTimestamp < MIN_VALID_BACKUP_TS) return null
-  ```
-
-- **autofix_class**: `advisory`
-
-#### M2: Missing doc comment on `getLastBackupDisplay`
-
-- **Issue**: The `getLastBackupDisplay` helper function (line 33) lacks a JSDoc comment explaining its return contract and the meaning of `data-[stale]` / `data-[never]` attributes.
-
-- **Location**: `src/app/components/settings/DataAndBackupPanel.tsx:33`
-
-- **Impact**: Future developers need to read the full implementation to understand the return states.
-
-- **Suggestion**: Add a JSDoc:
-
-  ```typescript
-  /**
-   * Derives the backup status display string from settings.
-   * Returns `null` when no backup has ever been made (sets `data-never`).
-   * Returns `isStale: true` when the latest backup is >30 days old (sets `data-stale`).
-   */
-  ```
-
-- **autofix_class**: `safe_auto`
-
-#### M3: No visual success indicator on backup status banner after upload
-
-- **Issue**: After a successful Drive upload completes, the status banner does not visually update (see B1). Even after fixing B1, the banner text changes from "No backup yet" to "Last backup: just now (Drive)" but there is no transient animation or highlight to draw the user's attention to the updated status.
-
-- **Location**: `src/app/components/settings/DataAndBackupPanel.tsx:178-235`
-
-- **Impact**: Users who are not focused on the banner may miss the status change. A subtle highlight animation (e.g., brief green border flash) would draw attention.
-
-- **Suggestion**: Add a brief success animation class (e.g., `animate-success-flash` that fades in/out over 2 seconds) when the status transitions from a non-OK state to OK. This is a UX polish enhancement.
-
-- **autofix_class**: `manual` — requires animation design decisions.
+- **Issue**: If `lastLocalAt` or `lastDriveAt` is somehow `0` (falsy), the `getLastBackupDisplay` function would return `null` (treating it as "no backup"). But if the value is `0` and the other timestamp exists, `Math.max(0, ...)` would pass `0` to `formatRelativeTime(0)`, which calls `formatDistanceToNow(new Date(0))` returning "approximately 54 years ago" — confusing output.
+- **Location**: `DataAndBackupPanel.tsx:21-31` (formatRelativeTime), `DataAndBackupPanel.tsx:49-58` (getLastBackupDisplay)
+- **Evidence**: The `!lastLocalAt && !lastDriveAt` check treats falsy values (including `0`) as absent, but `Math.max` may still include `0` if the other timestamp exists.
+- **Impact**: Low — this is only reachable if data corruption occurs. But defensive coding would prevent confusing output.
+- **Suggestion**: In `formatRelativeTime`, add a guard: `if (timestamp <= 0) return 'never'`. Alternatively, ensure `getLastBackupDisplay` filters out zero/falsy timestamps explicitly.
+- **Severity**: MEDIUM
+- **Autofix class**: `safe_auto`
 
 ### Nitpicks (Optional)
 
-#### N1: Inline SVG icon in toast could use `aria-label`
+#### N1 — Consistent card pattern improves scanability
 
-- **Issue**: The toast success message at line 136-149 contains an `ExternalLink` icon inside an `<a>` tag. The icon has `aria-hidden="true"` (correct), but the link text is only "View" which is somewhat generic.
-
-- **Location**: `src/app/components/settings/DataAndBackupPanel.tsx:138-146`
-
-- **Impact**: Screen readers hear "View link" without context about what is being viewed.
-
-- **Suggestion**: Use `aria-label="View backup file in Google Drive"` on the `<a>` element to provide screen reader context.
-
-- **autofix_class**: `safe_auto`
+- **Issue**: The "Google Drive Backup" heading is outside the Drive card, while the "Data Management" heading is inside the card. This slight inconsistency makes the page structure harder to scan at a glance.
+- **Location**: `IntegrationsDataSection.tsx:351-353` vs `IntegrationsDataSection.tsx:80-93`
+- **Impact**: Trivial. Consistent section heading placement would marginally improve scanability.
+- **Suggestion**: Move the "Google Drive Backup" heading inside the card component for consistency, or accept the current structure as-is.
+- **Autofix class**: `advisory`
 
 ## Accessibility Checklist
 
-| Check                                  | Status   | Notes                                                                                                                                                                |
-| -------------------------------------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Text contrast ≥4.5:1                   | Pass     | All text uses theme tokens with verified contrast ratios. `text-muted-foreground` (#656870 on #faf5ee = ~3.9:1) is a pre-existing global pattern for secondary text. |
-| Keyboard navigation                    | Pass     | All interactive elements are `<button>` elements with proper tab order. No non-interactive elements with onClick handlers.                                           |
-| Focus indicators visible               | Pass     | Global `focus-visible` styles apply (2px solid `--focus-ring`).                                                                                                      |
-| Heading hierarchy                      | Pass     | The "Google Drive Backup" heading is `<h3>` under "Data Management" `<h2>`, which is under "Integrations & Data" `<h1>`.                                             |
-| ARIA labels on icon buttons            | Pass     | Dynamic `aria-label` on the "Send to Drive" button. `aria-hidden="true"` on decorative icons.                                                                        |
-| Semantic HTML                          | Pass     | Proper `<button>` elements (no div-based click handlers), `<h3>` headings.                                                                                           |
-| ARIA live regions                      | **Fail** | Backup status text does not use `aria-live="polite"` for dynamic content. (H1)                                                                                       |
-| prefers-reduced-motion                 | Pass     | Animations use `tw-animate-css` which respects reduced motion preferences. Global `index.css` has comprehensive reduced-motion rules.                                |
-| `aria-describedby` on form fields      | N/A      | No form fields in this component.                                                                                                                                    |
-| `aria-expanded` on collapsible regions | N/A      | No collapsible regions.                                                                                                                                              |
-| `aria-invalid` on form errors          | N/A      | No form fields.                                                                                                                                                      |
+| Check | Status | Notes |
+|-------|--------|-------|
+| Text contrast >= 4.5:1 | PASS | Warning text `#8a6518` on white: 4.57:1 passes AA. All other text tokens meet contrast. |
+| Keyboard navigation | PASS | Skip-to-content link present. Tab order reaches all settings nav items and interactive elements. |
+| Focus indicators visible | PASS | 2px brand-colored outline on focused elements. |
+| Heading hierarchy | PASS | H1 "Settings" -> H2 "Account" -> (context-specific headings). Proper hierarchy. |
+| ARIA labels on icon buttons | PASS | Drive button has dynamic `aria-label` changing based on auth state. |
+| ARIA live regions | PASS | Backup banner has `role="status"` + `aria-live="polite"`. Upload progress has `aria-live="polite"`. |
+| Semantic HTML | FAIL | Redundant `role="banner"` on `<header>` element (1 instance detected). |
+| Form labels associated | PASS | All app-level form inputs have proper labels via `id`/`for` association or `aria-label`. |
+| `prefers-reduced-motion` | NOT VERIFIED | Animations use `animate-in` classes which should respect reduced-motion, but not explicitly tested. |
+| Images have alt text | PASS | All images have appropriate alt text or `aria-hidden="true"`. |
+| Toast "View" link aria-label | FAIL | Generic "View" link lacks accessible name (see M1). |
 
 ## Responsive Design Verification
 
-- **Mobile (375px)**: Pass — Card layout uses flex with wrapping. `min-h-[44px]` on buttons. The status icon + text + button stack should work on mobile.
-- **Tablet (768px)**: Pass — Standard card layout reflows naturally.
-- **Sidebar Collapse (1024px)**: Pass — Standard layout behavior.
-- **Desktop (1440px)**: Pass — Two-pane layout works as expected.
+| Breakpoint | Status | Notes |
+|------------|--------|-------|
+| Mobile (375px) | PASS | No horizontal scroll. Content stacks correctly. Sidebar accessible via sheet. Touch targets >=44px. |
+| Tablet (768px) | PASS | No horizontal scroll. Layout reflows to 2-column where applicable. |
+| Sidebar collapse (1024px) | PASS | Sidebar remains visible and persistent. Content area adjusts correctly. |
+| Desktop (1440px) | PASS | Full layout with persistent sidebar and proper content section widths. |
 
-## Design Token Usage
+## Dark Mode Verification
 
-| Token                   | Location                                                          | Status                         |
-| ----------------------- | ----------------------------------------------------------------- | ------------------------------ |
-| `bg-surface-elevated`   | Status banner card (line 179), Drive panel (line 237)             | Correct                        |
-| `bg-brand-soft`         | Status icon container (line 192), Drive icon container (line 241) | Correct                        |
-| `text-brand`            | Status icon (line 201), Drive icon (line 241)                     | Correct                        |
-| `text-destructive`      | Stale status heading (line 219)                                   | Correct                        |
-| `text-warning`          | No-backup heading (line 208)                                      | Correct                        |
-| `text-muted-foreground` | Secondary text (lines 212, 222, 231, 246)                         | Correct (pre-existing pattern) |
-| `border-border`         | Card borders (lines 179, 237)                                     | Correct                        |
-| `variant="brand"`       | Drive upload button (line 251)                                    | Correct                        |
+| Check | Status | Notes |
+|-------|--------|-------|
+| Body background changes | PASS | Light: `rgb(249, 249, 254)` -> Dark: `rgb(23, 28, 36)` |
+| Banner background adapts | PASS | Transitions from `#ffffff` to semi-transparent dark. |
+| Warning text contrast (dark) | PASS | `rgb(224, 168, 80)` on dark background passes AA. |
+| Brand button contrast (dark) | PASS | `rgb(77, 163, 255)` bg with `rgb(10, 21, 32)` text: ~6.7:1 passes AA. |
+| No artifacts when toggling | PASS | Toggling light/dark/light shows no rendering artifacts. |
 
-No hardcoded colors or pixel values found. All spacing follows 8px grid (p-4 = 16px, gap-3 = 12px, mt-1 = 4px).
+## Code Quality Observations
+
+- **Design tokens**: All colors use theme tokens. No hardcoded Tailwind color classes found in the changed UI files.
+- **Spacing**: Follows 8px grid (p-4=16px, p-2=8px, gap-3=12px).
+- **Border radius**: Cards use `rounded-xl` (computed 14px), buttons use `rounded-xl` — consistent with component type expectations.
+- **Error handling**: Three `Drive*Error` types are handled separately with specific error messages. `console.error` logging is present for non-Drive errors.
+- **Test coverage**: Unit tests cover all three backup status states (never, stale, recent) with Edge cases like `lastDestination` fallback.
 
 ## Recommendations
 
-1. **Fix B1 first** — The stale status banner is the most impactful issue. Users will not see their backup metadata update after the primary action (Drive upload) this story enables.
-
-2. **Add `aria-live="polite"`** — After fixing B1, ensure screen readers announce the status change (H1).
-
-3. **Align with existing settings event pattern** — The codebase already has `settingsUpdated` listeners in 4+ locations. Using the established pattern keeps the codebase consistent (H2 override via B1 fix).
-
-4. **Track the status-banner-after-export scenario** — The JSON export handler in `SettingsPageContext.tsx` (line 168) also calls `updateBackupMeta('local')`, but the `DataAndBackupPanel` won't see this update either. The B1 fix (event listener or context consumption) handles both scenarios.
+1. Fix the imperceptible hover effect on cards by replacing `hover:bg-surface-elevated/80` with a more visible hover state.
+2. Add `aria-label="View backup file in Google Drive"` to the toast success link for screen reader accessibility.
+3. Consider adding a brief highlight animation to the backup status banner when metadata updates to draw user attention.
+4. Add a defensive guard in `formatRelativeTime` for zero/negative timestamps to prevent confusing output in edge cases.

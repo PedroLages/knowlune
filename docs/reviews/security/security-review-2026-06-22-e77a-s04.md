@@ -1,74 +1,54 @@
-## Security Review: E77A-S04 — Backup Metadata Tracking and Status
+## Security Review: E77A-S04 — Backup metadata tracking and status
 
 **Date:** 2026-06-22
 **Phases executed:** 4/8
-**Diff scope:** 9 files changed, 617 insertions(+), 251 deletions(-)
+**Diff scope:** 19 files changed, 1946 insertions, 662 deletions
 
 ### Phases Executed
 
-| Phase | Name            | Triggered By             | Findings                         |
-| ----- | --------------- | ------------------------ | -------------------------------- |
-| 1     | Attack Surface  | Always                   | 0 vectors identified             |
-| 2     | Secrets Scan    | Always                   | Clean                            |
-| 3     | OWASP Top 10    | Always                   | 2 categories checked             |
-| 4     | Dependencies    | package.json unchanged   | N/A                              |
-| 5     | Auth & Access   | No auth files changed    | N/A                              |
-| 6     | STRIDE          | No new routes/components | N/A                              |
-| 7     | Configuration   | No config files changed  | N/A                              |
-| 8     | Config Security | Always-on (secrets)      | Clean; .mcp.json not git-tracked |
+| Phase | Name | Triggered By | Findings |
+|-------|------|-------------|----------|
+| 1 | Attack Surface | Always | 0 vectors identified |
+| 2 | Secrets Scan | Always | Clean |
+| 3 | OWASP Top 10 | Always | 5 categories checked |
+| 8 | Config Security | Always-on | Clean |
+
+Phases 4-7 not triggered: no package.json changes, no auth files changed, no new routes/components, no config files changed.
 
 ### Attack Surface Changes
 
-This story introduces no new attack surface. Changes are limited to:
+This story adds backup metadata tracking (`BackupMeta` interface with `lastLocalAt`, `lastDriveAt`, `lastDestination`) to `AppSettings` in localStorage, and a backup status banner in the Data & Backup settings panel. No new API endpoints, no new user input fields, no new network requests, no new third-party integrations.
 
-- **Settings schema extension** (`backupMeta?: BackupMeta` in `AppSettings`): An optional informational field storing backup timestamps (`lastLocalAt`, `lastDriveAt`, `lastDestination`). Stored in localStorage under `app-settings`. This field is read-only from the user's perspective — it is updated programmatically on export success, not via user input.
-- **Backup status banner** (`DataAndBackupPanel.tsx`): Renders a React-controlled `<p>` element with text content. All display values are either hardcoded strings ('just now', 'Drive', 'Local') or output of `date-fns/formatDistanceToNow()` — no user-controlled data passed through.
-- **`updateBackupMeta()` function** (`exportService.ts`): Writes `Date.now()` timestamps to settings on backup success. No network calls, no user-controlled inputs.
-
-**No new:** API routes, user input fields, form controls, search functionality, file uploads, network requests, third-party integrations, or dependency changes.
+**Key change:** `updateBackupMeta` writes timestamps to localStorage via `saveSettings`. Called from two trusted internal paths:
+- `SettingsPageContext.tsx` — after local JSON export completes
+- `DataAndBackupPanel.tsx` — after Google Drive upload succeeds
 
 ### Findings
 
-**No security findings identified.**
-
-All changed code is purely informational metadata tracking. Every OWASP check returned negative.
-
-| Category                               | Verdict        | Rationale                                                                                                                                                                                                                        |
-| -------------------------------------- | -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| CS2 (Client-Side Injection / XSS)      | Not applicable | No `dangerouslySetInnerHTML`, no `href={variable}`, no `ref.current.innerHTML`, no `eval`. Backup display text is rendered via React JSX `${}` interpolation (auto-escaped). All string values are hardcoded or from `date-fns`. |
-| CS3 (Sensitive Data in Client Storage) | Not applicable | `BackupMeta` stores only timestamps and a destination enum. No API keys, auth tokens, or user secrets.                                                                                                                           |
-| CS5 (Client-Side Integrity)            | Not applicable | The metadata is purely informational ("no behavioral impact" per code comment). Timestamps are `Date.now()` — no user-controlled values can be written.                                                                          |
-| CS7 (Client-Side Security Logging)     | Not applicable | No new `console.log` / `console.dir` calls introduced. The pre-existing `console.error('JSON export error:', error)` in `SettingsPageContext.tsx` is unchanged and logs an error object on exception — not sensitive data.       |
-| CS9 (Client-Side Communication)        | Not applicable | No `postMessage`, cross-window, or cross-origin communication added.                                                                                                                                                             |
-| A05 (Security Misconfiguration)        | Not applicable | No config changes in this story.                                                                                                                                                                                                 |
-| A07 (Auth Failures)                    | Not applicable | No auth-related code changed.                                                                                                                                                                                                    |
+No findings. The diff introduces no security-relevant attack surface.
 
 ### Secrets Scan
 
-Clean — no secrets detected in the diff.
-
-- Hardcoded credentials: None found in diff.
-- `.mcp.json`: Contains a Google Stitch API key (`AQ.Ab8RN6...`) but is **not tracked by git** (`.mcp.json` is in `.gitignore` via the `*.local` / individual entries pattern). The key is local-only.
-- `.env` files: Not tracked by git. `.gitignore` includes `.env` and `*.local`.
-- No API keys, tokens, or passwords introduced by this story.
-- The `console.error` on export failure is pre-existing and logs an `Error` object — not secrets.
+Clean — no API keys, tokens, passwords, or other secrets detected in the diff.
 
 ### OWASP Coverage
 
-| Category                              | Applicable? | Finding? | Details                                      |
-| ------------------------------------- | ----------- | -------- | -------------------------------------------- |
-| CS2: Client-Side Injection (XSS)      | No          | No       | React JSX auto-escapes all rendered text     |
-| CS3: Sensitive Data in Client Storage | No          | No       | Timestamps only, no secrets                  |
-| CS5: Client-Side Integrity            | No          | No       | Informational metadata, no behavioral impact |
-| CS7: Client-Side Security Logging     | No          | No       | No new console.log calls                     |
-| CS9: Client-Side Communication        | No          | No       | No postMessage or cross-window ops           |
+| Category | Applicable? | Finding? | Details |
+|----------|------------|----------|---------|
+| CS2: Client-Side Injection (XSS) | Yes | No | All dynamic content rendered through React JSX auto-escaping. No `dangerouslySetInnerHTML`, no `href={variable}`, no `ref.current.innerHTML`, no `data:` or `javascript:` protocols. |
+| CS3: Sensitive Data in Client Storage | Yes | No | `backupMeta` stores only timestamps (number) and destination label (`'local'`/`'drive'`). No secrets, tokens, or PII. The `app-settings` key is correctly in the export allowlist. |
+| CS5: Client-Side Integrity | Yes | No | `Date.now()` timestamps are correct and deterministic. The `destination` parameter relies on TypeScript type enforcement (no runtime validation), but all call sites use hardcoded `'local'` or `'drive'` strings. `saveSettings` merges partial objects correctly. |
+| CS7: Client-Side Security Logging | Yes | No | No new `console.log` of sensitive data. Only `console.warn` for Supabase profile sync failure — pre-existing, not introduced in this diff. |
+| CS9: Client-Side Communication | Yes | No | `window.dispatchEvent(new Event('settingsUpdated'))` fires with no payload. The handler in `DataAndBackupPanel` only re-reads settings. No data leakage via events. |
+| A05: Security Misconfiguration | No | N/A | No config files changed. |
 
 ### What's Done Well
 
-1. **No user-controllable data in metadata writes**: The `updateBackupMeta` function uses `Date.now()` for timestamps and a hardcoded destination enum — no user input can influence the stored values.
-2. **Clean diff scope**: The story focuses on a single concern (backup metadata tracking) with no scope creep into unrelated security-sensitive areas.
-3. **Correct placement of metadata writes**: Both calls to `updateBackupMeta` are on the success path after the export/upload completes, not on failure or before the operation finishes.
+1. **Export allowlist extended correctly**: The `backupMeta` is stored as part of `app-settings` in localStorage, which is already in the `EXPORTABLE_LS_PREFIXES` allowlist. The export correctly includes backup metadata (appropriate — no secrets are stored in it).
+
+2. **Event-driven UI update without data leakage**: The `settingsUpdated` custom event carries no payload — it merely signals a reload. The component re-reads settings from localStorage directly, avoiding any data injection through the event mechanism.
+
+3. **Graceful error handling in date formatting**: `formatRelativeTime` wraps `formatDistanceToNow` in a try/catch, returning `'unknown'` if the timestamp is malformed. The `getLastBackupDisplay` function handles both `undefined` and `0` timestamps correctly through explicit `!== undefined` checks.
 
 ---
-
 Phases: 4/8 | Findings: 0 total | Blockers: 0 | False positives filtered: 0

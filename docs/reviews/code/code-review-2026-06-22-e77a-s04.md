@@ -2,43 +2,31 @@
 
 ### What Works Well
 
-1. **Clean finally-block pattern**: `handleSendToDrive` in `DataAndBackupPanel.tsx` correctly uses a local `let succeeded = false` variable (lines 102, 128) rather than reading React state from the closure in the `finally` block. This is the exact fix documented in the `react-closure-staleness-finally.md` memory, avoiding the React 19 batching quirk discovered in E77A-S03. Good institutional knowledge application.
+1. **Correct finally-block pattern for React 19.** `handleSendToDrive` in `DataAndBackupPanel.tsx` uses a local `let succeeded = false` variable (line 130, checked at line 195) rather than reading React state from the `finally` closure. This avoids the React 19 automatic-batching quirk documented in `react-closure-staleness-finally.md` from E77A-S03. Good institutional knowledge transfer.
 
-2. **Thorough edge case coverage in display logic**: `getLastBackupDisplay` handles all meaningful combinations of `lastLocalAt`, `lastDriveAt`, and `lastDestination` — including the case where `lastDestination` is unset but only one or both timestamp fields exist (lines 48-56). The fallback logic correctly picks the destination with the latest timestamp.
+2. **Thorough edge case handling in `getLastBackupDisplay`.** The function explicitly guards against sentinel-0 confusion in `Math.max` by building the `timestamps` array with `!== undefined` checks (lines 56-57) rather than truthiness. The destination fallback logic (lines 63-71) prefers the explicit `lastDestination` field and falls back to comparing timestamps — deliberate, well-documented in JSDoc.
 
-3. **Good test coverage across layers**: Three separate test files cover the unit (settings.test.ts — backupMeta in defaults/metadata round-trip), display (DataAndBackupPanel.meta.test.tsx), and integration (DataAndBackupPanel.drive.test.tsx — `updateBackupMeta('drive')` wired into success path).
+3. **Complete test coverage for all 4 ACs.** Three test files cover the feature: `DataAndBackupPanel.meta.test.tsx` covers all three banner states (never, stale, recent) with both destination labels; `DataAndBackupPanel.drive.test.tsx` verifies `updateBackupMeta('drive')` is wired into the Drive upload success path; and `exportService.test.ts` verifies `updateBackupMeta` preserves existing fields, sets the correct per-destination timestamp, and dispatches the `settingsUpdated` event.
 
 ### Findings
 
-#### Medium
+No findings to report. After running all four review passes on the 19 changed files (1,946 lines added, 662 removed), the code is well-structured, all acceptance criteria are implemented and tested, and edge cases are properly handled.
 
-- **`[Correctness]` DataAndBackupPanel.tsx:19 (confidence: 90)** — AC5 stale threshold mismatch: code uses 30 days, spec says 7 days.
+Specific checks that passed:
 
-  `const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000` (30 days) versus AC5: "Given the last backup was more than **7 days** ago When the Data & Backup page renders Then a stale backup warning is shown."
-
-  The user-facing message (line 222) reads "Your backup is more than 30 days old" and the test (DataAndBackupPanel.meta.test.tsx:115) correctly tests against the 30-day boundary, so the implementation is internally consistent. But it does not match the acceptance criterion, which specifies 7 days.
-
-  **Why it matters for learners**: With 30 days, users see the stale warning much later than specified. 7 days is more aggressive but gives earlier notice of stale backups. The current UX suggests 30 days was an intentional design choice — 7 days would be noisy for a feature like `knowlune-backup-*.json` files that don't degrade rapidly.
-
-  **Fix**: Either:
-  - (a) Update the acceptance criterion in the story file from 7 days to 30 days to match the deliberate implementation, or
-  - (b) Change `THIRTY_DAYS_MS` to `7 * 24 * 60 * 60 * 1000` and update the user message from "more than 30 days old" to "more than 7 days old."
-
-  Given the user-facing text already says "30 days," option (a) is likely correct and is 0-effort. Recommend updating the AC.
-
-  **Effort**: ~2 minutes (edit story file AC5).
-
-  **Autofix class**: `gated_auto` — requires design decision on which direction to reconcile.
+- **No silent failures**: `updateBackupMeta` is called inside try/catch blocks in both callers (`DataAndBackupPanel.handleSendToDrive` and `SettingsPageContext.handleExportJson`). The `window.dispatchEvent` is synchronous with no error path.
+- **No closure staleness**: The `useEffect` event listener (line 100) calls `getSettings()` imperatively on each event, avoiding stale closure from the initial render.
+- **No race conditions**: `updateBackupMeta` reads and writes settings synchronously (no `await` between `getSettings()` and `saveSettings()`).
+- **Proper cleanup**: The `useEffect` returns a cleanup function that removes the event listener on unmount.
+- **No hardcoded colors**: All Tailwind classes use design tokens (`bg-surface-elevated`, `bg-destructive/10`, `bg-warning/10`, `bg-brand-soft`, `text-destructive`, `text-warning`, `text-brand`).
+- **No AI smells**: No hallucinated APIs, no over-abstraction, no copy-paste artifacts. The `updateBackupMeta` function is appropriately simple (6 lines).
+- **No test anti-patterns**: No `waitForTimeout`, no manual IndexedDB seeding, no raw `Date.now()` in component assertions. The meta tests mock `date-fns` to return predictable relative times.
+- **R1 AC5 mismatch resolved**: The story file now specifies "30 days" in AC4 (matching the `THIRTY_DAYS_MS` constant at line 19), aligning spec with implementation.
 
 ### Recommendations
 
-1. Reconcile the AC5 threshold (7 days in spec vs 30 days in code). The implementation appears deliberate (named constant, explicit user message), so updating the AC is the right call. This is the only action item from this review.
-
-### Summary
-
-This is a clean, well-structured story. The code adds `BackupMeta` as an optional additive field to `AppSettings`, wires `updateBackupMeta()` into both the JSON export handler (`handleExportJson` → `'local'`) and the Drive upload handler (`handleSendToDrive` → `'drive'`), and renders the backup status banner with proper handling of all states (never, fresh, stale). The `succeeded`-flag pattern in the `finally` block correctly avoids the React 19 closure staleness bug. Tests cover all display variants and the Drive upload error paths. Only one spec-vs-implementation discrepancy found.
+None.
 
 ---
-
-Issues found: 1 | Blockers: 0 | High: 0 | Medium: 1 | Nits: 0
-Confidence: avg 90 | >= 90: 1 | 70-89: 0 | < 70: 0
+Issues found: 0 | Blockers: 0 | High: 0 | Medium: 0 | Nits: 0
+Confidence: avg N/A | >= 90: 0 | 70-89: 0 | < 70: 0
