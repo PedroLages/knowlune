@@ -54,6 +54,8 @@ export function DataAndBackupPanel() {
     setUploadProgress(0)
     setUploadPhase('Exporting data...')
 
+    let currentPhase: 'export' | 'upload' = 'export'
+
     try {
       // 1. Export all data as JSON
       const exportData = await exportAllAsJson((percent, phase) => {
@@ -63,6 +65,7 @@ export function DataAndBackupPanel() {
         setUploadPhase(phase || 'Exporting data...')
       })
 
+      currentPhase = 'upload'
       setUploadPhase('Uploading to Google Drive...')
       setUploadProgress(70)
 
@@ -103,6 +106,9 @@ export function DataAndBackupPanel() {
         toastError.saveFailed('Google Drive access needed. Please reconnect.')
       } else if (error instanceof DriveNetworkError) {
         toastError.saveFailed(error.message)
+      } else if (currentPhase === 'export') {
+        console.error('Drive export error:', error)
+        toastError.saveFailed('Export failed. Try again?')
       } else {
         console.error('Drive upload error:', error)
         toastError.saveFailed('Upload failed. Try again?')
@@ -132,7 +138,7 @@ export function DataAndBackupPanel() {
             </div>
           </div>
           <Button
-            variant="outline"
+            variant="brand"
             size="sm"
             onClick={handleSendToDrive}
             disabled={isUploading}

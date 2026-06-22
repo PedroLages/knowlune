@@ -134,19 +134,6 @@ async function executeUpload(token: string, body: string, signal?: AbortSignal):
 // ── Public API ───────────────────────────────────────────────
 
 /**
- * Upload a backup JSON blob to the user's Google Drive root folder.
- *
- * - Uses multipart upload (suitable for files < 5 MB).
- * - Retries once on 401 after refreshing the token.
- * - Retries once on network failure after 1 s backoff.
- * - Throws typed errors for known failure modes.
- *
- * @param blob     The JSON blob to upload.
- * @param filename The display name in Drive (e.g. "knowlune-backup-2026-06-21.knowlune.json")
- * @param signal   Optional AbortSignal to cancel the request.
- * @returns        `{ fileId, webViewLink }` from the Drive API response.
- */
-/**
  * Attempt a single upload with the current token, returning the response.
  * Throws DriveNetworkError on network failure.
  */
@@ -158,6 +145,23 @@ async function attemptUpload(token: string, body: string, signal?: AbortSignal):
   }
 }
 
+/**
+ * Upload a backup JSON blob to the user's Google Drive root folder.
+ *
+ * - Uses multipart upload (suitable for files < 5 MB).
+ * - Retries once on 401 after refreshing the token.
+ * - Retries once on network failure after 1 s backoff.
+ * - Throws typed errors for known failure modes.
+ *
+ * Note: Upload goes to Drive root (`My Drive`). No `Knowlune/backups/`
+ * folder is created in this MVP -- the `drive.file` scope limits visibility
+ * to app-created files, and users can organise them manually in Drive UI.
+ *
+ * @param blob     The JSON blob to upload.
+ * @param filename The display name in Drive (e.g. "knowlune-backup-2026-06-21.knowlune.json")
+ * @param signal   Optional AbortSignal to cancel the request.
+ * @returns        `{ fileId, webViewLink }` from the Drive API response.
+ */
 export async function uploadBackupToDrive(
   blob: Blob,
   filename: string,
@@ -178,14 +182,14 @@ export async function uploadBackupToDrive(
   let response: Response
   try {
     response = await attemptUpload(token, body, signal)
-  } catch (firstError) {
+  } catch {
     // Single retry after 1 s backoff
     await sleep(1000)
     try {
       response = await attemptUpload(token, body, signal)
     } catch {
-      // Second failure — surface the original error
-      throw firstError
+      // Second failure — throw a fresh network error
+      throw new DriveNetworkError()
     }
   }
 
@@ -209,11 +213,17 @@ export async function uploadBackupToDrive(
     throw mapDriveError(response.status, responseBody)
   }
 
-  // 6. Map Drive API response (id → fileId) to our type
-  const apiResponse = (await response.json()) as {
-    id: string
-    webViewLink: string
+  // 6. Map Drive API response (id → fileId) to our type with runtime validation
+  const raw: unknown = await response.json()
+  if (
+    typeof raw !== 'object' ||
+    raw === null ||
+    typeof (raw as Record<string, unknown>).id !== 'string' ||
+    typeof (raw as Record<string, unknown>).webViewLink !== 'string'
+  ) {
+    throw new Error('Unexpected Drive API response: missing id or webViewLink')
   }
+  const apiResponse = raw as { id: string; webViewLink: string }
   return {
     fileId: apiResponse.id,
     webViewLink: apiResponse.webViewLink,
