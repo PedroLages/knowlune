@@ -5,7 +5,12 @@ import { useTheme } from 'next-themes'
 import { getSettings, saveSettings, type AppSettings } from '@/lib/settings'
 import { useAuthStore } from '@/stores/useAuthStore'
 import { toastSuccess, toastError } from '@/lib/toastHelpers'
-import { exportAllAsJson, exportAllAsCsv, exportNotesAsMarkdown, updateBackupMeta } from '@/lib/exportService'
+import {
+  exportAllAsJson,
+  exportAllAsCsv,
+  exportNotesAsMarkdown,
+  updateBackupMeta,
+} from '@/lib/exportService'
 import { importFullData } from '@/lib/importService'
 import { downloadJson, downloadZip, downloadBlob } from '@/lib/fileDownload'
 import { exportAchievementsAsBadges } from '@/lib/openBadges'

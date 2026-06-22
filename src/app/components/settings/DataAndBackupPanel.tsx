@@ -209,21 +209,17 @@ export function DataAndBackupPanel() {
                   No backup yet
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  You have never backed up your data. Export your data or connect Google Drive
-                  to keep a safe copy.
+                  You have never backed up your data. Export your data or connect Google Drive to
+                  keep a safe copy.
                 </p>
               </>
             ) : display.isStale ? (
               <>
-                <p
-                  className="text-sm font-medium text-destructive"
-                  data-testid="stale-backup-text"
-                >
+                <p className="text-sm font-medium text-destructive" data-testid="stale-backup-text">
                   Last backup was {display.label}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Your backup is more than 30 days old. Create a fresh backup to protect your
-                  data.
+                  Your backup is more than 30 days old. Create a fresh backup to protect your data.
                 </p>
               </>
             ) : (

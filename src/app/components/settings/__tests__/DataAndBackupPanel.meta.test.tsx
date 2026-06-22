@@ -149,9 +149,7 @@ describe('DataAndBackupPanel — backup metadata display (E77A-S04)', () => {
   })
 
   it('shows recent backup when backupMeta is empty (no timestamps stored)', () => {
-    mockGetSettings.mockReturnValue(
-      createSettings({ backupMeta: { lastDestination: undefined } })
-    )
+    mockGetSettings.mockReturnValue(createSettings({ backupMeta: { lastDestination: undefined } }))
 
     render(<DataAndBackupPanel />)
 

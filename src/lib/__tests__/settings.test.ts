@@ -55,12 +55,13 @@ describe('settings', () => {
         displayName: 'Learner',
         bio: '',
         theme: 'system',
-        colorScheme: 'professional',
+        colorScheme: 'clean',
         accessibilityFont: false,
         contentDensity: 'default',
         reduceMotion: 'system',
         profilePhotoUrl: undefined,
-        fontSize: undefined,
+        courseViewMode: 'grid',
+        courseGridColumns: 'auto',
         focusAutoQuiz: true,
         focusAutoFlashcard: true,
         readingFontSize: '1x',
@@ -78,12 +79,13 @@ describe('settings', () => {
         displayName: 'Learner',
         bio: '',
         theme: 'system',
-        colorScheme: 'professional',
+        colorScheme: 'clean',
         accessibilityFont: false,
         contentDensity: 'default',
         reduceMotion: 'system',
         profilePhotoUrl: undefined,
-        fontSize: undefined,
+        courseViewMode: 'grid',
+        courseGridColumns: 'auto',
         focusAutoQuiz: true,
         focusAutoFlashcard: true,
         readingFontSize: '1x',
@@ -168,7 +170,8 @@ describe('settings', () => {
         contentDensity: 'default',
         reduceMotion: 'system',
         profilePhotoUrl: undefined,
-        fontSize: undefined,
+        courseViewMode: 'grid',
+        courseGridColumns: 'auto',
         focusAutoQuiz: true,
         focusAutoFlashcard: true,
         readingFontSize: '1x',
@@ -184,10 +187,10 @@ describe('settings', () => {
       expect(getSettings().colorScheme).toBe('vibrant')
     })
 
-    it('defaults colorScheme to "professional" for existing users without it', () => {
+    it('defaults colorScheme to "clean" for existing users without it', () => {
       // Simulate legacy settings without colorScheme
       localStorage.setItem('app-settings', JSON.stringify({ displayName: 'Legacy' }))
-      expect(getSettings().colorScheme).toBe('professional')
+      expect(getSettings().colorScheme).toBe('clean')
     })
   })
 
