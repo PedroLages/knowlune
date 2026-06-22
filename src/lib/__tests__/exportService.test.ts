@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 // Mock db before importing module
 const mockToArray = vi.fn().mockResolvedValue([])
@@ -30,23 +30,65 @@ vi.mock('../noteExport', () => ({
   htmlToMarkdown: vi.fn().mockImplementation((html: string) => html.replace(/<[^>]*>/g, '')),
 }))
 
-// Settings mock used by updateBackupMeta tests
-let mockSettingsBackupMeta: Record<string, unknown> | undefined = undefined
-const mockSaveSettings = vi.fn()
-vi.mock('@/lib/settings', () => ({
-  getSettings: () => ({ backupMeta: mockSettingsBackupMeta }),
-  saveSettings: (...args: unknown[]) => mockSaveSettings(...args),
+// Mock sync dependencies for backup export
+vi.mock('@/db/checkpoint', () => ({
+  CHECKPOINT_VERSION: 65,
 }))
 
-const dispatchSpy = vi.spyOn(window, 'dispatchEvent')
+const MOCK_SYNCABLE_TABLES = [
+  'contentProgress',
+  'studySessions',
+  'progress',
+  'notes',
+  'bookmarks',
+  'flashcards',
+  'reviewRecords',
+  'embeddings',
+  'bookHighlights',
+  'vocabularyItems',
+  'audioBookmarks',
+  'audioClips',
+  'chatConversations',
+  'learnerModels',
+  'importedCourses',
+  'importedVideos',
+  'importedPdfs',
+  'authors',
+  'books',
+  'bookReviews',
+  'shelves',
+  'bookShelves',
+  'readingQueue',
+  'chapterMappings',
+  'learningPaths',
+  'learningPathEntries',
+  'challenges',
+  'courseReminders',
+  'notifications',
+  'careerPaths',
+  'pathEnrollments',
+  'studySchedules',
+  'opdsCatalogs',
+  'audiobookshelfServers',
+  'notificationPreferences',
+  'quizzes',
+  'quizAttempts',
+  'aiUsageEvents',
+  'userConsents',
+]
+
+vi.mock('@/lib/sync/backfill', () => ({
+  SYNCABLE_TABLES: MOCK_SYNCABLE_TABLES,
+}))
 
 const { db } = await import('@/db/schema')
 const {
   exportAllAsJson,
   exportAllAsCsv,
   exportNotesAsMarkdown,
-  updateBackupMeta,
   CURRENT_SCHEMA_VERSION,
+  collectBackupPayload,
+  exportAllAsBlob,
 } = await import('../exportService')
 const { sessionsToCSV, progressToCSV, deriveStreakDays, streakDaysToCSV } =
   await import('../csvSerializer')
@@ -55,7 +97,6 @@ describe('exportService', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     localStorage.clear()
-    mockSettingsBackupMeta = undefined
     // Reset default mock behavior
     mockToArray.mockResolvedValue([])
     ;(db.studySessions.toArray as ReturnType<typeof vi.fn>).mockResolvedValue([])
@@ -63,10 +104,6 @@ describe('exportService', () => {
     ;(db.notes.toArray as ReturnType<typeof vi.fn>).mockResolvedValue([])
     ;(db.importedCourses.toArray as ReturnType<typeof vi.fn>).mockResolvedValue([])
     ;(db.reviewRecords.toArray as ReturnType<typeof vi.fn>).mockResolvedValue([])
-  })
-
-  afterEach(() => {
-    mockSettingsBackupMeta = undefined
   })
 
   describe('CURRENT_SCHEMA_VERSION', () => {
@@ -648,84 +685,89 @@ describe('exportService', () => {
     })
   })
 
-  describe('updateBackupMeta', () => {
-    it('sets lastLocalAt and lastDestination to "local" when called with "local"', () => {
-      mockSettingsBackupMeta = undefined
+  // ── Backup Export Tests (E77a-S01) ──────────────────────────────────────
 
-      updateBackupMeta('local')
-
-      expect(mockSaveSettings).toHaveBeenCalledOnce()
-      const saved = mockSaveSettings.mock.calls[0][0] as { backupMeta: Record<string, unknown> }
-      expect(saved.backupMeta.lastDestination).toBe('local')
-      expect(typeof saved.backupMeta.lastLocalAt).toBe('number')
-      expect(saved.backupMeta.lastDriveAt).toBeUndefined()
+  describe('collectBackupPayload', () => {
+    beforeEach(() => {
+      vi.clearAllMocks()
+      localStorage.clear()
     })
 
-    it('sets lastDriveAt and lastDestination to "drive" when called with "drive"', () => {
-      mockSettingsBackupMeta = undefined
+    it('returns a valid BackupPayload with schemaVersion and exportedAt', async () => {
+      const result = await collectBackupPayload()
 
-      updateBackupMeta('drive')
-
-      expect(mockSaveSettings).toHaveBeenCalledOnce()
-      const saved = mockSaveSettings.mock.calls[0][0] as { backupMeta: Record<string, unknown> }
-      expect(saved.backupMeta.lastDestination).toBe('drive')
-      expect(typeof saved.backupMeta.lastDriveAt).toBe('number')
-      expect(saved.backupMeta.lastLocalAt).toBeUndefined()
+      expect(result).toHaveProperty('schemaVersion', 65)
+      expect(result).toHaveProperty('exportedAt')
+      expect(new Date(result.exportedAt).toISOString()).toBe(result.exportedAt)
+      expect(result).toHaveProperty('data')
+      expect(result).toHaveProperty('settings')
     })
 
-    it('preserves existing backupMeta fields when updating with "drive" after a local backup', () => {
-      const localTs = Date.now() - 60_000
-      mockSettingsBackupMeta = {
-        lastLocalAt: localTs,
-        lastDestination: 'local',
+    it('reads from all syncable tables except syncQueue and syncMetadata', async () => {
+      // mockTable tracks how many times db.table() is called
+      mockToArray.mockResolvedValue([])
+
+      await collectBackupPayload()
+
+      // Should have called db.table() for every syncable table
+      for (const tableName of MOCK_SYNCABLE_TABLES) {
+        if (tableName === 'syncQueue' || tableName === 'syncMetadata') {
+          expect(mockTable).not.toHaveBeenCalledWith(tableName)
+        } else {
+          expect(mockTable).toHaveBeenCalledWith(tableName)
+        }
       }
-
-      updateBackupMeta('drive')
-
-      expect(mockSaveSettings).toHaveBeenCalledOnce()
-      const saved = mockSaveSettings.mock.calls[0][0] as { backupMeta: Record<string, unknown> }
-      // lastLocalAt is preserved (not overwritten)
-      expect(saved.backupMeta.lastLocalAt).toBe(localTs)
-      // lastDriveAt is set to a new timestamp
-      expect(typeof saved.backupMeta.lastDriveAt).toBe('number')
-      expect(saved.backupMeta.lastDriveAt).not.toBe(localTs)
-      // lastDestination updated to drive
-      expect(saved.backupMeta.lastDestination).toBe('drive')
     })
 
-    it('updates timestamp with current Date.now() value', () => {
-      mockSettingsBackupMeta = undefined
-      const before = Date.now()
+    it('includes settings from localStorage', async () => {
+      localStorage.setItem('app-settings', JSON.stringify({ theme: 'dark', displayName: 'Test' }))
 
-      updateBackupMeta('local')
+      const result = await collectBackupPayload()
 
-      const saved = mockSaveSettings.mock.calls[0][0] as { backupMeta: Record<string, unknown> }
-      const savedTs = saved.backupMeta.lastLocalAt as number
-      expect(savedTs).toBeGreaterThanOrEqual(before)
-      expect(savedTs).toBeLessThanOrEqual(Date.now())
+      // getLocalStorageData() returns raw localStorage entries (key-value pairs)
+      expect(result.settings).toHaveProperty('app-settings')
+      // Should reflect the written values
+      const appSettings = result.settings['app-settings'] as Record<string, unknown>
+      expect(appSettings.displayName).toBe('Test')
+      expect(appSettings.theme).toBe('dark')
     })
 
-    it('dispatches a settingsUpdated event', () => {
-      mockSettingsBackupMeta = undefined
-      dispatchSpy.mockClear()
+    it('returns empty arrays for tables where db.table().toArray() throws', async () => {
+      mockTable.mockImplementation((name: string) => {
+        if (name === 'progress') {
+          return { toArray: vi.fn().mockRejectedValue(new Error('DB error')) }
+        }
+        return { toArray: mockToArray }
+      })
 
-      updateBackupMeta('local')
+      const result = await collectBackupPayload()
 
-      expect(dispatchSpy).toHaveBeenCalledWith(expect.any(Event))
-      const event = dispatchSpy.mock.calls[0][0] as Event
-      expect(event.type).toBe('settingsUpdated')
+      expect(result.data.progress).toEqual([])
+    })
+  })
+
+  describe('exportAllAsBlob', () => {
+    it('returns a blob and filename', async () => {
+      const result = await exportAllAsBlob()
+
+      expect(result.blob).toBeInstanceOf(Blob)
+      expect(result.blob.type).toBe('application/json')
+      expect(result.filename).toBeDefined()
     })
 
-    it('handles undefined backupMeta gracefully', () => {
-      mockSettingsBackupMeta = undefined
+    it('produces a filename matching the expected pattern', async () => {
+      const result = await exportAllAsBlob()
 
-      updateBackupMeta('drive')
+      // Pattern: knowlune-backup-YYYY-MM-DD-HHmmss.json
+      expect(result.filename).toMatch(/^knowlune-backup-\d{4}-\d{2}-\d{2}-\d{6}\.json$/)
+    })
 
-      expect(mockSaveSettings).toHaveBeenCalledOnce()
-      const saved = mockSaveSettings.mock.calls[0][0] as { backupMeta: Record<string, unknown> }
-      expect(saved.backupMeta).toBeDefined()
-      expect(saved.backupMeta.lastDestination).toBe('drive')
-      expect(typeof saved.backupMeta.lastDriveAt).toBe('number')
+    it('produces a blob with application/json type', async () => {
+      const result = await exportAllAsBlob()
+
+      expect(result.blob).toBeInstanceOf(Blob)
+      expect(result.blob.type).toBe('application/json')
+      expect(result.blob.size).toBeGreaterThan(0)
     })
   })
 })

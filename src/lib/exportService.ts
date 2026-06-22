@@ -5,10 +5,13 @@
  * - JSON (full data with schema version)
  * - CSV (sessions, progress, streaks as separate files in zip)
  * - Markdown (notes with YAML frontmatter in zip)
+ * - Backup JSON (all syncable tables + settings, schema-versioned, restorable)
  *
  * Non-serializable fields (FileSystemHandles, Blobs) are excluded.
  */
 import { db } from '@/db/schema'
+import { CHECKPOINT_VERSION } from '@/db/checkpoint'
+import { SYNCABLE_TABLES } from '@/lib/sync/backfill'
 import type {
   ImportedCourse,
   ImportedVideo,
@@ -318,4 +321,97 @@ export async function exportNotesAsMarkdown(
 
   onProgress?.(100, 'Complete')
   return files
+}
+
+// =============================================================================
+// Full Backup Export (E77a-S01)
+// =============================================================================
+
+export interface BackupPayload {
+  /** Schema version at export time — used for migration detection on restore */
+  schemaVersion: number
+  /** ISO-8601 timestamp of when the backup was created */
+  exportedAt: string
+  /** Per-table arrays of Dexie records (syncable tables only) */
+  data: Record<string, unknown[]>
+  /** localStorage settings snapshot */
+  settings: Record<string, unknown>
+}
+
+export interface ExportResult {
+  /** JSON blob ready for download */
+  blob: Blob
+  /** Human-readable filename, sortable chronologically */
+  filename: string
+}
+
+const BACKUP_PREFIX = 'knowlune-backup'
+
+function formatBackupTimestamp(): string {
+  const now = new Date()
+  const y = now.getFullYear()
+  const M = String(now.getMonth() + 1).padStart(2, '0')
+  const d = String(now.getDate()).padStart(2, '0')
+  const h = String(now.getHours()).padStart(2, '0')
+  const m = String(now.getMinutes()).padStart(2, '0')
+  const s = String(now.getSeconds()).padStart(2, '0')
+  return `${y}-${M}-${d}-${h}${m}${s}`
+}
+
+function buildBackupFilename(): string {
+  return `${BACKUP_PREFIX}-${formatBackupTimestamp()}.json`
+}
+
+/**
+ * Collect all syncable table data from IndexedDB and return as a structured
+ * BackupPayload.
+ *
+ * This reads ALL records from every syncable table. For large datasets this
+ * may be a heavy operation — the caller should show appropriate loading state.
+ */
+export async function collectBackupPayload(): Promise<BackupPayload> {
+  const data: Record<string, unknown[]> = {}
+
+  for (const tableName of SYNCABLE_TABLES) {
+    // Skip sync infrastructure tables — they are transient state, not user data.
+    if (tableName === 'syncQueue' || tableName === 'syncMetadata') {
+      continue
+    }
+
+    try {
+      const rows = await db.table(tableName).toArray()
+      data[tableName] = rows
+    } catch {
+      // If a table can't be read (e.g. schema mismatch), include an empty array.
+      // This mirrors the best-effort strategy used by the sync engine.
+      data[tableName] = []
+    }
+  }
+
+  const settings = getLocalStorageData()
+
+  return {
+    schemaVersion: CHECKPOINT_VERSION,
+    exportedAt: new Date().toISOString(),
+    data,
+    settings,
+  }
+}
+
+/**
+ * Collect all data and produce a downloadable blob + filename.
+ *
+ * Usage:
+ *   const { blob, filename } = await exportAllAsBlob()
+ *   const url = URL.createObjectURL(blob)
+ *   const a = document.createElement('a')
+ *   a.href = url; a.download = filename; a.click()
+ *   URL.revokeObjectURL(url)
+ */
+export async function exportAllAsBlob(): Promise<ExportResult> {
+  const payload = await collectBackupPayload()
+  const json = JSON.stringify(payload, null, 2)
+  const blob = new Blob([json], { type: 'application/json' })
+
+  return { blob, filename: buildBackupFilename() }
 }

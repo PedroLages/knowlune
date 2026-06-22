@@ -7,6 +7,7 @@ import {
   Plug,
   RefreshCw,
   Lock,
+  HardDrive,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -19,6 +20,7 @@ export type SettingsCategorySlug =
   | 'integrations'
   | 'sync'
   | 'privacy'
+  | 'data-backup'
 
 export interface SettingsCategory {
   slug: SettingsCategorySlug
@@ -75,6 +77,12 @@ export const SETTINGS_CATEGORIES: SettingsCategory[] = [
     label: 'Privacy & Consent',
     description: 'Manage your data processing consents',
     icon: Lock,
+  },
+  {
+    slug: 'data-backup',
+    label: 'Data & Backup',
+    description: 'Download a backup or restore from a file',
+    icon: HardDrive,
   },
 ]
 
