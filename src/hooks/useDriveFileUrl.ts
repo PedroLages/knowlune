@@ -83,8 +83,8 @@ export function useDriveFileUrl(
           URL.revokeObjectURL(url)
         }
       } catch (err) {
-          // silent-catch-ok — error is surfaced to caller via state.error
-          if (!cancelled) {
+        // silent-catch-ok — error is surfaced to caller via state.error
+        if (!cancelled) {
           const message = err instanceof Error ? err.message : String(err)
           console.warn('[useDriveFileUrl] Drive file resolution failed:', message)
           setState(prev => {
