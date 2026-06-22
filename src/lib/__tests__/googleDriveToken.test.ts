@@ -39,7 +39,7 @@ beforeEach(() => {
 
 describe('getDriveToken', () => {
   it('returns null when supabase is not configured', async () => {
-    mockSupabaseValue.mockReturnValue(null)
+    mockSupabaseValue.mockReturnValue(null as never)
     const result = await getDriveToken()
     expect(result).toBeNull()
   })
@@ -104,7 +104,7 @@ describe('getDriveToken', () => {
 
 describe('refreshDriveToken', () => {
   it('returns null when supabase is not configured', async () => {
-    mockSupabaseValue.mockReturnValue(null)
+    mockSupabaseValue.mockReturnValue(null as never)
     const result = await refreshDriveToken()
     expect(result).toBeNull()
   })
