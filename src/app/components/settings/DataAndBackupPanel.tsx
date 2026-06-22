@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { toast } from 'sonner'
-import { Cloud, ExternalLink, Loader2 } from 'lucide-react'
+import { Cloud, ExternalLink, Loader2, ShieldCheck } from 'lucide-react'
+import { formatDistanceToNow } from 'date-fns'
 import { Button } from '@/app/components/ui/button'
 import { Progress } from '@/app/components/ui/progress'
 import { ReconnectGoogleDialog } from '@/app/components/settings/ReconnectGoogleDialog'
@@ -11,8 +12,51 @@ import {
   DrivePermissionError,
   DriveNetworkError,
 } from '@/lib/googleDriveUpload'
-import { exportAllAsJson } from '@/lib/exportService'
+import { exportAllAsJson, updateBackupMeta } from '@/lib/exportService'
+import { getSettings } from '@/lib/settings'
 import { TOAST_DURATION } from '@/lib/toastConfig'
+
+const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000
+
+function formatRelativeTime(timestamp: number): string {
+  const now = Date.now()
+  const diffMs = now - timestamp
+
+  if (diffMs < 60_000) return 'just now'
+  try {
+    return formatDistanceToNow(new Date(timestamp), { addSuffix: true })
+  } catch {
+    return 'unknown'
+  }
+}
+
+function getLastBackupDisplay(settings: ReturnType<typeof getSettings>): {
+  label: string
+  isStale: boolean
+} | null {
+  const meta = settings.backupMeta
+  if (!meta) return null
+
+  const { lastLocalAt, lastDriveAt, lastDestination } = meta
+  if (!lastLocalAt && !lastDriveAt) return null
+
+  const latestTimestamp = Math.max(lastLocalAt ?? 0, lastDriveAt ?? 0)
+  const isStale = Date.now() - latestTimestamp > THIRTY_DAYS_MS
+
+  // Prefer the named destination; fall back to the source with the latest timestamp
+  let destLabel: string
+  if (lastDestination === 'drive') {
+    destLabel = 'Drive'
+  } else if (lastDestination === 'local') {
+    destLabel = 'Local'
+  } else if (lastDriveAt && (!lastLocalAt || lastDriveAt > lastLocalAt)) {
+    destLabel = 'Drive'
+  } else {
+    destLabel = 'Local'
+  }
+
+  return { label: `${formatRelativeTime(latestTimestamp)} (${destLabel})`, isStale }
+}
 
 /**
  * "Send to Google Drive" panel for the Data & Backup settings section.
@@ -30,6 +74,8 @@ export function DataAndBackupPanel() {
   const [knownTokenState, setKnownTokenState] = useState<'untested' | 'present' | 'absent'>(
     'untested'
   )
+  const settings = getSettings()
+  const display = getLastBackupDisplay(settings)
 
   async function handleSendToDrive() {
     if (isUploading) return
@@ -82,6 +128,9 @@ export function DataAndBackupPanel() {
       succeeded = true
       setUploadPhase('Complete!')
 
+      // Record backup metadata (E77A-S04)
+      updateBackupMeta('drive')
+
       // 4. Show success toast with view link
       toast.success(
         <>
@@ -125,6 +174,70 @@ export function DataAndBackupPanel() {
 
   return (
     <>
+      {/* Backup status banner — informational (E77A-S04) */}
+      <div
+        className="rounded-xl border border-border bg-surface-elevated p-4 hover:bg-surface-elevated/80 transition-colors data-[stale=true]:border-destructive/40 data-[never=true]:border-warning/30"
+        data-testid="backup-status-banner"
+        data-stale={display?.isStale ?? false}
+        data-never={display === null}
+      >
+        <div className="flex items-start gap-3">
+          <div
+            className={`rounded-lg p-2 mt-0.5 ${
+              display?.isStale
+                ? 'bg-destructive/10'
+                : display === null
+                  ? 'bg-warning/10'
+                  : 'bg-brand-soft'
+            }`}
+          >
+            <ShieldCheck
+              className={`size-4 ${
+                display?.isStale
+                  ? 'text-destructive'
+                  : display === null
+                    ? 'text-warning'
+                    : 'text-brand'
+              }`}
+              aria-hidden="true"
+            />
+          </div>
+          <div className="flex-1 min-w-0">
+            {display === null ? (
+              <>
+                <p className="text-sm font-medium text-warning" data-testid="never-backed-up-text">
+                  No backup yet
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  You have never backed up your data. Export your data or connect Google Drive
+                  to keep a safe copy.
+                </p>
+              </>
+            ) : display.isStale ? (
+              <>
+                <p
+                  className="text-sm font-medium text-destructive"
+                  data-testid="stale-backup-text"
+                >
+                  Last backup was {display.label}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Your backup is more than 30 days old. Create a fresh backup to protect your
+                  data.
+                </p>
+              </>
+            ) : (
+              <>
+                <p className="text-sm font-medium" data-testid="recent-backup-text">
+                  Last backup: {display.label}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">Your data is up to date.</p>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+
       <div className="rounded-xl border border-border bg-surface-elevated p-4 hover:bg-surface-elevated/80 transition-colors">
         <div className="flex items-start justify-between">
           <div className="flex items-start gap-3">

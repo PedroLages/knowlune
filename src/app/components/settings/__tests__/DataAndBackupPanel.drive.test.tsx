@@ -47,6 +47,7 @@ vi.mock('@/lib/googleDriveUpload', () => {
 vi.mock('@/lib/exportService', () => ({
   exportAllAsJson: (onProgress?: (pct: number, phase: string) => void) =>
     mockExportAllAsJson(onProgress),
+  updateBackupMeta: vi.fn(),
 }))
 
 vi.mock('@/stores/useAuthStore', () => ({

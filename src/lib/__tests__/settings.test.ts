@@ -67,6 +67,7 @@ describe('settings', () => {
         readingLineHeight: 1.5,
         readingTheme: 'auto',
         autoSyncEnabled: true,
+        backupMeta: undefined,
       })
     })
 
@@ -89,6 +90,7 @@ describe('settings', () => {
         readingLineHeight: 1.5,
         readingTheme: 'auto',
         autoSyncEnabled: true,
+        backupMeta: undefined,
       })
     })
 
@@ -173,6 +175,7 @@ describe('settings', () => {
         readingLineHeight: 1.5,
         readingTheme: 'auto',
         autoSyncEnabled: true,
+        backupMeta: undefined,
       })
     })
 
