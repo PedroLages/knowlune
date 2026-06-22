@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, beforeAll, afterAll } from 'vitest'
-import { render, screen, waitFor, type RenderResult } from '@testing-library/react'
+import { render, screen, waitFor, fireEvent, type RenderResult } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router'
 import {
@@ -114,6 +114,19 @@ vi.mock('@/ai/learningPath/suggestPlacement', () => ({
   isPathPlacementAvailable: () => false,
 }))
 
+const { mockUseIsPremium, MockDriveFolderBrowser } = vi.hoisted(() => ({
+  mockUseIsPremium: vi.fn(),
+  MockDriveFolderBrowser: vi.fn(),
+}))
+
+vi.mock('@/lib/entitlement/isPremium', () => ({
+  useIsPremium: () => mockUseIsPremium(),
+}))
+
+vi.mock('@/app/components/import/DriveFolderBrowser', () => ({
+  DriveFolderBrowser: MockDriveFolderBrowser,
+}))
+
 function makeMockFileHandle(name: string): FileSystemFileHandle {
   return {
     name,
@@ -200,6 +213,18 @@ describe('ImportWizardDialog', () => {
     mockLearningPathState.loadPaths = vi.fn()
     mockLearningPathState.addCourseToPath = vi.fn()
     mockLearningPathState.createPath = vi.fn()
+    // Default: guest user (not premium) — PremiumGate shows upgrade CTA
+    mockUseIsPremium.mockReturnValue({
+      isPremium: false,
+      loading: false,
+      tier: 'free',
+      isStale: false,
+      error: null,
+      trialEnd: null,
+      hadTrial: false,
+    })
+    // Default: DriveFolderBrowser renders as a dialog container placeholder
+    MockDriveFolderBrowser.mockImplementation(() => <div data-testid="mock-drive-folder-browser" />)
     // Reset singleton guard counter between tests
     __resetWizardOpenCount()
   })
@@ -1127,5 +1152,120 @@ describe('ImportWizardDialog', () => {
       rerender2(<ImportWizardDialog open={false} onOpenChange={vi.fn()} />)
       expect(isImportWizardOpen()).toBe(false)
     })
+  })
+})
+
+
+// --- AC25: PremiumGate wrapping for Google Drive import button ---
+
+describe('AC25 - PremiumGate wrapping for Drive import button', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    __resetWizardOpenCount()
+    mockUseIsPremium.mockReturnValue({
+      isPremium: true,
+      loading: false,
+      tier: 'premium',
+      isStale: false,
+      error: null,
+      trialEnd: null,
+      hadTrial: false,
+    })
+  })
+
+  it('renders the Import from Google Drive button when user is premium', () => {
+    render(<ImportWizardDialog open={true} onOpenChange={vi.fn()} />)
+    expect(screen.getByTestId('wizard-drive-import-btn')).toBeInTheDocument()
+    expect(screen.getByText('Import from Google Drive')).toBeInTheDocument()
+  })
+
+  it('shows PremiumGate upgrade CTA for non-premium users', () => {
+    mockUseIsPremium.mockReturnValue({
+      isPremium: false,
+      loading: false,
+      tier: 'free',
+      isStale: false,
+      error: null,
+      trialEnd: null,
+      hadTrial: false,
+    })
+    render(<ImportWizardDialog open={true} onOpenChange={vi.fn()} />)
+    // PremiumGate should render the upgrade CTA instead of the Drive button
+    expect(screen.getByTestId('premium-gate-cta')).toBeInTheDocument()
+    expect(screen.queryByTestId('wizard-drive-import-btn')).not.toBeInTheDocument()
+  })
+})
+
+// --- AC26: handleDriveFolderSelected callback ---
+
+describe('AC26 - handleDriveFolderSelected data mapping', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    __resetWizardOpenCount()
+    // Set premium so the Drive import button renders
+    mockUseIsPremium.mockReturnValue({
+      isPremium: true,
+      loading: false,
+      tier: 'premium',
+      isStale: false,
+      error: null,
+      trialEnd: null,
+      hadTrial: false,
+    })
+  })
+
+  it('maps Drive folder files to ScannedCourse correctly', async () => {
+    const user = userEvent.setup()
+
+    // Override MockDriveFolderBrowser to render a trigger button
+    MockDriveFolderBrowser.mockImplementation(({ onFolderSelected }) => (
+      <div data-testid="mock-drive-browser">
+        <button
+          data-testid="mock-drive-select"
+          onClick={() =>
+            onFolderSelected({
+              folderId: 'drive-folder-1',
+              folderName: 'My Drive Course',
+              files: [
+                { id: 'v1', name: 'lesson.mp4', mimeType: 'video/mp4', size: 5000000 },
+                { id: 'a1', name: 'audio.mp3', mimeType: 'audio/mpeg', size: 2000000 },
+                { id: 'p1', name: 'notes.pdf', mimeType: 'application/pdf', size: 1000000 },
+                { id: 'e1', name: 'book.epub', mimeType: 'application/epub+zip', size: 3000000 },
+                { id: 't1', name: 'readme.txt', mimeType: 'text/plain', size: 500 },
+              ],
+            })
+          }
+        >
+          Simulate Drive Selection
+        </button>
+      </div>
+    ))
+
+    render(<ImportWizardDialog open={true} onOpenChange={vi.fn()} />)
+
+    // Click the Drive import button to open the mocked Drive browser
+    await user.click(screen.getByTestId('wizard-drive-import-btn'))
+
+    // The mocked DriveFolderBrowser should now be rendered
+    await waitFor(() => {
+      expect(screen.getByTestId('mock-drive-browser')).toBeInTheDocument()
+    })
+
+    // Click the mock select button to trigger onFolderSelected
+    // Use fireEvent.click because the Dialog overlay has pointer-events:none
+    // which blocks userEvent.click
+    fireEvent.click(screen.getByTestId('mock-drive-select'))
+
+    // The wizard should transition to the details step with mapped data
+    await waitFor(() => {
+      expect(screen.getByTestId('wizard-details-step')).toBeInTheDocument()
+    })
+
+    // Course name should be set from the folder name
+    expect(screen.getByTestId('wizard-course-name-input')).toHaveValue('My Drive Course')
+
+    // Summary should show mapped counts: 2 videos (mp4 + mp3 audio), 2 PDFs (1 PDF + 1 EPUB)
+    expect(screen.getByTestId('wizard-video-count')).toHaveTextContent('2 videos')
+    expect(screen.getByTestId('wizard-pdf-count')).toHaveTextContent('2 PDFs')
   })
 })

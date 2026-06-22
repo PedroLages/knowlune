@@ -99,10 +99,13 @@ function mapDriveError(status: number, body: { error?: { message?: string } }): 
       ) {
         return new DriveScopeError()
       }
-      if (errorMessage.toLowerCase().includes('rate') || errorMessage.toLowerCase().includes('quota')) {
+      if (
+        errorMessage.toLowerCase().includes('rate') ||
+        errorMessage.toLowerCase().includes('quota')
+      ) {
         return new DriveRateLimitError()
       }
-      return new DriveApiError(403, errorMessage)
+      return new DriveApiError(403, 'Access to this file or folder was denied.')
     }
     case 404:
       return new DriveApiError(404, 'File or folder not found.')
@@ -114,10 +117,7 @@ function mapDriveError(status: number, body: { error?: { message?: string } }): 
 }
 
 /** Fetch helper with 401-retry + token refresh. */
-async function driveFetch(
-  url: string,
-  options: RequestInit = {}
-): Promise<Response> {
+async function driveFetch(url: string, options: RequestInit = {}): Promise<Response> {
   const token = await getDriveToken()
   if (!token) {
     throw new DriveScopeError('No Google Drive token available. Please sign in with Google.')
@@ -222,9 +222,7 @@ export async function listFolder(
 /**
  * Get metadata for a specific Drive file.
  */
-export async function getFileMetadata(
-  fileId: string
-): Promise<DriveListResult<DriveFile>> {
+export async function getFileMetadata(fileId: string): Promise<DriveListResult<DriveFile>> {
   const params = new URLSearchParams({
     fields: 'id,name,mimeType,size,modifiedTime',
   })

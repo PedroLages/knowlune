@@ -28,7 +28,13 @@ vi.mock('@/stores/useAuthStore', () => ({
   },
 }))
 
-import { getDriveToken, refreshDriveToken, hasDriveReadScope, requestDriveReadScope, clearDriveReadFlag } from '@/lib/googleDriveToken'
+import {
+  getDriveToken,
+  refreshDriveToken,
+  hasDriveReadScope,
+  requestDriveReadScope,
+  clearDriveReadFlag,
+} from '@/lib/googleDriveToken'
 
 const fetchMock = vi.fn()
 

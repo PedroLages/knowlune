@@ -48,6 +48,7 @@ the import wizard, the app triggers a second OAuth flow:
 **Important:** Both `drive.file` and `drive.readonly` must be added to the
 Supabase provider's "Additional Scopes" field for the incremental flow to work.
 The full scopes string should be:
+
 ```
 email profile https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/drive.readonly
 ```

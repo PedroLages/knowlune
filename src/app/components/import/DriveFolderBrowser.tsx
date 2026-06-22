@@ -1,6 +1,7 @@
 // E77B-S01: Drive Folder Browser
 // Folder picker UI: shows Drive root, user navigates into folders, selects a course folder.
-// Premium-gated — assertPremium() before any Drive API call.
+// Premium-gated via PremiumGate in ImportWizardDialog — the button that opens this dialog
+// is wrapped in <PremiumGate>, so non-premium users never reach this component.
 
 import { useState, useCallback, useEffect } from 'react'
 import {
@@ -13,8 +14,22 @@ import {
 } from '@/app/components/ui/dialog'
 import { Button } from '@/app/components/ui/button'
 import { Input } from '@/app/components/ui/input'
-import { Loader2, Folder, File, FolderOpen, ChevronRight, Search, AlertTriangle, RefreshCw } from 'lucide-react'
-import { listFolder, isSupportedForImport, type DriveFile, type DriveFolderBrowserResult } from '@/lib/googleDriveFileService'
+import {
+  Loader2,
+  Folder,
+  File,
+  FolderOpen,
+  ChevronRight,
+  Search,
+  AlertTriangle,
+  RefreshCw,
+} from 'lucide-react'
+import {
+  listFolder,
+  isSupportedForImport,
+  type DriveFile,
+  type DriveFolderBrowserResult,
+} from '@/lib/googleDriveFileService'
 import { hasDriveReadScope, requestDriveReadScope } from '@/lib/googleDriveToken'
 
 // ── Types ──────────────────────────────────────────────────────
@@ -29,7 +44,11 @@ type BrowserStep = 'check-scope' | 'browse' | 'confirm'
 
 // ── Component ──────────────────────────────────────────────────
 
-export function DriveFolderBrowser({ open, onOpenChange, onFolderSelected }: DriveFolderBrowserProps) {
+export function DriveFolderBrowser({
+  open,
+  onOpenChange,
+  onFolderSelected,
+}: DriveFolderBrowserProps) {
   const [step, setStep] = useState<BrowserStep>('check-scope')
   const [hasScope, setHasScope] = useState<boolean | null>(null)
   const [scopeCheckLoading, setScopeCheckLoading] = useState(true)
@@ -42,6 +61,7 @@ export function DriveFolderBrowser({ open, onOpenChange, onFolderSelected }: Dri
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
+  const [focusedIndex, setFocusedIndex] = useState(-1)
 
   // Verify drive.readonly scope on open
   useEffect(() => {
@@ -142,12 +162,9 @@ export function DriveFolderBrowser({ open, onOpenChange, onFolderSelected }: Dri
     loadFolderContents(currentFolderId)
   }, [currentFolderId, loadFolderContents])
 
-  const handleFolderSelect = useCallback(
-    (folderId: string) => {
-      setSelectedFolder(prev => (prev === folderId ? null : folderId))
-    },
-    []
-  )
+  const handleFolderSelect = useCallback((folderId: string) => {
+    setSelectedFolder(prev => (prev === folderId ? null : folderId))
+  }, [])
 
   const handleConfirmSelection = useCallback(async () => {
     if (!selectedFolder) return
@@ -184,14 +201,62 @@ export function DriveFolderBrowser({ open, onOpenChange, onFolderSelected }: Dri
 
   // Filter items by search query
   const filteredItems = searchQuery.trim()
-    ? items.filter(
-        i => i.name.toLowerCase().includes(searchQuery.toLowerCase())
-      )
+    ? items.filter(i => i.name.toLowerCase().includes(searchQuery.toLowerCase()))
     : items
 
-  const selectedFolderData = selectedFolder
-    ? items.find(i => i.id === selectedFolder)
-    : null
+  const selectedFolderData = selectedFolder ? items.find(i => i.id === selectedFolder) : null
+
+  const handleListKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLDivElement>) => {
+      const list = filteredItems
+      if (list.length === 0) return
+
+      switch (e.key) {
+        case 'ArrowDown': {
+          e.preventDefault()
+          setFocusedIndex(prev => {
+            const next = prev < 0 ? 0 : Math.min(prev + 1, list.length - 1)
+            const el = document.querySelector<HTMLElement>(
+              `[data-testid="drive-item-${list[next].id}"]`
+            )
+            el?.scrollIntoView({ block: 'nearest' })
+            return next
+          })
+          break
+        }
+        case 'ArrowUp': {
+          e.preventDefault()
+          setFocusedIndex(prev => {
+            const next = prev <= 0 ? list.length - 1 : prev - 1
+            const el = document.querySelector<HTMLElement>(
+              `[data-testid="drive-item-${list[next].id}"]`
+            )
+            el?.scrollIntoView({ block: 'nearest' })
+            return next
+          })
+          break
+        }
+        case 'Enter': {
+          e.preventDefault()
+          const idx = focusedIndex >= 0 ? focusedIndex : 0
+          const item = list[idx]
+          if (!item) return
+          if (item.mimeType === 'application/vnd.google-apps.folder') {
+            handleFolderClick(item)
+          } else {
+            handleFolderSelect(item.id)
+          }
+          break
+        }
+      }
+    },
+    [filteredItems, focusedIndex, handleFolderClick, handleFolderSelect]
+  )
+
+  // Reset focused index when items change
+  useEffect(() => {
+    setFocusedIndex(-1)
+  }, [filteredItems])
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -226,12 +291,10 @@ export function DriveFolderBrowser({ open, onOpenChange, onFolderSelected }: Dri
                   <AlertTriangle className="size-6 text-warning" aria-hidden="true" />
                 </div>
                 <div className="text-center space-y-2 max-w-sm">
-                  <p className="text-sm font-medium">
-                    Google Drive Read Access Required
-                  </p>
+                  <p className="text-sm font-medium">Google Drive Read Access Required</p>
                   <p className="text-xs text-muted-foreground">
-                    To browse your Google Drive folders, Knowlune needs read-only access to
-                    your Drive. You'll be redirected to Google to grant this permission.
+                    To browse your Google Drive folders, Knowlune needs read-only access to your
+                    Drive. You'll be redirected to Google to grant this permission.
                   </p>
                 </div>
                 {error && (
@@ -264,15 +327,16 @@ export function DriveFolderBrowser({ open, onOpenChange, onFolderSelected }: Dri
         {step === 'browse' && (
           <div className="flex flex-col gap-3 min-h-0 flex-1">
             {/* Breadcrumb navigation */}
-            <div
+            <nav
               className="flex items-center gap-1 text-sm overflow-x-auto pb-1"
               data-testid="drive-breadcrumbs"
-              role="navigation"
               aria-label="Folder breadcrumbs"
             >
               {breadcrumbs.map((crumb, index) => (
                 <span key={crumb.id} className="flex items-center gap-1 shrink-0">
-                  {index > 0 && <ChevronRight className="size-3 text-muted-foreground" aria-hidden="true" />}
+                  {index > 0 && (
+                    <ChevronRight className="size-3 text-muted-foreground" aria-hidden="true" />
+                  )}
                   {index < breadcrumbs.length - 1 ? (
                     <button
                       type="button"
@@ -289,11 +353,14 @@ export function DriveFolderBrowser({ open, onOpenChange, onFolderSelected }: Dri
                   )}
                 </span>
               ))}
-            </div>
+            </nav>
 
             {/* Search */}
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" aria-hidden="true" />
+              <Search
+                className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground"
+                aria-hidden="true"
+              />
               <Input
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
@@ -306,11 +373,19 @@ export function DriveFolderBrowser({ open, onOpenChange, onFolderSelected }: Dri
 
             {/* Folder contents */}
             <div
-              className="flex-1 overflow-y-auto border border-border rounded-xl min-h-[200px]"
+              className="flex-1 overflow-y-auto border border-border rounded-xl min-h-[200px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               data-testid="drive-file-list"
               role="listbox"
               aria-label="Drive files and folders"
               aria-multiselectable={false}
+              aria-live="polite"
+              aria-activedescendant={
+                focusedIndex >= 0 && filteredItems[focusedIndex]
+                  ? `drive-item-${filteredItems[focusedIndex].id}`
+                  : undefined
+              }
+              onKeyDown={handleListKeyDown}
+              tabIndex={0}
             >
               {loading ? (
                 <div className="flex items-center justify-center py-12">
@@ -332,19 +407,21 @@ export function DriveFolderBrowser({ open, onOpenChange, onFolderSelected }: Dri
                   </Button>
                 </div>
               ) : filteredItems.length === 0 ? (
-                <div className="flex flex-col items-center gap-2 py-12" data-testid="drive-empty-folder">
+                <div
+                  className="flex flex-col items-center gap-2 py-12"
+                  data-testid="drive-empty-folder"
+                >
                   <FolderOpen className="size-8 text-muted-foreground" aria-hidden="true" />
                   <p className="text-sm text-muted-foreground">
-                    {searchQuery.trim()
-                      ? 'No files match your search.'
-                      : 'This folder is empty.'}
+                    {searchQuery.trim() ? 'No files match your search.' : 'This folder is empty.'}
                   </p>
                 </div>
               ) : (
                 <div className="divide-y divide-border">
-                  {filteredItems.map(item => {
+                  {filteredItems.map((item, index) => {
                     const isFolder = item.mimeType === 'application/vnd.google-apps.folder'
                     const isSelected = selectedFolder === item.id
+                    const isFocused = focusedIndex === index
                     const supported = isFolder || isSupportedForImport(item.mimeType)
 
                     if (isFolder) {
@@ -352,13 +429,12 @@ export function DriveFolderBrowser({ open, onOpenChange, onFolderSelected }: Dri
                         <div
                           key={item.id}
                           className={`flex items-center gap-3 px-4 py-2.5 cursor-pointer transition-colors ${
-                            isSelected
-                              ? 'bg-brand-soft/40'
-                              : 'hover:bg-muted/50'
-                          }`}
+                            isSelected ? 'bg-brand-soft/40' : 'hover:bg-muted/50'
+                          } ${isFocused ? 'bg-muted/30' : ''}`}
                           onClick={() => handleFolderClick(item)}
                           role="option"
                           aria-selected={isSelected}
+                          tabIndex={-1}
                           data-testid={`drive-item-${item.id}`}
                         >
                           <Folder className="size-5 shrink-0 text-brand" aria-hidden="true" />
@@ -376,16 +452,18 @@ export function DriveFolderBrowser({ open, onOpenChange, onFolderSelected }: Dri
                       <div
                         key={item.id}
                         className={`flex items-center gap-3 px-4 py-2.5 cursor-pointer transition-colors ${
-                          isSelected
-                            ? 'bg-brand-soft/40'
-                            : 'hover:bg-muted/50'
-                        }`}
+                          isSelected ? 'bg-brand-soft/40' : 'hover:bg-muted/50'
+                        } ${isFocused ? 'bg-muted/30' : ''}`}
                         onClick={() => handleFolderSelect(item.id)}
                         role="option"
                         aria-selected={isSelected}
+                        tabIndex={-1}
                         data-testid={`drive-item-${item.id}`}
                       >
-                        <File className="size-5 shrink-0 text-muted-foreground" aria-hidden="true" />
+                        <File
+                          className="size-5 shrink-0 text-muted-foreground"
+                          aria-hidden="true"
+                        />
                         <span className="flex-1 text-sm truncate">{item.name}</span>
                         <span className="text-xs text-muted-foreground shrink-0">
                           {formatFileSize(item.size)}

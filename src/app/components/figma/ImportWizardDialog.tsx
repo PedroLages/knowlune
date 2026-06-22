@@ -41,6 +41,7 @@ import {
   ExternalLink,
 } from 'lucide-react'
 import { scanCourseFolder, scanFromDroppedFiles, persistScannedCourse } from '@/lib/courseImport'
+import { getVideoFormat } from '@/lib/fileSystem'
 import type { ScannedCourse, ScannedImage } from '@/lib/courseImport'
 import type { CourseManifest } from '@/lib/courseManifest'
 import { ImportDropZone } from './ImportDropZone'
@@ -487,63 +488,61 @@ export function ImportWizardDialog({
   }, [])
 
   /** Handle a folder selected from the Google Drive folder browser. */
-  const handleDriveFolderSelected = useCallback(
-    (result: DriveFolderBrowserResult) => {
-      // Map Drive files to a ScannedCourse structure
-      const videos = result.files.filter(f => f.mimeType.startsWith('video/'))
-      const pdfs = result.files.filter(f => f.mimeType === 'application/pdf')
-      const epubs = result.files.filter(f => f.mimeType === 'application/epub+zip')
-      const dummyHandle = null as unknown as FileSystemFileHandle
-      const dummyDirHandle = null as unknown as FileSystemDirectoryHandle
+  const handleDriveFolderSelected = useCallback((result: DriveFolderBrowserResult) => {
+    // Map Drive files to a ScannedCourse structure
+    const videos = result.files.filter(f => f.mimeType.startsWith('video/'))
+    const audios = result.files.filter(f => f.mimeType.startsWith('audio/'))
+    const pdfs = result.files.filter(f => f.mimeType === 'application/pdf')
+    const epubs = result.files.filter(f => f.mimeType === 'application/epub+zip')
+    const dummyHandle = null as unknown as FileSystemFileHandle
+    const dummyDirHandle = null as unknown as FileSystemDirectoryHandle
 
-      // Create a scanned course from Drive folder data
-      const scanned: ScannedCourse = {
+    // Create a scanned course from Drive folder data
+    const scanned: ScannedCourse = {
+      id: crypto.randomUUID(),
+      name: result.folderName,
+      scannedAt: new Date().toISOString(),
+      directoryHandle: dummyDirHandle,
+      videos: [...videos, ...audios].map((f, i) => ({
         id: crypto.randomUUID(),
-        name: result.folderName,
-        scannedAt: new Date().toISOString(),
-        directoryHandle: dummyDirHandle,
-        videos: videos.map((f, i) => ({
+        filename: f.name,
+        path: `drive://${f.id}`,
+        duration: 0,
+        format: getVideoFormat(f.name),
+        order: i + 1,
+        fileHandle: dummyHandle,
+        fileSize: f.size ?? 0,
+        width: 0,
+        height: 0,
+      })),
+      pdfs: [
+        ...pdfs.map(f => ({
           id: crypto.randomUUID(),
           filename: f.name,
           path: `drive://${f.id}`,
-          duration: 0,
-          format: 'mp4' as const,
-          order: i + 1,
+          pageCount: 0,
           fileHandle: dummyHandle,
-          fileSize: f.size ?? 0,
-          width: 0,
-          height: 0,
         })),
-        pdfs: [
-          ...pdfs.map(f => ({
-            id: crypto.randomUUID(),
-            filename: f.name,
-            path: `drive://${f.id}`,
-            pageCount: 0,
-            fileHandle: dummyHandle,
-          })),
-          ...epubs.map(f => ({
-            id: crypto.randomUUID(),
-            filename: f.name,
-            path: `drive://${f.id}`,
-            pageCount: 0,
-            fileHandle: dummyHandle,
-          })),
-        ],
-        images: [],
-        manifestData: undefined,
-      }
+        ...epubs.map(f => ({
+          id: crypto.randomUUID(),
+          filename: f.name,
+          path: `drive://${f.id}`,
+          pageCount: 0,
+          fileHandle: dummyHandle,
+        })),
+      ],
+      images: [],
+      manifestData: undefined,
+    }
 
-      setScannedCourse(scanned)
-      setCourseName(result.folderName)
-      setDescription('')
-      setTags([])
-      setAiTagsApplied(false)
-      setAiDescriptionApplied(false)
-      setStep('details')
-    },
-    []
-  )
+    setScannedCourse(scanned)
+    setCourseName(result.folderName)
+    setDescription('')
+    setTags([])
+    setAiTagsApplied(false)
+    setAiDescriptionApplied(false)
+    setStep('details')
+  }, [])
 
   const handleGoToPathStep = useCallback(() => {
     setStep('path')

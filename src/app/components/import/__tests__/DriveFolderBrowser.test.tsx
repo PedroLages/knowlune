@@ -106,9 +106,27 @@ describe('DriveFolderBrowser - Browse', () => {
   const mockFolders = [
     { id: 'folder-1', name: 'Course Materials', mimeType: 'application/vnd.google-apps.folder' },
     { id: 'folder-2', name: 'References', mimeType: 'application/vnd.google-apps.folder' },
-    { id: 'file-1', name: 'intro.mp4', mimeType: 'video/mp4', size: 5000000, modifiedTime: '2026-06-01T12:00:00Z' },
-    { id: 'file-2', name: 'slides.pdf', mimeType: 'application/pdf', size: 2000000, modifiedTime: '2026-06-01T12:00:00Z' },
-    { id: 'file-3', name: 'notes.txt', mimeType: 'text/plain', size: 1000, modifiedTime: '2026-06-01T12:00:00Z' },
+    {
+      id: 'file-1',
+      name: 'intro.mp4',
+      mimeType: 'video/mp4',
+      size: 5000000,
+      modifiedTime: '2026-06-01T12:00:00Z',
+    },
+    {
+      id: 'file-2',
+      name: 'slides.pdf',
+      mimeType: 'application/pdf',
+      size: 2000000,
+      modifiedTime: '2026-06-01T12:00:00Z',
+    },
+    {
+      id: 'file-3',
+      name: 'notes.txt',
+      mimeType: 'text/plain',
+      size: 1000,
+      modifiedTime: '2026-06-01T12:00:00Z',
+    },
   ]
 
   beforeEach(() => {
@@ -300,8 +318,20 @@ describe('DriveFolderBrowser - Browse', () => {
 describe('DriveFolderBrowser - Selection', () => {
   const mockFiles = [
     { id: 'folder-1', name: 'My Course', mimeType: 'application/vnd.google-apps.folder' },
-    { id: 'file-1', name: 'lesson1.mp4', mimeType: 'video/mp4', size: 10000000, modifiedTime: '2026-06-01T12:00:00Z' },
-    { id: 'file-2', name: 'handout.pdf', mimeType: 'application/pdf', size: 3000000, modifiedTime: '2026-06-01T12:00:00Z' },
+    {
+      id: 'file-1',
+      name: 'lesson1.mp4',
+      mimeType: 'video/mp4',
+      size: 10000000,
+      modifiedTime: '2026-06-01T12:00:00Z',
+    },
+    {
+      id: 'file-2',
+      name: 'handout.pdf',
+      mimeType: 'application/pdf',
+      size: 3000000,
+      modifiedTime: '2026-06-01T12:00:00Z',
+    },
   ]
 
   beforeEach(() => {

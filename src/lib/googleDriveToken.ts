@@ -117,12 +117,9 @@ export async function hasDriveReadScope(): Promise<boolean> {
 
   // Verify by making a lightweight Drive API call that requires drive.readonly
   try {
-    const response = await fetch(
-      'https://www.googleapis.com/drive/v3/about?fields=user',
-      {
-        headers: { Authorization: `Bearer ${token}` },
-      }
-    )
+    const response = await fetch('https://www.googleapis.com/drive/v3/about?fields=user', {
+      headers: { Authorization: `Bearer ${token}` },
+    })
 
     if (response.ok) {
       localStorage.setItem(DRIVE_READ_GRANTED_KEY, 'true')

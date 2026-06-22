@@ -27,11 +27,7 @@ import {
 
 // ── Helpers ──────────────────────────────────────────────────
 
-function makeDriveResponse(
-  status: number,
-  body: Record<string, unknown>,
-  ok?: boolean
-): Response {
+function makeDriveResponse(status: number, body: Record<string, unknown>, ok?: boolean): Response {
   return {
     ok: ok ?? (status >= 200 && status < 300),
     status,
@@ -90,9 +86,7 @@ describe('isSupportedForImport', () => {
 describe('buildStreamUrl', () => {
   it('returns a media download URL for a valid file ID', () => {
     const url = buildStreamUrl('file-123')
-    expect(url).toBe(
-      'https://www.googleapis.com/drive/v3/files/file-123?alt=media'
-    )
+    expect(url).toBe('https://www.googleapis.com/drive/v3/files/file-123?alt=media')
   })
 
   it('returns null for an empty file ID', () => {
@@ -155,11 +149,7 @@ describe('getFileMetadata', () => {
   it('returns scope error on 403 with insufficient scopes', async () => {
     mockGetDriveToken.mockResolvedValue('limited-token')
     fetchMock.mockResolvedValue(
-      makeDriveResponse(
-        403,
-        { error: { message: 'Insufficient scopes for this request' } },
-        false
-      )
+      makeDriveResponse(403, { error: { message: 'Insufficient scopes for this request' } }, false)
     )
 
     const result = await getFileMetadata('file-123')
@@ -176,15 +166,25 @@ describe('getFileMetadata', () => {
 describe('listFolder', () => {
   const mockFiles = [
     { id: 'folder-1', name: 'Course Materials', mimeType: 'application/vnd.google-apps.folder' },
-    { id: 'file-1', name: 'intro.mp4', mimeType: 'video/mp4', size: 5000000, modifiedTime: '2026-06-01T12:00:00Z' },
-    { id: 'file-2', name: 'slides.pdf', mimeType: 'application/pdf', size: 2000000, modifiedTime: '2026-06-01T12:00:00Z' },
+    {
+      id: 'file-1',
+      name: 'intro.mp4',
+      mimeType: 'video/mp4',
+      size: 5000000,
+      modifiedTime: '2026-06-01T12:00:00Z',
+    },
+    {
+      id: 'file-2',
+      name: 'slides.pdf',
+      mimeType: 'application/pdf',
+      size: 2000000,
+      modifiedTime: '2026-06-01T12:00:00Z',
+    },
   ]
 
   it('returns files and folders inside a Drive folder', async () => {
     mockGetDriveToken.mockResolvedValue('valid-token')
-    fetchMock.mockResolvedValue(
-      makeDriveResponse(200, { files: mockFiles })
-    )
+    fetchMock.mockResolvedValue(makeDriveResponse(200, { files: mockFiles }))
 
     const result = await listFolder('root')
 
