@@ -20,7 +20,7 @@
  * a single `db.version(CHECKPOINT_VERSION).stores(CHECKPOINT_SCHEMA)` call
  * for fresh installs.
  */
-export const CHECKPOINT_VERSION = 65
+export const CHECKPOINT_VERSION = 66
 
 /**
  * Shared `searchFrecency` index string. Used by both the v53 `.stores()` call

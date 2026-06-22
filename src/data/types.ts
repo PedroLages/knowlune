@@ -169,6 +169,16 @@ export interface PdfMetadata {
 
 export type CourseSource = 'local' | 'youtube'
 
+export interface DriveFileRef {
+  /** Google Drive file ID. */
+  fileId: string
+  /**
+   * Drive source identifier for future multi-source support.
+   * Currently only 'google' is supported.
+   */
+  driveSource: 'google'
+}
+
 export interface ImportedCourse {
   id: string
   name: string
@@ -195,6 +205,9 @@ export interface ImportedCourse {
   youtubeThumbnailUrl?: string // Playlist/channel thumbnail URL
   youtubePublishedAt?: string // ISO 8601 — playlist publish date
   lastRefreshedAt?: string // ISO 8601 — last metadata refresh timestamp (E28-S12)
+  // Drive source fields (E77b-S02)
+  /** Google Drive folder ID from which this course was imported. */
+  sourceDriveId?: string
   // Sync metadata — stamped by syncableWrite
   userId?: string | null
   guestSessionId?: string | null
@@ -233,6 +246,9 @@ export interface ImportedVideo {
   embeddable?: boolean
   /** Reason this video is not embeddable (set only when `embeddable === false`) */
   unembeddableReason?: UnembeddableReason
+  // Drive source fields (E77b-S02)
+  /** Reference to a Drive-hosted file when this video was imported from Google Drive. */
+  driveFileRef?: DriveFileRef
 }
 
 export interface ImportedPdf {
