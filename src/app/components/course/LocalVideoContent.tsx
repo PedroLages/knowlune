@@ -13,6 +13,7 @@ import { Camera, FileWarning, FolderSearch, RefreshCw, ShieldAlert } from 'lucid
 import { toast } from 'sonner'
 import { db } from '@/db/schema'
 import { useVideoFromHandle } from '@/hooks/useVideoFromHandle'
+import { useDriveFileUrl } from '@/hooks/useDriveFileUrl'
 import { useCaptionLoader } from '@/app/hooks/useCaptionLoader'
 import { useVideoPositionSync } from '@/app/hooks/useVideoPositionSync'
 import { VideoPlayer, type VideoPlayerHandle } from '@/app/components/figma/VideoPlayer'
@@ -158,7 +159,25 @@ export const LocalVideoContent = forwardRef<VideoPlayerHandle, LocalVideoContent
       return loadVideo()
     }, [loadVideo])
 
-    const { blobUrl, error, loading } = useVideoFromHandle(video?.fileHandle, retryKey)
+    // ── Drive vs. local source resolution ───────────────────────────
+    // Drive-sourced lessons (driveFileRef set) use Drive streaming + OPFS caching.
+    // Locally sourced lessons use FileSystemFileHandle blob URL creation.
+    const isDriveSource = !!video?.driveFileRef
+
+    const {
+      blobUrl: localBlobUrl,
+      error: localError,
+      loading: localLoading,
+    } = useVideoFromHandle(isDriveSource ? undefined : video?.fileHandle, retryKey)
+    const {
+      blobUrl: driveBlobUrl,
+      error: driveError,
+      loading: driveLoading,
+    } = useDriveFileUrl(isDriveSource ? (video?.driveFileRef ?? null) : null, retryKey)
+
+    const blobUrl = isDriveSource ? driveBlobUrl : localBlobUrl
+    const error = isDriveSource ? driveError : localError
+    const loading = isDriveSource ? driveLoading : localLoading
 
     // F008: Clear recovery overlay once blob URL loading completes (URL arrived or error).
     // Prevents the spinner from showing indefinitely if blob generation fails.
@@ -595,15 +614,25 @@ export const LocalVideoContent = forwardRef<VideoPlayerHandle, LocalVideoContent
       )
     }
 
-    // Error state: permission denied or file not found
+    // Error state: permission denied, file not found, or Drive error
     if (error) {
+      // Drive errors have a string message (not 'permission-denied' or 'file-not-found').
+      // Show a Drive-specific error UI with a retry button.
+      const isDriveError = isDriveSource
+
       return (
         <div
           data-testid="lesson-error-state"
           className="flex flex-col items-center justify-center h-full gap-6 px-4"
         >
           <div className="flex flex-col items-center gap-3 text-center max-w-sm">
-            {error === 'permission-denied' ? (
+            {isDriveError ? (
+              <>
+                <FileWarning className="size-12 text-destructive" aria-hidden="true" />
+                <h2 className="font-semibold text-lg">Playback Error</h2>
+                <p className="text-sm text-muted-foreground">{error}</p>
+              </>
+            ) : error === 'permission-denied' ? (
               <>
                 <ShieldAlert className="size-12 text-warning" aria-hidden="true" />
                 <h2 className="font-semibold text-lg">Permission required</h2>
@@ -620,7 +649,16 @@ export const LocalVideoContent = forwardRef<VideoPlayerHandle, LocalVideoContent
             )}
           </div>
           <div className="flex flex-col sm:flex-row gap-3">
-            {error === 'permission-denied' ? (
+            {isDriveError ? (
+              <Button
+                onClick={() => handleRecoveryNeeded(lastKnownTimeRef.current)}
+                variant="brand"
+                className="gap-2"
+              >
+                <RefreshCw className="size-4" aria-hidden="true" />
+                Retry
+              </Button>
+            ) : error === 'permission-denied' ? (
               <Button
                 onClick={handleReGrantPermission}
                 variant="brand"
