@@ -1,9 +1,9 @@
 ---
 story_id: E77a-S01
 story_name: "Local Backup Download and Restore"
-status: ready-for-dev
+status: completed
 started: 2026-06-22
-completed:
+completed: 2026-06-22
 reviewed: false
 review_started:
 review_gates_passed: []
