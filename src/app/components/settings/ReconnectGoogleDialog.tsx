@@ -58,9 +58,8 @@ export function ReconnectGoogleDialog({
           <DialogTitle className="text-center">Connect Google Drive</DialogTitle>
           <DialogDescription className="text-center">
             To upload backups to Google Drive, Knowlune needs permission to create files in your
-            Drive. This uses the{' '}
-            <strong className="text-foreground">drive.file</strong> scope — only files created by
-            Knowlune are accessible.
+            Drive. This uses the <strong className="text-foreground">drive.file</strong> scope —
+            only files created by Knowlune are accessible.
           </DialogDescription>
         </DialogHeader>
 

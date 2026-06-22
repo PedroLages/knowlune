@@ -5,7 +5,12 @@ import { Button } from '@/app/components/ui/button'
 import { Progress } from '@/app/components/ui/progress'
 import { ReconnectGoogleDialog } from '@/app/components/settings/ReconnectGoogleDialog'
 import { getDriveToken } from '@/lib/googleDriveToken'
-import { uploadBackupToDrive, DriveQuotaError, DrivePermissionError, DriveNetworkError } from '@/lib/googleDriveUpload'
+import {
+  uploadBackupToDrive,
+  DriveQuotaError,
+  DrivePermissionError,
+  DriveNetworkError,
+} from '@/lib/googleDriveUpload'
 import { exportAllAsJson } from '@/lib/exportService'
 import { toastError } from '@/lib/toastHelpers'
 import { TOAST_DURATION } from '@/lib/toastConfig'
@@ -23,7 +28,9 @@ export function DataAndBackupPanel() {
   const [uploadProgress, setUploadProgress] = useState(0)
   const [uploadPhase, setUploadPhase] = useState('')
   const [reconnectOpen, setReconnectOpen] = useState(false)
-  const [knownTokenState, setKnownTokenState] = useState<'untested' | 'present' | 'absent'>('untested')
+  const [knownTokenState, setKnownTokenState] = useState<'untested' | 'present' | 'absent'>(
+    'untested'
+  )
 
   async function handleSendToDrive() {
     if (isUploading) return
@@ -130,7 +137,11 @@ export function DataAndBackupPanel() {
             onClick={handleSendToDrive}
             disabled={isUploading}
             className="gap-2 min-h-[44px]"
-            aria-label={knownTokenState === 'present' ? 'Upload backup to Google Drive' : 'Connect Google Drive'}
+            aria-label={
+              knownTokenState === 'present'
+                ? 'Upload backup to Google Drive'
+                : 'Connect Google Drive'
+            }
             data-testid="send-to-drive-button"
           >
             {isUploading ? (
@@ -141,7 +152,9 @@ export function DataAndBackupPanel() {
             ) : (
               <>
                 <Cloud className="size-4" />
-                {knownTokenState === 'present' || knownTokenState === 'untested' ? 'Send to Drive' : 'Reconnect Google'}
+                {knownTokenState === 'present' || knownTokenState === 'untested'
+                  ? 'Send to Drive'
+                  : 'Reconnect Google'}
               </>
             )}
           </Button>
@@ -166,10 +179,7 @@ export function DataAndBackupPanel() {
       </div>
 
       {/* Reconnect dialog */}
-      <ReconnectGoogleDialog
-        open={reconnectOpen}
-        onOpenChange={setReconnectOpen}
-      />
+      <ReconnectGoogleDialog open={reconnectOpen} onOpenChange={setReconnectOpen} />
     </>
   )
 }

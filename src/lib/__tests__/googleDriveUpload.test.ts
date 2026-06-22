@@ -42,11 +42,7 @@ function makeBlob(content: string): Blob {
   return blob
 }
 
-function makeDriveResponse(
-  status: number,
-  body: Record<string, unknown>,
-  ok?: boolean
-): Response {
+function makeDriveResponse(status: number, body: Record<string, unknown>, ok?: boolean): Response {
   return {
     ok: ok ?? (status >= 200 && status < 300),
     status,
@@ -98,9 +94,9 @@ describe('uploadBackupToDrive', () => {
   it('throws DrivePermissionError when getDriveToken returns null', async () => {
     mockGetDriveToken.mockResolvedValue(null)
 
-    await expect(
-      uploadBackupToDrive(makeBlob('{}'), 'backup.json')
-    ).rejects.toThrow(DrivePermissionError)
+    await expect(uploadBackupToDrive(makeBlob('{}'), 'backup.json')).rejects.toThrow(
+      DrivePermissionError
+    )
 
     expect(fetchMock).not.toHaveBeenCalled()
   })
@@ -138,9 +134,9 @@ describe('uploadBackupToDrive', () => {
 
     fetchMock.mockResolvedValueOnce(makeDriveResponse(401, { message: 'Unauthorized' }, false))
 
-    await expect(
-      uploadBackupToDrive(makeBlob('{}'), 'backup.json')
-    ).rejects.toThrow(DrivePermissionError)
+    await expect(uploadBackupToDrive(makeBlob('{}'), 'backup.json')).rejects.toThrow(
+      DrivePermissionError
+    )
   })
 
   it('throws DriveQuotaError on 403 with quota message', async () => {
@@ -154,9 +150,9 @@ describe('uploadBackupToDrive', () => {
       )
     )
 
-    await expect(
-      uploadBackupToDrive(makeBlob('{}'), 'backup.json')
-    ).rejects.toThrow(DriveQuotaError)
+    await expect(uploadBackupToDrive(makeBlob('{}'), 'backup.json')).rejects.toThrow(
+      DriveQuotaError
+    )
   })
 
   it('throws DrivePermissionError on 403 with permission message', async () => {
@@ -170,35 +166,31 @@ describe('uploadBackupToDrive', () => {
       )
     )
 
-    await expect(
-      uploadBackupToDrive(makeBlob('{}'), 'backup.json')
-    ).rejects.toThrow(DrivePermissionError)
+    await expect(uploadBackupToDrive(makeBlob('{}'), 'backup.json')).rejects.toThrow(
+      DrivePermissionError
+    )
   })
 
   it('throws DrivePermissionError on 403 with generic message', async () => {
     mockGetDriveToken.mockResolvedValue('valid-token')
 
-    fetchMock.mockResolvedValueOnce(
-      makeDriveResponse(403, { message: 'Forbidden' }, false)
-    )
+    fetchMock.mockResolvedValueOnce(makeDriveResponse(403, { message: 'Forbidden' }, false))
 
-    await expect(
-      uploadBackupToDrive(makeBlob('{}'), 'backup.json')
-    ).rejects.toThrow(DrivePermissionError)
+    await expect(uploadBackupToDrive(makeBlob('{}'), 'backup.json')).rejects.toThrow(
+      DrivePermissionError
+    )
   })
 
   it('retries on network failure with backoff', async () => {
     mockGetDriveToken.mockResolvedValue('valid-token')
 
     // Network error on first call, success on second
-    fetchMock
-      .mockRejectedValueOnce(new TypeError('Failed to fetch'))
-      .mockResolvedValueOnce(
-        makeDriveResponse(200, {
-          id: 'file-789',
-          webViewLink: 'https://drive.google.com/file/d/file-789/view',
-        })
-      )
+    fetchMock.mockRejectedValueOnce(new TypeError('Failed to fetch')).mockResolvedValueOnce(
+      makeDriveResponse(200, {
+        id: 'file-789',
+        webViewLink: 'https://drive.google.com/file/d/file-789/view',
+      })
+    )
 
     const result = await uploadBackupToDrive(makeBlob('{}'), 'backup.json')
 
@@ -216,9 +208,9 @@ describe('uploadBackupToDrive', () => {
 
     fetchMock.mockRejectedValue(new TypeError('Failed to fetch'))
 
-    await expect(
-      uploadBackupToDrive(makeBlob('{}'), 'backup.json')
-    ).rejects.toThrow(DriveNetworkError)
+    await expect(uploadBackupToDrive(makeBlob('{}'), 'backup.json')).rejects.toThrow(
+      DriveNetworkError
+    )
 
     expect(fetchMock).toHaveBeenCalledTimes(2)
   })

@@ -18,13 +18,22 @@ vi.mock('@/lib/googleDriveToken', () => ({
 
 vi.mock('@/lib/googleDriveUpload', () => {
   const DriveQuotaError = class extends Error {
-    constructor() { super('Your Google Drive is full.'); this.name = 'DriveQuotaError' }
+    constructor() {
+      super('Your Google Drive is full.')
+      this.name = 'DriveQuotaError'
+    }
   }
   const DrivePermissionError = class extends Error {
-    constructor() { super('Reconnect Google'); this.name = 'DrivePermissionError' }
+    constructor() {
+      super('Reconnect Google')
+      this.name = 'DrivePermissionError'
+    }
   }
   const DriveNetworkError = class extends Error {
-    constructor() { super('Upload failed. Try again?'); this.name = 'DriveNetworkError' }
+    constructor() {
+      super('Upload failed. Try again?')
+      this.name = 'DriveNetworkError'
+    }
   }
   return {
     uploadBackupToDrive: (...args: unknown[]) => mockUploadBackupToDrive(...args),
@@ -72,7 +81,10 @@ describe('DataAndBackupPanel', () => {
     // Use a delayed promise so React renders the intermediate "Uploading" state
     mockGetDriveToken.mockResolvedValue('valid-token')
     mockExportAllAsJson.mockImplementation(
-      () => new Promise(resolve => setTimeout(() => resolve({ schemaVersion: 14, exportedAt: '', data: {} }), 100))
+      () =>
+        new Promise(resolve =>
+          setTimeout(() => resolve({ schemaVersion: 14, exportedAt: '', data: {} }), 100)
+        )
     )
     mockUploadBackupToDrive.mockResolvedValue({ fileId: 'id', webViewLink: 'https://drivE' })
 

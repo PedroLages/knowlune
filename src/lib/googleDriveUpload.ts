@@ -119,11 +119,7 @@ function sleep(ms: number): Promise<void> {
 /**
  * Execute the raw multipart POST with the given token.
  */
-async function executeUpload(
-  token: string,
-  body: string,
-  signal?: AbortSignal
-): Promise<Response> {
+async function executeUpload(token: string, body: string, signal?: AbortSignal): Promise<Response> {
   return fetch(UPLOAD_URL, {
     method: 'POST',
     headers: {
@@ -154,11 +150,7 @@ async function executeUpload(
  * Attempt a single upload with the current token, returning the response.
  * Throws DriveNetworkError on network failure.
  */
-async function attemptUpload(
-  token: string,
-  body: string,
-  signal?: AbortSignal
-): Promise<Response> {
+async function attemptUpload(token: string, body: string, signal?: AbortSignal): Promise<Response> {
   try {
     return await executeUpload(token, body, signal)
   } catch {
