@@ -30,6 +30,7 @@ import type {
 import { sessionsToCSV, progressToCSV, deriveStreakDays, streakDaysToCSV } from './csvSerializer'
 import { sanitizeFilename, extractTextFromHtml, htmlToMarkdown } from './noteExport'
 import { yieldToUI } from './uiUtils'
+import { saveSettings, getSettings } from '@/lib/settings'
 
 // --- Export Schema ---
 
@@ -59,6 +60,28 @@ export interface KnowluneExport {
 // --- Progress Callback ---
 
 export type ExportProgressCallback = (percent: number, phase: string) => void
+
+// --- Backup Metadata (E77A-S04) ---
+
+/**
+ * Record a successful backup in settings metadata.
+ * Updates the destination-specific timestamp and sets lastDestination.
+ */
+export function updateBackupMeta(destination: 'local' | 'drive'): void {
+  const current = getSettings()
+  const now = Date.now()
+  const updatedMeta = {
+    ...current.backupMeta,
+    lastDestination: destination,
+  }
+  if (destination === 'local') {
+    updatedMeta.lastLocalAt = now
+  } else {
+    updatedMeta.lastDriveAt = now
+  }
+  saveSettings({ backupMeta: updatedMeta })
+  window.dispatchEvent(new Event('settingsUpdated'))
+}
 
 // --- JSON Export (AC1) ---
 

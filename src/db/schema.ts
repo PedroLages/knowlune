@@ -1745,6 +1745,18 @@ function _declareLegacyMigrations(database: Dexie): void {
       // No backfill. Table is new; storyboards populate lazily on first play
       // (or background-generate after import).
     })
+
+  // v66 (E77b-S02): Drive course import metadata fields
+  // - importedCourses: added optional `sourceDriveId` for tracking Google Drive folder origin
+  // - importedVideos: added optional `driveFileRef` for per-file Drive source reference
+  // No index changes — both fields are optional and not queried by index at this time.
+  database
+    .version(66)
+    .stores({})
+    .upgrade(async _tx => {
+      // No backfill required — optional fields on existing tables; Dexie writes them
+      // on first put/update after this version is opened.
+    })
 } // end _declareLegacyMigrations
 
 export { db, CHECKPOINT_VERSION, CHECKPOINT_SCHEMA }

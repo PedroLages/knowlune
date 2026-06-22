@@ -55,7 +55,7 @@
 # - All new epics start at backlog status
 
 generated: 2026-03-15
-last_updated: 2026-04-25  # E99 complete (S05 merged via PR #452 — virtualized courses list with ARIA, focus rescue, reduced-motion). All 5 stories shipped.
+last_updated: 2026-06-22  # E68, E77A, E77B marked done — virtualized courses list with ARIA, focus rescue, reduced-motion). All 5 stories shipped.
 project: Elearningplatformwireframes
 project_key: NOKEY  # deliberate: file-system tracking only, no external tool integration planned
 tracking_system: file-system
@@ -781,10 +781,10 @@ development_status:
   #   @huggingface/transformers v3 migration deferred to a post-beta epic.
   # Depends on: E9 (AI infra — already done, code exists)
   # ──────────────────────────────────────────────────
-  epic-68: in-progress
+  epic-68: done
   68-1-model-download-progress-and-warmup: done  # replaces 68-1 + 68-3: progress toast + idle warm-up
   68-2-cache-api-validation-and-openai-fallback: done  # replaces 68-2 + 68-4 + 68-5 + 68-6: minimal EmbeddingProvider seam + OpenAI fallback
-  68-3-worker-crash-telemetry-and-safari-fallback: ready-for-dev  # replaces 68-7: structured crash payloads + module-worker fallback
+  68-3-worker-crash-telemetry-and-safari-fallback: done  # replaces 68-7: structured crash payloads + module-worker fallback
   epic-68-retrospective: optional
 
   # ──────────────────────────────────────────────────
@@ -905,11 +905,11 @@ development_status:
   # Auth: Supabase-brokered Google OAuth (provider_token) — no parallel GIS flow.
   # Depends on: E19 (Supabase Auth), E35 (Premium gate for Drive destination)
   # ──────────────────────────────────────────────────
-  epic-77a: in-progress
+  epic-77a: done
   77a-1-local-backup-download-and-restore: done  # local .knowlune.json download + restore + safety backup
-  77a-2-supabase-google-oauth-drive-scope: backlog  # add drive.file scope to Supabase Google provider; token helper
-  77a-3-drive-upload-destination-and-reconnect: backlog  # optional "Send to Drive" button + reconnect flow
-  77a-4-backup-metadata-tracking-and-status: backlog  # lastBackupAt, stale warning in Settings > Data & Backup
+  77a-2-supabase-google-oauth-drive-scope: done  # add drive.file scope to Supabase Google provider; token helper
+  77a-3-drive-upload-destination-and-reconnect: done  # optional "Send to Drive" button + reconnect flow
+  77a-4-backup-metadata-tracking-and-status: done  # lastBackupAt, stale warning in Settings > Data & Backup
   epic-77a-retrospective: optional
 
   # ──────────────────────────────────────────────────
@@ -924,11 +924,11 @@ development_status:
   # ⚠️  CORS: Drive media endpoint needs Edge Function proxy for video streaming.
   # Depends on: E77A-S02 (token helper), E35 (Premium), E94 (sync for file refs)
   # ──────────────────────────────────────────────────
-  epic-77b: backlog
-  77b-1-drive-auth-readonly-scope-and-folder-browser: backlog  # drive.readonly scope + Drive folder picker in import wizard (premium gated)
-  77b-2-drive-course-import-metadata-and-schema: backlog  # store Drive file refs in IndexedDB; Dexie v59 migration
-  77b-3-drive-file-streaming-and-opfs-cache: backlog  # stream from Drive + transparent OPFS cache on first play
-  77b-4-drive-source-management-ui-and-sync-validation: backlog  # source badge, reconnect flow, E94 sync round-trip test
+  epic-77b: done
+  77b-1-drive-auth-readonly-scope-and-folder-browser: done  # drive.readonly scope + Drive folder picker in import wizard (premium gated)
+  77b-2-drive-course-import-metadata-and-schema: done  # store Drive file refs in IndexedDB; Dexie v59 migration
+  77b-3-drive-file-streaming-and-opfs-cache: done  # stream from Drive + transparent OPFS cache on first play
+  77b-4-drive-source-management-ui-and-sync-validation: done  # source badge, reconnect flow, E94 sync round-trip test
   epic-77b-retrospective: optional
 
   # ──────────────────────────────────────────────────

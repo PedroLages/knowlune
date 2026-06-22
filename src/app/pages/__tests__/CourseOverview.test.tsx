@@ -300,3 +300,38 @@ describe('CourseOverview Syllabus — module EntryActionButton states', () => {
     expect(screen.getByText('Module 1')).toBeInTheDocument()
   })
 })
+
+// ---------------------------------------------------------------------------
+// Drive source badge
+// ---------------------------------------------------------------------------
+
+describe('CourseOverview — Drive source badge', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockVideos.length = 0
+    mockProgressRecords.length = 0
+    mockCourse.source = undefined
+  })
+
+  it('renders Drive source banner for Drive-imported courses', async () => {
+    mockCourse.source = 'drive'
+    renderOverview()
+
+    await waitFor(() => {
+      expect(screen.getByTestId('drive-source-banner')).toBeInTheDocument()
+    })
+
+    expect(screen.getByText('Google Drive Course')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Reconnect Drive folder/i })).toBeInTheDocument()
+  })
+
+  it('does not render Drive source banner for non-Drive courses', async () => {
+    renderOverview()
+
+    await waitFor(() => {
+      expect(screen.getByText('Syllabus')).toBeInTheDocument()
+    })
+
+    expect(screen.queryByTestId('drive-source-banner')).not.toBeInTheDocument()
+  })
+})

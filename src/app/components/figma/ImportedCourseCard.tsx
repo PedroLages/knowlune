@@ -15,6 +15,7 @@ import {
   Pencil,
   Clock,
   X,
+  HardDrive,
 } from 'lucide-react'
 import { useNavigate } from 'react-router'
 import { Badge } from '@/app/components/ui/badge'
@@ -771,6 +772,15 @@ export function ImportedCourseCard({
             {course.totalFileSize != null && course.totalFileSize > 0 && (
               <span data-testid="course-card-file-size" className="text-muted-foreground">
                 {formatFileSize(course.totalFileSize)}
+              </span>
+            )}
+            {course.source === 'drive' && (
+              <span
+                data-testid="course-card-source-badge"
+                className="inline-flex items-center gap-1 rounded-md bg-brand-soft/80 px-1.5 py-0.5 text-[10px] font-medium text-brand-soft-foreground"
+              >
+                <HardDrive className="size-3" aria-hidden="true" />
+                Drive
               </span>
             )}
           </div>

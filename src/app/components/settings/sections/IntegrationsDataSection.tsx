@@ -31,8 +31,10 @@ import {
 import { AIConfigurationSettings } from '@/app/components/figma/AIConfigurationSettings'
 import { YouTubeConfigurationSettings } from '@/app/components/figma/YouTubeConfigurationSettings'
 import { WhisperSettings } from '@/app/components/settings/WhisperSettings'
+import { DriveConfigurationSettings } from '@/app/components/settings/DriveConfigurationSettings'
 import { DataRetentionSettings } from '@/app/components/settings/DataRetentionSettings'
 import { StorageManagement } from '@/app/components/settings/StorageManagement'
+import { DataAndBackupPanel } from '@/app/components/settings/DataAndBackupPanel'
 import { useSettingsPage } from '@/app/components/settings/SettingsPageContext'
 import { useAuthStore, selectIsGuestMode } from '@/stores/useAuthStore'
 import { GatedFeatureCard } from '@/app/components/auth/GatedFeatureCard'
@@ -74,6 +76,9 @@ export function IntegrationsDataSection() {
 
       {/* Speech-to-Text Configuration */}
       <WhisperSettings />
+
+      {/* Google Drive Configuration */}
+      <DriveConfigurationSettings />
 
       {/* Data Management */}
       <Card id="data-management">
@@ -341,6 +346,14 @@ export function IntegrationsDataSection() {
               aria-label="Select JSON backup file to import"
               tabIndex={-1}
             />
+          </div>
+
+          <Separator />
+
+          {/* Google Drive Backup */}
+          <div className="space-y-3">
+            <h3 className="text-sm font-medium">Google Drive Backup</h3>
+            <DataAndBackupPanel />
           </div>
 
           <Separator />

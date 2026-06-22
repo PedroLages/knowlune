@@ -58,7 +58,6 @@ export function UnifiedCourseDetail() {
   const adapterAuthorInfo = adapter?.getAuthorInfo() ?? null
 
   // Store access for mutations
-  const importedCourses = useCourseImportStore(s => s.importedCourses)
   const loadImportedCourses = useCourseImportStore(s => s.loadImportedCourses)
   const removeImportedCourse = useCourseImportStore(s => s.removeImportedCourse)
   const updateCourseDetails = useCourseImportStore(s => s.updateCourseDetails)
@@ -264,7 +263,7 @@ export function UnifiedCourseDetail() {
     }
   }, [course, isOnline, isRefreshing, courseId])
 
-  const storeCourse = importedCourses.find(c => c.id === courseId)
+
 
   const showLocalFilesUnavailable =
     course?.source === 'local' &&
@@ -349,6 +348,7 @@ export function UnifiedCourseDetail() {
         </div>
       )}
 
+
       {loadError && (
         <div
           data-testid="course-load-error"
@@ -404,14 +404,15 @@ export function UnifiedCourseDetail() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {storeCourse && (
+      {course && (
         <EditCourseDialog
           open={editDialogOpen}
           onOpenChange={setEditDialogOpen}
-          course={storeCourse}
+          course={course}
           allTags={allTags}
         />
       )}
+
     </div>
   )
 }

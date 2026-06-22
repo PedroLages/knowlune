@@ -22,6 +22,7 @@ def parse_args():
     parser = argparse.ArgumentParser(description='Merge agent review results')
     parser.add_argument('--agent-results-dir', required=True, help='Directory containing agent JSON outputs')
     parser.add_argument('--run-state', help='Optional: run state JSON for story_id')
+    parser.add_argument('--story-id', help='Filter results to this story ID (e.g. E77-S02)')
     parser.add_argument('--output', required=True, help='Output path for consolidated findings')
     return parser.parse_args()
 
@@ -81,14 +82,36 @@ def deduplicate_findings(all_findings):
     used_lines = set()
     
     for file_path, findings in by_file.items():
-        # Sort by line number
-        findings.sort(key=lambda f: f.get('line') or 0)
+        # Sort by line number (safely extract int from string or int values)
+        def safe_line(f):
+            val = f.get('line')
+            if val is None:
+                return 0
+            try:
+                return int(val)
+            except (ValueError, TypeError):
+                # Handle range strings like "51-89" or "3, 7"
+                import re
+                m = re.match(r'\d+', str(val))
+                return int(m.group()) if m else 0
+
+        findings.sort(key=safe_line)
         
         for finding in findings:
-            line = finding.get('line')
-            if line is None:
+            # Normalize line to int safely
+            raw_line = finding.get('line')
+            if raw_line is None:
                 processed.append(finding)
                 continue
+            try:
+                line = int(raw_line)
+            except (ValueError, TypeError):
+                import re
+                m = re.match(r'\d+', str(raw_line))
+                line = int(m.group()) if m else 0
+                if line == 0:
+                    processed.append(finding)
+                    continue
             
             # Check if this line is already used
             key = (file_path, line)
@@ -96,8 +119,19 @@ def deduplicate_findings(all_findings):
                 continue
             
             # Find nearby findings (within 5 lines)
+            def get_line_safe(f):
+                v = f.get('line')
+                if v is None:
+                    return 0
+                try:
+                    return int(v)
+                except (ValueError, TypeError):
+                    import re
+                    m = re.match(r'\d+', str(v))
+                    return int(m.group()) if m else 0
+
             nearby = [f for f in findings
-                     if abs((f.get('line') or 0) - line) <= 5]
+                     if abs(get_line_safe(f) - line) <= 5]
             
             # Merge nearby findings into consensus
             if len(nearby) > 1:
@@ -113,7 +147,7 @@ def deduplicate_findings(all_findings):
                 
                 # Mark all lines as used
                 for f in nearby:
-                    used_lines.add((file_path, f.get('line', 0)))
+                    used_lines.add((file_path, get_line_safe(f)))
                 
                 processed.append(representative)
             else:
@@ -224,10 +258,19 @@ def merge_results(agent_outputs):
 
 def main():
     args = parse_args()
-    
+
     # Load agent outputs
     agent_outputs = load_json_files(args.agent_results_dir)
-    
+
+    # Filter by story_id if specified
+    if args.story_id:
+        filtered = {}
+        for filename, output in agent_outputs.items():
+            output_story_id = output.get('story_id', '')
+            if output_story_id.upper() == args.story_id.upper():
+                filtered[filename] = output
+        agent_outputs = filtered
+
     if not agent_outputs:
         # No outputs - return empty PASS result
         result = {

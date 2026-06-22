@@ -11,6 +11,16 @@ export type ReadingTheme = 'auto' | 'sepia' | 'gray' | 'dark' | 'high-contrast'
 export type CourseViewMode = 'grid' | 'list' | 'compact' | 'timeline'
 export type CourseGridColumns = 'auto' | 2 | 3 | 4 | 5
 
+/** Backup metadata tracking when the user last backed up data (E77A-S04). */
+export interface BackupMeta {
+  /** Timestamp (ms since epoch) of the last local JSON export/download. */
+  lastLocalAt?: number
+  /** Timestamp (ms since epoch) of the last Google Drive upload. */
+  lastDriveAt?: number
+  /** Which destination was used for the most recent backup. */
+  lastDestination?: 'local' | 'drive'
+}
+
 /** Maps font size labels to root font-size pixel values */
 export const FONT_SIZE_PX: Record<FontSize, number> = {
   'x-small': 12,
@@ -76,6 +86,11 @@ export interface AppSettings {
    * concrete values cap at lg+. Mobile (<640px) is always 1 column.
    */
   courseGridColumns?: CourseGridColumns
+  /**
+   * Backup metadata: tracks when and where the user last backed up data
+   * (E77A-S04). Purely informational — no behavioral impact.
+   */
+  backupMeta?: BackupMeta
 }
 
 export const DISPLAY_DEFAULTS = {
@@ -106,6 +121,7 @@ const defaults: AppSettings = {
   autoSyncEnabled: true,
   courseViewMode: 'grid',
   courseGridColumns: 'auto',
+  backupMeta: undefined,
 }
 
 const VALID_CONTENT_DENSITY: ContentDensity[] = ['default', 'spacious']
