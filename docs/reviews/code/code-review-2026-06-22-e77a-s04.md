@@ -28,5 +28,6 @@ Specific checks that passed:
 None.
 
 ---
+
 Issues found: 0 | Blockers: 0 | High: 0 | Medium: 0 | Nits: 0
 Confidence: avg N/A | >= 90: 0 | 70-89: 0 | < 70: 0

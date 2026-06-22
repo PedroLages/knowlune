@@ -8,21 +8,23 @@
 
 ### AC Coverage Table
 
-| AC# | Description | Unit Test | E2E Test | Verdict |
-|-----|-------------|-----------|----------|---------|
-| 1 | Given a backup is created locally When the export completes Then lastLocalAt metadata is updated with the current timestamp. | src/lib/__tests__/exportService.test.ts:652 (updateBackupMeta('local')) | None | Covered |
-| 2 | Given a backup is uploaded to Google Drive When the drive upload completes Then lastDriveAt metadata is updated with the current timestamp. | src/lib/__tests__/exportService.test.ts:664 (updateBackupMeta('drive')), src/app/components/settings/__tests__/DataAndBackupPanel.drive.test.tsx:202 (asserts updateBackupMeta called with 'drive') | None | Covered |
-| 3 | Given the user opens Settings > Data & Backup When the page loads Then the last backup timestamps are displayed for each backup type. | src/app/components/settings/__tests__/DataAndBackupPanel.meta.test.tsx:72 (Local), :89 (Drive), :105 (never backed up), :159 (fallback, no lastDestination), :174 (Drive more recent, no lastDestination) | None | Covered |
-| 4 | Given the last backup was more than 30 days ago When the Data & Backup page renders Then a stale backup warning is shown. | src/app/components/settings/__tests__/DataAndBackupPanel.meta.test.tsx:115 (Drive stale >30d), :134 (Local stale >30d) | None | Covered |
+| AC# | Description                                                                                                                                 | Unit Test                                                                                                                                                                                                 | E2E Test | Verdict |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | ------- |
+| 1   | Given a backup is created locally When the export completes Then lastLocalAt metadata is updated with the current timestamp.                | src/lib/**tests**/exportService.test.ts:652 (updateBackupMeta('local'))                                                                                                                                   | None     | Covered |
+| 2   | Given a backup is uploaded to Google Drive When the drive upload completes Then lastDriveAt metadata is updated with the current timestamp. | src/lib/**tests**/exportService.test.ts:664 (updateBackupMeta('drive')), src/app/components/settings/**tests**/DataAndBackupPanel.drive.test.tsx:202 (asserts updateBackupMeta called with 'drive')       | None     | Covered |
+| 3   | Given the user opens Settings > Data & Backup When the page loads Then the last backup timestamps are displayed for each backup type.       | src/app/components/settings/**tests**/DataAndBackupPanel.meta.test.tsx:72 (Local), :89 (Drive), :105 (never backed up), :159 (fallback, no lastDestination), :174 (Drive more recent, no lastDestination) | None     | Covered |
+| 4   | Given the last backup was more than 30 days ago When the Data & Backup page renders Then a stale backup warning is shown.                   | src/app/components/settings/**tests**/DataAndBackupPanel.meta.test.tsx:115 (Drive stale >30d), :134 (Local stale >30d)                                                                                    | None     | Covered |
 
 **Coverage**: 4/4 ACs fully covered | 0 gaps | 0 partial
 
 ### Test Quality Findings
 
 #### Blockers (untested ACs)
+
 None. All 4 ACs have tests.
 
 #### High Priority
+
 None.
 
 #### Medium
@@ -43,4 +45,5 @@ None.
 - **Negative diffMs (future timestamp)**: If `Date.now() - timestamp` produces a negative value (future backup), `formatRelativeTime` returns `'just now'` due to the `diffMs < 60_000` guard. Low-likelihood but untested behavior.
 
 ---
+
 ACs: 4 covered / 4 total | Findings: 3 | Blockers: 0 | High: 0 | Medium: 2 | Nits: 1

@@ -89,38 +89,38 @@ Story E77A-S04 adds backup metadata tracking (`lastLocalAt`, `lastDriveAt`, `las
 
 ## Accessibility Checklist
 
-| Check | Status | Notes |
-|-------|--------|-------|
-| Text contrast >= 4.5:1 | PASS | Warning text `#8a6518` on white: 4.57:1 passes AA. All other text tokens meet contrast. |
-| Keyboard navigation | PASS | Skip-to-content link present. Tab order reaches all settings nav items and interactive elements. |
-| Focus indicators visible | PASS | 2px brand-colored outline on focused elements. |
-| Heading hierarchy | PASS | H1 "Settings" -> H2 "Account" -> (context-specific headings). Proper hierarchy. |
-| ARIA labels on icon buttons | PASS | Drive button has dynamic `aria-label` changing based on auth state. |
-| ARIA live regions | PASS | Backup banner has `role="status"` + `aria-live="polite"`. Upload progress has `aria-live="polite"`. |
-| Semantic HTML | FAIL | Redundant `role="banner"` on `<header>` element (1 instance detected). |
-| Form labels associated | PASS | All app-level form inputs have proper labels via `id`/`for` association or `aria-label`. |
-| `prefers-reduced-motion` | NOT VERIFIED | Animations use `animate-in` classes which should respect reduced-motion, but not explicitly tested. |
-| Images have alt text | PASS | All images have appropriate alt text or `aria-hidden="true"`. |
-| Toast "View" link aria-label | FAIL | Generic "View" link lacks accessible name (see M1). |
+| Check                        | Status       | Notes                                                                                               |
+| ---------------------------- | ------------ | --------------------------------------------------------------------------------------------------- |
+| Text contrast >= 4.5:1       | PASS         | Warning text `#8a6518` on white: 4.57:1 passes AA. All other text tokens meet contrast.             |
+| Keyboard navigation          | PASS         | Skip-to-content link present. Tab order reaches all settings nav items and interactive elements.    |
+| Focus indicators visible     | PASS         | 2px brand-colored outline on focused elements.                                                      |
+| Heading hierarchy            | PASS         | H1 "Settings" -> H2 "Account" -> (context-specific headings). Proper hierarchy.                     |
+| ARIA labels on icon buttons  | PASS         | Drive button has dynamic `aria-label` changing based on auth state.                                 |
+| ARIA live regions            | PASS         | Backup banner has `role="status"` + `aria-live="polite"`. Upload progress has `aria-live="polite"`. |
+| Semantic HTML                | FAIL         | Redundant `role="banner"` on `<header>` element (1 instance detected).                              |
+| Form labels associated       | PASS         | All app-level form inputs have proper labels via `id`/`for` association or `aria-label`.            |
+| `prefers-reduced-motion`     | NOT VERIFIED | Animations use `animate-in` classes which should respect reduced-motion, but not explicitly tested. |
+| Images have alt text         | PASS         | All images have appropriate alt text or `aria-hidden="true"`.                                       |
+| Toast "View" link aria-label | FAIL         | Generic "View" link lacks accessible name (see M1).                                                 |
 
 ## Responsive Design Verification
 
-| Breakpoint | Status | Notes |
-|------------|--------|-------|
-| Mobile (375px) | PASS | No horizontal scroll. Content stacks correctly. Sidebar accessible via sheet. Touch targets >=44px. |
-| Tablet (768px) | PASS | No horizontal scroll. Layout reflows to 2-column where applicable. |
-| Sidebar collapse (1024px) | PASS | Sidebar remains visible and persistent. Content area adjusts correctly. |
-| Desktop (1440px) | PASS | Full layout with persistent sidebar and proper content section widths. |
+| Breakpoint                | Status | Notes                                                                                               |
+| ------------------------- | ------ | --------------------------------------------------------------------------------------------------- |
+| Mobile (375px)            | PASS   | No horizontal scroll. Content stacks correctly. Sidebar accessible via sheet. Touch targets >=44px. |
+| Tablet (768px)            | PASS   | No horizontal scroll. Layout reflows to 2-column where applicable.                                  |
+| Sidebar collapse (1024px) | PASS   | Sidebar remains visible and persistent. Content area adjusts correctly.                             |
+| Desktop (1440px)          | PASS   | Full layout with persistent sidebar and proper content section widths.                              |
 
 ## Dark Mode Verification
 
-| Check | Status | Notes |
-|-------|--------|-------|
-| Body background changes | PASS | Light: `rgb(249, 249, 254)` -> Dark: `rgb(23, 28, 36)` |
-| Banner background adapts | PASS | Transitions from `#ffffff` to semi-transparent dark. |
-| Warning text contrast (dark) | PASS | `rgb(224, 168, 80)` on dark background passes AA. |
-| Brand button contrast (dark) | PASS | `rgb(77, 163, 255)` bg with `rgb(10, 21, 32)` text: ~6.7:1 passes AA. |
-| No artifacts when toggling | PASS | Toggling light/dark/light shows no rendering artifacts. |
+| Check                        | Status | Notes                                                                 |
+| ---------------------------- | ------ | --------------------------------------------------------------------- |
+| Body background changes      | PASS   | Light: `rgb(249, 249, 254)` -> Dark: `rgb(23, 28, 36)`                |
+| Banner background adapts     | PASS   | Transitions from `#ffffff` to semi-transparent dark.                  |
+| Warning text contrast (dark) | PASS   | `rgb(224, 168, 80)` on dark background passes AA.                     |
+| Brand button contrast (dark) | PASS   | `rgb(77, 163, 255)` bg with `rgb(10, 21, 32)` text: ~6.7:1 passes AA. |
+| No artifacts when toggling   | PASS   | Toggling light/dark/light shows no rendering artifacts.               |
 
 ## Code Quality Observations
 
