@@ -30,8 +30,31 @@ vi.mock('../noteExport', () => ({
   htmlToMarkdown: vi.fn().mockImplementation((html: string) => html.replace(/<[^>]*>/g, '')),
 }))
 
+// Mock sync dependencies for backup export
+vi.mock('@/db/checkpoint', () => ({
+  CHECKPOINT_VERSION: 65,
+}))
+
+const MOCK_SYNCABLE_TABLES = [
+  'contentProgress', 'studySessions', 'progress', 'notes', 'bookmarks',
+  'flashcards', 'reviewRecords', 'embeddings', 'bookHighlights',
+  'vocabularyItems', 'audioBookmarks', 'audioClips', 'chatConversations',
+  'learnerModels', 'importedCourses', 'importedVideos', 'importedPdfs',
+  'authors', 'books', 'bookReviews', 'shelves', 'bookShelves',
+  'readingQueue', 'chapterMappings', 'learningPaths', 'learningPathEntries',
+  'challenges', 'courseReminders', 'notifications', 'careerPaths',
+  'pathEnrollments', 'studySchedules', 'opdsCatalogs',
+  'audiobookshelfServers', 'notificationPreferences', 'quizzes',
+  'quizAttempts', 'aiUsageEvents', 'userConsents',
+]
+
+vi.mock('@/lib/sync/backfill', () => ({
+  SYNCABLE_TABLES: MOCK_SYNCABLE_TABLES,
+}))
+
 const { db } = await import('@/db/schema')
-const { exportAllAsJson, exportAllAsCsv, exportNotesAsMarkdown, CURRENT_SCHEMA_VERSION } =
+const { exportAllAsJson, exportAllAsCsv, exportNotesAsMarkdown, CURRENT_SCHEMA_VERSION,
+        collectBackupPayload, exportAllAsBlob } =
   await import('../exportService')
 const { sessionsToCSV, progressToCSV, deriveStreakDays, streakDaysToCSV } =
   await import('../csvSerializer')
@@ -625,6 +648,90 @@ describe('exportService', () => {
           typeof phase === 'string' && (phase as string).startsWith('Converting note')
       )
       expect(convertingCalls.length).toBeGreaterThanOrEqual(2)
+    })
+  })
+
+  // ── Backup Export Tests (E77a-S01) ──────────────────────────────────────
+
+  describe('collectBackupPayload', () => {
+    beforeEach(() => {
+      vi.clearAllMocks()
+      localStorage.clear()
+    })
+
+    it('returns a valid BackupPayload with schemaVersion and exportedAt', async () => {
+      const result = await collectBackupPayload()
+
+      expect(result).toHaveProperty('schemaVersion', 65)
+      expect(result).toHaveProperty('exportedAt')
+      expect(new Date(result.exportedAt).toISOString()).toBe(result.exportedAt)
+      expect(result).toHaveProperty('data')
+      expect(result).toHaveProperty('settings')
+    })
+
+    it('reads from all syncable tables except syncQueue and syncMetadata', async () => {
+      // mockTable tracks how many times db.table() is called
+      mockToArray.mockResolvedValue([])
+
+      await collectBackupPayload()
+
+      // Should have called db.table() for every syncable table
+      for (const tableName of MOCK_SYNCABLE_TABLES) {
+        if (tableName === 'syncQueue' || tableName === 'syncMetadata') {
+          expect(mockTable).not.toHaveBeenCalledWith(tableName)
+        } else {
+          expect(mockTable).toHaveBeenCalledWith(tableName)
+        }
+      }
+    })
+
+    it('includes settings from localStorage', async () => {
+      localStorage.setItem('app-settings', JSON.stringify({ theme: 'dark', displayName: 'Test' }))
+
+      const result = await collectBackupPayload()
+
+      // getSettings() returns parsed settings object (not raw localStorage entries)
+      expect(result.settings).toHaveProperty('displayName')
+      // Should reflect the written values
+      expect(result.settings.displayName).toBe('Test')
+    })
+
+    it('returns empty arrays for tables where db.table().toArray() throws', async () => {
+      mockTable.mockImplementation((name: string) => {
+        if (name === 'progress') {
+          return { toArray: vi.fn().mockRejectedValue(new Error('DB error')) }
+        }
+        return { toArray: mockToArray }
+      })
+
+      const result = await collectBackupPayload()
+
+      expect(result.data.progress).toEqual([])
+    })
+  })
+
+  describe('exportAllAsBlob', () => {
+    it('returns a blob and filename', async () => {
+      const result = await exportAllAsBlob()
+
+      expect(result.blob).toBeInstanceOf(Blob)
+      expect(result.blob.type).toBe('application/json')
+      expect(result.filename).toBeDefined()
+    })
+
+    it('produces a filename matching the expected pattern', async () => {
+      const result = await exportAllAsBlob()
+
+      // Pattern: knowlune-backup-YYYY-MM-DD-HHmmss.json
+      expect(result.filename).toMatch(/^knowlune-backup-\d{4}-\d{2}-\d{2}-\d{6}\.json$/)
+    })
+
+    it('produces a blob with application/json type', async () => {
+      const result = await exportAllAsBlob()
+
+      expect(result.blob).toBeInstanceOf(Blob)
+      expect(result.blob.type).toBe('application/json')
+      expect(result.blob.size).toBeGreaterThan(0)
     })
   })
 })

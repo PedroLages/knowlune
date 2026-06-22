@@ -17,6 +17,7 @@ import { NotificationsSection } from '../sections/NotificationsSection'
 import { IntegrationsDataSection } from '../sections/IntegrationsDataSection'
 import { SyncSection } from '../sections/SyncSection'
 import { PrivacySection } from '../sections/PrivacySection'
+import { DataAndBackupSection } from '../sections/DataAndBackupSection'
 
 interface SettingsLayoutProps {
   modifiedCategories?: Set<SettingsCategorySlug>
@@ -32,6 +33,7 @@ const SECTION_COMPONENTS: Record<SettingsCategorySlug, React.ComponentType> = {
   integrations: IntegrationsDataSection,
   sync: SyncSection,
   privacy: PrivacySection,
+  'data-backup': DataAndBackupSection,
 }
 
 export function SettingsLayout({ modifiedCategories, onSearchOpen }: SettingsLayoutProps) {
