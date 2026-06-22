@@ -157,6 +157,7 @@ log_info "Merging agent results..."
 
 python3 "${BASE_PATH}/scripts/workflow/merge-agent-results.py" \
   --agent-results-dir="$AGENT_RESULTS_DIR" \
+  --story-id="$STORY_ID_UPPER" \
   --output="$CONSOLIDATED_FINDINGS" \
   >&2
 
