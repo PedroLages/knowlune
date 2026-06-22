@@ -250,6 +250,23 @@ describe('signInWithGoogle', () => {
       })
     )
   })
+
+  it('passes Drive file scope, offline access, and consent prompt', async () => {
+    mockSignInWithOAuth.mockResolvedValue({ error: null })
+    await useAuthStore.getState().signInWithGoogle()
+    expect(mockSignInWithOAuth).toHaveBeenCalledWith(
+      expect.objectContaining({
+        provider: 'google',
+        options: expect.objectContaining({
+          scopes: 'email profile https://www.googleapis.com/auth/drive.file',
+          queryParams: expect.objectContaining({
+            access_type: 'offline',
+            prompt: 'consent',
+          }),
+        }),
+      })
+    )
+  })
 })
 
 describe('signOut', () => {
