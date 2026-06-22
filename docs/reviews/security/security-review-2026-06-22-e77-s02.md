@@ -6,12 +6,12 @@
 
 ### Phases Executed
 
-| Phase | Name | Triggered By | Findings |
-|-------|------|-------------|----------|
-| 1 | Attack Surface | Always | 2 vectors identified |
-| 2 | Secrets Scan | Always | Clean |
-| 3 | OWASP Top 10 | Always | 3 categories checked |
-| 8 | Config Security | Always-on | 0 findings introduced by story |
+| Phase | Name            | Triggered By | Findings                       |
+| ----- | --------------- | ------------ | ------------------------------ |
+| 1     | Attack Surface  | Always       | 2 vectors identified           |
+| 2     | Secrets Scan    | Always       | Clean                          |
+| 3     | OWASP Top 10    | Always       | 3 categories checked           |
+| 8     | Config Security | Always-on    | 0 findings introduced by story |
 
 ### Attack Surface Changes
 
@@ -22,12 +22,15 @@
 ### Findings
 
 #### Blockers
+
 _None._
 
 #### High Priority
+
 _None._
 
 #### Medium
+
 _None._
 
 #### Informational
@@ -68,7 +71,7 @@ _None._
 
 **Clean** — no secrets, API keys, or credentials detected in the diff.
 
-Scanned patterns: AKIA, sk-, ghp_, gho_, github_pat_, xoxb-, xoxp-, password, secret, api_key, token (in credential context), bearer (in credential context).
+Scanned patterns: AKIA, sk-, ghp*, gho*, github*pat*, xoxb-, xoxp-, password, secret, api_key, token (in credential context), bearer (in credential context).
 
 The diff contains only mock token values in test files (`'google-token-123'`, `'fresh-token'`, `'refreshed-token'`) which are clearly test fixtures, not real credentials.
 
@@ -76,13 +79,13 @@ No `.env` files are tracked by git. `.mcp.json` is not tracked by git.
 
 ### OWASP Coverage
 
-| Category | Applicable? | Finding? | Details |
-|----------|------------|----------|---------|
-| CS2: Client-Side Injection (XSS) | No | No | No new DOM manipulation, user input rendering, or `dangerouslySetInnerHTML` introduced |
-| CS3: Sensitive Data in Client Storage | Yes | I1 | provider_token now present in session, persisted by Supabase's built-in localStorage mechanism |
-| CS7: Client-Side Security Logging | Yes | No | Both console.error statements are gated by `import.meta.env.DEV`. No token values are logged in any path |
-| A05: Security Misconfiguration | No | No | No changes to CSP, CORS, or build configuration in this diff |
-| A07: Auth Failures | Yes | No | OAuth flow follows Supabase PKCE pattern correctly. Token refresh uses standard `refreshSession()` API. `drive.file` scope is minimal necessary |
+| Category                              | Applicable? | Finding? | Details                                                                                                                                         |
+| ------------------------------------- | ----------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| CS2: Client-Side Injection (XSS)      | No          | No       | No new DOM manipulation, user input rendering, or `dangerouslySetInnerHTML` introduced                                                          |
+| CS3: Sensitive Data in Client Storage | Yes         | I1       | provider_token now present in session, persisted by Supabase's built-in localStorage mechanism                                                  |
+| CS7: Client-Side Security Logging     | Yes         | No       | Both console.error statements are gated by `import.meta.env.DEV`. No token values are logged in any path                                        |
+| A05: Security Misconfiguration        | No          | No       | No changes to CSP, CORS, or build configuration in this diff                                                                                    |
+| A07: Auth Failures                    | Yes         | No       | OAuth flow follows Supabase PKCE pattern correctly. Token refresh uses standard `refreshSession()` API. `drive.file` scope is minimal necessary |
 
 ### CSP Impact
 
@@ -92,14 +95,14 @@ The CSP in `index.html` already includes `https://www.googleapis.com` in `connec
 
 Conditional phase not fully triggered (no new page components or routes), but the new `googleDriveToken.ts` module was reviewed:
 
-| Threat | Assessment |
-|--------|-----------|
-| Spoofing | Tokens come from Supabase OAuth flow — identity is verified by Google + Supabase |
-| Tampering | Token is read-only from in-memory store. Refresh path uses signed Supabase session |
-| Repudiation | No audit trail in this module — Drive operations not yet introduced |
+| Threat                 | Assessment                                                                           |
+| ---------------------- | ------------------------------------------------------------------------------------ |
+| Spoofing               | Tokens come from Supabase OAuth flow — identity is verified by Google + Supabase     |
+| Tampering              | Token is read-only from in-memory store. Refresh path uses signed Supabase session   |
+| Repudiation            | No audit trail in this module — Drive operations not yet introduced                  |
 | Information Disclosure | Token returned only to caller, never logged. CSP allows `connect-src` to Google APIs |
-| Denial of Service | Token refresh calls Supabase API — rate limited by Supabase/Google |
-| Elevation of Privilege | `drive.file` scope is minimally permissive (app folder only) |
+| Denial of Service      | Token refresh calls Supabase API — rate limited by Supabase/Google                   |
+| Elevation of Privilege | `drive.file` scope is minimally permissive (app folder only)                         |
 
 ### What's Done Well
 
@@ -108,4 +111,5 @@ Conditional phase not fully triggered (no new page components or routes), but th
 3. **Clean error handling:** Both `getDriveToken()` and `refreshDriveToken()` return `null` on errors instead of throwing. No stack traces or error details are exposed to callers. The error messages visible to users in `useAuthStore` are mapped through `mapSupabaseError()`.
 
 ---
+
 Phases: 4/8 | Findings: 2 total | Blockers: 0 | False positives filtered: 0

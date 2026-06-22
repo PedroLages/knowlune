@@ -12,17 +12,17 @@ The 9 story ACs describe a full Google Drive service layer (folder management, r
 
 ### AC Coverage Table
 
-| AC# | Description | Unit Test | E2E Test | Verdict |
-|-----|-------------|-----------|----------|---------|
-| 1 | Create Knowlune/ folder on first Drive operation, cache folderId in store | None | None | Gap |
-| 2 | Create backups/ subfolder, cache folderId in store | None | None | Gap |
-| 3 | withRetry() exponential backoff (1s, 2s, 4s, 3 retries, jitter) | None | None | Gap |
-| 4 | 401 -> DriveAuthError thrown immediately (no retry) | None | None | Gap |
-| 5 | 403 storageQuotaExceeded -> DriveQuotaError thrown | None | None | Gap |
-| 6 | 403 without quota -> DrivePermissionError thrown | None | None | Gap |
-| 7 | 204 No Content -> return undefined without response.json() | None | None | Gap |
-| 8 | alt=media download -> use response.text() instead of response.json() | None | None | Gap |
-| 9 | Reconnect with different account clears cached folder IDs | None | None | Gap |
+| AC# | Description                                                               | Unit Test | E2E Test | Verdict |
+| --- | ------------------------------------------------------------------------- | --------- | -------- | ------- |
+| 1   | Create Knowlune/ folder on first Drive operation, cache folderId in store | None      | None     | Gap     |
+| 2   | Create backups/ subfolder, cache folderId in store                        | None      | None     | Gap     |
+| 3   | withRetry() exponential backoff (1s, 2s, 4s, 3 retries, jitter)           | None      | None     | Gap     |
+| 4   | 401 -> DriveAuthError thrown immediately (no retry)                       | None      | None     | Gap     |
+| 5   | 403 storageQuotaExceeded -> DriveQuotaError thrown                        | None      | None     | Gap     |
+| 6   | 403 without quota -> DrivePermissionError thrown                          | None      | None     | Gap     |
+| 7   | 204 No Content -> return undefined without response.json()                | None      | None     | Gap     |
+| 8   | alt=media download -> use response.text() instead of response.json()      | None      | None     | Gap     |
+| 9   | Reconnect with different account clears cached folder IDs                 | None      | None     | Gap     |
 
 **Coverage**: 0/9 ACs fully covered | 9 gaps | 0 partial
 
@@ -57,4 +57,5 @@ The 9 story ACs describe a full Google Drive service layer (folder management, r
 3. **No `signOut()`-gated token invalidation**: When `signOut()` is called, the provider_token in the Zustand session is cleared, but there is no test that `getDriveToken()` returns `null` after sign-out. This would naturally happen (session is null, so `getDriveToken` returns null), but an explicit test would guard against regressions.
 
 ---
+
 ACs: 0 covered / 9 total | Findings: 5 total | Blockers: 1 | High: 2 | Medium: 2 | Nits: 1
