@@ -33,6 +33,7 @@ export interface CourseDetailsUpdate {
   difficulty?: Difficulty | null
   tags?: string[]
   authorId?: string | null // null to unlink, string to set, undefined to leave unchanged
+  sourceDriveId?: string // Google Drive folder ID for Drive-imported courses (E77b-S02)
 }
 
 interface CourseImportState {
@@ -325,6 +326,7 @@ export const useCourseImportStore = create<CourseImportState>((set, get) => ({
     if (details.difficulty !== undefined) patch.difficulty = details.difficulty ?? undefined
     if (normalizedTags !== undefined) patch.tags = normalizedTags
     if (details.authorId !== undefined) patch.authorId = details.authorId ?? undefined
+    if (details.sourceDriveId !== undefined) patch.sourceDriveId = details.sourceDriveId
 
     // Optimistic update
     set(state => ({

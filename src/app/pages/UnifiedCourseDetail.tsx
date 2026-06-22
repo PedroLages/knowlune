@@ -16,7 +16,7 @@
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useParams, useNavigate, Link } from 'react-router'
-import { AlertTriangle, ArrowLeft, Laptop, RefreshCw } from 'lucide-react'
+import { AlertTriangle, ArrowLeft, HardDrive, Laptop, RefreshCw } from 'lucide-react'
 import { toast } from 'sonner'
 import { db } from '@/db'
 import { useCourseAdapter } from '@/hooks/useCourseAdapter'
@@ -29,6 +29,7 @@ import { refreshCourseMetadata } from '@/lib/youtubeMetadataRefresh'
 import { revokeObjectUrl } from '@/lib/courseAdapter'
 import { getLastWatchedLesson, getFirstLesson } from '@/lib/progress'
 import { Skeleton } from '@/app/components/ui/skeleton'
+import { Button } from '@/app/components/ui/button'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -45,7 +46,9 @@ import { CourseHeader, type CtaVariant } from '@/app/components/course/CourseHea
 import { CourseProgress } from '@/app/components/course/CourseProgress'
 import { AISummaryPanel } from '@/app/components/course/AISummaryPanel'
 import { LessonList } from '@/app/components/course/LessonList'
+import { DriveFolderBrowser } from '@/app/components/import/DriveFolderBrowser'
 import type { ImportedVideo, ImportedPdf, VideoProgress, YouTubeCourseChapter } from '@/data/types'
+import type { DriveFolderBrowserResult } from '@/lib/googleDriveFileService'
 
 export function UnifiedCourseDetail() {
   const { courseId } = useParams<{ courseId: string }>()
@@ -89,6 +92,8 @@ export function UnifiedCourseDetail() {
   const [editDialogOpen, setEditDialogOpen] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [isRefreshing, setIsRefreshing] = useState(false)
+  const [reconnectOpen, setReconnectOpen] = useState(false)
+  const [isReconnecting, setIsReconnecting] = useState(false)
 
   // Load content from Dexie
   useEffect(() => {
@@ -264,6 +269,52 @@ export function UnifiedCourseDetail() {
     }
   }, [course, isOnline, isRefreshing, courseId])
 
+  /** Handle Drive folder reconnection: map new file IDs to existing lessons by filename. */
+  const handleReconnectFolder = useCallback(
+    async (result: DriveFolderBrowserResult) => {
+      if (!courseId || isReconnecting) return
+      setIsReconnecting(true)
+
+      try {
+        // Update the course's sourceDriveId
+        await updateCourseDetails(courseId, { sourceDriveId: result.folderId })
+
+        // Map new Drive file IDs to existing videos by filename
+        let matchedCount = 0
+        const updatedVideos = await db.importedVideos.where('courseId').equals(courseId).toArray()
+
+        for (const video of updatedVideos) {
+          const matchingFile = result.files.find(
+            f => f.name.toLowerCase() === video.filename.toLowerCase()
+          )
+          if (matchingFile) {
+            await db.importedVideos.update(video.id, {
+              driveFileRef: {
+                fileId: matchingFile.id,
+                driveSource: 'google' as const,
+              },
+            })
+            matchedCount++
+          }
+        }
+
+        // Refresh the videos state
+        setVideos(await db.importedVideos.where('courseId').equals(courseId).sortBy('order'))
+
+        toast.success(
+          `Drive folder reconnected. ${matchedCount} of ${result.files.length} files matched.`
+        )
+      } catch (err) {
+        console.error('[UnifiedCourseDetail] Reconnect failed:', err)
+        toast.error('Failed to reconnect Drive folder')
+      } finally {
+        setIsReconnecting(false)
+        setReconnectOpen(false)
+      }
+    },
+    [courseId, isReconnecting, updateCourseDetails]
+  )
+
   const storeCourse = importedCourses.find(c => c.id === courseId)
 
   const showLocalFilesUnavailable =
@@ -349,6 +400,33 @@ export function UnifiedCourseDetail() {
         </div>
       )}
 
+      {storeCourse?.source === 'drive' && (
+        <div
+          data-testid="drive-source-banner"
+          className="flex items-start gap-3 rounded-xl border border-border bg-muted p-4 text-sm text-muted-foreground mb-4"
+        >
+          <HardDrive className="size-5 shrink-0 mt-0.5 text-brand" aria-hidden="true" />
+          <div className="flex-1 min-w-0">
+            <p className="font-medium text-foreground">Google Drive Course</p>
+            <p className="text-xs mt-0.5">
+              This course was imported from Google Drive. If files have been moved or deleted, you
+              can reconnect to a new Drive folder.
+            </p>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setReconnectOpen(true)}
+            disabled={isReconnecting}
+            className="shrink-0 gap-2 min-h-[44px]"
+            aria-label="Reconnect Drive folder"
+          >
+            <HardDrive className="size-4" aria-hidden="true" />
+            {isReconnecting ? 'Reconnecting...' : 'Reconnect'}
+          </Button>
+        </div>
+      )}
+
       {loadError && (
         <div
           data-testid="course-load-error"
@@ -412,6 +490,12 @@ export function UnifiedCourseDetail() {
           allTags={allTags}
         />
       )}
+
+      <DriveFolderBrowser
+        open={reconnectOpen}
+        onOpenChange={setReconnectOpen}
+        onFolderSelected={handleReconnectFolder}
+      />
     </div>
   )
 }

@@ -31,6 +31,7 @@ import {
 import { AIConfigurationSettings } from '@/app/components/figma/AIConfigurationSettings'
 import { YouTubeConfigurationSettings } from '@/app/components/figma/YouTubeConfigurationSettings'
 import { WhisperSettings } from '@/app/components/settings/WhisperSettings'
+import { DriveConfigurationSettings } from '@/app/components/settings/DriveConfigurationSettings'
 import { DataRetentionSettings } from '@/app/components/settings/DataRetentionSettings'
 import { StorageManagement } from '@/app/components/settings/StorageManagement'
 import { DataAndBackupPanel } from '@/app/components/settings/DataAndBackupPanel'
@@ -75,6 +76,9 @@ export function IntegrationsDataSection() {
 
       {/* Speech-to-Text Configuration */}
       <WhisperSettings />
+
+      {/* Google Drive Configuration */}
+      <DriveConfigurationSettings />
 
       {/* Data Management */}
       <Card id="data-management">
