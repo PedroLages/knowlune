@@ -203,6 +203,8 @@ class WorkerCoordinator {
 
   /**
    * Spawn worker based on task type.
+   * Implements module-worker fallback for Safari: try {type: 'module'} first,
+   * on SyntaxError/TypeError retry without type option.
    */
   private spawnWorker(type: WorkerRequestType): Worker {
     let workerUrl: string
@@ -224,30 +226,66 @@ class WorkerCoordinator {
         throw new Error(`Unknown worker type: ${type}`)
     }
 
+    const url = new URL(workerUrl, import.meta.url)
+
+    // Safari does not support {type: 'module'} for workers. We attempt the
+    // module variant first (Vite's default), catch the SyntaxError/TypeError,
+    // and retry without the type option. Vite also emits a non-module build
+    // via ?worker import, so the fallback URL works in modern Safari.
     try {
-      const worker = new Worker(new URL(workerUrl, import.meta.url), {
-        type: 'module',
-      })
-
-      // Persistent message router — single listener routes all responses by requestId
-      worker.addEventListener('message', (event: MessageEvent) => {
-        this.routeWorkerMessage(event)
-      })
-
-      // Global error handler — event.error can be null in cross-origin/security errors
-      worker.addEventListener('error', event => {
-        console.error('[Coordinator] Worker error:', event)
-        this.handleWorkerError(
-          type,
-          event.error ?? new Error(event.message ?? 'Unknown worker error')
-        )
-      })
-
+      const worker = this.trySpawnWorker(url, type)
       return worker
     } catch (error) {
       console.error('[Coordinator] Failed to spawn worker:', error)
       throw new Error('Web Workers not supported in this browser')
     }
+  }
+
+  /**
+   * Attempt to spawn a worker with module-type. Falls back to classic worker
+   * on SyntaxError/TypeError (Safari compatibility).
+   */
+  private trySpawnWorker(url: URL, type: WorkerRequestType): Worker {
+    let worker: Worker
+    try {
+      // Attempt module worker first (standard Vite output)
+      worker = new Worker(url, { type: 'module' })
+    } catch (firstError) {
+      // SyntaxError or TypeError indicates the browser doesn't support
+      // module workers (Safari < 16.4, older browsers). Retry as classic worker.
+      if (firstError instanceof SyntaxError || firstError instanceof TypeError) {
+        console.warn(
+          '[Coordinator] Module worker not supported, falling back to classic worker:',
+          firstError
+        )
+        try {
+          worker = new Worker(url)
+        } catch (secondError) {
+          // Fallback also failed — throw the original error for clearer diagnostics
+          console.error('[Coordinator] Classic worker fallback also failed:', secondError)
+          throw secondError
+        }
+      } else {
+        // Some other error, rethrow
+        throw firstError
+      }
+    }
+
+    // Persistent message router — single listener routes all responses by requestId
+    worker.addEventListener('message', (event: MessageEvent) => {
+      this.routeWorkerMessage(event)
+    })
+
+    // Global error handler — event.error can be null in cross-origin/security errors
+    worker.addEventListener('error', event => {
+      console.error('[Coordinator] Worker error:', event)
+      this.handleWorkerError(
+        type,
+        event.error ?? new Error(event.message ?? 'Unknown worker error')
+      )
+    })
+
+    return worker
   }
 
   /**
@@ -385,15 +423,18 @@ class WorkerCoordinator {
 
     // Dispatch custom event so other parts of the app can respond
     // (e.g., switch to cloud fallback, show telemetry)
+    // Structured payload per R5: requestId, provider, error class, stack
     if (typeof window !== 'undefined') {
       window.dispatchEvent(
         new CustomEvent('worker-crash', {
           detail: {
             workerId,
-            error: error?.message ?? 'Unknown error',
+            requestId: pendingRequestIds[0] ?? 'unknown',
             provider: type === 'embed' ? 'local' : undefined,
+            error: error?.name ?? 'Error',
+            errorMessage: error?.message ?? 'Unknown error',
+            stack: error?.stack ?? undefined,
             cacheUnavailable: !cacheAvailable,
-            requestId: pendingRequestIds.join(','),
           },
         })
       )

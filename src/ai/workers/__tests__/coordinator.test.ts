@@ -311,7 +311,9 @@ describe('WorkerCoordinator', () => {
       cacheUnavailable: false,
       provider: 'local',
     })
-    expect(eventArg.detail.error).toBe('Out of memory')
+    // error is now error.name (class name), errorMessage is the human-readable message
+    expect(eventArg.detail.error).toBe('Error')
+    expect(eventArg.detail.errorMessage).toBe('Out of memory')
 
     window.removeEventListener('worker-crash', crashEventSpy)
 

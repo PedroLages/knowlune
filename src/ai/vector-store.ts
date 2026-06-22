@@ -7,6 +7,46 @@ import { useAuthStore } from '@/stores/useAuthStore'
 import { syncEngine } from '@/lib/sync/syncEngine'
 import type { Embedding } from '@/data/types'
 
+// ============================================================================
+// Crash Deduplication Guard
+// ============================================================================
+//
+// Repeated worker crashes with the same requestId should not double-dispatch
+// events. After a crash, a new worker is spawned; if it crashes again with
+// the same underlying cause, the requestId may repeat within a short window.
+// This guard ensures only the first crash per requestId is reported.
+//
+// Outside callers (e.g., workerCrashTelemetry) should use this guard before
+// processing a worker-crash event.
+
+const crashSeen = new Map<string, number>()
+const CRASH_DEDUP_WINDOW_MS = 5_000
+
+/**
+ * Check whether a worker crash event should be processed or skipped as a
+ * duplicate. Returns true if this crash requestId has been seen within the
+ * dedup window.
+ */
+export function isDuplicateCrash(requestId: string): boolean {
+  const lastSeen = crashSeen.get(requestId)
+  const now = Date.now()
+  if (lastSeen && now - lastSeen < CRASH_DEDUP_WINDOW_MS) {
+    return true
+  }
+  crashSeen.set(requestId, now)
+  return false
+}
+
+/**
+ * Clear crash dedup tracking (for testing).
+ */
+export function resetCrashDedupCache(): void {
+  crashSeen.clear()
+}
+
+// ============================================================================
+// Vector Store Persistence
+
 export class VectorStorePersistence {
   private store: BruteForceVectorStore
 
