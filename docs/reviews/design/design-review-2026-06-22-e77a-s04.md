@@ -45,6 +45,7 @@ The E77A-S04 story implements backup metadata tracking (`BackupMeta` interface) 
 - **Root cause**: The component manages its own `getSettings()` call instead of consuming the `SettingsPageContext` (which has live `settings` state) or listening for `settingsUpdated` events.
 
 - **Suggestion**: Add a `useEffect` that registers a `settingsUpdated` listener to re-read settings:
+
   ```typescript
   const [, forceUpdate] = useState(0)
   useEffect(() => {
@@ -53,6 +54,7 @@ The E77A-S04 story implements backup metadata tracking (`BackupMeta` interface) 
     return () => window.removeEventListener('settingsUpdated', handler)
   }, [])
   ```
+
   Alternatively, refactor to use the `useSettingsPage()` context which already provides live settings state.
 
 - **autofix_class**: `gated_auto` — the fix is mechanical (add useEffect + listener) but affects the component's render cycle and requires user approval.
@@ -68,6 +70,7 @@ The E77A-S04 story implements backup metadata tracking (`BackupMeta` interface) 
 - **Impact**: Blind and low-vision users will not be informed when their backup status changes from "No backup yet" to "Last backup: 5 minutes ago (Drive)" after a successful upload. This is a WCAG 4.1.3 (Status Messages) violation.
 
 - **Suggestion**: Add `aria-live="polite"` to the outer text container (`<div className="flex-1 min-w-0">` at line 205) so dynamic content changes are announced:
+
   ```typescript
   <div className="flex-1 min-w-0" aria-live="polite">
   ```
@@ -85,10 +88,12 @@ The E77A-S04 story implements backup metadata tracking (`BackupMeta` interface) 
 - **Impact**: The backup status banner is disconnected from the broader settings state, making it unreliable as a source of truth for backup timelines.
 
 - **Suggestion**: Replace the direct `getSettings()` call with context consumption:
+
   ```typescript
   const { settings } = useSettingsPage()
   const display = getLastBackupDisplay(settings)
   ```
+
   Note: this may require adding `settings` to the `IntegrationsDataSection` page props or making the context available deeper. The simpler event-listener approach from B1 may be preferred for minimal refactoring.
 
 - **autofix_class**: `manual` — requires architectural decision about state management approach.
@@ -104,6 +109,7 @@ The E77A-S04 story implements backup metadata tracking (`BackupMeta` interface) 
 - **Impact**: Low — this would require corrupted localStorage to trigger. However, adding a guard ensures robustness against edge cases.
 
 - **Suggestion**: Add a minimum timestamp check in `getLastBackupDisplay`:
+
   ```typescript
   // Treat timestamps before 2020 as "no backup" (backup feature didn't exist before 2025)
   const MIN_VALID_BACKUP_TS = 1577836800000 // 2020-01-01
@@ -121,6 +127,7 @@ The E77A-S04 story implements backup metadata tracking (`BackupMeta` interface) 
 - **Impact**: Future developers need to read the full implementation to understand the return states.
 
 - **Suggestion**: Add a JSDoc:
+
   ```typescript
   /**
    * Derives the backup status display string from settings.
@@ -159,19 +166,19 @@ The E77A-S04 story implements backup metadata tracking (`BackupMeta` interface) 
 
 ## Accessibility Checklist
 
-| Check | Status | Notes |
-|-------|--------|-------|
-| Text contrast ≥4.5:1 | Pass | All text uses theme tokens with verified contrast ratios. `text-muted-foreground` (#656870 on #faf5ee = ~3.9:1) is a pre-existing global pattern for secondary text. |
-| Keyboard navigation | Pass | All interactive elements are `<button>` elements with proper tab order. No non-interactive elements with onClick handlers. |
-| Focus indicators visible | Pass | Global `focus-visible` styles apply (2px solid `--focus-ring`). |
-| Heading hierarchy | Pass | The "Google Drive Backup" heading is `<h3>` under "Data Management" `<h2>`, which is under "Integrations & Data" `<h1>`. |
-| ARIA labels on icon buttons | Pass | Dynamic `aria-label` on the "Send to Drive" button. `aria-hidden="true"` on decorative icons. |
-| Semantic HTML | Pass | Proper `<button>` elements (no div-based click handlers), `<h3>` headings. |
-| ARIA live regions | **Fail** | Backup status text does not use `aria-live="polite"` for dynamic content. (H1) |
-| prefers-reduced-motion | Pass | Animations use `tw-animate-css` which respects reduced motion preferences. Global `index.css` has comprehensive reduced-motion rules. |
-| `aria-describedby` on form fields | N/A | No form fields in this component. |
-| `aria-expanded` on collapsible regions | N/A | No collapsible regions. |
-| `aria-invalid` on form errors | N/A | No form fields. |
+| Check                                  | Status   | Notes                                                                                                                                                                |
+| -------------------------------------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Text contrast ≥4.5:1                   | Pass     | All text uses theme tokens with verified contrast ratios. `text-muted-foreground` (#656870 on #faf5ee = ~3.9:1) is a pre-existing global pattern for secondary text. |
+| Keyboard navigation                    | Pass     | All interactive elements are `<button>` elements with proper tab order. No non-interactive elements with onClick handlers.                                           |
+| Focus indicators visible               | Pass     | Global `focus-visible` styles apply (2px solid `--focus-ring`).                                                                                                      |
+| Heading hierarchy                      | Pass     | The "Google Drive Backup" heading is `<h3>` under "Data Management" `<h2>`, which is under "Integrations & Data" `<h1>`.                                             |
+| ARIA labels on icon buttons            | Pass     | Dynamic `aria-label` on the "Send to Drive" button. `aria-hidden="true"` on decorative icons.                                                                        |
+| Semantic HTML                          | Pass     | Proper `<button>` elements (no div-based click handlers), `<h3>` headings.                                                                                           |
+| ARIA live regions                      | **Fail** | Backup status text does not use `aria-live="polite"` for dynamic content. (H1)                                                                                       |
+| prefers-reduced-motion                 | Pass     | Animations use `tw-animate-css` which respects reduced motion preferences. Global `index.css` has comprehensive reduced-motion rules.                                |
+| `aria-describedby` on form fields      | N/A      | No form fields in this component.                                                                                                                                    |
+| `aria-expanded` on collapsible regions | N/A      | No collapsible regions.                                                                                                                                              |
+| `aria-invalid` on form errors          | N/A      | No form fields.                                                                                                                                                      |
 
 ## Responsive Design Verification
 
@@ -182,16 +189,16 @@ The E77A-S04 story implements backup metadata tracking (`BackupMeta` interface) 
 
 ## Design Token Usage
 
-| Token | Location | Status |
-|-------|----------|--------|
-| `bg-surface-elevated` | Status banner card (line 179), Drive panel (line 237) | Correct |
-| `bg-brand-soft` | Status icon container (line 192), Drive icon container (line 241) | Correct |
-| `text-brand` | Status icon (line 201), Drive icon (line 241) | Correct |
-| `text-destructive` | Stale status heading (line 219) | Correct |
-| `text-warning` | No-backup heading (line 208) | Correct |
-| `text-muted-foreground` | Secondary text (lines 212, 222, 231, 246) | Correct (pre-existing pattern) |
-| `border-border` | Card borders (lines 179, 237) | Correct |
-| `variant="brand"` | Drive upload button (line 251) | Correct |
+| Token                   | Location                                                          | Status                         |
+| ----------------------- | ----------------------------------------------------------------- | ------------------------------ |
+| `bg-surface-elevated`   | Status banner card (line 179), Drive panel (line 237)             | Correct                        |
+| `bg-brand-soft`         | Status icon container (line 192), Drive icon container (line 241) | Correct                        |
+| `text-brand`            | Status icon (line 201), Drive icon (line 241)                     | Correct                        |
+| `text-destructive`      | Stale status heading (line 219)                                   | Correct                        |
+| `text-warning`          | No-backup heading (line 208)                                      | Correct                        |
+| `text-muted-foreground` | Secondary text (lines 212, 222, 231, 246)                         | Correct (pre-existing pattern) |
+| `border-border`         | Card borders (lines 179, 237)                                     | Correct                        |
+| `variant="brand"`       | Drive upload button (line 251)                                    | Correct                        |
 
 No hardcoded colors or pixel values found. All spacing follows 8px grid (p-4 = 16px, gap-3 = 12px, mt-1 = 4px).
 

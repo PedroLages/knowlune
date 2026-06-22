@@ -39,5 +39,6 @@
 This is a clean, well-structured story. The code adds `BackupMeta` as an optional additive field to `AppSettings`, wires `updateBackupMeta()` into both the JSON export handler (`handleExportJson` → `'local'`) and the Drive upload handler (`handleSendToDrive` → `'drive'`), and renders the backup status banner with proper handling of all states (never, fresh, stale). The `succeeded`-flag pattern in the `finally` block correctly avoids the React 19 closure staleness bug. Tests cover all display variants and the Drive upload error paths. Only one spec-vs-implementation discrepancy found.
 
 ---
+
 Issues found: 1 | Blockers: 0 | High: 0 | Medium: 1 | Nits: 0
 Confidence: avg 90 | >= 90: 1 | 70-89: 0 | < 70: 0
