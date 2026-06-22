@@ -38,6 +38,7 @@ import {
   Settings,
   AlertTriangle,
   FileJson,
+  ExternalLink,
 } from 'lucide-react'
 import { scanCourseFolder, scanFromDroppedFiles, persistScannedCourse } from '@/lib/courseImport'
 import type { ScannedCourse, ScannedImage } from '@/lib/courseImport'
@@ -49,6 +50,9 @@ import { useLearningPathStore } from '@/stores/useLearningPathStore'
 import { isPathPlacementAvailable } from '@/ai/learningPath/suggestPlacement'
 import { toast } from 'sonner'
 import { useImportProgressStore } from '@/stores/useImportProgressStore'
+import { PremiumGate } from '@/app/components/PremiumGate'
+import { DriveFolderBrowser } from '@/app/components/import/DriveFolderBrowser'
+import type { DriveFolderBrowserResult } from '@/lib/googleDriveFileService'
 
 type WizardStep = 'select' | 'details' | 'path'
 
@@ -162,6 +166,7 @@ export function ImportWizardDialog({
   const [selectedCategory, setSelectedCategory] = useState<string>('')
   const tagInputRef = useRef<HTMLInputElement>(null)
   const manifestDataRef = useRef<CourseManifest | undefined>(undefined)
+  const [driveFolderBrowserOpen, setDriveFolderBrowserOpen] = useState(false)
 
   // Path placement state (E26-S04)
   const [selectedPathId, setSelectedPathId] = useState<string | null>(null)
@@ -301,6 +306,7 @@ export function ImportWizardDialog({
     setSelectedDifficulty(undefined)
     setSelectedCategory('')
     manifestDataRef.current = undefined
+    setDriveFolderBrowserOpen(false)
     setSelectedPathId(null)
     setSelectedPosition(1)
     setPathChoice('accept')
@@ -479,6 +485,65 @@ export function ImportWizardDialog({
       setIsScanning(false)
     }
   }, [])
+
+  /** Handle a folder selected from the Google Drive folder browser. */
+  const handleDriveFolderSelected = useCallback(
+    (result: DriveFolderBrowserResult) => {
+      // Map Drive files to a ScannedCourse structure
+      const videos = result.files.filter(f => f.mimeType.startsWith('video/'))
+      const pdfs = result.files.filter(f => f.mimeType === 'application/pdf')
+      const epubs = result.files.filter(f => f.mimeType === 'application/epub+zip')
+      const dummyHandle = null as unknown as FileSystemFileHandle
+      const dummyDirHandle = null as unknown as FileSystemDirectoryHandle
+
+      // Create a scanned course from Drive folder data
+      const scanned: ScannedCourse = {
+        id: crypto.randomUUID(),
+        name: result.folderName,
+        scannedAt: new Date().toISOString(),
+        directoryHandle: dummyDirHandle,
+        videos: videos.map((f, i) => ({
+          id: crypto.randomUUID(),
+          filename: f.name,
+          path: `drive://${f.id}`,
+          duration: 0,
+          format: 'mp4' as const,
+          order: i + 1,
+          fileHandle: dummyHandle,
+          fileSize: f.size ?? 0,
+          width: 0,
+          height: 0,
+        })),
+        pdfs: [
+          ...pdfs.map(f => ({
+            id: crypto.randomUUID(),
+            filename: f.name,
+            path: `drive://${f.id}`,
+            pageCount: 0,
+            fileHandle: dummyHandle,
+          })),
+          ...epubs.map(f => ({
+            id: crypto.randomUUID(),
+            filename: f.name,
+            path: `drive://${f.id}`,
+            pageCount: 0,
+            fileHandle: dummyHandle,
+          })),
+        ],
+        images: [],
+        manifestData: undefined,
+      }
+
+      setScannedCourse(scanned)
+      setCourseName(result.folderName)
+      setDescription('')
+      setTags([])
+      setAiTagsApplied(false)
+      setAiDescriptionApplied(false)
+      setStep('details')
+    },
+    []
+  )
 
   const handleGoToPathStep = useCallback(() => {
     setStep('path')
@@ -737,7 +802,28 @@ export function ImportWizardDialog({
             </Button>
             {isScanning && <ScanProgressIndicator />}
             {!isScanning && (
-              <ImportDropZone onFilesDropped={handleFilesDropped} disabled={isScanning} />
+              <>
+                <div className="relative w-full">
+                  <div className="absolute inset-0 flex items-center">
+                    <span className="w-full border-t border-border" />
+                  </div>
+                  <div className="relative flex justify-center text-xs uppercase">
+                    <span className="bg-background px-2 text-muted-foreground">or</span>
+                  </div>
+                </div>
+                <PremiumGate featureLabel="Google Drive import">
+                  <Button
+                    variant="outline"
+                    onClick={() => setDriveFolderBrowserOpen(true)}
+                    data-testid="wizard-drive-import-btn"
+                    className="rounded-xl w-full"
+                  >
+                    <ExternalLink className="size-4 mr-2" aria-hidden="true" />
+                    Import from Google Drive
+                  </Button>
+                </PremiumGate>
+                <ImportDropZone onFilesDropped={handleFilesDropped} disabled={isScanning} />
+              </>
             )}
           </div>
         )}
@@ -1359,6 +1445,13 @@ export function ImportWizardDialog({
           </DialogFooter>
         )}
       </DialogContent>
+
+      {/* Google Drive folder browser dialog — separate Dialog, rendered alongside */}
+      <DriveFolderBrowser
+        open={driveFolderBrowserOpen}
+        onOpenChange={setDriveFolderBrowserOpen}
+        onFolderSelected={handleDriveFolderSelected}
+      />
     </Dialog>
   )
 }
