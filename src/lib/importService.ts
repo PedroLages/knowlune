@@ -261,12 +261,12 @@ function getRestorableTables(): string[] {
 
 /**
  * Check if a table name exists in the current Dexie schema.
- * Dexie.table() throws for unknown tables, so we use try/catch.
+ * Uses db.tables (which returns only schema-registered tables) rather than
+ * db.table() (which returns a Table object for any string in Dexie 4).
  */
 function tableExistsInDexie(tableName: string): boolean {
   try {
-    const t = db.table(tableName)
-    return !!t && t.name === tableName
+    return db.tables.some(t => t.name === tableName)
   } catch {
     return false
   }

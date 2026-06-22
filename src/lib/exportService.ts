@@ -30,7 +30,6 @@ import type {
 import { sessionsToCSV, progressToCSV, deriveStreakDays, streakDaysToCSV } from './csvSerializer'
 import { sanitizeFilename, extractTextFromHtml, htmlToMarkdown } from './noteExport'
 import { yieldToUI } from './uiUtils'
-import { getSettings } from './settings'
 
 // --- Export Schema ---
 
@@ -366,7 +365,7 @@ export async function collectBackupPayload(): Promise<BackupPayload> {
     }
   }
 
-  const settings = getSettings() as unknown as Record<string, unknown>
+  const settings = getLocalStorageData()
 
   return {
     schemaVersion: CHECKPOINT_VERSION,

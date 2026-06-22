@@ -17,6 +17,7 @@ vi.mock('@/db/schema', () => ({
         await fn()
       }),
     table: mockTable,
+    tables: MOCK_SYNCABLE_TABLES.map(name => ({ name })),
     importedCourses: { clear: mockClear },
     importedVideos: { clear: mockClear },
     importedPdfs: { clear: mockClear },

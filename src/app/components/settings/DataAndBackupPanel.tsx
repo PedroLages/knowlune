@@ -15,6 +15,7 @@
 
 import { useCallback, useRef, useState } from 'react'
 import { Download, HardDrive, Upload } from 'lucide-react'
+import { toast } from 'sonner'
 
 import { Button } from '@/app/components/ui/button'
 import { Card, CardContent, CardHeader } from '@/app/components/ui/card'
@@ -26,7 +27,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/app/components/ui/tooltip'
-import { toastSuccess, toastError } from '@/lib/toastHelpers'
+import { toastError } from '@/lib/toastHelpers'
 import { CHECKPOINT_VERSION } from '@/db/checkpoint'
 
 import { type BackupPayload, exportAllAsBlob } from '@/lib/exportService'
@@ -97,9 +98,9 @@ export function DataAndBackupPanel() {
       localStorage.setItem('knowlune-last-backup-at', now.toISOString())
       setLastBackupAt(now)
 
-      toastSuccess.exported('Backup downloaded')
+      toast.success('Backup downloaded')
     } catch (error) {
-      toastError.saveFailed(error instanceof Error ? error.message : 'Failed to create backup')
+      toast.error('Failed to create backup. Please try again.')
     } finally {
       setIsExporting(false)
     }
@@ -206,7 +207,7 @@ export function DataAndBackupPanel() {
 
         // Step 3: Refresh Zustand stores by reloading the page
         // This is the safest approach — all stores re-read from Dexie on mount.
-        toastSuccess.exported(
+        toast.success(
           `Restored ${summary.totalRecords.toLocaleString()} records across ` +
             `${Object.keys(summary.counts).length} tables`
         )
@@ -220,7 +221,7 @@ export function DataAndBackupPanel() {
           window.location.reload()
         }, 1500)
       } catch (error) {
-        toastError.importFailed(error instanceof Error ? error.message : 'Restore failed')
+        toast.error('Restore failed. Please try again.')
       } finally {
         setIsRestoring(false)
         setBackupPreview(null)

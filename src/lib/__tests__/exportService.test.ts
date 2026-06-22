@@ -724,10 +724,12 @@ describe('exportService', () => {
 
       const result = await collectBackupPayload()
 
-      // getSettings() returns parsed settings object (not raw localStorage entries)
-      expect(result.settings).toHaveProperty('displayName')
+      // getLocalStorageData() returns raw localStorage entries (key-value pairs)
+      expect(result.settings).toHaveProperty('app-settings')
       // Should reflect the written values
-      expect(result.settings.displayName).toBe('Test')
+      const appSettings = result.settings['app-settings'] as Record<string, unknown>
+      expect(appSettings.displayName).toBe('Test')
+      expect(appSettings.theme).toBe('dark')
     })
 
     it('returns empty arrays for tables where db.table().toArray() throws', async () => {
