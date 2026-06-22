@@ -925,7 +925,7 @@ development_status:
   # Depends on: E77A-S02 (token helper), E35 (Premium), E94 (sync for file refs)
   # ──────────────────────────────────────────────────
   epic-77b: backlog
-  77b-1-drive-auth-readonly-scope-and-folder-browser: review  # drive.readonly scope + Drive folder picker in import wizard (premium gated)
+  77b-1-drive-auth-readonly-scope-and-folder-browser: done  # drive.readonly scope + Drive folder picker in import wizard (premium gated)
   77b-2-drive-course-import-metadata-and-schema: backlog  # store Drive file refs in IndexedDB; Dexie v59 migration
   77b-3-drive-file-streaming-and-opfs-cache: backlog  # stream from Drive + transparent OPFS cache on first play
   77b-4-drive-source-management-ui-and-sync-validation: backlog  # source badge, reconnect flow, E94 sync round-trip test
