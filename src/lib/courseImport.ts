@@ -1153,3 +1153,95 @@ export async function importCourseFromFolder(): Promise<ImportedCourse> {
   const scanned = await scanCourseFolder()
   return persistScannedCourse(scanned)
 }
+
+// --- Drive Import (E77b-S02) ---
+
+/**
+ * Describes a single file from a Google Drive folder to be imported as a course lesson.
+ * This is the minimal surface the caller must provide — typically sourced from
+ * the Google Drive API response.
+ */
+export interface DriveFileDescription {
+  /** Google Drive file ID. */
+  fileId: string
+  /** Display name of the file (used for lesson title and filename fallback). */
+  name: string
+  /** MIME type of the file (e.g., 'video/mp4'). */
+  mimeType: string
+}
+
+/**
+ * Imports a course directly from Google Drive without downloading any files.
+ *
+ * Creates a Course record with `sourceDriveId` set to the Drive folder ID, and
+ * Lesson (ImportedVideo) records with per-file `driveFileRef` entries pointing
+ * to the corresponding Drive file IDs — no file download at import time.
+ *
+ * Drive-sourced courses are first-class courses sharing the same data model and
+ * UX as local imports. Files are streamed on-demand when the user plays a lesson.
+ *
+ * @param folderId - The Google Drive folder ID
+ * @param folderName - Display name for the course (typically the folder name)
+ * @param files - Array of Drive file descriptions to import as lessons
+ * @returns The persisted ImportedCourse record
+ */
+export async function importCourseFromDrive(
+  folderId: string,
+  folderName: string,
+  files: DriveFileDescription[]
+): Promise<ImportedCourse> {
+  const courseId = crypto.randomUUID()
+  const now = new Date().toISOString()
+
+  // Validate that all fileIds match the expected Drive format
+  const FILE_ID_RE = /^[a-zA-Z0-9_-]+$/
+  for (const f of files) {
+    if (!FILE_ID_RE.test(f.fileId)) {
+      throw new Error(`Invalid Drive fileId format: "${f.fileId}"`)
+    }
+  }
+
+  // Only video files become lessons; non-video files (PDFs, images, audio, etc.)
+  // are silently skipped. PDF records are not persisted here — that is deferred
+  // to a follow-up story (E77B-S03 or later) which will also add driveFileRef to
+  // the ImportedPdf type. Until then, pdfCount is zeroed to avoid implying
+  // records exist that were never stored.
+  const videoFiles = files.filter(f => f.mimeType.startsWith('video/'))
+
+  const videos: ImportedVideo[] = videoFiles.map((f, index) => ({
+    id: crypto.randomUUID(),
+    courseId,
+    filename: f.name,
+    path: '', // No local path for Drive files
+    duration: 0, // Unknown at import time (no download)
+    format: 'mp4' as const, // Conservative default; refined on first play
+    order: index + 1,
+    fileHandle: null as unknown as FileSystemFileHandle, // No local handle
+    fileSize: undefined,
+    width: undefined,
+    height: undefined,
+    driveFileRef: { fileId: f.fileId, driveSource: 'google' },
+  }))
+
+  const course: ImportedCourse = {
+    id: courseId,
+    name: folderName,
+    importedAt: now,
+    category: '',
+    tags: [],
+    status: 'not-started',
+    videoCount: videos.length,
+    pdfCount: 0, // PDF records not persisted yet (deferred to E77B-S03+)
+    directoryHandle: null as unknown as FileSystemDirectoryHandle,
+    sourceDriveId: folderId,
+    source: 'drive',
+  }
+
+  // Persist course + videos using syncableWrite for sync queue entries
+  await syncableWrite('importedCourses', 'add', course as unknown as SyncableRecord)
+  for (const video of videos) {
+    await syncableWrite('importedVideos', 'add', video as unknown as SyncableRecord)
+  }
+
+  return course
+}

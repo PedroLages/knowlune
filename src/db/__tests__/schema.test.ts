@@ -72,6 +72,7 @@ describe('ElearningDB schema', () => {
       'courseEmbeddings',
       'courseReminders',
       'courseThumbnails',
+      'downloads',
       'embeddings',
       'entitlements',
       'flashcards',
@@ -91,6 +92,7 @@ describe('ElearningDB schema', () => {
       'quizzes',
       'readingQueue',
       'readingStreakCache',
+      'reorderHistory',
       'reviewRecords',
       'screenshots',
       'searchFrecency',
@@ -102,6 +104,7 @@ describe('ElearningDB schema', () => {
       'transcriptEmbeddings',
       'userConsents',
       'videoCaptions',
+      'videoStoryboards',
       'vocabularyItems',
       'youtubeChapters',
       'youtubeTranscripts',
@@ -109,8 +112,8 @@ describe('ElearningDB schema', () => {
     ])
   })
 
-  it('should be at version 61 (guest gate)', () => {
-    expect(db.verno).toBe(61)
+  it('should be at version 66 (drive source metadata)', () => {
+    expect(db.verno).toBe(66)
   })
 
   it('should have searchFrecency table with compound primary key [entityType+entityId] (v53)', () => {
