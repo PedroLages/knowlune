@@ -46,6 +46,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
   DialogClose,
 } from '@/app/components/ui/dialog'
 import { Checkbox } from '@/app/components/ui/checkbox'
@@ -879,6 +880,7 @@ export function ImportedCourseCard({
               for screen readers but hide visually. */}
           <DialogHeader className="sr-only">
             <DialogTitle>{course.name} — Preview</DialogTitle>
+            <DialogDescription className="sr-only">Course details and available actions</DialogDescription>
           </DialogHeader>
           <div className="relative aspect-video w-full rounded-2xl overflow-hidden bg-black shadow-2xl">
             {isLoading && <Skeleton className="absolute inset-0 rounded-2xl" />}
