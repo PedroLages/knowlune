@@ -515,6 +515,7 @@ class WorkerCoordinator {
     this.pendingRequests.forEach(pending => {
       clearTimeout(pending.timeout)
       pending.reject(new Error('Tab hidden — retry when visible'))
+      this.decrementActiveRequests(pending.workerId)
     })
     this.pendingRequests.clear()
   }

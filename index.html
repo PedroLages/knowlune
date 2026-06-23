@@ -13,6 +13,7 @@
 
     <!-- E51-S02: Synchronously apply .reduce-motion before first paint to prevent flash of animations -->
     <script src="/reduce-motion-init.js"></script>
+    <!-- The hash in script-src is for a dynamically-generated inline script (likely framer-motion runtime) on the Learning Track Detail page. If the library version changes, verify the hash still matches. -->
     <meta http-equiv="Content-Security-Policy" content="
         default-src 'self';
         manifest-src 'self';
@@ -30,6 +31,7 @@
         upgrade-insecure-requests;
         block-all-mixed-content;
       ">
+    <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="mobile-web-app-capable" content="yes">
     <link rel="apple-touch-startup-image" href="public/splash/apple-splash-2048-2732.jpg" media="(device-width: 1024px) and (device-height: 1366px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)">
     <link rel="apple-touch-startup-image" href="public/splash/apple-splash-2732-2048.jpg" media="(device-width: 1024px) and (device-height: 1366px) and (-webkit-device-pixel-ratio: 2) and (orientation: landscape)">

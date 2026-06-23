@@ -160,8 +160,8 @@ describe('WorkerCoordinator', () => {
     expect(coordinator.getStatus().activeWorkers).toBe(1)
   })
 
-  // AC3: Visibility change terminates workers
-  it('AC3: terminates workers when tab becomes hidden', async () => {
+  // AC3: Visibility change rejects pending requests but keeps workers alive
+  it('AC3: keeps workers alive when tab becomes hidden (only rejects pending requests)', async () => {
     await generateEmbeddings(['test'])
     expect(coordinator.getStatus().activeWorkers).toBe(1)
 
@@ -169,10 +169,69 @@ describe('WorkerCoordinator', () => {
     Object.defineProperty(document, 'hidden', { value: true, writable: true, configurable: true })
     document.dispatchEvent(new Event('visibilitychange'))
 
-    expect(coordinator.getStatus().activeWorkers).toBe(0)
+    // Workers stay alive — only pending requests are rejected
+    expect(coordinator.getStatus().activeWorkers).toBe(1)
 
     // Restore
     Object.defineProperty(document, 'hidden', { value: false, writable: true, configurable: true })
+  })
+
+  // AC3: Pending requests are rejected with the correct error when tab is hidden
+  it('AC3: rejects pending requests with "Tab hidden — retry when visible" on visibility change', async () => {
+    class NeverRespondingWorker extends EventTarget {
+      postMessage(): void {}
+      terminate(): void {}
+      addEventListener(type: string, listener: EventListener): void {
+        super.addEventListener(type, listener)
+      }
+      removeEventListener(type: string, listener: EventListener): void {
+        super.removeEventListener(type, listener)
+      }
+    }
+    global.Worker = NeverRespondingWorker as unknown as typeof Worker
+
+    // Start a request that will never complete
+    const taskPromise = coordinator.executeTask('embed', { texts: ['stuck'] })
+
+    // Wait a tick for request to be registered
+    await new Promise(resolve => queueMicrotask(resolve as () => void))
+
+    expect(coordinator.getStatus().pendingRequests).toBe(1)
+    expect(coordinator.getStatus().activeWorkers).toBe(1)
+
+    // Simulate tab hidden — rejects pending requests but keeps worker alive
+    Object.defineProperty(document, 'hidden', { value: true, writable: true, configurable: true })
+    document.dispatchEvent(new Event('visibilitychange'))
+
+    // Worker stays alive, pending requests cleared
+    expect(coordinator.getStatus().activeWorkers).toBe(1)
+    expect(coordinator.getStatus().pendingRequests).toBe(0)
+
+    // Pending promise rejects with the transient error
+    await expect(taskPromise).rejects.toThrow('Tab hidden — retry when visible')
+
+    // Restore
+    Object.defineProperty(document, 'hidden', { value: false, writable: true, configurable: true })
+  })
+
+  // AC3: Workers accept new requests after tab re-show (model stays in memory)
+  it('AC3: workers accept new requests after tab re-show', async () => {
+    await generateEmbeddings(['prep'])
+    expect(coordinator.getStatus().activeWorkers).toBe(1)
+
+    // Simulate tab hidden (no pending requests — just verifies worker stays alive)
+    Object.defineProperty(document, 'hidden', { value: true, writable: true, configurable: true })
+    document.dispatchEvent(new Event('visibilitychange'))
+    expect(coordinator.getStatus().activeWorkers).toBe(1)
+
+    // Restore visibility
+    Object.defineProperty(document, 'hidden', { value: false, writable: true, configurable: true })
+
+    // Should still accept and complete new tasks after re-show
+    const embeddings = await generateEmbeddings(['new request after hide'])
+    expect(embeddings).toHaveLength(1)
+    expect(embeddings[0]).toBeInstanceOf(Float32Array)
+    expect(coordinator.getStatus().activeWorkers).toBe(1)
   })
 
   // AC3: terminate() rejects pending requests (B1 fix)

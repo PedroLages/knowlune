@@ -997,7 +997,10 @@ export async function listSubDirectories(
       dirs.push(entry as FileSystemDirectoryHandle)
     }
   }
-  return dirs.sort((a, b) => a.name.localeCompare(b.name))
+  // Return directories in file-system order — callers that need a specific
+  // order (e.g. BulkImportDialog when a track-manifest.json defines positions)
+  // are responsible for sorting themselves.
+  return dirs
 }
 
 // --- Drag-and-Drop File Import (E33-S06) ---
