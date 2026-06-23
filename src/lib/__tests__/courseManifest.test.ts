@@ -156,7 +156,30 @@ describe('parseCourseManifest', () => {
   })
 
   // Edge cases
-  it('rejects unknown manifest version', () => {
+  it('parses manifest with version 1.1', () => {
+    const result = parseCourseManifest({
+      version: '1.1',
+      course: { name: 'Version 1.1 Course' },
+    })
+
+    expect(result.ok).toBe(true)
+    if (!result.ok) throw new Error('Expected ok result')
+    expect(result.value.version).toBe('1.1')
+    expect(result.value.course.name).toBe('Version 1.1 Course')
+  })
+
+  it('accepts any 1.x version (e.g., 1.9)', () => {
+    const result = parseCourseManifest({
+      version: '1.9',
+      course: { name: 'Future Minor Course' },
+    })
+
+    expect(result.ok).toBe(true)
+    if (!result.ok) throw new Error('Expected ok result')
+    expect(result.value.version).toBe('1.9')
+  })
+
+  it('rejects major version 2.0', () => {
     const result = parseCourseManifest({
       version: '2.0',
       course: { name: 'Future Course' },
@@ -167,6 +190,20 @@ describe('parseCourseManifest', () => {
     expect(result.errors).toHaveLength(1)
     expect(result.errors[0].path).toBe('version')
     expect(result.errors[0].message).toContain('2.0')
+    expect(result.errors[0].message).toContain('1.x')
+  })
+
+  it('rejects major version 0.9', () => {
+    const result = parseCourseManifest({
+      version: '0.9',
+      course: { name: 'Old Version Course' },
+    })
+
+    expect(result.ok).toBe(false)
+    if (result.ok) throw new Error('Expected error result')
+    expect(result.errors).toHaveLength(1)
+    expect(result.errors[0].path).toBe('version')
+    expect(result.errors[0].message).toContain('0.9')
   })
 
   it('rejects missing version', () => {
@@ -516,8 +553,31 @@ describe('parseTrackManifest', () => {
     expect(result.value.track.difficulty).toBeUndefined()
   })
 
+  it('parses track manifest with version 1.1', () => {
+    const result = parseTrackManifest({
+      version: '1.1',
+      track: { name: 'Track 1.1', courses: [{ folder: 'c1', position: 1 }] },
+    })
+
+    expect(result.ok).toBe(true)
+    if (!result.ok) throw new Error('Expected ok result')
+    expect(result.value.version).toBe('1.1')
+    expect(result.value.track.name).toBe('Track 1.1')
+  })
+
+  it('accepts any 1.x version in track manifest (e.g., 1.9)', () => {
+    const result = parseTrackManifest({
+      version: '1.9',
+      track: { name: 'Future Track', courses: [] },
+    })
+
+    expect(result.ok).toBe(true)
+    if (!result.ok) throw new Error('Expected ok result')
+    expect(result.value.version).toBe('1.9')
+  })
+
   // Edge cases
-  it('rejects unknown version', () => {
+  it('rejects major version 3.0 in track manifest', () => {
     const result = parseTrackManifest({
       version: '3.0',
       track: { name: 'Test', courses: [] },
@@ -526,6 +586,18 @@ describe('parseTrackManifest', () => {
     expect(result.ok).toBe(false)
     if (result.ok) throw new Error('Expected error result')
     expect(result.errors[0].message).toContain('3.0')
+    expect(result.errors[0].message).toContain('1.x')
+  })
+
+  it('rejects major version 0.9 in track manifest', () => {
+    const result = parseTrackManifest({
+      version: '0.9',
+      track: { name: 'Test', courses: [] },
+    })
+
+    expect(result.ok).toBe(false)
+    if (result.ok) throw new Error('Expected error result')
+    expect(result.errors[0].message).toContain('0.9')
   })
 
   it('rejects missing track name', () => {

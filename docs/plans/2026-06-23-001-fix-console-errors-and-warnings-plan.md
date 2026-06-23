@@ -1,7 +1,7 @@
 ---
 title: Fix Console Errors and Warnings in Production Deployment
 type: fix
-status: active
+status: done
 date: 2026-06-23
 deepened: 2026-06-23
 ---

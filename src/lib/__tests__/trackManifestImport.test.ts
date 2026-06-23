@@ -153,9 +153,12 @@ beforeEach(async () => {
 // ───── Helpers ─────
 
 /** Build a minimal TrackManifest with the given course entries */
-function makeManifest(courses: Array<{ folder: string; position: number }>) {
+function makeManifest(
+  courses: Array<{ folder: string; position: number }>,
+  version: string = '1.0'
+) {
   return {
-    version: '1.0' as const,
+    version,
     track: {
       name: 'Test Track',
       description: 'A test track',
@@ -682,5 +685,108 @@ describe('batchImportTrackCourses — reorder loop (Unit 2)', () => {
     expect(trackEntries[2].position).toBe(3)
     expect(trackEntries[3].courseId).toBe('old-course-2')
     expect(trackEntries[3].position).toBe(4)
+  })
+})
+
+// ──────────────────────────────────────────────────
+// Unit 3: Version 1.1 manifest integration
+// ──────────────────────────────────────────────────
+
+describe('batchImportTrackCourses — version 1.1 manifest (Unit 3)', () => {
+  it('imports courses in correct manifest order with version 1.1', async () => {
+    mockScanCourseFolderFromHandle.mockImplementation(
+      async (handle: FileSystemDirectoryHandle) => ({
+        status: 'success' as const,
+        course: makeStagedCourse(`new-${handle.name}`, handle.name),
+      })
+    )
+
+    mockPersistScannedCourse.mockImplementation(async (course: StagedImportedCourse) => ({
+      ...course,
+      status: 'ready',
+    }))
+
+    const manifest = makeManifest(
+      [
+        { folder: 'c1', position: 1 },
+        { folder: 'c2', position: 2 },
+        { folder: 'c3', position: 3 },
+        { folder: 'c4', position: 4 },
+        { folder: 'c5', position: 5 },
+      ],
+      '1.1'
+    )
+
+    const parentHandle = makeParentHandle(manifest.track.courses.map(c => c.folder))
+    const result = await act(async () => batchImportTrackCourses(parentHandle, manifest))
+
+    expect(result.successCount).toBe(5)
+
+    const store = useLearningPathStore.getState()
+    const trackEntries = store.entries
+      .filter(e => e.pathId === result.trackId)
+      .sort((a, b) => a.position - b.position)
+
+    expect(trackEntries).toHaveLength(5)
+    trackEntries.forEach((entry, i) => {
+      expect(entry.position).toBe(i + 1)
+    })
+
+    const folderOrder = ['c1', 'c2', 'c3', 'c4', 'c5']
+    const resultsByFolder = new Map(result.courses.map(r => [r.folder, r]))
+    trackEntries.forEach((entry, i) => {
+      const expectedFolder = folderOrder[i]
+      const expectedResult = resultsByFolder.get(expectedFolder)
+      expect(entry.courseId).toBe(expectedResult!.courseId)
+    })
+  })
+
+  it('reorders courses correctly when version 1.1 manifest array order differs from position fields', async () => {
+    mockScanCourseFolderFromHandle.mockImplementation(
+      async (handle: FileSystemDirectoryHandle) => ({
+        status: 'success' as const,
+        course: makeStagedCourse(`new-${handle.name}`, handle.name),
+      })
+    )
+
+    mockPersistScannedCourse.mockImplementation(async (course: StagedImportedCourse) => ({
+      ...course,
+      status: 'ready',
+    }))
+
+    // Array order: a, b, c, d, e → but positions are reversed
+    const manifest = makeManifest(
+      [
+        { folder: 'a', position: 5 },
+        { folder: 'b', position: 4 },
+        { folder: 'c', position: 3 },
+        { folder: 'd', position: 2 },
+        { folder: 'e', position: 1 },
+      ],
+      '1.1'
+    )
+
+    const parentHandle = makeParentHandle(manifest.track.courses.map(c => c.folder))
+    const result = await act(async () => batchImportTrackCourses(parentHandle, manifest))
+
+    expect(result.successCount).toBe(5)
+
+    const store = useLearningPathStore.getState()
+    const trackEntries = store.entries
+      .filter(e => e.pathId === result.trackId)
+      .sort((a, b) => a.position - b.position)
+
+    expect(trackEntries).toHaveLength(5)
+
+    const folderByCourseId = new Map(
+      result.courses.filter(r => r.success).map(r => [r.courseId, r.folder])
+    )
+
+    const expectedOrder = ['e', 'd', 'c', 'b', 'a']
+    trackEntries.forEach((entry, i) => {
+      const folder = folderByCourseId.get(entry.courseId)
+      expect(folder).toBe(expectedOrder[i])
+      expect(entry.position).toBe(i + 1)
+    })
   })
 })
