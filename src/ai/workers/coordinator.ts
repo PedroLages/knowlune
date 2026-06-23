@@ -483,7 +483,7 @@ class WorkerCoordinator {
   }
 
   /**
-   * Terminate all workers (cleanup on app unmount or tab hide).
+   * Terminate all workers (cleanup on app unmount or page unload).
    * Rejects all pending requests so callers don't hang indefinitely.
    */
   terminate(): void {
@@ -502,6 +502,22 @@ class WorkerCoordinator {
 
     this.idleTimers.forEach(timer => clearTimeout(timer))
     this.idleTimers.clear()
+  }
+
+  /**
+   * Reject all pending requests without terminating workers.
+   * Used when the tab is hidden — keeps workers alive (model in memory)
+   * so they are ready when the user returns, avoiding full model re-download.
+   * Pending requests are rejected with a transient error so callers
+   * can retry or fall back gracefully.
+   */
+  rejectPendingRequests(): void {
+    this.pendingRequests.forEach(pending => {
+      clearTimeout(pending.timeout)
+      pending.reject(new Error('Tab hidden — retry when visible'))
+      this.decrementActiveRequests(pending.workerId)
+    })
+    this.pendingRequests.clear()
   }
 
   /**
@@ -540,14 +556,13 @@ if (typeof window !== 'undefined') {
 }
 
 // Free memory when tab is hidden (tab switch, minimize, etc.)
-// TODO(68-3): This kills in-progress model downloads on tab hide, requiring a
-// full re-download on return. 68-3 will add crash telemetry + Safari-specific
-// fallback to resume downloads instead of restarting from zero.
+// Previously terminated all workers, requiring full model re-download on return.
+// Now only rejects pending requests — workers stay alive with model in memory.
 if (typeof document !== 'undefined') {
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) {
-      console.log('[Coordinator] Tab hidden — terminating workers to free memory')
-      coordinator.terminate()
+      console.log('[Coordinator] Tab hidden — rejecting pending requests, keeping workers alive')
+      coordinator.rejectPendingRequests()
     }
   })
 }

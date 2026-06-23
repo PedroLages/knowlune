@@ -627,6 +627,8 @@ const quizAttempts: TableRegistryEntry = {
   priority: 4,
   fieldMap: {},
   insertOnly: true,
+  cursorField: 'created_at',
+  stripFields: ['updatedAt'],
 }
 
 /**
@@ -639,6 +641,8 @@ const aiUsageEvents: TableRegistryEntry = {
   priority: 4,
   fieldMap: {},
   insertOnly: true,
+  cursorField: 'created_at',
+  stripFields: ['updatedAt'],
 }
 
 // ---------------------------------------------------------------------------

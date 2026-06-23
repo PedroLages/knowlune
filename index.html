@@ -13,10 +13,11 @@
 
     <!-- E51-S02: Synchronously apply .reduce-motion before first paint to prevent flash of animations -->
     <script src="/reduce-motion-init.js"></script>
+    <!-- The hash in script-src is for a dynamically-generated inline script (likely framer-motion runtime) on the Learning Track Detail page. If the library version changes, verify the hash still matches. -->
     <meta http-equiv="Content-Security-Policy" content="
         default-src 'self';
         manifest-src 'self';
-        script-src  'self' 'wasm-unsafe-eval' https://www.youtube.com;
+        script-src  'self' 'wasm-unsafe-eval' https://www.youtube.com 'sha256-uUew0TW/lrngy0J3LVp+D/7ubZJy1tfFlGU/IVg84rQ=';
         style-src   'self' 'unsafe-inline';
         img-src     'self' data: blob: https: https://images.unsplash.com https://*.unsplash.com https://*.googleusercontent.com https://*.ytimg.com https://covers.openlibrary.org https://books.google.com https://*.mzstatic.com https://m.media-amazon.com;
         media-src   'self' blob: https:;
@@ -31,6 +32,7 @@
         block-all-mixed-content;
       ">
     <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
     <link rel="apple-touch-startup-image" href="public/splash/apple-splash-2048-2732.jpg" media="(device-width: 1024px) and (device-height: 1366px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)">
     <link rel="apple-touch-startup-image" href="public/splash/apple-splash-2732-2048.jpg" media="(device-width: 1024px) and (device-height: 1366px) and (-webkit-device-pixel-ratio: 2) and (orientation: landscape)">
     <link rel="apple-touch-startup-image" href="public/splash/apple-splash-1668-2388.jpg" media="(device-width: 834px) and (device-height: 1194px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)">

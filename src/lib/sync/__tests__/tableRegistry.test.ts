@@ -226,18 +226,20 @@ describe('tableRegistry — stripFields', () => {
   // This test enumerates the complete set — adding a new stripFields table
   // without corresponding download preservation tests will fail here.
   // Note: syncQueue is NOT in the tableRegistry (it's a Dexie-only internal table).
-  it('exactly 7 tables have stripFields (complete coverage guard)', () => {
+  it('exactly 9 tables have stripFields (complete coverage guard)', () => {
     const tablesWithStrips = tableRegistry
       .filter(e => e.stripFields && e.stripFields.length > 0)
       .map(e => e.dexieTable)
       .sort()
     expect(tablesWithStrips).toEqual([
+      'aiUsageEvents',
       'audioBookmarks',
       'authors',
       'books',
       'importedCourses',
       'importedPdfs',
       'importedVideos',
+      'quizAttempts',
       'studySessions',
     ])
   })
@@ -251,12 +253,14 @@ describe('tableRegistry — stripFields', () => {
         .map(e => [e.dexieTable, [...e.stripFields!].sort()])
     )
     expect(strips).toEqual({
+      aiUsageEvents: ['updatedAt'],
       audioBookmarks: ['updatedAt'],
       authors: ['photoBlob', 'photoHandle'],
       books: ['fileUrl', 'source'],
       importedCourses: ['coverImageHandle', 'directoryHandle'],
       importedPdfs: ['fileBlob', 'fileHandle'],
       importedVideos: ['fileHandle'],
+      quizAttempts: ['updatedAt'],
       studySessions: [
         'contentItemId',
         'courseId',
