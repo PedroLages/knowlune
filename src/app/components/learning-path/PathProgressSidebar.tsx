@@ -1,8 +1,10 @@
-import { Clock, BookOpen, BarChart3, Calendar, Pencil } from 'lucide-react'
+import { Clock, BookOpen, BarChart3, Calendar, Pencil, Unlock } from 'lucide-react'
 import { Card, CardContent } from '@/app/components/ui/card'
+import { Switch } from '@/app/components/ui/switch'
 import { PathProgressRing } from '@/app/components/figma/PathProgressRing'
 import { cn } from '@/app/components/ui/utils'
 import type { PathProgressSummary } from '@/app/hooks/usePathProgress'
+import type { PathProgressionMode } from '@/data/types'
 
 interface PathProgressSidebarProps {
   progress: PathProgressSummary
@@ -14,6 +16,9 @@ interface PathProgressSidebarProps {
   courseCount?: number
   createdAt?: string
   updatedAt?: string
+  /** Progression mode toggle (optional — for learning tracks with 2+ courses) */
+  progressionMode?: PathProgressionMode
+  onProgressionModeChange?: (mode: PathProgressionMode) => void
 }
 
 function formatDate(iso: string): string {
@@ -33,6 +38,8 @@ export function PathProgressSidebar({
   courseCount,
   createdAt,
   updatedAt,
+  progressionMode,
+  onProgressionModeChange,
 }: PathProgressSidebarProps) {
   const { completionPct, completedCourses, totalCourses, estimatedRemainingHours } = progress
 
@@ -163,6 +170,42 @@ export function PathProgressSidebar({
                   </span>
                 </div>
               )}
+              {courseCount != null &&
+                courseCount > 1 &&
+                onProgressionModeChange != null && (
+                  <>
+                    <hr className="my-3 border-border/50" />
+                    <div className="flex items-center gap-2.5">
+                      <Unlock
+                        className="size-4 text-brand flex-shrink-0"
+                        aria-hidden="true"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <label
+                          htmlFor="progression-mode-toggle"
+                          className="text-sm font-medium text-foreground cursor-pointer"
+                        >
+                          Free access
+                        </label>
+                        <p
+                          id="progression-mode-description"
+                          className="text-xs text-muted-foreground"
+                        >
+                          Start any course without completing previous ones
+                        </p>
+                      </div>
+                      <Switch
+                        id="progression-mode-toggle"
+                        checked={progressionMode === 'free'}
+                        onCheckedChange={checked =>
+                          onProgressionModeChange(checked ? 'free' : 'sequential')
+                        }
+                        aria-label="Enable free access mode"
+                        aria-describedby="progression-mode-description"
+                      />
+                    </div>
+                  </>
+                )}
             </div>
           </CardContent>
         </Card>

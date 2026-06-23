@@ -496,7 +496,12 @@ export interface LearningPath {
   coverImageUrl?: string
   /** Gradient preset key (e.g., 'cyan-blue', 'emerald-green') — used when coverImageUrl is unset */
   coverPreset?: string
+  /** Progression mode: 'sequential' (courses lock until prior completed) or 'free' (all accessible). undefined defaults to sequential. */
+  progressionMode?: PathProgressionMode
 }
+
+/** Controls whether courses in a learning track are locked sequentially or freely accessible. */
+export type PathProgressionMode = 'sequential' | 'free'
 
 export interface LearningPathEntry {
   id: string // Primary key: UUID
