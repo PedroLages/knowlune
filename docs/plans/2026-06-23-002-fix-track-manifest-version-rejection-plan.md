@@ -1,7 +1,7 @@
 ---
 title: "fix: Accept manifest version 1.1 in track and course manifest parsers"
 type: fix
-status: active
+status: completed
 date: 2026-06-23
 ---
 
