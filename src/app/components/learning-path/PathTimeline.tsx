@@ -42,7 +42,7 @@ import { SortableCourseTimelineEntry } from '@/app/components/learning-path/Sort
 import { formatClockDuration } from '@/lib/formatDuration'
 import { isCourseInProgress } from '@/lib/progressUtils'
 import type { ChapterGroup } from '@/lib/curriculumGrouping'
-import type { LearningPathEntry, PathCourseInfo, ImportedVideo, VideoProgress } from '@/data/types'
+import type { LearningPathEntry, PathCourseInfo, ImportedVideo, VideoProgress, PathProgressionMode } from '@/data/types'
 
 // ---- Types ----
 
@@ -89,6 +89,8 @@ interface PathTimelineProps {
   /** Legacy index-based reorder (skips calling when `onReorderByCourseId` is set) */
   onReorder?: (fromIndex: number, toIndex: number) => void
   className?: string
+  /** When 'free', all non-gap courses are accessible regardless of completion status */
+  progressionMode?: PathProgressionMode
 }
 
 /** Gap entry card with resolution buttons */
@@ -190,6 +192,8 @@ function CourseTimelineEntry({
   videos,
   lessonGroups,
   videoProgressMap,
+  progressionMode,
+  suppressAnimations,
 }: {
   entry: TimelineEntry
   info?: PathCourseInfo
@@ -205,22 +209,33 @@ function CourseTimelineEntry({
   videos?: ImportedVideo[]
   lessonGroups?: ChapterGroup[]
   videoProgressMap?: Map<string, VideoProgress>
+  progressionMode?: PathProgressionMode
+  suppressAnimations?: boolean
 }) {
-  const isLocked = !isCompleted && !isInProgress
-  const status = isCompleted ? 'completed' : isInProgress ? 'in-progress' : 'locked'
+  const isFreeMode = progressionMode === 'free'
+  const isLocked = isFreeMode ? false : !isCompleted && !isInProgress
+  const status = isCompleted
+    ? 'completed'
+    : isFreeMode
+      ? 'available'
+      : isInProgress
+        ? 'in-progress'
+        : 'locked'
   const statusLabel = isManuallyCompleted
     ? 'Completed'
     : isCompleted
       ? 'Completed'
-      : isInProgress
-        ? hasRealProgress
-          ? 'In Progress'
-          : 'Up Next'
-        : 'Locked'
+      : isFreeMode
+        ? 'Available'
+        : isInProgress
+          ? hasRealProgress
+            ? 'In Progress'
+            : 'Up Next'
+          : 'Locked'
   const entryRef = useRef<HTMLDivElement>(null)
   const [isExpanded, setIsExpanded] = useState(false)
   const prevLockedRef = useRef(isLocked)
-  const justUnlocked = prevLockedRef.current && !isLocked
+  const justUnlocked = !suppressAnimations && prevLockedRef.current && !isLocked
   const prefersReducedMotion = useReducedMotion()
   const shouldAnimate = !prefersReducedMotion
 
@@ -257,6 +272,7 @@ function CourseTimelineEntry({
               'px-2 py-0.5 text-[10px] font-bold rounded-full uppercase tracking-wider inline-flex items-center gap-1',
               isCompleted && 'bg-success-soft text-success',
               isInProgress && 'bg-brand-soft text-brand-soft-foreground',
+              isFreeMode && !isCompleted && !isInProgress && 'bg-muted/60 text-muted-foreground',
               isLocked && 'bg-muted text-muted-foreground'
             )}
           >
@@ -478,7 +494,16 @@ export function PathTimeline({
   onReorder,
   onReorderByCourseId,
   className,
+  progressionMode,
 }: PathTimelineProps) {
+  // Suppress per-entry unlock animations when the mode itself changes
+  // (many entries transition from locked→unlocked simultaneously).
+  const prevModeRef = useRef(progressionMode)
+  const suppressAnimations = prevModeRef.current !== progressionMode
+  useEffect(() => {
+    prevModeRef.current = progressionMode
+  }, [progressionMode])
+
   const gapEntryIds = useMemo(() => new Set(gapEntries.map(e => e.id)), [gapEntries])
 
   // Filter out the skipped entry (used for dedup with ContinueLearningBento)
@@ -660,6 +685,8 @@ export function PathTimeline({
                     videos={videosByCourse?.get(entry.courseId)}
                     lessonGroups={lessonGroupsByCourse?.get(entry.courseId)}
                     videoProgressMap={videoProgressMap}
+                    progressionMode={progressionMode}
+                    suppressAnimations={suppressAnimations}
                   />
                 </div>
               )
@@ -729,6 +756,8 @@ export function PathTimeline({
               videos={videosByCourse?.get(entry.courseId)}
               lessonGroups={lessonGroupsByCourse?.get(entry.courseId)}
               videoProgressMap={videoProgressMap}
+                progressionMode={progressionMode}
+                suppressAnimations={suppressAnimations}
             />
           </div>
         )

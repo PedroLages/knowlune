@@ -24,7 +24,7 @@ import { cn } from '@/app/components/ui/utils'
 import { EntryActionButton, LessonRow } from '@/app/components/learning-path/TimelinePrimitives'
 import { formatClockDuration } from '@/lib/formatDuration'
 import type { ChapterGroup } from '@/lib/curriculumGrouping'
-import type { PathCourseInfo, ImportedVideo, VideoProgress } from '@/data/types'
+import type { PathCourseInfo, ImportedVideo, VideoProgress, PathProgressionMode } from '@/data/types'
 import type { LearningPathEntry } from '@/data/types'
 
 interface SortableCourseTimelineEntryProps {
@@ -42,6 +42,8 @@ interface SortableCourseTimelineEntryProps {
   videos?: ImportedVideo[]
   lessonGroups?: ChapterGroup[]
   videoProgressMap?: Map<string, VideoProgress>
+  progressionMode?: PathProgressionMode
+  suppressAnimations?: boolean
 }
 
 export function SortableCourseTimelineEntry({
@@ -58,20 +60,31 @@ export function SortableCourseTimelineEntry({
   videos,
   lessonGroups,
   videoProgressMap,
+  progressionMode,
+  suppressAnimations,
 }: SortableCourseTimelineEntryProps) {
-  const isLocked = !isCompleted && !isInProgress
-  const status = isCompleted ? 'completed' : isInProgress ? 'in-progress' : 'locked'
+  const isFreeMode = progressionMode === 'free'
+  const isLocked = isFreeMode ? false : !isCompleted && !isInProgress
+  const status = isCompleted
+    ? 'completed'
+    : isFreeMode
+      ? 'available'
+      : isInProgress
+        ? 'in-progress'
+        : 'locked'
   const statusLabel = isManuallyCompleted
     ? 'Completed'
     : isCompleted
       ? 'Completed'
-      : isInProgress
-        ? hasRealProgress
-          ? 'In Progress'
-          : 'Up Next'
-        : 'Locked'
+      : isFreeMode
+        ? 'Available'
+        : isInProgress
+          ? hasRealProgress
+            ? 'In Progress'
+            : 'Up Next'
+          : 'Locked'
   const prevLockedRef = useRef(isLocked)
-  const justUnlocked = prevLockedRef.current && !isLocked
+  const justUnlocked = !suppressAnimations && prevLockedRef.current && !isLocked
 
   const [isExpanded, setIsExpanded] = useState(false)
 
@@ -107,6 +120,7 @@ export function SortableCourseTimelineEntry({
               'flex size-[14px] shrink-0 items-center justify-center rounded-full border-2',
               status === 'completed' && 'border-success bg-success',
               status === 'in-progress' && 'border-brand bg-brand',
+              status === 'available' && 'border-muted-foreground/25 bg-muted/60',
               status === 'locked' && 'border-border bg-card'
             )}
             aria-label={statusLabel}
@@ -125,6 +139,7 @@ export function SortableCourseTimelineEntry({
               'flex size-[10px] shrink-0 items-center justify-center rounded-full',
               status === 'completed' && 'bg-success',
               status === 'in-progress' && 'bg-brand',
+              status === 'available' && 'bg-muted-foreground/40',
               status === 'locked' && 'bg-muted-foreground/30'
             )}
             aria-label={statusLabel}
@@ -147,6 +162,7 @@ export function SortableCourseTimelineEntry({
               isCompleted && 'border-success/20',
               isInProgress && 'border-brand/20 ring-1 ring-brand/5',
               isLocked && 'border-border/50 opacity-60',
+              isFreeMode && !isCompleted && !isInProgress && 'border-border/80 opacity-100',
               isDragging && 'opacity-50 shadow-lg z-10',
               justUnlocked && 'shadow-brand/10 shadow-lg'
             )}
@@ -189,6 +205,7 @@ export function SortableCourseTimelineEntry({
                         'px-2 py-0.5 text-[10px] font-bold rounded-full uppercase tracking-wider inline-flex items-center gap-1',
                         isCompleted && 'bg-success-soft text-success',
                         isInProgress && 'bg-brand-soft text-brand-soft-foreground',
+                        isFreeMode && !isCompleted && !isInProgress && 'bg-muted/60 text-muted-foreground',
                         isLocked && 'bg-muted text-muted-foreground'
                       )}
                     >

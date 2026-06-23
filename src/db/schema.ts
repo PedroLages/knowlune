@@ -1757,6 +1757,12 @@ function _declareLegacyMigrations(database: Dexie): void {
       // No backfill required — optional fields on existing tables; Dexie writes them
       // on first put/update after this version is opened.
     })
+
+  database.version(67).stores({
+    // Non-indexed optional field `progressionMode` added to `learningPaths`.
+    // No index change — the field is only read per-track by ID (`paths.find()`).
+    // Dexie writes the field on first put/update after this version is opened.
+  })
 } // end _declareLegacyMigrations
 
 export { db, CHECKPOINT_VERSION, CHECKPOINT_SCHEMA }

@@ -27,6 +27,7 @@ import { useContentProgressStore } from '@/stores/useContentProgressStore'
 import { findFirstIncompleteLesson } from '@/lib/resumeLearning'
 import type {
   PathCourseInfo,
+  PathProgressionMode,
   ImportedVideo,
   ImportedPdf,
   VideoProgress,
@@ -39,6 +40,7 @@ export function LearningTrackDetail() {
   const paths = useLearningPathStore(s => s.paths)
   const loadPaths = useLearningPathStore(s => s.loadPaths)
   const reorderPathCourses = useLearningPathStore(s => s.reorderPathCourses)
+  const setProgressionMode = useLearningPathStore(s => s.setProgressionMode)
   const { importedCourses, loadImportedCourses, thumbnailUrls, loadThumbnailUrls } =
     useCourseImportStore()
   const { authors, loadAuthors } = useAuthorStore()
@@ -304,6 +306,14 @@ export function LearningTrackDetail() {
       }
     },
     [manuallyCompletedIds, markComplete, undoComplete]
+  )
+
+  const handleProgressionModeChange = useCallback(
+    (mode: PathProgressionMode) => {
+      if (!trackId) return
+      setProgressionMode(trackId, mode)
+    },
+    [trackId, setProgressionMode]
   )
 
   // Build course info lookup — uses real progress data
@@ -678,6 +688,7 @@ export function LearningTrackDetail() {
                       onReorderByCourseId={(activeCourseId, overCourseId) =>
                         reorderPathCourses(trackId ?? '', activeCourseId, overCourseId)
                       }
+                      progressionMode={path.progressionMode}
                     />
                   </div>
                 </motion.section>
@@ -692,6 +703,8 @@ export function LearningTrackDetail() {
                   courseCount={courseEntries.length}
                   createdAt={path.createdAt}
                   updatedAt={path.updatedAt}
+                  progressionMode={path.progressionMode}
+                  onProgressionModeChange={handleProgressionModeChange}
                 />
               </aside>
             </div>

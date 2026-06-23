@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { toast } from 'sonner'
 import { db } from '@/db'
-import type { LearningPath, LearningPathEntry } from '@/data/types'
+import type { LearningPath, LearningPathEntry, PathProgressionMode } from '@/data/types'
 import { persistWithRetry } from '@/lib/persistWithRetry'
 import { trackAIUsage } from '@/lib/aiEventTracking'
 import { syncableWrite, type SyncableRecord } from '@/lib/sync/syncableWrite'
@@ -31,6 +31,7 @@ interface LearningPathState {
   createPath: (name: string, description?: string) => Promise<LearningPath>
   renamePath: (pathId: string, name: string) => Promise<void>
   updateDescription: (pathId: string, description: string) => Promise<void>
+  setProgressionMode: (pathId: string, mode: PathProgressionMode) => Promise<void>
   updatePathCover: (
     pathId: string,
     cover: { coverImageUrl?: string; coverPreset?: string }
@@ -296,6 +297,42 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
         error: 'Failed to update path description',
       })
       toast.error('Failed to update path description')
+    }
+  },
+
+  setProgressionMode: async (pathId: string, mode: PathProgressionMode) => {
+    const prevPaths = get().paths
+    const prevActivePath = get().activePath
+    const existing = prevPaths.find(p => p.id === pathId)
+    if (!existing) return
+
+    // Optimistic update
+    set(state => ({
+      paths: state.paths.map(p =>
+        p.id === pathId ? { ...p, progressionMode: mode } : p
+      ),
+      activePath:
+        state.activePath?.id === pathId
+          ? { ...state.activePath, progressionMode: mode }
+          : state.activePath,
+      error: null,
+    }))
+
+    try {
+      await persistWithRetry(async () => {
+        await syncableWrite('learningPaths', 'put', {
+          ...existing,
+          progressionMode: mode,
+        } as unknown as SyncableRecord)
+      })
+    } catch (error) {
+      console.error('[LearningPathStore] Failed to update progression mode:', error)
+      set({
+        paths: prevPaths,
+        activePath: prevActivePath,
+        error: 'Failed to update progression mode',
+      })
+      toast.error('Failed to update progression mode')
     }
   },
 
