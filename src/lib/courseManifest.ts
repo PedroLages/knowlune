@@ -256,10 +256,10 @@ export function parseCourseManifest(json: unknown): ParseResult<CourseManifest> 
 
   // Version
   const version = asString(json.version)
-  if (!version || version !== '1.0') {
+  if (!version || !version.startsWith('1.')) {
     errors.push({
       path: 'version',
-      message: `Unsupported manifest version "${String(json.version)}". Only version "1.0" is supported.`,
+      message: `Unsupported manifest version "${String(json.version)}". Only version 1.x is supported.`,
     })
   }
 
@@ -403,7 +403,7 @@ export function parseCourseManifest(json: unknown): ParseResult<CourseManifest> 
   return {
     ok: true,
     value: {
-      version: '1.0',
+      version,
       course: {
         name: name!,
         description,
@@ -433,10 +433,10 @@ export function parseTrackManifest(json: unknown): ParseResult<TrackManifest> {
 
   // Version
   const version = asString(json.version)
-  if (!version || version !== '1.0') {
+  if (!version || !version.startsWith('1.')) {
     errors.push({
       path: 'version',
-      message: `Unsupported track manifest version "${String(json.version)}". Only version "1.0" is supported.`,
+      message: `Unsupported track manifest version "${String(json.version)}". Only version 1.x is supported.`,
     })
   }
 
@@ -531,7 +531,7 @@ export function parseTrackManifest(json: unknown): ParseResult<TrackManifest> {
   return {
     ok: true,
     value: {
-      version: '1.0',
+      version,
       track: {
         name: name!,
         description,
