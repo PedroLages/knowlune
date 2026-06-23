@@ -155,7 +155,7 @@ beforeEach(async () => {
 /** Build a minimal TrackManifest with the given course entries */
 function makeManifest(
   courses: Array<{ folder: string; position: number }>,
-  version = '1.0' as const
+  version: string = '1.0'
 ) {
   return {
     version,
