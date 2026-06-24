@@ -10,6 +10,7 @@ import { EmptyState } from '@/app/components/EmptyState'
 import { DelayedFallback } from '@/app/components/DelayedFallback'
 import { PathHeroBanner } from '@/app/components/learning-path/PathHeroBanner'
 import { PathProgressSidebar } from '@/app/components/learning-path/PathProgressSidebar'
+import { ProgressionModeToggle } from '@/app/components/learning-path/ProgressionModeToggle'
 import { ContinueLearningBento } from '@/app/components/learning-path/ContinueLearningBento'
 import { PathTimeline } from '@/app/components/learning-path/PathTimeline'
 import { useLearningPathStore } from '@/stores/useLearningPathStore'
@@ -645,6 +646,10 @@ export function LearningTrackDetail() {
                         <span className="text-muted-foreground text-sm">
                           {courseEntries.length} {courseEntries.length === 1 ? 'Course' : 'Courses'}
                         </span>
+                        <ProgressionModeToggle
+                          mode={path.progressionMode ?? 'sequential'}
+                          onChange={handleProgressionModeChange}
+                        />
                         <Button
                           variant={isEditing ? 'brand' : 'ghost'}
                           size="sm"

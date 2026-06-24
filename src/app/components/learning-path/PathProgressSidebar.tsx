@@ -1,7 +1,7 @@
-import { Clock, BookOpen, BarChart3, Calendar, Pencil, Unlock } from 'lucide-react'
+import { Clock, BookOpen, BarChart3, Calendar, Pencil } from 'lucide-react'
 import { Card, CardContent } from '@/app/components/ui/card'
-import { Switch } from '@/app/components/ui/switch'
 import { PathProgressRing } from '@/app/components/figma/PathProgressRing'
+import { ProgressionModeToggle } from '@/app/components/learning-path/ProgressionModeToggle'
 import { cn } from '@/app/components/ui/utils'
 import type { PathProgressSummary } from '@/app/hooks/usePathProgress'
 import type { PathProgressionMode } from '@/data/types'
@@ -175,35 +175,10 @@ export function PathProgressSidebar({
                 onProgressionModeChange != null && (
                   <>
                     <hr className="my-3 border-border/50" />
-                    <div className="flex items-center gap-2.5">
-                      <Unlock
-                        className="size-4 text-brand flex-shrink-0"
-                        aria-hidden="true"
-                      />
-                      <div className="flex-1 min-w-0">
-                        <label
-                          htmlFor="progression-mode-toggle"
-                          className="text-sm font-medium text-foreground cursor-pointer"
-                        >
-                          Free access
-                        </label>
-                        <p
-                          id="progression-mode-description"
-                          className="text-xs text-muted-foreground"
-                        >
-                          Start any course without completing previous ones
-                        </p>
-                      </div>
-                      <Switch
-                        id="progression-mode-toggle"
-                        checked={progressionMode === 'free'}
-                        onCheckedChange={checked =>
-                          onProgressionModeChange(checked ? 'free' : 'sequential')
-                        }
-                        aria-label="Enable free access mode"
-                        aria-describedby="progression-mode-description"
-                      />
-                    </div>
+                    <ProgressionModeToggle
+                      mode={progressionMode ?? 'sequential'}
+                      onChange={onProgressionModeChange}
+                    />
                   </>
                 )}
             </div>

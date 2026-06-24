@@ -197,6 +197,7 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
       createdAt: now,
       updatedAt: now,
       isAIGenerated: false,
+      progressionMode: 'free',
     }
 
     const prevPaths = get().paths
@@ -1106,6 +1107,7 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
       createdAt: now,
       updatedAt: now,
       isAIGenerated: false,
+      progressionMode: 'free',
     }
 
     const prevPaths = get().paths
@@ -1270,6 +1272,7 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
       forkedFrom: templateId,
       estimatedHours: template.estimatedHours,
       difficultyLabel: template.difficultyLabel,
+      progressionMode: 'free',
     }
 
     const prevPaths = get().paths
