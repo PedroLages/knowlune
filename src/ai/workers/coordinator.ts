@@ -276,12 +276,20 @@ class WorkerCoordinator {
       this.routeWorkerMessage(event)
     })
 
-    // Global error handler — event.error can be null in cross-origin/security errors
+    // Global error handler — event.error is null when the worker script fails to
+    // load (network error, CSP block, 404 → HTML with wrong MIME type, etc.).
+    // event.message contains the browser's diagnostic (e.g., "Failed to load
+    // module script: Expected a JavaScript module script but the server responded
+    // with a MIME type of \"text/html\".").
     worker.addEventListener('error', event => {
-      console.error('[Coordinator] Worker error:', event)
+      const scriptUrl = url.toString()
+      const detail = event.error
+        ? `runtime error: ${event.error.message}`
+        : `script load failure: ${event.message || 'no diagnostic available'}`
+      console.error(`[Coordinator] Worker error (${scriptUrl}):`, detail, event)
       this.handleWorkerError(
         type,
-        event.error ?? new Error(event.message ?? 'Unknown worker error')
+        event.error ?? new Error(detail)
       )
     })
 
