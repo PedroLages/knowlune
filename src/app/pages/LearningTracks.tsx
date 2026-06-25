@@ -1,16 +1,10 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { motion } from 'motion/react'
-import { Plus, Search, Route, Download, LayoutTemplate, ChevronDown } from 'lucide-react'
+import { Plus, Search, Route, Download, LayoutTemplate } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
 import { Card, CardContent } from '@/app/components/ui/card'
-import { Badge } from '@/app/components/ui/badge'
 import { Skeleton } from '@/app/components/ui/skeleton'
 import { Input } from '@/app/components/ui/input'
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from '@/app/components/ui/collapsible'
 import { EmptyState } from '@/app/components/EmptyState'
 import { DelayedFallback } from '@/app/components/DelayedFallback'
 import { TemplateCard } from '@/app/components/course/TemplateCard'
@@ -135,7 +129,6 @@ export function LearningTracks() {
   const [isLoaded, setIsLoaded] = useState(false)
   const [search, setSearch] = useState('')
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
-  const [discoverOpen, setDiscoverOpen] = useState(false)
   const [coverDialogPath, setCoverDialogPath] = useState<LearningPath | null>(null)
   const coverDialogTriggerRef = useRef<HTMLElement | null>(null)
   const [editDialogPath, setEditDialogPath] = useState<LearningPath | null>(null)
@@ -420,42 +413,6 @@ export function LearningTracks() {
               })}
             </motion.div>
 
-            {/* Collapsible "Discover more paths" section */}
-            {templates.length > 0 && (
-              <motion.div variants={fadeUp} className="mt-12">
-                <Collapsible open={discoverOpen} onOpenChange={setDiscoverOpen}>
-                  <CollapsibleTrigger
-                    className="flex items-center gap-2 w-full text-left py-2 group"
-                    aria-controls="discover-more-tracks-panel"
-                  >
-                    <LayoutTemplate className="w-5 h-5 text-muted-foreground" />
-                    <h2 className="text-lg font-semibold flex-1">Discover more tracks</h2>
-                    <Badge variant="secondary" className="text-xs mr-2">
-                      {templates.length}
-                    </Badge>
-                    <ChevronDown
-                      className={`w-4 h-4 text-muted-foreground transition-transform ${discoverOpen ? 'rotate-180' : ''}`}
-                    />
-                  </CollapsibleTrigger>
-                  <CollapsibleContent id="discover-more-tracks-panel" className="pt-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-[var(--content-gap)]">
-                      {templates.map(tpl => {
-                        const tplEntries = getEntriesForPath(tpl.id)
-                        return (
-                          <div key={tpl.id} className="w-full">
-                            <TemplateCard
-                              template={tpl}
-                              courseCount={tplEntries.length}
-                              matchCount={templateMatchCounts.get(tpl.id) ?? 0}
-                            />
-                          </div>
-                        )
-                      })}
-                    </div>
-                  </CollapsibleContent>
-                </Collapsible>
-              </motion.div>
-            )}
           </>
         )}
       </motion.div>
