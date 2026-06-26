@@ -207,26 +207,34 @@ export async function batchImportTrackCourses(
     await store.batchAddCoursesToPath(trackId, coursesToAdd)
     toast.info(`Added ${coursesToAdd.length} courses to existing track "${trackName}"`)
   } else {
-    // Create new track
-    const courses = results
+    // Create new track — pre-sort by manifest position so the initial
+    // entry positions are correct from the start (no render flash between
+    // createPathWithCourses and the applyManifestOrder correction pass).
+    const folderPosition = new Map(positions.map(p => [p.folder, p.position]))
+    const sortedResults = [...results]
       .filter(r => r.success && r.courseId)
-      .map(r => ({
-        courseId: r.courseId!,
-        courseType: 'imported' as const,
-        justification: positions.find(p => p.folder === r.folder)?.notes,
-        completionTarget:
-          positions.find(p => p.folder === r.folder)?.completionTarget ?? undefined,
-      }))
+      .sort((a, b) => {
+        const posA = folderPosition.get(a.folder) ?? Number.MAX_SAFE_INTEGER
+        const posB = folderPosition.get(b.folder) ?? Number.MAX_SAFE_INTEGER
+        return posA - posB
+      })
+    const courses = sortedResults.map(r => ({
+      courseId: r.courseId!,
+      courseType: 'imported' as const,
+      justification: positions.find(p => p.folder === r.folder)?.notes,
+      completionTarget:
+        positions.find(p => p.folder === r.folder)?.completionTarget ?? undefined,
+    }))
     const newPath = await store.createPathWithCourses(trackName, trackDescription, courses)
     trackId = newPath.id
     toast.success(`Track "${trackName}" created with ${successCount} courses`)
   }
 
-  // Apply manifest-specified order directly (both new and existing tracks).
-  // Build a folder→courseId map from import results, then order course IDs
-  // by their manifest positions. This replaces the old reorder loop which
-  // moved courses one-at-a-time through the DnD machinery, causing cascading
-  // position reassignments that could produce incorrect final order.
+  // Apply manifest-specified order. For new tracks this is a defensive no-op
+  // (courses are pre-sorted before createPathWithCourses above). For existing
+  // tracks this repositions entries added at the tail by batchAddCoursesToPath.
+  // Replaces the old per-course reorder loop which moved entries one-at-a-time
+  // through the DnD machinery, causing cascading position reassignments.
   const courseIdByFolder = new Map<string, string>()
   for (const r of results) {
     if (r.success && r.courseId) courseIdByFolder.set(r.folder, r.courseId)
