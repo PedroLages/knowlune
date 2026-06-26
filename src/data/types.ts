@@ -208,6 +208,8 @@ export interface ImportedCourse {
   // Drive source fields (E77b-S02)
   /** Google Drive folder ID from which this course was imported. */
   sourceDriveId?: string
+  /** Manifest-defined position for track-level sorting (from track-manifest.json). */
+  manifestPosition?: number
   // Sync metadata — stamped by syncableWrite
   userId?: string | null
   guestSessionId?: string | null

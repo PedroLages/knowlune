@@ -391,12 +391,23 @@ export function InlineCoursePicker({
   }, [])
 
   // Build course list from imported courses (catalog courses table dropped in E89-S01).
-  // Sort alphabetically by name for predictable, stable display order — Dexie's
-  // toArray() order is arbitrary (UUID primary keys), causing courses to shuffle
-  // between page reloads.
+  // Sort by manifest position (ascending) so batch-imported courses appear in the
+  // order defined by track-manifest.json. Courses without a manifest position
+  // fall back to alphabetical order.
   const allCourses: CoursePickerItem[] = useMemo(() => {
     return importedCourses
       .filter(c => !excludeCourseIds.has(c.id))
+      .sort((a, b) => {
+        const posA = a.manifestPosition
+        const posB = b.manifestPosition
+        // Both have manifest positions — sort by them
+        if (posA != null && posB != null) return posA - posB
+        // Only one has a manifest position — it comes first
+        if (posA != null) return -1
+        if (posB != null) return 1
+        // Neither has a manifest position — sort alphabetically
+        return a.name.localeCompare(b.name)
+      })
       .map(c => ({
         id: c.id,
         name: c.name,
@@ -405,7 +416,6 @@ export function InlineCoursePicker({
         thumbnailUrl: thumbnailUrls[c.id],
         tags: c.tags ?? [],
       }))
-      .sort((a, b) => a.name.localeCompare(b.name))
   }, [importedCourses, excludeCourseIds, authors, thumbnailUrls])
 
   // Recently Imported: courses not assigned to any path

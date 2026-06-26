@@ -3,6 +3,7 @@ import type { TrackManifest, ManifestAuthor } from '@/lib/courseManifest'
 import { scanCourseFolderFromHandle, persistScannedCourse } from '@/lib/courseImport'
 import type { BulkScanResult } from '@/lib/courseImport'
 import { useLearningPathStore } from '@/stores/useLearningPathStore'
+import { useCourseImportStore } from '@/stores/useCourseImportStore'
 import { useAuthorStore } from '@/stores/useAuthorStore'
 import { db } from '@/db'
 import { toast } from 'sonner'
@@ -146,6 +147,20 @@ export async function batchImportTrackCourses(
       // Persist the scanned course
       const importedCourse = await persistScannedCourse(scanResult.course)
       results.push({ folder, success: true, courseId: importedCourse.id })
+
+      // Store the manifest position on the course record so the
+      // InlineCoursePicker and other UIs can sort by manifest order.
+      const manifestCourse = positions.find(p => normalizeFolder(p.folder) === normalizeFolder(folder))
+      if (manifestCourse) {
+        db.importedCourses.update(importedCourse.id, { manifestPosition: manifestCourse.position })
+        useCourseImportStore.setState(state => ({
+          importedCourses: state.importedCourses.map(c =>
+            c.id === importedCourse.id
+              ? { ...c, manifestPosition: manifestCourse.position }
+              : c
+          ),
+        }))
+      }
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Unexpected error'
       results.push({ folder, success: false, error: message })
