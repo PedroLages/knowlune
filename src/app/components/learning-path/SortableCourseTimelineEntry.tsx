@@ -26,6 +26,7 @@ import { formatClockDuration } from '@/lib/formatDuration'
 import type { ChapterGroup } from '@/lib/curriculumGrouping'
 import type { PathCourseInfo, ImportedVideo, VideoProgress, PathProgressionMode } from '@/data/types'
 import type { LearningPathEntry } from '@/data/types'
+import type { CourseProgressInfo } from '@/app/hooks/usePathProgress'
 
 interface SortableCourseTimelineEntryProps {
   entry: LearningPathEntry
