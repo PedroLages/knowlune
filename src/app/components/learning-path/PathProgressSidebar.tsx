@@ -23,6 +23,8 @@ interface PathProgressSidebarProps {
   onProgressionModeChange?: (mode: PathProgressionMode) => void
 }
 
+const MINUTES_PER_LESSON = 15
+
 function formatDate(iso: string): string {
   return new Intl.DateTimeFormat('en-US', {
     month: 'short',

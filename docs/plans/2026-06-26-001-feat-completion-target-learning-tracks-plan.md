@@ -302,7 +302,7 @@ for each entry in entries (imported type only):
 
 ---
 
-- [ ] **Unit 4: Milestone & Completion Alignment**
+- [x] **Unit 4: Milestone & Completion Alignment**
 
 **Goal:** Ensure path milestone celebrations (25/50/75/100% toasts) and the "Path Complete" banner use target-capped denominators, aligning with what the path UI considers "complete."
 
