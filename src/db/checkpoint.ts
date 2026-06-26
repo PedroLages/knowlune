@@ -1,5 +1,5 @@
 /**
- * Dexie Migration Checkpoint — v68
+ * Dexie Migration Checkpoint — v67
  *
  * This file provides a frozen snapshot of the complete IndexedDB schema at version 66.
  * Fresh installs skip the incremental version declarations and create the full
@@ -20,7 +20,7 @@
  * a single `db.version(CHECKPOINT_VERSION).stores(CHECKPOINT_SCHEMA)` call
  * for fresh installs.
  */
-export const CHECKPOINT_VERSION = 68
+export const CHECKPOINT_VERSION = 67
 
 /**
  * Shared `searchFrecency` index string. Used by both the v53 `.stores()` call

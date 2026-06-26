@@ -687,8 +687,8 @@ describe('createPathWithCourses', () => {
   it('should create path and add all courses', async () => {
     const path = await act(async () => {
       return useLearningPathStore.getState().createPathWithCourses('My Path', 'Desc', [
-        { courseId: 'c1', courseType: 'imported', completionTarget: undefined },
-        { courseId: 'c2', courseType: 'imported', completionTarget: undefined },
+        { courseId: 'c1', courseType: 'imported' },
+        { courseId: 'c2', courseType: 'imported' },
       ])
     })
 
@@ -707,9 +707,9 @@ describe('createPathWithCourses', () => {
   it('should skip duplicate course IDs', async () => {
     await act(async () => {
       return useLearningPathStore.getState().createPathWithCourses('Path', undefined, [
-        { courseId: 'c1', courseType: 'imported', completionTarget: undefined },
-        { courseId: 'c1', courseType: 'imported', completionTarget: undefined },
-        { courseId: 'c2', courseType: 'imported', completionTarget: undefined },
+        { courseId: 'c1', courseType: 'imported' },
+        { courseId: 'c1', courseType: 'imported' },
+        { courseId: 'c2', courseType: 'imported' },
       ])
     })
 
@@ -734,9 +734,7 @@ describe('createPathWithCourses', () => {
       await act(async () => {
         await useLearningPathStore
           .getState()
-          .createPathWithCourses('Fail', undefined, [
-            { courseId: 'c1', courseType: 'imported', completionTarget: undefined },
-          ])
+          .createPathWithCourses('Fail', undefined, [{ courseId: 'c1', courseType: 'imported' }])
       })
     } catch {
       // Expected to throw
@@ -758,8 +756,8 @@ describe('batchAddCoursesToPath', () => {
 
     await act(async () => {
       await useLearningPathStore.getState().batchAddCoursesToPath(pathId, [
-        { courseId: 'c1', courseType: 'imported', completionTarget: undefined },
-        { courseId: 'c2', courseType: 'imported', completionTarget: undefined },
+        { courseId: 'c1', courseType: 'imported' },
+        { courseId: 'c2', courseType: 'imported' },
       ])
     })
 
@@ -785,8 +783,8 @@ describe('batchAddCoursesToPath', () => {
     // Try batch-adding c1 (duplicate) and c2
     await act(async () => {
       await useLearningPathStore.getState().batchAddCoursesToPath(pathId, [
-        { courseId: 'c1', courseType: 'imported', completionTarget: undefined },
-        { courseId: 'c2', courseType: 'imported', completionTarget: undefined },
+        { courseId: 'c1', courseType: 'imported' },
+        { courseId: 'c2', courseType: 'imported' },
       ])
     })
 
@@ -820,9 +818,7 @@ describe('batchAddCoursesToPath', () => {
       await expect(
         useLearningPathStore
           .getState()
-          .batchAddCoursesToPath(pathId, [
-            { courseId: 'c1', courseType: 'imported', completionTarget: undefined },
-          ])
+          .batchAddCoursesToPath(pathId, [{ courseId: 'c1', courseType: 'imported' }])
       ).rejects.toThrow('fail')
     })
     expect(useLearningPathStore.getState().error).toBe('Failed to add courses to learning path')

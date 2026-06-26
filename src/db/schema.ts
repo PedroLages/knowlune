@@ -1763,12 +1763,6 @@ function _declareLegacyMigrations(database: Dexie): void {
     // No index change — the field is only read per-track by ID (`paths.find()`).
     // Dexie writes the field on first put/update after this version is opened.
   })
-
-  database.version(68).stores({
-    // Non-indexed optional field `completionTarget` added to `learningPathEntries`.
-    // No index change — the field is read per-entry by ID.
-    // Dexie writes the field on first put/update after this version is opened.
-  })
 } // end _declareLegacyMigrations
 
 export { db, CHECKPOINT_VERSION, CHECKPOINT_SCHEMA }

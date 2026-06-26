@@ -640,8 +640,8 @@ describe('batchImportTrackCourses — reorder loop (Unit 2)', () => {
     const store = useLearningPathStore.getState()
     await store.loadPaths()
     const existingPath = await store.createPathWithCourses('Test Track', 'pre-existing', [
-      { courseId: 'old-course-1', courseType: 'imported' as const, completionTarget: undefined },
-      { courseId: 'old-course-2', courseType: 'imported' as const, completionTarget: undefined },
+      { courseId: 'old-course-1', courseType: 'imported' as const },
+      { courseId: 'old-course-2', courseType: 'imported' as const },
     ])
 
     // Pre-seed courses in the DB as already-imported

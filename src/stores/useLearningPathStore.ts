@@ -1,12 +1,7 @@
 import { create } from 'zustand'
 import { toast } from 'sonner'
 import { db } from '@/db'
-import type {
-  LearningPath,
-  LearningPathEntry,
-  PathProgressionMode,
-  CompletionTarget,
-} from '@/data/types'
+import type { LearningPath, LearningPathEntry, PathProgressionMode } from '@/data/types'
 import { persistWithRetry } from '@/lib/persistWithRetry'
 import { trackAIUsage } from '@/lib/aiEventTracking'
 import { syncableWrite, type SyncableRecord } from '@/lib/sync/syncableWrite'
@@ -52,8 +47,7 @@ interface LearningPathState {
     pathId: string,
     courseId: string,
     courseType: 'imported' | 'catalog',
-    justification?: string,
-    completionTarget?: CompletionTarget
+    justification?: string
   ) => Promise<void>
   removeCourseFromPath: (pathId: string, courseId: string) => Promise<void>
   /**
@@ -98,21 +92,11 @@ interface LearningPathState {
   createPathWithCourses: (
     name: string,
     description: string | undefined,
-    courses: Array<{
-      courseId: string
-      courseType: 'imported' | 'catalog'
-      justification?: string
-      completionTarget: CompletionTarget | undefined
-    }>
+    courses: Array<{ courseId: string; courseType: 'imported' | 'catalog'; justification?: string }>
   ) => Promise<LearningPath>
   batchAddCoursesToPath: (
     pathId: string,
-    courses: Array<{
-      courseId: string
-      courseType: 'imported' | 'catalog'
-      justification?: string
-      completionTarget: CompletionTarget | undefined
-    }>
+    courses: Array<{ courseId: string; courseType: 'imported' | 'catalog'; justification?: string }>
   ) => Promise<void>
 
   // Template operations
@@ -576,8 +560,7 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
     pathId: string,
     courseId: string,
     courseType: 'imported' | 'catalog',
-    justification?: string,
-    completionTarget?: CompletionTarget
+    justification?: string
   ) => {
     const existingEntries = get().entries.filter(e => e.pathId === pathId)
 
@@ -595,7 +578,6 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
       position: existingEntries.length + 1,
       justification,
       isManuallyOrdered: false,
-      completionTarget,
     }
 
     const prevEntries = get().entries
@@ -849,7 +831,6 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
           position: course.position,
           justification: course.justification,
           isManuallyOrdered: false,
-          completionTarget: undefined,
         }
         generatedEntries.push(entry)
         set(state => ({
@@ -866,7 +847,6 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
         position: course.position,
         justification: course.justification,
         isManuallyOrdered: false,
-        completionTarget: undefined,
       }))
 
       const now = new Date().toISOString()
@@ -967,7 +947,6 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
             position: aiEntry.position,
             justification: aiEntry.justification,
             isManuallyOrdered: false,
-            completionTarget: entry.completionTarget,
           }
         }
         return entry
@@ -1077,7 +1056,6 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
       position: gapEntry.position,
       justification: gapEntry.justification,
       isManuallyOrdered: false,
-      completionTarget: undefined,
     }
 
     const prevEntries = get().entries
@@ -1119,12 +1097,7 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
   createPathWithCourses: async (
     name: string,
     description: string | undefined,
-    courses: Array<{
-      courseId: string
-      courseType: 'imported' | 'catalog'
-      justification?: string
-      completionTarget: CompletionTarget | undefined
-    }>
+    courses: Array<{ courseId: string; courseType: 'imported' | 'catalog'; justification?: string }>
   ) => {
     const now = new Date().toISOString()
     const path: LearningPath = {
@@ -1157,7 +1130,6 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
       position: i + 1,
       justification: c.justification,
       isManuallyOrdered: false,
-      completionTarget: c.completionTarget,
     }))
 
     // Optimistic update
@@ -1193,12 +1165,7 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
 
   batchAddCoursesToPath: async (
     pathId: string,
-    courses: Array<{
-      courseId: string
-      courseType: 'imported' | 'catalog'
-      justification?: string
-      completionTarget: CompletionTarget | undefined
-    }>
+    courses: Array<{ courseId: string; courseType: 'imported' | 'catalog'; justification?: string }>
   ) => {
     const existingEntries = get().entries.filter(e => e.pathId === pathId)
     const existingCourseIds = new Set(existingEntries.map(e => e.courseId))
@@ -1222,7 +1189,6 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
       position: nextPosition + i,
       justification: c.justification,
       isManuallyOrdered: false,
-      completionTarget: c.completionTarget,
     }))
 
     const prevEntries = get().entries
@@ -1356,7 +1322,6 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
           position: entry.position,
           justification: entry.justification,
           isManuallyOrdered: false,
-          completionTarget: entry.completionTarget,
         }
         newEntries.push(newEntry)
       }

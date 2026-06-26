@@ -1,4 +1,4 @@
-import type { CompletionTarget, CourseCategory, Difficulty } from '@/data/types'
+import type { CourseCategory, Difficulty } from '@/data/types'
 
 // ── Schema types ──────────────────────────────────────────────
 
@@ -53,8 +53,6 @@ export interface TrackManifestCourse {
   position: number
   /** Optional notes stored as LearningPathEntry.justification during import. */
   notes?: string
-  /** Optional per-course lesson count cap for track progress. */
-  completionTarget?: CompletionTarget
 }
 
 export interface TrackManifest {
@@ -91,19 +89,6 @@ const VALID_CATEGORIES: readonly string[] = [
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
-}
-
-function parseCompletionTarget(
-  value: unknown,
-): { targetLessonCount?: number } | null {
-  if (value === undefined || value === null) return null // absent = no target
-  if (typeof value !== 'object' || Array.isArray(value)) return null
-  const obj = value as Record<string, unknown>
-  if (obj.targetLessonCount === undefined) return null // no lesson count = no target
-  if (typeof obj.targetLessonCount !== 'number' || !Number.isInteger(obj.targetLessonCount) || obj.targetLessonCount < 1) {
-    return null
-  }
-  return { targetLessonCount: obj.targetLessonCount }
 }
 
 function asString(value: unknown): string | null {
@@ -538,16 +523,8 @@ export function parseTrackManifest(json: unknown): ParseResult<TrackManifest> {
       })
     }
     const notes = asOptionalString(entry.notes)
-    const completionTarget = parseCompletionTarget(entry.completionTarget)
-    if (completionTarget === null) {
-      errors.push({
-        path: `track.courses[${ci}].completionTarget`,
-        message:
-          'completionTarget must be an object with an optional targetLessonCount (positive integer >= 1)',
-      })
-    }
     if (folder) {
-      courses.push({ folder, position: entry.position as number, notes, ...(completionTarget && { completionTarget }) })
+      courses.push({ folder, position: entry.position as number, notes })
     }
   }
 

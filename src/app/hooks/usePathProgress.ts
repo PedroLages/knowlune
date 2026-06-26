@@ -10,10 +10,6 @@ export interface CourseProgressInfo {
   completedLessons: number
   totalLessons: number
   completionPct: number
-  /** Full course lesson count (always videoCount, never target-capped). */
-  absoluteTotalLessons: number
-  /** Completion percentage based on absolute lesson count. */
-  absoluteCompletionPct: number
 }
 
 export interface PathProgressSummary {
@@ -80,8 +76,6 @@ export function usePathProgress(entries: LearningPathEntry[]): PathProgressSumma
           completedLessons: 0,
           totalLessons: 0,
           completionPct: 0,
-          absoluteTotalLessons: 0,
-          absoluteCompletionPct: 0,
         })
       }
     }
@@ -117,7 +111,7 @@ export function usePathProgress(entries: LearningPathEntry[]): PathProgressSumma
 
       for (const entry of importedEntries) {
         const importedCourse = importedMap.get(entry.courseId)
-        const absoluteTotalLessons = importedCourse?.videoCount ?? 0
+        const totalLessons = importedCourse?.videoCount ?? 0
 
         // Count completed videos from Dexie progress table
         const completedFromDexie = videoProgress.filter(
@@ -128,43 +122,24 @@ export function usePathProgress(entries: LearningPathEntry[]): PathProgressSumma
         const localCourseProgress = localProgress[entry.courseId]
         const completedFromLocal = localCourseProgress?.completedLessons?.length ?? 0
 
-        // Raw absolute completed (clamped to actual course length)
-        const absoluteCompleted = Math.min(
+        // Take the higher of the two sources (they may overlap)
+        const completedLessons = Math.min(
           Math.max(completedFromDexie, completedFromLocal),
-          absoluteTotalLessons
+          totalLessons
         )
 
-        // Compute target-capped denominator
-        const targetLessonCount = entry.completionTarget?.targetLessonCount
-        let targetTotal: number
-        if (targetLessonCount != null && targetLessonCount >= 1) {
-          targetTotal = Math.min(targetLessonCount, absoluteTotalLessons)
-        } else {
-          targetTotal = absoluteTotalLessons
-        }
-
-        // Clamp completed to target (can't exceed target)
-        const clampedCompleted = Math.min(absoluteCompleted, targetTotal)
-
-        const completionPct =
-          targetTotal > 0 ? Math.round((clampedCompleted / targetTotal) * 100) : 0
-        const absoluteCompletionPct =
-          absoluteTotalLessons > 0
-            ? Math.round((absoluteCompleted / absoluteTotalLessons) * 100)
-            : 0
+        const pct = totalLessons > 0 ? Math.round((completedLessons / totalLessons) * 100) : 0
 
         courseProgress.set(entry.courseId, {
           courseId: entry.courseId,
-          completedLessons: clampedCompleted,
-          totalLessons: targetTotal,
-          completionPct,
-          absoluteTotalLessons,
-          absoluteCompletionPct,
+          completedLessons,
+          totalLessons,
+          completionPct: pct,
         })
 
-        totalCompletedLessons += clampedCompleted
-        totalLessonsCount += targetTotal
-        if (targetTotal > 0 && clampedCompleted >= targetTotal) {
+        totalCompletedLessons += completedLessons
+        totalLessonsCount += totalLessons
+        if (totalLessons > 0 && completedLessons >= totalLessons) {
           completedCoursesCount++
         }
       }
@@ -231,6 +206,7 @@ export function useMultiPathProgress(
     const importedEntries = allEntries.filter(e => e.courseType === 'imported')
 
     // Batch load all data once
+    const catalogCourseIds = [...new Set(catalogEntries.map(e => e.courseId))]
     const importedCourseIds = [...new Set(importedEntries.map(e => e.courseId))]
 
     // Catalog courses table dropped (E89-S01) — skip catalog DB queries
@@ -256,67 +232,39 @@ export function useMultiPathProgress(
     const importedCourseMap = new Map(importedCourses.map(c => [c.id, c]))
     const localProgress = importedCourseIds.length > 0 ? getAllProgress() : {}
 
-    // Build per-course progress lookup with composite key (pathId:courseId)
-    // to support per-path completionTarget variance (R7).
+    // Build per-course progress lookup
     const courseProgressLookup = new Map<string, CourseProgressInfo>()
 
     // Catalog courses — table dropped (E89-S01), report 0 progress
-    for (const entry of catalogEntries) {
-      const key = entry.pathId + ':' + entry.courseId
-      courseProgressLookup.set(key, {
-        courseId: entry.courseId,
+    for (const courseId of catalogCourseIds) {
+      courseProgressLookup.set(courseId, {
+        courseId,
         completedLessons: 0,
         totalLessons: 0,
         completionPct: 0,
-        absoluteTotalLessons: 0,
-        absoluteCompletionPct: 0,
       })
     }
 
-    // Imported courses — aggregate per entry to apply per-path completionTarget
-    const rawCourseCache = new Map<string, { absoluteTotal: number; absoluteCompleted: number }>()
-    for (const entry of importedEntries) {
-      // Cache raw absolute data per courseId (avoid redundant DB lookups)
-      if (!rawCourseCache.has(entry.courseId)) {
-        const ic = importedCourseMap.get(entry.courseId)
-        const absoluteTotal = ic?.videoCount ?? 0
-        const completedFromDexie = videoProgress.filter(
-          vp => vp.courseId === entry.courseId && vp.completedAt
-        ).length
-        const localCp = localProgress[entry.courseId]
-        const completedFromLocal = localCp?.completedLessons?.length ?? 0
-        const absoluteCompleted = Math.min(
-          Math.max(completedFromDexie, completedFromLocal),
-          absoluteTotal
-        )
-        rawCourseCache.set(entry.courseId, { absoluteTotal, absoluteCompleted })
-      }
+    // Imported courses
+    for (const courseId of importedCourseIds) {
+      const ic = importedCourseMap.get(courseId)
+      const totalLessons = ic?.videoCount ?? 0
+      const completedFromDexie = videoProgress.filter(
+        vp => vp.courseId === courseId && vp.completedAt
+      ).length
+      const localCp = localProgress[courseId]
+      const completedFromLocal = localCp?.completedLessons?.length ?? 0
+      const completedLessons = Math.min(
+        Math.max(completedFromDexie, completedFromLocal),
+        totalLessons
+      )
+      const pct = totalLessons > 0 ? Math.round((completedLessons / totalLessons) * 100) : 0
 
-      const { absoluteTotal, absoluteCompleted } = rawCourseCache.get(entry.courseId)!
-
-      // Apply per-path completionTarget
-      const targetLessonCount = entry.completionTarget?.targetLessonCount
-      let targetTotal: number
-      if (targetLessonCount != null && targetLessonCount >= 1) {
-        targetTotal = Math.min(targetLessonCount, absoluteTotal)
-      } else {
-        targetTotal = absoluteTotal
-      }
-
-      const clampedCompleted = Math.min(absoluteCompleted, targetTotal)
-      const completionPct =
-        targetTotal > 0 ? Math.round((clampedCompleted / targetTotal) * 100) : 0
-      const absoluteCompletionPct =
-        absoluteTotal > 0 ? Math.round((absoluteCompleted / absoluteTotal) * 100) : 0
-
-      const key = entry.pathId + ':' + entry.courseId
-      courseProgressLookup.set(key, {
-        courseId: entry.courseId,
-        completedLessons: clampedCompleted,
-        totalLessons: targetTotal,
-        completionPct,
-        absoluteTotalLessons: absoluteTotal,
-        absoluteCompletionPct,
+      courseProgressLookup.set(courseId, {
+        courseId,
+        completedLessons,
+        totalLessons,
+        completionPct: pct,
       })
     }
 
@@ -333,8 +281,7 @@ export function useMultiPathProgress(
       const pathCourseProgress = new Map<string, CourseProgressInfo>()
 
       for (const entry of entries) {
-        const key = pathId + ':' + entry.courseId
-        const cp = courseProgressLookup.get(key)
+        const cp = courseProgressLookup.get(entry.courseId)
         if (cp) {
           pathCourseProgress.set(entry.courseId, cp)
           totalCompleted += cp.completedLessons
@@ -348,8 +295,6 @@ export function useMultiPathProgress(
             completedLessons: 0,
             totalLessons: 0,
             completionPct: 0,
-            absoluteTotalLessons: 0,
-            absoluteCompletionPct: 0,
           })
         }
       }

@@ -669,7 +669,6 @@ export function LearningTrackDetail() {
                       }))}
                       courseInfoMap={courseInfo}
                       gapEntries={courseEntries.filter(e => e.courseId === '')}
-                      courseProgressMap={pathProgress.courseProgress}
                       onGapResolve={() => {}}
                       onCourseClick={courseId => {
                         const lessonId = firstLessonByCourse.get(courseId)
@@ -704,7 +703,6 @@ export function LearningTrackDetail() {
               <aside className="lg:col-span-1 space-y-6">
                 <PathProgressSidebar
                   progress={enhancedProgress}
-                  entries={courseEntries}
                   difficultyLabel={path.difficultyLabel}
                   estimatedHours={path.estimatedHours}
                   courseCount={courseEntries.length}
