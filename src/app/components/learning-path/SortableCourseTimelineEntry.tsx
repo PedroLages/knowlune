@@ -31,6 +31,8 @@ import type { CourseProgressInfo } from '@/app/hooks/usePathProgress'
 interface SortableCourseTimelineEntryProps {
   entry: LearningPathEntry
   info?: PathCourseInfo
+  /** Per-course target-capped progress — needed for dual-display badges when entry has completionTarget */
+  courseProgress?: CourseProgressInfo
   isCompleted: boolean
   isInProgress: boolean
   /** When true, the module has real progress (1-99%) — shows "In Progress" label and "Continue Module" button */
@@ -50,6 +52,7 @@ interface SortableCourseTimelineEntryProps {
 export function SortableCourseTimelineEntry({
   entry,
   info,
+  courseProgress,
   isCompleted,
   isInProgress,
   hasRealProgress,
@@ -201,22 +204,48 @@ export function SortableCourseTimelineEntry({
                     <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest">
                       Module {index + 1}
                     </span>
-                    <span
-                      className={cn(
-                        'px-2 py-0.5 text-[10px] font-bold rounded-full uppercase tracking-wider inline-flex items-center gap-1',
-                        isCompleted && 'bg-success-soft text-success',
-                        isInProgress && 'bg-brand-soft text-brand-soft-foreground',
-                        isFreeMode && !isCompleted && !isInProgress && 'bg-muted/60 text-muted-foreground',
-                        isLocked && 'bg-muted text-muted-foreground'
-                      )}
-                    >
-                      {isCompleted && <Check className="size-3" aria-hidden="true" />}
-                      {isInProgress && (
-                        <span className="size-1.5 rounded-full bg-brand-soft-foreground motion-safe:animate-pulse" />
-                      )}
-                      {isLocked && <Lock className="size-3 opacity-50" aria-hidden="true" />}
-                      {statusLabel}
-                    </span>
+                    {entry.completionTarget?.targetLessonCount != null && courseProgress ? (
+                      <div
+                        className="flex flex-col items-end"
+                        aria-label={`${courseProgress.completedLessons} of ${courseProgress.totalLessons} target lessons complete. ${courseProgress.completedLessons} of ${courseProgress.absoluteTotalLessons} total.`}
+                      >
+                        <span
+                          className={cn(
+                            'px-2 py-0.5 text-[10px] font-bold rounded-full uppercase tracking-wider inline-flex items-center gap-1',
+                            isCompleted && 'bg-success-soft text-success',
+                            isInProgress && 'bg-brand-soft text-brand-soft-foreground',
+                            isFreeMode && !isCompleted && !isInProgress && 'bg-muted/60 text-muted-foreground',
+                            isLocked && 'bg-muted text-muted-foreground'
+                          )}
+                        >
+                          {courseProgress.completedLessons}/{courseProgress.totalLessons} target
+                          {isCompleted && <Check className="size-3" aria-hidden="true" />}
+                          {isInProgress && (
+                            <span className="size-1.5 rounded-full bg-brand-soft-foreground motion-safe:animate-pulse" />
+                          )}
+                        </span>
+                        <span className="text-[9px] text-muted-foreground mt-0.5">
+                          {courseProgress.absoluteTotalLessons} total
+                        </span>
+                      </div>
+                    ) : (
+                      <span
+                        className={cn(
+                          'px-2 py-0.5 text-[10px] font-bold rounded-full uppercase tracking-wider inline-flex items-center gap-1',
+                          isCompleted && 'bg-success-soft text-success',
+                          isInProgress && 'bg-brand-soft text-brand-soft-foreground',
+                          isFreeMode && !isCompleted && !isInProgress && 'bg-muted/60 text-muted-foreground',
+                          isLocked && 'bg-muted text-muted-foreground'
+                        )}
+                      >
+                        {isCompleted && <Check className="size-3" aria-hidden="true" />}
+                        {isInProgress && (
+                          <span className="size-1.5 rounded-full bg-brand-soft-foreground motion-safe:animate-pulse" />
+                        )}
+                        {isLocked && <Lock className="size-3 opacity-50" aria-hidden="true" />}
+                        {statusLabel}
+                      </span>
+                    )}
                   </div>
 
                   {/* Row 2: Title */}

@@ -43,6 +43,7 @@ import { formatClockDuration } from '@/lib/formatDuration'
 import { isCourseInProgress } from '@/lib/progressUtils'
 import type { ChapterGroup } from '@/lib/curriculumGrouping'
 import type { LearningPathEntry, PathCourseInfo, ImportedVideo, VideoProgress, PathProgressionMode } from '@/data/types'
+import type { CourseProgressInfo } from '@/app/hooks/usePathProgress'
 
 // ---- Types ----
 
@@ -91,6 +92,8 @@ interface PathTimelineProps {
   className?: string
   /** When 'free', all non-gap courses are accessible regardless of completion status */
   progressionMode?: PathProgressionMode
+  /** Per-course target-capped progress — needed for dual-display badges when entries have completionTarget */
+  courseProgressMap?: Map<string, CourseProgressInfo>
 }
 
 /** Gap entry card with resolution buttons */
@@ -181,6 +184,7 @@ function GapTimelineEntry({
 function CourseTimelineEntry({
   entry,
   info,
+  courseProgress,
   isCompleted,
   isInProgress,
   hasRealProgress,
@@ -197,6 +201,8 @@ function CourseTimelineEntry({
 }: {
   entry: TimelineEntry
   info?: PathCourseInfo
+  /** Per-course target-capped progress — needed for dual-display badges when entry has completionTarget */
+  courseProgress?: CourseProgressInfo
   isCompleted: boolean
   isInProgress: boolean
   /** When true, the module has real progress (1-99%) — shows "In Progress" label and "Continue Module" button */
@@ -267,22 +273,48 @@ function CourseTimelineEntry({
           <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest">
             Module {index + 1}
           </span>
-          <span
-            className={cn(
-              'px-2 py-0.5 text-[10px] font-bold rounded-full uppercase tracking-wider inline-flex items-center gap-1',
-              isCompleted && 'bg-success-soft text-success',
-              isInProgress && 'bg-brand-soft text-brand-soft-foreground',
-              isFreeMode && !isCompleted && !isInProgress && 'bg-muted/60 text-muted-foreground',
-              isLocked && 'bg-muted text-muted-foreground'
-            )}
-          >
-            {isCompleted && <Check className="size-3" aria-hidden="true" />}
-            {isInProgress && (
-              <span className="size-1.5 rounded-full bg-brand-soft-foreground motion-safe:animate-pulse" />
-            )}
-            {isLocked && <Lock className="size-3" aria-hidden="true" />}
-            {statusLabel}
-          </span>
+          {entry.completionTarget?.targetLessonCount != null && courseProgress ? (
+            <div
+              className="flex flex-col items-end"
+              aria-label={`${courseProgress.completedLessons} of ${courseProgress.totalLessons} target lessons complete. ${courseProgress.completedLessons} of ${courseProgress.absoluteTotalLessons} total.`}
+            >
+              <span
+                className={cn(
+                  'px-2 py-0.5 text-[10px] font-bold rounded-full uppercase tracking-wider inline-flex items-center gap-1',
+                  isCompleted && 'bg-success-soft text-success',
+                  isInProgress && 'bg-brand-soft text-brand-soft-foreground',
+                  isFreeMode && !isCompleted && !isInProgress && 'bg-muted/60 text-muted-foreground',
+                  isLocked && 'bg-muted text-muted-foreground'
+                )}
+              >
+                {courseProgress.completedLessons}/{courseProgress.totalLessons} target
+                {isCompleted && <Check className="size-3" aria-hidden="true" />}
+                {isInProgress && (
+                  <span className="size-1.5 rounded-full bg-brand-soft-foreground motion-safe:animate-pulse" />
+                )}
+              </span>
+              <span className="text-[9px] text-muted-foreground mt-0.5">
+                {courseProgress.absoluteTotalLessons} total
+              </span>
+            </div>
+          ) : (
+            <span
+              className={cn(
+                'px-2 py-0.5 text-[10px] font-bold rounded-full uppercase tracking-wider inline-flex items-center gap-1',
+                isCompleted && 'bg-success-soft text-success',
+                isInProgress && 'bg-brand-soft text-brand-soft-foreground',
+                isFreeMode && !isCompleted && !isInProgress && 'bg-muted/60 text-muted-foreground',
+                isLocked && 'bg-muted text-muted-foreground'
+              )}
+            >
+              {isCompleted && <Check className="size-3" aria-hidden="true" />}
+              {isInProgress && (
+                <span className="size-1.5 rounded-full bg-brand-soft-foreground motion-safe:animate-pulse" />
+              )}
+              {isLocked && <Lock className="size-3" aria-hidden="true" />}
+              {statusLabel}
+            </span>
+          )}
         </div>
 
         {/* Row 2: Title */}
@@ -495,6 +527,7 @@ export function PathTimeline({
   onReorderByCourseId,
   className,
   progressionMode,
+  courseProgressMap,
 }: PathTimelineProps) {
   // Suppress per-entry unlock animations when the mode itself changes
   // (many entries transition from locked→unlocked simultaneously).
@@ -661,6 +694,7 @@ export function PathTimeline({
               }
 
               const info = courseInfoMap.get(entry.courseId)
+              const cp = courseProgressMap?.get(entry.courseId)
               const isManuallyCompleted = manuallyCompletedIds?.has(entry.id) ?? false
               const isCompleted = (info?.completionPct ?? 0) >= 100 || isManuallyCompleted
               const hasRealProgress = isCourseInProgress(info?.completionPct, isCompleted)
@@ -674,6 +708,7 @@ export function PathTimeline({
                   <SortableCourseTimelineEntry
                     entry={entry}
                     info={info}
+                    courseProgress={cp}
                     isCompleted={isCompleted}
                     isInProgress={isInProgress}
                     hasRealProgress={hasRealProgress}
@@ -732,6 +767,7 @@ export function PathTimeline({
         }
 
         const info = courseInfoMap.get(entry.courseId)
+        const cp = courseProgressMap?.get(entry.courseId)
         const isManuallyCompleted = manuallyCompletedIds?.has(entry.id) ?? false
         const isCompleted = (info?.completionPct ?? 0) >= 100 || isManuallyCompleted
         const hasRealProgress = isCourseInProgress(info?.completionPct, isCompleted)
@@ -745,6 +781,7 @@ export function PathTimeline({
             <CourseTimelineEntry
               entry={entry}
               info={info}
+              courseProgress={cp}
               isCompleted={isCompleted}
               isInProgress={isInProgress}
               hasRealProgress={hasRealProgress}
