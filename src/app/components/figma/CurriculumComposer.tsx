@@ -251,6 +251,7 @@ export function CurriculumComposer({
       const courses = matchedEntries.map(e => ({
         courseId: e.courseId!,
         courseType: 'imported' as const,
+        completionTarget: undefined,
       }))
 
       const path = await createPathWithCourses(
@@ -282,6 +283,7 @@ export function CurriculumComposer({
         const courses = selectedCourseIds.map(id => ({
           courseId: id,
           courseType: 'imported' as const,
+          completionTarget: undefined,
         }))
 
         const path = await createPathWithCourses(
