@@ -115,6 +115,9 @@ interface LearningPathState {
     }>
   ) => Promise<void>
 
+  // Manifest import ordering
+  applyManifestOrder: (pathId: string, orderedCourseIds: string[]) => Promise<void>
+
   // Template operations
   forkTemplate: (templateId: string) => Promise<string | null> // returns new path ID or null on failure
 
@@ -1256,6 +1259,59 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
       })
       toast.error('Failed to add courses to learning path')
       throw error
+    }
+  },
+
+  applyManifestOrder: async (pathId: string, orderedCourseIds: string[]) => {
+    const allEntries = get().entries.filter(e => e.pathId === pathId)
+    const entryByCourseId = new Map(allEntries.map(e => [e.courseId, e]))
+
+    // Build ordered entries: manifest courses first, then any extras (user-added)
+    const ordered: LearningPathEntry[] = []
+    const seenIds = new Set<string>()
+
+    for (const courseId of orderedCourseIds) {
+      const entry = entryByCourseId.get(courseId)
+      if (entry && !seenIds.has(entry.id)) {
+        ordered.push({ ...entry, position: ordered.length + 1 })
+        seenIds.add(entry.id)
+      }
+    }
+
+    // Append entries not in the manifest (preserve user-added courses)
+    for (const entry of allEntries) {
+      if (!seenIds.has(entry.id)) {
+        ordered.push({ ...entry, position: ordered.length + 1 })
+        seenIds.add(entry.id)
+      }
+    }
+
+    const prevEntries = get().entries
+    const prevPaths = get().paths
+
+    // Optimistic update
+    set(state => ({
+      entries: [...state.entries.filter(e => e.pathId !== pathId), ...ordered],
+      paths: state.paths.map(p =>
+        p.id === pathId ? { ...p, updatedAt: new Date().toISOString() } : p
+      ),
+      error: null,
+    }))
+
+    try {
+      await persistWithRetry(async () => {
+        for (const entry of ordered) {
+          await syncableWrite('learningPathEntries', 'put', entry as unknown as SyncableRecord)
+        }
+        const existingPath = await db.learningPaths.get(pathId)
+        if (existingPath) {
+          await syncableWrite('learningPaths', 'put', existingPath as unknown as SyncableRecord)
+        }
+      })
+    } catch (error) {
+      console.error('[LearningPathStore] Failed to apply manifest order:', error)
+      set({ entries: prevEntries, paths: prevPaths, error: 'Failed to apply manifest order' })
+      toast.error('Failed to apply course order')
     }
   },
 

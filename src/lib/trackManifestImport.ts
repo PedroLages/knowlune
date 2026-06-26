@@ -222,33 +222,25 @@ export async function batchImportTrackCourses(
     toast.success(`Track "${trackName}" created with ${successCount} courses`)
   }
 
-  // Apply manifest-specified positions via reorder (both new and existing tracks).
-  // Re-read live store state each iteration — reorderCourse mutates entries,
-  // so a static snapshot captured before the loop would go stale.
-  //
-  // Sort positions by their manifest order to minimize moves: processing the
-  // smallest target positions first avoids shifting already-placed courses.
-  const sortedPositions = [...positions].sort((a, b) => a.position - b.position)
+  // Apply manifest-specified order directly (both new and existing tracks).
+  // Build a folder→courseId map from import results, then order course IDs
+  // by their manifest positions. This replaces the old reorder loop which
+  // moved courses one-at-a-time through the DnD machinery, causing cascading
+  // position reassignments that could produce incorrect final order.
+  const courseIdByFolder = new Map<string, string>()
+  for (const r of results) {
+    if (r.success && r.courseId) courseIdByFolder.set(r.folder, r.courseId)
+  }
 
-  for (const { folder, position } of sortedPositions) {
-    const result = results.find(r => r.folder === folder && r.success)
-    if (!result?.courseId) continue
+  // Sort by manifest position to guarantee correct order even if the
+  // manifest JSON array order differs from the position field values.
+  const manifestOrderedCourseIds = [...positions]
+    .filter(p => courseIdByFolder.has(p.folder))
+    .sort((a, b) => a.position - b.position)
+    .map(p => courseIdByFolder.get(p.folder)!)
 
-    // getState() returns the live Zustand snapshot — never use the stale
-    // `store` variable captured above for entry index lookups.
-    const currentEntries = useLearningPathStore
-      .getState()
-      .entries.filter(e => e.pathId === trackId)
-      .sort((a, b) => a.position - b.position)
-
-    const entryIndex = currentEntries.findIndex(e => e.courseId === result.courseId)
-    // Clamp target to valid range — when courses fail to import, the entries
-    // array may be shorter than the highest manifest position, which would
-    // cause reorderCourse to silently skip (out-of-bounds toEntry).
-    const targetIndex = Math.min(position - 1, currentEntries.length - 1)
-    if (entryIndex >= 0 && entryIndex !== targetIndex) {
-      await store.reorderCourse(trackId, entryIndex, targetIndex)
-    }
+  if (manifestOrderedCourseIds.length > 0) {
+    await store.applyManifestOrder(trackId, manifestOrderedCourseIds)
   }
 
   return {
