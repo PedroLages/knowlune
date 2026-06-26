@@ -71,15 +71,19 @@ export function PathProgressSidebar({
 
   // Compute absolute estimated remaining hours (all lessons, not just target)
   let absoluteEstimatedRemaining = estimatedRemainingHours
+  let absoluteCompletedCount = completedLessons
   if (hasTargets) {
     let totalAbsRemaining = 0
+    let absCompCount = 0
     for (const cp of progress.courseProgress.values()) {
       const absoluteCompleted =
         cp.absoluteTotalLessons > 0
           ? Math.round((cp.absoluteCompletionPct / 100) * cp.absoluteTotalLessons)
           : 0
       totalAbsRemaining += cp.absoluteTotalLessons - absoluteCompleted
+      absCompCount += absoluteCompleted
     }
+    absoluteCompletedCount = absCompCount
     absoluteEstimatedRemaining = Math.round(
       ((totalAbsRemaining * MINUTES_PER_LESSON) / 60) * 10
     ) / 10
@@ -95,12 +99,12 @@ export function PathProgressSidebar({
 
   // ARIA label for the progress ring — explains target vs absolute progress
   const ringAriaLabel = hasTargets
-    ? `${completedLessons} of ${totalLessons} target lessons complete. ${completedLessons} of ${absoluteTotal} total lessons.`
+    ? `${completedLessons} of ${totalLessons} target lessons complete. ${absoluteCompletedCount} of ${absoluteTotal} total lessons.`
     : undefined
 
-  // Secondary text for dual display: target-capped numerator / absolute denominator
+  // Secondary text for dual display: absolute numerator / absolute denominator
   const secondaryText = hasTargets
-    ? `${completedLessons}/${absoluteTotal} total lessons`
+    ? `${absoluteCompletedCount}/${absoluteTotal} total lessons`
     : null
 
   return (

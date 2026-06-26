@@ -1,4 +1,4 @@
-import type { CourseCategory, Difficulty } from '@/data/types'
+import type { CompletionTarget, CourseCategory, Difficulty } from '@/data/types'
 
 // ── Schema types ──────────────────────────────────────────────
 
@@ -54,7 +54,7 @@ export interface TrackManifestCourse {
   /** Optional notes stored as LearningPathEntry.justification during import. */
   notes?: string
   /** Optional per-course lesson count cap for track progress. */
-  completionTarget?: { targetLessonCount?: number }
+  completionTarget?: CompletionTarget
 }
 
 export interface TrackManifest {
@@ -96,10 +96,10 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 function parseCompletionTarget(
   value: unknown,
 ): { targetLessonCount?: number } | null {
-  if (value === undefined || value === null) return {} // absent = no target
+  if (value === undefined || value === null) return null // absent = no target
   if (typeof value !== 'object' || Array.isArray(value)) return null
   const obj = value as Record<string, unknown>
-  if (obj.targetLessonCount === undefined) return {} // no lesson count = no target
+  if (obj.targetLessonCount === undefined) return null // no lesson count = no target
   if (typeof obj.targetLessonCount !== 'number' || !Number.isInteger(obj.targetLessonCount) || obj.targetLessonCount < 1) {
     return null
   }
