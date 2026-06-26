@@ -1264,21 +1264,37 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
 
   applyManifestOrder: async (pathId: string, orderedCourseIds: string[]) => {
     const allEntries = get().entries.filter(e => e.pathId === pathId)
-    const entryByCourseId = new Map(allEntries.map(e => [e.courseId, e]))
 
-    // Build ordered entries: manifest courses first, then any extras (user-added)
+    // Group entries by courseId to detect duplicates (same courseId, different entry.id).
+    // A plain Map silently drops duplicates; grouping lets us keep one and delete the rest.
+    const byCourseId = new Map<string, LearningPathEntry[]>()
+    for (const e of allEntries) {
+      const arr = byCourseId.get(e.courseId)
+      if (arr) arr.push(e)
+      else byCourseId.set(e.courseId, [e])
+    }
+
     const ordered: LearningPathEntry[] = []
     const seenIds = new Set<string>()
+    const orphanIds: string[] = []
 
+    // Place manifest courses in order — keep the first entry for each courseId,
+    // mark any other entries with the same courseId as orphans for deletion.
     for (const courseId of orderedCourseIds) {
-      const entry = entryByCourseId.get(courseId)
-      if (entry && !seenIds.has(entry.id)) {
-        ordered.push({ ...entry, position: ordered.length + 1 })
-        seenIds.add(entry.id)
+      const entries = byCourseId.get(courseId)
+      if (entries && entries.length > 0) {
+        const keep = entries[0]
+        ordered.push({ ...keep, position: ordered.length + 1 })
+        seenIds.add(keep.id)
+        for (let i = 1; i < entries.length; i++) {
+          orphanIds.push(entries[i].id)
+          seenIds.add(entries[i].id) // prevent re-append in extras loop
+        }
       }
     }
 
-    // Append entries not in the manifest (preserve user-added courses)
+    // Append entries not in the manifest (preserve user-added courses).
+    // Orphan ids are already in seenIds so they are skipped here.
     for (const entry of allEntries) {
       if (!seenIds.has(entry.id)) {
         ordered.push({ ...entry, position: ordered.length + 1 })
@@ -1289,7 +1305,7 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
     const prevEntries = get().entries
     const prevPaths = get().paths
 
-    // Optimistic update
+    // Optimistic update — replace all entries for this path with ordered set
     set(state => ({
       entries: [...state.entries.filter(e => e.pathId !== pathId), ...ordered],
       paths: state.paths.map(p =>
@@ -1302,6 +1318,11 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
       await persistWithRetry(async () => {
         for (const entry of ordered) {
           await syncableWrite('learningPathEntries', 'put', entry as unknown as SyncableRecord)
+        }
+        // Delete orphan entries from Dexie (and sync queue → Supabase).
+        // Without this, orphans survive in Dexie and reappear on next loadPaths().
+        for (const orphanId of orphanIds) {
+          await syncableWrite('learningPathEntries', 'delete', orphanId)
         }
         const existingPath = await db.learningPaths.get(pathId)
         if (existingPath) {
