@@ -128,6 +128,7 @@ async function fetchTemplateEntries(client: SupabaseClient): Promise<LearningPat
         ? `Search for: ${row.match_title as string}`
         : undefined,
     isManuallyOrdered: false,
+    completionTarget: undefined,
   }))
 }
 
