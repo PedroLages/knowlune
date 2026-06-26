@@ -390,7 +390,10 @@ export function InlineCoursePicker({
     setSearch('')
   }, [])
 
-  // Build course list from imported courses (catalog courses table dropped in E89-S01)
+  // Build course list from imported courses (catalog courses table dropped in E89-S01).
+  // Sort alphabetically by name for predictable, stable display order — Dexie's
+  // toArray() order is arbitrary (UUID primary keys), causing courses to shuffle
+  // between page reloads.
   const allCourses: CoursePickerItem[] = useMemo(() => {
     return importedCourses
       .filter(c => !excludeCourseIds.has(c.id))
@@ -402,6 +405,7 @@ export function InlineCoursePicker({
         thumbnailUrl: thumbnailUrls[c.id],
         tags: c.tags ?? [],
       }))
+      .sort((a, b) => a.name.localeCompare(b.name))
   }, [importedCourses, excludeCourseIds, authors, thumbnailUrls])
 
   // Recently Imported: courses not assigned to any path

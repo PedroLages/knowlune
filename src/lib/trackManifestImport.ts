@@ -7,6 +7,17 @@ import { useAuthorStore } from '@/stores/useAuthorStore'
 import { db } from '@/db'
 import { toast } from 'sonner'
 
+/**
+ * Normalize a folder name for reliable comparison.
+ *
+ * File System Access API may return directory names with different Unicode
+ * normalization (NFD on macOS) than the JSON manifest (usually NFC).
+ * Trimming whitespace also guards against copy-paste artifacts.
+ */
+function normalizeFolder(name: string): string {
+  return name.trim().normalize('NFC')
+}
+
 export interface TrackManifestSummary {
   trackName: string
   trackDescription?: string
@@ -189,6 +200,14 @@ export async function batchImportTrackCourses(
   const trackDescription = manifest.track.description
   const store = useLearningPathStore.getState()
 
+  // Build a normalized folder→position map for reliable comparison across
+  // Unicode normalization boundaries (macOS NFD vs JSON NFC).
+  const folderPosition = new Map<string, number>()
+  for (const p of positions) {
+    const key = normalizeFolder(p.folder)
+    folderPosition.set(key, p.position)
+  }
+
   // Check if a track with this name already exists
   let trackId: string
   const existingPath = store.paths.find(p => p.name.toLowerCase() === trackName.toLowerCase())
@@ -200,9 +219,9 @@ export async function batchImportTrackCourses(
       .map(r => ({
         courseId: r.courseId!,
         courseType: 'imported' as const,
-        justification: positions.find(p => p.folder === r.folder)?.notes,
+        justification: positions.find(p => normalizeFolder(p.folder) === normalizeFolder(r.folder))?.notes,
         completionTarget:
-          positions.find(p => p.folder === r.folder)?.completionTarget ?? undefined,
+          positions.find(p => normalizeFolder(p.folder) === normalizeFolder(r.folder))?.completionTarget ?? undefined,
       }))
     await store.batchAddCoursesToPath(trackId, coursesToAdd)
     toast.info(`Added ${coursesToAdd.length} courses to existing track "${trackName}"`)
@@ -210,20 +229,25 @@ export async function batchImportTrackCourses(
     // Create new track — pre-sort by manifest position so the initial
     // entry positions are correct from the start (no render flash between
     // createPathWithCourses and the applyManifestOrder correction pass).
-    const folderPosition = new Map(positions.map(p => [p.folder, p.position]))
     const sortedResults = [...results]
       .filter(r => r.success && r.courseId)
       .sort((a, b) => {
-        const posA = folderPosition.get(a.folder) ?? Number.MAX_SAFE_INTEGER
-        const posB = folderPosition.get(b.folder) ?? Number.MAX_SAFE_INTEGER
+        const posA = folderPosition.get(normalizeFolder(a.folder)) ?? Number.MAX_SAFE_INTEGER
+        const posB = folderPosition.get(normalizeFolder(b.folder)) ?? Number.MAX_SAFE_INTEGER
+        if (posA >= Number.MAX_SAFE_INTEGER) {
+          console.warn('[trackManifestImport] Folder not in manifest (pre-sort):', a.folder)
+        }
+        if (posB >= Number.MAX_SAFE_INTEGER) {
+          console.warn('[trackManifestImport] Folder not in manifest (pre-sort):', b.folder)
+        }
         return posA - posB
       })
     const courses = sortedResults.map(r => ({
       courseId: r.courseId!,
       courseType: 'imported' as const,
-      justification: positions.find(p => p.folder === r.folder)?.notes,
+      justification: positions.find(p => normalizeFolder(p.folder) === normalizeFolder(r.folder))?.notes,
       completionTarget:
-        positions.find(p => p.folder === r.folder)?.completionTarget ?? undefined,
+        positions.find(p => normalizeFolder(p.folder) === normalizeFolder(r.folder))?.completionTarget ?? undefined,
     }))
     const newPath = await store.createPathWithCourses(trackName, trackDescription, courses)
     trackId = newPath.id
@@ -237,17 +261,36 @@ export async function batchImportTrackCourses(
   // through the DnD machinery, causing cascading position reassignments.
   const courseIdByFolder = new Map<string, string>()
   for (const r of results) {
-    if (r.success && r.courseId) courseIdByFolder.set(r.folder, r.courseId)
+    if (r.success && r.courseId) courseIdByFolder.set(normalizeFolder(r.folder), r.courseId)
   }
 
   // Sort by manifest position to guarantee correct order even if the
   // manifest JSON array order differs from the position field values.
   const manifestOrderedCourseIds = [...positions]
-    .filter(p => courseIdByFolder.has(p.folder))
+    .filter(p => courseIdByFolder.has(normalizeFolder(p.folder)))
     .sort((a, b) => a.position - b.position)
-    .map(p => courseIdByFolder.get(p.folder)!)
+    .map(p => courseIdByFolder.get(normalizeFolder(p.folder))!)
+
+  // Warn about manifest courses that imported successfully but are missing
+  // from the courseIdByFolder map (should never happen after normalization).
+  for (const p of positions) {
+    if (courseIdByFolder.has(normalizeFolder(p.folder))) continue
+    const imported = results.find(r => r.success && normalizeFolder(r.folder) === normalizeFolder(p.folder))
+    if (imported) {
+      console.warn(
+        '[trackManifestImport] Manifest course imported but folder mismatch after normalization — manifest:',
+        JSON.stringify(p.folder),
+        '| result:',
+        JSON.stringify(imported.folder)
+      )
+    }
+  }
 
   if (manifestOrderedCourseIds.length > 0) {
+    console.log(
+      '[trackManifestImport] Applying manifest order:',
+      manifestOrderedCourseIds.map((id, i) => `${i + 1}. ${id}`)
+    )
     await store.applyManifestOrder(trackId, manifestOrderedCourseIds)
   }
 

@@ -218,12 +218,14 @@ export function BulkImportDialog({
       // Reorder sub-directories by track-manifest.json positions if a manifest exists
       const manifestResult = await readTrackManifest(parentHandle)
       if (manifestResult.ok) {
+        // Normalize folder names for reliable comparison — file system API
+        // may return NFD on macOS while JSON uses NFC.
         const positionByFolder = new Map(
-          manifestResult.manifest.track.courses.map((c, i) => [c.folder, i])
+          manifestResult.manifest.track.courses.map((c, i) => [c.folder.trim().normalize('NFC'), i])
         )
         subDirs.sort((a, b) => {
-          const posA = positionByFolder.get(a.name) ?? Infinity
-          const posB = positionByFolder.get(b.name) ?? Infinity
+          const posA = positionByFolder.get(a.name.trim().normalize('NFC')) ?? Infinity
+          const posB = positionByFolder.get(b.name.trim().normalize('NFC')) ?? Infinity
           return posA - posB
         })
 
