@@ -511,6 +511,13 @@ export interface LearningPathEntry {
   position: number // 1-indexed sequence position
   justification?: string // AI-provided reasoning for placement
   isManuallyOrdered: boolean // User manually reordered it
+  completionTarget?: CompletionTarget // Per-track-entry progress cap
+}
+
+/** Caps the progress denominator for a course within a learning track. */
+export interface CompletionTarget {
+  /** Cap progress at this lesson count (clamped to actual course length). */
+  targetLessonCount?: number
 }
 
 /** Lightweight course info for path views — shared by FocusPanel and RoadmapListView */
