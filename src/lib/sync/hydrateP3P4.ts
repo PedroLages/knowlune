@@ -38,6 +38,7 @@ import { toCamelCase } from '@/lib/sync/fieldMapper'
 import { tableRegistry } from '@/lib/sync/tableRegistry'
 import type { TableRegistryEntry } from '@/lib/sync/tableRegistry'
 import type {
+  CompletionTarget,
   LearningPath,
   LearningPathEntry,
   Challenge,
@@ -128,6 +129,9 @@ async function fetchTemplateEntries(client: SupabaseClient): Promise<LearningPat
         ? `Search for: ${row.match_title as string}`
         : undefined,
     isManuallyOrdered: false,
+    completionTarget: 'completion_target' in row
+      ? (row.completion_target as CompletionTarget)
+      : undefined,
   }))
 }
 

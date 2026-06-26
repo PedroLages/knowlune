@@ -111,7 +111,8 @@ export async function calculatePathMilestoneProgress(pathId: string): Promise<nu
     importedEntries,
     importedCourseMap,
     normalizedProgress,
-    localProgress
+    localProgress,
+    entries // pass entries for completionTarget-aware denominator computation
   )
 }
 

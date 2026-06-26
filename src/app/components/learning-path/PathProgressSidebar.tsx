@@ -4,10 +4,12 @@ import { PathProgressRing } from '@/app/components/figma/PathProgressRing'
 import { ProgressionModeToggle } from '@/app/components/learning-path/ProgressionModeToggle'
 import { cn } from '@/app/components/ui/utils'
 import type { PathProgressSummary } from '@/app/hooks/usePathProgress'
-import type { PathProgressionMode } from '@/data/types'
+import type { PathProgressionMode, LearningPathEntry } from '@/data/types'
 
 interface PathProgressSidebarProps {
   progress: PathProgressSummary
+  /** Path entries — needed to detect completionTargets for dual progress display */
+  entries?: LearningPathEntry[]
   skillTags?: string[]
   className?: string
   /** Track metadata (optional — for backward compat with learning paths) */
@@ -21,6 +23,8 @@ interface PathProgressSidebarProps {
   onProgressionModeChange?: (mode: PathProgressionMode) => void
 }
 
+const MINUTES_PER_LESSON = 15
+
 function formatDate(iso: string): string {
   return new Intl.DateTimeFormat('en-US', {
     month: 'short',
@@ -31,6 +35,7 @@ function formatDate(iso: string): string {
 
 export function PathProgressSidebar({
   progress,
+  entries,
   skillTags,
   className,
   difficultyLabel,
@@ -41,11 +46,66 @@ export function PathProgressSidebar({
   progressionMode,
   onProgressionModeChange,
 }: PathProgressSidebarProps) {
-  const { completionPct, completedCourses, totalCourses, estimatedRemainingHours } = progress
+  const {
+    completionPct,
+    completedCourses,
+    totalCourses,
+    estimatedRemainingHours,
+    completedLessons,
+    totalLessons,
+  } = progress
+
+  // Check if any entry has a completionTarget — dual display applies
+  const hasTargets =
+    entries?.some(e => e.completionTarget?.targetLessonCount != null) ?? false
+
+  // Compute aggregate absolute total lessons from per-course data
+  let absoluteTotal = totalLessons
+  if (hasTargets) {
+    let absTotal = 0
+    for (const cp of progress.courseProgress.values()) {
+      absTotal += cp.absoluteTotalLessons
+    }
+    absoluteTotal = absTotal
+  }
+
+  // Compute absolute estimated remaining hours (all lessons, not just target)
+  let absoluteEstimatedRemaining = estimatedRemainingHours
+  let absoluteCompletedCount = completedLessons
+  if (hasTargets) {
+    let totalAbsRemaining = 0
+    let absCompCount = 0
+    for (const cp of progress.courseProgress.values()) {
+      const absoluteCompleted =
+        cp.absoluteTotalLessons > 0
+          ? Math.round((cp.absoluteCompletionPct / 100) * cp.absoluteTotalLessons)
+          : 0
+      totalAbsRemaining += cp.absoluteTotalLessons - absoluteCompleted
+      absCompCount += absoluteCompleted
+    }
+    absoluteCompletedCount = absCompCount
+    absoluteEstimatedRemaining = Math.round(
+      ((totalAbsRemaining * MINUTES_PER_LESSON) / 60) * 10
+    ) / 10
+  }
 
   // Format hours for display
   const formattedTime =
     estimatedRemainingHours > 0 ? `~${Math.round(estimatedRemainingHours)}h` : '0h'
+  const formattedAbsTime =
+    absoluteEstimatedRemaining > 0 ? `~${Math.round(absoluteEstimatedRemaining)}h` : '0h'
+
+  const showDualTime = hasTargets && Math.round(estimatedRemainingHours) !== Math.round(absoluteEstimatedRemaining)
+
+  // ARIA label for the progress ring — explains target vs absolute progress
+  const ringAriaLabel = hasTargets
+    ? `${completedLessons} of ${totalLessons} target lessons complete. ${absoluteCompletedCount} of ${absoluteTotal} total lessons.`
+    : undefined
+
+  // Secondary text for dual display: absolute numerator / absolute denominator
+  const secondaryText = hasTargets
+    ? `${absoluteCompletedCount}/${absoluteTotal} total lessons`
+    : null
 
   return (
     <aside className={cn('space-y-6', className)}>
@@ -56,24 +116,44 @@ export function PathProgressSidebar({
           <h3 className="font-display text-lg font-bold mb-6">Your Progress</h3>
 
           {/* Progress ring with soft brand glow wrapper */}
-          <div className="flex justify-center mb-6 relative">
+          <div
+            className={cn(
+              'mb-6 relative',
+              hasTargets
+                ? 'flex max-sm:flex-col sm:flex-row sm:items-center sm:justify-center sm:gap-6'
+                : 'flex justify-center'
+            )}
+          >
             {/* Ambient glow behind the ring */}
             <div
               className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 size-36 rounded-full bg-brand/5 blur-2xl pointer-events-none"
               aria-hidden="true"
             />
-            <PathProgressRing percentage={completionPct} size="xl" strokeWidth={6}>
-              <div className="text-center" aria-live="polite" aria-atomic="true">
-                <span className="block text-2xl font-extrabold text-foreground">
-                  {completionPct > 0 && Math.round(completionPct) === 0
-                    ? '< 1%'
-                    : `${Math.round(completionPct)}%`}
-                </span>
-                <span className="block text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-                  Complete
-                </span>
+            <div
+              className="flex justify-center"
+              role={hasTargets ? 'img' : undefined}
+              aria-label={ringAriaLabel}
+            >
+              <PathProgressRing percentage={completionPct} size="xl" strokeWidth={6}>
+                <div className="text-center" aria-live="polite" aria-atomic="true">
+                  <span className="block text-2xl font-extrabold text-foreground">
+                    {completionPct > 0 && Math.round(completionPct) === 0
+                      ? '< 1%'
+                      : `${Math.round(completionPct)}%`}
+                  </span>
+                  <span className="block text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                    Complete
+                  </span>
+                </div>
+              </PathProgressRing>
+            </div>
+
+            {/* Dual display: secondary text with absolute progress */}
+            {secondaryText && (
+              <div className="text-center sm:text-left">
+                <p className="text-sm text-muted-foreground">{secondaryText}</p>
               </div>
-            </PathProgressRing>
+            )}
           </div>
 
           {/* Stats */}
@@ -89,7 +169,9 @@ export function PathProgressSidebar({
               <Clock className="size-4 text-brand flex-shrink-0" aria-hidden="true" />
               <span className="text-muted-foreground">Estimated Time Left</span>
               <span className="ml-auto font-bold text-foreground tabular-nums">
-                {formattedTime}
+                {showDualTime
+                  ? `${formattedTime} (target) / ${formattedAbsTime} (full)`
+                  : formattedTime}
               </span>
             </div>
           </div>
