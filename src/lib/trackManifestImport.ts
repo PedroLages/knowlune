@@ -7,34 +7,6 @@ import { useAuthorStore } from '@/stores/useAuthorStore'
 import { db } from '@/db'
 import { toast } from 'sonner'
 
-/**
- * Process `items` with a concurrency-limited async pool.
- *
- * Each item is processed by `fn`, which is expected to handle its own errors
- * (the function never throws — error isolation is the caller's responsibility).
- * Results are collected in the same order as the input array.
- *
- * Concurrency is clamped to the number of items; an empty array returns immediately.
- */
-async function concurrentMap<T, R>(
-  items: T[],
-  concurrency: number,
-  fn: (item: T) => Promise<R>
-): Promise<R[]> {
-  if (items.length === 0) return []
-  const results: R[] = new Array(items.length)
-  let idx = 0
-  const limit = Math.min(concurrency, items.length)
-  const workers = Array.from({ length: limit }, async () => {
-    while (idx < items.length) {
-      const i = idx++
-      results[i] = await fn(items[i])
-    }
-  })
-  await Promise.all(workers)
-  return results
-}
-
 export interface TrackManifestSummary {
   trackName: string
   trackDescription?: string
@@ -118,56 +90,57 @@ export async function batchImportTrackCourses(
   parentDirHandle: FileSystemDirectoryHandle,
   manifest: TrackManifest
 ): Promise<BatchImportResult> {
+  const results: CourseImportResult[] = []
   const positions = manifest.track.courses
 
-  // Phase 1: Import courses concurrently (up to 3 at a time).
-  // Each callback is self-contained — errors in one course never abort others.
-  const results: CourseImportResult[] = await concurrentMap(
-    positions,
-    3,
-    async ({ folder }): Promise<CourseImportResult> => {
+  // Phase 1: Import each course sequentially
+  for (const { folder } of positions) {
+    try {
+      // Get the subdirectory handle
+      let dirHandle: FileSystemDirectoryHandle
       try {
-        // Get the subdirectory handle
-        let dirHandle: FileSystemDirectoryHandle
-        try {
-          dirHandle = await parentDirHandle.getDirectoryHandle(folder)
-        } catch {
-          toast.warning(`Course folder "${folder}" not found — skipped`)
-          return { folder, success: false, error: `Folder "${folder}" not found` }
-        }
-
-        // Scan the subdirectory
-        const scanResult: BulkScanResult = await scanCourseFolderFromHandle(dirHandle)
-
-        if (scanResult.status === 'duplicate') {
-          const existingCourse = await db.importedCourses.where('name').equals(folder).first()
-          if (existingCourse) {
-            return { folder, success: true, courseId: existingCourse.id }
-          }
-          toast.warning(`"${folder}" appears to be imported but could not be found`)
-          return { folder, success: false, error: 'Course not found in database' }
-        }
-
-        if (scanResult.status === 'no-files') {
-          toast.warning(`"${folder}" has no supported files — skipped`)
-          return { folder, success: false, error: 'No supported files found' }
-        }
-
-        if (scanResult.status === 'error') {
-          toast.error(`Failed to scan "${folder}": ${scanResult.message}`)
-          return { folder, success: false, error: scanResult.message }
-        }
-
-        // Persist the scanned course
-        const importedCourse = await persistScannedCourse(scanResult.course)
-        return { folder, success: true, courseId: importedCourse.id }
-      } catch (err) {
-        const message = err instanceof Error ? err.message : 'Unexpected error'
-        toast.error(`Failed to import "${folder}": ${message}`)
-        return { folder, success: false, error: message }
+        dirHandle = await parentDirHandle.getDirectoryHandle(folder)
+      } catch {
+        results.push({ folder, success: false, error: `Folder "${folder}" not found` })
+        toast.warning(`Course folder "${folder}" not found — skipped`)
+        continue
       }
+
+      // Scan the subdirectory
+      const scanResult: BulkScanResult = await scanCourseFolderFromHandle(dirHandle)
+
+      if (scanResult.status === 'duplicate') {
+        const existingCourse = await db.importedCourses.where('name').equals(folder).first()
+        if (existingCourse) {
+          results.push({ folder, success: true, courseId: existingCourse.id })
+        } else {
+          results.push({ folder, success: false, error: 'Course not found in database' })
+          toast.warning(`"${folder}" appears to be imported but could not be found`)
+        }
+        continue
+      }
+
+      if (scanResult.status === 'no-files') {
+        results.push({ folder, success: false, error: 'No supported files found' })
+        toast.warning(`"${folder}" has no supported files — skipped`)
+        continue
+      }
+
+      if (scanResult.status === 'error') {
+        results.push({ folder, success: false, error: scanResult.message })
+        toast.error(`Failed to scan "${folder}": ${scanResult.message}`)
+        continue
+      }
+
+      // Persist the scanned course
+      const importedCourse = await persistScannedCourse(scanResult.course)
+      results.push({ folder, success: true, courseId: importedCourse.id })
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Unexpected error'
+      results.push({ folder, success: false, error: message })
+      toast.error(`Failed to import "${folder}": ${message}`)
     }
-  )
+  }
 
   const successCount = results.filter(r => r.success).length
   const failureCount = results.length - successCount

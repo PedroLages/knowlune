@@ -1,5 +1,5 @@
 import { db } from '@/db'
-import { syncableWrite, syncableWriteBulk } from '@/lib/sync/syncableWrite'
+import { syncableWrite } from '@/lib/sync/syncableWrite'
 import type { SyncableRecord } from '@/lib/sync/syncableWrite'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
 import { useImportProgressStore } from '@/stores/useImportProgressStore'
@@ -663,14 +663,14 @@ export async function persistScannedCourse(
     persistCompleted++
     persistProgress.updateProcessingProgress(scanned.id, persistCompleted, totalPersistItems)
 
-    if (orderedVideos.length > 0) {
-      await syncableWriteBulk('importedVideos', 'add', orderedVideos as unknown as SyncableRecord[])
-      persistCompleted += orderedVideos.length
+    for (const video of orderedVideos) {
+      await syncableWrite('importedVideos', 'add', video as unknown as SyncableRecord)
+      persistCompleted++
       persistProgress.updateProcessingProgress(scanned.id, persistCompleted, totalPersistItems)
     }
-    if (pdfs.length > 0) {
-      await syncableWriteBulk('importedPdfs', 'add', pdfs as unknown as SyncableRecord[])
-      persistCompleted += pdfs.length
+    for (const pdf of pdfs) {
+      await syncableWrite('importedPdfs', 'add', pdf as unknown as SyncableRecord)
+      persistCompleted++
       persistProgress.updateProcessingProgress(scanned.id, persistCompleted, totalPersistItems)
     }
   } catch (error) {
@@ -1242,8 +1242,8 @@ export async function importCourseFromDrive(
 
   // Persist course + videos using syncableWrite for sync queue entries
   await syncableWrite('importedCourses', 'add', course as unknown as SyncableRecord)
-  if (videos.length > 0) {
-    await syncableWriteBulk('importedVideos', 'add', videos as unknown as SyncableRecord[])
+  for (const video of videos) {
+    await syncableWrite('importedVideos', 'add', video as unknown as SyncableRecord)
   }
 
   return course
