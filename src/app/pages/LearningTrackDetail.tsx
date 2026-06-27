@@ -128,12 +128,26 @@ export function LearningTrackDetail() {
   const courseEntries = useLearningPathStore(
     useShallow(
       useCallback(
-        state =>
-          trackId
-            ? state.entries
-                .filter(e => e.pathId === trackId)
-                .sort((a, b) => a.position - b.position)
-            : [],
+        state => {
+          if (!trackId) return []
+          const entries = state.entries.filter(e => e.pathId === trackId)
+          const path = state.paths.find(p => p.id === trackId)
+
+          if (path?.orderMode === 'manifest') {
+            // Sort by manifestOrdinal ascending. Entries without manifestOrdinal
+            // (user-added courses, gap entries) sort after manifest entries by position.
+            return entries.sort((a, b) => {
+              const aOrd = a.manifestOrdinal
+              const bOrd = b.manifestOrdinal
+              if (aOrd != null && bOrd != null) return aOrd - bOrd
+              if (aOrd != null) return -1
+              if (bOrd != null) return 1
+              return a.position - b.position
+            })
+          }
+
+          return entries.sort((a, b) => a.position - b.position)
+        },
         [trackId]
       )
     )

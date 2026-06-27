@@ -320,6 +320,38 @@ export async function buildMigrationPatches(
       orderMode = inManifestOrder && manifestEntries.length > 0 ? 'manifest' : 'custom'
     }
 
+    // When orderMode is manifest, reorder entry positions to match manifest ordinals.
+    // The migration backfills manifestOrdinal but leaves position values at their
+    // old import order. This ensures data is internally consistent: position
+    // reflects manifest order, not the legacy import order (F-045).
+    if (orderMode === 'manifest') {
+      const getOrdinal = (e: LearningPathEntry) =>
+        entryPatches.find(ep => ep.id === e.id)?.patch.manifestOrdinal ?? e.manifestOrdinal
+
+      const manifestEntries = pathEntries
+        .filter(e => getOrdinal(e) != null)
+        .sort((a, b) => getOrdinal(a)! - getOrdinal(b)!)
+
+      const nonManifestEntries = pathEntries
+        .filter(e => getOrdinal(e) == null)
+        .sort((a, b) => a.position - b.position)
+
+      const reordered = [...manifestEntries, ...nonManifestEntries]
+
+      for (let i = 0; i < reordered.length; i++) {
+        const entry = reordered[i]
+        const newPos = i + 1
+        if (entry.position !== newPos) {
+          const existing = entryPatches.find(ep => ep.id === entry.id)
+          if (existing) {
+            existing.patch.position = newPos
+          } else {
+            entryPatches.push({ id: entry.id, patch: { position: newPos } })
+          }
+        }
+      }
+    }
+
     const pathPatch: Partial<LearningPath> = {
       orderMode,
       updatedAt: now,
@@ -1337,9 +1369,23 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
   },
 
   getEntriesForPath: (pathId: string) => {
-    return get()
-      .entries.filter(e => e.pathId === pathId)
-      .sort((a, b) => a.position - b.position)
+    const entries = get().entries.filter(e => e.pathId === pathId)
+    const path = get().paths.find(p => p.id === pathId)
+
+    if (path?.orderMode === 'manifest') {
+      // Sort by manifestOrdinal ascending. Entries without manifestOrdinal
+      // (user-added courses, gap entries) sort after manifest entries by position.
+      return entries.sort((a, b) => {
+        const aOrd = a.manifestOrdinal
+        const bOrd = b.manifestOrdinal
+        if (aOrd != null && bOrd != null) return aOrd - bOrd
+        if (aOrd != null) return -1 // manifest entries come before non-manifest
+        if (bOrd != null) return 1
+        return a.position - b.position // fallback for non-manifest entries
+      })
+    }
+
+    return entries.sort((a, b) => a.position - b.position)
   },
 
   /** Returns a map of courseId → minimum manifestOrdinal across all loaded entries.
@@ -1603,6 +1649,21 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
       state: 'active',
       manifestCourseKey: course.folder.trim().normalize('NFC'),
     }))
+
+    // Debug: verify entry order after manifest sorting (F-045)
+    if (import.meta.env.DEV && typeof window !== 'undefined') {
+      console.log(
+        `[LearningPathStore] createPathFromManifest: "${input.name}" — ${pathEntries.length} entries`
+      )
+      console.table(
+        pathEntries.map(e => ({
+          position: e.position,
+          manifestOrdinal: e.manifestOrdinal,
+          courseId: e.courseId.slice(0, 8),
+          manifestCourseKey: e.manifestCourseKey,
+        }))
+      )
+    }
 
     const prevPaths = get().paths
     const prevEntries = get().entries

@@ -134,7 +134,16 @@ function ContinueLearningPathSectionInner() {
       if (path.isTemplate) continue // skip template paths
       const pathEntries = entries
         .filter(e => e.pathId === path.id)
-        .sort((a, b) => a.position - b.position)
+        .sort((a, b) => {
+          if (path.orderMode === 'manifest') {
+            const aOrd = a.manifestOrdinal
+            const bOrd = b.manifestOrdinal
+            if (aOrd != null && bOrd != null) return aOrd - bOrd
+            if (aOrd != null) return -1
+            if (bOrd != null) return 1
+          }
+          return a.position - b.position
+        })
       entriesMap.set(path.id, pathEntries)
     }
     return entriesMap

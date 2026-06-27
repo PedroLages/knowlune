@@ -203,7 +203,16 @@ export function LearningTracks() {
     for (const path of paths) {
       const pathEntries = entries
         .filter(e => e.pathId === path.id)
-        .sort((a, b) => a.position - b.position)
+        .sort((a, b) => {
+          if (path.orderMode === 'manifest') {
+            const aOrd = a.manifestOrdinal
+            const bOrd = b.manifestOrdinal
+            if (aOrd != null && bOrd != null) return aOrd - bOrd
+            if (aOrd != null) return -1
+            if (bOrd != null) return 1
+          }
+          return a.position - b.position
+        })
       map.set(path.id, getPathCourseThumbnailUrls(pathEntries, thumbnailUrls, 4))
     }
     return map

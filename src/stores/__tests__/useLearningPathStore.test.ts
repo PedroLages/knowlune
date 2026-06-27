@@ -853,6 +853,126 @@ describe('getEntriesForPath', () => {
     const entries = useLearningPathStore.getState().getEntriesForPath('nonexistent')
     expect(entries).toEqual([])
   })
+
+  it('should sort by manifestOrdinal when path.orderMode is manifest (F-045)', async () => {
+    // Simulate a pre-refactor track: entries have correct manifestOrdinals
+    // but their position values are in the old import order.
+    const pathId = 'p-f045'
+    const path: LearningPath = {
+      id: pathId,
+      name: 'Manifest Track',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      isAIGenerated: false,
+      progressionMode: 'free',
+      orderMode: 'manifest',
+    }
+    const entries: LearningPathEntry[] = [
+      {
+        id: 'e-f045-1',
+        pathId,
+        courseId: 'c-p8-01', // P8-01 — manifest position 17
+        courseType: 'imported',
+        position: 1, // Wrong: rendered first because position=1
+        manifestOrdinal: 17,
+        source: 'manifest',
+        state: 'active',
+        manifestCourseKey: 'P8-01 - The Cutting Edge',
+      },
+      {
+        id: 'e-f045-2',
+        pathId,
+        courseId: 'c-p1-02', // P1-02 — manifest position 2
+        courseType: 'imported',
+        position: 2, // Wrong: rendered second
+        manifestOrdinal: 2,
+        source: 'manifest',
+        state: 'active',
+        manifestCourseKey: 'P1-02 - DaVinci Resolve',
+      },
+      {
+        id: 'e-f045-3',
+        pathId,
+        courseId: 'c-p3-01', // P3-01 — manifest position 4
+        courseType: 'imported',
+        position: 3, // Wrong: rendered third
+        manifestOrdinal: 4,
+        source: 'manifest',
+        state: 'active',
+        manifestCourseKey: 'P3-01 - Mastery Bootcamp',
+      },
+    ]
+
+    await db.learningPaths.put(path)
+    await db.learningPathEntries.bulkPut(entries)
+
+    // Load from DB — migration will skip (orderMode is already set)
+    await act(async () => {
+      await useLearningPathStore.getState().loadPaths()
+    })
+
+    const sorted = useLearningPathStore.getState().getEntriesForPath(pathId)
+    expect(sorted).toHaveLength(3)
+
+    // Must be sorted by manifestOrdinal, NOT by position:
+    // P1-02 (ordinal 2) first, P3-01 (ordinal 4) second, P8-01 (ordinal 17) third
+    expect(sorted[0].manifestOrdinal).toBe(2)
+    expect(sorted[0].courseId).toBe('c-p1-02')
+    expect(sorted[1].manifestOrdinal).toBe(4)
+    expect(sorted[1].courseId).toBe('c-p3-01')
+    expect(sorted[2].manifestOrdinal).toBe(17)
+    expect(sorted[2].courseId).toBe('c-p8-01')
+  })
+
+  it('should sort by position when path.orderMode is custom', async () => {
+    const pathId = 'p-f045-custom'
+    const path: LearningPath = {
+      id: pathId,
+      name: 'Custom Track',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      isAIGenerated: false,
+      progressionMode: 'free',
+      orderMode: 'custom',
+    }
+    const entries: LearningPathEntry[] = [
+      {
+        id: 'e-f045-c1',
+        pathId,
+        courseId: 'c-p8-01',
+        courseType: 'imported',
+        position: 1,
+        manifestOrdinal: 17,
+        source: 'manifest',
+        state: 'active',
+        manifestCourseKey: 'P8-01',
+      },
+      {
+        id: 'e-f045-c2',
+        pathId,
+        courseId: 'c-p1-02',
+        courseType: 'imported',
+        position: 2,
+        manifestOrdinal: 2,
+        source: 'manifest',
+        state: 'active',
+        manifestCourseKey: 'P1-02',
+      },
+    ]
+
+    await db.learningPaths.put(path)
+    await db.learningPathEntries.bulkPut(entries)
+
+    await act(async () => {
+      await useLearningPathStore.getState().loadPaths()
+    })
+
+    // Custom mode: must sort by position, ignoring manifestOrdinal
+    const sorted = useLearningPathStore.getState().getEntriesForPath(pathId)
+    expect(sorted).toHaveLength(2)
+    expect(sorted[0].position).toBe(1)
+    expect(sorted[1].position).toBe(2)
+  })
 })
 
 describe('deletePathWithUndo / restorePath', () => {
@@ -1297,7 +1417,10 @@ describe('loadPaths migration error path', () => {
     })
 
     const state = useLearningPathStore.getState()
-    expect(state.isLoaded).toBe(false)
+    // F-003: isLoaded is true even on migration failure — avoids infinite spinner.
+    // Consumers check migrationFailed to show an error banner instead.
+    expect(state.isLoaded).toBe(true)
+    expect(state.migrationFailed).toBe(true)
     expect(state.error).toBe('Failed to migrate track ordering — rolled back')
   })
 })

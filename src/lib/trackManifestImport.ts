@@ -295,9 +295,33 @@ export async function batchImportTrackCourses(
       }))
 
     if (manifestCoursesForOrder.length > 0) {
+      // Debug: verify applyManifestOrder input order (F-045)
+      if (import.meta.env.DEV) {
+        console.log(
+          '[trackManifestImport] applyManifestOrder for existing track:',
+          manifestCoursesForOrder.map((mc, i) =>
+            `${i + 1}. pos=${mc.position} folder="${mc.folder.slice(0, 40)}"`
+          )
+        )
+      }
       await store.applyManifestOrder(trackId, manifestCoursesForOrder, {
         setOrderMode: 'manifest',
       })
+      // Debug: verify applyManifestOrder result
+      if (import.meta.env.DEV) {
+        const verifyEntries = useLearningPathStore
+          .getState()
+          .entries.filter(e => e.pathId === trackId)
+          .sort((a, b) => a.position - b.position)
+        console.table(
+          verifyEntries.map(e => ({
+            position: e.position,
+            manifestOrdinal: e.manifestOrdinal,
+            courseId: e.courseId.slice(0, 8),
+            manifestCourseKey: e.manifestCourseKey,
+          }))
+        )
+      }
     }
   }
 
