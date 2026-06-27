@@ -374,8 +374,9 @@ describe('reorderCourse', () => {
     })
 
     const entries = useLearningPathStore.getState().getEntriesForPath(pathId)
+    const path = useLearningPathStore.getState().paths.find(p => p.id === pathId)
     expect(entries[0].courseId).toBe('c3')
-    expect(entries[0].isManuallyOrdered).toBe(true)
+    expect(path?.orderMode).toBe('custom')
   })
 
   it('should do nothing when fromIndex equals toIndex', async () => {
@@ -459,12 +460,13 @@ describe('reorderCourse', () => {
     })
 
     const entries = useLearningPathStore.getState().getEntriesForPath(pathId)
+    const path = useLearningPathStore.getState().paths.find(p => p.id === pathId)
     expect(entries.map(e => e.courseId)).toEqual(['c3', '', 'c1', 'c2'])
     expect(entries[0].position).toBe(1)
     expect(entries[1].position).toBe(2)
     expect(entries[2].position).toBe(3)
     expect(entries[3].position).toBe(4)
-    expect(entries[0].isManuallyOrdered).toBe(true)
+    expect(path?.orderMode).toBe('custom')
   })
 })
 

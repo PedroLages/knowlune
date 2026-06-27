@@ -391,21 +391,23 @@ export function InlineCoursePicker({
   }, [])
 
   // Build course list from imported courses (catalog courses table dropped in E89-S01).
-  // Sort by manifest position (ascending) so batch-imported courses appear in the
-  // order defined by track-manifest.json. Courses without a manifest position
+  // Sort by manifest ordinal (via store getter) so batch-imported courses appear in the
+  // order defined by track-manifest.json. Courses without a manifest ordinal
   // fall back to alphabetical order.
   const allCourses: CoursePickerItem[] = useMemo(() => {
+    // Read manifestOrdinal map synchronously from Zustand store
+    const ordinalMap = useLearningPathStore.getState().getManifestOrdinalMap()
     return importedCourses
       .filter(c => !excludeCourseIds.has(c.id))
       .sort((a, b) => {
-        const posA = a.manifestPosition
-        const posB = b.manifestPosition
-        // Both have manifest positions — sort by them
+        const posA = ordinalMap.get(a.id)
+        const posB = ordinalMap.get(b.id)
+        // Both have manifest ordinals — sort by them
         if (posA != null && posB != null) return posA - posB
-        // Only one has a manifest position — it comes first
+        // Only one has a manifest ordinal — it comes first
         if (posA != null) return -1
         if (posB != null) return 1
-        // Neither has a manifest position — sort alphabetically
+        // Neither has a manifest ordinal — sort alphabetically
         return a.name.localeCompare(b.name)
       })
       .map(c => ({
@@ -416,7 +418,7 @@ export function InlineCoursePicker({
         thumbnailUrl: thumbnailUrls[c.id],
         tags: c.tags ?? [],
       }))
-  }, [importedCourses, excludeCourseIds, authors, thumbnailUrls])
+  }, [importedCourses, excludeCourseIds, authors, thumbnailUrls, entries])
 
   // Recently Imported: courses not assigned to any path
   const assignedCourseIds: Set<string> = useMemo(() => {

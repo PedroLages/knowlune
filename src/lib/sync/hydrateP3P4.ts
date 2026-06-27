@@ -132,6 +132,8 @@ async function fetchTemplateEntries(client: SupabaseClient): Promise<LearningPat
     completionTarget: 'completion_target' in row
       ? (row.completion_target as CompletionTarget)
       : undefined,
+    source: 'user',
+    state: 'active',
   }))
 }
 
