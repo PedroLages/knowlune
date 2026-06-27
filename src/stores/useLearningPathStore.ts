@@ -116,13 +116,36 @@ interface LearningPathState {
   ) => Promise<void>
 
   // Manifest import ordering
-  applyManifestOrder: (pathId: string, orderedCourseIds: string[]) => Promise<void>
+  applyManifestOrder: (
+    pathId: string,
+    manifestCourses: Array<{
+      folder: string
+      courseId?: string
+      position: number
+    }>,
+    options?: {
+      setOrderMode?: 'manifest' | 'preserve'
+      baseManifestHash?: string
+    }
+  ) => Promise<void>
+
+  /** Single-pass creation for manifest-imported tracks (replaces createPathWithCourses + applyManifestOrder). */
+  createPathFromManifest: (input: {
+    name: string
+    description?: string
+    courses: Array<{ courseId: string; folder: string; position: number }>
+    manifestHash: string
+    manifestName?: string
+  }) => Promise<string>
 
   // Template operations
   forkTemplate: (templateId: string) => Promise<string | null> // returns new path ID or null on failure
 
   // Helpers
   getEntriesForPath: (pathId: string) => LearningPathEntry[]
+
+  /** Returns a map of courseId → minimum manifestOrdinal across all loaded entries. Used by InlineCoursePicker sorting. */
+  getManifestOrdinalMap: () => Map<string, number>
 
   /**
    * Replace Dexie + in-memory collections from a validated remote snapshot.
@@ -189,14 +212,190 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
   loadPaths: async () => {
     if (get().isLoaded) return
     try {
-      const paths = await db.learningPaths.toArray()
-      const entries = await db.learningPathEntries.toArray()
-      const sorted = paths.sort(
+      const rawPaths = await db.learningPaths.toArray()
+      const rawEntries = await db.learningPathEntries.toArray()
+      const sorted = rawPaths.sort(
         (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
       )
-      set({
+
+      // ── Migration: backfill orderMode, manifestOrdinal, source, state ──
+      // Runs once for each path that needs migration (idempotent — checks
+      // sentinel `manifestOrdinal != null` on entries, `orderMode` on path).
+      // Persists patches through syncableWrite so they survive across sessions.
+      const importedCourses = await db.importedCourses.toArray()
+      const coursesById = new Map(importedCourses.map(c => [c.id, c]))
+      const now = new Date().toISOString()
+
+      // Take a Zustand snapshot before any mutations for rollback
+      const preMigrationSnapshot = {
         paths: sorted,
-        entries,
+        entries: rawEntries,
+      }
+
+      interface EntryPatch {
+        id: string
+        patch: Partial<LearningPathEntry>
+      }
+
+      const allPathPatches: Array<{ id: string; patch: Partial<LearningPath>; entriesSnapshot: LearningPathEntry[] }> = []
+      const allEntryPatches: EntryPatch[] = []
+
+      for (const path of rawPaths) {
+        // Skip if path already has orderMode — already migrated
+        if (path.orderMode != null) continue
+
+        const pathEntries = rawEntries
+          .filter(e => e.pathId === path.id)
+          .sort((a, b) => a.position - b.position)
+
+        // Per-entry migration rules
+        const entryPatches: EntryPatch[] = []
+        for (const entry of pathEntries) {
+          const course = entry.courseId ? coursesById.get(entry.courseId) : undefined
+
+          if (isPathGapEntry(entry)) {
+            // Gap entries — no manifest data
+            if (entry.manifestOrdinal == null) {
+              entryPatches.push({
+                id: entry.id,
+                patch: {
+                  manifestOrdinal: null,
+                  source: entry.source ?? 'user',
+                  state: entry.state ?? 'active',
+                  manifestCourseKey: null,
+                },
+              })
+            }
+          } else if (entry.manifestOrdinal != null) {
+            // Already has manifestOrdinal — backfill other provenance if missing
+            if (!entry.source || !entry.state) {
+              entryPatches.push({
+                id: entry.id,
+                patch: {
+                  source: entry.source ?? 'manifest',
+                  state: entry.state ?? 'active',
+                  manifestCourseKey: entry.manifestCourseKey ?? course?.name ?? null,
+                },
+              })
+            }
+          } else if (course?.manifestPosition != null) {
+            // Legacy bridge: backfill from old wrong-scope field
+            entryPatches.push({
+              id: entry.id,
+              patch: {
+                manifestOrdinal: course.manifestPosition,
+                source: entry.source ?? 'manifest',
+                state: entry.state ?? 'active',
+                manifestCourseKey: entry.manifestCourseKey ?? course.name ?? null,
+              },
+            })
+          } else {
+            // No manifest data — mark as user-sourced
+            if (entry.manifestOrdinal == null || !entry.source || !entry.state) {
+              entryPatches.push({
+                id: entry.id,
+                patch: {
+                  manifestOrdinal: null,
+                  source: entry.source ?? 'user',
+                  state: entry.state ?? 'active',
+                  manifestCourseKey: null,
+                },
+              })
+            }
+          }
+        }
+
+        // Path-level orderMode derivation
+        let orderMode: 'custom' | 'manifest' = 'custom'
+
+        if (entryPatches.length > 0 || pathEntries.some(e => e.isManuallyOrdered === true)) {
+          // Check if any entry is manually ordered (legacy flag)
+          if (pathEntries.some(e => e.isManuallyOrdered === true)) {
+            orderMode = 'custom'
+          } else {
+            // Check if manifest-sourced entries are still in manifest ordinal order
+            const manifestEntries = pathEntries
+              .filter(e => {
+                const ordinal = entryPatches.find(ep => ep.id === e.id)?.patch.manifestOrdinal ?? e.manifestOrdinal
+                return ordinal != null
+              })
+              .sort((a, b) => a.position - b.position)
+
+            const inManifestOrder = manifestEntries.every((entry, i) => {
+              if (i === 0) return true
+              const prevOrdinal = entryPatches.find(ep => ep.id === manifestEntries[i - 1].id)?.patch.manifestOrdinal ?? manifestEntries[i - 1].manifestOrdinal
+              const currOrdinal = entryPatches.find(ep => ep.id === entry.id)?.patch.manifestOrdinal ?? entry.manifestOrdinal
+              if (prevOrdinal == null || currOrdinal == null) return false
+              return currOrdinal > prevOrdinal
+            })
+
+            orderMode = inManifestOrder && manifestEntries.length > 0 ? 'manifest' : 'custom'
+          }
+        }
+
+        const pathPatch: Partial<LearningPath> = {
+          orderMode,
+          updatedAt: now,
+        }
+
+        allPathPatches.push({ id: path.id, patch: pathPatch, entriesSnapshot: pathEntries })
+        allEntryPatches.push(...entryPatches)
+      }
+
+      // ── Persist ──
+      if (allPathPatches.length > 0 || allEntryPatches.length > 0) {
+        try {
+          await persistWithRetry(async () => {
+            for (const { id, patch } of allPathPatches) {
+              const existing = await db.learningPaths.get(id)
+              if (existing) {
+                await syncableWrite('learningPaths', 'put', {
+                  ...existing,
+                  ...patch,
+                } as unknown as SyncableRecord)
+              }
+            }
+            for (const { id, patch } of allEntryPatches) {
+              const existing = await db.learningPathEntries.get(id)
+              if (existing) {
+                await syncableWrite('learningPathEntries', 'put', {
+                  ...existing,
+                  ...patch,
+                } as unknown as SyncableRecord)
+              }
+            }
+          })
+        } catch (persistError) {
+          console.error('[LearningPathStore] Migration persist failed — rolling back:', persistError)
+          // Rollback: restore Zustand to pre-migration snapshot
+          set({
+            paths: preMigrationSnapshot.paths,
+            entries: preMigrationSnapshot.entries,
+            error: 'Failed to migrate track ordering — rolled back',
+          })
+          toast.error('Track ordering migration failed. Changes have been rolled back.')
+          // Continue — load the unmigrated data so the app still works
+        }
+      }
+
+      // ── Re-read from Dexie to pick up persisted migration ──
+      const migratedPaths = await db.learningPaths.toArray()
+      const migratedEntries = await db.learningPathEntries.toArray()
+      const finalSorted = migratedPaths.sort(
+        (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+      )
+
+      // Apply computed patches to in-memory state for entries that may not have
+      // been persisted yet (if we're in the error path above)
+      const patchedEntries = migratedEntries.map(entry => {
+        const patch = allEntryPatches.find(ep => ep.id === entry.id)
+        if (patch) return { ...entry, ...patch.patch }
+        return entry
+      })
+
+      set({
+        paths: finalSorted,
+        entries: patchedEntries,
         activePath: sorted[0] || null,
         error: null,
         isLoaded: true,
@@ -217,6 +416,7 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
       updatedAt: now,
       isAIGenerated: false,
       progressionMode: 'free',
+      orderMode: 'custom',
     }
 
     const prevPaths = get().paths
@@ -599,6 +799,8 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
       justification,
       isManuallyOrdered: false,
       completionTarget,
+      source: 'user',
+      state: 'active',
     }
 
     const prevEntries = get().entries
@@ -688,6 +890,8 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
     const pathEntries = get()
       .entries.filter(e => e.pathId === pathId)
       .sort((a, b) => a.position - b.position)
+    const path = get().paths.find(p => p.id === pathId)
+    if (!path) return
 
     const movable = pathEntries.filter(e => !isPathGapEntry(e))
     const oldIx = movable.findIndex(e => e.courseId === activeCourseId)
@@ -699,14 +903,27 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
     const movableReordered = arrayMoveInPlaceCopy(movable, oldIx, newIx)
     const rebuilt = weavePathWithMovableOrder(pathEntries, movableReordered)
 
+    // Flip orderMode to "custom" on first user drag reorder
+    const wasOrderMode = path.orderMode ?? 'custom'
+    const switchedFromManifest = wasOrderMode === 'manifest'
+
+    // Reassign dense positions — no longer write isManuallyOrdered
     const updated = rebuilt.map((entry, index) => ({
       ...entry,
       position: index + 1,
-      isManuallyOrdered: entry.id === movedEntry.id ? true : entry.isManuallyOrdered,
     }))
+
+    const updatedPath = {
+      ...path,
+      orderMode: 'custom' as const,
+      updatedAt: new Date().toISOString(),
+    }
 
     set(state => ({
       entries: [...state.entries.filter(e => e.pathId !== pathId), ...updated],
+      paths: state.paths.map(p =>
+        p.id === pathId ? updatedPath : p
+      ),
       error: null,
     }))
 
@@ -714,27 +931,32 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
       for (const entry of updated) {
         await syncableWrite('learningPathEntries', 'put', entry as unknown as SyncableRecord)
       }
-      const existingPath = await db.learningPaths.get(pathId)
-      if (existingPath) {
-        await syncableWrite('learningPaths', 'put', existingPath as unknown as SyncableRecord)
-      }
+      await syncableWrite('learningPaths', 'put', updatedPath as unknown as SyncableRecord)
     }).catch(error => {
       console.error('[LearningPathStore] Failed to persist reordering:', error)
-      set({ error: 'Failed to save reordering' })
+      // Rollback: restore pre-mutation state
+      set(state => ({
+        entries: state.entries.map(e => {
+          const orig = pathEntries.find(pe => pe.id === e.id)
+          return orig ?? e
+        }),
+        paths: state.paths.map(p =>
+          p.id === pathId ? path : p
+        ),
+        error: 'Failed to save reordering',
+      }))
     })
 
-    if (movedEntry.justification || movedEntry.isManuallyOrdered) {
+    // Record reorder history — gated on the reorder operation (not the deprecated flag)
+    const fromIndex = pathEntries.indexOf(movedEntry)
+    if (fromIndex !== newIx) {
       try {
-        const suggestedPos = movedEntry.isManuallyOrdered ? movedEntry.position : null
-
         const importedCourses = useCourseImportStore.getState().importedCourses
         const courseData = importedCourses.find(c => c.id === movedEntry.courseId)
         const courseName = courseData?.name || 'Unknown Course'
         const courseTags = courseData?.tags || []
 
-        const movedPos =
-          updated.find(e => e.id === movedEntry.id)?.position ??
-          movableReordered.findIndex(e => e.id === movedEntry.id) + 1
+        const movedPos = newIx + 1
         const beforeCourses = resolvedCourseNames(
           updated.filter(e => e.id !== movedEntry.id && e.position < movedPos).slice(-2)
         )
@@ -746,7 +968,7 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
           id: crypto.randomUUID(),
           pathId,
           courseId: movedEntry.courseId,
-          suggestedPosition: suggestedPos,
+          suggestedPosition: switchedFromManifest ? movedEntry.position : null,
           chosenPosition: movedPos,
           courseName,
           courseTags,
@@ -853,6 +1075,8 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
           justification: course.justification,
           isManuallyOrdered: false,
           completionTarget: undefined,
+          source: 'user',
+          state: 'active',
         }
         generatedEntries.push(entry)
         set(state => ({
@@ -870,6 +1094,8 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
         justification: course.justification,
         isManuallyOrdered: false,
         completionTarget: undefined,
+        source: 'user',
+        state: 'active',
       }))
 
       const now = new Date().toISOString()
@@ -891,6 +1117,7 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
           await syncableWrite('learningPaths', 'put', {
             ...existingPath,
             isAIGenerated: true,
+            orderMode: existingPath.orderMode ?? 'custom',
           } as unknown as SyncableRecord)
         }
       })
@@ -969,8 +1196,8 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
             ...entry,
             position: aiEntry.position,
             justification: aiEntry.justification,
-            isManuallyOrdered: false,
             completionTarget: entry.completionTarget,
+            // Preserve existing source/state — AI order doesn't change provenance
           }
         }
         return entry
@@ -1010,6 +1237,24 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
       .sort((a, b) => a.position - b.position)
   },
 
+  /** Returns a map of courseId → minimum manifestOrdinal across all loaded entries.
+   * Used by InlineCoursePicker to sort courses by manifest position.
+   * If the same course appears in multiple tracks with different ordinals,
+   * the minimum ordinal is used — placing the course earliest in the picker
+   * where users expect to see familiar courses first. */
+  getManifestOrdinalMap: () => {
+    const entries = get().entries
+    const ordinals = new Map<string, number>()
+    for (const entry of entries) {
+      if (entry.manifestOrdinal == null) continue
+      const current = ordinals.get(entry.courseId)
+      if (current == null || entry.manifestOrdinal < current) {
+        ordinals.set(entry.courseId, entry.manifestOrdinal)
+      }
+    }
+    return ordinals
+  },
+
   applyPlacementSuggestion: async (
     pathId: string,
     courseId: string,
@@ -1032,7 +1277,7 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
     reordered.splice(Math.min(toIndex, reordered.length), 0, {
       ...moved,
       justification,
-      isManuallyOrdered: false,
+      // Preserve existing source/state — placement doesn't change provenance
     })
 
     const updated = reordered.map((e, index) => ({
@@ -1081,6 +1326,8 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
       justification: gapEntry.justification,
       isManuallyOrdered: false,
       completionTarget: undefined,
+      source: 'user',
+      state: 'active',
     }
 
     const prevEntries = get().entries
@@ -1127,7 +1374,8 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
       courseType: 'imported' | 'catalog'
       justification?: string
       completionTarget: CompletionTarget | undefined
-    }>
+    }>,
+    orderMode?: 'manifest' | 'custom'
   ) => {
     const now = new Date().toISOString()
     const path: LearningPath = {
@@ -1138,6 +1386,7 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
       updatedAt: now,
       isAIGenerated: false,
       progressionMode: 'free',
+      orderMode: orderMode ?? 'custom',
     }
 
     const prevPaths = get().paths
@@ -1161,6 +1410,8 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
       justification: c.justification,
       isManuallyOrdered: false,
       completionTarget: c.completionTarget,
+      source: 'user',
+      state: 'active',
     }))
 
     // Optimistic update
@@ -1194,6 +1445,90 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
     return path
   },
 
+  createPathFromManifest: async (input) => {
+    const now = new Date().toISOString()
+
+    // Sort courses by manifest position (ascending), tie-break by folder
+    const sorted = [...input.courses].sort((a, b) => {
+      if (a.position !== b.position) return a.position - b.position
+      return a.folder.localeCompare(b.folder)
+    })
+
+    // Deduplicate by courseId — keep first occurrence in sorted order
+    const seen = new Set<string>()
+    const uniqueCourses = sorted.filter(c => {
+      if (seen.has(c.courseId)) {
+        console.warn(
+          '[LearningPathStore] createPathFromManifest duplicate courseId:',
+          c.courseId,
+          '- keeping first occurrence'
+        )
+        return false
+      }
+      seen.add(c.courseId)
+      return true
+    })
+
+    const pathId = crypto.randomUUID()
+    const path: LearningPath = {
+      id: pathId,
+      name: input.name,
+      description: input.description,
+      createdAt: now,
+      updatedAt: now,
+      isAIGenerated: false,
+      progressionMode: 'free',
+      orderMode: 'manifest',
+      baseManifestHash: input.manifestHash,
+    }
+
+    const pathEntries: LearningPathEntry[] = uniqueCourses.map((course, index) => ({
+      id: crypto.randomUUID(),
+      pathId,
+      courseId: course.courseId,
+      courseType: 'imported' as const,
+      position: index + 1, // dense sequential — the mutable current order
+      isManuallyOrdered: false,
+      manifestOrdinal: course.position, // immutable curated position from manifest
+      source: 'manifest',
+      state: 'active',
+      manifestCourseKey: course.folder,
+    }))
+
+    const prevPaths = get().paths
+    const prevEntries = get().entries
+    const prevActivePath = get().activePath
+
+    // Optimistic update
+    set(state => ({
+      paths: [...state.paths, path],
+      entries: [...state.entries, ...pathEntries],
+      activePath: state.activePath || path,
+      error: null,
+    }))
+
+    try {
+      await persistWithRetry(async () => {
+        await syncableWrite('learningPaths', 'add', path as unknown as SyncableRecord)
+        for (const entry of pathEntries) {
+          await syncableWrite('learningPathEntries', 'add', entry as unknown as SyncableRecord)
+        }
+      })
+    } catch (error) {
+      console.error('[LearningPathStore] Failed to create path from manifest:', error)
+      set({
+        paths: prevPaths,
+        entries: prevEntries,
+        activePath: prevActivePath,
+        error: 'Failed to create path from manifest',
+      })
+      toast.error('Failed to create track from manifest')
+      throw error
+    }
+
+    return pathId
+  },
+
   batchAddCoursesToPath: async (
     pathId: string,
     courses: Array<{
@@ -1201,6 +1536,7 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
       courseType: 'imported' | 'catalog'
       justification?: string
       completionTarget: CompletionTarget | undefined
+      source?: 'manifest' | 'user'
     }>
   ) => {
     const existingEntries = get().entries.filter(e => e.pathId === pathId)
@@ -1226,6 +1562,8 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
       justification: c.justification,
       isManuallyOrdered: false,
       completionTarget: c.completionTarget,
+      source: c.source ?? 'user',
+      state: 'active',
     }))
 
     const prevEntries = get().entries
@@ -1262,11 +1600,35 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
     }
   },
 
-  applyManifestOrder: async (pathId: string, orderedCourseIds: string[]) => {
+  applyManifestOrder: async (
+    pathId: string,
+    manifestCourses: Array<{
+      folder: string
+      courseId?: string
+      position: number
+    }>,
+    options?: {
+      setOrderMode?: 'manifest' | 'preserve'
+      baseManifestHash?: string
+    }
+  ) => {
     const allEntries = get().entries.filter(e => e.pathId === pathId)
+    const path = get().paths.find(p => p.id === pathId)
+    if (!path) return
 
-    // Group entries by courseId to detect duplicates (same courseId, different entry.id).
-    // A plain Map silently drops duplicates; grouping lets us keep one and delete the rest.
+    // Build a lookup from manifest course identifier → manifest position.
+    // Match strategy: manifestCourseKey (folder), then course ID.
+    const manifestByCourseKey = new Map<string, (typeof manifestCourses)[number]>()
+    const manifestByCourseId = new Map<string, (typeof manifestCourses)[number]>()
+    for (const mc of manifestCourses) {
+      const key = mc.folder.trim().normalize('NFC')
+      manifestByCourseKey.set(key, mc)
+      if (mc.courseId) {
+        manifestByCourseId.set(mc.courseId, mc)
+      }
+    }
+
+    // Group entries by courseId to detect duplicates.
     const byCourseId = new Map<string, LearningPathEntry[]>()
     for (const e of allEntries) {
       const arr = byCourseId.get(e.courseId)
@@ -1278,23 +1640,31 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
     const seenIds = new Set<string>()
     const orphanIds: string[] = []
 
-    // Place manifest courses in order — keep the first entry for each courseId,
-    // mark any other entries with the same courseId as orphans for deletion.
-    for (const courseId of orderedCourseIds) {
-      const entries = byCourseId.get(courseId)
-      if (entries && entries.length > 0) {
-        const keep = entries[0]
-        ordered.push({ ...keep, position: ordered.length + 1 })
+    // Place manifest courses in manifest position order.
+    const manifestSorted = [...manifestCourses].sort((a, b) => a.position - b.position)
+    for (const mc of manifestSorted) {
+      const key = mc.folder.trim().normalize('NFC')
+      // Try to match by manifestCourseKey first, then courseId
+      const matchedEntries = byCourseId.get(mc.courseId ?? '') ?? []
+      if (matchedEntries.length > 0) {
+        const keep = matchedEntries[0]
+        ordered.push({
+          ...keep,
+          position: ordered.length + 1,
+          source: 'manifest',
+          state: 'active',
+          manifestOrdinal: mc.position,
+          manifestCourseKey: key,
+        })
         seenIds.add(keep.id)
-        for (let i = 1; i < entries.length; i++) {
-          orphanIds.push(entries[i].id)
-          seenIds.add(entries[i].id) // prevent re-append in extras loop
+        for (let i = 1; i < matchedEntries.length; i++) {
+          orphanIds.push(matchedEntries[i].id)
+          seenIds.add(matchedEntries[i].id)
         }
       }
     }
 
-    // Append entries not in the manifest (preserve user-added courses).
-    // Orphan ids are already in seenIds so they are skipped here.
+    // Append entries not in the manifest (preserve user-added/gap courses).
     for (const entry of allEntries) {
       if (!seenIds.has(entry.id)) {
         ordered.push({ ...entry, position: ordered.length + 1 })
@@ -1305,11 +1675,29 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
     const prevEntries = get().entries
     const prevPaths = get().paths
 
-    // Optimistic update — replace all entries for this path with ordered set
+    // Determine path mode update
+    const currentOrderMode = path.orderMode
+    let newOrderMode: 'manifest' | 'custom' | undefined
+    if (options?.setOrderMode === 'manifest') {
+      newOrderMode = 'manifest'
+    } else if (options?.setOrderMode === 'preserve') {
+      newOrderMode = currentOrderMode ?? 'custom'
+    } else {
+      // Default: preserve current, fall back to 'custom'
+      newOrderMode = currentOrderMode ?? 'custom'
+    }
+
+    const pathPatch: Partial<LearningPath> = {
+      updatedAt: new Date().toISOString(),
+      orderMode: newOrderMode,
+      ...(options?.baseManifestHash ? { baseManifestHash: options.baseManifestHash } : {}),
+    }
+
+    // Optimistic update
     set(state => ({
       entries: [...state.entries.filter(e => e.pathId !== pathId), ...ordered],
       paths: state.paths.map(p =>
-        p.id === pathId ? { ...p, updatedAt: new Date().toISOString() } : p
+        p.id === pathId ? { ...p, ...pathPatch } as LearningPath : p
       ),
       error: null,
     }))
@@ -1319,14 +1707,15 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
         for (const entry of ordered) {
           await syncableWrite('learningPathEntries', 'put', entry as unknown as SyncableRecord)
         }
-        // Delete orphan entries from Dexie (and sync queue → Supabase).
-        // Without this, orphans survive in Dexie and reappear on next loadPaths().
         for (const orphanId of orphanIds) {
           await syncableWrite('learningPathEntries', 'delete', orphanId)
         }
         const existingPath = await db.learningPaths.get(pathId)
         if (existingPath) {
-          await syncableWrite('learningPaths', 'put', existingPath as unknown as SyncableRecord)
+          await syncableWrite('learningPaths', 'put', {
+            ...existingPath,
+            ...pathPatch,
+          } as unknown as SyncableRecord)
         }
       })
     } catch (error) {
@@ -1384,6 +1773,7 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
       estimatedHours: template.estimatedHours,
       difficultyLabel: template.difficultyLabel,
       progressionMode: 'free',
+      orderMode: 'custom',
     }
 
     const prevPaths = get().paths
@@ -1434,6 +1824,8 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
           justification: entry.justification,
           isManuallyOrdered: false,
           completionTarget: entry.completionTarget,
+          source: 'user',
+          state: 'active',
         }
         newEntries.push(newEntry)
       }
