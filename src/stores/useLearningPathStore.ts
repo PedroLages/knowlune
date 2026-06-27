@@ -4,7 +4,7 @@ import { db } from '@/db'
 import type { LearningPath, LearningPathEntry, PathProgressionMode } from '@/data/types'
 import { persistWithRetry } from '@/lib/persistWithRetry'
 import { trackAIUsage } from '@/lib/aiEventTracking'
-import { syncableWrite, type SyncableRecord } from '@/lib/sync/syncableWrite'
+import { syncableWrite, syncableWriteBulk, type SyncableRecord } from '@/lib/sync/syncableWrite'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
 import { extractGapSearchTerm } from '@/data/learningPathUtils'
 
@@ -1143,8 +1143,8 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
     try {
       await persistWithRetry(async () => {
         await syncableWrite('learningPaths', 'add', path as unknown as SyncableRecord)
-        for (const entry of pathEntries) {
-          await syncableWrite('learningPathEntries', 'add', entry as unknown as SyncableRecord)
+        if (pathEntries.length > 0) {
+          await syncableWriteBulk('learningPathEntries', 'add', pathEntries as unknown as SyncableRecord[])
         }
       })
     } catch (error) {
@@ -1205,8 +1205,8 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
 
     try {
       await persistWithRetry(async () => {
-        for (const entry of pathEntries) {
-          await syncableWrite('learningPathEntries', 'add', entry as unknown as SyncableRecord)
+        if (pathEntries.length > 0) {
+          await syncableWriteBulk('learningPathEntries', 'add', pathEntries as unknown as SyncableRecord[])
         }
         const updatedPath = get().paths.find(p => p.id === pathId)
         if (updatedPath) {

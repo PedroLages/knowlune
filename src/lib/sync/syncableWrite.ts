@@ -210,3 +210,102 @@ export async function syncableWrite<T extends SyncableRecord>(
     console.error('[syncableWrite] Queue insert failed — write succeeded, sync deferred:', err)
   }
 }
+
+// ---------------------------------------------------------------------------
+// Bulk writer
+// ---------------------------------------------------------------------------
+
+/**
+ * Write multiple records to a synced Dexie table in a single bulk operation
+ * and enqueue them all for Supabase upload.
+ *
+ * Same metadata-stamping contract as `syncableWrite`, but amortizes auth
+ * lookup, table registry lookup, Dexie transaction, and engine nudge across
+ * all records. Each record still gets its own sync queue entry — the E94-S02
+ * per-record queue design is preserved.
+ *
+ * @param tableName - The Dexie table name (must be registered in tableRegistry).
+ * @param operation - 'put' (upsert) or 'add' (insert). 'delete' is not supported
+ *                    in bulk — use individual syncableWrite calls for deletes.
+ * @param records   - The records to write. Empty array is a no-op.
+ * @param options   - Optional flags:
+ *   - `skipQueue`: if true, Dexie write happens but no queue entries are created.
+ */
+export async function syncableWriteBulk<T extends SyncableRecord>(
+  tableName: string,
+  operation: 'put' | 'add',
+  records: T[],
+  options?: { skipQueue?: boolean }
+): Promise<void> {
+  if (records.length === 0) return
+
+  // Capture timestamp once for all records.
+  const now = new Date().toISOString()
+
+  // [1] Registry lookup (single call).
+  const entry = tableRegistry.find(e => e.dexieTable === tableName)
+  if (!entry) {
+    throw new Error(
+      `[syncableWriteBulk] Unknown table: "${tableName}". ` +
+        `Add it to src/lib/sync/tableRegistry.ts before calling syncableWriteBulk.`
+    )
+  }
+
+  // [2] Auth lookup (single call — same pattern as syncableWrite).
+  const userId = useAuthStore.getState().user?.id ?? null
+
+  // [3] Validate all record IDs and stamp metadata.
+  const guestSessionId =
+    userId === null ? (sessionStorage.getItem('knowlune-guest-id') ?? null) : null
+
+  const stampedRecords: T[] = records.map(record => {
+    const id = record.id
+    if (typeof id !== 'string' || id.trim() === '') {
+      throw new Error(
+        `[syncableWriteBulk] Empty record id for table "${tableName}" ` +
+          `(operation "${operation}"). Every record in a bulk write must have a non-empty id.`
+      )
+    }
+    return {
+      ...record,
+      userId,
+      ...(guestSessionId !== null ? { guestSessionId } : {}),
+      updatedAt: now,
+    }
+  })
+
+  // [4] Execute the Dexie bulk write.
+  if (operation === 'put') {
+    await db.table(tableName).bulkPut(stampedRecords)
+  } else {
+    await db.table(tableName).bulkAdd(stampedRecords)
+  }
+
+  // [5] Queue guard — skip if unauthenticated or caller opted out.
+  if (!userId || options?.skipQueue) return
+
+  // [6] Build and enqueue sync queue entries (one per record).
+  try {
+    const queueEntries: Omit<SyncQueueEntry, 'id'>[] = stampedRecords.map(record => ({
+      tableName,
+      recordId: record.id!,
+      operation,
+      payload: toSnakeCase(entry, record as Record<string, unknown>),
+      attempts: 0,
+      status: 'pending' as const,
+      createdAt: now,
+      updatedAt: now,
+    }))
+
+    await db.syncQueue.bulkAdd(queueEntries as SyncQueueEntry[])
+
+    // Single nudge for the whole batch.
+    syncEngine.nudge()
+  } catch (err) {
+    // Intentional: queue insert failure is non-fatal (same contract as syncableWrite).
+    console.error(
+      '[syncableWriteBulk] Queue insert failed — bulk write succeeded, sync deferred:',
+      err
+    )
+  }
+}
