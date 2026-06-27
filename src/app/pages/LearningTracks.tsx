@@ -1,13 +1,13 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { motion } from 'motion/react'
-import { Plus, Search, Route, Download, LayoutTemplate } from 'lucide-react'
+import { Plus, Search, Route, Download } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
 import { Card, CardContent } from '@/app/components/ui/card'
 import { Skeleton } from '@/app/components/ui/skeleton'
 import { Input } from '@/app/components/ui/input'
 import { EmptyState } from '@/app/components/EmptyState'
 import { DelayedFallback } from '@/app/components/DelayedFallback'
-import { TemplateCard } from '@/app/components/course/TemplateCard'
+
 import { ImportWizardDialog } from '@/app/components/figma/ImportWizardDialog'
 import { CurriculumComposer } from '@/app/components/figma/CurriculumComposer'
 import { PathCoverDialog } from '@/app/components/learning-path/PathCoverDialog'
@@ -15,7 +15,7 @@ import { EditPathDialog } from '@/app/components/learning-path/EditPathDialog'
 import { LearningPathCard } from '@/app/components/learning-path/LearningPathCard'
 import { useLearningPathStore } from '@/stores/useLearningPathStore'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
-import { extractGapSearchTerm } from '@/data/learningPathUtils'
+
 import { useMultiPathProgress } from '@/app/hooks/usePathProgress'
 import { useNextBestCourse } from '@/app/hooks/useNextBestCourse'
 import { useImportWizardTrigger } from '@/app/hooks/useImportWizardTrigger'
@@ -123,7 +123,7 @@ function TrackCardSkeleton() {
 // --- Main Page ---
 
 export function LearningTracks() {
-  const { paths, entries, loadPaths, getEntriesForPath } = useLearningPathStore()
+  const { paths, entries, loadPaths } = useLearningPathStore()
   const { importedCourses, loadImportedCourses, thumbnailUrls, loadThumbnailUrls } =
     useCourseImportStore()
   const [isLoaded, setIsLoaded] = useState(false)
@@ -209,30 +209,14 @@ export function LearningTracks() {
     return map
   }, [paths, entries, thumbnailUrls])
 
-  // Separate user paths from templates
+  // Separate user paths from templates.
+  // Template section intentionally removed — templates are only accessible via
+  // the curriculum composer's AI mode, not from the main tracks list. The old
+  // template section was dropped because users found it confusing to see both
+  // personal tracks and system templates in the same view. If re-added, restore
+  // the TemplateCard component and render a "Discover Templates" section above
+  // the user path grid.
   const userPaths = useMemo(() => paths.filter(p => !p.isTemplate), [paths])
-  const templates = useMemo(() => paths.filter(p => p.isTemplate), [paths])
-
-  // Compute match count per template (for card display)
-  const templateMatchCounts = useMemo(() => {
-    const normalize = (s: string) =>
-      s
-        .toLowerCase()
-        .replace(/[^a-z0-9\s]/g, '')
-        .replace(/\s+/g, ' ')
-        .trim()
-    const importedNames = new Set(importedCourses.map(c => normalize(c.name)))
-    const counts = new Map<string, number>()
-    for (const tpl of templates) {
-      const tplEntries = entries.filter(e => e.pathId === tpl.id)
-      const matched = tplEntries.filter(e => {
-        const searchTerm = extractGapSearchTerm(e.justification)
-        return searchTerm && importedNames.has(normalize(searchTerm))
-      }).length
-      counts.set(tpl.id, matched)
-    }
-    return counts
-  }, [templates, entries, importedCourses])
 
   const filteredPaths = useMemo(() => {
     if (!search.trim()) return userPaths
@@ -323,46 +307,8 @@ export function LearningTracks() {
         </span>
 
         {/* Content */}
-        {userPaths.length === 0 && templates.length > 0 ? (
-          /* Empty user paths — templates as primary CTA */
-          <>
-            <motion.div variants={fadeUp} className="mb-8">
-              <div className="flex items-center gap-2 mb-4">
-                <LayoutTemplate className="w-5 h-5 text-brand-soft-foreground" />
-                <h2 className="text-xl font-semibold">Start with a template</h2>
-              </div>
-              <p className="text-muted-foreground mb-6">
-                Browse curated learning tracks to discover how tracks work. Fork one to get started
-                instantly.
-              </p>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-[var(--content-gap)]">
-                {templates.map(tpl => {
-                  const tplEntries = getEntriesForPath(tpl.id)
-                  return (
-                    <div key={tpl.id} className="w-full">
-                      <TemplateCard
-                        template={tpl}
-                        courseCount={tplEntries.length}
-                        matchCount={templateMatchCounts.get(tpl.id) ?? 0}
-                      />
-                    </div>
-                  )
-                })}
-              </div>
-            </motion.div>
-
-            <motion.div variants={fadeUp}>
-              <EmptyState
-                icon={Route}
-                title="Or create your own track"
-                description="Prefer to build from scratch? Create a custom learning track with your own course sequence."
-                actionLabel="Create Track"
-                onAction={() => setCreateDialogOpen(true)}
-              />
-            </motion.div>
-          </>
-        ) : userPaths.length === 0 && templates.length === 0 ? (
-          /* No templates, no paths — empty state */
+        {userPaths.length === 0 ? (
+          /* No tracks — empty state */
           <>
             <motion.div variants={fadeUp}>
               <EmptyState

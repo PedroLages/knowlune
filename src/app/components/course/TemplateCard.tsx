@@ -8,6 +8,18 @@ import { cn } from '@/app/components/ui/utils'
 import { fadeUp } from '@/lib/motion'
 import type { LearningPath } from '@/data/types'
 
+/**
+ * TemplateCard component.
+ *
+ * ORPHANED: This component is defined but not currently imported anywhere in
+ * production code. It was originally created for the "Discover Templates"
+ * section on the Learning Tracks page, but that section was removed in a
+ * refactor (see LearningTracks.tsx F-016 disposition).
+ *
+ * Retained for future template discovery features. Do not delete without
+ * confirming that the template browser feature is not planned.
+ */
+
 interface TemplateCardProps {
   template: LearningPath
   courseCount: number

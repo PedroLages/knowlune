@@ -208,7 +208,11 @@ export interface ImportedCourse {
   // Drive source fields (E77b-S02)
   /** Google Drive folder ID from which this course was imported. */
   sourceDriveId?: string
-  /** Manifest-defined position for track-level sorting (from track-manifest.json). */
+  /**
+   * @deprecated Legacy migration bridge only. Do not write new values.
+   * Ordering now lives on LearningPathEntry.manifestOrdinal.
+   * Remove after one release cycle when all legacy tracks are migrated.
+   */
   manifestPosition?: number
   // Sync metadata — stamped by syncableWrite
   userId?: string | null
@@ -500,6 +504,16 @@ export interface LearningPath {
   coverPreset?: string
   /** Progression mode: 'sequential' (courses lock until prior completed) or 'free' (all accessible). undefined defaults to sequential (legacy); new paths default to 'free'. */
   progressionMode?: PathProgressionMode
+  /**
+   * Explicit ordering mode for this track.
+   * - "manifest": display order follows `manifestOrdinal` (from import manifest).
+   * - "custom": display order follows user's manual arrangement (via `position`).
+   * Defaults to "custom" for user-created paths; "manifest" for manifest-imported paths.
+   * Flips to "custom" on first user drag reorder.
+   */
+  orderMode?: 'manifest' | 'custom'
+  /** SHA-256 hash of the track-manifest.json contents at import time. Used for future re-import/merge. */
+  baseManifestHash?: string | null
 }
 
 /** Controls whether courses in a learning track are locked sequentially or freely accessible. */
@@ -512,8 +526,21 @@ export interface LearningPathEntry {
   courseType: 'imported' | 'catalog' // Which course source
   position: number // 1-indexed sequence position
   justification?: string // AI-provided reasoning for placement
-  isManuallyOrdered: boolean // User manually reordered it
+  /**
+   * @deprecated Use LearningPath.orderMode instead. Kept for legacy Dexie rows.
+   * New code never writes this field. The only ordering truth after this refactor
+   * is LearningPath.orderMode + position + manifestOrdinal.
+   */
+  isManuallyOrdered?: boolean
   completionTarget?: CompletionTarget // Per-track-entry progress cap
+  /** Immutable curated position from the manifest at import time. null for user-added entries. */
+  manifestOrdinal?: number | null
+  /** Provenance: who added this entry. "manifest" for import entries, "user" for manual adds. */
+  source?: 'manifest' | 'user'
+  /** Relationship to current manifest version. "active" = in current manifest. */
+  state?: 'active' | 'removed-upstream' | 'detached'
+  /** Stable folder-level ID from the manifest for future merge matching. */
+  manifestCourseKey?: string | null
 }
 
 /** Caps the progress denominator for a course within a learning track. */

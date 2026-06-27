@@ -482,7 +482,10 @@ const learningPaths: TableRegistryEntry = {
   supabaseTable: 'learning_paths',
   conflictStrategy: 'lww',
   priority: 3,
-  fieldMap: {},
+  fieldMap: {
+    orderMode: 'order_mode',
+    baseManifestHash: 'base_manifest_hash',
+  },
 }
 
 const learningPathEntries: TableRegistryEntry = {
@@ -490,7 +493,12 @@ const learningPathEntries: TableRegistryEntry = {
   supabaseTable: 'learning_path_entries',
   conflictStrategy: 'lww',
   priority: 3,
-  fieldMap: {},
+  fieldMap: {
+    manifestOrdinal: 'manifest_ordinal',
+    manifestCourseKey: 'manifest_course_key',
+    source: 'source',
+    state: 'state',
+  },
 }
 
 /**

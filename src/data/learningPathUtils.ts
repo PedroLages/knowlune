@@ -27,3 +27,27 @@ export function cleanGapJustification(justification?: string): string | undefine
   if (!justification) return undefined
   return justification.replace(/\s*\[Search for: .+\]$/, '') || undefined
 }
+
+/**
+ * Create a provenance partial for a LearningPathEntry.
+ *
+ * Returns the common `{ source, state, manifestOrdinal, manifestCourseKey }`
+ * fields shared by every new entry. Omit `source` to default to `'user'`.
+ *
+ * Spread the result into your entry object literal:
+ * ```
+ * const entry: LearningPathEntry = {
+ *   id: crypto.randomUUID(),
+ *   ...entryProvenance('user'),
+ *   // … remaining fields
+ * }
+ * ```
+ */
+export function entryProvenance(source: 'user' | 'manifest' = 'user') {
+  return {
+    source,
+    state: 'active' as const,
+    manifestOrdinal: null,
+    manifestCourseKey: null,
+  }
+}

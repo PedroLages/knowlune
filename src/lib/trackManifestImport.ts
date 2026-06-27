@@ -1,12 +1,21 @@
+import { sha256 } from '@/lib/hash'
 import { parseTrackManifest } from '@/lib/courseManifest'
 import type { TrackManifest, ManifestAuthor } from '@/lib/courseManifest'
 import { scanCourseFolderFromHandle, persistScannedCourse } from '@/lib/courseImport'
 import type { BulkScanResult } from '@/lib/courseImport'
 import { useLearningPathStore } from '@/stores/useLearningPathStore'
-import { useCourseImportStore } from '@/stores/useCourseImportStore'
 import { useAuthorStore } from '@/stores/useAuthorStore'
 import { db } from '@/db'
 import { toast } from 'sonner'
+
+/**
+ * Compute a deterministic hash from the manifest content for baseManifestHash.
+ * Uses SHA-256 via crypto.subtle for collision resistance.
+ */
+async function computeManifestHash(manifest: TrackManifest): Promise<string> {
+  const fullHash = await sha256(JSON.stringify(manifest.track))
+  return fullHash.slice(0, 16) // 16 hex chars = 64 bits, sufficient for collision resistance
+}
 
 /**
  * Normalize a folder name for reliable comparison.
@@ -89,6 +98,13 @@ export async function readTrackManifest(
 }
 
 /**
+ * Module-level loading lock for batchImportTrackCourses (F-012).
+ * Prevents concurrent invocations that could create duplicate tracks
+ * or corrupt entry ordering.
+ */
+let _batchImportLock: Promise<unknown> | null = null
+
+/**
  * Executes a batch import of all courses listed in a track manifest.
  *
  * Iterates sequentially over each course folder listed in the manifest,
@@ -97,15 +113,21 @@ export async function readTrackManifest(
  *
  * After all courses are imported, creates a track (or matches by name)
  * and adds the successfully imported courses to it.
+ *
+ * Uses a module-level loading lock to prevent concurrent invocations.
  */
 export async function batchImportTrackCourses(
   parentDirHandle: FileSystemDirectoryHandle,
   manifest: TrackManifest
 ): Promise<BatchImportResult> {
-  const results: CourseImportResult[] = []
-  const positions = manifest.track.courses
+  // In-flight guard: coalesce concurrent calls into a single import
+  if (_batchImportLock) return _batchImportLock as Promise<BatchImportResult>
 
-  // Phase 1: Import each course sequentially
+  _batchImportLock = (async () => {
+    const results: CourseImportResult[] = []
+    const positions = manifest.track.courses
+
+    // Phase 1: Import each course sequentially
   for (const { folder } of positions) {
     try {
       // Get the subdirectory handle
@@ -147,20 +169,8 @@ export async function batchImportTrackCourses(
       // Persist the scanned course
       const importedCourse = await persistScannedCourse(scanResult.course)
       results.push({ folder, success: true, courseId: importedCourse.id })
-
-      // Store the manifest position on the course record so the
-      // InlineCoursePicker and other UIs can sort by manifest order.
-      const manifestCourse = positions.find(p => normalizeFolder(p.folder) === normalizeFolder(folder))
-      if (manifestCourse) {
-        db.importedCourses.update(importedCourse.id, { manifestPosition: manifestCourse.position })
-        useCourseImportStore.setState(state => ({
-          importedCourses: state.importedCourses.map(c =>
-            c.id === importedCourse.id
-              ? { ...c, manifestPosition: manifestCourse.position }
-              : c
-          ),
-        }))
-      }
+      // manifestPosition on ImportedCourse is deprecated — ordering now lives
+      // on LearningPathEntry.manifestOrdinal, populated during track creation.
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Unexpected error'
       results.push({ folder, success: false, error: message })
@@ -215,14 +225,6 @@ export async function batchImportTrackCourses(
   const trackDescription = manifest.track.description
   const store = useLearningPathStore.getState()
 
-  // Build a normalized folder→position map for reliable comparison across
-  // Unicode normalization boundaries (macOS NFD vs JSON NFC).
-  const folderPosition = new Map<string, number>()
-  for (const p of positions) {
-    const key = normalizeFolder(p.folder)
-    folderPosition.set(key, p.position)
-  }
-
   // Check if a track with this name already exists
   let trackId: string
   const existingPath = store.paths.find(p => p.name.toLowerCase() === trackName.toLowerCase())
@@ -234,6 +236,7 @@ export async function batchImportTrackCourses(
       .map(r => ({
         courseId: r.courseId!,
         courseType: 'imported' as const,
+        source: 'manifest' as const,
         justification: positions.find(p => normalizeFolder(p.folder) === normalizeFolder(r.folder))?.notes,
         completionTarget:
           positions.find(p => normalizeFolder(p.folder) === normalizeFolder(r.folder))?.completionTarget ?? undefined,
@@ -241,72 +244,61 @@ export async function batchImportTrackCourses(
     await store.batchAddCoursesToPath(trackId, coursesToAdd)
     toast.info(`Added ${coursesToAdd.length} courses to existing track "${trackName}"`)
   } else {
-    // Create new track — pre-sort by manifest position so the initial
-    // entry positions are correct from the start (no render flash between
-    // createPathWithCourses and the applyManifestOrder correction pass).
-    const sortedResults = [...results]
+    // Create new track via single-pass createPathFromManifest.
+    // This replaces the old two-pass (createPathWithCourses + applyManifestOrder).
+    const manifestHash = await computeManifestHash(manifest)
+    const manifestCourses = results
       .filter(r => r.success && r.courseId)
-      .sort((a, b) => {
-        const posA = folderPosition.get(normalizeFolder(a.folder)) ?? Number.MAX_SAFE_INTEGER
-        const posB = folderPosition.get(normalizeFolder(b.folder)) ?? Number.MAX_SAFE_INTEGER
-        if (posA >= Number.MAX_SAFE_INTEGER) {
-          console.warn('[trackManifestImport] Folder not in manifest (pre-sort):', a.folder)
-        }
-        if (posB >= Number.MAX_SAFE_INTEGER) {
-          console.warn('[trackManifestImport] Folder not in manifest (pre-sort):', b.folder)
-        }
-        return posA - posB
-      })
-    const courses = sortedResults.map(r => ({
-      courseId: r.courseId!,
-      courseType: 'imported' as const,
-      justification: positions.find(p => normalizeFolder(p.folder) === normalizeFolder(r.folder))?.notes,
-      completionTarget:
-        positions.find(p => normalizeFolder(p.folder) === normalizeFolder(r.folder))?.completionTarget ?? undefined,
-    }))
-    const newPath = await store.createPathWithCourses(trackName, trackDescription, courses)
-    trackId = newPath.id
+      .map(r => ({
+        courseId: r.courseId!,
+        folder: r.folder,
+        position: positions.find(p => normalizeFolder(p.folder) === normalizeFolder(r.folder))?.position ?? 0,
+      }))
+
+    // Guard: no courses to add — abort before calling createPathFromManifest
+    if (manifestCourses.length === 0) {
+      toast.error('No courses were successfully imported — track creation aborted')
+      return {
+        trackName,
+        courses: results,
+        successCount: 0,
+        failureCount,
+      }
+    }
+
+    trackId = await store.createPathFromManifest({
+      name: trackName,
+      description: trackDescription,
+      courses: manifestCourses,
+      manifestHash,
+      manifestName: trackName,
+    })
     toast.success(`Track "${trackName}" created with ${successCount} courses`)
   }
 
-  // Apply manifest-specified order. For new tracks this is a defensive no-op
-  // (courses are pre-sorted before createPathWithCourses above). For existing
-  // tracks this repositions entries added at the tail by batchAddCoursesToPath.
-  // Replaces the old per-course reorder loop which moved entries one-at-a-time
-  // through the DnD machinery, causing cascading position reassignments.
-  const courseIdByFolder = new Map<string, string>()
-  for (const r of results) {
-    if (r.success && r.courseId) courseIdByFolder.set(normalizeFolder(r.folder), r.courseId)
-  }
-
-  // Sort by manifest position to guarantee correct order even if the
-  // manifest JSON array order differs from the position field values.
-  const manifestOrderedCourseIds = [...positions]
-    .filter(p => courseIdByFolder.has(normalizeFolder(p.folder)))
-    .sort((a, b) => a.position - b.position)
-    .map(p => courseIdByFolder.get(normalizeFolder(p.folder))!)
-
-  // Warn about manifest courses that imported successfully but are missing
-  // from the courseIdByFolder map (should never happen after normalization).
-  for (const p of positions) {
-    if (courseIdByFolder.has(normalizeFolder(p.folder))) continue
-    const imported = results.find(r => r.success && normalizeFolder(r.folder) === normalizeFolder(p.folder))
-    if (imported) {
-      console.warn(
-        '[trackManifestImport] Manifest course imported but folder mismatch after normalization — manifest:',
-        JSON.stringify(p.folder),
-        '| result:',
-        JSON.stringify(imported.folder)
-      )
+  // For existing tracks only: apply manifest order to reposition entries
+  // added at the tail by batchAddCoursesToPath. New tracks created via
+  // createPathFromManifest already have correct positions.
+  if (existingPath) {
+    const courseIdByFolder = new Map<string, string>()
+    for (const r of results) {
+      if (r.success && r.courseId) courseIdByFolder.set(normalizeFolder(r.folder), r.courseId)
     }
-  }
 
-  if (manifestOrderedCourseIds.length > 0) {
-    console.log(
-      '[trackManifestImport] Applying manifest order:',
-      manifestOrderedCourseIds.map((id, i) => `${i + 1}. ${id}`)
-    )
-    await store.applyManifestOrder(trackId, manifestOrderedCourseIds)
+    const manifestCoursesForOrder = [...positions]
+      .filter(p => courseIdByFolder.has(normalizeFolder(p.folder)))
+      .sort((a, b) => a.position - b.position)
+      .map(p => ({
+        folder: p.folder,
+        courseId: courseIdByFolder.get(normalizeFolder(p.folder))!,
+        position: p.position,
+      }))
+
+    if (manifestCoursesForOrder.length > 0) {
+      await store.applyManifestOrder(trackId, manifestCoursesForOrder, {
+        setOrderMode: 'manifest',
+      })
+    }
   }
 
   return {
@@ -316,4 +308,11 @@ export async function batchImportTrackCourses(
     successCount,
     failureCount,
   }
+    })()
+
+    try {
+      return await _batchImportLock as Promise<BatchImportResult>
+    } finally {
+      _batchImportLock = null
+    }
 }

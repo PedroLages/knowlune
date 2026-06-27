@@ -19,6 +19,7 @@
  * @module
  */
 
+import { sha256 } from '@/lib/hash'
 import { db } from '@/db/schema'
 import { getOllamaServerUrl, getOllamaSelectedModel } from '@/lib/aiConfiguration'
 import { resolveFeatureModel } from '@/lib/aiConfiguration'
@@ -505,11 +506,7 @@ function parseAndValidate(content: string): GeneratedQuestion[] | null {
  * Compute SHA-256 hash of a string using Web Crypto API.
  */
 async function computeSHA256(text: string): Promise<string> {
-  const encoder = new TextEncoder()
-  const data = encoder.encode(text)
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data)
-  const hashArray = Array.from(new Uint8Array(hashBuffer))
-  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
+  return sha256(text)
 }
 
 /**
