@@ -190,6 +190,7 @@ function CourseRow({
           className={cn(
             'flex items-center gap-2 cursor-pointer shrink-0',
             'size-6 rounded border-2 transition-colors',
+            'focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2',
             isSelected ? 'bg-brand border-brand' : 'border-muted-foreground/30 hover:border-brand'
           )}
           data-testid={`checkbox-${course.id}`}
@@ -394,6 +395,19 @@ export function InlineCoursePicker({
   // Sort by manifest ordinal (via store getter) so batch-imported courses appear in the
   // order defined by track-manifest.json. Courses without a manifest ordinal
   // fall back to alphabetical order.
+  //
+  // The ordinal dependency is scoped to only manifest-ordinal entries (courseId:ordinal pairs),
+  // so allCourses doesn't recompute on every non-ordinal entry change (e.g. gap entries).
+  const manifestOrdinalDep = useMemo(
+    () =>
+      entries
+        .filter(e => e.manifestOrdinal != null)
+        .map(e => `${e.courseId}:${e.manifestOrdinal}`)
+        .sort()
+        .join(),
+    [entries]
+  )
+
   const allCourses: CoursePickerItem[] = useMemo(() => {
     // Read manifestOrdinal map synchronously from Zustand store
     const ordinalMap = useLearningPathStore.getState().getManifestOrdinalMap()
@@ -418,7 +432,7 @@ export function InlineCoursePicker({
         thumbnailUrl: thumbnailUrls[c.id],
         tags: c.tags ?? [],
       }))
-  }, [importedCourses, excludeCourseIds, authors, thumbnailUrls, entries])
+  }, [importedCourses, excludeCourseIds, authors, thumbnailUrls, manifestOrdinalDep])
 
   // Recently Imported: courses not assigned to any path
   const assignedCourseIds: Set<string> = useMemo(() => {

@@ -7,6 +7,7 @@
  * @see E90-S04 — Model Discovery for Cloud Providers
  */
 
+import { sha256 } from './hash'
 import { apiUrl } from './apiBaseUrl'
 import type { AIProviderId } from './modelDefaults'
 import { getStaticModels } from './modelDiscovery.static'
@@ -50,12 +51,8 @@ const MAX_CACHE_ENTRIES = 50
 
 /** Compute a collision-resistant cache key using SHA-256 */
 async function computeCacheKey(provider: AIProviderId, apiKey: string): Promise<string> {
-  const data = new TextEncoder().encode(apiKey)
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data)
-  const hashHex = Array.from(new Uint8Array(hashBuffer))
-    .map(b => b.toString(16).padStart(2, '0'))
-    .join('')
-  return `${provider}:${hashHex.slice(0, 16)}`
+  const fullHash = await sha256(apiKey)
+  return `${provider}:${fullHash.slice(0, 16)}`
 }
 
 /** Check if cache entry is still valid */

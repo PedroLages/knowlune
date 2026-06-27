@@ -66,7 +66,7 @@ vi.mock('@/stores/useLearningPathStore', () => ({
       const state = { entries: mockEntries }
       return selector ? selector(state) : state
     },
-    { getState: () => ({ entries: mockEntries }) }
+    { getState: () => ({ entries: mockEntries, getManifestOrdinalMap: () => new Map() }) }
   ),
 }))
 

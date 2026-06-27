@@ -2,6 +2,7 @@ import 'fake-indexeddb/auto'
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { act } from 'react'
 import Dexie from 'dexie'
+import type { LearningPath, LearningPathEntry } from '@/data/types'
 
 // Mock toast
 vi.mock('sonner', () => ({
@@ -1093,5 +1094,210 @@ describe('deletePathWithUndo / restorePath', () => {
     expect(useLearningPathStore.getState().entries).toHaveLength(0)
     // No undo toast was shown (no pendingDeletes entry)
     // (Sonner toast mock can't easily distinguish, but the store state proves it)
+  })
+})
+
+describe('buildMigrationPatches', () => {
+  it('should use normalized course name for manifestCourseKey when folder is unavailable', async () => {
+    // Import the function
+    const { buildMigrationPatches } = await import('@/stores/useLearningPathStore')
+
+    // Create a course in Dexie
+    await db.importedCourses.add({
+      id: 'c1',
+      name: ' React Fundamentals ', // has leading/trailing spaces
+      importedAt: '2026-01-01T00:00:00Z',
+      category: 'behavioral-analysis',
+      tags: [],
+      status: 'not-started',
+      videoCount: 0,
+      pdfCount: 0,
+      directoryHandle: null,
+    })
+
+    const pathNoOrderMode: LearningPath = {
+      id: 'p1',
+      name: 'Test Path',
+      createdAt: '2026-01-01T00:00:00Z',
+      updatedAt: '2026-01-01T00:00:00Z',
+      isAIGenerated: false,
+    }
+
+    // Old-style entry: missing source, state, and manifestCourseKey
+    // Simulates a pre-migration entry that needs backfill from the course name.
+    const entry: LearningPathEntry = {
+      id: 'e1',
+      pathId: 'p1',
+      courseId: 'c1',
+      courseType: 'imported',
+      position: 1,
+      isManuallyOrdered: false,
+      manifestOrdinal: 1,
+      source: undefined, // triggers migration backfill
+      state: undefined,  // triggers migration backfill
+      manifestCourseKey: null, // needs backfill from name
+    }
+
+    const result = await buildMigrationPatches([pathNoOrderMode], [entry], [pathNoOrderMode])
+    expect(result).not.toBeNull()
+
+    const manifestCourseKeyPatch = result!.allEntryPatches.find(ep => ep.id === 'e1')?.patch.manifestCourseKey
+    expect(manifestCourseKeyPatch).toBe('React Fundamentals') // trimmed + NFC-normalized
+    // The leading/trailing spaces were trimmed
+    expect(manifestCourseKeyPatch).not.toMatch(/^\s|\s$/)
+  })
+
+  it('should preserve existing manifestCourseKey rather than overwrite', async () => {
+    const { buildMigrationPatches } = await import('@/stores/useLearningPathStore')
+
+    await db.importedCourses.add({
+      id: 'c2',
+      name: 'Advanced Topics',
+      importedAt: '2026-01-01T00:00:00Z',
+      category: 'behavioral-analysis',
+      tags: [],
+      status: 'not-started',
+      videoCount: 0,
+      pdfCount: 0,
+      directoryHandle: null,
+    })
+
+    const pathNoOrderMode: LearningPath = {
+      id: 'p2',
+      name: 'Test Path 2',
+      createdAt: '2026-01-01T00:00:00Z',
+      updatedAt: '2026-01-01T00:00:00Z',
+      isAIGenerated: false,
+    }
+
+    const entry: LearningPathEntry = {
+      id: 'e2',
+      pathId: 'p2',
+      courseId: 'c2',
+      courseType: 'imported',
+      position: 1,
+      isManuallyOrdered: false,
+      manifestOrdinal: 1,
+      source: 'manifest',
+      state: 'active',
+      manifestCourseKey: '02-advanced-topics', // already set — should be preserved
+    }
+
+    const result = await buildMigrationPatches([pathNoOrderMode], [entry], [pathNoOrderMode])
+    // Entry already has all provenance fields set — no entry patch generated.
+    // The existing manifestCourseKey is preserved (not overwritten by name).
+    expect(result).not.toBeNull()
+    const entryPatch = result!.allEntryPatches.find(ep => ep.id === 'e2')
+    expect(entryPatch).toBeUndefined() // no patch needed for this entry
+    // The path patch is generated (orderMode computed), but entry is untouched.
+    expect(result!.allPathPatches.length).toBeGreaterThanOrEqual(1)
+  })
+})
+
+describe('applyManifestOrder', () => {
+  it('should match by manifestCourseKey before falling back to courseId', async () => {
+    // Set up the store state with entries that have manifestCourseKey set
+    const path = await act(async () => {
+      return useLearningPathStore.getState().createPath('Manifest Key Test')
+    })
+    const pathId = path.id
+
+    // Add entries directly to store state with manifestCourseKey set
+    useLearningPathStore.setState(() => ({ entries: [
+        {
+          id: 'e-keymatch',
+          pathId,
+          courseId: 'c-nomatch', // courseId deliberately different — tests key matching
+          courseType: 'imported' as const,
+          position: 1,
+          isManuallyOrdered: false,
+          manifestOrdinal: 1,
+          source: 'manifest',
+          state: 'active',
+          manifestCourseKey: '01-react-fundamentals',
+        },
+        {
+          id: 'e-idfallback',
+          pathId,
+          courseId: 'c-linear-algebra',
+          courseType: 'imported' as const,
+          position: 2,
+          isManuallyOrdered: false,
+          manifestOrdinal: 2,
+          source: 'manifest',
+          state: 'active',
+          manifestCourseKey: null, // no key — will fall back to courseId
+        },
+      ],
+    }))
+
+    await act(async () => {
+      await useLearningPathStore.getState().applyManifestOrder(pathId, [
+        { folder: '01-react-fundamentals', courseId: 'c-nomatch', position: 1 },
+        { folder: '02-linear-algebra', courseId: 'c-linear-algebra', position: 2 },
+      ])
+    })
+
+    const entries = useLearningPathStore.getState().entries
+    const keyMatchEntry = entries.find(e => e.id === 'e-keymatch')
+    const idFallbackEntry = entries.find(e => e.id === 'e-idfallback')
+
+    // key-match entry: should be found by manifestCourseKey despite courseId not matching folder
+    expect(keyMatchEntry).toBeDefined()
+    expect(keyMatchEntry!.manifestOrdinal).toBe(1)
+    expect(keyMatchEntry!.manifestCourseKey).toBe('01-react-fundamentals')
+
+    // id-fallback entry: should still be found by courseId
+    expect(idFallbackEntry).toBeDefined()
+    expect(idFallbackEntry!.manifestOrdinal).toBe(2)
+    expect(idFallbackEntry!.manifestCourseKey).toBe('02-linear-algebra')
+  })
+})
+
+describe('loadPaths migration error path', () => {
+  it('should preserve isLoaded:false and error when migration persist fails', async () => {
+    // Create paths and entries that trigger the migration (no orderMode)
+    const path1 = {
+      id: 'p-migrate',
+      name: 'Migration Test',
+      createdAt: '2026-01-01T00:00:00Z',
+      updatedAt: '2026-01-01T00:00:00Z',
+      isAIGenerated: false,
+    }
+    await db.learningPaths.add(path1)
+
+    // Add a course that the migration can look up
+    await db.importedCourses.add({
+      id: 'c-migrate',
+      name: 'Course 1',
+      importedAt: '2026-01-01T00:00:00Z',
+      category: 'behavioral-analysis',
+      tags: [],
+      status: 'not-started',
+      videoCount: 0,
+      pdfCount: 0,
+      directoryHandle: null,
+      manifestPosition: 1,
+    })
+
+    await db.learningPathEntries.add({
+      id: 'e-migrate',
+      pathId: 'p-migrate',
+      courseId: 'c-migrate',
+      courseType: 'imported',
+      position: 1,
+      isManuallyOrdered: false,
+    })
+
+    // Mock syncableWrite to fail during migration persistence
+    vi.spyOn(syncableWriteModule, 'syncableWrite').mockRejectedValue(new Error('Migration persist fail'))
+
+    await act(async () => {
+      await useLearningPathStore.getState().loadPaths()
+    })
+
+    const state = useLearningPathStore.getState()
+    expect(state.isLoaded).toBe(false)
+    expect(state.error).toBe('Failed to migrate track ordering — rolled back')
   })
 })

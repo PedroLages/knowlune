@@ -11,6 +11,7 @@
  */
 
 import { generateEmbeddings } from './workers/coordinator'
+import { sha256 } from '@/lib/hash'
 import { db } from '@/db'
 import type { ImportedCourse, CourseEmbedding } from '@/data/types'
 import { isGranted, CONSENT_PURPOSES } from '@/lib/compliance/consentService'
@@ -26,11 +27,7 @@ import { useAuthStore } from '@/stores/useAuthStore'
  */
 export async function computeSourceHash(course: ImportedCourse): Promise<string> {
   const text = buildMetadataText(course)
-  const encoder = new TextEncoder()
-  const data = encoder.encode(text)
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data)
-  const hashArray = Array.from(new Uint8Array(hashBuffer))
-  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
+  return sha256(text)
 }
 
 /**

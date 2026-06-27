@@ -1,3 +1,4 @@
+import { sha256 } from '@/lib/hash'
 import { parseTrackManifest } from '@/lib/courseManifest'
 import type { TrackManifest, ManifestAuthor } from '@/lib/courseManifest'
 import { scanCourseFolderFromHandle, persistScannedCourse } from '@/lib/courseImport'
@@ -12,12 +13,8 @@ import { toast } from 'sonner'
  * Uses SHA-256 via crypto.subtle for collision resistance.
  */
 async function computeManifestHash(manifest: TrackManifest): Promise<string> {
-  const data = new TextEncoder().encode(JSON.stringify(manifest.track))
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data)
-  const hashHex = Array.from(new Uint8Array(hashBuffer))
-    .map(b => b.toString(16).padStart(2, '0'))
-    .join('')
-  return hashHex.slice(0, 16) // 16 hex chars = 64 bits, sufficient for collision resistance
+  const fullHash = await sha256(JSON.stringify(manifest.track))
+  return fullHash.slice(0, 16) // 16 hex chars = 64 bits, sufficient for collision resistance
 }
 
 /**
@@ -101,6 +98,13 @@ export async function readTrackManifest(
 }
 
 /**
+ * Module-level loading lock for batchImportTrackCourses (F-012).
+ * Prevents concurrent invocations that could create duplicate tracks
+ * or corrupt entry ordering.
+ */
+let _batchImportLock: Promise<unknown> | null = null
+
+/**
  * Executes a batch import of all courses listed in a track manifest.
  *
  * Iterates sequentially over each course folder listed in the manifest,
@@ -109,15 +113,21 @@ export async function readTrackManifest(
  *
  * After all courses are imported, creates a track (or matches by name)
  * and adds the successfully imported courses to it.
+ *
+ * Uses a module-level loading lock to prevent concurrent invocations.
  */
 export async function batchImportTrackCourses(
   parentDirHandle: FileSystemDirectoryHandle,
   manifest: TrackManifest
 ): Promise<BatchImportResult> {
-  const results: CourseImportResult[] = []
-  const positions = manifest.track.courses
+  // In-flight guard: coalesce concurrent calls into a single import
+  if (_batchImportLock) return _batchImportLock as Promise<BatchImportResult>
 
-  // Phase 1: Import each course sequentially
+  _batchImportLock = (async () => {
+    const results: CourseImportResult[] = []
+    const positions = manifest.track.courses
+
+    // Phase 1: Import each course sequentially
   for (const { folder } of positions) {
     try {
       // Get the subdirectory handle
@@ -215,14 +225,6 @@ export async function batchImportTrackCourses(
   const trackDescription = manifest.track.description
   const store = useLearningPathStore.getState()
 
-  // Build a normalized folder→position map for reliable comparison across
-  // Unicode normalization boundaries (macOS NFD vs JSON NFC).
-  const folderPosition = new Map<string, number>()
-  for (const p of positions) {
-    const key = normalizeFolder(p.folder)
-    folderPosition.set(key, p.position)
-  }
-
   // Check if a track with this name already exists
   let trackId: string
   const existingPath = store.paths.find(p => p.name.toLowerCase() === trackName.toLowerCase())
@@ -234,6 +236,7 @@ export async function batchImportTrackCourses(
       .map(r => ({
         courseId: r.courseId!,
         courseType: 'imported' as const,
+        source: 'manifest' as const,
         justification: positions.find(p => normalizeFolder(p.folder) === normalizeFolder(r.folder))?.notes,
         completionTarget:
           positions.find(p => normalizeFolder(p.folder) === normalizeFolder(r.folder))?.completionTarget ?? undefined,
@@ -251,6 +254,18 @@ export async function batchImportTrackCourses(
         folder: r.folder,
         position: positions.find(p => normalizeFolder(p.folder) === normalizeFolder(r.folder))?.position ?? 0,
       }))
+
+    // Guard: no courses to add — abort before calling createPathFromManifest
+    if (manifestCourses.length === 0) {
+      toast.error('No courses were successfully imported — track creation aborted')
+      return {
+        trackName,
+        courses: results,
+        successCount: 0,
+        failureCount,
+      }
+    }
+
     trackId = await store.createPathFromManifest({
       name: trackName,
       description: trackDescription,
@@ -293,4 +308,11 @@ export async function batchImportTrackCourses(
     successCount,
     failureCount,
   }
+    })()
+
+    try {
+      return await _batchImportLock as Promise<BatchImportResult>
+    } finally {
+      _batchImportLock = null
+    }
 }

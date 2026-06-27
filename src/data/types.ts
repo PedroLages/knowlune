@@ -531,7 +531,7 @@ export interface LearningPathEntry {
    * New code never writes this field. The only ordering truth after this refactor
    * is LearningPath.orderMode + position + manifestOrdinal.
    */
-  isManuallyOrdered: boolean
+  isManuallyOrdered?: boolean
   completionTarget?: CompletionTarget // Per-track-entry progress cap
   /** Immutable curated position from the manifest at import time. null for user-added entries. */
   manifestOrdinal?: number | null
