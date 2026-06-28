@@ -26,6 +26,7 @@ import {
   Video,
   FileText,
   Youtube,
+  Globe,
   ChevronDown,
   ChevronUp,
   Image as ImageIcon,
@@ -33,10 +34,13 @@ import {
 } from 'lucide-react'
 import {
   scanCourseFolderFromHandle,
+  scanCourseFolderFromServer,
   listSubDirectories,
+  listServerSubDirectories,
   persistScannedCourse,
 } from '@/lib/courseImport'
 import type { BulkScanResult, ScannedCourse } from '@/lib/courseImport'
+import { isValidImportUrl } from '@/lib/courseServerService'
 import { readTrackManifest, batchImportTrackCourses } from '@/lib/trackManifestImport'
 import type { TrackManifest } from '@/lib/courseManifest'
 import { showDirectoryPicker } from '@/lib/fileSystem'
@@ -72,7 +76,7 @@ interface ImportItem {
   pdfCount?: number
 }
 
-type DialogStep = 'choose' | 'select-folders' | 'scanning' | 'review' | 'importing' | 'results'
+type DialogStep = 'choose' | 'enter-url' | 'select-folders' | 'scanning' | 'review' | 'importing' | 'results'
 
 const MAX_CONCURRENCY = 5
 
@@ -107,6 +111,11 @@ export function BulkImportDialog({
   const [coverPreviewUrls, setCoverPreviewUrls] = useState<Map<string, Map<string, string>>>(
     new Map()
   )
+  // URL batch import state
+  const [serverUrlInput, setServerUrlInput] = useState('')
+  const [serverUrlError, setServerUrlError] = useState<string | null>(null)
+  const [isScanningUrl, setIsScanningUrl] = useState(false)
+
   const abortRef = useRef(false)
   const completedSuccessfullyRef = useRef(false)
   const parentHandleRef = useRef<FileSystemDirectoryHandle | null>(null)
@@ -156,6 +165,9 @@ export function BulkImportDialog({
       }
     }
     setCoverPreviewUrls(new Map())
+    setServerUrlInput('')
+    setServerUrlError(null)
+    setIsScanningUrl(false)
     abortRef.current = false
     completedSuccessfullyRef.current = false
     parentHandleRef.current = null
@@ -201,6 +213,51 @@ export function BulkImportDialog({
     handleOpenChange(false)
     onYouTubeImport?.()
   }, [handleOpenChange, onYouTubeImport])
+
+  // Step 1 → Enter URL: Scan a server URL for subdirectories
+  const handleServerUrlScan = useCallback(async () => {
+    const url = serverUrlInput.trim()
+
+    // Validate URL before any network call
+    const validation = isValidImportUrl(url)
+    if (!validation.valid) {
+      setServerUrlError(validation.reason)
+      return
+    }
+
+    setServerUrlError(null)
+    setIsScanningUrl(true)
+
+    try {
+      const result = await listServerSubDirectories(url)
+
+      if (!result.ok) {
+        setServerUrlError(result.error)
+        return
+      }
+
+      if (result.data.length === 0) {
+        setServerUrlError('No course folders found at this URL. Check that the server exposes subdirectories via nginx autoindex.')
+        return
+      }
+
+      // Populate folders from server-discovered subdirectories
+      setFolders(
+        result.data.map(d => ({
+          handle: null,
+          name: d.name,
+          selected: true,
+          serverUrl: d.url,
+        }))
+      )
+      setStep('select-folders')
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : 'Failed to scan server URL'
+      setServerUrlError(msg)
+    } finally {
+      setIsScanningUrl(false)
+    }
+  }, [serverUrlInput])
 
   // Step 1 → Step 2: Pick parent folder and list sub-dirs
   const handleSelectParentFolder = useCallback(async () => {
@@ -737,6 +794,23 @@ export function BulkImportDialog({
               </div>
             </button>
 
+            <button
+              type="button"
+              onClick={() => setStep('enter-url')}
+              className="flex items-center gap-4 rounded-xl border border-border p-4 text-left transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
+              data-testid="import-multiple-url-btn"
+            >
+              <div className="flex items-center justify-center size-12 rounded-full bg-brand-soft shrink-0">
+                <Globe className="size-6 text-brand-soft-foreground" aria-hidden="true" />
+              </div>
+              <div>
+                <p className="font-medium text-foreground">Import Multiple from URL</p>
+                <p className="text-sm text-muted-foreground">
+                  Paste a server URL to batch import courses
+                </p>
+              </div>
+            </button>
+
             {onYouTubeImport && (
               <button
                 type="button"
@@ -755,6 +829,73 @@ export function BulkImportDialog({
                 </div>
               </button>
             )}
+          </div>
+        )}
+
+        {/* Step: Enter server URL */}
+        {step === 'enter-url' && (
+          <div className="flex flex-col gap-4 py-4">
+            <p className="text-sm text-muted-foreground">
+              Paste the server URL containing course folders to batch import.
+            </p>
+            <Input
+              placeholder="https://example.com/courses/"
+              value={serverUrlInput}
+              onChange={e => {
+                setServerUrlInput(e.target.value)
+                if (serverUrlError) setServerUrlError(null)
+              }}
+              onKeyDown={e => {
+                if (e.key === 'Enter') {
+                  e.preventDefault()
+                  handleServerUrlScan()
+                }
+                if (e.key === 'Escape') {
+                  setStep('choose')
+                }
+              }}
+              autoFocus
+              className="min-h-[44px] font-mono text-sm"
+              data-testid="bulk-import-enter-url"
+              aria-invalid={!!serverUrlError}
+              disabled={isScanningUrl}
+            />
+            {serverUrlError && (
+              <p className="text-xs text-destructive" role="alert" data-testid="bulk-import-url-error">
+                {serverUrlError}
+              </p>
+            )}
+            <div className="flex gap-2">
+              <Button
+                variant="brand"
+                onClick={handleServerUrlScan}
+                disabled={!serverUrlInput.trim() || isScanningUrl}
+                className="rounded-xl min-h-[44px]"
+                data-testid="bulk-import-scan-url-btn"
+              >
+                {isScanningUrl ? (
+                  <>
+                    <Loader2 className="size-4 mr-2 animate-spin" aria-hidden="true" />
+                    Scanning...
+                  </>
+                ) : (
+                  'Scan'
+                )}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setServerUrlInput('')
+                  setServerUrlError(null)
+                  setStep('choose')
+                }}
+                className="rounded-xl min-h-[44px]"
+                data-testid="bulk-import-url-back-btn"
+                disabled={isScanningUrl}
+              >
+                Back
+              </Button>
+            </div>
           </div>
         )}
 
