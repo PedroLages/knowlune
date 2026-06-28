@@ -1,7 +1,7 @@
 /**
- * Dexie Migration Checkpoint — v67
+ * Dexie Migration Checkpoint — v68
  *
- * This file provides a frozen snapshot of the complete IndexedDB schema at version 66.
+ * This file provides a frozen snapshot of the complete IndexedDB schema at version 67.
  * Fresh installs skip the incremental version declarations and create the full
  * schema in a single step. Existing users at lower versions still run incremental
  * migrations through the legacy version chain in schema.ts.
@@ -20,7 +20,7 @@
  * a single `db.version(CHECKPOINT_VERSION).stores(CHECKPOINT_SCHEMA)` call
  * for fresh installs.
  */
-export const CHECKPOINT_VERSION = 67
+export const CHECKPOINT_VERSION = 68
 
 /**
  * Shared `searchFrecency` index string. Used by both the v53 `.stores()` call
@@ -143,6 +143,8 @@ export const CHECKPOINT_SCHEMA: Record<string, string> = {
   downloads: 'id, bookId, status, [bookId+status], createdAt',
   // v65 (video storyboards): per-video scrub-preview sprite sheets, local-only.
   videoStoryboards: 'videoId, courseId',
+  // v68 (E133-S01): course content servers — HTTP file servers for course video/PDF access.
+  courseServers: 'id, name, url, status, createdAt, updatedAt, userId, [userId+updatedAt]',
 }
 
 // v42 (E109-S01): vocabularyItems table added

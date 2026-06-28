@@ -39,8 +39,9 @@ import {
   AlertTriangle,
   FileJson,
   ExternalLink,
+  Globe,
 } from 'lucide-react'
-import { scanCourseFolder, scanFromDroppedFiles, persistScannedCourse } from '@/lib/courseImport'
+import { scanCourseFolder, scanFromDroppedFiles, persistScannedCourse, scanCourseFolderFromServer } from '@/lib/courseImport'
 import { getVideoFormat } from '@/lib/fileSystem'
 import type { ScannedCourse, ScannedImage } from '@/lib/courseImport'
 import type { CourseManifest } from '@/lib/courseManifest'
@@ -168,6 +169,8 @@ export function ImportWizardDialog({
   const tagInputRef = useRef<HTMLInputElement>(null)
   const manifestDataRef = useRef<CourseManifest | undefined>(undefined)
   const [driveFolderBrowserOpen, setDriveFolderBrowserOpen] = useState(false)
+  const [serverUrlInput, setServerUrlInput] = useState('')
+  const [showServerUrlInput, setShowServerUrlInput] = useState(false)
 
   // Path placement state (E26-S04)
   const [selectedPathId, setSelectedPathId] = useState<string | null>(null)
@@ -308,6 +311,8 @@ export function ImportWizardDialog({
     setSelectedCategory('')
     manifestDataRef.current = undefined
     setDriveFolderBrowserOpen(false)
+    setServerUrlInput('')
+    setShowServerUrlInput(false)
     setSelectedPathId(null)
     setSelectedPosition(1)
     setPathChoice('accept')
@@ -358,6 +363,7 @@ export function ImportWizardDialog({
       for (const image of scannedCourse!.images) {
         if (cancelled) return
         try {
+          if (!image.fileHandle) continue
           const file = await image.fileHandle.getFile()
           const url = URL.createObjectURL(file)
           urls.set(image.path, url)
@@ -543,6 +549,40 @@ export function ImportWizardDialog({
     setAiDescriptionApplied(false)
     setStep('details')
   }, [])
+
+  /** Handle importing from a course server URL (E133-S01). */
+  const handleServerUrlImport = useCallback(async () => {
+    const url = serverUrlInput.trim()
+    if (!url) {
+      toast.error('Please enter a folder URL')
+      return
+    }
+    // Basic validation — must start with http:// or https://
+    if (!/^https?:\/\//i.test(url)) {
+      toast.error('URL must start with http:// or https://')
+      return
+    }
+
+    setIsScanning(true)
+    setShowServerUrlInput(false)
+
+    try {
+      const scanned = await scanCourseFolderFromServer(url)
+      manifestDataRef.current = scanned.manifestData
+      setScannedCourse(scanned)
+      setCourseName(scanned.name)
+      setTags([])
+      setDescription('')
+      setAiTagsApplied(false)
+      setAiDescriptionApplied(false)
+      setStep('details')
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : 'Failed to scan server folder'
+      toast.error(msg)
+    } finally {
+      setIsScanning(false)
+    }
+  }, [serverUrlInput])
 
   const handleGoToPathStep = useCallback(() => {
     setStep('path')
@@ -821,6 +861,61 @@ export function ImportWizardDialog({
                     Import from Google Drive
                   </Button>
                 </PremiumGate>
+                <div className="relative w-full">
+                  <div className="absolute inset-0 flex items-center">
+                    <span className="w-full border-t border-border" />
+                  </div>
+                  <div className="relative flex justify-center text-xs uppercase">
+                    <span className="bg-background px-2 text-muted-foreground">or</span>
+                  </div>
+                </div>
+                {/* From URL — paste a course server folder URL */}
+                {showServerUrlInput ? (
+                  <div className="w-full space-y-2 rounded-xl border border-border bg-surface-elevated p-3">
+                    <Input
+                      placeholder="https://academy.pedrolages.net/AI/Course/"
+                      value={serverUrlInput}
+                      onChange={e => setServerUrlInput(e.target.value)}
+                      autoFocus
+                      onKeyDown={e => {
+                        if (e.key === 'Enter') handleServerUrlImport()
+                        if (e.key === 'Escape') setShowServerUrlInput(false)
+                      }}
+                      className="min-h-[44px] font-mono text-sm"
+                    />
+                    <div className="flex gap-2">
+                      <Button
+                        variant="brand"
+                        size="sm"
+                        onClick={handleServerUrlImport}
+                        disabled={!serverUrlInput.trim() || isScanning}
+                        className="gap-1 min-h-[44px]"
+                      >
+                        {isScanning ? <Loader2 className="size-4 animate-spin" /> : <Globe className="size-4" />}
+                        Scan
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setShowServerUrlInput(false)}
+                        className="min-h-[44px]"
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowServerUrlInput(true)}
+                    data-testid="wizard-server-url-btn"
+                    className="rounded-xl w-full"
+                    disabled={isScanning}
+                  >
+                    <Globe className="size-4 mr-2" aria-hidden="true" />
+                    Import from URL
+                  </Button>
+                )}
                 <ImportDropZone onFilesDropped={handleFilesDropped} disabled={isScanning} />
               </>
             )}

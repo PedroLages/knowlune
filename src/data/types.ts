@@ -167,7 +167,7 @@ export interface PdfMetadata {
   pageCount: number
 }
 
-export type CourseSource = 'local' | 'youtube' | 'drive'
+export type CourseSource = 'local' | 'youtube' | 'drive' | 'server'
 
 export interface DriveFileRef {
   /** Google Drive file ID. */
@@ -208,6 +208,11 @@ export interface ImportedCourse {
   // Drive source fields (E77b-S02)
   /** Google Drive folder ID from which this course was imported. */
   sourceDriveId?: string
+  // Course server fields (E133-S01)
+  /** FK to CourseServer.id — course was imported from this server. */
+  serverId?: string
+  /** Relative path from server root to course folder. */
+  serverPath?: string
   // Sync metadata — stamped by syncableWrite
   userId?: string | null
   guestSessionId?: string | null
@@ -249,6 +254,8 @@ export interface ImportedVideo {
   // Drive source fields (E77b-S02)
   /** Reference to a Drive-hosted file when this video was imported from Google Drive. */
   driveFileRef?: DriveFileRef
+  /** Full HTTP URL to video file on course server (E133-S01). */
+  serverUrl?: string
 }
 
 export interface ImportedPdf {
@@ -257,8 +264,10 @@ export interface ImportedPdf {
   filename: string
   path: string
   pageCount: number
-  fileHandle: FileSystemFileHandle
+  fileHandle: FileSystemFileHandle | null
   fileBlob?: Blob // Server-fetched file blob (E94-S05)
+  /** Full HTTP URL to PDF file on course server (E133-S01). */
+  serverUrl?: string
 }
 
 // --- Content Completion Status (Story 4.1) ---
@@ -1060,6 +1069,29 @@ export interface AudiobookshelfServer {
   libraryIds: string[] // Selected ABS library IDs to sync
   status: 'connected' | 'offline' | 'auth-failed'
   lastSyncedAt?: string // ISO date of last successful catalog fetch
+  createdAt: string // ISO 8601
+  updatedAt: string // ISO 8601
+}
+
+/**
+ * Course content server configuration (E133-S01).
+ *
+ * A course server is an HTTP file server (nginx) serving course video/PDF
+ * files from a directory tree. The app imports courses by fetching nginx
+ * autoindex directory listings, and plays videos directly from the server URL.
+ *
+ * Credential invariant (E133-S01): `authToken` lives in Supabase Vault
+ * and must be read through `getCourseServerToken(serverId)` /
+ * `useCourseServerToken(serverId)` from
+ * `src/lib/credentials/courseServerTokenResolver.ts`. It is intentionally
+ * absent from this interface so the compiler enforces the
+ * credential-off-the-row invariant (same pattern as ABS / OPDS).
+ */
+export interface CourseServer {
+  id: string // UUID v4
+  name: string // User-friendly label (e.g., "Unraid Academy")
+  url: string // Base URL (e.g., "https://academy.pedrolages.net")
+  status: 'connected' | 'offline' | 'auth-failed' | 'unknown'
   createdAt: string // ISO 8601
   updatedAt: string // ISO 8601
 }

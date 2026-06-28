@@ -98,7 +98,7 @@ export class LocalCourseAdapter implements CourseAdapter {
   }
 
   getSource(): CourseSource {
-    return 'local'
+    return this.course.source ?? 'local'
   }
 
   private buildVideoLessons(): LessonItem[] {

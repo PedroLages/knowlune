@@ -171,6 +171,8 @@ export type ElearningDatabase = Dexie & {
   downloads: Table<import('@/services/DownloadManager').DownloadRecord>
   // v65 (video storyboards): pre-generated scrub-preview sprite sheets, local-only.
   videoStoryboards: EntityTable<VideoStoryboard, 'videoId'>
+  // v68 (E133-S01): course content server connections
+  courseServers: EntityTable<import('@/data/types').CourseServer, 'id'>
 }
 
 /**
@@ -1763,6 +1765,19 @@ function _declareLegacyMigrations(database: Dexie): void {
     // No index change — the field is only read per-track by ID (`paths.find()`).
     // Dexie writes the field on first put/update after this version is opened.
   })
+
+  // v68 (E133-S01): Course content server table. Stores user-configured HTTP
+  // servers that serve course files (videos, PDFs) via nginx autoindex.
+  // Indexed by userId+updatedAt for sync, plus standalone indexes for
+  // listing and status queries.
+  database
+    .version(68)
+    .stores({
+      courseServers: 'id, name, url, status, createdAt, updatedAt, userId, [userId+updatedAt]',
+    })
+    .upgrade(async _tx => {
+      // No backfill. Table is new; populated by settings UI on first server add.
+    })
 } // end _declareLegacyMigrations
 
 export { db, CHECKPOINT_VERSION, CHECKPOINT_SCHEMA }

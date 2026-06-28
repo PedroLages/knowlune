@@ -589,6 +589,19 @@ const audiobookshelfServers: TableRegistryEntry = {
 }
 
 /**
+ * `courseServers` stores course content HTTP server connections (E133-S01).
+ * Auth tokens live in Supabase Vault and must never appear in Postgres rows.
+ */
+const courseServers: TableRegistryEntry = {
+  dexieTable: 'courseServers',
+  supabaseTable: 'course_servers',
+  conflictStrategy: 'lww',
+  priority: 3,
+  fieldMap: {},
+  vaultFields: ['authToken'],
+}
+
+/**
  * `notificationPreferences` is a singleton table: Dexie PK is the literal
  * string `'singleton'`, Supabase PK is `user_id`. The `fieldMap: { id: 'user_id' }`
  * translates the Dexie `id` field to the `user_id` column on upload, and
@@ -719,6 +732,7 @@ export const tableRegistry: TableRegistryEntry[] = [
   studySchedules,
   opdsCatalogs,
   audiobookshelfServers,
+  courseServers,
   notificationPreferences,
   // P4
   quizzes,
