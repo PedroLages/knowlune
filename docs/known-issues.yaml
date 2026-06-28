@@ -1967,3 +1967,338 @@ issues:
   plan: docs/plans/2026-06-01-001-fix-learning-track-detail-navigation-ux-plan.md
   status: open
   createdAt: "2026-06-01"
+
+  # ── R3 Escalation: deferred-issues hardening pass (PR #626) ──
+  # 8 HIGH production bugs + 17 MEDIUM gaps + 2 LOW = 27 total
+  # Discovered during ce:review R3 on branch feature/deferred-issues-url-batch-import-hardening
+  # Plan: docs/plans/2026-06-28-001-feat-url-batch-import-dialog-redesign-plan.md
+
+  # HIGH (8) — Production bugs found in R3
+
+  - id: KI-101
+    type: reliability
+    summary: "handleRetry leaves item stuck in 'scanning' state if scanCourseFromSource throws unexpectedly"
+    file: "src/app/components/figma/BulkImportDialog.tsx:753-831"
+    severity: high
+    discovered_by: ce-review-r3-deferred-issues-hardening
+    discovered_on: 2026-06-28
+    status: open
+    scheduled_for: null
+    fixed_by: null
+    notes: "handleRetry sets status='scanning' then awaits scanCourseFromSource. If that throws (network, CORS), no catch resets status. User must close/reopen dialog. Fix: try/catch with status='error' on failure."
+
+  - id: KI-102
+    type: ux
+    summary: "MAX_SERVER_SCAN_FILES truncated courses silently persisted — no user-facing warning"
+    file: "src/lib/courseImport.ts:1386-1464"
+    severity: high
+    discovered_by: ce-review-r3-deferred-issues-hardening
+    discovered_on: 2026-06-28
+    status: open
+    scheduled_for: null
+    fixed_by: null
+    notes: "Hard cap works but no toast/UI feedback. Pass truncated flag to caller, show warning in BulkImportDialog."
+
+  - id: KI-103
+    type: reliability
+    summary: "handleScanFolders has no generation counter guard — stale scan promises contaminate state across dialog sessions"
+    file: "src/app/components/figma/BulkImportDialog.tsx:380-520"
+    severity: high
+    discovered_by: ce-review-r3-deferred-issues-hardening
+    discovered_on: 2026-06-28
+    status: open
+    scheduled_for: null
+    fixed_by: null
+    notes: "10 concurrent folder scans with no generationRef capture. Dialog close+reopen during scan = stale promises land on new state. Fix: capture gen at top, check after every await (pattern exists in handleRetry)."
+
+  - id: KI-104
+    type: reliability
+    summary: "scanCourseFolderFromServer concurrent file cap race — shared mutable filesFound across 10 concurrent subdirectory scans"
+    file: "src/lib/courseImport.ts:1394-1464"
+    severity: high
+    discovered_by: ce-review-r3-deferred-issues-hardening
+    discovered_on: 2026-06-28
+    status: open
+    scheduled_for: null
+    fixed_by: null
+    notes: "10 concurrent Promise.allSettled calls share mutable filesFound counter. Two promises each see 4900 → both add 200 = 5100 > 5000. Fix: per-directory counters summed after all settle."
+
+  - id: KI-105
+    type: reliability
+    summary: "handleRetry silently drops user-configured course overrides (name/description/cover) — retry rescans with new UUID, override lookup misses"
+    file: "src/app/components/figma/BulkImportDialog.tsx:753-831"
+    severity: high
+    discovered_by: ce-review-r3-deferred-issues-hardening
+    discovered_on: 2026-06-28
+    status: open
+    scheduled_for: null
+    fixed_by: null
+    notes: "scanCourseFromSource returns new ScannedCourse with fresh UUID. courseOverrides keyed by original item.id — new UUID doesn't match. Fix: key by folder name or source path, not UUID."
+
+  - id: KI-106
+    type: test
+    summary: "No tests for withKeyLock concurrent lock behavior — cannot verify TOCTOU fix prevents races"
+    file: "src/lib/authorDetection.ts:63-99"
+    severity: high
+    discovered_by: ce-review-r3-deferred-issues-hardening
+    discovered_on: 2026-06-28
+    status: open
+    scheduled_for: null
+    fixed_by: null
+    notes: "withKeyLock uses per-name Map lock. No test exercises 2+ concurrent matchOrCreateAuthor calls for same name."
+
+  - id: KI-107
+    type: test
+    summary: "No tests for atomic author merge in Dexie rw transaction — cannot verify batchImportTrackCourses transaction safety"
+    file: "src/lib/trackManifestImport.ts:244-269"
+    severity: high
+    discovered_by: ce-review-r3-deferred-issues-hardening
+    discovered_on: 2026-06-28
+    status: open
+    scheduled_for: null
+    fixed_by: null
+    notes: "batchImportTrackCourses wraps author lookup+create in db.transaction('rw', ...). No test verifies rollback or concurrent safety."
+
+  - id: KI-108
+    type: test
+    summary: "scanCourseFolderFromServer has zero test coverage — entire server-scan code path untested"
+    file: "src/lib/courseImport.ts:1350-1470"
+    severity: high
+    discovered_by: ce-review-r3-deferred-issues-hardening
+    discovered_on: 2026-06-28
+    status: open
+    scheduled_for: null
+    fixed_by: null
+    notes: "BFS traversal, HTML parsing, file collection, MAX_SERVER_SCAN_FILES cap — all untested. Add mock fetch tests for normal, truncated, empty, error paths."
+
+  # MEDIUM (17) — Test gaps + UX polish
+
+  - id: KI-109
+    type: test
+    summary: "Cancel mid-import: no test verifying remaining items transition to Cancelled"
+    file: "src/app/components/figma/__tests__/BulkImportDialog.test.tsx"
+    severity: medium
+    discovered_by: ce-review-r3-deferred-issues-hardening
+    discovered_on: 2026-06-28
+    status: open
+    scheduled_for: null
+    fixed_by: null
+    notes: "Set cancelRequested=true mid-import, verify remaining items show Cancelled."
+
+  - id: KI-110
+    type: test
+    summary: "No E2E test for URL batch import happy-path (URL→scan server→manifest→track creation)"
+    file: "tests/e2e/"
+    severity: medium
+    discovered_by: R3-007-deferred
+    discovered_on: 2026-06-28
+    status: open
+    scheduled_for: null
+    fixed_by: null
+    notes: "Original R3-007. Requires Playwright page.route() to mock nginx autoindex HTML. Check if route-mocking fixture exists first."
+
+  - id: KI-111
+    type: test
+    summary: "No test for all-folders-empty flow — every scanned folder returns no-files"
+    file: "src/app/components/figma/__tests__/BulkImportDialog.test.tsx"
+    severity: medium
+    discovered_by: R3-012-deferred
+    discovered_on: 2026-06-28
+    status: open
+    scheduled_for: null
+    fixed_by: null
+    notes: "Original R3-012. Mock scanCourseFolder to return empty, verify toast/error state."
+
+  - id: KI-112
+    type: test
+    summary: "ImportWizardDialog URL scan network error path untested"
+    file: "src/app/components/figma/__tests__/ImportWizardDialog.test.tsx"
+    severity: medium
+    discovered_by: R3-016-deferred
+    discovered_on: 2026-06-28
+    status: open
+    scheduled_for: null
+    fixed_by: null
+    notes: "R3-008 covers abortRef but network-error-toast path lacks coverage."
+
+  - id: KI-113
+    type: test
+    summary: "ImportWizardDialog keyboard guards (Enter/Escape during scan) need tests analogous to BulkImportDialog"
+    file: "src/app/components/figma/__tests__/ImportWizardDialog.test.tsx"
+    severity: medium
+    discovered_by: ce-review-r3-deferred-issues-hardening
+    discovered_on: 2026-06-28
+    status: open
+    scheduled_for: null
+    fixed_by: null
+    notes: "Tests for Enter during scan (single call) and Escape during scan (no step transition)."
+
+  - id: KI-114
+    type: test
+    summary: "retryLockRef concurrency safety hard to test — deferred-promise pattern needed"
+    file: "src/app/components/figma/__tests__/BulkImportDialog.test.tsx"
+    severity: medium
+    discovered_by: ce-review-r3-deferred-issues-hardening
+    discovered_on: 2026-06-28
+    status: open
+    scheduled_for: null
+    fixed_by: null
+    notes: "Accept retryLockRef as hard-to-test safety net or add deferred-promise concurrency test."
+
+  - id: KI-115
+    type: ux
+    summary: "retryLock silently drops clicks — no visual feedback when retry is ignored"
+    file: "src/app/components/figma/BulkImportDialog.tsx:753"
+    severity: medium
+    discovered_by: ce-review-r3-deferred-issues-hardening
+    discovered_on: 2026-06-28
+    status: open
+    scheduled_for: null
+    fixed_by: null
+    notes: "When retryLockRef blocks a second retry click, nothing happens. Add toast or button disabled state."
+
+  - id: KI-116
+    type: reliability
+    summary: "handleRetry lock release fragmented — not all exit paths go through finally"
+    file: "src/app/components/figma/BulkImportDialog.tsx:753-831"
+    severity: medium
+    discovered_by: ce-review-r3-deferred-issues-hardening
+    discovered_on: 2026-06-28
+    status: open
+    scheduled_for: null
+    fixed_by: null
+    notes: "retryLockRef.current=false in multiple places. R3 fixer added try/finally but audit all early-return paths."
+
+  - id: KI-117
+    type: maintainability
+    summary: "matchOrCreateAuthor doesn't accept all manifest fields (bio, website, avatar)"
+    file: "src/lib/authorDetection.ts:63-99"
+    severity: medium
+    discovered_by: ce-review-r3-deferred-issues-hardening
+    discovered_on: 2026-06-28
+    status: open
+    scheduled_for: null
+    fixed_by: null
+    notes: "batchImportTrackCourses passes { name, title } but manifest may have bio, website, imageUrl."
+
+  - id: KI-118
+    type: maintainability
+    summary: "syncableWrite has no generic type parameter — structural validation relies on manual type assertions"
+    file: "src/lib/sync/syncableWrite.ts"
+    severity: medium
+    discovered_by: ce-review-r3-deferred-issues-hardening
+    discovered_on: 2026-06-28
+    status: open
+    scheduled_for: null
+    fixed_by: null
+    notes: "syncableWrite<T>(...) would enable compile-time validation of table vs payload shape."
+
+  - id: KI-119
+    type: maintainability
+    summary: "MAX_SERVER_SCAN_FILES hardcoded (5000) — tests can't exercise the limit"
+    file: "src/lib/courseImport.ts:1350"
+    severity: medium
+    discovered_by: ce-review-r3-deferred-issues-hardening
+    discovered_on: 2026-06-28
+    status: open
+    scheduled_for: null
+    fixed_by: null
+    notes: "Make MAX_SERVER_SCAN_FILES a function parameter with default so tests can pass a low value."
+
+  - id: KI-120
+    type: reliability
+    summary: "ImportWizardDialog handleServerUrlImport missing secondary abortRef check before setStep"
+    file: "src/app/components/figma/ImportWizardDialog.tsx:876"
+    severity: medium
+    discovered_by: ce-review-r3-deferred-issues-hardening
+    discovered_on: 2026-06-28
+    status: open
+    scheduled_for: null
+    fixed_by: null
+    notes: "After await scanCourseFolderFromServer, check abortRef before calling setStep('details')."
+
+  - id: KI-121
+    type: reliability
+    summary: "stale generationRef gap in ImportWizardDialog scan handlers — no gen check after awaits"
+    file: "src/app/components/figma/ImportWizardDialog.tsx:424-463"
+    severity: medium
+    discovered_by: ce-review-r3-deferred-issues-hardening
+    discovered_on: 2026-06-28
+    status: open
+    scheduled_for: null
+    fixed_by: null
+    notes: "isScanningRef set before first await in 3 handlers, but no generationRef capture+check after awaits."
+
+  - id: KI-122
+    type: test
+    summary: "No per-item error state assertions in persist-rejection test"
+    file: "src/app/components/figma/__tests__/BulkImportDialog.test.tsx"
+    severity: medium
+    discovered_by: ce-review-r3-deferred-issues-hardening
+    discovered_on: 2026-06-28
+    status: open
+    scheduled_for: null
+    fixed_by: null
+    notes: "TST-P2-003 tests persist rejection but doesn't assert individual item error states."
+
+  - id: KI-123
+    type: tech-debt
+    summary: "handleImport in ImportWizardDialog is 100+ lines — extract sub-steps"
+    file: "src/app/components/figma/ImportWizardDialog.tsx"
+    severity: medium
+    discovered_by: L8-deferred
+    discovered_on: 2026-06-28
+    status: open
+    scheduled_for: null
+    fixed_by: null
+    notes: "Original L8 from deferred LOW list. Extract image loading, folder scan, and import phases into named functions."
+
+  - id: KI-124
+    type: maintainability
+    summary: "console.error vs console.warn inconsistency on caught error paths"
+    file: "src/app/components/figma/BulkImportDialog.tsx:439,641"
+    severity: medium
+    discovered_by: ce-review-r3-deferred-issues-hardening
+    discovered_on: 2026-06-28
+    status: open
+    scheduled_for: null
+    fixed_by: null
+    notes: "Some caught errors use console.warn (non-critical) while others use console.error. Inconsistent."
+
+  - id: KI-125
+    type: maintainability
+    summary: "gen counter variable naming inconsistent — local 'gen' vs 'generationRef'"
+    file: "src/app/components/figma/BulkImportDialog.tsx:695"
+    severity: medium
+    discovered_by: ce-review-r3-deferred-issues-hardening
+    discovered_on: 2026-06-28
+    status: open
+    scheduled_for: null
+    fixed_by: null
+    notes: "handleRetry uses `const gen = generationRef.current` — consistent naming with other handlers."
+
+  # LOW (2) — Original deferred + maintainability
+
+  - id: KI-126
+    type: test
+    summary: "Missing data-testid on ImportWizardDialog URL input — can't target in E2E tests"
+    file: "src/app/components/figma/ImportWizardDialog.tsx"
+    severity: low
+    discovered_by: R3-011-deferred
+    discovered_on: 2026-06-28
+    status: open
+    scheduled_for: null
+    fixed_by: null
+    notes: "Original R3-011 from deferred list. Add data-testid='wizard-url-input'."
+
+  - id: KI-127
+    type: maintainability
+    summary: "runWithConcurrency local counter naming — completedCount vs processedCount"
+    file: "src/app/components/figma/BulkImportDialog.tsx:119"
+    severity: low
+    discovered_by: ce-review-r3-deferred-issues-hardening
+    discovered_on: 2026-06-28
+    status: open
+    scheduled_for: null
+    fixed_by: null
+    notes: "completedCount tracks settled promises, not successfully completed ones. Rename to settledCount."
