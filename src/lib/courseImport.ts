@@ -143,6 +143,12 @@ export interface ScannedCourse {
   serverId?: string
   /** Relative path from server root to this course folder (E133-S01). */
   serverPath?: string
+  /**
+   * Whether the file collection was truncated by MAX_SERVER_SCAN_FILES cap.
+   * Only set for server-sourced imports. When true, the import result is
+   * partial — the user may need to increase the cap or split the folder.
+   */
+  truncated?: boolean
 }
 
 // --- Scan Phase ---
@@ -532,7 +538,7 @@ function applyManifestVideoOrder(
       }
     }
   } else if (videos.length > matchedVideoIds.size) {
-    console.log(
+    console.warn(
       `[persistScannedCourse] Skipped ${videos.length - matchedVideoIds.size} video(s) not listed in course-manifest.json`
     )
   }
@@ -611,7 +617,8 @@ export async function persistScannedCourse(
       const authorBio = scanned.manifestData?.course.author?.bio
       const matchedId = await matchOrCreateAuthor(
         authorName,
-        authorTitle || authorBio ? { title: authorTitle, bio: authorBio } : undefined
+        authorTitle || authorBio ? { title: authorTitle, bio: authorBio } : undefined,
+        { useSyncableWrite: true }
       )
       if (matchedId) {
         authorId = matchedId
@@ -622,7 +629,7 @@ export async function persistScannedCourse(
   } else if (!authorId) {
     try {
       detectedAuthorName = detectAuthorFromFolderName(scanned.name)
-      const matchedId = await matchOrCreateAuthor(detectedAuthorName)
+      const matchedId = await matchOrCreateAuthor(detectedAuthorName, undefined, { useSyncableWrite: true })
       if (matchedId) {
         authorId = matchedId
       }
@@ -729,7 +736,7 @@ export async function persistScannedCourse(
           const photoCandidate = detectAuthorPhoto(scanned.images)
           if (photoCandidate) {
             updates.photoHandle = photoCandidate.fileHandle
-            console.info(
+            console.warn(
               `[Import] Auto-detected author photo: ${photoCandidate.path} for "${author.name}"`
             )
           }
@@ -1351,6 +1358,13 @@ export async function importCourseFromDrive(
 const MAX_CONCURRENT_DIR_SCANS = 10
 
 /**
+ * Maximum number of files to collect during a server-side BFS scan.
+ * Prevents memory exhaustion on directories with many files (e.g. 20K+).
+ * When reached, the scan stops and uses whatever was collected so far.
+ */
+const MAX_SERVER_SCAN_FILES = 5_000
+
+/**
  * Recursively scan a course folder on a remote HTTP server using nginx
  * autoindex directory listings. No File System Access API handles needed —
  * all files are referenced by their HTTP URL.
@@ -1396,6 +1410,7 @@ export async function scanCourseFolderFromServer(
   const seen = new Set<string>()
   let dirsScanned = 0
   let filesFound = 0
+  let hitCap = false
 
   while (pendingDirs.length > 0) {
     // Check for cancellation
@@ -1420,8 +1435,11 @@ export async function scanCourseFolderFromServer(
 
         for (const file of result.data.files) {
           if (file.type === 'directory') {
-            pendingDirs.push(file.url)
+            if (filesFound < MAX_SERVER_SCAN_FILES) {
+              pendingDirs.push(file.url)
+            }
           } else if (file.type === 'video') {
+            if (filesFound >= MAX_SERVER_SCAN_FILES) continue
             const relPath = file.url.replace(serverRoot + '/', '')
             const ext = file.name.split('.').pop()?.toLowerCase() ?? 'mp4'
             const validFormats = ['mp4', 'webm', 'mkv', 'ts', 'avi'] as const
@@ -1435,6 +1453,7 @@ export async function scanCourseFolderFromServer(
             })
             filesFound++
           } else if (file.type === 'pdf') {
+            if (filesFound >= MAX_SERVER_SCAN_FILES) continue
             const relPath = file.url.replace(serverRoot + '/', '')
             allPdfs.push({
               name: file.name,
@@ -1462,6 +1481,18 @@ export async function scanCourseFolderFromServer(
         console.warn('[scanServer] Directory scan rejected:', r.reason)
       }
     }
+  }
+
+  // Detect and log when the file cap was reached during the scan.
+  // This means the import result is partial — the server directory has more
+  // files than MAX_SERVER_SCAN_FILES permits.
+  if (filesFound >= MAX_SERVER_SCAN_FILES) {
+    hitCap = true
+    console.warn(
+      `[scanServer] File cap reached: ${filesFound} files collected (max ${MAX_SERVER_SCAN_FILES}). ` +
+        `Some files and directories from ${folderUrl} were skipped. ` +
+        `Consider splitting the folder or increasing MAX_SERVER_SCAN_FILES.`
+    )
   }
 
   // Build ScannedVideo[] — no fileHandle, duration=0 (lazy at playback)
@@ -1508,5 +1539,6 @@ export async function scanCourseFolderFromServer(
     source: 'server',
     ...(serverId ? { serverId } : {}),
     serverPath,
+    ...(hitCap ? { truncated: true } : {}),
   }
 }

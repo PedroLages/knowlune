@@ -2,10 +2,16 @@ import { parseTrackManifest } from '@/lib/courseManifest'
 import type { TrackManifest, ManifestAuthor } from '@/lib/courseManifest'
 import { scanCourseFolderFromHandle, persistScannedCourse } from '@/lib/courseImport'
 import type { BulkScanResult } from '@/lib/courseImport'
+import { matchOrCreateAuthor } from '@/lib/authorDetection'
 import { useLearningPathStore } from '@/stores/useLearningPathStore'
-import { useAuthorStore } from '@/stores/useAuthorStore'
 import { db } from '@/db'
+import { syncableWrite } from '@/lib/sync/syncableWrite'
+import type { SyncableRecord } from '@/lib/sync/syncableWrite'
+import type { ImportedAuthor } from '@/data/types'
 import { toast } from 'sonner'
+
+/** Timeout (ms) for fetching track-manifest.json from a remote server. */
+const FETCH_TIMEOUT_MS = 10_000
 
 export interface TrackManifestSummary {
   trackName: string
@@ -89,8 +95,6 @@ export async function fetchTrackManifestFromUrl(
   | { ok: true; summary: TrackManifestSummary; manifest: TrackManifest }
   | { ok: false; error: string }
 > {
-  const FETCH_TIMEOUT_MS = 10_000
-
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS)
 
@@ -166,6 +170,9 @@ export async function batchImportTrackCourses(
   signal?: AbortSignal
 ): Promise<BatchImportResult> {
   if (signal?.aborted) {
+    // Early return: signal aborted before any import work began.
+    // Returns a BatchImportResult with empty courses, no trackId, and zero counts.
+    // The caller should check signal.aborted before using the result for track creation.
     return {
       trackId: undefined,
       trackName: manifest.track.name,
@@ -240,30 +247,50 @@ export async function batchImportTrackCourses(
   const successCount = results.filter(r => r.success).length
   const failureCount = results.length - successCount
 
-  // Phase 2: Create or link author from manifest
+  // Phase 2: Create or link author from manifest (uses matchOrCreateAuthor for case-insensitive dedup)
   const trackAuthor = manifest.track.author
   if (trackAuthor) {
     try {
-      await useAuthorStore.getState().addAuthor({
-        name: trackAuthor.name,
+      const authorId = await matchOrCreateAuthor(trackAuthor.name, {
         title: trackAuthor.title,
-        shortBio: trackAuthor.shortBio,
         bio: trackAuthor.bio,
-        photoUrl: trackAuthor.avatar,
-        specialties: trackAuthor.specialties,
-        yearsExperience: trackAuthor.yearsExperience,
-        education: trackAuthor.education,
-        socialLinks:
-          trackAuthor.website || trackAuthor.linkedin || trackAuthor.twitter
-            ? {
+      }, { useSyncableWrite: true })
+      if (authorId) {
+        // Atomic merge: read author, compute updates, and write inside a single
+        // Dexie read-write transaction so the course-IDs append is safe against
+        // concurrent modifications from other tabs or workers.  The transaction
+        // spec includes 'syncQueue' because syncableWrite writes to both the
+        // target table and the queue table internally; Dexie binds its inner
+        // operations to this outer transaction automatically.
+        await db.transaction('rw', ['authors', 'syncQueue'] as const, async () => {
+          const existingAuthor = await db.authors.get(authorId)
+          if (existingAuthor) {
+            const courseIds = results.filter(r => r.success && r.courseId).map(r => r.courseId!)
+            const allCourseIds = [...new Set([...existingAuthor.courseIds, ...courseIds])]
+            const updates: Partial<ImportedAuthor> = {
+              courseIds: allCourseIds,
+              updatedAt: new Date().toISOString(),
+            }
+            if (trackAuthor.shortBio) updates.shortBio = trackAuthor.shortBio
+            if (trackAuthor.avatar) updates.photoUrl = trackAuthor.avatar
+            if (trackAuthor.specialties) updates.specialties = trackAuthor.specialties
+            if (trackAuthor.yearsExperience) updates.yearsExperience = trackAuthor.yearsExperience
+            if (trackAuthor.education) updates.education = trackAuthor.education
+            if (trackAuthor.website || trackAuthor.linkedin || trackAuthor.twitter) {
+              updates.socialLinks = {
                 website: trackAuthor.website,
                 linkedin: trackAuthor.linkedin,
                 twitter: trackAuthor.twitter,
               }
-            : undefined,
-        featuredQuote: trackAuthor.featuredQuote,
-        courseIds: results.filter(r => r.success && r.courseId).map(r => r.courseId!),
-      })
+            }
+            if (trackAuthor.featuredQuote) updates.featuredQuote = trackAuthor.featuredQuote
+            await syncableWrite('authors', 'put', {
+              ...existingAuthor,
+              ...updates,
+            } as unknown as SyncableRecord)
+          }
+        })
+      }
     } catch (err) {
       toast.warning('Failed to create author from manifest — continuing with track import')
     }

@@ -1272,6 +1272,27 @@ describe('server URL import card', () => {
     })
   })
 
+  it('shows error toast and returns to URL card when server scan fails', async () => {
+    const { toast } = await import('sonner')
+    mockScanCourseFolderFromServer.mockRejectedValue(new Error('Server unreachable'))
+
+    const user = userEvent.setup()
+    render(<ImportWizardDialog open={true} onOpenChange={vi.fn()} />)
+
+    await user.click(screen.getByTestId('wizard-server-url-btn'))
+    const input = screen.getByPlaceholderText('https://example.com/AI/Course/')
+    await user.type(input, 'https://example.com/Course/')
+    await user.click(screen.getByTestId('wizard-server-scan-btn'))
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith('Server unreachable')
+      // After catching the error, the URL input form is hidden and the original card shows again
+      expect(screen.getByTestId('wizard-server-url-btn')).toBeInTheDocument()
+    })
+    // The dialog stays on the select step (no transition to details)
+    expect(screen.queryByTestId('wizard-details-step')).not.toBeInTheDocument()
+  })
+
   it('hides URL form and shows card again on Cancel', async () => {
     const user = userEvent.setup()
     render(<ImportWizardDialog open={true} onOpenChange={vi.fn()} />)

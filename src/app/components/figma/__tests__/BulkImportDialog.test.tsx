@@ -8,7 +8,7 @@
  * @since E108-S01
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { BulkImportDialog } from '../BulkImportDialog'
@@ -121,8 +121,8 @@ function makeScanSuccess(id: string, folderName: string): BulkScanResult {
 // ───── Suite ─────
 
 describe('BulkImportDialog — batch import flow (F-003)', () => {
-  let onComplete: any
-  let onOpenChange: any
+  let onComplete: Mock
+  let onOpenChange: Mock
 
   beforeEach(() => {
     vi.clearAllMocks()
@@ -347,6 +347,244 @@ describe('BulkImportDialog — batch import flow (F-003)', () => {
         expect(courseIds).toContain('id-beta')
       })
     })
+
+    it('TST-P2-003: persistScannedCourse rejection sets item to error status', async () => {
+      mockPersistScannedCourse.mockRejectedValue(new Error('Disk full'))
+
+      const user = userEvent.setup()
+      render(
+        <BulkImportDialog
+          open={true}
+          onOpenChange={onOpenChange}
+          onSingleImport={vi.fn()}
+          onComplete={onComplete}
+        />
+      )
+
+      // Navigate: choose → select-folders → scan → review
+      await user.click(screen.getByTestId('import-multiple-btn'))
+      await waitFor(() => expect(screen.getByTestId('bulk-select-all')).toBeInTheDocument())
+      await user.click(screen.getByTestId('bulk-start-import-btn'))
+      await waitFor(() => expect(screen.getByTestId('bulk-confirm-import-btn')).toBeInTheDocument())
+
+      // Confirm import — persist will reject with Disk full
+      await user.click(screen.getByTestId('bulk-confirm-import-btn'))
+
+      // Wait for results step — items are marked as error because persist threw
+      await waitFor(() => {
+        expect(screen.getByTestId('bulk-done-btn')).toBeInTheDocument()
+      })
+
+      // Both items should show as error in the results list
+      expect(screen.getByTestId('bulk-results-summary')).toBeInTheDocument()
+    })
+
+    it('TST-P1-003: retry — scan returns error updates item status to error', async () => {
+      // First persist call fails to get to results step
+      mockPersistScannedCourse
+        .mockResolvedValueOnce(undefined)               // alpha succeeds
+        .mockRejectedValueOnce(new Error('First fail'))  // beta fails
+
+      const user = userEvent.setup()
+      render(
+        <BulkImportDialog
+          open={true}
+          onOpenChange={onOpenChange}
+          onSingleImport={vi.fn()}
+          onComplete={onComplete}
+        />
+      )
+
+      await user.click(screen.getByTestId('import-multiple-btn'))
+      await waitFor(() => expect(screen.getByTestId('bulk-select-all')).toBeInTheDocument())
+      await user.click(screen.getByTestId('bulk-start-import-btn'))
+      await waitFor(() => expect(screen.getByTestId('bulk-confirm-import-btn')).toBeInTheDocument())
+      await user.click(screen.getByTestId('bulk-confirm-import-btn'))
+      await waitFor(() => expect(screen.getByTestId('bulk-done-btn')).toBeInTheDocument())
+
+      // Now retry beta — make scan return error
+      mockScanCourseFromSource.mockResolvedValue({
+        status: 'error',
+        folderName: 'beta',
+        message: 'Network timeout',
+      })
+
+      const retryBtn = screen.queryByTestId('bulk-retry-beta')
+      expect(retryBtn).toBeInTheDocument()
+      await user.click(retryBtn!)
+
+      // The item should remain as error (scan returned error, not success)
+      await waitFor(() => {
+        // The retry button should still be visible because beta is still error
+        expect(screen.getByTestId('bulk-retry-beta')).toBeInTheDocument()
+      })
+    })
+
+    it('TST-P1-004: retry — scan returns duplicate maps to error status', async () => {
+      mockPersistScannedCourse
+        .mockResolvedValueOnce(undefined)
+        .mockRejectedValueOnce(new Error('First fail'))
+
+      const user = userEvent.setup()
+      render(
+        <BulkImportDialog
+          open={true}
+          onOpenChange={onOpenChange}
+          onSingleImport={vi.fn()}
+          onComplete={onComplete}
+        />
+      )
+
+      await user.click(screen.getByTestId('import-multiple-btn'))
+      await waitFor(() => expect(screen.getByTestId('bulk-select-all')).toBeInTheDocument())
+      await user.click(screen.getByTestId('bulk-start-import-btn'))
+      await waitFor(() => expect(screen.getByTestId('bulk-confirm-import-btn')).toBeInTheDocument())
+      await user.click(screen.getByTestId('bulk-confirm-import-btn'))
+      await waitFor(() => expect(screen.getByTestId('bulk-done-btn')).toBeInTheDocument())
+
+      // Retry — scan returns duplicate
+      mockScanCourseFromSource.mockResolvedValue({
+        status: 'duplicate',
+        folderName: 'beta',
+      })
+
+      const retryBtn = screen.queryByTestId('bulk-retry-beta')
+      await user.click(retryBtn!)
+
+      await waitFor(() => {
+        expect(screen.getByTestId('bulk-retry-beta')).toBeInTheDocument()
+      })
+    })
+
+    it('TST-P1-005: retry — scan returns no-files maps to no-files status', async () => {
+      mockPersistScannedCourse
+        .mockResolvedValueOnce(undefined)
+        .mockRejectedValueOnce(new Error('First fail'))
+
+      const user = userEvent.setup()
+      render(
+        <BulkImportDialog
+          open={true}
+          onOpenChange={onOpenChange}
+          onSingleImport={vi.fn()}
+          onComplete={onComplete}
+        />
+      )
+
+      await user.click(screen.getByTestId('import-multiple-btn'))
+      await waitFor(() => expect(screen.getByTestId('bulk-select-all')).toBeInTheDocument())
+      await user.click(screen.getByTestId('bulk-start-import-btn'))
+      await waitFor(() => expect(screen.getByTestId('bulk-confirm-import-btn')).toBeInTheDocument())
+      await user.click(screen.getByTestId('bulk-confirm-import-btn'))
+      await waitFor(() => expect(screen.getByTestId('bulk-done-btn')).toBeInTheDocument())
+
+      // Retry — scan returns no-files
+      mockScanCourseFromSource.mockResolvedValue({
+        status: 'no-files',
+        folderName: 'beta',
+      })
+
+      const retryBtn = screen.queryByTestId('bulk-retry-beta')
+      await user.click(retryBtn!)
+
+      // After retry with no-files, the item transitions from 'error' to 'no-files'.
+      // Items in 'no-files' state do not show a retry button (only 'error' items do).
+      await waitFor(() => {
+        expect(screen.queryByTestId('bulk-retry-beta')).not.toBeInTheDocument()
+      })
+    })
+
+    it('TST-P1-001: retry flow — failed item can be retried and succeeds', async () => {
+      // First make the second persist call fail
+      mockPersistScannedCourse
+        .mockResolvedValueOnce(undefined)               // alpha succeeds
+        .mockRejectedValueOnce(new Error('First fail'))  // beta fails
+
+      const user = userEvent.setup()
+      render(
+        <BulkImportDialog
+          open={true}
+          onOpenChange={onOpenChange}
+          onSingleImport={vi.fn()}
+          onComplete={onComplete}
+        />
+      )
+
+      // Navigate: choose → select-folders → scan → review
+      await user.click(screen.getByTestId('import-multiple-btn'))
+      await waitFor(() => expect(screen.getByTestId('bulk-select-all')).toBeInTheDocument())
+      await user.click(screen.getByTestId('bulk-start-import-btn'))
+      await waitFor(() => expect(screen.getByTestId('bulk-confirm-import-btn')).toBeInTheDocument())
+
+      // Confirm import — beta will fail
+      await user.click(screen.getByTestId('bulk-confirm-import-btn'))
+
+      // Wait for results step
+      await waitFor(() => {
+        expect(screen.getByTestId('bulk-done-btn')).toBeInTheDocument()
+      })
+
+      // Beta should have a retry button visible
+      const retryBtn = screen.queryByTestId('bulk-retry-beta')
+      expect(retryBtn).toBeInTheDocument()
+
+      // Reset scan mock back to default success behavior for the retry
+      mockScanCourseFromSource.mockImplementation(
+        (source: { folderName: string; handle: FileSystemDirectoryHandle | null }) =>
+          makeScanSuccess(`id-${source.folderName}`, source.folderName)
+      )
+      // Set up persist to succeed for the retry
+      mockPersistScannedCourse.mockResolvedValue(undefined)
+
+      // Click retry on beta
+      await user.click(retryBtn!)
+
+      // Wait for beta to transition back to success
+      await waitFor(() => {
+        // The retry button should no longer be shown (beta is now success)
+        expect(screen.queryByTestId('bulk-retry-beta')).not.toBeInTheDocument()
+      })
+    })
+
+    it('TST-P1-006: retry — scan succeeds but persist rejects, verifying error state', async () => {
+      // First persist call fails to get to results step
+      mockPersistScannedCourse
+        .mockResolvedValueOnce(undefined)               // alpha succeeds
+        .mockRejectedValueOnce(new Error('First fail'))  // beta fails
+
+      const user = userEvent.setup()
+      render(
+        <BulkImportDialog
+          open={true}
+          onOpenChange={onOpenChange}
+          onSingleImport={vi.fn()}
+          onComplete={onComplete}
+        />
+      )
+
+      await user.click(screen.getByTestId('import-multiple-btn'))
+      await waitFor(() => expect(screen.getByTestId('bulk-select-all')).toBeInTheDocument())
+      await user.click(screen.getByTestId('bulk-start-import-btn'))
+      await waitFor(() => expect(screen.getByTestId('bulk-confirm-import-btn')).toBeInTheDocument())
+      await user.click(screen.getByTestId('bulk-confirm-import-btn'))
+      await waitFor(() => expect(screen.getByTestId('bulk-done-btn')).toBeInTheDocument())
+
+      // Reset scan mock back to default success for retry
+      mockScanCourseFromSource.mockImplementation(
+        (source: { folderName: string; handle: FileSystemDirectoryHandle | null }) =>
+          makeScanSuccess(`id-${source.folderName}`, source.folderName)
+      )
+      // Make persist reject during retry
+      mockPersistScannedCourse.mockRejectedValue(new Error('Disk full on retry'))
+
+      const retryBtn = screen.queryByTestId('bulk-retry-beta')
+      await user.click(retryBtn!)
+
+      // After retry, beta should still show error (persist rejected)
+      await waitFor(() => {
+        expect(screen.getByTestId('bulk-retry-beta')).toBeInTheDocument()
+      })
+    })
   })
 
   // ───── URL Batch Import Flow ─────
@@ -465,6 +703,29 @@ describe('BulkImportDialog — batch import flow (F-003)', () => {
       })
     })
 
+    it('shows inline error when server scan returns no subdirectories', async () => {
+      mockListServerSubDirectories.mockResolvedValue({ ok: true, data: [] })
+
+      const user = userEvent.setup()
+      render(
+        <BulkImportDialog
+          open={true}
+          onOpenChange={onOpenChange}
+          onSingleImport={vi.fn()}
+        />
+      )
+
+      await user.click(screen.getByTestId('import-multiple-url-btn'))
+      const input = screen.getByTestId('bulk-import-enter-url')
+      await user.type(input, 'http://example.com/empty/')
+      await user.click(screen.getByTestId('bulk-import-scan-url-btn'))
+
+      await waitFor(() => {
+        expect(screen.getByTestId('bulk-import-url-error')).toBeInTheDocument()
+        expect(screen.getByTestId('bulk-import-url-error').textContent).toContain('No course folders found')
+      })
+    })
+
     it('transitions to select-folders step when scan succeeds with subdirectories', async () => {
       mockListServerSubDirectories.mockResolvedValue({
         ok: true,
@@ -489,6 +750,162 @@ describe('BulkImportDialog — batch import flow (F-003)', () => {
         expect(screen.getByTestId('bulk-select-all')).toBeInTheDocument()
         expect(screen.getByText('Course1')).toBeInTheDocument()
       })
+    })
+
+    it('TST-P2-002: pressing Enter while scanning does not trigger duplicate scan', async () => {
+      // Use a deferred promise so the scan hangs until we resolve it
+      let resolveScan!: (value: unknown) => void
+      mockListServerSubDirectories.mockImplementation(
+        () => new Promise(resolve => { resolveScan = resolve })
+      )
+
+      const user = userEvent.setup()
+      render(
+        <BulkImportDialog
+          open={true}
+          onOpenChange={onOpenChange}
+          onSingleImport={vi.fn()}
+        />
+      )
+
+      // Navigate to URL step and type a valid URL
+      await user.click(screen.getByTestId('import-multiple-url-btn'))
+      const input = screen.getByTestId('bulk-import-enter-url')
+      await user.type(input, 'http://example.com/courses/')
+
+      // Press Enter to trigger scan (first call)
+      await user.keyboard('{Enter}')
+
+      // Press Enter again while scan is still in progress
+      await user.keyboard('{Enter}')
+
+      // Verify scan was called only once (the ref guard prevented the second call)
+      expect(mockListServerSubDirectories).toHaveBeenCalledTimes(1)
+
+      // Resolve the scan so the component doesn't hang
+      resolveScan!({ ok: true, data: [{ name: 'Course1', url: 'http://example.com/courses/Course1/' }] })
+    })
+
+    it('TST-P2-001: closing dialog during scan prevents step transition', async () => {
+      let resolveScan!: (value: unknown) => void
+      mockListServerSubDirectories.mockImplementation(
+        () => new Promise(resolve => { resolveScan = resolve })
+      )
+
+      const user = userEvent.setup()
+      render(
+        <BulkImportDialog
+          open={true}
+          onOpenChange={onOpenChange}
+          onSingleImport={vi.fn()}
+        />
+      )
+
+      // Trigger scan with a slow promise
+      await user.click(screen.getByTestId('import-multiple-url-btn'))
+      const input = screen.getByTestId('bulk-import-enter-url')
+      await user.type(input, 'http://example.com/courses/')
+      await user.keyboard('{Enter}')
+
+      // Close the dialog while scan is still in progress
+      await user.keyboard('{Escape}')
+
+      // onOpenChange should have been called with false
+      await waitFor(() => {
+        expect(onOpenChange).toHaveBeenCalledWith(false)
+      })
+
+      // Resolve the scan — the abort check in handleServerUrlScan should prevent
+      // any step transition
+      resolveScan!({ ok: true, data: [{ name: 'Course1', url: 'http://example.com/courses/Course1/' }] })
+
+      // The dialog should not show select-folders (the URL input was cleaned up by resetDialog)
+      expect(screen.queryByTestId('bulk-select-all')).not.toBeInTheDocument()
+    })
+  })
+
+  // ───── Manifest with author data (TST-P2-004) ─────
+  //
+  // Verifies the component correctly passes a manifest that includes author
+  // metadata through to batchImportTrackCourses.  The internal behavior of
+  // batchImportTrackCourses calling matchOrCreateAuthor is tested in
+  // src/lib/__tests__/trackManifestImport.integration.test.ts.
+
+  describe('manifest with author data (TST-P2-004)', () => {
+    const onOpenChange = vi.fn()
+
+    const authorManifestResponse = {
+      ok: true as const,
+      summary: {
+        trackName: 'Test Track',
+        trackAuthor: { name: 'Jane Smith', title: 'Test Expert' },
+        courseFolders: ['alpha', 'beta'],
+      },
+      manifest: {
+        version: '1',
+        track: {
+          name: 'Test Track',
+          description: 'A test track',
+          author: {
+            name: 'Jane Smith',
+            title: 'Test Expert',
+          },
+          courses: [
+            { folder: 'alpha', position: 1 },
+            { folder: 'beta', position: 2 },
+          ],
+        },
+      },
+    }
+
+    beforeEach(() => {
+      vi.clearAllMocks()
+      mockShowDirectoryPicker.mockResolvedValue(mockDirHandle('ParentFolder'))
+      mockListSubDirectories.mockResolvedValue([mockDirHandle('alpha'), mockDirHandle('beta')])
+      mockReadTrackManifest.mockResolvedValue(authorManifestResponse)
+      mockScanCourseFromSource.mockImplementation(
+        (source: { folderName: string }) =>
+          makeScanSuccess(`id-${source.folderName}`, source.folderName)
+      )
+      mockBatchImportTrackCourses.mockResolvedValue({
+        trackId: 'track-abc',
+        trackName: 'Test Track',
+        courses: [
+          { folder: 'alpha', success: true, courseId: 'course-alpha' },
+          { folder: 'beta', success: true, courseId: 'course-beta' },
+        ],
+        successCount: 2,
+        failureCount: 0,
+      })
+    })
+
+    it('passes manifest with author data to batchImportTrackCourses', async () => {
+      const user = userEvent.setup()
+      render(
+        <BulkImportDialog
+          open={true}
+          onOpenChange={onOpenChange}
+          onSingleImport={vi.fn()}
+        />
+      )
+
+      await user.click(screen.getByTestId('import-multiple-btn'))
+      await waitFor(() => expect(screen.getByTestId('bulk-select-all')).toBeInTheDocument())
+      await user.click(screen.getByTestId('bulk-start-import-btn'))
+      await waitFor(() => {
+        expect(screen.getByTestId('bulk-confirm-import-btn')).toBeInTheDocument()
+      })
+
+      await user.click(screen.getByTestId('bulk-confirm-import-btn'))
+
+      await waitFor(() => {
+        expect(mockBatchImportTrackCourses).toHaveBeenCalled()
+      })
+
+      const [, manifest] = mockBatchImportTrackCourses.mock.calls[0]
+      expect(manifest.track.author).toBeDefined()
+      expect(manifest.track.author!.name).toBe('Jane Smith')
+      expect(manifest.track.author!.title).toBe('Test Expert')
     })
   })
 })

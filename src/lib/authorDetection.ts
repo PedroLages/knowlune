@@ -10,6 +10,8 @@
  */
 
 import { db } from '@/db'
+import { syncableWrite } from '@/lib/sync/syncableWrite'
+import type { ImportedAuthor } from '@/data/types'
 import type { ScannedImage } from '@/lib/courseImport'
 
 // --- Pure Detection ---
@@ -53,16 +55,61 @@ export function detectAuthorFromFolderName(folderName: string): string | null {
   return null
 }
 
+// --- Per-Name Lock for TOCTOU Prevention ---
+
+/**
+ * Simple per-key async mutex.  Calls to the same key are serialized:
+ * each waits for the previous to complete before proceeding.
+ * Used by both `matchOrCreateAuthor` and (via export) the track
+ * manifest import to prevent TOCTOU races on author records.
+ *
+ * @internal Module-level state; not persisted across sessions.
+ */
+const keyLocks = new Map<string, Promise<void>>()
+
+/**
+ * Acquires a per-key lock, runs `fn`, then releases.
+ * Safe for concurrent calls because JavaScript's event loop
+ * is single-threaded — there is no interleaving between
+ * the `get`-and-`set` gap in the acquisition loop.
+ */
+export async function withKeyLock<T>(key: string, fn: () => Promise<T>): Promise<T> {
+  // Wait for any existing holder to finish
+  while (true) {
+    const existing = keyLocks.get(key)
+    if (!existing) break
+    await existing
+  }
+
+  let resolve!: () => void
+  const promise = new Promise<void>(r => {
+    resolve = r
+  })
+  keyLocks.set(key, promise)
+
+  try {
+    return await fn()
+  } finally {
+    keyLocks.delete(key)
+    resolve()
+  }
+}
+
 // --- DB Match / Create ---
 
 /**
  * Looks up an existing author by name (case-insensitive) or creates a new one.
  *
+ * Uses a per-name lock so that concurrent calls for the same author name
+ * are serialized, preventing a TOCTOU race where two callers both see
+ * "not found" and create duplicate author records.
+ *
  * @returns The author ID (existing or newly created), or null if authorName is null/empty.
  */
 export async function matchOrCreateAuthor(
   authorName: string | null,
-  authorDetails?: { title?: string; bio?: string }
+  authorDetails?: { title?: string; bio?: string },
+  options?: { useSyncableWrite?: boolean }
 ): Promise<string | null> {
   if (!authorName) return null
 
@@ -71,19 +118,19 @@ export async function matchOrCreateAuthor(
 
   const normalizedInput = trimmed.toLowerCase()
 
-  return db.transaction('rw', db.authors, async () => {
-    // Case-insensitive lookup via indexed query instead of full table scan
+  return withKeyLock(normalizedInput, async () => {
+    // Lookup inside the lock — by the time we reach this point any
+    // previous concurrent call for the same name has already finished.
     const existing = await db.authors.where('name').equalsIgnoreCase(normalizedInput).first()
 
     if (existing) {
       return existing.id
     }
 
-    // Create new author with slug-based ID
+    // Create new author
     const id = crypto.randomUUID()
     const now = new Date().toISOString()
-
-    await db.authors.add({
+    const author: ImportedAuthor = {
       id,
       name: trimmed,
       courseIds: [],
@@ -92,7 +139,13 @@ export async function matchOrCreateAuthor(
       updatedAt: now,
       ...(authorDetails?.title ? { title: authorDetails.title } : {}),
       ...(authorDetails?.bio ? { bio: authorDetails.bio } : {}),
-    })
+    }
+
+    if (options?.useSyncableWrite) {
+      await syncableWrite('authors', 'add', author as unknown as Record<string, unknown>)
+    } else {
+      await db.authors.add(author)
+    }
 
     return id
   })
