@@ -28,7 +28,7 @@ import type { CourseServer } from '@/data/types'
 import { toast } from 'sonner'
 
 const DEFAULT_SERVER_NAME = 'Unraid Academy'
-const DEFAULT_SERVER_URL = 'http://192.168.2.200:8099'
+const DEFAULT_SERVER_URL = 'https://academy.pedrolages.net'
 
 /** Status indicator styling */
 function StatusIndicator({ status }: { status: CourseServer['status'] }) {
