@@ -102,17 +102,20 @@ export async function fetchTrackManifestFromUrl(
       headers: { Accept: 'application/json' },
     })
 
-    clearTimeout(timeout)
-
     if (response.status === 404) {
+      clearTimeout(timeout)
       return { ok: false, error: 'Not found' }
     }
 
     if (!response.ok) {
+      clearTimeout(timeout)
       return { ok: false, error: `Server returned ${response.status}` }
     }
 
+    // Keep timeout active during body read to guard against slow streaming
     const json = await response.json()
+    clearTimeout(timeout)
+
     const result = parseTrackManifest(json)
 
     if (!result.ok) {
