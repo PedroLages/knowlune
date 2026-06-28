@@ -124,12 +124,20 @@ async function runWithConcurrency<T>(
 ): Promise<void> {
   const running: Promise<void>[] = []
   let queueIndex = 0
-  while (queueIndex < items.length && !abortSignal.current) {
-    while (running.length < maxConcurrency && queueIndex < items.length) {
+  let completedCount = 0
+  const totalItems = items.length
+
+  while (queueIndex < totalItems && !abortSignal.current && completedCount < totalItems) {
+    while (
+      running.length < maxConcurrency &&
+      queueIndex < totalItems &&
+      completedCount < totalItems
+    ) {
       const item = items[queueIndex++]
-      const promise = fn(item).then(() => {
+      const promise = fn(item).finally(() => {
         const idx = running.indexOf(promise)
         if (idx >= 0) running.splice(idx, 1)
+        completedCount++
       })
       running.push(promise)
     }
@@ -291,6 +299,7 @@ export function BulkImportDialog({
   // Step 1 → Enter URL: Scan a server URL for subdirectories
   const handleServerUrlScan = useCallback(async () => {
     generationRef.current++
+    abortRef.current = false
     const url = serverUrlInput.trim()
 
     // Clear stale parent handle — server-URL scans never have a filesystem handle
@@ -303,6 +312,7 @@ export function BulkImportDialog({
       return
     }
 
+    isScanningUrlRef.current = true
     setServerUrlError(null)
     setIsScanningUrl(true)
 
@@ -403,7 +413,7 @@ export function BulkImportDialog({
       const detectedAuthorName = detectAuthorFromFolderName(parentHandle.name)
       if (detectedAuthorName) {
         try {
-          const authorId = await matchOrCreateAuthor(detectedAuthorName)
+          const authorId = await matchOrCreateAuthor(detectedAuthorName, undefined, { useSyncableWrite: true })
           setParentAuthorId(authorId)
         } catch {
           // silent-catch-ok: author detection is non-critical — continue without it
@@ -693,9 +703,6 @@ export function BulkImportDialog({
       get current() {
         return abortRef.current || useImportProgressStore.getState().cancelRequested
       },
-      set current(v: boolean) {
-        abortRef.current = v
-      },
     })
 
     if (useImportProgressStore.getState().cancelRequested) {
@@ -772,7 +779,7 @@ export function BulkImportDialog({
     if (gen === generationRef.current) {
       setStep('results')
     }
-  }, [scannedCourses, courseOverrides, parentAuthorId, trackManifest])
+  }, [scannedCourses, folders, courseOverrides, parentAuthorId, trackManifest])
 
   // Retry a single failed item
   const handleRetry = useCallback(
@@ -846,9 +853,13 @@ export function BulkImportDialog({
       }
 
       try {
+        const courseOverride = scanResult.course ? courseOverrides.get(scanResult.course.id) : undefined
         const overrides = {
           skipStoreUpdate: true,
           ...(parentAuthorId ? { authorId: parentAuthorId } : {}),
+          ...(courseOverride?.name ? { name: courseOverride.name } : {}),
+          ...(courseOverride?.description ? { description: courseOverride.description } : {}),
+          ...(courseOverride?.coverImageHandle ? { coverImageHandle: courseOverride.coverImageHandle } : {}),
         }
         await persistScannedCourse(scanResult.course, overrides)
         if (gen !== generationRef.current) {
@@ -881,7 +892,7 @@ export function BulkImportDialog({
         retryLockRef.current = false
       }
     },
-    [importItems, parentAuthorId]
+    [importItems, parentAuthorId, courseOverrides]
   )
 
   // Progress calculation

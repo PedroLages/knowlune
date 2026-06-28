@@ -611,7 +611,8 @@ export async function persistScannedCourse(
       const authorBio = scanned.manifestData?.course.author?.bio
       const matchedId = await matchOrCreateAuthor(
         authorName,
-        authorTitle || authorBio ? { title: authorTitle, bio: authorBio } : undefined
+        authorTitle || authorBio ? { title: authorTitle, bio: authorBio } : undefined,
+        { useSyncableWrite: true }
       )
       if (matchedId) {
         authorId = matchedId
@@ -622,7 +623,7 @@ export async function persistScannedCourse(
   } else if (!authorId) {
     try {
       detectedAuthorName = detectAuthorFromFolderName(scanned.name)
-      const matchedId = await matchOrCreateAuthor(detectedAuthorName)
+      const matchedId = await matchOrCreateAuthor(detectedAuthorName, undefined, { useSyncableWrite: true })
       if (matchedId) {
         authorId = matchedId
       }

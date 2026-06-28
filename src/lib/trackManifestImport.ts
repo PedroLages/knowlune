@@ -7,6 +7,7 @@ import { useLearningPathStore } from '@/stores/useLearningPathStore'
 import { db } from '@/db'
 import { syncableWrite } from '@/lib/sync/syncableWrite'
 import type { SyncableRecord } from '@/lib/sync/syncableWrite'
+import type { ImportedAuthor } from '@/data/types'
 import { toast } from 'sonner'
 
 /** Timeout (ms) for fetching track-manifest.json from a remote server. */
@@ -253,14 +254,14 @@ export async function batchImportTrackCourses(
       const authorId = await matchOrCreateAuthor(trackAuthor.name, {
         title: trackAuthor.title,
         bio: trackAuthor.bio,
-      })
+      }, { useSyncableWrite: true })
       if (authorId) {
         // Update the author with additional manifest-provided fields
         const existingAuthor = await db.authors.get(authorId)
         if (existingAuthor) {
           const courseIds = results.filter(r => r.success && r.courseId).map(r => r.courseId!)
           const allCourseIds = [...new Set([...existingAuthor.courseIds, ...courseIds])]
-          const updates: Record<string, unknown> = {
+          const updates: Partial<ImportedAuthor> = {
             courseIds: allCourseIds,
             updatedAt: new Date().toISOString(),
           }

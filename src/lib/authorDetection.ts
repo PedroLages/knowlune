@@ -10,6 +10,8 @@
  */
 
 import { db } from '@/db'
+import { syncableWrite } from '@/lib/sync/syncableWrite'
+import type { ImportedAuthor } from '@/data/types'
 import type { ScannedImage } from '@/lib/courseImport'
 
 // --- Pure Detection ---
@@ -62,7 +64,8 @@ export function detectAuthorFromFolderName(folderName: string): string | null {
  */
 export async function matchOrCreateAuthor(
   authorName: string | null,
-  authorDetails?: { title?: string; bio?: string }
+  authorDetails?: { title?: string; bio?: string },
+  options?: { useSyncableWrite?: boolean }
 ): Promise<string | null> {
   if (!authorName) return null
 
@@ -71,31 +74,35 @@ export async function matchOrCreateAuthor(
 
   const normalizedInput = trimmed.toLowerCase()
 
-  return db.transaction('rw', db.authors, async () => {
-    // Case-insensitive lookup via indexed query instead of full table scan
-    const existing = await db.authors.where('name').equalsIgnoreCase(normalizedInput).first()
+  // Use a read-only transaction for the lookup; the create step (which may use
+  // syncableWrite) runs outside the lookup transaction to avoid nesting issues.
+  const existing = await db.authors.where('name').equalsIgnoreCase(normalizedInput).first()
 
-    if (existing) {
-      return existing.id
-    }
+  if (existing) {
+    return existing.id
+  }
 
-    // Create new author with slug-based ID
-    const id = crypto.randomUUID()
-    const now = new Date().toISOString()
+  // Create new author
+  const id = crypto.randomUUID()
+  const now = new Date().toISOString()
+  const author: ImportedAuthor = {
+    id,
+    name: trimmed,
+    courseIds: [],
+    isPreseeded: false,
+    createdAt: now,
+    updatedAt: now,
+    ...(authorDetails?.title ? { title: authorDetails.title } : {}),
+    ...(authorDetails?.bio ? { bio: authorDetails.bio } : {}),
+  }
 
-    await db.authors.add({
-      id,
-      name: trimmed,
-      courseIds: [],
-      isPreseeded: false,
-      createdAt: now,
-      updatedAt: now,
-      ...(authorDetails?.title ? { title: authorDetails.title } : {}),
-      ...(authorDetails?.bio ? { bio: authorDetails.bio } : {}),
-    })
+  if (options?.useSyncableWrite) {
+    await syncableWrite('authors', 'add', author as unknown as Record<string, unknown>)
+  } else {
+    await db.authors.add(author)
+  }
 
-    return id
-  })
+  return id
 }
 
 // --- Author Photo Detection ---
