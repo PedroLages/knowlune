@@ -1,6 +1,25 @@
+import { Globe, Twitter, Linkedin, Instagram, Youtube } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
 import { useCourseStore } from '@/stores/useCourseStore'
 import { useAuthorStore } from '@/stores/useAuthorStore'
 import type { Author, Course, ImportedAuthor, ImportedCourse } from '@/data/types'
+
+/**
+ * Map of social platform keys to their Lucide icons.
+ * Used by author display components for rendering platform-specific icons.
+ */
+export const SOCIAL_ICON_MAP: Record<string, LucideIcon> = {
+  website: Globe,
+  twitter: Twitter,
+  linkedin: Linkedin,
+  instagram: Instagram,
+  youtube: Youtube,
+}
+
+/** Get the Lucide icon for a social platform key, or undefined if unknown. */
+export function getSocialIcon(platform: string): LucideIcon | undefined {
+  return SOCIAL_ICON_MAP[platform]
+}
 
 /**
  * Unified author view type for display purposes.
@@ -16,7 +35,7 @@ export interface AuthorView {
   specialties: string[]
   yearsExperience: number
   education?: string
-  socialLinks: { website?: string; linkedin?: string; twitter?: string }
+  socialLinks: { website?: string; linkedin?: string; twitter?: string; instagram?: string; youtube?: string }
   featuredQuote?: string
   courseCount: number
   isPreseeded: boolean
@@ -113,11 +132,48 @@ function importedToView(author: ImportedAuthor): AuthorView {
  * If an imported author has `isPreseeded: true` and the same ID as a static author,
  * the imported version takes precedence (it contains user edits).
  * Static-only authors (not in IndexedDB) are included as fallback.
+ *
+ * Deduplicates by normalized name (case-insensitive, trimmed): when two or more
+ * authors share the same normalized name, the one with the most populated fields
+ * wins; ties are broken by most recent `updatedAt`.
  */
 export function getMergedAuthors(storeAuthors: ImportedAuthor[]): AuthorView[] {
   // Only user-imported authors are shown. Pre-seeded static authors (src/data/authors/)
   // were removed to avoid confusing fresh users with pre-populated data.
-  return storeAuthors.map(importedToView)
+  const views = storeAuthors.map(importedToView)
+
+  // Deduplicate by normalized name
+  const seen = new Map<string, AuthorView>()
+  for (const view of views) {
+    const key = view.name.toLowerCase().trim()
+    const existing = seen.get(key)
+    if (!existing) {
+      seen.set(key, view)
+      continue
+    }
+    // Keep the record with more populated fields
+    const existingScore = populatedFieldScore(existing)
+    const viewScore = populatedFieldScore(view)
+    if (
+      viewScore > existingScore ||
+      (viewScore === existingScore && view.createdAt > existing.createdAt)
+    ) {
+      seen.set(key, view)
+    }
+  }
+  return [...seen.values()]
+}
+
+/** Count populated optional fields to determine which duplicate author record is richer. */
+function populatedFieldScore(view: AuthorView): number {
+  let score = 0
+  if (view.title) score++
+  if (view.bio) score++
+  if (view.shortBio) score++
+  if (view.education) score++
+  // Count non-empty social links
+  score += Object.values(view.socialLinks).filter(v => v).length
+  return score
 }
 
 /** Extract initials from a full name (e.g., "Jane Smith" -> "JS") */

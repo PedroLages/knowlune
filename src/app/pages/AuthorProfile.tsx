@@ -1,7 +1,8 @@
 import { useState, useMemo, useEffect, type ReactNode } from 'react'
 import { useParams, Link, useNavigate, useLocation } from 'react-router'
 import { recordVisit } from '@/lib/searchFrecency'
-import { BookOpen, Clock, ExternalLink, GraduationCap, Users, Pencil, Trash2 } from 'lucide-react'
+import { BookOpen, Clock, GraduationCap, Users, Pencil, Trash2 } from 'lucide-react'
+import { getSocialIcon } from '@/lib/authors'
 import { Button } from '@/app/components/ui/button'
 import { Badge } from '@/app/components/ui/badge'
 import { Card, CardContent } from '@/app/components/ui/card'
@@ -188,33 +189,25 @@ export function AuthorProfile() {
                 </blockquote>
               )}
 
-              {/* Specialty Badges */}
-              {author.specialties.length > 0 && (
-                <div className="flex flex-wrap justify-center sm:justify-start gap-1.5 mb-4">
-                  {author.specialties.map(specialty => (
-                    <Badge key={specialty} variant="secondary" className="text-xs">
-                      {specialty}
-                    </Badge>
-                  ))}
-                </div>
-              )}
-
               {/* Social Links */}
               {socialEntries.length > 0 && (
-                <div className="flex justify-center sm:justify-start gap-2">
-                  {socialEntries.map(([platform, url]) => (
-                    <a
-                      key={platform}
-                      href={url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 text-sm text-brand hover:underline capitalize"
-                      aria-label={`${platform} — ${author.name}`}
-                    >
-                      {platform}
-                      <ExternalLink className="size-3" aria-hidden="true" />
-                    </a>
-                  ))}
+                <div className="flex justify-center sm:justify-start gap-3">
+                  {socialEntries.map(([platform, url]) => {
+                    const Icon = getSocialIcon(platform)
+                    return (
+                      <a
+                        key={platform}
+                        href={url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 text-muted-foreground hover:text-brand transition-colors"
+                        aria-label={`${platform} — ${author.name}`}
+                        title={platform.charAt(0).toUpperCase() + platform.slice(1)}
+                      >
+                        {Icon ? <Icon className="size-4" aria-hidden="true" /> : platform}
+                      </a>
+                    )
+                  })}
                 </div>
               )}
             </div>

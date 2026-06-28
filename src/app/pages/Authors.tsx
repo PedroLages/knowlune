@@ -5,15 +5,14 @@ import {
   ArrowDownAZ,
   BookOpen,
   Calendar,
-  ExternalLink,
   Import,
   Pencil,
   Plus,
   Trash2,
   Users,
 } from 'lucide-react'
+import { getSocialIcon } from '@/lib/authors'
 import { Card, CardContent } from '@/app/components/ui/card'
-import { Badge } from '@/app/components/ui/badge'
 import { Button } from '@/app/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/app/components/ui/avatar'
 import { Skeleton } from '@/app/components/ui/skeleton'
@@ -304,30 +303,38 @@ function AuthorCard({
               </p>
             )}
 
-            {/* Specialty Badges */}
-            {author.specialties.length > 0 && (
-              <div className="flex min-w-0 w-full flex-wrap justify-center gap-1.5 mt-3 mb-5">
-                {author.specialties.slice(0, 3).map(specialty => (
-                  <Badge
-                    key={specialty}
-                    variant="secondary"
-                    className="text-xs max-w-full truncate"
-                  >
-                    {specialty}
-                  </Badge>
-                ))}
-                {author.specialties.length > 3 && (
-                  <Badge variant="secondary" className="text-xs shrink-0">
-                    +{author.specialties.length - 3}
-                  </Badge>
-                )}
-              </div>
-            )}
-            {/* Stats Row — pushed to bottom via flex-grow when no specialties */}
+            {/* Social Links */}
+            {(() => {
+              const socialEntries = Object.entries(author.socialLinks).filter(([, url]) => url)
+              if (socialEntries.length === 0) return null
+              return (
+                <div className="flex justify-center gap-2 mt-2">
+                  {socialEntries.map(([platform, url]) => {
+                    const Icon = getSocialIcon(platform)
+                    if (!Icon) return null
+                    return (
+                      <a
+                        key={platform}
+                        href={url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={e => e.stopPropagation()}
+                        className="text-muted-foreground hover:text-brand transition-colors"
+                        aria-label={`${platform} — ${author.name}`}
+                        title={platform.charAt(0).toUpperCase() + platform.slice(1)}
+                      >
+                        <Icon className="size-4" aria-hidden="true" />
+                      </a>
+                    )
+                  })}
+                </div>
+              )
+            })()}
+            {/* Stats Row — pushed to bottom via flex-grow when no social links */}
             <div
               className={cn(
                 'flex items-center justify-center gap-6 text-sm text-muted-foreground',
-                author.specialties.length === 0 && 'mt-auto'
+                !Object.values(author.socialLinks).filter(v => v).length && 'mt-auto'
               )}
             >
               <div className="flex items-center gap-1.5" data-testid="author-course-count">
@@ -474,36 +481,25 @@ function FeaturedAuthorProfile({
                 </blockquote>
               )}
 
-              {/* Specialty Badges */}
-              {author.specialties.length > 0 && (
-                <div
-                  className="flex flex-wrap justify-center sm:justify-start gap-1.5 mb-4"
-                  data-testid="specialty-badges"
-                >
-                  {author.specialties.map(specialty => (
-                    <Badge key={specialty} variant="secondary" className="text-xs">
-                      {specialty}
-                    </Badge>
-                  ))}
-                </div>
-              )}
-
               {/* Social Links */}
               {socialEntries.length > 0 && (
                 <div className="flex justify-center sm:justify-start gap-3">
-                  {socialEntries.map(([platform, url]) => (
-                    <a
-                      key={platform}
-                      href={url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 text-sm text-brand hover:underline capitalize"
-                      aria-label={`${platform} — ${author.name}`}
-                    >
-                      {platform}
-                      <ExternalLink className="size-3" aria-hidden="true" />
-                    </a>
-                  ))}
+                  {socialEntries.map(([platform, url]) => {
+                    const Icon = getSocialIcon(platform)
+                    return (
+                      <a
+                        key={platform}
+                        href={url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 text-muted-foreground hover:text-brand transition-colors"
+                        aria-label={`${platform} — ${author.name}`}
+                        title={platform.charAt(0).toUpperCase() + platform.slice(1)}
+                      >
+                        {Icon ? <Icon className="size-4" aria-hidden="true" /> : platform}
+                      </a>
+                    )
+                  })}
                 </div>
               )}
             </div>

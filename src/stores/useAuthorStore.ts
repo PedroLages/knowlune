@@ -30,7 +30,7 @@ interface NewAuthorData {
   specialties?: string[]
   yearsExperience?: number
   education?: string
-  socialLinks?: { website?: string; twitter?: string; linkedin?: string }
+  socialLinks?: { website?: string; twitter?: string; linkedin?: string; instagram?: string; youtube?: string }
   featuredQuote?: string
   isPreseeded?: boolean
 }
@@ -46,7 +46,7 @@ interface UpdateAuthorData {
   specialties?: string[]
   yearsExperience?: number
   education?: string
-  socialLinks?: { website?: string; twitter?: string; linkedin?: string }
+  socialLinks?: { website?: string; twitter?: string; linkedin?: string; instagram?: string; youtube?: string }
   featuredQuote?: string
 }
 
@@ -63,7 +63,7 @@ interface AuthorStoreState {
 
   loadAuthors: (options?: LoadAuthorsOptions) => Promise<void>
   clearAuthorsLoadError: () => void
-  addAuthor: (data: NewAuthorData) => Promise<ImportedAuthor>
+  addAuthor: (data: NewAuthorData) => Promise<ImportedAuthor | null>
   updateAuthor: (id: string, data: UpdateAuthorData) => Promise<void>
   deleteAuthor: (id: string, options?: { silent?: boolean }) => Promise<void>
   getAuthorById: (id: string) => ImportedAuthor | undefined
@@ -125,10 +125,21 @@ export const useAuthorStore = create<AuthorStoreState>((set, get) => ({
   },
 
   addAuthor: async (data: NewAuthorData) => {
+    const normalizedName = data.name.trim()
+
+    // Prevent duplicate authors by case-insensitive name
+    const existing = await db.authors.where('name').equalsIgnoreCase(normalizedName).first()
+    if (existing) {
+      toast.error(`Author "${data.name}" already exists`, {
+        description: 'Edit the existing author instead of creating a duplicate.',
+      })
+      return null
+    }
+
     const now = new Date().toISOString()
     const author: ImportedAuthor = {
       id: crypto.randomUUID(),
-      name: data.name,
+      name: normalizedName,
       title: data.title,
       bio: data.bio,
       shortBio: data.shortBio,

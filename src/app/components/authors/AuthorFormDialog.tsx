@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react'
-import { X } from 'lucide-react'
 import { toast } from 'sonner'
 import {
   Dialog,
@@ -13,10 +12,8 @@ import { Button } from '@/app/components/ui/button'
 import { Input } from '@/app/components/ui/input'
 import { Label } from '@/app/components/ui/label'
 import { Textarea } from '@/app/components/ui/textarea'
-import { Badge } from '@/app/components/ui/badge'
 import { Separator } from '@/app/components/ui/separator'
 import { useAuthorStore } from '@/stores/useAuthorStore'
-import { flattenSpecialties } from '@/lib/authors'
 import type { AuthorSocialLinks, ImportedAuthor } from '@/data/types'
 
 interface FormErrors {
@@ -25,6 +22,8 @@ interface FormErrors {
   website?: string
   linkedin?: string
   twitter?: string
+  instagram?: string
+  youtube?: string
 }
 
 /** Accept ImportedAuthor for edit mode */
@@ -34,23 +33,6 @@ interface AuthorFormDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   author?: EditableAuthor // undefined = create mode, defined = edit mode
-}
-
-/** Append tokens from one input chunk (comma / semicolon / pipe aware) without case-insensitive dupes. */
-function mergeSpecialtiesFromInput(existing: string[], chunk: string): string[] {
-  const trimmed = chunk.trim()
-  if (!trimmed) return existing
-  const incoming = flattenSpecialties([trimmed])
-  if (incoming.length === 0) return existing
-  const seen = new Set(existing.map(s => s.toLowerCase()))
-  const out = [...existing]
-  for (const t of incoming) {
-    const k = t.toLowerCase()
-    if (seen.has(k)) continue
-    seen.add(k)
-    out.push(t)
-  }
-  return out
 }
 
 function isValidUrl(value: string): boolean {
@@ -74,14 +56,14 @@ export function AuthorFormDialog({ open, onOpenChange, author }: AuthorFormDialo
   const [title, setTitle] = useState('')
   const [bio, setBio] = useState('')
   const [shortBio, setShortBio] = useState('')
-  const [specialties, setSpecialties] = useState<string[]>([])
-  const [specialtyInput, setSpecialtyInput] = useState('')
   const [yearsExperience, setYearsExperience] = useState('')
   const [education, setEducation] = useState('')
   const [avatar, setAvatar] = useState('')
   const [website, setWebsite] = useState('')
   const [linkedin, setLinkedin] = useState('')
   const [twitter, setTwitter] = useState('')
+  const [instagram, setInstagram] = useState('')
+  const [youtube, setYoutube] = useState('')
   const [featuredQuote, setFeaturedQuote] = useState('')
   const [errors, setErrors] = useState<FormErrors>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -99,14 +81,14 @@ export function AuthorFormDialog({ open, onOpenChange, author }: AuthorFormDialo
     setTitle(author.title ?? '')
     setBio(author.bio ?? '')
     setShortBio(author.shortBio ?? '')
-    setSpecialties([...(author.specialties ?? [])])
-    setSpecialtyInput('')
     setYearsExperience(author.yearsExperience ? String(author.yearsExperience) : '')
     setEducation(author.education ?? '')
     setAvatar(author.photoUrl ?? '')
     setWebsite(author.socialLinks?.website ?? '')
     setLinkedin(author.socialLinks?.linkedin ?? '')
     setTwitter(author.socialLinks?.twitter ?? '')
+    setInstagram(author.socialLinks?.instagram ?? '')
+    setYoutube(author.socialLinks?.youtube ?? '')
     setFeaturedQuote(author.featuredQuote ?? '')
     setErrors({})
   }, [open, author, isDirty])
@@ -116,14 +98,14 @@ export function AuthorFormDialog({ open, onOpenChange, author }: AuthorFormDialo
     setTitle('')
     setBio('')
     setShortBio('')
-    setSpecialties([])
-    setSpecialtyInput('')
     setYearsExperience('')
     setEducation('')
     setAvatar('')
     setWebsite('')
     setLinkedin('')
     setTwitter('')
+    setInstagram('')
+    setYoutube('')
     setFeaturedQuote('')
     setErrors({})
   }
@@ -153,43 +135,15 @@ export function AuthorFormDialog({ open, onOpenChange, author }: AuthorFormDialo
       errs.twitter = 'Please enter a valid URL (https://…)'
     }
 
+    if (!isValidUrl(instagram)) {
+      errs.instagram = 'Please enter a valid URL (https://…)'
+    }
+
+    if (!isValidUrl(youtube)) {
+      errs.youtube = 'Please enter a valid URL (https://…)'
+    }
+
     return errs
-  }
-
-  function handleAddSpecialty() {
-    const trimmed = specialtyInput.trim()
-    if (!trimmed) {
-      setSpecialtyInput('')
-      return
-    }
-    setIsDirty(true)
-    setSpecialties(prev => mergeSpecialtiesFromInput(prev, trimmed))
-    setSpecialtyInput('')
-  }
-
-  function handleSpecialtyPaste(e: React.ClipboardEvent<HTMLInputElement>) {
-    const text = e.clipboardData.getData('text/plain')
-    if (!text.trim() || !/[,;|]/.test(text)) return
-    e.preventDefault()
-    const el = e.currentTarget
-    const start = el.selectionStart ?? specialtyInput.length
-    const end = el.selectionEnd ?? specialtyInput.length
-    const combined = specialtyInput.slice(0, start) + text + specialtyInput.slice(end)
-    setIsDirty(true)
-    setSpecialties(prev => mergeSpecialtiesFromInput(prev, combined))
-    setSpecialtyInput('')
-  }
-
-  function handleSpecialtyKeyDown(e: React.KeyboardEvent) {
-    if (e.key === 'Enter' || e.key === ',') {
-      e.preventDefault()
-      handleAddSpecialty()
-    }
-  }
-
-  function handleRemoveSpecialty(specialty: string) {
-    setIsDirty(true)
-    setSpecialties(prev => prev.filter(s => s !== specialty))
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -205,13 +159,14 @@ export function AuthorFormDialog({ open, onOpenChange, author }: AuthorFormDialo
     if (website.trim()) socialLinks.website = website.trim()
     if (linkedin.trim()) socialLinks.linkedin = linkedin.trim()
     if (twitter.trim()) socialLinks.twitter = twitter.trim()
+    if (instagram.trim()) socialLinks.instagram = instagram.trim()
+    if (youtube.trim()) socialLinks.youtube = youtube.trim()
 
     const authorData = {
       name: name.trim(),
       title: title.trim() || undefined,
       bio: bio.trim() || undefined,
       shortBio: shortBio.trim() || undefined,
-      specialties,
       yearsExperience:
         yearsExperience && Number(yearsExperience) > 0 ? Number(yearsExperience) : undefined,
       photoUrl: avatar.trim() || undefined,
@@ -225,7 +180,12 @@ export function AuthorFormDialog({ open, onOpenChange, author }: AuthorFormDialo
         await updateAuthor(author.id, authorData)
         toast.success('Author updated')
       } else {
-        await addAuthor(authorData)
+        const result = await addAuthor(authorData)
+        if (!result) {
+          // Duplicate detected — store already showed toast, just bail
+          setIsSubmitting(false)
+          return
+        }
         toast.success('Author created')
       }
       resetForm()
@@ -337,42 +297,6 @@ export function AuthorFormDialog({ open, onOpenChange, author }: AuthorFormDialo
                     value={bio}
                     onChange={e => setBio(e.target.value)}
                     className="border-2"
-                  />
-                </div>
-
-                {/* Specialties */}
-                <div className="min-w-0 space-y-1.5">
-                  <Label htmlFor="author-specialties">Specialties</Label>
-                  {specialties.length > 0 && (
-                    <div className="mb-1.5 flex min-w-0 flex-wrap gap-1.5">
-                      {specialties.map(specialty => (
-                        <Badge
-                          key={specialty}
-                          variant="secondary"
-                          className="max-w-full min-w-0 gap-1 break-words pr-1"
-                        >
-                          {specialty}
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveSpecialty(specialty)}
-                            className="rounded-full p-0.5 hover:bg-muted-foreground/20 transition-colors"
-                            aria-label={`Remove ${specialty}`}
-                          >
-                            <X className="size-3" aria-hidden="true" />
-                          </button>
-                        </Badge>
-                      ))}
-                    </div>
-                  )}
-                  <Input
-                    id="author-specialties"
-                    placeholder="Enter or paste — commas split into tags"
-                    value={specialtyInput}
-                    onChange={e => setSpecialtyInput(e.target.value)}
-                    onKeyDown={handleSpecialtyKeyDown}
-                    onPaste={handleSpecialtyPaste}
-                    onBlur={handleAddSpecialty}
-                    className="min-w-0 border-2"
                   />
                 </div>
 
@@ -508,6 +432,50 @@ export function AuthorFormDialog({ open, onOpenChange, author }: AuthorFormDialo
                   {errors.twitter && (
                     <p id="author-twitter-error" role="alert" className="text-destructive text-xs">
                       {errors.twitter}
+                    </p>
+                  )}
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="author-instagram">Instagram</Label>
+                  <Input
+                    id="author-instagram"
+                    type="url"
+                    placeholder="https://instagram.com/username"
+                    value={instagram}
+                    onChange={e => {
+                      setInstagram(e.target.value)
+                      if (errors.instagram) setErrors(prev => ({ ...prev, instagram: undefined }))
+                    }}
+                    aria-invalid={!!errors.instagram}
+                    aria-describedby={errors.instagram ? 'author-instagram-error' : undefined}
+                    className="font-mono text-xs border-2"
+                  />
+                  {errors.instagram && (
+                    <p id="author-instagram-error" role="alert" className="text-destructive text-xs">
+                      {errors.instagram}
+                    </p>
+                  )}
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="author-youtube">YouTube</Label>
+                  <Input
+                    id="author-youtube"
+                    type="url"
+                    placeholder="https://youtube.com/@channel"
+                    value={youtube}
+                    onChange={e => {
+                      setYoutube(e.target.value)
+                      if (errors.youtube) setErrors(prev => ({ ...prev, youtube: undefined }))
+                    }}
+                    aria-invalid={!!errors.youtube}
+                    aria-describedby={errors.youtube ? 'author-youtube-error' : undefined}
+                    className="font-mono text-xs border-2"
+                  />
+                  {errors.youtube && (
+                    <p id="author-youtube-error" role="alert" className="text-destructive text-xs">
+                      {errors.youtube}
                     </p>
                   )}
                 </div>
