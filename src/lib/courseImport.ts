@@ -1302,8 +1302,6 @@ export async function scanCourseFolderFromServer(
   const courseName = decodeURIComponent(segments[segments.length - 1] || 'Imported Course')
 
   // Derive the server root URL for building serverPath
-  // The server root is the base of the course content (e.g., "http://192.168.2.200:8099")
-  // We derive it by removing the path portion after the host
   const parsedUrl = new URL(folderUrl)
   const serverRoot = `${parsedUrl.protocol}//${parsedUrl.host}`
 
@@ -1321,8 +1319,16 @@ export async function scanCourseFolderFromServer(
   // Breadth-first traversal with concurrency limit
   const pendingDirs: string[] = [folderUrl]
   const seen = new Set<string>()
+  let dirsScanned = 0
+  let filesFound = 0
 
   while (pendingDirs.length > 0) {
+    // Check for cancellation
+    if (useImportProgressStore.getState().cancelRequested) {
+      useImportProgressStore.getState().confirmCancellation()
+      throw new Error('Import cancelled by user')
+    }
+
     // Take up to MAX_CONCURRENT_DIR_SCANS directories
     const batch = pendingDirs.splice(0, MAX_CONCURRENT_DIR_SCANS)
 
@@ -1342,17 +1348,17 @@ export async function scanCourseFolderFromServer(
             pendingDirs.push(file.url)
           } else if (file.type === 'video') {
             const relPath = file.url.replace(serverRoot + '/', '')
-            // Determine format from extension
             const ext = file.name.split('.').pop()?.toLowerCase() ?? 'mp4'
             const validFormats = ['mp4', 'webm', 'mkv', 'ts', 'avi'] as const
             allVideos.push({
               name: file.name,
               url: file.url,
               path: relPath,
-              format: validFormats.includes(ext as typeof validFormats[number])
+              format: validFormats.includes(ext as (typeof validFormats)[number])
                 ? (ext as 'mp4' | 'webm' | 'mkv' | 'ts' | 'avi')
                 : 'mp4',
             })
+            filesFound++
           } else if (file.type === 'pdf') {
             const relPath = file.url.replace(serverRoot + '/', '')
             allPdfs.push({
@@ -1360,8 +1366,18 @@ export async function scanCourseFolderFromServer(
               url: file.url,
               path: relPath,
             })
+            filesFound++
           }
         }
+
+        dirsScanned++
+        // Update progress: dirsScanned / approximate total (pending + scanned + current batch)
+        const total = pendingDirs.length + seen.size
+        progressStore.updateScanProgress(
+          courseId,
+          filesFound,
+          total > 0 ? total : null
+        )
       })
     )
 
@@ -1399,6 +1415,9 @@ export async function scanCourseFolderFromServer(
       pageCount: 0,
       serverUrl: p.url,
     }))
+
+  // Mark import as complete in progress store
+  progressStore.completeCourse(courseId)
 
   // Derive server path (relative path from server root to this course folder)
   const serverPath = decodeURIComponent(urlPath.replace(/^\//, '').replace(/\/$/, ''))
