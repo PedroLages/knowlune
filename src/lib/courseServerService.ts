@@ -112,6 +112,48 @@ function parseAutoindex(html: string, baseUrl: string): ServerFile[] {
     })
 }
 
+/**
+ * Validate a URL for use with the import system.
+ *
+ * Checks that the URL is a non-empty string, parseable via the URL constructor,
+ * has protocol http: or https:, and is not a bare IP-literal URL without a path
+ * segment (which would be an nginx root that isn't useful for course import).
+ *
+ * Returns a discriminated union so callers can render precise inline errors.
+ */
+export function isValidImportUrl(
+  url: string
+): { valid: true } | { valid: false; reason: string } {
+  if (!url.trim()) {
+    return { valid: false, reason: 'URL is empty' }
+  }
+
+  let parsed: URL
+  try {
+    parsed = new URL(url.trim())
+  } catch {
+    return { valid: false, reason: 'URL is not valid — check the address and try again' }
+  }
+
+  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+    return {
+      valid: false,
+      reason: `Unsupported protocol "${parsed.protocol.replace(':', '')}". Only http:// and https:// are supported.`,
+    }
+  }
+
+  // Reject bare IP-literal URLs without any path — they're server roots, not course folders
+  const pathname = parsed.pathname.replace(/\/+$/, '')
+  if (!pathname || pathname === '') {
+    return {
+      valid: false,
+      reason: 'URL must include a folder path — paste a specific folder URL, not just the server root.',
+    }
+  }
+
+  return { valid: true }
+}
+
 // ─── Public API ───────────────────────────────────────────────────────────────
 
 /**
@@ -133,11 +175,11 @@ export async function fetchDirectoryListing(url: string): Promise<ServerResult<D
     const response = await fetch(normalized, {
       signal: controller.signal,
       headers: { Accept: 'text/html' },
+      redirect: 'error',
     })
 
-    clearTimeout(timeout)
-
     if (!response.ok) {
+      clearTimeout(timeout)
       return {
         ok: false,
         error: `Server returned ${response.status} ${response.statusText}`,
@@ -146,6 +188,7 @@ export async function fetchDirectoryListing(url: string): Promise<ServerResult<D
     }
 
     const html = await response.text()
+    clearTimeout(timeout)
     const files = parseAutoindex(html, normalized + '/')
 
     return { ok: true, data: { url: normalized, files } }
@@ -187,6 +230,7 @@ export async function verifyConnection(
     const response = await fetch(normalized, {
       signal: controller.signal,
       headers,
+      redirect: 'error',
     })
 
     clearTimeout(timeout)

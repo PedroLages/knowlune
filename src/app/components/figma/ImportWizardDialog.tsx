@@ -42,6 +42,7 @@ import {
   Globe,
 } from 'lucide-react'
 import { scanCourseFolder, scanFromDroppedFiles, persistScannedCourse, scanCourseFolderFromServer } from '@/lib/courseImport'
+import { isValidImportUrl } from '@/lib/courseServerService'
 import { getVideoFormat } from '@/lib/fileSystem'
 import type { ScannedCourse, ScannedImage } from '@/lib/courseImport'
 import type { CourseManifest } from '@/lib/courseManifest'
@@ -101,7 +102,7 @@ function ScanProgressIndicator() {
       data-testid="wizard-scan-progress"
     >
       <div className="flex items-center gap-2 justify-center">
-        <Loader2 className="size-4 text-brand animate-spin shrink-0" aria-hidden="true" />
+        <Loader2 className="size-4 text-brand motion-safe:animate-spin shrink-0" aria-hidden="true" />
         <span className="text-sm font-medium truncate">{current.courseName}</span>
       </div>
       <Progress value={percent ?? 0} className="h-1.5" aria-label="Scan progress" />
@@ -557,9 +558,10 @@ export function ImportWizardDialog({
       toast.error('Please enter a folder URL')
       return
     }
-    // Basic validation — must start with http:// or https://
-    if (!/^https?:\/\//i.test(url)) {
-      toast.error('URL must start with http:// or https://')
+    // Validate URL before any network call — uses shared validator from courseServerService
+    const validation = isValidImportUrl(url)
+    if (!validation.valid) {
+      toast.error(validation.reason)
       return
     }
 
@@ -764,7 +766,10 @@ export function ImportWizardDialog({
                 ? 'Course Details'
                 : 'Learning Path'}
           </DialogTitle>
-          <DialogDescription id="import-wizard-description">
+          <DialogDescription
+            id="import-wizard-description"
+            aria-live="polite"
+          >
             {step === 'select'
               ? 'Select a folder containing your course videos and PDFs.'
               : step === 'details'
@@ -784,10 +789,9 @@ export function ImportWizardDialog({
           ]
 
           return (
-            <div
+            <nav
               className="flex items-center gap-2 text-xs text-muted-foreground"
               aria-label={`Step ${currentStep} of ${totalSteps}`}
-              role="status"
             >
               {steps.map((s, i) => (
                 <span key={s.num} className="contents">
@@ -800,6 +804,7 @@ export function ImportWizardDialog({
                           ? 'bg-brand-soft text-brand-soft-foreground'
                           : 'bg-muted text-muted-foreground'
                     }`}
+                    aria-current={currentStep === s.num ? 'step' : undefined}
                   >
                     {currentStep > s.num ? <Check className="size-3" aria-hidden="true" /> : s.num}
                   </span>
@@ -808,115 +813,139 @@ export function ImportWizardDialog({
                   </span>
                 </span>
               ))}
-            </div>
+            </nav>
           )
         })()}
 
         {step === 'select' && (
-          <div className="flex flex-col items-center gap-4 py-6">
-            <div className="flex items-center justify-center size-16 rounded-full bg-brand-soft">
-              <FolderOpen className="size-8 text-brand-soft-foreground" aria-hidden="true" />
-            </div>
-            <p className="text-sm text-muted-foreground text-center max-w-xs">
-              Choose a folder with your course materials. We'll scan it for videos and PDFs.
-            </p>
-            <Button
-              variant="brand"
-              onClick={handleSelectFolder}
-              disabled={isScanning}
-              data-testid="wizard-select-folder-btn"
-              className="rounded-xl"
-            >
-              {isScanning ? (
-                <>
-                  <Loader2 className="size-4 mr-2 animate-spin" />
-                  Scanning...
-                </>
-              ) : (
-                <>
-                  <FolderOpen className="size-4 mr-2" />
-                  Select Folder
-                </>
-              )}
-            </Button>
-            {isScanning && <ScanProgressIndicator />}
-            {!isScanning && (
+          <div className="flex flex-col gap-4 py-4">
+            {isScanning ? (
+              <div className="flex flex-col items-center py-8" data-testid="wizard-scanning-state">
+                <ScanProgressIndicator />
+              </div>
+            ) : (
               <>
-                <div className="relative w-full">
-                  <div className="absolute inset-0 flex items-center">
-                    <span className="w-full border-t border-border" />
-                  </div>
-                  <div className="relative flex justify-center text-xs uppercase">
-                    <span className="bg-background px-2 text-muted-foreground">or</span>
-                  </div>
-                </div>
-                <PremiumGate featureLabel="Google Drive import">
-                  <Button
-                    variant="outline"
-                    onClick={() => setDriveFolderBrowserOpen(true)}
-                    data-testid="wizard-drive-import-btn"
-                    className="rounded-xl w-full"
-                  >
-                    <ExternalLink className="size-4 mr-2" aria-hidden="true" />
-                    Import from Google Drive
-                  </Button>
-                </PremiumGate>
-                <div className="relative w-full">
-                  <div className="absolute inset-0 flex items-center">
-                    <span className="w-full border-t border-border" />
-                  </div>
-                  <div className="relative flex justify-center text-xs uppercase">
-                    <span className="bg-background px-2 text-muted-foreground">or</span>
-                  </div>
-                </div>
-                {/* From URL — paste a course server folder URL */}
-                {showServerUrlInput ? (
-                  <div className="w-full space-y-2 rounded-xl border border-border bg-surface-elevated p-3">
-                    <Input
-                      placeholder="https://academy.pedrolages.net/AI/Course/"
-                      value={serverUrlInput}
-                      onChange={e => setServerUrlInput(e.target.value)}
-                      autoFocus
-                      onKeyDown={e => {
-                        if (e.key === 'Enter') handleServerUrlImport()
-                        if (e.key === 'Escape') setShowServerUrlInput(false)
-                      }}
-                      className="min-h-[44px] font-mono text-sm"
-                    />
-                    <div className="flex gap-2">
-                      <Button
-                        variant="brand"
-                        size="sm"
-                        onClick={handleServerUrlImport}
-                        disabled={!serverUrlInput.trim() || isScanning}
-                        className="gap-1 min-h-[44px]"
-                      >
-                        {isScanning ? <Loader2 className="size-4 animate-spin" /> : <Globe className="size-4" />}
-                        Scan
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setShowServerUrlInput(false)}
-                        className="min-h-[44px]"
-                      >
-                        Cancel
-                      </Button>
-                    </div>
-                  </div>
-                ) : (
-                  <Button
-                    variant="outline"
-                    onClick={() => setShowServerUrlInput(true)}
-                    data-testid="wizard-server-url-btn"
-                    className="rounded-xl w-full"
+                <p className="text-sm text-muted-foreground text-center">
+                  Choose how you want to import your course materials.
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {/* Select Folder card */}
+                  <button
+                    type="button"
+                    onClick={handleSelectFolder}
                     disabled={isScanning}
+                    className="flex flex-col items-start gap-3 rounded-xl border border-border p-4 text-left transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring disabled:opacity-50"
+                    data-testid="wizard-select-folder-btn"
                   >
-                    <Globe className="size-4 mr-2" aria-hidden="true" />
-                    Import from URL
-                  </Button>
-                )}
-                <ImportDropZone onFilesDropped={handleFilesDropped} disabled={isScanning} />
+                    <div className="flex items-center justify-center size-12 rounded-full bg-brand-soft shrink-0 self-center">
+                      <FolderOpen className="size-6 text-brand-soft-foreground" aria-hidden="true" />
+                    </div>
+                    <div className="text-left">
+                      <p className="font-medium text-foreground">Select Folder</p>
+                      <p className="text-sm text-muted-foreground">
+                        Choose a folder with your course videos and PDFs
+                      </p>
+                    </div>
+                  </button>
+
+                  {/* Drag & Drop card */}
+                  <div className="flex flex-col items-start gap-3 rounded-xl border border-dashed border-border p-4">
+                    <div className="flex items-center justify-center size-12 rounded-full bg-brand-soft shrink-0 self-center">
+                      <FolderOpen className="size-6 text-brand-soft-foreground" aria-hidden="true" />
+                    </div>
+                    <div className="text-left">
+                      <p className="font-medium text-foreground">Drag & Drop</p>
+                      <p className="text-sm text-muted-foreground">
+                        Drop files here to import as a course
+                      </p>
+                    </div>
+                    <ImportDropZone onFilesDropped={handleFilesDropped} disabled={isScanning} />
+                  </div>
+
+                  {/* Import from URL card */}
+                  {showServerUrlInput ? (
+                    <div className="sm:col-span-2 space-y-3 rounded-xl border border-border bg-surface-elevated p-4">
+                      <Label htmlFor="wizard-server-url-input">Server URL</Label>
+                      <Input
+                        id="wizard-server-url-input"
+                        placeholder="https://example.com/AI/Course/"
+                        value={serverUrlInput}
+                        onChange={e => setServerUrlInput(e.target.value)}
+                        autoFocus
+                        onKeyDown={e => {
+                          if (e.key === 'Enter') handleServerUrlImport()
+                          if (e.key === 'Escape') setShowServerUrlInput(false)
+                        }}
+                        className="min-h-[44px] font-mono text-sm"
+                      />
+                      <div className="flex gap-2">
+                        <Button
+                          variant="brand"
+                          size="sm"
+                          onClick={handleServerUrlImport}
+                          disabled={!serverUrlInput.trim() || isScanning}
+                          className="gap-1 min-h-[44px] rounded-xl"
+                          data-testid="wizard-server-scan-btn"
+                        >
+                          {isScanning ? (
+                            <Loader2 className="size-4 motion-safe:animate-spin" />
+                          ) : (
+                            <Globe className="size-4" />
+                          )}
+                          Scan
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setShowServerUrlInput(false)}
+                          className="min-h-[44px] rounded-xl"
+                          data-testid="wizard-server-cancel-btn"
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setShowServerUrlInput(true)}
+                      disabled={isScanning}
+                      className="flex flex-col items-start gap-3 rounded-xl border border-border p-4 text-left transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring disabled:opacity-50"
+                      data-testid="wizard-server-url-btn"
+                    >
+                      <div className="flex items-center justify-center size-12 rounded-full bg-brand-soft shrink-0 self-center">
+                        <Globe className="size-6 text-brand-soft-foreground" aria-hidden="true" />
+                      </div>
+                      <div className="text-left">
+                        <p className="font-medium text-foreground">Import from URL</p>
+                        <p className="text-sm text-muted-foreground">
+                          Paste a course server URL to import
+                        </p>
+                      </div>
+                    </button>
+                  )}
+
+                  {/* Google Drive card */}
+                  <PremiumGate featureLabel="Google Drive import">
+                    <button
+                      type="button"
+                      onClick={() => setDriveFolderBrowserOpen(true)}
+                      disabled={isScanning}
+                      className="flex flex-col items-start gap-3 rounded-xl border border-border p-4 text-left transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring disabled:opacity-50 w-full"
+                      data-testid="wizard-drive-import-btn"
+                    >
+                      <div className="flex items-center justify-center size-12 rounded-full bg-brand-soft shrink-0 self-center">
+                        <ExternalLink className="size-6 text-brand-soft-foreground" aria-hidden="true" />
+                      </div>
+                      <div className="text-left">
+                        <p className="font-medium text-foreground">Google Drive</p>
+                        <p className="text-sm text-muted-foreground">
+                          Import from Google Drive folders
+                        </p>
+                      </div>
+                    </button>
+                  </PremiumGate>
+                </div>
               </>
             )}
           </div>
@@ -969,7 +998,7 @@ export function ImportWizardDialog({
                   aria-live="polite"
                 >
                   <Loader2
-                    className="size-4 animate-spin text-brand-soft-foreground"
+                    className="size-4 motion-safe:animate-spin text-brand-soft-foreground"
                     aria-hidden="true"
                   />
                   <span className="text-xs text-brand-soft-foreground">
@@ -1293,7 +1322,7 @@ export function ImportWizardDialog({
                   aria-live="polite"
                 >
                   <Loader2
-                    className="size-4 animate-spin text-brand-soft-foreground"
+                    className="size-4 motion-safe:animate-spin text-brand-soft-foreground"
                     aria-hidden="true"
                   />
                   <span className="text-xs text-brand-soft-foreground">
@@ -1482,7 +1511,7 @@ export function ImportWizardDialog({
               >
                 {isPersisting ? (
                   <>
-                    <Loader2 className="size-4 mr-2 animate-spin" />
+                    <Loader2 className="size-4 mr-2 motion-safe:animate-spin" />
                     Importing...
                   </>
                 ) : (
@@ -1529,7 +1558,7 @@ export function ImportWizardDialog({
             >
               {isPersisting ? (
                 <>
-                  <Loader2 className="size-4 mr-2 animate-spin" />
+                  <Loader2 className="size-4 mr-2 motion-safe:animate-spin" />
                   Importing...
                 </>
               ) : (

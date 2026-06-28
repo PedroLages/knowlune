@@ -16,7 +16,8 @@ import {
   detectAuthorPhoto,
 } from '@/lib/authorDetection'
 import { autoGenerateThumbnail } from '@/lib/autoThumbnail'
-import { fetchDirectoryListing } from '@/lib/courseServerService'
+import { fetchDirectoryListing, isValidImportUrl } from '@/lib/courseServerService'
+import type { ServerResult } from '@/lib/courseServerService'
 import { generateStoryboard, saveVideoStoryboard, loadVideoStoryboard } from '@/lib/videoStoryboard'
 import { loadThumbnailFromFile, saveCourseThumbnail } from '@/lib/thumbnailService'
 import {
@@ -1002,6 +1003,47 @@ export async function scanCourseFolderFromHandle(
 }
 
 /**
+ * Scans a course folder from the appropriate source (server URL or local handle).
+ *
+ * Encapsulates the branching logic that decides between server-sourced and
+ * local-file-system imports. Used by `BulkImportDialog` to avoid duplicating
+ * the source-selection pattern across its scan loop and rescan handler.
+ *
+ * @returns A `BulkScanResult` preserving all statuses (`'success'`, `'error'`,
+ *          `'no-files'`, `'duplicate'`). Server-URL scans produce `'success'`
+ *          or `'error'`; handle scans pass through `scanCourseFolderFromHandle`'s
+ *          full result shape.
+ */
+export async function scanCourseFromSource(
+  source: { serverUrl?: string; handle: FileSystemDirectoryHandle | null; folderName: string }
+): Promise<BulkScanResult> {
+  if (source.serverUrl) {
+    try {
+      // Check for duplicate by folder name before scanning (same as local handle path)
+      const existingCourse = await db.importedCourses.where('name').equals(source.folderName).first()
+      if (existingCourse) {
+        return { status: 'duplicate', folderName: source.folderName }
+      }
+
+      const scannedCourse = await scanCourseFolderFromServer(source.serverUrl)
+      return { status: 'success', course: scannedCourse }
+    } catch (error) {
+      return {
+        status: 'error',
+        folderName: source.folderName,
+        message: error instanceof Error ? error.message : 'Failed to scan server folder',
+      }
+    }
+  } else if (source.handle) {
+    // Pass through the full result from scanCourseFolderFromHandle,
+    // which may include 'no-files' or 'duplicate' statuses.
+    return await scanCourseFolderFromHandle(source.handle)
+  } else {
+    return { status: 'error', folderName: source.folderName, message: 'No source available' }
+  }
+}
+
+/**
  * Enumerates immediate sub-directories of a parent directory.
  * Used by bulk import to discover course folders.
  */
@@ -1018,6 +1060,39 @@ export async function listSubDirectories(
   // order (e.g. BulkImportDialog when a track-manifest.json defines positions)
   // are responsible for sorting themselves.
   return dirs
+}
+
+/**
+ * Enumerates immediate sub-directories of a remote server URL using nginx
+ * autoindex directory listings.
+ *
+ * Validates the URL, fetches the directory listing, and returns only directory
+ * entries. Errors are surfaced as `ServerResult` with user-friendly messages.
+ *
+ * @param url - Full URL to a directory on an nginx server
+ * @returns Array of sub-directory names and their full URLs
+ */
+export async function listServerSubDirectories(
+  url: string
+): Promise<ServerResult<{ name: string; url: string }[]>> {
+  // Validate URL first — catches empty strings, bad protocols, bare IP roots
+  const validation = isValidImportUrl(url)
+  if (!validation.valid) {
+    return { ok: false, error: validation.reason }
+  }
+
+  // Fetch the directory listing
+  const result = await fetchDirectoryListing(url)
+  if (!result.ok) {
+    return result // passthrough error (network, timeout, non-200, parse failure)
+  }
+
+  // Filter for directory entries only
+  const directories = result.data.files
+    .filter(f => f.type === 'directory')
+    .map(f => ({ name: f.name.replace(/\/$/, ''), url: f.url }))
+
+  return { ok: true, data: directories }
 }
 
 // --- Drag-and-Drop File Import (E33-S06) ---

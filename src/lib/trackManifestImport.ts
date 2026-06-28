@@ -77,6 +77,80 @@ export async function readTrackManifest(
 }
 
 /**
+ * Fetches and parses a track-manifest.json from a remote server URL.
+ *
+ * Used by the URL batch import flow to optionally sort discovered sub-directories
+ * by manifest-defined position. Returns the same result shape as readTrackManifest
+ * so callers can use either source interchangeably.
+ */
+export async function fetchTrackManifestFromUrl(
+  parentUrl: string
+): Promise<
+  | { ok: true; summary: TrackManifestSummary; manifest: TrackManifest }
+  | { ok: false; error: string }
+> {
+  const FETCH_TIMEOUT_MS = 10_000
+
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS)
+
+  try {
+    const manifestUrl = new URL('track-manifest.json', parentUrl.endsWith('/') ? parentUrl : parentUrl + '/').href
+
+    const response = await fetch(manifestUrl, {
+      signal: controller.signal,
+      headers: { Accept: 'application/json' },
+      redirect: 'error',
+    })
+
+    if (response.status === 404) {
+      clearTimeout(timeout)
+      return { ok: false, error: 'Not found' }
+    }
+
+    if (!response.ok) {
+      clearTimeout(timeout)
+      return { ok: false, error: `Server returned ${response.status}` }
+    }
+
+    // Keep timeout active during body read to guard against slow streaming
+    const json = await response.json()
+    clearTimeout(timeout)
+
+    const result = parseTrackManifest(json)
+
+    if (!result.ok) {
+      const messages = result.errors.map(e => `${e.path}: ${e.message}`).join('; ')
+      return { ok: false, error: `Invalid track-manifest.json: ${messages}` }
+    }
+
+    const manifest = result.value
+    return {
+      ok: true,
+      manifest,
+      summary: {
+        trackName: manifest.track.name,
+        trackDescription: manifest.track.description,
+        trackAuthor: manifest.track.author,
+        courseFolders: manifest.track.courses.map(c => c.folder),
+      },
+    }
+  } catch (err) {
+    clearTimeout(timeout)
+    if (err instanceof DOMException && err.name === 'AbortError') {
+      return { ok: false, error: 'Request timed out' }
+    }
+    if (err instanceof SyntaxError) {
+      return { ok: false, error: 'track-manifest.json is not valid JSON.' }
+    }
+    return {
+      ok: false,
+      error: `Failed to fetch track-manifest.json: ${err instanceof Error ? err.message : 'Unknown error'}`,
+    }
+  }
+}
+
+/**
  * Executes a batch import of all courses listed in a track manifest.
  *
  * Iterates sequentially over each course folder listed in the manifest,
@@ -88,13 +162,34 @@ export async function readTrackManifest(
  */
 export async function batchImportTrackCourses(
   parentDirHandle: FileSystemDirectoryHandle,
-  manifest: TrackManifest
+  manifest: TrackManifest,
+  signal?: AbortSignal
 ): Promise<BatchImportResult> {
+  if (signal?.aborted) {
+    return {
+      trackId: undefined,
+      trackName: manifest.track.name,
+      courses: [],
+      successCount: 0,
+      failureCount: 0,
+    }
+  }
+
   const results: CourseImportResult[] = []
   const positions = manifest.track.courses
 
   // Phase 1: Import each course sequentially
   for (const { folder } of positions) {
+    if (signal?.aborted) {
+      const partialSuccessCount = results.filter(r => r.success).length
+      const partialFailureCount = results.length - partialSuccessCount
+      return {
+        trackName: manifest.track.name,
+        courses: results,
+        successCount: partialSuccessCount,
+        failureCount: partialFailureCount,
+      }
+    }
     try {
       // Get the subdirectory handle
       let dirHandle: FileSystemDirectoryHandle
