@@ -818,7 +818,7 @@ export function BulkImportDialog({
 
         {/* Step: Choose import mode */}
         {step === 'choose' && (
-          <div className="flex flex-col gap-3 py-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 py-4">
             <button
               type="button"
               onClick={handleSingleImport}
