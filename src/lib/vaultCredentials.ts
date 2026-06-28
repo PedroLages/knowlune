@@ -15,7 +15,7 @@
 import { supabase } from '@/lib/auth/supabase'
 
 /** Supported credential types that can be stored in Vault. */
-export type CredentialType = 'ai-provider' | 'opds-catalog' | 'abs-server'
+export type CredentialType = 'ai-provider' | 'opds-catalog' | 'abs-server' | 'cs-server'
 
 const FUNCTION_NAME = 'vault-credentials'
 

@@ -346,6 +346,7 @@ export function BulkImportDialog({
         const urls = new Map<string, string>()
         for (const img of scanResult.course.images.slice(0, 8)) {
           try {
+            if (!img.fileHandle) continue
             const file = await img.fileHandle.getFile()
             urls.set(img.path, URL.createObjectURL(file))
           } catch {
@@ -398,11 +399,13 @@ export function BulkImportDialog({
 
   // Select cover image for a course
   const handleSelectCover = useCallback(
-    (courseId: string, image: { path: string; fileHandle: FileSystemFileHandle }) => {
+    (courseId: string, image: { path: string; fileHandle?: FileSystemFileHandle }) => {
       setCourseOverrides(prev => {
         const next = new Map(prev)
         const existing = next.get(courseId) ?? {}
-        next.set(courseId, { ...existing, coverImageHandle: image.fileHandle })
+        if (image.fileHandle) {
+          next.set(courseId, { ...existing, coverImageHandle: image.fileHandle })
+        }
         return next
       })
     },
@@ -455,7 +458,7 @@ export function BulkImportDialog({
     // No manifest — per-course persist loop (existing behavior, unchanged)
     const items: ImportItem[] = courses.map(c => ({
       folderName: c.name,
-      handle: c.directoryHandle,
+      handle: c.directoryHandle ?? (null as unknown as FileSystemDirectoryHandle),
       status: 'pending' as const,
       scannedCourse: c,
       videoCount: c.videos.length,

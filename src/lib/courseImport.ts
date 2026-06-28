@@ -16,6 +16,7 @@ import {
   detectAuthorPhoto,
 } from '@/lib/authorDetection'
 import { autoGenerateThumbnail } from '@/lib/autoThumbnail'
+import { fetchDirectoryListing } from '@/lib/courseServerService'
 import { generateStoryboard, saveVideoStoryboard, loadVideoStoryboard } from '@/lib/videoStoryboard'
 import { loadThumbnailFromFile, saveCourseThumbnail } from '@/lib/thumbnailService'
 import {
@@ -61,10 +62,12 @@ export interface ScannedVideo {
   duration: number
   format: ImportedVideo['format']
   order: number
-  fileHandle: FileSystemFileHandle
+  fileHandle?: FileSystemFileHandle // absent for server-imported files
   fileSize: number // File size in bytes (E1B-S02)
   width: number // Video width in pixels (E1B-S02)
   height: number // Video height in pixels (E1B-S02)
+  /** Full HTTP URL when imported from a course server (E133-S01). */
+  serverUrl?: string
 }
 
 /** A PDF discovered during folder scan, before persistence. */
@@ -73,14 +76,16 @@ export interface ScannedPdf {
   filename: string
   path: string
   pageCount: number
-  fileHandle: FileSystemFileHandle
+  fileHandle?: FileSystemFileHandle // absent for server-imported files
+  /** Full HTTP URL when imported from a course server (E133-S01). */
+  serverUrl?: string
 }
 
 /** An image discovered during folder scan, candidate for cover image. */
 export interface ScannedImage {
   filename: string
   path: string
-  fileHandle: FileSystemFileHandle
+  fileHandle?: FileSystemFileHandle // absent for server-imported files
 }
 
 type VideoExtractionResult = {
@@ -121,8 +126,8 @@ export interface ScannedCourse {
   name: string
   /** ISO 8601 timestamp of when the scan occurred. */
   scannedAt: string
-  /** The directory handle for future file access. */
-  directoryHandle: FileSystemDirectoryHandle
+  /** The directory handle for future file access (absent for server imports). */
+  directoryHandle: FileSystemDirectoryHandle | null
   /** Discovered video files with extracted metadata. */
   videos: ScannedVideo[]
   /** Discovered PDF files with extracted metadata. */
@@ -131,6 +136,12 @@ export interface ScannedCourse {
   images: ScannedImage[]
   /** Parsed course-manifest.json data, if present and valid. */
   manifestData?: CourseManifest
+  /** Course source type (E133-S01). */
+  source?: 'local' | 'server'
+  /** FK to CourseServer.id when source is 'server' (E133-S01). */
+  serverId?: string
+  /** Relative path from server root to this course folder (E133-S01). */
+  serverPath?: string
 }
 
 // --- Scan Phase ---
@@ -562,10 +573,11 @@ export async function persistScannedCourse(
     duration: v.duration,
     format: v.format,
     order: v.order,
-    fileHandle: v.fileHandle,
+    fileHandle: v.fileHandle ?? null,
     fileSize: v.fileSize,
     width: v.width,
     height: v.height,
+    ...(v.serverUrl ? { serverUrl: v.serverUrl } : {}),
   }))
 
   // Apply manifest lesson mapping (title, moduleTitle, order) when a manifest is present
@@ -582,7 +594,8 @@ export async function persistScannedCourse(
     filename: p.filename,
     path: p.path,
     pageCount: p.pageCount,
-    fileHandle: p.fileHandle,
+    fileHandle: p.fileHandle ?? null,
+    ...(p.serverUrl ? { serverUrl: p.serverUrl } : {}),
   }))
 
   // Author detection: use explicit override (authorId or authorName from manifest),
@@ -640,6 +653,10 @@ export async function persistScannedCourse(
     totalDuration: totalDuration > 0 ? totalDuration : undefined,
     totalFileSize: totalFileSize > 0 ? totalFileSize : undefined,
     maxResolutionHeight: maxResolutionHeight > 0 ? maxResolutionHeight : undefined,
+    // Server import fields (E133-S01)
+    ...(scanned.source ? { source: scanned.source } : {}),
+    ...(scanned.serverId ? { serverId: scanned.serverId } : {}),
+    ...(scanned.serverPath ? { serverPath: scanned.serverPath } : {}),
   }
 
   // Track persist progress so the UI can show per-file progress during the
@@ -1247,4 +1264,155 @@ export async function importCourseFromDrive(
   }
 
   return course
+}
+
+// ─── Server Import (E133-S01) ──────────────────────────────────────────────────
+
+/**
+ * Maximum number of concurrent directory listing requests during recursive scan.
+ * nginx serves autoindex pages fast — 10 concurrent keeps import snappy without
+ * hammering the server.
+ */
+const MAX_CONCURRENT_DIR_SCANS = 10
+
+/**
+ * Recursively scan a course folder on a remote HTTP server using nginx
+ * autoindex directory listings. No File System Access API handles needed —
+ * all files are referenced by their HTTP URL.
+ *
+ * The plan skips video metadata extraction (duration, resolution) during
+ * import because loading 50+ video files over HTTP is too slow. Videos get
+ * `duration: 0` initially; the real duration is reported by the `<video>`
+ * element at playback time and updated asynchronously.
+ *
+ * @param folderUrl — Full URL to the course folder (e.g. "http://192.168.2.200:8099/AI/Course/")
+ * @param serverId — Optional FK to CourseServer.id for settings integration
+ * @returns A ScannedCourse ready for the wizard's details step
+ */
+export async function scanCourseFolderFromServer(
+  folderUrl: string,
+  serverId?: string
+): Promise<ScannedCourse> {
+  const progressStore = useImportProgressStore.getState()
+  const courseId = crypto.randomUUID()
+
+  // Extract course name from URL path (last segment before trailing /)
+  const urlPath = new URL(folderUrl).pathname
+  const segments = urlPath.split('/').filter(Boolean)
+  const courseName = decodeURIComponent(segments[segments.length - 1] || 'Imported Course')
+
+  // Derive the server root URL for building serverPath
+  // The server root is the base of the course content (e.g., "http://192.168.2.200:8099")
+  // We derive it by removing the path portion after the host
+  const parsedUrl = new URL(folderUrl)
+  const serverRoot = `${parsedUrl.protocol}//${parsedUrl.host}`
+
+  progressStore.startImport(courseId, courseName)
+
+  // Recursively collect all files
+  const allVideos: {
+    name: string
+    url: string
+    path: string
+    format: 'mp4' | 'webm' | 'mkv' | 'ts' | 'avi'
+  }[] = []
+  const allPdfs: { name: string; url: string; path: string }[] = []
+
+  // Breadth-first traversal with concurrency limit
+  const pendingDirs: string[] = [folderUrl]
+  const seen = new Set<string>()
+
+  while (pendingDirs.length > 0) {
+    // Take up to MAX_CONCURRENT_DIR_SCANS directories
+    const batch = pendingDirs.splice(0, MAX_CONCURRENT_DIR_SCANS)
+
+    const results = await Promise.allSettled(
+      batch.map(async dirUrl => {
+        if (seen.has(dirUrl)) return
+        seen.add(dirUrl)
+
+        const result = await fetchDirectoryListing(dirUrl)
+        if (!result.ok) {
+          console.warn(`[scanServer] Failed to list ${dirUrl}: ${result.error}`)
+          return
+        }
+
+        for (const file of result.data.files) {
+          if (file.type === 'directory') {
+            pendingDirs.push(file.url)
+          } else if (file.type === 'video') {
+            const relPath = file.url.replace(serverRoot + '/', '')
+            // Determine format from extension
+            const ext = file.name.split('.').pop()?.toLowerCase() ?? 'mp4'
+            const validFormats = ['mp4', 'webm', 'mkv', 'ts', 'avi'] as const
+            allVideos.push({
+              name: file.name,
+              url: file.url,
+              path: relPath,
+              format: validFormats.includes(ext as typeof validFormats[number])
+                ? (ext as 'mp4' | 'webm' | 'mkv' | 'ts' | 'avi')
+                : 'mp4',
+            })
+          } else if (file.type === 'pdf') {
+            const relPath = file.url.replace(serverRoot + '/', '')
+            allPdfs.push({
+              name: file.name,
+              url: file.url,
+              path: relPath,
+            })
+          }
+        }
+      })
+    )
+
+    // Log any unexpected failures during concurrent scans
+    for (const r of results) {
+      if (r.status === 'rejected') {
+        console.warn('[scanServer] Directory scan rejected:', r.reason)
+      }
+    }
+  }
+
+  // Build ScannedVideo[] — no fileHandle, duration=0 (lazy at playback)
+  const videos: ScannedVideo[] = allVideos
+    .sort((a, b) => a.path.localeCompare(b.path, undefined, { numeric: true }))
+    .map((v, index) => ({
+      id: crypto.randomUUID(),
+      filename: v.name,
+      path: v.path,
+      duration: 0, // Deferred to playback (plan: skip metadata extraction for speed)
+      format: v.format as ScannedVideo['format'],
+      order: index + 1,
+      fileSize: 0,
+      width: 0,
+      height: 0,
+      serverUrl: v.url,
+    }))
+
+  // Build ScannedPdf[] — no fileHandle, pageCount=0 (lazy or Range-read later)
+  const pdfs: ScannedPdf[] = allPdfs
+    .sort((a, b) => a.path.localeCompare(b.path, undefined, { numeric: true }))
+    .map(p => ({
+      id: crypto.randomUUID(),
+      filename: p.name,
+      path: p.path,
+      pageCount: 0,
+      serverUrl: p.url,
+    }))
+
+  // Derive server path (relative path from server root to this course folder)
+  const serverPath = decodeURIComponent(urlPath.replace(/^\//, '').replace(/\/$/, ''))
+
+  return {
+    id: courseId,
+    name: courseName,
+    scannedAt: new Date().toISOString(),
+    directoryHandle: null,
+    videos,
+    pdfs,
+    images: [],
+    source: 'server',
+    ...(serverId ? { serverId } : {}),
+    serverPath,
+  }
 }

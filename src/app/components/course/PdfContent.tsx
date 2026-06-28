@@ -72,8 +72,16 @@ export function PdfContent({ courseId, lessonId }: PdfContentProps) {
     return loadPdf()
   }, [loadPdf])
 
-  // Resolve blob URL from FileSystemFileHandle
+  // Resolve blob URL from FileSystemFileHandle, or use server URL directly (E133-S01)
   useEffect(() => {
+    // Server-sourced PDFs use the server URL directly — no blob conversion needed
+    if (pdf?.serverUrl) {
+      setBlobUrl(pdf.serverUrl)
+      setBlobLoading(false)
+      setFileError(null)
+      return
+    }
+
     if (!pdf?.fileHandle) return
 
     let ignore = false

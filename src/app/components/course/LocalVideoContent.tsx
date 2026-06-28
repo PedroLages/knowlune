@@ -177,6 +177,15 @@ export const LocalVideoContent = forwardRef<VideoPlayerHandle, LocalVideoContent
 
     const blobUrl = isDriveSource ? driveBlobUrl : localBlobUrl
     const error = isDriveSource ? driveError : localError
+
+    // ── Server source resolution (E133-S01) ──────────────────────────
+    // Server-sourced videos use the server URL directly as <video src>.
+    // On network error, fall back to fileHandle blob URL if available.
+    const isServerSource = !!video?.serverUrl
+    const [serverError, setServerError] = useState(false)
+    const effectiveSrc = isServerSource && !serverError
+      ? (video?.serverUrl ?? null)
+      : blobUrl
     const loading = isDriveSource ? driveLoading : localLoading
 
     // F008: Clear recovery overlay once blob URL loading completes (URL arrived or error).
@@ -410,6 +419,12 @@ export const LocalVideoContent = forwardRef<VideoPlayerHandle, LocalVideoContent
     // stale/zero. The last-known-good position from timeupdate events
     // always reflects the true playback position.
     const handleRecoveryNeeded = useCallback((currentTime: number) => {
+      // E133-S01: If we're using a server URL and it failed, fall back to local file handle.
+      if (isServerSource && !serverError && video?.fileHandle) {
+        setServerError(true)
+        return
+      }
+
       // Prefer the last known-good position over the error-time position,
       // since the browser may reset currentTime during decode errors.
       const lastGood = lastKnownTimeRef.current
@@ -683,7 +698,7 @@ export const LocalVideoContent = forwardRef<VideoPlayerHandle, LocalVideoContent
     }
 
     // Video playback
-    if (!blobUrl) {
+    if (!effectiveSrc) {
       // F008: During recovery, render the spinner here so it persists across
       // VideoPlayer mount/unmount while the new blob URL is being generated.
       if (showRecoveryOverlay) {
@@ -787,7 +802,7 @@ export const LocalVideoContent = forwardRef<VideoPlayerHandle, LocalVideoContent
         {showVideoPlayer && (
           <VideoPlayer
             ref={ref}
-            src={blobUrl}
+            src={effectiveSrc!}
             title={video.filename}
             initialPosition={
               autoplay ? undefined : (recoveryPositionRef.current ?? resolvedInitialPosition)

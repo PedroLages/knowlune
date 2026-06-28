@@ -17,7 +17,7 @@
 import type { CredentialType } from '@/lib/vaultCredentials'
 
 /** ABS apiKey and OPDS password share this cache. `ai-provider` is untouched. */
-export type CachedCredentialKind = Extract<CredentialType, 'abs-server' | 'opds-catalog'>
+export type CachedCredentialKind = Extract<CredentialType, 'abs-server' | 'opds-catalog' | 'cs-server'>
 
 /** 5 minutes — only applied to negative (null) cache entries. */
 const NULL_TTL_MS = 5 * 60 * 1000

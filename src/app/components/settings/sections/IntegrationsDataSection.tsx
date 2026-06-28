@@ -32,6 +32,7 @@ import { AIConfigurationSettings } from '@/app/components/figma/AIConfigurationS
 import { YouTubeConfigurationSettings } from '@/app/components/figma/YouTubeConfigurationSettings'
 import { WhisperSettings } from '@/app/components/settings/WhisperSettings'
 import { DriveConfigurationSettings } from '@/app/components/settings/DriveConfigurationSettings'
+import { CourseServerSettings } from '@/app/components/settings/CourseServerSettings'
 import { DataRetentionSettings } from '@/app/components/settings/DataRetentionSettings'
 import { StorageManagement } from '@/app/components/settings/StorageManagement'
 import { DataAndBackupPanel } from '@/app/components/settings/DataAndBackupPanel'
@@ -79,6 +80,9 @@ export function IntegrationsDataSection() {
 
       {/* Google Drive Configuration */}
       <DriveConfigurationSettings />
+
+      {/* Course Content Server Configuration */}
+      <CourseServerSettings />
 
       {/* Data Management */}
       <Card id="data-management">
