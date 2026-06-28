@@ -175,11 +175,11 @@ export async function fetchDirectoryListing(url: string): Promise<ServerResult<D
     const response = await fetch(normalized, {
       signal: controller.signal,
       headers: { Accept: 'text/html' },
+      redirect: 'error',
     })
 
-    clearTimeout(timeout)
-
     if (!response.ok) {
+      clearTimeout(timeout)
       return {
         ok: false,
         error: `Server returned ${response.status} ${response.statusText}`,
@@ -188,6 +188,7 @@ export async function fetchDirectoryListing(url: string): Promise<ServerResult<D
     }
 
     const html = await response.text()
+    clearTimeout(timeout)
     const files = parseAutoindex(html, normalized + '/')
 
     return { ok: true, data: { url: normalized, files } }
@@ -229,6 +230,7 @@ export async function verifyConnection(
     const response = await fetch(normalized, {
       signal: controller.signal,
       headers,
+      redirect: 'error',
     })
 
     clearTimeout(timeout)
