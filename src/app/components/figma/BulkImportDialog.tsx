@@ -52,9 +52,10 @@ import { toast } from 'sonner'
 // --- Types ---
 
 interface FolderEntry {
-  handle: FileSystemDirectoryHandle
+  handle: FileSystemDirectoryHandle | null
   name: string
   selected: boolean
+  serverUrl?: string
 }
 
 type ImportItemStatus =
@@ -68,12 +69,13 @@ type ImportItemStatus =
 
 interface ImportItem {
   folderName: string
-  handle: FileSystemDirectoryHandle
+  handle: FileSystemDirectoryHandle | null
   status: ImportItemStatus
   error?: string
   scannedCourse?: ScannedCourse
   videoCount?: number
   pdfCount?: number
+  serverUrl?: string
 }
 
 type DialogStep = 'choose' | 'enter-url' | 'select-folders' | 'scanning' | 'review' | 'importing' | 'results'
@@ -352,6 +354,7 @@ export function BulkImportDialog({
       folderName: f.name,
       handle: f.handle,
       status: 'pending' as const,
+      serverUrl: f.serverUrl,
     }))
     setImportItems(scanItems)
 
@@ -370,7 +373,30 @@ export function BulkImportDialog({
       if (abortRef.current) return
       updateItem(item.folderName, { status: 'scanning' })
 
-      const scanResult: BulkScanResult = await scanCourseFolderFromHandle(item.handle)
+      let scanResult: BulkScanResult
+
+      if (item.serverUrl) {
+        // Server-sourced item — scan via HTTP
+        try {
+          const scannedCourse = await scanCourseFolderFromServer(item.serverUrl)
+          if (abortRef.current) {
+            updateItem(item.folderName, { status: 'error', error: 'Cancelled' })
+            return
+          }
+          scanResult = { status: 'success', course: scannedCourse }
+        } catch (error) {
+          scanResult = {
+            status: 'error',
+            folderName: item.folderName,
+            message: error instanceof Error ? error.message : 'Failed to scan server folder',
+          }
+        }
+      } else if (item.handle) {
+        // Local folder — scan via FileSystemDirectoryHandle
+        scanResult = await scanCourseFolderFromHandle(item.handle)
+      } else {
+        scanResult = { status: 'error', folderName: item.folderName, message: 'No source available' }
+      }
 
       if (abortRef.current) {
         updateItem(item.folderName, { status: 'error', error: 'Cancelled' })
@@ -489,7 +515,7 @@ export function BulkImportDialog({
         // Convert batch result to ImportItem[] for the results display
         const items: ImportItem[] = result.courses.map(c => ({
           folderName: c.folder,
-          handle: null as unknown as FileSystemDirectoryHandle,
+          handle: null,
           status: c.success ? ('success' as const) : ('error' as const),
           error: c.error,
         }))
@@ -515,7 +541,7 @@ export function BulkImportDialog({
     // No manifest — per-course persist loop (existing behavior, unchanged)
     const items: ImportItem[] = courses.map(c => ({
       folderName: c.name,
-      handle: c.directoryHandle ?? (null as unknown as FileSystemDirectoryHandle),
+      handle: c.directoryHandle ?? null,
       status: 'pending' as const,
       scannedCourse: c,
       videoCount: c.videos.length,
@@ -634,7 +660,24 @@ export function BulkImportDialog({
       const item = importItems.find(i => i.folderName === folderName)
       if (!item) return
 
-      const scanResult = await scanCourseFolderFromHandle(item.handle)
+      // Branch scan by source type (server vs local)
+      let scanResult: BulkScanResult
+      if (item.serverUrl) {
+        try {
+          const scannedCourse = await scanCourseFolderFromServer(item.serverUrl)
+          scanResult = { status: 'success', course: scannedCourse }
+        } catch (error) {
+          scanResult = {
+            status: 'error',
+            folderName: item.folderName,
+            message: error instanceof Error ? error.message : 'Failed to scan server folder',
+          }
+        }
+      } else if (item.handle) {
+        scanResult = await scanCourseFolderFromHandle(item.handle)
+      } else {
+        scanResult = { status: 'error', folderName: item.folderName, message: 'No source available' }
+      }
 
       if (scanResult.status !== 'success') {
         setImportItems(prev =>
