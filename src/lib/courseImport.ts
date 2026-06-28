@@ -1019,6 +1019,12 @@ export async function scanCourseFromSource(
 ): Promise<BulkScanResult> {
   if (source.serverUrl) {
     try {
+      // Check for duplicate by folder name before scanning (same as local handle path)
+      const existingCourse = await db.importedCourses.where('name').equals(source.folderName).first()
+      if (existingCourse) {
+        return { status: 'duplicate', folderName: source.folderName }
+      }
+
       const scannedCourse = await scanCourseFolderFromServer(source.serverUrl)
       return { status: 'success', course: scannedCourse }
     } catch (error) {
