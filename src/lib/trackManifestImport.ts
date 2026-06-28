@@ -256,33 +256,40 @@ export async function batchImportTrackCourses(
         bio: trackAuthor.bio,
       }, { useSyncableWrite: true })
       if (authorId) {
-        // Update the author with additional manifest-provided fields
-        const existingAuthor = await db.authors.get(authorId)
-        if (existingAuthor) {
-          const courseIds = results.filter(r => r.success && r.courseId).map(r => r.courseId!)
-          const allCourseIds = [...new Set([...existingAuthor.courseIds, ...courseIds])]
-          const updates: Partial<ImportedAuthor> = {
-            courseIds: allCourseIds,
-            updatedAt: new Date().toISOString(),
-          }
-          if (trackAuthor.shortBio) updates.shortBio = trackAuthor.shortBio
-          if (trackAuthor.avatar) updates.photoUrl = trackAuthor.avatar
-          if (trackAuthor.specialties) updates.specialties = trackAuthor.specialties
-          if (trackAuthor.yearsExperience) updates.yearsExperience = trackAuthor.yearsExperience
-          if (trackAuthor.education) updates.education = trackAuthor.education
-          if (trackAuthor.website || trackAuthor.linkedin || trackAuthor.twitter) {
-            updates.socialLinks = {
-              website: trackAuthor.website,
-              linkedin: trackAuthor.linkedin,
-              twitter: trackAuthor.twitter,
+        // Atomic merge: read author, compute updates, and write inside a single
+        // Dexie read-write transaction so the course-IDs append is safe against
+        // concurrent modifications from other tabs or workers.  The transaction
+        // spec includes 'syncQueue' because syncableWrite writes to both the
+        // target table and the queue table internally; Dexie binds its inner
+        // operations to this outer transaction automatically.
+        await db.transaction('rw', ['authors', 'syncQueue'] as const, async () => {
+          const existingAuthor = await db.authors.get(authorId)
+          if (existingAuthor) {
+            const courseIds = results.filter(r => r.success && r.courseId).map(r => r.courseId!)
+            const allCourseIds = [...new Set([...existingAuthor.courseIds, ...courseIds])]
+            const updates: Partial<ImportedAuthor> = {
+              courseIds: allCourseIds,
+              updatedAt: new Date().toISOString(),
             }
+            if (trackAuthor.shortBio) updates.shortBio = trackAuthor.shortBio
+            if (trackAuthor.avatar) updates.photoUrl = trackAuthor.avatar
+            if (trackAuthor.specialties) updates.specialties = trackAuthor.specialties
+            if (trackAuthor.yearsExperience) updates.yearsExperience = trackAuthor.yearsExperience
+            if (trackAuthor.education) updates.education = trackAuthor.education
+            if (trackAuthor.website || trackAuthor.linkedin || trackAuthor.twitter) {
+              updates.socialLinks = {
+                website: trackAuthor.website,
+                linkedin: trackAuthor.linkedin,
+                twitter: trackAuthor.twitter,
+              }
+            }
+            if (trackAuthor.featuredQuote) updates.featuredQuote = trackAuthor.featuredQuote
+            await syncableWrite('authors', 'put', {
+              ...existingAuthor,
+              ...updates,
+            } as unknown as SyncableRecord)
           }
-          if (trackAuthor.featuredQuote) updates.featuredQuote = trackAuthor.featuredQuote
-          await syncableWrite('authors', 'put', {
-            ...existingAuthor,
-            ...updates,
-          } as unknown as SyncableRecord)
-        }
+        })
       }
     } catch (err) {
       toast.warning('Failed to create author from manifest — continuing with track import')

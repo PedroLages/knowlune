@@ -786,107 +786,105 @@ export function BulkImportDialog({
     async (folderName: string) => {
       if (retryLockRef.current) return
       retryLockRef.current = true
-      const gen = generationRef.current
-
-      if (abortRef.current) {
-        retryLockRef.current = false
-        return
-      }
-      setImportItems(prev => {
-        const items = [...prev]
-        const idx = items.findIndex(i => i.folderName === folderName)
-        if (idx >= 0) {
-          items[idx] = { ...items[idx], status: 'scanning', error: undefined }
-        }
-        return items
-      })
-
-      const item = importItems.find(i => i.folderName === folderName)
-      if (!item) {
-        retryLockRef.current = false
-        return
-      }
-
-      const scanResult = await scanCourseFromSource(item)
-      if (abortRef.current || gen !== generationRef.current) {
-        retryLockRef.current = false
-        return
-      }
-
-      if (scanResult.status !== 'success') {
-        if (gen === generationRef.current) {
-          setImportItems(prev =>
-            prev.map(i =>
-              i.folderName === folderName
-                ? {
-                    ...i,
-                    status: scanResult.status === 'no-files' ? 'no-files' : 'error',
-                    error:
-                      scanResult.status === 'error'
-                        ? scanResult.message
-                        : scanResult.status === 'duplicate'
-                          ? 'Already imported'
-                          : undefined,
-                  }
-                : i
-            )
-          )
-        }
-        retryLockRef.current = false
-        return
-      }
-
-      if (gen === generationRef.current) {
-        setImportItems(prev =>
-          prev.map(i =>
-            i.folderName === folderName
-              ? {
-                  ...i,
-                  status: 'importing' as const,
-                  scannedCourse: scanResult.course,
-                  videoCount: scanResult.course.videos.length,
-                  pdfCount: scanResult.course.pdfs.length,
-                }
-              : i
-          )
-        )
-      }
 
       try {
-        const courseOverride = scanResult.course ? courseOverrides.get(scanResult.course.id) : undefined
-        const overrides = {
-          skipStoreUpdate: true,
-          ...(parentAuthorId ? { authorId: parentAuthorId } : {}),
-          ...(courseOverride?.name ? { name: courseOverride.name } : {}),
-          ...(courseOverride?.description ? { description: courseOverride.description } : {}),
-          ...(courseOverride?.coverImageHandle ? { coverImageHandle: courseOverride.coverImageHandle } : {}),
-        }
-        await persistScannedCourse(scanResult.course, overrides)
-        if (gen !== generationRef.current) {
-          retryLockRef.current = false
+        const gen = generationRef.current
+
+        if (abortRef.current) {
           return
         }
-        await useCourseImportStore.getState().loadImportedCourses()
-        if (gen === generationRef.current) {
-          setImportItems(prev =>
-            prev.map(i => (i.folderName === folderName ? { ...i, status: 'success' } : i))
-          )
+        setImportItems(prev => {
+          const items = [...prev]
+          const idx = items.findIndex(i => i.folderName === folderName)
+          if (idx >= 0) {
+            items[idx] = { ...items[idx], status: 'scanning', error: undefined }
+          }
+          return items
+        })
+
+        const item = importItems.find(i => i.folderName === folderName)
+        if (!item) {
+          return
         }
-        toast.success(`Imported: ${folderName}`)
-      } catch {
-        // silent-catch-ok: persistScannedCourse already shows error toasts, we just update item status
+
+        const scanResult = await scanCourseFromSource(item)
+        if (abortRef.current || gen !== generationRef.current) {
+          return
+        }
+
+        if (scanResult.status !== 'success') {
+          if (gen === generationRef.current) {
+            setImportItems(prev =>
+              prev.map(i =>
+                i.folderName === folderName
+                  ? {
+                      ...i,
+                      status: scanResult.status === 'no-files' ? 'no-files' : 'error',
+                      error:
+                        scanResult.status === 'error'
+                          ? scanResult.message
+                          : scanResult.status === 'duplicate'
+                            ? 'Already imported'
+                            : undefined,
+                    }
+                  : i
+              )
+            )
+          }
+          return
+        }
+
         if (gen === generationRef.current) {
           setImportItems(prev =>
             prev.map(i =>
               i.folderName === folderName
                 ? {
                     ...i,
-                    status: 'error',
-                    error: 'Failed to import',
+                    status: 'importing' as const,
+                    scannedCourse: scanResult.course,
+                    videoCount: scanResult.course.videos.length,
+                    pdfCount: scanResult.course.pdfs.length,
                   }
                 : i
             )
           )
+        }
+
+        try {
+          const courseOverride = scanResult.course ? courseOverrides.get(scanResult.course.id) : undefined
+          const overrides = {
+            skipStoreUpdate: true,
+            ...(parentAuthorId ? { authorId: parentAuthorId } : {}),
+            ...(courseOverride?.name ? { name: courseOverride.name } : {}),
+            ...(courseOverride?.description ? { description: courseOverride.description } : {}),
+            ...(courseOverride?.coverImageHandle ? { coverImageHandle: courseOverride.coverImageHandle } : {}),
+          }
+          await persistScannedCourse(scanResult.course, overrides)
+          if (gen !== generationRef.current) {
+            return
+          }
+          await useCourseImportStore.getState().loadImportedCourses()
+          if (gen === generationRef.current) {
+            setImportItems(prev =>
+              prev.map(i => (i.folderName === folderName ? { ...i, status: 'success' } : i))
+            )
+          }
+          toast.success(`Imported: ${folderName}`)
+        } catch {
+          // silent-catch-ok: persistScannedCourse already shows error toasts, we just update item status
+          if (gen === generationRef.current) {
+            setImportItems(prev =>
+              prev.map(i =>
+                i.folderName === folderName
+                  ? {
+                      ...i,
+                      status: 'error',
+                      error: 'Failed to import',
+                    }
+                  : i
+              )
+            )
+          }
         }
       } finally {
         retryLockRef.current = false

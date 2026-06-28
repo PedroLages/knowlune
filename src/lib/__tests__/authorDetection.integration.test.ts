@@ -2,12 +2,35 @@ import 'fake-indexeddb/auto'
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import Dexie from 'dexie'
 
+// Mock syncableWrite so the useSyncableWrite:true path in matchOrCreateAuthor
+// works without auth/queue dependencies. The mock delegates to the real Dexie
+// write so DB state is testable.
+const { syncableWriteMock } = vi.hoisted(() => ({
+  syncableWriteMock: vi.fn(),
+}))
+
+vi.mock('@/lib/sync/syncableWrite', () => ({
+  syncableWrite: syncableWriteMock,
+}))
+
 let matchOrCreateAuthor: (typeof import('@/lib/authorDetection'))['matchOrCreateAuthor']
 let db: (typeof import('@/db'))['db']
 
 beforeEach(async () => {
   await Dexie.delete('ElearningDB')
   vi.resetModules()
+
+  // Wire up the syncableWrite mock to actually write to the DB
+  syncableWriteMock.mockImplementation(
+    async (_tableName: string, operation: string, record: Record<string, unknown>) => {
+      const dbModule = await import('@/db')
+      if (operation === 'add') {
+        await dbModule.db.authors.add(record as any)
+      } else if (operation === 'put') {
+        await dbModule.db.authors.put(record as any)
+      }
+    }
+  )
 
   const dbModule = await import('@/db')
   db = dbModule.db
@@ -80,5 +103,45 @@ describe('matchOrCreateAuthor', () => {
 
     const result = await matchOrCreateAuthor('  JOHN DOE  ')
     expect(result).toBe('john-doe-id')
+  })
+
+  it('uses syncableWrite when useSyncableWrite option is true', async () => {
+    const result = await matchOrCreateAuthor('Syncable Author', undefined, {
+      useSyncableWrite: true,
+    })
+
+    expect(result).toBeTruthy()
+    expect(syncableWriteMock).toHaveBeenCalledWith(
+      'authors',
+      'add',
+      expect.objectContaining({
+        name: 'Syncable Author',
+        isPreseeded: false,
+        courseIds: [],
+      })
+    )
+
+    // Author should be in the DB
+    const author = await db.authors.get(result!)
+    expect(author).toBeDefined()
+    expect(author!.name).toBe('Syncable Author')
+
+    // Second call with same name returns same ID (dedup)
+    syncableWriteMock.mockClear()
+    const result2 = await matchOrCreateAuthor('Syncable Author', undefined, {
+      useSyncableWrite: true,
+    })
+    expect(result2).toBe(result)
+    // syncableWrite should NOT be called for the second call (author already exists)
+    expect(syncableWriteMock).not.toHaveBeenCalled()
+  })
+
+  it('does not create duplicate when useSyncableWrite is true and called twice with same name', async () => {
+    const id1 = await matchOrCreateAuthor('Dedup Author', { title: 'Expert' }, { useSyncableWrite: true })
+    const id2 = await matchOrCreateAuthor('Dedup Author', { title: 'Expert' }, { useSyncableWrite: true })
+    expect(id1).toBe(id2)
+
+    const count = await db.authors.count()
+    expect(count).toBe(1)
   })
 })

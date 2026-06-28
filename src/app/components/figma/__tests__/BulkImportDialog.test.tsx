@@ -379,6 +379,121 @@ describe('BulkImportDialog — batch import flow (F-003)', () => {
       expect(screen.getByTestId('bulk-results-summary')).toBeInTheDocument()
     })
 
+    it('TST-P1-003: retry — scan returns error updates item status to error', async () => {
+      // First persist call fails to get to results step
+      mockPersistScannedCourse
+        .mockResolvedValueOnce(undefined)               // alpha succeeds
+        .mockRejectedValueOnce(new Error('First fail'))  // beta fails
+
+      const user = userEvent.setup()
+      render(
+        <BulkImportDialog
+          open={true}
+          onOpenChange={onOpenChange}
+          onSingleImport={vi.fn()}
+          onComplete={onComplete}
+        />
+      )
+
+      await user.click(screen.getByTestId('import-multiple-btn'))
+      await waitFor(() => expect(screen.getByTestId('bulk-select-all')).toBeInTheDocument())
+      await user.click(screen.getByTestId('bulk-start-import-btn'))
+      await waitFor(() => expect(screen.getByTestId('bulk-confirm-import-btn')).toBeInTheDocument())
+      await user.click(screen.getByTestId('bulk-confirm-import-btn'))
+      await waitFor(() => expect(screen.getByTestId('bulk-done-btn')).toBeInTheDocument())
+
+      // Now retry beta — make scan return error
+      mockScanCourseFromSource.mockResolvedValue({
+        status: 'error',
+        folderName: 'beta',
+        message: 'Network timeout',
+      })
+
+      const retryBtn = screen.queryByTestId('bulk-retry-beta')
+      expect(retryBtn).toBeInTheDocument()
+      await user.click(retryBtn!)
+
+      // The item should remain as error (scan returned error, not success)
+      await waitFor(() => {
+        // The retry button should still be visible because beta is still error
+        expect(screen.getByTestId('bulk-retry-beta')).toBeInTheDocument()
+      })
+    })
+
+    it('TST-P1-004: retry — scan returns duplicate maps to error status', async () => {
+      mockPersistScannedCourse
+        .mockResolvedValueOnce(undefined)
+        .mockRejectedValueOnce(new Error('First fail'))
+
+      const user = userEvent.setup()
+      render(
+        <BulkImportDialog
+          open={true}
+          onOpenChange={onOpenChange}
+          onSingleImport={vi.fn()}
+          onComplete={onComplete}
+        />
+      )
+
+      await user.click(screen.getByTestId('import-multiple-btn'))
+      await waitFor(() => expect(screen.getByTestId('bulk-select-all')).toBeInTheDocument())
+      await user.click(screen.getByTestId('bulk-start-import-btn'))
+      await waitFor(() => expect(screen.getByTestId('bulk-confirm-import-btn')).toBeInTheDocument())
+      await user.click(screen.getByTestId('bulk-confirm-import-btn'))
+      await waitFor(() => expect(screen.getByTestId('bulk-done-btn')).toBeInTheDocument())
+
+      // Retry — scan returns duplicate
+      mockScanCourseFromSource.mockResolvedValue({
+        status: 'duplicate',
+        folderName: 'beta',
+      })
+
+      const retryBtn = screen.queryByTestId('bulk-retry-beta')
+      await user.click(retryBtn!)
+
+      await waitFor(() => {
+        expect(screen.getByTestId('bulk-retry-beta')).toBeInTheDocument()
+      })
+    })
+
+    it('TST-P1-005: retry — scan returns no-files maps to no-files status', async () => {
+      mockPersistScannedCourse
+        .mockResolvedValueOnce(undefined)
+        .mockRejectedValueOnce(new Error('First fail'))
+
+      const user = userEvent.setup()
+      render(
+        <BulkImportDialog
+          open={true}
+          onOpenChange={onOpenChange}
+          onSingleImport={vi.fn()}
+          onComplete={onComplete}
+        />
+      )
+
+      await user.click(screen.getByTestId('import-multiple-btn'))
+      await waitFor(() => expect(screen.getByTestId('bulk-select-all')).toBeInTheDocument())
+      await user.click(screen.getByTestId('bulk-start-import-btn'))
+      await waitFor(() => expect(screen.getByTestId('bulk-confirm-import-btn')).toBeInTheDocument())
+      await user.click(screen.getByTestId('bulk-confirm-import-btn'))
+      await waitFor(() => expect(screen.getByTestId('bulk-done-btn')).toBeInTheDocument())
+
+      // Retry — scan returns no-files
+      mockScanCourseFromSource.mockResolvedValue({
+        status: 'no-files',
+        folderName: 'beta',
+      })
+
+      const retryBtn = screen.queryByTestId('bulk-retry-beta')
+      await user.click(retryBtn!)
+
+      // After retry with no-files, the item transitions from 'error' to 'no-files'.
+      // Items in 'no-files' state do not show a retry button (only 'error' items do).
+      await waitFor(() => {
+        expect(screen.queryByTestId('bulk-retry-beta')).not.toBeInTheDocument()
+      })
+    })
+
     it('TST-P1-001: retry flow — failed item can be retried and succeeds', async () => {
       // First make the second persist call fail
       mockPersistScannedCourse
@@ -413,6 +528,11 @@ describe('BulkImportDialog — batch import flow (F-003)', () => {
       const retryBtn = screen.queryByTestId('bulk-retry-beta')
       expect(retryBtn).toBeInTheDocument()
 
+      // Reset scan mock back to default success behavior for the retry
+      mockScanCourseFromSource.mockImplementation(
+        (source: { folderName: string; handle: FileSystemDirectoryHandle | null }) =>
+          makeScanSuccess(`id-${source.folderName}`, source.folderName)
+      )
       // Set up persist to succeed for the retry
       mockPersistScannedCourse.mockResolvedValue(undefined)
 
@@ -423,6 +543,46 @@ describe('BulkImportDialog — batch import flow (F-003)', () => {
       await waitFor(() => {
         // The retry button should no longer be shown (beta is now success)
         expect(screen.queryByTestId('bulk-retry-beta')).not.toBeInTheDocument()
+      })
+    })
+
+    it('TST-P1-006: retry — scan succeeds but persist rejects, verifying error state', async () => {
+      // First persist call fails to get to results step
+      mockPersistScannedCourse
+        .mockResolvedValueOnce(undefined)               // alpha succeeds
+        .mockRejectedValueOnce(new Error('First fail'))  // beta fails
+
+      const user = userEvent.setup()
+      render(
+        <BulkImportDialog
+          open={true}
+          onOpenChange={onOpenChange}
+          onSingleImport={vi.fn()}
+          onComplete={onComplete}
+        />
+      )
+
+      await user.click(screen.getByTestId('import-multiple-btn'))
+      await waitFor(() => expect(screen.getByTestId('bulk-select-all')).toBeInTheDocument())
+      await user.click(screen.getByTestId('bulk-start-import-btn'))
+      await waitFor(() => expect(screen.getByTestId('bulk-confirm-import-btn')).toBeInTheDocument())
+      await user.click(screen.getByTestId('bulk-confirm-import-btn'))
+      await waitFor(() => expect(screen.getByTestId('bulk-done-btn')).toBeInTheDocument())
+
+      // Reset scan mock back to default success for retry
+      mockScanCourseFromSource.mockImplementation(
+        (source: { folderName: string; handle: FileSystemDirectoryHandle | null }) =>
+          makeScanSuccess(`id-${source.folderName}`, source.folderName)
+      )
+      // Make persist reject during retry
+      mockPersistScannedCourse.mockRejectedValue(new Error('Disk full on retry'))
+
+      const retryBtn = screen.queryByTestId('bulk-retry-beta')
+      await user.click(retryBtn!)
+
+      // After retry, beta should still show error (persist rejected)
+      await waitFor(() => {
+        expect(screen.getByTestId('bulk-retry-beta')).toBeInTheDocument()
       })
     })
   })

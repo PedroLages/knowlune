@@ -451,6 +451,7 @@ export function ImportWizardDialog({
   const handleSelectFolder = useCallback(async () => {
     abortRef.current = false
     setIsScanning(true)
+    isScanningRef.current = true
     try {
       const scanned = await scanCourseFolder()
       if (abortRef.current) return
@@ -492,6 +493,7 @@ export function ImportWizardDialog({
   const handleFilesDropped = useCallback(async (files: File[]) => {
     abortRef.current = false
     setIsScanning(true)
+    isScanningRef.current = true
     try {
       const scanned = await scanFromDroppedFiles(files, 'Imported Course')
       if (abortRef.current) return
@@ -598,6 +600,7 @@ export function ImportWizardDialog({
     }
 
     setIsScanning(true)
+    isScanningRef.current = true
     setShowServerUrlInput(false)
 
     try {

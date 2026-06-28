@@ -143,6 +143,12 @@ export interface ScannedCourse {
   serverId?: string
   /** Relative path from server root to this course folder (E133-S01). */
   serverPath?: string
+  /**
+   * Whether the file collection was truncated by MAX_SERVER_SCAN_FILES cap.
+   * Only set for server-sourced imports. When true, the import result is
+   * partial — the user may need to increase the cap or split the folder.
+   */
+  truncated?: boolean
 }
 
 // --- Scan Phase ---
@@ -1404,6 +1410,7 @@ export async function scanCourseFolderFromServer(
   const seen = new Set<string>()
   let dirsScanned = 0
   let filesFound = 0
+  let hitCap = false
 
   while (pendingDirs.length > 0) {
     // Check for cancellation
@@ -1476,6 +1483,18 @@ export async function scanCourseFolderFromServer(
     }
   }
 
+  // Detect and log when the file cap was reached during the scan.
+  // This means the import result is partial — the server directory has more
+  // files than MAX_SERVER_SCAN_FILES permits.
+  if (filesFound >= MAX_SERVER_SCAN_FILES) {
+    hitCap = true
+    console.warn(
+      `[scanServer] File cap reached: ${filesFound} files collected (max ${MAX_SERVER_SCAN_FILES}). ` +
+        `Some files and directories from ${folderUrl} were skipped. ` +
+        `Consider splitting the folder or increasing MAX_SERVER_SCAN_FILES.`
+    )
+  }
+
   // Build ScannedVideo[] — no fileHandle, duration=0 (lazy at playback)
   const videos: ScannedVideo[] = allVideos
     .sort((a, b) => a.path.localeCompare(b.path, undefined, { numeric: true }))
@@ -1520,5 +1539,6 @@ export async function scanCourseFolderFromServer(
     source: 'server',
     ...(serverId ? { serverId } : {}),
     serverPath,
+    ...(hitCap ? { truncated: true } : {}),
   }
 }
