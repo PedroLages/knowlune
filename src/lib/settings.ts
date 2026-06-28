@@ -243,6 +243,21 @@ export type UserSettingsPatch = {
  */
 export async function saveSettingsToSupabase(patch: UserSettingsPatch): Promise<void> {
   if (!supabase) return
+
+  // Defensive session refresh — supabase.auth.getUser() returns null when the
+  // JWT has expired, causing every call-site to silently warn without retrying.
+  // A single refreshSession() attempt restores the session if the refresh token
+  // is still valid, allowing the RPC call to succeed.
+  const {
+    data: { session },
+  } = await supabase.auth.getSession()
+  if (!session) {
+    const {
+      data: { session: refreshedSession },
+    } = await supabase.auth.refreshSession()
+    if (!refreshedSession) return
+  }
+
   const {
     data: { user },
   } = await supabase.auth.getUser()

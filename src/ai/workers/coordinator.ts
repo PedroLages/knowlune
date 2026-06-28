@@ -24,6 +24,13 @@ import type {
 import { isSuccessResponse, isErrorResponse, isDownloadProgress } from './types'
 import { supportsWorkers } from '@/ai/lib/workerCapabilities'
 
+// Vite ?worker imports — tells Vite to compile these files as web workers and
+// emit properly bundled .js chunks. The imported value is a constructor function
+// () => Worker. Without the ?worker suffix, Vite's static analysis may miss the
+// worker or emit raw .ts instead of compiled .js (see PR #626).
+import EmbeddingWorkerCtor from './embedding.worker.ts?worker'
+import SearchWorkerCtor from './search.worker.ts?worker'
+
 // ============================================================================
 // Configuration
 // ============================================================================
@@ -206,87 +213,69 @@ class WorkerCoordinator {
    * Implements module-worker fallback for Safari: try {type: 'module'} first,
    * on SyntaxError/TypeError retry without type option.
    */
+  /**
+   * Spawn worker based on task type.
+   *
+   * CRITICAL: Uses Vite ?worker imports (see top of file) to ensure each worker
+   * file is compiled to a properly bundled .js chunk. The previous approach used
+   * runtime variables in new URL() which Vite couldn't statically analyze,
+   * causing workers to silently fail in production (script load failure with
+   * "non-JavaScript MIME type 'text/html'").
+   *
+   * The ?worker import returns a constructor () => Worker. Vite handles the
+   * module/classic format selection based on worker.format config ('es').
+   * Safari fallback is handled by Vite's multi-format output.
+   */
   private spawnWorker(type: WorkerRequestType): Worker {
-    let workerUrl: string
+    let worker: Worker
+    let workerTypeForListeners: WorkerRequestType
 
     switch (type) {
       case 'embed':
-        workerUrl = './embedding.worker.ts'
+        worker = new EmbeddingWorkerCtor()
+        workerTypeForListeners = 'embed'
         break
       case 'search':
-        workerUrl = './search.worker.ts'
+      case 'load-index':
+        // load-index is handled by the search worker
+        worker = new SearchWorkerCtor()
+        workerTypeForListeners = 'search'
         break
       case 'infer':
-        workerUrl = './inference.worker.ts'
-        break
-      case 'load-index':
-        workerUrl = './search.worker.ts' // load-index handled by search worker
-        break
+        throw new Error(
+          'Inference worker is not yet implemented. ' +
+            'The inference.worker.ts file has not been created.'
+        )
       default:
         throw new Error(`Unknown worker type: ${type}`)
     }
 
-    const url = new URL(workerUrl, import.meta.url)
-
-    // Safari does not support {type: 'module'} for workers. We attempt the
-    // module variant first (Vite's default), catch the SyntaxError/TypeError,
-    // and retry without the type option. Vite also emits a non-module build
-    // via ?worker import, so the fallback URL works in modern Safari.
-    try {
-      const worker = this.trySpawnWorker(url, type)
-      return worker
-    } catch (error) {
-      console.error('[Coordinator] Failed to spawn worker:', error)
-      throw new Error('Web Workers not supported in this browser')
-    }
+    return this.setupWorkerListeners(worker, workerTypeForListeners)
   }
 
   /**
-   * Attempt to spawn a worker with module-type. Falls back to classic worker
-   * on SyntaxError/TypeError (Safari compatibility).
+   * Set up message router and error handler on a freshly spawned worker.
+   *
+   * The persistent message router dispatches all responses by requestId via
+   * a single listener — no per-request listener churn.
+   *
+   * The error handler catches both runtime errors (event.error is set) and
+   * script load failures (event.error is null, event.message has the browser's
+   * diagnostic like "Failed to load module script: Expected a JavaScript module
+   * script but the server responded with a MIME type of \"text/html\".").
    */
-  private trySpawnWorker(url: URL, type: WorkerRequestType): Worker {
-    let worker: Worker
-    try {
-      // Attempt module worker first (standard Vite output)
-      worker = new Worker(url, { type: 'module' })
-    } catch (firstError) {
-      // SyntaxError or TypeError indicates the browser doesn't support
-      // module workers (Safari < 16.4, older browsers). Retry as classic worker.
-      if (firstError instanceof SyntaxError || firstError instanceof TypeError) {
-        console.warn(
-          '[Coordinator] Module worker not supported, falling back to classic worker:',
-          firstError
-        )
-        try {
-          worker = new Worker(url)
-        } catch (secondError) {
-          // Fallback also failed — throw the original error for clearer diagnostics
-          console.error('[Coordinator] Classic worker fallback also failed:', secondError)
-          throw secondError
-        }
-      } else {
-        // Some other error, rethrow
-        throw firstError
-      }
-    }
-
+  private setupWorkerListeners(worker: Worker, type: WorkerRequestType): Worker {
     // Persistent message router — single listener routes all responses by requestId
     worker.addEventListener('message', (event: MessageEvent) => {
       this.routeWorkerMessage(event)
     })
 
-    // Global error handler — event.error is null when the worker script fails to
-    // load (network error, CSP block, 404 → HTML with wrong MIME type, etc.).
-    // event.message contains the browser's diagnostic (e.g., "Failed to load
-    // module script: Expected a JavaScript module script but the server responded
-    // with a MIME type of \"text/html\".").
+    // Global error handler
     worker.addEventListener('error', event => {
-      const scriptUrl = url.toString()
       const detail = event.error
         ? `runtime error: ${event.error.message}`
         : `script load failure: ${event.message || 'no diagnostic available'}`
-      console.error(`[Coordinator] Worker error (${scriptUrl}):`, detail, event)
+      console.error(`[Coordinator] Worker error (${type}-worker):`, detail, event)
       this.handleWorkerError(
         type,
         event.error ?? new Error(detail)

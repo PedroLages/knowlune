@@ -429,6 +429,7 @@ describe('E119-S03: erasure cascade — registry probe and drift guard', () => {
     'study_schedules',
     'opds_catalogs',
     'audiobookshelf_servers',
+    'course_servers',
     'notification_preferences',
     // P4
     'quizzes',

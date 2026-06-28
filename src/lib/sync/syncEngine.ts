@@ -184,6 +184,7 @@ const MONOTONIC_RPC: Record<string, MonotonicRpc> = {
     paramMap: {
       user_id: 'p_user_id',
       video_id: 'p_video_id',
+      course_id: 'p_course_id',
       watched_seconds: 'p_watched_seconds',
       duration_seconds: 'p_duration_seconds',
       updated_at: 'p_updated_at',

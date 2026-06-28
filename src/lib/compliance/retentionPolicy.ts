@@ -376,6 +376,15 @@ const syncTableEntries: readonly RetentionEntry[] = [
     notes: 'P3 sync; apiKey in Supabase Vault',
   },
   {
+    artefact: 'course_servers',
+    dataCategories: ['Course server configs (authToken in Vault)'],
+    lawfulBasis: 'Contract (service provision)',
+    period: 'Account lifetime + 30d',
+    deletionMechanism: 'hardDeleteUser cascade',
+    owner: 'Pedro',
+    notes: 'P3 sync; authToken in Supabase Vault',
+  },
+  {
     artefact: 'notification_preferences',
     dataCategories: ['Notification preference singleton'],
     lawfulBasis: 'Contract (service provision)',

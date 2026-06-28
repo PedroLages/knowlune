@@ -164,6 +164,7 @@ const progress: TableRegistryEntry = {
   fieldMap: {
     // Dexie uses VideoProgress fields; Supabase uses video_progress columns.
     // Map local canonical fields to the RPC/DB column names so uploads don't silently drop.
+    courseId: 'course_id',
     currentTime: 'watched_seconds',
     completionPercentage: 'watched_percent',
     durationSeconds: 'duration_seconds',

@@ -76,6 +76,7 @@ export const TABLE_NAMES: string[] = [
   'study_schedules',
   'opds_catalogs',
   'audiobookshelf_servers',
+  'course_servers',
   'notification_preferences',
   // P4 — Analytics / append-only events, quizzes
   'quizzes',
