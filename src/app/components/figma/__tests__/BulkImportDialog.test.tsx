@@ -20,9 +20,12 @@ import type { BatchImportResult } from '@/lib/trackManifestImport'
 
 const mockReadTrackManifest = vi.fn()
 const mockBatchImportTrackCourses = vi.fn()
+const mockFetchTrackManifestFromUrl = vi.fn()
 const mockShowDirectoryPicker = vi.fn()
 const mockListSubDirectories = vi.fn()
 const mockScanCourseFolderFromHandle = vi.fn()
+const mockScanCourseFromSource = vi.fn()
+const mockListServerSubDirectories = vi.fn()
 const mockPersistScannedCourse = vi.fn()
 const mockDetectAuthorFromFolderName = vi.fn()
 const mockMatchOrCreateAuthor = vi.fn()
@@ -30,10 +33,13 @@ const mockMatchOrCreateAuthor = vi.fn()
 vi.mock('@/lib/trackManifestImport', () => ({
   readTrackManifest: (...args: unknown[]) => mockReadTrackManifest(...args),
   batchImportTrackCourses: (...args: unknown[]) => mockBatchImportTrackCourses(...args),
+  fetchTrackManifestFromUrl: (...args: unknown[]) => mockFetchTrackManifestFromUrl(...args),
 }))
 
 vi.mock('@/lib/courseImport', () => ({
   scanCourseFolderFromHandle: (...args: unknown[]) => mockScanCourseFolderFromHandle(...args),
+  scanCourseFromSource: (...args: unknown[]) => mockScanCourseFromSource(...args),
+  listServerSubDirectories: (...args: unknown[]) => mockListServerSubDirectories(...args),
   listSubDirectories: (...args: unknown[]) => mockListSubDirectories(...args),
   persistScannedCourse: (...args: unknown[]) => mockPersistScannedCourse(...args),
 }))
@@ -173,8 +179,9 @@ describe('BulkImportDialog — batch import flow (F-003)', () => {
       mockListSubDirectories.mockResolvedValue([mockDirHandle('alpha'), mockDirHandle('beta')])
       mockReadTrackManifest.mockResolvedValue(mockManifestResponse)
       // Scanning still runs before the review step — make every folder scan successfully
-      mockScanCourseFolderFromHandle.mockImplementation((handle: FileSystemDirectoryHandle) =>
-        makeScanSuccess(`id-${handle.name}`, handle.name)
+      mockScanCourseFromSource.mockImplementation(
+        (source: { folderName: string; handle: FileSystemDirectoryHandle | null }) =>
+          makeScanSuccess(`id-${source.folderName}`, source.folderName)
       )
       mockBatchImportTrackCourses.mockResolvedValue(successResult)
     })
@@ -291,8 +298,9 @@ describe('BulkImportDialog — batch import flow (F-003)', () => {
       mockShowDirectoryPicker.mockResolvedValue(mockDirHandle('ParentFolder'))
       mockListSubDirectories.mockResolvedValue([mockDirHandle('alpha'), mockDirHandle('beta')])
       mockReadTrackManifest.mockResolvedValue({ ok: false as const, error: 'No manifest' })
-      mockScanCourseFolderFromHandle.mockImplementation((handle: FileSystemDirectoryHandle) =>
-        makeScanSuccess(`id-${handle.name}`, handle.name)
+      mockScanCourseFromSource.mockImplementation(
+        (source: { folderName: string; handle: FileSystemDirectoryHandle | null }) =>
+          makeScanSuccess(`id-${source.folderName}`, source.folderName)
       )
       mockPersistScannedCourse.mockResolvedValue(undefined)
     })
@@ -337,6 +345,149 @@ describe('BulkImportDialog — batch import flow (F-003)', () => {
         const [courseIds] = onComplete.mock.calls[0]
         expect(courseIds).toContain('id-alpha')
         expect(courseIds).toContain('id-beta')
+      })
+    })
+  })
+
+  // ───── URL Batch Import Flow ─────
+
+  describe('URL batch import flow', () => {
+    const onOpenChange = vi.fn()
+
+    beforeEach(() => {
+      vi.clearAllMocks()
+      mockListServerSubDirectories.mockReset()
+      mockScanCourseFromSource.mockReset()
+      mockFetchTrackManifestFromUrl.mockReset()
+      // By default, no track manifest is found — prevents real network calls
+      mockFetchTrackManifestFromUrl.mockResolvedValue({ ok: false, error: 'Not found' })
+    })
+
+    it('navigates to enter-url step when "Import Multiple from URL" is clicked', async () => {
+      const user = userEvent.setup()
+      render(
+        <BulkImportDialog
+          open={true}
+          onOpenChange={onOpenChange}
+          onSingleImport={vi.fn()}
+        />
+      )
+
+      await user.click(screen.getByTestId('import-multiple-url-btn'))
+      await waitFor(() => {
+        expect(screen.getByTestId('bulk-import-enter-url')).toBeInTheDocument()
+      })
+    })
+
+    it('shows validation error on empty URL scan trigger', async () => {
+      const user = userEvent.setup()
+      render(
+        <BulkImportDialog
+          open={true}
+          onOpenChange={onOpenChange}
+          onSingleImport={vi.fn()}
+        />
+      )
+
+      // Navigate to URL step
+      await user.click(screen.getByTestId('import-multiple-url-btn'))
+      await waitFor(() => {
+        expect(screen.getByTestId('bulk-import-scan-url-btn')).toBeInTheDocument()
+      })
+
+      // Scan button should be disabled when URL is empty
+      expect(screen.getByTestId('bulk-import-scan-url-btn')).toBeDisabled()
+    })
+
+    it('shows validation error for invalid URL format', async () => {
+      const user = userEvent.setup()
+      render(
+        <BulkImportDialog
+          open={true}
+          onOpenChange={onOpenChange}
+          onSingleImport={vi.fn()}
+        />
+      )
+
+      await user.click(screen.getByTestId('import-multiple-url-btn'))
+      const input = screen.getByTestId('bulk-import-enter-url')
+      await user.type(input, 'not-a-valid-url')
+      await user.click(screen.getByTestId('bulk-import-scan-url-btn'))
+
+      await waitFor(() => {
+        expect(screen.getByTestId('bulk-import-url-error')).toBeInTheDocument()
+      })
+    })
+
+    it('has a working Back button on URL step', async () => {
+      const user = userEvent.setup()
+      render(
+        <BulkImportDialog
+          open={true}
+          onOpenChange={onOpenChange}
+          onSingleImport={vi.fn()}
+        />
+      )
+
+      // Navigate to URL step
+      await user.click(screen.getByTestId('import-multiple-url-btn'))
+      await waitFor(() => {
+        expect(screen.getByTestId('bulk-import-url-back-btn')).toBeInTheDocument()
+      })
+
+      // Click Back
+      await user.click(screen.getByTestId('bulk-import-url-back-btn'))
+      await waitFor(() => {
+        expect(screen.getByTestId('import-multiple-url-btn')).toBeInTheDocument()
+      })
+    })
+
+    it('triggers server scan with valid URL and shows error when scan fails', async () => {
+      mockListServerSubDirectories.mockResolvedValue({ ok: false, error: 'Server unreachable' })
+
+      const user = userEvent.setup()
+      render(
+        <BulkImportDialog
+          open={true}
+          onOpenChange={onOpenChange}
+          onSingleImport={vi.fn()}
+        />
+      )
+
+      await user.click(screen.getByTestId('import-multiple-url-btn'))
+      const input = screen.getByTestId('bulk-import-enter-url')
+      await user.type(input, 'http://example.com/courses/')
+      await user.click(screen.getByTestId('bulk-import-scan-url-btn'))
+
+      await waitFor(() => {
+        expect(mockListServerSubDirectories).toHaveBeenCalledWith('http://example.com/courses/')
+        expect(screen.getByTestId('bulk-import-url-error')).toBeInTheDocument()
+      })
+    })
+
+    it('transitions to select-folders step when scan succeeds with subdirectories', async () => {
+      mockListServerSubDirectories.mockResolvedValue({
+        ok: true,
+        data: [{ name: 'Course1', url: 'http://example.com/courses/Course1/' }],
+      })
+
+      const user = userEvent.setup()
+      render(
+        <BulkImportDialog
+          open={true}
+          onOpenChange={onOpenChange}
+          onSingleImport={vi.fn()}
+        />
+      )
+
+      await user.click(screen.getByTestId('import-multiple-url-btn'))
+      const input = screen.getByTestId('bulk-import-enter-url')
+      await user.type(input, 'http://example.com/courses/')
+      await user.click(screen.getByTestId('bulk-import-scan-url-btn'))
+
+      await waitFor(() => {
+        expect(screen.getByTestId('bulk-select-all')).toBeInTheDocument()
+        expect(screen.getByText('Course1')).toBeInTheDocument()
       })
     })
   })

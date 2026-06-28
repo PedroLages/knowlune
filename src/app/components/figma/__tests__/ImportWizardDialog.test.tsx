@@ -9,6 +9,7 @@ import {
   __resetWizardOpenCount,
 } from '../ImportWizardDialog'
 import type { ScannedCourse } from '@/lib/courseImport'
+import { toast } from 'sonner'
 import type { ComponentPropsWithoutRef } from 'react'
 
 /** Render with MemoryRouter so Link components in step 3 don't throw. */
@@ -23,12 +24,15 @@ function renderWithRouter(
 }
 
 const mockScanCourseFolder = vi.fn()
+const mockScanCourseFolderFromServer = vi.fn()
 const mockPersistScannedCourse = vi.fn()
 
 vi.mock('@/lib/courseImport', () => ({
   scanCourseFolder: (...args: unknown[]) => mockScanCourseFolder(...args),
+  scanCourseFolderFromServer: (...args: unknown[]) => mockScanCourseFolderFromServer(...args),
   persistScannedCourse: (...args: unknown[]) => mockPersistScannedCourse(...args),
 }))
+
 
 vi.mock('sonner', () => ({
   toast: {
@@ -1192,6 +1196,109 @@ describe('AC25 - PremiumGate wrapping for Drive import button', () => {
     // PremiumGate should render the upgrade CTA instead of the Drive button
     expect(screen.getByTestId('premium-gate-cta')).toBeInTheDocument()
     expect(screen.queryByTestId('wizard-drive-import-btn')).not.toBeInTheDocument()
+  })
+})
+
+// ───── Server URL Import Card ─────
+
+describe('server URL import card', () => {
+  beforeEach(() => {
+    __resetWizardOpenCount()
+    mockScanCourseFolderFromServer.mockReset()
+    // PremiumGate requires isPremium mock to be set
+    mockUseIsPremium.mockReturnValue({
+      isPremium: false,
+      loading: false,
+      tier: 'free',
+      isStale: false,
+      error: null,
+      trialEnd: null,
+      hadTrial: false,
+    })
+  })
+
+  it('renders Import from URL card on select step', () => {
+    render(<ImportWizardDialog open={true} onOpenChange={vi.fn()} />)
+    expect(screen.getByTestId('import-wizard-dialog')).toBeInTheDocument()
+    expect(screen.getByTestId('wizard-server-url-btn')).toBeInTheDocument()
+  })
+
+  it('shows URL input form when card is clicked', async () => {
+    const user = userEvent.setup()
+    render(<ImportWizardDialog open={true} onOpenChange={vi.fn()} />)
+
+    await user.click(screen.getByTestId('wizard-server-url-btn'))
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText('https://example.com/AI/Course/')).toBeInTheDocument()
+    })
+  })
+
+  it('shows Scan and Cancel buttons when URL form is visible', async () => {
+    const user = userEvent.setup()
+    render(<ImportWizardDialog open={true} onOpenChange={vi.fn()} />)
+
+    await user.click(screen.getByTestId('wizard-server-url-btn'))
+    await waitFor(() => {
+      expect(screen.getByTestId('wizard-server-scan-btn')).toBeInTheDocument()
+      expect(screen.getByTestId('wizard-server-cancel-btn')).toBeInTheDocument()
+    })
+  })
+
+  it('triggers server scan and transitions to details step on success', async () => {
+    const scannedCourse = {
+      id: 'server-course-1',
+      name: 'Server Course',
+      videos: [{ id: 'v1', filename: 'video.mp4' }],
+      pdfs: [],
+      images: [],
+      directoryHandle: null,
+    }
+
+    mockScanCourseFolderFromServer.mockResolvedValue(scannedCourse)
+
+    const user = userEvent.setup()
+    render(<ImportWizardDialog open={true} onOpenChange={vi.fn()} />)
+
+    await user.click(screen.getByTestId('wizard-server-url-btn'))
+    const input = screen.getByPlaceholderText('https://example.com/AI/Course/')
+    await user.type(input, 'https://example.com/AI/Course/')
+    await user.click(screen.getByTestId('wizard-server-scan-btn'))
+
+    await waitFor(() => {
+      expect(mockScanCourseFolderFromServer).toHaveBeenCalledWith('https://example.com/AI/Course/')
+      expect(screen.getByTestId('wizard-details-step')).toBeInTheDocument()
+    })
+  })
+
+  it('hides URL form and shows card again on Cancel', async () => {
+    const user = userEvent.setup()
+    render(<ImportWizardDialog open={true} onOpenChange={vi.fn()} />)
+
+    await user.click(screen.getByTestId('wizard-server-url-btn'))
+    await waitFor(() => {
+      expect(screen.getByTestId('wizard-server-cancel-btn')).toBeInTheDocument()
+    })
+
+    await user.click(screen.getByTestId('wizard-server-cancel-btn'))
+    await waitFor(() => {
+      expect(screen.getByTestId('wizard-server-url-btn')).toBeInTheDocument()
+    })
+  })
+
+  it('shows toast error on invalid URL before network call', async () => {
+    const user = userEvent.setup()
+    render(<ImportWizardDialog open={true} onOpenChange={vi.fn()} />)
+
+    await user.click(screen.getByTestId('wizard-server-url-btn'))
+    const input = screen.getByPlaceholderText('https://example.com/AI/Course/')
+    await user.type(input, 'not-a-valid-url')
+    await user.click(screen.getByTestId('wizard-server-scan-btn'))
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalled()
+    })
+    // Should NOT attempt the network call for an invalid URL
+    expect(mockScanCourseFolderFromServer).not.toHaveBeenCalled()
   })
 })
 
