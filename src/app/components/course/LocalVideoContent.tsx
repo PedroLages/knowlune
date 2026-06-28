@@ -163,30 +163,30 @@ export const LocalVideoContent = forwardRef<VideoPlayerHandle, LocalVideoContent
     // Drive-sourced lessons (driveFileRef set) use Drive streaming + OPFS caching.
     // Locally sourced lessons use FileSystemFileHandle blob URL creation.
     const isDriveSource = !!video?.driveFileRef
+    const isServerSource = !!video?.serverUrl
 
     const {
       blobUrl: localBlobUrl,
       error: localError,
       loading: localLoading,
-    } = useVideoFromHandle(isDriveSource ? undefined : video?.fileHandle, retryKey)
+    } = useVideoFromHandle((isDriveSource || isServerSource) ? undefined : video?.fileHandle, retryKey)
     const {
       blobUrl: driveBlobUrl,
       error: driveError,
       loading: driveLoading,
     } = useDriveFileUrl(isDriveSource ? (video?.driveFileRef ?? null) : null, retryKey)
 
-    const blobUrl = isDriveSource ? driveBlobUrl : localBlobUrl
-    const error = isDriveSource ? driveError : localError
+    const blobUrl = isDriveSource ? driveBlobUrl : isServerSource ? null : localBlobUrl
+    const error = isDriveSource ? driveError : isServerSource ? null : localError
 
     // ── Server source resolution (E133-S01) ──────────────────────────
     // Server-sourced videos use the server URL directly as <video src>.
     // On network error, fall back to fileHandle blob URL if available.
-    const isServerSource = !!video?.serverUrl
     const [serverError, setServerError] = useState(false)
     const effectiveSrc = isServerSource && !serverError
       ? (video?.serverUrl ?? null)
       : blobUrl
-    const loading = isDriveSource ? driveLoading : localLoading
+    const loading = isDriveSource ? driveLoading : isServerSource ? false : localLoading
 
     // F008: Clear recovery overlay once blob URL loading completes (URL arrived or error).
     // Prevents the spinner from showing indefinitely if blob generation fails.
