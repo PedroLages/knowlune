@@ -134,6 +134,8 @@ export function BulkImportDialog({
   const completedSuccessfullyRef = useRef(false)
   const parentHandleRef = useRef<FileSystemDirectoryHandle | null>(null)
   const batchResultRef = useRef<{ trackId?: string; courseIds: string[] } | null>(null)
+  const generationRef = useRef(0)
+  const batchAbortRef = useRef<AbortController | null>(null)
 
   // Track manifest data for rendering the review-step header and for batch import
   const [trackManifest, setTrackManifest] = useState<{
@@ -183,7 +185,9 @@ export function BulkImportDialog({
     setServerUrlInput('')
     setServerUrlError(null)
     setIsScanningUrl(false)
-    abortRef.current = false
+    // Note: abortRef is NOT reset here — it's managed by the calling context
+    // (handleOpenChange sets it to true before calling resetDialog, and each
+    // async handler resets it to false at its own start.)
     completedSuccessfullyRef.current = false
     parentHandleRef.current = null
     batchResultRef.current = null
@@ -213,6 +217,8 @@ export function BulkImportDialog({
           }
         }
         abortRef.current = true // Signal cancellation to in-flight async ops before resetting state
+        batchAbortRef.current?.abort()
+        batchAbortRef.current = null
         resetDialog()
       }
       onOpenChange(nextOpen)
@@ -232,6 +238,7 @@ export function BulkImportDialog({
 
   // Step 1 → Enter URL: Scan a server URL for subdirectories
   const handleServerUrlScan = useCallback(async () => {
+    generationRef.current++
     const url = serverUrlInput.trim()
 
     // Clear stale parent handle — server-URL scans never have a filesystem handle
@@ -249,7 +256,7 @@ export function BulkImportDialog({
 
     try {
       const result = await listServerSubDirectories(url)
-      if (abortRef.current) return
+      if (abortRef.current || stepRef.current !== 'enter-url') return
 
       if (!result.ok) {
         setServerUrlError(result.error)
@@ -263,7 +270,7 @@ export function BulkImportDialog({
 
       // Attempt track-manifest detection for folder sorting (optional)
       const manifestResult = await fetchTrackManifestFromUrl(url)
-      if (abortRef.current) return
+      if (abortRef.current || stepRef.current !== 'enter-url') return
 
       if (manifestResult.ok) {
         const positionByFolder = new Map(
@@ -388,11 +395,19 @@ export function BulkImportDialog({
   const selectedCount = folders.filter(f => f.selected).length
 
   // Step 2 → Scan → Review: Scan selected folders concurrently, then show review step
+  const scanningRef = useRef(false)
   const handleScanFolders = useCallback(async () => {
+    if (scanningRef.current) return
+    scanningRef.current = true
+
     const selectedFolders = folders.filter(f => f.selected)
-    if (selectedFolders.length === 0) return
+    if (selectedFolders.length === 0) {
+      scanningRef.current = false
+      return
+    }
 
     abortRef.current = false
+    try {
 
     // Revoke stale cover preview object URLs before starting a new scan cycle
     for (const urls of coverPreviewUrls.values()) {
@@ -496,6 +511,11 @@ export function BulkImportDialog({
       toast.error('No folders could be scanned. Check the results for details.')
       setStep('results')
     }
+  } catch {
+    // Errors are caught per-item in scanFolder — top-level catch for finally
+  } finally {
+    scanningRef.current = false
+  }
   }, [folders, coverPreviewUrls])
 
   // Update course override
@@ -528,6 +548,8 @@ export function BulkImportDialog({
 
   // Review → Importing: Persist all scanned courses with overrides
   const handleConfirmImport = useCallback(async () => {
+    generationRef.current++
+    const gen = generationRef.current
     const courses = [...scannedCourses.values()]
     if (courses.length === 0) return
 
@@ -541,7 +563,10 @@ export function BulkImportDialog({
     if (manifest && parentHandle) {
       // Batch mode: delegate to batchImportTrackCourses (handles scan, persist, track creation)
       try {
-        const result = await batchImportTrackCourses(parentHandle, manifest)
+        batchAbortRef.current = new AbortController()
+        const result = await batchImportTrackCourses(parentHandle, manifest, batchAbortRef.current.signal)
+        batchAbortRef.current = null
+        if (abortRef.current || gen !== generationRef.current) return
 
         // Convert batch result to ImportItem[] for the results display
         const items: ImportItem[] = result.courses.map(c => ({
@@ -553,12 +578,16 @@ export function BulkImportDialog({
         setImportItems(items)
 
         // Store result for onComplete to pass trackId
-        batchResultRef.current = {
-          trackId: result.trackId,
-          courseIds: result.courses.filter(r => r.success && r.courseId).map(r => r.courseId!),
+        if (gen === generationRef.current) {
+          batchResultRef.current = {
+            trackId: result.trackId,
+            courseIds: result.courses.filter(r => r.success && r.courseId).map(r => r.courseId!),
+          }
         }
 
-        setStep('results')
+        if (gen === generationRef.current) {
+          setStep('results')
+        }
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Unexpected error during batch import'
         toast.error(`Batch import failed: ${message}`)
@@ -606,12 +635,13 @@ export function BulkImportDialog({
 
       try {
         const courseOverride = courseOverrides.get(item.scannedCourse.id)
-        const overrides: Record<string, unknown> = { skipStoreUpdate: true }
-        if (parentAuthorId) overrides.authorId = parentAuthorId
-        if (courseOverride?.name) overrides.name = courseOverride.name
-        if (courseOverride?.description) overrides.description = courseOverride.description
-        if (courseOverride?.coverImageHandle)
-          overrides.coverImageHandle = courseOverride.coverImageHandle
+        const overrides = {
+          skipStoreUpdate: true,
+          ...(parentAuthorId ? { authorId: parentAuthorId } : {}),
+          ...(courseOverride?.name ? { name: courseOverride.name } : {}),
+          ...(courseOverride?.description ? { description: courseOverride.description } : {}),
+          ...(courseOverride?.coverImageHandle ? { coverImageHandle: courseOverride.coverImageHandle } : {}),
+        }
 
         await persistScannedCourse(item.scannedCourse, overrides)
         updateItem(item.folderName, { status: 'success' })
@@ -657,7 +687,7 @@ export function BulkImportDialog({
 
     // Server-aware batch import path: when manifest exists but parentHandle is null
     // (server URL import), create or update the track with successfully imported courses.
-    if (trackManifest && !parentHandle) {
+    if (trackManifest && !parentHandle && !abortRef.current && gen === generationRef.current) {
       const successResults = results.filter(r => r.status === 'success')
       if (successResults.length > 0) {
         try {
@@ -681,11 +711,13 @@ export function BulkImportDialog({
             const newPath = await lpStore.createPathWithCourses(trackName, trackDesc, coursesToAdd)
             trackId = newPath.id
           }
-          batchResultRef.current = {
-            trackId,
-            courseIds: successResults
-              .filter(r => r.scannedCourse?.id)
-              .map(r => r.scannedCourse!.id),
+          if (gen === generationRef.current) {
+            batchResultRef.current = {
+              trackId,
+              courseIds: successResults
+                .filter(r => r.scannedCourse?.id)
+                .map(r => r.scannedCourse!.id),
+            }
           }
         } catch (err) {
           console.warn('[BulkImport] Failed to create/update track from server courses:', err)
@@ -712,7 +744,9 @@ export function BulkImportDialog({
       toast.error('No folders were imported. Check the results for details.')
     }
 
-    setStep('results')
+    if (gen === generationRef.current) {
+      setStep('results')
+    }
   }, [scannedCourses, courseOverrides, parentAuthorId, trackManifest])
 
   // Retry a single failed item
@@ -732,6 +766,7 @@ export function BulkImportDialog({
       if (!item) return
 
       const scanResult = await scanCourseFromSource(item)
+      if (abortRef.current) return
 
       if (scanResult.status !== 'success') {
         setImportItems(prev =>
@@ -768,9 +803,10 @@ export function BulkImportDialog({
       )
 
       try {
-        const overrides = parentAuthorId
-          ? { authorId: parentAuthorId, skipStoreUpdate: true }
-          : { skipStoreUpdate: true }
+        const overrides = {
+          skipStoreUpdate: true,
+          ...(parentAuthorId ? { authorId: parentAuthorId } : {}),
+        }
         await persistScannedCourse(scanResult.course, overrides)
         await useCourseImportStore.getState().loadImportedCourses()
         setImportItems(prev =>

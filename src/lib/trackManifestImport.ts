@@ -91,15 +91,16 @@ export async function fetchTrackManifestFromUrl(
 > {
   const FETCH_TIMEOUT_MS = 10_000
 
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS)
+
   try {
     const manifestUrl = new URL('track-manifest.json', parentUrl.endsWith('/') ? parentUrl : parentUrl + '/').href
-
-    const controller = new AbortController()
-    const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS)
 
     const response = await fetch(manifestUrl, {
       signal: controller.signal,
       headers: { Accept: 'application/json' },
+      redirect: 'error',
     })
 
     if (response.status === 404) {
@@ -135,6 +136,7 @@ export async function fetchTrackManifestFromUrl(
       },
     }
   } catch (err) {
+    clearTimeout(timeout)
     if (err instanceof DOMException && err.name === 'AbortError') {
       return { ok: false, error: 'Request timed out' }
     }
@@ -160,13 +162,34 @@ export async function fetchTrackManifestFromUrl(
  */
 export async function batchImportTrackCourses(
   parentDirHandle: FileSystemDirectoryHandle,
-  manifest: TrackManifest
+  manifest: TrackManifest,
+  signal?: AbortSignal
 ): Promise<BatchImportResult> {
+  if (signal?.aborted) {
+    return {
+      trackId: undefined,
+      trackName: manifest.track.name,
+      courses: [],
+      successCount: 0,
+      failureCount: 0,
+    }
+  }
+
   const results: CourseImportResult[] = []
   const positions = manifest.track.courses
 
   // Phase 1: Import each course sequentially
   for (const { folder } of positions) {
+    if (signal?.aborted) {
+      const partialSuccessCount = results.filter(r => r.success).length
+      const partialFailureCount = results.length - partialSuccessCount
+      return {
+        trackName: manifest.track.name,
+        courses: results,
+        successCount: partialSuccessCount,
+        failureCount: partialFailureCount,
+      }
+    }
     try {
       // Get the subdirectory handle
       let dirHandle: FileSystemDirectoryHandle
