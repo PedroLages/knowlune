@@ -33,13 +33,12 @@ import {
   Pencil,
 } from 'lucide-react'
 import {
-  scanCourseFolderFromHandle,
-  scanCourseFolderFromServer,
+  scanCourseFromSource,
   listSubDirectories,
   listServerSubDirectories,
   persistScannedCourse,
 } from '@/lib/courseImport'
-import type { BulkScanResult, ScannedCourse } from '@/lib/courseImport'
+import type { ScannedCourse } from '@/lib/courseImport'
 import { isValidImportUrl } from '@/lib/courseServerService'
 import { readTrackManifest, fetchTrackManifestFromUrl, batchImportTrackCourses } from '@/lib/trackManifestImport'
 import type { TrackManifest } from '@/lib/courseManifest'
@@ -245,7 +244,6 @@ export function BulkImportDialog({
 
       // Attempt track-manifest detection for folder sorting (optional)
       const manifestResult = await fetchTrackManifestFromUrl(url)
-      let serverTrackName: string | null = null
 
       if (manifestResult.ok) {
         const positionByFolder = new Map(
@@ -256,7 +254,6 @@ export function BulkImportDialog({
           const posB = positionByFolder.get(b.name) ?? Infinity
           return posA - posB
         })
-        serverTrackName = manifestResult.summary.trackName
         setTrackManifest({
           manifest: manifestResult.manifest,
           trackName: manifestResult.summary.trackName,
@@ -395,30 +392,7 @@ export function BulkImportDialog({
       if (abortRef.current) return
       updateItem(item.folderName, { status: 'scanning' })
 
-      let scanResult: BulkScanResult
-
-      if (item.serverUrl) {
-        // Server-sourced item — scan via HTTP
-        try {
-          const scannedCourse = await scanCourseFolderFromServer(item.serverUrl)
-          if (abortRef.current) {
-            updateItem(item.folderName, { status: 'error', error: 'Cancelled' })
-            return
-          }
-          scanResult = { status: 'success', course: scannedCourse }
-        } catch (error) {
-          scanResult = {
-            status: 'error',
-            folderName: item.folderName,
-            message: error instanceof Error ? error.message : 'Failed to scan server folder',
-          }
-        }
-      } else if (item.handle) {
-        // Local folder — scan via FileSystemDirectoryHandle
-        scanResult = await scanCourseFolderFromHandle(item.handle)
-      } else {
-        scanResult = { status: 'error', folderName: item.folderName, message: 'No source available' }
-      }
+      const scanResult = await scanCourseFromSource(item)
 
       if (abortRef.current) {
         updateItem(item.folderName, { status: 'error', error: 'Cancelled' })
@@ -682,24 +656,7 @@ export function BulkImportDialog({
       const item = importItems.find(i => i.folderName === folderName)
       if (!item) return
 
-      // Branch scan by source type (server vs local)
-      let scanResult: BulkScanResult
-      if (item.serverUrl) {
-        try {
-          const scannedCourse = await scanCourseFolderFromServer(item.serverUrl)
-          scanResult = { status: 'success', course: scannedCourse }
-        } catch (error) {
-          scanResult = {
-            status: 'error',
-            folderName: item.folderName,
-            message: error instanceof Error ? error.message : 'Failed to scan server folder',
-          }
-        }
-      } else if (item.handle) {
-        scanResult = await scanCourseFolderFromHandle(item.handle)
-      } else {
-        scanResult = { status: 'error', folderName: item.folderName, message: 'No source available' }
-      }
+      const scanResult = await scanCourseFromSource(item)
 
       if (scanResult.status !== 'success') {
         setImportItems(prev =>

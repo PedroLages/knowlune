@@ -1003,6 +1003,41 @@ export async function scanCourseFolderFromHandle(
 }
 
 /**
+ * Scans a course folder from the appropriate source (server URL or local handle).
+ *
+ * Encapsulates the branching logic that decides between server-sourced and
+ * local-file-system imports. Used by `BulkImportDialog` to avoid duplicating
+ * the source-selection pattern across its scan loop and rescan handler.
+ *
+ * @returns A `BulkScanResult` preserving all statuses (`'success'`, `'error'`,
+ *          `'no-files'`, `'duplicate'`). Server-URL scans produce `'success'`
+ *          or `'error'`; handle scans pass through `scanCourseFolderFromHandle`'s
+ *          full result shape.
+ */
+export async function scanCourseFromSource(
+  source: { serverUrl?: string; handle: FileSystemDirectoryHandle | null; folderName: string }
+): Promise<BulkScanResult> {
+  if (source.serverUrl) {
+    try {
+      const scannedCourse = await scanCourseFolderFromServer(source.serverUrl)
+      return { status: 'success', course: scannedCourse }
+    } catch (error) {
+      return {
+        status: 'error',
+        folderName: source.folderName,
+        message: error instanceof Error ? error.message : 'Failed to scan server folder',
+      }
+    }
+  } else if (source.handle) {
+    // Pass through the full result from scanCourseFolderFromHandle,
+    // which may include 'no-files' or 'duplicate' statuses.
+    return await scanCourseFolderFromHandle(source.handle)
+  } else {
+    return { status: 'error', folderName: source.folderName, message: 'No source available' }
+  }
+}
+
+/**
  * Enumerates immediate sub-directories of a parent directory.
  * Used by bulk import to discover course folders.
  */
