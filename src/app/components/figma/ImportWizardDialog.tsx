@@ -42,6 +42,7 @@ import {
   Globe,
 } from 'lucide-react'
 import { scanCourseFolder, scanFromDroppedFiles, persistScannedCourse, scanCourseFolderFromServer } from '@/lib/courseImport'
+import { isValidImportUrl } from '@/lib/courseServerService'
 import { getVideoFormat } from '@/lib/fileSystem'
 import type { ScannedCourse, ScannedImage } from '@/lib/courseImport'
 import type { CourseManifest } from '@/lib/courseManifest'
@@ -101,7 +102,7 @@ function ScanProgressIndicator() {
       data-testid="wizard-scan-progress"
     >
       <div className="flex items-center gap-2 justify-center">
-        <Loader2 className="size-4 text-brand animate-spin shrink-0" aria-hidden="true" />
+        <Loader2 className="size-4 text-brand motion-safe:animate-spin shrink-0" aria-hidden="true" />
         <span className="text-sm font-medium truncate">{current.courseName}</span>
       </div>
       <Progress value={percent ?? 0} className="h-1.5" aria-label="Scan progress" />
@@ -557,9 +558,10 @@ export function ImportWizardDialog({
       toast.error('Please enter a folder URL')
       return
     }
-    // Basic validation — must start with http:// or https://
-    if (!/^https?:\/\//i.test(url)) {
-      toast.error('URL must start with http:// or https://')
+    // Validate URL before any network call — uses shared validator from courseServerService
+    const validation = isValidImportUrl(url)
+    if (!validation.valid) {
+      toast.error(validation.reason)
       return
     }
 
@@ -764,7 +766,10 @@ export function ImportWizardDialog({
                 ? 'Course Details'
                 : 'Learning Path'}
           </DialogTitle>
-          <DialogDescription id="import-wizard-description">
+          <DialogDescription
+            id="import-wizard-description"
+            aria-live="polite"
+          >
             {step === 'select'
               ? 'Select a folder containing your course videos and PDFs.'
               : step === 'details'
@@ -829,13 +834,13 @@ export function ImportWizardDialog({
                     type="button"
                     onClick={handleSelectFolder}
                     disabled={isScanning}
-                    className="flex flex-col items-center gap-3 rounded-xl border border-border p-4 text-left transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring disabled:opacity-50"
+                    className="flex flex-col items-start gap-3 rounded-xl border border-border p-4 text-left transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring disabled:opacity-50"
                     data-testid="wizard-select-folder-btn"
                   >
-                    <div className="flex items-center justify-center size-12 rounded-full bg-brand-soft shrink-0">
+                    <div className="flex items-center justify-center size-12 rounded-full bg-brand-soft shrink-0 self-center">
                       <FolderOpen className="size-6 text-brand-soft-foreground" aria-hidden="true" />
                     </div>
-                    <div className="text-center">
+                    <div className="text-left">
                       <p className="font-medium text-foreground">Select Folder</p>
                       <p className="text-sm text-muted-foreground">
                         Choose a folder with your course videos and PDFs
@@ -844,11 +849,11 @@ export function ImportWizardDialog({
                   </button>
 
                   {/* Drag & Drop card */}
-                  <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-border p-4 transition-colors hover:bg-accent">
-                    <div className="flex items-center justify-center size-12 rounded-full bg-brand-soft shrink-0">
+                  <div className="flex flex-col items-start gap-3 rounded-xl border border-dashed border-border p-4 transition-colors hover:bg-accent">
+                    <div className="flex items-center justify-center size-12 rounded-full bg-brand-soft shrink-0 self-center">
                       <FolderOpen className="size-6 text-brand-soft-foreground" aria-hidden="true" />
                     </div>
-                    <div className="text-center">
+                    <div className="text-left">
                       <p className="font-medium text-foreground">Drag & Drop</p>
                       <p className="text-sm text-muted-foreground">
                         Drop files here to import as a course
@@ -878,9 +883,10 @@ export function ImportWizardDialog({
                           onClick={handleServerUrlImport}
                           disabled={!serverUrlInput.trim() || isScanning}
                           className="gap-1 min-h-[44px] rounded-xl"
+                          data-testid="wizard-server-scan-btn"
                         >
                           {isScanning ? (
-                            <Loader2 className="size-4 animate-spin" />
+                            <Loader2 className="size-4 motion-safe:animate-spin" />
                           ) : (
                             <Globe className="size-4" />
                           )}
@@ -891,6 +897,7 @@ export function ImportWizardDialog({
                           size="sm"
                           onClick={() => setShowServerUrlInput(false)}
                           className="min-h-[44px] rounded-xl"
+                          data-testid="wizard-server-cancel-btn"
                         >
                           Cancel
                         </Button>
@@ -901,13 +908,13 @@ export function ImportWizardDialog({
                       type="button"
                       onClick={() => setShowServerUrlInput(true)}
                       disabled={isScanning}
-                      className="flex flex-col items-center gap-3 rounded-xl border border-border p-4 text-left transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring disabled:opacity-50"
+                      className="flex flex-col items-start gap-3 rounded-xl border border-border p-4 text-left transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring disabled:opacity-50"
                       data-testid="wizard-server-url-btn"
                     >
-                      <div className="flex items-center justify-center size-12 rounded-full bg-brand-soft shrink-0">
+                      <div className="flex items-center justify-center size-12 rounded-full bg-brand-soft shrink-0 self-center">
                         <Globe className="size-6 text-brand-soft-foreground" aria-hidden="true" />
                       </div>
-                      <div className="text-center">
+                      <div className="text-left">
                         <p className="font-medium text-foreground">Import from URL</p>
                         <p className="text-sm text-muted-foreground">
                           Paste a course server URL to import
@@ -922,13 +929,13 @@ export function ImportWizardDialog({
                       type="button"
                       onClick={() => setDriveFolderBrowserOpen(true)}
                       disabled={isScanning}
-                      className="flex flex-col items-center gap-3 rounded-xl border border-border p-4 text-left transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring disabled:opacity-50 w-full"
+                      className="flex flex-col items-start gap-3 rounded-xl border border-border p-4 text-left transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring disabled:opacity-50 w-full"
                       data-testid="wizard-drive-import-btn"
                     >
-                      <div className="flex items-center justify-center size-12 rounded-full bg-brand-soft shrink-0">
+                      <div className="flex items-center justify-center size-12 rounded-full bg-brand-soft shrink-0 self-center">
                         <ExternalLink className="size-6 text-brand-soft-foreground" aria-hidden="true" />
                       </div>
-                      <div className="text-center">
+                      <div className="text-left">
                         <p className="font-medium text-foreground">Google Drive</p>
                         <p className="text-sm text-muted-foreground">
                           Import from Google Drive folders
@@ -989,7 +996,7 @@ export function ImportWizardDialog({
                   aria-live="polite"
                 >
                   <Loader2
-                    className="size-4 animate-spin text-brand-soft-foreground"
+                    className="size-4 motion-safe:animate-spin text-brand-soft-foreground"
                     aria-hidden="true"
                   />
                   <span className="text-xs text-brand-soft-foreground">
@@ -1313,7 +1320,7 @@ export function ImportWizardDialog({
                   aria-live="polite"
                 >
                   <Loader2
-                    className="size-4 animate-spin text-brand-soft-foreground"
+                    className="size-4 motion-safe:animate-spin text-brand-soft-foreground"
                     aria-hidden="true"
                   />
                   <span className="text-xs text-brand-soft-foreground">
@@ -1502,7 +1509,7 @@ export function ImportWizardDialog({
               >
                 {isPersisting ? (
                   <>
-                    <Loader2 className="size-4 mr-2 animate-spin" />
+                    <Loader2 className="size-4 mr-2 motion-safe:animate-spin" />
                     Importing...
                   </>
                 ) : (
@@ -1549,7 +1556,7 @@ export function ImportWizardDialog({
             >
               {isPersisting ? (
                 <>
-                  <Loader2 className="size-4 mr-2 animate-spin" />
+                  <Loader2 className="size-4 mr-2 motion-safe:animate-spin" />
                   Importing...
                 </>
               ) : (

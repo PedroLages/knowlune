@@ -45,6 +45,7 @@ import type { TrackManifest } from '@/lib/courseManifest'
 import { showDirectoryPicker } from '@/lib/fileSystem'
 import { detectAuthorFromFolderName, matchOrCreateAuthor } from '@/lib/authorDetection'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
+import { useLearningPathStore } from '@/stores/useLearningPathStore'
 import { useImportProgressStore } from '@/stores/useImportProgressStore'
 import { toast } from 'sonner'
 
@@ -118,6 +119,7 @@ export function BulkImportDialog({
   const [isScanningUrl, setIsScanningUrl] = useState(false)
 
   const abortRef = useRef(false)
+  const stepRef = useRef<DialogStep>('choose')
   const completedSuccessfullyRef = useRef(false)
   const parentHandleRef = useRef<FileSystemDirectoryHandle | null>(null)
   const batchResultRef = useRef<{ trackId?: string; courseIds: string[] } | null>(null)
@@ -132,6 +134,7 @@ export function BulkImportDialog({
   // Track when the dialog actually transitions through the results step,
   // so onComplete only fires when the import flow genuinely completed.
   useEffect(() => {
+    stepRef.current = step
     if (step === 'results') {
       completedSuccessfullyRef.current = true
     }
@@ -198,6 +201,7 @@ export function BulkImportDialog({
             onComplete(ids, trackId)
           }
         }
+        abortRef.current = true // Signal cancellation to in-flight async ops before resetting state
         resetDialog()
       }
       onOpenChange(nextOpen)
@@ -219,6 +223,9 @@ export function BulkImportDialog({
   const handleServerUrlScan = useCallback(async () => {
     const url = serverUrlInput.trim()
 
+    // Clear stale parent handle — server-URL scans never have a filesystem handle
+    parentHandleRef.current = null
+
     // Validate URL before any network call
     const validation = isValidImportUrl(url)
     if (!validation.valid) {
@@ -231,6 +238,7 @@ export function BulkImportDialog({
 
     try {
       const result = await listServerSubDirectories(url)
+      if (abortRef.current) return
 
       if (!result.ok) {
         setServerUrlError(result.error)
@@ -244,6 +252,7 @@ export function BulkImportDialog({
 
       // Attempt track-manifest detection for folder sorting (optional)
       const manifestResult = await fetchTrackManifestFromUrl(url)
+      if (abortRef.current) return
 
       if (manifestResult.ok) {
         const positionByFolder = new Map(
@@ -273,8 +282,11 @@ export function BulkImportDialog({
       )
       setStep('select-folders')
     } catch (error) {
-      const msg = error instanceof Error ? error.message : 'Failed to scan server URL'
-      setServerUrlError(msg)
+      // Don't surface errors after cancellation — dialog may already be closed
+      if (!abortRef.current) {
+        const msg = error instanceof Error ? error.message : 'Failed to scan server URL'
+        setServerUrlError(msg)
+      }
     } finally {
       setIsScanningUrl(false)
     }
@@ -328,6 +340,9 @@ export function BulkImportDialog({
         }
       }
 
+      // Guard against state contamination if dialog was closed during async operation
+      if (stepRef.current !== 'choose') return
+
       setFolders(
         subDirs.map(handle => ({
           handle,
@@ -367,6 +382,15 @@ export function BulkImportDialog({
     if (selectedFolders.length === 0) return
 
     abortRef.current = false
+
+    // Revoke stale cover preview object URLs before starting a new scan cycle
+    for (const urls of coverPreviewUrls.values()) {
+      for (const url of urls.values()) {
+        URL.revokeObjectURL(url)
+      }
+    }
+    setCoverPreviewUrls(new Map())
+
     setStep('scanning')
 
     const scanItems: ImportItem[] = selectedFolders.map(f => ({
@@ -461,7 +485,7 @@ export function BulkImportDialog({
       toast.error('No folders could be scanned. Check the results for details.')
       setStep('results')
     }
-  }, [folders])
+  }, [folders, coverPreviewUrls])
 
   // Update course override
   const handleCourseOverride = useCallback(
@@ -620,6 +644,45 @@ export function BulkImportDialog({
     await Promise.all(running)
     await useCourseImportStore.getState().loadImportedCourses()
 
+    // Server-aware batch import path: when manifest exists but parentHandle is null
+    // (server URL import), create or update the track with successfully imported courses.
+    if (trackManifest && !parentHandle) {
+      const successResults = results.filter(r => r.status === 'success')
+      if (successResults.length > 0) {
+        try {
+          const lpStore = useLearningPathStore.getState()
+          const trackName = trackManifest.manifest.track.name
+          const trackDesc = trackManifest.manifest.track.description
+          const existingPath = lpStore.paths.find(
+            p => p.name.toLowerCase() === trackName.toLowerCase()
+          )
+          const coursesToAdd = successResults
+            .filter(r => r.scannedCourse?.id)
+            .map(r => ({
+              courseId: r.scannedCourse!.id,
+              courseType: 'imported' as const,
+            }))
+          let trackId: string
+          if (existingPath) {
+            trackId = existingPath.id
+            await lpStore.batchAddCoursesToPath(trackId, coursesToAdd)
+          } else {
+            const newPath = await lpStore.createPathWithCourses(trackName, trackDesc, coursesToAdd)
+            trackId = newPath.id
+          }
+          batchResultRef.current = {
+            trackId,
+            courseIds: successResults
+              .filter(r => r.scannedCourse?.id)
+              .map(r => r.scannedCourse!.id),
+          }
+        } catch (err) {
+          console.warn('[BulkImport] Failed to create/update track from server courses:', err)
+          toast.warning('Courses imported but track could not be created')
+        }
+      }
+    }
+
     const successCount = results.filter(r => r.status === 'success').length
     const noFilesCount = results.filter(r => r.status === 'no-files').length
     const errorCount = results.filter(r => r.status === 'error').length
@@ -644,6 +707,7 @@ export function BulkImportDialog({
   // Retry a single failed item
   const handleRetry = useCallback(
     async (folderName: string) => {
+      if (abortRef.current) return
       setImportItems(prev => {
         const items = [...prev]
         const idx = items.findIndex(i => i.folderName === folderName)
@@ -748,14 +812,19 @@ export function BulkImportDialog({
         <DialogHeader className="pr-12">
           <DialogTitle>
             {step === 'choose' && 'Import Courses'}
+            {step === 'enter-url' && 'Enter Server URL'}
             {step === 'select-folders' && 'Select Course Folders'}
             {step === 'scanning' && 'Scanning Folders'}
             {step === 'review' && 'Review Courses'}
             {step === 'importing' && 'Importing Courses'}
             {step === 'results' && 'Import Complete'}
           </DialogTitle>
-          <DialogDescription id="bulk-import-description">
+          <DialogDescription
+            id="bulk-import-description"
+            aria-live="polite"
+          >
             {step === 'choose' && 'Choose how you want to import your courses.'}
+            {step === 'enter-url' && 'Paste a server URL to scan for course folders.'}
             {step === 'select-folders' &&
               (hasManifest && trackManifest
                 ? `Found ${folders.length} sub-folders for "${trackManifest.trackName}". Select which ones to import.`
@@ -803,7 +872,7 @@ export function BulkImportDialog({
               <div className="flex items-center justify-center size-12 rounded-full bg-brand-soft shrink-0">
                 {isLoadingFolders ? (
                   <Loader2
-                    className="size-6 text-brand-soft-foreground animate-spin"
+                    className="size-6 text-brand-soft-foreground motion-safe:animate-spin"
                     aria-hidden="true"
                   />
                 ) : (
@@ -821,7 +890,7 @@ export function BulkImportDialog({
             <button
               type="button"
               onClick={() => setStep('enter-url')}
-              className="flex items-center gap-4 rounded-xl border border-border p-4 text-left transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
+              className={`flex items-center gap-4 rounded-xl border border-border p-4 text-left transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring ${!onYouTubeImport ? 'sm:col-span-2' : ''}`}
               data-testid="import-multiple-url-btn"
             >
               <div className="flex items-center justify-center size-12 rounded-full bg-brand-soft shrink-0">
@@ -874,7 +943,7 @@ export function BulkImportDialog({
                   e.preventDefault()
                   handleServerUrlScan()
                 }
-                if (e.key === 'Escape') {
+                if (e.key === 'Escape' && !isScanningUrl) {
                   setStep('choose')
                 }
               }}
@@ -882,10 +951,11 @@ export function BulkImportDialog({
               className="min-h-[44px] font-mono text-sm"
               data-testid="bulk-import-enter-url"
               aria-invalid={!!serverUrlError}
+              aria-describedby={serverUrlError ? 'bulk-import-url-error-text' : undefined}
               disabled={isScanningUrl}
             />
             {serverUrlError && (
-              <p className="text-xs text-destructive" role="alert" data-testid="bulk-import-url-error">
+              <p className="text-xs text-destructive" role="alert" id="bulk-import-url-error-text" data-testid="bulk-import-url-error">
                 {serverUrlError}
               </p>
             )}
@@ -899,7 +969,7 @@ export function BulkImportDialog({
               >
                 {isScanningUrl ? (
                   <>
-                    <Loader2 className="size-4 mr-2 animate-spin" aria-hidden="true" />
+                    <Loader2 className="size-4 mr-2 motion-safe:animate-spin" aria-hidden="true" />
                     Scanning...
                   </>
                 ) : (
@@ -1042,10 +1112,10 @@ export function BulkImportDialog({
                     role="listitem"
                   >
                     {item.status === 'pending' && (
-                      <div className="size-5 rounded-full border-2 border-muted shrink-0" />
+                      <div className="size-5 rounded-full border-2 border-muted shrink-0" aria-label="Pending" />
                     )}
                     {item.status === 'scanning' && (
-                      <Loader2 className="size-5 text-brand animate-spin shrink-0" />
+                      <Loader2 className="size-5 text-brand motion-safe:animate-spin shrink-0" />
                     )}
                     {item.status === 'success' && (
                       <CheckCircle2 className="size-5 text-success shrink-0" />
@@ -1122,6 +1192,8 @@ export function BulkImportDialog({
                       <button
                         type="button"
                         onClick={() => setExpandedCourseId(isExpanded ? null : course.id)}
+                        aria-expanded={isExpanded}
+                        aria-controls={`bulk-course-details-${course.id}`}
                         className="flex items-center gap-3 w-full px-4 py-3 text-left hover:bg-accent transition-colors"
                       >
                         <FolderOpen
@@ -1154,7 +1226,10 @@ export function BulkImportDialog({
 
                       {/* Expanded edit form */}
                       {isExpanded && (
-                        <div className="px-4 pb-4 space-y-3 border-t border-border pt-3">
+                        <div
+                          id={`bulk-course-details-${course.id}`}
+                          className="px-4 pb-4 space-y-3 border-t border-border pt-3"
+                        >
                           <div className="space-y-1.5">
                             <Label htmlFor={`bulk-name-${course.id}`} className="text-xs">
                               Course Name
@@ -1290,7 +1365,7 @@ export function BulkImportDialog({
                     )}
                     {(item.status === 'scanning' || item.status === 'importing') && (
                       <Loader2
-                        className="size-5 text-brand animate-spin shrink-0"
+                        className="size-5 text-brand motion-safe:animate-spin shrink-0"
                         aria-label="In progress"
                       />
                     )}
