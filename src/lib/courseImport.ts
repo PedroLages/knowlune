@@ -16,7 +16,8 @@ import {
   detectAuthorPhoto,
 } from '@/lib/authorDetection'
 import { autoGenerateThumbnail } from '@/lib/autoThumbnail'
-import { fetchDirectoryListing } from '@/lib/courseServerService'
+import { fetchDirectoryListing, isValidImportUrl } from '@/lib/courseServerService'
+import type { ServerResult } from '@/lib/courseServerService'
 import { generateStoryboard, saveVideoStoryboard, loadVideoStoryboard } from '@/lib/videoStoryboard'
 import { loadThumbnailFromFile, saveCourseThumbnail } from '@/lib/thumbnailService'
 import {
@@ -1018,6 +1019,39 @@ export async function listSubDirectories(
   // order (e.g. BulkImportDialog when a track-manifest.json defines positions)
   // are responsible for sorting themselves.
   return dirs
+}
+
+/**
+ * Enumerates immediate sub-directories of a remote server URL using nginx
+ * autoindex directory listings.
+ *
+ * Validates the URL, fetches the directory listing, and returns only directory
+ * entries. Errors are surfaced as `ServerResult` with user-friendly messages.
+ *
+ * @param url - Full URL to a directory on an nginx server
+ * @returns Array of sub-directory names and their full URLs
+ */
+export async function listServerSubDirectories(
+  url: string
+): Promise<ServerResult<{ name: string; url: string }[]>> {
+  // Validate URL first — catches empty strings, bad protocols, bare IP roots
+  const validation = isValidImportUrl(url)
+  if (!validation.valid) {
+    return { ok: false, error: validation.reason }
+  }
+
+  // Fetch the directory listing
+  const result = await fetchDirectoryListing(url)
+  if (!result.ok) {
+    return result // passthrough error (network, timeout, non-200, parse failure)
+  }
+
+  // Filter for directory entries only
+  const directories = result.data.files
+    .filter(f => f.type === 'directory')
+    .map(f => ({ name: f.name.replace(/\/$/, ''), url: f.url }))
+
+  return { ok: true, data: directories }
 }
 
 // --- Drag-and-Drop File Import (E33-S06) ---
