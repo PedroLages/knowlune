@@ -4,7 +4,7 @@ type: feat
 status: active
 date: 2026-06-28
 origin: docs/brainstorms/2026-06-28-course-import-experience-requirements.md
-deepened: 2026-06-28
+deepened: 2026-06-29
 ---
 
 # URL Batch Import and Import Dialog Redesign
@@ -71,6 +71,29 @@ Users who self-host courses on an nginx-based file server can only import one co
 ## Key Technical Decisions
 
 1. **Extend FolderEntry/ImportItem with optional `serverUrl` field and make `handle` nullable** rather than creating separate types or a discriminated union. The scanning step already branches on source type, so optional/nullable fields are the minimal change. Making `handle` nullable (`FileSystemDirectoryHandle | null`) accommodates both local folders (non-null handle) and server folders (null handle).
+
+   **Blast radius of nullable `handle`** — every code path that accesses `.handle` in BulkImportDialog.tsx:
+
+   **FolderEntry.handle (type def at line 50–54):**
+   - Change `handle: FileSystemDirectoryHandle` → `handle: FileSystemDirectoryHandle | null`.
+
+   **FolderEntry.handle read sites:**
+   - Line 254: `subDirs.map(handle => ({ handle, name: handle.name, selected: true }))` — no guard needed; these are always local directory-picker handles (non-null).
+   - Line 296: `handle: f.handle` — used when creating ImportItem from FolderEntry. After both types are nullable, this assignment is type-safe (both `FileSystemDirectoryHandle | null`).
+
+   **ImportItem.handle (type def at line 65–73):**
+   - Change `handle: FileSystemDirectoryHandle` → `handle: FileSystemDirectoryHandle | null`.
+
+   **ImportItem.handle write sites:**
+   - Line 296: `handle: f.handle` — type-safe (both nullable).
+   - Line 435: `handle: null as unknown as FileSystemDirectoryHandle` (hard-cast hack for batch import path in `handleConfirmImport`). Replace with `handle: null` — now valid without cast.
+   - Line 461: `handle: c.directoryHandle ?? (null as unknown as FileSystemDirectoryHandle)` (per-course persist loop in `handleConfirmImport`). Replace with `handle: c.directoryHandle ?? null` — now valid without cast.
+
+   **ImportItem.handle read sites (require null-guard):**
+   - Line 316: `scanCourseFolderFromHandle(item.handle)` — inside the `scanFolder()` helper within `handleScanFolders`. **Must guard**: check `item.handle !== null` before calling local scan; otherwise call `scanCourseFolderFromServer(item.serverUrl!)`.
+   - Line 580: `scanCourseFolderFromHandle(item.handle)` — inside `handleRetry()`. **Must guard**: same branching: if `item.handle !== null` use local scan, else if `item.serverUrl` use server scan.
+
+   **No impact outside BulkImportDialog.tsx:** The `FolderEntry` and `ImportItem` interfaces are defined locally within that single file. ImportWizardDialog does not use these types. The downstream scanning functions (`scanCourseFolderFromHandle`, `scanCourseFolderFromServer`) accept `FileSystemDirectoryHandle` and `string` respectively — their signatures do not change.
 2. **Reuse existing `select-folders` step UI** for server-discovered folders. The checkbox list is source-agnostic (just names + selection state). Adding `serverUrl` to FolderEntry allows this without UI changes.
 3. **Reuse existing concurrency infrastructure** (`MAX_CONCURRENCY=5`, `Promise.race` loop, `abortRef`) for server scanning — it already works for local handles and adapts cleanly to URL-based items.
 4. **Add `listServerSubDirectories()` as a thin wrapper** around `fetchDirectoryListing()` for the batch-flow entry point, rather than modifying the existing single-course flow.
@@ -107,17 +130,26 @@ Users who self-host courses on an nginx-based file server can only import one co
     - Call `fetchDirectoryListing(url)`; on success, filter `files` entries where `type === 'directory'` and map to `{name, url}` objects.
     - Return type consistent with the existing `ServerResult<T>` type in `courseServerService.ts`: `{ ok: true; data: ... }` or `{ ok: false; error: string }` (the actual field is `ok`, not `success` — see `courseServerService.ts` line 30).
     - On network error, distinguish: network failure, non-200 response, CORS failure, invalid URL, empty directory (no sub-directories found but no error).
-    - URL validation logic should be a shared helper that both this function and the dialog's URL input validation can use.
+    - **Add a shared URL validation helper** in `src/lib/courseServerService.ts` (this file already has `normalizeBaseUrl`, `fetchDirectoryListing`, `verifyConnection`, is React-free, and is importable from all contexts):
+
+      ```typescript
+      export function isValidImportUrl(url: string): { valid: true } | { valid: false; reason: string }
+      ```
+
+      — Validates: non-empty string, parseable via `new URL()`, protocol is `http:` or `https:`, rejects bare IP-literal URLs without a path. Returns a discriminated union so callers can show precise inline error messages.
+      — Note: There is an existing `isValidUrl` in `AuthorFormDialog.tsx` (returns `boolean`), but it lacks error reason strings. The new `isValidImportUrl` is the canonical import-specific validator; the AuthorFormDialog one is unrelated and should not be reused.
+    - `listServerSubDirectories` calls `isValidImportUrl(url)` before making any network request — returns early with `{ ok: false, error: reason }` on invalid input.
+    - Unit 2's dialog URL input calls the same `isValidImportUrl` before enabling the Scan button, ensuring a single validation source of truth.
 
     **Patterns to follow:**
     - Return type: mirror `ServerResult<T>` from `courseServerService.ts` (already the pattern used by `fetchDirectoryListing` and `verifyConnection`).
-    - URL validation: mirror the existing checks in `scanCourseFolderFromServer` for consistency.
+    - URL validation: use the new `isValidImportUrl` helper; do not duplicate validation logic between units.
 
     **Test scenarios:**
     - Happy path: valid nginx autoindex URL with sub-directories -> returns array of `{name, url}` entries.
     - Edge case: URL with no sub-directories (empty directory) -> returns `{ ok: true, data: [] }` (empty array with `ok: true`).
     - Edge case: URL with trailing slash vs without -> both should work identically.
-    - Error path: invalid URL (no protocol, malformed) -> returns `{ ok: false, error: "..." }`.
+    - Error path: invalid URL (no protocol, malformed) -> returns `{ ok: false, error: "..." }`, calls `isValidImportUrl` which returns `{ valid: false, reason }`.
     - Error path: non-200 response (404, 500) -> returns descriptive error.
     - Error path: non-nginx server (HTML page without autoindex) -> `fetchDirectoryListing` returns parse error, surfaced as friendly message.
     - Error path: network error (unreachable host, timeout) -> returns network error message.
@@ -226,6 +258,7 @@ Users who self-host courses on an nginx-based file server can only import one co
     - Source type discrimination: `entry.handle === null && entry.serverUrl !== undefined` = server-sourced; `entry.handle !== null` = local-filesystem-sourced. This guides branching in subsequent steps.
     - Track-manifest detection (R2.6): call a new async function `fetchTrackManifest(parentUrl)` that fetches `{parentUrl}/track-manifest.json` and parses it. If found, auto-sort folders by manifest position and store manifest data, identical to the local-flow behavior. Add to `src/lib/trackManifestImport.ts` or `courseImport.ts`.
     - Error handling (R2.5): wrap the discovery call in try-catch, show friendly error messages for each failure type. Do not crash the dialog.
+    - **Null-guard requirements** (see full blast-radius enumeration in Key Technical Decisions #1): The two sites that read `Item.handle` (`scanFolder` inner function in `handleScanFolders` at line 316, and `handleRetry` at line 580) must guard against `null` before calling `scanCourseFolderFromHandle`, branching to `scanCourseFolderFromServer(item.serverUrl!)` for server-sourced items. These guards are the primary implementation concern introduced by the nullable type change.
 
     **Patterns to follow:**
     - `FolderEntry` is a local interface in BulkImportDialog — extend in place.
@@ -263,9 +296,9 @@ Users who self-host courses on an nginx-based file server can only import one co
 
     **Approach:**
     - In the `handleScanFolders` function (or equivalent scanning loop in BulkImportDialog), detect whether each item is server-sourced by checking `item.serverUrl`.
-    - Branch the per-item scan call:
-      - If `serverUrl` is present: call `scanCourseFolderFromServer(item.serverUrl, serverId?)`
-      - Otherwise: call `scanCourseFolderFromHandle(item.handle)`
+    - Branch the per-item scan call, guarding against nullable `handle` in both directions:
+      - If `serverUrl` is present: call `scanCourseFolderFromServer(item.serverUrl, serverId?)`. The `handle` is `null` here — do not access it.
+      - Otherwise (`handle !== null`): call `scanCourseFolderFromHandle(item.handle)`. TypeScript requires `item.handle` to be narrowed to non-null before passing.
     - **Return type mismatch**: `scanCourseFolderFromServer` returns `Promise<ScannedCourse>` directly, while `scanCourseFolderFromHandle` returns `Promise<BulkScanResult>`. The scanning loop expects `BulkScanResult`. Wrap the server result: `{ status: 'success'; course: scannedCourse }` on success, or `{ status: 'error'; folderName: item.folderName; message: error.message }` on error.
     - Reuse the existing `MAX_CONCURRENCY=5`, `Promise.race` loop, and `abortRef` cancellation — these are already source-agnostic infrastructure.
     - The scanning results populate `scannedCourses` (a `Map<string, ScannedCourse>`) — the review step operates on `ScannedCourse` objects and is already source-agnostic.
@@ -304,7 +337,9 @@ Users who self-host courses on an nginx-based file server can only import one co
     **Files:**
     - Modify: `src/app/components/figma/BulkImportDialog.tsx` (if prop threading needed)
     - Modify: `src/app/components/figma/CurriculumComposer.tsx` (if integration gap found)
-    - Test: manual/E2E verification or existing Learning Tracks test
+    - Test: `src/app/components/figma/__tests__/BulkImportDialog.test.tsx` (URL card rendering + URL scan flow through to import)
+    - Test: `src/app/components/figma/__tests__/CurriculumComposer.test.tsx` (track auto-addition on batch import complete)
+    - E2E (describe approach): `tests/e2e/` — use Playwright `page.route()` to intercept nginx autoindex response; no full E2E test required for this story, but describe the approach for future hardening
 
     **Approach:**
     - The URL batch import card shall always be visible in BulkImportDialog across all calling contexts (unlike the YouTube import card which depends on the `onYouTubeImport` prop). This means no guard on rendering the URL card — it shows unconditionally in the 'choose' step.
@@ -318,14 +353,39 @@ Users who self-host courses on an nginx-based file server can only import one co
     - `COURSE_IMPORTED` custom event: fire once for the batch with all course IDs (or fire once per course, depending on existing pattern — investigate during implementation).
 
     **Test scenarios:**
-    - Happy path: CurriculumComposer opens BulkImportDialog, URL batch import completes, `onComplete` fires with courseIds, courses appear in track course list.
-    - Edge case: user opens BulkImportDialog from non-track context (e.g., Courses page) — URL card visible but no track association needed.
-    - Edge case: user cancels batch import from Learning Tracks flow — no courses added.
-    - Integration: the `COURSE_IMPORTED` event fires for batch imports and CurriculumComposer picks it up.
+
+    Unit tests in `src/app/components/figma/__tests__/BulkImportDialog.test.tsx`:
+    - Happy path: URL card renders with `data-testid="import-multiple-url-btn"` alongside existing cards in the 'choose' step.
+    - Happy path: clicking URL card transitions to `'enter-url'` step — `data-testid="bulk-import-enter-url"` input is visible.
+    - Happy path: user types valid URL, presses Enter → mock `listServerSubDirectories` called with that URL → scan begins → progress indicator shows.
+    - Happy path: scan returns subdirectories → transitions to `'select-folders'` step with folder names visible in checkbox list.
+    - Happy path: select folders → scan (`scanCourseFolderFromServer` mocked) → review → confirm import → `onComplete` fires with expected `courseIds[]`.
+    - Edge case: user types empty URL → inline validation error shown (`text-destructive`), no network call.
+    - Edge case: user types `ftp://` URL → validation rejects, inline error shown.
+    - Edge case: user clicks "Back" from `'enter-url'` → returns to 'choose' step.
+    - Edge case: scan fails with network error → inline error shown, scan button re-enabled.
+    - Edge case: scan returns empty list → explanatory message shown with suggestions, back button to URL input.
+    - Integration: `scanCourseFolderFromServer` called with correct `serverUrl` for each selected folder in the batch.
+    - Integration: after import completes, `onComplete(courseIds)` invoked with all successfully imported course IDs.
+
+    Unit tests in `src/app/components/figma/__tests__/CurriculumComposer.test.tsx`:
+    - Happy path: CurriculumComposer renders with BulkImportDialog → `handleBatchImportComplete` receives `courseIds[]` → `setSelectedCourseIds` now includes those IDs (verified via state query or mock).
+    - Happy path: after `handleBatchImportComplete`, `loadImportedCourses` is called to refresh the course picker.
+    - Edge case: `handleBatchImportComplete` receives empty array → `selectedCourseIds` unchanged.
+    - Edge case: `handleBatchImportComplete` receives IDs that already exist in selection → no duplicates added.
+    - Integration: full CurriculumComposer → activate batch import → mock `listServerSubDirectories` and `scanCourseFolderFromServer` on BulkImportDialog → step through URL scan → select → scan → import → verify `createPathWithCourses` or `addCourseToPath` receives imported course IDs.
+
+    E2E approach (describe in plan for future hardening, not required for this story):
+    - Use Playwright `page.route()` to intercept the nginx autoindex URL and return a mock HTML response with subdirectory links.
+    - Use `page.evaluate()` to seed IndexedDB with minimal course data before the test.
+    - Step through the full CurriculumComposer → BulkImportDialog flow via `page.click()` and `page.fill()`.
+    - Assert that courses appear in the track course list after batch import completes.
+    - See existing patterns in `tests/support/fixtures/local-storage-fixture.ts` for IndexedDB seeding utilities and `tests/e2e/` for existing E2E test structure.
 
     **Verification:**
-    - Full end-to-end flow works: CurriculumComposer -> batch import URL -> courses visible in new track.
-    - No regression: existing local batch import in track creation still works.
+    - Unit tests in `BulkImportDialog.test.tsx` pass: URL card renders, enter-url step transitions, URL validation works, scan flow completes, `onComplete` fires with courseIds.
+    - Unit tests in `CurriculumComposer.test.tsx` pass: `handleBatchImportComplete` adds course IDs to selection.
+    - No regression: existing local batch import in track creation still works (existing tests pass).
 
 - [ ] **Unit 6: Import dialog source selection redesign and UX polish**
 
