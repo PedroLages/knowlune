@@ -789,10 +789,9 @@ export function ImportWizardDialog({
           ]
 
           return (
-            <div
+            <nav
               className="flex items-center gap-2 text-xs text-muted-foreground"
               aria-label={`Step ${currentStep} of ${totalSteps}`}
-              role="status"
             >
               {steps.map((s, i) => (
                 <span key={s.num} className="contents">
@@ -805,6 +804,7 @@ export function ImportWizardDialog({
                           ? 'bg-brand-soft text-brand-soft-foreground'
                           : 'bg-muted text-muted-foreground'
                     }`}
+                    aria-current={currentStep === s.num ? 'step' : undefined}
                   >
                     {currentStep > s.num ? <Check className="size-3" aria-hidden="true" /> : s.num}
                   </span>
@@ -813,14 +813,14 @@ export function ImportWizardDialog({
                   </span>
                 </span>
               ))}
-            </div>
+            </nav>
           )
         })()}
 
         {step === 'select' && (
           <div className="flex flex-col gap-4 py-4">
             {isScanning ? (
-              <div className="flex flex-col items-center py-8">
+              <div className="flex flex-col items-center py-8" data-testid="wizard-scanning-state">
                 <ScanProgressIndicator />
               </div>
             ) : (
@@ -849,7 +849,7 @@ export function ImportWizardDialog({
                   </button>
 
                   {/* Drag & Drop card */}
-                  <div className="flex flex-col items-start gap-3 rounded-xl border border-dashed border-border p-4 transition-colors hover:bg-accent">
+                  <div className="flex flex-col items-start gap-3 rounded-xl border border-dashed border-border p-4">
                     <div className="flex items-center justify-center size-12 rounded-full bg-brand-soft shrink-0 self-center">
                       <FolderOpen className="size-6 text-brand-soft-foreground" aria-hidden="true" />
                     </div>
@@ -865,7 +865,9 @@ export function ImportWizardDialog({
                   {/* Import from URL card */}
                   {showServerUrlInput ? (
                     <div className="sm:col-span-2 space-y-3 rounded-xl border border-border bg-surface-elevated p-4">
+                      <Label htmlFor="wizard-server-url-input">Server URL</Label>
                       <Input
+                        id="wizard-server-url-input"
                         placeholder="https://example.com/AI/Course/"
                         value={serverUrlInput}
                         onChange={e => setServerUrlInput(e.target.value)}

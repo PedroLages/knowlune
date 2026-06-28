@@ -1,3 +1,11 @@
+/**
+ * BulkImportDialog — batch import of multiple courses from a parent folder or server URL.
+ *
+ * NOTE: This component is 1487 lines long. For future maintainability, consider extracting:
+ * - Step content (choose/enter-url/select-folders/scanning/review/importing/results) into sub-components
+ * - The scan/persist loop into a custom hook
+ * - Folder selection UI into a shared component
+ */
 import { useState, useCallback, useRef, useEffect } from 'react'
 import { useStableCallback } from '@/app/hooks/useStableCallback'
 import {
@@ -29,6 +37,9 @@ import {
   Globe,
   ChevronDown,
   ChevronUp,
+  ChevronRight,
+  Check,
+  FileX,
   Image as ImageIcon,
   Pencil,
 } from 'lucide-react'
@@ -842,6 +853,49 @@ export function BulkImportDialog({
           </DialogDescription>
         </DialogHeader>
 
+        {/* Step indicator — consistent with ImportWizardDialog pattern */}
+        {(() => {
+          const bulkSteps = [
+            { step: 'choose' as const, label: 'Choose' },
+            { step: 'select-folders' as const, label: 'Select' },
+            { step: 'review' as const, label: 'Review' },
+            { step: 'importing' as const, label: 'Import' },
+          ]
+          let currentIdx = 0
+          if (step === 'choose' || step === 'enter-url') currentIdx = 0
+          else if (step === 'select-folders' || step === 'scanning') currentIdx = 1
+          else if (step === 'review') currentIdx = 2
+          else if (step === 'importing' || step === 'results') currentIdx = 3
+
+          return (
+            <nav
+              className="flex items-center gap-2 text-xs text-muted-foreground mb-2"
+              aria-label={`Step ${currentIdx + 1} of ${bulkSteps.length}`}
+            >
+              {bulkSteps.map((s, i) => (
+                <span key={s.step} className="contents">
+                  {i > 0 && <ChevronRight className="size-3" aria-hidden="true" />}
+                  <span
+                    className={`inline-flex items-center justify-center size-5 rounded-full text-xs font-medium ${
+                      currentIdx === i
+                        ? 'bg-brand text-brand-foreground'
+                        : currentIdx > i
+                          ? 'bg-brand-soft text-brand-soft-foreground'
+                          : 'bg-muted text-muted-foreground'
+                    }`}
+                    aria-current={currentIdx === i ? 'step' : undefined}
+                  >
+                    {currentIdx > i ? <Check className="size-3" aria-hidden="true" /> : i + 1}
+                  </span>
+                  <span className={currentIdx === i ? 'font-medium text-foreground' : ''}>
+                    {s.label}
+                  </span>
+                </span>
+              ))}
+            </nav>
+          )
+        })()}
+
         {/* Step: Choose import mode */}
         {step === 'choose' && (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 py-4">
@@ -931,7 +985,9 @@ export function BulkImportDialog({
             <p className="text-sm text-muted-foreground">
               Paste the server URL containing course folders to batch import.
             </p>
+            <Label htmlFor="bulk-server-url-input">Server URL</Label>
             <Input
+              id="bulk-server-url-input"
               placeholder="https://example.com/courses/"
               value={serverUrlInput}
               onChange={e => {
@@ -1120,7 +1176,10 @@ export function BulkImportDialog({
                     {item.status === 'success' && (
                       <CheckCircle2 className="size-5 text-success shrink-0" />
                     )}
-                    {(item.status === 'no-files' || item.status === 'duplicate') && (
+                    {item.status === 'no-files' && (
+                      <FileX className="size-5 text-muted-foreground shrink-0" />
+                    )}
+                    {item.status === 'duplicate' && (
                       <AlertTriangle className="size-5 text-warning shrink-0" />
                     )}
                     {item.status === 'error' && (
@@ -1268,7 +1327,11 @@ export function BulkImportDialog({
                                 <ImageIcon className="size-3" aria-hidden="true" />
                                 Cover Image
                               </Label>
-                              <div className="grid grid-cols-4 gap-2">
+                              <div
+                                className="grid grid-cols-4 gap-2"
+                                role="radiogroup"
+                                aria-label="Select cover image"
+                              >
                                 {course.images.slice(0, 8).map(img => {
                                   const url = courseImages.get(img.path)
                                   if (!url) return null
@@ -1277,6 +1340,9 @@ export function BulkImportDialog({
                                     <button
                                       key={img.path}
                                       type="button"
+                                      role="radio"
+                                      aria-checked={isSelected}
+                                      aria-label={`Select ${img.filename} as cover`}
                                       onClick={() => handleSelectCover(course.id, img)}
                                       className={`relative aspect-video rounded-lg overflow-hidden border-2 transition-colors ${
                                         isSelected
@@ -1376,8 +1442,8 @@ export function BulkImportDialog({
                       <XCircle className="size-5 text-destructive shrink-0" aria-label="Error" />
                     )}
                     {item.status === 'no-files' && (
-                      <AlertTriangle
-                        className="size-5 text-warning shrink-0"
+                      <FileX
+                        className="size-5 text-muted-foreground shrink-0"
                         aria-label="No supported files"
                       />
                     )}
@@ -1447,8 +1513,8 @@ export function BulkImportDialog({
                       </span>
                     )}
                     {noFilesItems.length > 0 && (
-                      <span className="flex items-center gap-1.5 text-warning">
-                        <AlertTriangle className="size-4" aria-hidden="true" />
+                      <span className="flex items-center gap-1.5 text-muted-foreground">
+                        <FileX className="size-4" aria-hidden="true" />
                         {noFilesItems.length} no files
                       </span>
                     )}
