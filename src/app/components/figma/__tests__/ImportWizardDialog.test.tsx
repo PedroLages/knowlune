@@ -247,7 +247,7 @@ describe('ImportWizardDialog', () => {
   it('shows folder selection step initially', () => {
     render(<ImportWizardDialog open={true} onOpenChange={vi.fn()} />)
     expect(screen.getByTestId('wizard-select-folder-btn')).toBeInTheDocument()
-    expect(screen.getByText(/choose a folder with your course materials/i)).toBeInTheDocument()
+    expect(screen.getByText(/choose how you want to import your course materials/i)).toBeInTheDocument()
   })
 
   it('shows step indicator with step 1 active', () => {
@@ -434,14 +434,14 @@ describe('ImportWizardDialog', () => {
 
     await user.click(screen.getByTestId('wizard-select-folder-btn'))
 
-    // Button should show scanning state
-    expect(screen.getByText('Scanning...')).toBeInTheDocument()
-    expect(screen.getByTestId('wizard-select-folder-btn')).toBeDisabled()
+    // Button is replaced by scanning indicator
+    expect(screen.queryByTestId('wizard-select-folder-btn')).not.toBeInTheDocument()
+    expect(screen.getByTestId('wizard-scanning-state')).toBeInTheDocument()
 
     // Resolve to clean up
     resolvePromise!(makeScannedCourse())
     await waitFor(() => {
-      expect(screen.queryByText('Scanning...')).not.toBeInTheDocument()
+      expect(screen.queryByTestId('wizard-scanning-state')).not.toBeInTheDocument()
     })
   })
 
@@ -1179,7 +1179,9 @@ describe('AC25 - PremiumGate wrapping for Drive import button', () => {
   it('renders the Import from Google Drive button when user is premium', () => {
     render(<ImportWizardDialog open={true} onOpenChange={vi.fn()} />)
     expect(screen.getByTestId('wizard-drive-import-btn')).toBeInTheDocument()
-    expect(screen.getByText('Import from Google Drive')).toBeInTheDocument()
+    // Card heading is "Google Drive" with description "Import from Google Drive folders"
+    expect(screen.getByText('Google Drive')).toBeInTheDocument()
+    expect(screen.getByText('Import from Google Drive folders')).toBeInTheDocument()
   })
 
   it('shows PremiumGate upgrade CTA for non-premium users', () => {
