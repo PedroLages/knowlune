@@ -10,6 +10,7 @@ import 'fake-indexeddb/auto'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { scanCourseFromSource, listServerSubDirectories } from '../courseImport'
 import { db } from '@/db'
+import type { ImportedCourse } from '@/data/types'
 
 // Mock global fetch for URL-based operations
 const mockFetch = vi.fn()
@@ -184,7 +185,7 @@ describe('scanCourseFromSource', () => {
       videoCount: 0,
       pdfCount: 0,
       directoryHandle: null,
-    } as any)
+    } satisfies ImportedCourse)
 
     const result = await scanCourseFromSource({
       serverUrl: 'http://example.com/MyCourse/',

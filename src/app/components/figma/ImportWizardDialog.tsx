@@ -143,6 +143,25 @@ const CATEGORY_OPTIONS: { value: string; label: string }[] = [
   { value: 'research-library', label: 'Research Library' },
 ]
 
+/**
+ * ImportWizardDialog — step-by-step wizard for importing a single course.
+ *
+ * Guides the user through three steps:
+ * 1. **Select** — choose a source (local folder, drag-drop, server URL, Google Drive)
+ * 2. **Details** — review/edit course name, description, tags, difficulty, cover image
+ * 3. **Path** — optionally place the course into a learning path (or resolve a gap entry)
+ *
+ * After import, dispatches a `COURSE_IMPORTED` custom event so sibling components
+ * (InlineCoursePicker, CurriculumComposer) can react to the new course.
+ *
+ * Uses a singleton guard (`wizardOpenCount`) to prevent multiple instances.
+ *
+ * @param props.open — Whether the dialog is visible
+ * @param props.onOpenChange — Callback when the dialog open state changes
+ * @param props.targetPathId — Pre-select a specific learning path in step 3
+ * @param props.gapEntryId — Gap entry ID to auto-resolve on successful import
+ * @param props.searchTerm — Pre-fill the course name with this search term (from gap context)
+ */
 export function ImportWizardDialog({
   open,
   onOpenChange,
@@ -172,6 +191,13 @@ export function ImportWizardDialog({
   const [driveFolderBrowserOpen, setDriveFolderBrowserOpen] = useState(false)
   const [serverUrlInput, setServerUrlInput] = useState('')
   const [showServerUrlInput, setShowServerUrlInput] = useState(false)
+  const isScanningRef = useRef(false)
+  const abortRef = useRef(false)
+
+  // Sync isScanningRef with isScanning state so keydown handlers have live access
+  useEffect(() => {
+    isScanningRef.current = isScanning
+  }, [isScanning])
 
   // Path placement state (E26-S04)
   const [selectedPathId, setSelectedPathId] = useState<string | null>(null)
@@ -414,6 +440,7 @@ export function ImportWizardDialog({
   const handleOpenChange = useCallback(
     (nextOpen: boolean) => {
       if (!nextOpen) {
+        abortRef.current = true
         resetWizard()
       }
       onOpenChange(nextOpen)
@@ -422,9 +449,11 @@ export function ImportWizardDialog({
   )
 
   const handleSelectFolder = useCallback(async () => {
+    abortRef.current = false
     setIsScanning(true)
     try {
       const scanned = await scanCourseFolder()
+      if (abortRef.current) return
       manifestDataRef.current = scanned.manifestData
       setScannedCourse(scanned)
       // Pre-fill from manifest if present (before AI effects run)
@@ -461,9 +490,11 @@ export function ImportWizardDialog({
   }, [])
 
   const handleFilesDropped = useCallback(async (files: File[]) => {
+    abortRef.current = false
     setIsScanning(true)
     try {
       const scanned = await scanFromDroppedFiles(files, 'Imported Course')
+      if (abortRef.current) return
       manifestDataRef.current = scanned.manifestData
       setScannedCourse(scanned)
       if (scanned.manifestData) {
@@ -553,6 +584,7 @@ export function ImportWizardDialog({
 
   /** Handle importing from a course server URL (E133-S01). */
   const handleServerUrlImport = useCallback(async () => {
+    abortRef.current = false
     const url = serverUrlInput.trim()
     if (!url) {
       toast.error('Please enter a folder URL')
@@ -570,6 +602,7 @@ export function ImportWizardDialog({
 
     try {
       const scanned = await scanCourseFolderFromServer(url)
+      if (abortRef.current) return
       manifestDataRef.current = scanned.manifestData
       setScannedCourse(scanned)
       setCourseName(scanned.name)
@@ -873,10 +906,19 @@ export function ImportWizardDialog({
                         onChange={e => setServerUrlInput(e.target.value)}
                         autoFocus
                         onKeyDown={e => {
-                          if (e.key === 'Enter') handleServerUrlImport()
-                          if (e.key === 'Escape') setShowServerUrlInput(false)
+                          if (e.key === 'Enter') {
+                            e.preventDefault()
+                            if (isScanningRef.current) return
+                            handleServerUrlImport()
+                          }
+                          if (e.key === 'Escape') {
+                            e.preventDefault()
+                            if (isScanningRef.current) return
+                            setShowServerUrlInput(false)
+                          }
                         }}
                         className="min-h-[44px] font-mono text-sm"
+                        data-testid="wizard-url-input"
                       />
                       <div className="flex gap-2">
                         <Button

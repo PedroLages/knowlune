@@ -8,7 +8,7 @@
  * @since E108-S01
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { BulkImportDialog } from '../BulkImportDialog'
@@ -121,12 +121,13 @@ function makeScanSuccess(id: string, folderName: string): BulkScanResult {
 // ───── Suite ─────
 
 describe('BulkImportDialog — batch import flow (F-003)', () => {
-  let onComplete: any
-  let onOpenChange: any
+  let onComplete: Mock
+  let onOpenChange: Mock
 
   beforeEach(() => {
     vi.clearAllMocks()
     onComplete = vi.fn()
+    onOpenChange = vi.fn()
     onOpenChange = vi.fn()
     mockDetectAuthorFromFolderName.mockReturnValue(null)
     mockLoadImportedCourses.mockResolvedValue(undefined)

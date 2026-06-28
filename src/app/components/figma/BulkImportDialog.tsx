@@ -93,6 +93,51 @@ type DialogStep = 'choose' | 'enter-url' | 'select-folders' | 'scanning' | 'revi
 
 const MAX_CONCURRENCY = 5
 
+/**
+ * Shared helper: updates an ImportItem in a results array by folderName and pushes the new
+ * array to React state. Used by both handleScanFolders and handleConfirmImport to avoid
+ * duplicating the find-and-replace logic.
+ */
+function updateItemInList(
+  results: ImportItem[],
+  folderName: string,
+  update: Partial<ImportItem>,
+  setter: React.Dispatch<React.SetStateAction<ImportItem[]>>
+): void {
+  const idx = results.findIndex(r => r.folderName === folderName)
+  if (idx >= 0) {
+    results[idx] = { ...results[idx], ...update }
+    setter([...results])
+  }
+}
+
+/**
+ * Shared helper: runs an async function over an array of items with bounded concurrency.
+ * The callback receives each item; errors are not caught here so the caller can handle
+ * them per-item.
+ */
+async function runWithConcurrency<T>(
+  items: T[],
+  fn: (item: T) => Promise<void>,
+  maxConcurrency: number,
+  abortSignal: { current: boolean }
+): Promise<void> {
+  const running: Promise<void>[] = []
+  let queueIndex = 0
+  while (queueIndex < items.length && !abortSignal.current) {
+    while (running.length < maxConcurrency && queueIndex < items.length) {
+      const item = items[queueIndex++]
+      const promise = fn(item).then(() => {
+        const idx = running.indexOf(promise)
+        if (idx >= 0) running.splice(idx, 1)
+      })
+      running.push(promise)
+    }
+    if (running.length > 0) await Promise.race(running)
+  }
+  await Promise.all(running)
+}
+
 // --- Component ---
 
 interface BulkImportDialogProps {
@@ -136,6 +181,8 @@ export function BulkImportDialog({
   const batchResultRef = useRef<{ trackId?: string; courseIds: string[] } | null>(null)
   const generationRef = useRef(0)
   const batchAbortRef = useRef<AbortController | null>(null)
+  const isScanningUrlRef = useRef(false)
+  const retryLockRef = useRef(false)
 
   // Track manifest data for rendering the review-step header and for batch import
   const [trackManifest, setTrackManifest] = useState<{
@@ -155,6 +202,11 @@ export function BulkImportDialog({
 
   // useStableCallback avoids stale closure issues with the onComplete prop
   const onComplete = useStableCallback(onCompleteProp ?? (() => {}))
+
+  // Synchronize the URL scanning state ref so the onKeyDown handler is not stale-closed over the state
+  useEffect(() => {
+    isScanningUrlRef.current = isScanningUrl
+  }, [isScanningUrl])
 
   // Sync dialog open state with progress store so overlay hides while dialog is showing progress
   useEffect(() => {
@@ -374,7 +426,7 @@ export function BulkImportDialog({
         // User cancelled — stay on choose step
       } else {
         toast.error('Failed to read the selected folder. Please try again.')
-        console.error('[BulkImport] Failed to list sub-directories:', error)
+        console.warn('[BulkImport] Failed to list sub-directories:', error)
       }
     } finally {
       setIsLoadingFolders(false)
@@ -430,45 +482,42 @@ export function BulkImportDialog({
     const results: ImportItem[] = [...scanItems]
     const scanned = new Map<string, ScannedCourse>()
 
-    function updateItem(folderName: string, update: Partial<ImportItem>) {
-      const idx = results.findIndex(r => r.folderName === folderName)
-      if (idx >= 0) {
-        results[idx] = { ...results[idx], ...update }
-        setImportItems([...results])
-      }
-    }
-
     async function scanFolder(item: ImportItem) {
       if (abortRef.current) return
-      updateItem(item.folderName, { status: 'scanning' })
+      updateItemInList(results, item.folderName, { status: 'scanning' }, setImportItems)
 
       const scanResult = await scanCourseFromSource(item)
 
       if (abortRef.current) {
-        updateItem(item.folderName, { status: 'error', error: 'Cancelled' })
+        updateItemInList(results, item.folderName, { status: 'error', error: 'Cancelled' }, setImportItems)
         return
       }
 
       if (scanResult.status === 'no-files') {
-        updateItem(item.folderName, { status: 'no-files' })
+        updateItemInList(results, item.folderName, { status: 'no-files' }, setImportItems)
         return
       }
       if (scanResult.status === 'duplicate') {
-        updateItem(item.folderName, { status: 'duplicate', error: 'Already imported' })
+        updateItemInList(results, item.folderName, { status: 'duplicate', error: 'Already imported' }, setImportItems)
         return
       }
       if (scanResult.status === 'error') {
-        updateItem(item.folderName, { status: 'error', error: scanResult.message })
+        updateItemInList(results, item.folderName, { status: 'error', error: scanResult.message }, setImportItems)
         return
       }
 
       scanned.set(scanResult.course.id, scanResult.course)
-      updateItem(item.folderName, {
-        status: 'success',
-        scannedCourse: scanResult.course,
-        videoCount: scanResult.course.videos.length,
-        pdfCount: scanResult.course.pdfs.length,
-      })
+      updateItemInList(
+        results,
+        item.folderName,
+        {
+          status: 'success',
+          scannedCourse: scanResult.course,
+          videoCount: scanResult.course.videos.length,
+          pdfCount: scanResult.course.pdfs.length,
+        },
+        setImportItems
+      )
 
       // Load image previews for cover selection
       if (scanResult.course.images.length > 0) {
@@ -489,19 +538,7 @@ export function BulkImportDialog({
     }
 
     // Concurrent scanning
-    const running: Promise<void>[] = []
-    let queueIndex = 0
-    while (queueIndex < scanItems.length && !abortRef.current) {
-      while (running.length < MAX_CONCURRENCY && queueIndex < scanItems.length) {
-        const item = scanItems[queueIndex++]
-        const promise = scanFolder(item).then(() => {
-          running.splice(running.indexOf(promise), 1)
-        })
-        running.push(promise)
-      }
-      if (running.length > 0) await Promise.race(running)
-    }
-    await Promise.all(running)
+    await runWithConcurrency(scanItems, scanFolder, MAX_CONCURRENCY, abortRef)
 
     setScannedCourses(scanned)
 
@@ -591,7 +628,7 @@ export function BulkImportDialog({
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Unexpected error during batch import'
         toast.error(`Batch import failed: ${message}`)
-        console.error('[BulkImport] batchImportTrackCourses threw:', err)
+        console.warn('[BulkImport] batchImportTrackCourses threw:', err)
         // Reset to review step so the user can retry or go back
         setStep('review')
       }
@@ -599,6 +636,11 @@ export function BulkImportDialog({
     }
 
     // No manifest — per-course persist loop (existing behavior, unchanged)
+    // Build a lookup so server-sourced courses retain their serverUrl on ImportItem for retry support
+    const serverUrlByFolder = new Map<string, string>()
+    for (const f of folders) {
+      if (f.serverUrl) serverUrlByFolder.set(f.name, f.serverUrl)
+    }
     const items: ImportItem[] = courses.map(c => ({
       folderName: c.name,
       handle: c.directoryHandle ?? null,
@@ -606,6 +648,7 @@ export function BulkImportDialog({
       scannedCourse: c,
       videoCount: c.videos.length,
       pdfCount: c.pdfs.length,
+      serverUrl: serverUrlByFolder.get(c.name),
     }))
     setImportItems(items)
     batchResultRef.current = null
@@ -617,19 +660,11 @@ export function BulkImportDialog({
 
     const results: ImportItem[] = [...items]
 
-    function updateItem(folderName: string, update: Partial<ImportItem>) {
-      const idx = results.findIndex(r => r.folderName === folderName)
-      if (idx >= 0) {
-        results[idx] = { ...results[idx], ...update }
-        setImportItems([...results])
-      }
-    }
-
     async function persistCourse(item: ImportItem) {
       if (abortRef.current || useImportProgressStore.getState().cancelRequested) return
       if (!item.scannedCourse) return
 
-      updateItem(item.folderName, { status: 'importing' })
+      updateItemInList(results, item.folderName, { status: 'importing' }, setImportItems)
       const totalFiles = (item.videoCount ?? 0) + (item.pdfCount ?? 0)
       progressStore.updateProcessingProgress(item.folderName, totalFiles, totalFiles)
 
@@ -644,45 +679,35 @@ export function BulkImportDialog({
         }
 
         await persistScannedCourse(item.scannedCourse, overrides)
-        updateItem(item.folderName, { status: 'success' })
+        updateItemInList(results, item.folderName, { status: 'success' }, setImportItems)
         progressStore.completeCourse(item.folderName)
       } catch {
         // silent-catch-ok: persistScannedCourse already shows error toasts
-        updateItem(item.folderName, { status: 'error', error: 'Failed to import' })
+        updateItemInList(results, item.folderName, { status: 'error', error: 'Failed to import' }, setImportItems)
         progressStore.failCourse(item.folderName, 'Failed to import')
       }
     }
 
     // Concurrent persist
-    const running: Promise<void>[] = []
-    let queueIndex = 0
-    while (
-      queueIndex < items.length &&
-      !abortRef.current &&
-      !useImportProgressStore.getState().cancelRequested
-    ) {
-      while (running.length < MAX_CONCURRENCY && queueIndex < items.length) {
-        const item = items[queueIndex++]
-        const promise = persistCourse(item).then(() => {
-          running.splice(running.indexOf(promise), 1)
-        })
-        running.push(promise)
-      }
-      if (running.length > 0) await Promise.race(running)
-    }
+    await runWithConcurrency(items, persistCourse, MAX_CONCURRENCY, {
+      get current() {
+        return abortRef.current || useImportProgressStore.getState().cancelRequested
+      },
+      set current(v: boolean) {
+        abortRef.current = v
+      },
+    })
 
     if (useImportProgressStore.getState().cancelRequested) {
       abortRef.current = true
       for (const item of results) {
         if (item.status === 'pending') {
-          updateItem(item.folderName, { status: 'error', error: 'Cancelled' })
+          updateItemInList(results, item.folderName, { status: 'error', error: 'Cancelled' }, setImportItems)
           progressStore.failCourse(item.folderName, 'Cancelled')
         }
       }
       useImportProgressStore.getState().confirmCancellation()
     }
-
-    await Promise.all(running)
     await useCourseImportStore.getState().loadImportedCourses()
 
     // Server-aware batch import path: when manifest exists but parentHandle is null
@@ -752,7 +777,14 @@ export function BulkImportDialog({
   // Retry a single failed item
   const handleRetry = useCallback(
     async (folderName: string) => {
-      if (abortRef.current) return
+      if (retryLockRef.current) return
+      retryLockRef.current = true
+      const gen = generationRef.current
+
+      if (abortRef.current) {
+        retryLockRef.current = false
+        return
+      }
       setImportItems(prev => {
         const items = [...prev]
         const idx = items.findIndex(i => i.folderName === folderName)
@@ -763,44 +795,55 @@ export function BulkImportDialog({
       })
 
       const item = importItems.find(i => i.folderName === folderName)
-      if (!item) return
+      if (!item) {
+        retryLockRef.current = false
+        return
+      }
 
       const scanResult = await scanCourseFromSource(item)
-      if (abortRef.current) return
+      if (abortRef.current || gen !== generationRef.current) {
+        retryLockRef.current = false
+        return
+      }
 
       if (scanResult.status !== 'success') {
+        if (gen === generationRef.current) {
+          setImportItems(prev =>
+            prev.map(i =>
+              i.folderName === folderName
+                ? {
+                    ...i,
+                    status: scanResult.status === 'no-files' ? 'no-files' : 'error',
+                    error:
+                      scanResult.status === 'error'
+                        ? scanResult.message
+                        : scanResult.status === 'duplicate'
+                          ? 'Already imported'
+                          : undefined,
+                  }
+                : i
+            )
+          )
+        }
+        retryLockRef.current = false
+        return
+      }
+
+      if (gen === generationRef.current) {
         setImportItems(prev =>
           prev.map(i =>
             i.folderName === folderName
               ? {
                   ...i,
-                  status: scanResult.status === 'no-files' ? 'no-files' : 'error',
-                  error:
-                    scanResult.status === 'error'
-                      ? scanResult.message
-                      : scanResult.status === 'duplicate'
-                        ? 'Already imported'
-                        : undefined,
+                  status: 'importing' as const,
+                  scannedCourse: scanResult.course,
+                  videoCount: scanResult.course.videos.length,
+                  pdfCount: scanResult.course.pdfs.length,
                 }
               : i
           )
         )
-        return
       }
-
-      setImportItems(prev =>
-        prev.map(i =>
-          i.folderName === folderName
-            ? {
-                ...i,
-                status: 'importing' as const,
-                scannedCourse: scanResult.course,
-                videoCount: scanResult.course.videos.length,
-                pdfCount: scanResult.course.pdfs.length,
-              }
-            : i
-        )
-      )
 
       try {
         const overrides = {
@@ -808,24 +851,34 @@ export function BulkImportDialog({
           ...(parentAuthorId ? { authorId: parentAuthorId } : {}),
         }
         await persistScannedCourse(scanResult.course, overrides)
+        if (gen !== generationRef.current) {
+          retryLockRef.current = false
+          return
+        }
         await useCourseImportStore.getState().loadImportedCourses()
-        setImportItems(prev =>
-          prev.map(i => (i.folderName === folderName ? { ...i, status: 'success' } : i))
-        )
+        if (gen === generationRef.current) {
+          setImportItems(prev =>
+            prev.map(i => (i.folderName === folderName ? { ...i, status: 'success' } : i))
+          )
+        }
         toast.success(`Imported: ${folderName}`)
       } catch {
         // silent-catch-ok: persistScannedCourse already shows error toasts, we just update item status
-        setImportItems(prev =>
-          prev.map(i =>
-            i.folderName === folderName
-              ? {
-                  ...i,
-                  status: 'error',
-                  error: 'Failed to import',
-                }
-              : i
+        if (gen === generationRef.current) {
+          setImportItems(prev =>
+            prev.map(i =>
+              i.folderName === folderName
+                ? {
+                    ...i,
+                    status: 'error',
+                    error: 'Failed to import',
+                  }
+                : i
+            )
           )
-        )
+        }
+      } finally {
+        retryLockRef.current = false
       }
     },
     [importItems, parentAuthorId]
@@ -1033,9 +1086,10 @@ export function BulkImportDialog({
               onKeyDown={e => {
                 if (e.key === 'Enter') {
                   e.preventDefault()
+                  if (isScanningUrlRef.current) return
                   handleServerUrlScan()
                 }
-                if (e.key === 'Escape' && !isScanningUrl) {
+                if (e.key === 'Escape' && !isScanningUrlRef.current) {
                   setStep('choose')
                 }
               }}
