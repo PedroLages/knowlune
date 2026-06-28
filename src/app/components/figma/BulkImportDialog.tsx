@@ -41,7 +41,7 @@ import {
 } from '@/lib/courseImport'
 import type { BulkScanResult, ScannedCourse } from '@/lib/courseImport'
 import { isValidImportUrl } from '@/lib/courseServerService'
-import { readTrackManifest, batchImportTrackCourses } from '@/lib/trackManifestImport'
+import { readTrackManifest, fetchTrackManifestFromUrl, batchImportTrackCourses } from '@/lib/trackManifestImport'
 import type { TrackManifest } from '@/lib/courseManifest'
 import { showDirectoryPicker } from '@/lib/fileSystem'
 import { detectAuthorFromFolderName, matchOrCreateAuthor } from '@/lib/authorDetection'
@@ -241,6 +241,28 @@ export function BulkImportDialog({
       if (result.data.length === 0) {
         setServerUrlError('No course folders found at this URL. Check that the server exposes subdirectories via nginx autoindex.')
         return
+      }
+
+      // Attempt track-manifest detection for folder sorting (optional)
+      const manifestResult = await fetchTrackManifestFromUrl(url)
+      let serverTrackName: string | null = null
+
+      if (manifestResult.ok) {
+        const positionByFolder = new Map(
+          manifestResult.manifest.track.courses.map((c, i) => [c.folder, i])
+        )
+        result.data.sort((a, b) => {
+          const posA = positionByFolder.get(a.name) ?? Infinity
+          const posB = positionByFolder.get(b.name) ?? Infinity
+          return posA - posB
+        })
+        serverTrackName = manifestResult.summary.trackName
+        setTrackManifest({
+          manifest: manifestResult.manifest,
+          trackName: manifestResult.summary.trackName,
+        })
+      } else {
+        setTrackManifest(null)
       }
 
       // Populate folders from server-discovered subdirectories
@@ -778,7 +800,9 @@ export function BulkImportDialog({
           <DialogDescription id="bulk-import-description">
             {step === 'choose' && 'Choose how you want to import your courses.'}
             {step === 'select-folders' &&
-              `Found ${folders.length} sub-folders. Select which ones to import.`}
+              (hasManifest && trackManifest
+                ? `Found ${folders.length} sub-folders for "${trackManifest.trackName}". Select which ones to import.`
+                : `Found ${folders.length} sub-folders. Select which ones to import.`)}
             {step === 'scanning' && `Scanning ${importItems.length} folders for content...`}
             {step === 'review' &&
               (hasManifest && trackManifest
