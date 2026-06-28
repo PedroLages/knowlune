@@ -466,6 +466,29 @@ describe('BulkImportDialog — batch import flow (F-003)', () => {
       })
     })
 
+    it('shows inline error when server scan returns no subdirectories', async () => {
+      mockListServerSubDirectories.mockResolvedValue({ ok: true, data: [] })
+
+      const user = userEvent.setup()
+      render(
+        <BulkImportDialog
+          open={true}
+          onOpenChange={onOpenChange}
+          onSingleImport={vi.fn()}
+        />
+      )
+
+      await user.click(screen.getByTestId('import-multiple-url-btn'))
+      const input = screen.getByTestId('bulk-import-enter-url')
+      await user.type(input, 'http://example.com/empty/')
+      await user.click(screen.getByTestId('bulk-import-scan-url-btn'))
+
+      await waitFor(() => {
+        expect(screen.getByTestId('bulk-import-url-error')).toBeInTheDocument()
+        expect(screen.getByTestId('bulk-import-url-error').textContent).toContain('No course folders found')
+      })
+    })
+
     it('transitions to select-folders step when scan succeeds with subdirectories', async () => {
       mockListServerSubDirectories.mockResolvedValue({
         ok: true,
