@@ -489,6 +489,10 @@ export function BulkImportDialog({
     }
     setCoverPreviewUrls(new Map())
 
+    // Clear any stale overrides from a prior scan cycle — each scan
+    // generates fresh UUIDs, so old overrides become unreachable.
+    setCourseOverrides(new Map())
+
     setStep('scanning')
 
     const scanItems: ImportItem[] = selectedFolders.map(f => ({
