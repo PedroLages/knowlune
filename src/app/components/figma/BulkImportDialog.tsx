@@ -513,10 +513,6 @@ export function BulkImportDialog({
       const scanResult = await scanCourseFromSource(item)
 
       if (abortRef.current || gen !== generationRef.current) {
-        // If still in results but stale generation, mark cancelled to clean up
-        if (gen !== generationRef.current) {
-          updateItemInList(results, item.folderName, { status: 'error', error: 'Stale scan discarded' }, setImportItems)
-        }
         return
       }
 
