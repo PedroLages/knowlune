@@ -699,6 +699,7 @@ export function BulkImportDialog({
       handle: c.directoryHandle ?? null,
       status: 'pending' as const,
       scannedCourse: c,
+      truncated: c.truncated ?? false,
       videoCount: c.videos.length,
       pdfCount: c.pdfs.length,
       serverUrl: serverUrlByFolder.get(c.name),
@@ -732,7 +733,7 @@ export function BulkImportDialog({
         }
 
         await persistScannedCourse(item.scannedCourse, overrides)
-        updateItemInList(results, item.folderName, { status: 'success' }, setImportItems)
+        updateItemInList(results, item.folderName, { status: item.truncated ? 'truncated' : 'success' }, setImportItems)
         progressStore.completeCourse(item.folderName)
       } catch {
         // silent-catch-ok: persistScannedCourse already shows error toasts
@@ -913,6 +914,7 @@ export function BulkImportDialog({
                 ? {
                     ...i,
                     status: 'importing' as const,
+                    truncated: scanResult.truncated ?? false,
                     scannedCourse: scanResult.course,
                     videoCount: scanResult.course.videos.length,
                     pdfCount: scanResult.course.pdfs.length,
@@ -942,7 +944,7 @@ export function BulkImportDialog({
           await useCourseImportStore.getState().loadImportedCourses()
           if (gen === generationRef.current) {
             setImportItems(prev =>
-              prev.map(i => (i.folderName === folderName ? { ...i, status: 'success' } : i))
+              prev.map(i => (i.folderName === folderName ? { ...i, status: i.truncated ? 'truncated' : 'success' } : i))
             )
           }
           toast.success(`Imported: ${folderName}`)
