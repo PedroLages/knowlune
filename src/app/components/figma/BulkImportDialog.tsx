@@ -602,8 +602,8 @@ export function BulkImportDialog({
       toast.error('No folders could be scanned. Check the results for details.')
       setStep('results')
     }
-  } catch {
-    // Errors are caught per-item in scanFolder — top-level catch for finally
+  } catch (err) {
+    console.warn('[BulkImport] handleScanFolders unexpected error:', err)
   } finally {
     scanningRef.current = false
   }
