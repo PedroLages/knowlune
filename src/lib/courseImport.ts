@@ -864,7 +864,7 @@ export async function persistScannedCourse(
  * Separates success/failure for consolidated reporting.
  */
 export type BulkScanResult =
-  | { status: 'success'; course: ScannedCourse }
+  | { status: 'success'; course: ScannedCourse; truncated?: boolean }
   | { status: 'no-files'; folderName: string }
   | { status: 'duplicate'; folderName: string }
   | { status: 'error'; folderName: string; message: string }
@@ -1033,7 +1033,11 @@ export async function scanCourseFromSource(
       }
 
       const scannedCourse = await scanCourseFolderFromServer(source.serverUrl)
-      return { status: 'success', course: scannedCourse }
+      return {
+        status: 'success',
+        course: scannedCourse,
+        ...(scannedCourse.truncated ? { truncated: true } : {}),
+      }
     } catch (error) {
       return {
         status: 'error',
@@ -1409,7 +1413,6 @@ export async function scanCourseFolderFromServer(
   const pendingDirs: string[] = [folderUrl]
   const seen = new Set<string>()
   let dirsScanned = 0
-  let filesFound = 0
   let hitCap = false
 
   while (pendingDirs.length > 0) {
@@ -1434,12 +1437,11 @@ export async function scanCourseFolderFromServer(
         }
 
         for (const file of result.data.files) {
+          const currentCount = allVideos.length + allPdfs.length
+          if (currentCount >= MAX_SERVER_SCAN_FILES) break
           if (file.type === 'directory') {
-            if (filesFound < MAX_SERVER_SCAN_FILES) {
-              pendingDirs.push(file.url)
-            }
+            pendingDirs.push(file.url)
           } else if (file.type === 'video') {
-            if (filesFound >= MAX_SERVER_SCAN_FILES) continue
             const relPath = file.url.replace(serverRoot + '/', '')
             const ext = file.name.split('.').pop()?.toLowerCase() ?? 'mp4'
             const validFormats = ['mp4', 'webm', 'mkv', 'ts', 'avi'] as const
@@ -1451,25 +1453,23 @@ export async function scanCourseFolderFromServer(
                 ? (ext as 'mp4' | 'webm' | 'mkv' | 'ts' | 'avi')
                 : 'mp4',
             })
-            filesFound++
           } else if (file.type === 'pdf') {
-            if (filesFound >= MAX_SERVER_SCAN_FILES) continue
             const relPath = file.url.replace(serverRoot + '/', '')
             allPdfs.push({
               name: file.name,
               url: file.url,
               path: relPath,
             })
-            filesFound++
           }
         }
 
         dirsScanned++
         // Update progress: dirsScanned / approximate total (pending + scanned + current batch)
         const total = pendingDirs.length + seen.size
+        const fileCount = allVideos.length + allPdfs.length
         progressStore.updateScanProgress(
           courseId,
-          filesFound,
+          fileCount,
           total > 0 ? total : null
         )
       })
@@ -1486,10 +1486,11 @@ export async function scanCourseFolderFromServer(
   // Detect and log when the file cap was reached during the scan.
   // This means the import result is partial — the server directory has more
   // files than MAX_SERVER_SCAN_FILES permits.
-  if (filesFound >= MAX_SERVER_SCAN_FILES) {
+  const totalFiles = allVideos.length + allPdfs.length
+  if (totalFiles >= MAX_SERVER_SCAN_FILES) {
     hitCap = true
     console.warn(
-      `[scanServer] File cap reached: ${filesFound} files collected (max ${MAX_SERVER_SCAN_FILES}). ` +
+      `[scanServer] File cap reached: ${totalFiles} files collected (max ${MAX_SERVER_SCAN_FILES}). ` +
         `Some files and directories from ${folderUrl} were skipped. ` +
         `Consider splitting the folder or increasing MAX_SERVER_SCAN_FILES.`
     )
