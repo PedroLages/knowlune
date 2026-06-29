@@ -16,11 +16,12 @@
     <!-- script-src hashes:
          sha256-uUew0TW/... — framer-motion runtime on Learning Track pages
          sha256-0cSQtHErXr... — dynamically-injected inline script on /learning-tracks page
-         If either library version changes, regenerate the hash from the CSP violation console error. -->
+         sha256-cvKx/M9e7JL... — dynamically-injected inline script on /learning-tracks page (added 2026-06-29)
+         If any library version changes, regenerate the hash from the CSP violation console error. -->
     <meta http-equiv="Content-Security-Policy" content="
         default-src 'self';
         manifest-src 'self';
-        script-src  'self' 'wasm-unsafe-eval' https://www.youtube.com https://static.cloudflareinsights.com 'sha256-uUew0TW/lrngy0J3LVp+D/7ubZJy1tfFlGU/IVg84rQ=' 'sha256-0cSQtHErXrGEos+kbJSujbNhpS2UlOr5nB+0Qt3+miU=';
+        script-src  'self' 'wasm-unsafe-eval' https://www.youtube.com https://static.cloudflareinsights.com 'sha256-uUew0TW/lrngy0J3LVp+D/7ubZJy1tfFlGU/IVg84rQ=' 'sha256-0cSQtHErXrGEos+kbJSujbNhpS2UlOr5nB+0Qt3+miU=' 'sha256-cvKx/M9e7JLqHfYNCEMRravzRCran6GFdp1EXV2S3q4=';
         style-src   'self' 'unsafe-inline';
         img-src     'self' data: blob: https: https://images.unsplash.com https://*.unsplash.com https://*.googleusercontent.com https://*.ytimg.com https://covers.openlibrary.org https://books.google.com https://*.mzstatic.com https://m.media-amazon.com;
         media-src   'self' blob: https:;
