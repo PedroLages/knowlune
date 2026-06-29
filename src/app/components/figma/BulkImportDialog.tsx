@@ -251,6 +251,7 @@ export function BulkImportDialog({
     // (handleOpenChange sets it to true before calling resetDialog, and each
     // async handler resets it to false at its own start.)
     completedSuccessfullyRef.current = false
+    truncationWarnedRef.current = false
     parentHandleRef.current = null
     batchResultRef.current = null
     originalCourseIdRef.current = null
