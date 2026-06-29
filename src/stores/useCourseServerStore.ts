@@ -69,6 +69,14 @@ interface CourseServerStoreState {
   checkServerStatus: (serverId: string) => Promise<void>
 }
 
+const VALID_STATUSES = new Set(['connected', 'offline', 'auth-failed', 'unknown'])
+
+function normalizeServerStatus(status: unknown): CourseServer['status'] {
+  return typeof status === 'string' && VALID_STATUSES.has(status)
+    ? (status as CourseServer['status'])
+    : 'unknown'
+}
+
 export const useCourseServerStore = create<CourseServerStoreState>((set, get) => ({
   servers: [],
   isLoaded: false,
@@ -76,7 +84,13 @@ export const useCourseServerStore = create<CourseServerStoreState>((set, get) =>
   loadServers: async () => {
     if (get().isLoaded) return
     try {
-      const servers = await db.courseServers.toArray()
+      const raw = await db.courseServers.toArray()
+      // Sanitize: normalize any record with an unrecognized status value
+      // (e.g., corrupted Dexie data or a future status from a sync edge case).
+      const servers = raw.map(s => ({
+        ...s,
+        status: normalizeServerStatus(s.status),
+      }))
       set({ servers, isLoaded: true })
     } catch (err) {
       console.error('[CourseServerStore] Failed to load servers:', err)

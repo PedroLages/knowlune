@@ -30,14 +30,19 @@ import { toast } from 'sonner'
 const DEFAULT_SERVER_NAME = 'Unraid Academy'
 const DEFAULT_SERVER_URL = 'https://academy.pedrolages.net'
 
-/** Status indicator styling */
+const STATUS_CONFIG = {
+  connected: { color: 'bg-success', label: 'Connected', Icon: Wifi },
+  offline: { color: 'bg-destructive', label: 'Offline', Icon: WifiOff },
+  'auth-failed': { color: 'bg-warning', label: 'Auth Failed', Icon: Key },
+  unknown: { color: 'bg-muted-foreground/40', label: 'Unknown', Icon: RefreshCw },
+} as const
+
+const STATUS_DEFAULT = STATUS_CONFIG.unknown
+
+/** Status indicator styling. Falls back to "Unknown" for unrecognized status values
+ *  (e.g., corrupted IndexedDB records or future status values not yet in the lookup). */
 function StatusIndicator({ status }: { status: CourseServer['status'] }) {
-  const config = {
-    connected: { color: 'bg-success', label: 'Connected', Icon: Wifi },
-    offline: { color: 'bg-destructive', label: 'Offline', Icon: WifiOff },
-    'auth-failed': { color: 'bg-warning', label: 'Auth Failed', Icon: Key },
-    unknown: { color: 'bg-muted-foreground/40', label: 'Unknown', Icon: RefreshCw },
-  }[status]
+  const config = STATUS_CONFIG[status] ?? STATUS_DEFAULT
 
   const Icon = config.Icon
   return (
