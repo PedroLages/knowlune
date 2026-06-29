@@ -257,4 +257,46 @@ describe('scanCourseFromSource', () => {
       expect(result.course.videos).toHaveLength(0)
     }
   })
+
+  // Path: server URL → cap race (KI-104) — 10 concurrent subdirectories each with 600 files
+  // verifies total files collected never exceeds MAX_SERVER_SCAN_FILES (5000)
+  it('caps at MAX_SERVER_SCAN_FILES with concurrent subdirs', async () => {
+    // Build a root autoindex with 10 subdirectories
+    const rootLinks = Array.from({ length: 10 }, (_, i) =>
+      `<a href="SubDir${i}/">SubDir${i}/</a>  01-Jan-2025 10:00    -`
+    ).join('\n')
+    const rootHtml = `<html><body><pre><a href="../">../</a>\n${rootLinks}\n</pre></body></html>`
+
+    // Build per-subdir autoindex with 600 video files each
+    function subdirHtml(dirIndex: number): string {
+      const fileLinks = Array.from({ length: 600 }, (_, i) =>
+        `<a href="video${dirIndex}_${i}.mp4">video${dirIndex}_${i}.mp4</a>  01-Jan-2025 10:00    10M`
+      ).join('\n')
+      return `<html><body><pre><a href="../">../</a>\n${fileLinks}\n</pre></body></html>`
+    }
+
+    // Seed fetch mock:
+    // First call: root page
+    // Subsequent calls: subdirectories (up to 10 concurrent, may be called fewer after cap)
+    const subdirResponses = Array.from({ length: 10 }, (_, i) =>
+      makeAutoindexResponse(subdirHtml(i))
+    )
+    mockFetch
+      .mockResolvedValueOnce(makeAutoindexResponse(rootHtml))
+    for (const resp of subdirResponses) {
+      mockFetch.mockResolvedValueOnce(resp)
+    }
+
+    const result = await scanCourseFromSource({
+      serverUrl: 'http://example.com/LargeCourse/',
+      handle: null,
+      folderName: 'LargeCourse',
+    })
+
+    expect(result.status).toBe('success')
+    if (result.status === 'success') {
+      expect(result.course.videos.length + result.course.pdfs.length).toBeLessThanOrEqual(5000)
+      expect(result.course.truncated).toBe(true)
+    }
+  })
 })
