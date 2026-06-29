@@ -602,7 +602,7 @@ export function BulkImportDialog({
       setStep('results')
     }
   } catch (err) {
-    console.warn('[BulkImport] handleScanFolders unexpected error:', err)
+    console.warn('[BulkImport] handleScanFolders unexpected error:', err) // silent-catch-ok: errors are caught per-item in scanFolder, top-level catch logs unexpected exceptions
   } finally {
     scanningRef.current = false
   }
