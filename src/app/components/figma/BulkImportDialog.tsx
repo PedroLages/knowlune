@@ -106,11 +106,10 @@ function updateItemInList(
   update: Partial<ImportItem>,
   setter: React.Dispatch<React.SetStateAction<ImportItem[]>>
 ): void {
-  const idx = results.findIndex(r => r.folderName === folderName)
-  if (idx >= 0) {
-    results[idx] = { ...results[idx], ...update }
-    setter([...results])
-  }
+  const updated = results.map(item =>
+    item.folderName === folderName ? { ...item, ...update } : item
+  )
+  setter(updated)
 }
 
 /**
