@@ -1056,8 +1056,10 @@ describe('BulkImportDialog — batch import flow (F-003)', () => {
       // Verify persistScannedCourse was called during the retry with the
       // skipStoreUpdate flag (confirms it ran through persist path, not just scan)
       const retryPersistCalls = mockPersistScannedCourse.mock.calls.filter(
-        ([_course, overrides]: [unknown, { skipStoreUpdate?: boolean }]) =>
-          overrides?.skipStoreUpdate === true
+        (call: unknown[]) => {
+          const overrides = call[1] as { skipStoreUpdate?: boolean } | undefined
+          return overrides?.skipStoreUpdate === true
+        }
       )
       // There should be at least one persist call from the retry
       // (the first from the initial import + at least one from the retry)
