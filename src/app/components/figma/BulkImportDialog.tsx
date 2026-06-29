@@ -192,7 +192,7 @@ export function BulkImportDialog({
   const batchAbortRef = useRef<AbortController | null>(null)
   const isScanningUrlRef = useRef(false)
   const retryLockRef = useRef(false)
-  const originalCourseIdRef = useRef<string | null>(null)
+  const originalCourseIdMapRef = useRef<Map<string, string>>(new Map())
 
   // Track manifest data for rendering the review-step header and for batch import
   const [trackManifest, setTrackManifest] = useState<{
@@ -254,7 +254,7 @@ export function BulkImportDialog({
     truncationWarnedRef.current = false
     parentHandleRef.current = null
     batchResultRef.current = null
-    originalCourseIdRef.current = null
+    originalCourseIdMapRef.current = new Map()
     setTrackManifest(null)
   }, [coverPreviewUrls])
 
@@ -546,12 +546,10 @@ export function BulkImportDialog({
       }
 
       scanned.set(scanResult.course.id, scanResult.course)
-      // KI-105: Capture the original course ID once so handleRetry can
-      // look up user-configured overrides by the original ID even after
-      // a re-scan generates a new UUID.
-      if (!originalCourseIdRef.current) {
-        originalCourseIdRef.current = scanResult.course.id
-      }
+      // KI-105: Store each course's original ID keyed by folderName so
+      // handleRetry can look up user-configured overrides by the original
+      // ID even after a re-scan generates a new UUID.
+      originalCourseIdMapRef.current.set(item.folderName, scanResult.course.id)
       const status: ImportItemStatus = scanResult.truncated ? 'truncated' : 'success'
       updateItemInList(
         results,
@@ -849,12 +847,12 @@ export function BulkImportDialog({
           return
         }
 
-        // KI-105: Capture original course ID before re-scanning so override
-        // lookup uses the original ID, not the new scan result's UUID.
-        // Prefer the item's own scannedCourse.id (correct for first retry of
-        // any item). Fall back to originalCourseIdRef for double-retry
-        // survivability after the item's scannedCourse was overwritten.
-        const originalCourseId = item.scannedCourse?.id || originalCourseIdRef.current
+        // KI-105: Look up original course ID from the map keyed by
+        // folderName. The map holds the true original ID captured during
+        // the initial scan. Fall back to the live item's scannedCourse.id
+        // for pre-existing items without a map entry (e.g., items imported
+        // before this fix was deployed).
+        const originalCourseId = originalCourseIdMapRef.current.get(folderName) ?? item.scannedCourse?.id
 
         setImportItems(prev => {
           const items = [...prev]
