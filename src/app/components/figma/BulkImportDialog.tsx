@@ -49,7 +49,7 @@ import {
   listServerSubDirectories,
   persistScannedCourse,
 } from '@/lib/courseImport'
-import type { ScannedCourse } from '@/lib/courseImport'
+import type { ScannedCourse, BulkScanResult } from '@/lib/courseImport'
 import { isValidImportUrl } from '@/lib/courseServerService'
 import { readTrackManifest, fetchTrackManifestFromUrl, batchImportTrackCourses } from '@/lib/trackManifestImport'
 import type { TrackManifest } from '@/lib/courseManifest'
@@ -77,6 +77,7 @@ type ImportItemStatus =
   | 'no-files'
   | 'error'
   | 'duplicate'
+  | 'truncated'
 
 interface ImportItem {
   folderName: string
@@ -87,6 +88,7 @@ interface ImportItem {
   videoCount?: number
   pdfCount?: number
   serverUrl?: string
+  truncated?: boolean
 }
 
 type DialogStep = 'choose' | 'enter-url' | 'select-folders' | 'scanning' | 'review' | 'importing' | 'results'
@@ -191,6 +193,7 @@ export function BulkImportDialog({
   const batchAbortRef = useRef<AbortController | null>(null)
   const isScanningUrlRef = useRef(false)
   const retryLockRef = useRef(false)
+  const originalCourseIdRef = useRef<string | null>(null)
 
   // Track manifest data for rendering the review-step header and for batch import
   const [trackManifest, setTrackManifest] = useState<{
@@ -251,6 +254,7 @@ export function BulkImportDialog({
     completedSuccessfullyRef.current = false
     parentHandleRef.current = null
     batchResultRef.current = null
+    originalCourseIdRef.current = null
     setTrackManifest(null)
   }, [coverPreviewUrls])
 
@@ -268,7 +272,7 @@ export function BulkImportDialog({
             trackId = batchResult.trackId
           } else {
             ids = importItems
-              .filter(i => i.status === 'success')
+              .filter(i => i.status === 'success' || i.status === 'truncated')
               .map(i => i.scannedCourse?.id)
               .filter((id): id is string => !!id)
           }
@@ -458,6 +462,7 @@ export function BulkImportDialog({
 
   // Step 2 → Scan → Review: Scan selected folders concurrently, then show review step
   const scanningRef = useRef(false)
+  const truncationWarnedRef = useRef(false)
   const handleScanFolders = useCallback(async () => {
     if (scanningRef.current) return
     scanningRef.current = true
@@ -469,6 +474,11 @@ export function BulkImportDialog({
     }
 
     abortRef.current = false
+    generationRef.current++
+    const gen = generationRef.current
+
+    // Reset truncation toast guard for this scan cycle
+    truncationWarnedRef.current = false
     try {
 
     // Revoke stale cover preview object URLs before starting a new scan cycle
@@ -493,13 +503,16 @@ export function BulkImportDialog({
     const scanned = new Map<string, ScannedCourse>()
 
     async function scanFolder(item: ImportItem) {
-      if (abortRef.current) return
+      if (abortRef.current || gen !== generationRef.current) return
       updateItemInList(results, item.folderName, { status: 'scanning' }, setImportItems)
 
       const scanResult = await scanCourseFromSource(item)
 
-      if (abortRef.current) {
-        updateItemInList(results, item.folderName, { status: 'error', error: 'Cancelled' }, setImportItems)
+      if (abortRef.current || gen !== generationRef.current) {
+        // If still in results but stale generation, mark cancelled to clean up
+        if (gen !== generationRef.current) {
+          updateItemInList(results, item.folderName, { status: 'error', error: 'Stale scan discarded' }, setImportItems)
+        }
         return
       }
 
@@ -516,18 +529,42 @@ export function BulkImportDialog({
         return
       }
 
+      // KI-102: Surface truncation warning once per dialog open
+      if (scanResult.truncated && !truncationWarnedRef.current) {
+        truncationWarnedRef.current = true
+        toast.warning(
+          'Some files were skipped — server directory exceeded the 5,000 file limit'
+        )
+      }
+
+      if (abortRef.current || gen !== generationRef.current) {
+        return
+      }
+
       scanned.set(scanResult.course.id, scanResult.course)
+      // KI-105: Capture the original course ID once so handleRetry can
+      // look up user-configured overrides by the original ID even after
+      // a re-scan generates a new UUID.
+      if (!originalCourseIdRef.current) {
+        originalCourseIdRef.current = scanResult.course.id
+      }
+      const status: ImportItemStatus = scanResult.truncated ? 'truncated' : 'success'
       updateItemInList(
         results,
         item.folderName,
         {
-          status: 'success',
+          status,
           scannedCourse: scanResult.course,
+          truncated: scanResult.truncated,
           videoCount: scanResult.course.videos.length,
           pdfCount: scanResult.course.pdfs.length,
         },
         setImportItems
       )
+
+      if (abortRef.current || gen !== generationRef.current) {
+        return
+      }
 
       // Load image previews for cover selection
       if (scanResult.course.images.length > 0) {
@@ -550,7 +587,15 @@ export function BulkImportDialog({
     // Concurrent scanning
     await runWithConcurrency(scanItems, scanFolder, MAX_CONCURRENCY, abortRef)
 
+    if (abortRef.current || gen !== generationRef.current) {
+      return
+    }
+
     setScannedCourses(scanned)
+
+    if (abortRef.current || gen !== generationRef.current) {
+      return
+    }
 
     if (scanned.size > 0) {
       setStep('review')
@@ -793,6 +838,20 @@ export function BulkImportDialog({
         if (abortRef.current) {
           return
         }
+
+        // Get a fresh snapshot of the item from closure state
+        const item = importItems.find(i => i.folderName === folderName)
+        if (!item) {
+          return
+        }
+
+        // KI-105: Capture original course ID before re-scanning so override
+        // lookup uses the original ID, not the new scan result's UUID.
+        // Prefer the item's own scannedCourse.id (correct for first retry of
+        // any item). Fall back to originalCourseIdRef for double-retry
+        // survivability after the item's scannedCourse was overwritten.
+        const originalCourseId = item.scannedCourse?.id || originalCourseIdRef.current
+
         setImportItems(prev => {
           const items = [...prev]
           const idx = items.findIndex(i => i.folderName === folderName)
@@ -802,12 +861,27 @@ export function BulkImportDialog({
           return items
         })
 
-        const item = importItems.find(i => i.folderName === folderName)
-        if (!item) {
+        // KI-101: Defensively wrap scanCourseFromSource so any unexpected
+        // throw resets the item status to 'error' instead of leaving it
+        // stuck in 'scanning'.
+        let scanResult: BulkScanResult
+        try {
+          scanResult = await scanCourseFromSource(item)
+        } catch (err) {
+          const message = err instanceof Error ? err.message : 'Failed to scan folder'
+          if (gen === generationRef.current) {
+            setImportItems(prev =>
+              prev.map(i =>
+                i.folderName === folderName
+                  ? { ...i, status: 'error', error: message }
+                  : i
+              )
+            )
+          }
+          toast.error(message)
           return
         }
 
-        const scanResult = await scanCourseFromSource(item)
         if (abortRef.current || gen !== generationRef.current) {
           return
         }
@@ -851,7 +925,11 @@ export function BulkImportDialog({
         }
 
         try {
-          const courseOverride = scanResult.course ? courseOverrides.get(scanResult.course.id) : undefined
+          // KI-105: Look up overrides using the original course ID (captured
+          // before re-scan), not the new scanResult.course.id which may have
+          // changed after the re-scan generated a fresh UUID.
+          const overrideId = originalCourseId || scanResult.course.id
+          const courseOverride = overrideId ? courseOverrides.get(overrideId) : undefined
           const overrides = {
             skipStoreUpdate: true,
             ...(parentAuthorId ? { authorId: parentAuthorId } : {}),
@@ -897,6 +975,7 @@ export function BulkImportDialog({
   const completedItems = importItems.filter(
     i =>
       i.status === 'success' ||
+      i.status === 'truncated' ||
       i.status === 'error' ||
       i.status === 'no-files' ||
       i.status === 'duplicate'
@@ -907,6 +986,7 @@ export function BulkImportDialog({
 
   // Results summary
   const successItems = importItems.filter(i => i.status === 'success')
+  const truncatedItems = importItems.filter(i => i.status === 'truncated')
   const failedItems = importItems.filter(i => i.status === 'error')
   const noFilesItems = importItems.filter(i => i.status === 'no-files')
   const duplicateItems = importItems.filter(i => i.status === 'duplicate')
@@ -946,8 +1026,8 @@ export function BulkImportDialog({
             {step === 'importing' && `Importing ${importItems.length} courses...`}
             {step === 'results' &&
               (batchResultRef.current?.trackId
-                ? `${successItems.length} of ${importItems.length} courses imported into track.`
-                : `${successItems.length} of ${importItems.length} courses imported.`)}
+                ? `${successItems.length + truncatedItems.length} of ${importItems.length} courses imported into track.`
+                : `${successItems.length + truncatedItems.length} of ${importItems.length} courses imported.`)}
           </DialogDescription>
         </DialogHeader>
 
@@ -1230,6 +1310,7 @@ export function BulkImportDialog({
                         (importItems.filter(
                           i =>
                             i.status === 'success' ||
+                            i.status === 'truncated' ||
                             i.status === 'no-files' ||
                             i.status === 'duplicate' ||
                             i.status === 'error'
@@ -1245,6 +1326,7 @@ export function BulkImportDialog({
                   const done = importItems.filter(
                     i =>
                       i.status === 'success' ||
+                      i.status === 'truncated' ||
                       i.status === 'no-files' ||
                       i.status === 'duplicate' ||
                       i.status === 'error'
@@ -1272,8 +1354,10 @@ export function BulkImportDialog({
                     {item.status === 'scanning' && (
                       <Loader2 className="size-5 text-brand motion-safe:animate-spin shrink-0" />
                     )}
-                    {item.status === 'success' && (
-                      <CheckCircle2 className="size-5 text-success shrink-0" />
+                    {(item.status === 'success' || item.status === 'truncated') && (
+                      item.status === 'truncated'
+                        ? <AlertTriangle className="size-5 text-warning shrink-0" />
+                        : <CheckCircle2 className="size-5 text-success shrink-0" />
                     )}
                     {item.status === 'no-files' && (
                       <FileX className="size-5 text-muted-foreground shrink-0" />
@@ -1286,7 +1370,7 @@ export function BulkImportDialog({
                     )}
                     <div className="flex-1 min-w-0">
                       <p className="text-sm truncate">{item.folderName}</p>
-                      {item.status === 'success' && item.videoCount !== undefined && (
+                      {(item.status === 'success' || item.status === 'truncated') && item.videoCount !== undefined && (
                         <p className="text-xs text-muted-foreground flex items-center gap-2">
                           <span className="flex items-center gap-1">
                             <Video className="size-3" /> {item.videoCount} videos
@@ -1294,6 +1378,12 @@ export function BulkImportDialog({
                           <span className="flex items-center gap-1">
                             <FileText className="size-3" /> {item.pdfCount} PDFs
                           </span>
+                          {item.truncated && (
+                            <span className="flex items-center gap-1 text-warning">
+                              <AlertTriangle className="size-3" />
+                              Truncated
+                            </span>
+                          )}
                         </p>
                       )}
                       {item.status === 'no-files' && (
@@ -1370,6 +1460,12 @@ export function BulkImportDialog({
                             {course.images.length > 0 && (
                               <span className="flex items-center gap-1">
                                 <ImageIcon className="size-3" /> {course.images.length}
+                              </span>
+                            )}
+                            {course.truncated && (
+                              <span className="flex items-center gap-1 text-warning">
+                                <AlertTriangle className="size-3" />
+                                Truncated to {course.videos.length + course.pdfs.length} files
                               </span>
                             )}
                           </p>
@@ -1537,6 +1633,12 @@ export function BulkImportDialog({
                     {item.status === 'success' && (
                       <CheckCircle2 className="size-5 text-success shrink-0" aria-label="Success" />
                     )}
+                    {item.status === 'truncated' && (
+                      <AlertTriangle
+                        className="size-5 text-warning shrink-0"
+                        aria-label="Truncated"
+                      />
+                    )}
                     {item.status === 'error' && (
                       <XCircle className="size-5 text-destructive shrink-0" aria-label="Error" />
                     )}
@@ -1556,7 +1658,7 @@ export function BulkImportDialog({
                     {/* Folder name + details */}
                     <div className="flex-1 min-w-0">
                       <p className="text-sm truncate">{item.folderName}</p>
-                      {item.status === 'success' && item.videoCount !== undefined && (
+                      {(item.status === 'success' || item.status === 'truncated') && item.videoCount !== undefined && (
                         <p className="text-xs text-muted-foreground flex items-center gap-2">
                           <span className="flex items-center gap-1">
                             <Video className="size-3" aria-hidden="true" />
@@ -1566,6 +1668,12 @@ export function BulkImportDialog({
                             <FileText className="size-3" aria-hidden="true" />
                             {item.pdfCount}
                           </span>
+                          {item.truncated && (
+                            <span className="flex items-center gap-1 text-warning">
+                              <AlertTriangle className="size-3" aria-hidden="true" />
+                              Truncated
+                            </span>
+                          )}
                         </p>
                       )}
                       {item.status === 'no-files' && (
@@ -1609,6 +1717,12 @@ export function BulkImportDialog({
                       <span className="flex items-center gap-1.5 text-success">
                         <CheckCircle2 className="size-4" aria-hidden="true" />
                         {successItems.length} imported
+                      </span>
+                    )}
+                    {truncatedItems.length > 0 && (
+                      <span className="flex items-center gap-1.5 text-warning">
+                        <AlertTriangle className="size-4" aria-hidden="true" />
+                        {truncatedItems.length} truncated
                       </span>
                     )}
                     {noFilesItems.length > 0 && (
