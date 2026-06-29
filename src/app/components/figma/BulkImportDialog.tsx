@@ -106,10 +106,20 @@ function updateItemInList(
   update: Partial<ImportItem>,
   setter: React.Dispatch<React.SetStateAction<ImportItem[]>>
 ): void {
-  const updated = results.map(item =>
-    item.folderName === folderName ? { ...item, ...update } : item
-  )
-  setter(updated)
+  // IMPORTANT: Must mutate the shared results array AND trigger a React state
+  // update. Concurrent callbacks within the same parent handler share a local
+  // `results` array (e.g. `handleScanFolders` and `handleConfirmImport` both
+  // create `const results = [...items]` and pass it by reference). Each
+  // callback's mutation is read by subsequent callbacks via the shared array.
+  // A pure map-only approach would leave the original array untouched, causing
+  // stale-closure overwrites between concurrent persistCourse calls — the
+  // last callback to call setImportItems would overwrite the previous
+  // callback's changes with stale data from the unmutated original array.
+  const idx = results.findIndex(r => r.folderName === folderName)
+  if (idx >= 0) {
+    results[idx] = { ...results[idx], ...update }
+    setter([...results])
+  }
 }
 
 /**
