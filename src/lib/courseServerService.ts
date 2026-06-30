@@ -166,13 +166,19 @@ export function isValidImportUrl(
  * @param url - Full URL to the folder (e.g., "http://192.168.2.200:8099/AI/Course/")
  */
 export async function fetchDirectoryListing(url: string): Promise<ServerResult<DirectoryListing>> {
+  // Normalize for child URL construction (no trailing slash).
   const normalized = normalizeBaseUrl(url)
+
+  // Preserve trailing slash for fetch — nginx autoindex 301-redirects
+  // directory URLs without trailing slashes, and redirect: 'error' converts
+  // that into a TypeError (→ "Network error — server unreachable").
+  const fetchUrl = url.endsWith('/') ? url : url + '/'
 
   try {
     const controller = new AbortController()
     const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS)
 
-    const response = await fetch(normalized, {
+    const response = await fetch(fetchUrl, {
       signal: controller.signal,
       headers: { Accept: 'text/html' },
       redirect: 'error',
@@ -189,6 +195,7 @@ export async function fetchDirectoryListing(url: string): Promise<ServerResult<D
 
     const html = await response.text()
     clearTimeout(timeout)
+    // Use normalized (slash-stripped) URL as base so child URLs resolve correctly.
     const files = parseAutoindex(html, normalized + '/')
 
     return { ok: true, data: { url: normalized, files } }
@@ -216,7 +223,8 @@ export async function verifyConnection(
   url: string,
   authToken?: string | null
 ): Promise<ServerResult<{ reachable: boolean }>> {
-  const normalized = normalizeBaseUrl(url)
+  // Preserve trailing slash for fetch — same redirect issue as fetchDirectoryListing.
+  const fetchUrl = url.endsWith('/') ? url : url + '/'
 
   try {
     const controller = new AbortController()
@@ -227,7 +235,7 @@ export async function verifyConnection(
       headers['Authorization'] = `Bearer ${authToken}`
     }
 
-    const response = await fetch(normalized, {
+    const response = await fetch(fetchUrl, {
       signal: controller.signal,
       headers,
       redirect: 'error',

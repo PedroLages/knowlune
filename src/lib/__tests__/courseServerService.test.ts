@@ -172,7 +172,7 @@ describe('fetchDirectoryListing', () => {
     }
   })
 
-  it('normalizes trailing slash on base URL', async () => {
+  it('normalizes trailing slash on base URL for returned data.url', async () => {
     vi.mocked(globalThis.fetch).mockResolvedValueOnce({
       ok: true,
       text: () =>
@@ -187,6 +187,42 @@ describe('fetchDirectoryListing', () => {
     if (result.ok) {
       expect(result.data.url).not.toMatch(/\/\/$/)
     }
+  })
+
+  it('preserves trailing slash on the actual fetch URL to avoid nginx redirect', async () => {
+    vi.mocked(globalThis.fetch).mockResolvedValueOnce({
+      ok: true,
+      text: () =>
+        Promise.resolve(`<html><body><pre>
+        <a href="../">../</a>
+        <a href="file.mp4">file.mp4</a>
+        </pre></body></html>`),
+    } as Response)
+
+    // Input WITH trailing slash — should be preserved in fetch call
+    await fetchDirectoryListing('http://example.com/courses/')
+    expect(vi.mocked(globalThis.fetch)).toHaveBeenCalledWith(
+      'http://example.com/courses/',
+      expect.objectContaining({ redirect: 'error' })
+    )
+  })
+
+  it('adds trailing slash to fetch URL when input lacks it', async () => {
+    vi.mocked(globalThis.fetch).mockResolvedValueOnce({
+      ok: true,
+      text: () =>
+        Promise.resolve(`<html><body><pre>
+        <a href="../">../</a>
+        <a href="file.mp4">file.mp4</a>
+        </pre></body></html>`),
+    } as Response)
+
+    // Input WITHOUT trailing slash — should add one for fetch
+    await fetchDirectoryListing('http://example.com/courses')
+    expect(vi.mocked(globalThis.fetch)).toHaveBeenCalledWith(
+      'http://example.com/courses/',
+      expect.objectContaining({ redirect: 'error' })
+    )
   })
 })
 
@@ -241,6 +277,18 @@ describe('verifyConnection', () => {
           Authorization: 'Bearer token-123',
         }),
       })
+    )
+  })
+
+  it('preserves trailing slash on fetch URL to avoid nginx redirect', async () => {
+    vi.mocked(globalThis.fetch).mockResolvedValueOnce({
+      ok: true,
+    } as Response)
+
+    await verifyConnection('http://example.com/courses/')
+    expect(vi.mocked(globalThis.fetch)).toHaveBeenCalledWith(
+      'http://example.com/courses/',
+      expect.anything()
     )
   })
 
