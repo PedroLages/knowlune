@@ -97,6 +97,29 @@ vi.mock('@/stores/useCourseImportStore', () => ({
   ),
 }))
 
+const mockReorderCourse = vi.fn()
+const mockBatchAddCoursesToPath = vi.fn()
+const mockCreatePathWithCourses = vi.fn()
+
+const learningPathState = {
+  paths: [] as Array<{ id: string; name: string }>,
+  entries: [] as Array<{ courseId: string; pathId: string; position: number }>,
+  reorderCourse: mockReorderCourse,
+  batchAddCoursesToPath: mockBatchAddCoursesToPath,
+  createPathWithCourses: mockCreatePathWithCourses,
+}
+
+vi.mock('@/stores/useLearningPathStore', () => ({
+  useLearningPathStore: Object.assign(
+    (selector?: (s: typeof learningPathState) => unknown) =>
+      selector ? selector(learningPathState) : learningPathState,
+    {
+      getState: () => learningPathState,
+      setState: vi.fn(),
+    }
+  ),
+}))
+
 // ───── Helpers ─────
 
 function mockDirHandle(name: string): FileSystemDirectoryHandle {
@@ -821,6 +844,114 @@ describe('BulkImportDialog — batch import flow (F-003)', () => {
 
       // The dialog should not show select-folders (the URL input was cleaned up by resetDialog)
       expect(screen.queryByTestId('bulk-select-all')).not.toBeInTheDocument()
+    })
+    it('calls reorderCourse after URL+manifest import to enforce manifest order', async () => {
+      // Reset learning path store state
+      learningPathState.paths = []
+      learningPathState.entries = []
+      mockReorderCourse.mockReset()
+      mockBatchAddCoursesToPath.mockReset()
+      mockCreatePathWithCourses.mockReset()
+
+      // Return a manifest with 3 courses in specific order
+      mockFetchTrackManifestFromUrl.mockResolvedValue({
+        ok: true as const,
+        summary: { trackName: 'DevOps Track', trackAuthor: undefined, courseFolders: ['linux', 'docker', 'k8s'] },
+        manifest: {
+          version: '1',
+          track: {
+            name: 'DevOps Track',
+            description: 'DevOps learning path',
+            courses: [
+              { folder: 'linux', position: 1 },
+              { folder: 'docker', position: 2 },
+              { folder: 'k8s', position: 3 },
+            ],
+          },
+        },
+      })
+
+      // Return 3 folders from server scan
+      mockListServerSubDirectories.mockResolvedValue({
+        ok: true,
+        data: [
+          { name: 'linux', url: 'http://example.com/courses/linux/' },
+          { name: 'docker', url: 'http://example.com/courses/docker/' },
+          { name: 'k8s', url: 'http://example.com/courses/k8s/' },
+        ],
+      })
+
+      // Scanning returns success — courses get IDs in reverse manifest order
+      // to simulate concurrent scan completion order ≠ manifest order
+      mockScanCourseFromSource.mockImplementation(
+        (source: { folderName: string }) => {
+          return makeScanSuccess(`id-${source.folderName}`, source.folderName)
+        }
+      )
+      mockPersistScannedCourse.mockResolvedValue(undefined)
+
+      // Mock createPathWithCourses to return a track and populate entries
+      // in REVERSE manifest order — simulating the real bug where concurrent
+      // scan completion scrambles course order.
+      mockCreatePathWithCourses.mockImplementation(
+        (name: string, _desc: string, courses: Array<{ courseId: string }>) => {
+          const trackId = 'track-devops'
+          learningPathState.paths = [{ id: trackId, name }]
+          // Deliberately reverse the order to simulate scrambled concurrent scans
+          learningPathState.entries = [...courses].reverse().map((c, i) => ({
+            courseId: c.courseId,
+            pathId: trackId,
+            position: i,
+          }))
+          return Promise.resolve({ id: trackId, name, description: '' })
+        }
+      )
+
+      const user = userEvent.setup()
+      render(
+        <BulkImportDialog
+          open={true}
+          onOpenChange={onOpenChange}
+          onSingleImport={vi.fn()}
+          onComplete={onComplete}
+        />
+      )
+
+      // Navigate: choose → URL step
+      await user.click(screen.getByTestId('import-multiple-url-btn'))
+      await waitFor(() => {
+        expect(screen.getByTestId('bulk-import-enter-url')).toBeInTheDocument()
+      })
+
+      // Enter URL and scan
+      const input = screen.getByTestId('bulk-import-enter-url')
+      await user.type(input, 'http://example.com/courses/')
+      await user.click(screen.getByTestId('bulk-import-scan-url-btn'))
+
+      // Wait for select-folders step (with Select All checkbox)
+      await waitFor(() => {
+        expect(screen.getByTestId('bulk-select-all')).toBeInTheDocument()
+      })
+
+      // Start scan
+      await user.click(screen.getByTestId('bulk-start-import-btn'))
+
+      // Wait for review step
+      await waitFor(() => {
+        expect(screen.getByTestId('bulk-confirm-import-btn')).toBeInTheDocument()
+      })
+
+      // Confirm import — should create track and call reorderCourse
+      await user.click(screen.getByTestId('bulk-confirm-import-btn'))
+
+      // Wait for results
+      await waitFor(() => {
+        expect(screen.getByTestId('bulk-done-btn')).toBeInTheDocument()
+      })
+
+      // Verify reorderCourse was called — this is the assertion that currently FAILS
+      // because the URL+manifest path doesn't call reorderCourse
+      expect(mockReorderCourse).toHaveBeenCalled()
     })
   })
 

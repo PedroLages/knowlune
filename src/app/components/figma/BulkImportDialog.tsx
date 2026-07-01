@@ -797,6 +797,36 @@ export function BulkImportDialog({
             const newPath = await lpStore.createPathWithCourses(trackName, trackDesc, coursesToAdd)
             trackId = newPath.id
           }
+
+          // Apply manifest-specified positions via reorder (matching the pattern
+          // in batchImportTrackCourses).  Courses may have been added in scan
+          // completion order — reorder to match the manifest's declared positions.
+          //
+          // Re-read live store state each iteration — reorderCourse mutates
+          // entries, so a static snapshot captured before the loop would go stale.
+          const positions = trackManifest.manifest.track.courses
+          const sortedPositions = [...positions].sort((a, b) => a.position - b.position)
+
+          for (const { folder, position } of sortedPositions) {
+            const result = successResults.find(r => r.folderName === folder)
+            if (!result?.scannedCourse?.id) continue
+
+            const currentEntries = useLearningPathStore
+              .getState()
+              .entries.filter(e => e.pathId === trackId)
+              .sort((a, b) => a.position - b.position)
+
+            const entryIndex = currentEntries.findIndex(
+              e => e.courseId === result.scannedCourse!.id
+            )
+            // Clamp target to valid range — when courses fail to import, the
+            // entries array may be shorter than the highest manifest position.
+            const targetIndex = Math.min(position - 1, currentEntries.length - 1)
+            if (entryIndex >= 0 && entryIndex !== targetIndex) {
+              await lpStore.reorderCourse(trackId, entryIndex, targetIndex)
+            }
+          }
+
           if (gen === generationRef.current) {
             batchResultRef.current = {
               trackId,
