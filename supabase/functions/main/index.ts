@@ -31,6 +31,7 @@ const WORKER_ENV_ALLOWLIST = [
   'VERIFY_JWT',
   'RETENTION_TICK_SECRET',
   'EXPORT_WORKER_SECRET',
+  'ALLOWED_ORIGINS',
 ]
 
 console.log('main function started')

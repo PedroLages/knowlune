@@ -8,6 +8,8 @@
 // and emails the user.
 //
 // Retry logic:
+
+import { requireWorkerEnv } from '../_shared/envCheck.ts'
 //   - attempt_count is incremented BEFORE processing begins.
 //   - If attempt_count reaches 2 at the start of a processing attempt,
 //     the job is marked failed and a failure email is sent immediately
@@ -125,7 +127,7 @@ const SUPABASE_URL = Deno.env.get('SUPABASE_URL')
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
 // Shared secret for service-to-service auth. Set the same value in both
 // this function's env and in export-data's env as EXPORT_WORKER_SECRET.
-const EXPORT_WORKER_SECRET = Deno.env.get('EXPORT_WORKER_SECRET')
+const EXPORT_WORKER_SECRET = requireWorkerEnv('EXPORT_WORKER_SECRET') // KI-E119-POST-005: fail-closed
 
 if (!SUPABASE_URL) throw new Error('SUPABASE_URL is required')
 if (!SUPABASE_SERVICE_ROLE_KEY) throw new Error('SUPABASE_SERVICE_ROLE_KEY is required')
