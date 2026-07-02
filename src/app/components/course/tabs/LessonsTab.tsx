@@ -19,9 +19,11 @@ import {
   FolderOpen,
   ChevronDown,
   CheckCircle2,
+  AlertTriangle,
 } from 'lucide-react'
 import { Input } from '@/app/components/ui/input'
 import { Badge } from '@/app/components/ui/badge'
+import { Button } from '@/app/components/ui/button'
 import { Skeleton } from '@/app/components/ui/skeleton'
 import {
   Collapsible,
@@ -31,6 +33,7 @@ import {
 import { cn } from '@/app/components/ui/utils'
 import { EmptyState } from '@/app/components/EmptyState'
 import type { CourseAdapter, LessonItem, MaterialGroup } from '@/lib/courseAdapter'
+import { safeDecodeURIComponent } from '@/lib/courseAdapter'
 import { useContentProgressStore } from '@/stores/useContentProgressStore'
 
 // ---------------------------------------------------------------------------
@@ -117,7 +120,7 @@ function buildFolderTree(groups: MaterialGroup[]): FolderNode[] {
       currentPath = i === 0 ? segments[i] : `${currentPath}/${segments[i]}`
       let node = nodeMap.get(currentPath)
       if (!node) {
-        node = { name: segments[i], path: currentPath, items: [], children: [] }
+        node = { name: safeDecodeURIComponent(segments[i]), path: currentPath, items: [], children: [] }
         nodeMap.set(currentPath, node)
         parentChildren.push(node)
         // Sort after insertion to maintain natural order
@@ -163,6 +166,71 @@ function getAncestorPaths(nodes: FolderNode[], lessonId: string): string[] {
   return paths
 }
 
+/**
+ * Flatten the folder tree by skipping nodes that have exactly one child and
+ * zero direct items. This removes container/wrapper folders that exist only
+ * for organizational purposes (e.g., `DevOps > DevOps-Platform-Engineer >`)
+ * without losing structural information — the innermost skipped folder name
+ * is tracked as context.
+ *
+ * The original `folderTree` is preserved for `getAncestorPaths()` which
+ * needs the full hierarchy for path-based lookups.
+ */
+function getDisplayRoots(nodes: FolderNode[]): {
+  roots: FolderNode[]
+  skippedContext: string | null
+} {
+  let skippedContext: string | null = null
+
+  function flatten(n: FolderNode, lastSkipped: string | null): FolderNode[] {
+    // Skip nodes with exactly one child and zero direct items
+    if (n.items.length === 0 && n.children.length === 1) {
+      return flatten(n.children[0], n.name)
+    }
+    // Keep this node but recursively flatten its children
+    return [
+      {
+        ...n,
+        children: n.children.flatMap(c => {
+          const result = flatten(c, null)
+          // If flattening produced results, propagate last-skipped context
+          if (lastSkipped && result.length === 1 && result[0].items.length === 0 && result[0].children.length === 1) {
+            return result
+          }
+          return result
+        }),
+      },
+    ]
+  }
+
+  // Map each root through flatten; collect the "deepest" skipped name
+  const flattened = nodes.flatMap(n => {
+    const result = flatten(n, null)
+    // Track the innermost skipped folder (the one closest to the content)
+    // If this root was itself skipped (flatten returned a deeper node's children),
+    // we need to find the innermost skipped name
+    return result
+  })
+
+  // Find the innermost skipped folder name by walking from original roots
+  function findInnermostSkipped(n: FolderNode): string | null {
+    if (n.items.length === 0 && n.children.length === 1) {
+      const deeper = findInnermostSkipped(n.children[0])
+      return deeper ?? n.name
+    }
+    return null
+  }
+  for (const n of nodes) {
+    const skipped = findInnermostSkipped(n)
+    if (skipped) {
+      skippedContext = skipped
+      break
+    }
+  }
+
+  return { roots: flattened, skippedContext }
+}
+
 // ---------------------------------------------------------------------------
 // LessonLink (primary lesson row)
 // ---------------------------------------------------------------------------
@@ -195,11 +263,14 @@ function LessonLink({
     <Link
       ref={activeRef}
       to={`/courses/${courseId}/lessons/${lesson.id}`}
+      title={lesson.title}
       className={cn(
         'flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-1',
         isActive ? 'bg-brand-soft text-brand-soft-foreground font-medium' : 'hover:bg-accent'
       )}
       aria-current={isActive ? 'page' : undefined}
+      data-active={isActive ? 'true' : undefined}
     >
       <span
         className={cn(
@@ -208,7 +279,7 @@ function LessonLink({
         )}
       >
         {isActive ? (
-          <PlayCircle className="size-3.5 text-brand" aria-hidden="true" />
+          <PlayCircle className="size-4 text-brand" aria-hidden="true" />
         ) : isCompleted ? (
           <CheckCircle2
             className="size-3.5 text-success"
@@ -220,7 +291,7 @@ function LessonLink({
         )}
       </span>
       <div className="flex-1 min-w-0">
-        <p className={cn('text-sm truncate', isCompleted && 'line-through text-muted-foreground')}>
+        <p className={cn('text-sm line-clamp-2', isCompleted && 'line-through text-muted-foreground')}>
           <HighlightedLessonTitle text={lesson.title} query={searchQuery} />
         </p>
         <div
@@ -239,6 +310,9 @@ function LessonLink({
           ) : lesson.duration != null && lesson.duration > 0 ? (
             <span className="text-xs">{formatLessonDuration(lesson.duration)}</span>
           ) : null}
+          {isActive && (
+            <span className="text-[11px] text-brand font-medium">Now playing</span>
+          )}
           {materialCount > 0 && onFocusMaterials && (
             <button
               type="button"
@@ -292,14 +366,17 @@ function MaterialRow({
   return (
     <Link
       to={`/courses/${courseId}/lessons/${material.id}`}
+      title={material.title}
       className={cn(
         'flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-1',
         material.id === lessonId
           ? 'bg-brand-soft text-brand-soft-foreground font-medium'
           : 'hover:bg-accent'
       )}
       aria-current={material.id === lessonId ? 'page' : undefined}
       data-testid={`material-link-${material.id}`}
+      data-active={material.id === lessonId ? 'true' : undefined}
     >
       <span
         className={cn(
@@ -324,7 +401,7 @@ function MaterialRow({
         )}
       </span>
       <div className="flex-1 min-w-0">
-        <p className={cn('text-sm truncate', isCompleted && 'line-through text-muted-foreground')}>
+        <p className={cn('text-sm line-clamp-2', isCompleted && 'line-through text-muted-foreground')}>
           <HighlightedLessonTitle text={material.title} query={searchQuery} />
         </p>
         {material.sourceMetadata?.pageCount ? (
@@ -471,13 +548,14 @@ function FolderTreeNode({
       <CollapsibleTrigger
         className={cn(
           'flex w-full items-center gap-2 px-3 py-2 rounded-lg transition-colors text-sm font-medium group/folder',
+          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-1',
           isActive
             ? 'bg-brand-soft/30 text-foreground'
             : 'text-muted-foreground hover:bg-accent hover:text-foreground'
         )}
       >
         <FolderOpen className="size-3.5 shrink-0" aria-hidden="true" />
-        <span className="flex-1 text-left text-xs truncate">{node.name}</span>
+        <span className="flex-1 text-left text-sm line-clamp-2" title={node.name}>{node.name}</span>
         <span className="text-xs text-muted-foreground">{totalCount}</span>
         <ChevronDown
           className="size-3.5 text-muted-foreground transition-transform group-data-[state=open]/folder:rotate-180"
@@ -542,12 +620,15 @@ export interface LessonsTabProps {
 export function LessonsTab({ courseId, lessonId, adapter, onFocusMaterials }: LessonsTabProps) {
   const [materialGroups, setMaterialGroups] = useState<MaterialGroup[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [loadError, setLoadError] = useState(false)
+  const [retryCount, setRetryCount] = useState(0)
   const [searchQuery, setSearchQuery] = useState('')
   const activeRef = useRef<HTMLAnchorElement>(null)
 
   useEffect(() => {
     let ignore = false
     setIsLoading(true)
+    setLoadError(false)
 
     adapter
       .getGroupedLessons()
@@ -558,19 +639,21 @@ export function LessonsTab({ courseId, lessonId, adapter, onFocusMaterials }: Le
         }
       })
       .catch(() => {
-        // silent-catch-ok — error state handled by empty list
-        if (!ignore) setIsLoading(false)
+        if (!ignore) {
+          setIsLoading(false)
+          setLoadError(true)
+        }
       })
 
     return () => {
       ignore = true
     }
-  }, [adapter])
+  }, [adapter, retryCount])
 
   // Scroll active lesson into view on mount
   useEffect(() => {
     if (!isLoading && activeRef.current) {
-      activeRef.current.scrollIntoView({ block: 'center', behavior: 'instant' })
+      activeRef.current.scrollIntoView({ block: 'nearest', behavior: 'instant' })
     }
   }, [isLoading, lessonId])
 
@@ -587,8 +670,15 @@ export function LessonsTab({ courseId, lessonId, adapter, onFocusMaterials }: Le
     )
   }, [materialGroups, searchQuery])
 
-  // Build nested folder tree
+  // Build nested folder tree (raw, for path lookups)
   const folderTree = useMemo(() => buildFolderTree(filteredGroups), [filteredGroups])
+
+  // Flattened display roots — skips single-child container folders
+  const { roots: displayRoots, skippedContext: skippedFolderContext } = useMemo(
+    () => getDisplayRoots(folderTree),
+    [folderTree]
+  )
+
   const rootItems = useMemo(
     () =>
       filteredGroups.filter(
@@ -597,9 +687,9 @@ export function LessonsTab({ courseId, lessonId, adapter, onFocusMaterials }: Le
     [filteredGroups]
   )
   const hasMultipleFolders =
-    folderTree.length > 1 ||
-    (folderTree.length === 1 && rootItems.length > 0) ||
-    folderTree.length > 0
+    displayRoots.length > 1 ||
+    (displayRoots.length === 1 && rootItems.length > 0) ||
+    displayRoots.length > 0
 
   // Auto-expand ancestor folders containing the active lesson
   const activePaths = useMemo(() => getAncestorPaths(folderTree, lessonId), [folderTree, lessonId])
@@ -727,6 +817,29 @@ export function LessonsTab({ courseId, lessonId, adapter, onFocusMaterials }: Le
     )
   }
 
+  if (loadError) {
+    return (
+      <div
+        className="flex flex-col items-center justify-center py-12 px-4 text-center"
+        data-testid="lessons-tab-error"
+      >
+        <AlertTriangle className="size-10 mb-3 text-destructive opacity-70" aria-hidden="true" />
+        <h3 className="text-sm font-semibold text-foreground mb-1">Failed to load course content</h3>
+        <p className="text-xs text-muted-foreground mb-4">
+          Please check your connection and try again.
+        </p>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setRetryCount(c => c + 1)}
+          className="rounded-xl"
+        >
+          Retry
+        </Button>
+      </div>
+    )
+  }
+
   if (materialGroups.length === 0) {
     return (
       <EmptyState icon={Video} title="No lessons" description="This course has no lessons yet" />
@@ -771,6 +884,11 @@ export function LessonsTab({ courseId, lessonId, adapter, onFocusMaterials }: Le
           : currentIndex >= 0
             ? `Lesson ${currentIndex + 1} of ${materialGroups.length}`
             : `${materialGroups.length} lessons`}
+        {skippedFolderContext && !searchQuery && (
+          <span className="block truncate mt-0.5 text-muted-foreground/70">
+            {skippedFolderContext}
+          </span>
+        )}
       </div>
       {filteredGroups.length === 0 && searchQuery ? (
         <div
@@ -778,7 +896,18 @@ export function LessonsTab({ courseId, lessonId, adapter, onFocusMaterials }: Le
           data-testid="lesson-search-empty"
         >
           <Search className="size-10 mb-3 opacity-50" aria-hidden="true" />
-          <p className="text-sm">No lessons match your search</p>
+          <p className="text-sm mb-1">No lessons match your search</p>
+          <p className="text-xs text-muted-foreground/70 mb-3">
+            Try a different search term or clear the filter.
+          </p>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setSearchQuery('')}
+            className="rounded-xl"
+          >
+            Clear search
+          </Button>
         </div>
       ) : hasMultipleFolders ? (
         <>
@@ -800,8 +929,8 @@ export function LessonsTab({ courseId, lessonId, adapter, onFocusMaterials }: Le
               />
             )
           })}
-          {/* Nested folder tree */}
-          {folderTree.map(node => (
+          {/* Nested folder tree (using flattened display roots) */}
+          {displayRoots.map((node: FolderNode) => (
             <FolderTreeNode
               key={node.path}
               node={node}

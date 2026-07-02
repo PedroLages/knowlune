@@ -21,9 +21,25 @@ export type { MaterialGroup } from './lessonMaterialMatcher'
 // Utilities
 // ---------------------------------------------------------------------------
 
+/**
+ * Safely decode URI-encoded strings (e.g., `%20` → space).
+ * Returns the original string unchanged if decoding fails (malformed sequences).
+ * Already-decoded strings pass through `decodeURIComponent` unchanged,
+ * making this safe to call on any filename regardless of source.
+ */
+export function safeDecodeURIComponent(s: string): string {
+  if (!s) return s
+  try {
+    return decodeURIComponent(s)
+  } catch {
+    // Return original on malformed encoding (e.g., %ZZ — illegal hex pair)
+    return s
+  }
+}
+
 /** Convert a raw filename into a human-readable title. */
 export function humanizeFilename(filename: string): string {
-  return filename
+  return safeDecodeURIComponent(filename)
     .replace(/\.\w+$/, '') // strip extension
     .replace(/^\d+[-_.]\s*/, '') // strip leading numeric prefix (e.g. "01-")
     .replace(/[_]/g, ' ') // underscores to spaces

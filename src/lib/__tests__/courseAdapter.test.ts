@@ -97,6 +97,68 @@ function makePdf(overrides: Partial<ImportedPdf> = {}): ImportedPdf {
 }
 
 // ---------------------------------------------------------------------------
+// safeDecodeURIComponent utility
+// ---------------------------------------------------------------------------
+
+describe('safeDecodeURIComponent()', () => {
+  it('decodes %20 to space', () => {
+    expect(adapterLib.safeDecodeURIComponent('Linux%20Administration')).toBe(
+      'Linux Administration'
+    )
+  })
+
+  it('decodes complex encoding (%20 and %3A)', () => {
+    expect(adapterLib.safeDecodeURIComponent('Linux%20Admin%3A%20Guide')).toBe(
+      'Linux Admin: Guide'
+    )
+  })
+
+  it('passes already-decoded strings through unchanged (idempotent)', () => {
+    expect(adapterLib.safeDecodeURIComponent('01 - Introduction')).toBe('01 - Introduction')
+  })
+
+  it('returns empty string unchanged', () => {
+    expect(adapterLib.safeDecodeURIComponent('')).toBe('')
+  })
+
+  it('returns original string on malformed encoding (%ZZ)', () => {
+    expect(adapterLib.safeDecodeURIComponent('bad%ZZfile')).toBe('bad%ZZfile')
+  })
+
+  it('decodes only-encoded string', () => {
+    expect(adapterLib.safeDecodeURIComponent('%20%20%20')).toBe('   ')
+  })
+})
+
+describe('humanizeFilename() with URI decoding', () => {
+  it('decodes %20 in filename before stripping extension/prefix', () => {
+    expect(adapterLib.humanizeFilename('01%20-%20Overview.mp4')).toBe('01 - Overview')
+  })
+
+  it('decodes complex encoding', () => {
+    expect(
+      adapterLib.humanizeFilename('Linux%20Administration%20Bootcamp%3A%20Guide.mp4')
+    ).toBe('Linux Administration Bootcamp: Guide')
+  })
+
+  it('handles already-decoded filenames correctly (idempotent)', () => {
+    // Uses "NN-Name" format (no space before separator) — the existing regex
+    // expects `^\d+[-_.]\s*` which matches digit(s) + separator + optional whitespace
+    expect(adapterLib.humanizeFilename('01-Introduction.mp4')).toBe('Introduction')
+  })
+
+  it('returns empty string for malformed-encoding filename', () => {
+    // %ZZ is illegal hex — safeDecode returns original "bad%ZZfile"
+    // After stripping extension → "bad%ZZfile" (no transform applies)
+    expect(adapterLib.humanizeFilename('bad%ZZfile.mp4')).toBe('bad%ZZfile')
+  })
+
+  it('returns empty string for empty filename', () => {
+    expect(adapterLib.humanizeFilename('')).toBe('')
+  })
+})
+
+// ---------------------------------------------------------------------------
 // revokeObjectUrl utility
 // ---------------------------------------------------------------------------
 
