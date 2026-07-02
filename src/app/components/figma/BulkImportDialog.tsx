@@ -350,7 +350,7 @@ export function BulkImportDialog({
 
       if (manifestResult.ok) {
         const positionByFolder = new Map(
-          manifestResult.manifest.track.courses.map((c, i) => [c.folder, i])
+          manifestResult.manifest.track.courses.map(c => [c.folder, c.position])
         )
         result.data.sort((a, b) => {
           const posA = positionByFolder.get(a.name) ?? Infinity
@@ -403,7 +403,7 @@ export function BulkImportDialog({
       const manifestResult = await readTrackManifest(parentHandle)
       if (manifestResult.ok) {
         const positionByFolder = new Map(
-          manifestResult.manifest.track.courses.map((c, i) => [c.folder, i])
+          manifestResult.manifest.track.courses.map(c => [c.folder, c.position])
         )
         subDirs.sort((a, b) => {
           const posA = positionByFolder.get(a.name) ?? Infinity
@@ -650,7 +650,13 @@ export function BulkImportDialog({
   const handleConfirmImport = useCallback(async () => {
     generationRef.current++
     const gen = generationRef.current
-    const courses = [...scannedCourses.values()]
+    const courses: ScannedCourse[] = importItems
+      .filter(
+        item =>
+          (item.status === 'success' || item.status === 'truncated') &&
+          item.scannedCourse != null
+      )
+      .map(item => item.scannedCourse!)
     if (courses.length === 0) return
 
     abortRef.current = false
@@ -774,7 +780,16 @@ export function BulkImportDialog({
     // Server-aware batch import path: when manifest exists but parentHandle is null
     // (server URL import), create or update the track with successfully imported courses.
     if (trackManifest && !parentHandle && !abortRef.current && gen === generationRef.current) {
-      const successResults = results.filter(r => r.status === 'success')
+      const manifestPositions = new Map(
+        trackManifest.manifest.track.courses.map(c => [c.folder, c.position])
+      )
+      const successResults = results
+        .filter(r => r.status === 'success')
+        .sort((a, b) => {
+          const posA = manifestPositions.get(a.folderName) ?? Infinity
+          const posB = manifestPositions.get(b.folderName) ?? Infinity
+          return posA - posB
+        })
       if (successResults.length > 0) {
         try {
           const lpStore = useLearningPathStore.getState()
@@ -863,7 +878,7 @@ export function BulkImportDialog({
     if (gen === generationRef.current) {
       setStep('results')
     }
-  }, [scannedCourses, folders, courseOverrides, parentAuthorId, trackManifest])
+  }, [importItems, folders, courseOverrides, parentAuthorId, trackManifest])
 
   // Retry a single failed item
   const handleRetry = useCallback(
