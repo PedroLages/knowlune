@@ -5,7 +5,7 @@ import {
   buildIssuePayload,
   buildFallbackText,
   buildMailtoHref,
-  submitToGitHub,
+  submitFeedback,
   getIssueTitle,
   FEEDBACK_FALLBACK_EMAIL,
 } from '@/lib/feedbackService'
@@ -232,25 +232,49 @@ describe('buildMailtoHref', () => {
   })
 })
 
-describe('submitToGitHub', () => {
+// Mock supabase client for submitFeedback
+const mockGetSession = vi.fn()
+vi.mock('@/lib/auth/supabase', () => ({
+  supabase: {
+    auth: {
+      getSession: () => mockGetSession(),
+    },
+  },
+}))
+
+describe('submitFeedback', () => {
   const payload = { title: 'Test bug', body: 'Some body', labels: ['bug'] }
+
+  beforeEach(() => {
+    mockGetSession.mockResolvedValue({
+      data: { session: { access_token: 'test-jwt' } },
+    })
+  })
 
   afterEach(() => {
     vi.restoreAllMocks()
   })
 
-  it('returns ok: true when GitHub responds with 201', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, status: 201 } as Response))
-    const result = await submitToGitHub(payload, 'token-abc')
+  it('returns ok: true when Edge Function responds with success', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve({ ok: true }),
+    } as Response))
+    const result = await submitFeedback(payload)
     expect(result.ok).toBe(true)
   })
 
-  it('returns ok: false with error message on 4xx', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 422 } as Response))
-    const result = await submitToGitHub(payload, 'token-abc')
+  it('returns ok: false with error message on server error', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: false,
+      status: 502,
+      json: () => Promise.resolve({ ok: false, error: 'GitHub returned 500' }),
+    } as Response))
+    const result = await submitFeedback(payload)
     expect(result.ok).toBe(false)
     if (!result.ok) {
-      expect(result.error).toContain('422')
+      expect(result.error).toContain('GitHub returned 500')
     }
   })
 
@@ -259,7 +283,7 @@ describe('submitToGitHub', () => {
       'fetch',
       vi.fn().mockRejectedValue(Object.assign(new Error('Aborted'), { name: 'AbortError' }))
     )
-    const result = await submitToGitHub(payload, 'token-abc')
+    const result = await submitFeedback(payload)
     expect(result.ok).toBe(false)
     if (!result.ok) {
       expect(result.error).toContain('timed out')
@@ -268,10 +292,10 @@ describe('submitToGitHub', () => {
 
   it('returns ok: false with network message on fetch error', async () => {
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('Network error')))
-    const result = await submitToGitHub(payload, 'token-abc')
+    const result = await submitFeedback(payload)
     expect(result.ok).toBe(false)
     if (!result.ok) {
-      expect(result.error).toContain('reach GitHub')
+      expect(result.error).toContain('reach the server')
     }
   })
 })

@@ -5,7 +5,7 @@ import {
   buildIssuePayload,
   buildFallbackText,
   buildMailtoHref,
-  submitToGitHub,
+  submitFeedback,
 } from '@/lib/feedbackService'
 import type { FeedbackFormFields } from '@/lib/feedbackService'
 
@@ -36,8 +36,6 @@ export function useFeedbackSubmit(): UseFeedbackSubmitReturn {
 
   const submit = useCallback(
     async (fields: FeedbackFormFields) => {
-      const token = import.meta.env.VITE_GITHUB_FEEDBACK_TOKEN
-
       // Build context now (captures current URL, Sentry event id, etc.)
       const ctx = buildFeedbackContext(user, fields.mode)
       const fallback = buildFallbackText(fields, ctx)
@@ -47,19 +45,11 @@ export function useFeedbackSubmit(): UseFeedbackSubmitReturn {
         fallback
       )
 
-      // No token → go directly to fallback (no network call)
-      if (!token) {
-        setFallbackText(fallback)
-        setMailtoHref(mailto)
-        setStatus('fallback')
-        return
-      }
-
       setStatus('submitting')
       setError(null)
 
       const payload = buildIssuePayload(fields, ctx)
-      const result = await submitToGitHub(payload, token)
+      const result = await submitFeedback(payload)
 
       if (result.ok) {
         setStatus('success')
@@ -67,7 +57,9 @@ export function useFeedbackSubmit(): UseFeedbackSubmitReturn {
         setFallbackText(fallback)
         setMailtoHref(mailto)
         setError(result.error)
-        setStatus('error')
+        // If the Edge Function returns 401 (unauthenticated), show fallback
+        // so the user can still email their feedback.
+        setStatus(result.error?.includes('Unauthorized') ? 'fallback' : 'error')
       }
     },
     [user]
