@@ -133,6 +133,45 @@ jobs:
   # Note: E2E tests run in the dedicated test.yml pipeline with 4-shard
   # parallelism, burn-in detection, and retry logic. See docs/ci.md.
 
+  npm-audit:
+    name: npm Audit (HIGH severity)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run npm audit gate
+        run: bash scripts/ci-audit.sh
+
+  secrets-scan:
+    name: Secrets Scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Scan for hardcoded credentials
+        run: bash scripts/grep-gate-credentials.sh
+
+      - name: Scan git history for committed secrets (one-shot, non-blocking)
+        run: |
+          echo "=== Git history secrets scan (non-blocking) ==="
+          if command -v git-secrets &>/dev/null; then
+            git secrets --scan-history 2>&1 || echo "⚠️ git-secrets found matches in history — triage required"
+          else
+            echo "ℹ️ git-secrets not installed — skipping history scan. Install: brew install git-secrets"
+          fi
+        continue-on-error: true
+
   verify-subprocessors:
     name: Sub-processor Drift Check (E119-S12)
     runs-on: ubuntu-latest
@@ -185,7 +224,7 @@ jobs:
   ci-status:
     name: CI Status Check
     runs-on: ubuntu-latest
-    needs: [typecheck, lint, format, build, unit-tests, lighthouse, verify-subprocessors]
+    needs: [typecheck, lint, format, build, unit-tests, npm-audit, secrets-scan, lighthouse, verify-subprocessors]
     if: always()
     steps:
       - name: Check all jobs status
@@ -195,6 +234,8 @@ jobs:
           echo "Format: ${{ needs.format.result }}"
           echo "Build: ${{ needs.build.result }}"
           echo "Unit Tests: ${{ needs.unit-tests.result }}"
+          echo "npm Audit: ${{ needs.npm-audit.result }}"
+          echo "Secrets Scan: ${{ needs.secrets-scan.result }}"
           echo "Lighthouse: ${{ needs.lighthouse.result }}"
           echo "Sub-processor Check: ${{ needs.verify-subprocessors.result }}"
 
@@ -203,6 +244,8 @@ jobs:
              [ "${{ needs.format.result }}" != "success" ] || \
              [ "${{ needs.build.result }}" != "success" ] || \
              [ "${{ needs.unit-tests.result }}" != "success" ] || \
+             [ "${{ needs.npm-audit.result }}" != "success" ] || \
+             [ "${{ needs.secrets-scan.result }}" != "success" ] || \
              [ "${{ needs.verify-subprocessors.result }}" != "success" ]; then
             echo "❌ CI Pipeline failed - see above for details"
             exit 1

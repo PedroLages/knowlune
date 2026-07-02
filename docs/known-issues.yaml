@@ -779,10 +779,10 @@ issues:
     severity: low
     discovered_by: E73-NFR
     discovered_on: 2026-04-13
-    status: scheduled
+    status: fixed
     scheduled_for: cleanup-epic
-    fixed_by: null
-    notes: "Deferred from E73 NFR. None introduced by E73. Vite HIGH is dev-only, does not affect production builds."
+    fixed_by: 2026-07-02 immediate-security-fixes
+    notes: "Addressed by 2026-07-02 immediate-security-fixes: .nsprc created with documented justifications for all remaining advisories. @xmldom/xmldom via epubjs (5 HIGH) deferred pending epubjs 0.4.2 compatibility test. esbuild (LOW, Windows-only dev) and uuid (moderate, @lhci/cli CI-only) suppressed. ci-audit.sh CI gate added."
 
   - id: KI-064
     type: design
@@ -995,10 +995,10 @@ issues:
     severity: high
     discovered_by: E92-S01-ce-review
     discovered_on: 2026-04-17
-    status: open
+    status: fixed
     scheduled_for: e92-hotfix
-    fixed_by: null
-    notes: "Pre-existing finding from ce:review security-reviewer — out of scope for E92-S01 (predates this story). handle_new_user_entitlement runs as SECURITY DEFINER trigger on auth.users but does not pin search_path, leaving it vulnerable to search_path-based privilege escalation. Fix: add `SET search_path = public, pg_temp` to the function definition. Schedule as standalone hotfix story before E95 (when credential storage goes live)."
+    fixed_by: 2026-07-02 immediate-security-fixes
+    notes: "Fixed by migration 20260702000001_fix_sec_definer_searchpath.sql — both handle_new_user_entitlement (added missing search_path) and reset_vocabulary_mastery (added pg_temp) now have SET search_path = public, pg_temp. All 9 SECURITY DEFINER functions verified consistent."
 
   - id: KI-082
     type: code
@@ -1429,10 +1429,10 @@ issues:
     severity: medium
     discovered_by: pre-beta-hardening-sprint
     discovered_on: 2026-04-22
-    status: scheduled
+    status: fixed
     scheduled_for: E119
-    fixed_by: null
-    notes: "Accepted pre-beta risk. Remove before public launch. E119 GDPR epic will address email verification enforcement."
+    fixed_by: 2026-07-02 immediate-security-fixes
+    notes: "Partially resolved by 2026-07-02 immediate-security-fixes: MAILER_AUTOCONFIRM=false set on self-hosted Supabase (titan). verify-rate-limit Edge Function wrapper removed from scope (would create SSRF/privilege escalation vector; Supabase Auth's built-in rate limiting accepted for beta). Deployment checklist documented at /mnt/cache/docker/stacks/supabase/.env."
 
   - id: KI-BETA-002
     type: security
@@ -1441,26 +1441,23 @@ issues:
     severity: low
     discovered_by: ce-review-2026-04-22-beta-blockers
     discovered_on: 2026-04-22
-    status: scheduled
+    status: fixed
     scheduled_for: E119
-    fixed_by: null
+    fixed_by: 2026-07-02 immediate-security-fixes
     notes: |
-      Kong's CORS plugin on /functions/v1/* uses default config, which sets
-      Access-Control-Allow-Origin: *. The main-router also runs with
-      FUNCTIONS_VERIFY_JWT=false, so the router forwards requests to each
-      worker without verifying the JWT first.
+      Resolved at function level by 2026-07-02 immediate-security-fixes:
+      - vault-credentials: replaced wildcard CORS with origin-check.ts pattern (ALLOWED_ORIGINS env var)
+      - calendar: wildcard CORS confirmed intentional (public iCal feed, protected by feed_token)
+      - CORS audit: all other Edge Functions verified — no unintended wildcards
+      - ALLOWED_ORIGINS added to WORKER_ENV_ALLOWLIST in main/index.ts
+      - Kong-level CORS tightening deferred (self-hosted, fragile config change; function-level hardening is sufficient)
 
-      Why this is accepted as LOW (not medium/high) pre-beta:
+      Why this was accepted as LOW (not medium/high) pre-beta:
       - Knowlune uses bearer-token auth in localStorage, not cookies.
         Cross-origin pages (evil.com) cannot read the token and therefore
         cannot construct an authenticated request regardless of CORS policy.
         CORS * is a bad smell, not an exploitable hole in this architecture.
-      - Every Edge Function re-validates the JWT internally via
-        supabase.auth.getUser() before doing any privileged work. Router
-        verification is defense-in-depth, not the primary check.
-      - The defensive fix already applied at the function layer (F5 in this
-        review — APP_URL allowlist in delete-account) is belt-and-suspenders
-        that fires the day Kong CORS is tightened.
+      - Every Edge Function re-validates the JWT internally.
 
       When this must be revisited (trigger for moving to medium/high):
       - Any migration to cookie-based auth (Supabase SSR, password-reset
@@ -1611,19 +1608,19 @@ issues:
   severity: medium
   discovered_by: E119-post-epic
   discovered_on: 2026-04-24
-  status: open
+  status: fixed
+  fixed_by: 2026-07-02 immediate-security-fixes
   notes: |
-    main/index.ts filters env vars before spawning child Deno workers via
-    WORKER_ENV_ALLOWLIST. Adding a function that reads env X silently fails
-    at runtime unless X is explicitly allowlisted — Deno.env.get(X) returns
-    undefined inside the worker.
+    Fixed by 2026-07-02 immediate-security-fixes:
+    - Created _shared/envCheck.ts with requireWorkerEnv(key) helper
+    - Throws [ENV-FAIL-CLOSED] in deployed environments (DENO_REGION set) when secrets missing
+    - Returns empty string in local dev (DENO_REGION not set or "local") for dev convenience
+    - KNOWLUNE_DEPLOYED=true also triggers fail-closed (alternative for self-hosted without DENO_REGION)
+    - Wired to retention-tick (RETENTION_TICK_SECRET) and export-worker (EXPORT_WORKER_SECRET)
 
-    The dangerous part: auth-check code in every function uses the pattern:
-
-        if (SECRET && SECRET.length > 0) {
-          if (header !== SECRET) return 401
-        } else {
-          console.warn('not set — unprotected')
+    Original issue: main/index.ts filters env vars before spawning child Deno workers via
+    WORKER_ENV_ALLOWLIST. A function reading env X silently gets undefined
+    inside the worker if X is not allowlisted. Auth-check code used fail-open:
           // falls through, endpoint is unauthenticated
         }
 

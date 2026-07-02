@@ -1,0 +1,34 @@
+{
+  "GHSA-wh4c-j3r5-mjhp": {
+    "active": true,
+    "notes": "@xmldom/xmldom via epubjs→react-reader: XML injection via CDATA serialization. epubjs needs upgrade to 0.4.2 (breaking). EPUB reading must be tested before upgrading. Accepted until epubjs compatibility is verified."
+  },
+  "GHSA-2v35-w6hq-6mfw": {
+    "active": true,
+    "notes": "@xmldom/xmldom via epubjs→react-reader: Uncontrolled recursion in XML serialization. Same dependency chain as GHSA-wh4c-j3r5-mjhp."
+  },
+  "GHSA-f6ww-3ggp-fr8h": {
+    "active": true,
+    "notes": "@xmldom/xmldom via epubjs→react-reader: XML injection via DocumentType serialization. Same dependency chain as GHSA-wh4c-j3r5-mjhp."
+  },
+  "GHSA-x6wf-f3px-wcqx": {
+    "active": true,
+    "notes": "@xmldom/xmldom via epubjs→react-reader: XML node injection via processing instruction. Same dependency chain as GHSA-wh4c-j3r5-mjhp."
+  },
+  "GHSA-j759-j44w-7fr8": {
+    "active": true,
+    "notes": "@xmldom/xmldom via epubjs→react-reader: XML node injection via comment serialization. Same dependency chain as GHSA-wh4c-j3r5-mjhp."
+  },
+  "GHSA-g7r4-m6w7-qqqr": {
+    "active": true,
+    "notes": "esbuild (LOW severity, CVSS 2.5): Windows-only dev server file read. Dev-only dependency; not exploitable in Linux/macOS CI or production builds."
+  },
+  "GHSA-w5hq-g745-h8pq": {
+    "active": true,
+    "notes": "uuid via @lhci/cli: Missing buffer bounds check in v3/v5/v6. CI-only dev dependency (@lhci/cli ≥0.7.0); not in production bundle."
+  },
+  "GHSA-866g-f22w-33x8": {
+    "active": true,
+    "notes": "@ai-sdk/provider-utils via zhipu-ai-provider: Uncontrolled Resource Consumption. Nested dependency of a dev-only provider; not in production bundle."
+  }
+}
