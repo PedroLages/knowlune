@@ -181,6 +181,23 @@ export function UnifiedLessonPlayer() {
     []
   )
   const loadCourseProgress = useContentProgressStore(s => s.loadCourseProgress)
+  const statusMap = useContentProgressStore(s => s.statusMap)
+
+  // Compute course progress percentage for the sidebar header
+  const courseProgressPercent = useMemo(() => {
+    if (!courseId || lessons.length === 0) return null
+    const completed = lessons.filter(
+      l => (statusMap[`${courseId}:${l.id}`] ?? 'not-started') === 'completed'
+    ).length
+    return Math.round((completed / lessons.length) * 100)
+  }, [courseId, lessons, statusMap])
+
+  // Compute "Lesson X of Y" display (1-indexed)
+  const currentLessonPosition = useMemo(() => {
+    if (!lessonId || lessons.length === 0) return null
+    const index = lessons.findIndex(l => l.id === lessonId)
+    return index >= 0 ? index + 1 : null
+  }, [lessonId, lessons])
 
   // Ensure course progress is loaded so getItemStatus has data for checkCourseCompletion.
   useEffect(() => {
@@ -701,13 +718,34 @@ export function UnifiedLessonPlayer() {
           <div
             data-testid="desktop-sidebar"
             className={cn(
-              'sticky top-0 self-start flex-shrink-0 w-96 bg-card rounded-2xl shadow-sm overflow-hidden flex flex-col max-h-[calc(100svh-3rem)]',
+              'sticky top-0 self-start flex-shrink-0 w-[400px] bg-card rounded-2xl shadow-sm overflow-hidden flex flex-col max-h-[calc(100svh-3rem)]',
               isTheater || notesOpen ? 'hidden' : 'hidden lg:flex'
             )}
           >
-            <div className="px-4 py-3 border-b border-border flex-shrink-0">
-              <h3 className="text-sm font-semibold truncate">{course?.name ?? 'Course Content'}</h3>
-              <p className="text-xs text-muted-foreground">Course Content</p>
+            <div className="px-4 py-3 border-b border-border flex-shrink-0 space-y-1.5">
+              <h3 className="text-sm font-semibold line-clamp-1" title={course?.name}>
+                {course?.name ?? 'Course Content'}
+              </h3>
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-xs text-muted-foreground">
+                  {currentLessonPosition != null && totalLessons > 0
+                    ? `Lesson ${currentLessonPosition} of ${totalLessons}`
+                    : 'Course Content'}
+                </p>
+                {courseProgressPercent != null && (
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-12 h-1.5 bg-muted rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-success rounded-full transition-all duration-300"
+                        style={{ width: `${courseProgressPercent}%` }}
+                      />
+                    </div>
+                    <span className="text-xs text-muted-foreground tabular-nums">
+                      {courseProgressPercent}%
+                    </span>
+                  </div>
+                )}
+              </div>
             </div>
             <div className="flex-1 min-h-0 overflow-y-auto">
               <LessonsTab
