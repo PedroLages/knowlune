@@ -1,18 +1,15 @@
 /**
  * Feedback service for in-app bug reporting and feedback submission.
  *
- * Submissions route to GitHub Issues on PedroLages/Knowlune via REST API
- * using VITE_GITHUB_FEEDBACK_TOKEN.
- *
- * SECURITY NOTE: VITE_GITHUB_FEEDBACK_TOKEN is bundled into client assets.
- * This is acceptable while PedroLages/Knowlune is a private repo at beta scale,
- * using a fine-grained PAT with `Issues: write` scope only.
- * TODO (before public launch): migrate to a server-side proxy
- * (Cloudflare Worker or Supabase Edge Function) that holds the token server-side.
+ * Submissions route to GitHub Issues on PedroLages/Knowlune via the
+ * `submit-feedback` Supabase Edge Function, which holds the GitHub token
+ * server-side — never exposed to client bundles.
  */
 
 import * as Sentry from '@sentry/react'
 import type { User } from '@supabase/supabase-js'
+import { apiUrl } from '@/lib/apiBaseUrl'
+import { supabase } from '@/lib/auth/supabase'
 
 export type FeedbackMode = 'bug' | 'feedback'
 
@@ -56,7 +53,6 @@ export interface SubmitError {
  */
 export const FEEDBACK_FALLBACK_EMAIL = 'mindsetspheremail@gmail.com'
 
-const GITHUB_API_URL = 'https://api.github.com/repos/PedroLages/Knowlune/issues'
 const SUBMIT_TIMEOUT_MS = 10_000
 
 /**
@@ -153,38 +149,47 @@ export function buildIssuePayload(
 }
 
 /**
- * Submit a feedback report to GitHub Issues.
+ * Submit a feedback report via the `submit-feedback` Supabase Edge Function.
+ * The Edge Function authenticates via the Supabase session JWT and holds
+ * the GitHub token server-side.
+ *
  * Uses a 10-second AbortController timeout.
- * Returns { ok: true } on 201, or { ok: false, error } on failure/timeout.
+ * Returns { ok: true } on success, or { ok: false, error } on failure/timeout.
  */
-export async function submitToGitHub(
-  payload: { title: string; body: string; labels: string[] },
-  token: string
+export async function submitFeedback(
+  payload: { title: string; body: string; labels: string[] }
 ): Promise<SubmitResult | SubmitError> {
+  const { data: { session } } = await supabase.auth.getSession()
+  const accessToken = session?.access_token
+
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), SUBMIT_TIMEOUT_MS)
 
   try {
-    const response = await fetch(GITHUB_API_URL, {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    }
+    if (accessToken) {
+      headers['Authorization'] = `Bearer ${accessToken}`
+    }
+
+    const response = await fetch(apiUrl('submit-feedback'), {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-        Accept: 'application/vnd.github+json',
-        'X-GitHub-Api-Version': '2022-11-28',
-      },
+      headers,
       body: JSON.stringify(payload),
       signal: controller.signal,
     })
 
-    if (!response.ok) {
-      return {
-        ok: false,
-        error: `GitHub returned ${response.status}. Please use the copy option below.`,
-      }
+    const body = await response.json().catch(() => ({})) as { ok?: boolean; error?: string }
+
+    if (response.ok && body.ok) {
+      return { ok: true }
     }
 
-    return { ok: true }
+    return {
+      ok: false,
+      error: body.error || `Server returned ${response.status}. Please use the copy option below.`,
+    }
   } catch (err) {
     const isTimeout =
       err instanceof Error && (err.name === 'AbortError' || err.name === 'TimeoutError')
@@ -192,7 +197,7 @@ export async function submitToGitHub(
       ok: false,
       error: isTimeout
         ? 'Request timed out after 10 seconds. Please use the copy option below.'
-        : 'Could not reach GitHub. Please use the copy option below.',
+        : 'Could not reach the server. Please use the copy option below.',
     }
   } finally {
     clearTimeout(timer)
