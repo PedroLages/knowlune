@@ -15,6 +15,12 @@
 // SECURITY DEFINER wrappers (migration: vault_credentials_public_wrappers).
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import {
+  checkOrigin,
+  corsHeaders,
+  getAllowedOrigins,
+  handlePreflight,
+} from '../_shared/origin-check.ts'
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
@@ -23,20 +29,21 @@ if (!SUPABASE_SERVICE_ROLE_KEY) throw new Error('SUPABASE_SERVICE_ROLE_KEY is re
 
 const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
 
-const CORS_HEADERS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, content-type, apikey, x-client-info',
-  'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
-}
+// CORS origins: loaded from ALLOWED_ORIGINS env var. Requests without an Origin
+// header (server-to-server, curl, cron) are permitted. Invalid origins get 403.
+// KI-BETA-002: tightened from wildcard to origin-restricted.
+const allowedOrigins = getAllowedOrigins()
+
+const ALLOWED_METHODS = 'GET, POST, DELETE, OPTIONS'
 
 const VALID_CREDENTIAL_TYPES = ['ai-provider', 'opds-catalog', 'abs-server'] as const
 type CredentialType = (typeof VALID_CREDENTIAL_TYPES)[number]
 
-function json(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
-  })
+function json(body: unknown, req?: Request, status = 200): Response {
+  const headers = req
+    ? { ...corsHeaders(req, allowedOrigins), 'Content-Type': 'application/json' }
+    : { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json' }
+  return new Response(JSON.stringify(body), { status, headers })
 }
 
 function buildKey(userId: string, credentialType: CredentialType, credentialId: string): string {
@@ -46,7 +53,7 @@ function buildKey(userId: string, credentialType: CredentialType, credentialId: 
 async function authenticate(req: Request): Promise<{ userId: string } | Response> {
   const authHeader = req.headers.get('Authorization')
   if (!authHeader?.startsWith('Bearer ')) {
-    return json({ error: 'Missing or malformed Authorization header' }, 401)
+    return json({ error: 'Missing or malformed Authorization header' }, req, 401)
   }
   const token = authHeader.slice(7)
   const {
@@ -54,7 +61,7 @@ async function authenticate(req: Request): Promise<{ userId: string } | Response
     error,
   } = await supabaseAdmin.auth.getUser(token)
   if (error || !user) {
-    return json({ error: 'Invalid or expired token' }, 401)
+    return json({ error: 'Invalid or expired token' }, req, 401)
   }
   return { userId: user.id }
 }
@@ -170,9 +177,8 @@ async function deleteCredential(
 // ─── Main handler ─────────────────────────────────────────────────────────────
 
 Deno.serve(async (req: Request) => {
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { status: 200, headers: CORS_HEADERS })
-  }
+  const preflight = handlePreflight(req, allowedOrigins)
+  if (preflight) return preflight
 
   const authResult = await authenticate(req)
   if (authResult instanceof Response) return authResult
@@ -186,21 +192,21 @@ Deno.serve(async (req: Request) => {
     try {
       body = await req.json()
     } catch {
-      return json({ error: 'Invalid JSON body' }, 400)
+      return json({ error: 'Invalid JSON body' }, req, 400)
     }
 
     const credentialType = parseCredentialType(body.credentialType)
     if (!credentialType) {
       return json(
         { error: `credentialType must be one of: ${VALID_CREDENTIAL_TYPES.join(', ')}` },
-        400
+        req, 400
       )
     }
 
     const credentialId = body.credentialId
     const secret = body.secret
     if (!credentialId || !secret) {
-      return json({ error: 'credentialId and secret are required' }, 400)
+      return json({ error: 'credentialId and secret are required' }, req, 400)
     }
 
     return storeCredential(userId, credentialType, credentialId, secret)
@@ -211,12 +217,12 @@ Deno.serve(async (req: Request) => {
     if (!credentialType) {
       return json(
         { error: `credentialType must be one of: ${VALID_CREDENTIAL_TYPES.join(', ')}` },
-        400
+        req, 400
       )
     }
     const credentialId = url.searchParams.get('credentialId')
     if (!credentialId) {
-      return json({ error: 'credentialId is required' }, 400)
+      return json({ error: 'credentialId is required' }, req, 400)
     }
     return checkCredential(userId, credentialType, credentialId)
   }
@@ -226,12 +232,12 @@ Deno.serve(async (req: Request) => {
     if (!credentialType) {
       return json(
         { error: `credentialType must be one of: ${VALID_CREDENTIAL_TYPES.join(', ')}` },
-        400
+        req, 400
       )
     }
     const credentialId = url.searchParams.get('credentialId')
     if (!credentialId) {
-      return json({ error: 'credentialId is required' }, 400)
+      return json({ error: 'credentialId is required' }, req, 400)
     }
     return readCredential(userId, credentialType, credentialId)
   }
@@ -241,15 +247,15 @@ Deno.serve(async (req: Request) => {
     if (!credentialType) {
       return json(
         { error: `credentialType must be one of: ${VALID_CREDENTIAL_TYPES.join(', ')}` },
-        400
+        req, 400
       )
     }
     const credentialId = url.searchParams.get('credentialId')
     if (!credentialId) {
-      return json({ error: 'credentialId is required' }, 400)
+      return json({ error: 'credentialId is required' }, req, 400)
     }
     return deleteCredential(userId, credentialType, credentialId)
   }
 
-  return json({ error: 'Not found' }, 404)
+  return json({ error: 'Not found' }, req, 404)
 })

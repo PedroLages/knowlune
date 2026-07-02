@@ -10,6 +10,10 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
 const TOKEN_REGEX = /^[a-f0-9]{40}$/
 
 const CORS_HEADERS: Record<string, string> = {
+  // KI-BETA-002: Wildcard CORS is intentional here. This endpoint serves a
+  // public iCal feed consumed by calendar apps (Google Calendar, Apple Calendar,
+  // Outlook, etc.) that cannot send custom Origin headers. The feed is protected
+  // by a per-user feed_token in the URL path, not by CORS.
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, OPTIONS',
   'Access-Control-Allow-Headers': '*',

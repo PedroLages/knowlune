@@ -24,5 +24,7 @@
     ["cn\\(([^)]*)\\)", "[\"'`]([^\"'`]*).*?[\"'`]"]
   ],
   "claudeCode.initialPermissionMode": "plan",
-  "todo-tree.ripgrep": "/opt/homebrew/bin/rg"
+  "todo-tree.ripgrep": "/opt/homebrew/bin/rg",
+  "editor.fontSize": 19,
+  "files.autoSave": "afterDelay"
 }

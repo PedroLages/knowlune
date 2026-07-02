@@ -8,6 +8,8 @@
 //   1. Validates x-retention-secret header
 //   2. Heartbeat check: warns if no audit log row in last 48h (HEARTBEAT_MISS)
 //   3. Generates a run_id UUID for this invocation
+
+import { requireWorkerEnv } from '../_shared/envCheck.ts'
 //   4. Soft-delete grace finaliser: hard-deletes users whose pending_deletion_at
 //      is >7 days old (S03 logic, preserved verbatim)
 //   5. Per-entry retention enforcement loop over RETENTION_POLICY:
@@ -48,7 +50,7 @@ import { RETENTION_POLICY } from '../_shared/retentionPolicy.ts'
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
 const STRIPE_SECRET_KEY = Deno.env.get('STRIPE_SECRET_KEY')
-const RETENTION_TICK_SECRET = Deno.env.get('RETENTION_TICK_SECRET')
+const RETENTION_TICK_SECRET = requireWorkerEnv('RETENTION_TICK_SECRET') // KI-E119-POST-005: fail-closed
 
 if (!SUPABASE_URL) throw new Error('SUPABASE_URL is required')
 if (!SUPABASE_SERVICE_ROLE_KEY) throw new Error('SUPABASE_SERVICE_ROLE_KEY is required')
