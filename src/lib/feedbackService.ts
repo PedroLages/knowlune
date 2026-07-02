@@ -159,8 +159,14 @@ export function buildIssuePayload(
 export async function submitFeedback(
   payload: { title: string; body: string; labels: string[] }
 ): Promise<SubmitResult | SubmitError> {
-  const { data: { session } } = await supabase.auth.getSession()
-  const accessToken = session?.access_token
+  let accessToken: string | undefined
+  try {
+    const { data: { session } } = await supabase.auth.getSession()
+    accessToken = session?.access_token
+  } catch {
+    // Auth unavailable — proceed without token; Edge Function will return 401
+    // and the hook will show the fallback email path
+  }
 
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), SUBMIT_TIMEOUT_MS)
@@ -180,15 +186,15 @@ export async function submitFeedback(
       signal: controller.signal,
     })
 
-    const body = await response.json().catch(() => ({})) as { ok?: boolean; error?: string }
+    const responseBody = await response.json().catch(() => ({})) as { ok?: boolean; error?: string }
 
-    if (response.ok && body.ok) {
+    if (response.ok && responseBody.ok) {
       return { ok: true }
     }
 
     return {
       ok: false,
-      error: body.error || `Server returned ${response.status}. Please use the copy option below.`,
+      error: responseBody.error || `Server returned ${response.status}. Please use the copy option below.`,
     }
   } catch (err) {
     const isTimeout =
