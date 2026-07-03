@@ -56,6 +56,10 @@ interface PathHeroBannerProps {
    *  Layout back-link shows "← {trackName}" on the lesson player page. */
   trackId?: string
   trackName?: string
+  /** Name of the current in-progress course for CTA label */
+  currentCourseName?: string
+  /** Title of the next lesson to show as subtitle below CTA */
+  nextLessonTitle?: string
 }
 
 // ─── WCAG contrast guarantee ──────────────────────────────────────────────────
@@ -83,6 +87,8 @@ export function PathHeroBanner({
   onDelete,
   trackId,
   trackName,
+  currentCourseName,
+  nextLessonTitle,
 }: PathHeroBannerProps) {
   const hasDropdownActions = onEdit || onDelete
 
@@ -91,7 +97,12 @@ export function PathHeroBanner({
 
   // Determine CTA target and label
   const ctaCourseId = currentCourseId ?? firstCourseId
-  const ctaLabel = pathProgress.completionPct > 0 ? 'Continue Learning' : 'Start Learning'
+  const hasProgress = pathProgress.completionPct > 0
+  const ctaLabel = hasProgress
+    ? currentCourseName
+      ? `Resume ${currentCourseName}`
+      : 'Continue Learning'
+    : 'Start Learning'
 
   // --- Cover image load state, keyed by the image URL ---
   // The URL string is the image identity: tracking which URL has loaded/failed
@@ -281,19 +292,24 @@ export function PathHeroBanner({
           <div className="flex flex-wrap items-center gap-4 sm:gap-6">
             {/* CTA button — brand-filled for guaranteed contrast against the dark scrim */}
             {ctaCourseId && (
-              <Link
-                to={
-                  targetLessonId
-                    ? `/courses/${ctaCourseId}/lessons/${targetLessonId}`
-                    : `/courses/${ctaCourseId}`
-                }
-                state={trackId && trackName ? { fromTrack: { trackId, trackName } } : undefined}
-                className="inline-flex items-center gap-2 bg-brand text-brand-foreground hover:bg-brand-hover shadow-lg rounded-xl font-bold px-6 py-3 min-h-[44px] motion-safe:transition-all motion-safe:duration-200 hover:shadow-xl hover:-translate-y-0.5 motion-reduce:hover:translate-y-0"
-                data-testid="hero-cta"
-              >
-                <PlayCircle className="size-5" aria-hidden="true" />
-                {ctaLabel}
-              </Link>
+              <div>
+                <Link
+                  to={
+                    targetLessonId
+                      ? `/courses/${ctaCourseId}/lessons/${targetLessonId}`
+                      : `/courses/${ctaCourseId}`
+                  }
+                  state={trackId && trackName ? { fromTrack: { trackId, trackName } } : undefined}
+                  className="inline-flex items-center gap-2 bg-brand text-brand-foreground hover:bg-brand-hover shadow-lg rounded-xl font-bold px-6 py-3 min-h-[44px] motion-safe:transition-all motion-safe:duration-200 hover:shadow-xl hover:-translate-y-0.5 motion-reduce:hover:translate-y-0"
+                  data-testid="hero-cta"
+                >
+                  <PlayCircle className="size-5" aria-hidden="true" />
+                  {ctaLabel}
+                </Link>
+                {hasProgress && nextLessonTitle && (
+                  <p className="text-xs text-white/60 mt-2 ml-1">Next: {nextLessonTitle}</p>
+                )}
+              </div>
             )}
 
             {/* Avatar stack */}

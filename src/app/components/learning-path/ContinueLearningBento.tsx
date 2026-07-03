@@ -1,5 +1,5 @@
 import { Link } from 'react-router'
-import { BookOpen, Play, ArrowRight, Clock } from 'lucide-react'
+import { BookOpen, Play, ArrowRight, Clock, FileText } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
 import { cn } from '@/app/components/ui/utils'
 import type { LearningPathEntry, PathCourseInfo } from '@/data/types'
@@ -20,12 +20,28 @@ interface ContinueLearningBentoProps {
   coursePosition?: number
   /** Total number of courses in the track. */
   totalCourses?: number
+  /** Title of the next incomplete lesson to show as "Next: ..." */
+  nextLessonTitle?: string
+  /** Number of remaining lessons in the course */
+  lessonsRemaining?: number
+  /** Estimated remaining minutes for this course */
+  estimatedRemainingMinutes?: number
+}
+
+function formatRemainingTime(minutes: number): string {
+  if (minutes < 60) return `~${minutes}m remaining`
+  const h = Math.floor(minutes / 60)
+  const m = minutes % 60
+  return m > 0 ? `~${h}h ${m}m remaining` : `~${h}h remaining`
 }
 
 /**
  * Bento-style hero card showing the current in-progress course.
  * Features a gradient overlay, thumbnail with play button overlay,
- * course metadata, progress bar, and action buttons.
+ * course metadata, next lesson preview, progress bar, and action buttons.
+ *
+ * Designed as a "learning GPS" — the user should immediately know:
+ * "You are here. This is next."
  */
 export function ContinueLearningBento({
   entry,
@@ -38,6 +54,9 @@ export function ContinueLearningBento({
   trackName,
   coursePosition,
   totalCourses,
+  nextLessonTitle,
+  lessonsRemaining,
+  estimatedRemainingMinutes,
 }: ContinueLearningBentoProps) {
   const pct = courseInfo?.completionPct ?? 0
   const lessonPath = targetLessonId
@@ -60,7 +79,7 @@ export function ContinueLearningBento({
         </div>
 
         {/* Left: Thumbnail with play overlay */}
-        <div className="md:w-2/5 relative bg-muted overflow-hidden group">
+        <div className="md:w-2/5 relative bg-muted overflow-hidden group min-h-[180px] md:min-h-[240px]">
           {thumbnailUrl ? (
             <div className="relative h-full">
               <img
@@ -69,7 +88,6 @@ export function ContinueLearningBento({
                 className="h-full w-full object-cover group-hover:scale-105 motion-reduce:group-hover:scale-100 motion-safe:transition-transform motion-safe:duration-300"
                 loading="lazy"
               />
-              {/* Deeper gradient overlay for cinematic feel */}
               <div
                 className="absolute inset-0 bg-gradient-to-br from-brand-soft/40 via-transparent to-black/30 pointer-events-none"
                 aria-hidden="true"
@@ -86,7 +104,7 @@ export function ContinueLearningBento({
               to={lessonPath}
               state={linkState}
               className="group size-16 rounded-full bg-brand flex items-center justify-center text-brand-foreground shadow-[0_0_20px_color-mix(in_oklch,var(--brand)_30%,transparent)] hover:shadow-[0_0_30px_color-mix(in_oklch,var(--brand)_45%,transparent)] hover:bg-brand hover:scale-110 motion-reduce:hover:scale-100 motion-safe:transition-all motion-safe:duration-200"
-              aria-label={`Continue ${courseInfo?.name || 'course'}`}
+              aria-label={`Resume ${courseInfo?.name || 'course'}`}
             >
               <Play
                 className="size-7 ml-0.5 fill-current group-hover:scale-110 motion-safe:transition-transform motion-safe:duration-200"
@@ -96,26 +114,56 @@ export function ContinueLearningBento({
           </div>
         </div>
 
-        {/* Right: Course info and actions — subtle glass surface */}
+        {/* Right: Course info and actions */}
         <div className="md:w-3/5 p-6 flex flex-col justify-between relative z-10 bg-card/50 backdrop-blur-sm">
           <div>
+            {/* Context label */}
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+              Continue where you left off
+            </p>
+
+            {/* Course name */}
             <h3 className="text-xl md:text-2xl font-bold mb-1">
               {courseInfo?.name || 'Unknown Course'}
             </h3>
+
             {courseInfo?.authorName && (
-              <p className="text-sm text-muted-foreground mb-3">{courseInfo.authorName}</p>
+              <p className="text-sm text-muted-foreground mb-2">{courseInfo.authorName}</p>
             )}
-            <div className="flex items-center gap-3 text-sm text-muted-foreground mb-4">
-              {coursePosition != null && totalCourses != null ? (
+
+            {/* Next lesson preview */}
+            {nextLessonTitle && (
+              <div className="flex items-center gap-2 mt-3 mb-3 p-3 rounded-xl bg-brand-soft/30 border border-brand-soft/20">
+                <FileText className="size-4 text-brand flex-shrink-0" aria-hidden="true" />
+                <div className="min-w-0">
+                  <p className="text-xs text-muted-foreground font-medium">Next</p>
+                  <p className="text-sm font-semibold text-foreground truncate">
+                    {nextLessonTitle}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Progress + metadata row */}
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground mb-4">
+              {coursePosition != null && totalCourses != null && (
                 <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-semibold">
                   Course {coursePosition} of {totalCourses}
                 </span>
-              ) : null}
+              )}
               <span className="flex items-center gap-1.5">
-                <Clock className="size-4 text-brand" aria-hidden="true" />
+                <Clock className="size-4 text-brand flex-shrink-0" aria-hidden="true" />
                 <span className="text-brand font-medium">{pct}% complete</span>
               </span>
+              {lessonsRemaining != null && lessonsRemaining > 0 && (
+                <span>{lessonsRemaining} lessons left</span>
+              )}
+              {estimatedRemainingMinutes != null && estimatedRemainingMinutes > 0 && (
+                <span>{formatRemainingTime(estimatedRemainingMinutes)}</span>
+              )}
             </div>
+
+            {/* Progress bar */}
             <div className="w-full bg-muted h-2 rounded-full mb-6">
               <div
                 className="bg-brand h-full rounded-full motion-safe:transition-all motion-safe:duration-300"
@@ -123,10 +171,12 @@ export function ContinueLearningBento({
               />
             </div>
           </div>
+
+          {/* Action buttons */}
           <div className="flex flex-wrap gap-3">
             <Button variant="brand" asChild>
               <Link to={lessonPath} state={linkState}>
-                Continue lesson
+                Resume lesson
                 <ArrowRight className="size-4 ml-2" aria-hidden="true" />
               </Link>
             </Button>

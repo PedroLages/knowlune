@@ -288,36 +288,60 @@ function CourseTimelineEntry({
         {/* Row 2: Title */}
         <h3 className="text-xl font-bold">{info?.name || 'Unknown Course'}</h3>
 
-        {/* Row 3: Description (always visible) */}
-        {info?.description && (
-          <p className="text-sm text-muted-foreground mt-2 line-clamp-2">{info.description}</p>
+        {/* Row 3: Stats — lessons, duration, progress */}
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2 text-sm text-muted-foreground">
+          {videoCount > 0 && (
+            <span className="flex items-center gap-1.5 font-medium">
+              <Video className="size-4" aria-hidden="true" />
+              {videoCount} {videoCount === 1 ? 'lesson' : 'lessons'}
+            </span>
+          )}
+          {(info?.totalDuration ?? 0) > 0 && (
+            <span className="flex items-center gap-1.5 font-medium">
+              <Clock className="size-4" aria-hidden="true" />
+              {formatClockDuration(info!.totalDuration!)}
+            </span>
+          )}
+          {info?.completionPct != null && info.completionPct > 0 && (
+            <span className="font-semibold text-brand">{info.completionPct}% complete</span>
+          )}
+        </div>
+
+        {/* Row 4: Description + Why This Matters */}
+        {(info?.description || entry.justification) && (
+          <div className="mt-3 space-y-2">
+            {info?.description && (
+              <p className="text-sm text-muted-foreground line-clamp-2">{info.description}</p>
+            )}
+            {/* Why this matters — justification from AI or manifest */}
+            {entry.justification && (
+              <details className="group">
+                <summary className="text-xs font-semibold text-muted-foreground/70 cursor-pointer hover:text-muted-foreground transition-colors list-none flex items-center gap-1.5">
+                  <ChevronDown className="size-3.5 group-open:rotate-180 transition-transform" aria-hidden="true" />
+                  Why this matters
+                </summary>
+                <p className="text-xs text-muted-foreground/70 mt-1.5 leading-relaxed pl-5">
+                  {entry.justification}
+                </p>
+              </details>
+            )}
+          </div>
         )}
 
-        {/* Row 3b: Notes from manifest (justification) */}
-        {entry.justification && (
-          <p className="text-xs text-muted-foreground/70 mt-1.5 italic leading-relaxed">
-            {entry.justification}
-          </p>
-        )}
-
-        {/* Row 4: Stats + Action button */}
+        {/* Row 5: Progress bar + actions (non-simplified) */}
         {!simplified && (
           <div className="flex items-center justify-between gap-4 mt-4">
-            <div className="flex items-center gap-4 text-sm text-muted-foreground font-medium">
-              {videoCount > 0 && (
-                <span className="flex items-center gap-1.5">
-                  <Video className="size-4" aria-hidden="true" />
-                  {videoCount} {videoCount === 1 ? 'lesson' : 'lessons'}
-                </span>
-              )}
-              {(info?.totalDuration ?? 0) > 0 && (
-                <span className="flex items-center gap-1.5">
-                  <Clock className="size-4" aria-hidden="true" />
-                  {formatClockDuration(info!.totalDuration!)}
-                </span>
+            <div className="flex-1">
+              {info?.completionPct != null && info.completionPct > 0 && (
+                <div className="w-full bg-muted h-1.5 rounded-full overflow-hidden">
+                  <div
+                    className="bg-brand h-full rounded-full motion-safe:transition-all motion-safe:duration-300"
+                    style={{ width: `${info.completionPct}%` }}
+                  />
+                </div>
               )}
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 flex-shrink-0">
               <EntryActionButton
                 status={status}
                 isManuallyCompleted={isManuallyCompleted}

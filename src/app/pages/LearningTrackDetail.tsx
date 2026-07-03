@@ -2,10 +2,11 @@ import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { useParams, Link, useNavigate } from 'react-router'
 import { motion, useReducedMotion } from 'motion/react'
 import { useShallow } from 'zustand/react/shallow'
-import { BookOpen, Trophy, ArrowLeft, AlertCircle, RotateCcw } from 'lucide-react'
+import { BookOpen, Trophy, ArrowLeft, AlertCircle, RotateCcw, Map, List, Layers, FolderKanban, StickyNote } from 'lucide-react'
 import { Skeleton } from '@/app/components/ui/skeleton'
 import { Button } from '@/app/components/ui/button'
 import { Card, CardContent } from '@/app/components/ui/card'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/app/components/ui/tabs'
 import { EmptyState } from '@/app/components/EmptyState'
 import { DelayedFallback } from '@/app/components/DelayedFallback'
 import { PathHeroBanner } from '@/app/components/learning-path/PathHeroBanner'
@@ -13,6 +14,7 @@ import { PathProgressSidebar } from '@/app/components/learning-path/PathProgress
 import { ProgressionModeToggle } from '@/app/components/learning-path/ProgressionModeToggle'
 import { ContinueLearningBento } from '@/app/components/learning-path/ContinueLearningBento'
 import { PathTimeline } from '@/app/components/learning-path/PathTimeline'
+import { RoadmapPhases, type RoadmapPhase } from '@/app/components/learning-path/RoadmapPhases'
 import { useLearningPathStore } from '@/stores/useLearningPathStore'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
 import { useAuthorStore } from '@/stores/useAuthorStore'
@@ -61,6 +63,7 @@ export function LearningTrackDetail() {
   // ensures Zustand store updates (entries) are visible before deciding emptiness.
   const [entriesChecked, setEntriesChecked] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
+  const [activeTab, setActiveTab] = useState('overview')
 
   // Load all data on mount — uses requestAnimationFrame after Promise resolution
   // to ensure Zustand store state has been committed by React before rendering
@@ -496,6 +499,90 @@ export function LearningTrackDetail() {
     return map
   }, [videosByCourse, pdfsByCourse, videoProgressMap, statusMap, loadedCourseIds])
 
+  // ── New computed values for improved UX ──
+
+  // Next lesson title for the ContinueLearningBento
+  const nextLessonTitle = useMemo(() => {
+    const courseId = currentEntry?.courseId
+    if (!courseId) return undefined
+    const videos = videosByCourse.get(courseId)
+    if (!videos || videos.length === 0) return undefined
+    const targetId = currentEntryTargetLessonId
+    if (!targetId) return undefined
+    const video = videos.find(v => v.id === targetId)
+    return video?.filename?.replace(/\.\w+$/, '') ?? undefined
+  }, [currentEntry, videosByCourse, currentEntryTargetLessonId])
+
+  // Lessons remaining in current course
+  const currentCourseLessonsRemaining = useMemo(() => {
+    const courseId = currentEntry?.courseId
+    if (!courseId) return undefined
+    const videos = videosByCourse.get(courseId) ?? []
+    if (videos.length === 0) return undefined
+    const progressList = [...videoProgressMap.values()].filter(p => p.courseId === courseId)
+    const completedCount = progressList.filter(p => p.completionPercentage >= 90).length
+    return Math.max(0, videos.length - completedCount)
+  }, [currentEntry, videosByCourse, videoProgressMap])
+
+  // Estimated remaining minutes for current course
+  const currentCourseRemainingMinutes = useMemo(() => {
+    const courseId = currentEntry?.courseId
+    if (!courseId) return undefined
+    const videos = videosByCourse.get(courseId) ?? []
+    if (videos.length === 0) return undefined
+    const progressList = [...videoProgressMap.values()].filter(p => p.courseId === courseId)
+    const completedIds = new Set(progressList.filter(p => p.completionPercentage >= 90).map(p => p.videoId))
+    const remainingSeconds = videos
+      .filter(v => !completedIds.has(v.id))
+      .reduce((sum, v) => sum + v.duration, 0)
+    return Math.round(remainingSeconds / 60)
+  }, [currentEntry, videosByCourse, videoProgressMap])
+
+  // Current course info for sidebar
+  const currentCourseName = useMemo(() => {
+    if (!currentEntry?.courseId) return undefined
+    return courseInfo.get(currentEntry.courseId)?.name
+  }, [currentEntry, courseInfo])
+
+  const currentCoursePct = useMemo(() => {
+    if (!currentEntry?.courseId) return undefined
+    return courseInfo.get(currentEntry.courseId)?.completionPct
+  }, [currentEntry, courseInfo])
+
+  // Next milestone (first non-completed course)
+  const nextMilestoneName = useMemo(() => {
+    const next = courseEntries.find(e => {
+      if (e.courseId === '') return false
+      const pct = courseInfo.get(e.courseId)?.completionPct ?? 0
+      if (pct >= 100) return false
+      if (manuallyCompletedIds.has(e.id)) return false
+      return e.courseId !== currentEntry?.courseId
+    })
+    return next ? courseInfo.get(next.courseId)?.name : undefined
+  }, [courseEntries, courseInfo, manuallyCompletedIds, currentEntry])
+
+  // Roadmap phases — derive from course entries by splitting into groups of ~4
+  const roadmapPhases = useMemo((): RoadmapPhase[] => {
+    const nonGapCourses = courseEntries.filter(e => e.courseId !== '')
+    if (nonGapCourses.length === 0) return []
+
+    // Auto-derive phases from course groupings (every ~4 courses = 1 phase)
+    const PHASE_SIZE = 4
+    const phaseLabels = ['Foundation', 'Core Skills', 'Advanced Topics', 'Specialization', 'Mastery']
+    const phases: RoadmapPhase[] = []
+
+    for (let i = 0; i < nonGapCourses.length; i += PHASE_SIZE) {
+      const chunk = nonGapCourses.slice(i, i + PHASE_SIZE)
+      const phaseIdx = Math.floor(i / PHASE_SIZE)
+      phases.push({
+        name: phaseLabels[phaseIdx] ?? `Phase ${phaseIdx + 1}`,
+        description: `${chunk.length} ${chunk.length === 1 ? 'course' : 'courses'}`,
+        courseIds: chunk.map(e => e.courseId),
+      })
+    }
+    return phases
+  }, [courseEntries])
+
   // Check prefers-reduced-motion
   const prefersReducedMotion = useReducedMotion()
   const shouldAnimate = !prefersReducedMotion
@@ -570,9 +657,7 @@ export function LearningTrackDetail() {
 
   return (
     <>
-      {/* Full-width hero banner — breaks out of Layout main padding.
-          These -mx values cancel the Layout's main-content padding (p-4 sm:p-6).
-          If Layout padding changes, update these values to prevent horizontal scroll. */}
+      {/* Full-width hero banner — breaks out of Layout main padding. */}
       <div className="-mx-4 -mt-4 sm:-mx-6 sm:-mt-6">
         <PathHeroBanner
           path={path}
@@ -587,59 +672,161 @@ export function LearningTrackDetail() {
           backLabel="Back to Learning Tracks"
           trackId={trackId}
           trackName={path.name}
+          currentCourseName={currentCourseName}
+          nextLessonTitle={nextLessonTitle}
         />
       </div>
 
-      {/* Content area with reduced negative margin to subtly overlap hero (preserves cinematic feel while keeping CTA clear) */}
+      {/* Content area */}
       <div className="-mt-6 sm:-mt-8 lg:-mt-10 relative z-10">
-        <motion.div
-          variants={containerVariants}
-          initial="hidden"
-          animate="visible"
-          className="space-y-8"
-        >
-          {/* Course list section */}
-          {!entriesChecked /* Brief hold during initial load — prevents flash of empty state
-               before Zustand store entries are visible in this render cycle */ ? null : courseEntries.length >
-            0 ? (
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-[var(--content-gap)]">
-              {/* Left Column (2/3): Continue Learning + Timeline */}
-              <div className="lg:col-span-2 space-y-8">
-                {/* Continue Learning Bento Card */}
-                {currentEntry && (
-                  <motion.section variants={itemVariants}>
-                    <ContinueLearningBento
-                      entry={currentEntry}
-                      courseInfo={courseInfo.get(currentEntry.courseId)}
-                      thumbnailUrl={thumbnailUrls[currentEntry.courseId]}
-                      targetLessonId={currentEntryTargetLessonId}
-                      trackId={trackId}
-                      trackName={path.name}
-                      coursePosition={courseEntries.indexOf(currentEntry) + 1}
-                      totalCourses={courseEntries.length}
+        {!entriesChecked ? null : courseEntries.length > 0 ? (
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+            {/* Tab bar */}
+            <div className="overflow-x-auto -mx-1 px-1">
+              <TabsList className="w-full sm:w-auto inline-flex h-auto p-1 bg-muted/50 rounded-2xl gap-1">
+                <TabsTrigger value="overview" className="rounded-xl px-4 py-2.5 text-sm font-medium gap-2 data-[state=active]:bg-card data-[state=active]:shadow-sm">
+                  <Layers className="size-4" aria-hidden="true" />
+                  <span className="hidden sm:inline">Overview</span>
+                </TabsTrigger>
+                <TabsTrigger value="roadmap" className="rounded-xl px-4 py-2.5 text-sm font-medium gap-2 data-[state=active]:bg-card data-[state=active]:shadow-sm">
+                  <Map className="size-4" aria-hidden="true" />
+                  <span className="hidden sm:inline">Roadmap</span>
+                </TabsTrigger>
+                <TabsTrigger value="syllabus" className="rounded-xl px-4 py-2.5 text-sm font-medium gap-2 data-[state=active]:bg-card data-[state=active]:shadow-sm">
+                  <List className="size-4" aria-hidden="true" />
+                  <span className="hidden sm:inline">Syllabus</span>
+                </TabsTrigger>
+                <TabsTrigger value="projects" className="rounded-xl px-4 py-2.5 text-sm font-medium gap-2 data-[state=active]:bg-card data-[state=active]:shadow-sm">
+                  <FolderKanban className="size-4" aria-hidden="true" />
+                  <span className="hidden sm:inline">Projects</span>
+                </TabsTrigger>
+                <TabsTrigger value="notes" className="rounded-xl px-4 py-2.5 text-sm font-medium gap-2 data-[state=active]:bg-card data-[state=active]:shadow-sm">
+                  <StickyNote className="size-4" aria-hidden="true" />
+                  <span className="hidden sm:inline">Notes</span>
+                </TabsTrigger>
+              </TabsList>
+            </div>
+
+            {/* ── Overview Tab ── */}
+            <TabsContent value="overview" className="mt-0">
+              <motion.div
+                variants={containerVariants}
+                initial="hidden"
+                animate="visible"
+                className="space-y-8"
+              >
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-[var(--content-gap)]">
+                  {/* Left Column (2/3) */}
+                  <div className="lg:col-span-2 space-y-8">
+                    {/* Continue Learning Bento */}
+                    {currentEntry && (
+                      <motion.section variants={itemVariants}>
+                        <ContinueLearningBento
+                          entry={currentEntry}
+                          courseInfo={courseInfo.get(currentEntry.courseId)}
+                          thumbnailUrl={thumbnailUrls[currentEntry.courseId]}
+                          targetLessonId={currentEntryTargetLessonId}
+                          trackId={trackId}
+                          trackName={path.name}
+                          coursePosition={courseEntries.indexOf(currentEntry) + 1}
+                          totalCourses={courseEntries.length}
+                          nextLessonTitle={nextLessonTitle}
+                          lessonsRemaining={currentCourseLessonsRemaining}
+                          estimatedRemainingMinutes={currentCourseRemainingMinutes}
+                        />
+                      </motion.section>
+                    )}
+
+                    {/* Path Complete Banner */}
+                    {!currentEntry && courseEntries.length > 0 && (
+                      <motion.div variants={itemVariants}>
+                        <div className="bg-success-soft border border-success/20 rounded-2xl p-4 flex items-center gap-3">
+                          <Trophy className="w-5 h-5 text-success flex-shrink-0" aria-hidden="true" />
+                          <p className="text-sm font-medium text-success">All courses completed!</p>
+                        </div>
+                      </motion.div>
+                    )}
+
+                    {/* Motivation message */}
+                    {currentEntry && (
+                      <motion.div variants={itemVariants}>
+                        <div className="bg-card rounded-2xl border border-border/50 p-4 shadow-card-ambient">
+                          <p className="text-sm text-muted-foreground">
+                            {currentCoursePct != null && currentCoursePct > 0
+                              ? `You're making progress on ${currentCourseName ?? 'your current course'}. Keep going!`
+                              : `You started your learning path. Dive into ${currentCourseName ?? 'your first course'} to begin.`}
+                          </p>
+                        </div>
+                      </motion.div>
+                    )}
+                  </div>
+
+                  {/* Right Column (1/3): Progress Sidebar */}
+                  <aside className="lg:col-span-1 space-y-6">
+                    <PathProgressSidebar
+                      progress={enhancedProgress}
+                      difficultyLabel={path.difficultyLabel}
+                      estimatedHours={path.estimatedHours}
+                      courseCount={courseEntries.length}
+                      createdAt={path.createdAt}
+                      updatedAt={path.updatedAt}
+                      progressionMode={path.progressionMode}
+                      onProgressionModeChange={handleProgressionModeChange}
+                      currentCourseName={currentCourseName}
+                      currentCoursePct={currentCoursePct}
+                      nextMilestoneName={nextMilestoneName}
+                      nextMilestoneEstimate={
+                        nextMilestoneName
+                          ? 'Keep studying to reach this milestone'
+                          : undefined
+                      }
                     />
-                  </motion.section>
-                )}
+                  </aside>
+                </div>
+              </motion.div>
+            </TabsContent>
 
-                {/* Path Complete Banner */}
-                {!currentEntry && courseEntries.length > 0 && (
-                  <motion.div variants={itemVariants}>
-                    <div className="bg-success-soft border border-success/20 rounded-2xl p-4 flex items-center gap-3">
-                      <Trophy className="w-5 h-5 text-success flex-shrink-0" aria-hidden="true" />
-                      <p className="text-sm font-medium text-success">All courses completed!</p>
-                    </div>
-                  </motion.div>
-                )}
-
-                {/* Syllabus Card — cinematic glass surface */}
+            {/* ── Roadmap Tab ── */}
+            <TabsContent value="roadmap" className="mt-0">
+              <motion.div
+                variants={containerVariants}
+                initial="hidden"
+                animate="visible"
+              >
                 <motion.section variants={itemVariants}>
                   <div className="bg-card rounded-[24px] shadow-card-ambient border border-border/50 p-6 lg:p-8 relative overflow-hidden">
-                    {/* Cover-tinted top accent bar */}
                     <div
                       className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-brand/60 to-brand/20 pointer-events-none"
                       aria-hidden="true"
                     />
-                    {/* Card header */}
+                    <h2 className="font-display text-2xl font-bold mb-6">Your Learning Roadmap</h2>
+                    <RoadmapPhases
+                      entries={courseEntries}
+                      courseInfoMap={courseInfo}
+                      phases={roadmapPhases}
+                      trackId={trackId ?? ''}
+                      trackName={path.name}
+                      currentCourseId={currentCourseId}
+                    />
+                  </div>
+                </motion.section>
+              </motion.div>
+            </TabsContent>
+
+            {/* ── Syllabus Tab ── */}
+            <TabsContent value="syllabus" className="mt-0">
+              <motion.div
+                variants={containerVariants}
+                initial="hidden"
+                animate="visible"
+                className="space-y-8"
+              >
+                <motion.section variants={itemVariants}>
+                  <div className="bg-card rounded-[24px] shadow-card-ambient border border-border/50 p-6 lg:p-8 relative overflow-hidden">
+                    <div
+                      className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-brand/60 to-brand/20 pointer-events-none"
+                      aria-hidden="true"
+                    />
                     <div className="flex items-center justify-between mb-8">
                       <h2 className="font-display text-2xl font-bold">Syllabus</h2>
                       <div className="flex items-center gap-3">
@@ -660,8 +847,6 @@ export function LearningTrackDetail() {
                         </Button>
                       </div>
                     </div>
-
-                    {/* Timeline */}
                     <PathTimeline
                       entries={courseEntries.map(e => ({
                         ...e,
@@ -697,24 +882,58 @@ export function LearningTrackDetail() {
                     />
                   </div>
                 </motion.section>
-              </div>
+              </motion.div>
+            </TabsContent>
 
-              {/* Right Column (1/3): Progress Sidebar */}
-              <aside className="lg:col-span-1 space-y-6">
-                <PathProgressSidebar
-                  progress={enhancedProgress}
-                  difficultyLabel={path.difficultyLabel}
-                  estimatedHours={path.estimatedHours}
-                  courseCount={courseEntries.length}
-                  createdAt={path.createdAt}
-                  updatedAt={path.updatedAt}
-                  progressionMode={path.progressionMode}
-                  onProgressionModeChange={handleProgressionModeChange}
-                />
-              </aside>
-            </div>
-          ) : (
-            /* Empty path (no courses) */
+            {/* ── Projects Tab (placeholder) ── */}
+            <TabsContent value="projects" className="mt-0">
+              <motion.div
+                variants={containerVariants}
+                initial="hidden"
+                animate="visible"
+              >
+                <motion.section variants={itemVariants}>
+                  <Card className="rounded-[24px] shadow-card-ambient border border-border/50">
+                    <CardContent className="p-8 text-center">
+                      <FolderKanban className="size-12 text-muted-foreground mx-auto mb-4" aria-hidden="true" />
+                      <h3 className="text-lg font-semibold mb-2">Projects & Labs</h3>
+                      <p className="text-muted-foreground text-sm max-w-md mx-auto">
+                        Portfolio projects, hands-on labs, and capstone tasks will appear here as you progress through your courses.
+                      </p>
+                    </CardContent>
+                  </Card>
+                </motion.section>
+              </motion.div>
+            </TabsContent>
+
+            {/* ── Notes Tab (placeholder) ── */}
+            <TabsContent value="notes" className="mt-0">
+              <motion.div
+                variants={containerVariants}
+                initial="hidden"
+                animate="visible"
+              >
+                <motion.section variants={itemVariants}>
+                  <Card className="rounded-[24px] shadow-card-ambient border border-border/50">
+                    <CardContent className="p-8 text-center">
+                      <StickyNote className="size-12 text-muted-foreground mx-auto mb-4" aria-hidden="true" />
+                      <h3 className="text-lg font-semibold mb-2">Your Notes</h3>
+                      <p className="text-muted-foreground text-sm max-w-md mx-auto">
+                        Notes you take during lessons will be organized here by course and lesson.
+                      </p>
+                    </CardContent>
+                  </Card>
+                </motion.section>
+              </motion.div>
+            </TabsContent>
+          </Tabs>
+        ) : (
+          /* Empty path (no courses) */
+          <motion.div
+            variants={containerVariants}
+            initial="hidden"
+            animate="visible"
+          >
             <motion.div variants={itemVariants}>
               <Card className="rounded-2xl shadow-sm border border-border">
                 <CardContent className="p-8 text-center">
@@ -724,14 +943,13 @@ export function LearningTrackDetail() {
                   />
                   <h3 className="text-lg font-semibold mb-2">No courses yet</h3>
                   <p className="text-muted-foreground text-sm max-w-md mx-auto">
-                    This track doesn&apos;t have any courses yet. Add courses to start tracking your
-                    progress.
+                    This track doesn&apos;t have any courses yet. Add courses to start tracking your progress.
                   </p>
                 </CardContent>
               </Card>
             </motion.div>
-          )}
-        </motion.div>
+          </motion.div>
+        )}
       </div>
     </>
   )

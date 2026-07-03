@@ -1,5 +1,16 @@
 import { Link } from 'react-router'
-import { Check, AlertCircle, PlayCircle, RotateCcw, Undo2, CheckCircle2, Video } from 'lucide-react'
+import {
+  Check,
+  AlertCircle,
+  PlayCircle,
+  RotateCcw,
+  Undo2,
+  CheckCircle2,
+  Video,
+  FileText,
+  HelpCircle,
+  Code,
+} from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
 import { cn } from '@/app/components/ui/utils'
 import { formatClockDuration } from '@/lib/formatDuration'
@@ -85,35 +96,87 @@ export function StatusCircle({
 // LessonRow
 // ---------------------------------------------------------------------------
 
+export type LessonType = 'video' | 'reading' | 'quiz' | 'project'
+
+function LessonTypeIcon({
+  type,
+  isCompleted,
+  className,
+}: {
+  type?: LessonType
+  isCompleted: boolean
+  className?: string
+}) {
+  if (isCompleted) {
+    return <CheckCircle2 className={cn('size-5 text-success flex-shrink-0', className)} aria-hidden="true" />
+  }
+  switch (type) {
+    case 'reading':
+      return <FileText className={cn('size-5 text-muted-foreground flex-shrink-0', className)} aria-hidden="true" />
+    case 'quiz':
+      return <HelpCircle className={cn('size-5 text-muted-foreground flex-shrink-0', className)} aria-hidden="true" />
+    case 'project':
+      return <Code className={cn('size-5 text-muted-foreground flex-shrink-0', className)} aria-hidden="true" />
+    case 'video':
+    default:
+      return <Video className={cn('size-5 text-muted-foreground flex-shrink-0', className)} aria-hidden="true" />
+  }
+}
+
 /** Single lesson row within an expanded module accordion */
 export function LessonRow({
   video,
   courseId,
   isCompleted,
+  isCurrent,
+  lessonType,
 }: {
   video: ImportedVideo
   courseId: string
   isCompleted: boolean
+  /** When true, visually highlights this as the current/next lesson */
+  isCurrent?: boolean
+  /** Type of lesson content for icon display */
+  lessonType?: LessonType
 }) {
   const displayName = video.filename.replace(/\.\w+$/, '')
 
   return (
     <Link
       to={`/courses/${courseId}/lessons/${video.id}`}
-      className="flex items-center gap-3 px-4 py-2.5 min-h-[44px] rounded-xl transition-colors hover:bg-muted/50 group"
-    >
-      {isCompleted ? (
-        <CheckCircle2 className="size-5 text-success flex-shrink-0" aria-hidden="true" />
-      ) : (
-        <Video className="size-5 text-muted-foreground flex-shrink-0" aria-hidden="true" />
+      className={cn(
+        'flex items-center gap-3 px-4 py-3 min-h-[48px] rounded-xl transition-colors group',
+        isCurrent
+          ? 'bg-brand-soft/20 ring-1 ring-brand/20 hover:bg-brand-soft/30'
+          : 'hover:bg-muted/50'
       )}
+    >
+      <LessonTypeIcon type={lessonType} isCompleted={isCompleted} />
+
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium truncate text-foreground/80 group-hover:text-foreground transition-colors">
-          {displayName}
-        </p>
+        <div className="flex items-center gap-2">
+          <p
+            className={cn(
+              'text-base font-medium truncate transition-colors',
+              isCompleted
+                ? 'text-muted-foreground/60 line-through'
+                : isCurrent
+                  ? 'text-brand-soft-foreground font-semibold'
+                  : 'text-foreground/85 group-hover:text-foreground'
+            )}
+          >
+            {displayName}
+          </p>
+          {isCurrent && (
+            <span className="text-[10px] font-bold text-brand-soft-foreground uppercase tracking-wider flex-shrink-0 bg-brand-soft/40 px-1.5 py-0.5 rounded-full">
+              Current
+            </span>
+          )}
+        </div>
       </div>
+
       {video.duration > 0 && (
-        <span className="text-xs text-muted-foreground tabular-nums flex-shrink-0">
+        <span className="text-sm text-muted-foreground tabular-nums flex-shrink-0 ml-auto">
           {formatClockDuration(video.duration)}
         </span>
       )}
