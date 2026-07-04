@@ -803,6 +803,19 @@ export default defineConfig({
           if (id.includes('class-variance-authority') || id.includes('clsx') || id.includes('tailwind-merge')) {
             return 'style-utils'
           }
+          // motion (framer-motion) — animation library used by LearningTrackDetail
+          // and many page chunks. Separate chunk prevents tree-shaking issues
+          // where motion component factories (motion.div, motion.section)
+          // resolve as non-constructors in production builds.
+          if (id.includes('/motion/') && id.includes('node_modules')) {
+            return 'motion-vendor'
+          }
+          // @dnd-kit — drag-and-drop library used by PathTimeline.
+          // Separate chunk prevents tree-shaking of sensor classes
+          // (PointerSensor, KeyboardSensor) in production builds.
+          if (id.includes('@dnd-kit')) {
+            return 'dnd-kit'
+          }
         },
       },
     },
