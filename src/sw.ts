@@ -80,9 +80,7 @@ registerRoute(
   /^\/assets\/.+\.js$/i,
   new StaleWhileRevalidate({
     cacheName: 'route-chunks',
-    plugins: [
-      new ExpirationPlugin({ maxEntries: 50, maxAgeSeconds: 30 * 24 * 60 * 60 }),
-    ],
+    plugins: [new ExpirationPlugin({ maxEntries: 50, maxAgeSeconds: 30 * 24 * 60 * 60 })],
   })
 )
 
@@ -104,9 +102,12 @@ setDefaultHandler(new NetworkOnly())
 // backward-compatible manual updates via the message protocol.
 
 self.addEventListener('activate', event => {
-  event.waitUntil(self.clients.claim().catch(err => { // silent-catch-ok
-    console.warn('[SW] clients.claim() failed:', err)
-  }))
+  event.waitUntil(
+    self.clients.claim().catch(err => {
+      // silent-catch-ok
+      console.warn('[SW] clients.claim() failed:', err)
+    })
+  )
 })
 
 // ─── SKIP_WAITING message listener ───────────────────────────────────────
@@ -148,7 +149,8 @@ self.addEventListener('push', event => {
   }
 
   event.waitUntil(
-    self.registration.showNotification(title, options).catch(err => { // silent-catch-ok
+    self.registration.showNotification(title, options).catch(err => {
+      // silent-catch-ok
       console.warn('[SW] Failed to show notification:', err)
     })
   )

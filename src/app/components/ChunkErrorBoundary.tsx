@@ -37,9 +37,9 @@ export class ChunkErrorBoundary extends Component<
     const isChunkLoadError =
       error.name === 'TypeError' &&
       (error.message?.includes('dynamically imported') ||
-       error.message?.includes('Failed to fetch') ||
-       error.message?.includes('Loading chunk') ||
-       error.message?.includes('ChunkLoadError'))
+        error.message?.includes('Failed to fetch') ||
+        error.message?.includes('Loading chunk') ||
+        error.message?.includes('ChunkLoadError'))
 
     return {
       hasError: true,
@@ -57,9 +57,7 @@ export class ChunkErrorBoundary extends Component<
         ?.replace(/^at /, '')
         .split(' ')[0] ?? 'Unknown'
 
-    console.error(
-      `[ChunkErrorBoundary] Component: ${componentName}, Error: ${error.message}`
-    )
+    console.error(`[ChunkErrorBoundary] Component: ${componentName}, Error: ${error.message}`)
   }
 
   handleRetry = () => {
@@ -75,11 +73,6 @@ export class ChunkErrorBoundary extends Component<
 
     // For non-chunk errors, use the existing RouteErrorFallback so users
     // can retry or navigate elsewhere
-    return (
-      <RouteErrorFallback
-        error={this.state.error}
-        onRetry={this.handleRetry}
-      />
-    )
+    return <RouteErrorFallback error={this.state.error} onRetry={this.handleRetry} />
   }
 }
