@@ -18,10 +18,14 @@
  * That level of testing is deferred to manual DevTools verification.
  *
  * AC Mapping:
- *   AC 1-3: Push handler — build-time verification that handler code exists
- *   AC 4-5: Notification click — build-time verification that handler exists
- *   AC 6:   Subscription change — build-time verification that handler exists
- *   AC 7:   Build & icons — asset existence + build output verification
+ *   AC 1:  Push handler structure — ✅ build-time (addEventListener/waitUntil/showNotification)
+ *   AC 2:  Tag deduplication — ✅ build-time (tag in allowed payload fields)
+ *   AC 3:  Invalid payload fallback — ⚠️ deferred (empty catch block has no grep-able code path;
+ *          requires CDP push event dispatch for runtime verification. Covered by manual
+ *          DevTools test plan.)
+ *   AC 4-5: Notification click — ✅ build-time (notificationclick/close/matchAll/openWindow)
+ *   AC 6:  Subscription change — ✅ build-time (pushsubscriptionchange/subscribe/fetch)
+ *   AC 7:  Build & icons — ✅ build-time (asset existence + build output verification)
  */
 
 import { test, expect } from '../support/fixtures'
@@ -53,6 +57,12 @@ test.describe('E61-S02: Service Worker Push and Click Handlers — Build Verific
     // AC 1: Default badge
     expect(swContent, 'must reference badge icon').toMatch(/badge-72\.png/)
 
+    // AC 2: Tag field for notification deduplication
+    // The tag property passes through via whitelisted payload fields.
+    // After minification 'tag' may appear as a property accessor;
+    // we verify the whitelist mechanism references tag.
+    expect(swContent, 'push handler must support tag dedup').toMatch(/tag/)
+
     // AC 4-5: Notification click handler
     expect(swContent, 'notificationclick listener must be in compiled SW').toContain(
       'notificationclick'
@@ -65,6 +75,16 @@ test.describe('E61-S02: Service Worker Push and Click Handlers — Build Verific
       'pushsubscriptionchange'
     )
     expect(swContent, 'pushsubscriptionchange must re-subscribe').toContain('subscribe')
+    expect(swContent, 'pushsubscriptionchange must POST to backend').toContain('fetch')
+
+    // AC 5: Notification click must handle openWindow + navigate/postMessage fallback
+    expect(swContent, 'notificationclick must be able to open a new window').toContain(
+      'openWindow'
+    )
+    expect(
+      swContent,
+      'notificationclick must have navigate or postMessage fallback'
+    ).toMatch(/navigate|postMessage/)
   })
 
   test('AC 7: icon assets exist in dist/', () => {

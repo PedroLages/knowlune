@@ -104,11 +104,44 @@ self.addEventListener('message', event => {
   }
 })
 
+// ─── URL validation helper ────────────────────────────────────────────────
+// Validates that a URL from a push payload is safe to navigate to.
+// Only allows relative paths (starting with /) and same-origin https URLs.
+// javascript:, data:, and cross-origin URLs are rejected.
+
+function validateNavigationUrl(url: string): string | null {
+  try {
+    // Relative paths are safe — they stay within the app
+    if (url.startsWith('/') && !url.startsWith('//')) {
+      return url
+    }
+    // Absolute URLs must be same-origin https
+    const parsed = new URL(url)
+    if (
+      parsed.protocol === 'https:' &&
+      parsed.origin === self.location.origin
+    ) {
+      return url
+    }
+    console.warn('[SW] Blocked unsafe navigation URL:', url)
+    return null
+  } catch {
+    // Invalid URL — treat as relative path
+    if (url.startsWith('/')) return url
+    console.warn('[SW] Blocked malformed navigation URL:', url)
+    return null
+  }
+}
+
 // ─── Push event handler ──────────────────────────────────────────────────
 // Handles incoming push messages. Every push MUST show a notification —
 // browsers may revoke push permission if no notification is displayed.
 // Tag field enables deduplication (same tag replaces existing notification).
 // url is stored in data for use by the notificationclick handler.
+//
+// Payload fields are whitelisted to prevent a malicious push server from
+// injecting arbitrary NotificationOptions (actions, requireInteraction,
+// renotify, silent). Only safe display-related fields pass through.
 
 self.addEventListener('push', event => {
   event.waitUntil(
@@ -133,10 +166,30 @@ self.addEventListener('push', event => {
           if (typeof payload.title === 'string' && payload.title.length > 0) {
             title = payload.title
           }
+
+          // Whitelist: only safe display fields pass through from the payload.
+          // Reject actions, requireInteraction, renotify, silent, and other
+          // fields that a malicious push server could abuse.
+          const ALLOWED_PAYLOAD_FIELDS: (keyof NotificationOptions)[] = [
+            'body', 'icon', 'badge', 'tag', 'image',
+            'vibrate', 'dir', 'lang', 'timestamp',
+          ]
+
+          const safePayload: Record<string, unknown> = {}
+          for (const field of ALLOWED_PAYLOAD_FIELDS) {
+            if (field in payload) {
+              safePayload[field] = payload[field]
+            }
+          }
+
+          // Validate and sanitize the navigation URL
+          const rawUrl = typeof payload.url === 'string' ? payload.url : '/'
+          const safeUrl = validateNavigationUrl(rawUrl) || '/'
+
           notificationOptions = {
             ...notificationOptions,
-            ...payload,
-            data: { url: typeof payload.url === 'string' ? payload.url : '/' },
+            ...safePayload,
+            data: { url: safeUrl },
           }
         }
       } catch {
@@ -155,7 +208,8 @@ self.addEventListener('push', event => {
 
 self.addEventListener('notificationclick', event => {
   event.notification.close()
-  const url = event.notification.data?.url || '/'
+  const rawUrl = event.notification.data?.url || '/'
+  const url = validateNavigationUrl(rawUrl) || '/'
 
   event.waitUntil(
     (async () => {
@@ -209,11 +263,18 @@ self.addEventListener('pushsubscriptionchange', event => {
         )
 
         // Send new subscription to backend
-        await fetch('/api/push/subscriptions', {
+        const response = await fetch('/api/push/subscriptions', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(newSubscription.toJSON()),
         })
+        if (!response.ok) {
+          console.error(
+            '[SW] Push subscription POST failed:',
+            response.status,
+            response.statusText
+          )
+        }
       } catch (error) {
         // Intentional: log but don't throw — subscription loss is recoverable
         // on next app visit via usePushSubscription hook
