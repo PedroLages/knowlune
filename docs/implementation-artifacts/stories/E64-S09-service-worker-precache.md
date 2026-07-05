@@ -7,6 +7,16 @@ completed:
 reviewed: in-progress
 review_started: 2026-07-05
 review_gates_passed: []
+  - build
+  - lint
+  - type-check
+  - format-check
+  - unit-tests
+  - bundle-analysis
+  - code-review
+  - code-review-testing
+  - security-review
+  - glm-code-review
 burn_in_validated: false
 ---
 
@@ -39,7 +49,7 @@ so that my initial app install is fast and doesn't consume excessive bandwidth.
 
 **Given** the user has visited `/reports` previously (route chunk is runtime-cached)
 **When** the user goes offline and navigates to `/reports`
-**Then** the route loads from the runtime cache and displays correctly
+**Then** the route chunk loads from the runtime cache and the page structure renders (navigation, layout, headings), even if data-dependent sections show empty/loading states. Data persistence is handled by IndexedDB and is out of scope for this story.
 
 ### Offline Fallback
 
@@ -72,32 +82,51 @@ so that my initial app install is fast and doesn't consume excessive bandwidth.
   - [ ] 3.2 Minimum ignores: `mockServiceWorker.js`, `webllm*.js`, `ai-*.js`, `tiptap*.js`, `prosemirror*.js`, `chart-*.js`, `pdf-*.js`, `jspdf*.js`, `html2canvas*.js`, `seedCourses*.js`
   - [ ] 3.3 Preserve existing ignores if any
 
-- [ ] Task 4: Add route-chunk runtime caching in `src/sw.ts` (AC: 2, 3)
+- [ ] Task 4: Add runtime caching rules in `src/sw.ts` (AC: 2, 3)
+  - [ ] 4.0 Add font runtime caching rule **before** the route-chunks rule: `CacheFirst` strategy matching `/\/assets\/.+\.woff2$/i`, `cacheName: 'fonts'`, `ExpirationPlugin` with `maxEntries: 50`, `maxAgeSeconds: 30 * 24 * 60 * 60` (30 days). This prevents a regression — woff2 is excluded from precache via `globIgnores` and would otherwise hit `setDefaultHandler(new NetworkOnly())`, causing fonts to fail offline.
   - [ ] 4.1 Add `registerRoute()` with `StaleWhileRevalidate` strategy for `/assets/.*\.js$/`
-  - [ ] 4.2 Configure `cacheName: 'route-chunks'` with `ExpirationPlugin`: `maxEntries: 100`, `maxAgeSeconds: 7 * 24 * 60 * 60` (7 days)
-  - [ ] 4.3 Place this rule **after** existing runtime caching rules (images, Unsplash, HF, AI API, ABS proxy) and **before** the navigation fallback
+  - [ ] 4.2 Configure `cacheName: 'route-chunks'` with `CacheableResponsePlugin` (statuses: [0, 200]) and `ExpirationPlugin`: `maxEntries: 100`, `maxAgeSeconds: 24 * 60 * 60` (1 day — Vite content-hashed URLs make longer TTLs unnecessary after a new deployment)
+  - [ ] 4.3 Place both rules **after** existing runtime caching rules (images, Unsplash, HF, AI API, ABS proxy) and **before** the navigation fallback
   - [ ] 4.4 Verify existing 5 runtime caching rules are preserved
 
 - [ ] Task 5: Add offline fallback for unvisited routes (AC: 4)
   - [ ] 5.1 Create `src/app/components/OfflineRouteFallback.tsx` — displays "This page isn't available offline yet" with a "Go Home" button
   - [ ] 5.2 Style using design tokens: `bg-card`, `text-muted-foreground`, `text-brand` for the button
   - [ ] 5.3 Wrap lazy-loaded routes in an error boundary that catches chunk load failures (TypeError from failed dynamic import)
-  - [ ] 5.4 The error boundary should distinguish online/offline — only show the custom fallback when `!navigator.onLine`
-  - [ ] 5.5 Apply the boundary in `routes.tsx` or `App.tsx` around `<Suspense>` wrappers for lazy routes
+  - [ ] 5.4 The error boundary should distinguish chunk load failures from other runtime errors by checking `error.message` for chunk-load-specific patterns (`"dynamically imported module"`, `"Loading chunk"`, `"Importing a module script failed"`, `"Failed to fetch dynamically imported module"`). Non-chunk errors must be re-thrown to the parent `RouteErrorBoundary` so they are reported via `reportError()` and surface the correct fallback UI (generic error with retry, not "not available offline"). Only show the custom `OfflineRouteFallback` when `!navigator.onLine` AND the error is a chunk load failure.
+  - [ ] 5.5 Modify the `SuspensePage` helper in `src/app/routes.tsx` (line ~200) to wrap children in `ChunkErrorBoundary` between `RouteErrorBoundary` and `Suspense`. This covers all ~40+ lazy routes with a single change:
+
+    ```tsx
+    function SuspensePage({ children }: { children: React.ReactNode }) {
+      return (
+        <RouteErrorBoundary>
+          <ChunkErrorBoundary fallback={<OfflineRouteFallback />}>
+            <Suspense fallback={<PageLoader />}>{children}</Suspense>
+          </ChunkErrorBoundary>
+        </RouteErrorBoundary>
+      )
+    }
+    ```
+
+    This ensures `ChunkErrorBoundary` catches dynamic `import()` failures (TypeError) before `RouteErrorBoundary`, while still allowing `RouteErrorBoundary` to catch render errors and report them via `reportError()`.
 
 - [ ] Task 6: Verify precache size and build (AC: 1, 5)
   - [ ] 6.1 Run `npm run build` and inspect `dist/sw.js` precache manifest
   - [ ] 6.2 Calculate total precache asset sizes — must be under 3 MB
   - [ ] 6.3 Verify all critical app shell assets are in precache
   - [ ] 6.4 Verify excluded chunks (tiptap, chart, pdf, AI, etc.) are NOT in precache
-  - [ ] 6.5 Verify route-chunk runtime caching rule is present in compiled SW
+  - [ ] 6.5 Verify route-chunk AND font runtime caching rules are present in compiled SW, and all 7 `registerRoute` calls appear in the correct order (images → Unsplash → HF → AI API → ABS proxy → fonts → route-chunks → navigation fallback)
+  - [ ] 6.6 Create `tests/support/helpers/sw-verification.ts` with reusable functions (`verifyPrecacheContains`, `verifyPrecacheExcludes`, `verifyPrecacheUnderSize`, `verifyRuntimeCacheRule`, `verifyRouteOrder`) and create `tests/e2e/story-e64-s09.spec.ts` with build-time verification tests (precache manifest, exclusions, route order)
 
-- [ ] Task 7: Test offline behavior (AC: 2, 3, 4)
+- [ ] Task 7: Test offline behavior and write E2E tests (AC: 2, 3, 4)
   - [ ] 7.1 `npm run preview`, open app, visit `/reports` (caches route chunk)
-  - [ ] 7.2 Go offline (DevTools > Network > Offline), verify `/reports` loads from cache
-  - [ ] 7.3 Go offline, navigate to unvisited route — verify custom fallback message
+  - [ ] 7.2 Go offline (DevTools > Network > Offline), verify `/reports` loads from cache with page structure rendering
+  - [ ] 7.3 Go offline, navigate to unvisited route — verify custom `OfflineRouteFallback` message
   - [ ] 7.4 Go online, verify route loads normally (not stuck on fallback)
-  - [ ] 7.5 Run `npm run ci` — all existing tests pass, no regressions
+  - [ ] 7.5 Verify fonts load offline (no FOUT on any page) — confirm the `fonts` runtime cache works
+  - [ ] 7.6 Run `npm run ci` — all existing tests pass, no regressions
+  - [ ] 7.7 Write E2E SW-enabled tests in `tests/e2e/story-e64-s09.spec.ts` for AC 3 (route chunk loads offline) and AC 4 (app shell + offline fallback), using `context.setOffline(true)` against `vite preview` on port 4173
+  - [ ] 7.8 Write unit tests for `OfflineRouteFallback.test.tsx` and `ChunkErrorBoundary.test.tsx` following the pattern in `src/app/components/__tests__/ErrorBoundary.test.tsx`
 
 ## Design Guidance
 
@@ -154,21 +183,37 @@ VitePWA({
 
 **Note**: The exact chunk name patterns (e.g., `react-vendor-*.js`) must be validated against the current build output in Task 1. Vite's chunk naming may differ from these patterns. Adjust patterns based on what `npm run build` produces.
 
-### Route-Chunk Runtime Caching (`src/sw.ts`)
+### Route Runtime Caching (`src/sw.ts`)
 
 Add after the existing 5 runtime caching rules and before the navigation fallback:
 
 ```ts
-// src/sw.ts — Route chunk caching (StaleWhileRevalidate)
-// Any JS chunk not in the precache manifest (route-specific chunks)
+// f. Font files: CacheFirst, 50 entries, 30 days
+// woff2 fonts are excluded from precache via globIgnores — they must be
+// runtime-cached to load offline. Without this rule, fonts hit the
+// setDefaultHandler(new NetworkOnly()) at the bottom of sw.ts and fail offline.
+registerRoute(
+  /\/assets\/.+\.woff2$/i,
+  new CacheFirst({
+    cacheName: 'fonts',
+    plugins: [new ExpirationPlugin({ maxEntries: 50, maxAgeSeconds: 30 * 24 * 60 * 60 })],
+  })
+);
+
+// g. Route chunks: StaleWhileRevalidate, 100 entries, 1 day
+// Intentionally broad pattern — catches any JS chunk not in the precache
+// manifest. Workbox serves precached assets first, so this is a safe fallback
+// for dynamically-loaded route chunks. CacheableResponsePlugin prevents error
+// responses (4xx/5xx) from being cached as valid JS content.
 registerRoute(
   ({ url }) => /^\/assets\/.*\.js$/i.test(url.pathname),
   new StaleWhileRevalidate({
     cacheName: 'route-chunks',
     plugins: [
+      new CacheableResponsePlugin({ statuses: [0, 200] }),
       new ExpirationPlugin({
         maxEntries: 100,
-        maxAgeSeconds: 7 * 24 * 60 * 60, // 7 days
+        maxAgeSeconds: 24 * 60 * 60, // 1 day (content-hashed URLs make longer TTLs unnecessary)
       }),
     ],
   })
@@ -189,7 +234,7 @@ export function OfflineRouteFallback() {
   return (
     <div className="flex items-center justify-center min-h-[60vh]">
       <div className="text-center p-8 rounded-2xl bg-card max-w-md">
-        <WifiOff className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+        <WifiOff className="mx-auto size-12 text-muted-foreground mb-4" />
         <h2 className="text-lg font-semibold mb-2">
           This page isn't available offline
         </h2>
@@ -207,29 +252,36 @@ export function OfflineRouteFallback() {
 
 ### Error Boundary Integration
 
-Wrap lazy routes in `routes.tsx`:
+Modify the `SuspensePage` helper in `src/app/routes.tsx` (line ~200) to include `ChunkErrorBoundary` between `RouteErrorBoundary` and `Suspense`. This is the single wrapper used by all ~40+ lazy routes — one change covers every route:
 
 ```tsx
-// Pattern: error boundary around lazy-loaded routes
+// src/app/routes.tsx — Updated SuspensePage helper
+import { ChunkErrorBoundary } from '@/app/components/ChunkErrorBoundary';
 import { OfflineRouteFallback } from '@/app/components/OfflineRouteFallback';
 
-// In the route config:
-{
-  element: (
-    <ChunkErrorBoundary fallback={<OfflineRouteFallback />}>
-      <Suspense fallback={<PageLoadingSkeleton />}>
-        <LazyRouteComponent />
-      </Suspense>
-    </ChunkErrorBoundary>
-  ),
+function SuspensePage({ children }: { children: React.ReactNode }) {
+  return (
+    <RouteErrorBoundary>
+      <ChunkErrorBoundary fallback={<OfflineRouteFallback />}>
+        <Suspense fallback={<PageLoader />}>{children}</Suspense>
+      </ChunkErrorBoundary>
+    </RouteErrorBoundary>
+  )
 }
 ```
 
+**Why this order matters:** `ChunkErrorBoundary` must sit BETWEEN `RouteErrorBoundary` and `Suspense`:
+
+- If it were OUTSIDE `RouteErrorBoundary`, chunk load errors would be caught but render errors from `RouteErrorFallback` would be lost
+- If it were INSIDE `Suspense`, React throws dynamic import errors at the nearest error boundary ABOVE `Suspense`, so `ChunkErrorBoundary` would never fire
+
 The `ChunkErrorBoundary` should:
 1. Catch `TypeError` from failed `import()` (chunk load failure)
-2. Check `navigator.onLine` — only show `OfflineRouteFallback` when offline
-3. Show a generic error with retry button when online (network error, not missing chunk)
-4. Reset error state when going back online (`window.addEventListener('online', ...)`)
+2. **Discriminate chunk errors from other runtime errors** by checking `error.message` for chunk-load-specific patterns: `"dynamically imported module"`, `"Loading chunk"`, `"Importing a module script failed"`, `"Failed to fetch dynamically imported module"`. Non-chunk errors must be re-thrown to the parent `RouteErrorBoundary` so they are reported via `reportError()` and surface the correct fallback UI (generic error with retry, not "not available offline"). See `RouteErrorBoundary.tsx` line 107 for the existing `reportError` pattern.
+3. Check `navigator.onLine` — only show `OfflineRouteFallback` when offline AND the error is a chunk load failure
+4. Show a generic error with retry button when online (network error, not missing chunk)
+5. Reset error state when going back online (`window.addEventListener('online', ...)`)
+6. **Never silently suppress errors** — if unsure whether an error is a chunk load failure, delegate to `RouteErrorBoundary`
 
 ### Key Constraints
 
@@ -253,15 +305,60 @@ The `ChunkErrorBoundary` should:
 | File | Action | Purpose |
 |------|--------|---------|
 | `vite.config.ts` | Modify | Update `injectManifest.globPatterns` and `globIgnores` |
-| `src/sw.ts` | Modify | Add route-chunk `registerRoute` |
+| `src/sw.ts` | Modify | Add font runtime cache + route-chunk runtime cache `registerRoute` rules |
 | `src/app/components/OfflineRouteFallback.tsx` | **Create** | Offline fallback UI |
 | `src/app/components/ChunkErrorBoundary.tsx` | **Create** | Error boundary for chunk load failures |
-| `src/app/routes.tsx` or `App.tsx` | Modify | Wrap lazy routes with error boundary |
+| `src/app/routes.tsx` | Modify | Update `SuspensePage` to include `ChunkErrorBoundary` |
+| `tests/support/helpers/sw-verification.ts` | **Create** | Build-time SW verification helper (precache size, exclusions, route order) |
+| `tests/e2e/story-e64-s09.spec.ts` | **Create** | E2E tests for precache verification + offline behavior |
+| `src/app/components/__tests__/OfflineRouteFallback.test.tsx` | **Create** | Unit tests for offline fallback component |
+| `src/app/components/__tests__/ChunkErrorBoundary.test.tsx` | **Create** | Unit tests for chunk error boundary |
 
 ## Testing Notes
 
-- `npm run build` → inspect `dist/sw.js` for precache manifest size and route-chunk rule
+### Test Infrastructure
+
+#### `tests/support/helpers/sw-verification.ts` (New)
+
+Create a reusable build-time helper for SW verification. Functions:
+
+- `verifyPrecacheContains(swContent: string, patterns: string[])` — assert precache manifest includes patterns
+- `verifyPrecacheExcludes(swContent: string, patterns: string[])` — assert patterns are NOT in precache
+- `verifyPrecacheUnderSize(swContent: string, maxBytes: number)` — parse manifest entries, sum file sizes from `dist/`, assert total < maxBytes
+- `verifyRuntimeCacheRule(swContent: string, cacheName: string)` — assert `registerRoute` exists for `cacheName`
+- `verifyRouteOrder(swContent: string, expectedOrder: string[])` — assert `registerRoute` calls appear in order: `local-images`, `unsplash-images`, `hf-models`, `ai-api`, `abs-proxy`, `fonts`, `route-chunks`, `navigation-fallback`
+
+#### E2E Tests: `tests/e2e/story-e64-s09.spec.ts` (New)
+
+Two test groups:
+
+1. **Build-time tests** (any environment — reads `dist/sw.js`):
+   - AC 1: Precache manifest contains critical app shell assets
+   - AC 1: Total precache size under 3 MB
+   - AC 2: Route-specific chunks excluded from precache
+   - AC 5: All 7 runtime cache rules present in correct order
+
+2. **SW-enabled tests** (preview server only, port 4173):
+   - AC 3: Route chunk runtime-cached after first visit, loads offline
+   - AC 4: App shell renders offline with navigation, unvisited routes show fallback
+   - AC 4: OfflineRouteFallback renders when navigating offline to unvisited route
+
+Run SW-enabled tests via:
+
+```bash
+npm run build && npx vite preview --port 4173 &
+BASE_URL=http://localhost:4173 npx playwright test --grep "E64-S09.*preview"
+```
+
+#### Unit Tests: New Components
+
+- `src/app/components/__tests__/OfflineRouteFallback.test.tsx` — renders heading, "Go Home" button, navigates to `/`, uses design tokens
+- `src/app/components/__tests__/ChunkErrorBoundary.test.tsx` — catches chunk load TypeError, shows online generic error, shows offline fallback, re-throws non-chunk errors, resets on `online` event. Follow pattern in `src/app/components/__tests__/ErrorBoundary.test.tsx`.
+
+### Manual Verification
+
+- `npm run build` → inspect `dist/sw.js` for precache manifest size and all runtime rules
 - Manual offline testing: `npm run preview`, DevTools > Network > Offline, navigate
-- E2E tests for offline behavior can be added in a follow-up story (requires Playwright `context.setOffline(true)`)
 - Regression check: `npm run ci` must pass
 - Existing image caching must still work — verify Unsplash images load from cache when offline
+- Fonts must load offline — verify no FOUT when going offline on any page
