@@ -680,7 +680,9 @@ development_status:
     prUrl: https://github.com/PedroLages/knowlune/pull/631
     mergedAt: 2026-07-05T00:00:00.000Z
     branch: main
-  61-2-service-worker-push-and-click-handlers: ready-for-dev
+  61-2-service-worker-push-and-click-handlers:
+    status: review
+    startedAt: 2026-07-05T00:00:00.000Z
   61-3-push-subscription-management-and-supabase-persistence: ready-for-dev
   61-4-opt-in-flow-with-session-counting-and-pre-permission-dialog: ready-for-dev
   61-5-supabase-edge-function-for-push-dispatch: ready-for-dev
@@ -720,7 +722,7 @@ development_status:
   # Bundle size, lazy loading, IndexedDB compound indexes, pagination
   # Target: LCP < 2.5s, FCP < 1.8s, initial load < 435 KB gz
   # ──────────────────────────────────────────────────
-  epic-64: backlog
+  epic-64: in-progress
   64-1-remove-ai-sdk-modulepreload-and-verify-lazy-loading-boundaries: done
   64-2-conditional-seed-data-loading: done  # obsolete: superseded by E89-S01 (static courses table dropped in v30)
   64-3-bundle-size-baseline-and-regression-detection: done
@@ -729,7 +731,7 @@ development_status:
   64-6-overview-dashboard-progressive-loading-and-data-batching: backlog
   64-7-cursor-based-pagination-for-high-volume-tables: backlog
   64-8-web-worker-minisearch-indexing: backlog
-  64-9-service-worker-precache-optimization: backlog
+  64-9-service-worker-precache-optimization: ready-for-dev
   epic-64-retrospective: optional
 
   # ──────────────────────────────────────────────────

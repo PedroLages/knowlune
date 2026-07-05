@@ -30,6 +30,18 @@
   "chat.tools.terminal.autoApprove": {
     "ssh": true,
     "pkill": true,
-    "/usr/bin/ssh": true
+    "/usr/bin/ssh": true,
+    "/^bash scripts/workflow/review-state\\.sh --story-id=E61-S02 2>&1$/": {
+      "approve": true,
+      "matchCommandLine": true
+    },
+    "/^bash scripts/workflow/run-prechecks\\.sh --mode=full --story-id=E61-S02 --base-path=/Volumes/SSD/Dev/Apps/Knowlune --log-dir=/Volumes/SSD/Dev/Apps/Knowlune/\\.claude/state/review-story/logs/E61-S02 2>&1$/": {
+      "approve": true,
+      "matchCommandLine": true
+    },
+    "/^cd /Volumes/SSD/Dev/Apps/Knowlune && git add -A && git commit -m \"feat\\(E61-S02\\): service worker push notification click and subscription change handlers\n\n- Replace placeholder push handler with full payload support \\(icon, badge, tag, url\\)\n- Add notificationclick handler for focus/open tab navigation\n- Add pushsubscriptionchange handler for subscription renewal\n- Add E2E tests validating build output\n- Add notification icon assets\"$/": {
+      "approve": true,
+      "matchCommandLine": true
+    }
   }
 }

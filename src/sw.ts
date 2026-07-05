@@ -87,9 +87,12 @@ setDefaultHandler(new NetworkOnly())
 // backward-compatible manual updates via the message protocol.
 
 self.addEventListener('activate', event => {
-  event.waitUntil(self.clients.claim().catch(err => { // silent-catch-ok
-    console.warn('[SW] clients.claim() failed:', err)
-  }))
+  event.waitUntil(
+    self.clients.claim().catch(err => {
+      // silent-catch-ok
+      console.warn('[SW] clients.claim() failed:', err)
+    })
+  )
 })
 
 // ─── SKIP_WAITING message listener ───────────────────────────────────────
@@ -101,38 +104,182 @@ self.addEventListener('message', event => {
   }
 })
 
-// ─── Push event placeholder ──────────────────────────────────────────────
+// ─── URL validation helper ────────────────────────────────────────────────
+// Validates that a URL from a push payload is safe to navigate to.
+// Only allows relative paths (starting with /) and same-origin https URLs.
+// javascript:, data:, and cross-origin URLs are rejected.
+
+function validateNavigationUrl(url: string): string | null {
+  try {
+    // Relative paths are safe — they stay within the app
+    if (url.startsWith('/') && !url.startsWith('//')) {
+      return url
+    }
+    // Absolute URLs must be same-origin https
+    const parsed = new URL(url)
+    if (
+      parsed.protocol === 'https:' &&
+      parsed.origin === self.location.origin
+    ) {
+      return url
+    }
+    console.warn('[SW] Blocked unsafe navigation URL:', url)
+    return null
+  } catch {
+    // Invalid URL — treat as relative path
+    if (url.startsWith('/')) return url
+    console.warn('[SW] Blocked malformed navigation URL:', url)
+    return null
+  }
+}
+
+// ─── Push event handler ──────────────────────────────────────────────────
+// Handles incoming push messages. Every push MUST show a notification —
+// browsers may revoke push permission if no notification is displayed.
+// Tag field enables deduplication (same tag replaces existing notification).
+// url is stored in data for use by the notificationclick handler.
+//
+// Payload fields are whitelisted to prevent a malicious push server from
+// injecting arbitrary NotificationOptions (actions, requireInteraction,
+// renotify, silent). Only safe display-related fields pass through.
 
 self.addEventListener('push', event => {
-  let title = 'Knowlune'
-  let body = 'You have a new notification'
-
-  if (event.data) {
-    try {
-      const payload = event.data.json()
-      if (typeof payload !== 'object' || payload === null) {
-        console.warn('[SW] Push payload is not an object')
-      } else {
-        if (typeof payload.title === 'string' && payload.title.length > 0) {
-          title = payload.title.slice(0, 200)
-        }
-        if (typeof payload.body === 'string' && payload.body.length > 0) {
-          body = payload.body.slice(0, 500)
-        }
+  event.waitUntil(
+    (async () => {
+      const defaults = {
+        title: 'Knowlune',
+        body: 'You have a new notification',
+        icon: '/icons/icon-192.png',
+        badge: '/icons/badge-72.png',
       }
-    } catch (err) {
-      console.warn('[SW] Invalid push payload:', err) // silent-catch-ok
-    }
-  }
 
-  const options: NotificationOptions = {
-    body,
-    icon: '/pwa-192x192.png',
-  }
+      let title = defaults.title
+      let notificationOptions: NotificationOptions & { data?: { url?: string } } = {
+        body: defaults.body,
+        icon: defaults.icon,
+        badge: defaults.badge,
+      }
+
+      try {
+        if (event.data) {
+          const payload = event.data.json()
+          if (typeof payload.title === 'string' && payload.title.length > 0) {
+            title = payload.title
+          }
+
+          // Whitelist: only safe display fields pass through from the payload.
+          // Reject actions, requireInteraction, renotify, silent, and other
+          // fields that a malicious push server could abuse.
+          const ALLOWED_PAYLOAD_FIELDS: (keyof NotificationOptions)[] = [
+            'body', 'icon', 'badge', 'tag', 'image',
+            'vibrate', 'dir', 'lang', 'timestamp',
+          ]
+
+          const safePayload: Record<string, unknown> = {}
+          for (const field of ALLOWED_PAYLOAD_FIELDS) {
+            if (field in payload) {
+              safePayload[field] = payload[field]
+            }
+          }
+
+          // Validate and sanitize the navigation URL
+          const rawUrl = typeof payload.url === 'string' ? payload.url : '/'
+          const safeUrl = validateNavigationUrl(rawUrl) || '/'
+
+          notificationOptions = {
+            ...notificationOptions,
+            ...safePayload,
+            data: { url: safeUrl },
+          }
+        }
+      } catch {
+        // Invalid/missing payload — use defaults (already set above)
+      }
+
+      await self.registration.showNotification(title, notificationOptions)
+    })()
+  )
+})
+
+// ─── Notification click handler ──────────────────────────────────────────
+// Closes the notification, then focuses an existing Knowlune tab (navigating
+// to the payload URL if it differs) or opens a new tab. client.navigate() is
+// Chromium-only — postMessage fallback for Firefox/Safari.
+
+self.addEventListener('notificationclick', event => {
+  event.notification.close()
+  const rawUrl = event.notification.data?.url || '/'
+  const url = validateNavigationUrl(rawUrl) || '/'
 
   event.waitUntil(
-    self.registration.showNotification(title, options).catch(err => { // silent-catch-ok
-      console.warn('[SW] Failed to show notification:', err)
-    })
+    (async () => {
+      const windowClients = await self.clients.matchAll({
+        type: 'window',
+        includeUncontrolled: true,
+      })
+
+      // Try to focus an existing Knowlune tab
+      for (const client of windowClients) {
+        const clientUrl = new URL(client.url)
+        if (clientUrl.origin === self.location.origin && 'focus' in client) {
+          // Navigate if URL differs from current tab
+          if (clientUrl.pathname !== url) {
+            if ('navigate' in client) {
+              await (client as WindowClient).navigate(url)
+            }
+            // Intentional: postMessage fallback for non-Chromium browsers
+            client.postMessage({ type: 'NAVIGATE', url })
+          }
+          await client.focus()
+          return
+        }
+      }
+
+      // No existing tab — open new one (allowed because notificationclick is a user gesture)
+      if (self.clients.openWindow) {
+        await self.clients.openWindow(url)
+      }
+    })()
+  )
+})
+
+// ─── Push subscription change handler ────────────────────────────────────
+// When the browser renews the push subscription, re-subscribe with the same
+// VAPID key and POST the new subscription to the backend. Failures are logged
+// but not thrown — subscription loss is recoverable on next app visit via
+// the usePushSubscription hook.
+
+self.addEventListener('pushsubscriptionchange', event => {
+  event.waitUntil(
+    (async () => {
+      try {
+        if (!event.oldSubscription) {
+          console.warn('[SW] pushsubscriptionchange: no old subscription to renew')
+          return
+        }
+
+        const newSubscription = await self.registration.pushManager.subscribe(
+          event.oldSubscription.options
+        )
+
+        // Send new subscription to backend
+        const response = await fetch('/api/push/subscriptions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(newSubscription.toJSON()),
+        })
+        if (!response.ok) {
+          console.error(
+            '[SW] Push subscription POST failed:',
+            response.status,
+            response.statusText
+          )
+        }
+      } catch (error) {
+        // Intentional: log but don't throw — subscription loss is recoverable
+        // on next app visit via usePushSubscription hook
+        console.error('[SW] Push subscription change failed:', error)
+      }
+    })()
   )
 })

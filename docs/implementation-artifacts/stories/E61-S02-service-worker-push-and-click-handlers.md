@@ -1,12 +1,24 @@
 ---
 story_id: E61-S02
-story_name: "Service Worker Push and Click Handlers"
-status: ready-for-dev
-started:
+story_name: 'Service Worker Push and Click Handlers'
+status: review
+started: 2026-07-05
 completed:
-reviewed: false
-review_started:
-review_gates_passed: []
+reviewed: true
+review_started: 2026-07-05
+review_gates_passed:
+  - build
+  - lint
+  - type-check
+  - format-check
+  - unit-tests-skipped
+  - e2e-tests
+  - design-review-skipped
+  - code-review
+  - code-review-testing
+  - performance-benchmark-skipped
+  - security-review
+  - exploratory-qa-skipped
 burn_in_validated: false
 ---
 
@@ -113,6 +125,7 @@ No React UI components in this story. All work is in `src/sw.ts` (compiled to `d
 ### Integration with injectManifest (from E61-S01)
 
 This story extends the custom `src/sw.ts` created in E61-S01. The file already contains:
+
 - Workbox precaching (`precacheAndRoute`)
 - 5 runtime caching rules (`registerRoute`)
 - Navigation fallback
@@ -147,7 +160,7 @@ These map directly to `tag` values in push payloads for deduplication.
 
 ```ts
 // src/sw.ts — Push event handler (replaces E61-S01 placeholder)
-self.addEventListener('push', (event) => {
+self.addEventListener('push', event => {
   event.waitUntil(
     (async () => {
       const defaults = {
@@ -155,18 +168,18 @@ self.addEventListener('push', (event) => {
         body: 'You have a new notification',
         icon: '/icons/icon-192.png',
         badge: '/icons/badge-72.png',
-      };
+      }
 
-      let notificationOptions: NotificationOptions & { data?: { url?: string } } = { ...defaults };
+      let notificationOptions: NotificationOptions & { data?: { url?: string } } = { ...defaults }
 
       try {
         if (event.data) {
-          const payload = event.data.json();
+          const payload = event.data.json()
           notificationOptions = {
             ...defaults,
             ...payload,
             data: { url: payload.url || '/' },
-          };
+          }
         }
       } catch {
         // Invalid/missing payload — use defaults (no-op, already set)
@@ -175,79 +188,79 @@ self.addEventListener('push', (event) => {
       await self.registration.showNotification(
         notificationOptions.title || defaults.title,
         notificationOptions
-      );
+      )
     })()
-  );
-});
+  )
+})
 ```
 
 ### Notification Click Handler — Full Code
 
 ```ts
 // src/sw.ts — Notification click handler
-self.addEventListener('notificationclick', (event) => {
-  event.notification.close();
-  const url = event.notification.data?.url || '/';
+self.addEventListener('notificationclick', event => {
+  event.notification.close()
+  const url = event.notification.data?.url || '/'
 
   event.waitUntil(
     (async () => {
       const windowClients = await self.clients.matchAll({
         type: 'window',
         includeUncontrolled: true,
-      });
+      })
 
       // Try to focus an existing tab
       for (const client of windowClients) {
-        const clientUrl = new URL(client.url);
+        const clientUrl = new URL(client.url)
         if (clientUrl.origin === self.location.origin && 'focus' in client) {
           // If the URL differs, try navigate (Chromium), then postMessage fallback
           if (clientUrl.pathname !== url) {
             if ('navigate' in client) {
-              await (client as WindowClient).navigate(url);
+              await (client as WindowClient).navigate(url)
             }
             // Intentional: postMessage fallback for non-Chromium browsers
-            client.postMessage({ type: 'NAVIGATE', url });
+            client.postMessage({ type: 'NAVIGATE', url })
           }
-          await client.focus();
-          return;
+          await client.focus()
+          return
         }
       }
 
       // No existing tab — open new one (allowed because this is a user gesture)
       if (self.clients.openWindow) {
-        await self.clients.openWindow(url);
+        await self.clients.openWindow(url)
       }
     })()
-  );
-});
+  )
+})
 ```
 
 ### Push Subscription Change Handler — Full Code
 
 ```ts
 // src/sw.ts — Push subscription change handler
-self.addEventListener('pushsubscriptionchange', (event) => {
+self.addEventListener('pushsubscriptionchange', event => {
   event.waitUntil(
     (async () => {
       try {
         const newSubscription = await self.registration.pushManager.subscribe(
           event.oldSubscription.options
-        );
+        )
 
         // Send new subscription to backend
         await fetch('/api/push/subscriptions', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(newSubscription.toJSON()),
-        });
+        })
       } catch (error) {
         // Intentional: log but don't throw — subscription loss is recoverable
         // on next app visit via usePushSubscription hook
-        console.error('[SW] Push subscription change failed:', error);
+        console.error('[SW] Push subscription change failed:', error)
       }
     })()
-  );
-});
+  )
+})
 ```
 
 ### Key Technical Details
@@ -303,6 +316,12 @@ Before requesting `/review-story`, verify:
 
 [Populated by /review-story — adversarial code review findings]
 
+## Implementation Plan
+
+See [plan](../plans/plan-e61-s02-service-worker-push-and-click-handlers.md) for implementation approach.
+
 ## Challenges and Lessons Learned
 
-[Document issues, solutions, and patterns worth remembering]
+- **SW runtime tests in dev mode**: `vite-plugin-pwa` has `devOptions.enabled: false`, so the service worker is never registered when tests run against the Vite dev server (port 5173). SW registration tests must either use the production preview server (port 4173) or explicitly skip in dev mode. Pattern: use `test.skip(baseURL?.includes('5173'), 'reason')` for runtime SW tests.
+- **Build verification is reliable**: Checking `dist/sw.js` for handler code via `readFileSync` is deterministic and independent of browser SW support. This covers AC 1-7 without needing CDP-based push lifecycle testing.
+- **Auto-formatting in pre-checks**: The `run-prechecks.sh` pipeline auto-formats branch-changed files with Prettier and commits them. This can create a follow-up commit after the main implementation commit — expected behavior, not a bug.
