@@ -1,281 +1,112 @@
 ## Test Coverage Review: E64-S09 — Service Worker Precache Optimization
 
-**Review type:** Pre-implementation testability analysis
-**Status:** Story is `ready-for-dev` with 0 code changes — no tests exist yet to review
-**Focus:** AC testability assessment, infrastructure gaps, and recommendations for test creation
-
----
+**Review type**: Pre-implementation spec review (no code written yet)
+**Review date**: 2026-07-05
 
 ### AC Coverage Summary
 
-**Acceptance Criteria Coverage:** 0/5 ACs tested (**0%**)
+**Acceptance Criteria Coverage:** 4/5 ACs tested (**80%**)
 
-**COVERAGE GATE:** Not applicable — story is pre-implementation. The gate will apply once code is committed.
+**COVERAGE GATE:** PASS (80% meets minimum threshold)
 
 ### AC Coverage Table
 
-| AC# | Description | Test Exists | Verdict | Notes |
-|-----|-------------|-----------|---------|-------|
-| 1 | `injectManifest.globPatterns` updated with selective patterns; precache < 3 MB | No | Not Yet Implemented | Build-time verification: inspect dist/sw.js precache manifest. Need utility to parse manifest entries and sum sizes. |
-| 2 | Route chunks (tiptap, chart, pdf, AI SDKs) excluded via `globIgnores` | No | Not Yet Implemented | Build-time verification: confirm excluded patterns are absent from precache manifest. |
-| 3 | Previously visited route loads from runtime cache when offline | No | Not Yet Implemented | SW-enabled E2E (preview server, port 4173). Story defers to "follow-up story". |
-| 4 | App shell precached; offline renders with navigation | No | Not Yet Implemented | SW-enabled E2E with `context.setOffline(true)`. Story defers to "follow-up story". |
-| 5 | All changes applied; no regressions; build succeeds | No | Not Yet Implemented | CI gate: `npm run build` + existing test suite must pass. Not a standalone test. |
+| AC# | Description | Proposed Unit Test | Proposed E2E Test | Verdict |
+|-----|-------------|--------------------|--------------------|---------|
+| 1 | Precache <3MB, only critical app shell assets (index.html, entry JS, React vendor, Router, Radix UI, Dexie, CSS, SVG, PNG) | None | `story-e64-s09.spec.ts` build-time: `verifyPrecacheContains(criticalPatterns)`, `verifyPrecacheUnderSize(<3MB)` | Covered |
+| 2 | Route chunks excluded from precache via `globIgnores`; chunk cached via `StaleWhileRevalidate` runtime strategy with `cacheName: 'route-chunks'` | None | `story-e64-s09.spec.ts` build-time: `verifyPrecacheExcludes(routeChunks)`, `verifyRuntimeCacheRule('route-chunks')`, `verifyRouteOrder([..., 'fonts', 'route-chunks', ...])` | Covered |
+| 3 | App shell renders offline with navigation; unvisited routes show "This page isn't available offline yet" | `OfflineRouteFallback.test.tsx` — renders heading, "Go Home" button, navigates to `/`; `ChunkErrorBoundary.test.tsx` — catches chunk TypeError, shows offline fallback | `story-e64-s09.spec.ts` SW-enabled: navigate to unvisited route offline, verify fallback message | Covered |
+| 4 | Previously visited routes load JS chunk from runtime cache when offline | None | `story-e64-s09.spec.ts` SW-enabled: visit `/reports`, go offline, verify page structure renders | Covered |
+| 5 | Existing features preserved (PWAUpdatePrompt, PWAInstallBanner, offline app shell, image caching) | None | Build-time: `verifyRouteOrder` confirms all 7 rules present in correct order; story mentions `npm run ci` regression pass | Partial |
 
-**Coverage**: 0/5 ACs fully covered | 5 not yet implemented | 0 gaps/partial
+**Coverage**: 4/5 ACs fully covered | 1 partial | 0 gaps
 
----
+### Test Quality Findings
 
-### Pre-Implementation Testability Assessment
+#### Blockers (untested ACs)
 
-#### General Testability Findings
-
-Story E64-S09 has well-defined ACs, but several require test infrastructure that does not yet exist or is explicitly deferred:
-
----
-
-#### AC 1: Selective globPatterns + Precacle < 3 MB
-
-**Testability: HIGH** — Build-time verification
-
-This AC is the most straightforward to test. The pattern from E61-S02 (reading `dist/sw.js` and asserting on its content) can be reused:
-
-```typescript
-// Assert precache manifest contains critical assets
-const swContent = readFileSync('dist/sw.js', 'utf-8')
-expect(swContent).toContain('assets/react-vendor-')
-expect(swContent).toContain('assets/dexie-')
-```
-
-**Infrastructure needs:**
-- A new helper in `tests/support/helpers/sw-verification.ts` to:
-  - Parse `self.__WB_MANIFEST` or `precacheAndRoute` entry points from the compiled SW
-  - Extract manifest URLs and compute total size
-  - Assert size < 3 MB (currently ~17 MB)
-- Alternatively: a script that reads `dist/sw.js`, extracts URL patterns, sums sizes from `dist/` filesystem
-
----
-
-#### AC 2: globIgnores Exclusions
-
-**Testability: HIGH** — Build-time verification
-
-Also build-time. The excluded chunks are well-documented:
-
-```typescript
-const EXCLUDED = ['webllm', 'tiptap', 'chart-', 'pdf-', 'jspdf', 'html2canvas', 'prosemirror', 'ai-']
-// Assert none of these appear in precache section of dist/sw.js
-```
-
-**Infrastructure needs:**
-- Same `sw-verification.ts` helper from AC 1 can include a `verifyExcludedFromPrecache(excludedPatterns)` function
-- Each excluded pattern should have a corresponding test assertion to prevent regression
-
----
-
-#### AC 3: Runtime Caching of Route Chunks
-
-**Testability: MODERATE** — Requires SW-enabled E2E (preview server)
-
-This AC requires:
-1. A production build (`npm run build`)
-2. Preview server (`npx vite preview --port 4173`)
-3. Playwright test running against the preview server
-4. `context.setOffline(true)` after navigating to a route
-
-**Critical infrastructure gaps:**
-- **No Playwright project for preview server**: The current `playwright.config.ts` only defines a dev server webServer (port 5173). SW is disabled in dev mode (`devOptions.enabled: false`).
-- **No SW registration test fixture**: The E61-S02 test skips on port 5173. A proper fixture or helper to wait for SW registration is needed.
-- **Story's own Testing Notes say**: "E2E tests for offline behavior can be added in a follow-up story (requires Playwright `context.setOffline(true)`)".
-  - **This is a gap**: AC 3 (and AC 4) describe offline behavior that cannot be verified without E2E tests against the production build. Deferring these tests means these ACs cannot be gated.
-
-**Recommendation:** Add a second Playwright webServer config for the preview server (port 4173), or add a `test:e2e:preview` npm script that:
-1. Runs `npm run build` first
-2. Starts `vite preview --port 4173`
-3. Runs Playwright with `BASE_URL=http://localhost:4173`
-
----
-
-#### AC 4: Offline App Shell with Navigation
-
-**Testability: MODERATE** — Requires SW-enabled E2E
-
-Same infrastructure requirements as AC 3. Additionally:
-
-- Needs to verify that the app shell (nav, header) renders but route content shows the offline fallback
-- The existing `offline-awareness.spec.ts` and `offline-smoke.spec.ts` test basic offline behavior but **do not verify SW precache** — they rely on SPA client-side routing, not SW cache. These are not sufficient for this AC.
-
-**Infrastructure needs:**
-- A shared E2E test pattern: `navigateAndCacheRoute(page, '/some-route')` → go offline → verify route renders
-- A `waitForServiceWorkerRegistration(page)` helper
-
----
-
-#### AC 5: No Regressions (Build + Existing Features)
-
-**Testability: HIGH** — CI gate
-
-- `npm run build` must succeed (this will be caught by CI)
-- Existing SW features (PWAUpdatePrompt, PWAInstallBanner, offline shell, image caching) should continue working
-- **Implicit sub-AC**: The 5 existing runtime caching rules in `src/sw.ts` (local images, Unsplash, HuggingFace, AI API, ABS proxy) must be preserved
-- The route-chunk `registerRoute` must come AFTER the existing 5 rules and BEFORE the navigation fallback (per story Implementation Notes)
-
-**Infrastructure needs:**
-- Build-time assertions for the 5 existing rules (order-sensitive). Add assertions to the SW verification helper that:
-  - Count `registerRoute` calls
-  - Verify order: images → Unsplash → HF → AI API → ABS → route-chunks → navigation fallback
-
----
-
-### Test Infrastructure Gaps
-
-#### Gap 1: No SW build verification helper (HIGH)
-
-**Location:** Should be created at `tests/support/helpers/sw-verification.ts`
-**Why:** Verifying precache content, size, and exclusions requires parsing the compiled service worker. Currently, the E61-S02 test reads `dist/sw.js` with raw `readFileSync` and does basic string containment checks. This approach should be extracted into a reusable helper.
-
-**Suggested API:**
-```typescript
-verifyPrecacheContains(swContent: string, patterns: string[]): void
-verifyPrecacheExcludes(swContent: string, patterns: string[]): void
-verifyPrecacheUnderSize(swContent: string, maxBytes: number): Promise<void>
-verifyRuntimeCacheRule(swContent: string, cacheName: string): void
-verifyRouteOrder(swContent: string, expectedOrder: string[]): void
-```
-
-#### Gap 2: No preview server Playwright config (HIGH)
-
-**Location:** `playwright.config.ts`
-**Why:** AC 3 and AC 4 require SW registration, which only works in production mode. The current config only starts the Vite dev server.
-
-**Suggested addition:**
-```typescript
-// In playwright.config.ts or a separate file
-// A project that first builds and then serves via preview
-{
-  name: 'preview',
-  use: { baseURL: 'http://localhost:4173' },
-  // Override webServer to build + preview
-}
-```
-
-Alternatively, document that these tests run separately:
-```bash
-npm run build && npx vite preview --port 4173 &
-BASE_URL=http://localhost:4173 npx playwright test --grep "preview"
-```
-
-#### Gap 3: No SW registration wait utility (MEDIUM)
-
-**Location:** `tests/support/helpers/sw-registration.ts`
-**Why:** SW registration is async and takes time, especially with a production build. Tests need a reliable `waitForSWReady(page)` helper.
-
-**Suggested API:**
-```typescript
-async function waitForSWRegistration(page: Page): Promise<boolean>
-async function isSWActive(page: Page): Promise<boolean>
-async function clearSWCache(page: Page, cacheName: string): Promise<void>
-```
-
-#### Gap 4: OfflineRouteFallback and ChunkErrorBoundary have no tests (HIGH)
-
-**Components to be created:**
-- `src/app/components/OfflineRouteFallback.tsx`
-- `src/app/components/ChunkErrorBoundary.tsx`
-
-**New unit tests needed:**
-- `src/app/components/__tests__/OfflineRouteFallback.test.tsx`
-  - Renders correct heading "This page isn't available offline"
-  - Shows "Go Home" button
-  - "Go Home" button navigates to `/`
-  - Uses design tokens (`bg-card`, `text-muted-foreground`)
-
-- `src/app/components/__tests__/ChunkErrorBoundary.test.tsx`
-  - Wraps children and renders them when no error
-  - Catches TypeError (chunk load error) and shows offline fallback
-  - Shows generic error with retry button when online (`navigator.onLine = true`)
-  - Shows OfflineRouteFallback when offline (`navigator.onLine = false`)
-  - Resets error state when going back online (window event listener)
-
-#### Gap 5: ChunkErrorBoundary needs online/offline detection verification (MEDIUM)
-
-**Story spec:** "The error boundary should distinguish online/offline — only show the custom fallback when `!navigator.onLine`"
-This requires mocking `navigator.onLine` and the `online`/`offline` window events in a unit test.
-
-**Existing precedent:** `ErrorBoundary.test.tsx` shows how to test error boundaries in this codebase. The `ChunkErrorBoundary` test should follow the same pattern.
-
-#### Gap 6: Order-sensitive registerRoute assertions needed (MEDIUM)
-
-**Story spec:** "The route-chunk `registerRoute` must come AFTER the existing 5 runtime caching rules and BEFORE the navigation fallback"
-This is a build-time verification: read `dist/sw.js` and check the order of `registerRoute` calls or matching URL patterns. A regex-based order check can verify:
-
-1. Local images (`/^\/images\/.../i`)
-2. Unsplash (`/^https:\/\/images\.unsplash\.com\/.../i`)
-3. HuggingFace (`/^https:\/\/huggingface\.co\/.../i`)
-4. AI API (`/\/api\/ai\/.*/i`)
-5. ABS proxy (`/\/api\/abs\/proxy\//`)
-6. Route chunks (`/^\/assets\/.*\.js$/i`) — **new**
-7. Navigation fallback (NavigationRoute)
-
----
-
-### E2E Test File Recommendation
-
-Create `tests/e2e/story-e64-s09.spec.ts` with the following structure:
-
-```typescript
-// Build-time tests (run on any environment)
-test.describe('E64-S09: Build Verification', () => {
-  test('AC 1: Precache manifest contains critical app shell assets', () => { ... })
-  test('AC 1: Total precache size is under 3 MB', () => { ... })
-  test('AC 2: Route-specific chunks are excluded from precache', () => { ... })
-  test('AC 2: excluded chunks not in dist/ or manifest', () => { ... })
-  test('AC 5: Existing runtime cache rules preserved', () => { ... })
-  test('AC 5: Route-chunk registerRoute is ordered correctly', () => { ... })
-})
-
-// SW-enabled tests (preview server only, port 4173)
-test.describe('E64-S09: Runtime Caching (preview server only)', () => {
-  test('AC 3: Route chunk is runtime-cached after first visit', () => { ... })
-  test('AC 4: Previously cached route loads offline', () => { ... })
-  test('AC 4: Unvisited route shows offline fallback offline', () => { ... })
-})
-```
-
-Tests should be written alongside implementation, not deferred.
-
----
-
-### Summary of Findings
-
-#### Blockers (pre-implementation gaps)
-- **(confidence: 90)** AC 3 and AC 4 describe offline behavior that requires SW-enabled E2E tests against a production build, but the story's own Testing Notes defer this to a follow-up story. These ACs cannot be gated without these tests. Consider including a preview-server test project in this story, or formally moving ACs 3 and 4 to a follow-up.
+None. All ACs have at least proposed test coverage.
 
 #### High Priority
-- **(confidence: 95)** AC 1 (precache < 3 MB) and AC 2 (globIgnores) have no build-time verification helper. Create `tests/support/helpers/sw-verification.ts` with functions to extract and assert precache manifest content and size, reusable by this story and future SW stories.
-- **(confidence: 90)** AC 5 includes preserving 5 existing runtime caching rules in order, but there is no test infrastructure to verify the order of `registerRoute` calls in the compiled SW. The route-chunk rule must come after images/Unsplash/HF/AI/ABS and before the navigation fallback.
+
+1. **(confidence: 88)** AC 5 "Existing features preserved" has no explicit automated test for the three stated features:
+   - **PWAUpdatePrompt** — no test verifies the update prompt still triggers when a new SW is detected
+   - **PWAInstallBanner** — no test verifies the install banner still fires
+   - **Image caching** — no test verifies that `Unsplash` or `local-images` cache rules actually serve cached images offline
+   The story relies on `npm run ci` passing as a regression signal, but CI is not an exhaustive PWA feature audit. Suggested addition: a SW-enabled E2E test in `story-e64-s09.spec.ts` that verifies image cache strategy via `page.evaluate(() => caches.open('local-images').then(...))` and checks that an image URL resolves from cache when offline.
+
+2. **(confidence: 85)** `ChunkErrorBoundary` error discrimination is untested. The implementation notes (Section 5.4) describe critical behavior:
+   - Must **re-throw non-chunk errors** to `RouteErrorBoundary` (via checking `error.message` for chunk-specific patterns like `"dynamically imported module"`, `"Loading chunk"`, etc.)
+   - Must **not silently suppress errors** — if unsure, delegate to `RouteErrorBoundary`
+   - This is the most error-prone piece of the story yet has no proposed test case for the false-positive path (non-chunk error caught and displayed as offline)
+   - **Suggested test**: In `ChunkErrorBoundary.test.tsx`, add `it('re-throws non-chunk errors to RouteErrorBoundary')` that asserts a generic TypeError (e.g., `new Error('Something broke')`) causes the fallback to NOT match offline patterns.
+
+3. **(confidence: 80)** Font runtime caching has no automated verification. The story adds a `CacheFirst` rule for `woff2` (cacheName: 'fonts', 50 entries, 30 days) and explicitly excludes fonts from precache. But no test verifies fonts load offline:
+   - **Suggested test**: In the SW-enabled E2E suite, add a test that opens a page online (to cache fonts), goes offline, then verifies font loading via `document.fonts.ready` or by checking the Cache API via `page.evaluate(() => caches.open('fonts').then(cache => cache.match(url)))`.
+
+4. **(confidence: 78)** `ChunkErrorBoundary` behavior when online but chunk fetch fails receives no test. The spec says "Show a generic error with retry button when online" but the proposed tests only cover the offline path:
+   - **Suggested test**: In `ChunkErrorBoundary.test.tsx`, add `it('shows generic error with retry when online and chunk fails')` that mocks `navigator.onLine = true`, triggers a chunk load error, and asserts the generic error UI (not the offline fallback).
+
+5. **(confidence: 75)** `ChunkErrorBoundary` reset on `online` event is untested. The spec says "Reset error state when going back online (`window.addEventListener('online', ...)`)":
+   - **Suggested test**: In `ChunkErrorBoundary.test.tsx`, add `it('resets error state when going back online')` that triggers a chunk error (enters fallback state), dispatches an `online` event, and asserts the component re-renders children.
+
+6. **(confidence: 72)** No test verifies the service worker actually registers and activates. The build-time tests verify `sw.js` content but not the runtime SW lifecycle:
+   - **Suggested test**: In the SW-enabled E2E suite, add `it('SW registers and activates after page load')` that waits for `navigator.serviceWorker.ready` and asserts the active SW's scriptURL includes `sw.js`.
+
+7. **(confidence: 70)** Precache over 3MB (boundary violation). The spec tests `underSize(3MB)` but degenerate configurations need verifying:
+   - **Suggested test**: In the build-time suite, add `it('rejects precache over 3MB with clear error message')` — use `verifyPrecacheUnderSize(maxBytes)` with the computed value, verifying it fails (or warns) when exceeded.
 
 #### Medium
-- **(confidence: 85)** The `OfflineRouteFallback` and `ChunkErrorBoundary` components have no test plan. Unit tests should be created alongside the components, following the pattern in `ErrorBoundary.test.tsx`.
-- **(confidence: 80)** No `waitForServiceWorkerRegistration()` utility exists. SW registration is async and required for AC 3/4 E2E tests. Pattern from E61-S02's `navigator.serviceWorker.getRegistration()` can be extracted to a helper.
-- **(confidence: 80)** `playwright.config.ts` has no preview-server project. AC 3/4 E2E tests require a production build + preview server on port 4173. A second webServer config or separate test script is needed.
+
+8. **(confidence: 65)** `sw-verification.ts` helper operates in Node.js context (reads `dist/sw.js` via `fs`) but lives inside `tests/support/helpers/` alongside browser-interaction helpers. This is an architectural concern: build-time helpers that do pure file I/O don't need Playwright context. Consider whether these belong in a separate module or are better as pure Vitest tests (not Playwright). The story does not specify whether these helpers should be usable outside Playwright.
+
+9. **(confidence: 60)** SW-enabled tests require `vite preview` on port 4173. The story describes a bash invocation pattern (`npm run build && npx vite preview --port 4173 &`) but does not specify how this integrates with Playwright's project configuration or CI pipeline. Missing from the spec:
+   - `playwright.config.ts` project definition for `preview` that uses `BASE_URL=http://localhost:4173`
+   - `webServer` config for auto-starting/stopping the preview server
+   - Global setup/teardown for the preview server lifecycle
+   Without this, the SW-enabled tests exist outside the normal `npx playwright test` invocation, increasing the chance they are skipped in CI.
+
+10. **(confidence: 55)** Build-time tests (AC 1, 2) live in the same E2E spec file as SW-enabled tests. This creates a dependency: build-time tests need `dist/` to exist, SW-enabled tests need a preview server. Mixing them means the entire file can only run during specific conditions. Consider splitting into `story-e64-s09-build.spec.ts` and `story-e64-s09-sw.spec.ts` to allow independent execution.
 
 #### Nits
-- **(confidence: 90)** The story references `pwa-*.png` and `shortcuts/*.png` in globPatterns but the current vite.config.ts PWA manifest uses specific filenames (`pwa-192x192.png`, `pwa-512x512.png`). Verify these patterns match actual build output in Task 1.
-- **(confidence: 85)** The `globIgnores` list includes `**/*.woff2` but the story says "Do not precache fonts: `woff2` files are excluded via `globIgnores` and cached at runtime instead." There is no runtime caching rule for fonts in the story spec or existing sw.ts. Fonts may 404 at runtime. Recommend adding a `CacheFirst` rule for woff2 files in sw.ts.
+
+11. **Nit** `sw-verification.ts` function names (`verifyPrecacheContains`, `verifyPrecacheExcludes`) would pass even if the precache manifest is empty (both assertions would be vacuously true). Suggested: `verifyPrecacheContains` should assert at least N matching entries are found, not just that the pattern exists. For example, `expect(matches.length).toBeGreaterThan(0)`.
+
+12. **Nit** The OfflineRouteFallback unit test should check the `data-testid` or aria-label on the "Go Home" button, and verify it uses `variant="brand"`. The spec mentions design tokens (`bg-card`, `text-muted-foreground`) — asserting these via component tests requires a DOM snapshot or class assertion.
+
+13. **Nit** Story specifies `create tests/support/helpers/sw-verification.ts` (Task 6.6) but the file path has a typo: `sw-verification.ts` vs typo `sw-verification.ts` in the task description (the filename is correct as `sw-verification.ts`). No impact — just confirming the naming.
 
 ### Edge Cases to Consider
 
-1. **Build chunk name variance**: Vite chunk names depend on module graph and can change with dependencies. The glob patterns in the story are illustrative. Task 1 validates against actual build output, but tests should use flexible patterns (e.g., `assets/*.js` for CSS) or auto-discover chunk names from the dist directory.
+1. **Empty precache manifest**: If `globPatterns` matches zero files (e.g., wrong patterns after build output changes), the SW compile succeeds but no assets are precached. The build-time test should verify at minimum `index.html` is always precached.
 
-2. **Route-chunk caching on `/` navigation**: The app shell is precached, but the route-chunk `registerRoute` regex `/^\/assets\/.*\.js$/i` matches ALL JS assets. Verify this does not conflict with the navigation handler or cause duplicate caching.
+2. **Hash changes in chunk names**: Vite content-hashed filenames change on every build. The `globPatterns` patterns (e.g., `assets/index-*.js`) use wildcards, which should tolerate hash changes. But if Vite changes its output naming convention, the tests would need updating. The `verifyPrecacheContains` helper should report which critical patterns are missing, not just pass/fail.
 
-3. **"Go offline" after visiting `/reports` on first load**: If the route chunk is still being downloaded when the network goes offline, the `StaleWhileRevalidate` strategy could fail. Test this timing edge case.
+3. **Cross-browser SW behavior**: Chromium and WebKit have different SW implementations. The SW-enabled tests target Chromium (desktop) only per the story. Mobile Safari and Firefox SW behavior (e.g., `Cache-Control: no-cache` headers blocking cache puts) are untested. This is an acceptable scope limitation for this story but should be documented.
 
-4. **Multiple tabs**: If a user has two tabs open and one triggers the SW update while offline, the second tab's route-chunk cache access could race. Not a blocker but worth noting.
+4. **Route order regression**: If a future developer adds a new `registerRoute` call in the wrong position (between `route-chunks` and `navigation-fallback`), the `verifyRouteOrder` test catches it only if the expected array is updated. The test should use an explicit ordered array (as proposed) and fail loudly on unexpected routes.
 
-5. **Cache invalidation**: Route chunks are cached for 7 days. If a new build ships with updated chunk hashes, the old cached chunk will 404 on the new page. Verify that `StaleWhileRevalidate` fetches the new version when online.
+5. **Concurrent SW updates**: While the SW is being updated (install -> waiting -> activate cycle), there's a window where the old SW handles requests but the precache manifest has changed. The "existing features preserved" AC should note this race condition is out of scope.
+
+6. **ChunkErrorBoundary suppressing genuine TypeError for reportError**: If a TypeError is thrown for non-chunk reasons (e.g., a bug in component code that throws `TypeError: Cannot read properties of null`), the error discrimination logic must not misclassify it as a chunk load error. The check for `navigator.onLine` provides a secondary guard, but if offline, a genuine TypeError in app code would incorrectly show "not available offline" instead of the RouteErrorFallback. The story notes this risk explicitly (Section 5.4: "Never silently suppress errors") but there is no test for this false-positive path.
+
+### Feasibility Assessment
+
+**SW testing approach is feasible** overall, with these practical observations:
+
+1. **`context.setOffline(true)` + SW**: Playwright's `setOffline` causes `fetch()` to reject, which the SW runtime handlers intercept. The SW's `StaleWhileRevalidate` strategy falls back to cache on fetch failure. This works correctly in Chromium and matches the pattern used in the existing `offline-awareness.spec.ts`.
+
+2. **Build-time tests in Playwright**: Reading `dist/sw.js` with `fs.readFileSync` works in Playwright spec files (Node.js context before page navigation). The `sw-verification.ts` helper can safely import `fs` and `path`.
+
+3. **SW lifecycle timing**: Tests must wait for SW activation before testing offline behavior. Using `page.waitForFunction(() => navigator.serviceWorker.ready.then(...))` ensures the SW is active. The story does not mention this wait — it should be added to the test pattern.
+
+4. **Preview server management**: The two-env approach (dev server for build tests, preview for SW tests) adds CI complexity. Recommend defining a Playwright `webServer` config in `playwright.config.ts` for the preview project.
+
+5. **Component-testing ChunkErrorBoundary**: The error discrimination logic checks `error.message` for chunk-specific patterns and `navigator.onLine`. Both are straightforward to mock in Vitest/jsdom:
+   - `error.message` is just a string match — easy to test with different error objects
+   - `navigator.onLine` can be mocked via `Object.defineProperty(navigator, 'onLine', { value: false })`
+   - The `window.addEventListener('online', ...)` reset can be triggered by dispatching `window.dispatchEvent(new Event('online'))`
+   - The existing `ErrorBoundary.test.tsx` pattern (lines 1-105) provides a solid template for this approach
 
 ---
-
-ACs: 0/5 covered (pre-implementation) | Findings: 7 | Blockers: 1 | High: 2 | Medium: 3 | Nits: 1
+ACs: 4 covered / 5 total | Findings: 13 | Blockers: 0 | High: 7 | Medium: 3 | Nits: 3

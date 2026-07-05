@@ -83,7 +83,7 @@ so that my initial app install is fast and doesn't consume excessive bandwidth.
   - [ ] 3.3 Preserve existing ignores if any
 
 - [ ] Task 4: Add runtime caching rules in `src/sw.ts` (AC: 2, 3)
-  - [ ] 4.0 Add font runtime caching rule **before** the route-chunks rule: `CacheFirst` strategy matching `/\/assets\/.+\.woff2$/i`, `cacheName: 'fonts'`, `ExpirationPlugin` with `maxEntries: 50`, `maxAgeSeconds: 30 * 24 * 60 * 60` (30 days). This prevents a regression — woff2 is excluded from precache via `globIgnores` and would otherwise hit `setDefaultHandler(new NetworkOnly())`, causing fonts to fail offline.
+  - [ ] 4.0 Add font runtime caching rule **before** the route-chunks rule: `CacheFirst` strategy matching `/\/assets\/.+\.woff2$/i`, `cacheName: 'fonts'`, with `CacheableResponsePlugin({ statuses: [0, 200] })` (matching the pattern used by all other runtime caching rules in `sw.ts`), `ExpirationPlugin` with `maxEntries: 50`, `maxAgeSeconds: 30 * 24 * 60 * 60` (30 days). The `CacheableResponsePlugin` is essential — without it, transient CDN failures fill the `ExpirationPlugin`'s `maxEntries` slots with failed entries, evicting successfully cached fonts and causing FOUT when offline. This prevents a regression — woff2 is excluded from precache via `globIgnores` and would otherwise hit `setDefaultHandler(new NetworkOnly())`, causing fonts to fail offline.
   - [ ] 4.1 Add `registerRoute()` with `StaleWhileRevalidate` strategy for `/assets/.*\.js$/`
   - [ ] 4.2 Configure `cacheName: 'route-chunks'` with `CacheableResponsePlugin` (statuses: [0, 200]) and `ExpirationPlugin`: `maxEntries: 100`, `maxAgeSeconds: 24 * 60 * 60` (1 day — Vite content-hashed URLs make longer TTLs unnecessary after a new deployment)
   - [ ] 4.3 Place both rules **after** existing runtime caching rules (images, Unsplash, HF, AI API, ABS proxy) and **before** the navigation fallback
@@ -93,8 +93,11 @@ so that my initial app install is fast and doesn't consume excessive bandwidth.
   - [ ] 5.1 Create `src/app/components/OfflineRouteFallback.tsx` — displays "This page isn't available offline yet" with a "Go Home" button
   - [ ] 5.2 Style using design tokens: `bg-card`, `text-muted-foreground`, `text-brand` for the button
   - [ ] 5.3 Wrap lazy-loaded routes in an error boundary that catches chunk load failures (TypeError from failed dynamic import)
-  - [ ] 5.4 The error boundary should distinguish chunk load failures from other runtime errors by checking `error.message` for chunk-load-specific patterns (`"dynamically imported module"`, `"Loading chunk"`, `"Importing a module script failed"`, `"Failed to fetch dynamically imported module"`). Non-chunk errors must be re-thrown to the parent `RouteErrorBoundary` so they are reported via `reportError()` and surface the correct fallback UI (generic error with retry, not "not available offline"). Only show the custom `OfflineRouteFallback` when `!navigator.onLine` AND the error is a chunk load failure.
-  - [ ] 5.5 Modify the `SuspensePage` helper in `src/app/routes.tsx` (line ~200) to wrap children in `ChunkErrorBoundary` between `RouteErrorBoundary` and `Suspense`. This covers all ~40+ lazy routes with a single change:
+  - [ ] 5.4 The error boundary should distinguish chunk load failures from other runtime errors by checking `error.message` for chunk-load-specific patterns (`"dynamically imported module"`, `"Loading chunk"`, `"Importing a module script failed"`, `"Failed to fetch dynamically imported module"`). Implement as a class component with `componentDidCatch` storing the error in state, and `render()` branching on `this.state.hasError`:
+    - **Chunk load failure + offline** (`!navigator.onLine`): render `<OfflineRouteFallback />`. No `reportError()` needed — offline is expected.
+    - **Chunk load failure + online**: call `reportError(error, { context: 'ChunkErrorBoundary' })` (import from `@/lib/errorTracking`) and render a generic error with retry button. This ensures CDN outages and corrupted deployment assets are monitored.
+    - **Non-chunk error**: re-throw via `throw this.state.error` in `render()` — NOT in `componentDidCatch`. Throwing in the `render()` method after the error type check propagates the error to the parent `RouteErrorBoundary`, which handles `reportError()` and the correct fallback UI. Throwing in `componentDidCatch` does NOT propagate to parent boundaries and would silently swallow the error.
+  - [ ] 5.5 Modify the `SuspensePage` helper in `src/app/routes.tsx` (line ~200) to wrap children in `ChunkErrorBoundary` between `RouteErrorBoundary` and `Suspense`. Import using relative paths matching the existing convention (`'./components/ChunkErrorBoundary'` and `'./components/OfflineRouteFallback'`, same as the existing `'./components/RouteErrorBoundary'` import). This covers all ~40+ lazy routes with a single change:
 
     ```tsx
     function SuspensePage({ children }: { children: React.ReactNode }) {
@@ -116,7 +119,13 @@ so that my initial app install is fast and doesn't consume excessive bandwidth.
   - [ ] 6.3 Verify all critical app shell assets are in precache
   - [ ] 6.4 Verify excluded chunks (tiptap, chart, pdf, AI, etc.) are NOT in precache
   - [ ] 6.5 Verify route-chunk AND font runtime caching rules are present in compiled SW, and all 7 `registerRoute` calls appear in the correct order (images → Unsplash → HF → AI API → ABS proxy → fonts → route-chunks → navigation fallback)
-  - [ ] 6.6 Create `tests/support/helpers/sw-verification.ts` with reusable functions (`verifyPrecacheContains`, `verifyPrecacheExcludes`, `verifyPrecacheUnderSize`, `verifyRuntimeCacheRule`, `verifyRouteOrder`) and create `tests/e2e/story-e64-s09.spec.ts` with build-time verification tests (precache manifest, exclusions, route order)
+  - [ ] 6.6 Create `tests/support/helpers/sw-verification.ts` with reusable functions (`verifyPrecacheContains`, `verifyPrecacheExcludes`, `verifyPrecacheUnderSize`, `verifyRuntimeCacheRule`, `verifyRouteOrder`) and create `tests/e2e/story-e64-s09.spec.ts` with build-time verification tests:
+    - precache manifest: `verifyPrecacheContains` for critical assets (index.html, react-vendor, dexie, etc.)
+    - precache exclusions: `verifyPrecacheExcludes` for excluded chunks (tiptap, chart, pdf, AI, webllm)
+    - route order: `verifyRouteOrder` asserts 7 registerRoute calls in correct order
+    - precache boundary: `verifyPrecacheUnderSize` passes with 3MB limit; fails on degenerate configs that exceed it (verifying the check works, not vacuously passing on an empty manifest)
+    - `globPatterns` includes `assets/*.svg` for imported SVG coverage
+  - [ ] 6.7 Verify `globPatterns` includes `assets/*.svg` for Vite-imported SVGs (e.g., `import logoUrl from './logo.svg'` emits to `dist/assets/logo-[hash].svg`). Without this, lazy-loaded component SVGs render as broken images offline.
 
 - [ ] Task 7: Test offline behavior and write E2E tests (AC: 2, 3, 4)
   - [ ] 7.1 `npm run preview`, open app, visit `/reports` (caches route chunk)
@@ -126,7 +135,20 @@ so that my initial app install is fast and doesn't consume excessive bandwidth.
   - [ ] 7.5 Verify fonts load offline (no FOUT on any page) — confirm the `fonts` runtime cache works
   - [ ] 7.6 Run `npm run ci` — all existing tests pass, no regressions
   - [ ] 7.7 Write E2E SW-enabled tests in `tests/e2e/story-e64-s09.spec.ts` for AC 3 (route chunk loads offline) and AC 4 (app shell + offline fallback), using `context.setOffline(true)` against `vite preview` on port 4173
-  - [ ] 7.8 Write unit tests for `OfflineRouteFallback.test.tsx` and `ChunkErrorBoundary.test.tsx` following the pattern in `src/app/components/__tests__/ErrorBoundary.test.tsx`
+  - [ ] 7.8 Write unit tests for `OfflineRouteFallback.test.tsx` and `ChunkErrorBoundary.test.tsx` following the pattern in `src/app/components/__tests__/ErrorBoundary.test.tsx`. Required test cases:
+    - **OfflineRouteFallback**: renders heading text, "Go Home" button uses `variant="brand"`, component uses design tokens (`bg-card`, `text-muted-foreground`, `rounded-2xl`)
+    - **ChunkErrorBoundary — chunk failure + offline**: renders `OfflineRouteFallback` when `navigator.onLine` is false and error is a chunk load failure
+    - **ChunkErrorBoundary — chunk failure + online**: calls `reportError()` and renders generic error with retry button when `navigator.onLine` is true and error is a chunk load failure. Verify `reportError` is called with `{ context: 'ChunkErrorBoundary' }`.
+    - **ChunkErrorBoundary — non-chunk error re-throw**: non-chunk `TypeError` propagates to parent `RouteErrorBoundary` (verify `RouteErrorFallback` renders, not `OfflineRouteFallback`). Test that the re-throw happens in `render()`, not `componentDidCatch`.
+    - **ChunkErrorBoundary — reset on online event**: dispatching `window.dispatchEvent(new Event('online'))` resets error state and re-renders children
+    - **ChunkErrorBoundary — oscillation guard**: after 3+ consecutive failures within 30s, enters persistent error state requiring manual "Retry" click (debounces `online` event auto-retry)
+  - [ ] 7.9 Write SW-enabled E2E test for font offline loading: open a page online (caches woff2 via `CacheFirst`), go offline (`context.setOffline(true)`), verify `document.fonts.ready` resolves and no FOUT via visual regression or Cache API match for `cacheName: 'fonts'`
+  - [ ] 7.10 Write SW-enabled E2E test for SW registration: wait for `navigator.serviceWorker.ready`, assert `active.scriptURL` includes `sw.js`
+  - [ ] 7.11 AC 5 verification — regression tests for existing features:
+    - PWAUpdatePrompt: verify the update prompt component still renders when `workbox-window` detects a waiting SW
+    - PWAInstallBanner: verify `beforeinstallprompt` event handling and install button visibility
+    - Image caching: verify existing `registerRoute` rules for local-images, unsplash-images, hf-models are preserved in compiled `sw.js`
+    - Run `npm run ci` — all existing tests pass, no regressions
 
 ## Design Guidance
 
@@ -144,10 +166,13 @@ The `OfflineRouteFallback` component should be minimal and on-brand:
 ```ts
 // vite.config.ts — Updated injectManifest config
 VitePWA({
-  registerType: 'prompt',
+  // NOTE: Keep registerType: 'autoUpdate' and swSrc: 'sw.ts' from current config.
+  // These values are set earlier in the file; only injectManifest.globPatterns
+  // and injectManifest.globIgnores are changed by this story.
+  registerType: 'autoUpdate',
   // ... manifest unchanged from E61-S01 ...
   injectManifest: {
-    swSrc: 'src/sw.ts',
+    swSrc: 'sw.ts',
     // ✅ Updated: only critical app shell
     globPatterns: [
       'index.html',
@@ -158,7 +183,8 @@ VitePWA({
       'assets/dexie-*.js',           // Dexie/IndexedDB
       'assets/style-utils-*.js',     // clsx + tailwind-merge
       'assets/*.css',                // All CSS (tailwind output)
-      '*.svg',                       // SVG icons
+      'assets/*.svg',                // Imported SVGs (Vite emits to dist/assets/)
+      '*.svg',                       // Root SVG icons (favicon, etc.)
       'pwa-*.png',                   // PWA icons
       'apple-touch-icon-*.png',      // Apple touch icon
       'shortcuts/*.png',             // Shortcut icons
