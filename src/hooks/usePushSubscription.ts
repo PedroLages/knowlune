@@ -1,11 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useRegisterSW } from 'virtual:pwa-register/react'
 import { toast } from 'sonner'
-import {
-  subscribeToPush,
-  unsubscribeFromPush,
-  getPushPermissionState,
-} from '@/lib/pushManager'
+import { subscribeToPush, unsubscribeFromPush, getPushPermissionState } from '@/lib/pushManager'
 import type { PermissionState } from '@/lib/pushManager'
 
 /**
@@ -53,7 +49,10 @@ export function usePushSubscription() {
     const reg = registrationRef.current
     if (!reg) return
 
-    reg.pushManager.getSubscription().then((sub) => {
+    let ignore = false
+
+    reg.pushManager.getSubscription().then(sub => {
+      if (ignore) return
       if (sub) {
         subscriptionRef.current = sub
         setIsSubscribed(true)
@@ -62,6 +61,10 @@ export function usePushSubscription() {
         setIsSubscribed(false)
       }
     })
+
+    return () => {
+      ignore = true
+    }
   }, [isSupported])
 
   const subscribe = useCallback(async () => {
