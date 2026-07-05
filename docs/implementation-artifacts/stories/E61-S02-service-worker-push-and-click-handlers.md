@@ -1,9 +1,9 @@
 ---
 story_id: E61-S02
 story_name: 'Service Worker Push and Click Handlers'
-status: review
+status: done
 started: 2026-07-05
-completed:
+completed: 2026-07-05
 reviewed: true
 review_started: 2026-07-05
 review_gates_passed:
