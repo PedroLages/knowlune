@@ -18,7 +18,7 @@ import { registerRoute, NavigationRoute, setDefaultHandler } from 'workbox-routi
 import { CacheFirst, StaleWhileRevalidate, NetworkOnly } from 'workbox-strategies'
 import { ExpirationPlugin } from 'workbox-expiration'
 import { CacheableResponsePlugin } from 'workbox-cacheable-response'
-import { clientsClaim, skipWaiting } from 'workbox-core'
+import { skipWaiting } from 'workbox-core'
 
 // ─── Precache ────────────────────────────────────────────────────────────
 
@@ -31,9 +31,7 @@ registerRoute(
   /^\/images\/.+\.(png|webp|jpg|jpeg)$/i,
   new CacheFirst({
     cacheName: 'local-images',
-    plugins: [
-      new ExpirationPlugin({ maxEntries: 200, maxAgeSeconds: 30 * 24 * 60 * 60 }),
-    ],
+    plugins: [new ExpirationPlugin({ maxEntries: 200, maxAgeSeconds: 30 * 24 * 60 * 60 })],
   })
 )
 
@@ -84,14 +82,14 @@ self.addEventListener('install', () => {
   skipWaiting()
 })
 
-self.addEventListener('activate', (event) => {
-  event.waitUntil(clientsClaim())
+self.addEventListener('activate', event => {
+  event.waitUntil(self.clients.claim())
 })
 
 // ─── SKIP_WAITING message listener ───────────────────────────────────────
 // Required by PWAUpdatePrompt's "Reload" button
 
-self.addEventListener('message', (event) => {
+self.addEventListener('message', event => {
   if (event.data?.type === 'SKIP_WAITING') {
     skipWaiting()
   }
@@ -99,7 +97,7 @@ self.addEventListener('message', (event) => {
 
 // ─── Push event placeholder ──────────────────────────────────────────────
 
-self.addEventListener('push', (event) => {
+self.addEventListener('push', event => {
   let title = 'Knowlune'
   let body = 'You have a new notification'
 
