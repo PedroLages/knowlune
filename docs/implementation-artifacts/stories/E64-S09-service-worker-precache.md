@@ -4,9 +4,9 @@ story_name: "Service Worker Precache Optimization"
 status: ready-for-dev
 started:
 completed:
-reviewed: in-progress
+reviewed: true
 review_started: 2026-07-05
-review_gates_passed: []
+review_gates_passed:
   - build
   - lint
   - type-check
