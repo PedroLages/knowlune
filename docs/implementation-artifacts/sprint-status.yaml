@@ -674,8 +674,11 @@ development_status:
   # ──────────────────────────────────────────────────
   epic-61: backlog  # reset 2026-03-30: story specs created but no code implemented
   61-1-vapid-key-setup-and-service-worker-registration:
-    status: in-progress
+    status: done
     startedAt: 2026-07-05T00:00:00.000Z
+    finishedAt: 2026-07-05T00:00:00.000Z
+    prUrl: https://github.com/PedroLages/knowlune/pull/631
+    mergedAt: 2026-07-05T00:00:00.000Z
     branch: main
   61-2-service-worker-push-and-click-handlers: ready-for-dev
   61-3-push-subscription-management-and-supabase-persistence: ready-for-dev
