@@ -1,12 +1,24 @@
 ---
 story_id: E61-S02
 story_name: 'Service Worker Push and Click Handlers'
-status: ready-for-dev
+status: review
 started: 2026-07-05
 completed:
-reviewed: in-progress
+reviewed: true
 review_started: 2026-07-05
-review_gates_passed: []
+review_gates_passed:
+  - build
+  - lint
+  - type-check
+  - format-check
+  - unit-tests-skipped
+  - e2e-tests
+  - design-review-skipped
+  - code-review
+  - code-review-testing
+  - performance-benchmark-skipped
+  - security-review
+  - exploratory-qa-skipped
 burn_in_validated: false
 ---
 
