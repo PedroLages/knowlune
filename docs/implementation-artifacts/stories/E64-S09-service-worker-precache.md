@@ -265,3 +265,7 @@ The `ChunkErrorBoundary` should:
 - E2E tests for offline behavior can be added in a follow-up story (requires Playwright `context.setOffline(true)`)
 - Regression check: `npm run ci` must pass
 - Existing image caching must still work — verify Unsplash images load from cache when offline
+
+## Implementation Plan
+
+See [plan](plans/plan-e64-s09-service-worker-precache-optimization.md) for implementation approach.
