@@ -41,7 +41,12 @@ import {
   ExternalLink,
   Globe,
 } from 'lucide-react'
-import { scanCourseFolder, scanFromDroppedFiles, persistScannedCourse, scanCourseFolderFromServer } from '@/lib/courseImport'
+import {
+  scanCourseFolder,
+  scanFromDroppedFiles,
+  persistScannedCourse,
+  scanCourseFolderFromServer,
+} from '@/lib/courseImport'
 import { isValidImportUrl } from '@/lib/courseServerService'
 import { getVideoFormat } from '@/lib/fileSystem'
 import type { ScannedCourse, ScannedImage } from '@/lib/courseImport'
@@ -102,7 +107,10 @@ function ScanProgressIndicator() {
       data-testid="wizard-scan-progress"
     >
       <div className="flex items-center gap-2 justify-center">
-        <Loader2 className="size-4 text-brand motion-safe:animate-spin shrink-0" aria-hidden="true" />
+        <Loader2
+          className="size-4 text-brand motion-safe:animate-spin shrink-0"
+          aria-hidden="true"
+        />
         <span className="text-sm font-medium truncate">{current.courseName}</span>
       </div>
       <Progress value={percent ?? 0} className="h-1.5" aria-label="Scan progress" />
@@ -802,10 +810,7 @@ export function ImportWizardDialog({
                 ? 'Course Details'
                 : 'Learning Path'}
           </DialogTitle>
-          <DialogDescription
-            id="import-wizard-description"
-            aria-live="polite"
-          >
+          <DialogDescription id="import-wizard-description" aria-live="polite">
             {step === 'select'
               ? 'Select a folder containing your course videos and PDFs.'
               : step === 'details'
@@ -874,7 +879,10 @@ export function ImportWizardDialog({
                     data-testid="wizard-select-folder-btn"
                   >
                     <div className="flex items-center justify-center size-12 rounded-full bg-brand-soft shrink-0 self-center">
-                      <FolderOpen className="size-6 text-brand-soft-foreground" aria-hidden="true" />
+                      <FolderOpen
+                        className="size-6 text-brand-soft-foreground"
+                        aria-hidden="true"
+                      />
                     </div>
                     <div className="text-left">
                       <p className="font-medium text-foreground">Select Folder</p>
@@ -887,7 +895,10 @@ export function ImportWizardDialog({
                   {/* Drag & Drop card */}
                   <div className="flex flex-col items-start gap-3 rounded-xl border border-dashed border-border p-4">
                     <div className="flex items-center justify-center size-12 rounded-full bg-brand-soft shrink-0 self-center">
-                      <FolderOpen className="size-6 text-brand-soft-foreground" aria-hidden="true" />
+                      <FolderOpen
+                        className="size-6 text-brand-soft-foreground"
+                        aria-hidden="true"
+                      />
                     </div>
                     <div className="text-left">
                       <p className="font-medium text-foreground">Drag & Drop</p>
@@ -980,7 +991,10 @@ export function ImportWizardDialog({
                       data-testid="wizard-drive-import-btn"
                     >
                       <div className="flex items-center justify-center size-12 rounded-full bg-brand-soft shrink-0 self-center">
-                        <ExternalLink className="size-6 text-brand-soft-foreground" aria-hidden="true" />
+                        <ExternalLink
+                          className="size-6 text-brand-soft-foreground"
+                          aria-hidden="true"
+                        />
                       </div>
                       <div className="text-left">
                         <p className="font-medium text-foreground">Google Drive</p>

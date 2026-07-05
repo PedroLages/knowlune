@@ -1132,8 +1132,8 @@ async function _doDownload(): Promise<void> {
             await _applyRecord(entry, record)
           } catch (err) {
             // Surface record identity to make production minified errors debuggable.
-            const recordId = (record as Record<string, unknown>).id
-              ?? (record as Record<string, unknown>).recordId
+            const recordId =
+              (record as Record<string, unknown>).id ?? (record as Record<string, unknown>).recordId
             const idSuffix = recordId !== undefined ? ` (id=${String(recordId)})` : ''
             console.error(
               `[syncEngine] Error applying record from "${entry.dexieTable}"${idSuffix}:`,

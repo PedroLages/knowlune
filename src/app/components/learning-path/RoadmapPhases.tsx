@@ -129,9 +129,7 @@ export function RoadmapPhases({
                       {pct > 0 && !isCompleted && (
                         <p className="text-xs text-muted-foreground">{pct}% complete</p>
                       )}
-                      {isCompleted && (
-                        <p className="text-xs text-success">Completed</p>
-                      )}
+                      {isCompleted && <p className="text-xs text-success">Completed</p>}
                     </div>
                   </Link>
                 )

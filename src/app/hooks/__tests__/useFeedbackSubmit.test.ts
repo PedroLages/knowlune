@@ -54,11 +54,14 @@ describe('useFeedbackSubmit', () => {
   })
 
   it('transitions to success when Edge Function returns ok', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
-      ok: true,
-      status: 200,
-      json: () => Promise.resolve({ ok: true }),
-    } as Response))
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve({ ok: true }),
+      } as Response)
+    )
 
     const { result } = renderHook(() => useFeedbackSubmit())
 
@@ -71,11 +74,14 @@ describe('useFeedbackSubmit', () => {
   })
 
   it('transitions to success for feedback mode', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
-      ok: true,
-      status: 200,
-      json: () => Promise.resolve({ ok: true }),
-    } as Response))
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve({ ok: true }),
+      } as Response)
+    )
 
     const { result } = renderHook(() => useFeedbackSubmit())
 
@@ -87,11 +93,14 @@ describe('useFeedbackSubmit', () => {
   })
 
   it('transitions to error with fallback text when Edge Function fails', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
-      ok: false,
-      status: 502,
-      json: () => Promise.resolve({ ok: false, error: 'GitHub returned 500' }),
-    } as Response))
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 502,
+        json: () => Promise.resolve({ ok: false, error: 'GitHub returned 500' }),
+      } as Response)
+    )
 
     const { result } = renderHook(() => useFeedbackSubmit())
 
@@ -106,11 +115,15 @@ describe('useFeedbackSubmit', () => {
   })
 
   it('transitions to fallback when Edge Function returns 401 (unauthenticated)', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
-      ok: false,
-      status: 401,
-      json: () => Promise.resolve({ ok: false, error: 'Unauthorized — valid Supabase JWT required' }),
-    } as Response))
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 401,
+        json: () =>
+          Promise.resolve({ ok: false, error: 'Unauthorized — valid Supabase JWT required' }),
+      } as Response)
+    )
 
     const { result } = renderHook(() => useFeedbackSubmit())
 
@@ -124,11 +137,14 @@ describe('useFeedbackSubmit', () => {
   })
 
   it('reset() returns status to idle', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
-      ok: true,
-      status: 200,
-      json: () => Promise.resolve({ ok: true }),
-    } as Response))
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve({ ok: true }),
+      } as Response)
+    )
 
     const { result } = renderHook(() => useFeedbackSubmit())
 

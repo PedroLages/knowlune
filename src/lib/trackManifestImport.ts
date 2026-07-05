@@ -99,7 +99,10 @@ export async function fetchTrackManifestFromUrl(
   const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS)
 
   try {
-    const manifestUrl = new URL('track-manifest.json', parentUrl.endsWith('/') ? parentUrl : parentUrl + '/').href
+    const manifestUrl = new URL(
+      'track-manifest.json',
+      parentUrl.endsWith('/') ? parentUrl : parentUrl + '/'
+    ).href
 
     const response = await fetch(manifestUrl, {
       signal: controller.signal,
@@ -251,10 +254,14 @@ export async function batchImportTrackCourses(
   const trackAuthor = manifest.track.author
   if (trackAuthor) {
     try {
-      const authorId = await matchOrCreateAuthor(trackAuthor.name, {
-        title: trackAuthor.title,
-        bio: trackAuthor.bio,
-      }, { useSyncableWrite: true })
+      const authorId = await matchOrCreateAuthor(
+        trackAuthor.name,
+        {
+          title: trackAuthor.title,
+          bio: trackAuthor.bio,
+        },
+        { useSyncableWrite: true }
+      )
       if (authorId) {
         // Atomic merge: read author, compute updates, and write inside a single
         // Dexie read-write transaction so the course-IDs append is safe against

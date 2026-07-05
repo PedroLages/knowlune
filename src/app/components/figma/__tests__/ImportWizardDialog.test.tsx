@@ -33,7 +33,6 @@ vi.mock('@/lib/courseImport', () => ({
   persistScannedCourse: (...args: unknown[]) => mockPersistScannedCourse(...args),
 }))
 
-
 vi.mock('sonner', () => ({
   toast: {
     success: vi.fn(),
@@ -247,7 +246,9 @@ describe('ImportWizardDialog', () => {
   it('shows folder selection step initially', () => {
     render(<ImportWizardDialog open={true} onOpenChange={vi.fn()} />)
     expect(screen.getByTestId('wizard-select-folder-btn')).toBeInTheDocument()
-    expect(screen.getByText(/choose how you want to import your course materials/i)).toBeInTheDocument()
+    expect(
+      screen.getByText(/choose how you want to import your course materials/i)
+    ).toBeInTheDocument()
   })
 
   it('shows step indicator with step 1 active', () => {

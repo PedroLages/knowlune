@@ -26,5 +26,10 @@
   "claudeCode.initialPermissionMode": "plan",
   "todo-tree.ripgrep": "/opt/homebrew/bin/rg",
   "editor.fontSize": 19,
-  "files.autoSave": "afterDelay"
+  "files.autoSave": "afterDelay",
+  "chat.tools.terminal.autoApprove": {
+    "ssh": true,
+    "pkill": true,
+    "/usr/bin/ssh": true
+  }
 }

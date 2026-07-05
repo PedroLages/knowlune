@@ -1,7 +1,13 @@
 import { useState, useRef, useCallback } from 'react'
 import { Camera, Upload, Link, Sparkles, AlertCircle, Loader2, CheckCircle2 } from 'lucide-react'
 import { Link as RouterLink } from 'react-router'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/app/components/ui/dialog'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/app/components/ui/dialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/app/components/ui/tabs'
 import { Button } from '@/app/components/ui/button'
 import { Input } from '@/app/components/ui/input'
@@ -187,7 +193,9 @@ export function ThumbnailPickerDialog({
             <Camera className="size-4" aria-hidden="true" />
             Change Thumbnail
           </DialogTitle>
-          <DialogDescription className="sr-only">Select a cover image for this course</DialogDescription>
+          <DialogDescription className="sr-only">
+            Select a cover image for this course
+          </DialogDescription>
         </DialogHeader>
 
         <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">

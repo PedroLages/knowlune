@@ -309,9 +309,7 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
 
     // Optimistic update
     set(state => ({
-      paths: state.paths.map(p =>
-        p.id === pathId ? { ...p, progressionMode: mode } : p
-      ),
+      paths: state.paths.map(p => (p.id === pathId ? { ...p, progressionMode: mode } : p)),
       activePath:
         state.activePath?.id === pathId
           ? { ...state.activePath, progressionMode: mode }

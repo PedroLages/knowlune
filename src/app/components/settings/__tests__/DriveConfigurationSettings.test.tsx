@@ -55,26 +55,20 @@ describe('DriveConfigurationSettings', () => {
     render(<DriveConfigurationSettings />)
 
     expect(screen.getByText('Google Drive')).toBeInTheDocument()
-    expect(
-      screen.getByText(/Manage your Google Drive connection/)
-    ).toBeInTheDocument()
+    expect(screen.getByText(/Manage your Google Drive connection/)).toBeInTheDocument()
   })
 
   it('shows "Not connected" when no provider token', () => {
     render(<DriveConfigurationSettings />)
 
     expect(screen.getByText('Not connected')).toBeInTheDocument()
-    expect(
-      screen.getByRole('button', { name: /Disconnect Google Drive/i })
-    ).toBeDisabled()
+    expect(screen.getByRole('button', { name: /Disconnect Google Drive/i })).toBeDisabled()
   })
 
   it('shows connected Google email when session has provider_token and user has Google identity', async () => {
     mockAuthState.user = {
       email: 'test@example.com',
-      identities: [
-        { provider: 'google', identity_data: { email: 'google-user@gmail.com' } },
-      ],
+      identities: [{ provider: 'google', identity_data: { email: 'google-user@gmail.com' } }],
     }
     mockAuthState.session = { provider_token: 'google-token-123' }
     mockHasDriveReadScope.mockResolvedValue(true)
@@ -96,18 +90,14 @@ describe('DriveConfigurationSettings', () => {
     render(<DriveConfigurationSettings />)
 
     await waitFor(() => {
-      expect(
-        screen.getByRole('button', { name: /Disconnect Google Drive/i })
-      ).toBeEnabled()
+      expect(screen.getByRole('button', { name: /Disconnect Google Drive/i })).toBeEnabled()
     })
   })
 
   it('disconnect button is disabled when no Drive token exists', () => {
     render(<DriveConfigurationSettings />)
 
-    expect(
-      screen.getByRole('button', { name: /Disconnect Google Drive/i })
-    ).toBeDisabled()
+    expect(screen.getByRole('button', { name: /Disconnect Google Drive/i })).toBeDisabled()
   })
 
   it('opens disconnect confirmation dialog when Disconnect is clicked', async () => {
@@ -119,17 +109,13 @@ describe('DriveConfigurationSettings', () => {
     render(<DriveConfigurationSettings />)
 
     await waitFor(() => {
-      expect(
-        screen.getByRole('button', { name: /Disconnect Google Drive/i })
-      ).toBeEnabled()
+      expect(screen.getByRole('button', { name: /Disconnect Google Drive/i })).toBeEnabled()
     })
 
     await user.click(screen.getByRole('button', { name: /Disconnect Google Drive/i }))
 
     expect(screen.getByText('Disconnect Google Drive?')).toBeInTheDocument()
-    expect(
-      screen.getByText(/This will sign you out of your current session/)
-    ).toBeInTheDocument()
+    expect(screen.getByText(/This will sign you out of your current session/)).toBeInTheDocument()
   })
 
   it('closes disconnect dialog when Cancel is clicked', async () => {
@@ -141,9 +127,7 @@ describe('DriveConfigurationSettings', () => {
     render(<DriveConfigurationSettings />)
 
     await waitFor(() => {
-      expect(
-        screen.getByRole('button', { name: /Disconnect Google Drive/i })
-      ).toBeEnabled()
+      expect(screen.getByRole('button', { name: /Disconnect Google Drive/i })).toBeEnabled()
     })
 
     await user.click(screen.getByRole('button', { name: /Disconnect Google Drive/i }))
@@ -163,9 +147,7 @@ describe('DriveConfigurationSettings', () => {
     render(<DriveConfigurationSettings />)
 
     await waitFor(() => {
-      expect(
-        screen.getByRole('button', { name: /Disconnect Google Drive/i })
-      ).toBeEnabled()
+      expect(screen.getByRole('button', { name: /Disconnect Google Drive/i })).toBeEnabled()
     })
 
     await user.click(screen.getByRole('button', { name: /Disconnect Google Drive/i }))
@@ -188,9 +170,7 @@ describe('DriveConfigurationSettings', () => {
     render(<DriveConfigurationSettings />)
 
     await waitFor(() => {
-      expect(
-        screen.getByRole('button', { name: /Disconnect Google Drive/i })
-      ).toBeEnabled()
+      expect(screen.getByRole('button', { name: /Disconnect Google Drive/i })).toBeEnabled()
     })
 
     await user.click(screen.getByRole('button', { name: /Disconnect Google Drive/i }))
@@ -215,9 +195,7 @@ describe('DriveConfigurationSettings', () => {
     render(<DriveConfigurationSettings />)
 
     await waitFor(() => {
-      expect(
-        screen.getByRole('button', { name: /Disconnect Google Drive/i })
-      ).toBeEnabled()
+      expect(screen.getByRole('button', { name: /Disconnect Google Drive/i })).toBeEnabled()
     })
 
     await user.click(screen.getByRole('button', { name: /Disconnect Google Drive/i }))

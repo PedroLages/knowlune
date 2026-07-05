@@ -7,6 +7,7 @@ declare module '*?null-client'
 
 interface ImportMetaEnv {
   readonly VITE_API_URL?: string
+  readonly VITE_VAPID_PUBLIC_KEY?: string
   // Add more env variables here as needed
 }
 

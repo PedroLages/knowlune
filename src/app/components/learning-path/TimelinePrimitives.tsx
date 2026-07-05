@@ -108,18 +108,43 @@ function LessonTypeIcon({
   className?: string
 }) {
   if (isCompleted) {
-    return <CheckCircle2 className={cn('size-5 text-success flex-shrink-0', className)} aria-hidden="true" />
+    return (
+      <CheckCircle2
+        className={cn('size-5 text-success flex-shrink-0', className)}
+        aria-hidden="true"
+      />
+    )
   }
   switch (type) {
     case 'reading':
-      return <FileText className={cn('size-5 text-muted-foreground flex-shrink-0', className)} aria-hidden="true" />
+      return (
+        <FileText
+          className={cn('size-5 text-muted-foreground flex-shrink-0', className)}
+          aria-hidden="true"
+        />
+      )
     case 'quiz':
-      return <HelpCircle className={cn('size-5 text-muted-foreground flex-shrink-0', className)} aria-hidden="true" />
+      return (
+        <HelpCircle
+          className={cn('size-5 text-muted-foreground flex-shrink-0', className)}
+          aria-hidden="true"
+        />
+      )
     case 'project':
-      return <Code className={cn('size-5 text-muted-foreground flex-shrink-0', className)} aria-hidden="true" />
+      return (
+        <Code
+          className={cn('size-5 text-muted-foreground flex-shrink-0', className)}
+          aria-hidden="true"
+        />
+      )
     case 'video':
     default:
-      return <Video className={cn('size-5 text-muted-foreground flex-shrink-0', className)} aria-hidden="true" />
+      return (
+        <Video
+          className={cn('size-5 text-muted-foreground flex-shrink-0', className)}
+          aria-hidden="true"
+        />
+      )
   }
 }
 

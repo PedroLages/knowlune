@@ -1,0 +1,83 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Check qBittorrent on titan",
+			"type": "shell",
+			"command": "ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=10 titan.local 'echo OK && docker ps --format \"{{.Names}} {{.Ports}}\" 2>/dev/null | grep -i qbit; echo ---; curl -s http://192.168.2.200:8080/api/v2/app/version 2>/dev/null; curl -s http://192.168.2.200:8090/api/v2/app/version 2>/dev/null; curl -s http://192.168.2.200:8081/api/v2/app/version 2>/dev/null'",
+			"problemMatcher": []
+		},
+		{
+			"label": "Scan qBittorrent for audiobooks",
+			"type": "shell",
+			"command": "ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=10 titan.local 'SID=$(curl -s -c - \"http://localhost:8080/api/v2/auth/login\" --data-urlencode \"username=admin\" --data-urlencode \"password=adminadmin\" 2>/dev/null | grep SID | awk \"{print \\$NF}\"); if [ -z \"$SID\" ]; then echo \"LOGIN_FAILED\"; exit 1; fi; echo \"=== COMPLETED TORRENTS ===\"; curl -s \"http://localhost:8080/api/v2/torrents/info?filter=completed&sort=added_on\" --cookie \"SID=$SID\" 2>/dev/null | python3 -c \"import sys,json; torrents=json.load(sys.stdin); [print(f\\\"[{i+1}] {t[\\\"name\\\"]} | {t[\\\"size\\\"]/1073741824:.1f}GB | {t[\\\"state\\\"]} | {t[\\\"save_path\\\"]}\\\") for i,t in enumerate(torrents)]\"'",
+			"problemMatcher": []
+		},
+		{
+			"label": "Get qBit completed torrents JSON",
+			"type": "shell",
+			"command": "ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null titan.local 'SID=$(curl -s -c - \"http://localhost:8080/api/v2/auth/login\" --data-urlencode \"username=admin\" --data-urlencode \"password=adminadmin\" | grep SID | awk \"{print \\$NF}\"); curl -s \"http://localhost:8080/api/v2/torrents/info?filter=completed&sort=added_on\" --cookie \"SID=$SID\"' > /tmp/qbit-torrents.json 2>/dev/null && echo \"Saved $(wc -l < /tmp/qbit-torrents.json) lines\" && python3 -c \"\nimport json\nwith open('/tmp/qbit-torrents.json') as f:\n    torrents = json.load(f)\nfor i, t in enumerate(torrents):\n    gb = t['size'] / 1073741824\n    print(f'[{i+1}] {t[\\\"name\\\"]} | {gb:.1f}GB | {t[\\\"state\\\"]} | {t[\\\"save_path\\\"]}')\n\"",
+			"problemMatcher": []
+		},
+		{
+			"label": "Check all qBit torrents and categories",
+			"type": "shell",
+			"command": "ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null titan.local 'SID=$(curl -s -c - \"http://localhost:8080/api/v2/auth/login\" --data-urlencode \"username=admin\" --data-urlencode \"password=adminadmin\" | grep SID | awk \"{print \\$NF}\"); echo \"=== CATEGORIES ===\"; curl -s \"http://localhost:8080/api/v2/torrents/categories\" --cookie \"SID=$SID\"; echo; echo \"=== ALL TORRENTS (audio-related) ===\"; curl -s \"http://localhost:8080/api/v2/torrents/info?sort=added_on&reverse=true\" --cookie \"SID=$SID\" | python3 -c \"\nimport sys, json\ntorrents = json.load(sys.stdin)\nfor t in torrents:\n    name = t.get(\\\"name\\\",\\\"\\\")\n    if any(kw in name.lower() for kw in [\\\"audio\\\",\\\"audiobook\\\",\\\"mp3\\\",\\\"m4b\\\",\\\"m4a\\\",\\\"flac\\\",\\\"book\\\",\\\"unabridged\\\",\\\"narrated\\\"]):\n        print(json.dumps({k: t[k] for k in [\\\"name\\\",\\\"size\\\",\\\"state\\\",\\\"save_path\\\",\\\"category\\\",\\\"added_on\\\",\\\"content_path\\\"] if k in t}, indent=2))\n        print(\\\"---\\\")\n\"'",
+			"problemMatcher": []
+		},
+		{
+			"label": "Get torrents by audiobooks and books category",
+			"type": "shell",
+			"command": "ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null titan.local 'SID=$(curl -s -c - \"http://localhost:8080/api/v2/auth/login\" --data-urlencode \"username=admin\" --data-urlencode \"password=adminadmin\" | grep SID | awk \"{print \\$NF}\"); echo \"=== AUDIOBOOKS CATEGORY ===\"; curl -s \"http://localhost:8080/api/v2/torrents/info?category=audiobooks&sort=added_on\" --cookie \"SID=$SID\" | python3 -m json.tool 2>/dev/null | grep -E '\"name\"|\"state\"|\"size\"|\"save_path\"|\"content_path\"|\"added_on\"' | head -60; echo; echo \"=== BOOKS CATEGORY ===\"; curl -s \"http://localhost:8080/api/v2/torrents/info?category=books&sort=added_on\" --cookie \"SID=$SID\" | python3 -m json.tool 2>/dev/null | grep -E '\"name\"|\"state\"|\"size\"|\"save_path\"|\"content_path\"|\"added_on\"' | head -60'",
+			"problemMatcher": []
+		},
+		{
+			"label": "Get audiobooks category torrents",
+			"type": "shell",
+			"command": "ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null titan.local \"SID=\\$(curl -s -c - http://localhost:8080/api/v2/auth/login --data-urlencode username=admin --data-urlencode password=adminadmin | grep SID | awk '{print \\$NF}'); curl -s 'http://localhost:8080/api/v2/torrents/info?category=audiobooks&sort=added_on' --cookie \\\"SID=\\$SID\\\"\" > /tmp/qbit-audiobooks.json 2>/dev/null && python3 << 'PYEOF'\nimport json\nwith open('/tmp/qbit-audiobooks.json') as f:\n    torrents = json.load(f)\nprint(f\"Found {len(torrents)} audiobook torrents\")\nfor i, t in enumerate(torrents):\n    gb = t['size'] / 1073741824\n    name = t.get('name', '?')\n    state = t.get('state', '?')\n    added = t.get('added_on', '?')\n    print(f\"[{i+1}] {name}\")\n    print(f\"    Size: {gb:.1f}GB | State: {state} | Added: {added}\")\n    print()\nPYEOF",
+			"problemMatcher": []
+		},
+		{
+			"label": "Check books category and uncategorized torrents",
+			"type": "shell",
+			"command": "ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null titan.local \"SID=\\$(curl -s -c - http://localhost:8080/api/v2/auth/login --data-urlencode username=admin --data-urlencode password=adminadmin | grep SID | awk '{print \\$NF}'); echo '=== BOOKS ==='; curl -s 'http://localhost:8080/api/v2/torrents/info?category=books&sort=added_on' --cookie \\\"SID=\\$SID\\\" | python3 -c \\\"import sys,json; ts=json.load(sys.stdin); print(f'Found {len(ts)}'); [print(t.get('name','?')) for t in ts]\\\"; echo; echo '=== UNCATEGORIZED ==='; curl -s 'http://localhost:8080/api/v2/torrents/info?category=&sort=added_on' --cookie \\\"SID=\\$SID\\\" | python3 -c \\\"import sys,json; ts=json.load(sys.stdin); print(f'Found {len(ts)}'); [print(t.get('name','?')) for t in ts]\\\"\"",
+			"problemMatcher": []
+		},
+		{
+			"label": "Get ALL qBit torrents with categories",
+			"type": "shell",
+			"command": "ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null titan.local \"SID=\\$(curl -s -c - http://localhost:8080/api/v2/auth/login --data-urlencode username=admin --data-urlencode password=adminadmin | grep SID | awk '{print \\$NF}'); curl -s 'http://localhost:8080/api/v2/torrents/info?sort=added_on&reverse=true' --cookie \\\"SID=\\$SID\\\"\" > /tmp/qbit-all.json 2>/dev/null && python3 << 'PYEOF'\nimport json\nwith open('/tmp/qbit-all.json') as f:\n    torrents = json.load(f)\nprint(f\"Total torrents: {len(torrents)}\")\nprint()\nfor i, t in enumerate(torrents):\n    gb = t['size'] / 1073741824\n    name = t.get('name', '?')\n    state = t.get('state', '?')\n    cat = t.get('category', '(none)')\n    added = t.get('added_on', '?')[:10] if isinstance(t.get('added_on'), str) else '?'\n    print(f\"[{i+1}] [{cat}] {name}\")\n    print(f\"    {gb:.1f}GB | {state} | added: {added}\")\nPYEOF",
+			"problemMatcher": []
+		},
+		{
+			"label": "Check audiobook files on disk and active downloads",
+			"type": "shell",
+			"command": "ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null titan.local \"\necho '=== AUDIOBOOK DIRECTORY ON DISK ==='\nls -la /data/torrents/audiobooks/ 2>/dev/null || echo 'Directory does not exist or is empty'\necho\necho '=== ACTIVE DOWNLOADS ==='\nSID=\\$(curl -s -c - http://localhost:8080/api/v2/auth/login --data-urlencode username=admin --data-urlencode password=adminadmin | grep SID | awk '{print \\$NF}')\ncurl -s 'http://localhost:8080/api/v2/torrents/info?filter=downloading' --cookie \\\"SID=\\$SID\\\" | python3 -c \\\"import sys,json; ts=json.load(sys.stdin); print(f'Found {len(ts)} downloading'); [print(f'{t.get(\\\\\\\"name\\\\\\\",\\\\\\\"?\\\\\\\")} | {t.get(\\\\\\\"state\\\\\\\",\\\\\\\"?\\\\\\\")} | {t.get(\\\\\\\"progress\\\\\\\",0)*100:.1f}%') for t in ts]\\\" 2>/dev/null || echo 'No active downloads'\necho\necho '=== RECENTLY ADDED FILES IN DOWNLOADS ==='\nfind /data/torrents/downloads -type f -mtime -14 2>/dev/null | head -20 || echo 'Cannot access'\n\"",
+			"problemMatcher": []
+		},
+		{
+			"label": "Search for audiobook files on titan",
+			"type": "shell",
+			"command": "ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null titan.local \"\necho '=== SEARCHING FOR M4B/MP3 IN TORRENTS ==='\nfind /data/torrents -name '*.m4b' -o -name '*.m4a' 2>/dev/null | head -20\necho\necho '=== QBIT SAVE PATHS ==='\nSID=\\$(curl -s -c - http://localhost:8080/api/v2/auth/login --data-urlencode username=admin --data-urlencode password=adminadmin | grep SID | awk '{print \\$NF}')\ncurl -s 'http://localhost:8080/api/v2/app/defaultSavePath' --cookie \\\"SID=\\$SID\\\"\necho\necho '=== TORRENT CONTENT PATHS (last 5) ==='\ncurl -s 'http://localhost:8080/api/v2/torrents/info?sort=added_on&reverse=true&limit=5' --cookie \\\"SID=\\$SID\\\" | python3 -c \\\"import sys,json; [print(t.get('content_path','?')) for t in json.load(sys.stdin)]\\\"\n\"",
+			"problemMatcher": []
+		},
+		{
+			"label": "Check Allen Carr audiobook and search for audio files",
+			"type": "shell",
+			"command": "ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null titan.local \"\necho '=== ALLEN CARR AUDIOBOOK ==='\nls -la '/data/torrents/mac/Allen Carr - Easyway to stop smoking - audiobook/' 2>/dev/null || echo 'Path not found'\necho\necho '=== SEARCH FOR AUDIO FILES IN MAC DIR ==='\nfind '/data/torrents/mac' -type f \\( -name '*.mp3' -o -name '*.m4b' -o -name '*.m4a' -o -name '*.flac' -o -name '*.ogg' \\) 2>/dev/null | head -30\necho\necho '=== SEARCH AUDIO FILES EVERYWHERE ==='\nfind /data/torrents -maxdepth 3 -type f \\( -name '*.mp3' -o -name '*.m4b' -o -name '*.m4a' \\) 2>/dev/null | head -30\n\"",
+			"problemMatcher": []
+		},
+		{
+			"label": "Final summary - check qBit torrents and incomplete downloads",
+			"type": "shell",
+			"command": "ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null titan.local \"\necho '=== ALL TORRENTS WITH AUDIO/AUDIOBOOK/BOOK IN NAME ==='\nSID=\\$(curl -s -c - http://localhost:8080/api/v2/auth/login --data-urlencode username=admin --data-urlencode password=adminadmin | grep SID | awk '{print \\$NF}')\ncurl -s 'http://localhost:8080/api/v2/torrents/info?sort=added_on' --cookie \\\"SID=\\$SID\\\" | python3 -c \\\"\nimport sys, json\ntorrents = json.load(sys.stdin)\nfor t in torrents:\n    name = t.get('name','')\n    nl = name.lower()\n    if any(kw in nl for kw in ['audio','book','mp3','m4b','m4a','flac','unabridged','narrated']):\n        print(f\\\"  {t.get('category','?'):12s} {t.get('state','?'):12s} {t.get('size')/1e6:.0f}MB  {name}\\\")\n\\\"\necho\necho '=== INCOMPLETE/PAUSED TORRENTS WITH POTENTIAL AUDIO ==='\ncurl -s 'http://localhost:8080/api/v2/torrents/info?filter=paused&sort=added_on' --cookie \\\"SID=\\$SID\\\" | python3 -c \\\"\nimport sys, json\ntorrents = json.load(sys.stdin)\nfor t in torrents:\n    name = t.get('name','')\n    nl = name.lower()\n    if any(kw in nl for kw in ['audio','book','mp3','m4b','m4a','flac','unabridged','narrated']):\n        print(f\\\"  {t.get('category','?'):12s} {t.get('state','?'):12s} {t.get('progress')*100:.0f}% done  {name}\\\")\n\\\"\necho\necho '=== QBITTORRENT VERSION ==='\ncurl -s 'http://localhost:8080/api/v2/app/version' --cookie \\\"SID=\\$SID\\\"\n\"",
+			"problemMatcher": []
+		},
+		{
+			"label": "Check qBit torrents for audiobooks simply",
+			"type": "shell",
+			"command": "cat > /tmp/qbit-check.py << 'PYEOF'\nimport json, sys\nwith open('/tmp/qbit-all.json') as f:\n    torrents = json.load(f)\nkeywords = ['audio', 'book', 'mp3', 'm4b', 'm4a', 'flac', 'unabridged', 'narrated']\nfound = []\nfor t in torrents:\n    name = t.get('name', '')\n    nl = name.lower()\n    if any(kw in nl for kw in keywords):\n        found.append(t)\nif found:\n    print(f\"Found {len(found)} audiobook-related torrents:\")\n    for t in found:\n        gb = t['size'] / 1e9\n        print(f\"  [{t.get('category','?')}] {t.get('state','?'):12s} {gb:.1f}GB  {t.get('name','?')}\")\n        print(f\"    content: {t.get('content_path','?')}\")\nelse:\n    print(\"No audiobook-related torrents found.\")\n    print(\"\\nAll torrents:\")\n    for t in torrents:\n        print(f\"  [{t.get('category','?'):10s}] {t.get('name','?')}\")\nPYEOF\npython3 /tmp/qbit-check.py",
+			"problemMatcher": []
+		}
+	]
+}

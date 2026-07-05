@@ -256,21 +256,27 @@ describe('submitFeedback', () => {
   })
 
   it('returns ok: true when Edge Function responds with success', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
-      ok: true,
-      status: 200,
-      json: () => Promise.resolve({ ok: true }),
-    } as Response))
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve({ ok: true }),
+      } as Response)
+    )
     const result = await submitFeedback(payload)
     expect(result.ok).toBe(true)
   })
 
   it('returns ok: false with error message on server error', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
-      ok: false,
-      status: 502,
-      json: () => Promise.resolve({ ok: false, error: 'GitHub returned 500' }),
-    } as Response))
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 502,
+        json: () => Promise.resolve({ ok: false, error: 'GitHub returned 500' }),
+      } as Response)
+    )
     const result = await submitFeedback(payload)
     expect(result.ok).toBe(false)
     if (!result.ok) {

@@ -452,7 +452,11 @@ export function AuthorFormDialog({ open, onOpenChange, author }: AuthorFormDialo
                     className="font-mono text-xs border-2"
                   />
                   {errors.instagram && (
-                    <p id="author-instagram-error" role="alert" className="text-destructive text-xs">
+                    <p
+                      id="author-instagram-error"
+                      role="alert"
+                      className="text-destructive text-xs"
+                    >
                       {errors.instagram}
                     </p>
                   )}

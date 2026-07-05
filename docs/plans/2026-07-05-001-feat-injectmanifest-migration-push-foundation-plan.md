@@ -1,7 +1,7 @@
 ---
 title: "feat: InjectManifest Migration and Push Notification Foundation"
 type: feat
-status: active
+status: completed
 date: 2026-07-05
 origin: docs/brainstorms/2026-07-05-e61-s01-vapid-key-setup-requirements.md
 ---

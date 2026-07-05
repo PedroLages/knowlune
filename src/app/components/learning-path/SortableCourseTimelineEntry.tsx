@@ -24,7 +24,12 @@ import { cn } from '@/app/components/ui/utils'
 import { EntryActionButton, LessonRow } from '@/app/components/learning-path/TimelinePrimitives'
 import { formatClockDuration } from '@/lib/formatDuration'
 import type { ChapterGroup } from '@/lib/curriculumGrouping'
-import type { PathCourseInfo, ImportedVideo, VideoProgress, PathProgressionMode } from '@/data/types'
+import type {
+  PathCourseInfo,
+  ImportedVideo,
+  VideoProgress,
+  PathProgressionMode,
+} from '@/data/types'
 import type { LearningPathEntry } from '@/data/types'
 
 interface SortableCourseTimelineEntryProps {
@@ -205,7 +210,10 @@ export function SortableCourseTimelineEntry({
                         'px-2 py-0.5 text-[10px] font-bold rounded-full uppercase tracking-wider inline-flex items-center gap-1',
                         isCompleted && 'bg-success-soft text-success',
                         isInProgress && 'bg-brand-soft text-brand-soft-foreground',
-                        isFreeMode && !isCompleted && !isInProgress && 'bg-muted/60 text-muted-foreground',
+                        isFreeMode &&
+                          !isCompleted &&
+                          !isInProgress &&
+                          'bg-muted/60 text-muted-foreground',
                         isLocked && 'bg-muted text-muted-foreground'
                       )}
                     >

@@ -169,7 +169,10 @@ export const LocalVideoContent = forwardRef<VideoPlayerHandle, LocalVideoContent
       blobUrl: localBlobUrl,
       error: localError,
       loading: localLoading,
-    } = useVideoFromHandle((isDriveSource || isServerSource) ? undefined : video?.fileHandle, retryKey)
+    } = useVideoFromHandle(
+      isDriveSource || isServerSource ? undefined : video?.fileHandle,
+      retryKey
+    )
     const {
       blobUrl: driveBlobUrl,
       error: driveError,
@@ -183,9 +186,7 @@ export const LocalVideoContent = forwardRef<VideoPlayerHandle, LocalVideoContent
     // Server-sourced videos use the server URL directly as <video src>.
     // On network error, fall back to fileHandle blob URL if available.
     const [serverError, setServerError] = useState(false)
-    const effectiveSrc = isServerSource && !serverError
-      ? (video?.serverUrl ?? null)
-      : blobUrl
+    const effectiveSrc = isServerSource && !serverError ? (video?.serverUrl ?? null) : blobUrl
     const loading = isDriveSource ? driveLoading : isServerSource ? false : localLoading
 
     // F008: Clear recovery overlay once blob URL loading completes (URL arrived or error).

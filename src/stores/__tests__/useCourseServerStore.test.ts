@@ -16,17 +16,14 @@ import type { CourseServer } from '@/data/types'
 // Hoisted mocks
 // ---------------------------------------------------------------------------
 
-const {
-  storeCredentialMock,
-  deleteCredentialMock,
-  readCredentialMock,
-  refreshMock,
-} = vi.hoisted(() => ({
-  storeCredentialMock: vi.fn().mockResolvedValue(undefined),
-  deleteCredentialMock: vi.fn().mockResolvedValue(undefined),
-  readCredentialMock: vi.fn().mockResolvedValue(null),
-  refreshMock: vi.fn().mockResolvedValue({ data: { session: null }, error: null }),
-}))
+const { storeCredentialMock, deleteCredentialMock, readCredentialMock, refreshMock } = vi.hoisted(
+  () => ({
+    storeCredentialMock: vi.fn().mockResolvedValue(undefined),
+    deleteCredentialMock: vi.fn().mockResolvedValue(undefined),
+    readCredentialMock: vi.fn().mockResolvedValue(null),
+    refreshMock: vi.fn().mockResolvedValue({ data: { session: null }, error: null }),
+  })
+)
 
 vi.mock('@/lib/vaultCredentials', () => ({
   storeCredential: storeCredentialMock,
@@ -152,7 +149,12 @@ describe('useCourseServerStore.loadServers', () => {
   })
 
   it('loads all four valid statuses unchanged', async () => {
-    const validStatuses: CourseServer['status'][] = ['connected', 'offline', 'auth-failed', 'unknown']
+    const validStatuses: CourseServer['status'][] = [
+      'connected',
+      'offline',
+      'auth-failed',
+      'unknown',
+    ]
     for (const [i, status] of validStatuses.entries()) {
       await db.courseServers.put(makeServer({ id: `srv-${i}`, status }) as any)
     }

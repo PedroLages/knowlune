@@ -30,7 +30,13 @@ interface NewAuthorData {
   specialties?: string[]
   yearsExperience?: number
   education?: string
-  socialLinks?: { website?: string; twitter?: string; linkedin?: string; instagram?: string; youtube?: string }
+  socialLinks?: {
+    website?: string
+    twitter?: string
+    linkedin?: string
+    instagram?: string
+    youtube?: string
+  }
   featuredQuote?: string
   isPreseeded?: boolean
 }
@@ -46,7 +52,13 @@ interface UpdateAuthorData {
   specialties?: string[]
   yearsExperience?: number
   education?: string
-  socialLinks?: { website?: string; twitter?: string; linkedin?: string; instagram?: string; youtube?: string }
+  socialLinks?: {
+    website?: string
+    twitter?: string
+    linkedin?: string
+    instagram?: string
+    youtube?: string
+  }
   featuredQuote?: string
 }
 

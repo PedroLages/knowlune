@@ -263,8 +263,6 @@ export function UnifiedCourseDetail() {
     }
   }, [course, isOnline, isRefreshing, courseId])
 
-
-
   const showLocalFilesUnavailable =
     course?.source === 'local' &&
     typeof window !== 'undefined' &&
@@ -348,7 +346,6 @@ export function UnifiedCourseDetail() {
         </div>
       )}
 
-
       {loadError && (
         <div
           data-testid="course-load-error"
@@ -412,7 +409,6 @@ export function UnifiedCourseDetail() {
           allTags={allTags}
         />
       )}
-
     </div>
   )
 }

@@ -1,4 +1,13 @@
-import { Clock, BookOpen, BarChart3, Calendar, Pencil, Target, TrendingUp, Flag } from 'lucide-react'
+import {
+  Clock,
+  BookOpen,
+  BarChart3,
+  Calendar,
+  Pencil,
+  Target,
+  TrendingUp,
+  Flag,
+} from 'lucide-react'
 import { Card, CardContent } from '@/app/components/ui/card'
 import { Button } from '@/app/components/ui/button'
 import { PathProgressRing } from '@/app/components/figma/PathProgressRing'
@@ -116,7 +125,10 @@ export function PathProgressSidebar({
             {currentCourseName != null && currentCoursePct != null && (
               <div className="flex items-center gap-3 text-sm">
                 <BookOpen className="size-4 text-brand flex-shrink-0" aria-hidden="true" />
-                <span className="text-muted-foreground truncate max-w-[140px]" title={currentCourseName}>
+                <span
+                  className="text-muted-foreground truncate max-w-[140px]"
+                  title={currentCourseName}
+                >
                   Current course
                 </span>
                 <span className="ml-auto font-bold text-foreground tabular-nums">
@@ -196,7 +208,12 @@ export function PathProgressSidebar({
                 </div>
               )}
               {weeklyGoalMinutes == null && onSetWeeklyGoal && (
-                <Button variant="brand-outline" size="sm" className="w-full text-xs" onClick={onSetWeeklyGoal}>
+                <Button
+                  variant="brand-outline"
+                  size="sm"
+                  className="w-full text-xs"
+                  onClick={onSetWeeklyGoal}
+                >
                   Set weekly goal
                 </Button>
               )}
@@ -276,17 +293,15 @@ export function PathProgressSidebar({
                   </span>
                 </div>
               )}
-              {courseCount != null &&
-                courseCount > 1 &&
-                onProgressionModeChange != null && (
-                  <>
-                    <hr className="my-3 border-border/50" />
-                    <ProgressionModeToggle
-                      mode={progressionMode ?? 'sequential'}
-                      onChange={onProgressionModeChange}
-                    />
-                  </>
-                )}
+              {courseCount != null && courseCount > 1 && onProgressionModeChange != null && (
+                <>
+                  <hr className="my-3 border-border/50" />
+                  <ProgressionModeToggle
+                    mode={progressionMode ?? 'sequential'}
+                    onChange={onProgressionModeChange}
+                  />
+                </>
+              )}
             </div>
           </CardContent>
         </Card>

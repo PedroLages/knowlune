@@ -405,8 +405,8 @@ describe('BulkImportDialog — batch import flow (F-003)', () => {
     it('TST-P1-003: retry — scan returns error updates item status to error', async () => {
       // First persist call fails to get to results step
       mockPersistScannedCourse
-        .mockResolvedValueOnce(undefined)               // alpha succeeds
-        .mockRejectedValueOnce(new Error('First fail'))  // beta fails
+        .mockResolvedValueOnce(undefined) // alpha succeeds
+        .mockRejectedValueOnce(new Error('First fail')) // beta fails
 
       const user = userEvent.setup()
       render(
@@ -520,8 +520,8 @@ describe('BulkImportDialog — batch import flow (F-003)', () => {
     it('TST-P1-001: retry flow — failed item can be retried and succeeds', async () => {
       // First make the second persist call fail
       mockPersistScannedCourse
-        .mockResolvedValueOnce(undefined)               // alpha succeeds
-        .mockRejectedValueOnce(new Error('First fail'))  // beta fails
+        .mockResolvedValueOnce(undefined) // alpha succeeds
+        .mockRejectedValueOnce(new Error('First fail')) // beta fails
 
       const user = userEvent.setup()
       render(
@@ -572,8 +572,8 @@ describe('BulkImportDialog — batch import flow (F-003)', () => {
     it('TST-P1-006: retry — scan succeeds but persist rejects, verifying error state', async () => {
       // First persist call fails to get to results step
       mockPersistScannedCourse
-        .mockResolvedValueOnce(undefined)               // alpha succeeds
-        .mockRejectedValueOnce(new Error('First fail'))  // beta fails
+        .mockResolvedValueOnce(undefined) // alpha succeeds
+        .mockRejectedValueOnce(new Error('First fail')) // beta fails
 
       const user = userEvent.setup()
       render(
@@ -626,13 +626,7 @@ describe('BulkImportDialog — batch import flow (F-003)', () => {
 
     it('navigates to enter-url step when "Import Multiple from URL" is clicked', async () => {
       const user = userEvent.setup()
-      render(
-        <BulkImportDialog
-          open={true}
-          onOpenChange={onOpenChange}
-          onSingleImport={vi.fn()}
-        />
-      )
+      render(<BulkImportDialog open={true} onOpenChange={onOpenChange} onSingleImport={vi.fn()} />)
 
       await user.click(screen.getByTestId('import-multiple-url-btn'))
       await waitFor(() => {
@@ -642,13 +636,7 @@ describe('BulkImportDialog — batch import flow (F-003)', () => {
 
     it('shows validation error on empty URL scan trigger', async () => {
       const user = userEvent.setup()
-      render(
-        <BulkImportDialog
-          open={true}
-          onOpenChange={onOpenChange}
-          onSingleImport={vi.fn()}
-        />
-      )
+      render(<BulkImportDialog open={true} onOpenChange={onOpenChange} onSingleImport={vi.fn()} />)
 
       // Navigate to URL step
       await user.click(screen.getByTestId('import-multiple-url-btn'))
@@ -662,13 +650,7 @@ describe('BulkImportDialog — batch import flow (F-003)', () => {
 
     it('shows validation error for invalid URL format', async () => {
       const user = userEvent.setup()
-      render(
-        <BulkImportDialog
-          open={true}
-          onOpenChange={onOpenChange}
-          onSingleImport={vi.fn()}
-        />
-      )
+      render(<BulkImportDialog open={true} onOpenChange={onOpenChange} onSingleImport={vi.fn()} />)
 
       await user.click(screen.getByTestId('import-multiple-url-btn'))
       const input = screen.getByTestId('bulk-import-enter-url')
@@ -682,13 +664,7 @@ describe('BulkImportDialog — batch import flow (F-003)', () => {
 
     it('has a working Back button on URL step', async () => {
       const user = userEvent.setup()
-      render(
-        <BulkImportDialog
-          open={true}
-          onOpenChange={onOpenChange}
-          onSingleImport={vi.fn()}
-        />
-      )
+      render(<BulkImportDialog open={true} onOpenChange={onOpenChange} onSingleImport={vi.fn()} />)
 
       // Navigate to URL step
       await user.click(screen.getByTestId('import-multiple-url-btn'))
@@ -707,13 +683,7 @@ describe('BulkImportDialog — batch import flow (F-003)', () => {
       mockListServerSubDirectories.mockResolvedValue({ ok: false, error: 'Server unreachable' })
 
       const user = userEvent.setup()
-      render(
-        <BulkImportDialog
-          open={true}
-          onOpenChange={onOpenChange}
-          onSingleImport={vi.fn()}
-        />
-      )
+      render(<BulkImportDialog open={true} onOpenChange={onOpenChange} onSingleImport={vi.fn()} />)
 
       await user.click(screen.getByTestId('import-multiple-url-btn'))
       const input = screen.getByTestId('bulk-import-enter-url')
@@ -730,13 +700,7 @@ describe('BulkImportDialog — batch import flow (F-003)', () => {
       mockListServerSubDirectories.mockResolvedValue({ ok: true, data: [] })
 
       const user = userEvent.setup()
-      render(
-        <BulkImportDialog
-          open={true}
-          onOpenChange={onOpenChange}
-          onSingleImport={vi.fn()}
-        />
-      )
+      render(<BulkImportDialog open={true} onOpenChange={onOpenChange} onSingleImport={vi.fn()} />)
 
       await user.click(screen.getByTestId('import-multiple-url-btn'))
       const input = screen.getByTestId('bulk-import-enter-url')
@@ -745,7 +709,9 @@ describe('BulkImportDialog — batch import flow (F-003)', () => {
 
       await waitFor(() => {
         expect(screen.getByTestId('bulk-import-url-error')).toBeInTheDocument()
-        expect(screen.getByTestId('bulk-import-url-error').textContent).toContain('No course folders found')
+        expect(screen.getByTestId('bulk-import-url-error').textContent).toContain(
+          'No course folders found'
+        )
       })
     })
 
@@ -756,13 +722,7 @@ describe('BulkImportDialog — batch import flow (F-003)', () => {
       })
 
       const user = userEvent.setup()
-      render(
-        <BulkImportDialog
-          open={true}
-          onOpenChange={onOpenChange}
-          onSingleImport={vi.fn()}
-        />
-      )
+      render(<BulkImportDialog open={true} onOpenChange={onOpenChange} onSingleImport={vi.fn()} />)
 
       await user.click(screen.getByTestId('import-multiple-url-btn'))
       const input = screen.getByTestId('bulk-import-enter-url')
@@ -779,17 +739,14 @@ describe('BulkImportDialog — batch import flow (F-003)', () => {
       // Use a deferred promise so the scan hangs until we resolve it
       let resolveScan!: (value: unknown) => void
       mockListServerSubDirectories.mockImplementation(
-        () => new Promise(resolve => { resolveScan = resolve })
+        () =>
+          new Promise(resolve => {
+            resolveScan = resolve
+          })
       )
 
       const user = userEvent.setup()
-      render(
-        <BulkImportDialog
-          open={true}
-          onOpenChange={onOpenChange}
-          onSingleImport={vi.fn()}
-        />
-      )
+      render(<BulkImportDialog open={true} onOpenChange={onOpenChange} onSingleImport={vi.fn()} />)
 
       // Navigate to URL step and type a valid URL
       await user.click(screen.getByTestId('import-multiple-url-btn'))
@@ -806,23 +763,23 @@ describe('BulkImportDialog — batch import flow (F-003)', () => {
       expect(mockListServerSubDirectories).toHaveBeenCalledTimes(1)
 
       // Resolve the scan so the component doesn't hang
-      resolveScan!({ ok: true, data: [{ name: 'Course1', url: 'http://example.com/courses/Course1/' }] })
+      resolveScan!({
+        ok: true,
+        data: [{ name: 'Course1', url: 'http://example.com/courses/Course1/' }],
+      })
     })
 
     it('TST-P2-001: closing dialog during scan prevents step transition', async () => {
       let resolveScan!: (value: unknown) => void
       mockListServerSubDirectories.mockImplementation(
-        () => new Promise(resolve => { resolveScan = resolve })
+        () =>
+          new Promise(resolve => {
+            resolveScan = resolve
+          })
       )
 
       const user = userEvent.setup()
-      render(
-        <BulkImportDialog
-          open={true}
-          onOpenChange={onOpenChange}
-          onSingleImport={vi.fn()}
-        />
-      )
+      render(<BulkImportDialog open={true} onOpenChange={onOpenChange} onSingleImport={vi.fn()} />)
 
       // Trigger scan with a slow promise
       await user.click(screen.getByTestId('import-multiple-url-btn'))
@@ -840,7 +797,10 @@ describe('BulkImportDialog — batch import flow (F-003)', () => {
 
       // Resolve the scan — the abort check in handleServerUrlScan should prevent
       // any step transition
-      resolveScan!({ ok: true, data: [{ name: 'Course1', url: 'http://example.com/courses/Course1/' }] })
+      resolveScan!({
+        ok: true,
+        data: [{ name: 'Course1', url: 'http://example.com/courses/Course1/' }],
+      })
 
       // The dialog should not show select-folders (the URL input was cleaned up by resetDialog)
       expect(screen.queryByTestId('bulk-select-all')).not.toBeInTheDocument()
@@ -856,7 +816,11 @@ describe('BulkImportDialog — batch import flow (F-003)', () => {
       // Return a manifest with 3 courses in specific order
       mockFetchTrackManifestFromUrl.mockResolvedValue({
         ok: true as const,
-        summary: { trackName: 'DevOps Track', trackAuthor: undefined, courseFolders: ['linux', 'docker', 'k8s'] },
+        summary: {
+          trackName: 'DevOps Track',
+          trackAuthor: undefined,
+          courseFolders: ['linux', 'docker', 'k8s'],
+        },
         manifest: {
           version: '1',
           track: {
@@ -883,11 +847,9 @@ describe('BulkImportDialog — batch import flow (F-003)', () => {
 
       // Scanning returns success — courses get IDs in reverse manifest order
       // to simulate concurrent scan completion order ≠ manifest order
-      mockScanCourseFromSource.mockImplementation(
-        (source: { folderName: string }) => {
-          return makeScanSuccess(`id-${source.folderName}`, source.folderName)
-        }
-      )
+      mockScanCourseFromSource.mockImplementation((source: { folderName: string }) => {
+        return makeScanSuccess(`id-${source.folderName}`, source.folderName)
+      })
       mockPersistScannedCourse.mockResolvedValue(undefined)
 
       // Mock createPathWithCourses to return a track and populate entries
@@ -994,9 +956,8 @@ describe('BulkImportDialog — batch import flow (F-003)', () => {
       mockShowDirectoryPicker.mockResolvedValue(mockDirHandle('ParentFolder'))
       mockListSubDirectories.mockResolvedValue([mockDirHandle('alpha'), mockDirHandle('beta')])
       mockReadTrackManifest.mockResolvedValue(authorManifestResponse)
-      mockScanCourseFromSource.mockImplementation(
-        (source: { folderName: string }) =>
-          makeScanSuccess(`id-${source.folderName}`, source.folderName)
+      mockScanCourseFromSource.mockImplementation((source: { folderName: string }) =>
+        makeScanSuccess(`id-${source.folderName}`, source.folderName)
       )
       mockBatchImportTrackCourses.mockResolvedValue({
         trackId: 'track-abc',
@@ -1012,13 +973,7 @@ describe('BulkImportDialog — batch import flow (F-003)', () => {
 
     it('passes manifest with author data to batchImportTrackCourses', async () => {
       const user = userEvent.setup()
-      render(
-        <BulkImportDialog
-          open={true}
-          onOpenChange={onOpenChange}
-          onSingleImport={vi.fn()}
-        />
-      )
+      render(<BulkImportDialog open={true} onOpenChange={onOpenChange} onSingleImport={vi.fn()} />)
 
       await user.click(screen.getByTestId('import-multiple-btn'))
       await waitFor(() => expect(screen.getByTestId('bulk-select-all')).toBeInTheDocument())
@@ -1078,7 +1033,9 @@ describe('BulkImportDialog — batch import flow (F-003)', () => {
       await user.click(screen.getByTestId('import-multiple-btn'))
       await waitFor(() => expect(screen.getByTestId('bulk-start-import-btn')).toBeInTheDocument())
       await user.click(screen.getByTestId('bulk-start-import-btn'))
-      await waitFor(() => expect(screen.queryByTestId('bulk-start-import-btn')).not.toBeInTheDocument())
+      await waitFor(() =>
+        expect(screen.queryByTestId('bulk-start-import-btn')).not.toBeInTheDocument()
+      )
 
       // Close dialog while scan is in flight
       await user.keyboard('{Escape}')
@@ -1095,9 +1052,8 @@ describe('BulkImportDialog — batch import flow (F-003)', () => {
 
       // Setup second scan to return fresh IDs
       mockScanCourseFromSource.mockReset()
-      mockScanCourseFromSource.mockImplementation(
-        (source: { folderName: string }) =>
-          makeScanSuccess(`fresh-${source.folderName}`, source.folderName)
+      mockScanCourseFromSource.mockImplementation((source: { folderName: string }) =>
+        makeScanSuccess(`fresh-${source.folderName}`, source.folderName)
       )
       mockPersistScannedCourse.mockResolvedValue(undefined)
 
@@ -1135,9 +1091,8 @@ describe('BulkImportDialog — batch import flow (F-003)', () => {
       // Use a single folder to avoid multi-item override lookup complexity
       mockListSubDirectories.mockResolvedValue([mockDirHandle('mycourse')])
 
-      mockScanCourseFromSource.mockImplementation(
-        (source: { folderName: string }) =>
-          makeScanSuccess('orig-mycourse', source.folderName)
+      mockScanCourseFromSource.mockImplementation((source: { folderName: string }) =>
+        makeScanSuccess('orig-mycourse', source.folderName)
       )
       // Make persist fail so we can trigger a retry
       mockPersistScannedCourse.mockRejectedValueOnce(new Error('First fail'))
@@ -1170,9 +1125,7 @@ describe('BulkImportDialog — batch import flow (F-003)', () => {
       // Now retry — mock scan to return a NEW UUID
       // The scan result has course.id = 'new-uuid-mycourse', but the override
       // lookup should use item.scannedCourse?.id = 'orig-mycourse'
-      mockScanCourseFromSource.mockResolvedValue(
-        makeScanSuccess('new-uuid-mycourse', 'mycourse')
-      )
+      mockScanCourseFromSource.mockResolvedValue(makeScanSuccess('new-uuid-mycourse', 'mycourse'))
       mockPersistScannedCourse.mockResolvedValue(undefined)
 
       const retryBtn = screen.queryByTestId('bulk-retry-mycourse')
@@ -1186,12 +1139,10 @@ describe('BulkImportDialog — batch import flow (F-003)', () => {
 
       // Verify persistScannedCourse was called during the retry with the
       // skipStoreUpdate flag (confirms it ran through persist path, not just scan)
-      const retryPersistCalls = mockPersistScannedCourse.mock.calls.filter(
-        (call: unknown[]) => {
-          const overrides = call[1] as { skipStoreUpdate?: boolean } | undefined
-          return overrides?.skipStoreUpdate === true
-        }
-      )
+      const retryPersistCalls = mockPersistScannedCourse.mock.calls.filter((call: unknown[]) => {
+        const overrides = call[1] as { skipStoreUpdate?: boolean } | undefined
+        return overrides?.skipStoreUpdate === true
+      })
       // There should be at least one persist call from the retry
       // (the first from the initial import + at least one from the retry)
       expect(retryPersistCalls.length).toBeGreaterThanOrEqual(1)
@@ -1199,21 +1150,26 @@ describe('BulkImportDialog — batch import flow (F-003)', () => {
 
     it('KI-102: truncated scan surfaces toast warning and truncated badge in results', async () => {
       // Mock scanCourseFromSource to return truncated results
-      mockScanCourseFromSource.mockImplementation(
-        (source: { folderName: string }) => {
-          const course = makeScannedCourse(`id-${source.folderName}`, source.folderName)
-          course.videos = Array.from({ length: 5000 }, (_, i) => ({
-            id: `v${i}`, filename: `v${i}.mp4`, path: `v${i}.mp4`,
-            duration: 0, format: 'mp4' as const, order: i + 1, fileSize: 0, width: 0, height: 0,
-          }))
-          course.truncated = true
-          return {
-            status: 'success' as const,
-            course,
-            truncated: true,
-          } as BulkScanResult
-        }
-      )
+      mockScanCourseFromSource.mockImplementation((source: { folderName: string }) => {
+        const course = makeScannedCourse(`id-${source.folderName}`, source.folderName)
+        course.videos = Array.from({ length: 5000 }, (_, i) => ({
+          id: `v${i}`,
+          filename: `v${i}.mp4`,
+          path: `v${i}.mp4`,
+          duration: 0,
+          format: 'mp4' as const,
+          order: i + 1,
+          fileSize: 0,
+          width: 0,
+          height: 0,
+        }))
+        course.truncated = true
+        return {
+          status: 'success' as const,
+          course,
+          truncated: true,
+        } as BulkScanResult
+      })
 
       const user = userEvent.setup()
       render(
@@ -1234,9 +1190,7 @@ describe('BulkImportDialog — batch import flow (F-003)', () => {
       await waitFor(() => expect(screen.getByTestId('bulk-confirm-import-btn')).toBeInTheDocument())
 
       // Verify toast.warning was called with truncation message
-      expect(toast.warning).toHaveBeenCalledWith(
-        expect.stringContaining('5,000 file limit')
-      )
+      expect(toast.warning).toHaveBeenCalledWith(expect.stringContaining('5,000 file limit'))
 
       // Verify truncated badge is visible in the review step (one per truncated course)
       const badges = screen.getAllByText(/Truncated to \d+ files/)

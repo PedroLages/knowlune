@@ -137,8 +137,16 @@ describe('matchOrCreateAuthor', () => {
   })
 
   it('does not create duplicate when useSyncableWrite is true and called twice with same name', async () => {
-    const id1 = await matchOrCreateAuthor('Dedup Author', { title: 'Expert' }, { useSyncableWrite: true })
-    const id2 = await matchOrCreateAuthor('Dedup Author', { title: 'Expert' }, { useSyncableWrite: true })
+    const id1 = await matchOrCreateAuthor(
+      'Dedup Author',
+      { title: 'Expert' },
+      { useSyncableWrite: true }
+    )
+    const id2 = await matchOrCreateAuthor(
+      'Dedup Author',
+      { title: 'Expert' },
+      { useSyncableWrite: true }
+    )
     expect(id1).toBe(id2)
 
     const count = await db.authors.count()

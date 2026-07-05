@@ -634,7 +634,13 @@ export interface ImportedAuthor {
   specialties?: string[] // Specialty tags (E25-S01 AC5)
   yearsExperience?: number // Professional experience in years
   education?: string // Education background (e.g., "PhD Computer Science, MIT")
-  socialLinks?: { website?: string; twitter?: string; linkedin?: string; instagram?: string; youtube?: string } // Social profile links (E25-S01 AC5)
+  socialLinks?: {
+    website?: string
+    twitter?: string
+    linkedin?: string
+    instagram?: string
+    youtube?: string
+  } // Social profile links (E25-S01 AC5)
   featuredQuote?: string // Memorable quote from the author
   isPreseeded: boolean // Flag indicating if bundled (e.g., Chase Hughes) (E25-S01 AC5)
   createdAt: string // ISO 8601
