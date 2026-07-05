@@ -1,11 +1,11 @@
 /**
  * LessonsTab — Course lesson list sub-panel for PlayerSidePanel.
  *
- * Includes search/filter, highlighted titles, lesson duration formatting,
- * and companion material count badges (PDFs matched to videos by filename).
- * Sidebar shows all content types (videos + standalone PDFs) in natural folder order.
+ * Renders a clean lesson-based outline (sections → lessons) using
+ * the lesson-based curriculum engine. Companion materials (PDFs, TXTs,
+ * cheat sheets, slides) are nested under their parent lesson.
  *
- * Extracted from PlayerSidePanel.tsx to reduce god-component complexity.
+ * Rewritten for lesson-based curriculum architecture (2026-07-05).
  */
 
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
@@ -14,9 +14,9 @@ import {
   Video,
   PlayCircle,
   FileText,
+  BookOpen,
   Search,
   X,
-  FolderOpen,
   ChevronDown,
   CheckCircle2,
   AlertTriangle,
@@ -32,220 +32,62 @@ import {
 } from '@/app/components/ui/collapsible'
 import { cn } from '@/app/components/ui/utils'
 import { EmptyState } from '@/app/components/EmptyState'
-import type { CourseAdapter, LessonItem, MaterialGroup } from '@/lib/courseAdapter'
-import { safeDecodeURIComponent } from '@/lib/courseAdapter'
+import type { CourseAdapter } from '@/lib/courseAdapter'
+import type { CourseSection, LessonGroup, LessonGroupItem } from '@/lib/lessonBasedCurriculum'
 import { useContentProgressStore } from '@/stores/useContentProgressStore'
+import {
+  formatLessonDuration,
+  LESSON_SEARCH_THRESHOLD,
+  HighlightedLessonTitle,
+} from './LessonsTabHighlightedTitle'
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
-export function formatLessonDuration(seconds: number): string {
-  const h = Math.floor(seconds / 3600)
-  const m = Math.floor((seconds % 3600) / 60)
-  const s = Math.floor(seconds % 60)
-  if (h > 0) return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
-  return `${m}:${String(s).padStart(2, '0')}`
-}
-
-/** Minimum number of lessons required to show the search input */
-export const LESSON_SEARCH_THRESHOLD = 8
-
-export function HighlightedLessonTitle({ text, query }: { text: string; query: string }) {
-  if (!query) return <>{text}</>
-
-  const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-  const splitRegex = new RegExp(`(${escaped})`, 'gi')
-  const parts = text.split(splitRegex)
-
-  return (
-    <>
-      {parts.map((part, i) => {
-        const isMatch = part.length > 0 && part.toLowerCase() === query.toLowerCase()
-        return isMatch ? (
-          <mark key={i} className="bg-warning/30 text-inherit rounded-sm px-0.5">
-            {part}
-          </mark>
-        ) : (
-          <span key={i}>{part}</span>
-        )
-      })}
-    </>
-  )
-}
-
-// ---------------------------------------------------------------------------
-// Folder tree (nested subfolder grouping from full paths)
-// ---------------------------------------------------------------------------
-
-interface FolderNode {
-  name: string // display name (e.g., "02-02 How To Use The BTE")
-  path: string // full path key for expanded state (e.g., "07-BTE/02-02 How To Use The BTE")
-  items: MaterialGroup[] // items directly in this folder (not in subfolders)
-  children: FolderNode[] // sorted subfolders
-}
-
-/** Extract the directory portion of a path (everything before the filename). */
-function getDirPath(filePath: string): string {
-  const lastSlash = filePath.lastIndexOf('/')
-  return lastSlash > 0 ? filePath.substring(0, lastSlash) : ''
-}
-
-/** Build a nested folder tree from material groups using their full directory paths. */
-function buildFolderTree(groups: MaterialGroup[]): FolderNode[] {
-  // Intermediate map: full dir path → items in that exact folder
-  const dirMap = new Map<string, MaterialGroup[]>()
-  for (const group of groups) {
-    const filePath = (group.primary.sourceMetadata?.path as string) ?? ''
-    const dir = getDirPath(filePath)
-    if (!dirMap.has(dir)) dirMap.set(dir, [])
-    dirMap.get(dir)!.push(group)
+/**
+ * Get active state label for a lesson.
+ */
+function getActiveLabel(type: LessonGroupItem['type'], isMaterial: boolean): string {
+  if (isMaterial) return 'Viewing material'
+  switch (type) {
+    case 'video':
+      return 'Now playing'
+    case 'pdf':
+    case 'text':
+      return 'Now reading'
+    default:
+      return 'Active'
   }
-
-  // Build tree by inserting each dir path into a nested structure
-  const rootChildren: FolderNode[] = []
-  const nodeMap = new Map<string, FolderNode>()
-
-  // Collect all unique directory paths and sort them so parents come before children
-  const allDirs = Array.from(dirMap.keys())
-    .filter(d => d !== '')
-    .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
-
-  for (const dir of allDirs) {
-    const segments = dir.split('/')
-    let parentChildren = rootChildren
-    let currentPath = ''
-
-    for (let i = 0; i < segments.length; i++) {
-      currentPath = i === 0 ? segments[i] : `${currentPath}/${segments[i]}`
-      let node = nodeMap.get(currentPath)
-      if (!node) {
-        node = {
-          name: safeDecodeURIComponent(segments[i]),
-          path: currentPath,
-          items: [],
-          children: [],
-        }
-        nodeMap.set(currentPath, node)
-        parentChildren.push(node)
-        // Sort after insertion to maintain natural order
-        parentChildren.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }))
-      }
-      parentChildren = node.children
-    }
-  }
-
-  // Assign items to their folder nodes
-  for (const [dir, items] of dirMap) {
-    if (dir === '') continue // root items handled separately
-    const node = nodeMap.get(dir)
-    if (node) node.items = items
-  }
-
-  return rootChildren
-}
-
-/** Count all items in a folder node and its descendants. */
-function countNodeItems(node: FolderNode): number {
-  return node.items.length + node.children.reduce((sum, c) => sum + countNodeItems(c), 0)
-}
-
-/** Check if a folder node or any descendant contains the given lesson ID. */
-function nodeContainsLesson(node: FolderNode, lessonId: string): boolean {
-  if (node.items.some(g => g.primary.id === lessonId)) return true
-  return node.children.some(c => nodeContainsLesson(c, lessonId))
-}
-
-/** Get all folder paths that lead to the given lesson ID (for auto-expanding). */
-function getAncestorPaths(nodes: FolderNode[], lessonId: string): string[] {
-  const paths: string[] = []
-  function walk(node: FolderNode): boolean {
-    if (nodeContainsLesson(node, lessonId)) {
-      paths.push(node.path)
-      node.children.forEach(walk)
-      return true
-    }
-    return false
-  }
-  nodes.forEach(walk)
-  return paths
 }
 
 /**
- * Flatten the folder tree by skipping nodes that have exactly one child and
- * zero direct items. This removes container/wrapper folders that exist only
- * for organizational purposes (e.g., `DevOps > DevOps-Platform-Engineer >`)
- * without losing structural information — the innermost skipped folder name
- * is tracked as context.
- *
- * The original `folderTree` is preserved for `getAncestorPaths()` which
- * needs the full hierarchy for path-based lookups.
+ * Get content type icon for a lesson item.
  */
-function getDisplayRoots(nodes: FolderNode[]): {
-  roots: FolderNode[]
-  skippedContext: string | null
-} {
-  let skippedContext: string | null = null
-
-  function flatten(n: FolderNode, lastSkipped: string | null): FolderNode[] {
-    // Skip nodes with exactly one child and zero direct items
-    if (n.items.length === 0 && n.children.length === 1) {
-      return flatten(n.children[0], n.name)
-    }
-    // Keep this node but recursively flatten its children
-    return [
-      {
-        ...n,
-        children: n.children.flatMap(c => {
-          const result = flatten(c, null)
-          // If flattening produced results, propagate last-skipped context
-          if (
-            lastSkipped &&
-            result.length === 1 &&
-            result[0].items.length === 0 &&
-            result[0].children.length === 1
-          ) {
-            return result
-          }
-          return result
-        }),
-      },
-    ]
+function LessonTypeIcon({
+  type,
+  className,
+}: {
+  type: LessonGroupItem['type']
+  className?: string
+}) {
+  switch (type) {
+    case 'video':
+      return <Video className={cn('size-3', className)} aria-hidden="true" />
+    case 'pdf':
+      return <FileText className={cn('size-3', className)} aria-hidden="true" />
+    case 'text':
+      return <BookOpen className={cn('size-3', className)} aria-hidden="true" />
+    default:
+      return <FileText className={cn('size-3', className)} aria-hidden="true" />
   }
-
-  // Map each root through flatten; collect the "deepest" skipped name
-  const flattened = nodes.flatMap(n => {
-    const result = flatten(n, null)
-    // Track the innermost skipped folder (the one closest to the content)
-    // If this root was itself skipped (flatten returned a deeper node's children),
-    // we need to find the innermost skipped name
-    return result
-  })
-
-  // Find the innermost skipped folder name by walking from original roots
-  function findInnermostSkipped(n: FolderNode): string | null {
-    if (n.items.length === 0 && n.children.length === 1) {
-      const deeper = findInnermostSkipped(n.children[0])
-      return deeper ?? n.name
-    }
-    return null
-  }
-  for (const n of nodes) {
-    const skipped = findInnermostSkipped(n)
-    if (skipped) {
-      skippedContext = skipped
-      break
-    }
-  }
-
-  return { roots: flattened, skippedContext }
 }
 
 // ---------------------------------------------------------------------------
-// LessonLink (primary lesson row)
+// LessonRow — single lesson in the sidebar
 // ---------------------------------------------------------------------------
 
-function LessonLink({
+function LessonRow({
   lesson,
   courseId,
   isActive,
@@ -254,8 +96,9 @@ function LessonLink({
   activeRef,
   searchQuery,
   onFocusMaterials,
+  isMaterial,
 }: {
-  lesson: LessonItem
+  lesson: LessonGroupItem
   courseId: string
   isActive: boolean
   index: number
@@ -263,51 +106,80 @@ function LessonLink({
   activeRef?: React.Ref<HTMLAnchorElement>
   searchQuery: string
   onFocusMaterials?: () => void
+  isMaterial?: boolean
 }) {
   const completionStatus = useContentProgressStore(
     state => state.statusMap[`${courseId}:${lesson.id}`] ?? 'not-started'
   )
   const isCompleted = completionStatus === 'completed'
 
+  const formattedDuration =
+    lesson.type === 'video' && lesson.duration && lesson.duration > 0
+      ? formatLessonDuration(lesson.duration)
+      : null
+
+  const displayInfo = isMaterial
+    ? null
+    : lesson.type === 'video'
+      ? formattedDuration
+      : lesson.type === 'pdf'
+        ? `${lesson.pageCount ?? '?'} pgs`
+        : lesson.type === 'text'
+          ? 'Reading'
+          : null
+
+  const activeLabel = isActive ? getActiveLabel(lesson.type, Boolean(isMaterial)) : null
+
   return (
     <Link
       ref={activeRef}
       to={`/courses/${courseId}/lessons/${lesson.id}`}
-      title={lesson.title}
+      title={lesson.displayTitle}
       className={cn(
-        'flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors',
+        'flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors group',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-1',
-        isActive ? 'bg-brand-soft text-brand-soft-foreground font-medium' : 'hover:bg-accent'
+        isActive
+          ? 'bg-brand-soft text-brand-soft-foreground font-medium'
+          : 'hover:bg-accent'
       )}
       aria-current={isActive ? 'page' : undefined}
       data-active={isActive ? 'true' : undefined}
     >
+      {/* Index / completion / active indicator */}
       <span
         className={cn(
           'flex-shrink-0 size-7 rounded-lg flex items-center justify-center',
-          isCompleted && !isActive ? 'bg-success/10' : 'bg-brand-soft/50'
+          isCompleted && \!isActive
+            ? 'bg-success/10'
+            : isMaterial
+              ? 'bg-resource-pdf-bg'
+              : 'bg-brand-soft/50'
         )}
       >
         {isActive ? (
           <PlayCircle className="size-4 text-brand" aria-hidden="true" />
-        ) : isCompleted ? (
+        ) : isCompleted && \!isMaterial ? (
           <CheckCircle2
             className="size-3.5 text-success"
             aria-hidden="true"
             data-testid={`completion-check-${lesson.id}`}
           />
+        ) : isMaterial ? (
+          <FileText className="size-3.5 text-resource-pdf" aria-hidden="true" />
         ) : (
           <span className="text-xs font-semibold text-brand-soft-foreground">{index + 1}</span>
         )}
       </span>
+
+      {/* Lesson info */}
       <div className="flex-1 min-w-0">
         <p
           className={cn(
             'text-sm line-clamp-2',
-            isCompleted && 'line-through text-muted-foreground'
+            isCompleted && \!isActive && 'line-through text-muted-foreground'
           )}
         >
-          <HighlightedLessonTitle text={lesson.title} query={searchQuery} />
+          <HighlightedLessonTitle text={lesson.displayTitle} query={searchQuery} />
         </p>
         <div
           className={cn(
@@ -315,18 +187,12 @@ function LessonLink({
             isActive ? 'text-brand-soft-foreground/70' : 'text-muted-foreground'
           )}
         >
-          {lesson.type === 'pdf' ? (
-            <FileText className="size-3" aria-hidden="true" />
-          ) : (
-            <Video className="size-3" aria-hidden="true" />
+          <LessonTypeIcon type={lesson.type} />
+          {displayInfo && <span className="text-xs">{displayInfo}</span>}
+          {activeLabel && (
+            <span className="text-[11px] text-brand font-medium">{activeLabel}</span>
           )}
-          {lesson.type === 'pdf' && lesson.sourceMetadata?.pageCount ? (
-            <span className="text-xs">{String(lesson.sourceMetadata.pageCount)} pgs</span>
-          ) : lesson.duration != null && lesson.duration > 0 ? (
-            <span className="text-xs">{formatLessonDuration(lesson.duration)}</span>
-          ) : null}
-          {isActive && <span className="text-[11px] text-brand font-medium">Now playing</span>}
-          {materialCount > 0 && onFocusMaterials && (
+          {\!isMaterial && materialCount > 0 && onFocusMaterials && (
             <button
               type="button"
               className="min-w-[44px] min-h-[44px] flex items-center justify-center -m-2 rounded-sm"
@@ -335,7 +201,7 @@ function LessonLink({
                 e.stopPropagation()
                 onFocusMaterials()
               }}
-              aria-label="View materials"
+              aria-label={`${materialCount} material${materialCount \!== 1 ? 's' : ''}`}
             >
               <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4">
                 <FileText className="size-2.5 mr-0.5" aria-hidden="true" />
@@ -343,7 +209,7 @@ function LessonLink({
               </Badge>
             </button>
           )}
-          {materialCount > 0 && !onFocusMaterials && (
+          {\!isMaterial && materialCount > 0 && \!onFocusMaterials && (
             <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4 ml-1">
               <FileText className="size-2.5 mr-0.5" aria-hidden="true" />
               {materialCount}
@@ -356,8 +222,7 @@ function LessonLink({
 }
 
 // ---------------------------------------------------------------------------
-// MaterialRow — a single companion PDF sub-row (extracted from .map() to satisfy
-// Rules of Hooks — useContentProgressStore must be called at component top level)
+// MaterialRow — companion material sub-row
 // ---------------------------------------------------------------------------
 
 function MaterialRow({
@@ -366,7 +231,7 @@ function MaterialRow({
   lessonId,
   searchQuery,
 }: {
-  material: LessonItem
+  material: LessonGroupItem
   courseId: string
   lessonId: string
   searchQuery: string
@@ -375,41 +240,39 @@ function MaterialRow({
     state => state.statusMap[`${courseId}:${material.id}`] ?? 'not-started'
   )
   const isCompleted = completionStatus === 'completed'
+  const isActive = material.id === lessonId
 
   return (
     <Link
       to={`/courses/${courseId}/lessons/${material.id}`}
-      title={material.title}
+      title={material.displayTitle}
       className={cn(
         'flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-1',
-        material.id === lessonId
+        isActive
           ? 'bg-brand-soft text-brand-soft-foreground font-medium'
           : 'hover:bg-accent'
       )}
-      aria-current={material.id === lessonId ? 'page' : undefined}
+      aria-current={isActive ? 'page' : undefined}
       data-testid={`material-link-${material.id}`}
-      data-active={material.id === lessonId ? 'true' : undefined}
+      data-active={isActive ? 'true' : undefined}
     >
       <span
         className={cn(
           'flex-shrink-0 size-7 rounded-lg flex items-center justify-center',
-          isCompleted && material.id !== lessonId ? 'bg-success/10' : 'bg-resource-pdf-bg'
+          isCompleted && \!isActive ? 'bg-success/10' : 'bg-resource-pdf-bg'
         )}
       >
-        {isCompleted && material.id !== lessonId ? (
+        {isCompleted && \!isActive ? (
           <CheckCircle2
             className="size-3.5 text-success"
             aria-hidden="true"
             data-testid={`completion-check-${material.id}`}
           />
         ) : (
-          <FileText
-            className={cn(
-              'size-3.5',
-              material.id === lessonId ? 'text-brand' : 'text-resource-pdf'
-            )}
-            aria-hidden="true"
+          <LessonTypeIcon
+            type={material.type}
+            className={isActive ? 'text-brand' : 'text-resource-pdf'}
           />
         )}
       </span>
@@ -417,27 +280,29 @@ function MaterialRow({
         <p
           className={cn(
             'text-sm line-clamp-2',
-            isCompleted && 'line-through text-muted-foreground'
+            isCompleted && \!isActive && 'line-through text-muted-foreground'
           )}
         >
-          <HighlightedLessonTitle text={material.title} query={searchQuery} />
+          <HighlightedLessonTitle text={material.displayTitle} query={searchQuery} />
         </p>
-        {material.sourceMetadata?.pageCount ? (
-          <div className="flex items-center gap-1 mt-0.5 text-xs text-muted-foreground">
-            <FileText className="size-3" aria-hidden="true" />
-            <span>{String(material.sourceMetadata.pageCount)} pgs</span>
-          </div>
-        ) : null}
+        <div className="flex items-center gap-1 mt-0.5 text-xs text-muted-foreground">
+          <LessonTypeIcon type={material.type} />
+          {material.type === 'pdf' && material.pageCount ? (
+            <span>{material.pageCount} pgs</span>
+          ) : (
+            <span className="capitalize">{material.type}</span>
+          )}
+        </div>
       </div>
     </Link>
   )
 }
 
 // ---------------------------------------------------------------------------
-// MaterialGroupRow — primary lesson with collapsible companion PDF sub-rows
+// LessonGroupRow — primary lesson with collapsible companion materials
 // ---------------------------------------------------------------------------
 
-function MaterialGroupRow({
+function LessonGroupRow({
   group,
   courseId,
   lessonId,
@@ -448,7 +313,7 @@ function MaterialGroupRow({
   isExpanded,
   onToggleExpand,
 }: {
-  group: MaterialGroup
+  group: LessonGroup
   courseId: string
   lessonId: string
   index: number
@@ -458,19 +323,21 @@ function MaterialGroupRow({
   isExpanded: boolean
   onToggleExpand: () => void
 }) {
-  const isActive = group.primary.id === lessonId
+  const isPrimaryActive = group.primary.id === lessonId
   const hasMaterials = group.materials.length > 0
 
-  // Don't show collapse toggle for groups without materials
-  if (!hasMaterials) {
+  // Check if active lesson is a material within this group
+  const activeMaterial = group.materials.find(m => m.id === lessonId)
+
+  if (\!hasMaterials) {
     return (
-      <LessonLink
+      <LessonRow
         lesson={group.primary}
         courseId={courseId}
-        isActive={isActive}
+        isActive={isPrimaryActive}
         index={index}
         materialCount={0}
-        activeRef={isActive ? activeRef : undefined}
+        activeRef={isPrimaryActive ? activeRef : undefined}
         searchQuery={searchQuery}
         onFocusMaterials={onFocusMaterials}
       />
@@ -481,13 +348,13 @@ function MaterialGroupRow({
     <Collapsible open={isExpanded} onOpenChange={onToggleExpand}>
       <div className="flex items-center gap-1">
         <div className="flex-1 min-w-0">
-          <LessonLink
+          <LessonRow
             lesson={group.primary}
             courseId={courseId}
-            isActive={isActive}
+            isActive={isPrimaryActive || Boolean(activeMaterial)}
             index={index}
             materialCount={group.materials.length}
-            activeRef={isActive ? activeRef : undefined}
+            activeRef={isPrimaryActive ? activeRef : undefined}
             searchQuery={searchQuery}
             onFocusMaterials={onFocusMaterials}
           />
@@ -527,97 +394,74 @@ function MaterialGroupRow({
 }
 
 // ---------------------------------------------------------------------------
-// FolderTreeNode — recursive folder rendering with nested collapsibles
+// SectionHeader — collapsible section heading
 // ---------------------------------------------------------------------------
 
-function FolderTreeNode({
-  node,
+function SectionHeader({
+  section,
   courseId,
   lessonId,
-  expandedFolders,
-  toggleFolder,
+  isExpanded,
+  onToggle,
+  searchQuery,
   expandedMaterialGroups,
   toggleMaterialGroup,
   activeRef,
-  searchQuery,
   onFocusMaterials,
-  forceOpen,
-  groupIndexMap,
 }: {
-  node: FolderNode
+  section: CourseSection
   courseId: string
   lessonId: string
-  expandedFolders: Set<string>
-  toggleFolder: (path: string) => void
-  expandedMaterialGroups: Set<string>
-  toggleMaterialGroup: (groupId: string) => void
-  activeRef: React.RefObject<HTMLAnchorElement | null>
+  isExpanded: boolean
+  onToggle: () => void
   searchQuery: string
+  expandedMaterialGroups: Set<string>
+  toggleMaterialGroup: (id: string) => void
+  activeRef: React.RefObject<HTMLAnchorElement | null>
   onFocusMaterials?: () => void
-  forceOpen?: boolean
-  groupIndexMap: Map<string, number>
 }) {
-  const totalCount = countNodeItems(node)
-  const isActive = nodeContainsLesson(node, lessonId)
-  const isOpen = forceOpen || expandedFolders.has(node.path)
+  const hasActiveLesson = section.lessons.some(
+    g => g.primary.id === lessonId || g.materials.some(m => m.id === lessonId)
+  )
 
   return (
-    <Collapsible open={isOpen} onOpenChange={() => toggleFolder(node.path)}>
+    <Collapsible open={isExpanded} onOpenChange={onToggle}>
       <CollapsibleTrigger
         className={cn(
-          'flex w-full items-center gap-2 px-3 py-2 rounded-lg transition-colors text-sm font-medium group/folder',
+          'flex w-full items-center gap-2 px-3 py-2 rounded-lg transition-colors text-sm font-medium',
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-1',
-          isActive
+          hasActiveLesson
             ? 'bg-brand-soft/30 text-foreground'
             : 'text-muted-foreground hover:bg-accent hover:text-foreground'
         )}
+        aria-expanded={isExpanded}
       >
-        <FolderOpen className="size-3.5 shrink-0" aria-hidden="true" />
-        <span className="flex-1 text-left text-sm line-clamp-2" title={node.name}>
-          {node.name}
+        <span className="flex-1 text-left text-sm font-semibold line-clamp-1">
+          {section.title}
         </span>
-        <span className="text-xs text-muted-foreground">{totalCount}</span>
+        <span className="text-xs text-muted-foreground">
+          {section.lessons.length} lesson{section.lessons.length \!== 1 ? 's' : ''}
+        </span>
         <ChevronDown
-          className="size-3.5 text-muted-foreground transition-transform group-data-[state=open]/folder:rotate-180"
+          className={cn(
+            'size-3.5 text-muted-foreground transition-transform',
+            isExpanded && 'rotate-180'
+          )}
           aria-hidden="true"
         />
       </CollapsibleTrigger>
       <CollapsibleContent>
-        <div className="ml-2 pl-2 border-l border-border/50 space-y-0.5">
-          {/* Direct items in this folder */}
-          {node.items.map(group => {
-            const originalIndex = groupIndexMap.get(group.primary.id) ?? 0
-            return (
-              <MaterialGroupRow
-                key={group.primary.id}
-                group={group}
-                courseId={courseId}
-                lessonId={lessonId}
-                index={originalIndex}
-                activeRef={group.primary.id === lessonId ? activeRef : undefined}
-                searchQuery={searchQuery}
-                onFocusMaterials={onFocusMaterials}
-                isExpanded={expandedMaterialGroups.has(group.primary.id)}
-                onToggleExpand={() => toggleMaterialGroup(group.primary.id)}
-              />
-            )
-          })}
-          {/* Nested subfolders */}
-          {node.children.map(child => (
-            <FolderTreeNode
-              key={child.path}
-              node={child}
+        <div className="ml-2 pl-2 border-l border-border/50 space-y-0.5 pt-0.5">
+          {section.lessons.map((group, gi) => (
+            <LessonGroupRow
+              key={group.primary.id}
+              group={group}
               courseId={courseId}
               lessonId={lessonId}
-              expandedFolders={expandedFolders}
-              toggleFolder={toggleFolder}
-              expandedMaterialGroups={expandedMaterialGroups}
-              toggleMaterialGroup={toggleMaterialGroup}
-              activeRef={activeRef}
+              index={gi}
               searchQuery={searchQuery}
-              onFocusMaterials={onFocusMaterials}
-              forceOpen={forceOpen}
-              groupIndexMap={groupIndexMap}
+              isExpanded={expandedMaterialGroups.has(group.primary.id)}
+              onToggleExpand={() => toggleMaterialGroup(group.primary.id)}
             />
           ))}
         </div>
@@ -638,7 +482,7 @@ export interface LessonsTabProps {
 }
 
 export function LessonsTab({ courseId, lessonId, adapter, onFocusMaterials }: LessonsTabProps) {
-  const [materialGroups, setMaterialGroups] = useState<MaterialGroup[]>([])
+  const [sections, setSections] = useState<CourseSection[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [loadError, setLoadError] = useState(false)
   const [retryCount, setRetryCount] = useState(0)
@@ -651,15 +495,15 @@ export function LessonsTab({ courseId, lessonId, adapter, onFocusMaterials }: Le
     setLoadError(false)
 
     adapter
-      .getGroupedLessons()
-      .then(groups => {
-        if (!ignore) {
-          setMaterialGroups(groups)
+      .getLessonBasedCurriculum()
+      .then(data => {
+        if (\!ignore) {
+          setSections(data)
           setIsLoading(false)
         }
       })
       .catch(() => {
-        if (!ignore) {
+        if (\!ignore) {
           setIsLoading(false)
           setLoadError(true)
         }
@@ -672,143 +516,127 @@ export function LessonsTab({ courseId, lessonId, adapter, onFocusMaterials }: Le
 
   // Scroll active lesson into view on mount
   useEffect(() => {
-    if (!isLoading && activeRef.current) {
+    if (\!isLoading && activeRef.current) {
       activeRef.current.scrollIntoView({ block: 'nearest', behavior: 'instant' })
     }
   }, [isLoading, lessonId])
 
-  const showSearch = materialGroups.length > LESSON_SEARCH_THRESHOLD
+  // Total lesson count (primary lessons only)
+  const totalLessons = useMemo(
+    () => sections.reduce((sum, s) => sum + s.lessons.length, 0),
+    [sections]
+  )
 
-  // Filter groups by search query (match primary title or material titles)
-  const filteredGroups = useMemo(() => {
-    if (!searchQuery) return materialGroups
+  const showSearch = totalLessons > LESSON_SEARCH_THRESHOLD
+
+  // Filter sections by search query
+  const filteredSections = useMemo(() => {
+    if (\!searchQuery) return sections
     const q = searchQuery.toLowerCase()
-    return materialGroups.filter(
-      g =>
-        g.primary.title.toLowerCase().includes(q) ||
-        g.materials.some(m => m.title.toLowerCase().includes(q))
-    )
-  }, [materialGroups, searchQuery])
+    return sections
+      .map(section => ({
+        ...section,
+        lessons: section.lessons.filter(
+          g =>
+            g.primary.displayTitle.toLowerCase().includes(q) ||
+            g.materials.some(m => m.displayTitle.toLowerCase().includes(q))
+        ),
+      }))
+      .filter(s => s.lessons.length > 0)
+  }, [sections, searchQuery])
 
-  // Build nested folder tree (raw, for path lookups)
-  const folderTree = useMemo(() => buildFolderTree(filteredGroups), [filteredGroups])
+  // Auto-expand sections containing the active lesson
+  const activeSectionPaths = useMemo(() => {
+    const paths = new Set<string>()
+    for (const section of sections) {
+      const hasActive = section.lessons.some(
+        g => g.primary.id === lessonId || g.materials.some(m => m.id === lessonId)
+      )
+      if (hasActive) paths.add(section.title)
+    }
+    return paths
+  }, [sections, lessonId])
 
-  // Flattened display roots — skips single-child container folders
-  const { roots: displayRoots, skippedContext: skippedFolderContext } = useMemo(
-    () => getDisplayRoots(folderTree),
-    [folderTree]
+  const hasMultipleSections = sections.length > 1
+
+  // Sections expanded state
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(
+    () => new Set(activeSectionPaths)
   )
 
-  const rootItems = useMemo(
-    () =>
-      filteredGroups.filter(
-        g => getDirPath((g.primary.sourceMetadata?.path as string) ?? '') === ''
-      ),
-    [filteredGroups]
-  )
-  const hasMultipleFolders =
-    displayRoots.length > 1 ||
-    (displayRoots.length === 1 && rootItems.length > 0) ||
-    displayRoots.length > 0
-
-  // Auto-expand ancestor folders containing the active lesson
-  const activePaths = useMemo(() => getAncestorPaths(folderTree, lessonId), [folderTree, lessonId])
-
-  // Controlled expanded-folders state using full path keys
-  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(() => new Set(activePaths))
-
-  // When active lesson changes folder, auto-expand the full chain
-  // and auto-collapse all folders that are not ancestors of the current lesson.
-  // Uses replace (not merge) so only the current section's folder chain stays open.
   useEffect(() => {
-    setExpandedFolders(new Set(activePaths))
-  }, [activePaths.join(',')])
+    setExpandedSections(new Set(activeSectionPaths))
+  }, [JSON.stringify([...activeSectionPaths])])
 
-  const toggleFolder = useCallback((folderPath: string) => {
-    setExpandedFolders(prev => {
-      const next = new Set(prev)
-      if (next.has(folderPath)) next.delete(folderPath)
-      else next.add(folderPath)
-      return next
-    })
-  }, [])
-
-  // Track whether initial companion-PDF auto-expand has run for this course.
-  // Reset when courseId changes so each course gets its own initial expansion.
-  const initialExpandDoneRef = useRef(false)
-  const lastCourseIdRef = useRef(courseId)
-  useEffect(() => {
-    if (lastCourseIdRef.current !== courseId) {
-      initialExpandDoneRef.current = false
-      lastCourseIdRef.current = courseId
-    }
-  }, [courseId])
-
-  // Track previously seen group IDs that have materials, so we can merge
-  // newly discovered groups on adapter reload without nuking user toggles.
-  const prevMaterialGroupIdsRef = useRef<Set<string>>(new Set())
-
-  // Auto-expand groups with companion PDFs on first load.
-  // On subsequent loads (adapter change for same course), merge only new groups
-  // into the expanded set, preserving user's manual collapse choices.
-  useEffect(() => {
-    if (isLoading || materialGroups.length === 0) return
-
-    const groupsWithMaterials = new Set(
-      materialGroups.filter(g => g.materials.length > 0).map(g => g.primary.id)
-    )
-
-    if (!initialExpandDoneRef.current) {
-      // First load: expand all groups that have companion materials.
-      if (groupsWithMaterials.size > 0) {
-        setExpandedMaterialGroups(prev => {
-          const next = new Set(prev)
-          for (const id of groupsWithMaterials) next.add(id)
-          return next
-        })
-      }
-      initialExpandDoneRef.current = true
-      prevMaterialGroupIdsRef.current = groupsWithMaterials
-    } else {
-      // Subsequent loads (adapter reloaded): merge only new group IDs that
-      // weren't present in the previous load. Never collapse groups the user
-      // may have manually expanded.
-      const newIds = [...groupsWithMaterials].filter(id => !prevMaterialGroupIdsRef.current.has(id))
-      if (newIds.length > 0) {
-        setExpandedMaterialGroups(prev => {
-          const next = new Set(prev)
-          for (const id of newIds) next.add(id)
-          return next
-        })
-      }
-      prevMaterialGroupIdsRef.current = groupsWithMaterials
-    }
-  }, [isLoading, materialGroups])
-
-  // Controlled expanded state for material groups (PDF sub-rows).
-  // Seed initial expansion for groups where the active lesson IS a material.
+  // Material groups expanded state
   const [expandedMaterialGroups, setExpandedMaterialGroups] = useState<Set<string>>(() => {
     const initial = new Set<string>()
-    for (const g of filteredGroups) {
-      if (g.materials.some(m => m.id === lessonId)) {
-        initial.add(g.primary.id)
+    for (const section of sections) {
+      for (const group of section.lessons) {
+        if (group.materials.some(m => m.id === lessonId)) {
+          initial.add(group.primary.id)
+        }
       }
     }
     return initial
   })
 
-  // Auto-expand parent group when navigating directly to a companion PDF URL.
+  // Auto-expand groups with materials on first load
+  const initialExpandDoneRef = useRef(false)
+  const lastCourseIdRef = useRef(courseId)
+
+  useEffect(() => {
+    if (lastCourseIdRef.current \!== courseId) {
+      initialExpandDoneRef.current = false
+      lastCourseIdRef.current = courseId
+    }
+  }, [courseId])
+
+  useEffect(() => {
+    if (isLoading || sections.length === 0) return
+
+    const groupsWithMaterials = new Set<string>()
+    for (const section of sections) {
+      for (const group of section.lessons) {
+        if (group.materials.length > 0) {
+          groupsWithMaterials.add(group.primary.id)
+        }
+      }
+    }
+
+    if (\!initialExpandDoneRef.current && groupsWithMaterials.size > 0) {
+      setExpandedMaterialGroups(prev => {
+        const next = new Set(prev)
+        for (const id of groupsWithMaterials) next.add(id)
+        return next
+      })
+      initialExpandDoneRef.current = true
+    }
+  }, [isLoading, sections])
+
+  // Auto-expand parent group when active lesson is a material
   useEffect(() => {
     setExpandedMaterialGroups(prev => {
       const next = new Set(prev)
-      for (const g of filteredGroups) {
-        if (g.materials.some(m => m.id === lessonId)) {
-          next.add(g.primary.id)
+      for (const section of sections) {
+        for (const group of section.lessons) {
+          if (group.materials.some(m => m.id === lessonId)) {
+            next.add(group.primary.id)
+          }
         }
       }
       return next
     })
-  }, [lessonId, filteredGroups])
+  }, [lessonId, sections])
+
+  const toggleSection = useCallback((sectionTitle: string) => {
+    setExpandedSections(prev => {
+      const next = new Set(prev)
+      if (next.has(sectionTitle)) next.delete(sectionTitle)
+      else next.add(sectionTitle)
+      return next
+    })
+  }, [])
 
   const toggleMaterialGroup = useCallback((groupId: string) => {
     setExpandedMaterialGroups(prev => {
@@ -819,14 +647,19 @@ export function LessonsTab({ courseId, lessonId, adapter, onFocusMaterials }: Le
     })
   }, [])
 
-  // Pre-compute O(1) lookup for original group indices (must be before early returns)
-  const groupIndexMap = useMemo(
-    () => new Map(materialGroups.map((g, i) => [g.primary.id, i])),
-    [materialGroups]
-  )
+  // Find current lesson index
+  let currentIndex = -1
+  let lessonCount = 0
+  for (const section of sections) {
+    for (const group of section.lessons) {
+      if (group.primary.id === lessonId) {
+        currentIndex = lessonCount
+      }
+      lessonCount++
+    }
+  }
 
-  const currentIndex = materialGroups.findIndex(g => g.primary.id === lessonId)
-
+  // --- Loading state ---
   if (isLoading) {
     return (
       <div className="p-3 space-y-2">
@@ -837,6 +670,7 @@ export function LessonsTab({ courseId, lessonId, adapter, onFocusMaterials }: Le
     )
   }
 
+  // --- Error state ---
   if (loadError) {
     return (
       <div
@@ -862,14 +696,17 @@ export function LessonsTab({ courseId, lessonId, adapter, onFocusMaterials }: Le
     )
   }
 
-  if (materialGroups.length === 0) {
+  // --- Empty state ---
+  if (sections.length === 0 || totalLessons === 0) {
     return (
       <EmptyState icon={Video} title="No lessons" description="This course has no lessons yet" />
     )
   }
 
+  // --- Render ---
   return (
     <div className="p-2 space-y-0.5" data-testid="lessons-tab-list">
+      {/* Search */}
       {showSearch && (
         <div className="px-2 pt-2 pb-1">
           <div className="relative">
@@ -900,19 +737,18 @@ export function LessonsTab({ courseId, lessonId, adapter, onFocusMaterials }: Le
           </div>
         </div>
       )}
+
+      {/* Lesson count */}
       <div className="px-2 pb-2 text-xs text-muted-foreground">
-        {searchQuery && filteredGroups.length !== materialGroups.length
-          ? `Showing ${filteredGroups.length} of ${materialGroups.length} lessons`
+        {searchQuery
+          ? `Showing ${filteredSections.reduce((sum, s) => sum + s.lessons.length, 0)} of ${totalLessons} lessons`
           : currentIndex >= 0
-            ? `Lesson ${currentIndex + 1} of ${materialGroups.length}`
-            : `${materialGroups.length} lessons`}
-        {skippedFolderContext && !searchQuery && (
-          <span className="block truncate mt-0.5 text-muted-foreground/70">
-            {skippedFolderContext}
-          </span>
-        )}
+            ? `Lesson ${currentIndex + 1} of ${totalLessons}`
+            : `${totalLessons} lessons`}
       </div>
-      {filteredGroups.length === 0 && searchQuery ? (
+
+      {/* Empty search state */}
+      {filteredSections.length === 0 && searchQuery ? (
         <div
           className="flex flex-col items-center justify-center py-12 text-muted-foreground"
           data-testid="lesson-search-empty"
@@ -931,63 +767,41 @@ export function LessonsTab({ courseId, lessonId, adapter, onFocusMaterials }: Le
             Clear search
           </Button>
         </div>
-      ) : hasMultipleFolders ? (
-        <>
-          {/* Root-level items (no folder) render flat */}
-          {rootItems.map(group => {
-            const originalIndex = groupIndexMap.get(group.primary.id) ?? 0
-            return (
-              <MaterialGroupRow
-                key={group.primary.id}
-                group={group}
-                courseId={courseId}
-                lessonId={lessonId}
-                index={originalIndex}
-                activeRef={group.primary.id === lessonId ? activeRef : undefined}
-                searchQuery={searchQuery}
-                onFocusMaterials={onFocusMaterials}
-                isExpanded={expandedMaterialGroups.has(group.primary.id)}
-                onToggleExpand={() => toggleMaterialGroup(group.primary.id)}
-              />
-            )
-          })}
-          {/* Nested folder tree (using flattened display roots) */}
-          {displayRoots.map((node: FolderNode) => (
-            <FolderTreeNode
-              key={node.path}
-              node={node}
-              courseId={courseId}
-              lessonId={lessonId}
-              expandedFolders={expandedFolders}
-              toggleFolder={toggleFolder}
-              expandedMaterialGroups={expandedMaterialGroups}
-              toggleMaterialGroup={toggleMaterialGroup}
-              activeRef={activeRef}
-              searchQuery={searchQuery}
-              onFocusMaterials={onFocusMaterials}
-              forceOpen={!!searchQuery}
-              groupIndexMap={groupIndexMap}
-            />
-          ))}
-        </>
+      ) : hasMultipleSections ? (
+        /* Multi-section layout */
+        filteredSections.map(section => (
+          <SectionHeader
+            key={section.title}
+            section={section}
+            courseId={courseId}
+            lessonId={lessonId}
+            isExpanded={expandedSections.has(section.title)}
+            onToggle={() => toggleSection(section.title)}
+            searchQuery={searchQuery}
+            expandedMaterialGroups={expandedMaterialGroups}
+            toggleMaterialGroup={toggleMaterialGroup}
+            activeRef={activeRef}
+            onFocusMaterials={onFocusMaterials}
+          />
+        ))
       ) : (
-        filteredGroups.map(group => {
-          const originalIndex = groupIndexMap.get(group.primary.id) ?? 0
-          return (
-            <MaterialGroupRow
+        /* Flat layout (single section) */
+        filteredSections.flatMap(section =>
+          section.lessons.map((group, gi) => (
+            <LessonGroupRow
               key={group.primary.id}
               group={group}
               courseId={courseId}
               lessonId={lessonId}
-              index={originalIndex}
+              index={gi}
               activeRef={group.primary.id === lessonId ? activeRef : undefined}
               searchQuery={searchQuery}
               onFocusMaterials={onFocusMaterials}
               isExpanded={expandedMaterialGroups.has(group.primary.id)}
               onToggleExpand={() => toggleMaterialGroup(group.primary.id)}
             />
-          )
-        })
+          ))
+        )
       )}
     </div>
   )

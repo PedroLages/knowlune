@@ -28,7 +28,7 @@ import { revokeObjectUrl } from '@/lib/courseAdapter'
 import type { ImportedPdf } from '@/data/types'
 
 import type { CourseAdapter } from '@/lib/courseAdapter'
-import { getCompanionMaterials, type MaterialGroup } from '@/lib/lessonMaterialMatcher'
+import type { LessonGroupItem } from '@/lib/lessonBasedCurriculum'
 
 interface MaterialsTabProps {
   courseId: string
@@ -292,7 +292,7 @@ function PdfSection({ pdf, courseId, isOpen, onToggle }: PdfSectionProps) {
 
 export function MaterialsTab({ courseId, lessonId, adapter }: MaterialsTabProps) {
   const [allPdfs, setAllPdfs] = useState<ImportedPdf[]>([])
-  const [groups, setGroups] = useState<MaterialGroup[]>([])
+  const [materials, setMaterials] = useState<LessonGroupItem[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [showAll, setShowAll] = useState(false)
   const [openPdfId, setOpenPdfId] = useState<string | null>(null)
@@ -302,7 +302,7 @@ export function MaterialsTab({ courseId, lessonId, adapter }: MaterialsTabProps)
     setOpenPdfId(open ? pdfId : null)
   }, [])
 
-  // Load all PDFs and grouped lesson data in parallel
+  // Load all PDFs and lesson-based curriculum in parallel
   useEffect(() => {
     let ignore = false
     setIsLoading(true)
@@ -310,12 +310,29 @@ export function MaterialsTab({ courseId, lessonId, adapter }: MaterialsTabProps)
 
     Promise.all([
       db.importedPdfs.where('courseId').equals(courseId).toArray(),
-      adapter.getGroupedLessons(),
+      adapter.getLessonBasedCurriculum(),
     ])
-      .then(([pdfs, materialGroups]) => {
+      .then(([pdfs, sections]) => {
         if (!ignore) {
           setAllPdfs(pdfs)
-          setGroups(materialGroups)
+
+          // Find the current lesson's group and extract its materials
+          const lessonMaterials: LessonGroupItem[] = []
+          for (const section of sections) {
+            for (const group of section.lessons) {
+              if (group.primary.id === lessonId) {
+                lessonMaterials.push(...group.materials)
+                break
+              }
+              // Also check if we're viewing a material - show all materials of that group
+              const materialMatch = group.materials.find(m => m.id === lessonId)
+              if (materialMatch) {
+                lessonMaterials.push(...group.materials)
+                break
+              }
+            }
+          }
+          setMaterials(lessonMaterials)
           setIsLoading(false)
         }
       })
@@ -327,7 +344,7 @@ export function MaterialsTab({ courseId, lessonId, adapter }: MaterialsTabProps)
     return () => {
       ignore = true
     }
-  }, [courseId, adapter])
+  }, [courseId, lessonId, adapter])
 
   // Reset view state when lesson changes
   useEffect(() => {
@@ -355,9 +372,8 @@ export function MaterialsTab({ courseId, lessonId, adapter }: MaterialsTabProps)
     )
   }
 
-  // Find companion materials for current lesson
-  const companionMaterials = getCompanionMaterials(lessonId, groups)
-  const companionPdfIds = new Set(companionMaterials.map(m => m.id))
+  // Build companion PDF set from lesson-based materials
+  const companionPdfIds = new Set(materials.map(m => m.id))
   const companionPdfs = allPdfs.filter(p => companionPdfIds.has(p.id))
 
   // Show all mode or no companions found

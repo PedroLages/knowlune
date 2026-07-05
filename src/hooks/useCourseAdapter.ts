@@ -12,6 +12,7 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '@/db'
 import { createCourseAdapter, type CourseAdapter } from '@/lib/courseAdapter'
+import type { YouTubeCourseChapter } from '@/data/types'
 
 export interface UseCourseAdapterResult {
   adapter: CourseAdapter | null
@@ -31,7 +32,9 @@ export function useCourseAdapter(courseId: string | undefined): UseCourseAdapter
 
       const pdfs = await db.importedPdfs.where('courseId').equals(courseId).sortBy('filename')
 
-      const adapter = createCourseAdapter(course, videos, pdfs)
+      const chapters = await db.youtubeChapters.where('courseId').equals(courseId).toArray()
+
+      const adapter = createCourseAdapter(course, videos, pdfs, chapters)
       return { adapter, error: null }
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Unknown error loading course'

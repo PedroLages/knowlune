@@ -8,7 +8,7 @@
  * Architecture: docs/planning-artifacts/bmad-architecture-course-unification-ai-models.md § A1
  */
 
-import type { ImportedCourse, ImportedVideo, ImportedPdf, CourseSource } from '@/data/types'
+import type { ImportedCourse, ImportedVideo, ImportedPdf, CourseSource, YouTubeCourseChapter } from '@/data/types'
 import { db } from '@/db'
 import {
   matchMaterialsToLessons,
@@ -16,6 +16,8 @@ import {
   type MaterialGroup,
 } from './lessonMaterialMatcher'
 export type { MaterialGroup } from './lessonMaterialMatcher'
+import { buildLessonBasedCurriculum, type CourseSection } from './lessonBasedCurriculum'
+export type { CourseSection } from './lessonBasedCurriculum'
 
 // ---------------------------------------------------------------------------
 // Utilities
@@ -63,7 +65,7 @@ export function revokeObjectUrl(url: string): void {
 export interface LessonItem {
   id: string
   title: string
-  type: 'video' | 'pdf'
+  type: 'video' | 'pdf' | 'text'
   duration?: number
   order: number
   sourceMetadata?: Record<string, unknown>
@@ -88,6 +90,7 @@ export interface CourseAdapter {
   getLessons(): Promise<LessonItem[]>
   getLesson(lessonId: string): Promise<LessonItem | null>
   getGroupedLessons(): Promise<MaterialGroup[]>
+  getLessonBasedCurriculum(): Promise<CourseSection[]>
   getMediaUrl(lessonId: string): Promise<string | null>
   getTranscript(lessonId: string): Promise<string | null>
   getThumbnailUrl(): Promise<string | null>
@@ -102,11 +105,13 @@ export interface CourseAdapter {
 
 export class LocalCourseAdapter implements CourseAdapter {
   private cachedGroups: MaterialGroup[] | null = null
+  private cachedLessonSections: CourseSection[] | null = null
 
   constructor(
     private course: ImportedCourse,
     private videos: ImportedVideo[],
-    private pdfs: ImportedPdf[]
+    private pdfs: ImportedPdf[],
+    private chapters: YouTubeCourseChapter[] = []
   ) {}
 
   getCourse(): ImportedCourse {
@@ -137,19 +142,21 @@ export class LocalCourseAdapter implements CourseAdapter {
   }
 
   private buildPdfLessons(): LessonItem[] {
-    return this.pdfs.map(p => ({
-      id: p.id,
-      title: humanizeFilename(p.filename),
-      type: 'pdf' as const,
-      duration: undefined,
-      // Extract numeric prefix from filename for natural sort order
-      // e.g. "01a-Resources.pdf" → 1, "05. Trade Zella.pdf" → 5
-      order: parseInt(p.filename.match(/^(\d+)/)?.[1] ?? '', 10) || Infinity,
-      sourceMetadata: {
-        path: p.path,
-        pageCount: p.pageCount,
-      },
-    }))
+    return this.pdfs.map(p => {
+      const ext = p.filename.match(/\.(\w+)$/)?.[1]?.toLowerCase() ?? ''
+      const isTxt = ext === 'txt' || ext === 'md' || ext === 'markdown'
+      return {
+        id: p.id,
+        title: humanizeFilename(p.filename),
+        type: (isTxt ? 'text' : 'pdf') as 'text' | 'pdf',
+        duration: undefined,
+        order: parseInt(p.filename.match(/^(\d+)/)?.[1] ?? '', 10) || Infinity,
+        sourceMetadata: {
+          path: p.path,
+          pageCount: p.pageCount,
+        },
+      }
+    })
   }
 
   async getGroupedLessons(): Promise<MaterialGroup[]> {
@@ -159,22 +166,35 @@ export class LocalCourseAdapter implements CourseAdapter {
     return groups
   }
 
+  async getLessonBasedCurriculum(): Promise<CourseSection[]> {
+    if (this.cachedLessonSections) return this.cachedLessonSections
+    const sections = buildLessonBasedCurriculum({
+      videos: this.videos,
+      pdfs: this.pdfs,
+      chapters: this.chapters,
+      preferChapterGrouping: this.course.source === 'youtube',
+    })
+    this.cachedLessonSections = sections
+    return sections
+  }
+
   async getLessons(): Promise<LessonItem[]> {
-    // Exclude companion PDFs from the flat list — they appear as
-    // nested materials under their parent video in the sidebar.
-    // This ensures prev/next navigation skips companion PDFs.
-    const groups = await this.getGroupedLessons()
-    const companionIds = getCompanionPdfIds(groups)
-
-    const videoLessons = this.buildVideoLessons()
-    const pdfLessons = this.buildPdfLessons()
-
-    return [...videoLessons, ...pdfLessons]
-      .filter(l => !companionIds.has(l.id))
-      .sort((a, b) => {
-        if (a.order !== b.order) return a.order - b.order
-        return a.title.localeCompare(b.title)
-      })
+    // Use lesson-based curriculum: return primary lessons in order
+    const sections = await this.getLessonBasedCurriculum()
+    const lessons: LessonItem[] = []
+    for (const section of sections) {
+      for (const group of section.lessons) {
+        lessons.push({
+          id: group.primary.id,
+          title: group.primary.displayTitle,
+          type: group.primary.type,
+          duration: group.primary.duration,
+          order: lessons.length,
+          sourceMetadata: group.primary.sourceMetadata as Record<string, unknown> | undefined,
+        })
+      }
+    }
+    return lessons
   }
 
   /**
@@ -306,9 +326,12 @@ export class LocalCourseAdapter implements CourseAdapter {
 // ---------------------------------------------------------------------------
 
 export class YouTubeCourseAdapter implements CourseAdapter {
+  private cachedLessonSections: CourseSection[] | null = null
+
   constructor(
     private course: ImportedCourse,
-    private videos: ImportedVideo[]
+    private videos: ImportedVideo[],
+    private chapters: YouTubeCourseChapter[] = []
   ) {}
 
   getCourse(): ImportedCourse {
@@ -363,6 +386,18 @@ export class YouTubeCourseAdapter implements CourseAdapter {
   async getGroupedLessons(): Promise<MaterialGroup[]> {
     const lessons = await this.getLessons()
     return lessons.map(l => ({ primary: l, materials: [] }))
+  }
+
+  async getLessonBasedCurriculum(): Promise<CourseSection[]> {
+    if (this.cachedLessonSections) return this.cachedLessonSections
+    const sections = buildLessonBasedCurriculum({
+      videos: this.videos,
+      pdfs: [],
+      chapters: this.chapters,
+      preferChapterGrouping: true,
+    })
+    this.cachedLessonSections = sections
+    return sections
   }
 
   async getMediaUrl(lessonId: string): Promise<string | null> {
@@ -451,13 +486,14 @@ export class YouTubeCourseAdapter implements CourseAdapter {
 export function createCourseAdapter(
   course: ImportedCourse,
   videos: ImportedVideo[],
-  pdfs: ImportedPdf[]
+  pdfs: ImportedPdf[],
+  chapters?: YouTubeCourseChapter[]
 ): CourseAdapter {
   if (course.source === 'youtube') {
-    return new YouTubeCourseAdapter(course, videos)
+    return new YouTubeCourseAdapter(course, videos, chapters ?? [])
   }
   // source === 'local' or undefined (backward-compatible)
-  return new LocalCourseAdapter(course, videos, pdfs)
+  return new LocalCourseAdapter(course, videos, pdfs, chapters ?? [])
 }
 
 /**
