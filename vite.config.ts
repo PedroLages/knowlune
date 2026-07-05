@@ -568,8 +568,6 @@ export default defineConfig({
         'pwa-*.png',
         'apple-touch-icon-*.png',
         'shortcuts/*.png',
-        // Workbox client (needed for SW update prompt — PWAUpdatePrompt)
-        'workbox-window*.js',
       ],
       globIgnores: [
         '**/mockServiceWorker.js',
