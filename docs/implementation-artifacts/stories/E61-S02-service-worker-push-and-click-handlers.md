@@ -4,8 +4,8 @@ story_name: 'Service Worker Push and Click Handlers'
 status: ready-for-dev
 started: 2026-07-05
 completed:
-reviewed: false
-review_started:
+reviewed: in-progress
+review_started: 2026-07-05
 review_gates_passed: []
 burn_in_validated: false
 ---
