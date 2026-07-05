@@ -310,4 +310,6 @@ See [plan](../plans/plan-e61-s02-service-worker-push-and-click-handlers.md) for 
 
 ## Challenges and Lessons Learned
 
-[Document issues, solutions, and patterns worth remembering]
+- **SW runtime tests in dev mode**: `vite-plugin-pwa` has `devOptions.enabled: false`, so the service worker is never registered when tests run against the Vite dev server (port 5173). SW registration tests must either use the production preview server (port 4173) or explicitly skip in dev mode. Pattern: use `test.skip(baseURL?.includes('5173'), 'reason')` for runtime SW tests.
+- **Build verification is reliable**: Checking `dist/sw.js` for handler code via `readFileSync` is deterministic and independent of browser SW support. This covers AC 1-7 without needing CDP-based push lifecycle testing.
+- **Auto-formatting in pre-checks**: The `run-prechecks.sh` pipeline auto-formats branch-changed files with Prettier and commits them. This can create a follow-up commit after the main implementation commit — expected behavior, not a bug.
