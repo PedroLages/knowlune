@@ -542,47 +542,10 @@ export default defineConfig({
         }
       ],
     },
-    workbox: {
+    injectManifest: {
+      swSrc: 'src/sw.ts',
       globPatterns: ['**/*.{js,css,html,svg,png,webp,woff2}'],
       globIgnores: ['**/mockServiceWorker.js', '**/webllm*.js'],
-      navigateFallback: 'index.html',
-      navigateFallbackDenylist: [/^\/api\//],
-      runtimeCaching: [
-        {
-          urlPattern: /^\/images\/.+\.(png|webp|jpg|jpeg)$/i,
-          handler: 'CacheFirst',
-          options: {
-            cacheName: 'local-images',
-            expiration: { maxEntries: 200, maxAgeSeconds: 30 * 24 * 60 * 60 },
-          },
-        },
-        {
-          urlPattern: /^https:\/\/images\.unsplash\.com\/.*/i,
-          handler: 'StaleWhileRevalidate',
-          options: {
-            cacheName: 'unsplash-images',
-            expiration: { maxEntries: 80, maxAgeSeconds: 30 * 24 * 60 * 60 },
-            cacheableResponse: { statuses: [0, 200] },
-          },
-        },
-        {
-          urlPattern: /^https:\/\/huggingface\.co\/.*/i,
-          handler: 'CacheFirst',
-          options: {
-            cacheName: 'hf-models',
-            expiration: { maxEntries: 20, maxAgeSeconds: 90 * 24 * 60 * 60 },
-            cacheableResponse: { statuses: [0, 200] },
-          },
-        },
-        {
-          urlPattern: /^\/api\/ai\/.*/i,
-          handler: 'NetworkOnly',
-        },
-        {
-          urlPattern: /\/api\/abs\/proxy\//,
-          handler: 'NetworkOnly',
-        },
-      ],
     },
     devOptions: {
       enabled: false,
