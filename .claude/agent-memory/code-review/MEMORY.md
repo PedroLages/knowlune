@@ -53,6 +53,25 @@
 - Fix: Use local variable (e.g., `let succeeded = false`) set in `try`, checked in `finally`
 - See [react-closure-staleness-finally.md](react-closure-staleness-finally.md)
 
+## New Pattern: Spec Drift from Current Codebase (E64-S09)
+
+- Spec code blocks drafted against E61-S01 stale config, not current codebase state
+- `registerType: 'prompt'` shown but current is `'autoUpdate'`, `swSrc: 'src/sw.ts'` shown but current is `'sw.ts'` (with `srcDir: 'src'`)
+- Without validation against the actual running config, spec code blocks cause build failures or silent UX regressions
+- Fix: `grep` current config files before including configuration code blocks in spec
+- See [story-details.md](story-details.md) for E64-S09 entry
+
+## New Pattern: Class Component Error Boundary Re-throw Pitfalls (E64-S09)
+
+- Re-throwing from `componentDidCatch` does NOT propagate to parent error boundary
+- Must use `throw this.state.error` in `render()` method
+- Common with error boundaries that conditionally handle vs delegate errors
+- See [story-details.md](story-details.md) for E64-S09 entry
+
+## Silent Failure Patterns (Updated E64-S09)
+
+- Error boundaries that catch before parent but fail to call `reportError()` for online failures — added: ChunkErrorBoundary catch-before-RouteErrorBoundary pattern
+
 ## Story-Level Details
 
 See [story-details.md](story-details.md) for per-story findings.

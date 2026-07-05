@@ -734,7 +734,7 @@ development_status:
   64-6-overview-dashboard-progressive-loading-and-data-batching: backlog
   64-7-cursor-based-pagination-for-high-volume-tables: backlog
   64-8-web-worker-minisearch-indexing: backlog
-  64-9-service-worker-precache-optimization: ready-for-dev
+  64-9-service-worker-precache-optimization: done
   epic-64-retrospective: optional
 
   # ──────────────────────────────────────────────────

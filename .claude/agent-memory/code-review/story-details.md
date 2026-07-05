@@ -481,3 +481,13 @@ See git history for these older reviews. Key recurring patterns captured in MEMO
 - MEDIUM: Gate logic (`supportsWorkers() && deviceMemory >= 4`) duplicated between App.tsx and EmbeddingModelProgressToast.tsx -- divergence risk.
 - NIT: First-progress timeout (15s) starts from component mount, not from actual warm-up start (3s + requestIdleCallback delay). Effective timeout could be <3s on busy main thread.
 - Positive: Clean committed code, all previous findings addressed, proper hook consumption, comprehensive test coverage (16 tests), no hardcoded colors or sizes, good debounce pattern (500ms throttling), thorough timeout/cancel management with proper ref cleanup.
+
+## E64-S09: Service Worker Precache Optimization (Pre-Implementation Spec Review)
+
+- **BLOCKER**: Spec `VitePWA()` code block shows `registerType: 'prompt'` and `swSrc: 'src/sw.ts'` -- stale values from E61-S01. Current: `registerType: 'autoUpdate'` and `swSrc: 'sw.ts'` (with `srcDir: 'src'`). Two failure modes: (a) merge with current `srcDir: 'src'` + spec's `swSrc: 'src/sw.ts'` resolves to `src/src/sw.ts` (build fails), (b) replace changes `registerType` to `'prompt'` (UX regression -- manual SW update approval). Root cause: spec block drafted from E61-S01, not reconciled with current config.
+- **HIGH**: ChunkErrorBoundary non-chunk error re-throw requires `throw` in `render()`, not `componentDidCatch` -- class component error boundaries only propagate to parent via render-throw.
+- **HIGH**: Missing `reportError()` in ChunkErrorBoundary for chunk errors when online. ChunkErrorBoundary catches before RouteErrorBoundary, so online chunk failures invisible to monitoring.
+- **HIGH**: Font caching rule lacks `CacheableResponsePlugin({ statuses: [0, 200] })`. Transient failures occupy `maxEntries: 50` slots -- FOUT risk offline.
+- **MEDIUM**: Online/offline oscillation causes ChunkErrorBoundary re-render loop. Needs retry count guard + backoff.
+- **MEDIUM**: `globPatterns` has `*.svg` (root-level only) but not `assets/*.svg`. Imported SVGs in `/assets/` won't precache -- broken images on lazy routes offline.
+- **Pattern discovered**: Spec drift from current codebase. Fix: grep current config files before including config code blocks in spec.

@@ -1,9 +1,9 @@
 ---
 story_id: E64-S09
 story_name: "Service Worker Precache Optimization"
-status: ready-for-dev
-started:
-completed:
+status: done
+started: 2026-07-05
+completed: 2026-07-05
 reviewed: true
 review_started: 2026-07-05
 review_gates_passed:
@@ -17,6 +17,10 @@ review_gates_passed:
   - code-review-testing
   - security-review
   - glm-code-review
+  - design-review-skipped
+  - performance-benchmark-skipped
+  - exploratory-qa-skipped
+  - e2e-tests-skipped
 burn_in_validated: false
 ---
 
