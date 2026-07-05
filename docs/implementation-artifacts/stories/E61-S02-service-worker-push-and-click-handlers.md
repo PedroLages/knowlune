@@ -2,7 +2,7 @@
 story_id: E61-S02
 story_name: "Service Worker Push and Click Handlers"
 status: ready-for-dev
-started:
+started: 2026-07-05
 completed:
 reviewed: false
 review_started:
@@ -302,6 +302,10 @@ Before requesting `/review-story`, verify:
 ## Code Review Feedback
 
 [Populated by /review-story — adversarial code review findings]
+
+## Implementation Plan
+
+See [plan](../plans/plan-e61-s02-service-worker-push-and-click-handlers.md) for implementation approach.
 
 ## Challenges and Lessons Learned
 
