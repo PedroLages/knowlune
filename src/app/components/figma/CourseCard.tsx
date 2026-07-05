@@ -296,7 +296,9 @@ export function CourseCard({
       >
         <DialogHeader className="sr-only">
           <DialogTitle>{course.title} — Preview</DialogTitle>
-          <DialogDescription className="sr-only">Course details and available actions</DialogDescription>
+          <DialogDescription className="sr-only">
+            Course details and available actions
+          </DialogDescription>
         </DialogHeader>
         <div className="relative aspect-video w-full rounded-2xl overflow-hidden bg-black shadow-2xl">
           {previewSrc && (

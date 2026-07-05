@@ -629,7 +629,9 @@ export async function persistScannedCourse(
   } else if (!authorId) {
     try {
       detectedAuthorName = detectAuthorFromFolderName(scanned.name)
-      const matchedId = await matchOrCreateAuthor(detectedAuthorName, undefined, { useSyncableWrite: true })
+      const matchedId = await matchOrCreateAuthor(detectedAuthorName, undefined, {
+        useSyncableWrite: true,
+      })
       if (matchedId) {
         authorId = matchedId
       }
@@ -1021,13 +1023,18 @@ export async function scanCourseFolderFromHandle(
  *          or `'error'`; handle scans pass through `scanCourseFolderFromHandle`'s
  *          full result shape.
  */
-export async function scanCourseFromSource(
-  source: { serverUrl?: string; handle: FileSystemDirectoryHandle | null; folderName: string }
-): Promise<BulkScanResult> {
+export async function scanCourseFromSource(source: {
+  serverUrl?: string
+  handle: FileSystemDirectoryHandle | null
+  folderName: string
+}): Promise<BulkScanResult> {
   if (source.serverUrl) {
     try {
       // Check for duplicate by folder name before scanning (same as local handle path)
-      const existingCourse = await db.importedCourses.where('name').equals(source.folderName).first()
+      const existingCourse = await db.importedCourses
+        .where('name')
+        .equals(source.folderName)
+        .first()
       if (existingCourse) {
         return { status: 'duplicate', folderName: source.folderName }
       }
@@ -1467,11 +1474,7 @@ export async function scanCourseFolderFromServer(
         // Update progress: dirsScanned / approximate total (pending + scanned + current batch)
         const total = pendingDirs.length + seen.size
         const fileCount = allVideos.length + allPdfs.length
-        progressStore.updateScanProgress(
-          courseId,
-          fileCount,
-          total > 0 ? total : null
-        )
+        progressStore.updateScanProgress(courseId, fileCount, total > 0 ? total : null)
       })
     )
 

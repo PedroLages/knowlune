@@ -502,7 +502,7 @@ export default defineConfig({
   youtubeTranscriptProxy(),
   premiumImportGuard({ enabled: !process.env.PREMIUM_BUILD }),
   VitePWA({
-    registerType: 'prompt',
+    registerType: 'autoUpdate',
     includeAssets: ['favicon.svg', 'apple-touch-icon-180x180.png'],
     manifest: {
       name: 'Knowlune',

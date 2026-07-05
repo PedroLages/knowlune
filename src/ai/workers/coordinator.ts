@@ -276,10 +276,7 @@ class WorkerCoordinator {
         ? `runtime error: ${event.error.message}`
         : `script load failure: ${event.message || 'no diagnostic available'}`
       console.error(`[Coordinator] Worker error (${type}-worker):`, detail, event)
-      this.handleWorkerError(
-        type,
-        event.error ?? new Error(detail)
-      )
+      this.handleWorkerError(type, event.error ?? new Error(detail))
     })
 
     return worker

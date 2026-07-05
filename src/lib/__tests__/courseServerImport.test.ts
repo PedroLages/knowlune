@@ -60,7 +60,17 @@ vi.mock('@/stores/useImportProgressStore', () => ({
             confirmCancellation: vi.fn(),
             setDialogOpen: vi.fn(),
           },
-    { getState: () => ({ startImport: vi.fn(), updateScanProgress: vi.fn(), completeCourse: vi.fn(), failCourse: vi.fn(), cancelRequested: false, confirmCancellation: vi.fn(), setDialogOpen: vi.fn() }) }
+    {
+      getState: () => ({
+        startImport: vi.fn(),
+        updateScanProgress: vi.fn(),
+        completeCourse: vi.fn(),
+        failCourse: vi.fn(),
+        cancelRequested: false,
+        confirmCancellation: vi.fn(),
+        setDialogOpen: vi.fn(),
+      }),
+    }
   ),
 }))
 
@@ -91,7 +101,9 @@ describe('listServerSubDirectories', () => {
 
   it('returns empty array when no subdirectories exist', async () => {
     mockFetch.mockResolvedValueOnce(
-      makeAutoindexResponse(`<html><body><pre><a href="../">../</a><a href="file.mp4">file.mp4</a></pre></body></html>`)
+      makeAutoindexResponse(
+        `<html><body><pre><a href="../">../</a><a href="file.mp4">file.mp4</a></pre></body></html>`
+      )
     )
     const result = await listServerSubDirectories('http://example.com/courses/')
     expect(result.ok).toBe(true)
@@ -118,7 +130,11 @@ describe('listServerSubDirectories', () => {
   })
 
   it('returns error when server responds with non-200', async () => {
-    mockFetch.mockResolvedValueOnce({ ok: false, status: 500, statusText: 'Server Error' } as Response)
+    mockFetch.mockResolvedValueOnce({
+      ok: false,
+      status: 500,
+      statusText: 'Server Error',
+    } as Response)
     const result = await listServerSubDirectories('http://example.com/error/')
     expect(result.ok).toBe(false)
     if (!result.ok) {
@@ -157,7 +173,9 @@ describe('scanCourseFromSource', () => {
   // Path: server URL → success
   it('returns success when scanning from server URL', async () => {
     mockFetch.mockResolvedValueOnce(
-      makeAutoindexResponse(`<html><body><pre><a href="../">../</a><a href="video.mp4">video.mp4</a></pre></body></html>`)
+      makeAutoindexResponse(
+        `<html><body><pre><a href="../">../</a><a href="video.mp4">video.mp4</a></pre></body></html>`
+      )
     )
 
     const result = await scanCourseFromSource({
@@ -262,15 +280,18 @@ describe('scanCourseFromSource', () => {
   // verifies total files collected never exceeds MAX_SERVER_SCAN_FILES (5000)
   it('caps at MAX_SERVER_SCAN_FILES with concurrent subdirs', async () => {
     // Build a root autoindex with 10 subdirectories
-    const rootLinks = Array.from({ length: 10 }, (_, i) =>
-      `<a href="SubDir${i}/">SubDir${i}/</a>  01-Jan-2025 10:00    -`
+    const rootLinks = Array.from(
+      { length: 10 },
+      (_, i) => `<a href="SubDir${i}/">SubDir${i}/</a>  01-Jan-2025 10:00    -`
     ).join('\n')
     const rootHtml = `<html><body><pre><a href="../">../</a>\n${rootLinks}\n</pre></body></html>`
 
     // Build per-subdir autoindex with 600 video files each
     function subdirHtml(dirIndex: number): string {
-      const fileLinks = Array.from({ length: 600 }, (_, i) =>
-        `<a href="video${dirIndex}_${i}.mp4">video${dirIndex}_${i}.mp4</a>  01-Jan-2025 10:00    10M`
+      const fileLinks = Array.from(
+        { length: 600 },
+        (_, i) =>
+          `<a href="video${dirIndex}_${i}.mp4">video${dirIndex}_${i}.mp4</a>  01-Jan-2025 10:00    10M`
       ).join('\n')
       return `<html><body><pre><a href="../">../</a>\n${fileLinks}\n</pre></body></html>`
     }
@@ -281,8 +302,7 @@ describe('scanCourseFromSource', () => {
     const subdirResponses = Array.from({ length: 10 }, (_, i) =>
       makeAutoindexResponse(subdirHtml(i))
     )
-    mockFetch
-      .mockResolvedValueOnce(makeAutoindexResponse(rootHtml))
+    mockFetch.mockResolvedValueOnce(makeAutoindexResponse(rootHtml))
     for (const resp of subdirResponses) {
       mockFetch.mockResolvedValueOnce(resp)
     }

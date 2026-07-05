@@ -35,7 +35,13 @@ export interface AuthorView {
   specialties: string[]
   yearsExperience: number
   education?: string
-  socialLinks: { website?: string; linkedin?: string; twitter?: string; instagram?: string; youtube?: string }
+  socialLinks: {
+    website?: string
+    linkedin?: string
+    twitter?: string
+    instagram?: string
+    youtube?: string
+  }
   featuredQuote?: string
   courseCount: number
   isPreseeded: boolean

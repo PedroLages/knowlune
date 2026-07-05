@@ -14,7 +14,8 @@ import {
 } from '../pushManager'
 
 // A known valid VAPID public key (generated via web-push)
-const TEST_VAPID_KEY = 'BM5un7mxzsfStWgO9VnFbckDmM1-aMo7iMCpZt46h1nUcz_QeVKzGQ5b07Rb4EG-oLLRp5FzcvEsEBH40RiYNCA'
+const TEST_VAPID_KEY =
+  'BM5un7mxzsfStWgO9VnFbckDmM1-aMo7iMCpZt46h1nUcz_QeVKzGQ5b07Rb4EG-oLLRp5FzcvEsEBH40RiYNCA'
 
 describe('urlBase64ToUint8Array', () => {
   it('converts a valid VAPID public key to a Uint8Array', () => {
@@ -29,6 +30,12 @@ describe('urlBase64ToUint8Array', () => {
     const a = urlBase64ToUint8Array(TEST_VAPID_KEY)
     const b = urlBase64ToUint8Array(TEST_VAPID_KEY)
     expect(a).toEqual(b)
+  })
+
+  it('produces known byte values for a simple base64url string', () => {
+    // base64url("Hello") = "SGVsbG8" → bytes [72, 101, 108, 108, 111]
+    const result = urlBase64ToUint8Array('SGVsbG8')
+    expect(Array.from(result)).toEqual([72, 101, 108, 108, 111])
   })
 
   it('handles empty string', () => {

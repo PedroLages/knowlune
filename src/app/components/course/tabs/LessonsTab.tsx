@@ -120,7 +120,12 @@ function buildFolderTree(groups: MaterialGroup[]): FolderNode[] {
       currentPath = i === 0 ? segments[i] : `${currentPath}/${segments[i]}`
       let node = nodeMap.get(currentPath)
       if (!node) {
-        node = { name: safeDecodeURIComponent(segments[i]), path: currentPath, items: [], children: [] }
+        node = {
+          name: safeDecodeURIComponent(segments[i]),
+          path: currentPath,
+          items: [],
+          children: [],
+        }
         nodeMap.set(currentPath, node)
         parentChildren.push(node)
         // Sort after insertion to maintain natural order
@@ -194,7 +199,12 @@ function getDisplayRoots(nodes: FolderNode[]): {
         children: n.children.flatMap(c => {
           const result = flatten(c, null)
           // If flattening produced results, propagate last-skipped context
-          if (lastSkipped && result.length === 1 && result[0].items.length === 0 && result[0].children.length === 1) {
+          if (
+            lastSkipped &&
+            result.length === 1 &&
+            result[0].items.length === 0 &&
+            result[0].children.length === 1
+          ) {
             return result
           }
           return result
@@ -291,7 +301,12 @@ function LessonLink({
         )}
       </span>
       <div className="flex-1 min-w-0">
-        <p className={cn('text-sm line-clamp-2', isCompleted && 'line-through text-muted-foreground')}>
+        <p
+          className={cn(
+            'text-sm line-clamp-2',
+            isCompleted && 'line-through text-muted-foreground'
+          )}
+        >
           <HighlightedLessonTitle text={lesson.title} query={searchQuery} />
         </p>
         <div
@@ -310,9 +325,7 @@ function LessonLink({
           ) : lesson.duration != null && lesson.duration > 0 ? (
             <span className="text-xs">{formatLessonDuration(lesson.duration)}</span>
           ) : null}
-          {isActive && (
-            <span className="text-[11px] text-brand font-medium">Now playing</span>
-          )}
+          {isActive && <span className="text-[11px] text-brand font-medium">Now playing</span>}
           {materialCount > 0 && onFocusMaterials && (
             <button
               type="button"
@@ -401,7 +414,12 @@ function MaterialRow({
         )}
       </span>
       <div className="flex-1 min-w-0">
-        <p className={cn('text-sm line-clamp-2', isCompleted && 'line-through text-muted-foreground')}>
+        <p
+          className={cn(
+            'text-sm line-clamp-2',
+            isCompleted && 'line-through text-muted-foreground'
+          )}
+        >
           <HighlightedLessonTitle text={material.title} query={searchQuery} />
         </p>
         {material.sourceMetadata?.pageCount ? (
@@ -555,7 +573,9 @@ function FolderTreeNode({
         )}
       >
         <FolderOpen className="size-3.5 shrink-0" aria-hidden="true" />
-        <span className="flex-1 text-left text-sm line-clamp-2" title={node.name}>{node.name}</span>
+        <span className="flex-1 text-left text-sm line-clamp-2" title={node.name}>
+          {node.name}
+        </span>
         <span className="text-xs text-muted-foreground">{totalCount}</span>
         <ChevronDown
           className="size-3.5 text-muted-foreground transition-transform group-data-[state=open]/folder:rotate-180"
@@ -824,7 +844,9 @@ export function LessonsTab({ courseId, lessonId, adapter, onFocusMaterials }: Le
         data-testid="lessons-tab-error"
       >
         <AlertTriangle className="size-10 mb-3 text-destructive opacity-70" aria-hidden="true" />
-        <h3 className="text-sm font-semibold text-foreground mb-1">Failed to load course content</h3>
+        <h3 className="text-sm font-semibold text-foreground mb-1">
+          Failed to load course content
+        </h3>
         <p className="text-xs text-muted-foreground mb-4">
           Please check your connection and try again.
         </p>

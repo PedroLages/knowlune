@@ -121,9 +121,7 @@ function parseAutoindex(html: string, baseUrl: string): ServerFile[] {
  *
  * Returns a discriminated union so callers can render precise inline errors.
  */
-export function isValidImportUrl(
-  url: string
-): { valid: true } | { valid: false; reason: string } {
+export function isValidImportUrl(url: string): { valid: true } | { valid: false; reason: string } {
   if (!url.trim()) {
     return { valid: false, reason: 'URL is empty' }
   }
@@ -147,7 +145,8 @@ export function isValidImportUrl(
   if (!pathname || pathname === '') {
     return {
       valid: false,
-      reason: 'URL must include a folder path — paste a specific folder URL, not just the server root.',
+      reason:
+        'URL must include a folder path — paste a specific folder URL, not just the server root.',
     }
   }
 

@@ -1,16 +1,7 @@
 import { useState, useMemo } from 'react'
 import { VirtualizedGrid } from '@/app/components/VirtualizedGrid'
 import { Link } from 'react-router'
-import {
-  ArrowDownAZ,
-  BookOpen,
-  Calendar,
-  Import,
-  Pencil,
-  Plus,
-  Trash2,
-  Users,
-} from 'lucide-react'
+import { ArrowDownAZ, BookOpen, Calendar, Import, Pencil, Plus, Trash2, Users } from 'lucide-react'
 import { getSocialIcon } from '@/lib/authors'
 import { Card, CardContent } from '@/app/components/ui/card'
 import { Button } from '@/app/components/ui/button'

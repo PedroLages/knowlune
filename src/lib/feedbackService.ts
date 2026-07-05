@@ -156,12 +156,16 @@ export function buildIssuePayload(
  * Uses a 10-second AbortController timeout.
  * Returns { ok: true } on success, or { ok: false, error } on failure/timeout.
  */
-export async function submitFeedback(
-  payload: { title: string; body: string; labels: string[] }
-): Promise<SubmitResult | SubmitError> {
+export async function submitFeedback(payload: {
+  title: string
+  body: string
+  labels: string[]
+}): Promise<SubmitResult | SubmitError> {
   let accessToken: string | undefined
   try {
-    const { data: { session } } = await supabase.auth.getSession()
+    const {
+      data: { session },
+    } = await supabase.auth.getSession()
     accessToken = session?.access_token
   } catch {
     // Auth unavailable — proceed without token; Edge Function will return 401
@@ -186,7 +190,10 @@ export async function submitFeedback(
       signal: controller.signal,
     })
 
-    const responseBody = await response.json().catch(() => ({})) as { ok?: boolean; error?: string }
+    const responseBody = (await response.json().catch(() => ({}))) as {
+      ok?: boolean
+      error?: string
+    }
 
     if (response.ok && responseBody.ok) {
       return { ok: true }
@@ -194,7 +201,9 @@ export async function submitFeedback(
 
     return {
       ok: false,
-      error: responseBody.error || `Server returned ${response.status}. Please use the copy option below.`,
+      error:
+        responseBody.error ||
+        `Server returned ${response.status}. Please use the copy option below.`,
     }
   } catch (err) {
     const isTimeout =

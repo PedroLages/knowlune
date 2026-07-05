@@ -25,10 +25,7 @@ export function ProgressionModeToggle({ mode, onChange, disabled }: ProgressionM
         >
           {isFree ? 'Free navigation' : 'Sequential mode'}
         </label>
-        <p
-          id="progression-mode-description"
-          className="text-xs text-muted-foreground"
-        >
+        <p id="progression-mode-description" className="text-xs text-muted-foreground">
           {isFree
             ? 'Start any course without completing previous ones.'
             : 'Complete each course to unlock the next one.'}

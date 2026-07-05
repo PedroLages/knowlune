@@ -2,7 +2,18 @@ import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { useParams, Link, useNavigate } from 'react-router'
 import { motion, useReducedMotion } from 'motion/react'
 import { useShallow } from 'zustand/react/shallow'
-import { BookOpen, Trophy, ArrowLeft, AlertCircle, RotateCcw, Map, List, Layers, FolderKanban, StickyNote } from 'lucide-react'
+import {
+  BookOpen,
+  Trophy,
+  ArrowLeft,
+  AlertCircle,
+  RotateCcw,
+  Map,
+  List,
+  Layers,
+  FolderKanban,
+  StickyNote,
+} from 'lucide-react'
 import { Skeleton } from '@/app/components/ui/skeleton'
 import { Button } from '@/app/components/ui/button'
 import { Card, CardContent } from '@/app/components/ui/card'
@@ -531,7 +542,9 @@ export function LearningTrackDetail() {
     const videos = videosByCourse.get(courseId) ?? []
     if (videos.length === 0) return undefined
     const progressList = [...videoProgressMap.values()].filter(p => p.courseId === courseId)
-    const completedIds = new Set(progressList.filter(p => p.completionPercentage >= 90).map(p => p.videoId))
+    const completedIds = new Set(
+      progressList.filter(p => p.completionPercentage >= 90).map(p => p.videoId)
+    )
     const remainingSeconds = videos
       .filter(v => !completedIds.has(v.id))
       .reduce((sum, v) => sum + v.duration, 0)
@@ -568,7 +581,13 @@ export function LearningTrackDetail() {
 
     // Auto-derive phases from course groupings (every ~4 courses = 1 phase)
     const PHASE_SIZE = 4
-    const phaseLabels = ['Foundation', 'Core Skills', 'Advanced Topics', 'Specialization', 'Mastery']
+    const phaseLabels = [
+      'Foundation',
+      'Core Skills',
+      'Advanced Topics',
+      'Specialization',
+      'Mastery',
+    ]
     const phases: RoadmapPhase[] = []
 
     for (let i = 0; i < nonGapCourses.length; i += PHASE_SIZE) {
@@ -684,23 +703,38 @@ export function LearningTrackDetail() {
             {/* Tab bar */}
             <div className="overflow-x-auto -mx-1 px-1">
               <TabsList className="w-full sm:w-auto inline-flex h-auto p-1 bg-muted/50 rounded-2xl gap-1">
-                <TabsTrigger value="overview" className="rounded-xl px-4 py-2.5 text-sm font-medium gap-2 data-[state=active]:bg-card data-[state=active]:shadow-sm">
+                <TabsTrigger
+                  value="overview"
+                  className="rounded-xl px-4 py-2.5 text-sm font-medium gap-2 data-[state=active]:bg-card data-[state=active]:shadow-sm"
+                >
                   <Layers className="size-4" aria-hidden="true" />
                   <span className="hidden sm:inline">Overview</span>
                 </TabsTrigger>
-                <TabsTrigger value="roadmap" className="rounded-xl px-4 py-2.5 text-sm font-medium gap-2 data-[state=active]:bg-card data-[state=active]:shadow-sm">
+                <TabsTrigger
+                  value="roadmap"
+                  className="rounded-xl px-4 py-2.5 text-sm font-medium gap-2 data-[state=active]:bg-card data-[state=active]:shadow-sm"
+                >
                   <Map className="size-4" aria-hidden="true" />
                   <span className="hidden sm:inline">Roadmap</span>
                 </TabsTrigger>
-                <TabsTrigger value="syllabus" className="rounded-xl px-4 py-2.5 text-sm font-medium gap-2 data-[state=active]:bg-card data-[state=active]:shadow-sm">
+                <TabsTrigger
+                  value="syllabus"
+                  className="rounded-xl px-4 py-2.5 text-sm font-medium gap-2 data-[state=active]:bg-card data-[state=active]:shadow-sm"
+                >
                   <List className="size-4" aria-hidden="true" />
                   <span className="hidden sm:inline">Syllabus</span>
                 </TabsTrigger>
-                <TabsTrigger value="projects" className="rounded-xl px-4 py-2.5 text-sm font-medium gap-2 data-[state=active]:bg-card data-[state=active]:shadow-sm">
+                <TabsTrigger
+                  value="projects"
+                  className="rounded-xl px-4 py-2.5 text-sm font-medium gap-2 data-[state=active]:bg-card data-[state=active]:shadow-sm"
+                >
                   <FolderKanban className="size-4" aria-hidden="true" />
                   <span className="hidden sm:inline">Projects</span>
                 </TabsTrigger>
-                <TabsTrigger value="notes" className="rounded-xl px-4 py-2.5 text-sm font-medium gap-2 data-[state=active]:bg-card data-[state=active]:shadow-sm">
+                <TabsTrigger
+                  value="notes"
+                  className="rounded-xl px-4 py-2.5 text-sm font-medium gap-2 data-[state=active]:bg-card data-[state=active]:shadow-sm"
+                >
                   <StickyNote className="size-4" aria-hidden="true" />
                   <span className="hidden sm:inline">Notes</span>
                 </TabsTrigger>
@@ -741,7 +775,10 @@ export function LearningTrackDetail() {
                     {!currentEntry && courseEntries.length > 0 && (
                       <motion.div variants={itemVariants}>
                         <div className="bg-success-soft border border-success/20 rounded-2xl p-4 flex items-center gap-3">
-                          <Trophy className="w-5 h-5 text-success flex-shrink-0" aria-hidden="true" />
+                          <Trophy
+                            className="w-5 h-5 text-success flex-shrink-0"
+                            aria-hidden="true"
+                          />
                           <p className="text-sm font-medium text-success">All courses completed!</p>
                         </div>
                       </motion.div>
@@ -776,9 +813,7 @@ export function LearningTrackDetail() {
                       currentCoursePct={currentCoursePct}
                       nextMilestoneName={nextMilestoneName}
                       nextMilestoneEstimate={
-                        nextMilestoneName
-                          ? 'Keep studying to reach this milestone'
-                          : undefined
+                        nextMilestoneName ? 'Keep studying to reach this milestone' : undefined
                       }
                     />
                   </aside>
@@ -788,11 +823,7 @@ export function LearningTrackDetail() {
 
             {/* ── Roadmap Tab ── */}
             <TabsContent value="roadmap" className="mt-0">
-              <motion.div
-                variants={containerVariants}
-                initial="hidden"
-                animate="visible"
-              >
+              <motion.div variants={containerVariants} initial="hidden" animate="visible">
                 <motion.section variants={itemVariants}>
                   <div className="bg-card rounded-[24px] shadow-card-ambient border border-border/50 p-6 lg:p-8 relative overflow-hidden">
                     <div
@@ -887,18 +918,18 @@ export function LearningTrackDetail() {
 
             {/* ── Projects Tab (placeholder) ── */}
             <TabsContent value="projects" className="mt-0">
-              <motion.div
-                variants={containerVariants}
-                initial="hidden"
-                animate="visible"
-              >
+              <motion.div variants={containerVariants} initial="hidden" animate="visible">
                 <motion.section variants={itemVariants}>
                   <Card className="rounded-[24px] shadow-card-ambient border border-border/50">
                     <CardContent className="p-8 text-center">
-                      <FolderKanban className="size-12 text-muted-foreground mx-auto mb-4" aria-hidden="true" />
+                      <FolderKanban
+                        className="size-12 text-muted-foreground mx-auto mb-4"
+                        aria-hidden="true"
+                      />
                       <h3 className="text-lg font-semibold mb-2">Projects & Labs</h3>
                       <p className="text-muted-foreground text-sm max-w-md mx-auto">
-                        Portfolio projects, hands-on labs, and capstone tasks will appear here as you progress through your courses.
+                        Portfolio projects, hands-on labs, and capstone tasks will appear here as
+                        you progress through your courses.
                       </p>
                     </CardContent>
                   </Card>
@@ -908,15 +939,14 @@ export function LearningTrackDetail() {
 
             {/* ── Notes Tab (placeholder) ── */}
             <TabsContent value="notes" className="mt-0">
-              <motion.div
-                variants={containerVariants}
-                initial="hidden"
-                animate="visible"
-              >
+              <motion.div variants={containerVariants} initial="hidden" animate="visible">
                 <motion.section variants={itemVariants}>
                   <Card className="rounded-[24px] shadow-card-ambient border border-border/50">
                     <CardContent className="p-8 text-center">
-                      <StickyNote className="size-12 text-muted-foreground mx-auto mb-4" aria-hidden="true" />
+                      <StickyNote
+                        className="size-12 text-muted-foreground mx-auto mb-4"
+                        aria-hidden="true"
+                      />
                       <h3 className="text-lg font-semibold mb-2">Your Notes</h3>
                       <p className="text-muted-foreground text-sm max-w-md mx-auto">
                         Notes you take during lessons will be organized here by course and lesson.
@@ -929,11 +959,7 @@ export function LearningTrackDetail() {
           </Tabs>
         ) : (
           /* Empty path (no courses) */
-          <motion.div
-            variants={containerVariants}
-            initial="hidden"
-            animate="visible"
-          >
+          <motion.div variants={containerVariants} initial="hidden" animate="visible">
             <motion.div variants={itemVariants}>
               <Card className="rounded-2xl shadow-sm border border-border">
                 <CardContent className="p-8 text-center">
@@ -943,7 +969,8 @@ export function LearningTrackDetail() {
                   />
                   <h3 className="text-lg font-semibold mb-2">No courses yet</h3>
                   <p className="text-muted-foreground text-sm max-w-md mx-auto">
-                    This track doesn&apos;t have any courses yet. Add courses to start tracking your progress.
+                    This track doesn&apos;t have any courses yet. Add courses to start tracking your
+                    progress.
                   </p>
                 </CardContent>
               </Card>

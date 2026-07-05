@@ -42,7 +42,13 @@ import { SortableCourseTimelineEntry } from '@/app/components/learning-path/Sort
 import { formatClockDuration } from '@/lib/formatDuration'
 import { isCourseInProgress } from '@/lib/progressUtils'
 import type { ChapterGroup } from '@/lib/curriculumGrouping'
-import type { LearningPathEntry, PathCourseInfo, ImportedVideo, VideoProgress, PathProgressionMode } from '@/data/types'
+import type {
+  LearningPathEntry,
+  PathCourseInfo,
+  ImportedVideo,
+  VideoProgress,
+  PathProgressionMode,
+} from '@/data/types'
 
 // ---- Types ----
 
@@ -317,7 +323,10 @@ function CourseTimelineEntry({
             {entry.justification && (
               <details className="group">
                 <summary className="text-xs font-semibold text-muted-foreground/70 cursor-pointer hover:text-muted-foreground transition-colors list-none flex items-center gap-1.5">
-                  <ChevronDown className="size-3.5 group-open:rotate-180 transition-transform" aria-hidden="true" />
+                  <ChevronDown
+                    className="size-3.5 group-open:rotate-180 transition-transform"
+                    aria-hidden="true"
+                  />
                   Why this matters
                 </summary>
                 <p className="text-xs text-muted-foreground/70 mt-1.5 leading-relaxed pl-5">
@@ -780,8 +789,8 @@ export function PathTimeline({
               videos={videosByCourse?.get(entry.courseId)}
               lessonGroups={lessonGroupsByCourse?.get(entry.courseId)}
               videoProgressMap={videoProgressMap}
-                progressionMode={progressionMode}
-                suppressAnimations={suppressAnimations}
+              progressionMode={progressionMode}
+              suppressAnimations={suppressAnimations}
             />
           </div>
         )

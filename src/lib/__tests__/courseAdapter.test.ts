@@ -102,15 +102,11 @@ function makePdf(overrides: Partial<ImportedPdf> = {}): ImportedPdf {
 
 describe('safeDecodeURIComponent()', () => {
   it('decodes %20 to space', () => {
-    expect(adapterLib.safeDecodeURIComponent('Linux%20Administration')).toBe(
-      'Linux Administration'
-    )
+    expect(adapterLib.safeDecodeURIComponent('Linux%20Administration')).toBe('Linux Administration')
   })
 
   it('decodes complex encoding (%20 and %3A)', () => {
-    expect(adapterLib.safeDecodeURIComponent('Linux%20Admin%3A%20Guide')).toBe(
-      'Linux Admin: Guide'
-    )
+    expect(adapterLib.safeDecodeURIComponent('Linux%20Admin%3A%20Guide')).toBe('Linux Admin: Guide')
   })
 
   it('passes already-decoded strings through unchanged (idempotent)', () => {
@@ -136,9 +132,9 @@ describe('humanizeFilename() with URI decoding', () => {
   })
 
   it('decodes complex encoding', () => {
-    expect(
-      adapterLib.humanizeFilename('Linux%20Administration%20Bootcamp%3A%20Guide.mp4')
-    ).toBe('Linux Administration Bootcamp: Guide')
+    expect(adapterLib.humanizeFilename('Linux%20Administration%20Bootcamp%3A%20Guide.mp4')).toBe(
+      'Linux Administration Bootcamp: Guide'
+    )
   })
 
   it('handles already-decoded filenames correctly (idempotent)', () => {

@@ -47,10 +47,14 @@ registerRoute(
   })
 )
 
-// c. HuggingFace models: CacheFirst, 20 entries, 90 days
+// c. HuggingFace models: StaleWhileRevalidate, 20 entries, 90 days
+// Switched from CacheFirst because HuggingFace may not send CORS headers
+// for all responses, which causes CacheableResponsePlugin to drop them.
+// StaleWhileRevalidate serves cached content even when the network fetch
+// fails.
 registerRoute(
   /^https:\/\/huggingface\.co\/.*/i,
-  new CacheFirst({
+  new StaleWhileRevalidate({
     cacheName: 'hf-models',
     plugins: [
       new ExpirationPlugin({ maxEntries: 20, maxAgeSeconds: 90 * 24 * 60 * 60 }),
@@ -77,13 +81,15 @@ registerRoute(navigationRoute)
 setDefaultHandler(new NetworkOnly())
 
 // ─── SW Lifecycle ────────────────────────────────────────────────────────
-
-self.addEventListener('install', () => {
-  skipWaiting()
-})
+// skipWaiting intentionally omitted from install event — registerType:'autoUpdate'
+// means vite-plugin-pwa calls skipWaiting() automatically after a new SW
+// takes over. The SKIP_WAITING message listener below is retained for
+// backward-compatible manual updates via the message protocol.
 
 self.addEventListener('activate', event => {
-  event.waitUntil(self.clients.claim())
+  event.waitUntil(self.clients.claim().catch(err => { // silent-catch-ok
+    console.warn('[SW] clients.claim() failed:', err)
+  }))
 })
 
 // ─── SKIP_WAITING message listener ───────────────────────────────────────
@@ -104,14 +110,18 @@ self.addEventListener('push', event => {
   if (event.data) {
     try {
       const payload = event.data.json()
-      if (typeof payload.title === 'string' && payload.title.length > 0) {
-        title = payload.title
+      if (typeof payload !== 'object' || payload === null) {
+        console.warn('[SW] Push payload is not an object')
+      } else {
+        if (typeof payload.title === 'string' && payload.title.length > 0) {
+          title = payload.title.slice(0, 200)
+        }
+        if (typeof payload.body === 'string' && payload.body.length > 0) {
+          body = payload.body.slice(0, 500)
+        }
       }
-      if (typeof payload.body === 'string' && payload.body.length > 0) {
-        body = payload.body
-      }
-    } catch {
-      // Invalid JSON payload — use defaults
+    } catch (err) {
+      console.warn('[SW] Invalid push payload:', err) // silent-catch-ok
     }
   }
 
@@ -120,5 +130,9 @@ self.addEventListener('push', event => {
     icon: '/pwa-192x192.png',
   }
 
-  event.waitUntil(self.registration.showNotification(title, options))
+  event.waitUntil(
+    self.registration.showNotification(title, options).catch(err => { // silent-catch-ok
+      console.warn('[SW] Failed to show notification:', err)
+    })
+  )
 })

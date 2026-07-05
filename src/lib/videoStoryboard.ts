@@ -270,9 +270,7 @@ export async function saveVideoStoryboard(
 }
 
 /** Load a storyboard record and return an object URL for the sprite sheet */
-export async function loadVideoStoryboard(
-  videoId: string
-): Promise<{
+export async function loadVideoStoryboard(videoId: string): Promise<{
   url: string
   columns: number
   rows: number

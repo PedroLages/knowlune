@@ -23,9 +23,18 @@ export type PushErrorCode =
   | 'API_NOT_SUPPORTED'
   | 'INVALID_VAPID_KEY'
 
-export type PushResult<T> =
-  | { ok: true; data: T }
-  | { ok: false; error: PushError }
+/**
+ * Generic Result type for operations that can succeed or fail.
+ *
+ * Intended to unify the shared pattern used by PushResult, ServerResult, and
+ * ParseResult across the project in a future refactor.
+ *
+ * @typeParam T - The success value type
+ * @typeParam E - The error type (defaults to string)
+ */
+export type Result<T, E = string> = { ok: true; data: T } | { ok: false; error: E }
+
+export type PushResult<T> = Result<T, PushError>
 
 export type PermissionState = 'granted' | 'denied' | 'default' | 'unsupported'
 
@@ -40,8 +49,13 @@ export type PermissionState = 'granted' | 'denied' | 'default' | 'unsupported'
  * @returns Decoded Uint8Array
  */
 export function urlBase64ToUint8Array(base64String: string): Uint8Array {
+  // Validate input length: valid base64url padding requires len % 4 to be 0, 2, or 3
+  const remainder = base64String.length % 4
+  if (remainder === 1) {
+    return new Uint8Array(0)
+  }
   // Restore standard base64 padding
-  const padding = '='.repeat((4 - (base64String.length % 4)) % 4)
+  const padding = remainder === 0 ? '' : remainder === 2 ? '==' : '='
   const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/')
   const rawData = atob(base64)
   const output = new Uint8Array(rawData.length)
@@ -85,23 +99,22 @@ export function getPushPermissionState(): PermissionState {
 export async function subscribeToPush(
   registration: ServiceWorkerRegistration
 ): Promise<PushResult<PushSubscription>> {
-  // Guard: PushManager availability
-  if (
-    typeof window === 'undefined' ||
-    !('PushManager' in window) ||
-    !registration.pushManager
-  ) {
-    return {
-      ok: false,
-      error: { code: 'API_NOT_SUPPORTED', message: 'PushManager is not available in this environment' },
-    }
-  }
-
-  // Guard: permission already denied
+  // Guard: permission already denied (check before PushManager for lighter guard)
   if (typeof Notification !== 'undefined' && Notification.permission === 'denied') {
     return {
       ok: false,
       error: { code: 'PERMISSION_DENIED', message: 'Notification permission has been denied' },
+    }
+  }
+
+  // Guard: PushManager availability
+  if (typeof window === 'undefined' || !('PushManager' in window) || !registration.pushManager) {
+    return {
+      ok: false,
+      error: {
+        code: 'API_NOT_SUPPORTED',
+        message: 'PushManager is not available in this environment',
+      },
     }
   }
 
@@ -122,6 +135,13 @@ export async function subscribeToPush(
 
     return { ok: true, data: subscription }
   } catch (err) {
+    // Catch atob failures from invalid VAPID key first
+    if (err instanceof DOMException && err.name === 'InvalidCharacterError') {
+      return {
+        ok: false,
+        error: { code: 'INVALID_VAPID_KEY', message: 'VITE_VAPID_PUBLIC_KEY is not valid base64' },
+      }
+    }
     const message = err instanceof Error ? err.message : 'Unknown error during subscription'
     return {
       ok: false,

@@ -270,7 +270,9 @@ export function EmbeddingModelProgressToast() {
       // attempted — happens in isolation tests and on low-memory devices)
       if (!toastIdRef.current || !warmupAttemptedRef.current || hasCompletedRef.current) return
 
-      const detail = (event as CustomEvent<{ workerId: string; error: string; errorMessage?: string }>).detail
+      const detail = (
+        event as CustomEvent<{ workerId: string; error: string; errorMessage?: string }>
+      ).detail
       const errorMsg = detail?.errorMessage ?? detail?.error ?? 'Unknown error'
 
       // Cancel pending timers

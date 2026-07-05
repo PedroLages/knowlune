@@ -80,9 +80,7 @@ describe('CourseServerSettings', () => {
     render(<CourseServerSettings />)
 
     expect(screen.getByText('Course Content Servers')).toBeInTheDocument()
-    expect(
-      screen.getByText(/No servers configured/)
-    ).toBeInTheDocument()
+    expect(screen.getByText(/No servers configured/)).toBeInTheDocument()
   })
 
   it('renders a server with "connected" status without crashing', () => {
@@ -142,8 +140,12 @@ describe('CourseServerSettings', () => {
   it('renders multiple servers with mixed statuses without crashing', () => {
     mockState.servers.push(
       makeServer({ id: 'srv-1', name: 'Good Server', status: 'connected' }),
-      makeServer({ id: 'srv-2', name: 'Bad Server', status: 'not-a-real-status' as CourseServer['status'] }),
-      makeServer({ id: 'srv-3', name: 'Offline Server', status: 'offline' }),
+      makeServer({
+        id: 'srv-2',
+        name: 'Bad Server',
+        status: 'not-a-real-status' as CourseServer['status'],
+      }),
+      makeServer({ id: 'srv-3', name: 'Offline Server', status: 'offline' })
     )
 
     render(<CourseServerSettings />)

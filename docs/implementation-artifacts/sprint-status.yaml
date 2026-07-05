@@ -673,7 +673,10 @@ development_status:
   # Depends on: E58 (notifications), E60 (smart triggers), E44-E49 (Supabase sync)
   # ──────────────────────────────────────────────────
   epic-61: backlog  # reset 2026-03-30: story specs created but no code implemented
-  61-1-vapid-key-setup-and-service-worker-registration: ready-for-dev
+  61-1-vapid-key-setup-and-service-worker-registration:
+    status: in-progress
+    startedAt: 2026-07-05T00:00:00.000Z
+    branch: main
   61-2-service-worker-push-and-click-handlers: ready-for-dev
   61-3-push-subscription-management-and-supabase-persistence: ready-for-dev
   61-4-opt-in-flow-with-session-counting-and-pre-permission-dialog: ready-for-dev

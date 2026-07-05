@@ -217,7 +217,7 @@ function RestoreDialogBody({
         <Checkbox
           id="safety-backup"
           checked={createSafetyBackup}
-          onCheckedChange={(checked) => onSafetyBackupChange(checked === true)}
+          onCheckedChange={checked => onSafetyBackupChange(checked === true)}
         />
         <label htmlFor="safety-backup" className="text-sm leading-snug cursor-pointer">
           <span className="font-medium">Create safety backup</span>
