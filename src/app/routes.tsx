@@ -11,6 +11,7 @@ import { Layout } from './components/Layout'
 import { DelayedFallback } from './components/DelayedFallback'
 import { Skeleton } from './components/ui/skeleton'
 import { RouteErrorBoundary } from './components/RouteErrorBoundary'
+import { ChunkErrorBoundary } from './components/ChunkErrorBoundary'
 import { PremiumFeaturePage, PREMIUM_FEATURES } from './components/PremiumFeaturePage'
 import { MessageSquare, Sparkles, Brain, RotateCcw, Shuffle, BarChart3, Layers } from 'lucide-react'
 import { useAuthStore, selectAuthState } from '@/stores/useAuthStore'
@@ -200,7 +201,9 @@ function PageLoader() {
 function SuspensePage({ children }: { children: React.ReactNode }) {
   return (
     <RouteErrorBoundary>
-      <Suspense fallback={<PageLoader />}>{children}</Suspense>
+      <ChunkErrorBoundary>
+        <Suspense fallback={<PageLoader />}>{children}</Suspense>
+      </ChunkErrorBoundary>
     </RouteErrorBoundary>
   )
 }
