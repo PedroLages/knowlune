@@ -841,7 +841,7 @@ export function CourseOverview() {
             </div>
 
             {/* Course Tags */}
-            {course.tags.length > 0 && (
+            {Array.isArray(course.tags) && course.tags.length > 0 && (
               <div className="bg-card/50 border border-muted-foreground/10 rounded-2xl p-6">
                 <h2 className="text-sm font-bold text-foreground mb-3 uppercase tracking-wider">
                   Topics

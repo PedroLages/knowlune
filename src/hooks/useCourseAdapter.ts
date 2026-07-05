@@ -23,15 +23,21 @@ export function useCourseAdapter(courseId: string | undefined): UseCourseAdapter
   const result = useLiveQuery(async () => {
     if (!courseId) return null
 
-    const course = await db.importedCourses.get(courseId)
-    if (!course) return { adapter: null, error: 'course-not-found' }
+    try {
+      const course = await db.importedCourses.get(courseId)
+      if (!course) return { adapter: null, error: 'course-not-found' }
 
-    const videos = await db.importedVideos.where('courseId').equals(courseId).sortBy('order')
+      const videos = await db.importedVideos.where('courseId').equals(courseId).sortBy('order')
 
-    const pdfs = await db.importedPdfs.where('courseId').equals(courseId).sortBy('filename')
+      const pdfs = await db.importedPdfs.where('courseId').equals(courseId).sortBy('filename')
 
-    const adapter = createCourseAdapter(course, videos, pdfs)
-    return { adapter, error: null }
+      const adapter = createCourseAdapter(course, videos, pdfs)
+      return { adapter, error: null }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Unknown error loading course'
+      console.error(`[useCourseAdapter] Query failed for course ${courseId}:`, err)
+      return { adapter: null, error: message }
+    }
   }, [courseId])
 
   // useLiveQuery returns undefined while loading
