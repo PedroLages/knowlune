@@ -122,7 +122,7 @@ so that my initial app install is fast and doesn't consume excessive bandwidth.
   - [ ] 6.6 Create `tests/support/helpers/sw-verification.ts` with reusable functions (`verifyPrecacheContains`, `verifyPrecacheExcludes`, `verifyPrecacheUnderSize`, `verifyRuntimeCacheRule`, `verifyRouteOrder`) and create `tests/e2e/story-e64-s09.spec.ts` with build-time verification tests:
     - precache manifest: `verifyPrecacheContains` for critical assets (index.html, react-vendor, dexie, etc.)
     - precache exclusions: `verifyPrecacheExcludes` for excluded chunks (tiptap, chart, pdf, AI, webllm)
-    - route order: `verifyRouteOrder` asserts 7 registerRoute calls in correct order
+    - route order: `verifyRouteOrder` asserts 8 registerRoute calls in correct order
     - precache boundary: `verifyPrecacheUnderSize` passes with 3MB limit; fails on degenerate configs that exceed it (verifying the check works, not vacuously passing on an empty manifest)
     - `globPatterns` includes `assets/*.svg` for imported SVG coverage
   - [ ] 6.7 Verify `globPatterns` includes `assets/*.svg` for Vite-imported SVGs (e.g., `import logoUrl from './logo.svg'` emits to `dist/assets/logo-[hash].svg`). Without this, lazy-loaded component SVGs render as broken images offline.
@@ -222,7 +222,10 @@ registerRoute(
   /\/assets\/.+\.woff2$/i,
   new CacheFirst({
     cacheName: 'fonts',
-    plugins: [new ExpirationPlugin({ maxEntries: 50, maxAgeSeconds: 30 * 24 * 60 * 60 })],
+    plugins: [
+      new CacheableResponsePlugin({ statuses: [0, 200] }),
+      new ExpirationPlugin({ maxEntries: 50, maxAgeSeconds: 30 * 24 * 60 * 60 }),
+    ],
   })
 );
 
@@ -282,8 +285,8 @@ Modify the `SuspensePage` helper in `src/app/routes.tsx` (line ~200) to include 
 
 ```tsx
 // src/app/routes.tsx — Updated SuspensePage helper
-import { ChunkErrorBoundary } from '@/app/components/ChunkErrorBoundary';
-import { OfflineRouteFallback } from '@/app/components/OfflineRouteFallback';
+import { ChunkErrorBoundary } from './components/ChunkErrorBoundary';
+import { OfflineRouteFallback } from './components/OfflineRouteFallback';
 
 function SuspensePage({ children }: { children: React.ReactNode }) {
   return (
