@@ -546,8 +546,38 @@ export default defineConfig({
     srcDir: 'src',
     injectManifest: {
       swSrc: 'sw.ts',
-      globPatterns: ['**/*.{js,css,html,svg,png,webp,woff2}'],
-      globIgnores: ['**/mockServiceWorker.js', '**/webllm*.js'],
+      // E64-S09: Whitelist only critical app-shell assets for precache.
+      // Route chunks and optional libraries are excluded and cached at runtime
+      // via the StaleWhileRevalidate rule in src/sw.ts.
+      globPatterns: [
+        // HTML
+        '*.html',
+        // Critical JS chunks (app shell — eagerly loaded at startup)
+        'assets/index-*.js',
+        'assets/react-vendor-*.js',
+        'assets/radix-ui-*.js',
+        'assets/react-router-*.js',
+        'assets/dexie-*.js',
+        'assets/style-utils-*.js',
+        'assets/sonner-*.js',
+        'assets/motion-vendor-*.js',
+        // CSS
+        'assets/*.css',
+        // Icons and images
+        '*.svg',
+        'pwa-*.png',
+        'apple-touch-icon-*.png',
+        'shortcuts/*.png',
+        // Workbox client (needed for SW update prompt — PWAUpdatePrompt)
+        'workbox-window*.js',
+      ],
+      globIgnores: [
+        '**/mockServiceWorker.js',
+        '**/webllm*.js',
+        '**/apple-splash-*.jpg',     // ~30 splash images (~1.3 MB)
+        '**/*.woff',                 // Fonts — loaded on demand, not app shell
+        '**/*.woff2',                // Fonts
+      ],
     },
     devOptions: {
       enabled: false,

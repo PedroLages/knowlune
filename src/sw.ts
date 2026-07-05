@@ -69,6 +69,23 @@ registerRoute(/^\/api\/ai\/.*/i, new NetworkOnly())
 // e. ABS proxy: NetworkOnly
 registerRoute(/\/api\/abs\/proxy\//, new NetworkOnly())
 
+// f. Route chunks: StaleWhileRevalidate, 50 entries, 30 days
+// Any JS chunk not in the precache manifest (route-specific chunks, optional
+// libraries like tiptap/chart/pdf) is cached on first access. Precached files
+// are served by the precache handler registered first, so this rule only
+// catches non-precached JS.
+// E64-S09: Added to support precache size reduction — precache only contains
+// critical app shell; everything else is cached at runtime.
+registerRoute(
+  /^\/assets\/.+\.js$/i,
+  new StaleWhileRevalidate({
+    cacheName: 'route-chunks',
+    plugins: [
+      new ExpirationPlugin({ maxEntries: 50, maxAgeSeconds: 30 * 24 * 60 * 60 }),
+    ],
+  })
+)
+
 // ─── Navigation fallback ─────────────────────────────────────────────────
 
 const navigationRoute = new NavigationRoute(createHandlerBoundToURL('/index.html'), {
