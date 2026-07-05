@@ -4,6 +4,7 @@ reviewed: in-progress
 review_started: 2026-07-05
 review_gates_passed: []
 ---
+
 # E61-S02 Implementation Plan: Service Worker Push and Click Handlers
 
 ## 1. Context
@@ -22,11 +23,11 @@ This means study-reminder push notifications, even if delivered, cannot navigate
 
 Three complete service worker event handlers in a single file (`src/sw.ts`):
 
-| Handler | Purpose |
-|---------|---------|
-| `push` (replaces placeholder) | Show notification with full payload: title, body, icon, badge, tag, url |
-| `notificationclick` (new) | Close notification → focus existing tab or open new tab at payload URL |
-| `pushsubscriptionchange` (new) | Re-subscribe with same VAPID key → POST new subscription to backend |
+| Handler                        | Purpose                                                                 |
+| ------------------------------ | ----------------------------------------------------------------------- |
+| `push` (replaces placeholder)  | Show notification with full payload: title, body, icon, badge, tag, url |
+| `notificationclick` (new)      | Close notification → focus existing tab or open new tab at payload URL  |
+| `pushsubscriptionchange` (new) | Re-subscribe with same VAPID key → POST new subscription to backend     |
 
 Plus two static icon assets in `public/icons/`.
 
@@ -41,12 +42,12 @@ Plus two static icon assets in `public/icons/`.
 
 ### 1.4 Files Involved
 
-| File | Action | Scope |
-|------|--------|-------|
-| `src/sw.ts` | Modify — replace push placeholder, add two new handlers | ~70 new lines |
-| `public/icons/icon-192.png` | Create — copy of `public/pwa-192x192.png` | 1 file |
-| `public/icons/badge-72.png` | Create — new monochrome 72×72 asset | 1 file |
-| `tests/e2e/story-e61-s02.spec.ts` | Exists — validates build output (no changes needed) | Already written |
+| File                              | Action                                                  | Scope           |
+| --------------------------------- | ------------------------------------------------------- | --------------- |
+| `src/sw.ts`                       | Modify — replace push placeholder, add two new handlers | ~70 new lines   |
+| `public/icons/icon-192.png`       | Create — copy of `public/pwa-192x192.png`               | 1 file          |
+| `public/icons/badge-72.png`       | Create — new monochrome 72×72 asset                     | 1 file          |
+| `tests/e2e/story-e61-s02.spec.ts` | Exists — validates build output (no changes needed)     | Already written |
 
 ---
 
@@ -75,6 +76,7 @@ cp public/pwa-192x192.png public/icons/icon-192.png
 This needs to be a **monochrome 72×72 PNG with transparent background**. Android strips color from badge icons displayed in the status bar — a monochrome design ensures consistent appearance.
 
 Options:
+
 - Create manually in an image editor (Figma, Sketch, GIMP)
 - Generate programmatically via a script (e.g., resize + desaturate the 192px icon to 72px)
 - The badge should be a simplified, single-color version of the Knowlune icon (dark-on-transparent)
@@ -95,18 +97,18 @@ Replace the entire `// ─── Push event placeholder ───` section and i
 
 **Key additions over the placeholder**:
 
-| Field | Placeholder (E61-S01) | Full Handler (E61-S02) |
-|-------|----------------------|------------------------|
-| `icon` | Hardcoded `/pwa-192x192.png` | `/icons/icon-192.png` (via defaults object) |
-| `badge` | Not set | `/icons/badge-72.png` (browser-dependent) |
-| `tag` | Not parsed | Parsed from payload → passed through to `showNotification` for deduplication |
-| `url` | Not parsed | Parsed from payload → stored in `data.url` for notificationclick handler |
+| Field    | Placeholder (E61-S01)                        | Full Handler (E61-S02)                                                         |
+| -------- | -------------------------------------------- | ------------------------------------------------------------------------------ |
+| `icon`   | Hardcoded `/pwa-192x192.png`                 | `/icons/icon-192.png` (via defaults object)                                    |
+| `badge`  | Not set                                      | `/icons/badge-72.png` (browser-dependent)                                      |
+| `tag`    | Not parsed                                   | Parsed from payload → passed through to `showNotification` for deduplication   |
+| `url`    | Not parsed                                   | Parsed from payload → stored in `data.url` for notificationclick handler       |
 | Fallback | Separate try/catch with manual string checks | Single try/catch — spreads payload over defaults, catches invalid JSON cleanly |
 
 **Implementation pattern**:
 
 ```ts
-self.addEventListener('push', (event) => {
+self.addEventListener('push', event => {
   event.waitUntil(
     (async () => {
       const defaults = {
@@ -114,18 +116,18 @@ self.addEventListener('push', (event) => {
         body: 'You have a new notification',
         icon: '/icons/icon-192.png',
         badge: '/icons/badge-72.png',
-      };
+      }
 
-      let notificationOptions: NotificationOptions & { data?: { url?: string } } = { ...defaults };
+      let notificationOptions: NotificationOptions & { data?: { url?: string } } = { ...defaults }
 
       try {
         if (event.data) {
-          const payload = event.data.json();
+          const payload = event.data.json()
           notificationOptions = {
             ...defaults,
             ...payload,
             data: { url: payload.url || '/' },
-          };
+          }
         }
       } catch {
         // Invalid/missing payload — use defaults (already set above)
@@ -134,13 +136,14 @@ self.addEventListener('push', (event) => {
       await self.registration.showNotification(
         notificationOptions.title || defaults.title,
         notificationOptions
-      );
+      )
     })()
-  );
-});
+  )
+})
 ```
 
 **Critical details**:
+
 - `event.waitUntil()` wraps an async IIFE — mandatory; without it the browser may terminate the SW before `showNotification` completes
 - Every push MUST call `showNotification` — browser requirement; failure can revoke push permission
 - `...defaults, ...payload` ensures payload fields override defaults while missing fields fall back
@@ -161,44 +164,45 @@ self.addEventListener('push', (event) => {
 **Implementation**:
 
 ```ts
-self.addEventListener('notificationclick', (event) => {
-  event.notification.close();
-  const url = event.notification.data?.url || '/';
+self.addEventListener('notificationclick', event => {
+  event.notification.close()
+  const url = event.notification.data?.url || '/'
 
   event.waitUntil(
     (async () => {
       const windowClients = await self.clients.matchAll({
         type: 'window',
         includeUncontrolled: true,
-      });
+      })
 
       // Try to focus an existing Knowlune tab
       for (const client of windowClients) {
-        const clientUrl = new URL(client.url);
+        const clientUrl = new URL(client.url)
         if (clientUrl.origin === self.location.origin && 'focus' in client) {
           // Navigate if URL differs from current
           if (clientUrl.pathname !== url) {
             if ('navigate' in client) {
-              await (client as WindowClient).navigate(url);
+              await (client as WindowClient).navigate(url)
             }
             // Fallback: postMessage for non-Chromium browsers
-            client.postMessage({ type: 'NAVIGATE', url });
+            client.postMessage({ type: 'NAVIGATE', url })
           }
-          await client.focus();
-          return;
+          await client.focus()
+          return
         }
       }
 
       // No existing tab — open new one (allowed on user gesture)
       if (self.clients.openWindow) {
-        await self.clients.openWindow(url);
+        await self.clients.openWindow(url)
       }
     })()
-  );
-});
+  )
+})
 ```
 
 **Key behaviors**:
+
 1. **Close notification**: `event.notification.close()` — always first
 2. **Find existing tab**: `clients.matchAll({ type: 'window', includeUncontrolled: true })` — matches same-origin tabs
 3. **Focus + navigate**: If tab found at same origin → `client.focus()`. If URL differs → `client.navigate()` (Chromium) or `postMessage` fallback
@@ -220,31 +224,32 @@ self.addEventListener('notificationclick', (event) => {
 **Implementation**:
 
 ```ts
-self.addEventListener('pushsubscriptionchange', (event) => {
+self.addEventListener('pushsubscriptionchange', event => {
   event.waitUntil(
     (async () => {
       try {
         const newSubscription = await self.registration.pushManager.subscribe(
           event.oldSubscription.options
-        );
+        )
 
         // Send new subscription to backend
         await fetch('/api/push/subscriptions', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(newSubscription.toJSON()),
-        });
+        })
       } catch (error) {
         // Log but don't throw — subscription loss is recoverable
         // on next app visit via usePushSubscription hook
-        console.error('[SW] Push subscription change failed:', error);
+        console.error('[SW] Push subscription change failed:', error)
       }
     })()
-  );
-});
+  )
+})
 ```
 
 **Key behaviors**:
+
 1. **Re-subscribe**: `pushManager.subscribe(event.oldSubscription.options)` — reuses the same `applicationServerKey` (VAPID key) from the original subscription
 2. **POST to backend**: Sends the new subscription JSON to `/api/push/subscriptions`
 3. **Fail gracefully**: Catch block logs but doesn't throw — if the backend endpoint doesn't exist yet, the subscription loss is recoverable on next app visit via `usePushSubscription` hook
@@ -319,25 +324,30 @@ Must pass: typecheck → lint → format:check → build → test:unit. No regre
 **Prerequisites**: Push permission granted in the browser.
 
 **Test 1 — Full payload notification**:
+
 1. Open DevTools → Application → Service Workers → Find Knowlune SW → "Push"
 2. Enter: `{"title":"Study Reminder","body":"Time to review!","icon":"/icons/icon-192.png","badge":"/icons/badge-72.png","tag":"review-due","url":"/flashcards"}`
 3. Expected: Notification with correct title, body, icon, badge. Click → navigates to `/flashcards`
 
 **Test 2 — No payload / fallback**:
+
 1. Push with empty input
 2. Expected: Generic "Knowlune" / "You have a new notification"
 3. Expected: Click → opens `/` (default URL)
 
 **Test 3 — Tag deduplication**:
+
 1. Push with `"tag": "review-due"` twice
 2. Expected: Only one notification visible (second replaces first)
 
 **Test 4 — App-open click behavior**:
+
 1. Have Knowlune open at `/library`
 2. Push with `"url": "/flashcards"` → click notification
 3. Expected: Existing tab focuses AND navigates to `/flashcards`
 
 **Test 5 — App-closed click behavior**:
+
 1. Close all Knowlune tabs
 2. Push with `"url": "/notes"` → click notification
 3. Expected: New tab opens at `/notes`
@@ -345,6 +355,7 @@ Must pass: typecheck → lint → format:check → build → test:unit. No regre
 ### 3.4 E2E Test Expectations
 
 The existing `tests/e2e/story-e61-s02.spec.ts` validates:
+
 - `dist/sw.js` contains all required handlers and calls
 - `dist/icons/icon-192.png` and `dist/icons/badge-72.png` exist
 - SW registration succeeds in the browser

@@ -1,6 +1,6 @@
 ---
 story_id: E61-S02
-story_name: "Service Worker Push and Click Handlers"
+story_name: 'Service Worker Push and Click Handlers'
 status: ready-for-dev
 started: 2026-07-05
 completed:
@@ -113,6 +113,7 @@ No React UI components in this story. All work is in `src/sw.ts` (compiled to `d
 ### Integration with injectManifest (from E61-S01)
 
 This story extends the custom `src/sw.ts` created in E61-S01. The file already contains:
+
 - Workbox precaching (`precacheAndRoute`)
 - 5 runtime caching rules (`registerRoute`)
 - Navigation fallback
@@ -147,7 +148,7 @@ These map directly to `tag` values in push payloads for deduplication.
 
 ```ts
 // src/sw.ts — Push event handler (replaces E61-S01 placeholder)
-self.addEventListener('push', (event) => {
+self.addEventListener('push', event => {
   event.waitUntil(
     (async () => {
       const defaults = {
@@ -155,18 +156,18 @@ self.addEventListener('push', (event) => {
         body: 'You have a new notification',
         icon: '/icons/icon-192.png',
         badge: '/icons/badge-72.png',
-      };
+      }
 
-      let notificationOptions: NotificationOptions & { data?: { url?: string } } = { ...defaults };
+      let notificationOptions: NotificationOptions & { data?: { url?: string } } = { ...defaults }
 
       try {
         if (event.data) {
-          const payload = event.data.json();
+          const payload = event.data.json()
           notificationOptions = {
             ...defaults,
             ...payload,
             data: { url: payload.url || '/' },
-          };
+          }
         }
       } catch {
         // Invalid/missing payload — use defaults (no-op, already set)
@@ -175,79 +176,79 @@ self.addEventListener('push', (event) => {
       await self.registration.showNotification(
         notificationOptions.title || defaults.title,
         notificationOptions
-      );
+      )
     })()
-  );
-});
+  )
+})
 ```
 
 ### Notification Click Handler — Full Code
 
 ```ts
 // src/sw.ts — Notification click handler
-self.addEventListener('notificationclick', (event) => {
-  event.notification.close();
-  const url = event.notification.data?.url || '/';
+self.addEventListener('notificationclick', event => {
+  event.notification.close()
+  const url = event.notification.data?.url || '/'
 
   event.waitUntil(
     (async () => {
       const windowClients = await self.clients.matchAll({
         type: 'window',
         includeUncontrolled: true,
-      });
+      })
 
       // Try to focus an existing tab
       for (const client of windowClients) {
-        const clientUrl = new URL(client.url);
+        const clientUrl = new URL(client.url)
         if (clientUrl.origin === self.location.origin && 'focus' in client) {
           // If the URL differs, try navigate (Chromium), then postMessage fallback
           if (clientUrl.pathname !== url) {
             if ('navigate' in client) {
-              await (client as WindowClient).navigate(url);
+              await (client as WindowClient).navigate(url)
             }
             // Intentional: postMessage fallback for non-Chromium browsers
-            client.postMessage({ type: 'NAVIGATE', url });
+            client.postMessage({ type: 'NAVIGATE', url })
           }
-          await client.focus();
-          return;
+          await client.focus()
+          return
         }
       }
 
       // No existing tab — open new one (allowed because this is a user gesture)
       if (self.clients.openWindow) {
-        await self.clients.openWindow(url);
+        await self.clients.openWindow(url)
       }
     })()
-  );
-});
+  )
+})
 ```
 
 ### Push Subscription Change Handler — Full Code
 
 ```ts
 // src/sw.ts — Push subscription change handler
-self.addEventListener('pushsubscriptionchange', (event) => {
+self.addEventListener('pushsubscriptionchange', event => {
   event.waitUntil(
     (async () => {
       try {
         const newSubscription = await self.registration.pushManager.subscribe(
           event.oldSubscription.options
-        );
+        )
 
         // Send new subscription to backend
         await fetch('/api/push/subscriptions', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(newSubscription.toJSON()),
-        });
+        })
       } catch (error) {
         // Intentional: log but don't throw — subscription loss is recoverable
         // on next app visit via usePushSubscription hook
-        console.error('[SW] Push subscription change failed:', error);
+        console.error('[SW] Push subscription change failed:', error)
       }
     })()
-  );
-});
+  )
+})
 ```
 
 ### Key Technical Details

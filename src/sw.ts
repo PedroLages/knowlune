@@ -87,9 +87,12 @@ setDefaultHandler(new NetworkOnly())
 // backward-compatible manual updates via the message protocol.
 
 self.addEventListener('activate', event => {
-  event.waitUntil(self.clients.claim().catch(err => { // silent-catch-ok
-    console.warn('[SW] clients.claim() failed:', err)
-  }))
+  event.waitUntil(
+    self.clients.claim().catch(err => {
+      // silent-catch-ok
+      console.warn('[SW] clients.claim() failed:', err)
+    })
+  )
 })
 
 // ─── SKIP_WAITING message listener ───────────────────────────────────────
@@ -107,7 +110,7 @@ self.addEventListener('message', event => {
 // Tag field enables deduplication (same tag replaces existing notification).
 // url is stored in data for use by the notificationclick handler.
 
-self.addEventListener('push', (event) => {
+self.addEventListener('push', event => {
   event.waitUntil(
     (async () => {
       const defaults = {
@@ -150,7 +153,7 @@ self.addEventListener('push', (event) => {
 // to the payload URL if it differs) or opens a new tab. client.navigate() is
 // Chromium-only — postMessage fallback for Firefox/Safari.
 
-self.addEventListener('notificationclick', (event) => {
+self.addEventListener('notificationclick', event => {
   event.notification.close()
   const url = event.notification.data?.url || '/'
 
@@ -192,7 +195,7 @@ self.addEventListener('notificationclick', (event) => {
 // but not thrown — subscription loss is recoverable on next app visit via
 // the usePushSubscription hook.
 
-self.addEventListener('pushsubscriptionchange', (event) => {
+self.addEventListener('pushsubscriptionchange', event => {
   event.waitUntil(
     (async () => {
       try {
