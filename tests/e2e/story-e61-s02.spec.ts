@@ -20,6 +20,10 @@
 import { test, expect } from '../support/fixtures'
 import { readFileSync, existsSync } from 'fs'
 import path from 'path'
+import { fileURLToPath } from 'url'
+
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
 
 const DIST_DIR = path.resolve(__dirname, '../../dist')
 const SW_FILE = path.join(DIST_DIR, 'sw.js')
@@ -82,19 +86,15 @@ test.describe('E61-S02: Service Worker Push and Click Handlers — Build Verific
 test.describe('E61-S02: Service Worker Registration', () => {
   test('service worker registers successfully', async ({ page }) => {
     await page.goto('/')
+    // Wait for Vite dependency optimization to settle before checking SW
+    await page.waitForLoadState('networkidle')
+    // Small delay to let SW registration complete after page load
+    await page.waitForTimeout(2000)
 
-    // Wait for the SW to be registered (vite-plugin-pwa handles this)
-    // The SW may take a moment to register after page load
-    const hasSW = await page.evaluate(async () => {
+    const hasSW = await page.evaluate(() => {
       if (!('serviceWorker' in navigator)) return false
-
-      // Poll for SW registration (up to 10s)
-      for (let i = 0; i < 20; i++) {
-        const reg = await navigator.serviceWorker.getRegistration()
-        if (reg && reg.active) return true
-        await new Promise(r => setTimeout(r, 500))
-      }
-      return false
+      // Check once — registration should be complete after networkidle + delay
+      return navigator.serviceWorker.getRegistration().then(reg => !!(reg && reg.active))
     })
 
     expect(hasSW, 'Service Worker must be registered and active').toBe(true)
@@ -102,12 +102,13 @@ test.describe('E61-S02: Service Worker Registration', () => {
 
   test('push manager is available after SW registration', async ({ page }) => {
     await page.goto('/')
+    await page.waitForLoadState('networkidle')
+    await page.waitForTimeout(2000)
 
     const pushAvailable = await page.evaluate(async () => {
       if (!('serviceWorker' in navigator)) return false
       if (!('PushManager' in window)) return false
 
-      // Wait for SW to be ready
       const reg = await navigator.serviceWorker.ready
       return !!reg.pushManager
     })

@@ -101,38 +101,121 @@ self.addEventListener('message', event => {
   }
 })
 
-// ─── Push event placeholder ──────────────────────────────────────────────
+// ─── Push event handler ──────────────────────────────────────────────────
+// Handles incoming push messages. Every push MUST show a notification —
+// browsers may revoke push permission if no notification is displayed.
+// Tag field enables deduplication (same tag replaces existing notification).
+// url is stored in data for use by the notificationclick handler.
 
-self.addEventListener('push', event => {
-  let title = 'Knowlune'
-  let body = 'You have a new notification'
-
-  if (event.data) {
-    try {
-      const payload = event.data.json()
-      if (typeof payload !== 'object' || payload === null) {
-        console.warn('[SW] Push payload is not an object')
-      } else {
-        if (typeof payload.title === 'string' && payload.title.length > 0) {
-          title = payload.title.slice(0, 200)
-        }
-        if (typeof payload.body === 'string' && payload.body.length > 0) {
-          body = payload.body.slice(0, 500)
-        }
+self.addEventListener('push', (event) => {
+  event.waitUntil(
+    (async () => {
+      const defaults = {
+        title: 'Knowlune',
+        body: 'You have a new notification',
+        icon: '/icons/icon-192.png',
+        badge: '/icons/badge-72.png',
       }
-    } catch (err) {
-      console.warn('[SW] Invalid push payload:', err) // silent-catch-ok
-    }
-  }
 
-  const options: NotificationOptions = {
-    body,
-    icon: '/pwa-192x192.png',
-  }
+      let title = defaults.title
+      let notificationOptions: NotificationOptions & { data?: { url?: string } } = {
+        body: defaults.body,
+        icon: defaults.icon,
+        badge: defaults.badge,
+      }
+
+      try {
+        if (event.data) {
+          const payload = event.data.json()
+          if (typeof payload.title === 'string' && payload.title.length > 0) {
+            title = payload.title
+          }
+          notificationOptions = {
+            ...notificationOptions,
+            ...payload,
+            data: { url: typeof payload.url === 'string' ? payload.url : '/' },
+          }
+        }
+      } catch {
+        // Invalid/missing payload — use defaults (already set above)
+      }
+
+      await self.registration.showNotification(title, notificationOptions)
+    })()
+  )
+})
+
+// ─── Notification click handler ──────────────────────────────────────────
+// Closes the notification, then focuses an existing Knowlune tab (navigating
+// to the payload URL if it differs) or opens a new tab. client.navigate() is
+// Chromium-only — postMessage fallback for Firefox/Safari.
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close()
+  const url = event.notification.data?.url || '/'
 
   event.waitUntil(
-    self.registration.showNotification(title, options).catch(err => { // silent-catch-ok
-      console.warn('[SW] Failed to show notification:', err)
-    })
+    (async () => {
+      const windowClients = await self.clients.matchAll({
+        type: 'window',
+        includeUncontrolled: true,
+      })
+
+      // Try to focus an existing Knowlune tab
+      for (const client of windowClients) {
+        const clientUrl = new URL(client.url)
+        if (clientUrl.origin === self.location.origin && 'focus' in client) {
+          // Navigate if URL differs from current tab
+          if (clientUrl.pathname !== url) {
+            if ('navigate' in client) {
+              await (client as WindowClient).navigate(url)
+            }
+            // Intentional: postMessage fallback for non-Chromium browsers
+            client.postMessage({ type: 'NAVIGATE', url })
+          }
+          await client.focus()
+          return
+        }
+      }
+
+      // No existing tab — open new one (allowed because notificationclick is a user gesture)
+      if (self.clients.openWindow) {
+        await self.clients.openWindow(url)
+      }
+    })()
+  )
+})
+
+// ─── Push subscription change handler ────────────────────────────────────
+// When the browser renews the push subscription, re-subscribe with the same
+// VAPID key and POST the new subscription to the backend. Failures are logged
+// but not thrown — subscription loss is recoverable on next app visit via
+// the usePushSubscription hook.
+
+self.addEventListener('pushsubscriptionchange', (event) => {
+  event.waitUntil(
+    (async () => {
+      try {
+        if (!event.oldSubscription) {
+          console.warn('[SW] pushsubscriptionchange: no old subscription to renew')
+          return
+        }
+
+        const newSubscription = await self.registration.pushManager.subscribe(
+          event.oldSubscription.options
+        )
+
+        // Send new subscription to backend
+        await fetch('/api/push/subscriptions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(newSubscription.toJSON()),
+        })
+      } catch (error) {
+        // Intentional: log but don't throw — subscription loss is recoverable
+        // on next app visit via usePushSubscription hook
+        console.error('[SW] Push subscription change failed:', error)
+      }
+    })()
   )
 })

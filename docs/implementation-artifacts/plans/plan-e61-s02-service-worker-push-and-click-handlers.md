@@ -1,3 +1,9 @@
+---
+story_id: E61-S02
+reviewed: in-progress
+review_started: 2026-07-05
+review_gates_passed: []
+---
 # E61-S02 Implementation Plan: Service Worker Push and Click Handlers
 
 ## 1. Context
