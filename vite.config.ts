@@ -542,8 +542,10 @@ export default defineConfig({
         }
       ],
     },
+    strategies: 'injectManifest',
+    srcDir: 'src',
     injectManifest: {
-      swSrc: 'src/sw.ts',
+      swSrc: 'sw.ts',
       globPatterns: ['**/*.{js,css,html,svg,png,webp,woff2}'],
       globIgnores: ['**/mockServiceWorker.js', '**/webllm*.js'],
     },
