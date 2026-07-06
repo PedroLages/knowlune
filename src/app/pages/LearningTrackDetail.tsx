@@ -721,7 +721,7 @@ export function LearningTrackDetail() {
         {!entriesChecked ? null : courseEntries.length > 0 ? (
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
             {/* Tab bar — sticky below hero */}
-            <div className="sticky top-0 z-20 -mx-2 px-2 py-2 bg-background/95 backdrop-blur-sm border-b border-border overflow-x-auto">
+            <div className="sticky top-0 z-20 -mx-2 px-2 py-2 backdrop-blur-sm border-b border-border overflow-x-auto">
               <TabsList className="w-full sm:w-auto inline-flex h-[52px] p-1.5 bg-muted/60 rounded-[18px] gap-1">
                 <TabsTrigger
                   value="overview"
