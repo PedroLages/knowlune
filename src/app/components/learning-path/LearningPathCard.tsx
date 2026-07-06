@@ -34,6 +34,10 @@ export interface LearningPathCardProps {
   description?: string | null
   completionPct: number
   courseCount: number
+  /** Total lessons across all courses in the path. */
+  totalLessons?: number
+  /** Estimated remaining hours based on incomplete lessons. */
+  estimatedRemainingHours?: number
   courseThumbnails: string[]
   isAIGenerated?: boolean
   coverImageUrl?: string
@@ -54,6 +58,8 @@ export function LearningPathCard({
   description,
   completionPct,
   courseCount,
+  totalLessons,
+  estimatedRemainingHours,
   courseThumbnails,
   isAIGenerated,
   coverImageUrl,
@@ -90,18 +96,18 @@ export function LearningPathCard({
         />
       </div>
 
-      {/* Dropdown menu — over gradient */}
+      {/* Dropdown menu — over gradient, subtle hover-reveal */}
       {hasDropdownActions && (
-        <div className="absolute top-4 right-4 z-10">
+        <div className="absolute top-3 right-3 z-10">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
                 variant="ghost"
                 size="icon"
-                className="size-11 bg-white/20 hover:bg-white/40 backdrop-blur-md text-white rounded-full"
+                className="size-8 bg-white/10 hover:bg-white/25 backdrop-blur-sm text-white/80 rounded-full opacity-0 group-hover:opacity-100 focus-visible:opacity-100 motion-safe:transition-opacity"
                 aria-label={`Actions for ${pathName}`}
               >
-                <MoreHorizontal className="size-4" aria-hidden="true" />
+                <MoreHorizontal className="size-3.5" aria-hidden="true" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
@@ -158,25 +164,49 @@ export function LearningPathCard({
             className="block focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 rounded-lg"
             aria-label={`${pathName} — ${courseCount} ${courseCount === 1 ? 'course' : 'courses'}, ${Math.round(completionPct)}% completed`}
           >
-            {/* Course count badge */}
-            <Badge
-              variant="secondary"
-              className={cn(
-                'text-xs font-semibold uppercase tracking-wider',
-                isCompleted && 'bg-success-soft text-success'
+            {/* Badges row: course count + status chip */}
+            <div className="flex items-center gap-2 mb-1">
+              <Badge
+                variant="secondary"
+                className={cn(
+                  'text-xs font-semibold uppercase tracking-wider',
+                  isCompleted && 'bg-success-soft text-success'
+                )}
+              >
+                {courseCount} {courseCount === 1 ? 'course' : 'courses'}
+              </Badge>
+              {/* Status chip */}
+              {isCompleted ? (
+                <Badge className="bg-success-soft text-success text-xs">Completed</Badge>
+              ) : isNotStarted ? (
+                <Badge variant="secondary" className="text-xs">Not Started</Badge>
+              ) : (
+                <Badge className="bg-brand-soft text-brand-soft-foreground text-xs">In Progress</Badge>
               )}
-            >
-              {courseCount} {courseCount === 1 ? 'course' : 'courses'}
-            </Badge>
+            </div>
 
             {/* Title */}
             <h3 className="text-xl font-bold text-foreground mb-2">{pathName}</h3>
 
             {/* Description */}
             {description && (
-              <p className="text-sm text-muted-foreground font-medium mb-6 leading-relaxed">
+              <p className="text-sm text-muted-foreground font-medium mb-3 leading-relaxed">
                 {description}
               </p>
+            )}
+
+            {/* Metadata row */}
+            {courseCount > 0 && (
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground mb-2">
+                {totalLessons !== undefined && totalLessons > 0 && (
+                  <span>
+                    {totalLessons} {totalLessons === 1 ? 'lesson' : 'lessons'}
+                  </span>
+                )}
+                {estimatedRemainingHours !== undefined && estimatedRemainingHours > 0 && completionPct < 100 && (
+                  <span>~{estimatedRemainingHours}h remaining</span>
+                )}
+              </div>
             )}
 
             {/* Next course preview */}
