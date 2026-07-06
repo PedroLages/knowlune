@@ -69,6 +69,8 @@ interface PathCardProps {
   pathName: string
   courseName: string
   completionPct: number
+  totalCourses: number
+  estimatedRemainingHours: number
   action: 'resume' | 'start'
   navigateLabel: string
   onNavigate: () => void
@@ -79,6 +81,8 @@ function PathResumeCard({
   pathName,
   courseName,
   completionPct,
+  totalCourses,
+  estimatedRemainingHours,
   action,
   navigateLabel,
   onNavigate,
@@ -90,7 +94,10 @@ function PathResumeCard({
       <p className="text-xs text-muted-foreground font-medium truncate mb-1">{pathName}</p>
 
       {/* Course title */}
-      <h3 className="text-sm font-semibold truncate mb-2">{courseName}</h3>
+      <h3 className="text-sm font-semibold truncate mb-2">
+        {action === 'resume' ? 'Next: ' : 'Start: '}
+        {courseName}
+      </h3>
 
       {/* Progress bar for in-progress courses */}
       {action === 'resume' && (
@@ -107,11 +114,24 @@ function PathResumeCard({
         </div>
       )}
 
-      {/* Continue/Start button */}
-      <Button variant="brand" size="sm" className="w-full" onClick={onNavigate}>
-        {navigateLabel}
-        <ArrowRight className="ml-1.5 size-3.5" aria-hidden="true" />
-      </Button>
+      {/* Metadata row */}
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground mb-3">
+        <span>
+          {totalCourses} {totalCourses === 1 ? 'course' : 'courses'}
+        </span>
+        <span>{Math.round(completionPct)}% complete</span>
+        {estimatedRemainingHours > 0 && completionPct < 100 && (
+          <span>~{estimatedRemainingHours}h remaining</span>
+        )}
+      </div>
+
+      {/* Action button — right-aligned, content-sized */}
+      <div className="flex justify-end">
+        <Button variant="brand" size="sm" onClick={onNavigate}>
+          {navigateLabel}
+          <ArrowRight className="ml-1.5 size-3.5" aria-hidden="true" />
+        </Button>
+      </div>
     </div>
   )
 }
@@ -149,6 +169,8 @@ function ContinueLearningPathSectionInner() {
       pathId: string
       pathName: string
       createdAt: string
+      totalCourses: number
+      estimatedRemainingHours: number
       info: DerivedCourseInfo
     }> = []
 
@@ -163,6 +185,8 @@ function ContinueLearningPathSectionInner() {
           pathId,
           pathName: path.name,
           createdAt: path.createdAt,
+          totalCourses: progress.totalCourses,
+          estimatedRemainingHours: progress.estimatedRemainingHours,
           info,
         })
       }
@@ -200,7 +224,7 @@ function ContinueLearningPathSectionInner() {
       {/* Section header */}
       <div className="flex items-center gap-2 mb-4">
         <Route className="size-5 text-brand-soft-foreground" aria-hidden="true" />
-        <h2 className="text-xl font-semibold">Continue Learning Paths</h2>
+        <h2 className="text-xl font-semibold">Continue Learning</h2>
       </div>
 
       {/* Primary path card */}
@@ -208,6 +232,8 @@ function ContinueLearningPathSectionInner() {
         pathName={primary.pathName}
         courseName={primary.info.course?.name ?? 'Unknown Course'}
         completionPct={primary.info.completionPct}
+        totalCourses={primary.totalCourses}
+        estimatedRemainingHours={primary.estimatedRemainingHours}
         action={primary.info.action}
         navigateLabel={primary.info.action === 'resume' ? 'Continue' : 'Start'}
         onNavigate={() =>
@@ -233,7 +259,7 @@ function ContinueLearningPathSectionInner() {
             <span>
               {expanded
                 ? 'Show less'
-                : `${remaining.length} more ${remaining.length === 1 ? 'path' : 'paths'} in progress`}
+                : `${remaining.length} more ${remaining.length === 1 ? 'learning path' : 'learning paths'}`}
             </span>
           </button>
 
@@ -245,6 +271,8 @@ function ContinueLearningPathSectionInner() {
                   pathName={p.pathName}
                   courseName={p.info.course?.name ?? 'Unknown Course'}
                   completionPct={p.info.completionPct}
+                  totalCourses={p.totalCourses}
+                  estimatedRemainingHours={p.estimatedRemainingHours}
                   action={p.info.action}
                   navigateLabel={p.info.action === 'resume' ? 'Continue' : 'Start'}
                   onNavigate={() => handleNavigate(p.pathId, p.info.entry.courseId, p.info.action)}
