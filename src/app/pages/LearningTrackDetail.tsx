@@ -808,6 +808,57 @@ export function LearningTrackDetail() {
                         </div>
                       </motion.div>
                     )}
+
+                    {/* ── Track Curriculum ── */}
+                    <motion.section variants={itemVariants}>
+                      <div className="bg-card rounded-[24px] shadow-card-ambient border border-border/50 p-6 lg:p-8 relative overflow-hidden">
+                        <div
+                          className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-brand/60 to-brand/20 pointer-events-none"
+                          aria-hidden="true"
+                        />
+                        <div className="flex items-center justify-between mb-8">
+                          <h2 className="font-display text-2xl font-bold">Courses</h2>
+                          <div className="flex items-center gap-3">
+                            <span className="text-muted-foreground text-sm">
+                              {courseEntries.length} {courseEntries.length === 1 ? 'Course' : 'Courses'}
+                            </span>
+                            <ProgressionModeToggle
+                              mode={path.progressionMode ?? 'sequential'}
+                              onChange={handleProgressionModeChange}
+                            />
+                          </div>
+                        </div>
+                        <PathTimeline
+                          entries={courseEntries.map(e => ({
+                            ...e,
+                            info: courseInfo.get(e.courseId),
+                          }))}
+                          courseInfoMap={courseInfo}
+                          gapEntries={courseEntries.filter(e => e.courseId === '')}
+                          onGapResolve={() => {}}
+                          onCourseClick={courseId => {
+                            const lessonId = firstLessonByCourse.get(courseId)
+                            const fromTrackState = {
+                              fromTrack: { trackId: trackId ?? '', trackName: path.name },
+                            }
+                            if (lessonId) {
+                              navigate(`/courses/${courseId}/lessons/${lessonId}`, {
+                                state: fromTrackState,
+                              })
+                            } else {
+                              navigate(`/courses/${courseId}`, { state: fromTrackState })
+                            }
+                          }}
+                          autoScrollToCurrent
+                          videosByCourse={videosByCourse}
+                          lessonGroupsByCourse={lessonGroupsByCourse}
+                          videoProgressMap={videoProgressMap}
+                          manuallyCompletedIds={manuallyCompletedIds}
+                          onMarkComplete={handleMarkComplete}
+                          progressionMode={path.progressionMode}
+                        />
+                      </div>
+                    </motion.section>
                   </div>
 
                   {/* Right Column (1/3): Progress Sidebar — sticky on scroll */}
@@ -833,57 +884,6 @@ export function LearningTrackDetail() {
                     </div>
                   </aside>
                 </div>
-
-                {/* ── Track Curriculum ── */}
-                <motion.section variants={itemVariants}>
-                  <div className="bg-card rounded-[24px] shadow-card-ambient border border-border/50 p-6 lg:p-8 relative overflow-hidden">
-                    <div
-                      className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-brand/60 to-brand/20 pointer-events-none"
-                      aria-hidden="true"
-                    />
-                    <div className="flex items-center justify-between mb-8">
-                      <h2 className="font-display text-2xl font-bold">Courses</h2>
-                      <div className="flex items-center gap-3">
-                        <span className="text-muted-foreground text-sm">
-                          {courseEntries.length} {courseEntries.length === 1 ? 'Course' : 'Courses'}
-                        </span>
-                        <ProgressionModeToggle
-                          mode={path.progressionMode ?? 'sequential'}
-                          onChange={handleProgressionModeChange}
-                        />
-                      </div>
-                    </div>
-                    <PathTimeline
-                      entries={courseEntries.map(e => ({
-                        ...e,
-                        info: courseInfo.get(e.courseId),
-                      }))}
-                      courseInfoMap={courseInfo}
-                      gapEntries={courseEntries.filter(e => e.courseId === '')}
-                      onGapResolve={() => {}}
-                      onCourseClick={courseId => {
-                        const lessonId = firstLessonByCourse.get(courseId)
-                        const fromTrackState = {
-                          fromTrack: { trackId: trackId ?? '', trackName: path.name },
-                        }
-                        if (lessonId) {
-                          navigate(`/courses/${courseId}/lessons/${lessonId}`, {
-                            state: fromTrackState,
-                          })
-                        } else {
-                          navigate(`/courses/${courseId}`, { state: fromTrackState })
-                        }
-                      }}
-                      autoScrollToCurrent
-                      videosByCourse={videosByCourse}
-                      lessonGroupsByCourse={lessonGroupsByCourse}
-                      videoProgressMap={videoProgressMap}
-                      manuallyCompletedIds={manuallyCompletedIds}
-                      onMarkComplete={handleMarkComplete}
-                      progressionMode={path.progressionMode}
-                    />
-                  </div>
-                </motion.section>
               </motion.div>
             </TabsContent>
 
