@@ -135,7 +135,7 @@ export function PathHeroBanner({
         // Cinematic hero stage: tall, full-bleed, cover-led.
         // Content is anchored to the bottom via flex layout.
         'relative overflow-hidden rounded-[28px] border border-border/50 shadow-card-ambient',
-        'min-h-[420px] md:min-h-[480px] lg:min-h-[560px]',
+        'min-h-[280px] md:min-h-[320px] lg:min-h-[360px]',
         'flex flex-col justify-end',
         'bg-black' // Base fallback while pending — matches the scrim's darkest tone.
       )}

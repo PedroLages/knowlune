@@ -20,6 +20,8 @@ interface PathProgressSidebarProps {
   progress: PathProgressSummary
   skillTags?: string[]
   className?: string
+  /** Active tab context — sidebar content adapts per tab. */
+  tab?: string
   /** Track metadata (optional — for backward compat with learning paths) */
   difficultyLabel?: string
   estimatedHours?: number
@@ -60,6 +62,7 @@ export function PathProgressSidebar({
   progress,
   skillTags,
   className,
+  tab,
   difficultyLabel,
   estimatedHours,
   courseCount,
@@ -82,6 +85,65 @@ export function PathProgressSidebar({
 
   return (
     <aside className={cn('space-y-6', className)}>
+      {/* ── Courses tab: compact current-course sidebar ── */}
+      {tab === 'courses' && currentCourseName != null && (
+        <>
+          <Card className="rounded-[24px] border border-border/50 bg-card shadow-card-ambient">
+            <CardContent className="p-5">
+              <h3 className="font-display text-sm font-bold mb-3 flex items-center gap-2">
+                <BookOpen className="size-4 text-brand" aria-hidden="true" />
+                Current Course
+              </h3>
+              <p className="text-sm font-semibold text-foreground">{currentCourseName}</p>
+              {currentCoursePct != null && (
+                <>
+                  <div className="flex items-center justify-between mt-2 text-sm">
+                    <span className="text-muted-foreground">{Math.round(currentCoursePct)}% complete</span>
+                  </div>
+                  <div className="w-full bg-muted h-1.5 rounded-full overflow-hidden mt-1">
+                    <div
+                      className="bg-brand h-full rounded-full motion-safe:transition-all motion-safe:duration-300"
+                      style={{ width: `${currentCoursePct}%` }}
+                    />
+                  </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
+          {nextMilestoneName && (
+            <Card className="rounded-[24px] border border-border/50 bg-card shadow-card-ambient">
+              <CardContent className="p-5">
+                <h3 className="font-display text-sm font-bold mb-3 flex items-center gap-2">
+                  <Flag className="size-4 text-brand" aria-hidden="true" />
+                  Next Course
+                </h3>
+                <p className="text-sm font-semibold text-foreground">{nextMilestoneName}</p>
+              </CardContent>
+            </Card>
+          )}
+        </>
+      )}
+
+      {/* ── Roadmap tab: phase progress ── */}
+      {tab === 'roadmap' && (
+        <>
+          <Card className="rounded-[24px] border border-border/50 bg-card shadow-card-ambient">
+            <CardContent className="p-5">
+              <h3 className="font-display text-sm font-bold mb-3 flex items-center gap-2">
+                <Target className="size-4 text-brand" aria-hidden="true" />
+                Roadmap Progress
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                {completedCourses} of {totalCourses} courses completed
+              </p>
+            </CardContent>
+          </Card>
+        </>
+      )}
+
+      {/* ── Default: full progress sidebar (overview + any unrecognized tab) ── */}
+      {(tab == null || tab === '' || tab === 'overview' || (tab !== 'courses' && tab !== 'roadmap')) && (
+        <>
       {/* Progress card — cinematic glass surface */}
       <Card className="rounded-[24px] border border-border/50 bg-card shadow-card-ambient">
         <CardContent className="p-6">
@@ -305,6 +367,9 @@ export function PathProgressSidebar({
             </div>
           </CardContent>
         </Card>
+      )}
+      {/* Close the default overview block opened above */}
+      </>
       )}
     </aside>
   )
