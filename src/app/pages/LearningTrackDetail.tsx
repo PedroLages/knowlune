@@ -561,6 +561,27 @@ export function LearningTrackDetail() {
     return courseInfo.get(currentEntry.courseId)?.completionPct
   }, [currentEntry, courseInfo])
 
+  // Thumbnail for ContinueLearningBento: prefer next lesson's video thumbnail →
+  // first video thumbnail → course cover thumbnail → undefined (fallback)
+  const continueThumbnailUrl = useMemo(() => {
+    const courseId = currentEntry?.courseId
+    if (!courseId) return undefined
+    const videos = videosByCourse.get(courseId)
+    if (!videos || videos.length === 0) {
+      // No videos loaded — fall back to course cover thumbnail
+      return thumbnailUrls[courseId]
+    }
+    // Try the target (next incomplete) lesson first
+    if (currentEntryTargetLessonId) {
+      const targetVideo = videos.find(v => v.id === currentEntryTargetLessonId)
+      if (targetVideo?.thumbnailUrl) return targetVideo.thumbnailUrl
+    }
+    // Try the first video's thumbnail
+    if (videos[0]?.thumbnailUrl) return videos[0].thumbnailUrl
+    // Fall back to course cover
+    return thumbnailUrls[courseId]
+  }, [currentEntry, videosByCourse, currentEntryTargetLessonId, thumbnailUrls])
+
   // Next milestone (first non-completed course)
   const nextMilestoneName = useMemo(() => {
     const next = courseEntries.find(e => {
@@ -749,7 +770,7 @@ export function LearningTrackDetail() {
                         <ContinueLearningBento
                           entry={currentEntry}
                           courseInfo={courseInfo.get(currentEntry.courseId)}
-                          thumbnailUrl={thumbnailUrls[currentEntry.courseId]}
+                          thumbnailUrl={continueThumbnailUrl}
                           targetLessonId={currentEntryTargetLessonId}
                           trackId={trackId}
                           trackName={path.name}
