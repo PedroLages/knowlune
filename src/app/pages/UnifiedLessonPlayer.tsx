@@ -718,7 +718,7 @@ export function UnifiedLessonPlayer() {
           <div
             data-testid="desktop-sidebar"
             className={cn(
-              'sticky top-0 self-start flex-shrink-0 w-[400px] bg-card rounded-2xl shadow-sm overflow-hidden flex flex-col max-h-[calc(100svh-3rem)]',
+              'sticky top-0 self-start flex-shrink-0 w-[360px] xl:w-[380px] bg-card rounded-2xl shadow-sm overflow-hidden flex flex-col max-h-[calc(100svh-3rem)] transition-all duration-200',
               isTheater || notesOpen ? 'hidden' : 'hidden lg:flex'
             )}
           >

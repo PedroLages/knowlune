@@ -1,11 +1,15 @@
 /**
- * LessonsTab — Course lesson list sub-panel for PlayerSidePanel.
+ * LessonsTab - Course lesson list sub-panel for PlayerSidePanel.
  *
- * Renders a clean lesson-based outline (sections → lessons) using
- * the lesson-based curriculum engine. Companion materials (PDFs, TXTs,
- * cheat sheets, slides) are nested under their parent lesson.
+ * Renders a professional course navigator with:
+ * - Clean section headers (collapsible, only active section expanded by default)
+ * - Global lesson numbering (001, 002, 003...)
+ * - Unified status circle (not started / in progress / completed / active)
+ * - Clean file-type badges (Video, PDF, Reading)
+ * - Filter chips: All, Videos, PDFs, In Progress, Completed
+ * - Companion materials nested under parent lesson
  *
- * Rewritten for lesson-based curriculum architecture (2026-07-05).
+ * Rewritten for lesson-based curriculum architecture (2026-07-06).
  */
 
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
@@ -20,9 +24,10 @@ import {
   ChevronDown,
   CheckCircle2,
   AlertTriangle,
+  Clock,
+  Circle,
 } from 'lucide-react'
 import { Input } from '@/app/components/ui/input'
-import { Badge } from '@/app/components/ui/badge'
 import { Button } from '@/app/components/ui/button'
 import { Skeleton } from '@/app/components/ui/skeleton'
 import {
@@ -42,178 +47,177 @@ import {
 } from './LessonsTabHighlightedTitle'
 
 // ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
+
+type FilterType = 'all' | 'video' | 'pdf' | 'in-progress' | 'completed'
+
+// ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
-/**
- * Get active state label for a lesson.
- */
-function getActiveLabel(type: LessonGroupItem['type'], isMaterial: boolean): string {
-  if (isMaterial) return 'Viewing material'
+/** Get a human-readable file type badge label. */
+function getTypeBadge(type: LessonGroupItem['type']): { label: string; icon: React.ReactNode } {
   switch (type) {
     case 'video':
-      return 'Now playing'
+      return { label: 'Video', icon: <Video className="size-3" aria-hidden="true" /> }
     case 'pdf':
+      return { label: 'PDF', icon: <FileText className="size-3" aria-hidden="true" /> }
     case 'text':
-      return 'Now reading'
+      return { label: 'Reading', icon: <BookOpen className="size-3" aria-hidden="true" /> }
     default:
-      return 'Active'
+      return { label: 'Material', icon: <FileText className="size-3" aria-hidden="true" /> }
   }
 }
 
-/**
- * Get content type icon for a lesson item.
- */
-function LessonTypeIcon({
-  type,
-  className,
-}: {
-  type: LessonGroupItem['type']
-  className?: string
-}) {
-  switch (type) {
-    case 'video':
-      return <Video className={cn('size-3', className)} aria-hidden="true" />
-    case 'pdf':
-      return <FileText className={cn('size-3', className)} aria-hidden="true" />
-    case 'text':
-      return <BookOpen className={cn('size-3', className)} aria-hidden="true" />
-    default:
-      return <FileText className={cn('size-3', className)} aria-hidden="true" />
-  }
+/** Format the global lesson number (zero-padded 3 digits). */
+function formatLessonNumber(globalIndex: number): string {
+  return String(globalIndex + 1).padStart(3, '0')
 }
 
 // ---------------------------------------------------------------------------
-// LessonRow — single lesson in the sidebar
+// StatusCircle - unified status indicator (replaces multiple colored icons)
+// ---------------------------------------------------------------------------
+
+function StatusCircle({
+  status,
+  globalNumber,
+  isActive,
+}: {
+  status: 'not-started' | 'in-progress' | 'completed'
+  globalNumber: number
+  isActive: boolean
+}) {
+  if (isActive) {
+    return (
+      <span className="flex-shrink-0 size-7 rounded-lg bg-brand flex items-center justify-center shadow-sm shadow-brand/20">
+        <PlayCircle className="size-3.5 text-brand-foreground" aria-hidden="true" />
+      </span>
+    )
+  }
+
+  if (status === 'completed') {
+    return (
+      <span className="flex-shrink-0 size-7 rounded-lg bg-success/15 flex items-center justify-center">
+        <CheckCircle2 className="size-3.5 text-success" aria-hidden="true" />
+      </span>
+    )
+  }
+
+  if (status === 'in-progress') {
+    return (
+      <span className="flex-shrink-0 size-7 rounded-lg bg-brand-soft/60 flex items-center justify-center">
+        <Clock className="size-3.5 text-brand" aria-hidden="true" />
+      </span>
+    )
+  }
+
+  // Not started
+  return (
+    <span className="flex-shrink-0 size-7 rounded-lg bg-muted flex items-center justify-center">
+      <span className="text-[10px] font-semibold text-muted-foreground tabular-nums">
+        {formatLessonNumber(globalNumber)}
+      </span>
+    </span>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// LessonRow - single lesson in the sidebar
 // ---------------------------------------------------------------------------
 
 function LessonRow({
   lesson,
   courseId,
   isActive,
-  index,
+  globalIndex,
   materialCount,
   activeRef,
   searchQuery,
-  onFocusMaterials,
-  isMaterial,
+  hasMaterials,
 }: {
   lesson: LessonGroupItem
   courseId: string
   isActive: boolean
-  index: number
+  globalIndex: number
   materialCount: number
   activeRef?: React.Ref<HTMLAnchorElement>
   searchQuery: string
-  onFocusMaterials?: () => void
-  isMaterial?: boolean
+  hasMaterials: boolean
 }) {
   const completionStatus = useContentProgressStore(
-    state => state.statusMap[`${courseId}:${lesson.id}`] ?? 'not-started'
+    state => state.statusMap[courseId + ':' + lesson.id] ?? 'not-started'
   )
-  const isCompleted = completionStatus === 'completed'
 
   const formattedDuration =
     lesson.type === 'video' && lesson.duration && lesson.duration > 0
       ? formatLessonDuration(lesson.duration)
       : null
 
-  const displayInfo = isMaterial
-    ? null
-    : lesson.type === 'video'
-      ? formattedDuration
-      : lesson.type === 'pdf'
-        ? `${lesson.pageCount ?? '?'} pgs`
-        : lesson.type === 'text'
-          ? 'Reading'
-          : null
-
-  const activeLabel = isActive ? getActiveLabel(lesson.type, Boolean(isMaterial)) : null
+  const badge = getTypeBadge(lesson.type)
 
   return (
     <Link
       ref={activeRef}
-      to={`/courses/${courseId}/lessons/${lesson.id}`}
+      to={'/courses/' + courseId + '/lessons/' + lesson.id}
       title={lesson.displayTitle}
       className={cn(
-        'flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors group',
+        'flex items-start gap-2.5 rounded-xl px-2.5 py-3 transition-colors group',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-1',
         isActive
-          ? 'bg-brand-soft text-brand-soft-foreground font-medium'
+          ? 'bg-brand-soft'
           : 'hover:bg-accent'
       )}
       aria-current={isActive ? 'page' : undefined}
       data-active={isActive ? 'true' : undefined}
     >
-      {/* Index / completion / active indicator */}
-      <span
-        className={cn(
-          'flex-shrink-0 size-7 rounded-lg flex items-center justify-center',
-          isCompleted && !isActive
-            ? 'bg-success/10'
-            : isMaterial
-              ? 'bg-resource-pdf-bg'
-              : 'bg-brand-soft/50'
-        )}
-      >
-        {isActive ? (
-          <PlayCircle className="size-4 text-brand" aria-hidden="true" />
-        ) : isCompleted && !isMaterial ? (
-          <CheckCircle2
-            className="size-3.5 text-success"
-            aria-hidden="true"
-            data-testid={`completion-check-${lesson.id}`}
-          />
-        ) : isMaterial ? (
-          <FileText className="size-3.5 text-resource-pdf" aria-hidden="true" />
-        ) : (
-          <span className="text-xs font-semibold text-brand-soft-foreground">{index + 1}</span>
-        )}
-      </span>
+      {/* Status indicator */}
+      <StatusCircle
+        status={completionStatus}
+        globalNumber={globalIndex}
+        isActive={isActive}
+      />
 
       {/* Lesson info */}
-      <div className="flex-1 min-w-0">
+      <div className="flex-1 min-w-0 pt-0.5">
         <p
           className={cn(
-            'text-sm line-clamp-2',
-            isCompleted && !isActive && 'line-through text-muted-foreground'
+            'text-sm leading-snug line-clamp-2',
+            isActive
+              ? 'text-brand-soft-foreground font-semibold'
+              : completionStatus === 'completed'
+                ? 'text-muted-foreground/70'
+                : 'text-foreground'
           )}
         >
           <HighlightedLessonTitle text={lesson.displayTitle} query={searchQuery} />
         </p>
-        <div
-          className={cn(
-            'flex items-center gap-1.5 mt-0.5',
-            isActive ? 'text-brand-soft-foreground/70' : 'text-muted-foreground'
+        <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+          {/* Now Playing label */}
+          {isActive && (
+            <span className="text-[11px] text-brand font-semibold mr-0.5">Now Playing</span>
           )}
-        >
-          <LessonTypeIcon type={lesson.type} />
-          {displayInfo && <span className="text-xs">{displayInfo}</span>}
-          {activeLabel && (
-            <span className="text-[11px] text-brand font-medium">{activeLabel}</span>
+          {/* Type badge */}
+          <span
+            className={cn(
+              'inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-medium',
+              isActive
+                ? 'bg-brand/10 text-brand'
+                : 'bg-muted text-muted-foreground'
+            )}
+          >
+            {badge.icon}
+            {badge.label}
+          </span>
+          {/* Duration (videos only) */}
+          {formattedDuration && (
+            <span className="text-[10px] text-muted-foreground/70">{formattedDuration}</span>
           )}
-          {!isMaterial && materialCount > 0 && onFocusMaterials && (
-            <button
-              type="button"
-              className="min-w-[44px] min-h-[44px] flex items-center justify-center -m-2 rounded-sm"
-              onClick={e => {
-                e.preventDefault()
-                e.stopPropagation()
-                onFocusMaterials()
-              }}
-              aria-label={`${materialCount} material${materialCount !== 1 ? 's' : ''}`}
-            >
-              <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4">
-                <FileText className="size-2.5 mr-0.5" aria-hidden="true" />
-                {materialCount}
-              </Badge>
-            </button>
-          )}
-          {!isMaterial && materialCount > 0 && !onFocusMaterials && (
-            <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4 ml-1">
-              <FileText className="size-2.5 mr-0.5" aria-hidden="true" />
-              {materialCount}
-            </Badge>
+          {/* Material count */}
+          {hasMaterials && (
+            <span className="text-[10px] text-muted-foreground/50">
+              +{materialCount}
+            </span>
           )}
         </div>
       </div>
@@ -222,7 +226,7 @@ function LessonRow({
 }
 
 // ---------------------------------------------------------------------------
-// MaterialRow — companion material sub-row
+// MaterialRow - companion material sub-row (lighter visual weight)
 // ---------------------------------------------------------------------------
 
 function MaterialRow({
@@ -236,90 +240,66 @@ function MaterialRow({
   lessonId: string
   searchQuery: string
 }) {
-  const completionStatus = useContentProgressStore(
-    state => state.statusMap[`${courseId}:${material.id}`] ?? 'not-started'
-  )
-  const isCompleted = completionStatus === 'completed'
   const isActive = material.id === lessonId
+  const badge = getTypeBadge(material.type)
 
   return (
     <Link
-      to={`/courses/${courseId}/lessons/${material.id}`}
+      to={'/courses/' + courseId + '/lessons/' + material.id}
       title={material.displayTitle}
       className={cn(
-        'flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors',
+        'flex items-center gap-2 rounded-lg px-2 py-2 transition-colors',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-1',
         isActive
-          ? 'bg-brand-soft text-brand-soft-foreground font-medium'
-          : 'hover:bg-accent'
+          ? 'bg-brand-soft/70'
+          : 'hover:bg-accent/50'
       )}
       aria-current={isActive ? 'page' : undefined}
-      data-testid={`material-link-${material.id}`}
+      data-testid={'material-link-' + material.id}
       data-active={isActive ? 'true' : undefined}
     >
-      <span
-        className={cn(
-          'flex-shrink-0 size-7 rounded-lg flex items-center justify-center',
-          isCompleted && !isActive ? 'bg-success/10' : 'bg-resource-pdf-bg'
-        )}
-      >
-        {isCompleted && !isActive ? (
-          <CheckCircle2
-            className="size-3.5 text-success"
-            aria-hidden="true"
-            data-testid={`completion-check-${material.id}`}
-          />
-        ) : (
-          <LessonTypeIcon
-            type={material.type}
-            className={isActive ? 'text-brand' : 'text-resource-pdf'}
-          />
-        )}
+      {/* Small dot indicator */}
+      <span className="flex-shrink-0 size-5 flex items-center justify-center">
+        <Circle className={cn('size-1.5', isActive ? 'fill-brand text-brand' : 'fill-muted-foreground/30 text-muted-foreground/30')} aria-hidden="true" />
       </span>
       <div className="flex-1 min-w-0">
         <p
           className={cn(
-            'text-sm line-clamp-2',
-            isCompleted && !isActive && 'line-through text-muted-foreground'
+            'text-xs leading-snug line-clamp-1',
+            isActive ? 'text-brand-soft-foreground font-medium' : 'text-muted-foreground'
           )}
         >
           <HighlightedLessonTitle text={material.displayTitle} query={searchQuery} />
         </p>
-        <div className="flex items-center gap-1 mt-0.5 text-xs text-muted-foreground">
-          <LessonTypeIcon type={material.type} />
-          {material.type === 'pdf' && material.pageCount ? (
-            <span>{material.pageCount} pgs</span>
-          ) : (
-            <span className="capitalize">{material.type}</span>
-          )}
-        </div>
       </div>
+      <span className="inline-flex items-center gap-1 rounded px-1 py-0.5 text-[10px] text-muted-foreground/60 bg-muted/50 flex-shrink-0">
+        {badge.icon}
+        {badge.label}
+      </span>
     </Link>
   )
 }
 
 // ---------------------------------------------------------------------------
-// LessonGroupRow — primary lesson with collapsible companion materials
+// LessonGroupRow - primary lesson with collapsible companion materials
 // ---------------------------------------------------------------------------
 
 function LessonGroupRow({
   group,
   courseId,
   lessonId,
-  index,
+  globalIndex,
   activeRef,
   searchQuery,
-  onFocusMaterials,
   isExpanded,
   onToggleExpand,
 }: {
   group: LessonGroup
   courseId: string
   lessonId: string
-  index: number
+  globalIndex: number
   activeRef?: React.Ref<HTMLAnchorElement>
   searchQuery: string
-  onFocusMaterials?: () => void
   isExpanded: boolean
   onToggleExpand: () => void
 }) {
@@ -335,49 +315,52 @@ function LessonGroupRow({
         lesson={group.primary}
         courseId={courseId}
         isActive={isPrimaryActive}
-        index={index}
+        globalIndex={globalIndex}
         materialCount={0}
         activeRef={isPrimaryActive ? activeRef : undefined}
         searchQuery={searchQuery}
-        onFocusMaterials={onFocusMaterials}
+        hasMaterials={false}
       />
     )
   }
 
   return (
     <Collapsible open={isExpanded} onOpenChange={onToggleExpand}>
-      <div className="flex items-center gap-1">
-        <div className="flex-1 min-w-0">
-          <LessonRow
-            lesson={group.primary}
-            courseId={courseId}
-            isActive={isPrimaryActive || Boolean(activeMaterial)}
-            index={index}
-            materialCount={group.materials.length}
-            activeRef={isPrimaryActive ? activeRef : undefined}
-            searchQuery={searchQuery}
-            onFocusMaterials={onFocusMaterials}
-          />
-        </div>
+      <div>
+        <LessonRow
+          lesson={group.primary}
+          courseId={courseId}
+          isActive={isPrimaryActive || Boolean(activeMaterial)}
+          globalIndex={globalIndex}
+          materialCount={group.materials.length}
+          activeRef={isPrimaryActive ? activeRef : undefined}
+          searchQuery={searchQuery}
+          hasMaterials
+        />
+        {/* Expand/collapse toggle */}
         <CollapsibleTrigger asChild>
           <button
             type="button"
-            className="flex-shrink-0 size-6 flex items-center justify-center rounded-md hover:bg-accent transition-colors"
-            aria-label={isExpanded ? 'Collapse materials' : 'Expand materials'}
-            data-testid={`materials-collapse-${group.primary.id}`}
+            className={cn(
+              'flex items-center gap-1 ml-9 px-2 py-0.5 rounded-md text-[10px] text-muted-foreground/70 hover:text-muted-foreground transition-colors w-full text-left',
+              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring'
+            )}
+            aria-label={isExpanded ? 'Hide materials' : 'Show materials'}
+            data-testid={'materials-collapse-' + group.primary.id}
           >
             <ChevronDown
               className={cn(
-                'size-3.5 text-muted-foreground transition-transform',
+                'size-3 transition-transform',
                 isExpanded && 'rotate-180'
               )}
               aria-hidden="true"
             />
+            {group.materials.length} material{group.materials.length !== 1 ? 's' : ''}
           </button>
         </CollapsibleTrigger>
       </div>
       <CollapsibleContent>
-        <div className="ml-6 pl-2 border-l border-border/50 space-y-0.5">
+        <div className="ml-9 pl-3 border-l border-border/40 pt-0.5 space-y-0">
           {group.materials.map(material => (
             <MaterialRow
               key={material.id}
@@ -394,7 +377,7 @@ function LessonGroupRow({
 }
 
 // ---------------------------------------------------------------------------
-// SectionHeader — collapsible section heading
+// SectionHeader - collapsible section heading
 // ---------------------------------------------------------------------------
 
 function SectionHeader({
@@ -407,7 +390,7 @@ function SectionHeader({
   expandedMaterialGroups,
   toggleMaterialGroup,
   activeRef,
-  onFocusMaterials,
+  sectionIndex,
 }: {
   section: CourseSection
   courseId: string
@@ -418,52 +401,69 @@ function SectionHeader({
   expandedMaterialGroups: Set<string>
   toggleMaterialGroup: (id: string) => void
   activeRef: React.RefObject<HTMLAnchorElement | null>
-  onFocusMaterials?: () => void
+  sectionIndex: number
 }) {
   const hasActiveLesson = section.lessons.some(
     g => g.primary.id === lessonId || g.materials.some(m => m.id === lessonId)
   )
 
+  // Count completed lessons in this section
+  const statusMap = useContentProgressStore(state => state.statusMap)
+  const completedCount = section.lessons.filter(
+    g => statusMap[courseId + ':' + g.primary.id] === 'completed'
+  ).length
+
   return (
     <Collapsible open={isExpanded} onOpenChange={onToggle}>
       <CollapsibleTrigger
         className={cn(
-          'flex w-full items-center gap-2 px-3 py-2 rounded-lg transition-colors text-sm font-medium',
+          'flex w-full items-center gap-2.5 px-2.5 py-2.5 rounded-xl transition-colors',
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-1',
           hasActiveLesson
-            ? 'bg-brand-soft/30 text-foreground'
-            : 'text-muted-foreground hover:bg-accent hover:text-foreground'
+            ? 'bg-brand-soft/40'
+            : 'hover:bg-accent'
         )}
         aria-expanded={isExpanded}
       >
-        <span className="flex-1 text-left text-sm font-semibold line-clamp-1">
+        {/* Section number */}
+        <span className="flex-shrink-0 size-6 rounded-md bg-muted flex items-center justify-center text-[10px] font-bold text-muted-foreground tabular-nums">
+          {String(sectionIndex + 1).padStart(2, '0')}
+        </span>
+        <span className={cn(
+          'flex-1 text-left text-sm font-semibold line-clamp-1',
+          hasActiveLesson ? 'text-brand-soft-foreground' : 'text-foreground'
+        )}>
           {section.title}
         </span>
-        <span className="text-xs text-muted-foreground">
-          {section.lessons.length} lesson{section.lessons.length !== 1 ? 's' : ''}
+        <span className="text-[10px] text-muted-foreground tabular-nums flex-shrink-0">
+          {completedCount}/{section.lessons.length}
         </span>
         <ChevronDown
           className={cn(
-            'size-3.5 text-muted-foreground transition-transform',
+            'size-3.5 text-muted-foreground transition-transform flex-shrink-0',
             isExpanded && 'rotate-180'
           )}
           aria-hidden="true"
         />
       </CollapsibleTrigger>
       <CollapsibleContent>
-        <div className="ml-2 pl-2 border-l border-border/50 space-y-0.5 pt-0.5">
-          {section.lessons.map((group, gi) => (
-            <LessonGroupRow
-              key={group.primary.id}
-              group={group}
-              courseId={courseId}
-              lessonId={lessonId}
-              index={gi}
-              searchQuery={searchQuery}
-              isExpanded={expandedMaterialGroups.has(group.primary.id)}
-              onToggleExpand={() => toggleMaterialGroup(group.primary.id)}
-            />
-          ))}
+        <div className="ml-2 pl-3 border-l border-border/40 space-y-px pt-1">
+          {section.lessons.map((group, gi) => {
+            const globalLessonIndex = section.startIndex + gi
+            return (
+              <LessonGroupRow
+                key={group.primary.id}
+                group={group}
+                courseId={courseId}
+                lessonId={lessonId}
+                globalIndex={globalLessonIndex}
+                activeRef={group.primary.id === lessonId ? activeRef : undefined}
+                searchQuery={searchQuery}
+                isExpanded={expandedMaterialGroups.has(group.primary.id)}
+                onToggleExpand={() => toggleMaterialGroup(group.primary.id)}
+              />
+            )
+          })}
         </div>
       </CollapsibleContent>
     </Collapsible>
@@ -481,13 +481,16 @@ export interface LessonsTabProps {
   onFocusMaterials?: () => void
 }
 
-export function LessonsTab({ courseId, lessonId, adapter, onFocusMaterials }: LessonsTabProps) {
+export function LessonsTab({ courseId, lessonId, adapter, onFocusMaterials: _onFocusMaterials }: LessonsTabProps) {
   const [sections, setSections] = useState<CourseSection[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [loadError, setLoadError] = useState(false)
   const [retryCount, setRetryCount] = useState(0)
   const [searchQuery, setSearchQuery] = useState('')
+  const [activeFilter, setActiveFilter] = useState<FilterType>('all')
   const activeRef = useRef<HTMLAnchorElement>(null)
+
+  const statusMap = useContentProgressStore(state => state.statusMap)
 
   useEffect(() => {
     let ignore = false
@@ -529,21 +532,71 @@ export function LessonsTab({ courseId, lessonId, adapter, onFocusMaterials }: Le
 
   const showSearch = totalLessons > LESSON_SEARCH_THRESHOLD
 
-  // Filter sections by search query
+  // Filters
+  const FILTER_OPTIONS: { value: FilterType; label: string }[] = [
+    { value: 'all', label: 'All' },
+    { value: 'video', label: 'Videos' },
+    { value: 'pdf', label: 'PDFs' },
+    { value: 'in-progress', label: 'In Progress' },
+    { value: 'completed', label: 'Completed' },
+  ]
+
+  // Filter sections by search query + active filter
   const filteredSections = useMemo(() => {
-    if (!searchQuery) return sections
-    const q = searchQuery.toLowerCase()
-    return sections
-      .map(section => ({
-        ...section,
-        lessons: section.lessons.filter(
-          g =>
-            g.primary.displayTitle.toLowerCase().includes(q) ||
-            g.materials.some(m => m.displayTitle.toLowerCase().includes(q))
-        ),
-      }))
-      .filter(s => s.lessons.length > 0)
-  }, [sections, searchQuery])
+    let result = sections
+
+    // Apply content-type filter
+    if (activeFilter === 'video') {
+      result = result
+        .map(section => ({
+          ...section,
+          lessons: section.lessons.filter(g => g.primary.type === 'video'),
+        }))
+        .filter(s => s.lessons.length > 0)
+    } else if (activeFilter === 'pdf') {
+      result = result
+        .map(section => ({
+          ...section,
+          lessons: section.lessons.filter(g => g.primary.type === 'pdf' || g.primary.type === 'text'),
+        }))
+        .filter(s => s.lessons.length > 0)
+    } else if (activeFilter === 'in-progress') {
+      result = result
+        .map(section => ({
+          ...section,
+          lessons: section.lessons.filter(
+            g => statusMap[courseId + ':' + g.primary.id] === 'in-progress'
+          ),
+        }))
+        .filter(s => s.lessons.length > 0)
+    } else if (activeFilter === 'completed') {
+      result = result
+        .map(section => ({
+          ...section,
+          lessons: section.lessons.filter(
+            g => statusMap[courseId + ':' + g.primary.id] === 'completed'
+          ),
+        }))
+        .filter(s => s.lessons.length > 0)
+    }
+
+    // Apply search query
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase()
+      result = result
+        .map(section => ({
+          ...section,
+          lessons: section.lessons.filter(
+            g =>
+              g.primary.displayTitle.toLowerCase().includes(q) ||
+              g.materials.some(m => m.displayTitle.toLowerCase().includes(q))
+          ),
+        }))
+        .filter(s => s.lessons.length > 0)
+    }
+
+    return result
+  }, [sections, searchQuery, activeFilter, courseId, statusMap])
 
   // Auto-expand sections containing the active lesson
   const activeSectionPaths = useMemo(() => {
@@ -559,7 +612,7 @@ export function LessonsTab({ courseId, lessonId, adapter, onFocusMaterials }: Le
 
   const hasMultipleSections = sections.length > 1
 
-  // Sections expanded state
+  // Sections expanded state - only active section expanded by default
   const [expandedSections, setExpandedSections] = useState<Set<string>>(
     () => new Set(activeSectionPaths)
   )
@@ -568,7 +621,7 @@ export function LessonsTab({ courseId, lessonId, adapter, onFocusMaterials }: Le
     setExpandedSections(new Set(activeSectionPaths))
   }, [JSON.stringify([...activeSectionPaths])])
 
-  // Material groups expanded state
+  // Material groups expanded state - only active lesson's group expanded
   const [expandedMaterialGroups, setExpandedMaterialGroups] = useState<Set<string>>(() => {
     const initial = new Set<string>()
     for (const section of sections) {
@@ -580,39 +633,6 @@ export function LessonsTab({ courseId, lessonId, adapter, onFocusMaterials }: Le
     }
     return initial
   })
-
-  // Auto-expand groups with materials on first load
-  const initialExpandDoneRef = useRef(false)
-  const lastCourseIdRef = useRef(courseId)
-
-  useEffect(() => {
-    if (lastCourseIdRef.current !== courseId) {
-      initialExpandDoneRef.current = false
-      lastCourseIdRef.current = courseId
-    }
-  }, [courseId])
-
-  useEffect(() => {
-    if (isLoading || sections.length === 0) return
-
-    const groupsWithMaterials = new Set<string>()
-    for (const section of sections) {
-      for (const group of section.lessons) {
-        if (group.materials.length > 0) {
-          groupsWithMaterials.add(group.primary.id)
-        }
-      }
-    }
-
-    if (!initialExpandDoneRef.current && groupsWithMaterials.size > 0) {
-      setExpandedMaterialGroups(prev => {
-        const next = new Set(prev)
-        for (const id of groupsWithMaterials) next.add(id)
-        return next
-      })
-      initialExpandDoneRef.current = true
-    }
-  }, [isLoading, sections])
 
   // Auto-expand parent group when active lesson is a material
   useEffect(() => {
@@ -703,12 +723,15 @@ export function LessonsTab({ courseId, lessonId, adapter, onFocusMaterials }: Le
     )
   }
 
+  const filteredTotal = filteredSections.reduce((sum, s) => sum + s.lessons.length, 0)
+
   // --- Render ---
   return (
-    <div className="p-2 space-y-0.5" data-testid="lessons-tab-list">
-      {/* Search */}
-      {showSearch && (
-        <div className="px-2 pt-2 pb-1">
+    <div className="p-2 space-y-1" data-testid="lessons-tab-list">
+      {/* Search + Filter row */}
+      {(showSearch || true) && (
+        <div className="px-1 pt-1 pb-2 space-y-2">
+          {/* Search input */}
           <div className="relative">
             <Search
               className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground"
@@ -735,41 +758,62 @@ export function LessonsTab({ courseId, lessonId, adapter, onFocusMaterials }: Le
               </button>
             )}
           </div>
+
+          {/* Filter chips */}
+          <div className="flex items-center gap-1 flex-wrap">
+            {FILTER_OPTIONS.map(opt => (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => setActiveFilter(opt.value)}
+                className={cn(
+                  'px-2.5 py-1 rounded-lg text-[11px] font-medium transition-colors',
+                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring',
+                  activeFilter === opt.value
+                    ? 'bg-brand text-brand-foreground'
+                    : 'bg-muted text-muted-foreground hover:bg-muted-foreground/15'
+                )}
+                aria-pressed={activeFilter === opt.value}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
         </div>
       )}
 
       {/* Lesson count */}
-      <div className="px-2 pb-2 text-xs text-muted-foreground">
-        {searchQuery
-          ? `Showing ${filteredSections.reduce((sum, s) => sum + s.lessons.length, 0)} of ${totalLessons} lessons`
+      <div className="px-2 pb-1.5 text-[11px] text-muted-foreground">
+        {searchQuery || activeFilter !== 'all'
+          ? 'Showing ' + filteredTotal + ' of ' + totalLessons + ' lessons'
           : currentIndex >= 0
-            ? `Lesson ${currentIndex + 1} of ${totalLessons}`
-            : `${totalLessons} lessons`}
+            ? 'Lesson ' + (currentIndex + 1) + ' of ' + totalLessons
+            : totalLessons + ' lessons'}
       </div>
 
-      {/* Empty search state */}
-      {filteredSections.length === 0 && searchQuery ? (
+      {/* Empty search/filter state */}
+      {filteredSections.length === 0 && (searchQuery || activeFilter !== 'all') ? (
         <div
           className="flex flex-col items-center justify-center py-12 text-muted-foreground"
           data-testid="lesson-search-empty"
         >
           <Search className="size-10 mb-3 opacity-50" aria-hidden="true" />
-          <p className="text-sm mb-1">No lessons match your search</p>
+          <p className="text-sm mb-1">No lessons match</p>
           <p className="text-xs text-muted-foreground/70 mb-3">
             Try a different search term or clear the filter.
           </p>
           <Button
             variant="outline"
             size="sm"
-            onClick={() => setSearchQuery('')}
+            onClick={() => { setSearchQuery(''); setActiveFilter('all') }}
             className="rounded-xl"
           >
-            Clear search
+            Clear all filters
           </Button>
         </div>
       ) : hasMultipleSections ? (
         /* Multi-section layout */
-        filteredSections.map(section => (
+        filteredSections.map((section, si) => (
           <SectionHeader
             key={section.title}
             section={section}
@@ -781,26 +825,28 @@ export function LessonsTab({ courseId, lessonId, adapter, onFocusMaterials }: Le
             expandedMaterialGroups={expandedMaterialGroups}
             toggleMaterialGroup={toggleMaterialGroup}
             activeRef={activeRef}
-            onFocusMaterials={onFocusMaterials}
+            sectionIndex={si}
           />
         ))
       ) : (
         /* Flat layout (single section) */
         filteredSections.flatMap(section =>
-          section.lessons.map((group, gi) => (
-            <LessonGroupRow
-              key={group.primary.id}
-              group={group}
-              courseId={courseId}
-              lessonId={lessonId}
-              index={gi}
-              activeRef={group.primary.id === lessonId ? activeRef : undefined}
-              searchQuery={searchQuery}
-              onFocusMaterials={onFocusMaterials}
-              isExpanded={expandedMaterialGroups.has(group.primary.id)}
-              onToggleExpand={() => toggleMaterialGroup(group.primary.id)}
-            />
-          ))
+          section.lessons.map((group, gi) => {
+            const globalLessonIndex = section.startIndex + gi
+            return (
+              <LessonGroupRow
+                key={group.primary.id}
+                group={group}
+                courseId={courseId}
+                lessonId={lessonId}
+                globalIndex={globalLessonIndex}
+                activeRef={group.primary.id === lessonId ? activeRef : undefined}
+                searchQuery={searchQuery}
+                isExpanded={expandedMaterialGroups.has(group.primary.id)}
+                onToggleExpand={() => toggleMaterialGroup(group.primary.id)}
+              />
+            )
+          })
         )
       )}
     </div>

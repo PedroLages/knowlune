@@ -63,6 +63,8 @@ export interface CourseSection {
   numericPrefix: string
   /** Clean section title */
   title: string
+  /** 0-based index of the first lesson in this section (cumulative across all sections) */
+  startIndex: number
   /** Lesson groups within this section, sorted by numeric prefix */
   lessons: LessonGroup[]
 }
@@ -514,6 +516,34 @@ function parseSectionPrefix(path: string): string {
 }
 
 /**
+ * Convert a raw folder name into a clean human-readable section title.
+ *
+ * Examples:
+ *   "01-Getting-Started"                     → "Getting Started"
+ *   "02 - Installing and Connecting to a Linux System" → "Installing and Connecting to a Linux System"
+ *   "03-Linux-Fundamentals"                  → "Linux Fundamentals"
+ *   ""                                        → "Course Content"
+ */
+function cleanSectionTitle(folderName: string): string {
+  if (!folderName) return 'Course Content'
+
+  // Strip leading numeric prefix (e.g. "01", "02 - ", "03-")
+  const cleaned = folderName
+    .replace(/^\d+\s*-\s*/, '')  // "01 - Overview"
+    .replace(/^\d+-/, '')         // "01-Overview"
+    .replace(/^\d+\s+/, '')       // "01 Overview"
+    .trim()
+
+  if (!cleaned) return 'Course Content'
+
+  // Humanize: replace hyphens/underscores with spaces
+  return cleaned
+    .replace(/[-_]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+/**
  * Build sections from lesson groups.
  * Groups lessons by their folder path's first segment.
  */
@@ -534,25 +564,33 @@ function buildSections(lessonGroups: LessonGroup[]): CourseSection[] {
   // If only one section (or all empty), return flat
   if (sections.size <= 1) {
     const onlySection = Array.from(sections.values())[0]
+    const title = cleanSectionTitle(onlySection?.path || '')
     return [
       {
         numericPrefix: onlySection ? parseSectionPrefix(onlySection.path) : '1',
-        title: onlySection?.path || 'Course Content',
+        title,
+        startIndex: 0,
         lessons: onlySection?.lessons || lessonGroups,
       },
     ]
   }
 
   // Multiple sections — sort by section prefix
+  let runningIndex = 0
   return Array.from(sections.entries())
     .sort(([a], [b]) =>
       parseSectionPrefix(a).localeCompare(parseSectionPrefix(b), undefined, { numeric: true })
     )
-    .map(([name, { path, lessons }]) => ({
-      numericPrefix: parseSectionPrefix(path),
-      title: name,
-      lessons,
-    }))
+    .map(([_name, { path, lessons }]) => {
+      const section: CourseSection = {
+        numericPrefix: parseSectionPrefix(path),
+        title: cleanSectionTitle(path),
+        startIndex: runningIndex,
+        lessons,
+      }
+      runningIndex += lessons.length
+      return section
+    })
 }
 
 // ---------------------------------------------------------------------------
@@ -568,6 +606,7 @@ function buildYouTubeSections(
       {
         numericPrefix: '1',
         title: 'Course Content',
+        startIndex: 0,
         lessons: sortImportedVideosForCurriculum(videos).map((v, i) => ({
           numericPrefix: String(i + 1).padStart(3, '0'),
           primary: {
@@ -621,10 +660,9 @@ function buildYouTubeSections(
     chapterGroups.get(currentTitle)!.push(...currentVideos)
   }
 
-  let sectionIdx = 0
+  let runningYouTubeIndex = 0
   return Array.from(chapterGroups.entries()).map(([title, chapterVideos], sectionIndex) => {
-    sectionIdx++
-    return {
+    const section: CourseSection = {
       numericPrefix: String(sectionIndex + 1).padStart(3, '0'),
       title: title || `Section ${sectionIndex + 1}`,
       lessons: chapterVideos.map((v, i) => ({
@@ -648,6 +686,8 @@ function buildYouTubeSections(
         materials: [],
       })),
     }
+    runningYouTubeIndex += chapterVideos.length
+    return section
   })
 }
 
