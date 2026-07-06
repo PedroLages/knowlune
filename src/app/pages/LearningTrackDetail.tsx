@@ -9,7 +9,6 @@ import {
   AlertCircle,
   RotateCcw,
   Map as MapIcon,
-  List,
   Layers,
   FolderKanban,
   StickyNote,
@@ -718,13 +717,6 @@ export function LearningTrackDetail() {
                   <span className="hidden sm:inline">Roadmap</span>
                 </TabsTrigger>
                 <TabsTrigger
-                  value="syllabus"
-                  className="rounded-xl px-4 py-2.5 text-sm font-medium gap-2 data-[state=active]:bg-card data-[state=active]:shadow-sm"
-                >
-                  <List className="size-4" aria-hidden="true" />
-                  <span className="hidden sm:inline">Syllabus</span>
-                </TabsTrigger>
-                <TabsTrigger
                   value="projects"
                   className="rounded-xl px-4 py-2.5 text-sm font-medium gap-2 data-[state=active]:bg-card data-[state=active]:shadow-sm"
                 >
@@ -818,40 +810,8 @@ export function LearningTrackDetail() {
                     />
                   </aside>
                 </div>
-              </motion.div>
-            </TabsContent>
 
-            {/* ── Roadmap Tab ── */}
-            <TabsContent value="roadmap" className="mt-0">
-              <motion.div variants={containerVariants} initial="hidden" animate="visible">
-                <motion.section variants={itemVariants}>
-                  <div className="bg-card rounded-[24px] shadow-card-ambient border border-border/50 p-6 lg:p-8 relative overflow-hidden">
-                    <div
-                      className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-brand/60 to-brand/20 pointer-events-none"
-                      aria-hidden="true"
-                    />
-                    <h2 className="font-display text-2xl font-bold mb-6">Your Learning Roadmap</h2>
-                    <RoadmapPhases
-                      entries={courseEntries}
-                      courseInfoMap={courseInfo}
-                      phases={roadmapPhases}
-                      trackId={trackId ?? ''}
-                      trackName={path.name}
-                      currentCourseId={currentCourseId}
-                    />
-                  </div>
-                </motion.section>
-              </motion.div>
-            </TabsContent>
-
-            {/* ── Syllabus Tab ── */}
-            <TabsContent value="syllabus" className="mt-0">
-              <motion.div
-                variants={containerVariants}
-                initial="hidden"
-                animate="visible"
-                className="space-y-8"
-              >
+                {/* ── Syllabus / Curriculum ── */}
                 <motion.section variants={itemVariants}>
                   <div className="bg-card rounded-[24px] shadow-card-ambient border border-border/50 p-6 lg:p-8 relative overflow-hidden">
                     <div
@@ -910,6 +870,29 @@ export function LearningTrackDetail() {
                         reorderPathCourses(trackId ?? '', activeCourseId, overCourseId)
                       }
                       progressionMode={path.progressionMode}
+                    />
+                  </div>
+                </motion.section>
+              </motion.div>
+            </TabsContent>
+
+            {/* ── Roadmap Tab ── */}
+            <TabsContent value="roadmap" className="mt-0">
+              <motion.div variants={containerVariants} initial="hidden" animate="visible">
+                <motion.section variants={itemVariants}>
+                  <div className="bg-card rounded-[24px] shadow-card-ambient border border-border/50 p-6 lg:p-8 relative overflow-hidden">
+                    <div
+                      className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-brand/60 to-brand/20 pointer-events-none"
+                      aria-hidden="true"
+                    />
+                    <h2 className="font-display text-2xl font-bold mb-6">Your Learning Roadmap</h2>
+                    <RoadmapPhases
+                      entries={courseEntries}
+                      courseInfoMap={courseInfo}
+                      phases={roadmapPhases}
+                      trackId={trackId ?? ''}
+                      trackName={path.name}
+                      currentCourseId={currentCourseId}
                     />
                   </div>
                 </motion.section>
