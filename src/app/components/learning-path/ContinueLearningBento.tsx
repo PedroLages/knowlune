@@ -94,8 +94,11 @@ export function ContinueLearningBento({
               />
             </div>
           ) : (
-            <div className="h-full min-h-[180px] flex items-center justify-center bg-gradient-to-br from-brand/10 to-brand/30">
-              <BookOpen className="size-16 text-brand/40" aria-hidden="true" />
+            <div className="h-full min-h-[180px] flex flex-col items-center justify-center bg-gradient-to-br from-brand/10 to-brand/30 gap-3">
+              <BookOpen className="size-12 text-brand/30" aria-hidden="true" />
+              <p className="text-sm font-semibold text-brand/50 text-center px-4 line-clamp-2">
+                {courseInfo?.name || 'Course'}
+              </p>
             </div>
           )}
           {/* Centered play button overlay with brand glow */}
