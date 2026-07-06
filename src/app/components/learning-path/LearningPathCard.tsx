@@ -40,6 +40,8 @@ export interface LearningPathCardProps {
   coverPreset?: string
   href: string
   action?: LearningPathCardAction | null
+  /** Next course name to display as a one-line preview below the description. */
+  nextCourseName?: string
   onEdit?: () => void
   onChangeCover?: () => void
   onImportCourse?: () => void
@@ -58,6 +60,7 @@ export function LearningPathCard({
   coverPreset,
   href,
   action,
+  nextCourseName,
   onEdit,
   onChangeCover,
   onImportCourse,
@@ -175,6 +178,11 @@ export function LearningPathCard({
                 {description}
               </p>
             )}
+
+            {/* Next course preview */}
+            {nextCourseName && (
+              <p className="text-xs text-muted-foreground truncate mb-2">Next: {nextCourseName}</p>
+            )}
           </Link>
 
           <Separator className="mb-6" />
@@ -195,11 +203,6 @@ export function LearningPathCard({
               {courseCount === 0 && (
                 <div className="size-8 rounded-full ring-2 ring-card bg-muted flex items-center justify-center">
                   <BookOpen className="size-3.5 text-muted-foreground" aria-hidden="true" />
-                </div>
-              )}
-              {courseCount > 3 && (
-                <div className="size-8 rounded-full ring-2 ring-card bg-muted flex items-center justify-center text-[10px] font-bold text-muted-foreground">
-                  +{courseCount - 3}
                 </div>
               )}
             </div>

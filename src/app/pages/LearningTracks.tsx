@@ -19,6 +19,7 @@ import { CurriculumComposer } from '@/app/components/figma/CurriculumComposer'
 import { PathCoverDialog } from '@/app/components/learning-path/PathCoverDialog'
 import { EditPathDialog } from '@/app/components/learning-path/EditPathDialog'
 import { LearningPathCard } from '@/app/components/learning-path/LearningPathCard'
+import { ContinueLearningPathSection } from '@/app/components/ContinueLearningPathSection'
 import { useLearningPathStore } from '@/stores/useLearningPathStore'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
 import { extractGapSearchTerm } from '@/data/learningPathUtils'
@@ -87,6 +88,7 @@ function TrackCard({
         coverPreset={path.coverPreset}
         href={`/learning-tracks/${path.id}`}
         action={footerAction}
+        nextCourseName={footerAction?.courseName}
         onEdit={() => onOpenEditDialog(path)}
         onChangeCover={() => {
           coverDialogTriggerRef.current = document.activeElement as HTMLElement
@@ -251,6 +253,19 @@ export function LearningTracks() {
     )
   }, [userPaths, search])
 
+  // Sort: in-progress (1-99%) first, then not-started (0%), then completed (100%+).
+  // Within each tier, most recently updated first.
+  const sortedFilteredPaths = useMemo(() => {
+    return [...filteredPaths].sort((a, b) => {
+      const pctA = pathStats.get(a.id)?.completionPct ?? 0
+      const pctB = pathStats.get(b.id)?.completionPct ?? 0
+      const tier = (pct: number) => (pct === 0 ? 1 : pct >= 100 ? 2 : 0)
+      const tierDiff = tier(pctA) - tier(pctB)
+      if (tierDiff !== 0) return tierDiff
+      return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+    })
+  }, [filteredPaths, pathStats])
+
   if (!isLoaded) {
     return (
       <DelayedFallback>
@@ -329,6 +344,13 @@ export function LearningTracks() {
             : ''}
         </span>
 
+        {/* Continue Learning Paths section — renders null when no actionable paths */}
+        {userPaths.length > 0 && (
+          <motion.div variants={fadeUp}>
+            <ContinueLearningPathSection />
+          </motion.div>
+        )}
+
         {/* Content */}
         {userPaths.length === 0 && templates.length > 0 ? (
           /* Empty user paths — templates as primary CTA */
@@ -401,7 +423,7 @@ export function LearningTracks() {
               role="list"
               aria-label="Learning tracks"
             >
-              {filteredPaths.map(path => {
+              {sortedFilteredPaths.map(path => {
                 const stats = pathStats.get(path.id) || { courseCount: 0, completionPct: 0 }
                 return (
                   <div key={path.id} role="listitem" className="w-full">
