@@ -10,7 +10,6 @@ import {
   RotateCcw,
   Map as MapIcon,
   Layers,
-  ListVideo,
   FolderKanban,
   StickyNote,
 } from 'lucide-react'
@@ -22,9 +21,7 @@ import { EmptyState } from '@/app/components/EmptyState'
 import { DelayedFallback } from '@/app/components/DelayedFallback'
 import { PathHeroBanner } from '@/app/components/learning-path/PathHeroBanner'
 import { PathProgressSidebar } from '@/app/components/learning-path/PathProgressSidebar'
-import { ProgressionModeToggle } from '@/app/components/learning-path/ProgressionModeToggle'
 import { ContinueLearningBento } from '@/app/components/learning-path/ContinueLearningBento'
-import { PathTimeline } from '@/app/components/learning-path/PathTimeline'
 import { RoadmapPhases, type RoadmapPhase } from '@/app/components/learning-path/RoadmapPhases'
 import { useLearningPathStore } from '@/stores/useLearningPathStore'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
@@ -702,38 +699,31 @@ export function LearningTrackDetail() {
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
             {/* Tab bar — sticky below hero */}
             <div className="sticky top-0 z-20 -mx-2 px-2 py-2 bg-background/95 backdrop-blur-sm border-b border-border overflow-x-auto">
-              <TabsList className="w-full sm:w-auto inline-flex h-12 p-1 bg-muted/50 rounded-2xl gap-1">
+              <TabsList className="w-full sm:w-auto inline-flex h-[52px] p-1.5 bg-muted/60 rounded-[18px] gap-1">
                 <TabsTrigger
                   value="overview"
-                  className="h-9 rounded-xl px-4 text-sm font-medium gap-2 data-[state=active]:bg-card data-[state=active]:shadow-sm transition-none"
+                  className="h-10 rounded-xl px-4 text-[15px] font-semibold gap-2 data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm text-muted-foreground hover:text-foreground hover:bg-muted/80"
                 >
                   <Layers className="size-[18px]" aria-hidden="true" />
                   <span className="hidden sm:inline">Overview</span>
                 </TabsTrigger>
                 <TabsTrigger
                   value="roadmap"
-                  className="h-9 rounded-xl px-4 text-sm font-medium gap-2 data-[state=active]:bg-card data-[state=active]:shadow-sm transition-none"
+                  className="h-10 rounded-xl px-4 text-[15px] font-semibold gap-2 data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm text-muted-foreground hover:text-foreground hover:bg-muted/80"
                 >
                   <MapIcon className="size-[18px]" aria-hidden="true" />
                   <span className="hidden sm:inline">Roadmap</span>
                 </TabsTrigger>
                 <TabsTrigger
-                  value="courses"
-                  className="h-9 rounded-xl px-4 text-sm font-medium gap-2 data-[state=active]:bg-card data-[state=active]:shadow-sm transition-none"
-                >
-                  <ListVideo className="size-[18px]" aria-hidden="true" />
-                  <span className="hidden sm:inline">Courses</span>
-                </TabsTrigger>
-                <TabsTrigger
                   value="projects"
-                  className="h-9 rounded-xl px-4 text-sm font-medium gap-2 data-[state=active]:bg-card data-[state=active]:shadow-sm transition-none"
+                  className="h-10 rounded-xl px-4 text-[15px] font-semibold gap-2 data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm text-muted-foreground hover:text-foreground hover:bg-muted/80"
                 >
                   <FolderKanban className="size-[18px]" aria-hidden="true" />
                   <span className="hidden sm:inline">Projects</span>
                 </TabsTrigger>
                 <TabsTrigger
                   value="notes"
-                  className="h-9 rounded-xl px-4 text-sm font-medium gap-2 data-[state=active]:bg-card data-[state=active]:shadow-sm transition-none"
+                  className="h-10 rounded-xl px-4 text-[15px] font-semibold gap-2 data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm text-muted-foreground hover:text-foreground hover:bg-muted/80"
                 >
                   <StickyNote className="size-[18px]" aria-hidden="true" />
                   <span className="hidden sm:inline">Notes</span>
@@ -747,7 +737,6 @@ export function LearningTrackDetail() {
                 variants={containerVariants}
                 initial="hidden"
                 animate="visible"
-                className="space-y-8"
               >
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-[var(--content-gap)]">
                   {/* Left Column (2/3) */}
@@ -798,226 +787,168 @@ export function LearningTrackDetail() {
                     )}
                   </div>
 
-                  {/* Right Column (1/3): Progress Sidebar */}
-                  <aside className="lg:col-span-1 space-y-6">
-                    <PathProgressSidebar
-                      progress={enhancedProgress}
-                      difficultyLabel={path.difficultyLabel}
-                      estimatedHours={path.estimatedHours}
-                      courseCount={courseEntries.length}
-                      createdAt={path.createdAt}
-                      updatedAt={path.updatedAt}
-                      progressionMode={path.progressionMode}
-                      onProgressionModeChange={handleProgressionModeChange}
-                      currentCourseName={currentCourseName}
-                      currentCoursePct={currentCoursePct}
-                      nextMilestoneName={nextMilestoneName}
-                      nextMilestoneEstimate={
-                        nextMilestoneName ? 'Keep studying to reach this milestone' : undefined
-                      }
-                      tab={activeTab}
-                    />
+                  {/* Right Column (1/3): Progress Sidebar — sticky on scroll */}
+                  <aside className="lg:col-span-1">
+                    <div className="lg:sticky lg:top-[72px]">
+                      <PathProgressSidebar
+                        progress={enhancedProgress}
+                        difficultyLabel={path.difficultyLabel}
+                        estimatedHours={path.estimatedHours}
+                        courseCount={courseEntries.length}
+                        createdAt={path.createdAt}
+                        updatedAt={path.updatedAt}
+                        progressionMode={path.progressionMode}
+                        onProgressionModeChange={handleProgressionModeChange}
+                        currentCourseName={currentCourseName}
+                        currentCoursePct={currentCoursePct}
+                        nextMilestoneName={nextMilestoneName}
+                        nextMilestoneEstimate={
+                          nextMilestoneName ? 'Keep studying to reach this milestone' : undefined
+                        }
+                        tab={activeTab}
+                      />
+                    </div>
                   </aside>
                 </div>
-
-                {/* ── Courses / Curriculum ── */}
-                <motion.section variants={itemVariants}>
-                  <div className="bg-card rounded-[24px] shadow-card-ambient border border-border/50 p-6 lg:p-8 relative overflow-hidden">
-                    <div
-                      className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-brand/60 to-brand/20 pointer-events-none"
-                      aria-hidden="true"
-                    />
-                    <div className="flex items-center justify-between mb-8">
-                      <h2 className="font-display text-2xl font-bold">Courses</h2>
-                      <div className="flex items-center gap-3">
-                        <span className="text-muted-foreground text-sm">
-                          {courseEntries.length} {courseEntries.length === 1 ? 'Course' : 'Courses'}
-                        </span>
-                        <ProgressionModeToggle
-                          mode={path.progressionMode ?? 'sequential'}
-                          onChange={handleProgressionModeChange}
-                        />
-                        <Button
-                          variant={isEditing ? 'brand' : 'ghost'}
-                          size="sm"
-                          onClick={() => setIsEditing(!isEditing)}
-                          data-testid="edit-courses-button"
-                        >
-                          {isEditing ? 'Done' : 'Edit'}
-                        </Button>
-                      </div>
-                    </div>
-                    <PathTimeline
-                      entries={courseEntries.map(e => ({
-                        ...e,
-                        info: courseInfo.get(e.courseId),
-                      }))}
-                      courseInfoMap={courseInfo}
-                      gapEntries={courseEntries.filter(e => e.courseId === '')}
-                      onGapResolve={() => {}}
-                      onCourseClick={courseId => {
-                        const lessonId = firstLessonByCourse.get(courseId)
-                        const fromTrackState = {
-                          fromTrack: { trackId: trackId ?? '', trackName: path.name },
-                        }
-                        if (lessonId) {
-                          navigate(`/courses/${courseId}/lessons/${lessonId}`, {
-                            state: fromTrackState,
-                          })
-                        } else {
-                          navigate(`/courses/${courseId}`, { state: fromTrackState })
-                        }
-                      }}
-                      autoScrollToCurrent
-                      videosByCourse={videosByCourse}
-                      lessonGroupsByCourse={lessonGroupsByCourse}
-                      videoProgressMap={videoProgressMap}
-                      manuallyCompletedIds={manuallyCompletedIds}
-                      onMarkComplete={handleMarkComplete}
-                      editable={isEditing}
-                      onReorderByCourseId={(activeCourseId, overCourseId) =>
-                        reorderPathCourses(trackId ?? '', activeCourseId, overCourseId)
-                      }
-                      progressionMode={path.progressionMode}
-                    />
-                  </div>
-                </motion.section>
-              </motion.div>
-            </TabsContent>
-
-            {/* ── Courses Tab ── */}
-            <TabsContent value="courses" className="mt-0">
-              <motion.div
-                variants={containerVariants}
-                initial="hidden"
-                animate="visible"
-                className="space-y-8"
-              >
-                <motion.section variants={itemVariants}>
-                  <div className="bg-card rounded-[24px] shadow-card-ambient border border-border/50 p-6 lg:p-8 relative overflow-hidden">
-                    <div
-                      className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-brand/60 to-brand/20 pointer-events-none"
-                      aria-hidden="true"
-                    />
-                    <div className="flex items-center justify-between mb-8">
-                      <h2 className="font-display text-2xl font-bold">Courses</h2>
-                      <div className="flex items-center gap-3">
-                        <span className="text-muted-foreground text-sm">
-                          {courseEntries.length} {courseEntries.length === 1 ? 'Course' : 'Courses'}
-                        </span>
-                        <ProgressionModeToggle
-                          mode={path.progressionMode ?? 'sequential'}
-                          onChange={handleProgressionModeChange}
-                        />
-                        <Button
-                          variant={isEditing ? 'brand' : 'ghost'}
-                          size="sm"
-                          onClick={() => setIsEditing(!isEditing)}
-                          data-testid="edit-courses-button"
-                        >
-                          {isEditing ? 'Done' : 'Edit'}
-                        </Button>
-                      </div>
-                    </div>
-                    <PathTimeline
-                      entries={courseEntries.map(e => ({
-                        ...e,
-                        info: courseInfo.get(e.courseId),
-                      }))}
-                      courseInfoMap={courseInfo}
-                      gapEntries={courseEntries.filter(e => e.courseId === '')}
-                      onGapResolve={() => {}}
-                      onCourseClick={courseId => {
-                        const lessonId = firstLessonByCourse.get(courseId)
-                        const fromTrackState = {
-                          fromTrack: { trackId: trackId ?? '', trackName: path.name },
-                        }
-                        if (lessonId) {
-                          navigate(`/courses/${courseId}/lessons/${lessonId}`, {
-                            state: fromTrackState,
-                          })
-                        } else {
-                          navigate(`/courses/${courseId}`, { state: fromTrackState })
-                        }
-                      }}
-                      autoScrollToCurrent
-                      videosByCourse={videosByCourse}
-                      lessonGroupsByCourse={lessonGroupsByCourse}
-                      videoProgressMap={videoProgressMap}
-                      manuallyCompletedIds={manuallyCompletedIds}
-                      onMarkComplete={handleMarkComplete}
-                      editable={isEditing}
-                      onReorderByCourseId={(activeCourseId, overCourseId) =>
-                        reorderPathCourses(trackId ?? '', activeCourseId, overCourseId)
-                      }
-                      progressionMode={path.progressionMode}
-                    />
-                  </div>
-                </motion.section>
               </motion.div>
             </TabsContent>
 
             {/* ── Roadmap Tab ── */}
             <TabsContent value="roadmap" className="mt-0">
               <motion.div variants={containerVariants} initial="hidden" animate="visible">
-                <motion.section variants={itemVariants}>
-                  <div className="bg-card rounded-[24px] shadow-card-ambient border border-border/50 p-6 lg:p-8 relative overflow-hidden">
-                    <div
-                      className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-brand/60 to-brand/20 pointer-events-none"
-                      aria-hidden="true"
-                    />
-                    <h2 className="font-display text-2xl font-bold mb-6">Your Learning Roadmap</h2>
-                    <RoadmapPhases
-                      entries={courseEntries}
-                      courseInfoMap={courseInfo}
-                      phases={roadmapPhases}
-                      trackId={trackId ?? ''}
-                      trackName={path.name}
-                      currentCourseId={currentCourseId}
-                    />
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-[var(--content-gap)]">
+                  <div className="lg:col-span-2">
+                    <motion.section variants={itemVariants}>
+                      <div className="bg-card rounded-[24px] shadow-card-ambient border border-border/50 p-6 lg:p-8 relative overflow-hidden">
+                        <div
+                          className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-brand/60 to-brand/20 pointer-events-none"
+                          aria-hidden="true"
+                        />
+                        <h2 className="font-display text-2xl font-bold mb-6">Your Learning Roadmap</h2>
+                        <RoadmapPhases
+                          entries={courseEntries}
+                          courseInfoMap={courseInfo}
+                          phases={roadmapPhases}
+                          trackId={trackId ?? ''}
+                          trackName={path.name}
+                          currentCourseId={currentCourseId}
+                        />
+                      </div>
+                    </motion.section>
                   </div>
-                </motion.section>
+                  <aside className="lg:col-span-1">
+                    <div className="lg:sticky lg:top-[72px]">
+                      <PathProgressSidebar
+                        progress={enhancedProgress}
+                        difficultyLabel={path.difficultyLabel}
+                        estimatedHours={path.estimatedHours}
+                        courseCount={courseEntries.length}
+                        createdAt={path.createdAt}
+                        updatedAt={path.updatedAt}
+                        progressionMode={path.progressionMode}
+                        onProgressionModeChange={handleProgressionModeChange}
+                        currentCourseName={currentCourseName}
+                        currentCoursePct={currentCoursePct}
+                        nextMilestoneName={nextMilestoneName}
+                        nextMilestoneEstimate={
+                          nextMilestoneName ? 'Keep studying to reach this milestone' : undefined
+                        }
+                        tab={activeTab}
+                      />
+                    </div>
+                  </aside>
+                </div>
               </motion.div>
             </TabsContent>
 
             {/* ── Projects Tab (placeholder) ── */}
             <TabsContent value="projects" className="mt-0">
               <motion.div variants={containerVariants} initial="hidden" animate="visible">
-                <motion.section variants={itemVariants}>
-                  <Card className="rounded-[24px] shadow-card-ambient border border-border/50">
-                    <CardContent className="p-8 text-center">
-                      <FolderKanban
-                        className="size-12 text-muted-foreground mx-auto mb-4"
-                        aria-hidden="true"
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-[var(--content-gap)]">
+                  <div className="lg:col-span-2">
+                    <motion.section variants={itemVariants}>
+                      <Card className="rounded-[24px] shadow-card-ambient border border-border/50">
+                        <CardContent className="p-8 text-center">
+                          <FolderKanban
+                            className="size-12 text-muted-foreground mx-auto mb-4"
+                            aria-hidden="true"
+                          />
+                          <h3 className="text-lg font-semibold mb-2">Projects & Labs</h3>
+                          <p className="text-muted-foreground text-sm max-w-md mx-auto">
+                            Portfolio projects, hands-on labs, and capstone tasks will appear here as
+                            you progress through your courses.
+                          </p>
+                        </CardContent>
+                      </Card>
+                    </motion.section>
+                  </div>
+                  <aside className="lg:col-span-1">
+                    <div className="lg:sticky lg:top-[72px]">
+                      <PathProgressSidebar
+                        progress={enhancedProgress}
+                        difficultyLabel={path.difficultyLabel}
+                        estimatedHours={path.estimatedHours}
+                        courseCount={courseEntries.length}
+                        createdAt={path.createdAt}
+                        updatedAt={path.updatedAt}
+                        progressionMode={path.progressionMode}
+                        onProgressionModeChange={handleProgressionModeChange}
+                        currentCourseName={currentCourseName}
+                        currentCoursePct={currentCoursePct}
+                        nextMilestoneName={nextMilestoneName}
+                        nextMilestoneEstimate={
+                          nextMilestoneName ? 'Keep studying to reach this milestone' : undefined
+                        }
+                        tab={activeTab}
                       />
-                      <h3 className="text-lg font-semibold mb-2">Projects & Labs</h3>
-                      <p className="text-muted-foreground text-sm max-w-md mx-auto">
-                        Portfolio projects, hands-on labs, and capstone tasks will appear here as
-                        you progress through your courses.
-                      </p>
-                    </CardContent>
-                  </Card>
-                </motion.section>
+                    </div>
+                  </aside>
+                </div>
               </motion.div>
             </TabsContent>
 
             {/* ── Notes Tab (placeholder) ── */}
             <TabsContent value="notes" className="mt-0">
               <motion.div variants={containerVariants} initial="hidden" animate="visible">
-                <motion.section variants={itemVariants}>
-                  <Card className="rounded-[24px] shadow-card-ambient border border-border/50">
-                    <CardContent className="p-8 text-center">
-                      <StickyNote
-                        className="size-12 text-muted-foreground mx-auto mb-4"
-                        aria-hidden="true"
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-[var(--content-gap)]">
+                  <div className="lg:col-span-2">
+                    <motion.section variants={itemVariants}>
+                      <Card className="rounded-[24px] shadow-card-ambient border border-border/50">
+                        <CardContent className="p-8 text-center">
+                          <StickyNote
+                            className="size-12 text-muted-foreground mx-auto mb-4"
+                            aria-hidden="true"
+                          />
+                          <h3 className="text-lg font-semibold mb-2">Your Notes</h3>
+                          <p className="text-muted-foreground text-sm max-w-md mx-auto">
+                            Notes you take during lessons will be organized here by course and lesson.
+                          </p>
+                        </CardContent>
+                      </Card>
+                    </motion.section>
+                  </div>
+                  <aside className="lg:col-span-1">
+                    <div className="lg:sticky lg:top-[72px]">
+                      <PathProgressSidebar
+                        progress={enhancedProgress}
+                        difficultyLabel={path.difficultyLabel}
+                        estimatedHours={path.estimatedHours}
+                        courseCount={courseEntries.length}
+                        createdAt={path.createdAt}
+                        updatedAt={path.updatedAt}
+                        progressionMode={path.progressionMode}
+                        onProgressionModeChange={handleProgressionModeChange}
+                        currentCourseName={currentCourseName}
+                        currentCoursePct={currentCoursePct}
+                        nextMilestoneName={nextMilestoneName}
+                        nextMilestoneEstimate={
+                          nextMilestoneName ? 'Keep studying to reach this milestone' : undefined
+                        }
+                        tab={activeTab}
                       />
-                      <h3 className="text-lg font-semibold mb-2">Your Notes</h3>
-                      <p className="text-muted-foreground text-sm max-w-md mx-auto">
-                        Notes you take during lessons will be organized here by course and lesson.
-                      </p>
-                    </CardContent>
-                  </Card>
-                </motion.section>
+                    </div>
+                  </aside>
+                </div>
               </motion.div>
             </TabsContent>
           </Tabs>
