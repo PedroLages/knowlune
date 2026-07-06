@@ -1,10 +1,17 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { motion } from 'motion/react'
-import { Plus, Search, Route, Download, LayoutTemplate } from 'lucide-react'
+import { Plus, Search, Route, Download, LayoutTemplate, ArrowUpDown, Check, CheckCircle2 } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
 import { Card, CardContent } from '@/app/components/ui/card'
 import { Skeleton } from '@/app/components/ui/skeleton'
 import { Input } from '@/app/components/ui/input'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/app/components/ui/dropdown-menu'
+import { cn } from '@/app/components/ui/utils'
 import { EmptyState } from '@/app/components/EmptyState'
 import { DelayedFallback } from '@/app/components/DelayedFallback'
 import { TemplateCard } from '@/app/components/course/TemplateCard'
@@ -141,6 +148,10 @@ export function LearningTracks() {
   const coverDialogTriggerRef = useRef<HTMLElement | null>(null)
   const [editDialogPath, setEditDialogPath] = useState<LearningPath | null>(null)
 
+  // Filter and sort state
+  const [activeTab, setActiveTab] = useState<'all' | 'in-progress' | 'not-started' | 'completed'>('all')
+  const [sortBy, setSortBy] = useState<'recent' | 'progress' | 'newest' | 'most-courses' | 'a-z'>('recent')
+
   // Import wizard trigger (singleton guard pattern)
   const {
     trigger,
@@ -257,18 +268,64 @@ export function LearningTracks() {
     )
   }, [userPaths, search])
 
-  // Sort: in-progress (1-99%) first, then not-started (0%), then completed (100%+).
-  // Within each tier, most recently updated first.
+  // Compute counts for filter tabs
+  const tabCounts = useMemo(() => ({
+    all: filteredPaths.length,
+    'in-progress': filteredPaths.filter(p => {
+      const pct = pathStats.get(p.id)?.completionPct ?? 0
+      return pct > 0 && pct < 100
+    }).length,
+    'not-started': filteredPaths.filter(p => {
+      const pct = pathStats.get(p.id)?.completionPct ?? 0
+      return pct === 0
+    }).length,
+    completed: filteredPaths.filter(p => {
+      const pct = pathStats.get(p.id)?.completionPct ?? 0
+      return pct >= 100
+    }).length,
+  }), [filteredPaths, pathStats])
+
+  // Filter by active tab, then sort
   const sortedFilteredPaths = useMemo(() => {
-    return [...filteredPaths].sort((a, b) => {
-      const pctA = pathStats.get(a.id)?.completionPct ?? 0
-      const pctB = pathStats.get(b.id)?.completionPct ?? 0
-      const tier = (pct: number) => (pct === 0 ? 1 : pct >= 100 ? 2 : 0)
-      const tierDiff = tier(pctA) - tier(pctB)
-      if (tierDiff !== 0) return tierDiff
-      return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+    // Filter by tab
+    const tabFiltered = activeTab === 'all'
+      ? filteredPaths
+      : filteredPaths.filter(p => {
+          const pct = pathStats.get(p.id)?.completionPct ?? 0
+          if (activeTab === 'in-progress') return pct > 0 && pct < 100
+          if (activeTab === 'not-started') return pct === 0
+          return pct >= 100 // completed
+        })
+
+    // Sort
+    return [...tabFiltered].sort((a, b) => {
+      switch (sortBy) {
+        case 'progress': {
+          const pctA = pathStats.get(a.id)?.completionPct ?? 0
+          const pctB = pathStats.get(b.id)?.completionPct ?? 0
+          return pctB - pctA
+        }
+        case 'newest':
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        case 'most-courses': {
+          const countA = pathStats.get(a.id)?.courseCount ?? 0
+          const countB = pathStats.get(b.id)?.courseCount ?? 0
+          return countB - countA
+        }
+        case 'a-z':
+          return a.name.localeCompare(b.name)
+        case 'recent':
+        default: {
+          const pctA = pathStats.get(a.id)?.completionPct ?? 0
+          const pctB = pathStats.get(b.id)?.completionPct ?? 0
+          const tier = (pct: number) => (pct === 0 ? 1 : pct >= 100 ? 2 : 0)
+          const tierDiff = tier(pctA) - tier(pctB)
+          if (tierDiff !== 0) return tierDiff
+          return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+        }
+      }
     })
-  }, [filteredPaths, pathStats])
+  }, [filteredPaths, activeTab, sortBy, pathStats])
 
   if (!isLoaded) {
     return (
@@ -413,45 +470,128 @@ export function LearningTracks() {
             <EmptyState
               icon={Search}
               title="No tracks match your search"
-              description={`No learning tracks found for "${search}". Try a different search term.`}
+              description={`No learning tracks found for "${search}". Try searching by course, lesson, or use a different term.`}
             />
           </motion.div>
         ) : (
           /* User track cards grid */
           <>
-            <motion.div
-              variants={staggerContainer}
-              initial="hidden"
-              animate="visible"
-              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-[var(--content-gap)]"
-              role="list"
-              aria-label="Learning tracks"
-            >
-              {sortedFilteredPaths.map(path => {
-                const stats = pathStats.get(path.id) || {
-                  courseCount: 0,
-                  completionPct: 0,
-                  totalLessons: 0,
-                  estimatedRemainingHours: 0,
-                }
-                return (
-                  <div key={path.id} role="listitem" className="w-full">
-                    <TrackCard
-                      path={path}
-                      courseCount={stats.courseCount}
-                      completionPct={stats.completionPct}
-                      totalLessons={stats.totalLessons}
-                      estimatedRemainingHours={stats.estimatedRemainingHours}
-                      courseThumbnails={pathThumbnails.get(path.id) || []}
-                      onImport={handlePathImport}
-                      onOpenCoverDialog={setCoverDialogPath}
-                      onOpenEditDialog={setEditDialogPath}
-                      coverDialogTriggerRef={coverDialogTriggerRef}
-                    />
-                  </div>
-                )
-              })}
-            </motion.div>
+            {/* Filter tabs + sort bar */}
+            {userPaths.length > 0 && (
+              <motion.div
+                variants={fadeUp}
+                className="flex items-center justify-between flex-wrap gap-3 mb-4"
+              >
+                <div className="flex items-center gap-1" role="tablist">
+                  {(['all', 'in-progress', 'not-started', 'completed'] as const).map(tab => (
+                    <button
+                      key={tab}
+                      role="tab"
+                      aria-selected={activeTab === tab}
+                      onClick={() => setActiveTab(tab)}
+                      className={cn(
+                        'px-3 py-1.5 rounded-lg text-sm font-medium transition-colors',
+                        activeTab === tab
+                          ? 'bg-brand text-brand-foreground'
+                          : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                      )}
+                    >
+                      {tab === 'all'
+                        ? 'All'
+                        : tab === 'in-progress'
+                          ? 'In Progress'
+                          : tab === 'not-started'
+                            ? 'Not Started'
+                            : 'Completed'}
+                      <span className="ml-1.5 text-xs opacity-70">{tabCounts[tab]}</span>
+                    </button>
+                  ))}
+                </div>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="sm" className="gap-1 text-muted-foreground">
+                      <ArrowUpDown className="size-3.5" />
+                      Sort
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    {([
+                      { key: 'recent', label: 'Recently opened' },
+                      { key: 'progress', label: 'Progress' },
+                      { key: 'newest', label: 'Newest' },
+                      { key: 'most-courses', label: 'Most courses' },
+                      { key: 'a-z', label: 'A–Z' },
+                    ] as const).map(({ key, label }) => (
+                      <DropdownMenuItem key={key} onClick={() => setSortBy(key)}>
+                        {label}
+                        {sortBy === key && <Check className="ml-auto size-4" />}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </motion.div>
+            )}
+
+            {/* Tracks grid or filter-empty state */}
+            {sortedFilteredPaths.length === 0 && activeTab !== 'all' ? (
+              <motion.div variants={fadeUp}>
+                <EmptyState
+                  icon={
+                    activeTab === 'completed'
+                      ? CheckCircle2
+                      : Route
+                  }
+                  title={`No ${
+                    activeTab === 'in-progress'
+                      ? 'in-progress'
+                      : activeTab === 'not-started'
+                        ? 'unstarted'
+                        : 'completed'
+                  } tracks`}
+                  description={
+                    activeTab === 'in-progress'
+                      ? 'Start a course in any track to see it here.'
+                      : activeTab === 'not-started'
+                        ? 'All your tracks have been started. Great progress!'
+                        : 'Complete all courses in a track to see it here.'
+                  }
+                />
+              </motion.div>
+            ) : (
+              <motion.div
+                variants={staggerContainer}
+                initial="hidden"
+                animate="visible"
+                className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-[var(--content-gap)]"
+                role="list"
+                aria-label="Learning tracks"
+              >
+                {sortedFilteredPaths.map(path => {
+                  const stats = pathStats.get(path.id) || {
+                    courseCount: 0,
+                    completionPct: 0,
+                    totalLessons: 0,
+                    estimatedRemainingHours: 0,
+                  }
+                  return (
+                    <div key={path.id} role="listitem" className="w-full">
+                      <TrackCard
+                        path={path}
+                        courseCount={stats.courseCount}
+                        completionPct={stats.completionPct}
+                        totalLessons={stats.totalLessons}
+                        estimatedRemainingHours={stats.estimatedRemainingHours}
+                        courseThumbnails={pathThumbnails.get(path.id) || []}
+                        onImport={handlePathImport}
+                        onOpenCoverDialog={setCoverDialogPath}
+                        onOpenEditDialog={setEditDialogPath}
+                        coverDialogTriggerRef={coverDialogTriggerRef}
+                      />
+                    </div>
+                  )
+                })}
+              </motion.div>
+            )}
           </>
         )}
       </motion.div>
