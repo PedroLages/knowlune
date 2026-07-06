@@ -149,7 +149,7 @@ function LessonRow({
       <span
         className={cn(
           'flex-shrink-0 size-7 rounded-lg flex items-center justify-center',
-          isCompleted && \!isActive
+          isCompleted && !isActive
             ? 'bg-success/10'
             : isMaterial
               ? 'bg-resource-pdf-bg'
@@ -158,7 +158,7 @@ function LessonRow({
       >
         {isActive ? (
           <PlayCircle className="size-4 text-brand" aria-hidden="true" />
-        ) : isCompleted && \!isMaterial ? (
+        ) : isCompleted && !isMaterial ? (
           <CheckCircle2
             className="size-3.5 text-success"
             aria-hidden="true"
@@ -176,7 +176,7 @@ function LessonRow({
         <p
           className={cn(
             'text-sm line-clamp-2',
-            isCompleted && \!isActive && 'line-through text-muted-foreground'
+            isCompleted && !isActive && 'line-through text-muted-foreground'
           )}
         >
           <HighlightedLessonTitle text={lesson.displayTitle} query={searchQuery} />
@@ -192,7 +192,7 @@ function LessonRow({
           {activeLabel && (
             <span className="text-[11px] text-brand font-medium">{activeLabel}</span>
           )}
-          {\!isMaterial && materialCount > 0 && onFocusMaterials && (
+          {!isMaterial && materialCount > 0 && onFocusMaterials && (
             <button
               type="button"
               className="min-w-[44px] min-h-[44px] flex items-center justify-center -m-2 rounded-sm"
@@ -201,7 +201,7 @@ function LessonRow({
                 e.stopPropagation()
                 onFocusMaterials()
               }}
-              aria-label={`${materialCount} material${materialCount \!== 1 ? 's' : ''}`}
+              aria-label={`${materialCount} material${materialCount !== 1 ? 's' : ''}`}
             >
               <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4">
                 <FileText className="size-2.5 mr-0.5" aria-hidden="true" />
@@ -209,7 +209,7 @@ function LessonRow({
               </Badge>
             </button>
           )}
-          {\!isMaterial && materialCount > 0 && \!onFocusMaterials && (
+          {!isMaterial && materialCount > 0 && !onFocusMaterials && (
             <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4 ml-1">
               <FileText className="size-2.5 mr-0.5" aria-hidden="true" />
               {materialCount}
@@ -260,10 +260,10 @@ function MaterialRow({
       <span
         className={cn(
           'flex-shrink-0 size-7 rounded-lg flex items-center justify-center',
-          isCompleted && \!isActive ? 'bg-success/10' : 'bg-resource-pdf-bg'
+          isCompleted && !isActive ? 'bg-success/10' : 'bg-resource-pdf-bg'
         )}
       >
-        {isCompleted && \!isActive ? (
+        {isCompleted && !isActive ? (
           <CheckCircle2
             className="size-3.5 text-success"
             aria-hidden="true"
@@ -280,7 +280,7 @@ function MaterialRow({
         <p
           className={cn(
             'text-sm line-clamp-2',
-            isCompleted && \!isActive && 'line-through text-muted-foreground'
+            isCompleted && !isActive && 'line-through text-muted-foreground'
           )}
         >
           <HighlightedLessonTitle text={material.displayTitle} query={searchQuery} />
@@ -329,7 +329,7 @@ function LessonGroupRow({
   // Check if active lesson is a material within this group
   const activeMaterial = group.materials.find(m => m.id === lessonId)
 
-  if (\!hasMaterials) {
+  if (!hasMaterials) {
     return (
       <LessonRow
         lesson={group.primary}
@@ -440,7 +440,7 @@ function SectionHeader({
           {section.title}
         </span>
         <span className="text-xs text-muted-foreground">
-          {section.lessons.length} lesson{section.lessons.length \!== 1 ? 's' : ''}
+          {section.lessons.length} lesson{section.lessons.length !== 1 ? 's' : ''}
         </span>
         <ChevronDown
           className={cn(
@@ -497,13 +497,13 @@ export function LessonsTab({ courseId, lessonId, adapter, onFocusMaterials }: Le
     adapter
       .getLessonBasedCurriculum()
       .then(data => {
-        if (\!ignore) {
+        if (!ignore) {
           setSections(data)
           setIsLoading(false)
         }
       })
       .catch(() => {
-        if (\!ignore) {
+        if (!ignore) {
           setIsLoading(false)
           setLoadError(true)
         }
@@ -516,7 +516,7 @@ export function LessonsTab({ courseId, lessonId, adapter, onFocusMaterials }: Le
 
   // Scroll active lesson into view on mount
   useEffect(() => {
-    if (\!isLoading && activeRef.current) {
+    if (!isLoading && activeRef.current) {
       activeRef.current.scrollIntoView({ block: 'nearest', behavior: 'instant' })
     }
   }, [isLoading, lessonId])
@@ -531,7 +531,7 @@ export function LessonsTab({ courseId, lessonId, adapter, onFocusMaterials }: Le
 
   // Filter sections by search query
   const filteredSections = useMemo(() => {
-    if (\!searchQuery) return sections
+    if (!searchQuery) return sections
     const q = searchQuery.toLowerCase()
     return sections
       .map(section => ({
@@ -586,7 +586,7 @@ export function LessonsTab({ courseId, lessonId, adapter, onFocusMaterials }: Le
   const lastCourseIdRef = useRef(courseId)
 
   useEffect(() => {
-    if (lastCourseIdRef.current \!== courseId) {
+    if (lastCourseIdRef.current !== courseId) {
       initialExpandDoneRef.current = false
       lastCourseIdRef.current = courseId
     }
@@ -604,7 +604,7 @@ export function LessonsTab({ courseId, lessonId, adapter, onFocusMaterials }: Le
       }
     }
 
-    if (\!initialExpandDoneRef.current && groupsWithMaterials.size > 0) {
+    if (!initialExpandDoneRef.current && groupsWithMaterials.size > 0) {
       setExpandedMaterialGroups(prev => {
         const next = new Set(prev)
         for (const id of groupsWithMaterials) next.add(id)
