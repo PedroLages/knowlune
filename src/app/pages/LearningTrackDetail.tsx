@@ -10,6 +10,7 @@ import {
   RotateCcw,
   Map as MapIcon,
   Layers,
+  ListVideo,
   FolderKanban,
   StickyNote,
 } from 'lucide-react'
@@ -696,38 +697,45 @@ export function LearningTrackDetail() {
       </div>
 
       {/* Content area */}
-      <div className="-mt-6 sm:-mt-8 lg:-mt-10 relative z-10">
+      <div className="-mt-6 sm:-mt-8 lg:-mt-10 relative z-10 max-w-[1440px] mx-auto w-full">
         {!entriesChecked ? null : courseEntries.length > 0 ? (
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-            {/* Tab bar */}
-            <div className="overflow-x-auto -mx-1 px-1">
-              <TabsList className="w-full sm:w-auto inline-flex h-auto p-1 bg-muted/50 rounded-2xl gap-1">
+            {/* Tab bar — sticky below hero */}
+            <div className="sticky top-0 z-20 -mx-2 px-2 py-2 bg-background/95 backdrop-blur-sm border-b border-border overflow-x-auto">
+              <TabsList className="w-full sm:w-auto inline-flex h-12 p-1 bg-muted/50 rounded-2xl gap-1">
                 <TabsTrigger
                   value="overview"
-                  className="rounded-xl px-4 py-2.5 text-sm font-medium gap-2 data-[state=active]:bg-card data-[state=active]:shadow-sm"
+                  className="h-9 rounded-xl px-4 text-sm font-medium gap-2 data-[state=active]:bg-card data-[state=active]:shadow-sm transition-none"
                 >
-                  <Layers className="size-4" aria-hidden="true" />
+                  <Layers className="size-[18px]" aria-hidden="true" />
                   <span className="hidden sm:inline">Overview</span>
                 </TabsTrigger>
                 <TabsTrigger
                   value="roadmap"
-                  className="rounded-xl px-4 py-2.5 text-sm font-medium gap-2 data-[state=active]:bg-card data-[state=active]:shadow-sm"
+                  className="h-9 rounded-xl px-4 text-sm font-medium gap-2 data-[state=active]:bg-card data-[state=active]:shadow-sm transition-none"
                 >
-                  <MapIcon className="size-4" aria-hidden="true" />
+                  <MapIcon className="size-[18px]" aria-hidden="true" />
                   <span className="hidden sm:inline">Roadmap</span>
                 </TabsTrigger>
                 <TabsTrigger
-                  value="projects"
-                  className="rounded-xl px-4 py-2.5 text-sm font-medium gap-2 data-[state=active]:bg-card data-[state=active]:shadow-sm"
+                  value="courses"
+                  className="h-9 rounded-xl px-4 text-sm font-medium gap-2 data-[state=active]:bg-card data-[state=active]:shadow-sm transition-none"
                 >
-                  <FolderKanban className="size-4" aria-hidden="true" />
+                  <ListVideo className="size-[18px]" aria-hidden="true" />
+                  <span className="hidden sm:inline">Courses</span>
+                </TabsTrigger>
+                <TabsTrigger
+                  value="projects"
+                  className="h-9 rounded-xl px-4 text-sm font-medium gap-2 data-[state=active]:bg-card data-[state=active]:shadow-sm transition-none"
+                >
+                  <FolderKanban className="size-[18px]" aria-hidden="true" />
                   <span className="hidden sm:inline">Projects</span>
                 </TabsTrigger>
                 <TabsTrigger
                   value="notes"
-                  className="rounded-xl px-4 py-2.5 text-sm font-medium gap-2 data-[state=active]:bg-card data-[state=active]:shadow-sm"
+                  className="h-9 rounded-xl px-4 text-sm font-medium gap-2 data-[state=active]:bg-card data-[state=active]:shadow-sm transition-none"
                 >
-                  <StickyNote className="size-4" aria-hidden="true" />
+                  <StickyNote className="size-[18px]" aria-hidden="true" />
                   <span className="hidden sm:inline">Notes</span>
                 </TabsTrigger>
               </TabsList>
@@ -807,11 +815,12 @@ export function LearningTrackDetail() {
                       nextMilestoneEstimate={
                         nextMilestoneName ? 'Keep studying to reach this milestone' : undefined
                       }
+                      tab={activeTab}
                     />
                   </aside>
                 </div>
 
-                {/* ── Syllabus / Curriculum ── */}
+                {/* ── Courses / Curriculum ── */}
                 <motion.section variants={itemVariants}>
                   <div className="bg-card rounded-[24px] shadow-card-ambient border border-border/50 p-6 lg:p-8 relative overflow-hidden">
                     <div
@@ -819,7 +828,7 @@ export function LearningTrackDetail() {
                       aria-hidden="true"
                     />
                     <div className="flex items-center justify-between mb-8">
-                      <h2 className="font-display text-2xl font-bold">Syllabus</h2>
+                      <h2 className="font-display text-2xl font-bold">Courses</h2>
                       <div className="flex items-center gap-3">
                         <span className="text-muted-foreground text-sm">
                           {courseEntries.length} {courseEntries.length === 1 ? 'Course' : 'Courses'}
@@ -832,7 +841,79 @@ export function LearningTrackDetail() {
                           variant={isEditing ? 'brand' : 'ghost'}
                           size="sm"
                           onClick={() => setIsEditing(!isEditing)}
-                          data-testid="edit-syllabus-button"
+                          data-testid="edit-courses-button"
+                        >
+                          {isEditing ? 'Done' : 'Edit'}
+                        </Button>
+                      </div>
+                    </div>
+                    <PathTimeline
+                      entries={courseEntries.map(e => ({
+                        ...e,
+                        info: courseInfo.get(e.courseId),
+                      }))}
+                      courseInfoMap={courseInfo}
+                      gapEntries={courseEntries.filter(e => e.courseId === '')}
+                      onGapResolve={() => {}}
+                      onCourseClick={courseId => {
+                        const lessonId = firstLessonByCourse.get(courseId)
+                        const fromTrackState = {
+                          fromTrack: { trackId: trackId ?? '', trackName: path.name },
+                        }
+                        if (lessonId) {
+                          navigate(`/courses/${courseId}/lessons/${lessonId}`, {
+                            state: fromTrackState,
+                          })
+                        } else {
+                          navigate(`/courses/${courseId}`, { state: fromTrackState })
+                        }
+                      }}
+                      autoScrollToCurrent
+                      videosByCourse={videosByCourse}
+                      lessonGroupsByCourse={lessonGroupsByCourse}
+                      videoProgressMap={videoProgressMap}
+                      manuallyCompletedIds={manuallyCompletedIds}
+                      onMarkComplete={handleMarkComplete}
+                      editable={isEditing}
+                      onReorderByCourseId={(activeCourseId, overCourseId) =>
+                        reorderPathCourses(trackId ?? '', activeCourseId, overCourseId)
+                      }
+                      progressionMode={path.progressionMode}
+                    />
+                  </div>
+                </motion.section>
+              </motion.div>
+            </TabsContent>
+
+            {/* ── Courses Tab ── */}
+            <TabsContent value="courses" className="mt-0">
+              <motion.div
+                variants={containerVariants}
+                initial="hidden"
+                animate="visible"
+                className="space-y-8"
+              >
+                <motion.section variants={itemVariants}>
+                  <div className="bg-card rounded-[24px] shadow-card-ambient border border-border/50 p-6 lg:p-8 relative overflow-hidden">
+                    <div
+                      className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-brand/60 to-brand/20 pointer-events-none"
+                      aria-hidden="true"
+                    />
+                    <div className="flex items-center justify-between mb-8">
+                      <h2 className="font-display text-2xl font-bold">Courses</h2>
+                      <div className="flex items-center gap-3">
+                        <span className="text-muted-foreground text-sm">
+                          {courseEntries.length} {courseEntries.length === 1 ? 'Course' : 'Courses'}
+                        </span>
+                        <ProgressionModeToggle
+                          mode={path.progressionMode ?? 'sequential'}
+                          onChange={handleProgressionModeChange}
+                        />
+                        <Button
+                          variant={isEditing ? 'brand' : 'ghost'}
+                          size="sm"
+                          onClick={() => setIsEditing(!isEditing)}
+                          data-testid="edit-courses-button"
                         >
                           {isEditing ? 'Done' : 'Edit'}
                         </Button>
