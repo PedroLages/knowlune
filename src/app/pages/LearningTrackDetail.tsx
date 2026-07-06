@@ -8,7 +8,7 @@ import {
   ArrowLeft,
   AlertCircle,
   RotateCcw,
-  Map,
+  Map as MapIcon,
   List,
   Layers,
   FolderKanban,
@@ -714,7 +714,7 @@ export function LearningTrackDetail() {
                   value="roadmap"
                   className="rounded-xl px-4 py-2.5 text-sm font-medium gap-2 data-[state=active]:bg-card data-[state=active]:shadow-sm"
                 >
-                  <Map className="size-4" aria-hidden="true" />
+                  <MapIcon className="size-4" aria-hidden="true" />
                   <span className="hidden sm:inline">Roadmap</span>
                 </TabsTrigger>
                 <TabsTrigger
