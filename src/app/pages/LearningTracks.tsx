@@ -31,6 +31,8 @@ function TrackCard({
   path,
   courseCount,
   completionPct,
+  totalLessons,
+  estimatedRemainingHours,
   courseThumbnails,
   onImport,
   onOpenCoverDialog,
@@ -40,6 +42,8 @@ function TrackCard({
   path: LearningPath
   courseCount: number
   completionPct: number
+  totalLessons: number
+  estimatedRemainingHours: number
   courseThumbnails: string[]
   onImport: (pathId: string) => void
   onOpenCoverDialog: (path: LearningPath) => void
@@ -76,6 +80,8 @@ function TrackCard({
         pathName={path.name}
         completionPct={completionPct}
         courseCount={courseCount}
+        totalLessons={totalLessons}
+        estimatedRemainingHours={estimatedRemainingHours}
         courseThumbnails={courseThumbnails}
         isAIGenerated={path.isAIGenerated}
         coverImageUrl={path.coverImageUrl}
@@ -185,15 +191,20 @@ export function LearningTracks() {
   // Compute real progress from contentProgress (catalog) and progress table (imported)
   const pathProgressMap = useMultiPathProgress(pathEntriesMap)
 
-  // Derive courseCount + completionPct per path
+  // Derive per-path stats from progress data
   const pathStats = useMemo(() => {
-    const stats = new Map<string, { courseCount: number; completionPct: number }>()
+    const stats = new Map<
+      string,
+      { courseCount: number; completionPct: number; totalLessons: number; estimatedRemainingHours: number }
+    >()
     for (const path of paths) {
       const progress = pathProgressMap.get(path.id)
       const pathEntries = entries.filter(e => e.pathId === path.id)
       stats.set(path.id, {
         courseCount: pathEntries.length,
         completionPct: progress?.completionPct ?? 0,
+        totalLessons: progress?.totalLessons ?? 0,
+        estimatedRemainingHours: progress?.estimatedRemainingHours ?? 0,
       })
     }
     return stats
@@ -417,13 +428,20 @@ export function LearningTracks() {
               aria-label="Learning tracks"
             >
               {sortedFilteredPaths.map(path => {
-                const stats = pathStats.get(path.id) || { courseCount: 0, completionPct: 0 }
+                const stats = pathStats.get(path.id) || {
+                  courseCount: 0,
+                  completionPct: 0,
+                  totalLessons: 0,
+                  estimatedRemainingHours: 0,
+                }
                 return (
                   <div key={path.id} role="listitem" className="w-full">
                     <TrackCard
                       path={path}
                       courseCount={stats.courseCount}
                       completionPct={stats.completionPct}
+                      totalLessons={stats.totalLessons}
+                      estimatedRemainingHours={stats.estimatedRemainingHours}
                       courseThumbnails={pathThumbnails.get(path.id) || []}
                       onImport={handlePathImport}
                       onOpenCoverDialog={setCoverDialogPath}
