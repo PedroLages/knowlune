@@ -362,7 +362,7 @@ export async function scanCourseFolder(): Promise<ScannedCourse> {
 
     const videos: ScannedVideo[] = toSortedVideos(videoResults)
 
-    // Build PDF records from successful extractions
+    // Build PDF records from successful extractions (sorted by path with natural numeric order)
     const pdfs: ScannedPdf[] = pdfResults
       .filter(
         (
@@ -372,6 +372,9 @@ export async function scanCourseFolder(): Promise<ScannedCourse> {
           metadata: { pageCount: number }
         }> => r.status === 'fulfilled'
       )
+      .sort((a, b) =>
+        a.value.entry.path.localeCompare(b.value.entry.path, undefined, { numeric: true })
+      )
       .map(r => ({
         id: crypto.randomUUID(),
         filename: r.value.entry.handle.name,
@@ -380,12 +383,14 @@ export async function scanCourseFolder(): Promise<ScannedCourse> {
         fileHandle: r.value.entry.handle,
       }))
 
-    // Build image candidates for cover selection
-    const images: ScannedImage[] = imageFiles.map(entry => ({
-      filename: entry.handle.name,
-      path: entry.path,
-      fileHandle: entry.handle,
-    }))
+    // Build image candidates for cover selection (sorted by path)
+    const images: ScannedImage[] = [...imageFiles]
+      .sort((a, b) => a.path.localeCompare(b.path, undefined, { numeric: true }))
+      .map(entry => ({
+        filename: entry.handle.name,
+        path: entry.path,
+        fileHandle: entry.handle,
+      }))
 
     // Read course-manifest.json if present
     const manifestData = await readCourseManifest(dirHandle)
@@ -1200,9 +1205,12 @@ export async function scanFromDroppedFiles(
       store.setImportProgress({ current: processedCount, total: totalFiles })
     }
 
-    // Extract PDF metadata from File objects
+    // Extract PDF metadata from File objects (sorted by name with natural numeric order)
+    const sortedPdfFiles = [...pdfFiles].sort((a, b) =>
+      a.name.localeCompare(b.name, undefined, { numeric: true })
+    )
     const pdfs: ScannedPdf[] = []
-    for (const file of pdfFiles) {
+    for (const file of sortedPdfFiles) {
       try {
         const metadata = await extractPdfMetadataFromFile(file)
         pdfs.push({
