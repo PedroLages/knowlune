@@ -40,6 +40,7 @@ import type {
   Difficulty,
 } from '@/data/types'
 import { toast } from 'sonner'
+import { isMaterialFilename } from '@/lib/lessonMaterialMatcher'
 
 // --- Error Types ---
 
@@ -69,6 +70,8 @@ export interface ScannedVideo {
   height: number // Video height in pixels (E1B-S02)
   /** Full HTTP URL when imported from a course server (E133-S01). */
   serverUrl?: string
+  /** Module/section title derived from the directory name during server scan. */
+  moduleTitle?: string
 }
 
 /** A PDF discovered during folder scan, before persistence. */
@@ -80,6 +83,12 @@ export interface ScannedPdf {
   fileHandle?: FileSystemFileHandle // absent for server-imported files
   /** Full HTTP URL when imported from a course server (E133-S01). */
   serverUrl?: string
+  /** Module/section title derived from the directory name during server scan. */
+  moduleTitle?: string
+  /** When this PDF is supplementary material, the parent video's ID. */
+  materialOf?: string
+  /** Order index; undefined for material PDFs (attached to parent video). */
+  order?: number
 }
 
 /** An image discovered during folder scan, candidate for cover image. */
@@ -149,6 +158,22 @@ export interface ScannedCourse {
    * partial — the user may need to increase the cap or split the folder.
    */
   truncated?: boolean
+  /** Caption files (SRT/VTT) discovered during server scan, matched to videos by stem. */
+  captions?: ScannedCaption[]
+}
+
+/** A caption/subtitle file discovered during server scan. */
+export interface ScannedCaption {
+  /** Raw filename stem before language suffix stripping (used for video matching). */
+  videoStem: string
+  /** Detected language code (e.g., "en") if a known suffix was stripped. */
+  language?: string
+  /** Raw SRT/VTT text content. */
+  srtContent: string
+  /** Full HTTP URL to the caption file on the server. */
+  serverUrl: string
+  /** Matched video ID in the scan set (populated after matching). */
+  matchedVideoId?: string
 }
 
 // --- Scan Phase ---
@@ -524,7 +549,7 @@ function applyManifestVideoOrder(
     ordered.push({
       ...video,
       title: lesson.title,
-      moduleTitle: lesson.moduleTitle || undefined,
+      moduleTitle: lesson.moduleTitle || video.moduleTitle || undefined,
       order: lesson.order,
     })
   }
@@ -537,7 +562,7 @@ function applyManifestVideoOrder(
         ordered.push({
           ...video,
           title: deriveTitleFromFilename(video.filename),
-          moduleTitle: undefined,
+          moduleTitle: video.moduleTitle || undefined,
           order: nextOrder++,
         })
       }
@@ -590,6 +615,7 @@ export async function persistScannedCourse(
     width: v.width,
     height: v.height,
     ...(v.serverUrl ? { serverUrl: v.serverUrl } : {}),
+    ...(v.moduleTitle ? { moduleTitle: v.moduleTitle } : {}),
   }))
 
   // Apply manifest lesson mapping (title, moduleTitle, order) when a manifest is present
@@ -599,16 +625,20 @@ export async function persistScannedCourse(
       ? applyManifestVideoOrder(videos, manifestModules)
       : videos
 
-  // Build ImportedPdf records (add courseId)
-  const pdfs: ImportedPdf[] = scanned.pdfs.map(p => ({
-    id: p.id,
-    courseId: scanned.id,
-    filename: p.filename,
-    path: p.path,
-    pageCount: p.pageCount,
-    fileHandle: p.fileHandle ?? null,
-    ...(p.serverUrl ? { serverUrl: p.serverUrl } : {}),
-  }))
+  // Build ImportedPdf records — material PDFs (materialOf set) are NOT standalone;
+  // they are attached to their parent video via the video's materials list.
+  const pdfs: ImportedPdf[] = scanned.pdfs
+    .filter(p => !p.materialOf) // materials are attached to parent video, not standalone
+    .map(p => ({
+      id: p.id,
+      courseId: scanned.id,
+      filename: p.filename,
+      path: p.path,
+      pageCount: p.pageCount,
+      fileHandle: p.fileHandle ?? null,
+      ...(p.serverUrl ? { serverUrl: p.serverUrl } : {}),
+      ...(p.moduleTitle ? { moduleTitle: p.moduleTitle } : {}),
+    }))
 
   // Author detection: use explicit override (authorId or authorName from manifest),
   // fall back to manifest author name, or auto-detect from folder name (AC1-AC3, AC5)
@@ -704,6 +734,23 @@ export async function persistScannedCourse(
       await syncableWrite('importedPdfs', 'add', pdf as unknown as SyncableRecord)
       persistCompleted++
       persistProgress.updateProcessingProgress(scanned.id, persistCompleted, totalPersistItems)
+    }
+    // Persist captions (SRT/VTT) to videoCaptions table
+    if (scanned.captions && scanned.captions.length > 0) {
+      for (const caption of scanned.captions) {
+        if (caption.matchedVideoId && caption.srtContent) {
+          await syncableWrite('videoCaptions', 'add', {
+            id: crypto.randomUUID(),
+            videoId: caption.matchedVideoId,
+            language: caption.language || 'en',
+            content: caption.srtContent,
+            source: 'file',
+            createdAt: now,
+            updatedAt: now,
+          } as unknown as SyncableRecord)
+          persistCompleted++
+        }
+      }
     }
   } catch (error) {
     useImportProgressStore.getState().failCourse(scanned.id, `Failed to save "${course.name}"`)
@@ -1397,6 +1444,47 @@ const MAX_SERVER_SCAN_FILES = 5_000
  * @param serverId — Optional FK to CourseServer.id for settings integration
  * @returns A ScannedCourse ready for the wizard's details step
  */
+
+/**
+ * Derive a clean module/section title from a directory URL.
+ * Strips the numeric prefix (e.g., "01 - Overview" → "Overview").
+ */
+function deriveModuleTitle(dirUrl: string | undefined): string | undefined {
+  if (!dirUrl) return undefined
+  try {
+    const pathname = new URL(dirUrl).pathname
+    const segments = pathname.split('/').filter(Boolean)
+    const lastSegment = decodeURIComponent(segments[segments.length - 1] || '')
+    if (!lastSegment) return undefined
+    // Strip numeric prefix: "01-Overview" → "Overview", "02 - Getting Started" → "Getting Started"
+    const cleaned = lastSegment
+      .replace(/^\d+\s*-\s*/, '')
+      .replace(/^\d+-/, '')
+      .replace(/^\d+\s+/, '')
+      .replace(/[-_]+/g, ' ')
+      .trim()
+    return cleaned || lastSegment
+  } catch {
+    return undefined
+  }
+}
+
+/** Known language suffixes in caption filenames (e.g., "001_intro_en.srt"). */
+const CAPTION_LANG_SUFFIXES = [
+  '_en', '_fr', '_es', '_de', '_ja', '_zh', '_ko', '_pt', '_ar', '_ru',
+  '_it', '_nl', '_pl', '_sv', '_tr', '_hi', '_vi', '_th',
+] as const
+
+/** Strips known language suffix from a stem. Returns {cleanStem, language}. */
+function stripLanguageSuffix(stem: string): { cleanStem: string; language?: string } {
+  for (const suffix of CAPTION_LANG_SUFFIXES) {
+    if (stem.toLowerCase().endsWith(suffix)) {
+      return { cleanStem: stem.slice(0, -suffix.length), language: suffix.slice(1) }
+    }
+  }
+  return { cleanStem: stem }
+}
+
 export async function scanCourseFolderFromServer(
   folderUrl: string,
   serverId?: string
@@ -1409,8 +1497,13 @@ export async function scanCourseFolderFromServer(
   const segments = urlPath.split('/').filter(Boolean)
   const courseName = decodeURIComponent(segments[segments.length - 1] || 'Imported Course')
 
-  // Derive the server root URL for building serverPath
+  // Compute the course base URL so derived paths are course-folder-relative.
+  // Stripping the full course URL (not just protocol+host) from file URLs
+  // produces paths like "01-Overview/001-intro.mp4" instead of
+  // "Academy/DevOps/MyCourse/01-Overview/001-intro.mp4".
+  // This matches local import behavior where paths are relative to the course folder.
   const parsedUrl = new URL(folderUrl)
+  const courseBaseUrl = folderUrl.replace(/\/+$/, '')
   const serverRoot = `${parsedUrl.protocol}//${parsedUrl.host}`
 
   progressStore.startImport(courseId, courseName)
@@ -1423,6 +1516,9 @@ export async function scanCourseFolderFromServer(
     format: 'mp4' | 'webm' | 'mkv' | 'ts' | 'avi'
   }[] = []
   const allPdfs: { name: string; url: string; path: string }[] = []
+  const allCaptions: { rawStem: string; cleanStem: string; language?: string; name: string; url: string }[] = []
+  // Map file URLs → parent directory URLs for section structure derivation
+  const fileDirMap = new Map<string, string>()
 
   // Breadth-first traversal with concurrency limit
   const pendingDirs: string[] = [folderUrl]
@@ -1457,7 +1553,7 @@ export async function scanCourseFolderFromServer(
           if (file.type === 'directory') {
             pendingDirs.push(file.url)
           } else if (file.type === 'video') {
-            const relPath = file.url.replace(serverRoot + '/', '')
+            const relPath = file.url.replace(courseBaseUrl + '/', '')
             const ext = file.name.split('.').pop()?.toLowerCase() ?? 'mp4'
             const validFormats = ['mp4', 'webm', 'mkv', 'ts', 'avi'] as const
             allVideos.push({
@@ -1468,12 +1564,25 @@ export async function scanCourseFolderFromServer(
                 ? (ext as 'mp4' | 'webm' | 'mkv' | 'ts' | 'avi')
                 : 'mp4',
             })
+            fileDirMap.set(file.url, dirUrl)
           } else if (file.type === 'pdf') {
-            const relPath = file.url.replace(serverRoot + '/', '')
+            const relPath = file.url.replace(courseBaseUrl + '/', '')
             allPdfs.push({
               name: file.name,
               url: file.url,
               path: relPath,
+            })
+            fileDirMap.set(file.url, dirUrl)
+          } else if (file.type === 'caption') {
+            // Collect caption files for post-scan matching (Unit 4)
+            const captionStemRaw = file.name.replace(/\.[a-zA-Z0-9]{2,4}$/, '')
+            const { cleanStem, language } = stripLanguageSuffix(captionStemRaw)
+            allCaptions.push({
+              rawStem: captionStemRaw,
+              cleanStem,
+              language,
+              name: file.name,
+              url: file.url,
             })
           }
         }
@@ -1521,18 +1630,83 @@ export async function scanCourseFolderFromServer(
       width: 0,
       height: 0,
       serverUrl: v.url,
+      moduleTitle: deriveModuleTitle(fileDirMap.get(v.url)),
     }))
 
+  // Post-scan material classification: classify companion PDFs
+  // by checking isMaterialFilename() and matching to parent videos by stem prefix.
+  const materialPdfMap = new Map<string, string>() // pdfId → videoId
+  for (const pdf of allPdfs) {
+    if (!isMaterialFilename(pdf.name)) continue
+    // Find the video with matching numeric prefix in the same section
+    const pdfPrefix = pdf.name.match(/^(\d+)/)?.[1]
+    if (!pdfPrefix) continue
+    const matchingVideo = videos.find(v => {
+      const vPrefix = v.filename.match(/^(\d+)/)?.[1]
+      return vPrefix === pdfPrefix && v.moduleTitle === deriveModuleTitle(fileDirMap.get(pdf.url))
+    })
+    if (matchingVideo) {
+      materialPdfMap.set(pdf.name, matchingVideo.id)
+    }
+  }
+
   // Build ScannedPdf[] — no fileHandle, pageCount=0 (lazy or Range-read later)
+  let pdfCounter = 0
   const pdfs: ScannedPdf[] = allPdfs
     .sort((a, b) => a.path.localeCompare(b.path, undefined, { numeric: true }))
-    .map(p => ({
-      id: crypto.randomUUID(),
-      filename: p.name,
-      path: p.path,
-      pageCount: 0,
-      serverUrl: p.url,
-    }))
+    .map(p => {
+      const materialOf = materialPdfMap.get(p.name)
+      return {
+        id: crypto.randomUUID(),
+        filename: p.name,
+        path: p.path,
+        pageCount: 0,
+        serverUrl: p.url,
+        moduleTitle: deriveModuleTitle(fileDirMap.get(p.url)),
+        ...(materialOf ? { materialOf } : {}),
+        // Material PDFs don't get a standalone order; they're attached to their parent
+        order: materialOf ? undefined : ++pdfCounter,
+      }
+    })
+
+  // Post-scan caption matching: match SRT/VTT files to videos by stem
+  const captions: ScannedCaption[] = []
+  for (const cap of allCaptions) {
+    // Try matching by clean stem (after language suffix stripping)
+    const matchingVideo = videos.find(v => {
+      const vStem = v.filename.replace(/\.[a-zA-Z0-9]{2,4}$/, '')
+      return vStem === cap.cleanStem
+    })
+    // Fallback: try the raw stem (includes language suffix)
+    const fallbackVideo = !matchingVideo
+      ? videos.find(v => {
+          const vStem = v.filename.replace(/\.[a-zA-Z0-9]{2,4}$/, '')
+          return vStem === cap.rawStem
+        })
+      : null
+    const targetVideo = matchingVideo || fallbackVideo
+    if (targetVideo) {
+      // Fetch caption content
+      let srtContent = ''
+      try {
+        const resp = await fetch(cap.url)
+        if (resp.ok) {
+          srtContent = await resp.text()
+        }
+      } catch {
+        console.warn(`[scanServer] Failed to fetch caption: ${cap.url}`)
+      }
+      captions.push({
+        videoStem: cap.cleanStem,
+        language: cap.language,
+        srtContent,
+        serverUrl: cap.url,
+        matchedVideoId: targetVideo.id,
+      })
+    } else {
+      console.warn(`[scanServer] No matching video for caption: ${cap.name}`)
+    }
+  }
 
   // Mark import as complete in progress store
   progressStore.completeCourse(courseId)
@@ -1549,6 +1723,7 @@ export async function scanCourseFolderFromServer(
     pdfs,
     images: [],
     source: 'server',
+    captions: captions.length > 0 ? captions : undefined,
     ...(serverId ? { serverId } : {}),
     serverPath,
     ...(hitCap ? { truncated: true } : {}),
