@@ -715,27 +715,95 @@ export async function persistScannedCourse(
   persistProgress.updateProcessingProgress(scanned.id, 0, totalPersistItems)
 
   try {
-    // E94-S02: Use syncableWrite instead of db.transaction so each record gets
-    // a sync queue entry. Atomicity across course/video/pdf is sacrificed — each
-    // record is individually atomic. If interrupted mid-import, partial records
-    // may exist locally without queue entries; an upload scan can detect these.
-    // The handles (directoryHandle, coverImageHandle, fileHandle) are stripped
-    // from the upload payload by the table registry automatically.
-    await syncableWrite('importedCourses', 'add', course as unknown as SyncableRecord)
-    persistCompleted++
-    persistProgress.updateProcessingProgress(scanned.id, persistCompleted, totalPersistItems)
+    // Unit 8: Re-import safety — upsert instead of insert to prevent duplicates.
+    // Uses Dexie's put() through a helper that checks for existing records by
+    // matching (courseId, serverUrl) for server imports or (courseId, path) for local.
 
-    for (const video of orderedVideos) {
-      await syncableWrite('importedVideos', 'add', video as unknown as SyncableRecord)
+    // Check if this course was already imported (same serverUrl or same name+source)
+    let existingCourse: ImportedCourse | undefined
+    if (scanned.serverPath) {
+      existingCourse = await db.importedCourses
+        .where('serverPath')
+        .equals(scanned.serverPath)
+        .first()
+    }
+
+    const isReimport = !!existingCourse
+    if (isReimport && existingCourse) {
+      // Re-import: update existing course record, preserve original id
+      const updatedCourse = { ...course as ImportedCourse, id: existingCourse.id }
+      await syncableWrite('importedCourses', 'put', updatedCourse as unknown as SyncableRecord)
+
+      // Collect existing video/PDF IDs for this course to enable upsert
+      const existingVideos = await db.importedVideos.where('courseId').equals(existingCourse.id).toArray()
+      const existingPdfs = await db.importedPdfs.where('courseId').equals(existingCourse.id).toArray()
+      const existingVidByServerUrl = new Map(existingVideos.filter(v => v.serverUrl).map(v => [v.serverUrl!, v]))
+      const existingPdfByServerUrl = new Map(existingPdfs.filter(p => p.serverUrl).map(p => [p.serverUrl!, p]))
+      const keptVideoIds = new Set<string>()
+      const keptPdfIds = new Set<string>()
+
+      for (const video of orderedVideos) {
+        const existing = video.serverUrl ? existingVidByServerUrl.get(video.serverUrl) : undefined
+        const record = existing ? { ...video, id: existing.id } : video
+        if (existing) {
+          await syncableWrite('importedVideos', 'put', record as unknown as SyncableRecord)
+          keptVideoIds.add(existing.id)
+        } else {
+          await syncableWrite('importedVideos', 'add', record as unknown as SyncableRecord)
+          keptVideoIds.add(record.id)
+        }
+        persistCompleted++
+        persistProgress.updateProcessingProgress(scanned.id, persistCompleted, totalPersistItems)
+      }
+
+      for (const pdf of pdfs) {
+        const existing = pdf.serverUrl ? existingPdfByServerUrl.get(pdf.serverUrl) : undefined
+        const record = existing ? { ...pdf, id: existing.id } : pdf
+        if (existing) {
+          await syncableWrite('importedPdfs', 'put', record as unknown as SyncableRecord)
+          keptPdfIds.add(existing.id)
+        } else {
+          await syncableWrite('importedPdfs', 'add', record as unknown as SyncableRecord)
+          keptPdfIds.add(record.id)
+        }
+        persistCompleted++
+        persistProgress.updateProcessingProgress(scanned.id, persistCompleted, totalPersistItems)
+      }
+
+      // Prune orphaned records (files removed from server since last import)
+      for (const v of existingVideos) {
+        if (!keptVideoIds.has(v.id)) {
+          await db.importedVideos.delete(v.id)
+          await db.videoCaptions.where('videoId').equals(v.id).delete()
+        }
+      }
+      for (const p of existingPdfs) {
+        if (!keptPdfIds.has(p.id)) {
+          await db.importedPdfs.delete(p.id)
+        }
+      }
+
+      // Use the existing course ID for all downstream operations
+      course.id = existingCourse.id
+    } else {
+      // First import: standard add flow
+      await syncableWrite('importedCourses', 'add', course as unknown as SyncableRecord)
       persistCompleted++
       persistProgress.updateProcessingProgress(scanned.id, persistCompleted, totalPersistItems)
+
+      for (const video of orderedVideos) {
+        await syncableWrite('importedVideos', 'add', video as unknown as SyncableRecord)
+        persistCompleted++
+        persistProgress.updateProcessingProgress(scanned.id, persistCompleted, totalPersistItems)
+      }
+      for (const pdf of pdfs) {
+        await syncableWrite('importedPdfs', 'add', pdf as unknown as SyncableRecord)
+        persistCompleted++
+        persistProgress.updateProcessingProgress(scanned.id, persistCompleted, totalPersistItems)
+      }
     }
-    for (const pdf of pdfs) {
-      await syncableWrite('importedPdfs', 'add', pdf as unknown as SyncableRecord)
-      persistCompleted++
-      persistProgress.updateProcessingProgress(scanned.id, persistCompleted, totalPersistItems)
-    }
-    // Persist captions (SRT/VTT) to videoCaptions table
+
+    // Persist captions (SRT/VTT) to videoCaptions table — same for both first import and re-import
     if (scanned.captions && scanned.captions.length > 0) {
       for (const caption of scanned.captions) {
         if (caption.matchedVideoId && caption.srtContent) {
