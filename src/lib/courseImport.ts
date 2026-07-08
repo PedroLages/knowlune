@@ -40,7 +40,6 @@ import type {
   Difficulty,
 } from '@/data/types'
 import { toast } from 'sonner'
-import { isMaterialFilename } from '@/lib/lessonMaterialMatcher'
 
 // --- Error Types ---
 
@@ -85,10 +84,6 @@ export interface ScannedPdf {
   serverUrl?: string
   /** Module/section title derived from the directory name during server scan. */
   moduleTitle?: string
-  /** When this PDF is supplementary material, the parent video's ID. */
-  materialOf?: string
-  /** Order index; undefined for material PDFs (attached to parent video). */
-  order?: number
 }
 
 /** An image discovered during folder scan, candidate for cover image. */
@@ -625,10 +620,8 @@ export async function persistScannedCourse(
       ? applyManifestVideoOrder(videos, manifestModules)
       : videos
 
-  // Build ImportedPdf records — material PDFs (materialOf set) are NOT standalone;
-  // they are attached to their parent video via the video's materials list.
+  // Build ImportedPdf records
   const pdfs: ImportedPdf[] = scanned.pdfs
-    .filter(p => !p.materialOf) // materials are attached to parent video, not standalone
     .map(p => ({
       id: p.id,
       courseId: scanned.id,
@@ -1700,41 +1693,22 @@ export async function scanCourseFolderFromServer(
       moduleTitle: deriveModuleTitle(fileDirMap.get(v.url)),
     }))
 
-  // Post-scan material classification: classify companion PDFs
-  // by checking isMaterialFilename() and matching to parent videos by stem prefix.
-  const materialPdfMap = new Map<string, string>() // pdfId → videoId
-  for (const pdf of allPdfs) {
-    if (!isMaterialFilename(pdf.name)) continue
-    // Find the video with matching numeric prefix in the same section
-    const pdfPrefix = pdf.name.match(/^(\d+)/)?.[1]
-    if (!pdfPrefix) continue
-    const matchingVideo = videos.find(v => {
-      const vPrefix = v.filename.match(/^(\d+)/)?.[1]
-      return vPrefix === pdfPrefix && v.moduleTitle === deriveModuleTitle(fileDirMap.get(pdf.url))
-    })
-    if (matchingVideo) {
-      materialPdfMap.set(pdf.name, matchingVideo.id)
-    }
-  }
-
-  // Build ScannedPdf[] — no fileHandle, pageCount=0 (lazy or Range-read later)
-  let pdfCounter = 0
+  // Build ScannedPdf[] — no fileHandle, pageCount=0 (lazy or Range-read later).
+  // NOTE: Material classification is deferred to render-time via
+  // lessonBasedCurriculum.matchMaterialsToLessons(). Scan-time classification
+  // was removed because isMaterialFilename() patterns are too aggressive for
+  // server-sourced PDFs — primary PDFs (e.g., "001 Linux Distros.pdf") were
+  // misclassified as materials and attached to wrong parent videos.
   const pdfs: ScannedPdf[] = allPdfs
     .sort((a, b) => a.path.localeCompare(b.path, undefined, { numeric: true }))
-    .map(p => {
-      const materialOf = materialPdfMap.get(p.name)
-      return {
-        id: crypto.randomUUID(),
-        filename: p.name,
-        path: p.path,
-        pageCount: 0,
-        serverUrl: p.url,
-        moduleTitle: deriveModuleTitle(fileDirMap.get(p.url)),
-        ...(materialOf ? { materialOf } : {}),
-        // Material PDFs don't get a standalone order; they're attached to their parent
-        order: materialOf ? undefined : ++pdfCounter,
-      }
-    })
+    .map(p => ({
+      id: crypto.randomUUID(),
+      filename: p.name,
+      path: p.path,
+      pageCount: 0,
+      serverUrl: p.url,
+      moduleTitle: deriveModuleTitle(fileDirMap.get(p.url)),
+    }))
 
   // Post-scan caption matching: match SRT/VTT files to videos by stem
   const captions: ScannedCaption[] = []
