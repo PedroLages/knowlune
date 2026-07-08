@@ -307,3 +307,41 @@ export function getCompanionPdfIds(groups: MaterialGroup[]): Set<string> {
   }
   return ids
 }
+
+// ---------------------------------------------------------------------------
+// Material filename detection (extracted from lessonBasedCurriculum.ts)
+// ---------------------------------------------------------------------------
+
+/** Material indicator patterns — files matching these are supplementary, not primary. */
+const MATERIAL_PATTERNS = [
+  /\btext$/,
+  /\bcheat[-_.]?sheet\b/,
+  /\bslides?\b/,
+  /\btranscript\b/,
+  /\bnotes?\b/,
+  /\bhandouts?\b/,
+  /\bhandout\b/,
+  /\bworksheet\b/,
+  /\bworksheets\b/,
+  /\bresources?\b/,
+  /\bsupplement\b/,
+  /\bextra\b/,
+  /\bbonus\b/,
+  /\bdownload\b/,
+  /\bpdf\b/,
+  /\bprint\b/,
+  /\bprintable\b/,
+]
+
+/**
+ * Determine if a filename represents a material/supporting file
+ * rather than the main lesson content.
+ *
+ * Used during server scanning (courseImport.ts) to classify PDFs as materials
+ * before persistence, and by lessonBasedCurriculum.ts for render-time grouping.
+ */
+export function isMaterialFilename(filename: string): boolean {
+  const components = parseFilenameComponents(filename)
+  const lowerStem = components.stem.toLowerCase()
+  return MATERIAL_PATTERNS.some(p => p.test(lowerStem))
+}
