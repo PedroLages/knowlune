@@ -719,13 +719,12 @@ export async function persistScannedCourse(
     // Uses Dexie's put() through a helper that checks for existing records by
     // matching (courseId, serverUrl) for server imports or (courseId, path) for local.
 
-    // Check if this course was already imported (same serverUrl or same name+source)
+    // Check if this course was already imported (same serverPath).
+    // Uses filter() instead of .where() because serverPath may not be indexed yet.
     let existingCourse: ImportedCourse | undefined
     if (scanned.serverPath) {
-      existingCourse = await db.importedCourses
-        .where('serverPath')
-        .equals(scanned.serverPath)
-        .first()
+      const allCourses = await db.importedCourses.toArray()
+      existingCourse = allCourses.find(c => c.serverPath === scanned.serverPath)
     }
 
     const isReimport = !!existingCourse
