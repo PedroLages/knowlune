@@ -42,6 +42,14 @@
     "/^cd /Volumes/SSD/Dev/Apps/Knowlune && git add -A && git commit -m \"feat\\(E61-S02\\): service worker push notification click and subscription change handlers\n\n- Replace placeholder push handler with full payload support \\(icon, badge, tag, url\\)\n- Add notificationclick handler for focus/open tab navigation\n- Add pushsubscriptionchange handler for subscription renewal\n- Add E2E tests validating build output\n- Add notification icon assets\"$/": {
       "approve": true,
       "matchCommandLine": true
+    },
+    "/^npx vitest run --project unit 2>&1$/": {
+      "approve": true,
+      "matchCommandLine": true
+    },
+    "/^npx vitest run --project unit 2>&1 \\| cat$/": {
+      "approve": true,
+      "matchCommandLine": true
     }
   }
 }

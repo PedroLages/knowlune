@@ -17,7 +17,7 @@
 export interface ServerFile {
   name: string
   url: string
-  type: 'video' | 'pdf' | 'image' | 'directory' | 'other'
+  type: 'video' | 'pdf' | 'image' | 'directory' | 'caption' | 'other'
   /** File size in bytes, extracted from autoindex when available. */
   fileSize?: number
 }
@@ -52,6 +52,9 @@ const PDF_EXTENSIONS = new Set(['.pdf'])
 /** Recognized image extensions (cover candidates). */
 const IMAGE_EXTENSIONS = new Set(['.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg', '.bmp'])
 
+/** Recognized caption/subtitle extensions. */
+const CAPTION_EXTENSIONS = new Set(['.srt', '.vtt'])
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function normalizeBaseUrl(url: string): string {
@@ -71,6 +74,7 @@ function classifyFile(name: string): ServerFile['type'] {
   if (VIDEO_EXTENSIONS.has(ext)) return 'video'
   if (PDF_EXTENSIONS.has(ext)) return 'pdf'
   if (IMAGE_EXTENSIONS.has(ext)) return 'image'
+  if (CAPTION_EXTENSIONS.has(ext)) return 'caption'
   return 'other'
 }
 

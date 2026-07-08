@@ -21,6 +21,7 @@
 
 import type { ImportedVideo, ImportedPdf, YouTubeCourseChapter } from '@/data/types'
 import { sortImportedVideosForCurriculum } from '@/lib/sortImportedVideosForCurriculum'
+import { isMaterialFilename } from '@/lib/lessonMaterialMatcher'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -133,38 +134,6 @@ export function cleanLessonTitle(filename: string): string {
   return cleaned
     .replace(/\b\w/g, c => c.toUpperCase())
     .trim()
-}
-
-/**
- * Determine if a filename represents a material/supporting file
- * rather than the main lesson content.
- */
-function isMaterialFilename(filename: string): boolean {
-  const { stem } = parseNumericPrefix(filename)
-  const lowerStem = stem.toLowerCase()
-
-  // Explicit material indicators
-  const materialPatterns = [
-    /\btext$/,
-    /\bcheat[-_.]?sheet\b/,
-    /\bslides?\b/,
-    /\btranscript\b/,
-    /\bnotes?\b/,
-    /\bhandouts?\b/,
-    /\bhandout\b/,
-    /\bworksheet\b/,
-    /\bworksheets\b/,
-    /\bresources?\b/,
-    /\bsupplement\b/,
-    /\bextra\b/,
-    /\bbonus\b/,
-    /\bdownload\b/,
-    /\bpdf\b/,
-    /\bprint\b/,
-    /\bprintable\b/,
-  ]
-
-  return materialPatterns.some(p => p.test(lowerStem))
 }
 
 /**
