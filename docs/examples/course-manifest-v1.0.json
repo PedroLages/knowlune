@@ -1,0 +1,78 @@
+{
+  "version": "1.0",
+  "course": {
+    "name": "Pat Kay - 30 Day Photography Fundamentals Accelerator",
+    "description": "A 30-day intensive course covering photography fundamentals — exposure triangle, composition, lighting, and post-processing basics.",
+    "category": "operative-training",
+    "difficulty": "beginner",
+    "tags": ["photography", "fundamentals", "composition", "lighting"],
+    "author": {
+      "name": "Pat Kay",
+      "title": "Photographer & Educator",
+      "shortBio": "Professional photographer and content creator",
+      "bio": "Pat Kay is a professional photographer and educator known for making complex photography concepts accessible to beginners.",
+      "avatar": "pat-kay.jpg",
+      "specialties": ["street-photography", "composition"],
+      "yearsExperience": 12,
+      "website": "https://patkay.com",
+      "linkedin": "https://linkedin.com/in/patkay",
+      "twitter": "https://twitter.com/patkay"
+    },
+    "modules": [
+      {
+        "title": "Week 1: Exposure Triangle",
+        "description": "Understanding aperture, shutter speed, and ISO",
+        "lessons": [
+          {
+            "title": "Welcome & Course Overview",
+            "filename": "01-welcome.mp4",
+            "description": "Course introduction and what to expect"
+          },
+          {
+            "title": "Understanding Aperture",
+            "filename": "02-aperture.mp4",
+            "description": "How aperture affects exposure and depth of field"
+          },
+          {
+            "title": "Understanding Shutter Speed",
+            "filename": "03-shutter-speed.mp4",
+            "description": "How shutter speed affects exposure and motion"
+          },
+          {
+            "title": "Understanding ISO",
+            "filename": "04-iso.mp4",
+            "description": "How ISO affects exposure and noise"
+          },
+          {
+            "title": "Putting It Together: Manual Mode",
+            "filename": "05-manual-mode.mp4",
+            "description": "Combining aperture, shutter speed, and ISO"
+          }
+        ]
+      },
+      {
+        "title": "Week 2: Composition Fundamentals",
+        "description": "Core composition techniques for compelling images",
+        "lessons": [
+          {
+            "title": "The Rule of Thirds",
+            "filename": "06-rule-of-thirds.mp4"
+          },
+          {
+            "title": "Leading Lines",
+            "filename": "07-leading-lines.mp4"
+          },
+          {
+            "title": "Framing & Layering",
+            "filename": "08-framing.mp4"
+          }
+        ]
+      }
+    ],
+    "track": {
+      "name": "Photography Mastery Roadmap",
+      "position": 1
+    },
+    "coverImage": "cover.jpg"
+  }
+}

@@ -513,8 +513,8 @@ describe('parseTrackManifest', () => {
     )
     expect(result.value.track.difficulty).toBe('advanced')
     expect(result.value.track.courses).toHaveLength(3)
-    expect(result.value.track.courses[0]).toEqual({ folder: '01-foundations', position: 1 })
-    expect(result.value.track.courses[2]).toEqual({ folder: '03-capstone-project', position: 3 })
+    expect(result.value.track.courses[0]).toMatchObject({ id: '01-foundations', folder: '01-foundations', position: 1 })
+    expect(result.value.track.courses[2]).toMatchObject({ id: '03-capstone-project', folder: '03-capstone-project', position: 3 })
   })
 
   it('parses course notes field', () => {
@@ -833,5 +833,324 @@ describe('parseTrackManifest', () => {
     expect(result.ok).toBe(true)
     if (!result.ok) throw new Error('Expected ok result')
     expect(result.value.track.author).toBeUndefined()
+  })
+
+  // ── v1.1 course fields ────────────────────────────────────────
+
+  it('parses a full v1.1 manifest with all new course fields', () => {
+    const result = parseTrackManifest({
+      version: '1.1',
+      track: {
+        name: 'Photography Mastery Roadmap',
+        description: 'Complete photography learning path',
+        difficulty: 'intermediate',
+        courses: [
+          {
+            id: 'pat-kay-30-day',
+            folder: 'Pat Kay - 30 Day Photography Fundamentals Accelerator',
+            position: 1,
+            phase: 'Phase 0: Foundations',
+            weeks: '4 weeks',
+            priority: 'required',
+            source: {
+              type: 'local',
+            },
+            courseManifest: 'course-manifest.json',
+            expected: {
+              sections: 4,
+              videos: 30,
+              pdfs: 2,
+              captions: 30,
+            },
+            importPolicy: {
+              preferManifest: true,
+              fallbackToFolderStructure: false,
+              sectionStrategy: 'folder-prefix',
+              lessonStrategy: 'section-scoped-numeric-prefix',
+            },
+            aliases: ['Pat Kay Photography', '30 Day Accelerator'],
+            notes: 'Complete before moving to Phase 1',
+          },
+        ],
+      },
+    })
+
+    expect(result.ok).toBe(true)
+    if (!result.ok) throw new Error('Expected ok result')
+    expect(result.value.version).toBe('1.1')
+    expect(result.value.track.courses).toHaveLength(1)
+
+    const course = result.value.track.courses[0]
+    expect(course.id).toBe('pat-kay-30-day')
+    expect(course.folder).toBe('Pat Kay - 30 Day Photography Fundamentals Accelerator')
+    expect(course.position).toBe(1)
+    expect(course.phase).toBe('Phase 0: Foundations')
+    expect(course.weeks).toBe('4 weeks')
+    expect(course.priority).toBe('required')
+    expect(course.source).toEqual({ type: 'local' })
+    expect(course.courseManifest).toBe('course-manifest.json')
+    expect(course.expected).toEqual({ sections: 4, videos: 30, pdfs: 2, captions: 30 })
+    expect(course.importPolicy).toEqual({
+      preferManifest: true,
+      fallbackToFolderStructure: false,
+      sectionStrategy: 'folder-prefix',
+      lessonStrategy: 'section-scoped-numeric-prefix',
+    })
+    expect(course.aliases).toEqual(['Pat Kay Photography', '30 Day Accelerator'])
+    expect(course.notes).toBe('Complete before moving to Phase 1')
+  })
+
+  it('parses v1.1 manifest with server source type', () => {
+    const result = parseTrackManifest({
+      version: '1.1',
+      track: {
+        name: 'Online Courses',
+        courses: [
+          {
+            folder: 'linux-admin',
+            position: 1,
+            source: {
+              type: 'server',
+              url: 'https://academy.example.com/courses/linux-admin/',
+            },
+          },
+        ],
+      },
+    })
+
+    expect(result.ok).toBe(true)
+    if (!result.ok) throw new Error('Expected ok result')
+    expect(result.value.track.courses[0].source).toEqual({
+      type: 'server',
+      url: 'https://academy.example.com/courses/linux-admin/',
+    })
+  })
+
+  it('parses v1.1 manifest with drive source type', () => {
+    const result = parseTrackManifest({
+      version: '1.1',
+      track: {
+        name: 'Drive Courses',
+        courses: [
+          {
+            folder: 'python-basics',
+            position: 1,
+            source: {
+              type: 'drive',
+              driveFolderId: '1abc2def3ghi',
+            },
+          },
+        ],
+      },
+    })
+
+    expect(result.ok).toBe(true)
+    if (!result.ok) throw new Error('Expected ok result')
+    expect(result.value.track.courses[0].source).toEqual({
+      type: 'drive',
+      driveFolderId: '1abc2def3ghi',
+    })
+  })
+
+  it('auto-derives id from folder when missing', () => {
+    const result = parseTrackManifest({
+      version: '1.1',
+      track: {
+        name: 'Test Track',
+        courses: [
+          { folder: 'Linux Admin Bootcamp', position: 1 },
+          { folder: 'Docker & Kubernetes Masterclass!', position: 2 },
+          { folder: '  Spaces  Everywhere  ', position: 3 },
+        ],
+      },
+    })
+
+    expect(result.ok).toBe(true)
+    if (!result.ok) throw new Error('Expected ok result')
+    expect(result.value.track.courses[0].id).toBe('linux-admin-bootcamp')
+    expect(result.value.track.courses[1].id).toBe('docker-kubernetes-masterclass')
+    expect(result.value.track.courses[2].id).toBe('spaces-everywhere')
+  })
+
+  it('uses explicit id over auto-derived id', () => {
+    const result = parseTrackManifest({
+      version: '1.1',
+      track: {
+        name: 'Test Track',
+        courses: [
+          { id: 'custom-id', folder: 'Some Folder Name', position: 1 },
+        ],
+      },
+    })
+
+    expect(result.ok).toBe(true)
+    if (!result.ok) throw new Error('Expected ok result')
+    expect(result.value.track.courses[0].id).toBe('custom-id')
+  })
+
+  it('v1.0 manifest (without new fields) still parses correctly', () => {
+    const result = parseTrackManifest({
+      version: '1.0',
+      track: {
+        name: 'Legacy Track',
+        courses: [
+          { folder: 'legacy-course', position: 1, notes: 'Old notes' },
+        ],
+      },
+    })
+
+    expect(result.ok).toBe(true)
+    if (!result.ok) throw new Error('Expected ok result')
+    const course = result.value.track.courses[0]
+    expect(course.id).toBe('legacy-course') // auto-derived from folder
+    expect(course.folder).toBe('legacy-course')
+    expect(course.position).toBe(1)
+    expect(course.notes).toBe('Old notes')
+    // v1.1 fields should be undefined
+    expect(course.phase).toBeUndefined()
+    expect(course.weeks).toBeUndefined()
+    expect(course.priority).toBeUndefined()
+    expect(course.source).toBeUndefined()
+    expect(course.courseManifest).toBeUndefined()
+    expect(course.expected).toBeUndefined()
+    expect(course.importPolicy).toBeUndefined()
+    expect(course.aliases).toBeUndefined()
+  })
+
+  it('rejects invalid priority value', () => {
+    const result = parseTrackManifest({
+      version: '1.1',
+      track: {
+        name: 'Test',
+        courses: [{ folder: 'x', position: 1, priority: 'mandatory' }],
+      },
+    })
+
+    expect(result.ok).toBe(false)
+    if (result.ok) throw new Error('Expected error result')
+    const prioError = result.errors.find(e => e.path.includes('priority'))
+    expect(prioError).toBeDefined()
+    expect(prioError!.message).toContain('mandatory')
+    expect(prioError!.message).toContain('required')
+  })
+
+  it('rejects invalid source type', () => {
+    const result = parseTrackManifest({
+      version: '1.1',
+      track: {
+        name: 'Test',
+        courses: [{ folder: 'x', position: 1, source: { type: 'dropbox' } }],
+      },
+    })
+
+    expect(result.ok).toBe(false)
+    if (result.ok) throw new Error('Expected error result')
+    const srcError = result.errors.find(e => e.path.includes('source.type'))
+    expect(srcError).toBeDefined()
+    expect(srcError!.message).toContain('dropbox')
+  })
+
+  it('rejects source that is not an object', () => {
+    const result = parseTrackManifest({
+      version: '1.1',
+      track: {
+        name: 'Test',
+        courses: [{ folder: 'x', position: 1, source: 'local' }],
+      },
+    })
+
+    expect(result.ok).toBe(false)
+    if (result.ok) throw new Error('Expected error result')
+    const srcError = result.errors.find(e => e.path.includes('source'))
+    expect(srcError).toBeDefined()
+  })
+
+  it('rejects invalid sectionStrategy', () => {
+    const result = parseTrackManifest({
+      version: '1.1',
+      track: {
+        name: 'Test',
+        courses: [
+          {
+            folder: 'x',
+            position: 1,
+            importPolicy: { sectionStrategy: 'by-magic' },
+          },
+        ],
+      },
+    })
+
+    expect(result.ok).toBe(false)
+    if (result.ok) throw new Error('Expected error result')
+    const policyError = result.errors.find(e => e.path.includes('sectionStrategy'))
+    expect(policyError).toBeDefined()
+    expect(policyError!.message).toContain('by-magic')
+  })
+
+  it('rejects invalid lessonStrategy', () => {
+    const result = parseTrackManifest({
+      version: '1.1',
+      track: {
+        name: 'Test',
+        courses: [
+          {
+            folder: 'x',
+            position: 1,
+            importPolicy: { lessonStrategy: 'random' },
+          },
+        ],
+      },
+    })
+
+    expect(result.ok).toBe(false)
+    if (result.ok) throw new Error('Expected error result')
+    const policyError = result.errors.find(e => e.path.includes('lessonStrategy'))
+    expect(policyError).toBeDefined()
+    expect(policyError!.message).toContain('random')
+  })
+
+  it('rejects aliases that are not string array', () => {
+    const result = parseTrackManifest({
+      version: '1.1',
+      track: {
+        name: 'Test',
+        courses: [{ folder: 'x', position: 1, aliases: 'just-a-string' }],
+      },
+    })
+
+    expect(result.ok).toBe(false)
+    if (result.ok) throw new Error('Expected error result')
+    const aliasError = result.errors.find(e => e.path.includes('aliases'))
+    expect(aliasError).toBeDefined()
+  })
+
+  it('rejects expected that is not an object', () => {
+    const result = parseTrackManifest({
+      version: '1.1',
+      track: {
+        name: 'Test',
+        courses: [{ folder: 'x', position: 1, expected: 'lots' }],
+      },
+    })
+
+    expect(result.ok).toBe(false)
+    if (result.ok) throw new Error('Expected error result')
+    const expError = result.errors.find(e => e.path.includes('expected'))
+    expect(expError).toBeDefined()
+  })
+
+  it('rejects importPolicy that is not an object', () => {
+    const result = parseTrackManifest({
+      version: '1.1',
+      track: {
+        name: 'Test',
+        courses: [{ folder: 'x', position: 1, importPolicy: 'fast' }],
+      },
+    })
+
+    expect(result.ok).toBe(false)
+    if (result.ok) throw new Error('Expected error result')
+    const policyError = result.errors.find(e => e.path.includes('importPolicy'))
+    expect(policyError).toBeDefined()
   })
 })

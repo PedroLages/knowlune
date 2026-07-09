@@ -1,0 +1,99 @@
+{
+  "version": "1.1",
+  "track": {
+    "name": "Photography Mastery Roadmap — Hybrid Foundation for Cinematic Filmmaking",
+    "description": "A comprehensive photography learning path from fundamentals to advanced cinematic techniques.",
+    "difficulty": "intermediate",
+    "author": {
+      "name": "Photography Roadmap Curator",
+      "title": "Photography Educator"
+    },
+    "courses": [
+      {
+        "id": "pat-kay-30-day",
+        "folder": "Pat Kay - 30 Day Photography Fundamentals Accelerator",
+        "position": 1,
+        "phase": "Phase 0: Foundations",
+        "weeks": "4 weeks",
+        "priority": "required",
+        "source": {
+          "type": "local"
+        },
+        "courseManifest": "course-manifest.json",
+        "expected": {
+          "sections": 4,
+          "videos": 30,
+          "pdfs": 2,
+          "captions": 30
+        },
+        "importPolicy": {
+          "preferManifest": true,
+          "fallbackToFolderStructure": false,
+          "sectionStrategy": "folder-prefix",
+          "lessonStrategy": "section-scoped-numeric-prefix"
+        },
+        "aliases": ["Pat Kay Photography", "30 Day Accelerator"],
+        "notes": "Complete before moving to Phase 1"
+      },
+      {
+        "id": "visual-approach",
+        "folder": "Visual Approach — Design & Composition Mastery",
+        "position": 2,
+        "phase": "Phase 1: Core Skills",
+        "weeks": "6 weeks",
+        "priority": "required",
+        "source": {
+          "type": "local"
+        }
+      },
+      {
+        "id": "color-science",
+        "folder": "Color Science & Grading Fundamentals",
+        "position": 3,
+        "phase": "Phase 1: Core Skills",
+        "weeks": "3 weeks",
+        "priority": "optional",
+        "source": {
+          "type": "server",
+          "url": "https://academy.example.com/courses/color-science/"
+        },
+        "expected": {
+          "videos": 18,
+          "pdfs": 0
+        }
+      },
+      {
+        "id": "lighting-masterclass",
+        "folder": "Lighting Masterclass — Natural & Studio",
+        "position": 4,
+        "phase": "Phase 2: Advanced Techniques",
+        "weeks": "5 weeks",
+        "priority": "required",
+        "source": {
+          "type": "drive",
+          "driveFolderId": "1aB2cD3eF4gH5iJ6kL7"
+        },
+        "importPolicy": {
+          "sectionStrategy": "flat",
+          "lessonStrategy": "global-numeric-prefix"
+        }
+      },
+      {
+        "id": "cinematic-storytelling",
+        "folder": "Cinematic Storytelling & Post-Production",
+        "position": 5,
+        "phase": "Phase 3: Mastery",
+        "weeks": "8 weeks",
+        "priority": "bonus",
+        "source": {
+          "type": "youtube"
+        },
+        "expected": {
+          "sections": 6,
+          "videos": 45,
+          "captions": 45
+        }
+      }
+    ]
+  }
+}

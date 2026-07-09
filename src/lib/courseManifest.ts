@@ -48,11 +48,49 @@ export interface CourseManifest {
   }
 }
 
+export interface TrackManifestCourseSource {
+  type: 'local' | 'server' | 'drive' | 'youtube'
+  url?: string
+  driveFolderId?: string
+}
+
+export interface TrackManifestCourseExpected {
+  sections?: number
+  videos?: number
+  pdfs?: number
+  captions?: number
+}
+
+export interface TrackManifestCourseImportPolicy {
+  preferManifest?: boolean
+  fallbackToFolderStructure?: boolean
+  sectionStrategy?: 'folder-prefix' | 'flat' | 'manifest-only'
+  lessonStrategy?: 'section-scoped-numeric-prefix' | 'global-numeric-prefix' | 'manifest-only'
+}
+
 export interface TrackManifestCourse {
+  /** Stable identifier — auto-derived from folder (slugified) if missing in JSON. */
+  id: string
   folder: string
   position: number
   /** Optional notes stored as LearningPathEntry.justification during import. */
   notes?: string
+  /** v1.1: Roadmap phase label (e.g., "Phase 0: Foundations"). */
+  phase?: string
+  /** v1.1: Estimated time range (e.g., "2-4 weeks"). */
+  weeks?: string
+  /** v1.1: Course priority within the track. */
+  priority?: 'required' | 'optional' | 'bonus'
+  /** v1.1: Direct import source configuration. */
+  source?: TrackManifestCourseSource
+  /** v1.1: Per-course manifest filename (e.g., "course-manifest.json"). */
+  courseManifest?: string
+  /** v1.1: Expected counts for validation (advisory only). */
+  expected?: TrackManifestCourseExpected
+  /** v1.1: Import strategy hints (advisory only). */
+  importPolicy?: TrackManifestCourseImportPolicy
+  /** v1.1: Alternative folder names for folder matching. */
+  aliases?: string[]
 }
 
 export interface TrackManifest {
@@ -110,6 +148,26 @@ function validateNonEmptyString(value: unknown, _path: string): string | null {
   if (typeof value !== 'string' || value.trim().length === 0) return null
   return value.trim()
 }
+
+/** Derive a stable slug-style id from a folder name. */
+function toSlugId(folder: string): string {
+  return folder
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '')
+}
+
+const VALID_PRIORITIES: readonly string[] = ['required', 'optional', 'bonus']
+
+const VALID_SOURCE_TYPES: readonly string[] = ['local', 'server', 'drive', 'youtube']
+
+const VALID_SECTION_STRATEGIES: readonly string[] = ['folder-prefix', 'flat', 'manifest-only']
+
+const VALID_LESSON_STRATEGIES: readonly string[] = [
+  'section-scoped-numeric-prefix',
+  'global-numeric-prefix',
+  'manifest-only',
+]
 
 // ── Lesson / Module parsers ───────────────────────────────────
 
@@ -522,9 +580,150 @@ export function parseTrackManifest(json: unknown): ParseResult<TrackManifest> {
         message: 'Course position must be a positive integer >= 1',
       })
     }
+
+    // v1.1: id — auto-derived from folder if missing
+    const id = asString(entry.id) ?? (folder ? toSlugId(folder) : `course-${ci}`)
+
+    // v1.1: optional fields
     const notes = asOptionalString(entry.notes)
+    const phase = asOptionalString(entry.phase)
+    const weeks = asOptionalString(entry.weeks)
+
+    // v1.1: priority (validated enum)
+    let priority: TrackManifestCourse['priority'] | undefined
+    if (entry.priority !== undefined) {
+      const prio = asString(entry.priority)
+      if (prio && (VALID_PRIORITIES as readonly string[]).includes(prio)) {
+        priority = prio as TrackManifestCourse['priority']
+      } else {
+        errors.push({
+          path: `track.courses[${ci}].priority`,
+          message: `Invalid priority "${String(entry.priority)}". Must be one of: ${VALID_PRIORITIES.join(', ')}`,
+        })
+      }
+    }
+
+    // v1.1: source
+    let source: TrackManifestCourseSource | undefined
+    if (entry.source !== undefined) {
+      if (isRecord(entry.source)) {
+        const sourceType = asString(entry.source.type)
+        if (sourceType && (VALID_SOURCE_TYPES as readonly string[]).includes(sourceType)) {
+          source = {
+            type: sourceType as TrackManifestCourseSource['type'],
+            url: asOptionalString(entry.source.url),
+            driveFolderId: asOptionalString(entry.source.driveFolderId),
+          }
+        } else {
+          errors.push({
+            path: `track.courses[${ci}].source.type`,
+            message: `Invalid source type "${String(entry.source.type)}". Must be one of: ${VALID_SOURCE_TYPES.join(', ')}`,
+          })
+        }
+      } else {
+        errors.push({
+          path: `track.courses[${ci}].source`,
+          message: 'Source must be an object with a "type" field',
+        })
+      }
+    }
+
+    // v1.1: courseManifest
+    const courseManifest = asOptionalString(entry.courseManifest)
+
+    // v1.1: expected (advisory counts)
+    let expected: TrackManifestCourseExpected | undefined
+    if (entry.expected !== undefined) {
+      if (isRecord(entry.expected)) {
+        expected = {
+          sections: typeof entry.expected.sections === 'number' ? entry.expected.sections : undefined,
+          videos: typeof entry.expected.videos === 'number' ? entry.expected.videos : undefined,
+          pdfs: typeof entry.expected.pdfs === 'number' ? entry.expected.pdfs : undefined,
+          captions: typeof entry.expected.captions === 'number' ? entry.expected.captions : undefined,
+        }
+      } else {
+        errors.push({
+          path: `track.courses[${ci}].expected`,
+          message: 'Expected must be an object with numeric fields',
+        })
+      }
+    }
+
+    // v1.1: importPolicy (advisory strategy hints)
+    let importPolicy: TrackManifestCourseImportPolicy | undefined
+    if (entry.importPolicy !== undefined) {
+      if (isRecord(entry.importPolicy)) {
+        const sectionStrategy = asOptionalString(entry.importPolicy.sectionStrategy)
+        const lessonStrategy = asOptionalString(entry.importPolicy.lessonStrategy)
+
+        if (
+          sectionStrategy !== undefined &&
+          !(VALID_SECTION_STRATEGIES as readonly string[]).includes(sectionStrategy)
+        ) {
+          errors.push({
+            path: `track.courses[${ci}].importPolicy.sectionStrategy`,
+            message: `Invalid sectionStrategy "${sectionStrategy}". Must be one of: ${VALID_SECTION_STRATEGIES.join(', ')}`,
+          })
+        }
+        if (
+          lessonStrategy !== undefined &&
+          !(VALID_LESSON_STRATEGIES as readonly string[]).includes(lessonStrategy)
+        ) {
+          errors.push({
+            path: `track.courses[${ci}].importPolicy.lessonStrategy`,
+            message: `Invalid lessonStrategy "${lessonStrategy}". Must be one of: ${VALID_LESSON_STRATEGIES.join(', ')}`,
+          })
+        }
+
+        importPolicy = {
+          preferManifest:
+            typeof entry.importPolicy.preferManifest === 'boolean'
+              ? entry.importPolicy.preferManifest
+              : undefined,
+          fallbackToFolderStructure:
+            typeof entry.importPolicy.fallbackToFolderStructure === 'boolean'
+              ? entry.importPolicy.fallbackToFolderStructure
+              : undefined,
+          sectionStrategy: sectionStrategy as TrackManifestCourseImportPolicy['sectionStrategy'],
+          lessonStrategy: lessonStrategy as TrackManifestCourseImportPolicy['lessonStrategy'],
+        }
+      } else {
+        errors.push({
+          path: `track.courses[${ci}].importPolicy`,
+          message: 'ImportPolicy must be an object',
+        })
+      }
+    }
+
+    // v1.1: aliases
+    let aliases: string[] | undefined
+    if (entry.aliases !== undefined) {
+      const parsed = asStringArray(entry.aliases)
+      if (parsed) {
+        aliases = parsed
+      } else {
+        errors.push({
+          path: `track.courses[${ci}].aliases`,
+          message: 'Aliases must be an array of strings',
+        })
+      }
+    }
+
     if (folder) {
-      courses.push({ folder, position: entry.position as number, notes })
+      courses.push({
+        id,
+        folder,
+        position: entry.position as number,
+        notes,
+        phase,
+        weeks,
+        priority,
+        source,
+        courseManifest,
+        expected,
+        importPolicy,
+        aliases,
+      })
     }
   }
 
