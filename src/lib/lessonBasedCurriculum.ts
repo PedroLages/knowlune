@@ -64,8 +64,6 @@ export interface CourseSection {
   numericPrefix: string
   /** Clean section title */
   title: string
-  /** 0-based index of the first lesson in this section (cumulative across all sections) */
-  startIndex: number
   /** Lesson groups within this section, sorted by numeric prefix */
   lessons: LessonGroup[]
 }
@@ -184,107 +182,121 @@ export function buildLessonBasedCurriculum(opts: {
     return buildYouTubeSections(videos, chapters)
   }
 
-  // Collect all items into lesson groups by numeric prefix
-  const prefixMap = new Map<string, LessonGroupBuilder>()
-
-  // Process videos
-  for (const video of videos) {
-    const { prefix } = parseNumericPrefix(video.filename)
-    if (!prefix) continue
-
-    if (!prefixMap.has(prefix)) {
-      prefixMap.set(prefix, { prefix, video: null, pdfs: [], txts: [], other: [], path: video.path })
+    // Collect items into section-scoped prefix maps.
+    // Outer key: section path (e.g. "01 - Overview")
+    // Inner key: numeric prefix (e.g. "001")
+    // This prevents prefix collisions across sections.
+    const sectionBuckets = new Map()
+  
+    function getSectionMap(sectionKey) {
+      if (!sectionBuckets.has(sectionKey)) {
+        sectionBuckets.set(sectionKey, new Map())
+      }
+      return sectionBuckets.get(sectionKey)
     }
-    const entry = prefixMap.get(prefix)!
-    // Keep the first video as the main one; extras become materials
-    if (!entry.video) {
-      entry.video = { ...video, isMaterial: false }
-    } else {
-      // Additional video at same prefix — treat as material
-      entry.video = { ...video, isMaterial: true }
-      entry.other.push(createItemFromVideo(video, true))
+  
+    function getBuilder(sectionKey, prefix, fallbackPath) {
+      const sectionMap = getSectionMap(sectionKey)
+      if (!sectionMap.has(prefix)) {
+        sectionMap.set(prefix, { prefix, video: null, pdfs: [], txts: [], other: [], path: fallbackPath })
+      }
+      return sectionMap.get(prefix)
     }
-    // Track best path (shallowest = section root)
-    if (video.path.length < (prefixMap.get(prefix)?.path ?? '').length) {
-      prefixMap.get(prefix)!.path = video.path
+  
+    // Process videos into section-scoped builders
+    for (const video of videos) {
+      const { prefix } = parseNumericPrefix(video.filename)
+      if (!prefix) continue
+  
+      const sectionKey = getSectionName(video.path) || ''
+      const builder = getBuilder(sectionKey, prefix, video.path)
+  
+      if (!builder.video) {
+        builder.video = { ...video, isMaterial: false }
+      } else {
+        // Additional video at same prefix — keep primary, push extra as material
+        builder.other.push(createItemFromVideo(video, true))
+      }
+  
+      if (video.path.length < builder.path.length) {
+        builder.path = video.path
+      }
     }
-  }
-
-  // Process PDFs (which includes TXT files stored as ImportedPdf)
-  for (const pdf of pdfs) {
-    const { prefix } = parseNumericPrefix(pdf.filename)
-    if (!prefix) continue
-
-    if (!prefixMap.has(prefix)) {
-      prefixMap.set(prefix, {
-        prefix,
-        video: null,
-        pdfs: [],
-        txts: [],
-        other: [],
-        path: pdf.path,
-      })
-    }
-
-    const contentType = detectContentType(pdf.filename)
-    const isMaterial = isMaterialFilename(pdf.filename)
-    const item = createItemFromPdf(pdf, isMaterial, contentType)
-
-    const entry = prefixMap.get(prefix)!
-    switch (contentType) {
-      case 'pdf':
-        if (isMaterial) {
-          entry.pdfs.push(item)
-        } else {
-          // This PDF is a primary reading — but only if no video exists
-          if (!entry.video) {
-            entry.pdfs.unshift({ ...item, isPrimaryCandidate: true })
+  
+    // Process PDFs into section-scoped builders
+    for (const pdf of pdfs) {
+      const { prefix } = parseNumericPrefix(pdf.filename)
+      if (!prefix) continue
+  
+      const sectionKey = getSectionName(pdf.path) || ''
+      const builder = getBuilder(sectionKey, prefix, pdf.path)
+  
+      const contentType = detectContentType(pdf.filename)
+      const isMaterial = isMaterialFilename(pdf.filename)
+      const item = createItemFromPdf(pdf, isMaterial, contentType)
+  
+      switch (contentType) {
+        case 'pdf':
+          if (isMaterial) {
+            builder.pdfs.push(item)
           } else {
-            entry.pdfs.push(item)
+            if (!builder.video) {
+              builder.pdfs.unshift({ ...item, isPrimaryCandidate: true })
+            } else {
+              builder.pdfs.push(item)
+            }
           }
-        }
-        break
-      case 'text':
-        if (isMaterial) {
-          entry.txts.push(item)
-        } else {
-          if (!entry.video) {
-            entry.txts.unshift({ ...item, isPrimaryCandidate: true })
+          break
+        case 'text':
+          if (isMaterial) {
+            builder.txts.push(item)
           } else {
-            entry.txts.push(item)
+            if (!builder.video) {
+              builder.txts.unshift({ ...item, isPrimaryCandidate: true })
+            } else {
+              builder.txts.push(item)
+            }
           }
-        }
-        break
-      default:
-        entry.other.push(item)
-        break
+          break
+        default:
+          builder.other.push(item)
+          break
+      }
+  
+      if (pdf.path.length < builder.path.length) {
+        builder.path = pdf.path
+      }
     }
-
-    // Track best path
-    if (pdf.path.length < (prefixMap.get(prefix)?.path ?? '').length) {
-      prefixMap.get(prefix)!.path = pdf.path
+  
+    // Build sections: resolve lesson groups within each section bucket
+    const sections = []
+  
+    for (const [sectionPath, prefixMap] of sectionBuckets) {
+      const sectionGroups = []
+  
+      for (const [, builder] of prefixMap) {
+        const group = resolveLessonGroup(builder)
+        if (group) sectionGroups.push(group)
+      }
+  
+      sectionGroups.sort((a, b) =>
+        a.numericPrefix.localeCompare(b.numericPrefix, undefined, { numeric: true })
+      )
+  
+      if (sectionGroups.length > 0) {
+        sections.push({
+          numericPrefix: parseSectionPrefix(sectionPath),
+          title: cleanSectionTitle(sectionPath),
+          lessons: sectionGroups,
+        })
+      }
     }
-  }
-
-  // Build LessonGroup for each prefix
-  const lessonGroups: LessonGroup[] = []
-
-  for (const [, builder] of prefixMap) {
-    const group = resolveLessonGroup(builder)
-    if (group) lessonGroups.push(group)
-  }
-
-  // Sort lesson groups by numeric prefix
-  lessonGroups.sort((a, b) =>
-    a.numericPrefix.localeCompare(b.numericPrefix, undefined, { numeric: true })
-  )
-
-  // Group lessons into sections by folder path
-  const sectionGroups = buildSections(lessonGroups)
-
-  return sectionGroups
-}
-
+  
+    sections.sort((a, b) =>
+      a.numericPrefix.localeCompare(b.numericPrefix, undefined, { numeric: true })
+    )
+  
+    return sections
 // ---------------------------------------------------------------------------
 // Internal types for builder
 // ---------------------------------------------------------------------------
