@@ -297,6 +297,9 @@ export function buildLessonBasedCurriculum(opts: {
     )
   
     return sections
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Internal types for builder
 // ---------------------------------------------------------------------------
