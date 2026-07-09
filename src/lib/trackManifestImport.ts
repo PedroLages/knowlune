@@ -189,7 +189,7 @@ export async function batchImportTrackCourses(
   const positions = manifest.track.courses
 
   // Phase 1: Import each course sequentially
-  for (const { folder } of positions) {
+  for (const entry of positions) {
     if (signal?.aborted) {
       const partialSuccessCount = results.filter(r => r.success).length
       const partialFailureCount = results.length - partialSuccessCount
@@ -201,13 +201,32 @@ export async function batchImportTrackCourses(
       }
     }
     try {
-      // Get the subdirectory handle
-      let dirHandle: FileSystemDirectoryHandle
-      try {
-        dirHandle = await parentDirHandle.getDirectoryHandle(folder)
-      } catch {
-        results.push({ folder, success: false, error: `Folder "${folder}" not found` })
-        toast.warning(`Course folder "${folder}" not found — skipped`)
+      // Resolve the subdirectory handle — try primary folder, then aliases
+      let dirHandle: FileSystemDirectoryHandle | null = null
+      let matchedFolder: string | null = null
+
+      const candidateFolders = [entry.folder, ...(entry.aliases ?? [])]
+      for (const candidate of candidateFolders) {
+        try {
+          dirHandle = await parentDirHandle.getDirectoryHandle(candidate)
+          matchedFolder = candidate
+          break
+        } catch {
+          // try next candidate
+        }
+      }
+
+      if (!dirHandle) {
+        const aliasHint =
+          entry.aliases && entry.aliases.length > 0
+            ? ` (also tried: ${entry.aliases.join(', ')})`
+            : ''
+        results.push({
+          folder: entry.folder,
+          success: false,
+          error: `Folder "${entry.folder}" not found${aliasHint}`,
+        })
+        toast.warning(`Course folder "${entry.folder}" not found — skipped`)
         continue
       }
 
@@ -215,35 +234,63 @@ export async function batchImportTrackCourses(
       const scanResult: BulkScanResult = await scanCourseFolderFromHandle(dirHandle)
 
       if (scanResult.status === 'duplicate') {
-        const existingCourse = await db.importedCourses.where('name').equals(folder).first()
+        const existingCourse = await db.importedCourses
+          .where('name')
+          .equals(entry.folder)
+          .first()
         if (existingCourse) {
-          results.push({ folder, success: true, courseId: existingCourse.id })
+          results.push({ folder: entry.folder, success: true, courseId: existingCourse.id })
         } else {
-          results.push({ folder, success: false, error: 'Course not found in database' })
-          toast.warning(`"${folder}" appears to be imported but could not be found`)
+          results.push({ folder: entry.folder, success: false, error: 'Course not found in database' })
+          toast.warning(`"${entry.folder}" appears to be imported but could not be found`)
         }
         continue
       }
 
       if (scanResult.status === 'no-files') {
-        results.push({ folder, success: false, error: 'No supported files found' })
-        toast.warning(`"${folder}" has no supported files — skipped`)
+        results.push({ folder: entry.folder, success: false, error: 'No supported files found' })
+        toast.warning(`"${entry.folder}" has no supported files — skipped`)
         continue
       }
 
       if (scanResult.status === 'error') {
-        results.push({ folder, success: false, error: scanResult.message })
-        toast.error(`Failed to scan "${folder}": ${scanResult.message}`)
+        results.push({ folder: entry.folder, success: false, error: scanResult.message })
+        toast.error(`Failed to scan "${entry.folder}": ${scanResult.message}`)
         continue
+      }
+
+      // v1.1: Advisory expected-count validation
+      if (entry.expected && scanResult.status === 'success') {
+        const actual = scanResult.course
+        const mismatches: string[] = []
+        if (entry.expected.videos !== undefined && (actual.videos?.length ?? 0) !== entry.expected.videos) {
+          mismatches.push(`videos: expected ${entry.expected.videos}, got ${actual.videos?.length ?? 0}`)
+        }
+        if (entry.expected.pdfs !== undefined && (actual.pdfs?.length ?? 0) !== entry.expected.pdfs) {
+          mismatches.push(`pdfs: expected ${entry.expected.pdfs}, got ${actual.pdfs?.length ?? 0}`)
+        }
+        if (mismatches.length > 0) {
+          toast.info(`"${entry.folder}" counts differ from manifest: ${mismatches.join('; ')}`)
+        }
+      }
+
+      // v1.1: Log if a per-course manifest is specified
+      if (entry.courseManifest) {
+        try {
+          await dirHandle.getFileHandle(entry.courseManifest)
+          // File exists — will be used by downstream course processing
+        } catch {
+          toast.warning(`"${entry.folder}" specifies courseManifest "${entry.courseManifest}" but file not found`)
+        }
       }
 
       // Persist the scanned course
       const importedCourse = await persistScannedCourse(scanResult.course)
-      results.push({ folder, success: true, courseId: importedCourse.id })
+      results.push({ folder: entry.folder, success: true, courseId: importedCourse.id })
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Unexpected error'
-      results.push({ folder, success: false, error: message })
-      toast.error(`Failed to import "${folder}": ${message}`)
+      results.push({ folder: entry.folder, success: false, error: message })
+      toast.error(`Failed to import "${entry.folder}": ${message}`)
     }
   }
 

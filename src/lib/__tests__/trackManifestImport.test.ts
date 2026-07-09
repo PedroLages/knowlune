@@ -154,7 +154,7 @@ beforeEach(async () => {
 
 /** Build a minimal TrackManifest with the given course entries */
 function makeManifest(
-  courses: Array<{ folder: string; position: number }>,
+  courses: Array<{ folder: string; position: number; id?: string; notes?: string }>,
   version: string = '1.0'
 ) {
   return {
@@ -162,7 +162,12 @@ function makeManifest(
     track: {
       name: 'Test Track',
       description: 'A test track',
-      courses,
+      courses: courses.map(c => ({
+        id: c.id ?? c.folder.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+        folder: c.folder,
+        position: c.position,
+        notes: c.notes,
+      })),
     },
   }
 }
