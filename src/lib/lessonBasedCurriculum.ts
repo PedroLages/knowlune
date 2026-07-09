@@ -538,14 +538,12 @@ function buildSections(lessonGroups: LessonGroup[]): CourseSection[] {
       {
         numericPrefix: onlySection ? parseSectionPrefix(onlySection.path) : '1',
         title,
-        startIndex: 0,
         lessons: onlySection?.lessons || lessonGroups,
       },
     ]
   }
 
   // Multiple sections — sort by section prefix
-  let runningIndex = 0
   return Array.from(sections.entries())
     .sort(([a], [b]) =>
       parseSectionPrefix(a).localeCompare(parseSectionPrefix(b), undefined, { numeric: true })
@@ -554,10 +552,8 @@ function buildSections(lessonGroups: LessonGroup[]): CourseSection[] {
       const section: CourseSection = {
         numericPrefix: parseSectionPrefix(path),
         title: cleanSectionTitle(path),
-        startIndex: runningIndex,
         lessons,
       }
-      runningIndex += lessons.length
       return section
     })
 }
@@ -575,7 +571,6 @@ function buildYouTubeSections(
       {
         numericPrefix: '1',
         title: 'Course Content',
-        startIndex: 0,
         lessons: sortImportedVideosForCurriculum(videos).map((v, i) => ({
           numericPrefix: String(i + 1).padStart(3, '0'),
           primary: {

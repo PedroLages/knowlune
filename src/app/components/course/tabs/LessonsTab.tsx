@@ -1,15 +1,14 @@
 /**
  * LessonsTab - Course lesson list sub-panel for PlayerSidePanel.
  *
- * Renders a professional course navigator with:
+ * Renders a clean course navigator with:
  * - Clean section headers (collapsible, only active section expanded by default)
- * - Global lesson numbering (001, 002, 003...)
  * - Unified status circle (not started / in progress / completed / active)
  * - Clean file-type badges (Video, PDF, Reading)
- * - Filter chips: All, Videos, PDFs, In Progress, Completed
  * - Companion materials nested under parent lesson
  *
  * Rewritten for lesson-based curriculum architecture (2026-07-06).
+ * Simplified 2026-07-09: removed global numbering and filter chips per UX research.
  */
 
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
@@ -42,15 +41,8 @@ import type { CourseSection, LessonGroup, LessonGroupItem } from '@/lib/lessonBa
 import { useContentProgressStore } from '@/stores/useContentProgressStore'
 import {
   formatLessonDuration,
-  LESSON_SEARCH_THRESHOLD,
   HighlightedLessonTitle,
 } from './LessonsTabHighlightedTitle'
-
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
-type FilterType = 'all' | 'video' | 'pdf' | 'in-progress' | 'completed'
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -70,22 +62,15 @@ function getTypeBadge(type: LessonGroupItem['type']): { label: string; icon: Rea
   }
 }
 
-/** Format the global lesson number (zero-padded 3 digits). */
-function formatLessonNumber(globalIndex: number): string {
-  return String(globalIndex + 1).padStart(3, '0')
-}
-
 // ---------------------------------------------------------------------------
-// StatusCircle - unified status indicator (replaces multiple colored icons)
+// StatusCircle - unified status indicator
 // ---------------------------------------------------------------------------
 
 function StatusCircle({
   status,
-  globalNumber,
   isActive,
 }: {
   status: 'not-started' | 'in-progress' | 'completed'
-  globalNumber: number
   isActive: boolean
 }) {
   if (isActive) {
@@ -112,12 +97,10 @@ function StatusCircle({
     )
   }
 
-  // Not started
+  // Not started — empty circle
   return (
     <span className="flex-shrink-0 size-7 rounded-lg bg-muted flex items-center justify-center">
-      <span className="text-[10px] font-semibold text-muted-foreground tabular-nums">
-        {formatLessonNumber(globalNumber)}
-      </span>
+      <Circle className="size-3 text-muted-foreground/40" aria-hidden="true" />
     </span>
   )
 }
@@ -130,7 +113,6 @@ function LessonRow({
   lesson,
   courseId,
   isActive,
-  globalIndex,
   materialCount,
   activeRef,
   searchQuery,
@@ -139,7 +121,6 @@ function LessonRow({
   lesson: LessonGroupItem
   courseId: string
   isActive: boolean
-  globalIndex: number
   materialCount: number
   activeRef?: React.Ref<HTMLAnchorElement>
   searchQuery: string
@@ -174,7 +155,6 @@ function LessonRow({
       {/* Status indicator */}
       <StatusCircle
         status={completionStatus}
-        globalNumber={globalIndex}
         isActive={isActive}
       />
 
@@ -288,7 +268,6 @@ function LessonGroupRow({
   group,
   courseId,
   lessonId,
-  globalIndex,
   activeRef,
   searchQuery,
   isExpanded,
@@ -297,7 +276,6 @@ function LessonGroupRow({
   group: LessonGroup
   courseId: string
   lessonId: string
-  globalIndex: number
   activeRef?: React.Ref<HTMLAnchorElement>
   searchQuery: string
   isExpanded: boolean
@@ -315,7 +293,6 @@ function LessonGroupRow({
         lesson={group.primary}
         courseId={courseId}
         isActive={isPrimaryActive}
-        globalIndex={globalIndex}
         materialCount={0}
         activeRef={isPrimaryActive ? activeRef : undefined}
         searchQuery={searchQuery}
@@ -331,7 +308,6 @@ function LessonGroupRow({
           lesson={group.primary}
           courseId={courseId}
           isActive={isPrimaryActive || Boolean(activeMaterial)}
-          globalIndex={globalIndex}
           materialCount={group.materials.length}
           activeRef={isPrimaryActive ? activeRef : undefined}
           searchQuery={searchQuery}
@@ -390,7 +366,6 @@ function SectionHeader({
   expandedMaterialGroups,
   toggleMaterialGroup,
   activeRef,
-  sectionIndex,
 }: {
   section: CourseSection
   courseId: string
@@ -401,7 +376,6 @@ function SectionHeader({
   expandedMaterialGroups: Set<string>
   toggleMaterialGroup: (id: string) => void
   activeRef: React.RefObject<HTMLAnchorElement | null>
-  sectionIndex: number
 }) {
   const hasActiveLesson = section.lessons.some(
     g => g.primary.id === lessonId || g.materials.some(m => m.id === lessonId)
@@ -425,10 +399,6 @@ function SectionHeader({
         )}
         aria-expanded={isExpanded}
       >
-        {/* Section number */}
-        <span className="flex-shrink-0 size-6 rounded-md bg-muted flex items-center justify-center text-[10px] font-bold text-muted-foreground tabular-nums">
-          {String(sectionIndex + 1).padStart(2, '0')}
-        </span>
         <span className={cn(
           'flex-1 text-left text-sm font-semibold line-clamp-1',
           hasActiveLesson ? 'text-brand-soft-foreground' : 'text-foreground'
@@ -448,22 +418,18 @@ function SectionHeader({
       </CollapsibleTrigger>
       <CollapsibleContent>
         <div className="ml-2 pl-3 border-l border-border/40 space-y-px pt-1">
-          {section.lessons.map((group, gi) => {
-            const globalLessonIndex = section.startIndex + gi
-            return (
-              <LessonGroupRow
-                key={group.primary.id}
-                group={group}
-                courseId={courseId}
-                lessonId={lessonId}
-                globalIndex={globalLessonIndex}
-                activeRef={group.primary.id === lessonId ? activeRef : undefined}
-                searchQuery={searchQuery}
-                isExpanded={expandedMaterialGroups.has(group.primary.id)}
-                onToggleExpand={() => toggleMaterialGroup(group.primary.id)}
-              />
-            )
-          })}
+          {section.lessons.map(group => (
+            <LessonGroupRow
+              key={group.primary.id}
+              group={group}
+              courseId={courseId}
+              lessonId={lessonId}
+              activeRef={group.primary.id === lessonId ? activeRef : undefined}
+              searchQuery={searchQuery}
+              isExpanded={expandedMaterialGroups.has(group.primary.id)}
+              onToggleExpand={() => toggleMaterialGroup(group.primary.id)}
+            />
+          ))}
         </div>
       </CollapsibleContent>
     </Collapsible>
@@ -487,10 +453,7 @@ export function LessonsTab({ courseId, lessonId, adapter, onFocusMaterials: _onF
   const [loadError, setLoadError] = useState(false)
   const [retryCount, setRetryCount] = useState(0)
   const [searchQuery, setSearchQuery] = useState('')
-  const [activeFilter, setActiveFilter] = useState<FilterType>('all')
   const activeRef = useRef<HTMLAnchorElement>(null)
-
-  const statusMap = useContentProgressStore(state => state.statusMap)
 
   useEffect(() => {
     let ignore = false
@@ -530,73 +493,22 @@ export function LessonsTab({ courseId, lessonId, adapter, onFocusMaterials: _onF
     [sections]
   )
 
-  const showSearch = totalLessons > LESSON_SEARCH_THRESHOLD
+  // Filter sections by search query only
+  const searchedSections = useMemo(() => {
+    if (!searchQuery) return sections
 
-  // Filters
-  const FILTER_OPTIONS: { value: FilterType; label: string }[] = [
-    { value: 'all', label: 'All' },
-    { value: 'video', label: 'Videos' },
-    { value: 'pdf', label: 'PDFs' },
-    { value: 'in-progress', label: 'In Progress' },
-    { value: 'completed', label: 'Completed' },
-  ]
-
-  // Filter sections by search query + active filter
-  const filteredSections = useMemo(() => {
-    let result = sections
-
-    // Apply content-type filter
-    if (activeFilter === 'video') {
-      result = result
-        .map(section => ({
-          ...section,
-          lessons: section.lessons.filter(g => g.primary.type === 'video'),
-        }))
-        .filter(s => s.lessons.length > 0)
-    } else if (activeFilter === 'pdf') {
-      result = result
-        .map(section => ({
-          ...section,
-          lessons: section.lessons.filter(g => g.primary.type === 'pdf' || g.primary.type === 'text'),
-        }))
-        .filter(s => s.lessons.length > 0)
-    } else if (activeFilter === 'in-progress') {
-      result = result
-        .map(section => ({
-          ...section,
-          lessons: section.lessons.filter(
-            g => statusMap[courseId + ':' + g.primary.id] === 'in-progress'
-          ),
-        }))
-        .filter(s => s.lessons.length > 0)
-    } else if (activeFilter === 'completed') {
-      result = result
-        .map(section => ({
-          ...section,
-          lessons: section.lessons.filter(
-            g => statusMap[courseId + ':' + g.primary.id] === 'completed'
-          ),
-        }))
-        .filter(s => s.lessons.length > 0)
-    }
-
-    // Apply search query
-    if (searchQuery) {
-      const q = searchQuery.toLowerCase()
-      result = result
-        .map(section => ({
-          ...section,
-          lessons: section.lessons.filter(
-            g =>
-              g.primary.displayTitle.toLowerCase().includes(q) ||
-              g.materials.some(m => m.displayTitle.toLowerCase().includes(q))
-          ),
-        }))
-        .filter(s => s.lessons.length > 0)
-    }
-
-    return result
-  }, [sections, searchQuery, activeFilter, courseId, statusMap])
+    const q = searchQuery.toLowerCase()
+    return sections
+      .map(section => ({
+        ...section,
+        lessons: section.lessons.filter(
+          g =>
+            g.primary.displayTitle.toLowerCase().includes(q) ||
+            g.materials.some(m => m.displayTitle.toLowerCase().includes(q))
+        ),
+      }))
+      .filter(s => s.lessons.length > 0)
+  }, [sections, searchQuery])
 
   // Auto-expand sections containing the active lesson
   const activeSectionPaths = useMemo(() => {
@@ -723,76 +635,52 @@ export function LessonsTab({ courseId, lessonId, adapter, onFocusMaterials: _onF
     )
   }
 
-  const filteredTotal = filteredSections.reduce((sum, s) => sum + s.lessons.length, 0)
+  const searchedTotal = searchedSections.reduce((sum, s) => sum + s.lessons.length, 0)
 
   // --- Render ---
   return (
     <div className="p-2 space-y-1" data-testid="lessons-tab-list">
-      {/* Search + Filter row */}
-      {(showSearch || true) && (
-        <div className="px-1 pt-1 pb-2 space-y-2">
-          {/* Search input */}
-          <div className="relative">
-            <Search
-              className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground"
-              aria-hidden="true"
-            />
-            <Input
-              type="search"
-              placeholder="Search lessons..."
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-              className="pl-9 pr-9 rounded-xl"
-              aria-label="Filter lessons by title"
-              data-testid="lesson-search-input"
-            />
-            {searchQuery && (
-              <button
-                type="button"
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                onClick={() => setSearchQuery('')}
-                aria-label="Clear search"
-                data-testid="lesson-search-clear"
-              >
-                <X className="size-4" aria-hidden="true" />
-              </button>
-            )}
-          </div>
-
-          {/* Filter chips */}
-          <div className="flex items-center gap-1 flex-wrap">
-            {FILTER_OPTIONS.map(opt => (
-              <button
-                key={opt.value}
-                type="button"
-                onClick={() => setActiveFilter(opt.value)}
-                className={cn(
-                  'px-2.5 py-1 rounded-lg text-[11px] font-medium transition-colors',
-                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring',
-                  activeFilter === opt.value
-                    ? 'bg-brand text-brand-foreground'
-                    : 'bg-muted text-muted-foreground hover:bg-muted-foreground/15'
-                )}
-                aria-pressed={activeFilter === opt.value}
-              >
-                {opt.label}
-              </button>
-            ))}
-          </div>
+      {/* Search input */}
+      <div className="px-1 pt-1 pb-2">
+        <div className="relative">
+          <Search
+            className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground"
+            aria-hidden="true"
+          />
+          <Input
+            type="search"
+            placeholder="Search lessons..."
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            className="pl-9 pr-9 rounded-xl"
+            aria-label="Filter lessons by title"
+            data-testid="lesson-search-input"
+          />
+          {searchQuery && (
+            <button
+              type="button"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+              onClick={() => setSearchQuery('')}
+              aria-label="Clear search"
+              data-testid="lesson-search-clear"
+            >
+              <X className="size-4" aria-hidden="true" />
+            </button>
+          )}
         </div>
-      )}
+      </div>
 
       {/* Lesson count */}
       <div className="px-2 pb-1.5 text-[11px] text-muted-foreground">
-        {searchQuery || activeFilter !== 'all'
-          ? 'Showing ' + filteredTotal + ' of ' + totalLessons + ' lessons'
+        {searchQuery
+          ? 'Showing ' + searchedTotal + ' of ' + totalLessons + ' lessons'
           : currentIndex >= 0
             ? 'Lesson ' + (currentIndex + 1) + ' of ' + totalLessons
             : totalLessons + ' lessons'}
       </div>
 
-      {/* Empty search/filter state */}
-      {filteredSections.length === 0 && (searchQuery || activeFilter !== 'all') ? (
+      {/* Empty search state */}
+      {searchedSections.length === 0 && searchQuery ? (
         <div
           className="flex flex-col items-center justify-center py-12 text-muted-foreground"
           data-testid="lesson-search-empty"
@@ -800,20 +688,20 @@ export function LessonsTab({ courseId, lessonId, adapter, onFocusMaterials: _onF
           <Search className="size-10 mb-3 opacity-50" aria-hidden="true" />
           <p className="text-sm mb-1">No lessons match</p>
           <p className="text-xs text-muted-foreground/70 mb-3">
-            Try a different search term or clear the filter.
+            Try a different search term.
           </p>
           <Button
             variant="outline"
             size="sm"
-            onClick={() => { setSearchQuery(''); setActiveFilter('all') }}
+            onClick={() => setSearchQuery('')}
             className="rounded-xl"
           >
-            Clear all filters
+            Clear search
           </Button>
         </div>
       ) : hasMultipleSections ? (
         /* Multi-section layout */
-        filteredSections.map((section, si) => (
+        searchedSections.map(section => (
           <SectionHeader
             key={section.title}
             section={section}
@@ -825,28 +713,23 @@ export function LessonsTab({ courseId, lessonId, adapter, onFocusMaterials: _onF
             expandedMaterialGroups={expandedMaterialGroups}
             toggleMaterialGroup={toggleMaterialGroup}
             activeRef={activeRef}
-            sectionIndex={si}
           />
         ))
       ) : (
         /* Flat layout (single section) */
-        filteredSections.flatMap(section =>
-          section.lessons.map((group, gi) => {
-            const globalLessonIndex = section.startIndex + gi
-            return (
-              <LessonGroupRow
-                key={group.primary.id}
-                group={group}
-                courseId={courseId}
-                lessonId={lessonId}
-                globalIndex={globalLessonIndex}
-                activeRef={group.primary.id === lessonId ? activeRef : undefined}
-                searchQuery={searchQuery}
-                isExpanded={expandedMaterialGroups.has(group.primary.id)}
-                onToggleExpand={() => toggleMaterialGroup(group.primary.id)}
-              />
-            )
-          })
+        searchedSections.flatMap(section =>
+          section.lessons.map(group => (
+            <LessonGroupRow
+              key={group.primary.id}
+              group={group}
+              courseId={courseId}
+              lessonId={lessonId}
+              activeRef={group.primary.id === lessonId ? activeRef : undefined}
+              searchQuery={searchQuery}
+              isExpanded={expandedMaterialGroups.has(group.primary.id)}
+              onToggleExpand={() => toggleMaterialGroup(group.primary.id)}
+            />
+          ))
         )
       )}
     </div>
