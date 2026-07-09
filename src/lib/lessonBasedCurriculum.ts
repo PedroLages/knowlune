@@ -297,7 +297,6 @@ export function buildLessonBasedCurriculum(opts: {
     )
   
     return sections
-  }
 }
 
 // ---------------------------------------------------------------------------
