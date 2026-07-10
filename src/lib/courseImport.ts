@@ -787,18 +787,20 @@ export async function persistScannedCourse(
       // Use the existing course ID for all downstream operations
       course.id = existingCourse.id
     } else {
-      // First import: standard add flow
-      await syncableWrite('importedCourses', 'add', course as unknown as SyncableRecord)
+      // First import: use put (upsert) instead of add (insert) so that
+      // re-importing a course after an incomplete delete does not fail
+      // with primary-key constraint violations on orphaned child records.
+      await syncableWrite('importedCourses', 'put', course as unknown as SyncableRecord)
       persistCompleted++
       persistProgress.updateProcessingProgress(scanned.id, persistCompleted, totalPersistItems)
 
       for (const video of orderedVideos) {
-        await syncableWrite('importedVideos', 'add', video as unknown as SyncableRecord)
+        await syncableWrite('importedVideos', 'put', video as unknown as SyncableRecord)
         persistCompleted++
         persistProgress.updateProcessingProgress(scanned.id, persistCompleted, totalPersistItems)
       }
       for (const pdf of pdfs) {
-        await syncableWrite('importedPdfs', 'add', pdf as unknown as SyncableRecord)
+        await syncableWrite('importedPdfs', 'put', pdf as unknown as SyncableRecord)
         persistCompleted++
         persistProgress.updateProcessingProgress(scanned.id, persistCompleted, totalPersistItems)
       }
@@ -822,8 +824,9 @@ export async function persistScannedCourse(
       }
     }
   } catch (error) {
-    useImportProgressStore.getState().failCourse(scanned.id, `Failed to save "${course.name}"`)
-    const message = `Failed to save "${course.name}" to your library. Please try again.`
+    const detail = error instanceof Error ? error.message : 'Unknown error'
+    useImportProgressStore.getState().failCourse(scanned.id, `Failed to save "${course.name}": ${detail}`)
+    const message = `Failed to save "${course.name}": ${detail}`
     console.error('[Import] Persist transaction failed:', error)
     toast.error(message)
     throw error
