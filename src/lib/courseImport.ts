@@ -169,6 +169,10 @@ export interface ScannedCaption {
   serverUrl: string
   /** Matched video ID in the scan set (populated after matching). */
   matchedVideoId?: string
+  /** Original filename (e.g. "001_intro_en.srt"). */
+  filename: string
+  /** Caption format derived from extension. */
+  format: 'srt' | 'vtt'
 }
 
 // --- Scan Phase ---
@@ -717,6 +721,12 @@ export async function persistScannedCourse(
   persistProgress.updateProcessingProgress(scanned.id, 0, totalPersistItems)
 
   try {
+    // Map scanned video IDs → persisted video IDs for caption association.
+    // Populated during the video write loops below so caption.matchedVideoId
+    // (set at scan time with the scanned video's UUID) is translated to the
+    // actual persisted video ID before writing to videoCaptions.
+    const scannedToPersistedVideoId = new Map<string, string>()
+
     // Unit 8: Re-import safety — upsert instead of insert to prevent duplicates.
     // Uses Dexie's put() through a helper that checks for existing records by
     // matching (courseId, serverUrl) for server imports or (courseId, path) for local.
@@ -753,6 +763,7 @@ export async function persistScannedCourse(
           await syncableWrite('importedVideos', 'add', record as unknown as SyncableRecord)
           keptVideoIds.add(record.id)
         }
+        scannedToPersistedVideoId.set(video.id, record.id)
         persistCompleted++
         persistProgress.updateProcessingProgress(scanned.id, persistCompleted, totalPersistItems)
       }
@@ -796,6 +807,7 @@ export async function persistScannedCourse(
 
       for (const video of orderedVideos) {
         await syncableWrite('importedVideos', 'put', video as unknown as SyncableRecord)
+        scannedToPersistedVideoId.set(video.id, video.id)
         persistCompleted++
         persistProgress.updateProcessingProgress(scanned.id, persistCompleted, totalPersistItems)
       }
@@ -806,19 +818,28 @@ export async function persistScannedCourse(
       }
     }
 
-    // Persist captions (SRT/VTT) to videoCaptions table — same for both first import and re-import
+    // Persist captions (SRT/VTT) to videoCaptions table using db.videoCaptions.put().
+    // We use put() (upsert on compound PK [courseId+videoId]) so re-importing
+    // the same course does not throw on duplicate-key conflicts.
+    // We use a direct Dexie call rather than syncableWrite because videoCaptions
+    // is intentionally not in the sync tableRegistry (captions are locally
+    // sourced from .srt/.vtt files — they have no Supabase equivalent).
+    //
+    // The scannedToPersistedVideoId map translates scan-time video UUIDs to
+    // the actual persisted video IDs (which may differ during re-import).
     if (scanned.captions && scanned.captions.length > 0) {
       for (const caption of scanned.captions) {
         if (caption.matchedVideoId && caption.srtContent) {
-          await syncableWrite('videoCaptions', 'add', {
-            id: crypto.randomUUID(),
-            videoId: caption.matchedVideoId,
-            language: caption.language || 'en',
+          const persistedVideoId = scannedToPersistedVideoId.get(caption.matchedVideoId)
+          if (!persistedVideoId) continue
+          await db.videoCaptions.put({
+            courseId: course.id,
+            videoId: persistedVideoId,
+            filename: caption.filename,
             content: caption.srtContent,
-            source: 'file',
+            format: caption.format,
             createdAt: now,
-            updatedAt: now,
-          } as unknown as SyncableRecord)
+          })
           persistCompleted++
         }
       }
@@ -1755,6 +1776,8 @@ export async function scanCourseFolderFromServer(
         srtContent,
         serverUrl: cap.url,
         matchedVideoId: targetVideo.id,
+        filename: cap.name,
+        format: cap.name.toLowerCase().endsWith('.vtt') ? 'vtt' : 'srt',
       })
     } else {
       console.warn(`[scanServer] No matching video for caption: ${cap.name}`)

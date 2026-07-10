@@ -411,6 +411,106 @@ describe('persistScannedCourse', () => {
     const storedCourse = await db.importedCourses.get(course.id)
     expect(storedCourse!.coverImageHandle).toBeDefined()
   })
+
+  // --- Caption persistence (server imports) ---
+
+  function createScannedCourseWithCaptions(overrides?: Partial<ScannedCourse>): ScannedCourse {
+    return createScannedCourse({
+      source: 'server',
+      serverPath: 'academy/courses/test-captions',
+      videos: [
+        {
+          id: 'video-1',
+          filename: 'intro.mp4',
+          path: 'intro.mp4',
+          duration: 120,
+          format: 'mp4',
+          order: 1,
+          fileHandle: createMockFileHandle('intro.mp4'),
+          fileSize: 25_000_000,
+          width: 1920,
+          height: 1080,
+          serverUrl: 'http://example.com/intro.mp4',
+        },
+      ],
+      pdfs: [
+        {
+          id: 'pdf-1',
+          filename: 'workbook.pdf',
+          path: 'workbook.pdf',
+          pageCount: 25,
+          fileHandle: createMockFileHandle('workbook.pdf'),
+          serverUrl: 'http://example.com/workbook.pdf',
+        },
+      ],
+      captions: [
+        {
+          videoStem: 'intro',
+          language: 'en',
+          srtContent: '1\n00:00:01,000 --> 00:00:03,000\nHello World',
+          serverUrl: 'http://example.com/intro_en.srt',
+          matchedVideoId: 'video-1',
+          filename: 'intro_en.srt',
+          format: 'srt',
+        },
+      ],
+      ...overrides,
+    })
+  }
+
+  it('should persist captions for server course with .srt files', async () => {
+    const scanned = createScannedCourseWithCaptions()
+    const course = await persistScannedCourse(scanned)
+
+    // Caption records exist in DB
+    const captions = await db.videoCaptions.toArray()
+    expect(captions).toHaveLength(1)
+    expect(captions[0].courseId).toBe(course.id)
+    expect(captions[0].videoId).toBe('video-1')
+    expect(captions[0].filename).toBe('intro_en.srt')
+    expect(captions[0].format).toBe('srt')
+    expect(captions[0].content).toBe('1\n00:00:01,000 --> 00:00:03,000\nHello World')
+  })
+
+  it('should persist caption records with correct courseId', async () => {
+    const scanned = createScannedCourseWithCaptions()
+    await persistScannedCourse(scanned)
+
+    const captions = await db.videoCaptions.toArray()
+    for (const caption of captions) {
+      expect(caption.courseId).toBeDefined()
+      expect(caption.courseId).toBe(scanned.id)
+    }
+  })
+
+  it('should not throw on re-import with captions (put upserts)', async () => {
+    const scanned = createScannedCourseWithCaptions()
+
+    // First import
+    await persistScannedCourse(scanned)
+
+    // Second import (re-import) should not throw
+    await expect(persistScannedCourse(scanned)).resolves.toBeDefined()
+
+    // Still only one caption record (put upserts, no duplicate)
+    const captions = await db.videoCaptions.toArray()
+    expect(captions).toHaveLength(1)
+  })
+
+  it('should succeed when videoCaptions is not in the sync tableRegistry', async () => {
+    // Import the tableRegistry to verify videoCaptions is NOT registered
+    const { tableRegistry } = await import('@/lib/sync/tableRegistry')
+    const videoCaptionsEntry = tableRegistry.find(e => e.dexieTable === 'videoCaptions')
+    expect(videoCaptionsEntry).toBeUndefined()
+
+    // Despite not being in the registry, import should still succeed
+    const scanned = createScannedCourseWithCaptions()
+    await expect(persistScannedCourse(scanned)).resolves.toBeDefined()
+
+    // Captions were saved directly via db.videoCaptions.put()
+    const captions = await db.videoCaptions.toArray()
+    expect(captions).toHaveLength(1)
+  })
 })
 
 // --- Integration: scan then persist ---
