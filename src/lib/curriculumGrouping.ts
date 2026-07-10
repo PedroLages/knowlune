@@ -1,11 +1,22 @@
 import { sortImportedVideosForCurriculum } from '@/lib/sortImportedVideosForCurriculum'
-import { safeDecodeURIComponent } from '@/lib/courseAdapter'
 import type { ImportedVideo, ImportedPdf, YouTubeCourseChapter } from '@/data/types'
 
 export interface ChapterGroup {
   title: string
   videos: ImportedVideo[]
   pdfs: ImportedPdf[]
+}
+
+/**
+ * Safely decode a URI-encoded string, returning the original on malformed input.
+ */
+function safeDecodeURIComponent(s: string): string {
+  if (!s) return s
+  try {
+    return decodeURIComponent(s)
+  } catch {
+    return s
+  }
 }
 
 /**
