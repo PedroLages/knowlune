@@ -1,4 +1,5 @@
 import { sortImportedVideosForCurriculum } from '@/lib/sortImportedVideosForCurriculum'
+import { safeDecodeURIComponent } from '@/lib/courseAdapter'
 import type { ImportedVideo, ImportedPdf, YouTubeCourseChapter } from '@/data/types'
 
 export interface ChapterGroup {
@@ -7,9 +8,47 @@ export interface ChapterGroup {
   pdfs: ImportedPdf[]
 }
 
+/**
+ * Extract the first folder segment from a path, decoded.
+ * e.g. "03%20-%20Linux%20Fundamentals/lesson.mp4" → "03 - Linux Fundamentals"
+ */
 function getFolderName(path: string): string {
-  const parts = path.split('/')
+  const decoded = safeDecodeURIComponent(path)
+  const parts = decoded.split('/')
   return parts.length > 1 ? parts[0] : ''
+}
+
+/**
+ * Convert a raw folder name into a human-readable title by
+ * stripping leading numeric prefixes.
+ *
+ * Examples:
+ *   "01 - Overview"              → "Overview"
+ *   "03-Linux-Fundamentals"      → "Linux Fundamentals"
+ *   "03%20-%20Linux%20Fundamentals" → "Linux Fundamentals"  (already decoded)
+ *   "My Section"                 → "My Section"
+ *   ""                            → "Course Content"
+ *   "mod-a"                      → "mod-a"  (no numeric prefix, left as-is)
+ */
+export function cleanFolderTitle(folderName: string): string {
+  if (!folderName) return 'Course Content'
+
+  const cleaned = folderName
+    .replace(/^\d+\s*[-. ]\s*/, '') // "01 - Overview", "01-Overview", "01. Overview", "01 Overview"
+    .trim()
+
+  if (!cleaned) return 'Course Content'
+
+  // Only humanize separators when a numeric prefix was actually stripped
+  // (i.e. the cleaned string is different from the original).
+  if (cleaned !== folderName) {
+    return cleaned
+      .replace(/[-_]+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+  }
+
+  return cleaned
 }
 
 export function groupByFolder(videos: ImportedVideo[], pdfs: ImportedPdf[] = []): ChapterGroup[] {
@@ -31,10 +70,10 @@ export function groupByFolder(videos: ImportedVideo[], pdfs: ImportedPdf[] = [])
   const allFolders = new Set([...videoGroups.keys(), ...pdfGroups.keys()])
   return Array.from(allFolders)
     .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
-    .map(title => ({
-      title,
-      videos: videoGroups.get(title) ?? [],
-      pdfs: pdfGroups.get(title) ?? [],
+    .map(folderName => ({
+      title: cleanFolderTitle(folderName),
+      videos: videoGroups.get(folderName) ?? [],
+      pdfs: pdfGroups.get(folderName) ?? [],
     }))
 }
 
