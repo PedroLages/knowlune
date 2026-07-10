@@ -114,9 +114,15 @@ export function CurriculumComposer({
     }
   }, [open, initialGoal])
 
-  // Auto-name suggestion: when courses are selected and name is empty, suggest a name
+  // Auto-name suggestion: when courses are selected and name is empty, suggest a name.
+  // Guard: only fire when importedCourses are loaded so the filter matches real courses.
   useEffect(() => {
-    if (selectedCourseIds.length > 0 && !name.trim() && !nameAutoFilled.current) {
+    if (
+      selectedCourseIds.length > 0 &&
+      !name.trim() &&
+      !nameAutoFilled.current &&
+      importedCourses.length > 0
+    ) {
       const selectedItems = importedCourses
         .filter(c => selectedCourseIds.includes(c.id))
         .map(c => ({
@@ -163,8 +169,16 @@ export function CurriculumComposer({
   const handleBatchImport = useCallback(() => setBatchImportOpen(true), [])
 
   const handleBatchImportComplete = useCallback(
-    (importedIds: string[]) => {
-      // Add all imported course IDs to the current selection
+    (importedIds: string[], trackId?: string) => {
+      if (trackId) {
+        // BulkImportDialog already created the track — close composer and navigate.
+        loadImportedCourses().catch(() => {})
+        loadPaths().catch(() => {})
+        onOpenChange(false)
+        navigate(`${redirectBase}/${trackId}`)
+        return
+      }
+      // No trackId: add imported course IDs to the current selection (existing behavior).
       setSelectedCourseIds(prev => {
         const unique = importedIds.filter(id => !prev.includes(id))
         if (unique.length === 0) return prev
@@ -174,7 +188,7 @@ export function CurriculumComposer({
       // silent-catch-ok: store refresh failure is non-critical
       loadImportedCourses().catch(() => {})
     },
-    [loadImportedCourses]
+    [loadImportedCourses, loadPaths, onOpenChange, navigate, redirectBase]
   )
 
   // --- AI Goal Generation ---
@@ -275,7 +289,14 @@ export function CurriculumComposer({
       e.preventDefault()
       if (selectedCourseIds.length === 0) return
 
-      const finalName = name.trim() || 'Untitled Path'
+      // Block empty-name submission — auto-name is a suggestion, not a substitute
+      // for explicit user confirmation. This prevents accidental "Untitled Path" tracks.
+      if (!name.trim()) {
+        toast.error('Please enter a track name')
+        return
+      }
+
+      const finalName = name.trim()
       setIsSubmitting(true)
 
       try {

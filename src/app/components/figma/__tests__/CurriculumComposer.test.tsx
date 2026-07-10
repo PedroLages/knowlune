@@ -264,7 +264,7 @@ describe('CurriculumComposer', () => {
     })
   })
 
-  it('should use "Untitled Path" when name is empty on submit', async () => {
+  it('should block submission when name is empty (Option A)', async () => {
     mockCreatePathWithCourses.mockResolvedValue({ id: 'path-1' })
 
     render(
@@ -273,28 +273,42 @@ describe('CurriculumComposer', () => {
       </BrowserRouter>
     )
 
-    // Clear name if auto-filled
-    fireEvent.change(screen.getByLabelText('Name'), { target: { value: '' } })
-
-    // Select course
+    // Auto-suggest will fire when courses are selected — wait for it, then clear.
     fireEvent.click(screen.getByLabelText('Select Node.js Advanced'))
 
-    // Wait for auto-suggest logic to handle empty (Node has no topic tags after filtering)
-    // Actually 'node' should generate 'Node Fundamentals' - let me use a course whose tags are all format/type
-    // But we already selected c2. Let me check: c2 has tags ['node', 'backend'], so 'node' is the topic tag.
-    // We need a course whose tags are all format/type. None in our mock data, so let's just select c2
-    // and clear the auto-filled name.
+    await waitFor(() => {
+      const nameInput = screen.getByLabelText('Name') as HTMLInputElement
+      // Auto-suggest should have filled the name from tags
+      expect(nameInput.value).not.toBe('')
+    })
+
+    // Now explicitly clear the name
     fireEvent.change(screen.getByLabelText('Name'), { target: { value: '' } })
 
     fireEvent.click(screen.getByRole('button', { name: 'Create Path' }))
 
     await waitFor(() => {
-      expect(mockCreatePathWithCourses).toHaveBeenCalledWith(
-        'Untitled Path',
-        undefined,
-        expect.any(Array)
-      )
+      // Should NOT create a path — empty name is blocked
+      expect(mockCreatePathWithCourses).not.toHaveBeenCalled()
     })
+  })
+
+  it('should not auto-suggest name when importedCourses is empty (stale guard)', async () => {
+    const prevCourses = courseImportState.importedCourses
+    courseImportState.importedCourses = []
+
+    render(
+      <BrowserRouter>
+        <CurriculumComposer {...defaultProps} />
+      </BrowserRouter>
+    )
+
+    // Simulate adding course IDs without the store having loaded courses yet.
+    // The auto-name effect should NOT fire because importedCourses.length === 0.
+    const nameInput = screen.getByLabelText('Name') as HTMLInputElement
+    expect(nameInput.value).toBe('')
+
+    courseImportState.importedCourses = prevCourses
   })
 
   it('should import course action button', () => {
