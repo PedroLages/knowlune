@@ -783,15 +783,18 @@ export function BulkImportDialog({
           setImportItems
         )
         progressStore.completeCourse(item.folderName)
-      } catch {
-        // silent-catch-ok: persistScannedCourse already shows error toasts
+      } catch (err) {
+        // silent-catch-ok: persistScannedCourse already shows error toasts.
+        // Preserve the actual error message so the user can see what went wrong.
+        const message = err instanceof Error ? err.message : 'Failed to import'
+        console.error('[BulkImport] persistCourse failed for', item.folderName, ':', err)
         updateItemInList(
           results,
           item.folderName,
-          { status: 'error', error: 'Failed to import' },
+          { status: 'error', error: message },
           setImportItems
         )
-        progressStore.failCourse(item.folderName, 'Failed to import')
+        progressStore.failCourse(item.folderName, message)
       }
     }
 
@@ -1050,8 +1053,11 @@ export function BulkImportDialog({
             )
           }
           toast.success(`Imported: ${folderName}`)
-        } catch {
-          // silent-catch-ok: persistScannedCourse already shows error toasts, we just update item status
+        } catch (err) {
+          // silent-catch-ok: persistScannedCourse already shows error toasts.
+          // Preserve the actual error message for the user.
+          const message = err instanceof Error ? err.message : 'Failed to import'
+          console.error('[BulkImport] retry persistCourse failed for', folderName, ':', err)
           if (gen === generationRef.current) {
             setImportItems(prev =>
               prev.map(i =>
@@ -1059,7 +1065,7 @@ export function BulkImportDialog({
                   ? {
                       ...i,
                       status: 'error',
-                      error: 'Failed to import',
+                      error: message,
                     }
                   : i
               )

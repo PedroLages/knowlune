@@ -697,6 +697,15 @@ export async function persistScannedCourse(
     ...(scanned.serverPath ? { serverPath: scanned.serverPath } : {}),
   }
 
+  console.debug('[Import] Persisting course:', {
+    id: course.id,
+    name: course.name,
+    videoCount: course.videoCount,
+    pdfCount: course.pdfCount,
+    source: course.source,
+    serverPath: course.serverPath,
+  })
+
   // Track persist progress so the UI can show per-file progress during the
   // sequential writes below. Without this, the wizard shows only "Importing…"
   // and the user has no indication that work is happening — for courses with
