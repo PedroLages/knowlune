@@ -13,8 +13,13 @@
 
 declare let self: ServiceWorkerGlobalScope
 
-import { precacheAndRoute, createHandlerBoundToURL } from 'workbox-precaching'
-import { registerRoute, NavigationRoute, setDefaultHandler } from 'workbox-routing'
+import { precacheAndRoute, matchPrecache } from 'workbox-precaching'
+import {
+  registerRoute,
+  NavigationRoute,
+  setDefaultHandler,
+  setCatchHandler,
+} from 'workbox-routing'
 import { CacheFirst, StaleWhileRevalidate, NetworkOnly } from 'workbox-strategies'
 import { ExpirationPlugin } from 'workbox-expiration'
 import { CacheableResponsePlugin } from 'workbox-cacheable-response'
@@ -70,11 +75,48 @@ registerRoute(/^\/api\/ai\/.*/i, new NetworkOnly())
 registerRoute(/\/api\/abs\/proxy\//, new NetworkOnly())
 
 // ─── Navigation fallback ─────────────────────────────────────────────────
+//
+// Network-first for HTML navigation requests.  The old App Shell pattern
+// (createHandlerBoundToURL('/index.html')) serves the precached index.html on
+// every navigation — after a new deployment the precached index.html still
+// references stale chunk filenames and causes "Failed to fetch dynamically
+// imported module" errors for every React.lazy() page.
+//
+// NetworkFirst ensures the browser always fetches the current index.html from
+// the server, so chunk references match the deployed assets.  The catch-
+// handler falls back to the precached index.html when the user is offline.
 
-const navigationRoute = new NavigationRoute(createHandlerBoundToURL('/index.html'), {
-  denylist: [/^\/api\//],
-})
+const navigationRoute = new NavigationRoute(
+  async ({ request }) => {
+    try {
+      // Try the network first — fetch fresh HTML with current chunk references
+      const response = await fetch(request)
+      if (response.ok) return response
+    } catch {
+      // Network unavailable — handled by setCatchHandler below
+    }
+    // Fallback: explicit throw so setCatchHandler takes over
+    throw new Error('Network unavailable — attempting offline fallback')
+  },
+  { denylist: [/^\/api\//] }
+)
 registerRoute(navigationRoute)
+
+// Offline fallback for navigation requests — serve the precached index.html
+// so the SPA shell still loads when the user has no connection.
+setCatchHandler(async ({ request }) => {
+  // Only handle navigation (document) requests; let other failed requests
+  // fall through to the default (NetworkOnly).
+  if (request.mode === 'navigate') {
+    const precached = await matchPrecache('/index.html')
+    if (precached) return precached
+    return new Response('Offline', {
+      status: 503,
+      headers: { 'Content-Type': 'text/plain' },
+    })
+  }
+  return Response.error()
+})
 
 // ─── Default handler ─────────────────────────────────────────────────────
 
