@@ -146,8 +146,8 @@ describe('BottomNav lesson mode', () => {
   it('renders standard primary nav items in standard mode', () => {
     renderBottomNav({ mode: 'standard' })
 
-    // Standard mode shows Overview, Courses, My Class, Notes + More
-    expect(screen.getByText('Overview')).toBeInTheDocument()
+    // Standard mode shows Dashboard, Courses, Learning Tracks, Notes + More
+    expect(screen.getByText('Dashboard')).toBeInTheDocument()
     expect(screen.getByText('Courses')).toBeInTheDocument()
     expect(screen.getByText('More')).toBeInTheDocument()
   })

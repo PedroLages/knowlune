@@ -8,15 +8,15 @@ import {
 } from '../navigation'
 
 describe('navigationGroups', () => {
-  it('has exactly 3 groups: Library, Study, Track', () => {
+  it('has exactly 3 groups: Main, Review, Insights', () => {
     expect(navigationGroups).toHaveLength(3)
-    expect(navigationGroups.map(g => g.label)).toEqual(['Library', 'Study', 'Track'])
+    expect(navigationGroups.map(g => g.label)).toEqual(['Main', 'Review', 'Insights'])
   })
 
-  it('Library group has 5 items in correct order', () => {
-    const library = navigationGroups[0]
-    expect(library.items.map(i => i.name)).toEqual([
-      'Overview',
+  it('Main group has 5 items in correct order', () => {
+    const main = navigationGroups[0]
+    expect(main.items.map(i => i.name)).toEqual([
+      'Dashboard',
       'Courses',
       'Learning Tracks',
       'Books',
@@ -24,30 +24,29 @@ describe('navigationGroups', () => {
     ])
   })
 
-  it('Study group has 9 items in correct order', () => {
-    const study = navigationGroups[1]
-    expect(study.items.map(i => i.name)).toEqual([
-      'My Courses',
+  it('Review group has 5 items in correct order', () => {
+    const review = navigationGroups[1]
+    expect(review.items.map(i => i.name)).toEqual([
       'Notes',
       'Flashcards',
       'Vocabulary',
-      'Highlight Review',
-      'Cross-Book Search',
+      'Highlights',
       'Review',
-      'Learning Path',
-      'AI Tutor',
     ])
   })
 
-  it('Track group has 6 items in correct order', () => {
-    const track = navigationGroups[2]
-    expect(track.items.map(i => i.name)).toEqual([
-      'Challenges',
+  it('Insights group has 9 items in correct order', () => {
+    const insights = navigationGroups[2]
+    expect(insights.items.map(i => i.name)).toEqual([
+      'Search',
       'Knowledge Map',
+      'Reports',
+      'Challenges',
       'Knowledge Gaps',
       'Retention',
       'Session History',
-      'Reports',
+      'Learning Path',
+      'AI Tutor',
     ])
   })
 
@@ -61,6 +60,27 @@ describe('navigationGroups', () => {
     const labels = navigationGroups.map(g => g.label)
     expect(labels).not.toContain('Connect')
   })
+
+  it('no "My Courses" item exists in sidebar', () => {
+    const allNames = navigationGroups.flatMap(g => g.items.map(i => i.name))
+    expect(allNames).not.toContain('My Courses')
+  })
+
+  it('Highlights label routes to /highlight-review', () => {
+    const highlights = navigationGroups
+      .flatMap(g => g.items)
+      .find(i => i.name === 'Highlights')
+    expect(highlights).toBeDefined()
+    expect(highlights!.path).toBe('/highlight-review')
+  })
+
+  it('Search label routes to /search-annotations', () => {
+    const search = navigationGroups
+      .flatMap(g => g.items)
+      .find(i => i.name === 'Search')
+    expect(search).toBeDefined()
+    expect(search!.path).toBe('/search-annotations')
+  })
 })
 
 describe('getPrimaryNav', () => {
@@ -68,17 +88,22 @@ describe('getPrimaryNav', () => {
     const primary = getPrimaryNav()
     // The bottom bar has exactly 4 slots — length must stay at 4
     expect(primary).toHaveLength(4)
-    expect(primary.map(i => i.name)).toEqual(['Overview', 'Courses', 'My Courses', 'Notes'])
+    expect(primary.map(i => i.name)).toEqual(['Dashboard', 'Courses', 'Learning Tracks', 'Notes'])
+  })
+
+  it('does not include My Courses in primary nav', () => {
+    const primary = getPrimaryNav()
+    expect(primary.map(i => i.name)).not.toContain('My Courses')
   })
 })
 
 describe('getOverflowNav', () => {
-  it('returns remaining items including Authors, Settings, and all Study/Track items', () => {
+  it('returns remaining items excluding primary items and Settings', () => {
     const overflow = getOverflowNav()
     const names = overflow.map(i => i.name)
-    // 20 total group items (5+9+6) + 1 Settings = 21 - 4 primary = 17 overflow
-    expect(overflow).toHaveLength(17)
-    expect(names).toContain('Learning Tracks')
+    // 19 total group items (5+5+9) + 1 Settings = 20 - 4 primary = 16 overflow
+    expect(overflow).toHaveLength(16)
+    expect(names).toContain('Books')
     expect(names).toContain('Authors')
     expect(names).toContain('Settings')
     expect(names).toContain('Learning Path')
@@ -88,10 +113,11 @@ describe('getOverflowNav', () => {
     expect(names).toContain('Review')
     expect(names).toContain('Retention')
     expect(names).toContain('Flashcards')
-    expect(names).not.toContain('Overview')
-    expect(names).not.toContain('My Courses')
+    expect(names).not.toContain('Dashboard')
     expect(names).not.toContain('Courses')
+    expect(names).not.toContain('Learning Tracks')
     expect(names).not.toContain('Notes')
+    expect(names).not.toContain('My Courses')
   })
 })
 

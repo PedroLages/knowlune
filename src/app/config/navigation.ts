@@ -4,7 +4,6 @@ import {
   BookA,
   Highlighter,
   Search,
-  GraduationCap,
   StickyNote,
   RotateCcw,
   ShieldCheck,
@@ -18,6 +17,7 @@ import {
   Library,
   Layers,
   MessageSquare,
+  Route,
   Settings as SettingsIcon,
   type LucideIcon,
 } from 'lucide-react'
@@ -78,49 +78,35 @@ export interface NavigationGroup {
 }
 
 // Grouped navigation for sidebar
-// Groups: Library (browse content), Study (active learning), Track (progress & analytics)
+// Groups: Main (core content), Review (active learning), Insights (progress & analytics)
 export const navigationGroups: NavigationGroup[] = [
   {
-    label: 'Library',
+    label: 'Main',
     items: [
-      { name: 'Overview', path: '/overview', icon: LayoutDashboard },
-      { name: 'Courses', path: '/courses', icon: GraduationCap },
-      { name: 'Learning Tracks', path: '/learning-tracks', icon: Layers },
+      { name: 'Dashboard', path: '/overview', icon: LayoutDashboard },
+      { name: 'Courses', path: '/courses', icon: BookOpen },
+      { name: 'Learning Tracks', path: '/learning-tracks', icon: Route },
       { name: 'Books', path: '/library', icon: Library },
       { name: 'Authors', path: '/authors', icon: Users, disclosureKey: 'course-imported' },
     ],
   },
   {
-    label: 'Study',
+    label: 'Review',
     items: [
-      { name: 'My Courses', path: '/my-class', icon: BookOpen },
       { name: 'Notes', path: '/notes', icon: StickyNote, disclosureKey: 'note-created' },
       { name: 'Flashcards', path: '/flashcards', icon: Layers },
       { name: 'Vocabulary', path: '/vocabulary', icon: BookA },
-      { name: 'Highlight Review', path: '/highlight-review', icon: Highlighter },
-      { name: 'Cross-Book Search', path: '/search-annotations', icon: Search },
+      { name: 'Highlights', path: '/highlight-review', icon: Highlighter },
       { name: 'Review', path: '/review', icon: RotateCcw, disclosureKey: 'review-used' },
-      {
-        name: 'Learning Path',
-        path: '/ai-learning-path',
-        icon: Sparkles,
-        disclosureKey: 'ai-used',
-        guestHidden: true,
-      },
-      {
-        name: 'AI Tutor',
-        path: '/tutor',
-        icon: MessageSquare,
-        disclosureKey: 'ai-used',
-        guestHidden: true,
-      },
     ],
   },
   {
-    label: 'Track',
+    label: 'Insights',
     items: [
-      { name: 'Challenges', path: '/challenges', icon: Target, disclosureKey: 'challenge-used' },
+      { name: 'Search', path: '/search-annotations', icon: Search },
       { name: 'Knowledge Map', path: '/knowledge-map', icon: Map },
+      { name: 'Reports', path: '/reports', icon: BarChart3, disclosureKey: 'lesson-completed' },
+      { name: 'Challenges', path: '/challenges', icon: Target, disclosureKey: 'challenge-used' },
       {
         name: 'Knowledge Gaps',
         path: '/knowledge-gaps',
@@ -135,7 +121,20 @@ export const navigationGroups: NavigationGroup[] = [
         icon: History,
         disclosureKey: 'challenge-used',
       },
-      { name: 'Reports', path: '/reports', icon: BarChart3, disclosureKey: 'lesson-completed' },
+      {
+        name: 'Learning Path',
+        path: '/ai-learning-path',
+        icon: Sparkles,
+        disclosureKey: 'ai-used',
+        guestHidden: true,
+      },
+      {
+        name: 'AI Tutor',
+        path: '/tutor',
+        icon: MessageSquare,
+        disclosureKey: 'ai-used',
+        guestHidden: true,
+      },
     ],
   },
 ]
@@ -155,7 +154,7 @@ export const navigationItems: NavigationItem[] = [
 
 // Paths for primary navigation (shown in mobile bottom bar).
 // The bottom bar has exactly 4 slots — this list must stay at 4 entries.
-export const primaryNavPaths = ['/overview', '/courses', '/my-class', '/notes']
+export const primaryNavPaths = ['/overview', '/courses', '/learning-tracks', '/notes']
 
 // Get primary navigation items (for mobile bottom bar)
 export function getPrimaryNav(): NavigationItem[] {

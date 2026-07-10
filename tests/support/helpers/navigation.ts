@@ -96,3 +96,10 @@ export async function goToSettings(page: Page): Promise<void> {
 export async function goToCourse(page: Page, courseId: string): Promise<void> {
   await navigateAndWait(page, `/courses/${courseId}`)
 }
+
+/** Navigate to the Learning Tracks page. */
+export async function goToLearningTracks(page: Page): Promise<void> {
+  await navigateAndWait(page, '/learning-tracks')
+  // Wait for page heading to confirm render
+  await page.waitForSelector('h1', { state: 'visible', timeout: 10000 }).catch(() => {})
+}

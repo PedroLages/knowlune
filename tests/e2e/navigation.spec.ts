@@ -12,9 +12,9 @@ import { test, expect } from '../support/fixtures'
 import {
   goToOverview,
   goToCourses,
-  goToMyClass,
   goToReports,
   goToSettings,
+  goToLearningTracks,
 } from '../support/helpers/navigation'
 
 test.describe('App Navigation', () => {
@@ -42,10 +42,12 @@ test.describe('App Navigation', () => {
     await expect(page.getByRole('heading', { name: 'All Courses', level: 1 })).toBeVisible()
   })
 
-  test('should navigate to My Courses page', async ({ page }) => {
-    await goToMyClass(page)
+  test('should navigate to Learning Tracks page', async ({ page }) => {
+    await goToLearningTracks(page)
 
-    await expect(page.getByRole('heading', { name: 'My Courses', level: 1 })).toBeVisible()
+    await expect(
+      page.getByRole('heading', { name: /learning tracks/i, level: 1 })
+    ).toBeVisible()
   })
 
   test('should navigate to Reports page', async ({ page }) => {
