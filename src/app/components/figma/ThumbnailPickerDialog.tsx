@@ -20,6 +20,7 @@ import {
   fetchThumbnailFromUrl,
   generateThumbnailWithGemini,
 } from '@/lib/thumbnailService'
+import { extractFrameFromServerVideo } from '@/lib/autoThumbnail'
 import { getAIConfiguration, getDecryptedApiKey } from '@/lib/aiConfiguration'
 import type { ThumbnailSource } from '@/data/types'
 import type { ImportedVideo } from '@/data/types'
@@ -85,14 +86,23 @@ export function ThumbnailPickerDialog({
 
   // --- Auto tab ---
   async function handleAutoExtract() {
-    if (!firstVideo?.fileHandle) {
+    if (!firstVideo) {
       setError('No video found in this course to extract a thumbnail from.')
       return
     }
     setIsLoading(true)
     setError(null)
     try {
-      const blob = await extractThumbnailFromVideo(firstVideo.fileHandle)
+      let blob: Blob
+      if (firstVideo.fileHandle) {
+        blob = await extractThumbnailFromVideo(firstVideo.fileHandle)
+      } else if (firstVideo.serverUrl) {
+        blob = await extractFrameFromServerVideo(firstVideo.serverUrl)
+      } else {
+        setError('No video found in this course to extract a thumbnail from.')
+        setIsLoading(false)
+        return
+      }
       await applyBlob(blob, 'auto')
     } catch (err) {
       // silent-catch-ok: error state updated in component

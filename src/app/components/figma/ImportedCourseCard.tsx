@@ -176,8 +176,12 @@ export function ImportedCourseCard({
   const [searching, setSearching] = useState(false)
   const [previewHandle, setPreviewHandle] = useState<FileSystemFileHandle | null>(null)
 
-  const videoHandle = previewOpen && !searching && firstVideo ? firstVideo.fileHandle : undefined
+  const isServerVideo = firstVideo?.serverUrl != null && !searching && previewOpen
+  const videoHandle = !isServerVideo && previewOpen && !searching && firstVideo
+    ? firstVideo.fileHandle
+    : undefined
   const { blobUrl, error: videoError, loading: videoLoading } = useVideoFromHandle(videoHandle)
+  const previewSrc = isServerVideo ? firstVideo!.serverUrl! : blobUrl
   const activePreviewHandle = showPreview ? previewHandle : undefined
   const {
     blobUrl: previewBlobUrl,
@@ -186,7 +190,7 @@ export function ImportedCourseCard({
   } = useVideoFromHandle(activePreviewHandle)
 
   useEffect(() => {
-    if (!showPreview || course.videoCount === 0 || course.source === 'youtube') {
+    if (!showPreview || course.videoCount === 0 || course.source === 'youtube' || course.source === 'server') {
       setPreviewHandle(null)
       setVideoReady(false)
       return
@@ -886,15 +890,15 @@ export function ImportedCourseCard({
           </DialogHeader>
           <div className="relative aspect-video w-full rounded-2xl overflow-hidden bg-black shadow-2xl">
             {isLoading && <Skeleton className="absolute inset-0 rounded-2xl" />}
-            {!isLoading && videoError && (
+            {!isLoading && videoError && !isServerVideo && (
               <p className="absolute inset-0 flex items-center justify-center text-white/90 text-sm text-center px-6">
                 {videoError}
               </p>
             )}
-            {!isLoading && !videoError && blobUrl && (
-              <VideoPlayer src={blobUrl} title={firstVideo?.filename} autoplay />
+            {!isLoading && !videoError && previewSrc && (
+              <VideoPlayer src={previewSrc} title={firstVideo?.filename} autoplay />
             )}
-            {!isLoading && !videoError && !blobUrl && (
+            {!isLoading && !videoError && !previewSrc && (
               <p className="absolute inset-0 flex items-center justify-center text-white/70 text-sm text-center px-6">
                 No video found in this course.
               </p>

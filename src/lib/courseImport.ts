@@ -15,11 +15,11 @@ import {
   matchOrCreateAuthor,
   detectAuthorPhoto,
 } from '@/lib/authorDetection'
-import { autoGenerateThumbnail } from '@/lib/autoThumbnail'
+import { autoGenerateThumbnail, autoGenerateThumbnailFromServer } from '@/lib/autoThumbnail'
 import { fetchDirectoryListing, isValidImportUrl } from '@/lib/courseServerService'
 import type { ServerResult } from '@/lib/courseServerService'
 import { generateStoryboard, saveVideoStoryboard, loadVideoStoryboard } from '@/lib/videoStoryboard'
-import { loadThumbnailFromFile, saveCourseThumbnail } from '@/lib/thumbnailService'
+import { loadThumbnailFromFile, saveCourseThumbnail, fetchThumbnailFromUrl } from '@/lib/thumbnailService'
 import {
   showDirectoryPicker,
   scanDirectory,
@@ -91,6 +91,7 @@ export interface ScannedImage {
   filename: string
   path: string
   fileHandle?: FileSystemFileHandle // absent for server-imported files
+  serverUrl?: string // present for server-imported images (HTTP URL)
 }
 
 type VideoExtractionResult = {
@@ -933,10 +934,36 @@ export async function persistScannedCourse(
 
   // Auto-generate thumbnail from first video at 10% mark (E1B-S04 AC1)
   // Skip if user selected a cover image in the wizard — don't overwrite their choice
-  if (!overrides?.coverImageHandle && orderedVideos.length > 0 && orderedVideos[0].fileHandle) {
-    autoGenerateThumbnail(course.id, orderedVideos[0].fileHandle).catch(() => {
-      // silent-catch-ok: thumbnail generation failure is non-fatal — card shows placeholder icon (E1B-S04 AC3)
-    })
+  // Tiered approach: local FileHandle > server image > server video frame (best-effort)
+  if (!overrides?.coverImageHandle && orderedVideos.length > 0) {
+    const firstVideo = orderedVideos[0]
+    if (firstVideo.fileHandle) {
+      autoGenerateThumbnail(course.id, firstVideo.fileHandle).catch(() => {
+        // silent-catch-ok: thumbnail generation failure is non-fatal — card shows placeholder icon (E1B-S04 AC3)
+      })
+    } else if (scanned.images.length > 0 && scanned.images[0].serverUrl) {
+      // Server course with discovered images — use first image as thumbnail (more reliable than video extraction)
+      fetchThumbnailFromUrl(scanned.images[0].serverUrl)
+        .then(async blob => {
+          await saveCourseThumbnail(course.id, blob, 'auto')
+          const url = URL.createObjectURL(blob)
+          useCourseImportStore.setState(state => ({
+            thumbnailUrls: { ...state.thumbnailUrls, [course.id]: url },
+          }))
+        })
+        .catch(() => {
+          // Fall back to video frame extraction
+          if (firstVideo.serverUrl) {
+            autoGenerateThumbnailFromServer(course.id, firstVideo.serverUrl).catch(() => {
+              // silent-catch-ok
+            })
+          }
+        })
+    } else if (firstVideo.serverUrl) {
+      autoGenerateThumbnailFromServer(course.id, firstVideo.serverUrl).catch(() => {
+        // silent-catch-ok: server thumbnail failure is non-fatal — card shows placeholder icon
+      })
+    }
   }
 
   // Background storyboard generation for local videos (fire-and-forget, sequential).
@@ -1609,6 +1636,7 @@ export async function scanCourseFolderFromServer(
     format: 'mp4' | 'webm' | 'mkv' | 'ts' | 'avi'
   }[] = []
   const allPdfs: { name: string; url: string; path: string }[] = []
+  const allImages: { name: string; url: string; path: string }[] = []
   const allCaptions: { rawStem: string; cleanStem: string; language?: string; name: string; url: string }[] = []
   // Map file URLs → parent directory URLs for section structure derivation
   const fileDirMap = new Map<string, string>()
@@ -1641,7 +1669,7 @@ export async function scanCourseFolderFromServer(
         }
 
         for (const file of result.data.files) {
-          const currentCount = allVideos.length + allPdfs.length
+          const currentCount = allVideos.length + allPdfs.length + allImages.length
           if (currentCount >= MAX_SERVER_SCAN_FILES) break
           if (file.type === 'directory') {
             pendingDirs.push(file.url)
@@ -1666,6 +1694,13 @@ export async function scanCourseFolderFromServer(
               path: relPath,
             })
             fileDirMap.set(file.url, dirUrl)
+          } else if (file.type === 'image') {
+            const relPath = file.url.replace(courseBaseUrl + '/', '')
+            allImages.push({
+              name: file.name,
+              url: file.url,
+              path: relPath,
+            })
           } else if (file.type === 'caption') {
             // Collect caption files for post-scan matching (Unit 4)
             const captionStemRaw = file.name.replace(/\.[a-zA-Z0-9]{2,4}$/, '')
@@ -1683,7 +1718,7 @@ export async function scanCourseFolderFromServer(
         dirsScanned++
         // Update progress: dirsScanned / approximate total (pending + scanned + current batch)
         const total = pendingDirs.length + seen.size
-        const fileCount = allVideos.length + allPdfs.length
+        const fileCount = allVideos.length + allPdfs.length + allImages.length
         progressStore.updateScanProgress(courseId, fileCount, total > 0 ? total : null)
       })
     )
@@ -1699,7 +1734,7 @@ export async function scanCourseFolderFromServer(
   // Detect and log when the file cap was reached during the scan.
   // This means the import result is partial — the server directory has more
   // files than MAX_SERVER_SCAN_FILES permits.
-  const totalFiles = allVideos.length + allPdfs.length
+  const totalFiles = allVideos.length + allPdfs.length + allImages.length
   if (totalFiles >= MAX_SERVER_SCAN_FILES) {
     hitCap = true
     console.warn(
@@ -1790,6 +1825,15 @@ export async function scanCourseFolderFromServer(
   // Derive server path (relative path from server root to this course folder)
   const serverPath = decodeURIComponent(urlPath.replace(/^\//, '').replace(/\/$/, ''))
 
+  // Build ScannedImage[] from server-discovered images
+  const images: ScannedImage[] = allImages
+    .sort((a, b) => a.path.localeCompare(b.path, undefined, { numeric: true }))
+    .map(img => ({
+      filename: img.name,
+      path: img.path,
+      serverUrl: img.url,
+    }))
+
   return {
     id: courseId,
     name: courseName,
@@ -1797,7 +1841,7 @@ export async function scanCourseFolderFromServer(
     directoryHandle: null,
     videos,
     pdfs,
-    images: [],
+    images,
     source: 'server',
     captions: captions.length > 0 ? captions : undefined,
     ...(serverId ? { serverId } : {}),

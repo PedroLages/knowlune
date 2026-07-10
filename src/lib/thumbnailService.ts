@@ -23,7 +23,7 @@ const JPEG_QUALITY = 0.82
 // Core resize utility (shared by all sources)
 // ---------------------------------------------------------------------------
 
-function resizeImageToBlob(
+export function resizeImageToBlob(
   source: HTMLVideoElement | HTMLImageElement | ImageBitmap,
   width = THUMB_W,
   height = THUMB_H

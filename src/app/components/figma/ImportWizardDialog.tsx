@@ -398,13 +398,22 @@ export function ImportWizardDialog({
       for (const image of scannedCourse!.images) {
         if (cancelled) return
         try {
-          if (!image.fileHandle) continue
-          const file = await image.fileHandle.getFile()
-          const url = URL.createObjectURL(file)
-          urls.set(image.path, url)
-          objectUrls.push(url)
+          if (image.fileHandle) {
+            const file = await image.fileHandle.getFile()
+            const url = URL.createObjectURL(file)
+            urls.set(image.path, url)
+            objectUrls.push(url)
+          } else if (image.serverUrl) {
+            // Server-imported image — fetch over HTTP and create blob URL
+            const response = await fetch(image.serverUrl, { mode: 'cors' })
+            if (!response.ok) continue
+            const blob = await response.blob()
+            const url = URL.createObjectURL(blob)
+            urls.set(image.path, url)
+            objectUrls.push(url)
+          }
         } catch {
-          // silent-catch-ok: image preview is optional, skip on error
+          // silent-catch-ok: image preview is optional, skip on error (CORS, network, etc.)
         }
       }
 
