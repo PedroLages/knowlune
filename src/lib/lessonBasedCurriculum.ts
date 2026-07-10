@@ -481,10 +481,27 @@ function resolveLessonGroup(builder: LessonGroupBuilder): LessonGroup | null {
 // ---------------------------------------------------------------------------
 
 /**
+ * Safely decode a URI-encoded string, returning the original on malformed input.
+ */
+function safeDecode(value: string): string {
+  if (!value) return value
+  try {
+    return decodeURIComponent(value)
+  } catch {
+    // silent-catch-ok: return original on malformed encoding (e.g., %ZZ)
+    return value
+  }
+}
+
+/**
  * Extract the first folder segment from a path (section name).
+ * Decodes URI-encoded paths so that server-imported courses with
+ * URL-encoded folder names (e.g. "03%20-%20Linux%20Fundamentals")
+ * produce clean section names.
  */
 function getSectionName(path: string): string {
-  const normalized = path.replace(/^\/+/, '')
+  const decoded = safeDecode(path)
+  const normalized = decoded.replace(/^\/+/, '')
   const slashIndex = normalized.indexOf('/')
   return slashIndex > 0 ? normalized.substring(0, slashIndex) : ''
 }
@@ -510,8 +527,12 @@ function parseSectionPrefix(path: string): string {
 function cleanSectionTitle(folderName: string): string {
   if (!folderName) return 'Course Content'
 
+  // Decode URI-encoded paths from server imports
+  // (e.g. "03%20-%20Linux%20Fundamentals" → "03 - Linux Fundamentals")
+  const decoded = safeDecode(folderName)
+
   // Strip leading numeric prefix (e.g. "01", "02 - ", "03-")
-  const cleaned = folderName
+  const cleaned = decoded
     .replace(/^\d+\s*-\s*/, '')  // "01 - Overview"
     .replace(/^\d+-/, '')         // "01-Overview"
     .replace(/^\d+\s+/, '')       // "01 Overview"
