@@ -436,6 +436,8 @@ export function LearningTrackDetail() {
   // Compute the first incomplete lesson for the CTA course.
   // Uses contentProgress (statusMap) as primary source, with legacy progress table fallback.
   // Returns undefined during contentProgress loading to preserve skeleton/spinner state.
+  // Returns undefined (not the first video) when all lessons are complete — the caller
+  // should handle "complete" state rather than restarting lesson 1.
   const targetLessonId = useMemo(() => {
     const ctaCourseId = currentCourseId ?? firstCourseId
     if (!ctaCourseId) return undefined
@@ -452,11 +454,8 @@ export function LearningTrackDetail() {
 
     const progressList = [...videoProgressMap.values()].filter(p => p.courseId === ctaCourseId)
 
-    return (
-      findFirstIncompleteLesson(ctaCourseId, statusMap, progressList, videos, pdfs) ??
-      videos[0]?.id ??
-      pdfs[0]?.id
-    )
+    // When all lessons are complete, return undefined — never restart lesson 1
+    return findFirstIncompleteLesson(ctaCourseId, statusMap, progressList, videos, pdfs) ?? undefined
   }, [
     currentCourseId,
     firstCourseId,
@@ -469,6 +468,7 @@ export function LearningTrackDetail() {
 
   // First lesson for the ContinueLearningBento's current entry.
   // Uses contentProgress (statusMap) as primary source, with legacy progress table fallback.
+  // Returns undefined when all lessons are complete — never restarts lesson 1.
   const currentEntryTargetLessonId = useMemo(() => {
     const courseId = currentEntry?.courseId
     if (!courseId) return undefined
@@ -485,27 +485,30 @@ export function LearningTrackDetail() {
 
     const progressList = [...videoProgressMap.values()].filter(p => p.courseId === courseId)
 
-    return (
-      findFirstIncompleteLesson(courseId, statusMap, progressList, videos, pdfs) ??
-      videos[0]?.id ??
-      pdfs[0]?.id
-    )
+    // When all lessons are complete, return undefined — never restart lesson 1
+    return findFirstIncompleteLesson(courseId, statusMap, progressList, videos, pdfs) ?? undefined
   }, [currentEntry, videosByCourse, pdfsByCourse, videoProgressMap, statusMap, loadedCourseIds])
 
   // Map of courseId → first incomplete lesson ID, for PathTimeline navigation.
   // Uses contentProgress (statusMap) as primary source, with legacy progress table fallback.
   // Courses without loaded contentProgress are skipped (no entry in the map) — the
   // PathTimeline's onCourseClick navigates to the course overview in that case.
+  // Courses where all lessons are complete are also skipped — never restart lesson 1.
   const firstLessonByCourse = useMemo(() => {
     const map = new Map<string, string>()
     for (const [courseId, videos] of videosByCourse) {
       if (!loadedCourseIds.has(courseId)) continue
       const pdfs = pdfsByCourse.get(courseId) ?? []
       const progressList = [...videoProgressMap.values()].filter(p => p.courseId === courseId)
-      const lessonId =
-        findFirstIncompleteLesson(courseId, statusMap, progressList, videos, pdfs) ??
-        videos[0]?.id ??
-        pdfs[0]?.id
+      const lessonId = findFirstIncompleteLesson(
+        courseId,
+        statusMap,
+        progressList,
+        videos,
+        pdfs,
+      )
+      // When all lessons are complete, lessonId is null — skip this course
+      // (PathTimeline will navigate to the course overview instead)
       if (lessonId) {
         map.set(courseId, lessonId)
       }
@@ -534,9 +537,18 @@ export function LearningTrackDetail() {
     const videos = videosByCourse.get(courseId) ?? []
     if (videos.length === 0) return undefined
     const progressList = [...videoProgressMap.values()].filter(p => p.courseId === courseId)
-    const completedCount = progressList.filter(p => p.completionPercentage >= 90).length
+    const progressByVideoId = new Map(progressList.map(p => [p.videoId, p]))
+    const completedCount = videos.filter(v => {
+      const cpStatus = statusMap[`${courseId}:${v.id}`]
+      const vp = progressByVideoId.get(v.id)
+      // Use same completion rules as the canonical resolver
+      if (cpStatus === 'completed') return true
+      if (vp?.completedAt) return true
+      if ((vp?.completionPercentage ?? 0) >= 90) return true
+      return false
+    }).length
     return Math.max(0, videos.length - completedCount)
-  }, [currentEntry, videosByCourse, videoProgressMap])
+  }, [currentEntry, videosByCourse, videoProgressMap, statusMap])
 
   // Estimated remaining minutes for current course
   const currentCourseRemainingMinutes = useMemo(() => {
@@ -545,11 +557,16 @@ export function LearningTrackDetail() {
     const videos = videosByCourse.get(courseId) ?? []
     if (videos.length === 0) return undefined
     const progressList = [...videoProgressMap.values()].filter(p => p.courseId === courseId)
-    const completedIds = new Set(
-      progressList.filter(p => p.completionPercentage >= 90).map(p => p.videoId)
-    )
+    const progressByVideoId = new Map(progressList.map(p => [p.videoId, p]))
     const remainingSeconds = videos
-      .filter(v => !completedIds.has(v.id))
+      .filter(v => {
+        const cpStatus = statusMap[`${courseId}:${v.id}`]
+        const vp = progressByVideoId.get(v.id)
+        if (cpStatus === 'completed') return false
+        if (vp?.completedAt) return false
+        if ((vp?.completionPercentage ?? 0) >= 90) return false
+        return true
+      })
       .reduce((sum, v) => sum + v.duration, 0)
     return Math.round(remainingSeconds / 60)
   }, [currentEntry, videosByCourse, videoProgressMap])

@@ -75,3 +75,69 @@ export function findFirstIncompleteLesson(
   // Phase 3: All lessons explicitly completed — caller handles review behavior
   return null
 }
+
+// ── Resume target with position ────────────────────────────────────────────
+
+export interface ResumeTargetResult {
+  lessonId: string
+  /** Saved playback position in seconds; 0 for unstarted lessons */
+  resumePositionSeconds: number
+}
+
+/**
+ * Like {@link findFirstIncompleteLesson} but also returns the saved playback
+ * position (`currentTime`) for partially-watched lessons, enabling the caller
+ * to pass it through to the lesson player.
+ *
+ * Returns `null` when all lessons are complete.
+ */
+export function findResumeTarget(
+  courseId: string,
+  statusMap: Record<string, CompletionStatus>,
+  videoProgressList: VideoProgress[],
+  videos: ImportedVideo[],
+  pdfs: ImportedPdf[] = [],
+): ResumeTargetResult | null {
+  const sortedVideos = [...videos].sort((a, b) => a.order - b.order)
+  const progressByVideoId = new Map(videoProgressList.map((p) => [p.videoId, p]))
+
+  for (const video of sortedVideos) {
+    const statusFromMap = statusMap[`${courseId}:${video.id}`]
+
+    if (statusFromMap) {
+      if (statusFromMap !== 'completed') {
+        const vp = progressByVideoId.get(video.id)
+        return {
+          lessonId: video.id,
+          resumePositionSeconds:
+            statusFromMap === 'in-progress' ? (vp?.currentTime ?? 0) : 0,
+        }
+      }
+      // Completed in contentProgress — skip
+      continue
+    }
+
+    // No contentProgress entry — fall back to legacy progress table
+    const legacyProg = progressByVideoId.get(video.id)
+    if (!legacyProg || legacyProg.completionPercentage < 90) {
+      return {
+        lessonId: video.id,
+        resumePositionSeconds: legacyProg?.currentTime ?? 0,
+      }
+    }
+    // Legacy progress >= 90% — consider completed, skip
+  }
+
+  // All videos completed or no videos — try PDFs
+  if (sortedVideos.length === 0 && pdfs.length > 0) {
+    const sortedPdfs = [...pdfs].sort((a, b) => a.filename.localeCompare(b.filename))
+    for (const pdf of sortedPdfs) {
+      const statusFromMap = statusMap[`${courseId}:${pdf.id}`]
+      if (statusFromMap !== 'completed') {
+        return { lessonId: pdf.id, resumePositionSeconds: 0 }
+      }
+    }
+  }
+
+  return null
+}

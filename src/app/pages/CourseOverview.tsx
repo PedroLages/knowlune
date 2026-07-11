@@ -31,8 +31,10 @@ import { db } from '@/db'
 import { useCourseAdapter } from '@/hooks/useCourseAdapter'
 import { useAuthorStore } from '@/stores/useAuthorStore'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
+import { useContentProgressStore } from '@/stores/useContentProgressStore'
 import { useLazyStore } from '@/hooks/useLazyStore'
-import { getLastWatchedLesson, getFirstLesson } from '@/lib/progress'
+import { isLessonCompleted } from '@/lib/progress'
+import { resolveCourseResumeTarget } from '@/lib/learningResumeResolver'
 import { Button } from '@/app/components/ui/button'
 import { Badge } from '@/app/components/ui/badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/app/components/ui/avatar'
@@ -85,6 +87,14 @@ export function CourseOverview() {
   const storeAuthors = useAuthorStore(s => s.authors)
   const loadAuthors = useAuthorStore(s => s.loadAuthors)
   useLazyStore(loadAuthors)
+
+  const statusMap = useContentProgressStore(s => s.statusMap)
+  const loadCourseProgress = useContentProgressStore(s => s.loadCourseProgress)
+
+  // Eagerly load contentProgress for this course
+  useEffect(() => {
+    if (courseId) loadCourseProgress(courseId)
+  }, [courseId, loadCourseProgress])
 
   // Content state
   const [videos, setVideos] = useState<ImportedVideo[]>([])
@@ -145,33 +155,30 @@ export function CourseOverview() {
     }
   }, [courseId])
 
-  // CTA resolution
+  // CTA resolution — uses the canonical resolver so lesson selection matches
+  // the dashboard, track cards, track-detail page, and ContinueLearningBento.
   useEffect(() => {
     if (!courseId || !adapter || contentLoading) return
     let ignore = false
 
     async function resolveCta() {
       try {
-        const lastWatched = await getLastWatchedLesson(courseId!)
+        const target = await resolveCourseResumeTarget(courseId!, { statusMap })
         if (ignore) return
 
-        if (lastWatched) {
-          const allCompleted =
-            videos.length > 0 &&
-            videos.every(
-              v => (progressMap.get(v.id)?.completionPercentage ?? 0) >= COMPLETION_THRESHOLD
-            )
-          setCtaVariant(allCompleted ? 'review' : 'continue')
-          setCtaLessonId(lastWatched.lessonId)
-          setCtaLessonTitle(lastWatched.lessonTitle)
+        if (target.action === 'resume') {
+          setCtaVariant('continue')
+          setCtaLessonId(target.lessonId ?? undefined)
+          setCtaLessonTitle(target.lessonTitle)
+        } else if (target.action === 'start') {
+          setCtaVariant('start')
+          setCtaLessonId(target.lessonId ?? undefined)
+          setCtaLessonTitle(target.lessonTitle)
         } else {
-          const first = await getFirstLesson(adapter!)
-          if (ignore) return
-          if (first) {
-            setCtaVariant('start')
-            setCtaLessonId(first.lessonId)
-            setCtaLessonTitle(first.lessonTitle)
-          }
+          // action === 'complete' — all lessons done
+          setCtaVariant('review')
+          setCtaLessonId(undefined)
+          setCtaLessonTitle(undefined)
         }
       } catch (err) {
         console.error('[CourseOverview CTA] Failed:', err)
@@ -184,7 +191,7 @@ export function CourseOverview() {
     return () => {
       ignore = true
     }
-  }, [courseId, adapter, contentLoading, videos, progressMap])
+  }, [courseId, adapter, contentLoading, videos, progressMap, statusMap])
 
   // Derived data
   const authorData = useMemo(() => {
@@ -200,9 +207,15 @@ export function CourseOverview() {
 
   const completedCount = useMemo(
     () =>
-      videos.filter(v => (progressMap.get(v.id)?.completionPercentage ?? 0) >= COMPLETION_THRESHOLD)
-        .length,
-    [videos, progressMap]
+      videos.filter(v =>
+        isLessonCompleted({
+          courseId: courseId!,
+          lessonId: v.id,
+          contentProgressStatus: statusMap[`${courseId}:${v.id}`],
+          videoProgress: progressMap.get(v.id) ?? null,
+        })
+      ).length,
+    [videos, progressMap, statusMap, courseId]
   )
 
   const groupedContent = useMemo(
@@ -422,7 +435,7 @@ export function CourseOverview() {
               </div>
             ))}
 
-          {ctaLabel && ctaLessonId && (
+          {ctaLabel && (
             <motion.div
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
@@ -437,7 +450,14 @@ export function CourseOverview() {
                   if (ctaVariant === 'start' && course.id) {
                     useCourseImportStore.getState().updateCourseStatus(course.id, 'active')
                   }
-                  navigate(`/courses/${course.id}/lessons/${ctaLessonId}`)
+                  if (ctaVariant === 'review') {
+                    // Course complete — scroll to curriculum for review
+                    window.scrollTo({ top: document.getElementById('curriculum')?.offsetTop ?? 0, behavior: 'smooth' })
+                    return
+                  }
+                  if (ctaLessonId) {
+                    navigate(`/courses/${course.id}/lessons/${ctaLessonId}`)
+                  }
                 }}
               >
                 <Play className="size-5 fill-current" aria-hidden="true" />

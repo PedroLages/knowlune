@@ -312,7 +312,11 @@ test.describe('Learning Tracks — list with seeded data', () => {
     await seedPaths(page, paths, entries)
     await page.reload({ waitUntil: 'load' })
 
-    await expect(page.getByText('2 courses')).toBeVisible()
+    // Scope to the track card badge to avoid ambiguity with the
+    // ContinueLearningPathSection which also shows course counts.
+    await expect(
+      page.locator('[data-slot="badge"]').filter({ hasText: '2 courses' })
+    ).toBeVisible()
   })
 })
 

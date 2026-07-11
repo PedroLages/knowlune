@@ -106,6 +106,14 @@ export function usePathProgress(entries: LearningPathEntry[]): PathProgressSumma
         .toArray()
         .catch(() => [])
 
+      // Load contentProgress for canonical completion status
+      // eslint-disable-next-line error-handling/no-silent-catch -- non-critical persistence error
+      const contentProgressRecords = await db.contentProgress
+        .where('courseId')
+        .anyOf(importedCourseIds)
+        .toArray()
+        .catch(() => [])
+
       // Also check localStorage progress (pre-seeded/legacy)
       localProgress = getAllProgress()
 
@@ -113,19 +121,26 @@ export function usePathProgress(entries: LearningPathEntry[]): PathProgressSumma
         const importedCourse = importedMap.get(entry.courseId)
         const totalLessons = importedCourse?.videoCount ?? 0
 
-        // Count completed videos from Dexie progress table
+        // Count completed from Dexie progress table (completedAt OR completionPct >= 90)
         const completedFromDexie = videoProgress.filter(
-          vp => vp.courseId === entry.courseId && vp.completedAt
+          vp =>
+            vp.courseId === entry.courseId &&
+            (vp.completedAt || vp.completionPercentage >= 90),
+        ).length
+
+        // Count completed from contentProgress table
+        const completedFromContentProgress = contentProgressRecords.filter(
+          cp => cp.courseId === entry.courseId && cp.status === 'completed',
         ).length
 
         // Count completed from localStorage
         const localCourseProgress = localProgress[entry.courseId]
         const completedFromLocal = localCourseProgress?.completedLessons?.length ?? 0
 
-        // Take the higher of the two sources (they may overlap)
+        // Take the highest of all three sources (they may overlap)
         const completedLessons = Math.min(
-          Math.max(completedFromDexie, completedFromLocal),
-          totalLessons
+          Math.max(completedFromDexie, completedFromContentProgress, completedFromLocal),
+          totalLessons,
         )
 
         const pct = totalLessons > 0 ? Math.round((completedLessons / totalLessons) * 100) : 0
@@ -210,7 +225,7 @@ export function useMultiPathProgress(
     const importedCourseIds = [...new Set(importedEntries.map(e => e.courseId))]
 
     // Catalog courses table dropped (E89-S01) — skip catalog DB queries
-    const [importedCourses, videoProgress] = await Promise.all([
+    const [importedCourses, videoProgress, contentProgressRecords] = await Promise.all([
       importedCourseIds.length > 0
         ? // eslint-disable-next-line error-handling/no-silent-catch -- non-critical persistence error
           db.importedCourses
@@ -222,6 +237,14 @@ export function useMultiPathProgress(
       importedCourseIds.length > 0
         ? // eslint-disable-next-line error-handling/no-silent-catch -- non-critical persistence error
           db.progress
+            .where('courseId')
+            .anyOf(importedCourseIds)
+            .toArray()
+            .catch(() => [])
+        : Promise.resolve([]),
+      importedCourseIds.length > 0
+        ? // eslint-disable-next-line error-handling/no-silent-catch -- non-critical persistence error
+          db.contentProgress
             .where('courseId')
             .anyOf(importedCourseIds)
             .toArray()
@@ -250,13 +273,18 @@ export function useMultiPathProgress(
       const ic = importedCourseMap.get(courseId)
       const totalLessons = ic?.videoCount ?? 0
       const completedFromDexie = videoProgress.filter(
-        vp => vp.courseId === courseId && vp.completedAt
+        vp =>
+          vp.courseId === courseId &&
+          (vp.completedAt || vp.completionPercentage >= 90),
+      ).length
+      const completedFromContentProgress = contentProgressRecords.filter(
+        cp => cp.courseId === courseId && cp.status === 'completed',
       ).length
       const localCp = localProgress[courseId]
       const completedFromLocal = localCp?.completedLessons?.length ?? 0
       const completedLessons = Math.min(
-        Math.max(completedFromDexie, completedFromLocal),
-        totalLessons
+        Math.max(completedFromDexie, completedFromContentProgress, completedFromLocal),
+        totalLessons,
       )
       const pct = totalLessons > 0 ? Math.round((completedLessons / totalLessons) * 100) : 0
 

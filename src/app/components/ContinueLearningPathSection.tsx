@@ -4,62 +4,81 @@
  * Shows the user's next best course from active learning paths, enabling
  * 1-click resume to the exact lesson.
  *
- * @see R3, R4, R5 — docs/plans/2026-05-04-001-feat-smart-resume-learning-paths-plan.md
+ * Uses the canonical {@link resolveTrackResumeTarget} resolver so lesson
+ * selection is consistent with track cards, the track-detail page, and the
+ * course-overview CTA.
+ *
+ * @see src/lib/learningResumeResolver.ts
+ * @see docs/plans/2026-05-04-001-feat-smart-resume-learning-paths-plan.md
  */
 
-import { useState, useMemo, useCallback, Component, type ReactNode, type ErrorInfo } from 'react'
+import { useState, useMemo, useCallback, useEffect, useRef, Component, type ReactNode, type ErrorInfo } from 'react'
 import { useNavigate } from 'react-router'
 import { motion } from 'motion/react'
 import { Route, ChevronDown, ChevronUp, ArrowRight } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
+import { db } from '@/db'
 import { useLearningPathStore } from '@/stores/useLearningPathStore'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
+import { useContentProgressStore } from '@/stores/useContentProgressStore'
 import { useMultiPathProgress } from '@/app/hooks/usePathProgress'
+import {
+  resolveCourseResumeTargetSync,
+  type CourseResumeTarget,
+} from '@/lib/learningResumeResolver'
 import { fadeUp } from '@/lib/motion'
-import type { LearningPathEntry, ImportedCourse } from '@/data/types'
+import type { LearningPathEntry, ImportedCourse, ImportedVideo, ImportedPdf, VideoProgress } from '@/data/types'
 import type { CourseProgressInfo } from '@/app/hooks/usePathProgress'
 
 // ── Helpers ──────────────────────────────────────────────────────────────
 
-/**
- * Derive the next best course info for a single path given its sorted entries
- * and course progress map. Returns null if the path is complete or empty.
- */
-interface DerivedCourseInfo {
+/** Per-path actionable info combining progress display with the resolved lesson target. */
+interface ActionablePathInfo {
+  pathId: string
+  pathName: string
+  createdAt: string
+  totalCourses: number
+  estimatedRemainingHours: number
+  /** The course that should be opened next */
   entry: LearningPathEntry
   course: ImportedCourse | null
-  action: 'resume' | 'start'
   completionPct: number
+  /** Resolved lesson target for the selected course (null while loading) */
+  lessonTarget: CourseResumeTarget | null
 }
 
-function deriveNextCourse(
+/**
+ * Find the first actionable course for a path using the same two-pass algorithm
+ * as before (in-progress → unstarted), but augmented with per-lesson resolution.
+ * Returns null when the path is complete or empty.
+ */
+function findActionableCourse(
   sortedEntries: LearningPathEntry[],
   courseProgress: Map<string, CourseProgressInfo> | undefined,
-  importedCourses: ImportedCourse[]
-): DerivedCourseInfo | null {
+  importedCourses: ImportedCourse[],
+): { entry: LearningPathEntry; course: ImportedCourse | null; completionPct: number } | null {
   if (sortedEntries.length === 0 || !courseProgress || courseProgress.size === 0) return null
 
-  // Pass 1: Find the first in-progress course (resume)
+  // Pass 1: first in-progress course
   for (const entry of sortedEntries) {
     const cp = courseProgress.get(entry.courseId)
     if (!cp) continue
     if (cp.completionPct > 0 && cp.completionPct < 100) {
       const course = importedCourses.find(c => c.id === entry.courseId) ?? null
-      return { entry, course, action: 'resume', completionPct: cp.completionPct }
+      return { entry, course, completionPct: cp.completionPct }
     }
   }
 
-  // Pass 2: Find the first unstarted course (start)
+  // Pass 2: first unstarted course
   for (const entry of sortedEntries) {
     const cp = courseProgress.get(entry.courseId)
     if (!cp) continue
     if (cp.completionPct === 0) {
       const course = importedCourses.find(c => c.id === entry.courseId) ?? null
-      return { entry, course, action: 'start', completionPct: 0 }
+      return { entry, course, completionPct: 0 }
     }
   }
 
-  // All complete or unactionable
   return null
 }
 
@@ -71,7 +90,7 @@ interface PathCardProps {
   completionPct: number
   totalCourses: number
   estimatedRemainingHours: number
-  action: 'resume' | 'start'
+  action: 'resume' | 'start' | 'complete'
   navigateLabel: string
   onNavigate: () => void
   isPrimary?: boolean
@@ -88,6 +107,9 @@ function PathResumeCard({
   onNavigate,
   isPrimary = false,
 }: PathCardProps) {
+  const actionLabel =
+    action === 'resume' ? 'Next: ' : action === 'start' ? 'Start: ' : ''
+
   return (
     <div className={`rounded-xl border border-border/50 bg-card p-4 ${isPrimary ? '' : 'mt-2'}`}>
       {/* Path name (small, muted) */}
@@ -95,7 +117,7 @@ function PathResumeCard({
 
       {/* Course title */}
       <h3 className="text-sm font-semibold truncate mb-2">
-        {action === 'resume' ? 'Next: ' : 'Start: '}
+        {actionLabel}
         {courseName}
       </h3>
 
@@ -146,6 +168,17 @@ function ContinueLearningPathSectionInner() {
   const paths = useLearningPathStore(s => s.paths)
   const entries = useLearningPathStore(s => s.entries)
   const importedCourses = useCourseImportStore(s => s.importedCourses)
+  const statusMap = useContentProgressStore(s => s.statusMap)
+  const loadCourseProgress = useContentProgressStore(s => s.loadCourseProgress)
+
+  // Per-course resolved lesson targets (populated asynchronously).
+  // Keyed by courseId; null until the resolver runs for that course.
+  const [lessonTargets, setLessonTargets] = useState<
+    Map<string, CourseResumeTarget>
+  >(new Map())
+
+  // Track which courses we've already resolved to avoid duplicate work
+  const resolvedRef = useRef(new Set<string>())
 
   // Build entries-by-path map for progress computation
   const entriesByPathMap = useMemo(() => {
@@ -163,54 +196,151 @@ function ContinueLearningPathSectionInner() {
   // Get progress for ALL paths in one hook call
   const progressMap = useMultiPathProgress(entriesByPathMap)
 
-  // Derive next course info per path
+  // Collect all course IDs that appear as the first actionable course in any path.
+  // These are the ones we need lesson-level targets for.
+  const targetCourseIds = useMemo(() => {
+    const ids = new Set<string>()
+    for (const [pathId, sortedEntries] of entriesByPathMap) {
+      const progress = progressMap.get(pathId)
+      if (!progress) continue
+      const found = findActionableCourse(sortedEntries, progress.courseProgress, importedCourses)
+      if (found) ids.add(found.entry.courseId)
+    }
+    return ids
+  }, [entriesByPathMap, progressMap, importedCourses])
+
+  // Eagerly load contentProgress + per-course data for target courses,
+  // then resolve lesson targets via the canonical sync resolver.
+  useEffect(() => {
+    const courseIds = [...targetCourseIds]
+    if (courseIds.length === 0) return
+
+    let ignore = false
+
+    async function resolveAll() {
+      // Batch-load contentProgress for all target courses
+      await Promise.allSettled(courseIds.map(id => loadCourseProgress(id)))
+
+      if (ignore) return
+
+      // For each course, load videos + progress, then resolve
+      const next = new Map(lessonTargets)
+      let changed = false
+
+      for (const courseId of courseIds) {
+        if (resolvedRef.current.has(courseId)) continue
+        resolvedRef.current.add(courseId)
+
+        try {
+          const [videos, pdfs, vpList] = await Promise.all([
+            db.importedVideos.where('courseId').equals(courseId).toArray(),
+            db.importedPdfs.where('courseId').equals(courseId).toArray(),
+            db.progress.where('courseId').equals(courseId).toArray(),
+          ])
+
+          const target = resolveCourseResumeTargetSync(courseId, {
+            videos: videos as ImportedVideo[],
+            pdfs: pdfs as ImportedPdf[],
+            videoProgressList: vpList as VideoProgress[],
+            statusMap,
+          })
+
+          next.set(courseId, target)
+          changed = true
+        } catch {
+          // Non-critical — skip this course if data can't be loaded
+        }
+      }
+
+      if (!ignore && changed) setLessonTargets(next)
+    }
+
+    resolveAll()
+    return () => { ignore = true }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [targetCourseIds, statusMap, loadCourseProgress])
+
+  // Reset resolved set when targetCourseIds change structurally
+  useEffect(() => {
+    resolvedRef.current = new Set()
+  }, [targetCourseIds])
+
+  // Derive actionable path info, merging course-level progress with lesson targets
   const actionablePaths = useMemo(() => {
-    const results: Array<{
-      pathId: string
-      pathName: string
-      createdAt: string
-      totalCourses: number
-      estimatedRemainingHours: number
-      info: DerivedCourseInfo
-    }> = []
+    const results: ActionablePathInfo[] = []
 
     for (const [pathId, sortedEntries] of entriesByPathMap) {
       const progress = progressMap.get(pathId)
       const path = paths.find(p => p.id === pathId)
       if (!path || !progress) continue
 
-      const info = deriveNextCourse(sortedEntries, progress.courseProgress, importedCourses)
-      if (info) {
-        results.push({
-          pathId,
-          pathName: path.name,
-          createdAt: path.createdAt,
-          totalCourses: progress.totalCourses,
-          estimatedRemainingHours: progress.estimatedRemainingHours,
-          info,
-        })
-      }
+      const found = findActionableCourse(sortedEntries, progress.courseProgress, importedCourses)
+      if (!found) continue
+
+      const lessonTarget = lessonTargets.get(found.entry.courseId) ?? null
+
+      results.push({
+        pathId,
+        pathName: path.name,
+        createdAt: path.createdAt,
+        totalCourses: progress.totalCourses,
+        estimatedRemainingHours: progress.estimatedRemainingHours,
+        entry: found.entry,
+        course: found.course,
+        completionPct: found.completionPct,
+        lessonTarget,
+      })
     }
 
     // Sort by most recently created first
     results.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
 
     return results
-  }, [entriesByPathMap, progressMap, paths, importedCourses])
+  }, [entriesByPathMap, progressMap, paths, importedCourses, lessonTargets])
 
-  // Handle navigation
+  // Determine the action label from the lesson target.
+  // Falls back to completionPct when the lesson target hasn't resolved yet.
+  const getAction = useCallback(
+    (p: ActionablePathInfo): 'resume' | 'start' | 'complete' => {
+      if (p.lessonTarget) {
+        if (p.lessonTarget.action === 'resume') return 'resume'
+        if (p.lessonTarget.action === 'start') return 'start'
+        return 'complete'
+      }
+      // Before the lesson target resolves, derive from course-level progress
+      return p.completionPct > 0 ? 'resume' : 'start'
+    },
+    [],
+  )
+
+  // Handle navigation to the EXACT lesson URL (not just the course overview).
+  // Uses the pre-resolved lesson target for instant navigation.
   const handleNavigate = useCallback(
-    (pathId: string, courseId: string, action: 'resume' | 'start') => {
-      if (action === 'resume' || action === 'start') {
-        // Navigate to course detail page (the lesson player URL isn't known
-        // without the hook's async targetLessonId resolution; the course
-        // detail page is a safe destination)
-        navigate(`/courses/${courseId}`)
+    (p: ActionablePathInfo) => {
+      const target = p.lessonTarget
+
+      if (target && (target.action === 'resume' || target.action === 'start') && target.lessonId) {
+        // Navigate directly to the lesson player
+        navigate(`/courses/${target.courseId}/lessons/${target.lessonId}`, {
+          state: {
+            fromTrack: { trackId: p.pathId, trackName: p.pathName },
+            resumePositionSeconds: target.resumePositionSeconds,
+          },
+        })
+      } else if (target?.action === 'complete') {
+        // All courses in the track are done — go to track detail
+        navigate(`/learning-tracks/${p.pathId}`)
       } else {
-        navigate(`/learning-tracks/${pathId}`)
+        // Lesson target not yet resolved or course has no playable lessons —
+        // fall back to course overview
+        navigate(`/courses/${p.entry.courseId}`, {
+          state: {
+            fromTrack: { trackId: p.pathId, trackName: p.pathName },
+          },
+        })
       }
     },
-    [navigate]
+    [navigate],
   )
 
   // Empty state: no actionable paths
@@ -230,15 +360,19 @@ function ContinueLearningPathSectionInner() {
       {/* Primary path card */}
       <PathResumeCard
         pathName={primary.pathName}
-        courseName={primary.info.course?.name ?? 'Unknown Course'}
-        completionPct={primary.info.completionPct}
+        courseName={primary.course?.name ?? 'Unknown Course'}
+        completionPct={primary.completionPct}
         totalCourses={primary.totalCourses}
         estimatedRemainingHours={primary.estimatedRemainingHours}
-        action={primary.info.action}
-        navigateLabel={primary.info.action === 'resume' ? 'Continue' : 'Start'}
-        onNavigate={() =>
-          handleNavigate(primary.pathId, primary.info.entry.courseId, primary.info.action)
+        action={getAction(primary)}
+        navigateLabel={
+          getAction(primary) === 'resume'
+            ? 'Continue'
+            : getAction(primary) === 'start'
+              ? 'Start'
+              : 'Review'
         }
+        onNavigate={() => handleNavigate(primary)}
         isPrimary
       />
 
@@ -269,13 +403,19 @@ function ContinueLearningPathSectionInner() {
                 <PathResumeCard
                   key={p.pathId}
                   pathName={p.pathName}
-                  courseName={p.info.course?.name ?? 'Unknown Course'}
-                  completionPct={p.info.completionPct}
+                  courseName={p.course?.name ?? 'Unknown Course'}
+                  completionPct={p.completionPct}
                   totalCourses={p.totalCourses}
                   estimatedRemainingHours={p.estimatedRemainingHours}
-                  action={p.info.action}
-                  navigateLabel={p.info.action === 'resume' ? 'Continue' : 'Start'}
-                  onNavigate={() => handleNavigate(p.pathId, p.info.entry.courseId, p.info.action)}
+                  action={getAction(p)}
+                  navigateLabel={
+                    getAction(p) === 'resume'
+                      ? 'Continue'
+                      : getAction(p) === 'start'
+                        ? 'Start'
+                        : 'Review'
+                  }
+                  onNavigate={() => handleNavigate(p)}
                 />
               ))}
             </div>

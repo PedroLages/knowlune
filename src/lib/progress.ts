@@ -1,4 +1,4 @@
-import { Course, Note } from '@/data/types'
+import { Course, Note, type CompletionStatus, type VideoProgress } from '@/data/types'
 import { db } from '@/db'
 import { logStudyAction, getStudyLog } from './studyLog'
 import {
@@ -140,6 +140,43 @@ export async function getLastWatchedLesson(
 
   return { lessonId: best.videoId, lessonTitle: title }
 }
+
+/**
+ * Canonical lesson-completion check. Evaluates all progress sources in priority
+ * order: contentProgress → legacy VideoProgress → localStorage completedLessons.
+ *
+ * Used by path progress, course progress, resume resolution, and completed-course
+ * detection so every consumer agrees on what "completed" means.
+ *
+ * Only actual lesson IDs should be checked; module / folder / section IDs must
+ * be filtered out by the caller.
+ */
+export interface LessonCompletionInput {
+  courseId: string
+  lessonId: string
+  contentProgressStatus?: CompletionStatus
+  videoProgress?: Pick<VideoProgress, 'completionPercentage' | 'completedAt'> | null
+  legacyCompletedLessonIds?: string[]
+}
+
+export function isLessonCompleted(input: LessonCompletionInput): boolean {
+  // 1. contentProgress status === 'completed' (canonical source)
+  if (input.contentProgressStatus === 'completed') return true
+
+  // 2. Legacy VideoProgress: completedAt exists OR completionPercentage >= 90
+  if (input.videoProgress) {
+    if (input.videoProgress.completedAt) return true
+    if (input.videoProgress.completionPercentage >= 90) return true
+  }
+
+  // 3. Legacy localStorage fallback
+  if (input.legacyCompletedLessonIds?.includes(input.lessonId)) return true
+
+  return false
+}
+
+/** Completion threshold for legacy VideoProgress (percentage). */
+export const COMPLETION_THRESHOLD_LEGACY = 90
 
 /**
  * Get the first non-PDF lesson from a course adapter.
