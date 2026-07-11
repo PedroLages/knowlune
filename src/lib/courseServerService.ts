@@ -33,18 +33,8 @@ export type ServerResult<T> = { ok: true; data: T } | { ok: false; error: string
 
 const FETCH_TIMEOUT_MS = 15_000
 
-/** Recognized video extensions. */
-const VIDEO_EXTENSIONS = new Set([
-  '.mp4',
-  '.mkv',
-  '.webm',
-  '.ts',
-  '.mov',
-  '.avi',
-  '.m4v',
-  '.flv',
-  '.wmv',
-])
+/** Recognized video extensions (aligned with local filesystem scanner). */
+const VIDEO_EXTENSIONS = new Set(['.mp4', '.mkv', '.webm', '.ts', '.avi'])
 
 /** Recognized PDF extension. */
 const PDF_EXTENSIONS = new Set(['.pdf'])
@@ -59,6 +49,40 @@ const CAPTION_EXTENSIONS = new Set(['.srt', '.vtt'])
 
 function normalizeBaseUrl(url: string): string {
   return url.replace(/\/+$/, '')
+}
+
+/**
+ * Normalize a URL to its canonical form for deduplication.
+ *
+ * - Removes URL fragment (`#...`)
+ * - Normalizes duplicate slashes in pathname (`//` → `/`)
+ * - Decodes and re-encodes the pathname to normalize encoding variants
+ * - Strips query parameters by default (nginx autoindex doesn't generate them)
+ * - Handles directory trailing slash normalization
+ *
+ * @param url - The URL to canonicalize
+ * @returns The canonical URL string
+ */
+export function canonicalizeUrl(url: string): string {
+  const parsed = new URL(url)
+  // Remove fragment
+  parsed.hash = ''
+  // Strip query parameters (nginx autoindex doesn't generate meaningful ones)
+  parsed.search = ''
+  // Normalize duplicate slashes
+  parsed.pathname = parsed.pathname.replace(/\/{2,}/g, '/')
+  // Decode and re-encode to normalize encoding variants (e.g., %20 vs space)
+  try {
+    parsed.pathname = decodeURIComponent(parsed.pathname)
+  } catch {
+    // If decoding fails, keep the original pathname
+  }
+  // Re-encode each path segment to normalize encoding
+  parsed.pathname = parsed.pathname
+    .split('/')
+    .map(seg => encodeURIComponent(decodeURIComponent(seg)))
+    .join('/')
+  return parsed.href
 }
 
 function getExtension(filename: string): string {

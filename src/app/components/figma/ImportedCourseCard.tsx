@@ -77,6 +77,12 @@ import {
 import type { ImportedCourse, ImportedVideo, LearnerCourseStatus } from '@/data/types'
 import type { MomentumScore } from '@/lib/momentum'
 
+/** Discriminated union for the video preview source on the course card. */
+type CoursePreviewSource =
+  | { type: 'local'; handle: FileSystemFileHandle }
+  | { type: 'server'; url: string }
+  | null
+
 const statusConfig: Record<
   LearnerCourseStatus,
   { label: string; icon: typeof Circle; badgeClass: string }
@@ -175,11 +181,14 @@ export function ImportedCourseCard({
   const [firstVideo, setFirstVideo] = useState<ImportedVideo | null>(null)
   const [searching, setSearching] = useState(false)
   const [previewHandle, setPreviewHandle] = useState<FileSystemFileHandle | null>(null)
+  const [previewSource, setPreviewSource] = useState<CoursePreviewSource>(null)
+  const [serverPreviewLoading, setServerPreviewLoading] = useState(false)
+  const [serverPreviewError, setServerPreviewError] = useState<string | null>(null)
+  const serverVideoRef = useRef<HTMLVideoElement>(null)
 
   const isServerVideo = firstVideo?.serverUrl != null && !searching && previewOpen
-  const videoHandle = !isServerVideo && previewOpen && !searching && firstVideo
-    ? firstVideo.fileHandle
-    : undefined
+  const videoHandle =
+    !isServerVideo && previewOpen && !searching && firstVideo ? firstVideo.fileHandle : undefined
   const { blobUrl, error: videoError, loading: videoLoading } = useVideoFromHandle(videoHandle)
   const previewSrc = isServerVideo ? firstVideo!.serverUrl! : blobUrl
   const activePreviewHandle = showPreview ? previewHandle : undefined
@@ -189,9 +198,13 @@ export function ImportedCourseCard({
     error: previewError,
   } = useVideoFromHandle(activePreviewHandle)
 
+  const inlinePreviewSrc = previewSource?.type === 'server' ? previewSource.url : previewBlobUrl
+  const isServerPreview = previewSource?.type === 'server'
+
   useEffect(() => {
-    if (!showPreview || course.videoCount === 0 || course.source === 'youtube' || course.source === 'server') {
+    if (!showPreview || course.videoCount === 0 || course.source === 'youtube') {
       setPreviewHandle(null)
+      setPreviewSource(null)
       setVideoReady(false)
       return
     }
@@ -205,30 +218,52 @@ export function ImportedCourseCard({
         if (!vids[0]) {
           console.warn('[CourseCardPreview] No videos found for course', course.id)
           setPreviewHandle(null)
+          setPreviewSource(null)
           setVideoReady(false)
           return
         }
-        if (!vids[0].fileHandle) {
+        // Prefer local fileHandle when available; fall back to serverUrl
+        if (vids[0].fileHandle) {
+          setPreviewHandle(vids[0].fileHandle)
+          setPreviewSource({ type: 'local', handle: vids[0].fileHandle })
+        } else if (vids[0].serverUrl) {
+          setPreviewHandle(null)
+          setPreviewSource({ type: 'server', url: vids[0].serverUrl })
+        } else {
           console.warn(
-            '[CourseCardPreview] First video has null fileHandle',
+            '[CourseCardPreview] First video has no fileHandle or serverUrl',
             vids[0].filename,
             course.id
           )
           setPreviewHandle(null)
+          setPreviewSource(null)
           setVideoReady(false)
-          return
         }
-        setPreviewHandle(vids[0].fileHandle)
       })
       .catch(err => {
         console.warn('[CourseCardPreview] DB query failed for course', course.id, err)
         setPreviewHandle(null)
+        setPreviewSource(null)
         setVideoReady(false)
       })
     return () => {
       cancelled = true
     }
   }, [showPreview, course.id, course.videoCount, course.source])
+
+  // Clean up server video resources on preview end
+  useEffect(() => {
+    if (showPreview) return
+    const video = serverVideoRef.current
+    if (video) {
+      video.pause()
+      video.removeAttribute('src')
+      video.load()
+    }
+    setServerPreviewLoading(false)
+    setServerPreviewError(null)
+    setPreviewSource(null)
+  }, [showPreview])
 
   const status = course.status
   const config = statusConfig[status]
@@ -374,7 +409,7 @@ export function ImportedCourseCard({
               />
             )}
             {/* Inline video preview — matches legacy CourseCard behavior (no status gate) */}
-            {showPreview && previewBlobUrl && (
+            {showPreview && previewSource?.type === 'local' && previewBlobUrl && (
               // width/height attrs prevent the browser from using intrinsic video dimensions before layout.
               // This was the root cause of the pixelated/cropped preview on non-16:9 source videos.
               <video
@@ -395,21 +430,58 @@ export function ImportedCourseCard({
                 )}
               />
             )}
+            {/* Server video preview — streams directly via HTTP Range requests */}
+            {showPreview && isServerPreview && inlinePreviewSrc && (
+              <video
+                ref={serverVideoRef}
+                key={inlinePreviewSrc}
+                src={inlinePreviewSrc}
+                crossOrigin="anonymous"
+                muted
+                autoPlay
+                playsInline
+                loop
+                preload="metadata"
+                aria-hidden="true"
+                width="100%"
+                height="100%"
+                onLoadStart={() => {
+                  setServerPreviewLoading(true)
+                  setServerPreviewError(null)
+                }}
+                onCanPlay={() => {
+                  setServerPreviewLoading(false)
+                  setVideoReady(true)
+                }}
+                onError={() => {
+                  setServerPreviewLoading(false)
+                  setServerPreviewError('Server video failed to load')
+                }}
+                className={cn(
+                  'absolute inset-0 block w-full h-full object-cover pointer-events-none transition-opacity duration-500',
+                  videoReady ? 'opacity-100' : 'opacity-0'
+                )}
+              />
+            )}
             {/* Loading overlay — shown while preview is being prepared */}
-            {showPreview && previewLoading && (
+            {showPreview && (previewLoading || serverPreviewLoading) && (
               <div className="absolute inset-0 z-10 bg-black/60 backdrop-blur-sm flex items-center justify-center">
                 <Loader2 className="size-5 text-white/80 animate-spin" aria-hidden="true" />
               </div>
             )}
             {/* Error indicator — shown when preview cannot load */}
-            {showPreview && previewError && !previewLoading && course.source !== 'youtube' && (
-              <div
-                className="absolute top-2 left-2 z-30 rounded-full px-2 py-1 bg-black/60 text-white backdrop-blur-sm border border-white/10 text-[11px] font-medium"
-                role="status"
-              >
-                Preview unavailable
-              </div>
-            )}
+            {showPreview &&
+              (previewError || serverPreviewError) &&
+              !previewLoading &&
+              !serverPreviewLoading &&
+              course.source !== 'youtube' && (
+                <div
+                  className="absolute top-2 left-2 z-30 rounded-full px-2 py-1 bg-black/60 text-white backdrop-blur-sm border border-white/10 text-[11px] font-medium"
+                  role="status"
+                >
+                  Preview unavailable
+                </div>
+              )}
 
             {/* Selection checkbox — top-left, only when selection mode is active */}
             {onToggleSelect && (
