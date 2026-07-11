@@ -38,13 +38,14 @@
     "test:e2e": "playwright test",
     "test:e2e:ci": "npm run test:e2e 2>&1 | bash scripts/filter-test-output.sh",
     "test:e2e:ui": "playwright test --ui",
-    "ci": "npm run typecheck && npm run lint && npm run format:check && npm run build && npm run test:unit",
+    "ci": "npm run typecheck && npm run lint && npm run format:check && npm run build && npm run verify:dist && npm run test:unit",
     "preview": "vite preview",
     "lighthouse": "lhci autorun",
     "lighthouse:collect": "lhci collect",
     "lighthouse:assert": "lhci assert",
     "lighthouse:upload": "lhci upload",
-    "verify:storage": "node scripts/verify-storage-config.mjs"
+    "verify:storage": "node scripts/verify-storage-config.mjs",
+    "verify:dist": "node scripts/verify-dist.cjs"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.44",

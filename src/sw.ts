@@ -74,6 +74,40 @@ registerRoute(/^\/api\/ai\/.*/i, new NetworkOnly())
 // e. ABS proxy: NetworkOnly
 registerRoute(/\/api\/abs\/proxy\//, new NetworkOnly())
 
+// f. Hashed route chunks: CacheFirst, 500 entries, 30 days
+// Content-hashed filenames are immutable (new build → new hashes), so
+// CacheFirst is safe. This cache acts as transitional protection for
+// tabs running an older application bundle — after a SW update, old
+// tabs may still reference chunks from the previous deployment. Those
+// chunks remain in this cache (up to 30 days) even if they're no
+// longer in the precache manifest.
+//
+// Uses a dedicated cache name (knowlune-route-chunks) separate from the
+// precache so it survives across SW updates.
+registerRoute(
+  /^\/assets\/.+\.(?:js|css|woff2?)$/i,
+  new CacheFirst({
+    cacheName: 'knowlune-route-chunks',
+    plugins: [
+      new ExpirationPlugin({ maxEntries: 500, maxAgeSeconds: 30 * 24 * 60 * 60 }),
+      new CacheableResponsePlugin({ statuses: [200] }),
+    ],
+  })
+)
+
+// g. Workers: CacheFirst, 50 entries, 30 days
+// Web workers and service worker helpers are also content-hashed.
+registerRoute(
+  /\.worker\.js$/i,
+  new CacheFirst({
+    cacheName: 'knowlune-route-chunks',
+    plugins: [
+      new ExpirationPlugin({ maxEntries: 50, maxAgeSeconds: 30 * 24 * 60 * 60 }),
+      new CacheableResponsePlugin({ statuses: [200] }),
+    ],
+  })
+)
+
 // ─── Navigation fallback ─────────────────────────────────────────────────
 //
 // Network-first for HTML navigation requests.  The old App Shell pattern
@@ -123,18 +157,56 @@ setCatchHandler(async ({ request }) => {
 setDefaultHandler(new NetworkOnly())
 
 // ─── SW Lifecycle ────────────────────────────────────────────────────────
-// skipWaiting intentionally omitted from install event — registerType:'autoUpdate'
-// means vite-plugin-pwa calls skipWaiting() automatically after a new SW
-// takes over. The SKIP_WAITING message listener below is retained for
-// backward-compatible manual updates via the message protocol.
+//
+// registerType: 'prompt' means the browser detects new SW versions but does
+// NOT auto-activate them. The old SW continues controlling existing tabs.
+// The PWAUpdatePrompt component shows a "New version available" banner;
+// the user accepts → skipWaiting() is called via message → page reloads →
+// the new SW activates for the fresh page.
+//
+// We deliberately do NOT call clients.claim() here — claim() would make the
+// new SW take control of tabs that are running an OLD application bundle
+// (loaded by the old SW). Those old tabs reference old chunk filenames that
+// the new SW's precache may not contain, causing "Failed to fetch dynamically
+// imported module" errors.
+//
+// The SKIP_WAITING message listener below is driven by PWAUpdatePrompt's
+// "Reload" button and is the ONLY path to activate a waiting SW.
+
+// ─── SW diagnostics ──────────────────────────────────────────────────────
+
+const BUILD_VERSION = '__BUILD_VERSION__'
+
+self.addEventListener('install', () => {
+  if (BUILD_VERSION && !BUILD_VERSION.startsWith('__')) {
+    console.log(`[SW] Install — build ${BUILD_VERSION}`)
+  } else {
+    console.log('[SW] Install')
+  }
+})
 
 self.addEventListener('activate', event => {
+  if (BUILD_VERSION && !BUILD_VERSION.startsWith('__')) {
+    console.log(`[SW] Activate — build ${BUILD_VERSION}`)
+  } else {
+    console.log('[SW] Activate')
+  }
+
+  // Clean up old precache revisions (Workbox default behavior).
+  // We intentionally omit clients.claim() — see lifecycle comment above.
   event.waitUntil(
-    self.clients.claim().catch(err => {
-      // silent-catch-ok
-      console.warn('[SW] clients.claim() failed:', err)
-    })
+    (async () => {
+      // Workbox automatically cleans outdated precache entries during activate.
+      // No additional cleanup needed.
+    })()
   )
+})
+
+// ─── Controller change detection ─────────────────────────────────────────
+// Log when a new SW takes control (useful for debugging deployment mismatches)
+
+self.addEventListener('controllerchange', () => {
+  console.log('[SW] Controller changed — new SW took over')
 })
 
 // ─── SKIP_WAITING message listener ───────────────────────────────────────
@@ -212,10 +284,13 @@ self.addEventListener('push', event => {
           // Whitelist: only safe display fields pass through from the payload.
           // Reject actions, requireInteraction, renotify, silent, and other
           // fields that a malicious push server could abuse.
-          const ALLOWED_PAYLOAD_FIELDS: (keyof NotificationOptions)[] = [
+          // Cast via unknown — the WebWorker lib types are missing 'image',
+          // 'vibrate', and 'timestamp' from NotificationOptions, but all
+          // three are valid per the Notifications API spec.
+          const ALLOWED_PAYLOAD_FIELDS = [
             'body', 'icon', 'badge', 'tag', 'image',
             'vibrate', 'dir', 'lang', 'timestamp',
-          ]
+          ] as unknown as (keyof NotificationOptions)[]
 
           const safePayload: Record<string, unknown> = {}
           for (const field of ALLOWED_PAYLOAD_FIELDS) {

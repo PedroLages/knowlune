@@ -3,6 +3,50 @@ import { createRoot } from 'react-dom/client'
 import App from './app/App.tsx'
 import './styles/index.css'
 
+// ─── Stale-chunk recovery ─────────────────────────────────────────────────
+//
+// When a deployment replaces build artifacts, the browser may have loaded an
+// older index.html (from SW precache or CDN edge cache) that references stale
+// chunk filenames. Dynamic imports of those stale chunks fail with a
+// vite:preloadError, producing "Failed to fetch dynamically imported module".
+//
+// This listener intercepts that error and reloads the page exactly ONCE
+// (guarded by sessionStorage). The reload fetches fresh HTML from the origin,
+// which references current chunk filenames. No reload-loop risk — if the
+// reloaded page also fails, the sessionStorage key is already set and the
+// error is logged but not re-triggered.
+//
+// Must run BEFORE React.render() — React.lazy() calls happen during render.
+
+const CHUNK_RECOVERY_KEY = 'knowlune-chunk-recovery'
+
+window.addEventListener('vite:preloadError', (event) => {
+  event.preventDefault()
+
+  if (sessionStorage.getItem(CHUNK_RECOVERY_KEY)) {
+    console.error(
+      '[ChunkRecovery] Reload already attempted — chunk still missing:',
+      event
+    )
+    return
+  }
+
+  sessionStorage.setItem(CHUNK_RECOVERY_KEY, '1')
+  console.warn(
+    '[ChunkRecovery] Stale chunk detected, reloading to fetch fresh assets...'
+  )
+
+  const url = new URL(window.location.href)
+  url.searchParams.set('__reload', Date.now().toString())
+  window.location.replace(url.toString())
+})
+
+// Clear the recovery marker after successful load — next preload error
+// (e.g., from a future deployment) should trigger a fresh recovery reload.
+window.addEventListener('load', () => {
+  sessionStorage.removeItem(CHUNK_RECOVERY_KEY)
+})
+
 // E2E TEST SUPPORT: Expose test mode control for E2E tests (dev only)
 // Tests can call window.__enableBookContentTestMode__() to enable mock EPUB loading
 // Gated behind import.meta.env.DEV — Vite tree-shakes this entire block from production builds

@@ -1,19 +1,25 @@
 # Cloudflare Pages HTTP headers
 # These apply at the CDN level before the HTML <meta> CSP tag is parsed,
 # providing a first line of defense and proper asset caching.
+#
+# Rule precedence: most-specific path wins. The /* catch-all is overridden
+# by any more specific rule that matches the same request path.
 
-# === Security Headers (apply before CSP meta tag is parsed) ===
+# === Default (all routes) — security headers + no HTML caching ===
+# Every SPA navigation route (/courses, /overview, /settings, etc.) hits
+# the SPA fallback that serves index.html. Without explicit no-cache on the
+# catch-all, these responses may be cached by the browser, serving stale HTML
+# that references stale chunk filenames after a deployment.
 /*
+  Cache-Control: no-cache, no-store, must-revalidate
   X-Content-Type-Options: nosniff
   X-Frame-Options: SAMEORIGIN
   Referrer-Policy: strict-origin-when-cross-origin
   Permissions-Policy: geolocation=(), microphone=(), camera=()
 
-# === SPA entry point — never cache (prevents stale SW precache of index.html) ===
-/index.html
-  Cache-Control: no-cache
-
-# === Hashed assets — immutable long-term cache (safe because hashes change on rebuild) ===
+# === Hashed assets — immutable long-term cache (overrides /* for these paths) ===
+# Content-hashed filenames mean a new build produces new URLs, so cache-busting
+# is automatic. immutable tells the browser to skip revalidation entirely.
 /assets/*.js
   Cache-Control: public, max-age=31536000, immutable
 
@@ -23,9 +29,12 @@
 /assets/*.woff2
   Cache-Control: public, max-age=31536000, immutable
 
-# === Service worker — short cache to ensure updates propagate quickly ===
+# === Service worker and Workbox runtime — never cache ===
+# The SW must be revalidated on every navigation to detect updates.
+# A stale SW precaches stale chunk filenames, causing the "Failed to fetch
+# dynamically imported module" error after a new deployment.
 /sw.js
-  Cache-Control: no-cache
+  Cache-Control: no-cache, no-store, must-revalidate
 
 /workbox-*.js
-  Cache-Control: no-cache
+  Cache-Control: no-cache, no-store, must-revalidate
