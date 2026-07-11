@@ -709,7 +709,12 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
   const handleVideoError = () => {
     const video = videoRef.current
     const code = video?.error?.code ?? null
-    const currentPos = video?.currentTime ?? 0
+    // Prefer the pending seek target over video.currentTime when a seek was in
+    // flight. During a network error the browser never received the new byte range,
+    // so video.currentTime still reflects the previous position — but the user
+    // explicitly requested pendingSeekRef. Using the stale value causes recovery
+    // to restore the wrong position (old position instead of intended seek target).
+    const currentPos = pendingSeekRef.current ?? video?.currentTime ?? 0
     const dur = video?.duration ?? 0
     const bufferedEnd =
       video && video.buffered.length > 0 ? video.buffered.end(video.buffered.length - 1) : 0
