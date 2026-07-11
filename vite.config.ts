@@ -481,6 +481,7 @@ function testModeCspPlugin(): Plugin {
 export default defineConfig({
   define: {
     __APP_VERSION__: JSON.stringify(pkg.version),
+    __BUILD_VERSION__: JSON.stringify(`${pkg.version}-${new Date().toISOString().replace(/[:.]/g, '-')}`),
     /** True when Playwright starts the dev server (`PLAYWRIGHT_TEST=1`); skips dev-only overlays. */
     __PLAYWRIGHT_TEST__: JSON.stringify(process.env.PLAYWRIGHT_TEST === '1'),
   },
@@ -502,7 +503,7 @@ export default defineConfig({
   youtubeTranscriptProxy(),
   premiumImportGuard({ enabled: !process.env.PREMIUM_BUILD }),
   VitePWA({
-    registerType: 'autoUpdate',
+    registerType: 'prompt',
     includeAssets: ['favicon.svg', 'apple-touch-icon-180x180.png'],
     manifest: {
       name: 'Knowlune',
