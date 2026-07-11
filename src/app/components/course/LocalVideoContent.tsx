@@ -31,7 +31,7 @@ import {
 import { addBookmark, getLessonBookmarks } from '@/lib/bookmarks'
 import { formatTimestamp } from '@/lib/format'
 import { syncableWrite } from '@/lib/sync/syncableWrite'
-import { loadVideoStoryboard, generateStoryboard, generateStoryboardFromUrl, saveVideoStoryboard } from '@/lib/videoStoryboard'
+import { loadVideoStoryboard, generateStoryboard, saveVideoStoryboard } from '@/lib/videoStoryboard'
 import type { StoryboardProp } from '@/app/components/figma/ScrubPreview'
 import type { ImportedVideo, VideoBookmark, VideoSourceKind } from '@/data/types'
 
@@ -97,7 +97,7 @@ export const LocalVideoContent = forwardRef<VideoPlayerHandle, LocalVideoContent
     // retries on every mouse move for the same lesson.
     const [storyboardFailed, setStoryboardFailed] = useState(false)
     // True while a storyboard is being generated (used for loading spinner in scrub preview).
-    const [storyboardLoading, setStoryboardLoading] = useState(false)
+    const [storyboardLoading, _setStoryboardLoading] = useState(false)
     // Tracks the last known-good playback position from timeupdate events.
     // Used during error recovery to avoid losing the position when the browser
     // resets currentTime to 0 during a decode error (Chromium behavior).
@@ -278,50 +278,12 @@ export const LocalVideoContent = forwardRef<VideoPlayerHandle, LocalVideoContent
             .catch(() => {
               // silent-catch-ok: generation failure is non-fatal — live extraction fallback
             })
-        } else if (video.serverUrl) {
-          // Server-URL video: generate storyboard from remote URL.
-          // Concurrency is limited globally (one at a time) via videoStoryboard module.
-          setStoryboardFailed(false)
-          setStoryboardLoading(true)
-          generateStoryboardFromUrl(video.serverUrl)
-            .then(result => {
-              if (ignore || !result) {
-                if (!ignore) {
-                  setStoryboardFailed(true)
-                  setStoryboardLoading(false)
-                }
-                return
-              }
-              return saveVideoStoryboard(video.id, video.courseId, result).then(() => result)
-            })
-            .then(result => {
-              if (ignore || !result) return
-              const url = URL.createObjectURL(result.blob)
-              const sb: StoryboardProp = {
-                url,
-                columns: result.columns,
-                rows: result.rows,
-                tileWidth: result.tileWidth,
-                tileHeight: result.tileHeight,
-                interval: result.interval,
-                frameCount: result.frameCount,
-              }
-              if (!ignore) {
-                setStoryboard(sb)
-                storyboardUrlRef.current = url
-                setStoryboardLoading(false)
-              } else {
-                URL.revokeObjectURL(url)
-              }
-            })
-            .catch(() => {
-              // silent-catch-ok: generation failure is non-fatal — live extraction fallback
-              if (!ignore) {
-                setStoryboardFailed(true)
-                setStoryboardLoading(false)
-              }
-            })
         }
+        // Server-URL videos without a cached storyboard show timestamp-only
+        // scrub feedback. Auto-generation on mount is disabled intentionally:
+        // downloading/seeking/capturing 20-30 remote frames is expensive and
+        // may hang if the server is slow. Cached/pre-generated thumbnails can
+        // be loaded (handled above) but no new generation runs automatically.
       }
 
       loadOrGenerate()

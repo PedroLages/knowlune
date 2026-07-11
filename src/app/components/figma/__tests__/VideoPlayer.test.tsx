@@ -30,36 +30,6 @@ Object.defineProperty(HTMLMediaElement.prototype, 'load', {
   value: loadMock,
 })
 
-// jsdom's TimeRanges is empty by default (length = 0), causing our
-// seek-ability detection to flag the video as non-seekable. Polyfill
-// seekable to a full-range [0, duration) so tests pass by default.
-// Individual tests can override with Object.defineProperty if needed.
-const defaultSeekable = Object.defineProperties(
-  {} as TimeRanges,
-  {
-    length: { get: () => 1, configurable: true },
-    start: {
-      value: (i: number) => {
-        if (i !== 0) throw new DOMException('IndexSizeError', 'IndexSizeError')
-        return 0
-      },
-      configurable: true,
-    },
-    end: {
-      value: (i: number) => {
-        if (i !== 0) throw new DOMException('IndexSizeError', 'IndexSizeError')
-        // Return a reasonable default — tests override duration separately
-        return 9999
-      },
-      configurable: true,
-    },
-  }
-)
-Object.defineProperty(HTMLMediaElement.prototype, 'seekable', {
-  configurable: true,
-  get: () => defaultSeekable,
-})
-
 import { VideoPlayer } from '../VideoPlayer'
 
 // ---------------------------------------------------------------------------

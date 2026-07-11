@@ -84,11 +84,14 @@ describe('ScrubPreview', () => {
 
   // ---- error path: thumbnail unavailable -----------------------------------
 
-  it('renders placeholder when thumbnail is unavailable', () => {
+  it('renders timestamp when no storyboard and thumbnail unavailable', () => {
     mockThumbnailAvailable.value = false
 
     renderPreview()
-    expect(screen.getByText('Preview')).toBeInTheDocument()
+    // When thumbnail is unavailable and no storyboard exists,
+    // the live canvas shows a spinner but still renders the timestamp.
+    // FormatTimestamp(42) = "0:42" (default time=42 from defaultProps)
+    expect(screen.getByText('0:42')).toBeInTheDocument()
   })
 
   // ---- a11y -----------------------------------------------------------------

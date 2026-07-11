@@ -37,8 +37,6 @@ import { Slider } from '@/app/components/ui/slider'
 import { cn } from '@/app/components/ui/utils'
 import { VideoShortcutsOverlay } from '@/app/components/figma/VideoShortcutsOverlay'
 import { formatTimestamp as formatTime } from '@/lib/format'
-import { toast } from 'sonner'
-
 // ── Video seek diagnostics ────────────────────────────────────────────────
 // Controlled by VITE_VIDEO_DIAGNOSTICS env var (set to 'true' to enable).
 // Logs structured [VideoSeek] events for diagnosing Range/206 issues.
@@ -205,27 +203,6 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
     getVideoElement: () => videoRef.current,
   }))
 
-  // ── Seek-ability detection ──────────────────────────────────────────────
-  // State flag drives UI (disabled buttons). Ref is read in event handlers
-  // (handleSeeked, handleProgress) to avoid stale closures.
-  const [seekDisabled, setSeekDisabled] = useState(false)
-  const seekDisabledRef = useRef(false)
-
-  // Probe-seek failure detection: before each seek we arm a probe. If the
-  // seeked event lands at ~0s when the target was > 0.5s, and no successful
-  // seek has completed within the last second, seeking is permanently disabled.
-  const seekProbeActiveRef = useRef(false)
-  const lastSuccessfulSeekTimestampRef = useRef(Date.now())
-  const seekProbeTimedOutRef = useRef(false)
-  const seekProbeTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
-
-  // How many progress events have we seen (for re-evaluation on first 3 only)
-  const progressCheckCountRef = useRef(0)
-  // One-shot toast guard so we don't spam the user on every interaction
-  const toastShownRef = useRef(false)
-  // Once a probe-seek conclusively fails, never re-enable for this session
-  const seekPermanentlyDisabledRef = useRef(false)
-
   const [justBookmarked, setJustBookmarked] = useState(false)
   const [isBuffering, setIsBuffering] = useState(false)
   const [hasError, setHasError] = useState(false)
@@ -312,16 +289,6 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
     loopEndRef.current = null
     setLoopStart(null)
     setLoopEnd(null)
-    // Reset seek-ability state for the new source
-    toastShownRef.current = false
-    seekProbeActiveRef.current = false
-    seekProbeTimedOutRef.current = false
-    seekPermanentlyDisabledRef.current = false
-    seekProbeTimeoutRef.current = undefined
-    progressCheckCountRef.current = 0
-    lastSuccessfulSeekTimestampRef.current = Date.now()
-    setSeekDisabled(false)
-    seekDisabledRef.current = false
   }, [src])
 
   // Autoplay when the caller opts in (preview dialogs). Try unmuted first
@@ -375,16 +342,6 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
     const requestId = ++seekToTimeRequestIdRef.current
     const target = seekToTime
 
-    // Arm probe for external seek requests
-    if (target > 0.5) {
-      seekProbeActiveRef.current = true
-      seekProbeTimedOutRef.current = false
-      clearTimeout(seekProbeTimeoutRef.current)
-      seekProbeTimeoutRef.current = setTimeout(() => {
-        seekProbeTimedOutRef.current = true
-      }, 2000)
-    }
-
     // Set pending seek so the seeked handler can verify position
     if (!videoRef.current) return
     pendingSeekRef.current = target
@@ -427,26 +384,6 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
       } else if (initialPosition && !hasRestoredPosition.current) {
         videoRef.current.currentTime = initialPosition
         hasRestoredPosition.current = true
-      }
-
-      // Detect seek-ability using the video element's seekable TimeRanges.
-      // A source without Range support has seekable.length === 0 or a single
-      // range of [0, 0] (browser placeholder). Re-evaluation on progress
-      // events may re-enable if the video transitions to seekable.
-      if (!seekPermanentlyDisabledRef.current) {
-        const v = videoRef.current
-        const seekable = v.seekable
-        const notSeekable =
-          seekable.length === 0 ||
-          (seekable.length === 1 && seekable.start(0) === 0 && seekable.end(0) === 0)
-        if (notSeekable) {
-          seekDisabledRef.current = true
-          setSeekDisabled(true)
-          videoDiag('seekDisabled: loadedmetadata', {
-            seekableLength: seekable.length,
-            ranges: seekable.length > 0 ? formatTimeRanges(seekable) : [],
-          })
-        }
       }
     }
   }
@@ -513,40 +450,6 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
       }
       wasPlayingBeforeSeekRef.current = false
     }
-
-    // Probe-seek failure detection: if we armed a probe (target > 0.5s) and
-    // the video landed at/near 0, the server likely rejected the seek because
-    // it doesn't support HTTP Range requests. Only permanently disable if no
-    // successful seek completed within the last 1000ms (avoids false positives
-    // in rapid burst-seek scenarios where one seek fails transiently).
-    if (seekProbeActiveRef.current) {
-      clearTimeout(seekProbeTimeoutRef.current)
-      seekProbeActiveRef.current = false
-      seekProbeTimedOutRef.current = false
-      if (currentTimeAfter >= 0.5) {
-        // Successfully reached the target position
-        lastSuccessfulSeekTimestampRef.current = Date.now()
-      } else if (currentTimeAfter < 0.5) {
-        // Landed at/near 0 — likely a Range support failure
-        if (Date.now() - lastSuccessfulSeekTimestampRef.current > 1000) {
-          // No successful seek within the last second → definitive failure
-          seekPermanentlyDisabledRef.current = true
-          seekDisabledRef.current = true
-          setSeekDisabled(true)
-          if (!toastShownRef.current) {
-            toastShownRef.current = true
-            toast.error(
-              "This video source doesn't support seeking. The server may need to enable HTTP Range requests.",
-              { duration: 8000 }
-            )
-          }
-          videoDiag('seekPermanentlyDisabled: probe-fail', {
-            currentTimeAfter,
-            lastSuccessfulSeekTimestamp: lastSuccessfulSeekTimestampRef.current,
-          })
-        }
-      }
-    }
   }
 
   const handleStalled = () => {
@@ -605,7 +508,6 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
 
   // Seek forward/backward
   const seek = (seconds: number) => {
-    if (seekDisabledRef.current) return
     if (videoRef.current) {
       const newTime = Math.max(
         0,
@@ -613,17 +515,6 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
       )
       pendingSeekRef.current = newTime
       wasPlayingBeforeSeekRef.current = !videoRef.current.paused
-
-      // Arm probe-seek detection for non-zero targets (target > 0.5s).
-      // If the seeked event lands at/near 0, the server rejected the seek.
-      if (newTime > 0.5) {
-        seekProbeActiveRef.current = true
-        seekProbeTimedOutRef.current = false
-        clearTimeout(seekProbeTimeoutRef.current)
-        seekProbeTimeoutRef.current = setTimeout(() => {
-          seekProbeTimedOutRef.current = true
-        }, 2000)
-      }
 
       videoRef.current.currentTime = newTime
       setCurrentTime(newTime)
@@ -764,21 +655,10 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
 
   // Jump to percentage
   const jumpToPercentage = (percentage: number) => {
-    if (seekDisabledRef.current) return
     if (videoRef.current) {
       const newTime = (percentage / 100) * videoRef.current.duration
       pendingSeekRef.current = newTime
       wasPlayingBeforeSeekRef.current = !videoRef.current.paused
-
-      // Also arm probe for percentage-based seeks (target almost always > 0.5s)
-      if (newTime > 0.5) {
-        seekProbeActiveRef.current = true
-        seekProbeTimedOutRef.current = false
-        clearTimeout(seekProbeTimeoutRef.current)
-        seekProbeTimeoutRef.current = setTimeout(() => {
-          seekProbeTimedOutRef.current = true
-        }, 2000)
-      }
 
       videoRef.current.currentTime = newTime
       setCurrentTime(newTime)
@@ -823,28 +703,6 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
       })
     }
     setBufferedRanges(ranges)
-
-    // Re-evaluate seek-ability on the first few progress events. Some servers
-    // (progressive download) initially report non-seekable but become seekable
-    // as the buffered range grows. Check up to 3 times and then stop.
-    if (!seekPermanentlyDisabledRef.current && seekDisabledRef.current) {
-      progressCheckCountRef.current++
-      if (progressCheckCountRef.current <= 3) {
-        const v = videoRef.current
-        const seekable = v.seekable
-        const nowSeekable =
-          seekable.length > 0 &&
-          !(seekable.length === 1 && seekable.start(0) === 0 && seekable.end(0) === 0)
-        if (nowSeekable) {
-          seekDisabledRef.current = false
-          setSeekDisabled(false)
-          videoDiag('seekReEnabled: progress', {
-            progressCheckCount: progressCheckCountRef.current,
-            seekableRanges: formatTimeRanges(seekable),
-          })
-        }
-      }
-    }
   }
 
   // Error handler with type detection
@@ -932,7 +790,6 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
 
   // Seek with overlay animation
   const seekWithOverlay = (seconds: number) => {
-    if (seekDisabledRef.current) return
     seek(seconds)
     const direction = seconds > 0 ? 'right' : 'left'
     clearTimeout(seekOverlayTimeoutRef.current)
@@ -1142,14 +999,12 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
           break
         case 'j':
           e.preventDefault()
-          if (seekDisabledRef.current) break
           seekWithOverlay(-10)
           announce('Skipped back 10 seconds')
           containerRef.current?.focus({ preventScroll: true })
           break
         case 'l':
           e.preventDefault()
-          if (seekDisabledRef.current) break
           seekWithOverlay(10)
           announce('Skipped forward 10 seconds')
           containerRef.current?.focus({ preventScroll: true })
@@ -1334,22 +1189,11 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
 
   // Handle progress bar change (percent 0–100)
   const handleProgressChange = (percent: number) => {
-    if (seekDisabledRef.current) return
     if (!isFinite(duration)) return
     if (videoRef.current) {
       const newTime = (percent / 100) * duration
       pendingSeekRef.current = newTime
       wasPlayingBeforeSeekRef.current = !videoRef.current.paused
-
-      // Arm probe for scrub-to-seek
-      if (newTime > 0.5) {
-        seekProbeActiveRef.current = true
-        seekProbeTimedOutRef.current = false
-        clearTimeout(seekProbeTimeoutRef.current)
-        seekProbeTimeoutRef.current = setTimeout(() => {
-          seekProbeTimedOutRef.current = true
-        }, 2000)
-      }
 
       videoRef.current.currentTime = newTime
       setCurrentTime(newTime)
@@ -1658,16 +1502,12 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
                 <Button
                   variant="ghost"
                   size="icon"
-                  className={cn(
-                    'size-11 text-white hover:bg-white/20 hover:text-white',
-                    seekDisabled && 'opacity-40 cursor-not-allowed'
-                  )}
+                  className="size-11 text-white hover:bg-white/20 hover:text-white"
                   onClick={() => {
                     seek(-10)
                     announce('Skipped back 10 seconds')
                   }}
                   aria-label="Skip back 10 seconds"
-                  disabled={seekDisabled}
                 >
                   <SkipBack className="size-5" />
                 </Button>
@@ -1676,16 +1516,12 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
                 <Button
                   variant="ghost"
                   size="icon"
-                  className={cn(
-                    'size-11 text-white hover:bg-white/20 hover:text-white',
-                    seekDisabled && 'opacity-40 cursor-not-allowed'
-                  )}
+                  className="size-11 text-white hover:bg-white/20 hover:text-white"
                   onClick={() => {
                     seek(10)
                     announce('Skipped forward 10 seconds')
                   }}
                   aria-label="Skip forward 10 seconds"
-                  disabled={seekDisabled}
                 >
                   <SkipForward className="size-5" />
                 </Button>

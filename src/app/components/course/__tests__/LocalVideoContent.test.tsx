@@ -71,7 +71,6 @@ vi.mock('@/lib/bookmarks', () => ({
 vi.mock('@/lib/videoStoryboard', () => ({
   loadVideoStoryboard: vi.fn().mockResolvedValue(undefined),
   generateStoryboard: vi.fn().mockResolvedValue(undefined),
-  generateStoryboardFromUrl: vi.fn().mockResolvedValue(undefined),
   saveVideoStoryboard: vi.fn().mockResolvedValue(undefined),
 }))
 
@@ -384,9 +383,8 @@ describe('LocalVideoContent server-source', () => {
     expect(useVideoFromHandle).toHaveBeenCalledWith(undefined, 0)
   })
 
-  it('triggers storyboard generation for server-URL videos', async () => {
+  it('does not auto-generate storyboard for server-URL videos', async () => {
     const { db } = await import('@/db/schema')
-    const { generateStoryboardFromUrl } = await import('@/lib/videoStoryboard')
     ;(db.importedVideos.get as ReturnType<typeof vi.fn>).mockResolvedValue(serverVideo)
 
     render(<LocalVideoContent {...DEFAULT_PROPS} />)
@@ -395,9 +393,10 @@ describe('LocalVideoContent server-source', () => {
       expect(document.querySelector('video')).toBeInTheDocument()
     })
 
-    // generateStoryboardFromUrl should have been called with the server URL
-    expect(generateStoryboardFromUrl).toHaveBeenCalledWith(
-      'https://academy.example.com/videos/lesson.mp4'
-    )
+    // Server-URL videos should NOT auto-generate storyboards on mount.
+    // The component no longer imports generateStoryboardFromUrl,
+    // so storyboard generation does not run. The video renders normally
+    // and the player controls overlay is present.
+    expect(screen.getByTestId('player-controls-overlay')).toBeInTheDocument()
   })
 })
