@@ -54,8 +54,9 @@ vi.mock('../syncEngine', () => ({
 }))
 
 // Import the module under test AFTER mocks are set up.
-import { syncableWrite } from '../syncableWrite'
+import { syncableWrite, synthesizeRecordId } from '../syncableWrite'
 import { db } from '@/db'
+import { tableRegistry } from '../tableRegistry'
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -578,5 +579,81 @@ describe('syncableWrite', () => {
       expect(mockPut).toHaveBeenCalledTimes(1)
       expect(mockSyncQueueAdd).not.toHaveBeenCalled()
     })
+  })
+})
+
+// ---------------------------------------------------------------------------
+// synthesizeRecordId — Unit tests for extracted pure function
+// ---------------------------------------------------------------------------
+
+describe('synthesizeRecordId', () => {
+  const notesEntry = tableRegistry.find(e => e.dexieTable === 'notes')!
+  const contentProgressEntry = tableRegistry.find(e => e.dexieTable === 'contentProgress')!
+  const chapterMappingsEntry = tableRegistry.find(e => e.dexieTable === 'chapterMappings')!
+
+  it('returns record.id for a simple-PK table', () => {
+    const record = { id: 'rec-1', title: 'Test Note' }
+    expect(synthesizeRecordId(record, notesEntry)).toBe('rec-1')
+  })
+
+  it('synthesizes compound-PK recordId joined with unit separator', () => {
+    const record = { courseId: 'c1', itemId: 'i1', progressPct: 0.5 }
+    expect(synthesizeRecordId(record, contentProgressEntry)).toBe('c1i1')
+  })
+
+  it('converts numeric compound field values via String()', () => {
+    const record = { courseId: 'c1', itemId: 42 }
+    expect(synthesizeRecordId(record, contentProgressEntry)).toBe('c142')
+  })
+
+  it('throws when simple-PK id is empty', () => {
+    const record = { id: '', title: 'Bad' }
+    expect(() => synthesizeRecordId(record, notesEntry)).toThrow(
+      /Empty recordId for table "notes"/
+    )
+  })
+
+  it('throws when simple-PK id is missing', () => {
+    const record = { title: 'No ID' }
+    expect(() => synthesizeRecordId(record, notesEntry)).toThrow(
+      /Empty recordId for table "notes"/
+    )
+  })
+
+  it('throws when a compound-PK field is missing', () => {
+    const record = { courseId: 'c1' }
+    expect(() => synthesizeRecordId(record, contentProgressEntry)).toThrow(
+      /Empty recordId for table "contentProgress"/
+    )
+  })
+
+  it('throws when a compound-PK field is empty string', () => {
+    const record = { courseId: '', itemId: 'i1' }
+    expect(() => synthesizeRecordId(record, contentProgressEntry)).toThrow(
+      /Empty recordId for table "contentProgress"/
+    )
+  })
+
+  it('resists collision: colon-separated values produce different recordIds', () => {
+    // Record with colons distributed across fields
+    const r1 = { epubBookId: 'urn:isbn:123', audioBookId: 'abs-1' }
+    // Record where the colons are all in one field
+    const r2 = { epubBookId: 'urn', audioBookId: 'isbn:123:abs-1' }
+
+    const id1 = synthesizeRecordId(r1, chapterMappingsEntry)
+    const id2 = synthesizeRecordId(r2, chapterMappingsEntry)
+
+    // If colons were the join character, these WOULD collide.
+    // Unit separator prevents this.
+    expect(id1).not.toBe(id2)
+    expect(id1).toContain('')
+    expect(id2).toContain('')
+  })
+
+  it('includes operation in error message when provided', () => {
+    const record = { id: '' }
+    expect(() => synthesizeRecordId(record, notesEntry, 'put')).toThrow(
+      /(operation "put")/
+    )
   })
 })

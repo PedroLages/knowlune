@@ -26,7 +26,7 @@
 import { db } from '@/db'
 import type { SyncQueueEntry } from '@/db'
 import { useAuthStore } from '@/stores/useAuthStore'
-import { tableRegistry } from './tableRegistry'
+import { tableRegistry, type TableRegistryEntry } from './tableRegistry'
 import { toSnakeCase } from './fieldMapper'
 import { syncEngine } from './syncEngine'
 
@@ -47,6 +47,63 @@ export interface SyncableRecord {
   /** Populated by syncableWrite — callers should not set this. */
   updatedAt?: string
   [key: string]: unknown
+}
+
+// ---------------------------------------------------------------------------
+// Record ID synthesis
+// ---------------------------------------------------------------------------
+
+/**
+ * Synthesize a stable recordId from a syncable record and its registry entry.
+ *
+ * For compound-PK tables (e.g. contentProgress, chapterMappings), joins the
+ * compound field values with the ASCII Unit Separator (U+001F) — guaranteed
+ * not to appear in user-supplied IDs (URIs, UUIDs, slugs). For simple-PK
+ * tables, returns `record.id`.
+ *
+ * @param record    The record to derive a recordId from. Must have `id` (for
+ *                  simple-PK tables) or compound key fields (for compound-PK
+ *                  tables) present.
+ * @param entry     The registry entry for the table — used to determine
+ *                  whether the table uses compound PK and which fields.
+ * @param operation Optional operation label for error messages (e.g. "put",
+ *                  "add"). When omitted the error omits the operation clause.
+ *
+ * @throws {Error} If the resulting recordId would be empty (missing field,
+ *   empty string, whitespace-only).
+ */
+export function synthesizeRecordId(
+  record: SyncableRecord,
+  entry: TableRegistryEntry,
+  operation?: string
+): string {
+  if (entry.compoundPkFields && entry.compoundPkFields.length > 0) {
+    const parts = entry.compoundPkFields.map(field => {
+      const value = (record as Record<string, unknown>)[field]
+      return typeof value === 'string' || typeof value === 'number' ? String(value) : ''
+    })
+    if (parts.some(p => p.trim() === '')) {
+      throw new Error(
+        `[syncableWrite] Empty recordId for table "${entry.dexieTable}"` +
+          (operation ? ` (operation "${operation}")` : '') +
+          `. A non-empty id is required.`
+      )
+    }
+    // Unit separator (U+001F) — guaranteed not to appear in user-supplied IDs
+    // (URIs, slugs, UUIDs). Joining on ':' would let `urn:isbn:123` collide
+    // with split-elsewhere variants (ADV-04 from R1 review).
+    return parts.join('')
+  }
+
+  const id = record?.id
+  if (typeof id !== 'string' || id.trim() === '') {
+    throw new Error(
+      `[syncableWrite] Empty recordId for table "${entry.dexieTable}"` +
+        (operation ? ` (operation "${operation}")` : '') +
+        `. A non-empty id is required.`
+    )
+  }
+  return id
 }
 
 // ---------------------------------------------------------------------------
@@ -107,31 +164,8 @@ export async function syncableWrite<T extends SyncableRecord>(
       )
     }
     recordId = id
-  } else if (entry.compoundPkFields && entry.compoundPkFields.length > 0) {
-    const rec = record as SyncableRecord | null | undefined
-    const parts = entry.compoundPkFields.map(field => {
-      const value = rec?.[field]
-      return typeof value === 'string' || typeof value === 'number' ? String(value) : ''
-    })
-    if (parts.some(p => p.trim() === '')) {
-      throw new Error(
-        `[syncableWrite] Empty recordId for table "${tableName}" ` +
-          `(operation "${operation}"). A non-empty id is required.`
-      )
-    }
-    // Unit separator (U+001F) — guaranteed not to appear in user-supplied IDs
-    // (URIs, slugs, UUIDs). Joining on ':' would let `urn:isbn:123` collide
-    // with split-elsewhere variants (ADV-04 from R1 review).
-    recordId = parts.join('\u001f')
   } else {
-    const id = (record as SyncableRecord | null | undefined)?.id
-    if (typeof id !== 'string' || id.trim() === '') {
-      throw new Error(
-        `[syncableWrite] Empty recordId for table "${tableName}" ` +
-          `(operation "${operation}"). A non-empty id is required.`
-      )
-    }
-    recordId = id
+    recordId = synthesizeRecordId(record as SyncableRecord, entry, operation)
   }
 
   // [2] Auth — read inside the function body to avoid stale closures.
