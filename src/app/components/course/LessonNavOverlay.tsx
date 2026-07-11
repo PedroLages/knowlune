@@ -15,6 +15,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/app/components/ui/tooltip'
+import { useReducedMotion } from '@/hooks/useReducedMotion'
 import { cn } from '@/app/components/ui/utils'
 
 interface LessonNavOverlayProps {
@@ -23,21 +24,10 @@ interface LessonNavOverlayProps {
   nextLesson: { id: string; title: string } | null
 }
 
-const REDUCED_MOTION_QUERY = '(prefers-reduced-motion: reduce)'
-
 export function LessonNavOverlay({ courseId, prevLesson, nextLesson }: LessonNavOverlayProps) {
   const navigate = useNavigate()
   const [isFullscreen, setIsFullscreen] = useState(false)
-  const [reducedMotion, setReducedMotion] = useState(false)
-
-  // Watch for prefers-reduced-motion
-  useEffect(() => {
-    const mq = window.matchMedia(REDUCED_MOTION_QUERY)
-    setReducedMotion(mq.matches)
-    const handler = (e: MediaQueryListEvent) => setReducedMotion(e.matches)
-    mq.addEventListener('change', handler)
-    return () => mq.removeEventListener('change', handler)
-  }, [])
+  const { shouldReduceMotion } = useReducedMotion()
 
   // Fullscreen detection with vendor-prefix fallbacks
   useEffect(() => {
@@ -71,7 +61,7 @@ export function LessonNavOverlay({ courseId, prevLesson, nextLesson }: LessonNav
   // the fullscreen element
   if (isFullscreen) return null
 
-  const transitionClass = reducedMotion
+  const transitionClass = shouldReduceMotion
     ? 'transition-none'
     : 'transition-opacity duration-200'
 

@@ -1,6 +1,7 @@
 import { useEffect, useMemo } from 'react'
 import { useScrubPreview } from '@/app/hooks/useScrubPreview'
 import { formatTimestamp } from '@/lib/format'
+import { crossOriginForUrl } from '@/lib/media'
 import { cn } from '@/app/components/ui/utils'
 
 /** Storyboard sprite-sheet data for instant preview rendering */
@@ -35,30 +36,6 @@ export interface ScrubPreviewProps {
   loading?: boolean
   /** When true, storyboard generation previously failed — skip live extraction and show compact timestamp only. */
   storyboardFailed?: boolean
-}
-
-/**
- * Determine whether crossOrigin="anonymous" is needed for an offscreen video
- * used in canvas extraction.
- *
- * - `blob:` URLs — always need crossOrigin; drawImage from blob to canvas
- *   requires CORS-awareness even though the blob is same-origin.
- * - Cross-origin HTTP URLs — need crossOrigin so servers that send CORS
- *   headers still work (existing behavior preserved).
- * - Same-origin HTTP URLs — omit crossOrigin so canvas extraction works
- *   without a CORS handshake. This is the primary fix for server-imported
- *   courses where the video server doesn't send CORS headers.
- * - Relative URLs / parse failures — treated as same-origin (safe default).
- */
-function crossOriginForUrl(src: string): 'anonymous' | undefined {
-  if (src.startsWith('blob:')) return 'anonymous'
-  try {
-    const url = new URL(src, window.location.href)
-    if (url.origin !== window.location.origin) return 'anonymous'
-  } catch {
-    // Unparseable URL — safest to omit crossOrigin (likely relative path)
-  }
-  return undefined
 }
 
 /**

@@ -1,0 +1,94 @@
+[
+  {
+    "case_id": "GC-001",
+    "case": "fresh-review",
+    "description": "Fresh review on a story that has never been reviewed",
+    "setup": {
+      "reviewed": false,
+      "review_gates_passed": [],
+      "ui_changes": true
+    },
+    "expected_behavior": "Set reviewed=in-progress, run all prechecks (build, lint, type-check, format-check, unit-tests, e2e-tests), dispatch all agents (design-review, code-review, code-review-testing, performance-benchmark, security-review, exploratory-qa), populate gates array with results"
+  },
+  {
+    "case_id": "GC-002",
+    "case": "resumed-review",
+    "description": "Resume an interrupted review that has some gates already passed",
+    "setup": {
+      "reviewed": "in-progress",
+      "review_gates_passed": ["build", "lint", "type-check", "format-check", "unit-tests", "e2e-tests", "code-review"],
+      "ui_changes": true
+    },
+    "expected_behavior": "Re-run prechecks (code may have changed), skip code-review agent (already passed), run remaining agents (design-review, code-review-testing, performance-benchmark, security-review, exploratory-qa), merge all results"
+  },
+  {
+    "case_id": "GC-003",
+    "case": "already-reviewed-reset",
+    "description": "Story already marked as reviewed=true, re-running forces full review",
+    "setup": {
+      "reviewed": true,
+      "review_gates_passed": ["build", "lint", "type-check", "format-check", "unit-tests", "e2e-tests", "design-review", "code-review", "code-review-testing", "performance-benchmark", "security-review", "exploratory-qa"],
+      "ui_changes": true
+    },
+    "expected_behavior": "Reset to reviewed=in-progress, clear review_gates_passed, update review_started timestamp, run full review from scratch"
+  },
+  {
+    "case_id": "GC-004",
+    "case": "precheck-failure",
+    "description": "Pre-check (build) fails, stops before dispatching agents",
+    "setup": {
+      "reviewed": false,
+      "review_gates_passed": [],
+      "build_fails": true
+    },
+    "expected_behavior": "Run prechecks, build gate FAILS, STOP before dispatching any agents, keep reviewed=in-progress, report which precheck failed with actionable error"
+  },
+  {
+    "case_id": "GC-005",
+    "case": "no-ui-skip",
+    "description": "No UI files in diff, design-review and exploratory-qa should be skipped",
+    "setup": {
+      "reviewed": false,
+      "review_gates_passed": [],
+      "ui_changes": false,
+      "changed_files": ["src/services/DataService.ts", "src/utils/helpers.ts"]
+    },
+    "expected_behavior": "Run prechecks, skip design-review agent (add design-review-skipped), skip exploratory-qa agent (add exploratory-qa-skipped), run code-review, code-review-testing, security-review agents, validate gates accepts -skipped variants"
+  },
+  {
+    "case_id": "GC-006",
+    "case": "burn-in-path",
+    "description": "E2E spec exists with test anti-patterns detected, offer burn-in testing",
+    "setup": {
+      "reviewed": false,
+      "review_gates_passed": [],
+      "e2e_spec_exists": true,
+      "test_anti_patterns": ["Date.now()", "waitForTimeout()"],
+      "anti_pattern_severity": "LOW"
+    },
+    "expected_behavior": "Run prechecks, detect anti-patterns in tests, present AskUserQuestion offering burn-in testing (10 iterations) as recommended option, user accepts → run burn-in, user declines → continue without burn-in"
+  },
+  {
+    "case_id": "GC-007",
+    "case": "blocked-verdict",
+    "description": "Agent returns BLOCKER finding, verdict is BLOCKED, reviewed stays in-progress",
+    "setup": {
+      "reviewed": false,
+      "review_gates_passed": [],
+      "ui_changes": true,
+      "agent_result": {
+        "agent": "code-review",
+        "status": "FAIL",
+        "findings": [
+          {
+            "severity": "BLOCKER",
+            "description": "SQL injection vulnerability in query builder",
+            "file": "src/services/DataService.ts",
+            "line": 42
+          }
+        ]
+      }
+    },
+    "expected_behavior": "Agent result collected with BLOCKER finding, verdict=BLOCKED, reviewed stays in-progress, report lists BLOCKER prominently, gate validation fails, user must fix and re-run"
+  }
+]

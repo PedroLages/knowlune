@@ -1,0 +1,26 @@
+{
+  "eval_id": 2,
+  "run_type": "with_skill",
+  "expectations": [
+    {
+      "text": "All 4 questions are answered autonomously — none asked back to user",
+      "passed": true,
+      "evidence": "All 4 questions answered with full Recommendation/Why/Trade-offs structure. No questions asked back."
+    },
+    {
+      "text": "References existing Knowlune gamification features found in the codebase (streaks, achievements, progress tracking)",
+      "passed": true,
+      "evidence": "Detailed table of existing features with specific file paths: StudyStreakCalendar.tsx, streakMilestones.ts, AchievementBanner.tsx, useChallengeStore.ts, CompletionModal.tsx, useEngagementPrefsStore.ts."
+    },
+    {
+      "text": "Recommendations are specific to personal learning platforms, not generic gamification advice",
+      "passed": true,
+      "evidence": "Explicitly distinguishes personal vs social platform mechanics. Recommends intrinsic motivation (mastery indicators, knowledge decay warnings) over extrinsic (XP, leaderboards). References pedagogical research (23-min focus recovery)."
+    },
+    {
+      "text": "Each answer includes reasoning and at least some mention of trade-offs",
+      "passed": true,
+      "evidence": "All 4 answers have 'Why' reasoning and explicit 'Trade-offs' sections."
+    }
+  ]
+}

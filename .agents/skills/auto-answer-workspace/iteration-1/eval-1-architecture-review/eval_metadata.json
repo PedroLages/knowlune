@@ -1,0 +1,27 @@
+{
+  "eval_id": 1,
+  "eval_name": "architecture-review-mode",
+  "prompt": "I'm running /auto-answer review for an architecture session. Answer these technical questions and show me your answers before proceeding:\n1. Should we use server-side or client-side rendering for the new dashboard analytics page?\n2. What state management approach for cross-page data sharing?\n3. Should we add a caching layer and if so, what strategy?",
+  "assertions": [
+    {
+      "id": "review-format",
+      "text": "Answers use the review format with clear Recommendation, Why, and Trade-offs sections",
+      "type": "boolean"
+    },
+    {
+      "id": "references-tech-stack",
+      "text": "Answers reference the existing Knowlune tech stack (React, Vite, Tailwind, or specific patterns found in codebase)",
+      "type": "boolean"
+    },
+    {
+      "id": "waits-for-approval",
+      "text": "Explicitly indicates waiting for user approval before proceeding (review mode behavior)",
+      "type": "boolean"
+    },
+    {
+      "id": "technical-depth",
+      "text": "Answers demonstrate technical depth — not surface-level generic advice",
+      "type": "boolean"
+    }
+  ]
+}

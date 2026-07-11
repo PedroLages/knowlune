@@ -16,6 +16,7 @@
  */
 
 import { db } from '@/db'
+import { crossOriginForUrl } from '@/lib/media'
 import type { VideoStoryboard } from '@/data/types'
 
 // ---- tunable constants ----------------------------------------------------
@@ -220,18 +221,6 @@ const REMOTE_MAX_FRAMES = 30
 /** Global concurrency guard: only one URL-based storyboard generates at a time. */
 let isGeneratingFromUrl = false
 
-/** Helper: decide whether crossOrigin is needed for offscreen video extraction. */
-function crossOriginForUrl(src: string): 'anonymous' | null {
-  if (src.startsWith('blob:')) return 'anonymous'
-  try {
-    const u = new URL(src, window.location.href)
-    if (u.origin !== window.location.origin) return 'anonymous'
-  } catch {
-    // Relative or unparseable URL — treat as same-origin
-  }
-  return null
-}
-
 /**
  * Generate a storyboard sprite sheet from a remote video URL.
  *
@@ -268,7 +257,7 @@ export async function generateStoryboardFromUrl(
       video.muted = true
       // Conditional crossOrigin — same-origin HTTP URLs omit it so canvas
       // extraction works even when the server doesn't send CORS headers.
-      video.crossOrigin = crossOriginForUrl(url)
+      video.crossOrigin = crossOriginForUrl(url) ?? null
       video.src = url
 
       const onAbort = () => {
