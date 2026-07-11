@@ -80,7 +80,8 @@ export const YouTubePlayer = forwardRef<YouTubePlayerHandle, YouTubePlayerProps>
           }
         })
         // silent-catch-ok — fallback to position 0 if progress read fails
-        .catch(() => {
+        .catch((err) => {
+          console.error('[YouTubePlayer] Failed to restore playback position:', err)
           if (!ignore) setInitialPosition(0)
         })
       return () => {
@@ -115,7 +116,9 @@ export const YouTubePlayer = forwardRef<YouTubePlayerHandle, YouTubePlayerProps>
             onUnembeddableDetected?.(result.reason)
           })
           // silent-catch-ok — probe failures fall back to current iframe render
-          .catch(() => {})
+          .catch((err) => {
+            console.error('[YouTubePlayer] Embedsability probe failed:', err)
+          })
       }, 500)
 
       return () => {

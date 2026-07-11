@@ -55,7 +55,9 @@ function playSynthChime(volume: number): void {
     oscillator.stop(ctx.currentTime + 0.5)
 
     oscillator.onended = () => {
-      ctx.close().catch(() => {})
+      ctx.close().catch((err) => {
+        console.error('[pomodoroAudio] Failed to close AudioContext:', err)
+      })
     }
   } catch {
     // Audio failure should never block timer flow
@@ -67,7 +69,8 @@ function playAudioFile(src: string, volume: number): void {
   try {
     const audio = new Audio(src)
     audio.volume = Math.min(1, Math.max(0, volume))
-    audio.play().catch(() => {
+    audio.play().catch((err) => {
+      console.error('[pomodoroAudio] Failed to play audio:', err)
       // Autoplay blocked or file missing — silently degrade
     })
   } catch {

@@ -746,10 +746,15 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
               .filter((e, i) => i >= 50 || new Date(e.movedAt).getTime() < cutoff)
               .map(e => e.id)
             if (toDelete.length > 0) {
-              db.reorderHistory.bulkDelete(toDelete).catch(() => {})
+              db.reorderHistory.bulkDelete(toDelete).catch((err) => {
+                console.error('[useLearningPathStore] Failed to bulk delete reorder history:', err)
+                toast.error('Failed to clean up reorder history.')
+              })
             }
           })
-          .catch(() => {})
+          .catch((err) => {
+            console.error('[useLearningPathStore] Failed to clean reorder history:', err)
+          })
       } catch (err) {
         console.warn('[LearningPathStore] Failed to record reorder history:', err)
       }
@@ -882,14 +887,18 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
       trackAIUsage('learning_path', {
         durationMs: Date.now() - startTime,
         metadata: { courseCount: result.length, pathId },
-      }).catch(() => {})
+      }).catch((err) => {
+        console.error('[useLearningPathStore] Failed to track AI usage (success):', err)
+      })
     } catch (error) {
       console.error('[LearningPathStore] Failed to generate path:', error)
       trackAIUsage('learning_path', {
         status: 'error',
         durationMs: Date.now() - startTime,
         metadata: { error: error instanceof Error ? error.message : 'Unknown error' },
-      }).catch(() => {})
+      }).catch((err) => {
+        console.error('[useLearningPathStore] Failed to track AI usage (error):', err)
+      })
       set({
         isGenerating: false,
         error: error instanceof Error ? error.message : 'Failed to generate learning path',
@@ -1288,7 +1297,9 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
       })
 
       if (get().forkGeneration !== generation) {
-        db.learningPaths.delete(newPathId).catch(() => {})
+        db.learningPaths.delete(newPathId).catch((err) => {
+          console.error('[useLearningPathStore] Failed to clean up aborted path creation:', err)
+        })
         set({ paths: prevPaths, activePath: prevActivePath })
         return null
       }

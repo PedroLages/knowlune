@@ -105,14 +105,18 @@ export function ProviderKeyAccordion({ onConfigChanged }: ProviderKeyAccordionPr
 
   useEffect(() => {
     // silent-catch-ok: status refresh failure is non-critical
-    refreshStatuses().catch(() => {})
+    refreshStatuses().catch((err) => {
+      console.error('[ProviderKeyAccordion] Failed to refresh statuses (init):', err)
+    })
   }, [refreshStatuses])
 
   // Listen for config updates (cross-tab or same-tab)
   useEffect(() => {
     function handleUpdate() {
       // silent-catch-ok: status refresh failure is non-critical
-      refreshStatuses().catch(() => {})
+      refreshStatuses().catch((err) => {
+        console.error('[ProviderKeyAccordion] Failed to refresh statuses (update):', err)
+      })
     }
     window.addEventListener('ai-configuration-updated', handleUpdate)
     window.addEventListener('storage', handleUpdate)

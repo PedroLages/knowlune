@@ -91,6 +91,17 @@ describe('matchOrCreateAuthor', () => {
     expect(count).toBe(1)
   })
 
+  it('creates exactly one author when called concurrently with same name (KI-106)', async () => {
+    const [id1, id2] = await Promise.all([
+      matchOrCreateAuthor('Concurrent Author'),
+      matchOrCreateAuthor('Concurrent Author'),
+    ])
+    expect(id1).toBe(id2)
+
+    const count = await db.authors.count()
+    expect(count).toBe(1)
+  })
+
   it('matches case-insensitively with leading/trailing whitespace', async () => {
     await db.authors.add({
       id: 'john-doe-id',

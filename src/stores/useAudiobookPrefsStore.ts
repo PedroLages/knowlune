@@ -108,8 +108,9 @@ function loadPersistedPrefs(): AudiobookPrefs {
             : defaults.skipForwardSeconds,
       }
     }
-  } catch {
+  } catch (err) {
     // silent-catch-ok: corrupted localStorage data — fall through to defaults
+    console.error("[useAudiobookPrefsStore] Failed to load persisted state, using defaults:", err)
   }
   return { ...defaults }
 }
@@ -117,8 +118,9 @@ function loadPersistedPrefs(): AudiobookPrefs {
 function persistPrefs(prefs: AudiobookPrefs) {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs))
-  } catch {
+  } catch (err) {
     // silent-catch-ok: localStorage full or unavailable — non-blocking
+    console.error("[useAudiobookPrefsStore] Failed to persist prefs:", err)
   }
 }
 

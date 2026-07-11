@@ -367,7 +367,9 @@ export function useAudioPlayer(book: Book | null): UseAudioPlayerReturn {
                 _activeSessionBaseUrl,
                 _activeSessionApiKey,
                 _activeSessionId
-              ).catch(() => {})
+              ).catch((err) => {
+                console.error('[useAudioPlayer] Failed to close playback session:', err)
+              })
             }
             _activeSessionId = session.id
             _activeSessionBaseUrl = baseUrl

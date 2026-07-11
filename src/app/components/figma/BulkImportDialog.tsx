@@ -175,20 +175,20 @@ async function runWithConcurrency<T>(
 ): Promise<void> {
   const running: Promise<void>[] = []
   let queueIndex = 0
-  let completedCount = 0
+  let settledCount = 0
   const totalItems = items.length
 
-  while (queueIndex < totalItems && !abortSignal.current && completedCount < totalItems) {
+  while (queueIndex < totalItems && !abortSignal.current && settledCount < totalItems) {
     while (
       running.length < maxConcurrency &&
       queueIndex < totalItems &&
-      completedCount < totalItems
+      settledCount < totalItems
     ) {
       const item = items[queueIndex++]
       const promise = fn(item).finally(() => {
         const idx = running.indexOf(promise)
         if (idx >= 0) running.splice(idx, 1)
-        completedCount++
+        settledCount++
       })
       running.push(promise)
     }
@@ -637,7 +637,7 @@ export function BulkImportDialog({
         // User cancelled — stay on choose step
       } else {
         toast.error('Failed to read the selected folder. Please try again.')
-        console.warn('[BulkImport] Failed to list sub-directories:', error)
+        console.error('[BulkImport] Failed to list sub-directories:', error)
       }
     } finally {
       setIsLoadingFolders(false)
@@ -672,7 +672,7 @@ export function BulkImportDialog({
 
     abortRef.current = false
     generationRef.current++
-    const gen = generationRef.current
+    const generation = generationRef.current
 
     // Reset truncation toast guard for this scan cycle
     truncationWarnedRef.current = false
@@ -703,12 +703,12 @@ export function BulkImportDialog({
       const scanned = new Map<string, ScannedCourse>()
 
       async function scanFolder(item: ImportItem) {
-        if (abortRef.current || gen !== generationRef.current) return
+        if (abortRef.current || generation !== generationRef.current) return
         updateItemInList(results, item.folderName, { status: 'scanning' }, setImportItems)
 
         const scanResult = await scanCourseFromSource(item)
 
-        if (abortRef.current || gen !== generationRef.current) {
+        if (abortRef.current || generation !== generationRef.current) {
           return
         }
 
@@ -741,7 +741,7 @@ export function BulkImportDialog({
           toast.warning('Some files were skipped — server directory exceeded the 5,000 file limit')
         }
 
-        if (abortRef.current || gen !== generationRef.current) {
+        if (abortRef.current || generation !== generationRef.current) {
           return
         }
 
@@ -764,7 +764,7 @@ export function BulkImportDialog({
           setImportItems
         )
 
-        if (abortRef.current || gen !== generationRef.current) {
+        if (abortRef.current || generation !== generationRef.current) {
           return
         }
 
@@ -789,13 +789,13 @@ export function BulkImportDialog({
       // Concurrent scanning
       await runWithConcurrency(scanItems, scanFolder, MAX_CONCURRENCY, abortRef)
 
-      if (abortRef.current || gen !== generationRef.current) {
+      if (abortRef.current || generation !== generationRef.current) {
         return
       }
 
       setScannedCourses(scanned)
 
-      if (abortRef.current || gen !== generationRef.current) {
+      if (abortRef.current || generation !== generationRef.current) {
         return
       }
 
@@ -806,7 +806,7 @@ export function BulkImportDialog({
         setStep('results')
       }
     } catch (err) {
-      console.warn('[BulkImport] handleScanFolders unexpected error:', err) // silent-catch-ok: errors are caught per-item in scanFolder, top-level catch logs unexpected exceptions
+      console.error('[BulkImport] handleScanFolders unexpected error:', err) // silent-catch-ok: errors are caught per-item in scanFolder, top-level catch logs unexpected exceptions
     } finally {
       scanningRef.current = false
     }
@@ -855,7 +855,7 @@ export function BulkImportDialog({
   // Review → Importing: Persist all scanned courses with overrides
   const handleConfirmImport = useCallback(async () => {
     generationRef.current++
-    const gen = generationRef.current
+    const generation = generationRef.current
     const courses: ScannedCourse[] = importItems
       .filter(
         item =>
@@ -881,7 +881,7 @@ export function BulkImportDialog({
           batchAbortRef.current.signal
         )
         batchAbortRef.current = null
-        if (abortRef.current || gen !== generationRef.current) return
+        if (abortRef.current || generation !== generationRef.current) return
 
         // Convert batch result to ImportItem[] for the results display
         const items: ImportItem[] = result.courses.map(c => ({
@@ -893,7 +893,7 @@ export function BulkImportDialog({
         setImportItems(items)
 
         // Store result for onComplete to pass trackId
-        if (gen === generationRef.current) {
+        if (generation === generationRef.current) {
           batchResultRef.current = {
             trackId: result.trackId,
             courseIds: result.courses.filter(r => r.success && r.courseId).map(r => r.courseId!),
@@ -901,7 +901,7 @@ export function BulkImportDialog({
         }
 
         // Apply track cover after track creation
-        if (result.trackId && gen === generationRef.current) {
+        if (result.trackId && generation === generationRef.current) {
           const selectedCandidate = trackCoverCandidates.find(c => c.id === selectedTrackCoverId)
           if (selectedCandidate) {
             const coverStatus = await applyImportedTrackCover({
@@ -910,19 +910,19 @@ export function BulkImportDialog({
               isExplicitSelection: trackCoverSelectionSource === 'manual',
               preserveExisting: true,
             })
-            if (gen === generationRef.current) {
+            if (generation === generationRef.current) {
               setTrackCoverResult(coverStatus)
             }
           }
         }
 
-        if (gen === generationRef.current) {
+        if (generation === generationRef.current) {
           setStep('results')
         }
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Unexpected error during batch import'
         toast.error(`Batch import failed: ${message}`)
-        console.warn('[BulkImport] batchImportTrackCourses threw:', err)
+        console.error('[BulkImport] batchImportTrackCourses threw:', err)
         // Reset to review step so the user can retry or go back
         setStep('review')
       }
@@ -1024,7 +1024,7 @@ export function BulkImportDialog({
 
     // Server-aware batch import path: when manifest exists but parentHandle is null
     // (server URL import), create or update the track with successfully imported courses.
-    if (trackManifest && !parentHandle && !abortRef.current && gen === generationRef.current) {
+    if (trackManifest && !parentHandle && !abortRef.current && generation === generationRef.current) {
       const manifestPositions = new Map(
         trackManifest.manifest.track.courses.map(c => [c.folder, c.position])
       )
@@ -1088,7 +1088,7 @@ export function BulkImportDialog({
           }
 
           // Apply track cover after server-URL track creation
-          if (gen === generationRef.current) {
+          if (generation === generationRef.current) {
             const selectedCandidate = trackCoverCandidates.find(c => c.id === selectedTrackCoverId)
             if (selectedCandidate) {
               const coverStatus = await applyImportedTrackCover({
@@ -1097,7 +1097,7 @@ export function BulkImportDialog({
                 isExplicitSelection: trackCoverSelectionSource === 'manual',
                 preserveExisting: true,
               })
-              if (gen === generationRef.current) {
+              if (generation === generationRef.current) {
                 setTrackCoverResult(coverStatus)
               }
             }
@@ -1110,7 +1110,7 @@ export function BulkImportDialog({
             }
           }
         } catch (err) {
-          console.warn('[BulkImport] Failed to create/update track from server courses:', err)
+          console.error('[BulkImport] Failed to create/update track from server courses:', err)
           toast.warning('Courses imported but track could not be created')
         }
       }
@@ -1134,7 +1134,7 @@ export function BulkImportDialog({
       toast.error('No folders were imported. Check the results for details.')
     }
 
-    if (gen === generationRef.current) {
+    if (generation === generationRef.current) {
       setStep('results')
     }
   }, [importItems, folders, courseOverrides, parentAuthorId, trackManifest])
@@ -1146,7 +1146,7 @@ export function BulkImportDialog({
       retryLockRef.current = true
 
       try {
-        const gen = generationRef.current
+        const generation = generationRef.current
 
         if (abortRef.current) {
           return
@@ -1183,7 +1183,7 @@ export function BulkImportDialog({
           scanResult = await scanCourseFromSource(item)
         } catch (err) {
           const message = err instanceof Error ? err.message : 'Failed to scan folder'
-          if (gen === generationRef.current) {
+          if (generation === generationRef.current) {
             setImportItems(prev =>
               prev.map(i =>
                 i.folderName === folderName ? { ...i, status: 'error', error: message } : i
@@ -1194,12 +1194,12 @@ export function BulkImportDialog({
           return
         }
 
-        if (abortRef.current || gen !== generationRef.current) {
+        if (abortRef.current || generation !== generationRef.current) {
           return
         }
 
         if (scanResult.status !== 'success') {
-          if (gen === generationRef.current) {
+          if (generation === generationRef.current) {
             setImportItems(prev =>
               prev.map(i =>
                 i.folderName === folderName
@@ -1220,7 +1220,7 @@ export function BulkImportDialog({
           return
         }
 
-        if (gen === generationRef.current) {
+        if (generation === generationRef.current) {
           setImportItems(prev =>
             prev.map(i =>
               i.folderName === folderName
@@ -1253,11 +1253,11 @@ export function BulkImportDialog({
               : {}),
           }
           await persistScannedCourse(scanResult.course, overrides)
-          if (gen !== generationRef.current) {
+          if (generation !== generationRef.current) {
             return
           }
           await useCourseImportStore.getState().loadImportedCourses()
-          if (gen === generationRef.current) {
+          if (generation === generationRef.current) {
             setImportItems(prev =>
               prev.map(i =>
                 i.folderName === folderName
@@ -1272,7 +1272,7 @@ export function BulkImportDialog({
           // Preserve the actual error message for the user.
           const message = err instanceof Error ? err.message : 'Failed to import'
           console.error('[BulkImport] retry persistCourse failed for', folderName, ':', err)
-          if (gen === generationRef.current) {
+          if (generation === generationRef.current) {
             setImportItems(prev =>
               prev.map(i =>
                 i.folderName === folderName
@@ -2167,6 +2167,7 @@ export function BulkImportDialog({
                         variant="ghost"
                         size="sm"
                         onClick={() => handleRetry(item.folderName)}
+                        disabled={retryLockRef.current}
                         className="shrink-0 min-h-[44px] min-w-[44px]"
                         aria-label={`Retry importing ${item.folderName}`}
                         data-testid={`bulk-retry-${item.folderName}`}

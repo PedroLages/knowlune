@@ -141,6 +141,9 @@ export const useCourseImportStore = create<CourseImportState>((set, get) => ({
           syncableWrite('importedCourses', 'delete', courseId),
           deleteCourseThumbnail(courseId),
           deleteVideoStoryboardsForCourse(courseId),
+          // KI-E96-S04-L02: Cascade delete YouTube chapters when parent course
+          // is deleted. Chapters persist in Dexie as orphans without this.
+          db.youtubeChapters.where('courseId').equals(courseId).delete(),
         ])
       })
 

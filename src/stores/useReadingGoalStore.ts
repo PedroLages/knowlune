@@ -107,8 +107,9 @@ function runLegacyStreakCleanupOnce(): void {
     if (localStorage.getItem(LEGACY_STREAK_CLEANUP_FLAG) === '1') return
     localStorage.removeItem(LEGACY_STREAK_KEY)
     localStorage.setItem(LEGACY_STREAK_CLEANUP_FLAG, '1')
-  } catch {
+  } catch (err) {
     // silent-catch-ok: cleanup is opportunistic; never blocks the store.
+    console.error("[useReadingGoalStore] Failed to run legacy streak cleanup:", err)
   }
 }
 
@@ -130,8 +131,9 @@ export const useReadingGoalStore = create<ReadingGoalState>((set, get) => ({
       // Streak is no longer loaded from localStorage (E95-S04). Cold-boot shows
       // defaults until `hydrateStreak()` fires from `hydrateSettingsFromSupabase`.
       set({ goal, streak: { ...DEFAULT_STREAK }, hasGoal: goal !== null })
-    } catch {
+    } catch (err) {
       // silent-catch-ok: corrupted storage — start fresh
+      console.error("[useReadingGoalStore] Failed to load persisted state, using defaults:", err)
       set({
         goal: null,
         streak: { ...DEFAULT_STREAK },
@@ -144,8 +146,9 @@ export const useReadingGoalStore = create<ReadingGoalState>((set, get) => ({
     const goal: ReadingGoal = { ...partial, updatedAt: new Date().toISOString() }
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(goal))
-    } catch {
+    } catch (err) {
       // silent-catch-ok: storage quota
+      console.error("[useReadingGoalStore] Failed to persist goal:", err)
     }
     set({ goal, hasGoal: true })
     // Streak fields (currentStreak, longestStreak, lastMetDate) are intentionally excluded — E95-S04.
@@ -162,8 +165,9 @@ export const useReadingGoalStore = create<ReadingGoalState>((set, get) => ({
       // Best-effort remove in case the legacy cleanup ran on a different
       // session and some shadow copy of the forgeable key remains.
       localStorage.removeItem(LEGACY_STREAK_KEY)
-    } catch {
+    } catch (err) {
       // silent-catch-ok
+      console.error("[useReadingGoalStore] Failed to clear goal:", err)
     }
     set({
       goal: null,

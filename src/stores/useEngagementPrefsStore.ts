@@ -73,8 +73,9 @@ function loadPersistedPrefs(): EngagementPrefs {
           : 'auto',
       }
     }
-  } catch {
+  } catch (err) {
     // Corrupted data — use defaults
+    console.error("[useEngagementPrefsStore] Failed to load persisted state, using defaults:", err)
   }
   return { ...defaults }
 }
@@ -82,8 +83,9 @@ function loadPersistedPrefs(): EngagementPrefs {
 function persistPrefs(prefs: EngagementPrefs) {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs))
-  } catch {
+  } catch (err) {
     // localStorage full or unavailable — non-blocking
+    console.error("[useEngagementPrefsStore] Failed to persist prefs:", err)
   }
 }
 

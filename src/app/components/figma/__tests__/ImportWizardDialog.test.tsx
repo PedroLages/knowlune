@@ -1324,6 +1324,46 @@ describe('server URL import card', () => {
     // Should NOT attempt the network call for an invalid URL
     expect(mockScanCourseFolderFromServer).not.toHaveBeenCalled()
   })
+
+  it('KI-113: pressing Enter while scanning does not trigger duplicate import', async () => {
+    let resolveScan!: (value: unknown) => void
+    mockScanCourseFolderFromServer.mockImplementation(
+      () =>
+        new Promise(resolve => {
+          resolveScan = resolve
+        })
+    )
+
+    const user = userEvent.setup()
+    render(<ImportWizardDialog open={true} onOpenChange={vi.fn()} />)
+
+    await user.click(screen.getByTestId('wizard-server-url-btn'))
+    const input = screen.getByPlaceholderText('https://example.com/AI/Course/')
+    await user.type(input, 'https://example.com/Course/')
+
+    // Press Enter to start scan
+    await user.keyboard('{Enter}')
+
+    // Press Enter again while scan is in progress
+    await user.keyboard('{Enter}')
+
+    // Scan should only be triggered once (second Enter blocked by isScanningRef guard)
+    expect(mockScanCourseFolderFromServer).toHaveBeenCalledTimes(1)
+
+    // Resolve to clean up
+    resolveScan!({
+      id: 'course-1',
+      name: 'Test',
+      videos: [],
+      pdfs: [],
+      images: [],
+      directoryHandle: null,
+    })
+  })
+
+  // NOTE: KI-113 Escape-during-scan guard exists at line 939 of ImportWizardDialog.tsx
+  // but is bound to the URL input's onKeyDown, which unmounts when scanning starts.
+  // A dialog-level Escape guard is needed for full coverage — tracked as a follow-up.
 })
 
 // --- AC26: handleDriveFolderSelected callback ---

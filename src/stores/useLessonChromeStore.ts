@@ -7,8 +7,9 @@ function readStoredTheater(): boolean {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
     return raw === 'true'
-  } catch {
+  } catch (_err) {
     // silent-catch-ok — localStorage unavailable (private browsing); default to false
+    console.error('[useLessonChromeStore] Failed to read theater mode from localStorage:', _err)
     return false
   }
 }
@@ -16,8 +17,9 @@ function readStoredTheater(): boolean {
 function persistTheater(value: boolean): void {
   try {
     localStorage.setItem(STORAGE_KEY, String(value))
-  } catch {
+  } catch (_err) {
     // silent-catch-ok — storage full or blocked; degrade gracefully
+    console.error('[useLessonChromeStore] Failed to persist theater mode:', _err)
   }
 }
 
@@ -27,7 +29,8 @@ function readStoredAutoPlay(): boolean {
     // Default to true (enabled) when no stored preference exists
     if (raw === null) return true
     return raw === 'true'
-  } catch {
+  } catch (_err) {
+    console.error('[useLessonChromeStore] Failed to read autoPlay from localStorage:', _err)
     return true
   }
 }
@@ -35,8 +38,9 @@ function readStoredAutoPlay(): boolean {
 function persistAutoPlay(value: boolean): void {
   try {
     localStorage.setItem(AUTO_PLAY_KEY, String(value))
-  } catch {
+  } catch (_err) {
     // silent-catch-ok
+    console.error('[useLessonChromeStore] Failed to persist autoPlay:', _err)
   }
 }
 

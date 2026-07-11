@@ -17,6 +17,9 @@
  */
 import { supabase } from '@/lib/auth/supabase'
 import type { ReadingGoal } from '@/data/types'
+import { db } from '@/db'
+import { toLocalDateString } from '@/lib/dateUtils'
+import { computeAverageReadingSpeed } from '@/services/ReadingStatsService'
 
 /** Streak triple returned by the server. Mirrors `useReadingGoalStore.streak`. */
 export interface ServerStreak {
@@ -60,10 +63,85 @@ export async function hydrateStreakFromSupabase(
   const row = Array.isArray(data) ? data[0] : data
   if (!row) return null
 
-  return {
+  const rpcResult: ServerStreak = {
     currentStreak: toInt(row.current_streak),
     longestStreak: toInt(row.longest_streak),
     lastMetDate: typeof row.last_met_date === 'string' ? row.last_met_date : null,
+  }
+
+  // KI-E95-S04-L01: Pages-mode fallback. The server RPC returns zeros for
+  // pages goal (deferred per OQ1). Compute the streak from local Dexie data
+  // so pages-goal users see a meaningful streak.
+  if (
+    goal.dailyType === 'pages' &&
+    rpcResult.currentStreak === 0 &&
+    rpcResult.longestStreak === 0
+  ) {
+    const local = await computePagesStreakFromLocal(goal)
+    if (local) return local
+  }
+
+  return rpcResult
+}
+
+/**
+ * KI-E95-S04-L01: Pages-goal fallback — compute a reading streak from local
+ * Dexie data when the server-side RPC returns zeros (pages goal not yet
+ * supported server-side per OQ1).
+ *
+ * Strategy: group all book study sessions (courseId = '') by date, estimate
+ * pages per day using the user's actual reading speed (pages/hour from
+ * finished books), or fall back to a 2 min/page heuristic. Count consecutive
+ * days where the estimate meets or exceeds the daily target.
+ *
+ * Returns null on any failure so the caller falls back to the RPC result.
+ */
+export async function computePagesStreakFromLocal(
+  goal: Pick<ReadingGoal, 'dailyTarget'>
+): Promise<ServerStreak | null> {
+  try {
+    const avgSpeedPagesPerHour = await computeAverageReadingSpeed()
+    const minPerPage = avgSpeedPagesPerHour ? 60 / avgSpeedPagesPerHour : 2
+
+    const sessions = await db.studySessions
+      .where('courseId')
+      .equals('')
+      .toArray()
+
+    const todayStr = toLocalDateString(new Date())
+
+    // Group session durations (seconds) by date
+    const secondsByDate = new Map<string, number>()
+    for (const s of sessions) {
+      if (!s.startTime) continue
+      const date = toLocalDateString(new Date(s.startTime))
+      if (date > todayStr) continue // skip future dates
+      secondsByDate.set(date, (secondsByDate.get(date) ?? 0) + (s.duration ?? 0))
+    }
+
+    const sortedDates = Array.from(secondsByDate.keys()).sort()
+
+    let currentStreak = 0
+    let longestStreak = 0
+    let lastMetDate: string | null = null
+
+    for (const date of sortedDates) {
+      const minutes = (secondsByDate.get(date) ?? 0) / 60
+      const pagesEstimate = Math.round(minutes / minPerPage)
+
+      if (pagesEstimate >= goal.dailyTarget) {
+        currentStreak++
+        if (currentStreak > longestStreak) longestStreak = currentStreak
+        lastMetDate = date
+      } else {
+        currentStreak = 0
+      }
+    }
+
+    return { currentStreak, longestStreak, lastMetDate }
+  } catch (err) {
+    console.error('[streak] Local pages streak computation failed:', err)
+    return null
   }
 }
 

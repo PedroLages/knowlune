@@ -353,8 +353,9 @@ export const useTutorStore = create<TutorState>((set, get) => ({
       } else {
         set({ messages: [], conversationId: null })
       }
-    } catch {
+    } catch (err) {
       // silent-catch-ok — load failure is non-critical, start fresh
+      console.error('[useTutorStore] Failed to load conversation:', err)
       set({ messages: [], conversationId: null })
     }
   },
@@ -397,7 +398,8 @@ export const useTutorStore = create<TutorState>((set, get) => ({
         await syncableWrite('chatConversations', 'add', conversation as unknown as SyncableRecord)
         set({ conversationId: id })
       }
-    } catch {
+    } catch (err) {
+      console.error('[useTutorStore] Failed to persist conversation:', err)
       toast.error('Failed to save conversation.')
     }
   },
@@ -406,7 +408,8 @@ export const useTutorStore = create<TutorState>((set, get) => ({
     try {
       const model = await getOrCreateLearnerModel(courseId)
       set({ learnerModel: model })
-    } catch {
+    } catch (err) {
+      console.error('[useTutorStore] Failed to load learner model:', err)
       toast.error('Failed to load learner model.')
       set({ learnerModel: null })
     }
@@ -418,7 +421,8 @@ export const useTutorStore = create<TutorState>((set, get) => ({
       if (updated) {
         set({ learnerModel: updated })
       }
-    } catch {
+    } catch (err) {
+      console.error('[useTutorStore] Failed to update learner model:', err)
       toast.error('Failed to update learner model.')
     }
   },
@@ -432,7 +436,8 @@ export const useTutorStore = create<TutorState>((set, get) => ({
       if (updated) {
         set({ learnerModel: updated })
       }
-    } catch {
+    } catch (err) {
+      console.error('[useTutorStore] Failed to update learner model fields:', err)
       toast.error('Failed to update learner model.')
     }
   },
@@ -441,7 +446,8 @@ export const useTutorStore = create<TutorState>((set, get) => ({
     try {
       await clearLearnerModelService(courseId)
       set({ learnerModel: null })
-    } catch {
+    } catch (err) {
+      console.error('[useTutorStore] Failed to clear learner model:', err)
       toast.error('Failed to clear learner model.')
     }
   },

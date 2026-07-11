@@ -272,8 +272,9 @@ export const useYouTubeImportStore = create<YouTubeImportState>((set, get) => ({
           ),
         }))
       }
-    } catch {
+    } catch (err) {
       // Fail-open — keep 'loaded'. Runtime fallback is the safety net.
+      console.error('[useYouTubeImportStore] Embeddability probe failed:', err)
     }
   },
 
