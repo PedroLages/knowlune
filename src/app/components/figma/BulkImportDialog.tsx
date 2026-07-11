@@ -10,6 +10,7 @@ import { useState, useCallback, useRef, useEffect } from 'react'
 import { useStableCallback } from '@/app/hooks/useStableCallback'
 import {
   Dialog,
+  DialogClose,
   DialogContent,
   DialogHeader,
   DialogTitle,
@@ -42,6 +43,7 @@ import {
   FileX,
   Image as ImageIcon,
   Pencil,
+  X,
 } from 'lucide-react'
 import {
   scanCourseFromSource,
@@ -443,10 +445,7 @@ export function BulkImportDialog({
         // Apply manifest-defined cover image if present (takes priority over discovered images)
         const manifestCoverImage = manifestResult.summary.trackCoverImage
         if (manifestCoverImage) {
-          const manifestUrl = new URL(
-            manifestCoverImage,
-            url.endsWith('/') ? url : url + '/'
-          ).href
+          const manifestUrl = new URL(manifestCoverImage, url.endsWith('/') ? url : url + '/').href
           const manifestCandidate: TrackCoverCandidate = {
             id: `manifest-cover`,
             filename: manifestCoverImage,
@@ -472,10 +471,7 @@ export function BulkImportDialog({
             ]
           : serverCandidates
 
-        const autoSelection = resolveTrackCoverAutoSelection(
-          allCandidates,
-          manifestCoverImage
-        )
+        const autoSelection = resolveTrackCoverAutoSelection(allCandidates, manifestCoverImage)
         if (autoSelection) {
           setSelectedTrackCoverId(autoSelection.selectedId)
           setTrackCoverSelectionSource(autoSelection.source)
@@ -906,9 +902,7 @@ export function BulkImportDialog({
 
         // Apply track cover after track creation
         if (result.trackId && gen === generationRef.current) {
-          const selectedCandidate = trackCoverCandidates.find(
-            c => c.id === selectedTrackCoverId
-          )
+          const selectedCandidate = trackCoverCandidates.find(c => c.id === selectedTrackCoverId)
           if (selectedCandidate) {
             const coverStatus = await applyImportedTrackCover({
               trackId: result.trackId,
@@ -1095,9 +1089,7 @@ export function BulkImportDialog({
 
           // Apply track cover after server-URL track creation
           if (gen === generationRef.current) {
-            const selectedCandidate = trackCoverCandidates.find(
-              c => c.id === selectedTrackCoverId
-            )
+            const selectedCandidate = trackCoverCandidates.find(c => c.id === selectedTrackCoverId)
             if (selectedCandidate) {
               const coverStatus = await applyImportedTrackCover({
                 trackId,
@@ -1324,82 +1316,100 @@ export function BulkImportDialog({
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent
-        className="min-w-0 overflow-x-hidden sm:max-w-lg"
+        className={`flex max-h-[calc(100dvh-2rem)] min-w-0 flex-col overflow-hidden sm:max-w-lg ${
+          step === 'review' ? 'gap-0 p-0' : 'gap-4 p-6'
+        }`}
         data-testid="bulk-import-dialog"
         aria-describedby="bulk-import-description"
+        hideClose
       >
-        <DialogHeader className="pr-12">
-          <DialogTitle>
-            {step === 'choose' && 'Import Courses'}
-            {step === 'enter-url' && 'Enter Server URL'}
-            {step === 'select-folders' && 'Select Course Folders'}
-            {step === 'scanning' && 'Scanning Folders'}
-            {step === 'review' && 'Review Courses'}
-            {step === 'importing' && 'Importing Courses'}
-            {step === 'results' && 'Import Complete'}
-          </DialogTitle>
-          <DialogDescription id="bulk-import-description" aria-live="polite">
-            {step === 'choose' && 'Choose how you want to import your courses.'}
-            {step === 'enter-url' && 'Paste a server URL to scan for course folders.'}
-            {step === 'select-folders' &&
-              (hasManifest && trackManifest
-                ? `Found ${folders.length} sub-folders for "${trackManifest.trackName}". Select which ones to import.`
-                : `Found ${folders.length} sub-folders. Select which ones to import.`)}
-            {step === 'scanning' && `Scanning ${importItems.length} folders for content...`}
-            {step === 'review' &&
-              (hasManifest && trackManifest
-                ? `${scannedCourses.size} courses ready — will be grouped under "${trackManifest.trackName}".`
-                : `${scannedCourses.size} courses ready. Edit details before importing.`)}
-            {step === 'importing' && `Importing ${importItems.length} courses...`}
-            {step === 'results' &&
-              (batchResultRef.current?.trackId
-                ? `${successItems.length + truncatedItems.length} of ${importItems.length} courses imported into track.`
-                : `${successItems.length + truncatedItems.length} of ${importItems.length} courses imported.`)}
-          </DialogDescription>
-        </DialogHeader>
+        <DialogClose asChild>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="absolute right-3 top-3 z-10 size-11 rounded-sm text-muted-foreground opacity-70 hover:opacity-100"
+            aria-label="Close"
+          >
+            <X className="size-4" aria-hidden="true" />
+          </Button>
+        </DialogClose>
+        <div
+          className={step === 'review' ? 'shrink-0 px-6 pb-3 pt-6' : 'shrink-0'}
+          data-testid="bulk-import-header"
+        >
+          <DialogHeader className="pr-12">
+            <DialogTitle>
+              {step === 'choose' && 'Import Courses'}
+              {step === 'enter-url' && 'Enter Server URL'}
+              {step === 'select-folders' && 'Select Course Folders'}
+              {step === 'scanning' && 'Scanning Folders'}
+              {step === 'review' && 'Review Courses'}
+              {step === 'importing' && 'Importing Courses'}
+              {step === 'results' && 'Import Complete'}
+            </DialogTitle>
+            <DialogDescription id="bulk-import-description" aria-live="polite">
+              {step === 'choose' && 'Choose how you want to import your courses.'}
+              {step === 'enter-url' && 'Paste a server URL to scan for course folders.'}
+              {step === 'select-folders' &&
+                (hasManifest && trackManifest
+                  ? `Found ${folders.length} sub-folders for "${trackManifest.trackName}". Select which ones to import.`
+                  : `Found ${folders.length} sub-folders. Select which ones to import.`)}
+              {step === 'scanning' && `Scanning ${importItems.length} folders for content...`}
+              {step === 'review' &&
+                (hasManifest && trackManifest
+                  ? `${scannedCourses.size} courses ready — will be grouped under "${trackManifest.trackName}".`
+                  : `${scannedCourses.size} courses ready. Edit details before importing.`)}
+              {step === 'importing' && `Importing ${importItems.length} courses...`}
+              {step === 'results' &&
+                (batchResultRef.current?.trackId
+                  ? `${successItems.length + truncatedItems.length} of ${importItems.length} courses imported into track.`
+                  : `${successItems.length + truncatedItems.length} of ${importItems.length} courses imported.`)}
+            </DialogDescription>
+          </DialogHeader>
 
-        {/* Step indicator — consistent with ImportWizardDialog pattern */}
-        {(() => {
-          const bulkSteps = [
-            { step: 'choose' as const, label: 'Choose' },
-            { step: 'select-folders' as const, label: 'Select' },
-            { step: 'review' as const, label: 'Review' },
-            { step: 'importing' as const, label: 'Import' },
-          ]
-          let currentIdx = 0
-          if (step === 'choose' || step === 'enter-url') currentIdx = 0
-          else if (step === 'select-folders' || step === 'scanning') currentIdx = 1
-          else if (step === 'review') currentIdx = 2
-          else if (step === 'importing' || step === 'results') currentIdx = 3
+          {/* Step indicator — consistent with ImportWizardDialog pattern */}
+          {(() => {
+            const bulkSteps = [
+              { step: 'choose' as const, label: 'Choose' },
+              { step: 'select-folders' as const, label: 'Select' },
+              { step: 'review' as const, label: 'Review' },
+              { step: 'importing' as const, label: 'Import' },
+            ]
+            let currentIdx = 0
+            if (step === 'choose' || step === 'enter-url') currentIdx = 0
+            else if (step === 'select-folders' || step === 'scanning') currentIdx = 1
+            else if (step === 'review') currentIdx = 2
+            else if (step === 'importing' || step === 'results') currentIdx = 3
 
-          return (
-            <nav
-              className="flex items-center gap-2 text-xs text-muted-foreground mb-2"
-              aria-label={`Step ${currentIdx + 1} of ${bulkSteps.length}`}
-            >
-              {bulkSteps.map((s, i) => (
-                <span key={s.step} className="contents">
-                  {i > 0 && <ChevronRight className="size-3" aria-hidden="true" />}
-                  <span
-                    className={`inline-flex items-center justify-center size-5 rounded-full text-xs font-medium ${
-                      currentIdx === i
-                        ? 'bg-brand text-brand-foreground'
-                        : currentIdx > i
-                          ? 'bg-brand-soft text-brand-soft-foreground'
-                          : 'bg-muted text-muted-foreground'
-                    }`}
-                    aria-current={currentIdx === i ? 'step' : undefined}
-                  >
-                    {currentIdx > i ? <Check className="size-3" aria-hidden="true" /> : i + 1}
+            return (
+              <nav
+                className="flex items-center gap-2 text-xs text-muted-foreground mb-2"
+                aria-label={`Step ${currentIdx + 1} of ${bulkSteps.length}`}
+              >
+                {bulkSteps.map((s, i) => (
+                  <span key={s.step} className="contents">
+                    {i > 0 && <ChevronRight className="size-3" aria-hidden="true" />}
+                    <span
+                      className={`inline-flex items-center justify-center size-5 rounded-full text-xs font-medium ${
+                        currentIdx === i
+                          ? 'bg-brand text-brand-foreground'
+                          : currentIdx > i
+                            ? 'bg-brand-soft text-brand-soft-foreground'
+                            : 'bg-muted text-muted-foreground'
+                      }`}
+                      aria-current={currentIdx === i ? 'step' : undefined}
+                    >
+                      {currentIdx > i ? <Check className="size-3" aria-hidden="true" /> : i + 1}
+                    </span>
+                    <span className={currentIdx === i ? 'font-medium text-foreground' : ''}>
+                      {s.label}
+                    </span>
                   </span>
-                  <span className={currentIdx === i ? 'font-medium text-foreground' : ''}>
-                    {s.label}
-                  </span>
-                </span>
-              ))}
-            </nav>
-          )
-        })()}
+                ))}
+              </nav>
+            )
+          })()}
+        </div>
 
         {/* Step: Choose import mode */}
         {step === 'choose' && (
@@ -1743,288 +1753,300 @@ export function BulkImportDialog({
         {/* Step: Review course details before importing */}
         {step === 'review' && (
           <>
-            {hasManifest && trackManifest && (
-              <div
-                className="rounded-xl border border-brand/20 bg-brand-soft/50 p-3 mb-2"
-                data-testid="bulk-track-header"
-              >
-                <p className="text-xs text-brand-soft-foreground font-semibold uppercase tracking-wider">
-                  Track
-                </p>
-                <p className="text-sm font-medium text-foreground mt-0.5">
-                  {trackManifest.trackName}
-                </p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  All courses will be grouped under this track after import.
-                </p>
-              </div>
-            )}
-
-            {/* Track Cover section — shown when root images are discovered */}
-            {trackCoverCandidates.length > 0 && (
-              <div
-                className="rounded-xl border border-border p-3 mb-2"
-                data-testid="bulk-track-cover-section"
-              >
-                {trackCoverCandidates.length === 1 && selectedTrackCoverId ? (
-                  /* Single auto-selected image */
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
-                      Track Cover
-                    </p>
-                    <div className="relative rounded-lg overflow-hidden aspect-video bg-muted mb-2">
-                      <img
-                        src={trackCoverCandidates[0].previewUrl}
-                        alt={trackCoverCandidates[0].filename}
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      {trackCoverSelectionSource === 'manifest'
-                        ? 'Selected from track-manifest.json'
-                        : 'Automatically selected from the track folder'}
-                    </p>
-                    {trackCoverSelectionSource === 'automatic' && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="text-xs mt-1 h-auto py-0.5 px-0 text-muted-foreground hover:text-foreground"
-                        onClick={handleClearTrackCover}
-                        data-testid="bulk-track-cover-change"
-                      >
-                        Use gradient instead
-                      </Button>
-                    )}
-                  </div>
-                ) : (
-                  /* Multiple candidates — user chooses */
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">
-                      Choose Track Cover
-                    </p>
-                    <p className="text-xs text-muted-foreground mb-2">
-                      Select an image for "{trackManifest?.trackName ?? 'this track'}"
-                    </p>
+            <div className="min-h-0 flex-1 overflow-hidden" data-testid="bulk-review-scroll-region">
+              <ScrollArea className="h-full min-w-0 w-full">
+                <div className="space-y-3 px-6 py-3 pr-8">
+                  {hasManifest && trackManifest && (
                     <div
-                      className="grid grid-cols-4 gap-2"
-                      role="radiogroup"
-                      aria-label="Select track cover image"
+                      className="rounded-xl border border-brand/20 bg-brand-soft/50 p-3"
+                      data-testid="bulk-track-header"
                     >
-                      {trackCoverCandidates.map(candidate => {
-                        const isSelected = selectedTrackCoverId === candidate.id
-                        return (
-                          <button
-                            key={candidate.id}
-                            type="button"
-                            role="radio"
-                            aria-checked={isSelected}
-                            aria-label={`${candidate.filename}${candidate.source === 'manifest' ? ' (from manifest)' : ''}`}
-                            onClick={() => handleSelectTrackCover(candidate.id)}
-                            className={`relative aspect-video rounded-lg overflow-hidden border-2 transition-colors ${
-                              isSelected
-                                ? 'border-brand ring-1 ring-brand/30'
-                                : 'border-transparent hover:border-border'
-                            }`}
-                            data-testid={`bulk-track-cover-${candidate.id}`}
-                          >
-                            {candidate.previewUrl ? (
-                              <img
-                                src={candidate.previewUrl}
-                                alt={candidate.filename}
-                                className="w-full h-full object-cover"
-                              />
-                            ) : (
-                              <div className="w-full h-full bg-muted flex items-center justify-center">
-                                <ImageIcon className="size-5 text-muted-foreground" />
-                              </div>
-                            )}
-                            {isSelected && (
-                              <div className="absolute inset-0 bg-brand/10 flex items-center justify-center">
-                                <CheckCircle2 className="size-5 text-brand" />
-                              </div>
-                            )}
-                            {candidate.source === 'manifest' && (
-                              <span className="absolute bottom-0.5 right-0.5 bg-brand text-brand-foreground text-[9px] px-1 rounded">
-                                manifest
-                              </span>
-                            )}
-                          </button>
-                        )
-                      })}
-                    </div>
-                    {selectedTrackCoverId && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="text-xs mt-2 h-auto py-0.5 px-0 text-muted-foreground hover:text-foreground"
-                        onClick={handleClearTrackCover}
-                        data-testid="bulk-track-cover-use-gradient"
-                      >
-                        Use gradient instead
-                      </Button>
-                    )}
-                    {!selectedTrackCoverId && trackCoverCandidates.length > 0 && (
-                      <p className="text-xs text-muted-foreground mt-2">
-                        No image selected — gradient will be used.
+                      <p className="text-xs text-brand-soft-foreground font-semibold uppercase tracking-wider">
+                        Track
                       </p>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
+                      <p className="text-sm font-medium text-foreground mt-0.5">
+                        {trackManifest.trackName}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        All courses will be grouped under this track after import.
+                      </p>
+                    </div>
+                  )}
 
-            <ScrollArea className="max-h-[50vh] min-w-0 w-full">
-              <div className="flex min-w-0 flex-col gap-2 pr-3" data-testid="bulk-review-list">
-                {[...scannedCourses.values()].map(course => {
-                  const isExpanded = expandedCourseId === course.id
-                  const override = courseOverrides.get(course.id)
-                  const displayName = override?.name ?? course.name
-                  const courseImages = coverPreviewUrls.get(course.id)
-
-                  return (
+                  {/* Track Cover section — shown when root images are discovered */}
+                  {trackCoverCandidates.length > 0 && (
                     <div
-                      key={course.id}
-                      className="rounded-xl border border-border overflow-hidden"
-                      data-testid={`bulk-review-${course.name}`}
+                      className="rounded-xl border border-border p-3"
+                      data-testid="bulk-track-cover-section"
                     >
-                      {/* Collapsed header */}
-                      <button
-                        type="button"
-                        onClick={() => setExpandedCourseId(isExpanded ? null : course.id)}
-                        aria-expanded={isExpanded}
-                        aria-controls={`bulk-course-details-${course.id}`}
-                        className="flex items-center gap-3 w-full px-4 py-3 text-left hover:bg-accent transition-colors"
-                      >
-                        <FolderOpen
-                          className="size-4 text-muted-foreground shrink-0"
-                          aria-hidden="true"
-                        />
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium truncate">{displayName}</p>
-                          <p className="text-xs text-muted-foreground flex items-center gap-2">
-                            <span className="flex items-center gap-1">
-                              <Video className="size-3" /> {course.videos.length}
-                            </span>
-                            <span className="flex items-center gap-1">
-                              <FileText className="size-3" /> {course.pdfs.length}
-                            </span>
-                            {course.images.length > 0 && (
-                              <span className="flex items-center gap-1">
-                                <ImageIcon className="size-3" /> {course.images.length}
-                              </span>
-                            )}
-                            {course.truncated && (
-                              <span className="flex items-center gap-1 text-warning">
-                                <AlertTriangle className="size-3" />
-                                Truncated to {course.videos.length + course.pdfs.length} files
-                              </span>
-                            )}
-                          </p>
-                        </div>
-                        <Pencil className="size-3.5 text-muted-foreground shrink-0" />
-                        {isExpanded ? (
-                          <ChevronUp className="size-4 text-muted-foreground shrink-0" />
-                        ) : (
-                          <ChevronDown className="size-4 text-muted-foreground shrink-0" />
-                        )}
-                      </button>
-
-                      {/* Expanded edit form */}
-                      {isExpanded && (
-                        <div
-                          id={`bulk-course-details-${course.id}`}
-                          className="px-4 pb-4 space-y-3 border-t border-border pt-3"
-                        >
-                          <div className="space-y-1.5">
-                            <Label htmlFor={`bulk-name-${course.id}`} className="text-xs">
-                              Course Name
-                            </Label>
-                            <Input
-                              id={`bulk-name-${course.id}`}
-                              value={displayName}
-                              onChange={e =>
-                                handleCourseOverride(course.id, 'name', e.target.value)
-                              }
-                              className="h-8 text-sm"
-                              data-testid={`bulk-name-input-${course.name}`}
+                      {trackCoverCandidates.length === 1 && selectedTrackCoverId ? (
+                        /* Single auto-selected image */
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
+                          <div className="relative aspect-video w-full shrink-0 overflow-hidden rounded-lg bg-muted sm:w-36">
+                            <img
+                              src={trackCoverCandidates[0].previewUrl}
+                              alt={trackCoverCandidates[0].filename}
+                              className="h-full w-full object-cover"
                             />
                           </div>
-                          <div className="space-y-1.5">
-                            <Label htmlFor={`bulk-desc-${course.id}`} className="text-xs">
-                              Description
-                            </Label>
-                            <Textarea
-                              id={`bulk-desc-${course.id}`}
-                              value={override?.description ?? ''}
-                              onChange={e =>
-                                handleCourseOverride(course.id, 'description', e.target.value)
-                              }
-                              placeholder="Optional description"
-                              rows={2}
-                              className="text-sm resize-none rounded-xl"
-                              data-testid={`bulk-desc-input-${course.name}`}
-                            />
-                          </div>
-
-                          {/* Cover image gallery */}
-                          {courseImages && courseImages.size > 0 && (
-                            <div className="space-y-1.5">
-                              <Label className="text-xs flex items-center gap-1.5">
-                                <ImageIcon className="size-3" aria-hidden="true" />
-                                Cover Image
-                              </Label>
-                              <div
-                                className="grid grid-cols-4 gap-2"
-                                role="radiogroup"
-                                aria-label="Select cover image"
+                          <div className="min-w-0 flex-1">
+                            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                              Track Cover
+                            </p>
+                            <p className="mt-1 text-xs text-muted-foreground">
+                              {trackCoverSelectionSource === 'manifest'
+                                ? 'Selected from track-manifest.json'
+                                : 'Automatically selected from the track folder'}
+                            </p>
+                            {trackCoverSelectionSource === 'automatic' && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="mt-1 h-auto px-0 py-0.5 text-xs text-muted-foreground hover:text-foreground"
+                                onClick={handleClearTrackCover}
+                                data-testid="bulk-track-cover-change"
                               >
-                                {course.images.slice(0, 8).map(img => {
-                                  const url = courseImages.get(img.path)
-                                  if (!url) return null
-                                  const isSelected = override?.coverImageHandle === img.fileHandle
-                                  return (
-                                    <button
-                                      key={img.path}
-                                      type="button"
-                                      role="radio"
-                                      aria-checked={isSelected}
-                                      aria-label={`Select ${img.filename} as cover`}
-                                      onClick={() => handleSelectCover(course.id, img)}
-                                      className={`relative aspect-video rounded-lg overflow-hidden border-2 transition-colors ${
-                                        isSelected
-                                          ? 'border-brand ring-1 ring-brand/30'
-                                          : 'border-transparent hover:border-border'
-                                      }`}
-                                    >
-                                      <img
-                                        src={url}
-                                        alt={img.filename}
-                                        className="w-full h-full object-cover"
-                                      />
-                                      {isSelected && (
-                                        <div className="absolute inset-0 bg-brand/10 flex items-center justify-center">
-                                          <CheckCircle2 className="size-5 text-brand" />
-                                        </div>
-                                      )}
-                                    </button>
-                                  )
-                                })}
-                              </div>
-                            </div>
+                                Use gradient instead
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      ) : (
+                        /* Multiple candidates — user chooses */
+                        <div>
+                          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">
+                            Choose Track Cover
+                          </p>
+                          <p className="text-xs text-muted-foreground mb-2">
+                            Select an image for "{trackManifest?.trackName ?? 'this track'}"
+                          </p>
+                          <div
+                            className="grid grid-cols-2 gap-2 sm:grid-cols-4"
+                            role="radiogroup"
+                            aria-label="Select track cover image"
+                          >
+                            {trackCoverCandidates.map(candidate => {
+                              const isSelected = selectedTrackCoverId === candidate.id
+                              return (
+                                <button
+                                  key={candidate.id}
+                                  type="button"
+                                  role="radio"
+                                  aria-checked={isSelected}
+                                  aria-label={`${candidate.filename}${candidate.source === 'manifest' ? ' (from manifest)' : ''}`}
+                                  onClick={() => handleSelectTrackCover(candidate.id)}
+                                  className={`relative aspect-video overflow-hidden rounded-lg border-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring ${
+                                    isSelected
+                                      ? 'border-brand ring-1 ring-brand/30'
+                                      : 'border-transparent hover:border-border'
+                                  }`}
+                                  data-testid={`bulk-track-cover-${candidate.id}`}
+                                >
+                                  {candidate.previewUrl ? (
+                                    <img
+                                      src={candidate.previewUrl}
+                                      alt={candidate.filename}
+                                      className="w-full h-full object-cover"
+                                    />
+                                  ) : (
+                                    <div className="w-full h-full bg-muted flex items-center justify-center">
+                                      <ImageIcon className="size-5 text-muted-foreground" />
+                                    </div>
+                                  )}
+                                  {isSelected && (
+                                    <div className="absolute inset-0 bg-brand/10 flex items-center justify-center">
+                                      <CheckCircle2 className="size-5 text-brand" />
+                                    </div>
+                                  )}
+                                  {candidate.source === 'manifest' && (
+                                    <span className="absolute bottom-0.5 right-0.5 bg-brand text-brand-foreground text-[9px] px-1 rounded">
+                                      manifest
+                                    </span>
+                                  )}
+                                </button>
+                              )
+                            })}
+                          </div>
+                          {selectedTrackCoverId && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-xs mt-2 h-auto py-0.5 px-0 text-muted-foreground hover:text-foreground"
+                              onClick={handleClearTrackCover}
+                              data-testid="bulk-track-cover-use-gradient"
+                            >
+                              Use gradient instead
+                            </Button>
+                          )}
+                          {!selectedTrackCoverId && trackCoverCandidates.length > 0 && (
+                            <p className="text-xs text-muted-foreground mt-2">
+                              No image selected — gradient will be used.
+                            </p>
                           )}
                         </div>
                       )}
                     </div>
-                  )
-                })}
-              </div>
-            </ScrollArea>
+                  )}
 
-            <DialogFooter className="w-full max-w-full sm:flex-wrap">
+                  <div className="flex min-w-0 flex-col gap-2" data-testid="bulk-review-list">
+                    {[...scannedCourses.values()].map(course => {
+                      const isExpanded = expandedCourseId === course.id
+                      const override = courseOverrides.get(course.id)
+                      const displayName = override?.name ?? course.name
+                      const courseImages = coverPreviewUrls.get(course.id)
+
+                      return (
+                        <div
+                          key={course.id}
+                          className="rounded-xl border border-border overflow-hidden"
+                          data-testid={`bulk-review-${course.name}`}
+                        >
+                          {/* Collapsed header */}
+                          <button
+                            type="button"
+                            onClick={() => setExpandedCourseId(isExpanded ? null : course.id)}
+                            aria-expanded={isExpanded}
+                            aria-controls={`bulk-course-details-${course.id}`}
+                            className="flex items-center gap-3 w-full px-4 py-3 text-left hover:bg-accent transition-colors"
+                          >
+                            <FolderOpen
+                              className="size-4 text-muted-foreground shrink-0"
+                              aria-hidden="true"
+                            />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium truncate" title={displayName}>
+                                {displayName}
+                              </p>
+                              <p className="text-xs text-muted-foreground flex items-center gap-2">
+                                <span className="flex items-center gap-1">
+                                  <Video className="size-3" /> {course.videos.length}
+                                </span>
+                                <span className="flex items-center gap-1">
+                                  <FileText className="size-3" /> {course.pdfs.length}
+                                </span>
+                                {course.images.length > 0 && (
+                                  <span className="flex items-center gap-1">
+                                    <ImageIcon className="size-3" /> {course.images.length}
+                                  </span>
+                                )}
+                                {course.truncated && (
+                                  <span className="flex items-center gap-1 text-warning">
+                                    <AlertTriangle className="size-3" />
+                                    Truncated to {course.videos.length + course.pdfs.length} files
+                                  </span>
+                                )}
+                              </p>
+                            </div>
+                            <Pencil className="size-3.5 text-muted-foreground shrink-0" />
+                            {isExpanded ? (
+                              <ChevronUp className="size-4 text-muted-foreground shrink-0" />
+                            ) : (
+                              <ChevronDown className="size-4 text-muted-foreground shrink-0" />
+                            )}
+                          </button>
+
+                          {/* Expanded edit form */}
+                          {isExpanded && (
+                            <div
+                              id={`bulk-course-details-${course.id}`}
+                              className="px-4 pb-4 space-y-3 border-t border-border pt-3"
+                            >
+                              <div className="space-y-1.5">
+                                <Label htmlFor={`bulk-name-${course.id}`} className="text-xs">
+                                  Course Name
+                                </Label>
+                                <Input
+                                  id={`bulk-name-${course.id}`}
+                                  value={displayName}
+                                  onChange={e =>
+                                    handleCourseOverride(course.id, 'name', e.target.value)
+                                  }
+                                  className="h-8 text-sm"
+                                  data-testid={`bulk-name-input-${course.name}`}
+                                />
+                              </div>
+                              <div className="space-y-1.5">
+                                <Label htmlFor={`bulk-desc-${course.id}`} className="text-xs">
+                                  Description
+                                </Label>
+                                <Textarea
+                                  id={`bulk-desc-${course.id}`}
+                                  value={override?.description ?? ''}
+                                  onChange={e =>
+                                    handleCourseOverride(course.id, 'description', e.target.value)
+                                  }
+                                  placeholder="Optional description"
+                                  rows={2}
+                                  className="text-sm resize-none rounded-xl"
+                                  data-testid={`bulk-desc-input-${course.name}`}
+                                />
+                              </div>
+
+                              {/* Cover image gallery */}
+                              {courseImages && courseImages.size > 0 && (
+                                <div className="space-y-1.5">
+                                  <Label className="text-xs flex items-center gap-1.5">
+                                    <ImageIcon className="size-3" aria-hidden="true" />
+                                    Cover Image
+                                  </Label>
+                                  <div
+                                    className="grid grid-cols-4 gap-2"
+                                    role="radiogroup"
+                                    aria-label="Select cover image"
+                                  >
+                                    {course.images.slice(0, 8).map(img => {
+                                      const url = courseImages.get(img.path)
+                                      if (!url) return null
+                                      const isSelected =
+                                        override?.coverImageHandle === img.fileHandle
+                                      return (
+                                        <button
+                                          key={img.path}
+                                          type="button"
+                                          role="radio"
+                                          aria-checked={isSelected}
+                                          aria-label={`Select ${img.filename} as cover`}
+                                          onClick={() => handleSelectCover(course.id, img)}
+                                          className={`relative aspect-video rounded-lg overflow-hidden border-2 transition-colors ${
+                                            isSelected
+                                              ? 'border-brand ring-1 ring-brand/30'
+                                              : 'border-transparent hover:border-border'
+                                          }`}
+                                        >
+                                          <img
+                                            src={url}
+                                            alt={img.filename}
+                                            className="w-full h-full object-cover"
+                                          />
+                                          {isSelected && (
+                                            <div className="absolute inset-0 bg-brand/10 flex items-center justify-center">
+                                              <CheckCircle2 className="size-5 text-brand" />
+                                            </div>
+                                          )}
+                                        </button>
+                                      )
+                                    })}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              </ScrollArea>
+            </div>
+
+            <DialogFooter
+              className="w-full shrink-0 border-t border-border bg-background px-6 py-4 sm:flex-row sm:justify-between"
+              data-testid="bulk-review-footer"
+            >
               <Button
                 variant="outline"
                 onClick={() => setStep('select-folders')}
-                className="rounded-xl"
+                className="w-full rounded-xl sm:w-auto"
                 data-testid="bulk-review-back-btn"
               >
                 Back
@@ -2032,7 +2054,7 @@ export function BulkImportDialog({
               <Button
                 variant="brand"
                 onClick={handleConfirmImport}
-                className="rounded-xl"
+                className="w-full rounded-xl sm:w-auto"
                 data-testid="bulk-confirm-import-btn"
               >
                 Import {scannedCourses.size} {scannedCourses.size === 1 ? 'Course' : 'Courses'}
