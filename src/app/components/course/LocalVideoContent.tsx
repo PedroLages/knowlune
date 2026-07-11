@@ -31,9 +31,9 @@ import {
 import { addBookmark, getLessonBookmarks } from '@/lib/bookmarks'
 import { formatTimestamp } from '@/lib/format'
 import { syncableWrite } from '@/lib/sync/syncableWrite'
-import { loadVideoStoryboard, generateStoryboard, saveVideoStoryboard } from '@/lib/videoStoryboard'
+import { loadVideoStoryboard, generateStoryboard, generateStoryboardFromUrl, saveVideoStoryboard } from '@/lib/videoStoryboard'
 import type { StoryboardProp } from '@/app/components/figma/ScrubPreview'
-import type { ImportedVideo, VideoBookmark } from '@/data/types'
+import type { ImportedVideo, VideoBookmark, VideoSourceKind } from '@/data/types'
 
 interface LocalVideoContentProps {
   courseId: string
@@ -93,6 +93,11 @@ export const LocalVideoContent = forwardRef<VideoPlayerHandle, LocalVideoContent
     const [permissionPending, setPermissionPending] = useState(false)
     const [storyboard, setStoryboard] = useState<StoryboardProp | undefined>(undefined)
     const storyboardUrlRef = useRef<string | null>(null)
+    // Tracks per-session storyboard generation failures to avoid repeated
+    // retries on every mouse move for the same lesson.
+    const storyboardFailedRef = useRef(false)
+    // True while a storyboard is being generated (used for loading spinner in scrub preview).
+    const [storyboardLoading, setStoryboardLoading] = useState(false)
     // Tracks the last known-good playback position from timeupdate events.
     // Used during error recovery to avoid losing the position when the browser
     // resets currentTime to 0 during a decode error (Chromium behavior).
@@ -104,6 +109,9 @@ export const LocalVideoContent = forwardRef<VideoPlayerHandle, LocalVideoContent
     // F008: Recovery overlay state persists across VideoPlayer mount/unmount during retry.
     // Set when handleRecoveryNeeded fires, cleared when blob URL loading completes.
     const [showRecoveryOverlay, setShowRecoveryOverlay] = useState(false)
+    // Server URL retry counter: limits reloads to 1 attempt per error episode.
+    // Reset when lesson changes.
+    const serverRetryCountRef = useRef(0)
 
     // Position sync: local tracking for useVideoPositionSync
     const [currentTime, setCurrentTime] = useState(0)
@@ -165,6 +173,17 @@ export const LocalVideoContent = forwardRef<VideoPlayerHandle, LocalVideoContent
     const isDriveSource = !!video?.driveFileRef
     const isServerSource = !!video?.serverUrl
 
+    // ── Video source kind — drives recovery strategy ────────────────────
+    const sourceKind: VideoSourceKind = video?.youtubeVideoId
+      ? 'youtube'
+      : isServerSource
+        ? 'server-url'
+        : isDriveSource
+          ? 'drive'
+          : video?.fileHandle
+            ? 'local-file'
+            : 'local-file' // default for unknown sources
+
     const {
       blobUrl: localBlobUrl,
       error: localError,
@@ -186,7 +205,18 @@ export const LocalVideoContent = forwardRef<VideoPlayerHandle, LocalVideoContent
     // Server-sourced videos use the server URL directly as <video src>.
     // On network error, fall back to fileHandle blob URL if available.
     const [serverError, setServerError] = useState(false)
-    const effectiveSrc = isServerSource && !serverError ? (video?.serverUrl ?? null) : blobUrl
+    // Cache-busting retry key: incremented on server recovery to force a fresh fetch.
+    const [serverRetryKey, setServerRetryKey] = useState(0)
+
+    // Build effective server URL with optional cache-busting query param
+    const effectiveServerUrl = (() => {
+      if (!isServerSource || !video?.serverUrl) return null
+      if (serverRetryKey <= 0) return video.serverUrl
+      const sep = video.serverUrl.includes('?') ? '&' : '?'
+      return `${video.serverUrl}${sep}_retry=${serverRetryKey}`
+    })()
+
+    const effectiveSrc = isServerSource && !serverError ? (effectiveServerUrl ?? null) : blobUrl
     const loading = isDriveSource ? driveLoading : isServerSource ? false : localLoading
 
     // F008: Clear recovery overlay once blob URL loading completes (URL arrived or error).
@@ -248,6 +278,49 @@ export const LocalVideoContent = forwardRef<VideoPlayerHandle, LocalVideoContent
             .catch(() => {
               // silent-catch-ok: generation failure is non-fatal — live extraction fallback
             })
+        } else if (video.serverUrl) {
+          // Server-URL video: generate storyboard from remote URL.
+          // Concurrency is limited globally (one at a time) via videoStoryboard module.
+          storyboardFailedRef.current = false
+          setStoryboardLoading(true)
+          generateStoryboardFromUrl(video.serverUrl)
+            .then(result => {
+              if (ignore || !result) {
+                if (!ignore) {
+                  storyboardFailedRef.current = true
+                  setStoryboardLoading(false)
+                }
+                return
+              }
+              return saveVideoStoryboard(video.id, video.courseId, result).then(() => result)
+            })
+            .then(result => {
+              if (ignore || !result) return
+              const url = URL.createObjectURL(result.blob)
+              const sb: StoryboardProp = {
+                url,
+                columns: result.columns,
+                rows: result.rows,
+                tileWidth: result.tileWidth,
+                tileHeight: result.tileHeight,
+                interval: result.interval,
+                frameCount: result.frameCount,
+              }
+              if (!ignore) {
+                setStoryboard(sb)
+                storyboardUrlRef.current = url
+                setStoryboardLoading(false)
+              } else {
+                URL.revokeObjectURL(url)
+              }
+            })
+            .catch(() => {
+              // silent-catch-ok: generation failure is non-fatal — live extraction fallback
+              if (!ignore) {
+                storyboardFailedRef.current = true
+                setStoryboardLoading(false)
+              }
+            })
         }
       }
 
@@ -286,6 +359,9 @@ export const LocalVideoContent = forwardRef<VideoPlayerHandle, LocalVideoContent
     useEffect(() => {
       recoveryPositionRef.current = undefined
       hasShownResumeDialog.current = false
+      serverRetryCountRef.current = 0
+      setServerRetryKey(0)
+      storyboardFailedRef.current = false
       setIsLoadingPosition(true)
       setResumeDialogOpen(false)
       setSavedRecord(null)
@@ -419,36 +495,75 @@ export const LocalVideoContent = forwardRef<VideoPlayerHandle, LocalVideoContent
     // handler fires, so the error-time position from VideoPlayer can be
     // stale/zero. The last-known-good position from timeupdate events
     // always reflects the true playback position.
-    const handleRecoveryNeeded = useCallback((currentTime: number) => {
-      // E133-S01: If we're using a server URL and it failed, fall back to local file handle.
-      if (isServerSource && !serverError && video?.fileHandle) {
-        setServerError(true)
-        return
-      }
+    const handleRecoveryNeeded = useCallback(
+      (currentTime: number) => {
+        // Prefer the last known-good position over the error-time position,
+        // since the browser may reset currentTime during decode errors.
+        const lastGood = lastKnownTimeRef.current
+        const recoveryPos =
+          isFinite(lastGood) && lastGood > 0 && (lastGood > currentTime || currentTime === 0)
+            ? lastGood
+            : currentTime
 
-      // Prefer the last known-good position over the error-time position,
-      // since the browser may reset currentTime during decode errors.
-      const lastGood = lastKnownTimeRef.current
-      const recoveryPos =
-        isFinite(lastGood) && lastGood > 0 && (lastGood > currentTime || currentTime === 0)
-          ? lastGood
-          : currentTime
+        if (!isFinite(recoveryPos)) {
+          console.warn('[LocalVideoContent] Invalid recovery position:', recoveryPos)
+          return
+        }
 
-      if (!isFinite(recoveryPos)) {
-        console.warn('[LocalVideoContent] Invalid recovery position:', recoveryPos)
-        return
-      }
+        console.warn(
+          `[LocalVideoContent] Recovery triggered | sourceKind=${sourceKind} | ` +
+            `errorTime=${currentTime.toFixed(1)}s lastGood=${lastGood.toFixed(1)}s ` +
+            `→ recoveryPos=${recoveryPos.toFixed(1)}s`
+        )
 
-      console.warn(
-        `[LocalVideoContent] Recovery triggered | ` +
-          `errorTime=${currentTime.toFixed(1)}s lastGood=${lastGood.toFixed(1)}s ` +
-          `→ recoveryPos=${recoveryPos.toFixed(1)}s`
-      )
+        switch (sourceKind) {
+          case 'server-url': {
+            // Server URL recovery: retry the same URL at most once.
+            // Do NOT run blob URL regeneration — there is no fileHandle.
+            // Do NOT show recovery overlay — URL change is synchronous.
+            if (serverRetryCountRef.current >= 1) {
+              console.warn('[LocalVideoContent] Server retry exhausted')
+              return
+            }
+            serverRetryCountRef.current++
+            recoveryPositionRef.current = recoveryPos
+            // Increment the server retry key to append _retry=N cache-busting param.
+            // This changes effectiveSrc, forcing VideoPlayer to remount with a fresh URL.
+            setServerRetryKey(k => k + 1)
+            console.warn(
+              `[LocalVideoContent] Server retry ${serverRetryCountRef.current}/1 | ` +
+                `recoveryPos=${recoveryPos.toFixed(1)}s`
+            )
+            return
+          }
 
-      recoveryPositionRef.current = recoveryPos
-      setShowRecoveryOverlay(true)
-      setRetryKey(k => k + 1)
-    }, [])
+          case 'local-file':
+          case 'drive': {
+            // E133-S01: If we have a serverUrl AND a local fileHandle, prefer local fallback.
+            if (isServerSource && !serverError && video?.fileHandle) {
+              setServerError(true)
+              return
+            }
+            // Standard blob URL regeneration
+            recoveryPositionRef.current = recoveryPos
+            setShowRecoveryOverlay(true)
+            setRetryKey(k => k + 1)
+            return
+          }
+
+          case 'youtube':
+            // YouTube errors are handled by the iframe API — no recovery needed here.
+            return
+
+          default:
+            // Unknown source kind — attempt standard blob regeneration as a best effort.
+            recoveryPositionRef.current = recoveryPos
+            setShowRecoveryOverlay(true)
+            setRetryKey(k => k + 1)
+        }
+      },
+      [sourceKind, isServerSource, serverError, video?.fileHandle, video?.serverUrl]
+    )
 
     // Notify parent when blob URL is ready (E91-S04 mini-player)
     useEffect(() => {
@@ -827,6 +942,8 @@ export const LocalVideoContent = forwardRef<VideoPlayerHandle, LocalVideoContent
             autoplay={autoplay}
             storyboard={storyboard}
             showRecoveryOverlay={showRecoveryOverlay}
+            storyboardLoading={storyboardLoading}
+            storyboardFailed={storyboardFailedRef.current}
           />
         )}
       </div>

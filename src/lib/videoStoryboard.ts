@@ -212,6 +212,155 @@ export async function generateStoryboard(
   }
 }
 
+// ── Server-URL storyboard generation ────────────────────────────────────
+
+/** Maximum frames for remote video storyboards (keeps generation fast). */
+const REMOTE_MAX_FRAMES = 30
+
+/** Global concurrency guard: only one URL-based storyboard generates at a time. */
+let isGeneratingFromUrl = false
+
+/**
+ * Generate a storyboard sprite sheet from a remote video URL.
+ *
+ * Creates an offscreen `<video>` with `crossOrigin="anonymous"`, seeks
+ * sequentially at the computed interval, draws each frame into a grid canvas,
+ * and returns the resulting WebP blob.
+ *
+ * Returns `null` on any failure (CORS, network error, abort) — callers
+ * should fall back to live extraction or a compact timestamp tooltip.
+ *
+ * Concurrency is limited to one active generation at a time. If called while
+ * another generation is in progress, the new call waits for the previous one
+ * to complete before starting.
+ */
+export async function generateStoryboardFromUrl(
+  url: string,
+  opts?: { signal?: AbortSignal }
+): Promise<StoryboardResult | null> {
+  // Wait for any in-progress generation to complete
+  while (isGeneratingFromUrl) {
+    if (opts?.signal?.aborted) return null
+    await new Promise<void>(r => setTimeout(r, 100))
+  }
+  isGeneratingFromUrl = true
+
+  try {
+    return await new Promise<StoryboardResult | null>((resolve, _reject) => {
+      const video = document.createElement('video')
+      video.preload = 'metadata'
+      video.muted = true
+      video.crossOrigin = 'anonymous'
+      video.src = url
+
+      const onAbort = () => {
+        cleanup()
+        resolve(null)
+      }
+      opts?.signal?.addEventListener('abort', onAbort, { once: true })
+
+      const cleanup = () => {
+        video.removeEventListener('loadedmetadata', onMetadata)
+        video.removeEventListener('error', onError)
+        opts?.signal?.removeEventListener('abort', onAbort)
+        video.pause()
+        video.removeAttribute('src')
+      }
+
+      const onError = () => {
+        cleanup()
+        resolve(null)
+      }
+
+      video.addEventListener('error', onError)
+
+      const onMetadata = async () => {
+        const duration = video.duration
+        if (!isFinite(duration) || duration <= 0) {
+          cleanup()
+          resolve(null)
+          return
+        }
+
+        // Compute adaptive interval for fewer frames (faster remote generation)
+        const interval = clamp(duration / REMOTE_MAX_FRAMES, MIN_INTERVAL, duration)
+        const frameCount = Math.max(1, Math.floor(duration / interval))
+        const { columns, rows } = computeGrid(frameCount, TILE_W, TILE_H, MAX_SHEET_DIM)
+
+        // Allocate grid canvas
+        const canvas = document.createElement('canvas')
+        canvas.width = columns * TILE_W
+        canvas.height = rows * TILE_H
+        const ctx = canvas.getContext('2d')
+        if (!ctx) {
+          cleanup()
+          resolve(null)
+          return
+        }
+        ctx.imageSmoothingEnabled = true
+
+        const rvfcAvailable = typeof (video as any).requestVideoFrameCallback === 'function'
+
+        for (let i = 0; i < frameCount; i++) {
+          if (opts?.signal?.aborted) {
+            cleanup()
+            resolve(null)
+            return
+          }
+
+          const targetTime = i * interval
+          const drawn = await seekAndDraw(video, targetTime, rvfcAvailable)
+          if (drawn && video.videoWidth > 0) {
+            const col = i % columns
+            const row = Math.floor(i / columns)
+            // Wrap drawImage in try/catch — CORS failure on remote video
+            // will throw SecurityError on the first draw attempt.
+            try {
+              ctx.drawImage(video, col * TILE_W, row * TILE_H, TILE_W, TILE_H)
+            } catch {
+              // CORS blocked — canvas is tainted
+              cleanup()
+              resolve(null)
+              return
+            }
+          }
+
+          // Yield to the browser so the UI stays responsive
+          await new Promise<void>(r => setTimeout(r, 0))
+        }
+
+        // Export to WebP blob (smaller than JPEG for thumbnails)
+        canvas.toBlob(
+          blob => {
+            cleanup()
+            if (blob) {
+              resolve({
+                blob,
+                columns,
+                rows,
+                tileWidth: TILE_W,
+                tileHeight: TILE_H,
+                interval,
+                frameCount,
+                duration,
+              })
+            } else {
+              resolve(null)
+            }
+          },
+          'image/webp',
+          JPEG_QUALITY
+        )
+      }
+
+      video.addEventListener('loadedmetadata', onMetadata)
+      video.load()
+    })
+  } finally {
+    isGeneratingFromUrl = false
+  }
+}
+
 /**
  * Seek to a time and wait for a drawable frame.
  * Uses requestVideoFrameCallback when available (Chrome/Safari),

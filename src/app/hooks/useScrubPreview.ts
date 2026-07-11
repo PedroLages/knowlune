@@ -9,6 +9,8 @@ interface ScrubPreviewAPI {
   requestFrameAt: (time: number) => void
   /** True when the most recent frame was successfully drawn to canvas */
   thumbnailAvailable: boolean
+  /** True when canvas extraction failed due to CORS (tainted canvas). */
+  corsFailed: boolean
 }
 
 /**
@@ -36,6 +38,7 @@ export function useScrubPreview(_src: string): ScrubPreviewAPI {
   const pendingTargetRef = useRef<number | null>(null)
   const lastRequestedRef = useRef<number | null>(null)
   const [thumbnailAvailable, setThumbnailAvailable] = useState(false)
+  const [corsFailed, setCorsFailed] = useState(false)
 
   // ---- ref callbacks (stable identity across renders) -------------------
   const videoRef = useCallback((el: HTMLVideoElement | null) => {
@@ -59,10 +62,15 @@ export function useScrubPreview(_src: string): ScrubPreviewAPI {
         canvas.height = canvas.clientHeight || canvas.height
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
         setThumbnailAvailable(true)
+        setCorsFailed(false)
       }
-    } catch {
-      // tainted canvas or other draw failure — fallback to timestamp-only
+    } catch (err) {
+      // tainted canvas (SecurityError from missing CORS headers)
+      // or other draw failure — fallback to timestamp-only
       setThumbnailAvailable(false)
+      if (err instanceof DOMException && err.name === 'SecurityError') {
+        setCorsFailed(true)
+      }
     }
   }, [])
 
@@ -144,6 +152,12 @@ export function useScrubPreview(_src: string): ScrubPreviewAPI {
     return () => video.removeEventListener('loadedmetadata', onMetadata)
   }, [])
 
+  // ---- reset corsFailed when source URL changes -------------------------
+  useEffect(() => {
+    setCorsFailed(false)
+    setThumbnailAvailable(false)
+  }, [_src])
+
   // ---- requestFrameAt ---------------------------------------------------
   const requestFrameAt = useCallback((time: number) => {
     const video = videoElRef.current
@@ -169,5 +183,5 @@ export function useScrubPreview(_src: string): ScrubPreviewAPI {
     video.currentTime = clamped
   }, [])
 
-  return { videoRef, canvasRef, requestFrameAt, thumbnailAvailable }
+  return { videoRef, canvasRef, requestFrameAt, thumbnailAvailable, corsFailed }
 }

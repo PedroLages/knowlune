@@ -71,6 +71,7 @@ vi.mock('@/lib/bookmarks', () => ({
 vi.mock('@/lib/videoStoryboard', () => ({
   loadVideoStoryboard: vi.fn().mockResolvedValue(undefined),
   generateStoryboard: vi.fn().mockResolvedValue(undefined),
+  generateStoryboardFromUrl: vi.fn().mockResolvedValue(undefined),
   saveVideoStoryboard: vi.fn().mockResolvedValue(undefined),
 }))
 
@@ -328,5 +329,75 @@ describe('LocalVideoContent resume dialog', () => {
     })
 
     expect(screen.queryByText('Resume video?')).not.toBeInTheDocument()
+  })
+})
+
+describe('LocalVideoContent server-source', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    // Reset progress mock to return null (no saved position — skip resume dialog)
+    mockProgressFirst.mockReset()
+    mockProgressFirst.mockResolvedValue(null)
+  })
+
+  const serverVideo = {
+    id: 'lesson-1',
+    courseId: 'course-1',
+    filename: 'server-video.mp4',
+    serverUrl: 'https://academy.example.com/videos/lesson.mp4',
+    fileHandle: null,
+  }
+
+  it('uses serverUrl as video src for server-source videos', async () => {
+    const { db } = await import('@/db/schema')
+    ;(db.importedVideos.get as ReturnType<typeof vi.fn>).mockResolvedValue(serverVideo)
+
+    render(<LocalVideoContent {...DEFAULT_PROPS} />)
+
+    await waitFor(() => {
+      const video = document.querySelector('video')
+      expect(video).toBeInTheDocument()
+      expect(video!.getAttribute('src')).toBe(
+        'https://academy.example.com/videos/lesson.mp4'
+      )
+    })
+  })
+
+  it('does NOT call useVideoFromHandle for server-source without fileHandle', async () => {
+    const { db } = await import('@/db/schema')
+    const { useVideoFromHandle } = await import('@/hooks/useVideoFromHandle')
+    ;(db.importedVideos.get as ReturnType<typeof vi.fn>).mockResolvedValue(serverVideo)
+    ;(useVideoFromHandle as ReturnType<typeof vi.fn>).mockReturnValue({
+      blobUrl: null,
+      error: null,
+      loading: false,
+    })
+
+    render(<LocalVideoContent {...DEFAULT_PROPS} />)
+
+    await waitFor(() => {
+      expect(document.querySelector('video')).toBeInTheDocument()
+    })
+
+    // useVideoFromHandle should have been called with undefined handle
+    // (which triggers the "skip" path in the hook)
+    expect(useVideoFromHandle).toHaveBeenCalledWith(undefined, 0)
+  })
+
+  it('triggers storyboard generation for server-URL videos', async () => {
+    const { db } = await import('@/db/schema')
+    const { generateStoryboardFromUrl } = await import('@/lib/videoStoryboard')
+    ;(db.importedVideos.get as ReturnType<typeof vi.fn>).mockResolvedValue(serverVideo)
+
+    render(<LocalVideoContent {...DEFAULT_PROPS} />)
+
+    await waitFor(() => {
+      expect(document.querySelector('video')).toBeInTheDocument()
+    })
+
+    // generateStoryboardFromUrl should have been called with the server URL
+    expect(generateStoryboardFromUrl).toHaveBeenCalledWith(
+      'https://academy.example.com/videos/lesson.mp4'
+    )
   })
 })

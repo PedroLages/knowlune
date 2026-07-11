@@ -171,6 +171,9 @@ export interface PdfMetadata {
 
 export type CourseSource = 'local' | 'youtube' | 'drive' | 'server'
 
+/** Classifies how a video's source data is obtained — drives recovery strategy. */
+export type VideoSourceKind = 'local-file' | 'server-url' | 'drive' | 'youtube'
+
 export interface DriveFileRef {
   /** Google Drive file ID. */
   fileId: string

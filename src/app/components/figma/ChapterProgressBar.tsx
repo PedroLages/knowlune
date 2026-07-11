@@ -18,6 +18,10 @@ interface ChapterProgressBarProps {
   buffered?: Array<{ start: number; end: number }>
   /** Storyboard sprite sheet for instant hover previews (optional) */
   storyboard?: StoryboardProp
+  /** When true, storyboard is being generated — show loading spinner in preview. */
+  storyboardLoading?: boolean
+  /** When true, storyboard generation previously failed — show compact timestamp only. */
+  storyboardFailed?: boolean
 }
 
 export function ChapterProgressBar({
@@ -32,6 +36,8 @@ export function ChapterProgressBar({
   src,
   buffered,
   storyboard,
+  storyboardLoading,
+  storyboardFailed,
 }: ChapterProgressBarProps) {
   const trackRef = useRef<HTMLDivElement | null>(null)
   const [hover, setHover] = useState<{ time: number; x: number } | null>(null)
@@ -213,6 +219,8 @@ export function ChapterProgressBar({
           chapterTitle={hoverChapterTitle}
           visible={hover !== null}
           storyboard={storyboard}
+          loading={storyboardLoading}
+          storyboardFailed={storyboardFailed}
         />
       )}
     </div>

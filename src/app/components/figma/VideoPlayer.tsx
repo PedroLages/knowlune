@@ -38,6 +38,30 @@ import { cn } from '@/app/components/ui/utils'
 import { VideoShortcutsOverlay } from '@/app/components/figma/VideoShortcutsOverlay'
 import { formatTimestamp as formatTime } from '@/lib/format'
 
+// ── Video seek diagnostics ────────────────────────────────────────────────
+// Controlled by VITE_VIDEO_DIAGNOSTICS env var (set to 'true' to enable).
+// Logs structured [VideoSeek] events for diagnosing Range/206 issues.
+
+const VIDEO_DIAGNOSTICS = import.meta.env.VITE_VIDEO_DIAGNOSTICS === 'true'
+
+/** Serialize TimeRanges to an array of {start, end} objects for logging. */
+function formatTimeRanges(r: TimeRanges): Array<{ start: number; end: number }> {
+  const out: Array<{ start: number; end: number }> = []
+  for (let i = 0; i < r.length; i++) {
+    out.push({ start: r.start(i), end: r.end(i) })
+  }
+  return out
+}
+
+function videoDiag(label: string, detail?: Record<string, unknown>) {
+  if (!VIDEO_DIAGNOSTICS) return
+  if (detail) {
+    console.info(`[VideoSeek] ${label}`, detail)
+  } else {
+    console.info(`[VideoSeek] ${label}`)
+  }
+}
+
 interface VideoPlayerProps {
   src: string
   title?: string
@@ -83,6 +107,10 @@ interface VideoPlayerProps {
    * because the recovery flow un-mounts VideoPlayer while the new blob URL loads.
    */
   showRecoveryOverlay?: boolean
+  /** When true, a storyboard is being generated — scrub preview shows a loading spinner. */
+  storyboardLoading?: boolean
+  /** When true, storyboard generation previously failed — scrub preview shows compact timestamp only. */
+  storyboardFailed?: boolean
 }
 
 export interface VideoPlayerHandle {
@@ -139,6 +167,8 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
     autoplay = false,
     storyboard,
     showRecoveryOverlay = false,
+    storyboardLoading = false,
+    storyboardFailed = false,
   },
   ref
 ) {
@@ -160,6 +190,15 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
   // Guard against infinite decode-error → skip → error loops.
   // Reset on src change so each new source gets a fresh skip budget.
   const decodeSkipAttemptRef = useRef(0)
+  // Tracks the last user-requested seek target time (seconds).
+  // Set by handleProgressChange / seek / jumpToPercentage; cleared on seeked.
+  const pendingSeekRef = useRef<number | null>(null)
+  // Captures whether the video was playing before a seek started, so seeked
+  // can resume playback if it was interrupted.
+  const wasPlayingBeforeSeekRef = useRef(false)
+  // Monotonically increasing counter for external seek requests (seekToTime).
+  // Prevents stale effect re-fires from re-applying an old seek target.
+  const seekToTimeRequestIdRef = useRef(0)
 
   useImperativeHandle(ref, () => ({
     getVideoElement: () => videoRef.current,
@@ -236,13 +275,16 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
   const [loopStart, setLoopStart] = useState<number | null>(null)
   const [loopEnd, setLoopEnd] = useState<number | null>(null)
 
-  // Reset position flag, error state, recovery state, and loop markers when source changes
+  // Reset position flag, error state, recovery state, seek state, and loop markers when source changes
   useEffect(() => {
     hasRestoredPosition.current = false
     setHasError(false)
     setErrorCode(null)
     retryPositionRef.current = null
     decodeSkipAttemptRef.current = 0
+    pendingSeekRef.current = null
+    wasPlayingBeforeSeekRef.current = false
+    seekToTimeRequestIdRef.current = 0
     // Clear loop state so stale markers don't persist across lessons
     loopStartRef.current = null
     loopEndRef.current = null
@@ -291,13 +333,34 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
     }
   }, [captionsEnabled, captions])
 
-  // Handle external seek requests from timestamp links
+  // Handle external seek requests from timestamp links.
+  // Uses a monotonic request ID to treat seekToTime as an event, not persistent state.
+  // Prevents re-application on rerenders when seekToTime hasn't changed.
   useEffect(() => {
-    if (seekToTime !== undefined && videoRef.current) {
-      videoRef.current.currentTime = seekToTime
-      setCurrentTime(seekToTime)
-      announce(`Jumped to ${formatTime(seekToTime)}`)
-      onSeekComplete?.()
+    if (seekToTime === undefined || !videoRef.current) return
+
+    let ignore = false
+    const requestId = ++seekToTimeRequestIdRef.current
+    const target = seekToTime
+
+    // Set pending seek so the seeked handler can verify position
+    pendingSeekRef.current = target
+    wasPlayingBeforeSeekRef.current = !videoRef.current.paused
+    videoRef.current.currentTime = target
+    setCurrentTime(target)
+
+    videoDiag('seekToTime', { target, requestId })
+
+    // In the next microtask, verify this request wasn't superseded.
+    // If a newer request arrived, skip onSeekComplete for this stale one.
+    Promise.resolve().then(() => {
+      if (!ignore && seekToTimeRequestIdRef.current === requestId) {
+        onSeekComplete?.()
+      }
+    })
+
+    return () => {
+      ignore = true
     }
   }, [seekToTime, onSeekComplete])
 
@@ -307,6 +370,12 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
       const dur = videoRef.current.duration
       setDuration(dur)
       onDurationChange?.(dur)
+      videoDiag('loadedmetadata', {
+        duration: dur,
+        initialPosition,
+        hasRestoredPosition: hasRestoredPosition.current,
+        retryPosition: retryPositionRef.current,
+      })
       // F002: Manual Retry position takes precedence — seek back to error-time position
       if (retryPositionRef.current !== null) {
         videoRef.current.currentTime = retryPositionRef.current
@@ -332,6 +401,83 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
         videoRef.current.currentTime = a
       }
     }
+  }
+
+  // ── Seek lifecycle diagnostics ────────────────────────────────────────
+
+  const handleSeeking = () => {
+    if (!VIDEO_DIAGNOSTICS) return
+    const v = videoRef.current
+    if (!v) return
+    videoDiag('seeking', {
+      currentTime: v.currentTime,
+      pendingSeek: pendingSeekRef.current,
+      readyState: v.readyState,
+      networkState: v.networkState,
+    })
+  }
+
+  const handleSeeked = () => {
+    const v = videoRef.current
+    if (!v) return
+    const pending = pendingSeekRef.current
+    const currentTimeAfter = v.currentTime
+
+    videoDiag('seeked', {
+      requestedTime: pending,
+      currentTimeAfter: currentTimeAfter,
+      duration: v.duration,
+      readyState: v.readyState,
+      networkState: v.networkState,
+      seekable: v.seekable.length > 0 ? formatTimeRanges(v.seekable) : [],
+      buffered: v.buffered.length > 0 ? formatTimeRanges(v.buffered) : [],
+    })
+
+    // Verify seek completed to the requested position
+    if (pending !== null) {
+      const gap = Math.abs(currentTimeAfter - pending)
+      if (gap > 0.5 && pending > 0) {
+        console.warn(
+          `[VideoSeek] Seek position mismatch: requested=${pending.toFixed(1)}s actual=${currentTimeAfter.toFixed(1)}s gap=${gap.toFixed(1)}s`
+        )
+      }
+      pendingSeekRef.current = null
+      // Resume playback if it was playing before the seek
+      if (wasPlayingBeforeSeekRef.current && v.paused) {
+        v.play().catch(() => {
+          // silent-catch-ok: browser may block autoplay
+        })
+      }
+      wasPlayingBeforeSeekRef.current = false
+    }
+  }
+
+  const handleStalled = () => {
+    const v = videoRef.current
+    if (!v) return
+    videoDiag('stalled', {
+      currentTime: v.currentTime,
+      buffered: v.buffered.length > 0 ? formatTimeRanges(v.buffered) : [],
+      readyState: v.readyState,
+    })
+  }
+
+  const handleSuspend = () => {
+    videoDiag('suspend')
+  }
+
+  const handleEmptied = () => {
+    videoDiag('emptied', {
+      pendingSeek: pendingSeekRef.current,
+      currentTime: videoRef.current?.currentTime,
+    })
+  }
+
+  const handleAbort = () => {
+    videoDiag('abort', {
+      currentTime: videoRef.current?.currentTime,
+      pendingSeek: pendingSeekRef.current,
+    })
   }
 
   // Handle video ended
@@ -367,6 +513,8 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
         0,
         Math.min(videoRef.current.duration, videoRef.current.currentTime + seconds)
       )
+      pendingSeekRef.current = newTime
+      wasPlayingBeforeSeekRef.current = !videoRef.current.paused
       videoRef.current.currentTime = newTime
       setCurrentTime(newTime)
     }
@@ -508,6 +656,8 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
   const jumpToPercentage = (percentage: number) => {
     if (videoRef.current) {
       const newTime = (percentage / 100) * videoRef.current.duration
+      pendingSeekRef.current = newTime
+      wasPlayingBeforeSeekRef.current = !videoRef.current.paused
       videoRef.current.currentTime = newTime
       setCurrentTime(newTime)
       announce(`Jumped to ${percentage}%`)
@@ -525,10 +675,19 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
   // Buffering handlers (200ms debounce to avoid flicker on fast seeks)
   const handleWaiting = () => {
     bufferingTimeoutRef.current = setTimeout(() => setIsBuffering(true), 200)
+    videoDiag('waiting', {
+      currentTime: videoRef.current?.currentTime,
+      pendingSeek: pendingSeekRef.current,
+      readyState: videoRef.current?.readyState,
+    })
   }
   const handleCanPlay = () => {
     clearTimeout(bufferingTimeoutRef.current)
     setIsBuffering(false)
+    videoDiag('canplay', {
+      currentTime: videoRef.current?.currentTime,
+      pendingSeek: pendingSeekRef.current,
+    })
   }
 
   // Buffered ranges (progress event)
@@ -568,7 +727,8 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
     console.warn(
       `[VideoPlayer] ${codeLabel} | file="${title ?? 'unknown'}" | ` +
         `currentTime=${currentPos.toFixed(1)}s | duration=${dur.toFixed(1)}s | ` +
-        `bufferedEnd=${bufferedEnd.toFixed(1)}s | src=${src?.substring(0, 60)}...`
+        `bufferedEnd=${bufferedEnd.toFixed(1)}s | pendingSeek=${pendingSeekRef.current ?? 'none'} | ` +
+        `src=${src?.substring(0, 60)}...`
     )
 
     // MEDIA_ERR_DECODE (code 3): source file corruption at a specific byte offset.
@@ -1029,8 +1189,11 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
   const handleProgressChange = (percent: number) => {
     if (videoRef.current) {
       const newTime = (percent / 100) * duration
+      pendingSeekRef.current = newTime
+      wasPlayingBeforeSeekRef.current = !videoRef.current.paused
       videoRef.current.currentTime = newTime
       setCurrentTime(newTime)
+      videoDiag('progressChange', { percent: percent.toFixed(1), targetTime: newTime.toFixed(1) })
     }
   }
 
@@ -1094,6 +1257,12 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
           onWaiting={handleWaiting}
           onCanPlay={handleCanPlay}
           onPlaying={handleCanPlay}
+          onSeeking={handleSeeking}
+          onSeeked={handleSeeked}
+          onStalled={handleStalled}
+          onSuspend={handleSuspend}
+          onEmptied={handleEmptied}
+          onAbort={handleAbort}
           onPlay={() => {
             setIsPlaying(true)
             onPlayStateChange?.(true)
@@ -1297,6 +1466,8 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
                 loopStart={loopStart}
                 loopEnd={loopEnd}
                 storyboard={storyboard}
+                storyboardLoading={storyboardLoading}
+                storyboardFailed={storyboardFailed}
               />
               <button
                 className="text-white text-xs font-medium min-w-[45px] text-right hover:text-white/80 transition-colors cursor-pointer"
