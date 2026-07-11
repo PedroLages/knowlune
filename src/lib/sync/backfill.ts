@@ -1,5 +1,8 @@
 import { db } from '@/db'
 import { tableRegistry } from './tableRegistry'
+import { synthesizeRecordId } from './syncableWrite'
+import { toSnakeCase } from './fieldMapper'
+import { syncEngine } from './syncEngine'
 
 /**
  * Backfill `userId` (and `updatedAt` if missing) on existing records in every
@@ -63,10 +66,12 @@ export async function backfillUserId(
 
   for (const tableName of SYNCABLE_TABLES) {
     try {
-      // Use a filter (not where-equals) because a missing index value and
-      // an explicit empty string both need to match. Dexie's `where().equals()`
-      // matches only explicitly-indexed values and would miss `undefined`.
-      const count = await db
+      const entry = tableRegistry.find(e => e.dexieTable === tableName)
+      if (!entry) continue
+
+      // Collect matching records (same filter as before — Dexie's
+      // where().equals() misses undefined, so filter() is required).
+      const records = await db
         .table(tableName)
         .filter((record: Record<string, unknown>) => {
           if (guestSessionId) {
@@ -76,23 +81,54 @@ export async function backfillUserId(
           const existing = record.userId
           return existing === undefined || existing === null || existing === ''
         })
-        .modify((record: Record<string, unknown>) => {
-          record.userId = userId
-          if (!record.updatedAt) {
-            record.updatedAt = now
-          }
-        })
-      recordsStamped += count
+        .toArray()
+
       tablesProcessed += 1
+
+      if (records.length === 0) continue
+
+      // Stamp userId, preserve existing updatedAt if already set
+      const stampedRecords = records.map(r => ({
+        ...r,
+        userId,
+        updatedAt: r.updatedAt ? r.updatedAt : now,
+      }))
+      await db.table(tableName).bulkPut(stampedRecords)
+
+      // Enqueue each stamped record for Supabase upload
+      for (const record of stampedRecords) {
+        try {
+          const recordId = synthesizeRecordId(record, entry)
+          const payload = toSnakeCase(entry, record)
+          await db.syncQueue.add({
+            tableName,
+            recordId,
+            operation: 'put',
+            payload,
+            attempts: 0,
+            status: 'pending',
+            createdAt: now,
+            updatedAt: now,
+          })
+        } catch (err) {
+          // Non-fatal per-record failure — same posture as syncableWrite:205-210.
+          // The Dexie write (bulkPut) already succeeded, so the record has userId
+          // stamped. The queue insert failing means this specific record won't be
+          // uploaded on this backfill cycle — the sync engine may re-enqueue on
+          // next sign-in via a full scan (E92-S06 download).
+          console.error(`[backfillUserId] Queue insert failed for "${tableName}":`, err)
+        }
+      }
+
+      recordsStamped += records.length
     } catch (err) {
-      // Per-table failure must not abort the aggregate backfill. Log and keep
-      // going — the user is better served by partial progress than none.
-      // Intentional: the sync engine will catch any stragglers on next sign-in
-      // since backfill is idempotent.
       console.error(`[backfillUserId] Table "${tableName}" failed:`, err)
       tablesFailed.push(tableName)
     }
   }
+
+  // Trigger the upload engine to process the newly enqueued entries.
+  syncEngine.nudge()
 
   return { tablesProcessed, recordsStamped, tablesFailed }
 }
