@@ -166,7 +166,7 @@ describe('Import Workflow: Cross-Store Integration', () => {
         title: 'Instructor',
         courseIds: [COURSE_ID],
       })
-      expect(author.id).toBeDefined()
+      expect(author!.id).toBeDefined()
     })
 
     // Load authors and verify linkage
@@ -233,19 +233,19 @@ describe('Import Workflow: Cross-Store Integration', () => {
       courseIds: [],
     })
 
-    expect(author.courseIds).toEqual([])
+    expect(author!.courseIds).toEqual([])
 
     // Link course to author
     await act(async () => {
-      await useAuthorStore.getState().linkCourseToAuthor(author.id, COURSE_ID)
+      await useAuthorStore.getState().linkCourseToAuthor(author!.id, COURSE_ID)
     })
 
     // Verify store updated
-    const updatedAuthor = useAuthorStore.getState().getAuthorById(author.id)
+    const updatedAuthor = useAuthorStore.getState().getAuthorById(author!.id)
     expect(updatedAuthor?.courseIds).toContain(COURSE_ID)
 
     // Verify DB persisted
-    const dbAuthor = await db.authors.get(author.id)
+    const dbAuthor = await db.authors.get(author!.id)
     expect(dbAuthor?.courseIds).toContain(COURSE_ID)
   })
 })

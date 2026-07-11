@@ -477,6 +477,11 @@ describe('BulkImportDialog — batch import flow (F-003)', () => {
 
       // Both items should show as error in the results list
       expect(screen.getByTestId('bulk-results-summary')).toBeInTheDocument()
+      // KI-122: Per-item error state assertions
+      await waitFor(() => {
+        expect(screen.getByTestId('bulk-item-alpha')).toHaveTextContent('Disk full')
+        expect(screen.getByTestId('bulk-item-beta')).toHaveTextContent('Disk full')
+      })
     })
 
     it('TST-P1-003: retry — scan returns error updates item status to error', async () => {
@@ -684,6 +689,68 @@ describe('BulkImportDialog — batch import flow (F-003)', () => {
       await waitFor(() => {
         expect(screen.getByTestId('bulk-retry-beta')).toBeInTheDocument()
       })
+    })
+
+    it('KI-109: cancel mid-import marks remaining items as Cancelled', async () => {
+      mockListSubDirectories.mockResolvedValue([
+        mockDirHandle('alpha'),
+        mockDirHandle('beta'),
+        mockDirHandle('gamma'),
+      ])
+      mockPersistScannedCourse.mockImplementation(async () => {
+        importProgressState.cancelRequested = true
+        return undefined
+      })
+
+      const user = userEvent.setup()
+      render(
+        <BulkImportDialog
+          open={true}
+          onOpenChange={onOpenChange}
+          onSingleImport={vi.fn()}
+          onComplete={onComplete}
+        />
+      )
+
+      await user.click(screen.getByTestId('import-multiple-btn'))
+      await waitFor(() => expect(screen.getByTestId('bulk-select-all')).toBeInTheDocument())
+      await user.click(screen.getByTestId('bulk-start-import-btn'))
+      await waitFor(() => expect(screen.getByTestId('bulk-confirm-import-btn')).toBeInTheDocument())
+      await user.click(screen.getByTestId('bulk-confirm-import-btn'))
+      await waitFor(() => expect(screen.getByTestId('bulk-done-btn')).toBeInTheDocument())
+
+      expect(screen.getByTestId('bulk-item-alpha')).not.toHaveTextContent('Cancelled')
+      expect(screen.getByTestId('bulk-item-beta')).toHaveTextContent('Cancelled')
+      expect(screen.getByTestId('bulk-item-gamma')).toHaveTextContent('Cancelled')
+    })
+
+    it('KI-111: all folders empty shows no-folders error and transitions to results', async () => {
+      mockScanCourseFromSource.mockImplementation(
+        (source: { folderName: string }) =>
+          ({ status: 'no-files', folderName: source.folderName }) as BulkScanResult
+      )
+
+      const user = userEvent.setup()
+      render(
+        <BulkImportDialog
+          open={true}
+          onOpenChange={onOpenChange}
+          onSingleImport={vi.fn()}
+          onComplete={onComplete}
+        />
+      )
+
+      await user.click(screen.getByTestId('import-multiple-btn'))
+      await waitFor(() => expect(screen.getByTestId('bulk-select-all')).toBeInTheDocument())
+      await user.click(screen.getByTestId('bulk-start-import-btn'))
+
+      await waitFor(() => {
+        expect(toast.error).toHaveBeenCalledWith(
+          expect.stringContaining('No folders could be scanned')
+        )
+        expect(screen.getByTestId('bulk-done-btn')).toBeInTheDocument()
+      })
+      expect(screen.queryByTestId('bulk-confirm-import-btn')).not.toBeInTheDocument()
     })
   })
 

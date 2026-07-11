@@ -616,7 +616,10 @@ export function YouTubeImportDialog({ open, onOpenChange }: YouTubeImportDialogP
                   if (videoIds.length > 0) {
                     // Fire-and-forget — don't block the UI
                     // silent-catch-ok: transcript failures are non-blocking; user can retry later
-                    transcriptStore.fetchBatch(result.courseId, videoIds).catch(() => {})
+                    transcriptStore.fetchBatch(result.courseId, videoIds).catch((err) => {
+                      console.error('[YouTubeImportDialog] Failed to fetch transcripts:', err)
+                      toast.error('Failed to fetch transcripts for some videos.')
+                    })
                   }
                 } else {
                   toast.error('Failed to create course', {

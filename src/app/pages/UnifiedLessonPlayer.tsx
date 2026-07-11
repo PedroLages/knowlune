@@ -613,7 +613,7 @@ export function UnifiedLessonPlayer() {
               variant="outline"
               onClick={() =>
                 navigate(`/courses/${courseId}/lessons/${prevLesson.id}`, {
-                  state: { ...location.state },
+                  state: { ...location.state, autoPlay: undefined },
                 })
               }
             >
@@ -628,7 +628,7 @@ export function UnifiedLessonPlayer() {
               variant="brand"
               onClick={() =>
                 navigate(`/courses/${courseId}/lessons/${nextLesson.id}`, {
-                  state: { ...location.state },
+                  state: { ...location.state, autoPlay: undefined },
                 })
               }
             >

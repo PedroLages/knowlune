@@ -27,8 +27,9 @@ function loadPersisted(): { completedAt: string | null } {
       const parsed = JSON.parse(raw)
       return { completedAt: parsed.completedAt ?? null }
     }
-  } catch {
+  } catch (err) {
     // Corrupted data — treat as fresh
+    console.error('[useWelcomeWizardStore] Failed to load persisted state, using defaults:', err)
   }
   return { completedAt: null }
 }
@@ -36,8 +37,9 @@ function loadPersisted(): { completedAt: string | null } {
 function persist(completedAt: string) {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({ completedAt }))
-  } catch {
+  } catch (err) {
     // localStorage full — non-blocking
+    console.error('[useWelcomeWizardStore] Failed to persist state:', err)
   }
 }
 

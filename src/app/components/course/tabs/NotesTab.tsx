@@ -87,7 +87,9 @@ export function NotesTab({
         }
       })
       // silent-catch-ok: video description is optional seed data; failure is non-critical
-      .catch(() => {})
+      .catch((err) => {
+        console.error('[NotesTab] Failed to fetch video description:', err)
+      })
     return () => {
       ignore = true
     }

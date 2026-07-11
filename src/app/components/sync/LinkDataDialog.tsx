@@ -9,6 +9,8 @@ import { clearSyncState } from '@/lib/sync/clearSyncState'
 import { countUnlinkedRecords, type UnlinkedCounts } from '@/lib/sync/countUnlinkedRecords'
 import { db } from '@/db'
 import { cn } from '@/app/components/ui/utils'
+import { useCourseImportStore } from '@/stores/useCourseImportStore'
+import { useBookStore } from '@/stores/useBookStore'
 
 /**
  * Non-dismissible modal shown on first sign-in when the device has local data
@@ -117,6 +119,10 @@ export function LinkDataDialog({ open, userId, onResolved, guestSessionId }: Lin
       }
       // Wipe upload queue and download cursors
       await clearSyncState()
+      // Invalidate cached Zustand stores so the UI doesn't show stale data
+      // from the just-cleared Dexie tables (KI-E95-S04-L02 stale-UI-after-fresh).
+      useCourseImportStore.setState({ importedCourses: [] })
+      useBookStore.setState({ books: [], isLoaded: false })
       // start() triggers fullSync internally — downloads fresh server state.
       syncEngine.start(userId).catch(err => {
         console.error('[LinkDataDialog] syncEngine.start (fresh) failed:', err)

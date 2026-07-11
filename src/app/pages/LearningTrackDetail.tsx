@@ -52,7 +52,6 @@ export function LearningTrackDetail() {
   const navigate = useNavigate()
   const paths = useLearningPathStore(s => s.paths)
   const loadPaths = useLearningPathStore(s => s.loadPaths)
-  const reorderPathCourses = useLearningPathStore(s => s.reorderPathCourses)
   const setProgressionMode = useLearningPathStore(s => s.setProgressionMode)
   const { importedCourses, loadImportedCourses, thumbnailUrls, loadThumbnailUrls } =
     useCourseImportStore()
@@ -71,8 +70,13 @@ export function LearningTrackDetail() {
   // Prevents "No courses yet" flash during initial load by waiting until
   // React has committed at least one render after isReady flips to true —
   // ensures Zustand store updates (entries) are visible before deciding emptiness.
+  //
+  // TODO: The requestAnimationFrame workaround below papers over a store-hydration
+  // timing gap — Zustand persist middleware rehydrates asynchronously and there's
+  // no built-in signal for "hydration complete." A proper fix would involve a
+  // store-level `_hasHydrated` flag or a React Router loader that awaits hydration
+  // before rendering. Tracked as KI-098.
   const [entriesChecked, setEntriesChecked] = useState(false)
-  const [isEditing, setIsEditing] = useState(false)
   const [activeTab, setActiveTab] = useState('overview')
 
   // Load all data on mount — uses requestAnimationFrame after Promise resolution
@@ -838,9 +842,9 @@ export function LearningTrackDetail() {
                           onGapResolve={() => {}}
                           onCourseClick={courseId => {
                             const lessonId = firstLessonByCourse.get(courseId)
-                            const fromTrackState = {
-                              fromTrack: { trackId: trackId ?? '', trackName: path.name },
-                            }
+                            const fromTrackState = trackId
+                              ? { fromTrack: { trackId, trackName: path.name } }
+                              : undefined
                             if (lessonId) {
                               navigate(`/courses/${courseId}/lessons/${lessonId}`, {
                                 state: fromTrackState,

@@ -15,9 +15,11 @@ beforeAll(() => {
 })
 import {
   LessonsTab,
+} from '@/app/components/course/tabs/LessonsTab'
+import {
   formatLessonDuration,
   LESSON_SEARCH_THRESHOLD,
-} from '@/app/components/course/tabs/LessonsTab'
+} from '@/app/components/course/tabs/LessonsTabHighlightedTitle'
 import { useContentProgressStore } from '@/stores/useContentProgressStore'
 import type { CourseAdapter, LessonItem, MaterialGroup } from '@/lib/courseAdapter'
 

@@ -25,8 +25,8 @@ import { cn } from '@/app/components/ui/utils'
 export type LibraryShelfHeadingLevel = 'h2' | 'h3' | 'h4'
 
 export interface LibraryShelfHeadingProps {
-  /** Lucide-style icon component (e.g., `Clock`, `Headphones`) */
-  icon: React.ComponentType<{ className?: string }>
+  /** Lucide-style icon component (e.g., `Clock`, `Headphones`). When absent, text shifts fully left with no indent. */
+  icon?: React.ComponentType<{ className?: string }>
   /** Heading label (e.g., "Continue Listening", "Audiobooks") */
   label: string
   /** Optional count badge rendered as `(n)` next to the label */
@@ -50,9 +50,10 @@ export interface LibraryShelfHeadingProps {
    */
   className?: string
   /**
-   * Base data-testid for the heading block. Sub-element test ids are derived
-   * by suffixing (`-heading`, `-subtitle`, `-actions`). When omitted, falls
-   * back to `library-shelf-row` for consistency with LibraryShelfRow.
+   * Base data-testid for the heading block. The caller is responsible for
+   * providing a unique testid per shelf instance. Sub-element test ids are
+   * derived by suffixing (`-heading`, `-subtitle`, `-actions`). When omitted,
+   * falls back to `library-shelf-row` for consistency with LibraryShelfRow.
    */
   'data-testid'?: string
   /**
@@ -87,10 +88,10 @@ export function LibraryShelfHeading({
           className="flex items-center gap-2 text-lg font-semibold text-foreground"
           data-testid={headingTestId}
         >
-          <Icon className="size-5" aria-hidden="true" />
+          {Icon && <Icon className="size-5" aria-hidden="true" />}
           <span className="truncate">{label}</span>
           {typeof count === 'number' && (
-            <span className="font-normal text-muted-foreground">({count})</span>
+            <span className="font-normal text-muted-foreground" aria-label={`${count} items`}>({count})</span>
           )}
         </Tag>
         {subtitle && (

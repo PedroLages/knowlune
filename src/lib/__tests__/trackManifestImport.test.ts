@@ -746,6 +746,145 @@ describe('batchImportTrackCourses — version 1.1 manifest (Unit 3)', () => {
     })
   })
 
+// ──────────────────────────────────────────────────
+// Phase 2: Atomic author merge (KI-107)
+// ──────────────────────────────────────────────────
+
+describe('batchImportTrackCourses — atomic author merge (KI-107)', () => {
+  it('creates author from manifest and merges course IDs atomically', async () => {
+    mockScanCourseFolderFromHandle.mockImplementation(
+      async (handle: FileSystemDirectoryHandle) => ({
+        status: 'success' as const,
+        course: makeStagedCourse(`new-${handle.name}`, handle.name),
+      })
+    )
+
+    mockPersistScannedCourse.mockImplementation(async (course: StagedImportedCourse) => ({
+      ...course,
+      status: 'ready',
+    }))
+
+    // Create manifest with author in Phase 2 data
+    const manifest = {
+      version: '1.0',
+      track: {
+        name: 'Author Merge Track',
+        description: 'Tracks with author merge',
+        author: {
+          name: 'Test Author KI107',
+          title: 'Expert',
+        },
+        courses: [
+          { id: 'course-a', folder: 'course-a', position: 1 },
+          { id: 'course-b', folder: 'course-b', position: 2 },
+        ],
+      },
+    } as unknown as Parameters<typeof batchImportTrackCourses>[1]
+
+    const parentHandle = makeParentHandle(['course-a', 'course-b'])
+    const result = await act(async () => batchImportTrackCourses(parentHandle, manifest))
+
+    expect(result.successCount).toBe(2)
+    expect(result.failureCount).toBe(0)
+
+    // Verify author was created in DB with the correct name
+    const author = await db.authors.where('name').equalsIgnoreCase('Test Author KI107').first()
+    expect(author).toBeDefined()
+    expect(author!.name).toBe('Test Author KI107')
+
+    // Verify author's courseIds includes all successfully imported courses
+    const courseIds = result.courses.filter(r => r.success).map(r => r.courseId!)
+    expect(author!.courseIds).toEqual(expect.arrayContaining(courseIds))
+    expect(author!.courseIds).toHaveLength(2)
+  })
+
+  it('does not crash when author already exists in DB (merge path)', async () => {
+    // Seed an existing author
+    await db.authors.add({
+      id: 'existing-author-id',
+      name: 'Existing Author KI107',
+      courseIds: ['old-course-id'],
+      isPreseeded: false,
+      createdAt: '2026-01-01T00:00:00.000Z',
+      updatedAt: '2026-01-01T00:00:00.000Z',
+    })
+
+    mockScanCourseFolderFromHandle.mockImplementation(
+      async (handle: FileSystemDirectoryHandle) => ({
+        status: 'success' as const,
+        course: makeStagedCourse(`new-${handle.name}`, handle.name),
+      })
+    )
+
+    mockPersistScannedCourse.mockImplementation(async (course: StagedImportedCourse) => ({
+      ...course,
+      status: 'ready',
+    }))
+
+    const manifest = {
+      version: '1.0',
+      track: {
+        name: 'Existing Author Track',
+        description: 'Track with existing author',
+        author: {
+          name: 'Existing Author KI107',
+          title: 'Senior Expert',
+        },
+        courses: [
+          { id: 'course-x', folder: 'course-x', position: 1 },
+        ],
+      },
+    } as unknown as Parameters<typeof batchImportTrackCourses>[1]
+
+    const parentHandle = makeParentHandle(['course-x'])
+    const result = await act(async () => batchImportTrackCourses(parentHandle, manifest))
+
+    expect(result.successCount).toBe(1)
+
+    // Author should have been merged: old + new course IDs
+    const author = await db.authors.get('existing-author-id')
+    expect(author).toBeDefined()
+    expect(author!.courseIds).toContain('old-course-id')
+    expect(author!.courseIds).toHaveLength(2)
+  })
+
+  it('handles author merge gracefully when no courses succeed', async () => {
+    // All courses fail to import
+    mockScanCourseFolderFromHandle.mockImplementation(
+      async (handle: FileSystemDirectoryHandle) => ({
+        status: 'no-files' as const,
+        folderName: handle.name,
+      })
+    )
+
+    const manifest = {
+      version: '1.0',
+      track: {
+        name: 'No Courses Track',
+        description: 'Track with author but no courses',
+        author: {
+          name: 'Orphan Author KI107',
+        },
+        courses: [
+          { id: 'course-fail', folder: 'course-fail', position: 1 },
+        ],
+      },
+    } as unknown as Parameters<typeof batchImportTrackCourses>[1]
+
+    const parentHandle = makeParentHandle(['course-fail'])
+    const result = await act(async () => batchImportTrackCourses(parentHandle, manifest))
+
+    expect(result.successCount).toBe(0)
+    expect(result.failureCount).toBe(1)
+
+    // Author should still be created (matchOrCreateAuthor runs before Phase 3 guard)
+    const author = await db.authors.where('name').equalsIgnoreCase('Orphan Author KI107').first()
+    expect(author).toBeDefined()
+    // courseIds should be empty since no courses succeeded
+    expect(author!.courseIds).toEqual([])
+  })
+})
+
   it('reorders courses correctly when version 1.1 manifest array order differs from position fields', async () => {
     mockScanCourseFolderFromHandle.mockImplementation(
       async (handle: FileSystemDirectoryHandle) => ({

@@ -7,7 +7,6 @@ import {
   parseNumericPrefix,
   cleanLessonTitle,
   buildLessonBasedCurriculum,
-  type LessonGroup,
 } from '../lessonBasedCurriculum'
 
 describe('parseNumericPrefix', () => {

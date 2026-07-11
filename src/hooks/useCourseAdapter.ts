@@ -12,7 +12,6 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '@/db'
 import { createCourseAdapter, type CourseAdapter } from '@/lib/courseAdapter'
-import type { YouTubeCourseChapter } from '@/data/types'
 
 export interface UseCourseAdapterResult {
   adapter: CourseAdapter | null

@@ -585,11 +585,11 @@ export function Layout() {
               <Link
                 to={`/learning-tracks/${fromTrack.trackId}`}
                 className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
-                aria-label={`Back to ${fromTrack.trackName}`}
+                aria-label={`Back to ${fromTrack.trackName || 'learning track'}`}
               >
-                <ArrowLeft className="size-5" />
+                <ArrowLeft className="size-5" aria-hidden="true" />
                 <span className="hidden sm:inline truncate max-w-[200px]">
-                  {fromTrack.trackName}
+                  {fromTrack.trackName || 'learning track'}
                 </span>
               </Link>
             )}
@@ -778,7 +778,6 @@ export function Layout() {
           {!isOnline && (
             <div
               role="status"
-              aria-live="polite"
               className="bg-warning/10 text-warning-foreground border-b border-warning/20 px-4 py-2 text-center text-sm -mx-4 -mt-4 mb-4 sm:-mx-6 sm:-mt-6"
             >
               You are offline. Some features may be limited.

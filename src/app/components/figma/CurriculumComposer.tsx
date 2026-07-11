@@ -153,7 +153,10 @@ export function CurriculumComposer({
         })
         // Refresh imported courses to include the new one
         // silent-catch-ok: store refresh failure is non-critical; courses are already in state
-        loadImportedCourses().catch(() => {})
+        loadImportedCourses().catch((err) => {
+          console.error('[CurriculumComposer] Failed to refresh imported courses after import:', err)
+          toast.error('Failed to refresh course list.')
+        })
       }
     }
     window.addEventListener(COURSE_IMPORTED, handleCourseImported)
@@ -172,8 +175,14 @@ export function CurriculumComposer({
     (importedIds: string[], trackId?: string) => {
       if (trackId) {
         // BulkImportDialog already created the track — close composer and navigate.
-        loadImportedCourses().catch(() => {})
-        loadPaths().catch(() => {})
+        loadImportedCourses().catch((err) => {
+          console.error('[CurriculumComposer] Failed to refresh imported courses after batch import:', err)
+          toast.error('Failed to refresh course list.')
+        })
+        loadPaths().catch((err) => {
+          console.error('[CurriculumComposer] Failed to refresh learning paths:', err)
+          toast.error('Failed to refresh learning paths.')
+        })
         onOpenChange(false)
         navigate(`${redirectBase}/${trackId}`)
         return
@@ -186,7 +195,10 @@ export function CurriculumComposer({
       })
       // Refresh imported courses to include new ones
       // silent-catch-ok: store refresh failure is non-critical
-      loadImportedCourses().catch(() => {})
+      loadImportedCourses().catch((err) => {
+          console.error('[CurriculumComposer] Failed to refresh imported courses (no trackId):', err)
+          toast.error('Failed to refresh course list.')
+        })
     },
     [loadImportedCourses, loadPaths, onOpenChange, navigate, redirectBase]
   )

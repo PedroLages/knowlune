@@ -261,7 +261,7 @@ function AuthorCard({
     <div className="group relative min-w-0">
       <Link
         to={`/authors/${author.id}`}
-        className="block min-w-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 rounded-2xl"
+        className="block min-w-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 rounded-2xl"
         data-testid="author-card"
       >
         <Card className="h-full min-w-0 rounded-2xl border-0 shadow-sm hover:shadow-xl motion-safe:hover:scale-[1.02] transition-all duration-300">

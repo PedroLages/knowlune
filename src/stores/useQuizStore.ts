@@ -200,8 +200,9 @@ export const useQuizStore = create<QuizState>()(
           // Done after set() so if set() throws, the backup key is preserved for crash recovery.
           try {
             localStorage.removeItem(`quiz-progress-${currentQuiz.id}`)
-          } catch {
+          } catch (err) {
             // Best-effort cleanup — storage errors are non-fatal
+            console.error('[useQuizStore] Failed to clean up quiz progress after submit:', err)
           }
         } catch (err) {
           console.error('[useQuizStore] submitQuiz failed:', err)
@@ -243,8 +244,9 @@ export const useQuizStore = create<QuizState>()(
         if (quizId) {
           try {
             localStorage.removeItem(`quiz-progress-${quizId}`)
-          } catch {
+          } catch (err) {
             // Best-effort cleanup — storage errors are non-fatal
+            console.error('[useQuizStore] Failed to clean up quiz progress on clear:', err)
           }
         }
         set({ currentQuiz: null, currentProgress: null, attempts: [], error: null })

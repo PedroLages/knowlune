@@ -195,7 +195,7 @@ export interface ScannedCourse {
   /** Relative path from server root to this course folder (E133-S01). */
   serverPath?: string
   /**
-   * Whether the file collection was truncated by MAX_SERVER_SCAN_FILES cap.
+   * Whether the file collection was truncated by the maxScanFiles cap.
    * Only set for server-sourced imports. When true, the import result is
    * partial — the user may need to increase the cap or split the folder.
    */
@@ -1690,13 +1690,6 @@ export async function importCourseFromDrive(
 const MAX_CONCURRENT_DIR_SCANS = 10
 
 /**
- * Maximum number of files to collect during a server-side BFS scan.
- * Prevents memory exhaustion on directories with many files (e.g. 20K+).
- * When reached, the scan stops and uses whatever was collected so far.
- */
-const MAX_SERVER_SCAN_FILES = 5_000
-
-/**
  * Recursively scan a course folder on a remote HTTP server using nginx
  * autoindex directory listings. No File System Access API handles needed —
  * all files are referenced by their HTTP URL.
@@ -1769,7 +1762,8 @@ function stripLanguageSuffix(stem: string): { cleanStem: string; language?: stri
 
 export async function scanCourseFolderFromServer(
   folderUrl: string,
-  serverId?: string
+  serverId?: string,
+  maxScanFiles: number = 5_000
 ): Promise<ScannedCourse> {
   const progressStore = useImportProgressStore.getState()
   const courseId = crypto.randomUUID()
@@ -1784,10 +1778,7 @@ export async function scanCourseFolderFromServer(
   // produces paths like "01-Overview/001-intro.mp4" instead of
   // "Academy/DevOps/MyCourse/01-Overview/001-intro.mp4".
   // This matches local import behavior where paths are relative to the course folder.
-  const parsedUrl = new URL(folderUrl)
   const courseBaseUrl = folderUrl.replace(/\/+$/, '')
-  const serverRoot = `${parsedUrl.protocol}//${parsedUrl.host}`
-
   progressStore.startImport(courseId, courseName)
 
   // Recursively collect all files
@@ -1848,7 +1839,7 @@ export async function scanCourseFolderFromServer(
 
         for (const file of result.data.files) {
           const currentCount = allVideos.length + allPdfs.length + allImages.length
-          if (currentCount >= MAX_SERVER_SCAN_FILES) break
+          if (currentCount >= maxScanFiles) break
           if (file.type === 'directory') {
             // Deduplicate directory URLs before enqueuing
             const canonicalChildDir = canonicalizeUrl(file.url)
@@ -1952,14 +1943,14 @@ export async function scanCourseFolderFromServer(
 
   // Detect and log when the file cap was reached during the scan.
   // This means the import result is partial — the server directory has more
-  // files than MAX_SERVER_SCAN_FILES permits.
+  // files than maxScanFiles permits.
   const totalFiles = allVideos.length + allPdfs.length + allImages.length
-  if (totalFiles >= MAX_SERVER_SCAN_FILES) {
+  if (totalFiles >= maxScanFiles) {
     hitCap = true
     console.warn(
-      `[scanServer] File cap reached: ${totalFiles} files collected (max ${MAX_SERVER_SCAN_FILES}). ` +
+      `[scanServer] File cap reached: ${totalFiles} files collected (max ${maxScanFiles}). ` +
         `Some files and directories from ${folderUrl} were skipped. ` +
-        `Consider splitting the folder or increasing MAX_SERVER_SCAN_FILES.`
+        `Consider splitting the folder or increasing maxScanFiles.`
     )
   }
 

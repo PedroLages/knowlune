@@ -7,8 +7,8 @@
  *
  * Returns `null` when `children` is empty (no empty-row whitespace on the page).
  *
- * The heading pattern matches `SmartGroupedView`'s `SectionHeading` component for
- * visual consistency across the Library page.
+ * The heading delegates to `LibraryShelfHeading` for visual consistency across
+ * the Library page.
  *
  * @since E116-S01
  */
@@ -23,8 +23,8 @@ import {
 } from '@/app/components/library/LibraryShelfHeading'
 
 export interface LibraryShelfRowProps {
-  /** Lucide-style icon component (e.g., `Clock`, `Headphones`) */
-  icon: React.ComponentType<{ className?: string }>
+  /** Lucide-style icon component (e.g., `Clock`, `Headphones`). When absent, text shifts fully left with no indent. */
+  icon?: React.ComponentType<{ className?: string }>
   /** Shelf heading label (e.g., "Continue Listening") */
   label: string
   /** Optional count badge next to label (e.g., number of items) */
@@ -47,7 +47,7 @@ export interface LibraryShelfRowProps {
    * `<section aria-labelledby={...}>` landmark wiring at call-sites.
    */
   headingId?: string
-  /** Optional data-testid for E2E/unit tests */
+  /** Optional data-testid for E2E/unit tests. The caller is responsible for providing a unique testid per shelf instance. */
   'data-testid'?: string
 }
 
@@ -158,6 +158,7 @@ export function LibraryShelfRow({
         >
           {Children.map(children, (child, i) =>
             child === null || child === undefined || child === false ? null : (
+              // index-as-key is acceptable here: items are static, never reordered within this scroller
               <div key={i} className="snap-start shrink-0">
                 {child}
               </div>

@@ -323,7 +323,7 @@ export function AuthorFormDialog({ open, onOpenChange, author }: AuthorFormDialo
                     maxLength={200}
                     value={education}
                     onChange={e => setEducation(e.target.value)}
-                    className="max-w-[16rem] border-2"
+                    className="max-w-[24rem] border-2"
                   />
                 </div>
               </div>

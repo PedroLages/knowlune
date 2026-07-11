@@ -89,6 +89,7 @@ function makeMockAdapter(groups: MaterialGroup[]): CourseAdapter {
     }),
     getAuthorInfo: vi.fn().mockReturnValue(null),
     getChapterGrouping: vi.fn().mockReturnValue(null),
+    getLessonBasedCurriculum: vi.fn().mockResolvedValue([]),
   }
 }
 

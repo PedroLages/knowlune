@@ -96,7 +96,9 @@ export function useAudiobookshelfProgressSync({
             duration: book.totalDuration,
             progress: localSeconds / book.totalDuration,
             isFinished: localSeconds / book.totalDuration >= 0.99,
-          }).catch(() => {})
+          }).catch((err) => {
+            console.error('[useAudiobookshelfProgressSync] Failed to push progress to ABS (sync):', err)
+          })
         }
         return
       }
@@ -128,7 +130,9 @@ export function useAudiobookshelfProgressSync({
             duration: book.totalDuration,
             progress: localSeconds / book.totalDuration,
             isFinished: localSeconds / book.totalDuration >= 0.99,
-          }).catch(() => {})
+          }).catch((err) => {
+            console.error('[useAudiobookshelfProgressSync] Failed to push progress to ABS (local ahead):', err)
+          })
         }
       }
     })()
@@ -179,7 +183,8 @@ export function useAudiobookshelfProgressSync({
             })
           }
         })
-        .catch(() => {
+        .catch((err) => {
+          console.error('[useAudiobookshelfProgressSync] Failed to push progress (session end), enqueuing for retry:', err)
           // Network error — enqueue for retry
           useAudiobookshelfStore.getState().enqueueSyncItem({
             serverId: book.absServerId!,

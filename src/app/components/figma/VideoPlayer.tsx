@@ -344,6 +344,7 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
     const target = seekToTime
 
     // Set pending seek so the seeked handler can verify position
+    if (!videoRef.current) return
     pendingSeekRef.current = target
     wasPlayingBeforeSeekRef.current = !videoRef.current.paused
     videoRef.current.currentTime = target

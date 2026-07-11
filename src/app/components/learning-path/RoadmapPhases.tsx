@@ -5,7 +5,6 @@ import {
   Lock,
   ArrowRight,
   ChevronDown,
-  Clock,
   BookOpen,
   Play,
   Target,
@@ -135,7 +134,7 @@ export function RoadmapPhases({
 
             {/* ── Course Cards ── */}
             <div className="space-y-3 pl-[52px]">
-              {phaseCourses.map(({ courseId, info, entry }, idx) => {
+              {phaseCourses.map(({ courseId, info, entry: _entry }, idx) => {
                 const pct = info?.completionPct ?? 0
                 const isCompleted = pct >= 100
                 const isCurrent = courseId === currentCourseId

@@ -5,6 +5,7 @@ import { Button } from '@/app/components/ui/button'
 import { Card, CardContent } from '@/app/components/ui/card'
 import { Skeleton } from '@/app/components/ui/skeleton'
 import { Input } from '@/app/components/ui/input'
+import { toast } from 'sonner'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -176,6 +177,7 @@ export function LearningTracks() {
       .catch(err => {
         if (!ignore) {
           console.error('[LearningTracks] Failed to load:', err)
+          toast.error('Failed to load learning tracks. Please try again.')
           setIsLoaded(true)
         }
       })
@@ -314,7 +316,7 @@ export function LearningTracks() {
             <Skeleton className="h-5 w-96" />
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-[var(--content-gap)]">
-            {Array.from({ length: 3 }, (_, i) => (
+            {Array.from({ length: 4 }, (_, i) => (
               <div key={i} className="w-full">
                 <TrackCardSkeleton />
               </div>
@@ -339,7 +341,7 @@ export function LearningTracks() {
           className="flex flex-col md:flex-row md:items-end justify-between gap-[var(--content-gap)]"
         >
           <div>
-            <h1 className="text-4xl font-extrabold tracking-tight font-display">Learning Tracks</h1>
+            <h1 className="text-4xl font-extrabold tracking-tight font-display break-words">Learning Tracks</h1>
             <p className="text-muted-foreground text-lg mt-2">
               Follow structured learning journeys and track your progress
             </p>

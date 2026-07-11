@@ -118,8 +118,9 @@ function loadSettings(): ReaderSettings {
           ? parsed.showProgressBar
           : DEFAULT_SETTINGS.showProgressBar,
     }
-  } catch {
+  } catch (err) {
     // silent-catch-ok: corrupted storage, use defaults
+    console.error('[useReaderStore] Failed to load persisted state, using defaults:', err)
     return DEFAULT_SETTINGS
   }
 }
@@ -127,8 +128,9 @@ function loadSettings(): ReaderSettings {
 function saveSettings(settings: ReaderSettings): void {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(settings))
-  } catch {
+  } catch (err) {
     // silent-catch-ok: storage full or unavailable
+    console.error('[useReaderStore] Failed to persist settings:', err)
   }
 }
 

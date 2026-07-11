@@ -85,7 +85,10 @@ async function runAutoAnalysis(course: ImportedCourse): Promise<void> {
     })
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}))
+      const errorData = await response.json().catch((err) => {
+        console.error('[autoAnalysis] Failed to parse error response:', err)
+        return {}
+      })
       throw new Error(
         `AI provider error (${response.status}): ${(errorData as { error?: string }).error || response.statusText}`
       )
@@ -119,7 +122,9 @@ async function runAutoAnalysis(course: ImportedCourse): Promise<void> {
       courseId: course.id,
       durationMs: Date.now() - startTime,
       metadata: { tagsGenerated: tags.length },
-    }).catch(() => {})
+    }).catch((err) => {
+      console.error('[autoAnalysis] Failed to track AI usage (success):', err)
+    })
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error'
     const isTimeout = error instanceof Error && error.name === 'AbortError'
@@ -140,7 +145,9 @@ async function runAutoAnalysis(course: ImportedCourse): Promise<void> {
       status: 'error',
       durationMs: Date.now() - startTime,
       metadata: { error: message },
-    }).catch(() => {})
+    }).catch((err) => {
+      console.error('[autoAnalysis] Failed to track AI usage (error):', err)
+    })
   } finally {
     clearTimeout(timeoutId)
   }

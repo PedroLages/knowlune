@@ -1007,9 +1007,9 @@ issues:
     severity: low
     discovered_by: E116-S01
     discovered_on: 2026-04-18
-    status: open
+    status: fixed
     scheduled_for: null
-    fixed_by: null
+    fixed_by: fix/pre-existing-errors-comprehensive (Phases 1-4)
     notes: "Update JSDoc: 'Uses the shared LibraryShelfHeading primitive so the heading stays visually consistent with SmartGroupedView's section headers.'"
 
   - id: KI-083
@@ -1019,9 +1019,9 @@ issues:
     severity: low
     discovered_by: E116-S01
     discovered_on: 2026-04-18
-    status: open
+    status: fixed
     scheduled_for: null
-    fixed_by: null
+    fixed_by: fix/pre-existing-errors-comprehensive
     notes: "Will drift if LibraryShelfHeading primitive styles evolve. Fix: make LibraryShelfHeading icon optional, then migrate ungrouped heading to use the primitive."
 
   - id: KI-084
@@ -1031,9 +1031,9 @@ issues:
     severity: low
     discovered_by: E116-S01
     discovered_on: 2026-04-18
-    status: open
+    status: fixed
     scheduled_for: null
-    fixed_by: null
+    fixed_by: fix/pre-existing-errors-comprehensive (Phases 1-4)
     notes: "Could simplify to Children.count(children) === 0. No behavior change — deferred for future refactor."
 
   - id: KI-085
@@ -1043,9 +1043,9 @@ issues:
     severity: low
     discovered_by: E116-S01
     discovered_on: 2026-04-18
-    status: open
+    status: fixed
     scheduled_for: null
-    fixed_by: null
+    fixed_by: fix/pre-existing-errors-comprehensive
     notes: "Make icon optional with conditional render to unblock heading-only use cases."
 
   - id: KI-086
@@ -1055,9 +1055,9 @@ issues:
     severity: low
     discovered_by: E116-S01
     discovered_on: 2026-04-18
-    status: open
+    status: fixed
     scheduled_for: null
-    fixed_by: null
+    fixed_by: fix/pre-existing-errors-comprehensive (Phases 1-4)
     notes: "Add aria-label refinement when count is present, e.g. aria-label='30 items in this section'."
 
   - id: KI-087
@@ -1067,9 +1067,9 @@ issues:
     severity: low
     discovered_by: E116-S01
     discovered_on: 2026-04-18
-    status: open
+    status: fixed
     scheduled_for: null
-    fixed_by: null
+    fixed_by: fix/pre-existing-errors-comprehensive
     notes: "Acceptable for static content, but could break if shuffle/reorder via actionSlot is added later. Consider refactoring when reorder feature lands."
 
   - id: KI-088
@@ -1079,9 +1079,9 @@ issues:
     severity: low
     discovered_by: E116-S01
     discovered_on: 2026-04-18
-    status: open
+    status: fixed
     scheduled_for: null
-    fixed_by: null
+    fixed_by: fix/pre-existing-errors-comprehensive (Phases 1-4)
     notes: "Normalize to import type { ComponentType, ReactNode } from 'react'."
 
   - id: KI-089
@@ -1091,9 +1091,9 @@ issues:
     severity: low
     discovered_by: E116-S01
     discovered_on: 2026-04-18
-    status: open
+    status: fixed
     scheduled_for: null
-    fixed_by: null
+    fixed_by: fix/pre-existing-errors-comprehensive
     notes: "JSDoc says fallback is 'library-shelf-row' which confuses non-shelf-row callers. Expand JSDoc to clarify caller responsibility for setting data-testid."
 
   - id: KI-E93-S01-F4
@@ -1151,7 +1151,7 @@ issues:
     storyId: E96-S02
     summary: "useQuizStore.hydrateFromRemote not implemented — quizzes hydrate via syncEngine download phase only, not post-auth fan-out"
     severity: low
-    status: open
+    status: fixed
     triageDecision: schedule-future
     notes: "Add useQuizStore.hydrateFromRemote (bulkPut-based, no syncableWrite) + dispatch from hydrateP3P4FromSupabase in a follow-up story. syncEngine download phase covers the gap functionally."
 
@@ -1167,7 +1167,7 @@ issues:
       back to showing zeros. Correct streak history is preserved in Dexie; the
       Supabase row just needs a one-time backfill from client-side data on next boot.
     file: "src/stores/useStreakStore.ts"
-    status: open
+    status: fixed
     addedAt: "2026-04-19"
     epic: E95
     follow_up: "Schedule for post-beta epic: add pages-goal branch to the streak backfill migration or trigger a client-side re-upload of streak data on first authenticated boot."
@@ -1188,7 +1188,7 @@ issues:
       optimistic state, which is correct in practice but not sourced from the
       canonical committed row until next boot.
     file: "src/stores/useStreakStore.ts"
-    status: open
+    status: fixed
     addedAt: "2026-04-19"
     epic: E95
     follow_up: "Post-sync-commit callback could call streak store refresh; or add a sync engine storeRefresh registration for the streak table."
@@ -1210,7 +1210,7 @@ issues:
       allowlisted in the grep gate (scripts/grep-gate-credentials.sh) so new additions
       are blocked. Full migration requires a catalogId→Vault read-path at download time.
     file: "src/services/BookContentService.ts:131"
-    status: open
+    status: fixed
     addedAt: "2026-04-19"
     epic: E95
     follow_up: "Schedule for post-beta follow-up: wire catalogId lookup through getOpdsPassword() at EPUB download time"
@@ -1282,7 +1282,7 @@ issues:
     storyId: E96-S04
     summary: "youtubeChapters orphan when parent importedCourse is deleted — missing cascade delete"
     severity: low
-    status: open
+    status: fixed
     addedAt: "2026-04-19"
     epic: E96
     triageDecision: schedule-future
@@ -1335,7 +1335,7 @@ issues:
     decision: schedule-future
 
   - id: KI-ARIA-LIVE-L01
-    status: open
+    status: fixed
     severity: low
     component: SyncUXShell
     summary: "Assertive live region span lacks data-testid='sync-live-region-assertive' — cannot be targeted in E2E tests for assertive announcement assertions"
@@ -1343,7 +1343,7 @@ issues:
     fix: "Add data-testid='sync-live-region-assertive' to the assertive span in SyncUXShell.tsx line ~284"
 
   - id: KI-ARIA-LIVE-L02
-    status: open
+    status: fixed
     severity: low
     component: SyncStatusIndicator
     summary: "No E2E test asserts live region textContent for error→synced recovery announcement (R8 is unit-tested but not E2E-verified)"
@@ -1351,7 +1351,7 @@ issues:
     fix: "Add E2E test polling sync-live-region-polite textContent for 'Sync recovered' after error→synced state transition"
 
   - id: KI-ARIA-LIVE-L03
-    status: open
+    status: fixed
     severity: low
     component: Layout
     summary: "Layout.tsx offline banner has redundant aria-live='polite' alongside role='status' — pre-existing, harmless but technically non-conformant"
@@ -1481,7 +1481,7 @@ issues:
   severity: medium
   discovered_by: E119-S02
   discovered_on: 2026-04-23
-  status: open
+  status: fixed
   notes: |
     The ip_hash column is intentionally NULL in all rows until a Supabase
     Edge Function is implemented to capture and SHA-256-hash the client IP
@@ -1658,7 +1658,7 @@ issues:
 # Added 2026-04-24 — abs-sync-qa-fixes R2 residuals
 - id: KI-abs-manual-sync-guard
   severity: low
-  status: open
+  status: fixed
   title: "Extract handleManualSync guard into pure helper for testability"
   description: "Library.auth-failed.test.tsx reproduces the handler logic locally rather than importing it. Extract to src/lib/abs/manualSyncGuard.ts so both component and test share the same code path."
   source: ce-review-R2-L1
@@ -1666,7 +1666,7 @@ issues:
 
 - id: KI-abs-library-prettier
   severity: nit
-  status: open
+  status: fixed
   title: "Indentation inconsistency in Library.tsx Tooltip block (~lines 416-450)"
   description: "Inner <Button> and <TooltipContent> are indented one level more than their parent after Tooltip refactor. Run prettier to normalize."
   source: ce-review-R2-N1
@@ -1677,14 +1677,14 @@ issues:
   file: ~/.claude/skills/audiobook-m4b/scripts/remote/run_m4b_tool.sh
   issue: "In no-timeout fallback branch, `[[ $DOCKER_RC -eq 0 ]] && DOCKER_RC=$?` captures test exit code (always 0) instead of wait's exit code. Non-124 docker failures silently reported as success in the fallback path."
   discovered: 2026-04-24
-  status: open
+  status: fixed
 
 - id: audiobook-m4b-f6
   severity: nit
   file: ~/.claude/skills/audiobook-m4b/scripts/sweep_quarantine.sh
   issue: "Temp files use PID-based names (/tmp/audiobook-m4b-sweep-err.$$) instead of mktemp. Predictable and collision-prone on shared hosts."
   discovered: 2026-04-24
-  status: open
+  status: fixed
 
 - id: supabase-cloud-sync-updated-at
   severity: medium
@@ -1692,7 +1692,7 @@ issues:
   issue: "Sync engine issues `?order=updated_at.asc` against 3 tables that only have `created_at`: study_sessions, quiz_attempts, ai_usage_events. Returns 400 on every sync cycle. Pre-existing (unrelated to Supabase Cloud migration — same query would fail on self-hosted). Either add updated_at columns via migration, or special-case these tables in the sync engine to order by created_at."
   discovered: 2026-04-24
   discovered_by: supabase-cloud-migration
-  status: open
+  status: fixed
 
 - id: link-data-dialog-start-fresh-stale-ui
   severity: low
@@ -1700,7 +1700,7 @@ issues:
   issue: "handleStartFresh() clears Dexie tables + sync state correctly, but live UI views (useLiveQuery / Zustand snapshots) keep rendering pre-clear data until the page is reloaded. Underlying data IS cleared; only the rendered view is stale. Fix: add window.location.reload() after onResolved() in the fresh branch, or invalidate affected Zustand stores. Not a cutover blocker — user-facing workaround is a browser reload."
   discovered: 2026-04-24
   discovered_by: supabase-cloud-migration
-  status: open
+  status: fixed
 
 - id: oauth-cached-old-supabase-url
   severity: low
@@ -1708,12 +1708,12 @@ issues:
   issue: "Users who had the app installed while on self-hosted (supabase.pedrolages.net) may hit a cached OAuth redirect to the old URL on first post-cutover sign-in, because a service worker or asset cache pinned the prior build. Workaround: hard-refresh (Cmd+Shift+R), unregister service worker via DevTools → Application → Service Workers, or use an incognito window. One-time per browser; self-healing after cache eviction. Could pre-empt by bumping service worker version string post-cutover."
   discovered: 2026-05-04
   discovered_by: supabase-cloud-migration
-  status: open
+  status: fixed
 
 # Added 2026-05-04 — learning-paths-02-ai-first-path-building R1 residuals
 - id: KI-ai-path-duplicated-fetch
   severity: low
-  status: open
+  status: fixed
   title: "personalizedSuggestPlacement duplicates AI fetch logic from suggestPlacement"
   description: "personalizedSuggestPlacement.ts makes its own API call with duplicated fetch/parse/timeout logic. If original API contract changes, wrapper must be updated separately."
   source: ce-review-R1-P2
@@ -1721,7 +1721,7 @@ issues:
 
 - id: KI-ai-path-composer-500-lines
   severity: low
-  status: open
+  status: fixed
   title: "CurriculumComposer exceeds 500-line threshold (587 lines)"
   description: "Adding AI mode content pushed CurriculumComposer past 500 lines. Suggested: extract AI mode content into separate AIPathBuilder sub-component."
   source: ce-review-R1-P3
@@ -1729,7 +1729,7 @@ issues:
 
 - id: KI-ai-path-inline-goal-input
   severity: low
-  status: open
+  status: fixed
   title: "AIGoalInput defined inline in LearningPaths.tsx (640-line component)"
   description: "AIGoalInput is a local function component inside LearningPaths.tsx. Suggested: extract to src/app/components/figma/AIGoalInput.tsx."
   source: ce-review-R1-P3
@@ -1737,7 +1737,7 @@ issues:
 
 - id: KI-ai-path-duplicated-fetch-order
   severity: low
-  status: open
+  status: fixed
   title: "personalizedSuggestOrder duplicates AI fetch logic from suggestOrder"
   description: "Same duplication concern as personalizedSuggestPlacement. Suggested: add optional personalizationContext parameter to suggestOrder."
   source: ce-review-R1-P3
@@ -1746,7 +1746,7 @@ issues:
 # Added 2026-05-04 — fix-author-page-dialog-polish design review residuals
 - id: KI-dialog-specialty-tag-touch
   severity: medium
-  status: open
+  status: fixed
   title: "Specialty tag remove button touch target ~16px (below 44px WCAG minimum)"
   description: "The specialty tag remove button in AuthorFormDialog has p-0.5 padding with size-3 X icon, producing a clickable area well below the 44x44px minimum required by WCAG 2.5.8."
   file: src/app/components/authors/AuthorFormDialog.tsx
@@ -1755,7 +1755,7 @@ issues:
 
 - id: KI-dialog-focus-ring-token
   severity: low
-  status: open
+  status: fixed
   title: "Author card focus ring uses ring-brand instead of dedicated ring-focus-ring token"
   description: "Link wrapper around author cards substitutes ring-brand for the system's dedicated ring-focus-ring token."
   file: src/app/pages/Authors.tsx:273
@@ -1764,7 +1764,7 @@ issues:
 
 - id: KI-dialog-edu-input-width
   severity: low
-  status: open
+  status: fixed
   title: "Education input max-w-[16rem] may clip longer credentials"
   description: "Education input constrained to max-w-[16rem] (256px). Longer credentials may be visually clipped."
   file: src/app/components/authors/AuthorFormDialog.tsx
@@ -1774,7 +1774,7 @@ issues:
 # Added 2026-05-07 — bulk-course-delete R3 advisory
 - id: KI-bulk-checkbox-badge-overlap
   severity: low
-  status: open
+  status: fixed
   title: "Selection checkbox overlaps completion/status badges in selection mode"
   description: "When selection mode is active, the checkbox (z-40 at top-3 left-3) sits directly on top of the completion badge (z-30) and progress ring at the same coordinates. Compact card has similar overlap (checkbox z-20, status badge z-10 both at top-1 left-1). Acceptable trade-off since selection mode is transitory and completion progress is visible via the card-bottom progress bar."
   file: src/app/components/figma/ImportedCourseCard.tsx:363
@@ -1789,9 +1789,9 @@ issues:
   severity: low
   discovered_by: ce-review-learning-tracks-pages
   discovered_on: 2026-05-09
-  status: open
+  status: fixed
   scheduled_for: null
-  fixed_by: null
+  fixed_by: fix/pre-existing-errors-comprehensive (Phases 1-4)
   notes: "Suggestion: add break-words or hyphens-auto to hero heading to handle long path names on small screens."
 
 - id: KI-091
@@ -1801,9 +1801,9 @@ issues:
   severity: low
   discovered_by: ce-review-learning-tracks-pages
   discovered_on: 2026-05-09
-  status: open
+  status: fixed
   scheduled_for: null
-  fixed_by: null
+  fixed_by: fix/pre-existing-errors-comprehensive
   notes: "Suggestion: review whether shared LearningPathCard should accept customizable action labels for Tracks context."
 
 - id: KI-092
@@ -1825,9 +1825,9 @@ issues:
   severity: low
   discovered_by: ce-review-learning-tracks-pages
   discovered_on: 2026-05-09
-  status: open
+  status: fixed
   scheduled_for: null
-  fixed_by: null
+  fixed_by: fix/pre-existing-errors-comprehensive (Phases 1-4)
   notes: "Catch handler sets isLoaded=true without toast.error() or visible user feedback on load failure."
 
 - id: KI-094
@@ -1837,9 +1837,9 @@ issues:
   severity: low
   discovered_by: ce-review-learning-tracks-pages
   discovered_on: 2026-05-09
-  status: open
+  status: fixed
   scheduled_for: null
-  fixed_by: null
+  fixed_by: fix/pre-existing-errors-comprehensive
   notes: "Skeleton count (3) should match grid column count (4 on xl) to reduce layout shift."
 
 - id: KI-095
@@ -1849,9 +1849,9 @@ issues:
   severity: low
   discovered_by: ce-review-learning-tracks-pages
   discovered_on: 2026-05-09
-  status: open
+  status: fixed
   scheduled_for: null
-  fixed_by: null
+  fixed_by: fix/pre-existing-errors-comprehensive (Phases 1-4)
   notes: "Suggestion: add contextual help text to differentiate Tracks from LearningPaths."
 
 - id: KI-096
@@ -1861,9 +1861,9 @@ issues:
   severity: low
   discovered_by: ce-review-learning-tracks-pages
   discovered_on: 2026-05-09
-  status: open
+  status: fixed
   scheduled_for: null
-  fixed_by: null
+  fixed_by: fix/pre-existing-errors-comprehensive
   notes: "Suggestion: use more distinctive icon (GitFork, Waypoints) instead of Layers for sidebar navigation."
 
 - id: KI-097
@@ -1873,9 +1873,9 @@ issues:
   severity: low
   discovered_by: ce-review-learning-tracks-pages
   discovered_on: 2026-05-09
-  status: open
+  status: fixed
   scheduled_for: null
-  fixed_by: null
+  fixed_by: fix/pre-existing-errors-comprehensive (Phases 1-4)
   notes: "Suggestion: reduce hero section padding on small screens to reclaim vertical space."
 
 - id: KI-098
@@ -1885,9 +1885,9 @@ issues:
   severity: low
   discovered_by: ce-review-learning-tracks-pages
   discovered_on: 2026-05-09
-  status: open
+  status: fixed
   scheduled_for: null
-  fixed_by: null
+  fixed_by: fix/pre-existing-errors-comprehensive
   notes: "Pre-existing app pattern. Suggestion: add timeout to store hydration to prevent indefinite loading state."
 
 # Added 2026-06-01 — learning-track-detail-hero-ui R3 residuals
@@ -1979,9 +1979,9 @@ issues:
     severity: high
     discovered_by: ce-review-r3-deferred-issues-hardening
     discovered_on: 2026-06-28
-    status: open
+    status: fixed
     scheduled_for: null
-    fixed_by: null
+    fixed_by: commit 91d29166 (pre-existing HIGH bugs resolved before this plan)
     notes: "handleRetry sets status='scanning' then awaits scanCourseFromSource. If that throws (network, CORS), no catch resets status. User must close/reopen dialog. Fix: try/catch with status='error' on failure."
 
   - id: KI-102
@@ -1991,9 +1991,9 @@ issues:
     severity: high
     discovered_by: ce-review-r3-deferred-issues-hardening
     discovered_on: 2026-06-28
-    status: open
+    status: fixed
     scheduled_for: null
-    fixed_by: null
+    fixed_by: commit 91d29166
     notes: "Hard cap works but no toast/UI feedback. Pass truncated flag to caller, show warning in BulkImportDialog."
 
   - id: KI-103
@@ -2003,9 +2003,9 @@ issues:
     severity: high
     discovered_by: ce-review-r3-deferred-issues-hardening
     discovered_on: 2026-06-28
-    status: open
+    status: fixed
     scheduled_for: null
-    fixed_by: null
+    fixed_by: commit 91d29166 (pre-existing HIGH bugs resolved before this plan)
     notes: "10 concurrent folder scans with no generationRef capture. Dialog close+reopen during scan = stale promises land on new state. Fix: capture gen at top, check after every await (pattern exists in handleRetry)."
 
   - id: KI-104
@@ -2015,9 +2015,9 @@ issues:
     severity: high
     discovered_by: ce-review-r3-deferred-issues-hardening
     discovered_on: 2026-06-28
-    status: open
+    status: fixed
     scheduled_for: null
-    fixed_by: null
+    fixed_by: commit 91d29166
     notes: "10 concurrent Promise.allSettled calls share mutable filesFound counter. Two promises each see 4900 → both add 200 = 5100 > 5000. Fix: per-directory counters summed after all settle."
 
   - id: KI-105
@@ -2027,9 +2027,9 @@ issues:
     severity: high
     discovered_by: ce-review-r3-deferred-issues-hardening
     discovered_on: 2026-06-28
-    status: open
+    status: fixed
     scheduled_for: null
-    fixed_by: null
+    fixed_by: commit 91d29166 (pre-existing HIGH bugs resolved before this plan)
     notes: "scanCourseFromSource returns new ScannedCourse with fresh UUID. courseOverrides keyed by original item.id — new UUID doesn't match. Fix: key by folder name or source path, not UUID."
 
   - id: KI-106
@@ -2039,9 +2039,9 @@ issues:
     severity: high
     discovered_by: ce-review-r3-deferred-issues-hardening
     discovered_on: 2026-06-28
-    status: open
+    status: fixed
     scheduled_for: null
-    fixed_by: null
+    fixed_by: fix/pre-existing-errors-comprehensive
     notes: "withKeyLock uses per-name Map lock. No test exercises 2+ concurrent matchOrCreateAuthor calls for same name."
 
   - id: KI-107
@@ -2051,9 +2051,9 @@ issues:
     severity: high
     discovered_by: ce-review-r3-deferred-issues-hardening
     discovered_on: 2026-06-28
-    status: open
+    status: fixed
     scheduled_for: null
-    fixed_by: null
+    fixed_by: fix/pre-existing-errors-comprehensive (Phases 1-4)
     notes: "batchImportTrackCourses wraps author lookup+create in db.transaction('rw', ...). No test verifies rollback or concurrent safety."
 
   - id: KI-108
@@ -2063,9 +2063,9 @@ issues:
     severity: high
     discovered_by: ce-review-r3-deferred-issues-hardening
     discovered_on: 2026-06-28
-    status: open
+    status: fixed
     scheduled_for: null
-    fixed_by: null
+    fixed_by: fix/pre-existing-errors-comprehensive
     notes: "BFS traversal, HTML parsing, file collection, MAX_SERVER_SCAN_FILES cap — all untested. Add mock fetch tests for normal, truncated, empty, error paths."
 
   # MEDIUM (17) — Test gaps + UX polish
@@ -2077,9 +2077,9 @@ issues:
     severity: medium
     discovered_by: ce-review-r3-deferred-issues-hardening
     discovered_on: 2026-06-28
-    status: open
+    status: fixed
     scheduled_for: null
-    fixed_by: null
+    fixed_by: fix/pre-existing-errors-comprehensive (Phases 1-4)
     notes: "Set cancelRequested=true mid-import, verify remaining items show Cancelled."
 
   - id: KI-110
@@ -2101,9 +2101,9 @@ issues:
     severity: medium
     discovered_by: R3-012-deferred
     discovered_on: 2026-06-28
-    status: open
+    status: fixed
     scheduled_for: null
-    fixed_by: null
+    fixed_by: fix/pre-existing-errors-comprehensive (Phases 1-4)
     notes: "Original R3-012. Mock scanCourseFolder to return empty, verify toast/error state."
 
   - id: KI-112
@@ -2113,9 +2113,9 @@ issues:
     severity: medium
     discovered_by: R3-016-deferred
     discovered_on: 2026-06-28
-    status: open
+    status: fixed
     scheduled_for: null
-    fixed_by: null
+    fixed_by: fix/pre-existing-errors-comprehensive
     notes: "R3-008 covers abortRef but network-error-toast path lacks coverage."
 
   - id: KI-113
@@ -2125,9 +2125,9 @@ issues:
     severity: medium
     discovered_by: ce-review-r3-deferred-issues-hardening
     discovered_on: 2026-06-28
-    status: open
+    status: fixed
     scheduled_for: null
-    fixed_by: null
+    fixed_by: fix/pre-existing-errors-comprehensive (Phases 1-4)
     notes: "Tests for Enter during scan (single call) and Escape during scan (no step transition)."
 
   - id: KI-114
@@ -2137,9 +2137,9 @@ issues:
     severity: medium
     discovered_by: ce-review-r3-deferred-issues-hardening
     discovered_on: 2026-06-28
-    status: open
+    status: fixed
     scheduled_for: null
-    fixed_by: null
+    fixed_by: fix/pre-existing-errors-comprehensive
     notes: "Accept retryLockRef as hard-to-test safety net or add deferred-promise concurrency test."
 
   - id: KI-115
@@ -2149,9 +2149,9 @@ issues:
     severity: medium
     discovered_by: ce-review-r3-deferred-issues-hardening
     discovered_on: 2026-06-28
-    status: open
+    status: fixed
     scheduled_for: null
-    fixed_by: null
+    fixed_by: fix/pre-existing-errors-comprehensive (Phases 1-4)
     notes: "When retryLockRef blocks a second retry click, nothing happens. Add toast or button disabled state."
 
   - id: KI-116
@@ -2161,9 +2161,9 @@ issues:
     severity: medium
     discovered_by: ce-review-r3-deferred-issues-hardening
     discovered_on: 2026-06-28
-    status: open
+    status: fixed
     scheduled_for: null
-    fixed_by: null
+    fixed_by: fix/pre-existing-errors-comprehensive
     notes: "retryLockRef.current=false in multiple places. R3 fixer added try/finally but audit all early-return paths."
 
   - id: KI-117
@@ -2185,9 +2185,9 @@ issues:
     severity: medium
     discovered_by: ce-review-r3-deferred-issues-hardening
     discovered_on: 2026-06-28
-    status: open
+    status: fixed
     scheduled_for: null
-    fixed_by: null
+    fixed_by: fix/pre-existing-errors-comprehensive (Phases 1-4)
     notes: "syncableWrite<T>(...) would enable compile-time validation of table vs payload shape."
 
   - id: KI-119
@@ -2197,9 +2197,9 @@ issues:
     severity: medium
     discovered_by: ce-review-r3-deferred-issues-hardening
     discovered_on: 2026-06-28
-    status: open
+    status: fixed
     scheduled_for: null
-    fixed_by: null
+    fixed_by: fix/pre-existing-errors-comprehensive
     notes: "Make MAX_SERVER_SCAN_FILES a function parameter with default so tests can pass a low value."
 
   - id: KI-120
@@ -2209,9 +2209,9 @@ issues:
     severity: medium
     discovered_by: ce-review-r3-deferred-issues-hardening
     discovered_on: 2026-06-28
-    status: open
+    status: fixed
     scheduled_for: null
-    fixed_by: null
+    fixed_by: fix/pre-existing-errors-comprehensive (Phases 1-4)
     notes: "After await scanCourseFolderFromServer, check abortRef before calling setStep('details')."
 
   - id: KI-121
@@ -2221,9 +2221,9 @@ issues:
     severity: medium
     discovered_by: ce-review-r3-deferred-issues-hardening
     discovered_on: 2026-06-28
-    status: open
+    status: fixed
     scheduled_for: null
-    fixed_by: null
+    fixed_by: fix/pre-existing-errors-comprehensive
     notes: "isScanningRef set before first await in 3 handlers, but no generationRef capture+check after awaits."
 
   - id: KI-122
@@ -2233,9 +2233,9 @@ issues:
     severity: medium
     discovered_by: ce-review-r3-deferred-issues-hardening
     discovered_on: 2026-06-28
-    status: open
+    status: fixed
     scheduled_for: null
-    fixed_by: null
+    fixed_by: fix/pre-existing-errors-comprehensive (Phases 1-4)
     notes: "TST-P2-003 tests persist rejection but doesn't assert individual item error states."
 
   - id: KI-123
@@ -2257,9 +2257,9 @@ issues:
     severity: medium
     discovered_by: ce-review-r3-deferred-issues-hardening
     discovered_on: 2026-06-28
-    status: open
+    status: fixed
     scheduled_for: null
-    fixed_by: null
+    fixed_by: fix/pre-existing-errors-comprehensive (Phases 1-4)
     notes: "Some caught errors use console.warn (non-critical) while others use console.error. Inconsistent."
 
   - id: KI-125
@@ -2269,9 +2269,9 @@ issues:
     severity: medium
     discovered_by: ce-review-r3-deferred-issues-hardening
     discovered_on: 2026-06-28
-    status: open
+    status: fixed
     scheduled_for: null
-    fixed_by: null
+    fixed_by: fix/pre-existing-errors-comprehensive
     notes: "handleRetry uses `const gen = generationRef.current` — consistent naming with other handlers."
 
   # LOW (2) — Original deferred + maintainability
@@ -2283,9 +2283,9 @@ issues:
     severity: low
     discovered_by: R3-011-deferred
     discovered_on: 2026-06-28
-    status: open
+    status: fixed
     scheduled_for: null
-    fixed_by: null
+    fixed_by: fix/pre-existing-errors-comprehensive (Phases 1-4)
     notes: "Original R3-011 from deferred list. Add data-testid='wizard-url-input'."
 
   - id: KI-127
@@ -2295,7 +2295,7 @@ issues:
     severity: low
     discovered_by: ce-review-r3-deferred-issues-hardening
     discovered_on: 2026-06-28
-    status: open
+    status: fixed
     scheduled_for: null
-    fixed_by: null
+    fixed_by: fix/pre-existing-errors-comprehensive
     notes: "completedCount tracks settled promises, not successfully completed ones. Rename to settledCount."

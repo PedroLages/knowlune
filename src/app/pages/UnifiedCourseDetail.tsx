@@ -102,7 +102,10 @@ export function UnifiedCourseDetail() {
         .where('courseId')
         .equals(courseId)
         .sortBy('order')
-        .catch(() => []),
+        .catch((err) => {
+          console.error('[UnifiedCourseDetail] Failed to load YouTube chapters:', err)
+          return []
+        }),
       db.progress.where('courseId').equals(courseId).toArray(),
     ])
       .then(([v, p, ch, prog]) => {
@@ -184,7 +187,9 @@ export function UnifiedCourseDetail() {
           thumbnailUrlRef.current = url
         }
       })
-      .catch(() => {})
+      .catch((err) => {
+        console.error('[UnifiedCourseDetail] Failed to load thumbnail:', err)
+      })
     return () => {
       ignore = true
       const blobUrl = thumbnailUrlRef.current

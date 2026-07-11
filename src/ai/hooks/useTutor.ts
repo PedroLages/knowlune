@@ -153,7 +153,9 @@ export function useTutor(options: UseTutorOptions): UseTutorResult {
       }))
 
     // Fire-and-forget — must not block navigation
-    void updateFromSession(state._courseId, tutorMessages, state.learnerModel).catch(() => {})
+    void updateFromSession(state._courseId, tutorMessages, state.learnerModel).catch((err) => {
+      console.error('[useTutor] Failed to persist tutor session:', err)
+    })
   }, [])
 
   useEffect(() => {
