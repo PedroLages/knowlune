@@ -78,6 +78,7 @@ import { ReadingToolbar } from '@/app/components/figma/ReadingToolbar'
 import { ReadingProgressBar } from '@/app/components/figma/ReadingProgressBar'
 import { ReadingModeDiscoveryTooltip } from '@/app/components/figma/ReadingModeDiscoveryTooltip'
 import { ReadingModeTOC } from '@/app/components/figma/ReadingModeTOC'
+import { LessonNavOverlay } from '@/app/components/course/LessonNavOverlay'
 import { MiniPlayer } from '@/app/components/course/MiniPlayer'
 import { NextCourseSuggestion } from '@/app/components/NextCourseSuggestion'
 import { NextInPath } from '@/app/components/NextInPath'
@@ -468,13 +469,14 @@ export function UnifiedLessonPlayer() {
         <div
           ref={videoContainerRef}
           className={cn(
-            'relative mb-3 w-full overflow-hidden',
+            'relative mb-3 w-full overflow-hidden group/video-container',
             !state.isPdf &&
               !isTheater &&
               'aspect-video max-h-[65svh] xl:max-h-[72svh] 2xl:max-h-[78svh]',
             !state.isPdf && isTheater && 'h-[calc(100svh-1rem)]'
           )}
           data-testid="video-container"
+          data-video-player-container=""
         >
           <LessonContentRenderer
             ref={videoPlayerRef}
@@ -497,6 +499,16 @@ export function UnifiedLessonPlayer() {
             onBookmarkSeek={state.handleTranscriptSeek}
             autoplay={shouldAutoPlay}
           />
+
+          {/* Floating prev/next lesson navigation arrows overlaid on the video
+              player — only for non-PDF video content with prev/next support */}
+          {capabilities.supportsPrevNext && !state.isPdf && (
+            <LessonNavOverlay
+              courseId={courseId!}
+              prevLesson={prevLesson}
+              nextLesson={nextLesson}
+            />
+          )}
         </div>
 
         {/* Portal target for FloatingNotesPanel — sibling to video container,

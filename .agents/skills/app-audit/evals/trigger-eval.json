@@ -1,0 +1,82 @@
+[
+  {
+    "query": "I just finished Epic 28 and all stories are merged to main. Before I start the next epic, I want to do a thorough check of the entire app — every page, accessibility, responsiveness, the works. Can you go through it all and tell me what needs attention?",
+    "should_trigger": true
+  },
+  {
+    "query": "hey can you audit just the courses section? I redesigned the course cards and lesson player last week and want to make sure everything is consistent and accessible across those pages",
+    "should_trigger": true
+  },
+  {
+    "query": "How production-ready is Knowlune right now? I want a comprehensive assessment — design quality, code health, test coverage, missing features, accessibility compliance. The full picture.",
+    "should_trigger": true
+  },
+  {
+    "query": "I'm noticing some inconsistencies across pages — the Reports page looks different from Overview, settings feels off compared to the rest. Can you systematically go through all the pages and check for design consistency?",
+    "should_trigger": true
+  },
+  {
+    "query": "run /app-audit premium --deep",
+    "should_trigger": true
+  },
+  {
+    "query": "what needs fixing in the app? I want a full quality check — UI issues, code smells, untested flows, accessibility gaps, the lot. Don't hold back.",
+    "should_trigger": true
+  },
+  {
+    "query": "I haven't looked at the premium features (flashcards, review queue, AI learning path, retention dashboard) in a while. Can you review all of them for quality — design, accessibility, edge cases, whether they actually work well?",
+    "should_trigger": true
+  },
+  {
+    "query": "Before I demo this to stakeholders next week, I need to know if there are any embarrassing issues — broken layouts, missing error states, accessibility violations, console errors. Check the whole app please.",
+    "should_trigger": true
+  },
+  {
+    "query": "how does the app look overall? I want an honest assessment of the UI/UX across all pages, not just the ones I've been working on recently",
+    "should_trigger": true
+  },
+  {
+    "query": "Can you check the test coverage across the entire app? I want to know which pages and flows have no tests at all, and maybe generate some E2E tests for the critical gaps.",
+    "should_trigger": true
+  },
+  {
+    "query": "I just finished implementing E28-S12 and need to run the quality gates before shipping. The story adds offline support and security hardening for YouTube courses.",
+    "should_trigger": false
+  },
+  {
+    "query": "Can you review the PR I just created? It's #105 on GitHub — the transcript fallback chain feature. Check if the code looks good and tests are solid.",
+    "should_trigger": false
+  },
+  {
+    "query": "The Overview page has a bug — the study streak counter shows NaN when there's no session data. Can you investigate and fix it?",
+    "should_trigger": false
+  },
+  {
+    "query": "I need to add a new Settings tab for notification preferences. It should have toggles for email, push, and in-app notifications with a save button.",
+    "should_trigger": false
+  },
+  {
+    "query": "run /design-review on the Reports page, I just changed the chart layout and want to make sure it looks right at all breakpoints",
+    "should_trigger": false
+  },
+  {
+    "query": "Can you do an SEO audit of the app? I want to check meta tags, structured data, page speed, and indexing issues before we go live.",
+    "should_trigger": false
+  },
+  {
+    "query": "check sprint status — I want to know how many stories are done in Epic 28 and what's left",
+    "should_trigger": false
+  },
+  {
+    "query": "The CourseCard component in src/app/components/figma/CourseCard.tsx has some TypeScript issues — can you review just that one file and clean up the types?",
+    "should_trigger": false
+  },
+  {
+    "query": "I want to refactor the Zustand stores to use a more consistent pattern. Can you look at all the store files and suggest improvements?",
+    "should_trigger": false
+  },
+  {
+    "query": "create E2E tests for the learning paths feature — the LearningPaths.tsx page and LearningPathDetail.tsx, covering navigation, filtering, and the detail view",
+    "should_trigger": false
+  }
+]

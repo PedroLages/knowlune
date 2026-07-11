@@ -1,0 +1,25 @@
+[shell_environment_policy]
+inherit = "core"
+
+[shell_environment_policy.set]
+ANTHROPIC_AUTH_TOKEN = "sk-92ff754adb374bfa89fd57b2bd4d6a7d"
+ANTHROPIC_BASE_URL = "https://api.deepseek.com/anthropic"
+API_TIMEOUT_MS = "3000000"
+ANTHROPIC_MODEL = "deepseek-v4-pro[1m]"
+ANTHROPIC_DEFAULT_OPUS_MODEL = "deepseek-v4-pro[1m]"
+ANTHROPIC_DEFAULT_SONNET_MODEL = "deepseek-v4-pro[1m]"
+ANTHROPIC_DEFAULT_HAIKU_MODEL = "deepseek-v4-flash"
+CLAUDE_CODE_SUBAGENT_MODEL = "deepseek-v4-flash"
+CLAUDE_CODE_EFFORT_LEVEL = "max"
+
+[mcp_servers.stitch]
+url = "https://stitch.googleapis.com/mcp"
+
+[mcp_servers.stitch.http_headers]
+Accept = "application/json"
+
+[mcp_servers.stitch.env_http_headers]
+X-Goog-Api-Key = "STITCH_API_KEY"
+
+[mcp_servers.supabase]
+url = "https://mcp.supabase.com/mcp?project_ref=chyvhrbtttpumsyuhgbu"

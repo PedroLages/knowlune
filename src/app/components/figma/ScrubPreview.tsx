@@ -1,6 +1,7 @@
 import { useEffect, useMemo } from 'react'
 import { useScrubPreview } from '@/app/hooks/useScrubPreview'
 import { formatTimestamp } from '@/lib/format'
+import { crossOriginForUrl } from '@/lib/media'
 import { cn } from '@/app/components/ui/utils'
 
 /** Storyboard sprite-sheet data for instant preview rendering */
@@ -113,7 +114,7 @@ export function ScrubPreview({
           muted
           preload="auto"
           playsInline
-          crossOrigin="anonymous"
+          crossOrigin={crossOriginForUrl(src)}
           className="fixed left-[-9999px] top-0 w-1 h-1 opacity-0 pointer-events-none"
           aria-hidden="true"
         />

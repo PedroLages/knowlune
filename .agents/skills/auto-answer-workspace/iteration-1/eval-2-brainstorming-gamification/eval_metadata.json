@@ -1,0 +1,27 @@
+{
+  "eval_id": 2,
+  "eval_name": "brainstorming-gamification-autopilot",
+  "prompt": "Use /auto-answer autopilot. I'm brainstorming gamification features for Knowlune. Answer these brainstorming questions yourself:\n1. What gamification mechanics would best fit a personal learning platform?\n2. How should we balance motivation vs distraction from actual learning?\n3. What's the risk of gamification feeling patronizing to adult learners?\n4. Should we make gamification opt-in or default-on?",
+  "assertions": [
+    {
+      "id": "answers-all-questions",
+      "text": "All 4 questions are answered autonomously — none asked back to user",
+      "type": "boolean"
+    },
+    {
+      "id": "checks-existing-features",
+      "text": "References existing Knowlune gamification features found in the codebase (streaks, achievements, progress tracking)",
+      "type": "boolean"
+    },
+    {
+      "id": "learning-platform-specific",
+      "text": "Recommendations are specific to personal learning platforms, not generic gamification advice",
+      "type": "boolean"
+    },
+    {
+      "id": "includes-reasoning-and-tradeoffs",
+      "text": "Each answer includes reasoning and at least some mention of trade-offs",
+      "type": "boolean"
+    }
+  ]
+}
