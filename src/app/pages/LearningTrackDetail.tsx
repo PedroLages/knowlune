@@ -52,7 +52,6 @@ export function LearningTrackDetail() {
   const navigate = useNavigate()
   const paths = useLearningPathStore(s => s.paths)
   const loadPaths = useLearningPathStore(s => s.loadPaths)
-  const reorderPathCourses = useLearningPathStore(s => s.reorderPathCourses)
   const setProgressionMode = useLearningPathStore(s => s.setProgressionMode)
   const { importedCourses, loadImportedCourses, thumbnailUrls, loadThumbnailUrls } =
     useCourseImportStore()
@@ -72,7 +71,6 @@ export function LearningTrackDetail() {
   // React has committed at least one render after isReady flips to true —
   // ensures Zustand store updates (entries) are visible before deciding emptiness.
   const [entriesChecked, setEntriesChecked] = useState(false)
-  const [isEditing, setIsEditing] = useState(false)
   const [activeTab, setActiveTab] = useState('overview')
 
   // Load all data on mount — uses requestAnimationFrame after Promise resolution

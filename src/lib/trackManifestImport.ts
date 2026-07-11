@@ -206,13 +206,11 @@ export async function batchImportTrackCourses(
     try {
       // Resolve the subdirectory handle — try primary folder, then aliases
       let dirHandle: FileSystemDirectoryHandle | null = null
-      let matchedFolder: string | null = null
 
       const candidateFolders = [entry.folder, ...(entry.aliases ?? [])]
       for (const candidate of candidateFolders) {
         try {
           dirHandle = await parentDirHandle.getDirectoryHandle(candidate)
-          matchedFolder = candidate
           break
         } catch {
           // try next candidate

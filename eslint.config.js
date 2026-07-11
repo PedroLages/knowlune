@@ -61,6 +61,23 @@ export default tseslint.config(eslint.configs.recommended, ...tseslint.configs.r
     'test-patterns/use-seeding-helpers': 'warn',
   },
 }, {
+  // CommonJS scripts — allow require() imports and declare Node globals
+  files: ['scripts/**/*.cjs'],
+  languageOptions: {
+    globals: {
+      console: 'readonly',
+      process: 'readonly',
+      require: 'readonly',
+      module: 'readonly',
+      __dirname: 'readonly',
+      __filename: 'readonly',
+      exports: 'readonly',
+    },
+  },
+  rules: {
+    '@typescript-eslint/no-require-imports': 'off',
+  },
+}, {
   // Test helper scripts in ESM (.mjs) — run in Node and/or browser contexts
   // (Playwright page.evaluate, etc.). Declare common globals to avoid no-undef noise.
   files: ['tests/**/*.mjs'],

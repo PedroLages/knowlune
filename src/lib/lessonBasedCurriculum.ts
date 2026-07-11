@@ -112,7 +112,7 @@ export function parseNumericPrefix(filename: string): {
  *   "011 vi-cheat-sheet.pdf"         → "vi cheat sheet"
  */
 export function cleanLessonTitle(filename: string): string {
-  const { prefix, stem } = parseNumericPrefix(filename)
+  const { prefix: _prefix, stem } = parseNumericPrefix(filename)
 
   // Remove trailing keywords that indicate material files (case-insensitive).
   // Patterns account for both original separators (hyphens/underscores/dots)
@@ -188,14 +188,14 @@ export function buildLessonBasedCurriculum(opts: {
     // This prevents prefix collisions across sections.
     const sectionBuckets = new Map()
   
-    function getSectionMap(sectionKey) {
+    function getSectionMap(sectionKey: string) {
       if (!sectionBuckets.has(sectionKey)) {
         sectionBuckets.set(sectionKey, new Map())
       }
       return sectionBuckets.get(sectionKey)
     }
   
-    function getBuilder(sectionKey, prefix, fallbackPath) {
+    function getBuilder(sectionKey: string, prefix: string, fallbackPath: string) {
       const sectionMap = getSectionMap(sectionKey)
       if (!sectionMap.has(prefix)) {
         sectionMap.set(prefix, { prefix, video: null, pdfs: [], txts: [], other: [], path: fallbackPath })
@@ -452,7 +452,7 @@ function resolveLessonGroup(builder: LessonGroupBuilder): LessonGroup | null {
       id: i.id,
       title: i.title,
       displayTitle: i.displayTitle,
-      type: i.type === 'material' ? 'material' : i.type,
+      type: (i.type === 'material' ? 'material' : i.type) as LessonGroupItem['type'],
       duration: i.duration,
       pageCount: i.pageCount,
       filename: i.filename,
@@ -545,52 +545,6 @@ function cleanSectionTitle(folderName: string): string {
     .replace(/[-_]+/g, ' ')
     .replace(/\s+/g, ' ')
     .trim()
-}
-
-/**
- * Build sections from lesson groups.
- * Groups lessons by their folder path's first segment.
- */
-function buildSections(lessonGroups: LessonGroup[]): CourseSection[] {
-  if (lessonGroups.length === 0) return []
-
-  // Check if all lessons are in the same section (flat structure)
-  const sections = new Map<string, { path: string; lessons: LessonGroup[] }>()
-
-  for (const group of lessonGroups) {
-    const sectionName = getSectionName(group.primary.path)
-    if (!sections.has(sectionName)) {
-      sections.set(sectionName, { path: sectionName, lessons: [] })
-    }
-    sections.get(sectionName)!.lessons.push(group)
-  }
-
-  // If only one section (or all empty), return flat
-  if (sections.size <= 1) {
-    const onlySection = Array.from(sections.values())[0]
-    const title = cleanSectionTitle(onlySection?.path || '')
-    return [
-      {
-        numericPrefix: onlySection ? parseSectionPrefix(onlySection.path) : '1',
-        title,
-        lessons: onlySection?.lessons || lessonGroups,
-      },
-    ]
-  }
-
-  // Multiple sections — sort by section prefix
-  return Array.from(sections.entries())
-    .sort(([a], [b]) =>
-      parseSectionPrefix(a).localeCompare(parseSectionPrefix(b), undefined, { numeric: true })
-    )
-    .map(([_name, { path, lessons }]) => {
-      const section: CourseSection = {
-        numericPrefix: parseSectionPrefix(path),
-        title: cleanSectionTitle(path),
-        lessons,
-      }
-      return section
-    })
 }
 
 // ---------------------------------------------------------------------------

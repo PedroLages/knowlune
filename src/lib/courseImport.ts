@@ -1784,10 +1784,7 @@ export async function scanCourseFolderFromServer(
   // produces paths like "01-Overview/001-intro.mp4" instead of
   // "Academy/DevOps/MyCourse/01-Overview/001-intro.mp4".
   // This matches local import behavior where paths are relative to the course folder.
-  const parsedUrl = new URL(folderUrl)
   const courseBaseUrl = folderUrl.replace(/\/+$/, '')
-  const serverRoot = `${parsedUrl.protocol}//${parsedUrl.host}`
-
   progressStore.startImport(courseId, courseName)
 
   // Recursively collect all files

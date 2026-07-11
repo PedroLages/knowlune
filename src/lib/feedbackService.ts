@@ -163,6 +163,7 @@ export async function submitFeedback(payload: {
 }): Promise<SubmitResult | SubmitError> {
   let accessToken: string | undefined
   try {
+    if (!supabase) throw new Error('Supabase client not initialized')
     const {
       data: { session },
     } = await supabase.auth.getSession()

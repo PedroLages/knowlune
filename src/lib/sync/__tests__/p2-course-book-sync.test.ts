@@ -158,7 +158,7 @@ describe('E94-S02 P2 sync wiring — authors', () => {
 
     const created = await useAuthorStore.getState().addAuthor(authorData)
 
-    const stored = await db.authors.get(created.id)
+    const stored = await db.authors.get(created!.id)
     expect(stored).toBeDefined()
 
     const entries = await getQueueEntries('authors')
@@ -178,7 +178,7 @@ describe('E94-S02 P2 sync wiring — authors', () => {
     const created = await useAuthorStore.getState().addAuthor(authorData)
 
     const entries = await getQueueEntries('authors')
-    const addEntry = entries.find(e => e.recordId === created.id && e.operation === 'add')
+    const addEntry = entries.find(e => e.recordId === created!.id && e.operation === 'add')
     expect(addEntry).toBeDefined()
     expect('photo_handle' in addEntry!.payload).toBe(false)
   })
@@ -188,12 +188,12 @@ describe('E94-S02 P2 sync wiring — authors', () => {
     const created = await useAuthorStore.getState().addAuthor(authorData)
     await db.syncQueue.clear()
 
-    await useAuthorStore.getState().deleteAuthor(created.id, { silent: true })
+    await useAuthorStore.getState().deleteAuthor(created!.id, { silent: true })
 
     const entries = await getQueueEntries('authors')
     const deleteEntry = entries.find(e => e.operation === 'delete')
     expect(deleteEntry).toBeDefined()
-    expect(deleteEntry!.payload).toEqual({ id: created.id })
+    expect(deleteEntry!.payload).toEqual({ id: created!.id })
   })
 
   it('linkCourseToAuthor produces a put entry with updated courseIds', async () => {
@@ -202,7 +202,7 @@ describe('E94-S02 P2 sync wiring — authors', () => {
     await db.syncQueue.clear()
 
     const courseId = crypto.randomUUID()
-    await useAuthorStore.getState().linkCourseToAuthor(created.id, courseId)
+    await useAuthorStore.getState().linkCourseToAuthor(created!.id, courseId)
 
     const entries = await getQueueEntries('authors')
     const putEntry = entries.find(e => e.operation === 'put')

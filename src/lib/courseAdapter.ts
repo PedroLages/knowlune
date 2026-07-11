@@ -12,7 +12,6 @@ import type { ImportedCourse, ImportedVideo, ImportedPdf, CourseSource, YouTubeC
 import { db } from '@/db'
 import {
   matchMaterialsToLessons,
-  getCompanionPdfIds,
   type MaterialGroup,
 } from './lessonMaterialMatcher'
 export type { MaterialGroup } from './lessonMaterialMatcher'
@@ -65,7 +64,7 @@ export function revokeObjectUrl(url: string): void {
 export interface LessonItem {
   id: string
   title: string
-  type: 'video' | 'pdf' | 'text'
+  type: 'video' | 'pdf' | 'text' | 'quiz' | 'assignment' | 'material'
   duration?: number
   order: number
   sourceMetadata?: Record<string, unknown>
