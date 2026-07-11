@@ -960,9 +960,10 @@ describe('reconcileAbsDuplicates', () => {
       absItemId: 'dup-prog',
     })
 
-    const { reconciled, idsToDelete } = reconcileAbsDuplicates(
-      [lowProgress, highProgress] as never[]
-    )
+    const { reconciled, idsToDelete } = reconcileAbsDuplicates([
+      lowProgress,
+      highProgress,
+    ] as never[])
     expect(reconciled).toHaveLength(1)
     expect(reconciled[0].id).toBe('high-prog')
     expect(idsToDelete).toContain('low-prog')
