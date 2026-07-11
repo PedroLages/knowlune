@@ -16,10 +16,14 @@ import {
   detectAuthorPhoto,
 } from '@/lib/authorDetection'
 import { autoGenerateThumbnail, autoGenerateThumbnailFromServer } from '@/lib/autoThumbnail'
-import { fetchDirectoryListing, isValidImportUrl } from '@/lib/courseServerService'
+import { fetchDirectoryListing, isValidImportUrl, canonicalizeUrl } from '@/lib/courseServerService'
 import type { ServerResult } from '@/lib/courseServerService'
 import { generateStoryboard, saveVideoStoryboard, loadVideoStoryboard } from '@/lib/videoStoryboard'
-import { loadThumbnailFromFile, saveCourseThumbnail, fetchThumbnailFromUrl } from '@/lib/thumbnailService'
+import {
+  loadThumbnailFromFile,
+  saveCourseThumbnail,
+  fetchThumbnailFromUrl,
+} from '@/lib/thumbnailService'
 import {
   showDirectoryPicker,
   scanDirectory,
@@ -626,17 +630,16 @@ export async function persistScannedCourse(
       : videos
 
   // Build ImportedPdf records
-  const pdfs: ImportedPdf[] = scanned.pdfs
-    .map(p => ({
-      id: p.id,
-      courseId: scanned.id,
-      filename: p.filename,
-      path: p.path,
-      pageCount: p.pageCount,
-      fileHandle: p.fileHandle ?? null,
-      ...(p.serverUrl ? { serverUrl: p.serverUrl } : {}),
-      ...(p.moduleTitle ? { moduleTitle: p.moduleTitle } : {}),
-    }))
+  const pdfs: ImportedPdf[] = scanned.pdfs.map(p => ({
+    id: p.id,
+    courseId: scanned.id,
+    filename: p.filename,
+    path: p.path,
+    pageCount: p.pageCount,
+    fileHandle: p.fileHandle ?? null,
+    ...(p.serverUrl ? { serverUrl: p.serverUrl } : {}),
+    ...(p.moduleTitle ? { moduleTitle: p.moduleTitle } : {}),
+  }))
 
   // Author detection: use explicit override (authorId or authorName from manifest),
   // fall back to manifest author name, or auto-detect from folder name (AC1-AC3, AC5)
@@ -743,14 +746,24 @@ export async function persistScannedCourse(
     const isReimport = !!existingCourse
     if (isReimport && existingCourse) {
       // Re-import: update existing course record, preserve original id
-      const updatedCourse = { ...course as ImportedCourse, id: existingCourse.id }
+      const updatedCourse = { ...(course as ImportedCourse), id: existingCourse.id }
       await syncableWrite('importedCourses', 'put', updatedCourse as unknown as SyncableRecord)
 
       // Collect existing video/PDF IDs for this course to enable upsert
-      const existingVideos = await db.importedVideos.where('courseId').equals(existingCourse.id).toArray()
-      const existingPdfs = await db.importedPdfs.where('courseId').equals(existingCourse.id).toArray()
-      const existingVidByServerUrl = new Map(existingVideos.filter(v => v.serverUrl).map(v => [v.serverUrl!, v]))
-      const existingPdfByServerUrl = new Map(existingPdfs.filter(p => p.serverUrl).map(p => [p.serverUrl!, p]))
+      const existingVideos = await db.importedVideos
+        .where('courseId')
+        .equals(existingCourse.id)
+        .toArray()
+      const existingPdfs = await db.importedPdfs
+        .where('courseId')
+        .equals(existingCourse.id)
+        .toArray()
+      const existingVidByServerUrl = new Map(
+        existingVideos.filter(v => v.serverUrl).map(v => [v.serverUrl!, v])
+      )
+      const existingPdfByServerUrl = new Map(
+        existingPdfs.filter(p => p.serverUrl).map(p => [p.serverUrl!, p])
+      )
       const keptVideoIds = new Set<string>()
       const keptPdfIds = new Set<string>()
 
@@ -847,7 +860,9 @@ export async function persistScannedCourse(
     }
   } catch (error) {
     const detail = error instanceof Error ? error.message : 'Unknown error'
-    useImportProgressStore.getState().failCourse(scanned.id, `Failed to save "${course.name}": ${detail}`)
+    useImportProgressStore
+      .getState()
+      .failCourse(scanned.id, `Failed to save "${course.name}": ${detail}`)
     const message = `Failed to save "${course.name}": ${detail}`
     console.error('[Import] Persist transaction failed:', error)
     toast.error(message)
@@ -938,8 +953,12 @@ export async function persistScannedCourse(
   if (!overrides?.coverImageHandle && orderedVideos.length > 0) {
     const firstVideo = orderedVideos[0]
     if (firstVideo.fileHandle) {
-      autoGenerateThumbnail(course.id, firstVideo.fileHandle).catch(() => {
+      autoGenerateThumbnail(course.id, firstVideo.fileHandle).catch(err => {
         // silent-catch-ok: thumbnail generation failure is non-fatal — card shows placeholder icon (E1B-S04 AC3)
+        console.warn('[ServerThumbnail] Local thumbnail generation failed:', {
+          courseId: course.id,
+          error: err instanceof Error ? err.message : String(err),
+        })
       })
     } else if (scanned.images.length > 0 && scanned.images[0].serverUrl) {
       // Server course with discovered images — use first image as thumbnail (more reliable than video extraction)
@@ -951,17 +970,38 @@ export async function persistScannedCourse(
             thumbnailUrls: { ...state.thumbnailUrls, [course.id]: url },
           }))
         })
-        .catch(() => {
+        .catch(err => {
           // Fall back to video frame extraction
+          console.warn('[ServerThumbnail] Image fetch failed, falling back to video extraction:', {
+            courseId: course.id,
+            imageUrl: scanned.images[0].serverUrl,
+            error: err instanceof Error ? err.message : String(err),
+          })
           if (firstVideo.serverUrl) {
-            autoGenerateThumbnailFromServer(course.id, firstVideo.serverUrl).catch(() => {
-              // silent-catch-ok
+            console.debug('[ServerThumbnail] Attempting thumbnail from server video (fallback):', {
+              courseId: course.id,
+              videoUrl: firstVideo.serverUrl,
+            })
+            autoGenerateThumbnailFromServer(course.id, firstVideo.serverUrl).catch(err => {
+              console.warn('[ServerThumbnail] Video thumbnail extraction also failed:', {
+                courseId: course.id,
+                videoUrl: firstVideo.serverUrl,
+                error: err instanceof Error ? err.message : String(err),
+              })
             })
           }
         })
     } else if (firstVideo.serverUrl) {
-      autoGenerateThumbnailFromServer(course.id, firstVideo.serverUrl).catch(() => {
-        // silent-catch-ok: server thumbnail failure is non-fatal — card shows placeholder icon
+      console.debug('[ServerThumbnail] Attempting thumbnail from server video:', {
+        courseId: course.id,
+        videoUrl: firstVideo.serverUrl,
+      })
+      autoGenerateThumbnailFromServer(course.id, firstVideo.serverUrl).catch(err => {
+        console.warn('[ServerThumbnail] Thumbnail generation failed:', {
+          courseId: course.id,
+          videoUrl: firstVideo.serverUrl,
+          error: err instanceof Error ? err.message : String(err),
+        })
       })
     }
   }
@@ -1591,8 +1631,24 @@ function deriveModuleTitle(dirUrl: string | undefined): string | undefined {
 
 /** Known language suffixes in caption filenames (e.g., "001_intro_en.srt"). */
 const CAPTION_LANG_SUFFIXES = [
-  '_en', '_fr', '_es', '_de', '_ja', '_zh', '_ko', '_pt', '_ar', '_ru',
-  '_it', '_nl', '_pl', '_sv', '_tr', '_hi', '_vi', '_th',
+  '_en',
+  '_fr',
+  '_es',
+  '_de',
+  '_ja',
+  '_zh',
+  '_ko',
+  '_pt',
+  '_ar',
+  '_ru',
+  '_it',
+  '_nl',
+  '_pl',
+  '_sv',
+  '_tr',
+  '_hi',
+  '_vi',
+  '_th',
 ] as const
 
 /** Strips known language suffix from a stem. Returns {cleanStem, language}. */
@@ -1637,9 +1693,23 @@ export async function scanCourseFolderFromServer(
   }[] = []
   const allPdfs: { name: string; url: string; path: string }[] = []
   const allImages: { name: string; url: string; path: string }[] = []
-  const allCaptions: { rawStem: string; cleanStem: string; language?: string; name: string; url: string }[] = []
+  const allCaptions: {
+    rawStem: string
+    cleanStem: string
+    language?: string
+    name: string
+    url: string
+  }[] = []
   // Map file URLs → parent directory URLs for section structure derivation
   const fileDirMap = new Map<string, string>()
+
+  // Deduplication: track seen file URLs (canonical form) to avoid counting
+  // the same file multiple times due to symlinks, encoding variants, etc.
+  const seenFileUrls = new Set<string>()
+  // Diagnostics: track duplicate counts for transparency
+  const duplicateVideoUrls: string[] = []
+  const duplicatePdfUrls: string[] = []
+  const duplicateDirUrls: string[] = []
 
   // Breadth-first traversal with concurrency limit
   const pendingDirs: string[] = [folderUrl]
@@ -1659,8 +1729,10 @@ export async function scanCourseFolderFromServer(
 
     const results = await Promise.allSettled(
       batch.map(async dirUrl => {
-        if (seen.has(dirUrl)) return
-        seen.add(dirUrl)
+        // Canonicalize directory URL for deduplication (trailing slash, encoding variants)
+        const canonicalDirUrl = canonicalizeUrl(dirUrl)
+        if (seen.has(canonicalDirUrl)) return
+        seen.add(canonicalDirUrl)
 
         const result = await fetchDirectoryListing(dirUrl)
         if (!result.ok) {
@@ -1672,8 +1744,22 @@ export async function scanCourseFolderFromServer(
           const currentCount = allVideos.length + allPdfs.length + allImages.length
           if (currentCount >= MAX_SERVER_SCAN_FILES) break
           if (file.type === 'directory') {
+            // Deduplicate directory URLs before enqueuing
+            const canonicalChildDir = canonicalizeUrl(file.url)
+            // Skip parent-directory links and URLs outside the course base path
+            if (!canonicalChildDir.startsWith(courseBaseUrl)) continue
+            if (seen.has(canonicalChildDir)) {
+              if (duplicateDirUrls.length < 20) duplicateDirUrls.push(file.url)
+              continue
+            }
             pendingDirs.push(file.url)
           } else if (file.type === 'video') {
+            const canonicalFileUrl = canonicalizeUrl(file.url)
+            if (seenFileUrls.has(canonicalFileUrl)) {
+              if (duplicateVideoUrls.length < 20) duplicateVideoUrls.push(file.url)
+              continue
+            }
+            seenFileUrls.add(canonicalFileUrl)
             const relPath = file.url.replace(courseBaseUrl + '/', '')
             const ext = file.name.split('.').pop()?.toLowerCase() ?? 'mp4'
             const validFormats = ['mp4', 'webm', 'mkv', 'ts', 'avi'] as const
@@ -1687,6 +1773,12 @@ export async function scanCourseFolderFromServer(
             })
             fileDirMap.set(file.url, dirUrl)
           } else if (file.type === 'pdf') {
+            const canonicalFileUrl = canonicalizeUrl(file.url)
+            if (seenFileUrls.has(canonicalFileUrl)) {
+              if (duplicatePdfUrls.length < 20) duplicatePdfUrls.push(file.url)
+              continue
+            }
+            seenFileUrls.add(canonicalFileUrl)
             const relPath = file.url.replace(courseBaseUrl + '/', '')
             allPdfs.push({
               name: file.name,
@@ -1695,6 +1787,9 @@ export async function scanCourseFolderFromServer(
             })
             fileDirMap.set(file.url, dirUrl)
           } else if (file.type === 'image') {
+            const canonicalFileUrl = canonicalizeUrl(file.url)
+            if (seenFileUrls.has(canonicalFileUrl)) continue
+            seenFileUrls.add(canonicalFileUrl)
             const relPath = file.url.replace(courseBaseUrl + '/', '')
             allImages.push({
               name: file.name,
@@ -1702,6 +1797,9 @@ export async function scanCourseFolderFromServer(
               path: relPath,
             })
           } else if (file.type === 'caption') {
+            const canonicalFileUrl = canonicalizeUrl(file.url)
+            if (seenFileUrls.has(canonicalFileUrl)) continue
+            seenFileUrls.add(canonicalFileUrl)
             // Collect caption files for post-scan matching (Unit 4)
             const captionStemRaw = file.name.replace(/\.[a-zA-Z0-9]{2,4}$/, '')
             const { cleanStem, language } = stripLanguageSuffix(captionStemRaw)
@@ -1729,6 +1827,21 @@ export async function scanCourseFolderFromServer(
         console.warn('[scanServer] Directory scan rejected:', r.reason)
       }
     }
+  }
+
+  // Emit diagnostics report with deduplication statistics
+  if (duplicateVideoUrls.length > 0 || duplicatePdfUrls.length > 0 || duplicateDirUrls.length > 0) {
+    console.info('[scanServer] Import diagnostics:', {
+      courseName,
+      uniqueDirs: seen.size,
+      uniqueVideos: allVideos.length,
+      duplicateVideosSkipped: duplicateVideoUrls.length,
+      uniquePdfs: allPdfs.length,
+      duplicatePdfsSkipped: duplicatePdfUrls.length,
+      duplicateDirsSkipped: duplicateDirUrls.length,
+      firstDuplicateVideoUrls: duplicateVideoUrls.slice(0, 20),
+      firstDuplicateDirUrls: duplicateDirUrls.slice(0, 20),
+    })
   }
 
   // Detect and log when the file cap was reached during the scan.

@@ -15,6 +15,7 @@ import {
   fetchDirectoryListing,
   buildFileUrl,
   verifyConnection,
+  canonicalizeUrl,
 } from '../courseServerService'
 
 // ───── isValidImportUrl ─────
@@ -300,5 +301,52 @@ describe('verifyConnection', () => {
     if (!result.ok) {
       expect(result.error).toContain('unreachable')
     }
+  })
+})
+
+// ───── canonicalizeUrl ─────
+
+describe('canonicalizeUrl', () => {
+  it('removes URL fragments', () => {
+    const result = canonicalizeUrl('http://example.com/path/file.mp4#anchor')
+    expect(result).not.toContain('#')
+  })
+
+  it('normalizes double slashes in pathname', () => {
+    const result = canonicalizeUrl('http://example.com/path//to///file.mp4')
+    expect(result).toBe('http://example.com/path/to/file.mp4')
+  })
+
+  it('strips query parameters', () => {
+    const result = canonicalizeUrl('http://example.com/file.mp4?t=12345&v=67890')
+    expect(result).toBe('http://example.com/file.mp4')
+  })
+
+  it('normalizes encoding variants (%20 vs space)', () => {
+    const a = canonicalizeUrl('http://example.com/path/file%20name.mp4')
+    const b = canonicalizeUrl('http://example.com/path/file name.mp4')
+    expect(a).toBe(b)
+  })
+
+  it('handles URL with both fragment and query params', () => {
+    const result = canonicalizeUrl('http://example.com/file.mp4?dl=1#t=10')
+    expect(result).toBe('http://example.com/file.mp4')
+  })
+
+  it('preserves basic URL structure', () => {
+    const result = canonicalizeUrl('http://192.168.1.1:8080/courses/video.mp4')
+    expect(result).toBe('http://192.168.1.1:8080/courses/video.mp4')
+  })
+
+  it('handles directory URLs with trailing slash', () => {
+    const result = canonicalizeUrl('http://example.com/courses/folder/')
+    expect(result).toBe('http://example.com/courses/folder/')
+  })
+
+  it('normalizes mixed encoding in path segments', () => {
+    const result = canonicalizeUrl('http://example.com/path/My%20Course/01.%20Introduction.mp4')
+    // Both segments should be normalized to the same encoding
+    expect(result).toContain('My%20Course')
+    expect(result).toContain('01.%20Introduction.mp4')
   })
 })
