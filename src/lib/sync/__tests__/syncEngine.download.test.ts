@@ -26,6 +26,8 @@ const {
   mockNotesPut,
   mockProgressGet,
   mockProgressPut,
+  mockProgressWhereFirst,
+  mockProgressWhereDelete,
   mockStudySessionsAdd,
   mockStudySessionsGet,
   mockSyncQueueToArray,
@@ -51,6 +53,8 @@ const {
 
   const mockProgressGet = vi.fn().mockResolvedValue(undefined)
   const mockProgressPut = vi.fn().mockResolvedValue(undefined)
+  const mockProgressWhereFirst = vi.fn().mockResolvedValue(undefined)
+  const mockProgressWhereDelete = vi.fn().mockResolvedValue(1)
 
   const mockStudySessionsGet = vi.fn().mockResolvedValue(undefined)
   const mockStudySessionsAdd = vi.fn().mockResolvedValue(undefined)
@@ -65,6 +69,8 @@ const {
     mockNotesPut,
     mockProgressGet,
     mockProgressPut,
+    mockProgressWhereFirst,
+    mockProgressWhereDelete,
     mockStudySessionsGet,
     mockStudySessionsAdd,
     mockSyncQueueToArray,
@@ -96,6 +102,12 @@ vi.mock('@/db', () => ({
       get: mockProgressGet,
       put: mockProgressPut,
       add: vi.fn().mockResolvedValue(undefined),
+      where: vi.fn().mockReturnValue({
+        equals: vi.fn().mockReturnValue({
+          first: mockProgressWhereFirst,
+          delete: mockProgressWhereDelete,
+        }),
+      }),
     },
     studySessions: {
       get: mockStudySessionsGet,
@@ -387,7 +399,11 @@ vi.mock('@/lib/sync/storageSync', () => ({
 }))
 
 // Import after mocks.
-import { syncEngine } from '../syncEngine'
+import {
+  syncEngine,
+  validateDownloadedProgress,
+  normalizeDownloadedProgress,
+} from '../syncEngine'
 import { getTableEntry, tableRegistry } from '../tableRegistry'
 
 // ---------------------------------------------------------------------------
@@ -526,12 +542,16 @@ describe('Monotonic conflict strategy', () => {
   it('preserves local monotonic field when server value is lower', async () => {
     mockProgressGet.mockResolvedValue({
       id: 'vid-1',
+      courseId: 'c1',
+      videoId: 'v1',
       watchedSeconds: 200,
       updatedAt: '2026-04-17T10:00:00Z',
     })
     setTableRows('video_progress', [
       {
         id: 'vid-1',
+        courseId: 'c1',
+        videoId: 'v1',
         watchedSeconds: 100,
         updatedAt: '2026-04-18T10:00:00Z',
         updated_at: '2026-04-18T10:00:00Z',
@@ -548,12 +568,16 @@ describe('Monotonic conflict strategy', () => {
   it('uses server monotonic field when server value is higher', async () => {
     mockProgressGet.mockResolvedValue({
       id: 'vid-1',
+      courseId: 'c1',
+      videoId: 'v1',
       watchedSeconds: 100,
       updatedAt: '2026-04-17T10:00:00Z',
     })
     setTableRows('video_progress', [
       {
         id: 'vid-1',
+        courseId: 'c1',
+        videoId: 'v1',
         watchedSeconds: 300,
         updatedAt: '2026-04-18T10:00:00Z',
         updated_at: '2026-04-18T10:00:00Z',
@@ -572,6 +596,8 @@ describe('Monotonic conflict strategy', () => {
     setTableRows('video_progress', [
       {
         id: 'vid-1',
+        courseId: 'c1',
+        videoId: 'v1',
         watchedSeconds: 120,
         updatedAt: '2026-04-18T10:00:00Z',
         updated_at: '2026-04-18T10:00:00Z',
@@ -587,6 +613,8 @@ describe('Monotonic conflict strategy', () => {
     // Local is newer → local non-monotonic fields win, monotonic takes max.
     mockProgressGet.mockResolvedValue({
       id: 'vid-1',
+      courseId: 'c1',
+      videoId: 'v1',
       watchedSeconds: 50,
       title: 'local-title',
       updatedAt: '2026-04-18T12:00:00Z',
@@ -594,6 +622,8 @@ describe('Monotonic conflict strategy', () => {
     setTableRows('video_progress', [
       {
         id: 'vid-1',
+        courseId: 'c1',
+        videoId: 'v1',
         watchedSeconds: 200,
         title: 'server-title',
         updatedAt: '2026-04-18T10:00:00Z',
@@ -1573,6 +1603,284 @@ describe('stripFields preservation in download apply', () => {
 
     expect(mockNotesPut).toHaveBeenCalledWith(
       expect.objectContaining({ id: 'n-7', content: 'new' })
+    )
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Problem B: Progress record validation & normalization
+// ---------------------------------------------------------------------------
+
+describe('validateDownloadedProgress', () => {
+  it('accepts a valid progress record with both compound-PK fields', () => {
+    const result = validateDownloadedProgress({ courseId: 'c1', videoId: 'v1' })
+    expect(result).toEqual({ valid: true })
+  })
+
+  it('rejects missing courseId with useful error', () => {
+    const result = validateDownloadedProgress({ videoId: 'v1' })
+    expect(result).toEqual({ valid: false, reason: 'Missing or empty courseId' })
+  })
+
+  it('rejects missing videoId with useful error', () => {
+    const result = validateDownloadedProgress({ courseId: 'c1' })
+    expect(result).toEqual({ valid: false, reason: 'Missing or empty videoId' })
+  })
+
+  it('rejects empty string courseId', () => {
+    const result = validateDownloadedProgress({ courseId: '', videoId: 'v1' })
+    expect(result).toEqual({ valid: false, reason: 'Missing or empty courseId' })
+  })
+
+  it('rejects empty string videoId', () => {
+    const result = validateDownloadedProgress({ courseId: 'c1', videoId: '' })
+    expect(result).toEqual({ valid: false, reason: 'Missing or empty videoId' })
+  })
+
+  it('rejects null courseId', () => {
+    const result = validateDownloadedProgress({ courseId: null, videoId: 'v1' })
+    expect(result).toEqual({ valid: false, reason: 'Missing or empty courseId' })
+  })
+
+  it('rejects null videoId (pre-migration Supabase record)', () => {
+    const result = validateDownloadedProgress({ courseId: 'c1', videoId: null })
+    expect(result).toEqual({ valid: false, reason: 'Missing or empty videoId' })
+  })
+
+  it('rejects undefined values', () => {
+    const result = validateDownloadedProgress({})
+    expect(result).toEqual({ valid: false, reason: 'Missing or empty courseId' })
+  })
+})
+
+describe('normalizeDownloadedProgress', () => {
+  it('strips the remote UUID id from the record', () => {
+    const result = normalizeDownloadedProgress({
+      id: '33f0ad61-6f2e-4c6e-87cf-7aa497ad8d2f',
+      courseId: 'c1',
+      videoId: 'v1',
+      currentTime: 120,
+      completionPercentage: 50,
+    })
+    expect(result).not.toHaveProperty('id')
+    expect(result.courseId).toBe('c1')
+    expect(result.videoId).toBe('v1')
+  })
+
+  it('uses lastPosition for currentTime when currentTime is missing', () => {
+    const result = normalizeDownloadedProgress({
+      courseId: 'c1',
+      videoId: 'v1',
+      lastPosition: 300,
+      completionPercentage: 75,
+    })
+    expect(result.currentTime).toBe(300)
+  })
+
+  it('uses lastPosition for currentTime when it is the better value', () => {
+    const result = normalizeDownloadedProgress({
+      courseId: 'c1',
+      videoId: 'v1',
+      currentTime: 100,
+      lastPosition: 300,
+      completionPercentage: 75,
+    })
+    expect(result.currentTime).toBe(300)
+  })
+
+  it('keeps currentTime when lastPosition is lower', () => {
+    const result = normalizeDownloadedProgress({
+      courseId: 'c1',
+      videoId: 'v1',
+      currentTime: 300,
+      lastPosition: 100,
+      completionPercentage: 75,
+    })
+    expect(result.currentTime).toBe(300)
+  })
+
+  it('strips lastPosition after consuming it', () => {
+    const result = normalizeDownloadedProgress({
+      courseId: 'c1',
+      videoId: 'v1',
+      currentTime: 120,
+      lastPosition: 300,
+      completionPercentage: 75,
+    })
+    expect(result).not.toHaveProperty('lastPosition')
+  })
+
+  it('strips userId and createdAt (remote-only fields)', () => {
+    const result = normalizeDownloadedProgress({
+      courseId: 'c1',
+      videoId: 'v1',
+      currentTime: 120,
+      completionPercentage: 50,
+      userId: 'some-user',
+      createdAt: '2026-01-01T00:00:00Z',
+    })
+    expect(result).not.toHaveProperty('userId')
+    expect(result).not.toHaveProperty('createdAt')
+  })
+
+  it('defaults currentTime to 0 when neither currentTime nor lastPosition are present', () => {
+    const result = normalizeDownloadedProgress({
+      courseId: 'c1',
+      videoId: 'v1',
+      completionPercentage: 50,
+    })
+    expect(result.currentTime).toBe(0)
+  })
+
+  it('ensures completionPercentage is numeric', () => {
+    const result = normalizeDownloadedProgress({
+      courseId: 'c1',
+      videoId: 'v1',
+      currentTime: 120,
+      completionPercentage: '75',
+    })
+    expect(result.completionPercentage).toBe(75)
+  })
+
+  it('preserves durationSeconds when present', () => {
+    const result = normalizeDownloadedProgress({
+      courseId: 'c1',
+      videoId: 'v1',
+      currentTime: 120,
+      completionPercentage: 50,
+      durationSeconds: 3600,
+    })
+    expect(result.durationSeconds).toBe(3600)
+  })
+})
+
+describe('Progress sync: malformed record resilience', () => {
+  let consoleWarnSpy: ReturnType<typeof vi.spyOn>
+
+  beforeEach(() => {
+    consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+  })
+
+  afterEach(() => {
+    consoleWarnSpy.mockRestore()
+  })
+
+  it('skips malformed progress record (null videoId) without aborting valid records', async () => {
+    // Two rows: one malformed (null videoId), one valid
+    setTableRows('video_progress', [
+      {
+        id: 'bad-record',
+        courseId: 'course-1',
+        videoId: null,
+        watchedSeconds: 100,
+        updatedAt: '2026-07-10T10:00:00Z',
+        updated_at: '2026-07-10T10:00:00Z',
+      },
+      {
+        id: 'good-record',
+        courseId: 'course-1',
+        videoId: 'video-1',
+        watchedSeconds: 200,
+        updatedAt: '2026-07-10T10:00:00Z',
+        updated_at: '2026-07-10T10:00:00Z',
+      },
+    ])
+
+    await syncEngine.fullSync()
+
+    // Bad record: skipped with warning
+    expect(consoleWarnSpy).toHaveBeenCalledWith(
+      '[syncEngine] Skipping invalid progress record:',
+      expect.objectContaining({
+        reason: 'Missing or empty videoId',
+        recordId: 'bad-record',
+      })
+    )
+
+    // Good record: applied (put called with normalized record — no id, has compound PK fields)
+    expect(mockProgressPut).toHaveBeenCalledWith(
+      expect.objectContaining({
+        courseId: 'course-1',
+        videoId: 'video-1',
+      })
+    )
+    // Remote UUID is stripped
+    const putCall = mockProgressPut.mock.calls.find(
+      (c: unknown[]) =>
+        (c[0] as Record<string, unknown>).courseId === 'course-1' &&
+        (c[0] as Record<string, unknown>).videoId === 'video-1'
+    )
+    expect(putCall).toBeDefined()
+    expect((putCall![0] as Record<string, unknown>)).not.toHaveProperty('id')
+  })
+
+  it('skips malformed progress record (empty courseId) and continues', async () => {
+    setTableRows('video_progress', [
+      {
+        id: 'empty-course',
+        courseId: '',
+        videoId: 'video-1',
+        watchedSeconds: 100,
+        updatedAt: '2026-07-10T10:00:00Z',
+        updated_at: '2026-07-10T10:00:00Z',
+      },
+      {
+        id: 'valid-2',
+        courseId: 'course-2',
+        videoId: 'video-2',
+        watchedSeconds: 300,
+        updatedAt: '2026-07-10T10:00:00Z',
+        updated_at: '2026-07-10T10:00:00Z',
+      },
+    ])
+
+    await syncEngine.fullSync()
+
+    expect(consoleWarnSpy).toHaveBeenCalledWith(
+      '[syncEngine] Skipping invalid progress record:',
+      expect.objectContaining({
+        reason: 'Missing or empty courseId',
+      })
+    )
+
+    // Valid record still applied
+    expect(mockProgressPut).toHaveBeenCalledWith(
+      expect.objectContaining({
+        courseId: 'course-2',
+        videoId: 'video-2',
+      })
+    )
+  })
+
+  it('valid progress record with last_position restores currentTime from lastPosition', async () => {
+    // Use mockProgressGet to simulate no local record (server-only insert)
+    mockProgressGet.mockResolvedValue(undefined)
+
+    setTableRows('video_progress', [
+      {
+        id: 'has-last-pos',
+        courseId: 'course-3',
+        videoId: 'video-3',
+        watchedSeconds: 100, // mapped to currentTime via fieldMap
+        lastPosition: 450,
+        completionPercentage: 80,
+        durationSeconds: 1200,
+        updatedAt: '2026-07-10T10:00:00Z',
+        updated_at: '2026-07-10T10:00:00Z',
+      },
+    ])
+
+    await syncEngine.fullSync()
+
+    // currentTime should be max(watchedSeconds=100, lastPosition=450) = 450
+    expect(mockProgressPut).toHaveBeenCalledWith(
+      expect.objectContaining({
+        courseId: 'course-3',
+        videoId: 'video-3',
+        currentTime: 450,
+        completionPercentage: 80,
+        durationSeconds: 1200,
+      })
     )
   })
 })

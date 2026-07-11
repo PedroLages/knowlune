@@ -850,6 +850,96 @@ async function _applyConflictCopy(
   await _applyLww(table, local, record)
 }
 
+// ---------------------------------------------------------------------------
+// Progress record validation & normalization (Problem B — malformed sync records)
+// ---------------------------------------------------------------------------
+
+/**
+ * Validate a downloaded progress record before applying it to Dexie.
+ *
+ * The progress table uses a compound primary key `[courseId+videoId]`.
+ * IndexedDB rejects null or undefined key components, so we must verify
+ * both fields are non-empty strings before any Dexie operation touches them.
+ *
+ * @returns `{ valid: true }` or `{ valid: false, reason }` with a human-readable explanation.
+ */
+export function validateDownloadedProgress(
+  record: Record<string, unknown>
+): { valid: true } | { valid: false; reason: string } {
+  if (typeof record.courseId !== 'string' || record.courseId.length === 0) {
+    return { valid: false, reason: 'Missing or empty courseId' }
+  }
+  if (typeof record.videoId !== 'string' || record.videoId.length === 0) {
+    return { valid: false, reason: 'Missing or empty videoId' }
+  }
+  return { valid: true }
+}
+
+/**
+ * Normalize a downloaded video_progress row for local Dexie storage.
+ *
+ * Supabase columns differ from the local `VideoProgress` type in several ways:
+ *   - `last_position` (Supabase) → `currentTime` when it is the better value
+ *   - `watched_seconds` maps to `currentTime` via fieldMap, but `last_position`
+ *     may hold the actual last-watched position
+ *   - Remote-only fields (`id` UUID, `lastPosition`, `userId`, `createdAt`)
+ *     are stripped so they don't pollute the local record
+ *
+ * The caller (`_applyRecord`) already converted snake_case → camelCase via
+ * `toCamelCase()`, so this function receives camelCase fields.
+ */
+export function normalizeDownloadedProgress(
+  record: Record<string, unknown>
+): Record<string, unknown> {
+  const normalized = { ...record }
+
+  // --- currentTime: prefer lastPosition when it is a better value ---
+  // `watched_seconds` maps to `currentTime` via fieldMap, but `last_position`
+  // is the column the legacy upload RPC writes as the last-seen position.
+  // If the server has a non-zero lastPosition that exceeds the mapped
+  // currentTime, it is the more authoritative value for resuming playback.
+  // Simpler case: when currentTime was never mapped (missing from fieldMap
+  // in older registry entries), lastPosition is the only position data.
+  // Complex case: both exist — take the max of the two numeric values.
+  const lastPos = normalized.lastPosition
+  const curTime = normalized.currentTime
+  if (typeof lastPos === 'number' && lastPos > 0) {
+    if (typeof curTime !== 'number') {
+      normalized.currentTime = lastPos
+    } else if (lastPos > curTime) {
+      normalized.currentTime = lastPos
+    }
+  } else if (typeof curTime !== 'number') {
+    normalized.currentTime = 0
+  }
+
+  // --- completionPercentage: ensure numeric ---
+  if (typeof normalized.completionPercentage !== 'number') {
+    normalized.completionPercentage = Number(normalized.completionPercentage) || 0
+  }
+
+  // --- durationSeconds: ensure numeric ---
+  if (typeof normalized.durationSeconds !== 'number') {
+    normalized.durationSeconds = Number(normalized.durationSeconds) || 0
+  }
+
+  // --- Strip remote-only fields not in VideoProgress type ---
+  // The Supabase UUID `id` is an internal primary key on the server — the
+  // local Dexie table uses the compound key `[courseId+videoId]`. Storing
+  // the remote UUID locally creates confusion (two different "id" semantics)
+  // and wastes storage.
+  delete normalized.id
+  // `lastPosition` was consumed above — remove it so it doesn't pollute Dexie.
+  delete normalized.lastPosition
+  // `userId` is owned by Supabase RLS; local records don't need a separate
+  // userId column because all local data belongs to the authenticated user.
+  delete normalized.userId
+  // `createdAt` is a server-side audit column not present on VideoProgress.
+  delete normalized.createdAt
+
+  return normalized
+}
+
 /**
  * Route a single downloaded record to the correct apply strategy based on the
  * table's `conflictStrategy`. Throws on Dexie write failure so `_doDownload`
@@ -891,6 +981,24 @@ async function _applyRecord(
       await table.delete(record['id'] as string)
     }
     return
+  }
+
+  // --- Progress record validation & normalization ---
+  // The `progress` table uses compound PK [courseId+videoId]. IndexedDB
+  // rejects null/empty key components, so validate before any Dexie operation.
+  // Normalization also strips Supabase-only fields (remote UUID id, lastPosition,
+  // userId, createdAt) and resolves last_position → currentTime.
+  if (entry.dexieTable === 'progress') {
+    const validation = validateDownloadedProgress(record)
+    if (!validation.valid) {
+      console.warn('[syncEngine] Skipping invalid progress record:', {
+        reason: validation.reason,
+        recordId: record.id,
+        recordKeys: Object.keys(record).sort().join(', '),
+      })
+      return // skip — don't block remaining records
+    }
+    record = normalizeDownloadedProgress(record)
   }
 
   const local = await _getLocalRecord(table, entry, record)
@@ -1132,13 +1240,31 @@ async function _doDownload(): Promise<void> {
             await _applyRecord(entry, record)
           } catch (err) {
             // Surface record identity to make production minified errors debuggable.
-            const recordId =
-              (record as Record<string, unknown>).id ?? (record as Record<string, unknown>).recordId
-            const idSuffix = recordId !== undefined ? ` (id=${String(recordId)})` : ''
-            console.error(
-              `[syncEngine] Error applying record from "${entry.dexieTable}"${idSuffix}:`,
-              err
-            )
+            const rec = record as Record<string, unknown>
+            const recordId = rec.id ?? rec.recordId
+
+            // Progress table: log full field values for debugging compound-PK failures.
+            if (entry.dexieTable === 'progress') {
+              console.error('[syncEngine] Failed progress record', {
+                errorName: err instanceof Error ? err.name : undefined,
+                errorMessage: err instanceof Error ? err.message : String(err),
+                errorStack: err instanceof Error ? err.stack : undefined,
+                recordId,
+                courseId: rec.courseId,
+                videoId: rec.videoId,
+                currentTime: rec.currentTime,
+                watchedSeconds: rec.watchedSeconds,
+                lastPosition: rec.lastPosition,
+                updatedAt: rec.updatedAt,
+                recordKeys: Object.keys(rec).sort().join(', '),
+              })
+            } else {
+              const idSuffix = recordId !== undefined ? ` (id=${String(recordId)})` : ''
+              console.error(
+                `[syncEngine] Error applying record from "${entry.dexieTable}"${idSuffix}:`,
+                err
+              )
+            }
             // Intentional: continue processing remaining records — one bad record
             // should not abort the whole table.
           }

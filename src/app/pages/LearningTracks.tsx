@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { motion } from 'motion/react'
-import { Plus, Search, Route, Download, ArrowUpDown, Check, CheckCircle2 } from 'lucide-react'
+import { Plus, Search, Route, Download, ArrowUpDown, Check, CheckCircle2, RefreshCw } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
 import { Card, CardContent } from '@/app/components/ui/card'
 import { Skeleton } from '@/app/components/ui/skeleton'
@@ -15,6 +15,7 @@ import {
 import { cn } from '@/app/components/ui/utils'
 import { EmptyState } from '@/app/components/EmptyState'
 import { DelayedFallback } from '@/app/components/DelayedFallback'
+import { db } from '@/db'
 
 import { ImportWizardDialog } from '@/app/components/figma/ImportWizardDialog'
 import { CurriculumComposer } from '@/app/components/figma/CurriculumComposer'
@@ -142,7 +143,10 @@ export function LearningTracks() {
   const { paths, entries, loadPaths } = useLearningPathStore()
   const { importedCourses, loadImportedCourses, thumbnailUrls, loadThumbnailUrls } =
     useCourseImportStore()
-  const [isLoaded, setIsLoaded] = useState(false)
+  const pathsLoaded = useLearningPathStore(s => s.isLoaded)
+  const coursesLoaded = useCourseImportStore(s => s.isCoursesLoaded)
+  const [loadError, setLoadError] = useState<string | null>(null)
+  const [isRetrying, setIsRetrying] = useState(false)
   const [search, setSearch] = useState('')
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [coverDialogPath, setCoverDialogPath] = useState<LearningPath | null>(null)
@@ -167,22 +171,104 @@ export function LearningTracks() {
   // Path card "Import Course" handler — opens wizard with that path's ID
   const handlePathImport = useCallback((pathId: string) => trigger(pathId), [trigger])
 
+  // --- IndexedDB diagnostics ---
+  // If another tab holds an older schema version, db.open() hangs indefinitely —
+  // these listeners surface the blocked state so we can time out and show content.
+  useEffect(() => {
+    const onBlocked = () =>
+      console.warn('[DB] IndexedDB upgrade blocked — another tab may hold an older schema version')
+    const onVersionChange = () =>
+      console.warn('[DB] IndexedDB versionchange — another tab upgraded the database')
+
+    db.on('blocked', onBlocked)
+    db.on('versionchange', onVersionChange)
+
+    // Log database state for debugging hung opens
+    console.log('[DB] Database state:', {
+      name: db.name,
+      isOpen: db.isOpen(),
+      verno: db.verno,
+    })
+
+    return () => {
+      db.on('blocked').unsubscribe(onBlocked)
+      db.on('versionchange').unsubscribe(onVersionChange)
+    }
+  }, [])
+
+  // --- Resilient initial loading ---
+  // Each operation is wrapped in an 8-second timeout. Promise.allSettled ensures
+  // one stalled Promise never blocks the other. Store selectors (pathsLoaded /
+  // coursesLoaded) replace the local isLoaded boolean — the page renders in
+  // stages: tracks and covers first, progress and resume targets later.
   useEffect(() => {
     let ignore = false
-    // silent-catch-ok: error logged to console, page still renders with empty state
-    Promise.all([loadPaths(), loadImportedCourses()])
-      .then(() => {
-        if (!ignore) setIsLoaded(true)
-      })
-      .catch(err => {
-        if (!ignore) {
-          console.error('[LearningTracks] Failed to load:', err)
-          toast.error('Failed to load learning tracks. Please try again.')
-          setIsLoaded(true)
-        }
-      })
+
+    async function withTimeout<T>(promise: Promise<T>, label: string, timeoutMs = 8000): Promise<T> {
+      return Promise.race([
+        promise,
+        new Promise<never>((_, reject) =>
+          setTimeout(
+            () => reject(new Error(`${label} timed out after ${timeoutMs}ms`)),
+            timeoutMs
+          )
+        ),
+      ])
+    }
+
+    async function load() {
+      console.time('[LearningTracks] loadPaths')
+      console.time('[LearningTracks] loadImportedCourses')
+
+      const results = await Promise.allSettled([
+        withTimeout(loadPaths(), 'loadPaths').then(() => {
+          console.timeEnd('[LearningTracks] loadPaths')
+        }),
+        withTimeout(loadImportedCourses(), 'loadImportedCourses').then(() => {
+          console.timeEnd('[LearningTracks] loadImportedCourses')
+        }),
+      ])
+
+      if (ignore) return
+
+      const pathResult = results[0]
+      const coursesResult = results[1]
+      const errors: string[] = []
+
+      if (pathResult.status === 'rejected') {
+        console.error('[LearningTracks] loadPaths failed:', pathResult.reason)
+        errors.push('Learning tracks')
+      }
+      if (coursesResult.status === 'rejected') {
+        console.error('[LearningTracks] loadImportedCourses failed:', coursesResult.reason)
+        errors.push('imported courses')
+      }
+
+      if (errors.length > 0) {
+        const msg = `Failed to load: ${errors.join(', ')}`
+        setLoadError(msg)
+        // Non-blocking warning — content renders with whatever data is available
+        toast.warning(msg + '. You can retry or continue with available data.', {
+          duration: 8000,
+        })
+      }
+    }
+
+    load()
+
     return () => {
       ignore = true
+    }
+  }, [loadPaths, loadImportedCourses])
+
+  // --- Retry handler ---
+  const handleRetry = useCallback(async () => {
+    setIsRetrying(true)
+    setLoadError(null)
+    try {
+      await Promise.allSettled([loadPaths(), loadImportedCourses()])
+    } finally {
+      setIsRetrying(false)
     }
   }, [loadPaths, loadImportedCourses])
 
@@ -307,7 +393,10 @@ export function LearningTracks() {
     })
   }, [filteredPaths, activeTab, sortBy, pathStats])
 
-  if (!isLoaded) {
+  // Show skeletons only when paths haven't loaded AND no error occurred.
+  // If paths are loaded (even if courses timed out), render the page —
+  // course thumbnails and resume targets fill in later when courses arrive.
+  if (!pathsLoaded && !loadError) {
     return (
       <DelayedFallback>
         <div className="space-y-6">
@@ -335,6 +424,30 @@ export function LearningTracks() {
         animate="visible"
         className="space-y-6"
       >
+        {/* Load error banner — non-blocking; content renders underneath */}
+        {loadError && (
+          <motion.div
+            variants={fadeUp}
+            className="flex items-center justify-between gap-4 rounded-xl border border-warning/30 bg-warning/10 px-5 py-3 text-sm text-warning-foreground"
+            role="alert"
+          >
+            <span>{loadError}</span>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleRetry}
+              disabled={isRetrying || (!pathsLoaded && !coursesLoaded)}
+              className="shrink-0"
+            >
+              <RefreshCw
+                className={cn('size-4 mr-1.5', isRetrying && 'animate-spin')}
+                aria-hidden="true"
+              />
+              {isRetrying ? 'Retrying…' : 'Retry'}
+            </Button>
+          </motion.div>
+        )}
+
         {/* Header */}
         <motion.div
           variants={fadeUp}
