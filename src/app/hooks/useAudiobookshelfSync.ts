@@ -308,11 +308,18 @@ export function useAudiobookshelfSync() {
           return
         }
 
-        // Fetch ALL pages for each selected library (not just page 0)
-        const allMappedBooks: Book[] = []
+        // Fetch ALL pages for each selected library (not just page 0).
+        // Use a Map keyed by canonical ABS identity to prevent duplicate
+        // entries when the same item appears in multiple libraries or
+        // server.libraryIds contains duplicates.
+        const seenAbsBooks = new Map<string, Book>()
         let totalItems = 0
 
-        for (const libId of server.libraryIds) {
+        // Deduplicate library IDs so a misconfigured server doesn't fetch the
+        // same library twice.
+        const uniqueLibraryIds = [...new Set(server.libraryIds)]
+
+        for (const libId of uniqueLibraryIds) {
           let currentPage = page
           let hasMore = true
 
@@ -344,7 +351,15 @@ export function useAudiobookshelfSync() {
             totalItems = result.data.total
             for (const absItem of result.data.results) {
               if (!isValidSyncItem(absItem)) continue
-              allMappedBooks.push(mapAbsItemToBook(absItem, server, apiKey))
+              const absKey = `${server.id}:${absItem.id}`
+              if (seenAbsBooks.has(absKey)) {
+                console.warn(
+                  `[useAudiobookshelfSync] Duplicate ABS item "${absItem.media.metadata.title}" (${absKey}) from library ${libId} — skipping.`
+                )
+                continue
+              }
+              const mapped = mapAbsItemToBook(absItem, server, apiKey)
+              seenAbsBooks.set(absKey, mapped)
             }
 
             // Check if there are more pages
@@ -356,7 +371,9 @@ export function useAudiobookshelfSync() {
           }
         }
 
-        // Single bulk upsert: 1 IDB write + 1 state update instead of N
+        // Single bulk upsert: 1 IDB write + 1 state update instead of N.
+        // allMappedBooks is the deduplicated Map values — no duplicate ABS items.
+        const allMappedBooks = [...seenAbsBooks.values()]
         const { removedCount } = await bulkUpsertAbsBooks(allMappedBooks)
 
         try {

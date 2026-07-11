@@ -23,6 +23,130 @@ import type { SyncableRecord } from '@/lib/sync/syncableWrite'
 import { useAuthStore, selectIsGuestMode } from '@/stores/useAuthStore'
 
 /**
+ * Returns the canonical ABS compound key for deduplication.
+ * Books without both `absServerId` and `absItemId` return null
+ * (local EPUB/PDF imports — not subject to ABS dedup).
+ */
+export function getAbsBookKey(bookOrServerId: Book | string, itemId?: string): string | null {
+  if (typeof bookOrServerId === 'string') {
+    return itemId ? `${bookOrServerId}:${itemId}` : null
+  }
+  const b = bookOrServerId
+  return b.absServerId && b.absItemId ? `${b.absServerId}:${b.absItemId}` : null
+}
+
+/**
+ * Fields that may be merged from duplicate ABS books onto the canonical copy.
+ * System/identity fields (userId, absServerId, linkedBookId, etc.) are excluded.
+ */
+const ABS_MERGEABLE_FIELDS = [
+  'description',
+  'series',
+  'seriesSequence',
+  'narrator',
+  'isbn',
+  'asin',
+  'language',
+  'publishDate',
+  'genre',
+  'tags',
+] as const
+
+/**
+ * One-time reconciliation: groups books by canonical ABS key, selects the
+ * canonical copy (highest progress → newest lastOpenedAt → valid currentPosition
+ * → earliest createdAt), merges user-facing metadata from duplicates, and
+ * returns the deduplicated array. Books without absServerId/absItemId pass
+ * through unchanged.
+ *
+ * Returns the deduplicated array and the set of non-canonical IDs to delete.
+ * Caller is responsible for persisting deletions and setting the localStorage
+ * marker.
+ */
+export function reconcileAbsDuplicates(books: Book[]): {
+  reconciled: Book[]
+  idsToDelete: Set<string>
+} {
+  const groups = new Map<string, Book[]>()
+  const nonAbsBooks: Book[] = []
+
+  for (const book of books) {
+    const key = getAbsBookKey(book)
+    if (!key) {
+      nonAbsBooks.push(book)
+      continue
+    }
+    const group = groups.get(key)
+    if (group) {
+      group.push(book)
+    } else {
+      groups.set(key, [book])
+    }
+  }
+
+  const idsToDelete = new Set<string>()
+  const reconciled: Book[] = [...nonAbsBooks]
+
+  for (const [, group] of groups) {
+    if (group.length === 1) {
+      reconciled.push(group[0])
+      continue
+    }
+
+    // Select canonical: highest progress → newest lastOpenedAt →
+    // has valid currentPosition → earliest createdAt
+    group.sort((a, b) => {
+      const progressDiff = (b.progress ?? 0) - (a.progress ?? 0)
+      if (progressDiff !== 0) return progressDiff
+
+      const aTime = a.lastOpenedAt ? new Date(a.lastOpenedAt).getTime() : 0
+      const bTime = b.lastOpenedAt ? new Date(b.lastOpenedAt).getTime() : 0
+      const timeDiff = bTime - aTime
+      if (timeDiff !== 0) return timeDiff
+
+      const aHasPos = a.currentPosition != null
+      const bHasPos = b.currentPosition != null
+      if (aHasPos && !bHasPos) return -1
+      if (!aHasPos && bHasPos) return 1
+
+      const aCreated = new Date(a.createdAt).getTime()
+      const bCreated = new Date(b.createdAt).getTime()
+      return aCreated - bCreated // earliest first
+    })
+
+    const canonical = group[0]
+    const duplicates = group.slice(1)
+
+    // Merge user-facing metadata from duplicates onto canonical
+    for (const dup of duplicates) {
+      for (const field of ABS_MERGEABLE_FIELDS) {
+        const canonicalVal = (canonical as unknown as Record<string, unknown>)[field]
+        const dupVal = (dup as unknown as Record<string, unknown>)[field]
+        if (
+          (canonicalVal === undefined || canonicalVal === null || canonicalVal === '') &&
+          dupVal !== undefined &&
+          dupVal !== null &&
+          dupVal !== ''
+        ) {
+          ;(canonical as unknown as Record<string, unknown>)[field] = dupVal
+        }
+      }
+      idsToDelete.add(dup.id)
+    }
+
+    reconciled.push(canonical)
+  }
+
+  if (idsToDelete.size > 0) {
+    console.info(
+      `[reconcileAbsDuplicates] Found ${idsToDelete.size} duplicate ABS book(s) across ${groups.size} groups — cleaning up.`
+    )
+  }
+
+  return { reconciled, idsToDelete }
+}
+
+/**
  * Decomposes the Book.source discriminated union into flat serializable fields
  * for Supabase upload. The `source` field itself is stripped from the upload
  * payload by the table registry (E94-S02).
@@ -118,6 +242,28 @@ export const useBookStore = create<BookStoreState>((set, get) => ({
   loadBooks: async () => {
     if (get().isLoaded) return
     const books = await db.books.toArray()
+
+    // One-time reconciliation of duplicate ABS books that accumulated
+    // before the dedup fix shipped. Runs exactly once, gated by a
+    // localStorage marker following the checkpoint.ts convention.
+    const RECONCILIATION_MARKER = 'knowlune-abs-dedup-v1'
+    if (!localStorage.getItem(RECONCILIATION_MARKER)) {
+      try {
+        const { reconciled, idsToDelete } = reconcileAbsDuplicates(books)
+        if (idsToDelete.size > 0) {
+          await db.books.bulkDelete([...idsToDelete])
+        }
+        localStorage.setItem(RECONCILIATION_MARKER, '1')
+        set({ books: reconciled, isLoaded: true })
+        return
+      } catch (err) {
+        // If reconciliation fails, do NOT set the marker — it will retry
+        // on next loadBooks. Surface the error but continue loading.
+        console.error('[loadBooks] ABS dedup reconciliation failed:', err)
+        toast.error('Failed to clean up duplicate books. Will retry on next launch.')
+      }
+    }
+
     set({ books, isLoaded: true })
   },
 
@@ -554,20 +700,20 @@ export const useBookStore = create<BookStoreState>((set, get) => ({
       // Build Map for O(1) lookup instead of linear scan
       const absKeyMap = new Map<string, Book>()
       for (const b of get().books) {
-        if (b.absServerId && b.absItemId) {
-          absKeyMap.set(`${b.absServerId}:${b.absItemId}`, b)
-        }
+        const key = getAbsBookKey(b)
+        if (key) absKeyMap.set(key, b)
       }
-      const existing = absKeyMap.get(`${book.absServerId}:${book.absItemId}`)
-      const merged: Book = existing
+      const absKey = getAbsBookKey(book)
+      const existingBook = absKey ? absKeyMap.get(absKey) : undefined
+      const merged: Book = existingBook
         ? {
             ...book,
-            id: existing.id,
-            status: existing.status,
-            progress: existing.progress,
-            currentPosition: existing.currentPosition,
-            lastOpenedAt: existing.lastOpenedAt,
-            createdAt: existing.createdAt,
+            id: existingBook.id,
+            status: existingBook.status,
+            progress: existingBook.progress,
+            currentPosition: existingBook.currentPosition,
+            lastOpenedAt: existingBook.lastOpenedAt,
+            createdAt: existingBook.createdAt,
             updatedAt: new Date().toISOString(),
           }
         : book
@@ -589,13 +735,28 @@ export const useBookStore = create<BookStoreState>((set, get) => ({
       // Build Map<absServerId:absItemId, Book> for O(1) dedup lookup
       const absKeyMap = new Map<string, Book>()
       for (const b of get().books) {
-        if (b.absServerId && b.absItemId) {
-          absKeyMap.set(`${b.absServerId}:${b.absItemId}`, b)
-        }
+        const key = getAbsBookKey(b)
+        if (key) absKeyMap.set(key, b)
       }
 
-      const mergedBooks: Book[] = newBooks.map(book => {
-        const existing = absKeyMap.get(`${book.absServerId}:${book.absItemId}`)
+      // Deduplicate incoming batch by canonical ABS key (defense in depth).
+      // Local books (no absServerId/absItemId) fall through to id-based key.
+      const dedupedBooks = new Map<string, Book>()
+      for (const book of newBooks) {
+        const absKey = getAbsBookKey(book)
+        const dedupKey = absKey ?? book.id
+        if (absKey && dedupedBooks.has(dedupKey)) {
+          console.warn(
+            `[bulkUpsertAbsBooks] Duplicate ABS item in batch: "${book.title}" (${absKey}) — keeping last occurrence.`
+          )
+        }
+        dedupedBooks.set(dedupKey, book)
+      }
+      const uniqueNewBooks = [...dedupedBooks.values()]
+
+      const mergedBooks: Book[] = uniqueNewBooks.map(book => {
+        const absKey = getAbsBookKey(book)
+        const existing = absKey ? absKeyMap.get(absKey) : undefined
         return existing
           ? {
               ...book,
@@ -611,8 +772,10 @@ export const useBookStore = create<BookStoreState>((set, get) => ({
       })
 
       // Purge local books whose absItemId no longer exists on the server
-      const incomingServerIds = new Set(newBooks.map(b => b.absServerId))
-      const incomingAbsKeys = new Set(newBooks.map(b => `${b.absServerId}:${b.absItemId}`))
+      const incomingServerIds = new Set(uniqueNewBooks.map(b => b.absServerId))
+      const incomingAbsKeys = new Set(
+        uniqueNewBooks.map(b => getAbsBookKey(b)).filter((k): k is string => k !== null)
+      )
       const staleBooks = get().books.filter(
         b =>
           b.absServerId &&

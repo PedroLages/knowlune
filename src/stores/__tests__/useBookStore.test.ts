@@ -784,3 +784,302 @@ describe('getBooksBySeries', () => {
     expect(group.nextUnfinishedId).toBe('cu-2')
   })
 })
+
+describe('getAbsBookKey', () => {
+  it('returns canonical key for ABS books', async () => {
+    const { getAbsBookKey } = await import('@/stores/useBookStore')
+    const book = makeBook({
+      absServerId: 'srv-1',
+      absItemId: 'item-42',
+    })
+    expect(getAbsBookKey(book as never)).toBe('srv-1:item-42')
+  })
+
+  it('returns null for books without absServerId', async () => {
+    const { getAbsBookKey } = await import('@/stores/useBookStore')
+    const book = makeBook({ absItemId: 'item-42' })
+    // makeBook won't have absServerId by default
+    expect(getAbsBookKey(book as never)).toBeNull()
+  })
+
+  it('returns null for books without absItemId', async () => {
+    const { getAbsBookKey } = await import('@/stores/useBookStore')
+    const book = makeBook({ absServerId: 'srv-1', absItemId: undefined })
+    expect(getAbsBookKey(book as never)).toBeNull()
+  })
+
+  it('returns null for local books with neither ABS field', async () => {
+    const { getAbsBookKey } = await import('@/stores/useBookStore')
+    const book = makeBook()
+    expect(getAbsBookKey(book as never)).toBeNull()
+  })
+
+  it('returns different keys for different servers with same itemId', async () => {
+    const { getAbsBookKey } = await import('@/stores/useBookStore')
+    const srv1 = makeBook({ absServerId: 'srv-1', absItemId: 'item-1' })
+    const srv2 = makeBook({ absServerId: 'srv-2', absItemId: 'item-1' })
+    expect(getAbsBookKey(srv1 as never)).not.toBe(getAbsBookKey(srv2 as never))
+  })
+})
+
+describe('bulkUpsertAbsBooks dedup', () => {
+  it('deduplicates identical ABS items within a single batch', async () => {
+    const duplicate = makeBook({
+      id: 'dup-a',
+      title: 'Duplicate Book',
+      absServerId: 'srv-1',
+      absItemId: 'dup-item',
+      source: { type: 'remote', url: 'http://abs/dup' },
+    })
+    const duplicate2 = makeBook({
+      id: 'dup-b',
+      title: 'Duplicate Book',
+      absServerId: 'srv-1',
+      absItemId: 'dup-item',
+      source: { type: 'remote', url: 'http://abs/dup' },
+    })
+
+    await act(async () => {
+      await useBookStore.getState().bulkUpsertAbsBooks([duplicate, duplicate2] as never[])
+    })
+
+    // Only one book should be persisted
+    expect(useBookStore.getState().books).toHaveLength(1)
+    expect(useBookStore.getState().books[0].absItemId).toBe('dup-item')
+  })
+
+  it('keeps local books unaffected by intra-batch ABS dedup', async () => {
+    const absBook = makeBook({
+      id: 'abs-only',
+      absServerId: 'srv-1',
+      absItemId: 'local-safe',
+      source: { type: 'remote', url: 'http://abs/local' },
+    })
+    const localBook = makeBook({
+      id: 'local-only',
+      title: 'Local EPUB',
+      source: { type: 'local', opfsPath: '/books/local.epub' },
+    })
+
+    await act(async () => {
+      await useBookStore.getState().bulkUpsertAbsBooks([absBook, localBook] as never[])
+    })
+
+    expect(useBookStore.getState().books).toHaveLength(2)
+  })
+
+  it('treats cross-server same itemId as distinct', async () => {
+    const srv1Book = makeBook({
+      id: 'srv1-item',
+      title: 'Server 1 Book',
+      absServerId: 'srv-1',
+      absItemId: 'shared-item',
+      source: { type: 'remote', url: 'http://srv1/item' },
+    })
+    const srv2Book = makeBook({
+      id: 'srv2-item',
+      title: 'Server 2 Book',
+      absServerId: 'srv-2',
+      absItemId: 'shared-item',
+      source: { type: 'remote', url: 'http://srv2/item' },
+    })
+
+    await act(async () => {
+      await useBookStore.getState().bulkUpsertAbsBooks([srv1Book, srv2Book] as never[])
+    })
+
+    expect(useBookStore.getState().books).toHaveLength(2)
+  })
+
+  it('idempotent re-sync does not create duplicates', async () => {
+    const book = makeBook({
+      id: 'idem-1',
+      title: 'Idempotent Book',
+      absServerId: 'srv-1',
+      absItemId: 'idem-item',
+      source: { type: 'remote', url: 'http://abs/idem' },
+    })
+
+    await act(async () => {
+      await useBookStore.getState().bulkUpsertAbsBooks([book] as never[])
+    })
+
+    const reSync = makeBook({
+      id: 'idem-new-id',
+      title: 'Idempotent Book (re-sync)',
+      absServerId: 'srv-1',
+      absItemId: 'idem-item',
+      source: { type: 'remote', url: 'http://abs/idem' },
+    })
+
+    await act(async () => {
+      await useBookStore.getState().bulkUpsertAbsBooks([reSync] as never[])
+    })
+
+    expect(useBookStore.getState().books).toHaveLength(1)
+    // ID preserved from first upsert
+    expect(useBookStore.getState().books[0].id).toBe('idem-1')
+  })
+})
+
+describe('reconcileAbsDuplicates', () => {
+  it('returns books unchanged when no duplicates exist', async () => {
+    const { reconcileAbsDuplicates } = await import('@/stores/useBookStore')
+    const books = [
+      makeBook({
+        id: 'clean-1',
+        absServerId: 'srv-1',
+        absItemId: 'item-1',
+      }),
+      makeBook({
+        id: 'clean-2',
+        absServerId: 'srv-1',
+        absItemId: 'item-2',
+      }),
+    ]
+
+    const { reconciled, idsToDelete } = reconcileAbsDuplicates(books as never[])
+    expect(reconciled).toHaveLength(2)
+    expect(idsToDelete.size).toBe(0)
+  })
+
+  it('selects canonical with highest progress among duplicates', async () => {
+    const { reconcileAbsDuplicates } = await import('@/stores/useBookStore')
+    const lowProgress = makeBook({
+      id: 'low-prog',
+      title: 'Low Progress',
+      progress: 10,
+      absServerId: 'srv-1',
+      absItemId: 'dup-prog',
+    })
+    const highProgress = makeBook({
+      id: 'high-prog',
+      title: 'High Progress',
+      progress: 80,
+      absServerId: 'srv-1',
+      absItemId: 'dup-prog',
+    })
+
+    const { reconciled, idsToDelete } = reconcileAbsDuplicates([
+      lowProgress,
+      highProgress,
+    ] as never[])
+    expect(reconciled).toHaveLength(1)
+    expect(reconciled[0].id).toBe('high-prog')
+    expect(idsToDelete).toContain('low-prog')
+  })
+
+  it('selects canonical with newest lastOpenedAt when progress tied', async () => {
+    const { reconcileAbsDuplicates } = await import('@/stores/useBookStore')
+    const older = makeBook({
+      id: 'older',
+      progress: 50,
+      lastOpenedAt: '2026-01-01T00:00:00.000Z',
+      absServerId: 'srv-1',
+      absItemId: 'dup-time',
+    })
+    const newer = makeBook({
+      id: 'newer',
+      progress: 50,
+      lastOpenedAt: '2026-06-01T00:00:00.000Z',
+      absServerId: 'srv-1',
+      absItemId: 'dup-time',
+    })
+
+    const { reconciled, idsToDelete } = reconcileAbsDuplicates([older, newer] as never[])
+    expect(reconciled).toHaveLength(1)
+    expect(reconciled[0].id).toBe('newer')
+    expect(idsToDelete).toContain('older')
+  })
+
+  it('merges user-facing metadata from duplicates onto canonical', async () => {
+    const { reconcileAbsDuplicates } = await import('@/stores/useBookStore')
+    const canonical = makeBook({
+      id: 'canon',
+      title: 'Canonical',
+      description: undefined, // missing
+      series: undefined, // missing
+      absServerId: 'srv-1',
+      absItemId: 'merge-item',
+    })
+    const dupe = makeBook({
+      id: 'dupe-1',
+      title: 'Duplicate',
+      description: 'A great book',
+      series: 'The Great Series',
+      absServerId: 'srv-1',
+      absItemId: 'merge-item',
+    })
+
+    const { reconciled, idsToDelete } = reconcileAbsDuplicates([canonical, dupe] as never[])
+    expect(reconciled).toHaveLength(1)
+    expect(reconciled[0].description).toBe('A great book')
+    expect(reconciled[0].series).toBe('The Great Series')
+    expect(idsToDelete).toContain('dupe-1')
+  })
+
+  it('does not merge system/identity fields from duplicates', async () => {
+    const { reconcileAbsDuplicates } = await import('@/stores/useBookStore')
+    const canonical = makeBook({
+      id: 'canon',
+      absServerId: 'srv-1',
+      absItemId: 'sys-item',
+    })
+    const dupe = makeBook({
+      id: 'dupe-1',
+      absServerId: 'srv-1',
+      absItemId: 'sys-item',
+      linkedBookId: 'some-linked-id', // system field — should NOT be merged
+    })
+
+    const { reconciled, idsToDelete } = reconcileAbsDuplicates([canonical, dupe] as never[])
+    expect(reconciled).toHaveLength(1)
+    // linkedBookId is not in ABS_MERGEABLE_FIELDS, so it should NOT transfer
+    expect(reconciled[0].linkedBookId).toBeUndefined()
+    expect(reconciled[0].id).toBe('canon')
+    expect(idsToDelete).toContain('dupe-1')
+  })
+
+  it('passes through local books without absServerId', async () => {
+    const { reconcileAbsDuplicates } = await import('@/stores/useBookStore')
+    const localBook = makeBook({ id: 'local-1', title: 'Local EPUB' })
+    const absBook = makeBook({
+      id: 'abs-1',
+      absServerId: 'srv-1',
+      absItemId: 'pass-item',
+    })
+
+    const { reconciled, idsToDelete } = reconcileAbsDuplicates([localBook, absBook] as never[])
+    expect(reconciled).toHaveLength(2)
+    expect(idsToDelete.size).toBe(0)
+  })
+
+  it('handles three duplicates correctly', async () => {
+    const { reconcileAbsDuplicates } = await import('@/stores/useBookStore')
+    const a = makeBook({
+      id: 'triple-a',
+      progress: 30,
+      absServerId: 'srv-1',
+      absItemId: 'triple',
+    })
+    const b = makeBook({
+      id: 'triple-b',
+      progress: 60,
+      absServerId: 'srv-1',
+      absItemId: 'triple',
+    })
+    const c = makeBook({
+      id: 'triple-c',
+      progress: 90,
+      absServerId: 'srv-1',
+      absItemId: 'triple',
+    })
+
+    const { reconciled, idsToDelete } = reconcileAbsDuplicates([a, b, c] as never[])
+    expect(reconciled).toHaveLength(1)
+    expect(reconciled[0].id).toBe('triple-c') // highest progress
+    expect(idsToDelete.size).toBe(2)
+    expect(idsToDelete).toContain('triple-a')
+    expect(idsToDelete).toContain('triple-b')
+  })
+})
