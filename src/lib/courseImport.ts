@@ -3,6 +3,7 @@ import { syncableWrite } from '@/lib/sync/syncableWrite'
 import type { SyncableRecord } from '@/lib/sync/syncableWrite'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
 import { useImportProgressStore } from '@/stores/useImportProgressStore'
+import { useLearningPathStore } from '@/stores/useLearningPathStore'
 import { useNotificationStore } from '@/stores/useNotificationStore'
 import { triggerAutoAnalysis } from '@/lib/autoAnalysis'
 import { generateCourseEmbeddingAfterImport } from '@/ai/courseEmbeddingService'
@@ -44,6 +45,47 @@ import type {
   Difficulty,
 } from '@/data/types'
 import { toast } from 'sonner'
+
+// --- Track Cover Types ---
+
+/** Supported image formats for automatic track-cover detection. */
+export const TRACK_COVER_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'] as const
+
+/** Supported image extensions for automatic track-cover detection. */
+export const TRACK_COVER_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp'] as const
+
+/**
+ * A candidate image for a learning-track cover, discovered during import.
+ *
+ * SVG, GIF, BMP, video thumbnails, author avatars, and images nested inside
+ * individual course directories are intentionally excluded — they are not
+ * suitable as full-width 16:9 track-card banners.
+ */
+export interface TrackCoverCandidate {
+  /** Stable identifier for React keying and selection tracking. */
+  id: string
+  /** Original filename (e.g. "DevOps-Platform-Engineer.webp"). */
+  filename: string
+  /** Discovery source — drives how the image is persisted after track creation. */
+  source: 'local' | 'server' | 'manifest'
+  /** Object URL for local files or full HTTP URL for server images. */
+  previewUrl: string
+  /** File System Access API handle (present for local-folder imports only). */
+  fileHandle?: FileSystemFileHandle
+  /** Full HTTP URL to the image on the content server (server imports only). */
+  serverUrl?: string
+}
+
+/**
+ * Returns true when a filename has a supported track-cover extension.
+ *
+ * Stricter than the general-purpose `isImageFile()` — excludes GIF, SVG, and
+ * BMP which are not suitable for 16:9 track-card banners.
+ */
+export function isTrackCoverImage(filename: string): boolean {
+  const ext = filename.toLowerCase().slice(filename.lastIndexOf('.'))
+  return (TRACK_COVER_EXTENSIONS as readonly string[]).includes(ext)
+}
 
 // --- Error Types ---
 
@@ -1325,6 +1367,70 @@ export async function listServerSubDirectories(
   return { ok: true, data: directories }
 }
 
+/**
+ * Result of listing a server track root — directories (course folders) and
+ * track-cover image candidates discovered at the immediate root level.
+ */
+export interface ServerTrackRootListing {
+  /** Immediate child directories (course folders). */
+  directories: Array<{ name: string; url: string }>
+  /** Immediate child image files suitable for track covers (JPEG/PNG/WebP only). */
+  images: Array<{ name: string; url: string }>
+}
+
+/**
+ * List a server URL's immediate children — both directories and root-level images.
+ *
+ * Makes a single HTTP request to the directory listing. Returns directories
+ * (for course-folder discovery) AND root-level images (for track-cover detection)
+ * in one call. Does NOT recurse into subdirectories.
+ *
+ * Images inside course directories are excluded — only files directly in the
+ * track root are returned. Duplicate canonical URLs are deduplicated and
+ * images are sorted naturally by filename.
+ *
+ * @param url - Full URL to a track-root directory on an nginx server
+ * @returns Both directories and root-level track-cover images
+ */
+export async function listServerTrackRoot(
+  url: string
+): Promise<ServerResult<ServerTrackRootListing>> {
+  // Validate URL first — catches empty strings, bad protocols, bare IP roots
+  const validation = isValidImportUrl(url)
+  if (!validation.valid) {
+    return { ok: false, error: validation.reason }
+  }
+
+  // Fetch the directory listing (single HTTP request)
+  const result = await fetchDirectoryListing(url)
+  if (!result.ok) {
+    return result // passthrough error (network, timeout, non-200, parse failure)
+  }
+
+  // Filter for directory entries
+  const directories = result.data.files
+    .filter(f => f.type === 'directory')
+    .map(f => ({ name: f.name.replace(/\/$/, ''), url: f.url }))
+
+  // Filter for root-level track-cover images (JPEG/PNG/WebP only — not GIF/SVG/BMP)
+  const seenUrls = new Set<string>()
+  const images: Array<{ name: string; url: string }> = []
+
+  for (const f of result.data.files) {
+    if (f.type !== 'image') continue
+    if (!isTrackCoverImage(f.name)) continue // excludes GIF, SVG, BMP
+    const canonical = canonicalizeUrl(f.url)
+    if (seenUrls.has(canonical)) continue
+    seenUrls.add(canonical)
+    images.push({ name: f.name, url: f.url })
+  }
+
+  // Sort images naturally by filename
+  images.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }))
+
+  return { ok: true, data: { directories, images } }
+}
+
 // --- Drag-and-Drop File Import (E33-S06) ---
 
 /**
@@ -1961,4 +2067,144 @@ export async function scanCourseFolderFromServer(
     serverPath,
     ...(hitCap ? { truncated: true } : {}),
   }
+}
+
+// ─── Track Cover Persistence ─────────────────────────────────────────────────
+
+/**
+ * Persists a selected track-cover candidate to Supabase Storage and updates the
+ * LearningPath record via the store.
+ *
+ * Handles both local (FileSystemFileHandle) and remote (HTTP URL) image sources.
+ * Upload failures are non-blocking — the track import succeeds regardless.
+ *
+ * @returns A status string describing the outcome for import result feedback.
+ */
+export async function applyImportedTrackCover({
+  trackId,
+  candidate,
+  isExplicitSelection,
+  preserveExisting,
+}: {
+  trackId: string
+  candidate: TrackCoverCandidate
+  /** True when the user explicitly selected this candidate in the chooser UI. */
+  isExplicitSelection: boolean
+  /** When true and the track already has a cover, skip persistence entirely. */
+  preserveExisting: boolean
+}): Promise<
+  | 'track-cover-added-automatically'
+  | 'track-cover-selected'
+  | 'track-cover-upload-failed'
+  | 'track-cover-skipped-preserved'
+> {
+  const lpStore = useLearningPathStore.getState()
+  const existingPath = lpStore.paths.find(p => p.id === trackId)
+
+  // Preserve existing manual covers unless the user explicitly chose a new one
+  if (preserveExisting && !isExplicitSelection && existingPath?.coverImageUrl) {
+    return 'track-cover-skipped-preserved'
+  }
+  if (preserveExisting && !isExplicitSelection && existingPath?.coverPreset) {
+    return 'track-cover-skipped-preserved'
+  }
+
+  try {
+    let file: File
+
+    if (candidate.source === 'local' && candidate.fileHandle) {
+      // Read from local FileSystemFileHandle
+      file = await candidate.fileHandle.getFile()
+    } else if (candidate.serverUrl) {
+      // Fetch from remote server with CORS
+      const response = await fetch(candidate.serverUrl)
+      if (!response.ok) {
+        throw new Error(`Server returned ${response.status} for ${candidate.serverUrl}`)
+      }
+      const contentType = response.headers.get('Content-Type') ?? ''
+      if (!contentType.startsWith('image/')) {
+        throw new Error(`Unexpected Content-Type "${contentType}" for ${candidate.serverUrl}`)
+      }
+      const blob = await response.blob()
+      // Enforce a reasonable source-size limit (10 MB) to prevent OOM on misconfigured servers
+      if (blob.size > 10 * 1024 * 1024) {
+        throw new Error(`Image too large (${(blob.size / 1024 / 1024).toFixed(1)} MB)`)
+      }
+      file = new File([blob], candidate.filename, {
+        type: contentType || 'image/jpeg',
+      })
+    } else {
+      throw new Error('Track cover candidate has no readable source')
+    }
+
+    // Dynamically import to avoid circular dependency at module-load time
+    const { uploadPathCover } = await import('@/lib/pathCoverUpload')
+    const coverImageUrl = await uploadPathCover(file, trackId)
+
+    await lpStore.updatePathCover(trackId, {
+      coverImageUrl,
+      coverPreset: undefined,
+    })
+
+    return isExplicitSelection ? 'track-cover-selected' : 'track-cover-added-automatically'
+  } catch (error) {
+    // Non-blocking: track import succeeds regardless of cover upload failure
+    console.warn(
+      '[applyImportedTrackCover] Cover upload failed (non-blocking):',
+      error instanceof Error ? error.message : error
+    )
+
+    // Fallback: if it's a server image, try storing the direct URL so the card
+    // still renders something (ephemeral — the URL may break later, but better
+    // than showing nothing)
+    if (candidate.serverUrl) {
+      try {
+        await lpStore.updatePathCover(trackId, {
+          coverImageUrl: candidate.serverUrl,
+          coverPreset: undefined,
+        })
+        return isExplicitSelection ? 'track-cover-selected' : 'track-cover-added-automatically'
+      } catch {
+        // Best-effort fallback also failed — card will show gradient
+      }
+    }
+
+    return 'track-cover-upload-failed'
+  }
+}
+
+/**
+ * Enumerates immediate image files in a directory handle that are suitable for
+ * track covers (JPEG/PNG/WebP only). Does NOT recurse into subdirectories.
+ *
+ * Returns candidates sorted naturally by filename. Callers are responsible for
+ * revoking object URLs via `URL.revokeObjectURL()` when done.
+ */
+export async function collectLocalTrackCoverCandidates(
+  parentDirHandle: FileSystemDirectoryHandle
+): Promise<TrackCoverCandidate[]> {
+  const candidates: TrackCoverCandidate[] = []
+
+  for await (const entry of parentDirHandle.values()) {
+    if (entry.kind !== 'file') continue
+    if (!isTrackCoverImage(entry.name)) continue
+
+    const fileHandle = entry as FileSystemFileHandle
+    try {
+      const file = await fileHandle.getFile()
+      candidates.push({
+        id: crypto.randomUUID(),
+        filename: fileHandle.name,
+        source: 'local',
+        previewUrl: URL.createObjectURL(file),
+        fileHandle,
+      })
+    } catch {
+      // Skip files that can't be read (permissions, etc.)
+    }
+  }
+
+  return candidates.sort((a, b) =>
+    a.filename.localeCompare(b.filename, undefined, { numeric: true })
+  )
 }

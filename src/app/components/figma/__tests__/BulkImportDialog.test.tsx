@@ -26,6 +26,9 @@ const mockListSubDirectories = vi.fn()
 const mockScanCourseFolderFromHandle = vi.fn()
 const mockScanCourseFromSource = vi.fn()
 const mockListServerSubDirectories = vi.fn()
+const mockListServerTrackRoot = vi.fn()
+const mockCollectLocalTrackCoverCandidates = vi.fn()
+const mockApplyImportedTrackCover = vi.fn()
 const mockPersistScannedCourse = vi.fn()
 const mockDetectAuthorFromFolderName = vi.fn()
 const mockMatchOrCreateAuthor = vi.fn()
@@ -40,7 +43,11 @@ vi.mock('@/lib/courseImport', () => ({
   scanCourseFolderFromHandle: (...args: unknown[]) => mockScanCourseFolderFromHandle(...args),
   scanCourseFromSource: (...args: unknown[]) => mockScanCourseFromSource(...args),
   listServerSubDirectories: (...args: unknown[]) => mockListServerSubDirectories(...args),
+  listServerTrackRoot: (...args: unknown[]) => mockListServerTrackRoot(...args),
   listSubDirectories: (...args: unknown[]) => mockListSubDirectories(...args),
+  collectLocalTrackCoverCandidates: (...args: unknown[]) =>
+    mockCollectLocalTrackCoverCandidates(...args),
+  applyImportedTrackCover: (...args: unknown[]) => mockApplyImportedTrackCover(...args),
   persistScannedCourse: (...args: unknown[]) => mockPersistScannedCourse(...args),
 }))
 
@@ -100,13 +107,15 @@ vi.mock('@/stores/useCourseImportStore', () => ({
 const mockReorderCourse = vi.fn()
 const mockBatchAddCoursesToPath = vi.fn()
 const mockCreatePathWithCourses = vi.fn()
+const mockUpdatePathCover = vi.fn()
 
 const learningPathState = {
-  paths: [] as Array<{ id: string; name: string }>,
+  paths: [] as Array<{ id: string; name: string; coverImageUrl?: string; coverPreset?: string }>,
   entries: [] as Array<{ courseId: string; pathId: string; position: number }>,
   reorderCourse: mockReorderCourse,
   batchAddCoursesToPath: mockBatchAddCoursesToPath,
   createPathWithCourses: mockCreatePathWithCourses,
+  updatePathCover: mockUpdatePathCover,
 }
 
 vi.mock('@/stores/useLearningPathStore', () => ({
@@ -201,6 +210,8 @@ describe('BulkImportDialog — batch import flow (F-003)', () => {
       mockShowDirectoryPicker.mockResolvedValue(mockDirHandle('ParentFolder'))
       mockListSubDirectories.mockResolvedValue([mockDirHandle('alpha'), mockDirHandle('beta')])
       mockReadTrackManifest.mockResolvedValue(mockManifestResponse)
+      mockCollectLocalTrackCoverCandidates.mockResolvedValue([])
+      mockApplyImportedTrackCover.mockResolvedValue('track-cover-added-automatically')
       // Scanning still runs before the review step — make every folder scan successfully
       mockScanCourseFromSource.mockImplementation(
         (source: { folderName: string; handle: FileSystemDirectoryHandle | null }) =>
@@ -618,10 +629,17 @@ describe('BulkImportDialog — batch import flow (F-003)', () => {
     beforeEach(() => {
       vi.clearAllMocks()
       mockListServerSubDirectories.mockReset()
+      mockListServerTrackRoot.mockReset()
       mockScanCourseFromSource.mockReset()
       mockFetchTrackManifestFromUrl.mockReset()
+      mockCollectLocalTrackCoverCandidates.mockReset()
+      mockApplyImportedTrackCover.mockReset()
       // By default, no track manifest is found — prevents real network calls
       mockFetchTrackManifestFromUrl.mockResolvedValue({ ok: false, error: 'Not found' })
+      // By default, no local track cover candidates
+      mockCollectLocalTrackCoverCandidates.mockResolvedValue([])
+      // By default, cover upload succeeds
+      mockApplyImportedTrackCover.mockResolvedValue('track-cover-added-automatically')
     })
 
     it('navigates to enter-url step when "Import Multiple from URL" is clicked', async () => {
@@ -680,7 +698,7 @@ describe('BulkImportDialog — batch import flow (F-003)', () => {
     })
 
     it('triggers server scan with valid URL and shows error when scan fails', async () => {
-      mockListServerSubDirectories.mockResolvedValue({ ok: false, error: 'Server unreachable' })
+      mockListServerTrackRoot.mockResolvedValue({ ok: false, error: 'Server unreachable' })
 
       const user = userEvent.setup()
       render(<BulkImportDialog open={true} onOpenChange={onOpenChange} onSingleImport={vi.fn()} />)
@@ -691,13 +709,16 @@ describe('BulkImportDialog — batch import flow (F-003)', () => {
       await user.click(screen.getByTestId('bulk-import-scan-url-btn'))
 
       await waitFor(() => {
-        expect(mockListServerSubDirectories).toHaveBeenCalledWith('http://example.com/courses/')
+        expect(mockListServerTrackRoot).toHaveBeenCalledWith('http://example.com/courses/')
         expect(screen.getByTestId('bulk-import-url-error')).toBeInTheDocument()
       })
     })
 
     it('shows inline error when server scan returns no subdirectories', async () => {
-      mockListServerSubDirectories.mockResolvedValue({ ok: true, data: [] })
+      mockListServerTrackRoot.mockResolvedValue({
+        ok: true,
+        data: { directories: [], images: [] },
+      })
 
       const user = userEvent.setup()
       render(<BulkImportDialog open={true} onOpenChange={onOpenChange} onSingleImport={vi.fn()} />)
@@ -716,9 +737,12 @@ describe('BulkImportDialog — batch import flow (F-003)', () => {
     })
 
     it('transitions to select-folders step when scan succeeds with subdirectories', async () => {
-      mockListServerSubDirectories.mockResolvedValue({
+      mockListServerTrackRoot.mockResolvedValue({
         ok: true,
-        data: [{ name: 'Course1', url: 'http://example.com/courses/Course1/' }],
+        data: {
+          directories: [{ name: 'Course1', url: 'http://example.com/courses/Course1/' }],
+          images: [],
+        },
       })
 
       const user = userEvent.setup()
@@ -738,7 +762,7 @@ describe('BulkImportDialog — batch import flow (F-003)', () => {
     it('TST-P2-002: pressing Enter while scanning does not trigger duplicate scan', async () => {
       // Use a deferred promise so the scan hangs until we resolve it
       let resolveScan!: (value: unknown) => void
-      mockListServerSubDirectories.mockImplementation(
+      mockListServerTrackRoot.mockImplementation(
         () =>
           new Promise(resolve => {
             resolveScan = resolve
@@ -760,18 +784,21 @@ describe('BulkImportDialog — batch import flow (F-003)', () => {
       await user.keyboard('{Enter}')
 
       // Verify scan was called only once (the ref guard prevented the second call)
-      expect(mockListServerSubDirectories).toHaveBeenCalledTimes(1)
+      expect(mockListServerTrackRoot).toHaveBeenCalledTimes(1)
 
       // Resolve the scan so the component doesn't hang
       resolveScan!({
         ok: true,
-        data: [{ name: 'Course1', url: 'http://example.com/courses/Course1/' }],
+        data: {
+          directories: [{ name: 'Course1', url: 'http://example.com/courses/Course1/' }],
+          images: [],
+        },
       })
     })
 
     it('TST-P2-001: closing dialog during scan prevents step transition', async () => {
       let resolveScan!: (value: unknown) => void
-      mockListServerSubDirectories.mockImplementation(
+      mockListServerTrackRoot.mockImplementation(
         () =>
           new Promise(resolve => {
             resolveScan = resolve
@@ -799,7 +826,10 @@ describe('BulkImportDialog — batch import flow (F-003)', () => {
       // any step transition
       resolveScan!({
         ok: true,
-        data: [{ name: 'Course1', url: 'http://example.com/courses/Course1/' }],
+        data: {
+          directories: [{ name: 'Course1', url: 'http://example.com/courses/Course1/' }],
+          images: [],
+        },
       })
 
       // The dialog should not show select-folders (the URL input was cleaned up by resetDialog)
@@ -836,13 +866,16 @@ describe('BulkImportDialog — batch import flow (F-003)', () => {
       })
 
       // Return 3 folders from server scan
-      mockListServerSubDirectories.mockResolvedValue({
+      mockListServerTrackRoot.mockResolvedValue({
         ok: true,
-        data: [
-          { name: 'linux', url: 'http://example.com/courses/linux/' },
-          { name: 'docker', url: 'http://example.com/courses/docker/' },
-          { name: 'k8s', url: 'http://example.com/courses/k8s/' },
-        ],
+        data: {
+          directories: [
+            { name: 'linux', url: 'http://example.com/courses/linux/' },
+            { name: 'docker', url: 'http://example.com/courses/docker/' },
+            { name: 'k8s', url: 'http://example.com/courses/k8s/' },
+          ],
+          images: [],
+        },
       })
 
       // Scanning returns success — courses get IDs in reverse manifest order
@@ -956,6 +989,8 @@ describe('BulkImportDialog — batch import flow (F-003)', () => {
       mockShowDirectoryPicker.mockResolvedValue(mockDirHandle('ParentFolder'))
       mockListSubDirectories.mockResolvedValue([mockDirHandle('alpha'), mockDirHandle('beta')])
       mockReadTrackManifest.mockResolvedValue(authorManifestResponse)
+      mockCollectLocalTrackCoverCandidates.mockResolvedValue([])
+      mockApplyImportedTrackCover.mockResolvedValue('track-cover-added-automatically')
       mockScanCourseFromSource.mockImplementation((source: { folderName: string }) =>
         makeScanSuccess(`id-${source.folderName}`, source.folderName)
       )

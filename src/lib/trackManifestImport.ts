@@ -17,6 +17,7 @@ export interface TrackManifestSummary {
   trackName: string
   trackDescription?: string
   trackAuthor?: ManifestAuthor
+  trackCoverImage?: string
   courseFolders: string[]
 }
 
@@ -65,6 +66,7 @@ export async function readTrackManifest(
         trackName: manifest.track.name,
         trackDescription: manifest.track.description,
         trackAuthor: manifest.track.author,
+        trackCoverImage: manifest.track.coverImage,
         courseFolders: manifest.track.courses.map(c => c.folder),
       },
     }
@@ -139,6 +141,7 @@ export async function fetchTrackManifestFromUrl(
         trackName: manifest.track.name,
         trackDescription: manifest.track.description,
         trackAuthor: manifest.track.author,
+        trackCoverImage: manifest.track.coverImage,
         courseFolders: manifest.track.courses.map(c => c.folder),
       },
     }

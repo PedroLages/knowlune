@@ -46,10 +46,12 @@ import {
 import {
   scanCourseFromSource,
   listSubDirectories,
-  listServerSubDirectories,
+  listServerTrackRoot,
+  collectLocalTrackCoverCandidates,
+  applyImportedTrackCover,
   persistScannedCourse,
 } from '@/lib/courseImport'
-import type { ScannedCourse, BulkScanResult } from '@/lib/courseImport'
+import type { ScannedCourse, BulkScanResult, TrackCoverCandidate } from '@/lib/courseImport'
 import { isValidImportUrl } from '@/lib/courseServerService'
 import {
   readTrackManifest,
@@ -105,6 +107,31 @@ type DialogStep =
   | 'results'
 
 const MAX_CONCURRENCY = 5
+
+/**
+ * Auto-selection logic for track covers.
+ *
+ * Priority:
+ * 1. Manifest-defined coverImage → auto-select as 'manifest'
+ * 2. Single discovered root image → auto-select as 'automatic'
+ * 3. Multiple candidates → leave unselected (user chooses in review step)
+ * 4. Zero candidates → leave unselected (gradient fallback)
+ */
+function resolveTrackCoverAutoSelection(
+  candidates: TrackCoverCandidate[],
+  manifestCoverImage?: string
+): { selectedId: string; source: 'automatic' | 'manifest' } | null {
+  if (manifestCoverImage) {
+    const manifestCandidate = candidates.find(c => c.source === 'manifest')
+    if (manifestCandidate) {
+      return { selectedId: manifestCandidate.id, source: 'manifest' }
+    }
+  }
+  if (candidates.length === 1) {
+    return { selectedId: candidates[0].id, source: 'automatic' }
+  }
+  return null
+}
 
 /**
  * Shared helper: updates an ImportItem in a results array by folderName and pushes the new
@@ -204,6 +231,17 @@ export function BulkImportDialog({
   const [serverUrlError, setServerUrlError] = useState<string | null>(null)
   const [isScanningUrl, setIsScanningUrl] = useState(false)
 
+  // Track-cover detection state
+  const [trackCoverCandidates, setTrackCoverCandidates] = useState<TrackCoverCandidate[]>([])
+  const [selectedTrackCoverId, setSelectedTrackCoverId] = useState<string | null>(null)
+  const [trackCoverSelectionSource, setTrackCoverSelectionSource] = useState<
+    'automatic' | 'manifest' | 'manual' | null
+  >(null)
+  // Track cover result feedback shown in the results step
+  const [trackCoverResult, setTrackCoverResult] = useState<string | null>(null)
+  // Server URL preserved for cover persistence after track creation
+  const serverUrlRef = useRef<string | null>(null)
+
   const abortRef = useRef(false)
   const stepRef = useRef<DialogStep>('choose')
   const completedSuccessfullyRef = useRef(false)
@@ -268,6 +306,17 @@ export function BulkImportDialog({
     setServerUrlInput('')
     setServerUrlError(null)
     setIsScanningUrl(false)
+    // Revoke track-cover object URLs (local file previews)
+    for (const c of trackCoverCandidates) {
+      if (c.source === 'local' && c.previewUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(c.previewUrl)
+      }
+    }
+    setTrackCoverCandidates([])
+    setSelectedTrackCoverId(null)
+    setTrackCoverSelectionSource(null)
+    setTrackCoverResult(null)
+    serverUrlRef.current = null
     // Note: abortRef is NOT reset here — it's managed by the calling context
     // (handleOpenChange sets it to true before calling resetDialog, and each
     // async handler resets it to false at its own start.)
@@ -321,7 +370,7 @@ export function BulkImportDialog({
     onYouTubeImport?.()
   }, [handleOpenChange, onYouTubeImport])
 
-  // Step 1 → Enter URL: Scan a server URL for subdirectories
+  // Step 1 → Enter URL: Scan a server URL for subdirectories and track-cover images
   const handleServerUrlScan = useCallback(async () => {
     generationRef.current++
     abortRef.current = false
@@ -341,8 +390,12 @@ export function BulkImportDialog({
     setServerUrlError(null)
     setIsScanningUrl(true)
 
+    // Preserve server URL for cover persistence after track creation
+    serverUrlRef.current = url
+
     try {
-      const result = await listServerSubDirectories(url)
+      // Use listServerTrackRoot to get both directories AND root-level images in one request
+      const result = await listServerTrackRoot(url)
       if (abortRef.current || stepRef.current !== 'enter-url') return
 
       if (!result.ok) {
@@ -350,14 +403,26 @@ export function BulkImportDialog({
         return
       }
 
-      if (result.data.length === 0) {
+      const { directories, images } = result.data
+
+      if (directories.length === 0) {
         setServerUrlError(
           'No course folders found at this URL. Check that the server exposes subdirectories via nginx autoindex.'
         )
         return
       }
 
-      // Attempt track-manifest detection for folder sorting (optional)
+      // Build track-cover candidates from server root images
+      const serverCandidates: TrackCoverCandidate[] = images.map(img => ({
+        id: crypto.randomUUID(),
+        filename: img.name,
+        source: 'server' as const,
+        previewUrl: img.url,
+        serverUrl: img.url,
+      }))
+      setTrackCoverCandidates(serverCandidates)
+
+      // Attempt track-manifest detection for folder sorting and manifest coverImage
       const manifestResult = await fetchTrackManifestFromUrl(url)
       if (abortRef.current || stepRef.current !== 'enter-url') return
 
@@ -365,7 +430,7 @@ export function BulkImportDialog({
         const positionByFolder = new Map(
           manifestResult.manifest.track.courses.map(c => [c.folder, c.position])
         )
-        result.data.sort((a, b) => {
+        directories.sort((a, b) => {
           const posA = positionByFolder.get(a.name) ?? Infinity
           const posB = positionByFolder.get(b.name) ?? Infinity
           return posA - posB
@@ -374,13 +439,71 @@ export function BulkImportDialog({
           manifest: manifestResult.manifest,
           trackName: manifestResult.summary.trackName,
         })
+
+        // Apply manifest-defined cover image if present (takes priority over discovered images)
+        const manifestCoverImage = manifestResult.summary.trackCoverImage
+        if (manifestCoverImage) {
+          const manifestUrl = new URL(
+            manifestCoverImage,
+            url.endsWith('/') ? url : url + '/'
+          ).href
+          const manifestCandidate: TrackCoverCandidate = {
+            id: `manifest-cover`,
+            filename: manifestCoverImage,
+            source: 'manifest',
+            previewUrl: manifestUrl,
+            serverUrl: manifestUrl,
+          }
+          // Prepend manifest cover so it appears first; it will be auto-selected below
+          setTrackCoverCandidates(prev => [manifestCandidate, ...prev])
+        }
+
+        // Auto-select track cover using priority: manifest > single discovered image
+        const allCandidates = manifestCoverImage
+          ? [
+              {
+                id: 'manifest-cover',
+                filename: manifestCoverImage,
+                source: 'manifest' as const,
+                previewUrl: new URL(manifestCoverImage, url.endsWith('/') ? url : url + '/').href,
+                serverUrl: new URL(manifestCoverImage, url.endsWith('/') ? url : url + '/').href,
+              },
+              ...serverCandidates,
+            ]
+          : serverCandidates
+
+        const autoSelection = resolveTrackCoverAutoSelection(
+          allCandidates,
+          manifestCoverImage
+        )
+        if (autoSelection) {
+          setSelectedTrackCoverId(autoSelection.selectedId)
+          setTrackCoverSelectionSource(autoSelection.source)
+        } else if (allCandidates.length > 1) {
+          // Multiple candidates — leave unselected, user picks in review step
+          setSelectedTrackCoverId(null)
+          setTrackCoverSelectionSource(null)
+        } else {
+          // Zero candidates — gradient fallback
+          setSelectedTrackCoverId(null)
+          setTrackCoverSelectionSource(null)
+        }
       } else {
         setTrackManifest(null)
+        // Auto-select from server-discovered images only (no manifest)
+        const autoSelection = resolveTrackCoverAutoSelection(serverCandidates)
+        if (autoSelection) {
+          setSelectedTrackCoverId(autoSelection.selectedId)
+          setTrackCoverSelectionSource(autoSelection.source)
+        } else {
+          setSelectedTrackCoverId(null)
+          setTrackCoverSelectionSource(null)
+        }
       }
 
       // Populate folders from server-discovered subdirectories
       setFolders(
-        result.data.map(d => ({
+        directories.map(d => ({
           handle: null,
           name: d.name,
           selected: true,
@@ -430,10 +553,63 @@ export function BulkImportDialog({
           manifest: manifestResult.manifest,
           trackName: manifestResult.summary.trackName,
         })
+
+        // Collect root-level images for track-cover detection
+        const localCandidates = await collectLocalTrackCoverCandidates(parentHandle)
+        const manifestCoverImage = manifestResult.summary.trackCoverImage
+
+        // If manifest defines a coverImage, prepend it as a manifest-sourced candidate
+        if (manifestCoverImage && localCandidates.some(c => c.filename === manifestCoverImage)) {
+          // Manifest references a local file that was already collected — re-tag it
+          const allCandidates = localCandidates.map(c =>
+            c.filename === manifestCoverImage ? { ...c, source: 'manifest' as const } : c
+          )
+          // Move the manifest one to the front
+          const manifestIdx = allCandidates.findIndex(c => c.source === 'manifest')
+          if (manifestIdx > 0) {
+            const [manifest] = allCandidates.splice(manifestIdx, 1)
+            allCandidates.unshift(manifest)
+          }
+          setTrackCoverCandidates(allCandidates)
+
+          const autoSelection = resolveTrackCoverAutoSelection(allCandidates, manifestCoverImage)
+          if (autoSelection) {
+            setSelectedTrackCoverId(autoSelection.selectedId)
+            setTrackCoverSelectionSource(autoSelection.source)
+          }
+        } else if (manifestCoverImage) {
+          // Manifest coverImage references a file not found in root — still register it
+          // as a candidate so the user can see it referenced (persistence will attempt fetch)
+          const manifestCandidate: TrackCoverCandidate = {
+            id: 'manifest-cover',
+            filename: manifestCoverImage,
+            source: 'manifest',
+            previewUrl: '', // No local preview; will be fetched from disk during persistence
+            fileHandle: undefined,
+          }
+          const allCandidates = [manifestCandidate, ...localCandidates]
+          setTrackCoverCandidates(allCandidates)
+          setSelectedTrackCoverId(manifestCandidate.id)
+          setTrackCoverSelectionSource('manifest')
+        } else {
+          setTrackCoverCandidates(localCandidates)
+
+          const autoSelection = resolveTrackCoverAutoSelection(localCandidates)
+          if (autoSelection) {
+            setSelectedTrackCoverId(autoSelection.selectedId)
+            setTrackCoverSelectionSource(autoSelection.source)
+          } else {
+            setSelectedTrackCoverId(null)
+            setTrackCoverSelectionSource(null)
+          }
+        }
       } else {
         // No manifest found — clear any stale manifest data
         parentHandleRef.current = null
         setTrackManifest(null)
+        setTrackCoverCandidates([])
+        setSelectedTrackCoverId(null)
+        setTrackCoverSelectionSource(null)
       }
 
       // Detect author from parent folder name (e.g., "Chase Hughes - The Operative Kit")
@@ -668,6 +844,18 @@ export function BulkImportDialog({
     []
   )
 
+  // Select a track cover candidate manually
+  const handleSelectTrackCover = useCallback((candidateId: string) => {
+    setSelectedTrackCoverId(candidateId)
+    setTrackCoverSelectionSource('manual')
+  }, [])
+
+  // Clear track cover selection (use gradient instead)
+  const handleClearTrackCover = useCallback(() => {
+    setSelectedTrackCoverId(null)
+    setTrackCoverSelectionSource(null)
+  }, [])
+
   // Review → Importing: Persist all scanned courses with overrides
   const handleConfirmImport = useCallback(async () => {
     generationRef.current++
@@ -713,6 +901,24 @@ export function BulkImportDialog({
           batchResultRef.current = {
             trackId: result.trackId,
             courseIds: result.courses.filter(r => r.success && r.courseId).map(r => r.courseId!),
+          }
+        }
+
+        // Apply track cover after track creation
+        if (result.trackId && gen === generationRef.current) {
+          const selectedCandidate = trackCoverCandidates.find(
+            c => c.id === selectedTrackCoverId
+          )
+          if (selectedCandidate) {
+            const coverStatus = await applyImportedTrackCover({
+              trackId: result.trackId,
+              candidate: selectedCandidate,
+              isExplicitSelection: trackCoverSelectionSource === 'manual',
+              preserveExisting: true,
+            })
+            if (gen === generationRef.current) {
+              setTrackCoverResult(coverStatus)
+            }
           }
         }
 
@@ -887,7 +1093,23 @@ export function BulkImportDialog({
             }
           }
 
+          // Apply track cover after server-URL track creation
           if (gen === generationRef.current) {
+            const selectedCandidate = trackCoverCandidates.find(
+              c => c.id === selectedTrackCoverId
+            )
+            if (selectedCandidate) {
+              const coverStatus = await applyImportedTrackCover({
+                trackId,
+                candidate: selectedCandidate,
+                isExplicitSelection: trackCoverSelectionSource === 'manual',
+                preserveExisting: true,
+              })
+              if (gen === generationRef.current) {
+                setTrackCoverResult(coverStatus)
+              }
+            }
+
             batchResultRef.current = {
               trackId,
               courseIds: successResults
@@ -1537,6 +1759,120 @@ export function BulkImportDialog({
                 </p>
               </div>
             )}
+
+            {/* Track Cover section — shown when root images are discovered */}
+            {trackCoverCandidates.length > 0 && (
+              <div
+                className="rounded-xl border border-border p-3 mb-2"
+                data-testid="bulk-track-cover-section"
+              >
+                {trackCoverCandidates.length === 1 && selectedTrackCoverId ? (
+                  /* Single auto-selected image */
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
+                      Track Cover
+                    </p>
+                    <div className="relative rounded-lg overflow-hidden aspect-video bg-muted mb-2">
+                      <img
+                        src={trackCoverCandidates[0].previewUrl}
+                        alt={trackCoverCandidates[0].filename}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {trackCoverSelectionSource === 'manifest'
+                        ? 'Selected from track-manifest.json'
+                        : 'Automatically selected from the track folder'}
+                    </p>
+                    {trackCoverSelectionSource === 'automatic' && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-xs mt-1 h-auto py-0.5 px-0 text-muted-foreground hover:text-foreground"
+                        onClick={handleClearTrackCover}
+                        data-testid="bulk-track-cover-change"
+                      >
+                        Use gradient instead
+                      </Button>
+                    )}
+                  </div>
+                ) : (
+                  /* Multiple candidates — user chooses */
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">
+                      Choose Track Cover
+                    </p>
+                    <p className="text-xs text-muted-foreground mb-2">
+                      Select an image for "{trackManifest?.trackName ?? 'this track'}"
+                    </p>
+                    <div
+                      className="grid grid-cols-4 gap-2"
+                      role="radiogroup"
+                      aria-label="Select track cover image"
+                    >
+                      {trackCoverCandidates.map(candidate => {
+                        const isSelected = selectedTrackCoverId === candidate.id
+                        return (
+                          <button
+                            key={candidate.id}
+                            type="button"
+                            role="radio"
+                            aria-checked={isSelected}
+                            aria-label={`${candidate.filename}${candidate.source === 'manifest' ? ' (from manifest)' : ''}`}
+                            onClick={() => handleSelectTrackCover(candidate.id)}
+                            className={`relative aspect-video rounded-lg overflow-hidden border-2 transition-colors ${
+                              isSelected
+                                ? 'border-brand ring-1 ring-brand/30'
+                                : 'border-transparent hover:border-border'
+                            }`}
+                            data-testid={`bulk-track-cover-${candidate.id}`}
+                          >
+                            {candidate.previewUrl ? (
+                              <img
+                                src={candidate.previewUrl}
+                                alt={candidate.filename}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <div className="w-full h-full bg-muted flex items-center justify-center">
+                                <ImageIcon className="size-5 text-muted-foreground" />
+                              </div>
+                            )}
+                            {isSelected && (
+                              <div className="absolute inset-0 bg-brand/10 flex items-center justify-center">
+                                <CheckCircle2 className="size-5 text-brand" />
+                              </div>
+                            )}
+                            {candidate.source === 'manifest' && (
+                              <span className="absolute bottom-0.5 right-0.5 bg-brand text-brand-foreground text-[9px] px-1 rounded">
+                                manifest
+                              </span>
+                            )}
+                          </button>
+                        )
+                      })}
+                    </div>
+                    {selectedTrackCoverId && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-xs mt-2 h-auto py-0.5 px-0 text-muted-foreground hover:text-foreground"
+                        onClick={handleClearTrackCover}
+                        data-testid="bulk-track-cover-use-gradient"
+                      >
+                        Use gradient instead
+                      </Button>
+                    )}
+                    {!selectedTrackCoverId && trackCoverCandidates.length > 0 && (
+                      <p className="text-xs text-muted-foreground mt-2">
+                        No image selected — gradient will be used.
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
             <ScrollArea className="max-h-[50vh] min-w-0 w-full">
               <div className="flex min-w-0 flex-col gap-2 pr-3" data-testid="bulk-review-list">
                 {[...scannedCourses.values()].map(course => {
@@ -1860,6 +2196,40 @@ export function BulkImportDialog({
                       </span>
                     )}
                   </div>
+
+                  {/* Track cover result feedback */}
+                  {trackCoverResult && (
+                    <div className="pt-1 border-t border-border/50">
+                      {trackCoverResult === 'track-cover-added-automatically' && (
+                        <span className="flex items-center gap-1.5 text-sm text-success">
+                          <CheckCircle2 className="size-4" aria-hidden="true" />
+                          Track cover added automatically
+                        </span>
+                      )}
+                      {trackCoverResult === 'track-cover-selected' && (
+                        <span className="flex items-center gap-1.5 text-sm text-success">
+                          <CheckCircle2 className="size-4" aria-hidden="true" />
+                          Track cover selected
+                        </span>
+                      )}
+                      {trackCoverResult === 'track-cover-upload-failed' && (
+                        <span className="flex items-center gap-1.5 text-sm text-warning">
+                          <AlertTriangle className="size-4" aria-hidden="true" />
+                          Track created, but cover upload failed
+                        </span>
+                      )}
+                    </div>
+                  )}
+                  {!trackCoverResult &&
+                    trackCoverCandidates.length > 0 &&
+                    batchResultRef.current?.trackId && (
+                      <div className="pt-1 border-t border-border/50">
+                        <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                          <ImageIcon className="size-4" aria-hidden="true" />
+                          Track created with gradient
+                        </span>
+                      </div>
+                    )}
                 </div>
 
                 <DialogFooter className="w-full max-w-full sm:flex-wrap">

@@ -100,6 +100,7 @@ export interface TrackManifest {
     description?: string
     difficulty?: Difficulty
     author?: ManifestAuthor
+    coverImage?: string
     courses: TrackManifestCourse[]
   }
 }
@@ -547,6 +548,39 @@ export function parseTrackManifest(json: unknown): ParseResult<TrackManifest> {
     }
   }
 
+  // Cover image (v1.2) — optional relative filename for the track card banner
+  const VALID_TRACK_COVER_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp']
+  let coverImage: string | undefined
+  if (track.coverImage !== undefined) {
+    const raw = asString(track.coverImage)
+    if (!raw) {
+      errors.push({
+        path: 'track.coverImage',
+        message: 'coverImage must be a string (relative filename)',
+      })
+    } else if (raw.includes('..')) {
+      errors.push({
+        path: 'track.coverImage',
+        message: 'coverImage must not contain ".." (directory traversal rejected)',
+      })
+    } else if (/^https?:\/\//i.test(raw)) {
+      errors.push({
+        path: 'track.coverImage',
+        message: 'coverImage must be a relative filename, not an absolute URL',
+      })
+    } else {
+      const ext = raw.toLowerCase().slice(raw.lastIndexOf('.'))
+      if (!VALID_TRACK_COVER_EXTENSIONS.includes(ext)) {
+        errors.push({
+          path: 'track.coverImage',
+          message: `coverImage extension "${ext}" is not supported. Use one of: ${VALID_TRACK_COVER_EXTENSIONS.join(', ')}`,
+        })
+      } else {
+        coverImage = raw
+      }
+    }
+  }
+
   // Courses array
   if (!Array.isArray(track.courses)) {
     errors.push({ path: 'track.courses', message: 'Track courses must be an array' })
@@ -740,6 +774,7 @@ export function parseTrackManifest(json: unknown): ParseResult<TrackManifest> {
         description,
         difficulty,
         author,
+        coverImage,
         courses,
       },
     },

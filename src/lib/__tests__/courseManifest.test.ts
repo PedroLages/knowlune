@@ -1153,4 +1153,119 @@ describe('parseTrackManifest', () => {
     const policyError = result.errors.find(e => e.path.includes('importPolicy'))
     expect(policyError).toBeDefined()
   })
+
+  // ── v1.2 coverImage tests ──────────────────────────────────
+
+  it('parses valid coverImage in v1.2 manifest', () => {
+    const result = parseTrackManifest({
+      version: '1.2',
+      track: {
+        name: 'DevOps-Platform-Engineer',
+        coverImage: 'DevOps-Platform-Engineer.webp',
+        courses: [{ folder: 'linux', position: 1 }],
+      },
+    })
+
+    expect(result.ok).toBe(true)
+    if (!result.ok) throw new Error('Expected ok result')
+    expect(result.value.track.coverImage).toBe('DevOps-Platform-Engineer.webp')
+  })
+
+  it('v1.0 manifest without coverImage remains valid', () => {
+    const result = parseTrackManifest({
+      version: '1.0',
+      track: {
+        name: 'Legacy Track',
+        courses: [{ folder: 'course1', position: 1 }],
+      },
+    })
+
+    expect(result.ok).toBe(true)
+    if (!result.ok) throw new Error('Expected ok result')
+    expect(result.value.track.coverImage).toBeUndefined()
+  })
+
+  it('v1.1 manifest without coverImage remains valid', () => {
+    const result = parseTrackManifest({
+      version: '1.1',
+      track: {
+        name: 'Modern Track',
+        courses: [
+          { folder: 'course1', position: 1, priority: 'required' as const },
+        ],
+      },
+    })
+
+    expect(result.ok).toBe(true)
+    if (!result.ok) throw new Error('Expected ok result')
+    expect(result.value.track.coverImage).toBeUndefined()
+  })
+
+  it('rejects coverImage containing .. (directory traversal)', () => {
+    const result = parseTrackManifest({
+      version: '1.2',
+      track: {
+        name: 'Test',
+        coverImage: '../secret/passwords.png',
+        courses: [{ folder: 'x', position: 1 }],
+      },
+    })
+
+    expect(result.ok).toBe(false)
+    if (result.ok) throw new Error('Expected error result')
+    const coverError = result.errors.find(e => e.path === 'track.coverImage')
+    expect(coverError).toBeDefined()
+    expect(coverError!.message).toContain('..')
+  })
+
+  it('rejects coverImage with absolute URL', () => {
+    const result = parseTrackManifest({
+      version: '1.2',
+      track: {
+        name: 'Test',
+        coverImage: 'https://evil.com/malware.png',
+        courses: [{ folder: 'x', position: 1 }],
+      },
+    })
+
+    expect(result.ok).toBe(false)
+    if (result.ok) throw new Error('Expected error result')
+    const coverError = result.errors.find(e => e.path === 'track.coverImage')
+    expect(coverError).toBeDefined()
+    expect(coverError!.message).toContain('absolute URL')
+  })
+
+  it('rejects coverImage with unsupported extension (.gif)', () => {
+    const result = parseTrackManifest({
+      version: '1.2',
+      track: {
+        name: 'Test',
+        coverImage: 'banner.gif',
+        courses: [{ folder: 'x', position: 1 }],
+      },
+    })
+
+    expect(result.ok).toBe(false)
+    if (result.ok) throw new Error('Expected error result')
+    const coverError = result.errors.find(e => e.path === 'track.coverImage')
+    expect(coverError).toBeDefined()
+    expect(coverError!.message).toContain('.gif')
+  })
+
+  it('rejects coverImage with unsupported extension (.svg)', () => {
+    const result = parseTrackManifest({
+      version: '1.2',
+      track: {
+        name: 'Test',
+        coverImage: 'logo.svg',
+        courses: [{ folder: 'x', position: 1 }],
+      },
+    })
+
+    expect(result.ok).toBe(false)
+    if (result.ok) throw new Error('Expected error result')
+    const coverError = result.errors.find(e => e.path === 'track.coverImage')
+    expect(coverError).toBeDefined()
+    expect(coverError!.message).toContain('.svg')
+  })
 })
