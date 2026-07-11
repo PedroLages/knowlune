@@ -215,7 +215,8 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
   // seeked event lands at ~0s when the target was > 0.5s, and no successful
   // seek has completed within the last second, seeking is permanently disabled.
   const seekProbeActiveRef = useRef(false)
-  const lastSuccessfulSeekTimestampRef = useRef(0)
+  const lastSuccessfulSeekTimestampRef = useRef(Date.now())
+  const seekProbeTimedOutRef = useRef(false)
   const seekProbeTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
 
   // How many progress events have we seen (for re-evaluation on first 3 only)
@@ -314,10 +315,11 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
     // Reset seek-ability state for the new source
     toastShownRef.current = false
     seekProbeActiveRef.current = false
+    seekProbeTimedOutRef.current = false
     seekPermanentlyDisabledRef.current = false
     seekProbeTimeoutRef.current = undefined
     progressCheckCountRef.current = 0
-    lastSuccessfulSeekTimestampRef.current = 0
+    lastSuccessfulSeekTimestampRef.current = Date.now()
     setSeekDisabled(false)
     seekDisabledRef.current = false
   }, [src])
@@ -372,6 +374,16 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
     let ignore = false
     const requestId = ++seekToTimeRequestIdRef.current
     const target = seekToTime
+
+    // Arm probe for external seek requests
+    if (target > 0.5) {
+      seekProbeActiveRef.current = true
+      seekProbeTimedOutRef.current = false
+      clearTimeout(seekProbeTimeoutRef.current)
+      seekProbeTimeoutRef.current = setTimeout(() => {
+        seekProbeTimedOutRef.current = true
+      }, 2000)
+    }
 
     // Set pending seek so the seeked handler can verify position
     if (!videoRef.current) return
@@ -510,7 +522,8 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
     if (seekProbeActiveRef.current) {
       clearTimeout(seekProbeTimeoutRef.current)
       seekProbeActiveRef.current = false
-      if (currentTimeAfter > 0.5) {
+      seekProbeTimedOutRef.current = false
+      if (currentTimeAfter >= 0.5) {
         // Successfully reached the target position
         lastSuccessfulSeekTimestampRef.current = Date.now()
       } else if (currentTimeAfter < 0.5) {
@@ -605,9 +618,10 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
       // If the seeked event lands at/near 0, the server rejected the seek.
       if (newTime > 0.5) {
         seekProbeActiveRef.current = true
+        seekProbeTimedOutRef.current = false
         clearTimeout(seekProbeTimeoutRef.current)
         seekProbeTimeoutRef.current = setTimeout(() => {
-          seekProbeActiveRef.current = false
+          seekProbeTimedOutRef.current = true
         }, 2000)
       }
 
@@ -759,9 +773,10 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
       // Also arm probe for percentage-based seeks (target almost always > 0.5s)
       if (newTime > 0.5) {
         seekProbeActiveRef.current = true
+        seekProbeTimedOutRef.current = false
         clearTimeout(seekProbeTimeoutRef.current)
         seekProbeTimeoutRef.current = setTimeout(() => {
-          seekProbeActiveRef.current = false
+          seekProbeTimedOutRef.current = true
         }, 2000)
       }
 
@@ -1329,9 +1344,10 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
       // Arm probe for scrub-to-seek
       if (newTime > 0.5) {
         seekProbeActiveRef.current = true
+        seekProbeTimedOutRef.current = false
         clearTimeout(seekProbeTimeoutRef.current)
         seekProbeTimeoutRef.current = setTimeout(() => {
-          seekProbeActiveRef.current = false
+          seekProbeTimedOutRef.current = true
         }, 2000)
       }
 

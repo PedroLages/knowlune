@@ -12,7 +12,7 @@
  */
 
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router'
+import { useNavigate, useLocation } from 'react-router'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/app/components/ui/tooltip'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
@@ -26,17 +26,18 @@ interface LessonNavOverlayProps {
 
 export function LessonNavOverlay({ courseId, prevLesson, nextLesson }: LessonNavOverlayProps) {
   const navigate = useNavigate()
+  const location = useLocation()
   const [isFullscreen, setIsFullscreen] = useState(false)
   const { shouldReduceMotion } = useReducedMotion()
 
   // Fullscreen detection with vendor-prefix fallbacks
   useEffect(() => {
     function handleFullscreenChange() {
-      const el = (
-        document.fullscreenElement ??
-        (document as unknown as Record<string, Element | null>).webkitFullscreenElement ??
-        (document as unknown as Record<string, Element | null>).mozFullscreenElement
-      ) as Element | null
+      const d = document as Document & {
+        webkitFullscreenElement?: Element | null
+        mozFullscreenElement?: Element | null
+      }
+      const el = d.fullscreenElement ?? d.webkitFullscreenElement ?? d.mozFullscreenElement
 
       // Only consider fullscreen if it's the video player container
       if (el?.closest('[data-video-player-container]')) {
@@ -67,7 +68,7 @@ export function LessonNavOverlay({ courseId, prevLesson, nextLesson }: LessonNav
 
   const handleNav = (lessonId: string) => {
     navigate(`/courses/${courseId}/lessons/${lessonId}`, {
-      state: { autoPlay: undefined },
+      state: { ...location.state, autoPlay: undefined },
     })
   }
 
@@ -92,7 +93,7 @@ export function LessonNavOverlay({ courseId, prevLesson, nextLesson }: LessonNav
   )
 
   return (
-    <div className="absolute inset-0 z-10 pointer-events-none" aria-hidden="true">
+    <div className="absolute inset-0 z-10 pointer-events-none">
       {/* Previous lesson arrow */}
       {prevLesson && (
         <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-auto">
