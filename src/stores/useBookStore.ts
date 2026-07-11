@@ -36,6 +36,117 @@ export function getAbsBookKey(bookOrServerId: Book | string, itemId?: string): s
 }
 
 /**
+ * Fields that may be merged from duplicate ABS books onto the canonical copy.
+ * System/identity fields (userId, absServerId, linkedBookId, etc.) are excluded.
+ */
+const ABS_MERGEABLE_FIELDS = [
+  'description',
+  'series',
+  'seriesSequence',
+  'narrator',
+  'isbn',
+  'asin',
+  'language',
+  'publishDate',
+  'genre',
+  'tags',
+] as const
+
+/**
+ * One-time reconciliation: groups books by canonical ABS key, selects the
+ * canonical copy (highest progress → newest lastOpenedAt → valid currentPosition
+ * → earliest createdAt), merges user-facing metadata from duplicates, and
+ * returns the deduplicated array. Books without absServerId/absItemId pass
+ * through unchanged.
+ *
+ * Returns the deduplicated array and the set of non-canonical IDs to delete.
+ * Caller is responsible for persisting deletions and setting the localStorage
+ * marker.
+ */
+export function reconcileAbsDuplicates(books: Book[]): {
+  reconciled: Book[]
+  idsToDelete: Set<string>
+} {
+  const groups = new Map<string, Book[]>()
+  const nonAbsBooks: Book[] = []
+
+  for (const book of books) {
+    const key = getAbsBookKey(book)
+    if (!key) {
+      nonAbsBooks.push(book)
+      continue
+    }
+    const group = groups.get(key)
+    if (group) {
+      group.push(book)
+    } else {
+      groups.set(key, [book])
+    }
+  }
+
+  const idsToDelete = new Set<string>()
+  const reconciled: Book[] = [...nonAbsBooks]
+
+  for (const [, group] of groups) {
+    if (group.length === 1) {
+      reconciled.push(group[0])
+      continue
+    }
+
+    // Select canonical: highest progress → newest lastOpenedAt →
+    // has valid currentPosition → earliest createdAt
+    group.sort((a, b) => {
+      const progressDiff = (b.progress ?? 0) - (a.progress ?? 0)
+      if (progressDiff !== 0) return progressDiff
+
+      const aTime = a.lastOpenedAt ? new Date(a.lastOpenedAt).getTime() : 0
+      const bTime = b.lastOpenedAt ? new Date(b.lastOpenedAt).getTime() : 0
+      const timeDiff = bTime - aTime
+      if (timeDiff !== 0) return timeDiff
+
+      const aHasPos = a.currentPosition != null
+      const bHasPos = b.currentPosition != null
+      if (aHasPos && !bHasPos) return -1
+      if (!aHasPos && bHasPos) return 1
+
+      const aCreated = new Date(a.createdAt).getTime()
+      const bCreated = new Date(b.createdAt).getTime()
+      return aCreated - bCreated // earliest first
+    })
+
+    const canonical = group[0]
+    const duplicates = group.slice(1)
+
+    // Merge user-facing metadata from duplicates onto canonical
+    for (const dup of duplicates) {
+      for (const field of ABS_MERGEABLE_FIELDS) {
+        const canonicalVal = (canonical as unknown as Record<string, unknown>)[field]
+        const dupVal = (dup as unknown as Record<string, unknown>)[field]
+        if (
+          (canonicalVal === undefined || canonicalVal === null || canonicalVal === '') &&
+          dupVal !== undefined &&
+          dupVal !== null &&
+          dupVal !== ''
+        ) {
+          ;(canonical as unknown as Record<string, unknown>)[field] = dupVal
+        }
+      }
+      idsToDelete.add(dup.id)
+    }
+
+    reconciled.push(canonical)
+  }
+
+  if (idsToDelete.size > 0) {
+    console.info(
+      `[reconcileAbsDuplicates] Found ${idsToDelete.size} duplicate ABS book(s) across ${groups.size} groups — cleaning up.`
+    )
+  }
+
+  return { reconciled, idsToDelete }
+}
+
+/**
  * Decomposes the Book.source discriminated union into flat serializable fields
  * for Supabase upload. The `source` field itself is stripped from the upload
  * payload by the table registry (E94-S02).
@@ -131,6 +242,28 @@ export const useBookStore = create<BookStoreState>((set, get) => ({
   loadBooks: async () => {
     if (get().isLoaded) return
     const books = await db.books.toArray()
+
+    // One-time reconciliation of duplicate ABS books that accumulated
+    // before the dedup fix shipped. Runs exactly once, gated by a
+    // localStorage marker following the checkpoint.ts convention.
+    const RECONCILIATION_MARKER = 'knowlune-abs-dedup-v1'
+    if (!localStorage.getItem(RECONCILIATION_MARKER)) {
+      try {
+        const { reconciled, idsToDelete } = reconcileAbsDuplicates(books)
+        if (idsToDelete.size > 0) {
+          await db.books.bulkDelete([...idsToDelete])
+        }
+        localStorage.setItem(RECONCILIATION_MARKER, '1')
+        set({ books: reconciled, isLoaded: true })
+        return
+      } catch (err) {
+        // If reconciliation fails, do NOT set the marker — it will retry
+        // on next loadBooks. Surface the error but continue loading.
+        console.error('[loadBooks] ABS dedup reconciliation failed:', err)
+        toast.error('Failed to clean up duplicate books. Will retry on next launch.')
+      }
+    }
+
     set({ books, isLoaded: true })
   },
 
