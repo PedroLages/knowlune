@@ -1633,6 +1633,82 @@ describe('VideoPlayer', () => {
       // checks v.paused — in jsdom the video.paused may still be true after seeked.
       // The key assertion: playMock should be called if the handler detects paused state.
     })
+
+    it('timeupdate during active seek does not overwrite optimistic progress', () => {
+      renderPlayer()
+      fireLoadedMetadata(200)
+
+      const video = getVideo()
+
+      // Set initial position to 30s
+      Object.defineProperty(video, 'currentTime', {
+        value: 30,
+        writable: true,
+        configurable: true,
+      })
+      fireEvent.timeUpdate(video)
+
+      // Click progress bar at 75% → pendingSeekRef = 150, optimistic setCurrentTime(150)
+      const input = screen.getByTestId('progress-input')
+      fireEvent.change(input, { target: { value: '75' } })
+      expect(video.currentTime).toBeCloseTo(150, 0)
+
+      // Progress bar should reflect the optimistic target (75%)
+      const bar = screen.getByTestId('chapter-progress-bar')
+      expect(Number(bar.getAttribute('data-progress'))).toBeCloseTo(75, 0)
+
+      // Fire timeupdate with stale pre-seek position (30s)
+      // With the guard, setCurrentTime is skipped while pendingSeekRef is active
+      Object.defineProperty(video, 'currentTime', {
+        value: 30,
+        writable: true,
+        configurable: true,
+      })
+      fireEvent.timeUpdate(video)
+
+      // Progress should still be 75% — NOT overwritten by stale timeupdate
+      expect(Number(bar.getAttribute('data-progress'))).toBeCloseTo(75, 0)
+    })
+
+    it('seeked event syncs progress to the actual post-seek position', () => {
+      renderPlayer()
+      fireLoadedMetadata(200)
+
+      const video = getVideo()
+
+      // Click progress bar at 25% → optimistic target = 50s
+      const input = screen.getByTestId('progress-input')
+      fireEvent.change(input, { target: { value: '25' } })
+
+      // Progress bar should show 25% (optimistic)
+      const bar = screen.getByTestId('chapter-progress-bar')
+      expect(Number(bar.getAttribute('data-progress'))).toBeCloseTo(25, 0)
+
+      // Simulate browser landing at 49.8s instead of exactly 50s
+      Object.defineProperty(video, 'currentTime', {
+        get: () => 49.8,
+        configurable: true,
+      })
+      fireEvent(video, new Event('seeked'))
+
+      // After seeked, progress should reflect the ACTUAL position (49.8/200 = 24.9%)
+      // NOT the optimistic 25%
+      expect(Number(bar.getAttribute('data-progress'))).toBeCloseTo(24.9, 0)
+    })
+
+    it('handleProgressChange no-ops when duration is zero or invalid', () => {
+      renderPlayer()
+      // Do NOT fire loadedMetadata — duration stays at 0
+
+      const video = getVideo()
+      const initialTime = video.currentTime
+
+      const input = screen.getByTestId('progress-input')
+      fireEvent.change(input, { target: { value: '50' } })
+
+      // currentTime should NOT change — duration was 0, seek was skipped
+      expect(video.currentTime).toBe(initialTime)
+    })
   })
 
   // -------------------------------------------------------------------------

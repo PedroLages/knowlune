@@ -192,6 +192,10 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
   // Tracks the last user-requested seek target time (seconds).
   // Set by handleProgressChange / seek / jumpToPercentage; cleared on seeked.
   const pendingSeekRef = useRef<number | null>(null)
+  // Single-retry flag for seek position mismatches. Set when the first seek
+  // attempt lands far from the target (e.g. server lacks Range support);
+  // cleared after the retry's seeked fires (success or failure).
+  const seekRetryRef = useRef(false)
   // Captures whether the video was playing before a seek started, so seeked
   // can resume playback if it was interrupted.
   const wasPlayingBeforeSeekRef = useRef(false)
@@ -282,6 +286,7 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
     retryPositionRef.current = null
     decodeSkipAttemptRef.current = 0
     pendingSeekRef.current = null
+    seekRetryRef.current = false
     wasPlayingBeforeSeekRef.current = false
     seekToTimeRequestIdRef.current = 0
     // Clear loop state so stale markers don't persist across lessons
@@ -392,7 +397,14 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
   const handleTimeUpdate = () => {
     if (videoRef.current) {
       const time = videoRef.current.currentTime
-      setCurrentTime(time)
+      // During an active seek, skip updating the progress state — timeupdate
+      // may fire with the pre-seek position before the seek completes, which
+      // would overwrite the optimistic value set by handleProgressChange.
+      // onTimeUpdate is still called so position-sync and transcript
+      // highlighting stay current.
+      if (pendingSeekRef.current === null) {
+        setCurrentTime(time)
+      }
       onTimeUpdate?.(time)
       // AB-loop enforcement: seek back to A when video reaches B
       const a = loopStartRef.current
@@ -437,11 +449,26 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
     if (pending !== null) {
       const gap = Math.abs(currentTimeAfter - pending)
       if (gap > 0.5 && pending > 0) {
+        // One retry: the browser may have failed the first seek (e.g.
+        // server does not support Range requests). Try the seek once more
+        // before giving up and logging the mismatch.
+        if (!seekRetryRef.current) {
+          seekRetryRef.current = true
+          videoDiag('seekRetry', { pending, currentTimeAfter, gap })
+          v.currentTime = pending
+          return // Don't clear pendingSeekRef — let the retry's seeked handle it
+        }
+        seekRetryRef.current = false
         console.warn(
-          `[VideoSeek] Seek position mismatch: requested=${pending.toFixed(1)}s actual=${currentTimeAfter.toFixed(1)}s gap=${gap.toFixed(1)}s`
+          `[VideoSeek] Seek position mismatch after retry: requested=${pending.toFixed(1)}s actual=${currentTimeAfter.toFixed(1)}s gap=${gap.toFixed(1)}s`
         )
+      } else {
+        seekRetryRef.current = false
       }
       pendingSeekRef.current = null
+      // Sync progress to the actual post-seek position — corrects any
+      // drift between the optimistic value and where the browser landed.
+      setCurrentTime(currentTimeAfter)
       // Resume playback if it was playing before the seek
       if (wasPlayingBeforeSeekRef.current && v.paused) {
         v.play().catch(() => {
@@ -1193,18 +1220,21 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
   }, [showControls])
 
   // Handle progress bar change (percent 0–100)
-  const handleProgressChange = (percent: number) => {
-    if (!isFinite(duration)) return
-    if (videoRef.current) {
-      const newTime = (percent / 100) * duration
-      pendingSeekRef.current = newTime
-      wasPlayingBeforeSeekRef.current = !videoRef.current.paused
+  const handleProgressChange = useCallback(
+    (percent: number) => {
+      if (!isFinite(duration) || duration <= 0) return
+      if (videoRef.current) {
+        const newTime = (percent / 100) * duration
+        pendingSeekRef.current = newTime
+        wasPlayingBeforeSeekRef.current = !videoRef.current.paused
 
-      videoRef.current.currentTime = newTime
-      setCurrentTime(newTime)
-      videoDiag('progressChange', { percent: percent.toFixed(1), targetTime: newTime.toFixed(1) })
-    }
-  }
+        videoRef.current.currentTime = newTime
+        setCurrentTime(newTime)
+        videoDiag('progressChange', { percent: percent.toFixed(1), targetTime: newTime.toFixed(1) })
+      }
+    },
+    [duration]
+  )
 
   // Handle volume slider change
   const handleVolumeChange = (value: number[]) => {
