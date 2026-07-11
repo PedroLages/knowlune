@@ -301,7 +301,7 @@ export function SyncUXShell({ children }: SyncUXShellProps) {
             Starts aria-hidden="true" per WAI-ARIA guidance to avoid spurious AT
             announcements on empty region insertion; announce() removes the attribute
             when content is set and restores it after the 150ms reset. */}
-        <span className="sr-only" role="alert" ref={assertiveRef} aria-hidden="true" />
+        <span className="sr-only" role="alert" ref={assertiveRef} aria-hidden="true" data-testid="sync-live-region-assertive" />
         {children}
         {/* E92-S08: Non-dismissible dialog on first sign-in with pre-existing local data */}
         {linkDialogUserId && (

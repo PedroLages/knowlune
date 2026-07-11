@@ -22,7 +22,7 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 import type { DisclosureKey } from '@/app/hooks/useProgressiveDisclosure'
-import { readFromTrack } from '@/app/hooks/useCourseRoute'
+import { readFromTrack } from '@/lib/locationState'
 
 export interface NavigationItem {
   name: string

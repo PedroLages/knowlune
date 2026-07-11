@@ -14,6 +14,7 @@
 
 import { useLocation } from 'react-router'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
+import { readFromTrack } from '@/lib/locationState'
 
 export interface CourseRouteInfo {
   /** True only for /courses/:courseId/lessons/:lessonId with nothing after */
@@ -30,21 +31,6 @@ export interface CourseRouteInfo {
    *  Present only when the user entered the course from a learning track in this session.
    *  Lost on hard refresh (intentional — matches all other location.state flags). */
   fromTrack?: { trackId: string; trackName: string }
-}
-
-/** Narrow an unknown location.state to the fromTrack shape, returning undefined on mismatch. */
-export function readFromTrack(state: unknown): { trackId: string; trackName: string } | undefined {
-  if (typeof state !== 'object' || state === null) return undefined
-  const s = state as Record<string, unknown>
-  if (
-    typeof s.fromTrack === 'object' &&
-    s.fromTrack !== null &&
-    typeof (s.fromTrack as Record<string, unknown>).trackId === 'string' &&
-    typeof (s.fromTrack as Record<string, unknown>).trackName === 'string'
-  ) {
-    return s.fromTrack as { trackId: string; trackName: string }
-  }
-  return undefined
 }
 
 export function useCourseRoute(): CourseRouteInfo {

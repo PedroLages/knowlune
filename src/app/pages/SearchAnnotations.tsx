@@ -161,7 +161,8 @@ export function SearchAnnotations() {
       if (!groups.has(bookId)) {
         groups.set(bookId, { book: r.book, results: [] })
       }
-      groups.get(bookId)!.results.push(r)
+      const group = groups.get(bookId)
+      if (group) group.results.push(r)
     }
     return Array.from(groups.entries())
   }, [results])

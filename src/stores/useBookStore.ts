@@ -424,7 +424,7 @@ export const useBookStore = create<BookStoreState>((set, get) => ({
 
     // Format filter
     if (filters.format && filters.format.length > 0) {
-      result = result.filter(b => filters.format!.includes(b.format))
+      result = result.filter(b => filters.format?.includes(b.format) ?? false)
     }
 
     // Author filter

@@ -111,7 +111,7 @@ export function SessionHistory() {
           const contentSummary =
             session.contentSummary ||
             ((session.videosWatched?.length ?? 0) > 0
-              ? session.videosWatched!.map(vid => videoMap.get(vid)?.filename ?? vid).join(', ')
+              ? session.videosWatched?.map(vid => videoMap.get(vid)?.filename ?? vid).join(', ')
               : undefined)
           return { ...session, courseTitle, contentSummary }
         })
@@ -410,7 +410,7 @@ export function SessionHistory() {
                       <div className="space-y-1">
                         <h4 className="text-sm font-medium">Videos Watched</h4>
                         <ul className="space-y-1">
-                          {session.videosWatched!.map(vid => (
+                          {session.videosWatched?.map(vid => (
                             <li key={vid} className="text-sm text-muted-foreground">
                               {vid}
                             </li>
