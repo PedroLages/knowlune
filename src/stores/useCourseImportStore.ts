@@ -59,6 +59,7 @@ interface CourseImportState {
   renameTagGlobally: (oldTag: string, newTag: string) => Promise<'renamed' | 'merged'>
   deleteTagGlobally: (tag: string) => Promise<void>
   loadImportedCourses: () => Promise<void>
+  resetCoursesLoadState: () => void
   loadThumbnailUrls: (courseIds: string[]) => Promise<void>
   setImporting: (isImporting: boolean) => void
   setImportError: (error: string | null) => void
@@ -522,6 +523,7 @@ export const useCourseImportStore = create<CourseImportState>((set, get) => ({
   },
 
   loadImportedCourses: async () => {
+    if (get().isCoursesLoaded) return
     try {
       const courses = await db.importedCourses.toArray()
       set({ importedCourses: courses, isCoursesLoaded: true, importError: null })
@@ -535,9 +537,16 @@ export const useCourseImportStore = create<CourseImportState>((set, get) => ({
           )
         })
     } catch (error) {
-      set({ isCoursesLoaded: true, importError: 'Failed to load courses from database' })
+      // Do NOT set isCoursesLoaded: true — the guard would prevent retry.
+      // Callers (Layout, LearningTracks, sync refresh) reset via
+      // resetCoursesLoadState() before re-triggering.
+      set({ importError: 'Failed to load courses from database' })
       console.error('[Database] Failed to load courses:', error)
     }
+  },
+
+  resetCoursesLoadState: () => {
+    set({ isCoursesLoaded: false, importError: null })
   },
 
   setImporting: (isImporting: boolean) => set({ isImporting }),

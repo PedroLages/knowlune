@@ -33,6 +33,7 @@ import { vectorStorePersistence } from '@/ai/vector-store'
 import { useVocabularyStore } from '@/stores/useVocabularyStore'
 import { useAudioClipStore } from '@/stores/useAudioClipStore'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
+import { useLearningPathStore } from '@/stores/useLearningPathStore'
 import { useAuthorStore } from '@/stores/useAuthorStore'
 import { useBookStore } from '@/stores/useBookStore'
 import { useBookReviewStore } from '@/stores/useBookReviewStore'
@@ -120,17 +121,33 @@ export function useSyncLifecycle(): void {
     // because the course store re-queries all child records on next navigation.
     // -------------------------------------------------------------------------
 
-    syncEngine.registerStoreRefresh('importedCourses', () =>
-      useCourseImportStore.getState().loadImportedCourses()
-    )
+    syncEngine.registerStoreRefresh('importedCourses', () => {
+      useCourseImportStore.getState().resetCoursesLoadState()
+      return useCourseImportStore.getState().loadImportedCourses()
+    })
 
-    syncEngine.registerStoreRefresh('importedVideos', () =>
-      useCourseImportStore.getState().loadImportedCourses()
-    )
+    syncEngine.registerStoreRefresh('importedVideos', () => {
+      useCourseImportStore.getState().resetCoursesLoadState()
+      return useCourseImportStore.getState().loadImportedCourses()
+    })
 
-    syncEngine.registerStoreRefresh('importedPdfs', () =>
-      useCourseImportStore.getState().loadImportedCourses()
-    )
+    syncEngine.registerStoreRefresh('importedPdfs', () => {
+      useCourseImportStore.getState().resetCoursesLoadState()
+      return useCourseImportStore.getState().loadImportedCourses()
+    })
+
+    // learningPaths / learningPathEntries — both tables refresh through loadPaths().
+    // Registered here so sync-downloaded path data appears in the UI without a manual
+    // page refresh. Uses the same reset-before-load pattern as books and shelves.
+    syncEngine.registerStoreRefresh('learningPaths', async () => {
+      useLearningPathStore.getState().resetLoadState()
+      await useLearningPathStore.getState().loadPaths()
+    })
+
+    syncEngine.registerStoreRefresh('learningPathEntries', async () => {
+      useLearningPathStore.getState().resetLoadState()
+      await useLearningPathStore.getState().loadPaths()
+    })
 
     // UX note (authors refresh): sync used to clear `isLoaded` before reload, which swapped
     // author routes into cold-loading skeletons. `loadAuthors({ silent: true })` refreshes Dexie

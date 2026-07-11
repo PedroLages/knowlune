@@ -556,7 +556,7 @@ describe('deleteTagGlobally', () => {
 })
 
 describe('loadImportedCourses error handling', () => {
-  it('should set error on DB failure', async () => {
+  it('should set error on DB failure and leave isCoursesLoaded false (allows retry)', async () => {
     const { db } = await import('@/db')
     vi.spyOn(db.importedCourses, 'toArray').mockRejectedValue(new Error('DB crash'))
 
@@ -564,8 +564,38 @@ describe('loadImportedCourses error handling', () => {
       await useCourseImportStore.getState().loadImportedCourses()
     })
 
-    expect(useCourseImportStore.getState().isCoursesLoaded).toBe(true)
+    // isCoursesLoaded stays false so the Retry button can re-trigger a real Dexie read.
+    // See LearningTracks handleRetry → resetCoursesLoadState → loadImportedCourses.
+    expect(useCourseImportStore.getState().isCoursesLoaded).toBe(false)
     expect(useCourseImportStore.getState().importError).toBe('Failed to load courses from database')
+  })
+
+  it('should honor isCoursesLoaded guard and skip redundant calls', async () => {
+    const { db } = await import('@/db')
+    const spy = vi.spyOn(db.importedCourses, 'toArray').mockResolvedValue([])
+
+    // First call: guard is false → executes the query
+    await act(async () => {
+      await useCourseImportStore.getState().loadImportedCourses()
+    })
+    expect(spy).toHaveBeenCalledTimes(1)
+    expect(useCourseImportStore.getState().isCoursesLoaded).toBe(true)
+
+    // Second call: guard is true → no-op
+    await act(async () => {
+      await useCourseImportStore.getState().loadImportedCourses()
+    })
+    expect(spy).toHaveBeenCalledTimes(1) // still 1 — guard prevented re-query
+
+    // resetCoursesLoadState clears the guard
+    useCourseImportStore.getState().resetCoursesLoadState()
+    expect(useCourseImportStore.getState().isCoursesLoaded).toBe(false)
+
+    // Third call: guard is false again → query executes
+    await act(async () => {
+      await useCourseImportStore.getState().loadImportedCourses()
+    })
+    expect(spy).toHaveBeenCalledTimes(2)
   })
 })
 

@@ -140,9 +140,14 @@ function TrackCardSkeleton() {
 // --- Main Page ---
 
 export function LearningTracks() {
-  const { paths, entries, loadPaths } = useLearningPathStore()
-  const { importedCourses, loadImportedCourses, thumbnailUrls, loadThumbnailUrls } =
-    useCourseImportStore()
+  const { paths, entries, loadPaths, resetLoadState } = useLearningPathStore()
+  const {
+    importedCourses,
+    loadImportedCourses,
+    resetCoursesLoadState,
+    thumbnailUrls,
+    loadThumbnailUrls,
+  } = useCourseImportStore()
   const pathsLoaded = useLearningPathStore(s => s.isLoaded)
   const coursesLoaded = useCourseImportStore(s => s.isCoursesLoaded)
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -201,22 +206,46 @@ export function LearningTracks() {
   // one stalled Promise never blocks the other. Store selectors (pathsLoaded /
   // coursesLoaded) replace the local isLoaded boolean — the page renders in
   // stages: tracks and covers first, progress and resume targets later.
+  //
+  // Guards against the DB not being open yet (Dexie auto-open races with React
+  // mount). If the database isn't open, we poll for up to 2s before proceeding —
+  // avoids burning the 8s timeout on a slow IndexedDB open.
   useEffect(() => {
     let ignore = false
+    const timeoutIds = new Set<ReturnType<typeof setTimeout>>()
 
     async function withTimeout<T>(promise: Promise<T>, label: string, timeoutMs = 8000): Promise<T> {
       return Promise.race([
         promise,
-        new Promise<never>((_, reject) =>
-          setTimeout(
-            () => reject(new Error(`${label} timed out after ${timeoutMs}ms`)),
-            timeoutMs
-          )
-        ),
+        new Promise<never>((_, reject) => {
+          const id = setTimeout(() => {
+            timeoutIds.delete(id)
+            reject(new Error(`${label} timed out after ${timeoutMs}ms`))
+          }, timeoutMs)
+          timeoutIds.add(id)
+        }),
       ])
     }
 
+    /** Poll db.isOpen() up to `maxWaitMs`. Resolves when open or maxWaitMs expires. */
+    async function waitForDbOpen(maxWaitMs = 2000): Promise<void> {
+      if (db.isOpen()) return
+      const deadline = Date.now() + maxWaitMs
+      while (Date.now() < deadline) {
+        await new Promise(r => setTimeout(r, 100))
+        if (db.isOpen()) return
+      }
+    }
+
     async function load() {
+      // Give Dexie a chance to finish auto-open before the 8s race starts.
+      // If the DB is already open this returns immediately; otherwise we poll
+      // for up to 2s so the read timeout fires on the query itself, not on
+      // the implicit db.open().
+      await waitForDbOpen()
+
+      if (ignore) return
+
       console.time('[LearningTracks] loadPaths')
       console.time('[LearningTracks] loadImportedCourses')
 
@@ -258,19 +287,37 @@ export function LearningTracks() {
 
     return () => {
       ignore = true
+      // Clean up pending setTimeout IDs and end console timers so Strict Mode
+      // double-invocation doesn't leave orphaned timers or produce "Timer
+      // already exists" warnings on the second mount.
+      for (const id of timeoutIds) clearTimeout(id)
+      timeoutIds.clear()
+      // console.timeEnd is safe here even if the timer was already ended by
+      // the promise resolve path — browsers silently ignore duplicate end
+      // calls for the same label.
+      try {
+        console.timeEnd('[LearningTracks] loadPaths')
+      } catch { /* timer may not exist */ }
+      try {
+        console.timeEnd('[LearningTracks] loadImportedCourses')
+      } catch { /* timer may not exist */ }
     }
   }, [loadPaths, loadImportedCourses])
 
   // --- Retry handler ---
+  // Resets the isLoaded / isCoursesLoaded guards so loadPaths() and
+  // loadImportedCourses() actually re-read from Dexie instead of no-oping.
   const handleRetry = useCallback(async () => {
     setIsRetrying(true)
     setLoadError(null)
+    resetLoadState()
+    resetCoursesLoadState()
     try {
       await Promise.allSettled([loadPaths(), loadImportedCourses()])
     } finally {
       setIsRetrying(false)
     }
-  }, [loadPaths, loadImportedCourses])
+  }, [loadPaths, loadImportedCourses, resetLoadState, resetCoursesLoadState])
 
   // Load thumbnail URLs when imported courses are available
   useLoadCourseThumbnails(importedCourses, loadThumbnailUrls)

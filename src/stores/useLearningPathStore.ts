@@ -106,6 +106,15 @@ interface LearningPathState {
   getEntriesForPath: (pathId: string) => LearningPathEntry[]
 
   /**
+   * Reset load state so loadPaths() can retry after a transient failure.
+   *
+   * Called by LearningTracks' Retry button before re-triggering the load.
+   * Without this, the `isLoaded` guard in loadPaths() would no-op every retry
+   * because the error path (prior to this fix) set `isLoaded: true`.
+   */
+  resetLoadState: () => void
+
+  /**
    * Replace Dexie + in-memory collections from a validated remote snapshot.
    *
    * E96-S02: called by `hydrateP3P4FromSupabase` after a Supabase pull. Pure
@@ -184,8 +193,15 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
       })
     } catch (error) {
       console.error('[LearningPathStore] Failed to load paths:', error)
-      set({ error: 'Failed to load learning paths from database', isLoaded: true })
+      // Do NOT set isLoaded: true — the guard would prevent retry from ever
+      // re-reading Dexie. The caller (LearningTracks) shows a warning banner
+      // with a Retry button that calls resetLoadState() before re-triggering.
+      set({ error: 'Failed to load learning paths from database' })
     }
+  },
+
+  resetLoadState: () => {
+    set({ isLoaded: false, error: null })
   },
 
   createPath: async (name: string, description?: string) => {
