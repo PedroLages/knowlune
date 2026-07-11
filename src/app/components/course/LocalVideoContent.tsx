@@ -95,7 +95,7 @@ export const LocalVideoContent = forwardRef<VideoPlayerHandle, LocalVideoContent
     const storyboardUrlRef = useRef<string | null>(null)
     // Tracks per-session storyboard generation failures to avoid repeated
     // retries on every mouse move for the same lesson.
-    const storyboardFailedRef = useRef(false)
+    const [storyboardFailed, setStoryboardFailed] = useState(false)
     // True while a storyboard is being generated (used for loading spinner in scrub preview).
     const [storyboardLoading, setStoryboardLoading] = useState(false)
     // Tracks the last known-good playback position from timeupdate events.
@@ -281,13 +281,13 @@ export const LocalVideoContent = forwardRef<VideoPlayerHandle, LocalVideoContent
         } else if (video.serverUrl) {
           // Server-URL video: generate storyboard from remote URL.
           // Concurrency is limited globally (one at a time) via videoStoryboard module.
-          storyboardFailedRef.current = false
+          setStoryboardFailed(false)
           setStoryboardLoading(true)
           generateStoryboardFromUrl(video.serverUrl)
             .then(result => {
               if (ignore || !result) {
                 if (!ignore) {
-                  storyboardFailedRef.current = true
+                  setStoryboardFailed(true)
                   setStoryboardLoading(false)
                 }
                 return
@@ -317,7 +317,7 @@ export const LocalVideoContent = forwardRef<VideoPlayerHandle, LocalVideoContent
             .catch(() => {
               // silent-catch-ok: generation failure is non-fatal — live extraction fallback
               if (!ignore) {
-                storyboardFailedRef.current = true
+                setStoryboardFailed(true)
                 setStoryboardLoading(false)
               }
             })
@@ -361,7 +361,7 @@ export const LocalVideoContent = forwardRef<VideoPlayerHandle, LocalVideoContent
       hasShownResumeDialog.current = false
       serverRetryCountRef.current = 0
       setServerRetryKey(0)
-      storyboardFailedRef.current = false
+      setStoryboardFailed(false)
       setIsLoadingPosition(true)
       setResumeDialogOpen(false)
       setSavedRecord(null)
@@ -943,7 +943,7 @@ export const LocalVideoContent = forwardRef<VideoPlayerHandle, LocalVideoContent
             storyboard={storyboard}
             showRecoveryOverlay={showRecoveryOverlay}
             storyboardLoading={storyboardLoading}
-            storyboardFailed={storyboardFailedRef.current}
+            storyboardFailed={storyboardFailed}
           />
         )}
       </div>

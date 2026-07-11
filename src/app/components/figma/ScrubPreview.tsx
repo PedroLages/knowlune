@@ -38,6 +38,30 @@ export interface ScrubPreviewProps {
 }
 
 /**
+ * Determine whether crossOrigin="anonymous" is needed for an offscreen video
+ * used in canvas extraction.
+ *
+ * - `blob:` URLs — always need crossOrigin; drawImage from blob to canvas
+ *   requires CORS-awareness even though the blob is same-origin.
+ * - Cross-origin HTTP URLs — need crossOrigin so servers that send CORS
+ *   headers still work (existing behavior preserved).
+ * - Same-origin HTTP URLs — omit crossOrigin so canvas extraction works
+ *   without a CORS handshake. This is the primary fix for server-imported
+ *   courses where the video server doesn't send CORS headers.
+ * - Relative URLs / parse failures — treated as same-origin (safe default).
+ */
+function crossOriginForUrl(src: string): 'anonymous' | undefined {
+  if (src.startsWith('blob:')) return 'anonymous'
+  try {
+    const url = new URL(src, window.location.href)
+    if (url.origin !== window.location.origin) return 'anonymous'
+  } catch {
+    // Unparseable URL — safest to omit crossOrigin (likely relative path)
+  }
+  return undefined
+}
+
+/**
  * Floating scrub preview tooltip — YouTube-style thumbnail shown when
  * hovering the progress bar. Uses an offscreen hidden <video> + <canvas>
  * to extract frames without disturbing main playback.
@@ -113,7 +137,7 @@ export function ScrubPreview({
           muted
           preload="auto"
           playsInline
-          crossOrigin="anonymous"
+          crossOrigin={crossOriginForUrl(src)}
           className="fixed left-[-9999px] top-0 w-1 h-1 opacity-0 pointer-events-none"
           aria-hidden="true"
         />

@@ -220,12 +220,28 @@ const REMOTE_MAX_FRAMES = 30
 /** Global concurrency guard: only one URL-based storyboard generates at a time. */
 let isGeneratingFromUrl = false
 
+/** Helper: decide whether crossOrigin is needed for offscreen video extraction. */
+function crossOriginForUrl(src: string): 'anonymous' | null {
+  if (src.startsWith('blob:')) return 'anonymous'
+  try {
+    const u = new URL(src, window.location.href)
+    if (u.origin !== window.location.origin) return 'anonymous'
+  } catch {
+    // Relative or unparseable URL — treat as same-origin
+  }
+  return null
+}
+
 /**
  * Generate a storyboard sprite sheet from a remote video URL.
  *
- * Creates an offscreen `<video>` with `crossOrigin="anonymous"`, seeks
- * sequentially at the computed interval, draws each frame into a grid canvas,
- * and returns the resulting WebP blob.
+ * Creates an offscreen `<video>`, seeks sequentially at the computed interval,
+ * draws each frame into a grid canvas, and returns the resulting WebP blob.
+ *
+ * `crossOrigin` is set conditionally:
+ *   - `blob:` URLs and cross-origin HTTP URLs → `"anonymous"`
+ *   - Same-origin HTTP URLs → omitted (avoids CORS failure for servers
+ *     without CORS headers; canvas extraction still works).
  *
  * Returns `null` on any failure (CORS, network error, abort) — callers
  * should fall back to live extraction or a compact timestamp tooltip.
@@ -250,7 +266,9 @@ export async function generateStoryboardFromUrl(
       const video = document.createElement('video')
       video.preload = 'metadata'
       video.muted = true
-      video.crossOrigin = 'anonymous'
+      // Conditional crossOrigin — same-origin HTTP URLs omit it so canvas
+      // extraction works even when the server doesn't send CORS headers.
+      video.crossOrigin = crossOriginForUrl(url)
       video.src = url
 
       const onAbort = () => {
