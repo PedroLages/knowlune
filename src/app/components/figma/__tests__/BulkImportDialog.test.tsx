@@ -325,6 +325,72 @@ describe('BulkImportDialog — batch import flow (F-003)', () => {
         expect(screen.getByTestId('bulk-confirm-import-btn')).toBeInTheDocument()
       })
     })
+
+    it('keeps the review actions outside one bounded scroll region with a compact track cover', async () => {
+      mockCollectLocalTrackCoverCandidates.mockResolvedValue([
+        {
+          id: 'track-cover-1',
+          filename: 'track-cover.jpg',
+          source: 'local',
+          previewUrl: 'blob:track-cover-1',
+        },
+      ])
+
+      const user = userEvent.setup()
+      render(
+        <BulkImportDialog
+          open={true}
+          onOpenChange={onOpenChange}
+          onSingleImport={vi.fn()}
+          onComplete={onComplete}
+        />
+      )
+
+      await flowToReview(user)
+
+      const dialog = screen.getByTestId('bulk-import-dialog')
+      const header = screen.getByTestId('bulk-import-header')
+      const scrollRegion = screen.getByTestId('bulk-review-scroll-region')
+      const footer = screen.getByTestId('bulk-review-footer')
+      const cover = screen.getByAltText('track-cover.jpg')
+      const firstCourseName = screen.getByText('alpha')
+
+      expect(dialog).toHaveClass('flex', 'max-h-[calc(100dvh-2rem)]', 'overflow-hidden', 'p-0')
+      expect(header).toHaveClass('shrink-0')
+      expect(scrollRegion).toHaveClass('min-h-0', 'flex-1', 'overflow-hidden')
+      expect(scrollRegion.querySelector('[data-slot="scroll-area"]')).toHaveClass('h-full')
+      expect(scrollRegion).toContainElement(screen.getByTestId('bulk-track-header'))
+      expect(scrollRegion).toContainElement(screen.getByTestId('bulk-track-cover-section'))
+      expect(scrollRegion).toContainElement(screen.getByTestId('bulk-review-list'))
+      expect(scrollRegion).not.toContainElement(footer)
+      expect(footer.parentElement).toBe(dialog)
+      expect(footer).toHaveClass('shrink-0', 'border-t', 'bg-background')
+      expect(cover.parentElement).toHaveClass('sm:w-36', 'aspect-video')
+      expect(firstCourseName).toHaveAttribute('title', 'alpha')
+
+      await user.click(firstCourseName)
+      expect(scrollRegion).toContainElement(screen.getByTestId('bulk-name-input-alpha'))
+      expect(footer.parentElement).toBe(dialog)
+
+      const backButton = screen.getByTestId('bulk-review-back-btn')
+      const importButton = screen.getByTestId('bulk-confirm-import-btn')
+      const closeButton = screen.getByRole('button', { name: 'Close' })
+      expect(
+        closeButton.compareDocumentPosition(importButton) & Node.DOCUMENT_POSITION_FOLLOWING
+      ).not.toBe(0)
+      backButton.focus()
+      await user.tab()
+      expect(importButton).toHaveFocus()
+      await user.tab({ shift: true })
+      expect(backButton).toHaveFocus()
+
+      await user.click(backButton)
+      expect(screen.getByTestId('bulk-select-all')).toBeInTheDocument()
+      expect(onOpenChange).not.toHaveBeenCalled()
+
+      await user.click(closeButton)
+      expect(onOpenChange).toHaveBeenCalledWith(false)
+    })
   })
 
   describe('no manifest — per-course persist path', () => {
