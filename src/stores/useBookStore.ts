@@ -606,7 +606,22 @@ export const useBookStore = create<BookStoreState>((set, get) => ({
         if (key) absKeyMap.set(key, b)
       }
 
-      const mergedBooks: Book[] = newBooks.map(book => {
+      // Deduplicate incoming batch by canonical ABS key (defense in depth).
+      // Local books (no absServerId/absItemId) fall through to id-based key.
+      const dedupedBooks = new Map<string, Book>()
+      for (const book of newBooks) {
+        const absKey = getAbsBookKey(book)
+        const dedupKey = absKey ?? book.id
+        if (absKey && dedupedBooks.has(dedupKey)) {
+          console.warn(
+            `[bulkUpsertAbsBooks] Duplicate ABS item in batch: "${book.title}" (${absKey}) — keeping last occurrence.`
+          )
+        }
+        dedupedBooks.set(dedupKey, book)
+      }
+      const uniqueNewBooks = [...dedupedBooks.values()]
+
+      const mergedBooks: Book[] = uniqueNewBooks.map(book => {
         const absKey = getAbsBookKey(book)
         const existing = absKey ? absKeyMap.get(absKey) : undefined
         return existing
@@ -624,9 +639,9 @@ export const useBookStore = create<BookStoreState>((set, get) => ({
       })
 
       // Purge local books whose absItemId no longer exists on the server
-      const incomingServerIds = new Set(newBooks.map(b => b.absServerId))
+      const incomingServerIds = new Set(uniqueNewBooks.map(b => b.absServerId))
       const incomingAbsKeys = new Set(
-        newBooks.map(b => getAbsBookKey(b)).filter((k): k is string => k !== null)
+        uniqueNewBooks.map(b => getAbsBookKey(b)).filter((k): k is string => k !== null)
       )
       const staleBooks = get().books.filter(
         b =>
