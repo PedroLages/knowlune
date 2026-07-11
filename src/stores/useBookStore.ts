@@ -23,6 +23,19 @@ import type { SyncableRecord } from '@/lib/sync/syncableWrite'
 import { useAuthStore, selectIsGuestMode } from '@/stores/useAuthStore'
 
 /**
+ * Returns the canonical ABS compound key for deduplication.
+ * Books without both `absServerId` and `absItemId` return null
+ * (local EPUB/PDF imports — not subject to ABS dedup).
+ */
+export function getAbsBookKey(bookOrServerId: Book | string, itemId?: string): string | null {
+  if (typeof bookOrServerId === 'string') {
+    return itemId ? `${bookOrServerId}:${itemId}` : null
+  }
+  const b = bookOrServerId
+  return b.absServerId && b.absItemId ? `${b.absServerId}:${b.absItemId}` : null
+}
+
+/**
  * Decomposes the Book.source discriminated union into flat serializable fields
  * for Supabase upload. The `source` field itself is stripped from the upload
  * payload by the table registry (E94-S02).
@@ -554,20 +567,20 @@ export const useBookStore = create<BookStoreState>((set, get) => ({
       // Build Map for O(1) lookup instead of linear scan
       const absKeyMap = new Map<string, Book>()
       for (const b of get().books) {
-        if (b.absServerId && b.absItemId) {
-          absKeyMap.set(`${b.absServerId}:${b.absItemId}`, b)
-        }
+        const key = getAbsBookKey(b)
+        if (key) absKeyMap.set(key, b)
       }
-      const existing = absKeyMap.get(`${book.absServerId}:${book.absItemId}`)
-      const merged: Book = existing
+      const absKey = getAbsBookKey(book)
+      const existingBook = absKey ? absKeyMap.get(absKey) : undefined
+      const merged: Book = existingBook
         ? {
             ...book,
-            id: existing.id,
-            status: existing.status,
-            progress: existing.progress,
-            currentPosition: existing.currentPosition,
-            lastOpenedAt: existing.lastOpenedAt,
-            createdAt: existing.createdAt,
+            id: existingBook.id,
+            status: existingBook.status,
+            progress: existingBook.progress,
+            currentPosition: existingBook.currentPosition,
+            lastOpenedAt: existingBook.lastOpenedAt,
+            createdAt: existingBook.createdAt,
             updatedAt: new Date().toISOString(),
           }
         : book
@@ -589,13 +602,13 @@ export const useBookStore = create<BookStoreState>((set, get) => ({
       // Build Map<absServerId:absItemId, Book> for O(1) dedup lookup
       const absKeyMap = new Map<string, Book>()
       for (const b of get().books) {
-        if (b.absServerId && b.absItemId) {
-          absKeyMap.set(`${b.absServerId}:${b.absItemId}`, b)
-        }
+        const key = getAbsBookKey(b)
+        if (key) absKeyMap.set(key, b)
       }
 
       const mergedBooks: Book[] = newBooks.map(book => {
-        const existing = absKeyMap.get(`${book.absServerId}:${book.absItemId}`)
+        const absKey = getAbsBookKey(book)
+        const existing = absKey ? absKeyMap.get(absKey) : undefined
         return existing
           ? {
               ...book,
@@ -612,7 +625,9 @@ export const useBookStore = create<BookStoreState>((set, get) => ({
 
       // Purge local books whose absItemId no longer exists on the server
       const incomingServerIds = new Set(newBooks.map(b => b.absServerId))
-      const incomingAbsKeys = new Set(newBooks.map(b => `${b.absServerId}:${b.absItemId}`))
+      const incomingAbsKeys = new Set(
+        newBooks.map(b => getAbsBookKey(b)).filter((k): k is string => k !== null)
+      )
       const staleBooks = get().books.filter(
         b =>
           b.absServerId &&
