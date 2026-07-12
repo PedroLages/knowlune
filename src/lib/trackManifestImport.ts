@@ -9,6 +9,7 @@ import { syncableWrite } from '@/lib/sync/syncableWrite'
 import type { SyncableRecord } from '@/lib/sync/syncableWrite'
 import type { ImportedAuthor } from '@/data/types'
 import { toast } from 'sonner'
+import { decodeUriComponentRepeated } from '@/lib/textUtils'
 
 /** Timeout (ms) for fetching track-manifest.json from a remote server. */
 const FETCH_TIMEOUT_MS = 10_000
@@ -33,6 +34,27 @@ export interface BatchImportResult {
   courses: CourseImportResult[]
   successCount: number
   failureCount: number
+}
+
+export function matchManifestCourseFolders<T extends { name: string }>(
+  folders: T[],
+  manifest: TrackManifest
+): { folders: T[]; missing: string[] } {
+  const available = new Map(
+    folders.map(folder => [decodeUriComponentRepeated(folder.name), folder] as const)
+  )
+  const matched: T[] = []
+  const missing: string[] = []
+
+  for (const entry of [...manifest.track.courses].sort((a, b) => a.position - b.position)) {
+    const folder = [entry.folder, ...(entry.aliases ?? [])]
+      .map(candidate => available.get(decodeUriComponentRepeated(candidate)))
+      .find((candidate): candidate is T => !!candidate)
+    if (folder) matched.push(folder)
+    else missing.push(entry.folder)
+  }
+
+  return { folders: matched, missing }
 }
 
 /**
@@ -234,14 +256,15 @@ export async function batchImportTrackCourses(
       const scanResult: BulkScanResult = await scanCourseFolderFromHandle(dirHandle)
 
       if (scanResult.status === 'duplicate') {
-        const existingCourse = await db.importedCourses
-          .where('name')
-          .equals(entry.folder)
-          .first()
+        const existingCourse = await db.importedCourses.where('name').equals(entry.folder).first()
         if (existingCourse) {
           results.push({ folder: entry.folder, success: true, courseId: existingCourse.id })
         } else {
-          results.push({ folder: entry.folder, success: false, error: 'Course not found in database' })
+          results.push({
+            folder: entry.folder,
+            success: false,
+            error: 'Course not found in database',
+          })
           toast.warning(`"${entry.folder}" appears to be imported but could not be found`)
         }
         continue
@@ -263,10 +286,18 @@ export async function batchImportTrackCourses(
       if (entry.expected && scanResult.status === 'success') {
         const actual = scanResult.course
         const mismatches: string[] = []
-        if (entry.expected.videos !== undefined && (actual.videos?.length ?? 0) !== entry.expected.videos) {
-          mismatches.push(`videos: expected ${entry.expected.videos}, got ${actual.videos?.length ?? 0}`)
+        if (
+          entry.expected.videos !== undefined &&
+          (actual.videos?.length ?? 0) !== entry.expected.videos
+        ) {
+          mismatches.push(
+            `videos: expected ${entry.expected.videos}, got ${actual.videos?.length ?? 0}`
+          )
         }
-        if (entry.expected.pdfs !== undefined && (actual.pdfs?.length ?? 0) !== entry.expected.pdfs) {
+        if (
+          entry.expected.pdfs !== undefined &&
+          (actual.pdfs?.length ?? 0) !== entry.expected.pdfs
+        ) {
           mismatches.push(`pdfs: expected ${entry.expected.pdfs}, got ${actual.pdfs?.length ?? 0}`)
         }
         if (mismatches.length > 0) {
@@ -280,7 +311,9 @@ export async function batchImportTrackCourses(
           await dirHandle.getFileHandle(entry.courseManifest)
           // File exists — will be used by downstream course processing
         } catch {
-          toast.warning(`"${entry.folder}" specifies courseManifest "${entry.courseManifest}" but file not found`)
+          toast.warning(
+            `"${entry.folder}" specifies courseManifest "${entry.courseManifest}" but file not found`
+          )
         }
       }
 

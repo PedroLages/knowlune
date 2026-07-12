@@ -27,6 +27,7 @@ export interface LearningPathCardAction {
   to: string
   variant: 'brand' | 'outline'
   courseName?: string
+  state?: { fromTrack: { trackId: string; trackName: string } }
 }
 
 export interface LearningPathCardProps {
@@ -179,9 +180,13 @@ export function LearningPathCard({
               {isCompleted ? (
                 <Badge className="bg-success-soft text-success text-xs">Completed</Badge>
               ) : isNotStarted ? (
-                <Badge variant="secondary" className="text-xs">Not Started</Badge>
+                <Badge variant="secondary" className="text-xs">
+                  Not Started
+                </Badge>
               ) : (
-                <Badge className="bg-brand-soft text-brand-soft-foreground text-xs">In Progress</Badge>
+                <Badge className="bg-brand-soft text-brand-soft-foreground text-xs">
+                  In Progress
+                </Badge>
               )}
             </div>
 
@@ -203,9 +208,9 @@ export function LearningPathCard({
                     {totalLessons} {totalLessons === 1 ? 'lesson' : 'lessons'}
                   </span>
                 )}
-                {estimatedRemainingHours !== undefined && estimatedRemainingHours > 0 && completionPct < 100 && (
-                  <span>~{estimatedRemainingHours}h remaining</span>
-                )}
+                {estimatedRemainingHours !== undefined &&
+                  estimatedRemainingHours > 0 &&
+                  completionPct < 100 && <span>~{estimatedRemainingHours}h remaining</span>}
               </div>
             )}
 
@@ -240,7 +245,7 @@ export function LearningPathCard({
             {/* Action button */}
             <div onClick={e => e.stopPropagation()}>
               {action ? (
-                <Link to={action.to} tabIndex={-1}>
+                <Link to={action.to} state={action.state} tabIndex={-1}>
                   <Button
                     variant={action.variant}
                     className="px-6 has-[>svg]:px-6 py-2 rounded-xl text-sm font-bold group-hover:px-7 motion-safe:transition-[padding]"

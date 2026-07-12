@@ -34,12 +34,34 @@ vi.mock('@/lib/trackManifestImport', () => ({
   readTrackManifest: (...args: unknown[]) => mockReadTrackManifest(...args),
   batchImportTrackCourses: (...args: unknown[]) => mockBatchImportTrackCourses(...args),
   fetchTrackManifestFromUrl: (...args: unknown[]) => mockFetchTrackManifestFromUrl(...args),
+  matchManifestCourseFolders: (
+    folders: Array<{ name: string }>,
+    manifest: {
+      track: { courses: Array<{ folder: string; position: number; aliases?: string[] }> }
+    }
+  ) => {
+    const byName = new Map(folders.map(folder => [folder.name, folder]))
+    const matched: Array<{ name: string }> = []
+    const missing: string[] = []
+    for (const entry of [...manifest.track.courses].sort((a, b) => a.position - b.position)) {
+      const folder = [entry.folder, ...(entry.aliases ?? [])]
+        .map(name => byName.get(name))
+        .find(Boolean)
+      if (folder) matched.push(folder)
+      else missing.push(entry.folder)
+    }
+    return { folders: matched, missing }
+  },
 }))
 
 vi.mock('@/lib/courseImport', () => ({
   scanCourseFolderFromHandle: (...args: unknown[]) => mockScanCourseFolderFromHandle(...args),
   scanCourseFromSource: (...args: unknown[]) => mockScanCourseFromSource(...args),
   listServerSubDirectories: (...args: unknown[]) => mockListServerSubDirectories(...args),
+  discoverServerImportRoot: async (...args: unknown[]) => {
+    const result = await mockListServerSubDirectories(...args)
+    return result.ok ? { ok: true, data: { folders: result.data, trackImages: [] } } : result
+  },
   listSubDirectories: (...args: unknown[]) => mockListSubDirectories(...args),
   persistScannedCourse: (...args: unknown[]) => mockPersistScannedCourse(...args),
 }))
@@ -261,7 +283,12 @@ describe('BulkImportDialog — batch import flow (F-003)', () => {
       await user.click(screen.getByTestId('bulk-done-btn'))
 
       await waitFor(() => {
-        expect(onComplete).toHaveBeenCalledWith(['course-alpha', 'course-beta'], 'track-abc')
+        expect(onComplete).toHaveBeenCalledWith(
+          expect.objectContaining({
+            courseIds: ['course-alpha', 'course-beta'],
+            trackId: 'track-abc',
+          })
+        )
       })
     })
 
@@ -365,9 +392,9 @@ describe('BulkImportDialog — batch import flow (F-003)', () => {
       await waitFor(() => {
         // The IDs come from the scanned courses which have id: 'id-alpha' and 'id-beta'
         expect(onComplete).toHaveBeenCalledOnce()
-        const [courseIds] = onComplete.mock.calls[0]
-        expect(courseIds).toContain('id-alpha')
-        expect(courseIds).toContain('id-beta')
+        const [completion] = onComplete.mock.calls[0]
+        expect(completion.courseIds).toContain('id-alpha')
+        expect(completion.courseIds).toContain('id-beta')
       })
     })
 
@@ -1081,9 +1108,9 @@ describe('BulkImportDialog — batch import flow (F-003)', () => {
       await user.click(screen.getByTestId('bulk-done-btn'))
       await waitFor(() => {
         expect(onComplete).toHaveBeenCalledOnce()
-        const [courseIds] = onComplete.mock.calls[0]
-        expect(courseIds).toContain('fresh-alpha')
-        expect(courseIds).toContain('fresh-beta')
+        const [completion] = onComplete.mock.calls[0]
+        expect(completion.courseIds).toContain('fresh-alpha')
+        expect(completion.courseIds).toContain('fresh-beta')
       })
     })
 

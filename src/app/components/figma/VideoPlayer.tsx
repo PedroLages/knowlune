@@ -83,6 +83,8 @@ interface VideoPlayerProps {
    * because the recovery flow un-mounts VideoPlayer while the new blob URL loads.
    */
   showRecoveryOverlay?: boolean
+  /** Visible reason why scrubbing is disabled for this media source. */
+  seekDisabledReason?: string
 }
 
 export interface VideoPlayerHandle {
@@ -139,6 +141,7 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
     autoplay = false,
     storyboard,
     showRecoveryOverlay = false,
+    seekDisabledReason,
   },
   ref
 ) {
@@ -186,6 +189,12 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [showControls, setShowControls] = useState(true)
   const [announcement, setAnnouncement] = useState('')
+
+  const announce = useCallback((message: string) => {
+    clearTimeout(announceTimeoutRef.current)
+    setAnnouncement(message)
+    announceTimeoutRef.current = setTimeout(() => setAnnouncement(''), 3000)
+  }, [])
 
   // Load saved playback speed from localStorage (validated against allowed values)
   const [playbackSpeed, setPlaybackSpeed] = useState(() => {
@@ -294,12 +303,17 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
   // Handle external seek requests from timestamp links
   useEffect(() => {
     if (seekToTime !== undefined && videoRef.current) {
+      if (seekDisabledReason) {
+        announce(seekDisabledReason)
+        onSeekComplete?.()
+        return
+      }
       videoRef.current.currentTime = seekToTime
       setCurrentTime(seekToTime)
       announce(`Jumped to ${formatTime(seekToTime)}`)
       onSeekComplete?.()
     }
-  }, [seekToTime, onSeekComplete])
+  }, [seekToTime, onSeekComplete, seekDisabledReason, announce])
 
   // Restore initial position and report duration
   const handleLoadedMetadata = () => {
@@ -312,7 +326,7 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
         videoRef.current.currentTime = retryPositionRef.current
         retryPositionRef.current = null
         hasRestoredPosition.current = true
-      } else if (initialPosition && !hasRestoredPosition.current) {
+      } else if (initialPosition && !hasRestoredPosition.current && !seekDisabledReason) {
         videoRef.current.currentTime = initialPosition
         hasRestoredPosition.current = true
       }
@@ -362,6 +376,10 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
 
   // Seek forward/backward
   const seek = (seconds: number) => {
+    if (seekDisabledReason) {
+      announce(seekDisabledReason)
+      return
+    }
     if (videoRef.current) {
       const newTime = Math.max(
         0,
@@ -506,6 +524,10 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
 
   // Jump to percentage
   const jumpToPercentage = (percentage: number) => {
+    if (seekDisabledReason) {
+      announce(seekDisabledReason)
+      return
+    }
     if (videoRef.current) {
       const newTime = (percentage / 100) * videoRef.current.duration
       videoRef.current.currentTime = newTime
@@ -513,14 +535,6 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
       announce(`Jumped to ${percentage}%`)
     }
   }
-
-  // ARIA announcement helper — clears after 3s so screen readers
-  // have time to process and the next announcement triggers a fresh change
-  const announce = useCallback((message: string) => {
-    clearTimeout(announceTimeoutRef.current)
-    setAnnouncement(message)
-    announceTimeoutRef.current = setTimeout(() => setAnnouncement(''), 3000)
-  }, [])
 
   // Buffering handlers (200ms debounce to avoid flicker on fast seeks)
   const handleWaiting = () => {
@@ -628,7 +642,12 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
 
   // Seek with overlay animation
   const seekWithOverlay = (seconds: number) => {
+    if (seekDisabledReason) {
+      announce(seekDisabledReason)
+      return
+    }
     seek(seconds)
+    announce(`Skipped ${seconds > 0 ? 'forward' : 'back'} ${Math.abs(seconds)} seconds`)
     const direction = seconds > 0 ? 'right' : 'left'
     clearTimeout(seekOverlayTimeoutRef.current)
     setSeekOverlay({ direction, amount: Math.abs(seconds), id: Date.now() })
@@ -838,13 +857,11 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
         case 'j':
           e.preventDefault()
           seekWithOverlay(-10)
-          announce('Skipped back 10 seconds')
           containerRef.current?.focus({ preventScroll: true })
           break
         case 'l':
           e.preventDefault()
           seekWithOverlay(10)
-          announce('Skipped forward 10 seconds')
           containerRef.current?.focus({ preventScroll: true })
           break
         case 'ArrowLeft':
@@ -1027,6 +1044,10 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
 
   // Handle progress bar change (percent 0–100)
   const handleProgressChange = (percent: number) => {
+    if (seekDisabledReason) {
+      announce(seekDisabledReason)
+      return
+    }
     if (videoRef.current) {
       const newTime = (percent / 100) * duration
       videoRef.current.currentTime = newTime
@@ -1297,6 +1318,8 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
                 loopStart={loopStart}
                 loopEnd={loopEnd}
                 storyboard={storyboard}
+                disabled={!!seekDisabledReason}
+                disabledReason={seekDisabledReason}
               />
               <button
                 className="text-white text-xs font-medium min-w-[45px] text-right hover:text-white/80 transition-colors cursor-pointer"
@@ -1308,6 +1331,11 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
                   : formatTime(duration)}
               </button>
             </div>
+            {seekDisabledReason && (
+              <p className="text-center text-xs text-warning" role="status">
+                {seekDisabledReason}
+              </p>
+            )}
 
             {/* Control Buttons */}
             <div data-testid="player-bottom-controls" className="flex items-center justify-between">

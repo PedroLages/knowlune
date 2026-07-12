@@ -39,6 +39,52 @@ const EMPTY_SUMMARY: PathProgressSummary = {
   courseProgress: new Map(),
 }
 
+function countCompletedLessons(
+  courseId: string,
+  totalLessons: number,
+  contentProgress: Array<{
+    courseId: string
+    itemId: string
+    contentType?: string
+    status: string
+  }>,
+  videoProgress: Array<{
+    courseId: string
+    videoId: string
+    completedAt?: string
+    completionPercentage?: number
+  }>,
+  localCompletedIds: string[]
+): number {
+  const canonical = new Map(
+    contentProgress
+      .filter(
+        record =>
+          record.courseId === courseId &&
+          (record.contentType === 'lesson' || record.contentType === undefined)
+      )
+      .map(record => [record.itemId, record.status])
+  )
+  const completed = new Set(
+    [...canonical].filter(([, status]) => status === 'completed').map(([itemId]) => itemId)
+  )
+
+  for (const progress of videoProgress) {
+    if (
+      progress.courseId === courseId &&
+      !canonical.has(progress.videoId) &&
+      (progress.completedAt || (progress.completionPercentage ?? 0) >= 90)
+    ) {
+      completed.add(progress.videoId)
+    }
+  }
+  for (const lessonId of localCompletedIds) {
+    if (!canonical.has(lessonId)) completed.add(lessonId)
+  }
+
+  return Math.min(completed.size, totalLessons)
+}
+
 /**
  * Compute progress for all courses in a learning path.
  *
@@ -83,6 +129,7 @@ export function usePathProgress(entries: LearningPathEntry[]): PathProgressSumma
     // --- Imported courses: use progress table + localStorage fallback ---
     let importedMap = new Map<string, any>()
     let videoProgress: any[] = []
+    let contentProgress: any[] = []
     let localProgress: Record<string, any> = {}
 
     if (importedEntries.length > 0) {
@@ -106,6 +153,15 @@ export function usePathProgress(entries: LearningPathEntry[]): PathProgressSumma
         .toArray()
         .catch(() => [])
 
+      contentProgress = await db.contentProgress
+        .where('courseId')
+        .anyOf(importedCourseIds)
+        .toArray()
+        .catch(error => {
+          console.error('[usePathProgress] Failed to load canonical progress:', error)
+          return []
+        })
+
       // Also check localStorage progress (pre-seeded/legacy)
       localProgress = getAllProgress()
 
@@ -113,19 +169,13 @@ export function usePathProgress(entries: LearningPathEntry[]): PathProgressSumma
         const importedCourse = importedMap.get(entry.courseId)
         const totalLessons = importedCourse?.videoCount ?? 0
 
-        // Count completed videos from Dexie progress table
-        const completedFromDexie = videoProgress.filter(
-          vp => vp.courseId === entry.courseId && vp.completedAt
-        ).length
-
-        // Count completed from localStorage
         const localCourseProgress = localProgress[entry.courseId]
-        const completedFromLocal = localCourseProgress?.completedLessons?.length ?? 0
-
-        // Take the higher of the two sources (they may overlap)
-        const completedLessons = Math.min(
-          Math.max(completedFromDexie, completedFromLocal),
-          totalLessons
+        const completedLessons = countCompletedLessons(
+          entry.courseId,
+          totalLessons,
+          contentProgress,
+          videoProgress,
+          localCourseProgress?.completedLessons ?? []
         )
 
         const pct = totalLessons > 0 ? Math.round((completedLessons / totalLessons) * 100) : 0
@@ -210,7 +260,7 @@ export function useMultiPathProgress(
     const importedCourseIds = [...new Set(importedEntries.map(e => e.courseId))]
 
     // Catalog courses table dropped (E89-S01) — skip catalog DB queries
-    const [importedCourses, videoProgress] = await Promise.all([
+    const [importedCourses, contentProgress, videoProgress] = await Promise.all([
       importedCourseIds.length > 0
         ? // eslint-disable-next-line error-handling/no-silent-catch -- non-critical persistence error
           db.importedCourses
@@ -218,6 +268,16 @@ export function useMultiPathProgress(
             .anyOf(importedCourseIds)
             .toArray()
             .catch(() => [])
+        : Promise.resolve([]),
+      importedCourseIds.length > 0
+        ? db.contentProgress
+            .where('courseId')
+            .anyOf(importedCourseIds)
+            .toArray()
+            .catch(error => {
+              console.error('[useMultiPathProgress] Failed to load canonical progress:', error)
+              return []
+            })
         : Promise.resolve([]),
       importedCourseIds.length > 0
         ? // eslint-disable-next-line error-handling/no-silent-catch -- non-critical persistence error
@@ -249,14 +309,13 @@ export function useMultiPathProgress(
     for (const courseId of importedCourseIds) {
       const ic = importedCourseMap.get(courseId)
       const totalLessons = ic?.videoCount ?? 0
-      const completedFromDexie = videoProgress.filter(
-        vp => vp.courseId === courseId && vp.completedAt
-      ).length
       const localCp = localProgress[courseId]
-      const completedFromLocal = localCp?.completedLessons?.length ?? 0
-      const completedLessons = Math.min(
-        Math.max(completedFromDexie, completedFromLocal),
-        totalLessons
+      const completedLessons = countCompletedLessons(
+        courseId,
+        totalLessons,
+        contentProgress,
+        videoProgress,
+        localCp?.completedLessons ?? []
       )
       const pct = totalLessons > 0 ? Math.round((completedLessons / totalLessons) * 100) : 0
 

@@ -46,7 +46,7 @@ import {
 import {
   scanCourseFromSource,
   listSubDirectories,
-  listServerSubDirectories,
+  discoverServerImportRoot,
   persistScannedCourse,
 } from '@/lib/courseImport'
 import type { ScannedCourse, BulkScanResult } from '@/lib/courseImport'
@@ -55,6 +55,7 @@ import {
   readTrackManifest,
   fetchTrackManifestFromUrl,
   batchImportTrackCourses,
+  matchManifestCourseFolders,
 } from '@/lib/trackManifestImport'
 import type { TrackManifest } from '@/lib/courseManifest'
 import { showDirectoryPicker } from '@/lib/fileSystem'
@@ -105,6 +106,14 @@ type DialogStep =
   | 'results'
 
 const MAX_CONCURRENCY = 5
+const MAX_PERSIST_CONCURRENCY = 1
+
+export interface BulkImportCompletion {
+  courseIds: string[]
+  trackId?: string
+  manifest?: { name: string; description?: string }
+  selectedCoverUrl?: string
+}
 
 /**
  * Shared helper: updates an ImportItem in a results array by folderName and pushes the new
@@ -175,8 +184,8 @@ interface BulkImportDialogProps {
   onOpenChange: (open: boolean) => void
   onSingleImport: () => void // Delegate to existing ImportWizardDialog
   onYouTubeImport?: () => void // Delegate to YouTubeImportDialog (E28-S05)
-  /** Called when batch import completes, with IDs of successfully imported courses and optional trackId */
-  onComplete?: (courseIds: string[], trackId?: string) => void
+  onComplete?: (completion: BulkImportCompletion) => void
+  trackCreationMode?: 'automatic' | 'deferred'
 }
 
 export function BulkImportDialog({
@@ -185,6 +194,7 @@ export function BulkImportDialog({
   onSingleImport,
   onYouTubeImport,
   onComplete: onCompleteProp,
+  trackCreationMode = 'automatic',
 }: BulkImportDialogProps) {
   const [step, setStep] = useState<DialogStep>('choose')
   const [folders, setFolders] = useState<FolderEntry[]>([])
@@ -203,12 +213,15 @@ export function BulkImportDialog({
   const [serverUrlInput, setServerUrlInput] = useState('')
   const [serverUrlError, setServerUrlError] = useState<string | null>(null)
   const [isScanningUrl, setIsScanningUrl] = useState(false)
+  const [trackImages, setTrackImages] = useState<{ name: string; url: string }[]>([])
+  const [selectedTrackCoverUrl, setSelectedTrackCoverUrl] = useState<string | undefined>()
+  const [missingManifestFolders, setMissingManifestFolders] = useState<string[]>([])
 
   const abortRef = useRef(false)
   const stepRef = useRef<DialogStep>('choose')
   const completedSuccessfullyRef = useRef(false)
   const parentHandleRef = useRef<FileSystemDirectoryHandle | null>(null)
-  const batchResultRef = useRef<{ trackId?: string; courseIds: string[] } | null>(null)
+  const batchResultRef = useRef<BulkImportCompletion | null>(null)
   const generationRef = useRef(0)
   const batchAbortRef = useRef<AbortController | null>(null)
   const isScanningUrlRef = useRef(false)
@@ -268,6 +281,9 @@ export function BulkImportDialog({
     setServerUrlInput('')
     setServerUrlError(null)
     setIsScanningUrl(false)
+    setTrackImages([])
+    setSelectedTrackCoverUrl(undefined)
+    setMissingManifestFolders([])
     // Note: abortRef is NOT reset here — it's managed by the calling context
     // (handleOpenChange sets it to true before calling resetDialog, and each
     // async handler resets it to false at its own start.)
@@ -286,19 +302,18 @@ export function BulkImportDialog({
         // (avoiding false positives if the dialog is closed externally)
         if (completedSuccessfullyRef.current) {
           const batchResult = batchResultRef.current
-          let ids: string[]
-          let trackId: string | undefined
+          let completion: BulkImportCompletion
           if (batchResult) {
-            ids = batchResult.courseIds
-            trackId = batchResult.trackId
+            completion = batchResult
           } else {
-            ids = importItems
+            const ids = importItems
               .filter(i => i.status === 'success' || i.status === 'truncated')
               .map(i => i.scannedCourse?.id)
               .filter((id): id is string => !!id)
+            completion = { courseIds: ids }
           }
-          if (ids.length > 0) {
-            onComplete(ids, trackId)
+          if (completion.courseIds.length > 0) {
+            onComplete(completion)
           }
         }
         abortRef.current = true // Signal cancellation to in-flight async ops before resetting state
@@ -342,7 +357,7 @@ export function BulkImportDialog({
     setIsScanningUrl(true)
 
     try {
-      const result = await listServerSubDirectories(url)
+      const result = await discoverServerImportRoot(url)
       if (abortRef.current || stepRef.current !== 'enter-url') return
 
       if (!result.ok) {
@@ -350,7 +365,7 @@ export function BulkImportDialog({
         return
       }
 
-      if (result.data.length === 0) {
+      if (result.data.folders.length === 0) {
         setServerUrlError(
           'No course folders found at this URL. Check that the server exposes subdirectories via nginx autoindex.'
         )
@@ -362,25 +377,29 @@ export function BulkImportDialog({
       if (abortRef.current || stepRef.current !== 'enter-url') return
 
       if (manifestResult.ok) {
-        const positionByFolder = new Map(
-          manifestResult.manifest.track.courses.map(c => [c.folder, c.position])
-        )
-        result.data.sort((a, b) => {
-          const posA = positionByFolder.get(a.name) ?? Infinity
-          const posB = positionByFolder.get(b.name) ?? Infinity
-          return posA - posB
-        })
+        const matched = matchManifestCourseFolders(result.data.folders, manifestResult.manifest)
+        result.data.folders = matched.folders
+        setMissingManifestFolders(matched.missing)
+        if (matched.missing.length > 0) {
+          toast.warning(
+            `${matched.missing.length} manifest course folder${matched.missing.length === 1 ? '' : 's'} could not be found.`
+          )
+        }
         setTrackManifest({
           manifest: manifestResult.manifest,
           trackName: manifestResult.summary.trackName,
         })
       } else {
         setTrackManifest(null)
+        setMissingManifestFolders([])
       }
+
+      setTrackImages(result.data.trackImages)
+      setSelectedTrackCoverUrl(result.data.trackImages[0]?.url)
 
       // Populate folders from server-discovered subdirectories
       setFolders(
-        result.data.map(d => ({
+        result.data.folders.map(d => ({
           handle: null,
           name: d.name,
           selected: true,
@@ -687,7 +706,7 @@ export function BulkImportDialog({
     const manifest = trackManifest?.manifest
     const parentHandle = parentHandleRef.current
 
-    if (manifest && parentHandle) {
+    if (manifest && parentHandle && trackCreationMode === 'automatic') {
       // Batch mode: delegate to batchImportTrackCourses (handles scan, persist, track creation)
       try {
         batchAbortRef.current = new AbortController()
@@ -713,6 +732,10 @@ export function BulkImportDialog({
           batchResultRef.current = {
             trackId: result.trackId,
             courseIds: result.courses.filter(r => r.success && r.courseId).map(r => r.courseId!),
+            manifest: {
+              name: manifest.track.name,
+              description: manifest.track.description,
+            },
           }
         }
 
@@ -775,7 +798,8 @@ export function BulkImportDialog({
             : {}),
         }
 
-        await persistScannedCourse(item.scannedCourse, overrides)
+        const persistedCourse = await persistScannedCourse(item.scannedCourse, overrides)
+        if (persistedCourse?.id) item.scannedCourse.id = persistedCourse.id
         updateItemInList(
           results,
           item.folderName,
@@ -783,20 +807,21 @@ export function BulkImportDialog({
           setImportItems
         )
         progressStore.completeCourse(item.folderName)
-      } catch {
+      } catch (error) {
         // silent-catch-ok: persistScannedCourse already shows error toasts
+        const message = error instanceof Error ? error.message : 'Failed to import'
         updateItemInList(
           results,
           item.folderName,
-          { status: 'error', error: 'Failed to import' },
+          { status: 'error', error: message },
           setImportItems
         )
-        progressStore.failCourse(item.folderName, 'Failed to import')
+        progressStore.failCourse(item.folderName, message)
       }
     }
 
-    // Concurrent persist
-    await runWithConcurrency(items, persistCourse, MAX_CONCURRENCY, {
+    // Sequential persistence keeps each atomic IndexedDB/sync batch isolated.
+    await runWithConcurrency(items, persistCourse, MAX_PERSIST_CONCURRENCY, {
       get current() {
         return abortRef.current || useImportProgressStore.getState().cancelRequested
       },
@@ -821,12 +846,18 @@ export function BulkImportDialog({
 
     // Server-aware batch import path: when manifest exists but parentHandle is null
     // (server URL import), create or update the track with successfully imported courses.
-    if (trackManifest && !parentHandle && !abortRef.current && gen === generationRef.current) {
+    if (
+      trackManifest &&
+      !parentHandle &&
+      trackCreationMode === 'automatic' &&
+      !abortRef.current &&
+      gen === generationRef.current
+    ) {
       const manifestPositions = new Map(
         trackManifest.manifest.track.courses.map(c => [c.folder, c.position])
       )
       const successResults = results
-        .filter(r => r.status === 'success')
+        .filter(r => r.status === 'success' || r.status === 'truncated')
         .sort((a, b) => {
           const posA = manifestPositions.get(a.folderName) ?? Infinity
           const posB = manifestPositions.get(b.folderName) ?? Infinity
@@ -850,8 +881,16 @@ export function BulkImportDialog({
           if (existingPath) {
             trackId = existingPath.id
             await lpStore.batchAddCoursesToPath(trackId, coursesToAdd)
+            if (selectedTrackCoverUrl) {
+              await lpStore.updatePathCover(trackId, { coverImageUrl: selectedTrackCoverUrl })
+            }
           } else {
-            const newPath = await lpStore.createPathWithCourses(trackName, trackDesc, coursesToAdd)
+            const newPath = await lpStore.createPathWithCourses(
+              trackName,
+              trackDesc,
+              coursesToAdd,
+              selectedTrackCoverUrl ? { coverImageUrl: selectedTrackCoverUrl } : undefined
+            )
             trackId = newPath.id
           }
 
@@ -890,6 +929,8 @@ export function BulkImportDialog({
               courseIds: successResults
                 .filter(r => r.scannedCourse?.id)
                 .map(r => r.scannedCourse!.id),
+              manifest: { name: trackName, description: trackDesc },
+              selectedCoverUrl: selectedTrackCoverUrl,
             }
           }
         } catch (err) {
@@ -899,7 +940,41 @@ export function BulkImportDialog({
       }
     }
 
-    const successCount = results.filter(r => r.status === 'success').length
+    if (
+      trackManifest &&
+      trackCreationMode === 'deferred' &&
+      !abortRef.current &&
+      gen === generationRef.current
+    ) {
+      const orderedIds = trackManifest.manifest.track.courses
+        .slice()
+        .sort((a, b) => a.position - b.position)
+        .map(entry =>
+          results.find(
+            result =>
+              result.folderName === entry.folder || entry.aliases?.includes(result.folderName)
+          )
+        )
+        .filter(
+          (result): result is ImportItem =>
+            !!result &&
+            (result.status === 'success' || result.status === 'truncated') &&
+            !!result.scannedCourse?.id
+        )
+        .map(result => result.scannedCourse!.id)
+      batchResultRef.current = {
+        courseIds: orderedIds,
+        manifest: {
+          name: trackManifest.manifest.track.name,
+          description: trackManifest.manifest.track.description,
+        },
+        selectedCoverUrl: selectedTrackCoverUrl,
+      }
+    }
+
+    const successCount = results.filter(
+      r => r.status === 'success' || r.status === 'truncated'
+    ).length
     const noFilesCount = results.filter(r => r.status === 'no-files').length
     const errorCount = results.filter(r => r.status === 'error').length
     const duplicateCount = results.filter(r => r.status === 'duplicate').length
@@ -920,7 +995,15 @@ export function BulkImportDialog({
     if (gen === generationRef.current) {
       setStep('results')
     }
-  }, [importItems, folders, courseOverrides, parentAuthorId, trackManifest])
+  }, [
+    importItems,
+    folders,
+    courseOverrides,
+    parentAuthorId,
+    trackManifest,
+    trackCreationMode,
+    selectedTrackCoverUrl,
+  ])
 
   // Retry a single failed item
   const handleRetry = useCallback(
@@ -1035,7 +1118,8 @@ export function BulkImportDialog({
               ? { coverImageHandle: courseOverride.coverImageHandle }
               : {}),
           }
-          await persistScannedCourse(scanResult.course, overrides)
+          const persistedCourse = await persistScannedCourse(scanResult.course, overrides)
+          if (persistedCourse?.id) scanResult.course.id = persistedCourse.id
           if (gen !== generationRef.current) {
             return
           }
@@ -1050,8 +1134,9 @@ export function BulkImportDialog({
             )
           }
           toast.success(`Imported: ${folderName}`)
-        } catch {
+        } catch (error) {
           // silent-catch-ok: persistScannedCourse already shows error toasts, we just update item status
+          const message = error instanceof Error ? error.message : 'Failed to import'
           if (gen === generationRef.current) {
             setImportItems(prev =>
               prev.map(i =>
@@ -1059,7 +1144,7 @@ export function BulkImportDialog({
                   ? {
                       ...i,
                       status: 'error',
-                      error: 'Failed to import',
+                      error: message,
                     }
                   : i
               )
@@ -1527,8 +1612,68 @@ export function BulkImportDialog({
                   {trackManifest.trackName}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  All courses will be grouped under this track after import.
+                  {trackCreationMode === 'deferred'
+                    ? 'Track details will be returned to the composer for confirmation.'
+                    : 'All courses will be grouped under this track after import.'}
                 </p>
+                {missingManifestFolders.length > 0 && (
+                  <p className="mt-2 text-xs text-warning" role="status">
+                    Missing: {missingManifestFolders.join(', ')}
+                  </p>
+                )}
+                {trackImages.length > 0 && (
+                  <div className="mt-3 space-y-2">
+                    <Label className="text-xs flex items-center gap-1.5">
+                      <ImageIcon className="size-3" aria-hidden="true" />
+                      Track cover
+                    </Label>
+                    <div
+                      className="flex flex-wrap gap-2"
+                      role="radiogroup"
+                      aria-label="Track cover"
+                    >
+                      {trackImages.map(candidate => {
+                        const isSelected = selectedTrackCoverUrl === candidate.url
+                        return (
+                          <button
+                            key={candidate.url}
+                            type="button"
+                            role="radio"
+                            aria-checked={isSelected}
+                            aria-label={`Use ${candidate.name} as track cover`}
+                            onClick={() => setSelectedTrackCoverUrl(candidate.url)}
+                            className={`relative h-16 w-24 overflow-hidden rounded-lg border-2 ${
+                              isSelected ? 'border-brand ring-1 ring-brand/30' : 'border-border'
+                            }`}
+                          >
+                            <img
+                              src={candidate.url}
+                              alt=""
+                              className="size-full object-cover"
+                              onError={event => {
+                                event.currentTarget.style.display = 'none'
+                              }}
+                            />
+                            {isSelected && (
+                              <CheckCircle2 className="absolute right-1 top-1 size-4 text-brand" />
+                            )}
+                          </button>
+                        )
+                      })}
+                      <button
+                        type="button"
+                        role="radio"
+                        aria-checked={!selectedTrackCoverUrl}
+                        onClick={() => setSelectedTrackCoverUrl(undefined)}
+                        className={`h-16 w-24 rounded-lg border-2 text-xs text-muted-foreground ${
+                          !selectedTrackCoverUrl ? 'border-brand' : 'border-border'
+                        }`}
+                      >
+                        No cover
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
             <ScrollArea className="max-h-[50vh] min-w-0 w-full">

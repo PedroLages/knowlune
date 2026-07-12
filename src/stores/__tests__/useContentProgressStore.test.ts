@@ -175,6 +175,32 @@ describe('setItemStatus', () => {
 })
 
 describe('loadCourseProgress', () => {
+  it('loads several courses in one merge without dropping either course', async () => {
+    await db.contentProgress.bulkPut([
+      {
+        courseId: 'c1',
+        itemId: 'les-1',
+        contentType: 'lesson',
+        status: 'completed',
+        updatedAt: '2026-01-15T12:00:00.000Z',
+      },
+      {
+        courseId: 'c2',
+        itemId: 'les-2',
+        contentType: 'lesson',
+        status: 'in-progress',
+        updatedAt: '2026-01-15T12:00:00.000Z',
+      },
+    ])
+
+    await act(async () => {
+      await useContentProgressStore.getState().loadCoursesProgress(['c1', 'c2'])
+    })
+
+    expect(useContentProgressStore.getState().getItemStatus('c1', 'les-1')).toBe('completed')
+    expect(useContentProgressStore.getState().getItemStatus('c2', 'les-2')).toBe('in-progress')
+  })
+
   it('should load records from IndexedDB into statusMap', async () => {
     // Seed data directly
     await db.contentProgress.put({

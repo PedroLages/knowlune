@@ -37,9 +37,11 @@ import type {
   ImportedCourse,
   ImportedVideo,
   ImportedPdf,
+  VideoCaptionRecord,
   Difficulty,
 } from '@/data/types'
 import { toast } from 'sonner'
+import { decodeUriComponentRepeated } from '@/lib/textUtils'
 
 // --- Error Types ---
 
@@ -165,6 +167,10 @@ export interface ScannedCaption {
   language?: string
   /** Raw SRT/VTT text content. */
   srtContent: string
+  /** Original caption filename. */
+  filename: string
+  /** Parsed caption format. */
+  format: 'srt' | 'vtt'
   /** Full HTTP URL to the caption file on the server. */
   serverUrl: string
   /** Matched video ID in the scan set (populated after matching). */
@@ -596,10 +602,20 @@ export async function persistScannedCourse(
 ): Promise<ImportedCourse> {
   const now = new Date().toISOString()
 
+  // A serverPath is the stable identity for server imports. Resolve it before
+  // building any child records so a re-import repairs the existing course
+  // instead of attaching new videos/captions to a throwaway scan UUID.
+  let existingCourse: ImportedCourse | undefined
+  if (scanned.serverPath) {
+    const allCourses = await db.importedCourses.toArray()
+    existingCourse = allCourses.find(c => c.serverPath === scanned.serverPath)
+  }
+  const targetCourseId = existingCourse?.id ?? scanned.id
+
   // Build ImportedVideo records (add courseId + metadata fields from E1B-S02)
   const videos: ImportedVideo[] = scanned.videos.map(v => ({
     id: v.id,
-    courseId: scanned.id,
+    courseId: targetCourseId,
     filename: v.filename,
     path: v.path,
     duration: v.duration,
@@ -621,17 +637,16 @@ export async function persistScannedCourse(
       : videos
 
   // Build ImportedPdf records
-  const pdfs: ImportedPdf[] = scanned.pdfs
-    .map(p => ({
-      id: p.id,
-      courseId: scanned.id,
-      filename: p.filename,
-      path: p.path,
-      pageCount: p.pageCount,
-      fileHandle: p.fileHandle ?? null,
-      ...(p.serverUrl ? { serverUrl: p.serverUrl } : {}),
-      ...(p.moduleTitle ? { moduleTitle: p.moduleTitle } : {}),
-    }))
+  const pdfs: ImportedPdf[] = scanned.pdfs.map(p => ({
+    id: p.id,
+    courseId: targetCourseId,
+    filename: p.filename,
+    path: p.path,
+    pageCount: p.pageCount,
+    fileHandle: p.fileHandle ?? null,
+    ...(p.serverUrl ? { serverUrl: p.serverUrl } : {}),
+    ...(p.moduleTitle ? { moduleTitle: p.moduleTitle } : {}),
+  }))
 
   // Author detection: use explicit override (authorId or authorName from manifest),
   // fall back to manifest author name, or auto-detect from folder name (AC1-AC3, AC5)
@@ -675,7 +690,7 @@ export async function persistScannedCourse(
   const maxResolutionHeight = orderedVideos.reduce((max, v) => Math.max(max, v.height || 0), 0)
 
   const course: ImportedCourse = {
-    id: scanned.id,
+    id: targetCourseId,
     name: overrides?.name ?? scanned.name,
     ...(overrides?.description ? { description: overrides.description } : {}),
     importedAt: now,
@@ -701,117 +716,102 @@ export async function persistScannedCourse(
   // sequential writes below. Without this, the wizard shows only "Importing…"
   // and the user has no indication that work is happening — for courses with
   // many files the silence can be long enough to feel stuck.
-  const totalPersistItems = 1 + orderedVideos.length + pdfs.length
+  const totalPersistItems =
+    1 +
+    orderedVideos.length +
+    pdfs.length +
+    (scanned.captions?.filter(c => c.srtContent).length ?? 0)
   let persistCompleted = 0
   const persistProgress = useImportProgressStore.getState()
   persistProgress.startImport(scanned.id, course.name)
   persistProgress.updateProcessingProgress(scanned.id, 0, totalPersistItems)
 
   try {
-    // Unit 8: Re-import safety — upsert instead of insert to prevent duplicates.
-    // Uses Dexie's put() through a helper that checks for existing records by
-    // matching (courseId, serverUrl) for server imports or (courseId, path) for local.
-
-    // Check if this course was already imported (same serverPath).
-    // Uses filter() instead of .where() because serverPath may not be indexed yet.
-    let existingCourse: ImportedCourse | undefined
-    if (scanned.serverPath) {
-      const allCourses = await db.importedCourses.toArray()
-      existingCourse = allCourses.find(c => c.serverPath === scanned.serverPath)
-    }
-
     const isReimport = !!existingCourse
-    if (isReimport && existingCourse) {
-      // Re-import: update existing course record, preserve original id
-      const updatedCourse = { ...course as ImportedCourse, id: existingCourse.id }
-      await syncableWrite('importedCourses', 'put', updatedCourse as unknown as SyncableRecord)
+    const existingVideos = isReimport
+      ? await db.importedVideos.where('courseId').equals(targetCourseId).toArray()
+      : []
+    const existingPdfs = isReimport
+      ? await db.importedPdfs.where('courseId').equals(targetCourseId).toArray()
+      : []
+    const existingVidByServerUrl = new Map(
+      existingVideos.filter(v => v.serverUrl).map(v => [v.serverUrl!, v])
+    )
+    const existingPdfByServerUrl = new Map(
+      existingPdfs.filter(p => p.serverUrl).map(p => [p.serverUrl!, p])
+    )
+    const persistedVideoIdByScannedId = new Map<string, string>()
+    const keptVideoIds = new Set<string>()
+    const keptPdfIds = new Set<string>()
 
-      // Collect existing video/PDF IDs for this course to enable upsert
-      const existingVideos = await db.importedVideos.where('courseId').equals(existingCourse.id).toArray()
-      const existingPdfs = await db.importedPdfs.where('courseId').equals(existingCourse.id).toArray()
-      const existingVidByServerUrl = new Map(existingVideos.filter(v => v.serverUrl).map(v => [v.serverUrl!, v]))
-      const existingPdfByServerUrl = new Map(existingPdfs.filter(p => p.serverUrl).map(p => [p.serverUrl!, p]))
-      const keptVideoIds = new Set<string>()
-      const keptPdfIds = new Set<string>()
+    await db.transaction(
+      'rw',
+      [db.importedCourses, db.importedVideos, db.importedPdfs, db.videoCaptions, db.syncQueue],
+      async () => {
+        await syncableWrite(
+          'importedCourses',
+          isReimport ? 'put' : 'add',
+          course as unknown as SyncableRecord
+        )
+        persistCompleted++
+        persistProgress.updateProcessingProgress(scanned.id, persistCompleted, totalPersistItems)
 
-      for (const video of orderedVideos) {
-        const existing = video.serverUrl ? existingVidByServerUrl.get(video.serverUrl) : undefined
-        const record = existing ? { ...video, id: existing.id } : video
-        if (existing) {
-          await syncableWrite('importedVideos', 'put', record as unknown as SyncableRecord)
-          keptVideoIds.add(existing.id)
-        } else {
-          await syncableWrite('importedVideos', 'add', record as unknown as SyncableRecord)
+        for (const video of orderedVideos) {
+          const existing = video.serverUrl ? existingVidByServerUrl.get(video.serverUrl) : undefined
+          const record = existing ? { ...video, id: existing.id } : video
+          await syncableWrite(
+            'importedVideos',
+            existing ? 'put' : 'add',
+            record as unknown as SyncableRecord
+          )
+          persistedVideoIdByScannedId.set(video.id, record.id)
           keptVideoIds.add(record.id)
-        }
-        persistCompleted++
-        persistProgress.updateProcessingProgress(scanned.id, persistCompleted, totalPersistItems)
-      }
-
-      for (const pdf of pdfs) {
-        const existing = pdf.serverUrl ? existingPdfByServerUrl.get(pdf.serverUrl) : undefined
-        const record = existing ? { ...pdf, id: existing.id } : pdf
-        if (existing) {
-          await syncableWrite('importedPdfs', 'put', record as unknown as SyncableRecord)
-          keptPdfIds.add(existing.id)
-        } else {
-          await syncableWrite('importedPdfs', 'add', record as unknown as SyncableRecord)
-          keptPdfIds.add(record.id)
-        }
-        persistCompleted++
-        persistProgress.updateProcessingProgress(scanned.id, persistCompleted, totalPersistItems)
-      }
-
-      // Prune orphaned records (files removed from server since last import)
-      for (const v of existingVideos) {
-        if (!keptVideoIds.has(v.id)) {
-          await db.importedVideos.delete(v.id)
-          await db.videoCaptions.where('videoId').equals(v.id).delete()
-        }
-      }
-      for (const p of existingPdfs) {
-        if (!keptPdfIds.has(p.id)) {
-          await db.importedPdfs.delete(p.id)
-        }
-      }
-
-      // Use the existing course ID for all downstream operations
-      course.id = existingCourse.id
-    } else {
-      // First import: standard add flow
-      await syncableWrite('importedCourses', 'add', course as unknown as SyncableRecord)
-      persistCompleted++
-      persistProgress.updateProcessingProgress(scanned.id, persistCompleted, totalPersistItems)
-
-      for (const video of orderedVideos) {
-        await syncableWrite('importedVideos', 'add', video as unknown as SyncableRecord)
-        persistCompleted++
-        persistProgress.updateProcessingProgress(scanned.id, persistCompleted, totalPersistItems)
-      }
-      for (const pdf of pdfs) {
-        await syncableWrite('importedPdfs', 'add', pdf as unknown as SyncableRecord)
-        persistCompleted++
-        persistProgress.updateProcessingProgress(scanned.id, persistCompleted, totalPersistItems)
-      }
-    }
-
-    // Persist captions (SRT/VTT) to videoCaptions table — same for both first import and re-import
-    if (scanned.captions && scanned.captions.length > 0) {
-      for (const caption of scanned.captions) {
-        if (caption.matchedVideoId && caption.srtContent) {
-          await syncableWrite('videoCaptions', 'add', {
-            id: crypto.randomUUID(),
-            videoId: caption.matchedVideoId,
-            language: caption.language || 'en',
-            content: caption.srtContent,
-            source: 'file',
-            createdAt: now,
-            updatedAt: now,
-          } as unknown as SyncableRecord)
           persistCompleted++
+          persistProgress.updateProcessingProgress(scanned.id, persistCompleted, totalPersistItems)
+        }
+
+        for (const pdf of pdfs) {
+          const existing = pdf.serverUrl ? existingPdfByServerUrl.get(pdf.serverUrl) : undefined
+          const record = existing ? { ...pdf, id: existing.id } : pdf
+          await syncableWrite(
+            'importedPdfs',
+            existing ? 'put' : 'add',
+            record as unknown as SyncableRecord
+          )
+          keptPdfIds.add(record.id)
+          persistCompleted++
+          persistProgress.updateProcessingProgress(scanned.id, persistCompleted, totalPersistItems)
+        }
+
+        for (const video of existingVideos) {
+          if (!keptVideoIds.has(video.id)) await db.importedVideos.delete(video.id)
+        }
+        for (const pdf of existingPdfs) {
+          if (!keptPdfIds.has(pdf.id)) await db.importedPdfs.delete(pdf.id)
+        }
+
+        // Captions are local course content and intentionally bypass the sync
+        // registry. Replace the course set so removed/renamed subtitles are pruned.
+        if (isReimport) await db.videoCaptions.where('courseId').equals(targetCourseId).delete()
+        for (const caption of scanned.captions ?? []) {
+          const videoId = caption.matchedVideoId
+            ? persistedVideoIdByScannedId.get(caption.matchedVideoId)
+            : undefined
+          if (!videoId || !caption.srtContent) continue
+          const record: VideoCaptionRecord = {
+            courseId: targetCourseId,
+            videoId,
+            filename: caption.filename,
+            content: caption.srtContent,
+            format: caption.format,
+            createdAt: now,
+          }
+          await db.videoCaptions.put(record)
+          persistCompleted++
+          persistProgress.updateProcessingProgress(scanned.id, persistCompleted, totalPersistItems)
         }
       }
-    }
+    )
   } catch (error) {
     useImportProgressStore.getState().failCourse(scanned.id, `Failed to save "${course.name}"`)
     const message = `Failed to save "${course.name}" to your library. Please try again.`
@@ -1142,15 +1142,6 @@ export async function scanCourseFromSource(source: {
 }): Promise<BulkScanResult> {
   if (source.serverUrl) {
     try {
-      // Check for duplicate by folder name before scanning (same as local handle path)
-      const existingCourse = await db.importedCourses
-        .where('name')
-        .equals(source.folderName)
-        .first()
-      if (existingCourse) {
-        return { status: 'duplicate', folderName: source.folderName }
-      }
-
       const scannedCourse = await scanCourseFolderFromServer(source.serverUrl)
       return {
         status: 'success',
@@ -1205,6 +1196,19 @@ export async function listSubDirectories(
 export async function listServerSubDirectories(
   url: string
 ): Promise<ServerResult<{ name: string; url: string }[]>> {
+  const result = await discoverServerImportRoot(url)
+  return result.ok ? { ok: true, data: result.data.folders } : result
+}
+
+export interface ServerImportRootDiscovery {
+  folders: { name: string; url: string }[]
+  trackImages: { name: string; url: string }[]
+}
+
+/** Discover course folders and cover candidates directly under a server root. */
+export async function discoverServerImportRoot(
+  url: string
+): Promise<ServerResult<ServerImportRootDiscovery>> {
   // Validate URL first — catches empty strings, bad protocols, bare IP roots
   const validation = isValidImportUrl(url)
   if (!validation.valid) {
@@ -1217,12 +1221,15 @@ export async function listServerSubDirectories(
     return result // passthrough error (network, timeout, non-200, parse failure)
   }
 
-  // Filter for directory entries only
-  const directories = result.data.files
+  const folders = result.data.files
     .filter(f => f.type === 'directory')
     .map(f => ({ name: f.name.replace(/\/$/, ''), url: f.url }))
+  const trackImages = result.data.files
+    .filter(f => f.type === 'image')
+    .map(f => ({ name: f.name, url: f.url }))
+    .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }))
 
-  return { ok: true, data: directories }
+  return { ok: true, data: { folders, trackImages } }
 }
 
 // --- Drag-and-Drop File Import (E33-S06) ---
@@ -1514,7 +1521,7 @@ function deriveModuleTitle(dirUrl: string | undefined): string | undefined {
   try {
     const pathname = new URL(dirUrl).pathname
     const segments = pathname.split('/').filter(Boolean)
-    const lastSegment = decodeURIComponent(segments[segments.length - 1] || '')
+    const lastSegment = decodeUriComponentRepeated(segments[segments.length - 1] || '')
     if (!lastSegment) return undefined
     // Strip numeric prefix: "01-Overview" → "Overview", "02 - Getting Started" → "Getting Started"
     const cleaned = lastSegment
@@ -1531,8 +1538,24 @@ function deriveModuleTitle(dirUrl: string | undefined): string | undefined {
 
 /** Known language suffixes in caption filenames (e.g., "001_intro_en.srt"). */
 const CAPTION_LANG_SUFFIXES = [
-  '_en', '_fr', '_es', '_de', '_ja', '_zh', '_ko', '_pt', '_ar', '_ru',
-  '_it', '_nl', '_pl', '_sv', '_tr', '_hi', '_vi', '_th',
+  '_en',
+  '_fr',
+  '_es',
+  '_de',
+  '_ja',
+  '_zh',
+  '_ko',
+  '_pt',
+  '_ar',
+  '_ru',
+  '_it',
+  '_nl',
+  '_pl',
+  '_sv',
+  '_tr',
+  '_hi',
+  '_vi',
+  '_th',
 ] as const
 
 /** Strips known language suffix from a stem. Returns {cleanStem, language}. */
@@ -1555,16 +1578,14 @@ export async function scanCourseFolderFromServer(
   // Extract course name from URL path (last segment before trailing /)
   const urlPath = new URL(folderUrl).pathname
   const segments = urlPath.split('/').filter(Boolean)
-  const courseName = decodeURIComponent(segments[segments.length - 1] || 'Imported Course')
+  const courseName = decodeUriComponentRepeated(segments[segments.length - 1] || 'Imported Course')
 
   // Compute the course base URL so derived paths are course-folder-relative.
   // Stripping the full course URL (not just protocol+host) from file URLs
   // produces paths like "01-Overview/001-intro.mp4" instead of
   // "Academy/DevOps/MyCourse/01-Overview/001-intro.mp4".
   // This matches local import behavior where paths are relative to the course folder.
-  const parsedUrl = new URL(folderUrl)
   const courseBaseUrl = folderUrl.replace(/\/+$/, '')
-  const serverRoot = `${parsedUrl.protocol}//${parsedUrl.host}`
 
   progressStore.startImport(courseId, courseName)
 
@@ -1576,7 +1597,13 @@ export async function scanCourseFolderFromServer(
     format: 'mp4' | 'webm' | 'mkv' | 'ts' | 'avi'
   }[] = []
   const allPdfs: { name: string; url: string; path: string }[] = []
-  const allCaptions: { rawStem: string; cleanStem: string; language?: string; name: string; url: string }[] = []
+  const allCaptions: {
+    rawStem: string
+    cleanStem: string
+    language?: string
+    name: string
+    url: string
+  }[] = []
   // Map file URLs → parent directory URLs for section structure derivation
   const fileDirMap = new Map<string, string>()
 
@@ -1741,6 +1768,8 @@ export async function scanCourseFolderFromServer(
         videoStem: cap.cleanStem,
         language: cap.language,
         srtContent,
+        filename: cap.name,
+        format: cap.name.toLowerCase().endsWith('.vtt') ? 'vtt' : 'srt',
         serverUrl: cap.url,
         matchedVideoId: targetVideo.id,
       })

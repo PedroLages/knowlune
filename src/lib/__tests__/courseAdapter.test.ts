@@ -109,6 +109,12 @@ describe('safeDecodeURIComponent()', () => {
     expect(adapterLib.safeDecodeURIComponent('Linux%20Admin%3A%20Guide')).toBe('Linux Admin: Guide')
   })
 
+  it('decodes double-encoded spaces and ampersands until stable', () => {
+    expect(adapterLib.safeDecodeURIComponent('01%2520%2526%2520Equipment%2520101')).toBe(
+      '01 & Equipment 101'
+    )
+  })
+
   it('passes already-decoded strings through unchanged (idempotent)', () => {
     expect(adapterLib.safeDecodeURIComponent('01 - Introduction')).toBe('01 - Introduction')
   })

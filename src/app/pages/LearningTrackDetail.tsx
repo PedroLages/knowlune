@@ -66,7 +66,7 @@ export function LearningTrackDetail() {
   )
   const [videoProgressMap, setVideoProgressMap] = useState<Map<string, VideoProgress>>(new Map())
   const statusMap = useContentProgressStore(s => s.statusMap)
-  const loadCourseProgress = useContentProgressStore(s => s.loadCourseProgress)
+  const loadCoursesProgress = useContentProgressStore(s => s.loadCoursesProgress)
   const [loadedCourseIds, setLoadedCourseIds] = useState<Set<string>>(new Set())
   // Prevents "No courses yet" flash during initial load by waiting until
   // React has committed at least one render after isReady flips to true —
@@ -237,15 +237,10 @@ export function LearningTrackDetail() {
     let ignore = false
 
     async function loadContentProgress() {
-      const batchSize = 10
-      for (let i = 0; i < courseIds.length; i += batchSize) {
-        if (ignore) return
-        const batch = courseIds.slice(i, i + batchSize)
-        await Promise.allSettled(batch.map(id => loadCourseProgress(id)))
-        batch.forEach(id => loadingSet.add(id))
-        if (!ignore) {
-          setLoadedCourseIds(new Set(loadingSet))
-        }
+      await loadCoursesProgress(courseIds)
+      courseIds.forEach(id => loadingSet.add(id))
+      if (!ignore) {
+        setLoadedCourseIds(new Set(loadingSet))
       }
     }
 
@@ -254,7 +249,7 @@ export function LearningTrackDetail() {
     return () => {
       ignore = true
     }
-  }, [isReady, courseEntries, loadCourseProgress])
+  }, [isReady, courseEntries, loadCoursesProgress])
 
   // Real progress tracking from contentProgress (catalog) + progress table (imported)
   const pathProgress = usePathProgress(courseEntries)
@@ -756,11 +751,7 @@ export function LearningTrackDetail() {
 
             {/* ── Overview Tab ── */}
             <TabsContent value="overview" className="mt-0">
-              <motion.div
-                variants={containerVariants}
-                initial="hidden"
-                animate="visible"
-              >
+              <motion.div variants={containerVariants} initial="hidden" animate="visible">
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-[var(--content-gap)]">
                   {/* Left Column (2/3) */}
                   <div className="lg:col-span-2 space-y-8">
@@ -820,7 +811,8 @@ export function LearningTrackDetail() {
                           <h2 className="font-display text-2xl font-bold">Courses</h2>
                           <div className="flex items-center gap-3">
                             <span className="text-muted-foreground text-sm">
-                              {courseEntries.length} {courseEntries.length === 1 ? 'Course' : 'Courses'}
+                              {courseEntries.length}{' '}
+                              {courseEntries.length === 1 ? 'Course' : 'Courses'}
                             </span>
                             <ProgressionModeToggle
                               mode={path.progressionMode ?? 'sequential'}
@@ -898,7 +890,9 @@ export function LearningTrackDetail() {
                           className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-brand/60 to-brand/20 pointer-events-none"
                           aria-hidden="true"
                         />
-                        <h2 className="font-display text-2xl font-bold mb-6">Your Learning Roadmap</h2>
+                        <h2 className="font-display text-2xl font-bold mb-6">
+                          Your Learning Roadmap
+                        </h2>
                         <RoadmapPhases
                           entries={courseEntries}
                           courseInfoMap={courseInfo}
@@ -949,8 +943,8 @@ export function LearningTrackDetail() {
                           />
                           <h3 className="text-lg font-semibold mb-2">Projects & Labs</h3>
                           <p className="text-muted-foreground text-sm max-w-md mx-auto">
-                            Portfolio projects, hands-on labs, and capstone tasks will appear here as
-                            you progress through your courses.
+                            Portfolio projects, hands-on labs, and capstone tasks will appear here
+                            as you progress through your courses.
                           </p>
                         </CardContent>
                       </Card>
@@ -995,7 +989,8 @@ export function LearningTrackDetail() {
                           />
                           <h3 className="text-lg font-semibold mb-2">Your Notes</h3>
                           <p className="text-muted-foreground text-sm max-w-md mx-auto">
-                            Notes you take during lessons will be organized here by course and lesson.
+                            Notes you take during lessons will be organized here by course and
+                            lesson.
                           </p>
                         </CardContent>
                       </Card>

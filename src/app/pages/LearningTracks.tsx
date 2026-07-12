@@ -67,19 +67,31 @@ function TrackCard({
       const navTo = targetLessonId
         ? `/courses/${entry!.courseId}/lessons/${targetLessonId}`
         : `/courses/${entry!.courseId}`
-      return { label: 'Continue', to: navTo, variant: 'brand' as const, courseName: course.name }
+      return {
+        label: 'Continue',
+        to: navTo,
+        variant: 'brand' as const,
+        courseName: course.name,
+        state: { fromTrack: { trackId: path.id, trackName: path.name } },
+      }
     }
     if (action === 'start' && course) {
       const navTo = targetLessonId
         ? `/courses/${entry!.courseId}/lessons/${targetLessonId}`
         : `/courses/${entry!.courseId}`
-      return { label: 'Start', to: navTo, variant: 'brand' as const, courseName: course.name }
+      return {
+        label: 'Start',
+        to: navTo,
+        variant: 'brand' as const,
+        courseName: course.name,
+        state: { fromTrack: { trackId: path.id, trackName: path.name } },
+      }
     }
     if (action === 'complete' || (action === null && isCompleted)) {
       return { label: 'Review', to: `/learning-tracks/${path.id}`, variant: 'outline' as const }
     }
     return null
-  }, [action, course, entry, targetLessonId, isCompleted, path.id])
+  }, [action, course, entry, targetLessonId, isCompleted, path.id, path.name])
 
   return (
     <motion.div variants={fadeUp}>
@@ -149,8 +161,12 @@ export function LearningTracks() {
   const [editDialogPath, setEditDialogPath] = useState<LearningPath | null>(null)
 
   // Filter and sort state
-  const [activeTab, setActiveTab] = useState<'all' | 'in-progress' | 'not-started' | 'completed'>('all')
-  const [sortBy, setSortBy] = useState<'recent' | 'progress' | 'newest' | 'most-courses' | 'a-z'>('recent')
+  const [activeTab, setActiveTab] = useState<'all' | 'in-progress' | 'not-started' | 'completed'>(
+    'all'
+  )
+  const [sortBy, setSortBy] = useState<'recent' | 'progress' | 'newest' | 'most-courses' | 'a-z'>(
+    'recent'
+  )
 
   // Import wizard trigger (singleton guard pattern)
   const {
@@ -206,7 +222,12 @@ export function LearningTracks() {
   const pathStats = useMemo(() => {
     const stats = new Map<
       string,
-      { courseCount: number; completionPct: number; totalLessons: number; estimatedRemainingHours: number }
+      {
+        courseCount: number
+        completionPct: number
+        totalLessons: number
+        estimatedRemainingHours: number
+      }
     >()
     for (const path of paths) {
       const progress = pathProgressMap.get(path.id)
@@ -247,33 +268,37 @@ export function LearningTracks() {
   }, [userPaths, search])
 
   // Compute counts for filter tabs
-  const tabCounts = useMemo(() => ({
-    all: filteredPaths.length,
-    'in-progress': filteredPaths.filter(p => {
-      const pct = pathStats.get(p.id)?.completionPct ?? 0
-      return pct > 0 && pct < 100
-    }).length,
-    'not-started': filteredPaths.filter(p => {
-      const pct = pathStats.get(p.id)?.completionPct ?? 0
-      return pct === 0
-    }).length,
-    completed: filteredPaths.filter(p => {
-      const pct = pathStats.get(p.id)?.completionPct ?? 0
-      return pct >= 100
-    }).length,
-  }), [filteredPaths, pathStats])
+  const tabCounts = useMemo(
+    () => ({
+      all: filteredPaths.length,
+      'in-progress': filteredPaths.filter(p => {
+        const pct = pathStats.get(p.id)?.completionPct ?? 0
+        return pct > 0 && pct < 100
+      }).length,
+      'not-started': filteredPaths.filter(p => {
+        const pct = pathStats.get(p.id)?.completionPct ?? 0
+        return pct === 0
+      }).length,
+      completed: filteredPaths.filter(p => {
+        const pct = pathStats.get(p.id)?.completionPct ?? 0
+        return pct >= 100
+      }).length,
+    }),
+    [filteredPaths, pathStats]
+  )
 
   // Filter by active tab, then sort
   const sortedFilteredPaths = useMemo(() => {
     // Filter by tab
-    const tabFiltered = activeTab === 'all'
-      ? filteredPaths
-      : filteredPaths.filter(p => {
-          const pct = pathStats.get(p.id)?.completionPct ?? 0
-          if (activeTab === 'in-progress') return pct > 0 && pct < 100
-          if (activeTab === 'not-started') return pct === 0
-          return pct >= 100 // completed
-        })
+    const tabFiltered =
+      activeTab === 'all'
+        ? filteredPaths
+        : filteredPaths.filter(p => {
+            const pct = pathStats.get(p.id)?.completionPct ?? 0
+            if (activeTab === 'in-progress') return pct > 0 && pct < 100
+            if (activeTab === 'not-started') return pct === 0
+            return pct >= 100 // completed
+          })
 
     // Sort
     return [...tabFiltered].sort((a, b) => {
@@ -453,13 +478,15 @@ export function LearningTracks() {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    {([
-                      { key: 'recent', label: 'Recently opened' },
-                      { key: 'progress', label: 'Progress' },
-                      { key: 'newest', label: 'Newest' },
-                      { key: 'most-courses', label: 'Most courses' },
-                      { key: 'a-z', label: 'A–Z' },
-                    ] as const).map(({ key, label }) => (
+                    {(
+                      [
+                        { key: 'recent', label: 'Recently opened' },
+                        { key: 'progress', label: 'Progress' },
+                        { key: 'newest', label: 'Newest' },
+                        { key: 'most-courses', label: 'Most courses' },
+                        { key: 'a-z', label: 'A–Z' },
+                      ] as const
+                    ).map(({ key, label }) => (
                       <DropdownMenuItem key={key} onClick={() => setSortBy(key)}>
                         {label}
                         {sortBy === key && <Check className="ml-auto size-4" />}
@@ -474,11 +501,7 @@ export function LearningTracks() {
             {sortedFilteredPaths.length === 0 && activeTab !== 'all' ? (
               <motion.div variants={fadeUp}>
                 <EmptyState
-                  icon={
-                    activeTab === 'completed'
-                      ? CheckCircle2
-                      : Route
-                  }
+                  icon={activeTab === 'completed' ? CheckCircle2 : Route}
                   title={`No ${
                     activeTab === 'in-progress'
                       ? 'in-progress'

@@ -15,7 +15,50 @@ import {
   fetchDirectoryListing,
   buildFileUrl,
   verifyConnection,
+  probeByteRangeSupport,
 } from '../courseServerService'
+
+describe('probeByteRangeSupport', () => {
+  const originalFetch = globalThis.fetch
+
+  afterEach(() => {
+    globalThis.fetch = originalFetch
+  })
+
+  it('recognizes 206 and cancels the response body immediately', async () => {
+    const cancel = vi.fn().mockResolvedValue(undefined)
+    globalThis.fetch = vi
+      .fn()
+      .mockResolvedValue({ status: 206, body: { cancel } } as unknown as Response)
+
+    await expect(probeByteRangeSupport('https://range-supported.example/video.mp4')).resolves.toBe(
+      'supported'
+    )
+    expect(cancel).toHaveBeenCalledOnce()
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({ headers: { Range: 'bytes=1-1' } })
+    )
+  })
+
+  it('recognizes a full 200 response as unsupported', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      status: 200,
+      body: { cancel: vi.fn().mockResolvedValue(undefined) },
+    } as unknown as Response)
+
+    await expect(probeByteRangeSupport('https://range-disabled.example/video.mp4')).resolves.toBe(
+      'unsupported'
+    )
+  })
+
+  it('keeps network and CORS failures unknown', async () => {
+    globalThis.fetch = vi.fn().mockRejectedValue(new TypeError('CORS'))
+    await expect(probeByteRangeSupport('https://range-unknown.example/video.mp4')).resolves.toBe(
+      'unknown'
+    )
+  })
+})
 
 // ───── isValidImportUrl ─────
 

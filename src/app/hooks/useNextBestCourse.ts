@@ -157,7 +157,7 @@ export function useNextBestCourse(pathId: string): NextBestCourseResult {
   const allEntries = useLearningPathStore(s => s.entries)
   const importedCourses = useCourseImportStore(s => s.importedCourses)
   const statusMap = useContentProgressStore(s => s.statusMap)
-  const loadCourseProgress = useContentProgressStore(s => s.loadCourseProgress)
+  const loadCoursesProgress = useContentProgressStore(s => s.loadCoursesProgress)
 
   // Derive sorted entries for this path
   const sortedEntries = useMemo(
@@ -198,12 +198,7 @@ export function useNextBestCourse(pathId: string): NextBestCourseResult {
     let ignore = false
 
     async function loadAll() {
-      const batchSize = 10
-      for (let i = 0; i < courseIds.length; i += batchSize) {
-        if (ignore) return
-        const batch = courseIds.slice(i, i + batchSize)
-        await Promise.allSettled(batch.map(id => loadCourseProgress(id)))
-      }
+      await loadCoursesProgress(courseIds)
       if (!ignore) {
         setContentProgressReady(true)
       }
@@ -214,7 +209,7 @@ export function useNextBestCourse(pathId: string): NextBestCourseResult {
     return () => {
       ignore = true
     }
-  }, [sortedEntries, loadCourseProgress])
+  }, [sortedEntries, loadCoursesProgress])
 
   // Shared stable callback wrapping computeNextBestCourse
   const runCompute = useCallback(() => {

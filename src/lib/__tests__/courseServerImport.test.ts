@@ -190,8 +190,8 @@ describe('scanCourseFromSource', () => {
     }
   })
 
-  // Path: server URL → duplicate detected
-  it('returns duplicate when server folder name already imported', async () => {
+  // Name matches do not block server re-scan; stable serverPath handles upsert later.
+  it('rescans a server folder even when a course has the same display name', async () => {
     // Pre-seed a course with the same name
     await db.importedCourses.add({
       id: 'existing-id',
@@ -211,9 +211,9 @@ describe('scanCourseFromSource', () => {
       folderName: 'MyCourse',
     })
 
-    expect(result.status).toBe('duplicate')
-    if (result.status === 'duplicate') {
-      expect(result.folderName).toBe('MyCourse')
+    expect(result.status).toBe('success')
+    if (result.status === 'success') {
+      expect(result.course.name).toBe('MyCourse')
     }
   })
 

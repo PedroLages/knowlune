@@ -264,7 +264,7 @@ describe('CurriculumComposer', () => {
     })
   })
 
-  it('should use "Untitled Path" when name is empty on submit', async () => {
+  it('should require a name instead of creating an Untitled Path', async () => {
     mockCreatePathWithCourses.mockResolvedValue({ id: 'path-1' })
 
     render(
@@ -286,15 +286,9 @@ describe('CurriculumComposer', () => {
     // and clear the auto-filled name.
     fireEvent.change(screen.getByLabelText('Name'), { target: { value: '' } })
 
-    fireEvent.click(screen.getByRole('button', { name: 'Create Path' }))
-
-    await waitFor(() => {
-      expect(mockCreatePathWithCourses).toHaveBeenCalledWith(
-        'Untitled Path',
-        undefined,
-        expect.any(Array)
-      )
-    })
+    const createButton = screen.getByRole('button', { name: 'Create Path' })
+    expect(createButton).toBeDisabled()
+    expect(mockCreatePathWithCourses).not.toHaveBeenCalled()
   })
 
   it('should import course action button', () => {

@@ -18,6 +18,8 @@ interface ChapterProgressBarProps {
   buffered?: Array<{ start: number; end: number }>
   /** Storyboard sprite sheet for instant hover previews (optional) */
   storyboard?: StoryboardProp
+  disabled?: boolean
+  disabledReason?: string
 }
 
 export function ChapterProgressBar({
@@ -32,12 +34,15 @@ export function ChapterProgressBar({
   src,
   buffered,
   storyboard,
+  disabled = false,
+  disabledReason,
 }: ChapterProgressBarProps) {
   const trackRef = useRef<HTMLDivElement | null>(null)
   const [hover, setHover] = useState<{ time: number; x: number } | null>(null)
 
   const handleChapterClick = (e: React.MouseEvent, time: number) => {
     e.stopPropagation()
+    if (disabled) return
     if (duration > 0) {
       onSeek((time / duration) * 100)
     }
@@ -162,6 +167,7 @@ export function ChapterProgressBar({
               className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 min-w-[44px] min-h-[44px] flex items-center justify-center z-20 cursor-pointer"
               style={{ left: `${pct}%` }}
               onClick={e => handleChapterClick(e, chapter.time)}
+              disabled={disabled}
               aria-label={`Go to chapter: ${chapter.title} at ${formatTime(chapter.time)}`}
             >
               <span className="w-0.5 h-3 bg-white/80" />
@@ -180,8 +186,10 @@ export function ChapterProgressBar({
             style={{ left: `${(bm.timestamp / duration) * 100}%` }}
             onClick={e => {
               e.stopPropagation()
+              if (disabled) return
               onBookmarkSeek?.(bm.timestamp)
             }}
+            disabled={disabled}
             aria-label={`Bookmark at ${formatTime(bm.timestamp)}`}
           >
             <span className="w-2 h-2 rounded-full bg-yellow-400 border border-yellow-600 group-hover/marker:scale-150 transition-transform" />
@@ -196,7 +204,10 @@ export function ChapterProgressBar({
         step="0.1"
         value={progress}
         aria-label="Video progress"
-        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+        aria-description={disabledReason}
+        title={disabledReason}
+        disabled={disabled}
+        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed z-10"
         onChange={e => onSeek(parseFloat(e.target.value))}
       />
 

@@ -18,6 +18,21 @@ export function getInitials(name: string): string {
     .join('')
 }
 
+/** Decode URI-encoded display text repeatedly until it is stable. */
+export function decodeUriComponentRepeated(value: string, maxPasses = 3): string {
+  let decoded = value
+  for (let pass = 0; pass < maxPasses; pass += 1) {
+    try {
+      const next = decodeURIComponent(decoded)
+      if (next === decoded) break
+      decoded = next
+    } catch {
+      break
+    }
+  }
+  return decoded
+}
+
 /** Strip HTML tags and decode common entities for plain-text preview. */
 export function stripHtml(html: string): string {
   return html

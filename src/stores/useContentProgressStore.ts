@@ -22,6 +22,7 @@ interface ContentProgressState {
   error: string | null
 
   loadCourseProgress: (courseId: string) => Promise<void>
+  loadCoursesProgress: (courseIds: string[]) => Promise<void>
   setItemStatus: (
     courseId: string,
     itemId: string,
@@ -71,22 +72,26 @@ export const useContentProgressStore = create<ContentProgressState>((set, get) =
   error: null,
 
   loadCourseProgress: async (courseId: string) => {
+    await get().loadCoursesProgress([courseId])
+  },
+
+  loadCoursesProgress: async (courseIds: string[]) => {
+    const uniqueCourseIds = [...new Set(courseIds)].filter(Boolean)
+    if (uniqueCourseIds.length === 0) return
     set({ isLoading: true, error: null })
     try {
-      const records = await db.contentProgress.where({ courseId }).toArray()
-      const { statusMap } = get()
-      // Clear stale entries for this course before merging fresh records
-      const prefix = `${courseId}:`
-      const updated: Record<string, CompletionStatus> = {}
-      for (const [k, v] of Object.entries(statusMap)) {
-        if (!k.startsWith(prefix)) {
-          updated[k] = v
+      const records = await db.contentProgress.where('courseId').anyOf(uniqueCourseIds).toArray()
+      const prefixes = uniqueCourseIds.map(courseId => `${courseId}:`)
+      set(state => {
+        const updated: Record<string, CompletionStatus> = {}
+        for (const [statusKey, status] of Object.entries(state.statusMap)) {
+          if (!prefixes.some(prefix => statusKey.startsWith(prefix))) updated[statusKey] = status
         }
-      }
-      for (const record of records) {
-        updated[key(record.courseId, record.itemId)] = record.status
-      }
-      set({ statusMap: updated, isLoading: false })
+        for (const record of records) {
+          updated[key(record.courseId, record.itemId)] = record.status
+        }
+        return { statusMap: updated, isLoading: false }
+      })
     } catch (error) {
       set({ isLoading: false, error: 'Failed to load progress' })
       console.error('[ContentProgressStore] Failed to load:', error)

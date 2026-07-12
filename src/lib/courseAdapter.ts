@@ -8,7 +8,13 @@
  * Architecture: docs/planning-artifacts/bmad-architecture-course-unification-ai-models.md § A1
  */
 
-import type { ImportedCourse, ImportedVideo, ImportedPdf, CourseSource, YouTubeCourseChapter } from '@/data/types'
+import type {
+  ImportedCourse,
+  ImportedVideo,
+  ImportedPdf,
+  CourseSource,
+  YouTubeCourseChapter,
+} from '@/data/types'
 import { db } from '@/db'
 import {
   matchMaterialsToLessons,
@@ -17,6 +23,7 @@ import {
 } from './lessonMaterialMatcher'
 export type { MaterialGroup } from './lessonMaterialMatcher'
 import { buildLessonBasedCurriculum, type CourseSection } from './lessonBasedCurriculum'
+import { decodeUriComponentRepeated } from './textUtils'
 export type { CourseSection } from './lessonBasedCurriculum'
 
 // ---------------------------------------------------------------------------
@@ -29,15 +36,7 @@ export type { CourseSection } from './lessonBasedCurriculum'
  * Already-decoded strings pass through `decodeURIComponent` unchanged,
  * making this safe to call on any filename regardless of source.
  */
-export function safeDecodeURIComponent(s: string): string {
-  if (!s) return s
-  try {
-    return decodeURIComponent(s)
-  } catch {
-    // Return original on malformed encoding (e.g., %ZZ — illegal hex pair)
-    return s
-  }
-}
+export const safeDecodeURIComponent = decodeUriComponentRepeated
 
 /** Convert a raw filename into a human-readable title. */
 export function humanizeFilename(filename: string): string {

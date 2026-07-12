@@ -253,8 +253,8 @@ describe('scanCourseFolder', () => {
     expect(scanned.videos).toHaveLength(1)
     expect(scanned.pdfs).toHaveLength(1)
     expect(scanned.images).toHaveLength(2)
-    expect(scanned.images[0].filename).toBe('cover.jpg')
-    expect(scanned.images[1].filename).toBe('banner.png')
+    expect(scanned.images[0].filename).toBe('banner.png')
+    expect(scanned.images[1].filename).toBe('cover.jpg')
   })
 })
 
@@ -318,6 +318,83 @@ describe('persistScannedCourse', () => {
     expect(pdfs).toHaveLength(1)
     expect(pdfs[0].filename).toBe('workbook.pdf')
     expect(pdfs[0].pageCount).toBe(25)
+  })
+
+  it('persists subtitle files using the local caption schema', async () => {
+    const scanned = createScannedCourse({
+      captions: [
+        {
+          videoStem: 'intro',
+          language: 'en',
+          srtContent: '1\n00:00:00,000 --> 00:00:01,000\nWelcome',
+          filename: 'intro_en.srt',
+          format: 'srt',
+          serverUrl: 'https://academy.example/intro_en.srt',
+          matchedVideoId: 'video-1',
+        },
+      ],
+    })
+
+    const course = await persistScannedCourse(scanned)
+    const caption = await db.videoCaptions.get([course.id, 'video-1'])
+
+    expect(caption).toMatchObject({
+      courseId: course.id,
+      videoId: 'video-1',
+      filename: 'intro_en.srt',
+      format: 'srt',
+    })
+    expect(caption?.content).toContain('Welcome')
+  })
+
+  it('rolls back the full course batch when a child record fails', async () => {
+    const scanned = createScannedCourse()
+    const videoTable = db.table('importedVideos')
+    const addSpy = vi
+      .spyOn(videoTable, 'add')
+      .mockRejectedValueOnce(new Error('video write failed'))
+
+    await expect(persistScannedCourse(scanned)).rejects.toThrow('video write failed')
+
+    expect(await db.importedCourses.get(scanned.id)).toBeUndefined()
+    expect(await db.importedPdfs.where('courseId').equals(scanned.id).count()).toBe(0)
+    addSpy.mockRestore()
+  })
+
+  it('reuses the stable course ID and repairs child records on server re-import', async () => {
+    const first = createScannedCourse({
+      source: 'server',
+      serverPath: 'roadmaps/course',
+      videos: [
+        {
+          ...createScannedCourse().videos[0],
+          serverUrl: 'https://academy.example/course/intro.mp4',
+        },
+      ],
+      pdfs: [],
+    })
+    const original = await persistScannedCourse(first)
+
+    const rescanned = createScannedCourse({
+      id: 'new-scan-id',
+      source: 'server',
+      serverPath: 'roadmaps/course',
+      videos: [
+        {
+          ...createScannedCourse().videos[0],
+          id: 'new-video-scan-id',
+          serverUrl: 'https://academy.example/course/intro.mp4',
+        },
+      ],
+      pdfs: [],
+    })
+    const repaired = await persistScannedCourse(rescanned)
+
+    expect(repaired.id).toBe(original.id)
+    expect(await db.importedCourses.count()).toBe(1)
+    const videos = await db.importedVideos.where('courseId').equals(original.id).toArray()
+    expect(videos).toHaveLength(1)
+    expect(videos[0].courseId).toBe(original.id)
   })
 
   it('should update Zustand store after persistence', async () => {

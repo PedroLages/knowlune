@@ -40,6 +40,12 @@ describe('parseNumericPrefix', () => {
   })
 })
 
+describe('encoded display names', () => {
+  it('decodes double-encoded lesson filenames before formatting', () => {
+    expect(cleanLessonTitle('01%2520-%2520Equipment%2520101.mp4')).toBe('Equipment 101')
+  })
+})
+
 describe('cleanLessonTitle', () => {
   it('cleans video filenames', () => {
     expect(cleanLessonTitle('001 The Linux Directory Structure.mp4')).toBe(

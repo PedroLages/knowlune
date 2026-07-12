@@ -25,6 +25,7 @@ import { useLearningPathStore } from '@/stores/useLearningPathStore'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
 import { ImportWizardDialog } from '@/app/components/figma/ImportWizardDialog'
 import { BulkImportDialog } from '@/app/components/figma/BulkImportDialog'
+import type { BulkImportCompletion } from '@/app/components/figma/BulkImportDialog'
 import { useIsMobile } from '@/app/hooks/useMediaQuery'
 import { useImportWizardTrigger } from '@/app/hooks/useImportWizardTrigger'
 import { PremiumGate } from '@/app/components/PremiumGate'
@@ -80,6 +81,7 @@ export function CurriculumComposer({
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
   const [selectedCourseIds, setSelectedCourseIds] = useState<string[]>([])
+  const [selectedTrackCoverUrl, setSelectedTrackCoverUrl] = useState<string | undefined>()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const nameAutoFilled = useRef(false)
 
@@ -105,6 +107,7 @@ export function CurriculumComposer({
       setName('')
       setDescription('')
       setSelectedCourseIds([])
+      setSelectedTrackCoverUrl(undefined)
       setIsSubmitting(false)
       nameAutoFilled.current = false
       setGoal(initialGoal || '')
@@ -163,13 +166,20 @@ export function CurriculumComposer({
   const handleBatchImport = useCallback(() => setBatchImportOpen(true), [])
 
   const handleBatchImportComplete = useCallback(
-    (importedIds: string[]) => {
+    (completion: BulkImportCompletion) => {
+      const importedIds = completion.courseIds
       // Add all imported course IDs to the current selection
       setSelectedCourseIds(prev => {
         const unique = importedIds.filter(id => !prev.includes(id))
         if (unique.length === 0) return prev
         return [...prev, ...unique]
       })
+      if (completion.manifest) {
+        setName(completion.manifest.name)
+        setDescription(completion.manifest.description ?? '')
+        nameAutoFilled.current = true
+      }
+      setSelectedTrackCoverUrl(completion.selectedCoverUrl)
       // Refresh imported courses to include new ones
       // silent-catch-ok: store refresh failure is non-critical
       loadImportedCourses().catch(() => {})
@@ -275,7 +285,11 @@ export function CurriculumComposer({
       e.preventDefault()
       if (selectedCourseIds.length === 0) return
 
-      const finalName = name.trim() || 'Untitled Path'
+      const finalName = name.trim()
+      if (!finalName) {
+        toast.error('Enter a name for this learning path')
+        return
+      }
       setIsSubmitting(true)
 
       try {
@@ -284,11 +298,11 @@ export function CurriculumComposer({
           courseType: 'imported' as const,
         }))
 
-        const path = await createPathWithCourses(
-          finalName,
-          description.trim() || undefined,
-          courses
-        )
+        const path = selectedTrackCoverUrl
+          ? await createPathWithCourses(finalName, description.trim() || undefined, courses, {
+              coverImageUrl: selectedTrackCoverUrl,
+            })
+          : await createPathWithCourses(finalName, description.trim() || undefined, courses)
         await loadPaths()
         toast.success(`Created "${finalName}"`)
         onOpenChange(false)
@@ -303,6 +317,7 @@ export function CurriculumComposer({
       name,
       description,
       selectedCourseIds,
+      selectedTrackCoverUrl,
       createPathWithCourses,
       loadPaths,
       onOpenChange,
@@ -345,6 +360,8 @@ export function CurriculumComposer({
           placeholder="e.g., Web Development Fundamentals"
           autoFocus
           maxLength={100}
+          required
+          aria-invalid={!name.trim()}
         />
       </div>
       <div className="space-y-2">
@@ -572,7 +589,7 @@ export function CurriculumComposer({
   )
 
   // --- Derived state ---
-  const canSubmitManual = selectedCourseIds.length > 0 && !isSubmitting
+  const canSubmitManual = selectedCourseIds.length > 0 && name.trim().length > 0 && !isSubmitting
 
   // --- Buttons ---
   const createPathButton =
@@ -687,6 +704,7 @@ export function CurriculumComposer({
         onOpenChange={setBatchImportOpen}
         onSingleImport={handleImportCourse}
         onComplete={handleBatchImportComplete}
+        trackCreationMode="deferred"
       />
     </>
   )

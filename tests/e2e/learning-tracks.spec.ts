@@ -38,7 +38,9 @@ const COVER_DATA_URL =
 async function clearTrackStores(page: import('@playwright/test').Page): Promise<void> {
   await clearLearningPath(page)
   await clearIndexedDBStore(page, DB_NAME, 'learningPathEntries')
+  await clearIndexedDBStore(page, DB_NAME, 'importedCourses')
   await clearIndexedDBStore(page, DB_NAME, 'importedVideos')
+  await clearIndexedDBStore(page, DB_NAME, 'contentProgress')
 }
 
 // ---------------------------------------------------------------------------
@@ -107,9 +109,7 @@ test.describe('Learning Tracks — sidebar navigation', () => {
 
     // The sidebar should show the Learning Tracks entry
     // (we're already on the page, so just verify the heading renders)
-    await expect(
-      page.getByRole('heading', { name: 'Learning Tracks', level: 1 })
-    ).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Learning Tracks', level: 1 })).toBeVisible()
   })
 })
 
@@ -124,9 +124,7 @@ test.describe('Learning Tracks — empty state', () => {
     await page.reload({ waitUntil: 'load' })
 
     await expect(page.getByText('No learning tracks yet')).toBeVisible()
-    await expect(
-      page.getByText('Create a track or import courses to get started.')
-    ).toBeVisible()
+    await expect(page.getByText('Create a track or import courses to get started.')).toBeVisible()
     // There are two "Create Track" buttons: header and empty state. The empty state
     // one is visible when there are no paths, so first() works.
     await expect(page.getByRole('button', { name: 'Create Track' }).first()).toBeVisible()
@@ -216,9 +214,7 @@ test.describe('Learning Tracks — no templates shown', () => {
 
     // Should show the clean empty state
     await expect(page.getByText('No learning tracks yet')).toBeVisible()
-    await expect(
-      page.getByText('Create a track or import courses to get started.')
-    ).toBeVisible()
+    await expect(page.getByText('Create a track or import courses to get started.')).toBeVisible()
     // "Or create your own track" should be gone
     await expect(page.getByText('Or create your own track')).not.toBeVisible()
   })
@@ -313,6 +309,97 @@ test.describe('Learning Tracks — list with seeded data', () => {
     await page.reload({ waitUntil: 'load' })
 
     await expect(page.getByText('2 courses')).toBeVisible()
+  })
+})
+
+test.describe('Learning Tracks — resume regression', () => {
+  test('returns to the in-progress second lesson and preserves track navigation state', async ({
+    page,
+  }) => {
+    await goToLearningTracks(page)
+    await clearTrackStores(page)
+    await seedPaths(
+      page,
+      [createLearningPath({ id: 'lt-resume', name: 'Resume Track' })],
+      [
+        createLearningPathEntry({
+          id: 'lpe-resume',
+          pathId: 'lt-resume',
+          courseId: 'course-resume',
+          position: 1,
+        }),
+      ]
+    )
+    await seedIndexedDBStore(page, DB_NAME, 'importedCourses', [
+      {
+        id: 'course-resume',
+        name: 'Resume Course',
+        importedAt: FIXED_DATE,
+        category: '',
+        tags: [],
+        status: 'in-progress',
+        videoCount: 2,
+        pdfCount: 0,
+        directoryHandle: null,
+      },
+    ])
+    await seedIndexedDBStore(page, DB_NAME, 'importedVideos', [
+      {
+        id: 'resume-lesson-1',
+        courseId: 'course-resume',
+        filename: '01-intro.mp4',
+        path: '01-intro.mp4',
+        duration: 60,
+        format: 'mp4',
+        order: 1,
+        fileHandle: null,
+      },
+      {
+        id: 'resume-lesson-2',
+        courseId: 'course-resume',
+        filename: '02-continue.mp4',
+        path: '02-continue.mp4',
+        duration: 60,
+        format: 'mp4',
+        order: 2,
+        fileHandle: null,
+      },
+    ])
+    await seedIndexedDBStore(page, DB_NAME, 'contentProgress', [
+      {
+        courseId: 'course-resume',
+        itemId: 'resume-lesson-1',
+        contentType: 'lesson',
+        status: 'completed',
+        progressPct: 100,
+        updatedAt: FIXED_DATE,
+      },
+      {
+        courseId: 'course-resume',
+        itemId: 'resume-lesson-2',
+        contentType: 'lesson',
+        status: 'in-progress',
+        progressPct: 50,
+        updatedAt: FIXED_DATE,
+      },
+    ])
+
+    await page.goto('/learning-tracks', { waitUntil: 'load' })
+    const continueLink = page.getByRole('link', { name: 'Continue Resume Course' })
+    await expect(continueLink).toHaveAttribute(
+      'href',
+      '/courses/course-resume/lessons/resume-lesson-2'
+    )
+    await continueLink.click()
+    await expect(page).toHaveURL('/courses/course-resume/lessons/resume-lesson-2')
+    await expect(page.getByRole('link', { name: 'Back to Resume Track' })).toBeVisible()
+
+    await page.goto('/courses', { waitUntil: 'load' })
+    await page.goto('/learning-tracks', { waitUntil: 'load' })
+    await expect(page.getByRole('link', { name: 'Continue Resume Course' })).toHaveAttribute(
+      'href',
+      '/courses/course-resume/lessons/resume-lesson-2'
+    )
   })
 })
 
@@ -424,9 +511,7 @@ test.describe('Learning Tracks — navigation', () => {
   test('page heading shows "Learning Tracks"', async ({ page }) => {
     await goToLearningTracks(page)
 
-    await expect(
-      page.getByRole('heading', { name: 'Learning Tracks', level: 1 })
-    ).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Learning Tracks', level: 1 })).toBeVisible()
   })
 })
 
@@ -673,7 +758,12 @@ test.describe('Learning Tracks — uploaded cover hero', () => {
       createLearningPath({ id: 'lt-tap', name: 'Tap Track', coverImageUrl: COVER_DATA_URL }),
     ]
     const entries = [
-      createLearningPathEntry({ id: 'lpe-tap', pathId: 'lt-tap', courseId: 'course-tap', position: 1 }),
+      createLearningPathEntry({
+        id: 'lpe-tap',
+        pathId: 'lt-tap',
+        courseId: 'course-tap',
+        position: 1,
+      }),
     ]
     await clearTrackStores(page)
     await seedPaths(page, paths, entries)
@@ -769,12 +859,13 @@ test.describe('Learning Tracks — uploaded cover hero', () => {
       // Alpha-composite rgba over a solid white reference background (#ffffff).
       // This gives the worst-case perceived background lightness and thus the
       // minimum (most conservative) contrast ratio.
-      function compositeOnWhite(r: number, g: number, b: number, a: number): [number, number, number] {
-        return [
-          r * a + 255 * (1 - a),
-          g * a + 255 * (1 - a),
-          b * a + 255 * (1 - a),
-        ]
+      function compositeOnWhite(
+        r: number,
+        g: number,
+        b: number,
+        a: number
+      ): [number, number, number] {
+        return [r * a + 255 * (1 - a), g * a + 255 * (1 - a), b * a + 255 * (1 - a)]
       }
 
       const surface = document.querySelector('[data-testid="hero-content-surface"]')
@@ -814,7 +905,9 @@ test.describe('Learning Tracks — uploaded cover hero', () => {
         const ctaColorRaw = window.getComputedStyle(cta).color
         const ctaColorParsed = parseColor(ctaColorRaw)
         if (ctaBgParsed && ctaColorParsed) {
-          const ctaEffectiveBg = compositeOnWhite(...(ctaBgParsed.slice(0, 4) as [number, number, number, number]))
+          const ctaEffectiveBg = compositeOnWhite(
+            ...(ctaBgParsed.slice(0, 4) as [number, number, number, number])
+          )
           ctaContrast = contrastRatio(
             luminance(ctaColorParsed[0], ctaColorParsed[1], ctaColorParsed[2]),
             luminance(...ctaEffectiveBg)

@@ -10,6 +10,7 @@ import 'fake-indexeddb/auto'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { act } from 'react'
 import Dexie from 'dexie'
+import type { TrackManifest } from '@/lib/courseManifest'
 
 // ───── Mocks ─────
 
@@ -110,6 +111,7 @@ async function seedExistingCourse(id: string, folderName: string) {
 // ───── Dynamic imports (after mocks are installed) ─────
 
 let batchImportTrackCourses: (typeof import('@/lib/trackManifestImport'))['batchImportTrackCourses']
+let matchManifestCourseFolders: (typeof import('@/lib/trackManifestImport'))['matchManifestCourseFolders']
 let db: (typeof import('@/db/schema'))['db']
 let useLearningPathStore: (typeof import('@/stores/useLearningPathStore'))['useLearningPathStore']
 let toastMocks: {
@@ -145,9 +147,38 @@ beforeEach(async () => {
 
   const trackImportMod = await import('@/lib/trackManifestImport')
   batchImportTrackCourses = trackImportMod.batchImportTrackCourses
+  matchManifestCourseFolders = trackImportMod.matchManifestCourseFolders
 
   const storeMod = await import('@/stores/useLearningPathStore')
   useLearningPathStore = storeMod.useLearningPathStore
+})
+
+describe('manifest-authoritative server discovery', () => {
+  it('keeps manifest order, uses aliases, ignores extras, and reports missing folders', () => {
+    const manifest = {
+      version: '1.0',
+      track: {
+        name: 'DevOps',
+        courses: [
+          { folder: 'Course B', position: 2 },
+          { folder: 'Course A', position: 1 },
+          { folder: 'Renamed Course', aliases: ['Course C'], position: 3 },
+          { folder: 'Missing Course', position: 4 },
+        ],
+      },
+    } as TrackManifest
+    const discovered = [
+      { name: 'track-projects/', url: '/track-projects/' },
+      { name: 'Course C', url: '/c/' },
+      { name: 'Course B', url: '/b/' },
+      { name: 'Course A', url: '/a/' },
+    ]
+
+    const result = matchManifestCourseFolders(discovered, manifest)
+
+    expect(result.folders.map(folder => folder.name)).toEqual(['Course A', 'Course B', 'Course C'])
+    expect(result.missing).toEqual(['Missing Course'])
+  })
 })
 
 // ───── Helpers ─────

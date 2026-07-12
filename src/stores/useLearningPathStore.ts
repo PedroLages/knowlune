@@ -92,7 +92,12 @@ interface LearningPathState {
   createPathWithCourses: (
     name: string,
     description: string | undefined,
-    courses: Array<{ courseId: string; courseType: 'imported' | 'catalog'; justification?: string }>
+    courses: Array<{
+      courseId: string
+      courseType: 'imported' | 'catalog'
+      justification?: string
+    }>,
+    cover?: { coverImageUrl?: string; coverPreset?: string }
   ) => Promise<LearningPath>
   batchAddCoursesToPath: (
     pathId: string,
@@ -1095,7 +1100,12 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
   createPathWithCourses: async (
     name: string,
     description: string | undefined,
-    courses: Array<{ courseId: string; courseType: 'imported' | 'catalog'; justification?: string }>
+    courses: Array<{
+      courseId: string
+      courseType: 'imported' | 'catalog'
+      justification?: string
+    }>,
+    cover?: { coverImageUrl?: string; coverPreset?: string }
   ) => {
     const now = new Date().toISOString()
     const path: LearningPath = {
@@ -1106,6 +1116,8 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
       updatedAt: now,
       isAIGenerated: false,
       progressionMode: 'free',
+      ...(cover?.coverImageUrl ? { coverImageUrl: cover.coverImageUrl } : {}),
+      ...(cover?.coverPreset ? { coverPreset: cover.coverPreset } : {}),
     }
 
     const prevPaths = get().paths
