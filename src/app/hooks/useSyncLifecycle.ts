@@ -21,7 +21,6 @@
 
 import { useEffect, useRef } from 'react'
 import { syncEngine } from '@/lib/sync/syncEngine'
-import { classifyError } from '@/lib/sync/classifyError'
 import { getSettings } from '@/lib/settings'
 import { useAuthStore } from '@/stores/useAuthStore'
 import { useSessionStore } from '@/stores/useSessionStore'
@@ -39,6 +38,7 @@ import { useBookStore } from '@/stores/useBookStore'
 import { useBookReviewStore } from '@/stores/useBookReviewStore'
 import { useShelfStore } from '@/stores/useShelfStore'
 import { useReadingQueueStore } from '@/stores/useReadingQueueStore'
+import { runFullSync } from '@/lib/sync/runFullSync'
 
 /** Interval between periodic nudge calls (ms). */
 const NUDGE_INTERVAL_MS = 30_000
@@ -62,8 +62,6 @@ export function useSyncLifecycle(): void {
   useEffect(() => {
     mountedRef.current = true
     autoSyncEnabledRef.current = isAutoSyncEnabled()
-
-    const { setStatus, markSyncComplete } = useSyncStatusStore.getState()
 
     // -------------------------------------------------------------------------
     // Store refresh registrations — MUST happen before first fullSync() so that
@@ -117,36 +115,31 @@ export function useSyncLifecycle(): void {
 
     // -------------------------------------------------------------------------
     // P2 store refresh registrations — E94-S02
-    // All three importedCourses/Videos/Pdfs callbacks trigger loadImportedCourses()
-    // because the course store re-queries all child records on next navigation.
+    // Grouped: all three import tables share one 'courses' refresh. The download
+    // engine marks the 'courses' group dirty when any of importedCourses,
+    // importedVideos, or importedPdfs is processed, and the batched refresh
+    // runs once after all download tasks complete.
     // -------------------------------------------------------------------------
 
-    syncEngine.registerStoreRefresh('importedCourses', () => {
-      useCourseImportStore.getState().resetCoursesLoadState()
-      return useCourseImportStore.getState().loadImportedCourses()
+    // Silent refresh: keep existing data visible during background sync.
+    // The `silent` option bypasses the isLoaded guard without resetting it,
+    // so Learning Tracks and other pages do not flash skeletons or errors
+    // while the sync download is in progress.
+    syncEngine.registerStoreRefresh('courses', () => {
+      return useCourseImportStore.getState().loadImportedCourses({ silent: true })
     })
 
-    syncEngine.registerStoreRefresh('importedVideos', () => {
-      useCourseImportStore.getState().resetCoursesLoadState()
-      return useCourseImportStore.getState().loadImportedCourses()
-    })
-
-    syncEngine.registerStoreRefresh('importedPdfs', () => {
-      useCourseImportStore.getState().resetCoursesLoadState()
-      return useCourseImportStore.getState().loadImportedCourses()
-    })
-
-    // learningPaths / learningPathEntries — both tables refresh through loadPaths().
-    // Registered here so sync-downloaded path data appears in the UI without a manual
-    // page refresh. Uses the same reset-before-load pattern as books and shelves.
+    // learningPaths + learningPathEntries share one refresh group.
     syncEngine.registerStoreRefresh('learningPaths', async () => {
-      useLearningPathStore.getState().resetLoadState()
-      await useLearningPathStore.getState().loadPaths()
+      await useLearningPathStore.getState().loadPaths({ silent: true })
     })
 
-    syncEngine.registerStoreRefresh('learningPathEntries', async () => {
-      useLearningPathStore.getState().resetLoadState()
-      await useLearningPathStore.getState().loadPaths()
+    // shelves + bookShelves share one refresh group.
+    syncEngine.registerStoreRefresh('shelves', async () => {
+      // shelves uses a custom loadShelves which already queries both tables.
+      // Reset the guard first since loadShelves doesn't support silent yet.
+      useShelfStore.setState({ isLoaded: false })
+      await useShelfStore.getState().loadShelves()
     })
 
     // UX note (authors refresh): sync used to clear `isLoaded` before reload, which swapped
@@ -167,18 +160,7 @@ export function useSyncLifecycle(): void {
       await useBookReviewStore.getState().loadReviews()
     })
 
-    // `shelves` and `bookShelves` are both owned by useShelfStore — loadShelves
-    // re-queries both tables. Registering both keys ensures the callback fires
-    // regardless of which table the download engine processed last.
-    syncEngine.registerStoreRefresh('shelves', async () => {
-      useShelfStore.setState({ isLoaded: false })
-      await useShelfStore.getState().loadShelves()
-    })
-
-    syncEngine.registerStoreRefresh('bookShelves', async () => {
-      useShelfStore.setState({ isLoaded: false })
-      await useShelfStore.getState().loadShelves()
-    })
+    // shelves + bookShelves already registered above as one refresh group.
 
     syncEngine.registerStoreRefresh('readingQueue', async () => {
       useReadingQueueStore.setState({ isLoaded: false })
@@ -192,25 +174,20 @@ export function useSyncLifecycle(): void {
     // useContentProgressStore in a later story if cross-session refresh is needed.
 
     // -------------------------------------------------------------------------
-    // Initial fullSync on mount — gated on autoSyncEnabled (E97-S02).
-    // When disabled, we skip the initial sync entirely so a user who has
-    // explicitly paused sync does not trigger a fullSync on every reload.
+    // Wire phase-change callback so the sync engine can surface granular
+    // status (uploading / downloading / applying / refreshing) to the UI.
     // -------------------------------------------------------------------------
 
-    if (autoSyncEnabledRef.current) {
-      setStatus('syncing')
-      syncEngine
-        .fullSync()
-        .then(() => {
-          if (!mountedRef.current) return
-          markSyncComplete()
-        })
-        .catch((err: unknown) => {
-          if (!mountedRef.current) return
-          console.error('[useSyncLifecycle] Initial fullSync failed:', err)
-          setStatus('error', classifyError(err))
-        })
-    }
+    syncEngine.onPhaseChange((phase) => {
+      const { setPhase } = useSyncStatusStore.getState()
+      setPhase(phase)
+    })
+
+    // -------------------------------------------------------------------------
+    // Initial fullSync is NOT started here — useAuthLifecycle.handleSignIn()
+    // is the sole owner of the authenticated initial sync. This hook only
+    // manages store refresh callbacks, periodic nudges, and lifecycle events.
+    // -------------------------------------------------------------------------
 
     // -------------------------------------------------------------------------
     // Periodic nudge — 30 second interval
@@ -250,19 +227,12 @@ export function useSyncLifecycle(): void {
 
     const handleOnline = () => {
       if (!autoSyncEnabledRef.current) return
-      const { setStatus: setState, markSyncComplete: markComplete } = useSyncStatusStore.getState()
-      setState('syncing')
-      syncEngine
-        .fullSync()
-        .then(() => {
-          if (!mountedRef.current) return
-          markComplete()
-        })
-        .catch((err: unknown) => {
-          if (!mountedRef.current) return
-          console.error('[useSyncLifecycle] Reconnection fullSync failed:', err)
-          setState('error', classifyError(err))
-        })
+      // Uses the shared runFullSync() utility which handles setStatus/markSyncComplete
+      // internally. The single-flight guard in syncEngine prevents concurrent cycles.
+      runFullSync().catch((err: unknown) => {
+        if (!mountedRef.current) return
+        console.error('[useSyncLifecycle] Reconnection fullSync failed:', err)
+      })
     }
     window.addEventListener('online', handleOnline)
 
@@ -320,15 +290,10 @@ export function useSyncLifecycle(): void {
       const userId = useAuthStore.getState().user?.id
       if (next) {
         if (userId) {
-          // silent-catch-ok — start() errors surface via useSyncStatusStore
-          // status='error' on the next fullSync attempt; the indicator owns
-          // the user-visible surface for sync lifecycle failures.
+          // start() triggers a fullSync via the single-flight wrapper. No need
+          // for a separate fullSync() call — that was a duplicate path.
           void syncEngine.start(userId).catch((err: unknown) => {
             console.error('[useSyncLifecycle] start after re-enable failed:', err)
-          })
-          // F2: trigger a fullSync to pick up any changes missed while paused.
-          void syncEngine.fullSync().catch((err: unknown) => {
-            console.error('[useSyncLifecycle] fullSync after re-enable failed:', err)
           })
         }
       } else {

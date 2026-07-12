@@ -39,6 +39,24 @@ const LINKED_FLAG_PREFIX = 'sync:linked:'
 // is permanent per device and is NOT cleared here.
 const WIZARD_DISMISSED_PREFIX = 'sync:wizard:dismissed:'
 
+/**
+ * Guards against duplicate handleSignIn calls within the same mount cycle.
+ *
+ * `onAuthStateChange(INITIAL_SESSION)` and `supabase.auth.getSession()` both
+ * fire on startup. Without deduplication, handleSignIn runs twice, hydrating
+ * settings and starting syncEngine twice. This ref stores a stable session key
+ * (`{userId}:{access_token_last_12_chars}`) — calls with the same key are
+ * suppressed. Cleared on SIGNED_OUT.
+ */
+let handledSessionKey: string | null = null
+
+/**
+ * Re-entrant guard: prevents concurrent handleSignIn calls from racing.
+ * When set, subsequent calls return immediately (the first caller is in-flight).
+ * Cleared in the finally block of handleSignIn.
+ */
+let signInInFlight = false
+
 export interface UseAuthLifecycleOptions {
   /** Called with the userId when unlinked local records are detected on sign-in. */
   onUnlinkedDetected?: (userId: string) => void
@@ -54,17 +72,44 @@ export function useAuthLifecycle({ onUnlinkedDetected }: UseAuthLifecycleOptions
      * Core sign-in handler shared by both the onAuthStateChange callback and
      * the getSession() fallback path.
      *
+     * @param source Identifies which path invoked sign-in handling — used for
+     *   diagnostic logging so duplicate suppression is traceable in production.
+     *
      * 1. Hydrates settings.
      * 2. If the user already linked this device (localStorage flag): start sync + backfill.
      * 3. Otherwise: check for unlinked records.
      *    - Has unlinked → call onUnlinkedDetected; syncEngine.start() deferred.
      *    - No unlinked → backfill (idempotent) + start sync immediately.
      */
-    async function handleSignIn(userId: string, userMetadata: Record<string, unknown>) {
+    async function handleSignIn(
+      userId: string,
+      userMetadata: Record<string, unknown>,
+      source: 'auth-event' | 'get-session',
+    ) {
       if (ignore) return
 
-      // Read guest session id before any async work so it's stable throughout this call.
-      const guestSessionId = sessionStorage.getItem('knowlune-guest-id')
+      // Re-entrant guard: prevent concurrent handleSignIn calls from racing.
+      if (signInInFlight) {
+        console.debug(
+          `[useAuthLifecycle] handleSignIn(${source}): sign-in already in-flight — skipping.`,
+        )
+        return
+      }
+
+      // Dedup by session key: suppress duplicate calls for the same session.
+      const sessionKey = `${userId}:${userMetadata.sub ?? ''}`.slice(0, 48)
+      if (handledSessionKey === sessionKey) {
+        console.debug(
+          `[useAuthLifecycle] handleSignIn(${source}): session ${sessionKey} already handled — skipping.`,
+        )
+        return
+      }
+      handledSessionKey = sessionKey
+      signInInFlight = true
+
+      try {
+        // Read guest session id before any async work so it's stable throughout this call.
+        const guestSessionId = sessionStorage.getItem('knowlune-guest-id')
 
       await hydrateSettingsFromSupabase(userMetadata, userId)
 
@@ -136,6 +181,9 @@ export function useAuthLifecycle({ onUnlinkedDetected }: UseAuthLifecycleOptions
         localStorage.setItem(`${LINKED_FLAG_PREFIX}${userId}`, 'true')
         clearGuestFlags()
       }
+      } finally {
+        signInInFlight = false
+      }
     }
 
     function clearGuestFlags() {
@@ -152,6 +200,10 @@ export function useAuthLifecycle({ onUnlinkedDetected }: UseAuthLifecycleOptions
       const state = useAuthStore.getState()
 
       if (event === 'SIGNED_OUT') {
+        // Clear deduplication guards so the next sign-in processes fresh.
+        handledSessionKey = null
+        signInInFlight = false
+
         // Distinguish user-initiated sign-out from system-initiated (token expiry)
         if (state._userInitiatedSignOut) {
           // User clicked "Sign out" — no expiry banner, reset flag
@@ -209,7 +261,7 @@ export function useAuthLifecycle({ onUnlinkedDetected }: UseAuthLifecycleOptions
 
       // Hydrate localStorage settings from Supabase user_metadata on sign-in
       if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session?.user) {
-        handleSignIn(session.user.id, session.user.user_metadata ?? {}).catch(err => {
+        handleSignIn(session.user.id, session.user.user_metadata ?? {}, 'auth-event').catch(err => {
           console.error('[useAuthLifecycle] handleSignIn (onAuthStateChange) failed:', err)
         })
       }
@@ -225,7 +277,7 @@ export function useAuthLifecycle({ onUnlinkedDetected }: UseAuthLifecycleOptions
       const state = useAuthStore.getState()
       state.setSession(session)
       if (session?.user) {
-        handleSignIn(session.user.id, session.user.user_metadata ?? {}).catch(err => {
+        handleSignIn(session.user.id, session.user.user_metadata ?? {}, 'get-session').catch(err => {
           console.error('[useAuthLifecycle] handleSignIn (getSession) failed:', err)
         })
       }

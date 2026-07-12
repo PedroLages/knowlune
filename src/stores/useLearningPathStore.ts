@@ -27,7 +27,7 @@ interface LearningPathState {
   >
 
   // Path CRUD
-  loadPaths: () => Promise<void>
+  loadPaths: (options?: { silent?: boolean }) => Promise<void>
   createPath: (name: string, description?: string) => Promise<LearningPath>
   renamePath: (pathId: string, name: string) => Promise<void>
   updateDescription: (pathId: string, description: string) => Promise<void>
@@ -176,8 +176,17 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
   isLoaded: false,
   pendingDeletes: {},
 
-  loadPaths: async () => {
-    if (get().isLoaded) return
+  /**
+   * Load learning paths and entries from Dexie.
+   *
+   * @param options.silent — When true, bypasses the isLoaded guard and
+   *   refreshes data from Dexie without resetting isLoaded. Existing data
+   *   stays visible during the refresh (no skeleton flash). Errors are
+   *   swallowed silently — the stale in-memory data is preserved. Used by
+   *   background sync store refreshes to avoid breaking Learning Tracks.
+   */
+  loadPaths: async (options?: { silent?: boolean }) => {
+    if (!options?.silent && get().isLoaded) return
     try {
       const paths = await db.learningPaths.toArray()
       const entries = await db.learningPathEntries.toArray()
@@ -196,7 +205,9 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
       // Do NOT set isLoaded: true — the guard would prevent retry from ever
       // re-reading Dexie. The caller (LearningTracks) shows a warning banner
       // with a Retry button that calls resetLoadState() before re-triggering.
-      set({ error: 'Failed to load learning paths from database' })
+      if (!options?.silent) {
+        set({ error: 'Failed to load learning paths from database' })
+      }
     }
   },
 

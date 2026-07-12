@@ -4,8 +4,8 @@
  * Zero-prop Zustand consumer that renders:
  *   - A single icon trigger (44×44 min touch target) colored by sync status.
  *   - An optional badge showing the pending queue depth.
- *   - A Popover with last-sync time, queue depth copy, and (when status is
- *     'error') a Retry now button that invokes the shared runFullSync() utility.
+ *   - A Popover with last-sync time, queue depth copy, phase-aware body text,
+ *     elapsed-time display, and (when status is 'error') a Retry button.
  *
  * See `docs/plans/2026-04-19-021-feat-e97-s01-sync-status-indicator-header-plan.md`.
  */
@@ -27,7 +27,11 @@ import { toast } from 'sonner'
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover'
 import { Button } from '../ui/button'
 import { Badge } from '../ui/badge'
-import { useSyncStatusStore, type SyncStatus } from '@/app/stores/useSyncStatusStore'
+import {
+  useSyncStatusStore,
+  type SyncStatus,
+  type SyncPhase,
+} from '@/app/stores/useSyncStatusStore'
 import { runFullSync } from '@/lib/sync/runFullSync'
 
 interface StatusConfigEntry {
@@ -37,7 +41,7 @@ interface StatusConfigEntry {
   colorClass: string
   /** Short label surfaced in the Popover header and aria-label template. */
   label: string
-  /** Body copy shown in the Popover when there is no error to display. */
+  /** Fallback body copy shown when phase-specific copy is unavailable. */
   copy: string
 }
 
@@ -68,10 +72,31 @@ const STATUS_CONFIG: Record<SyncStatus, StatusConfigEntry> = {
   },
 }
 
+/**
+ * Phase-aware body copy. When status is 'syncing', the indicator body shows
+ * the copy for the current phase instead of the static syncing copy.
+ * When pendingCount is zero during downloading, the copy reflects the download
+ * rather than implying an upload is running.
+ */
+const PHASE_COPY: Record<SyncPhase, string> = {
+  idle: 'Uploading your latest changes.',
+  uploading: 'Uploading your latest changes.',
+  downloading: 'Downloading changes from the cloud.',
+  applying: 'Updating local data.',
+  refreshing: 'Refreshing courses and learning tracks.',
+}
+
 function formatQueueCopy(pendingCount: number): string {
   if (pendingCount <= 0) return 'All changes saved'
   if (pendingCount === 1) return '1 change waiting to upload'
   return `${pendingCount} changes waiting to upload`
+}
+
+function formatElapsed(seconds: number): string {
+  if (seconds < 60) return `${seconds}s`
+  const m = Math.floor(seconds / 60)
+  const s = seconds % 60
+  return `${m}m ${s}s`
 }
 
 function usePrefersReducedMotion(): boolean {
@@ -100,9 +125,11 @@ function usePrefersReducedMotion(): boolean {
 
 export function SyncStatusIndicator(): React.ReactElement {
   const status = useSyncStatusStore(s => s.status)
+  const phase = useSyncStatusStore(s => s.phase)
   const pendingCount = useSyncStatusStore(s => s.pendingCount)
   const lastSyncAt = useSyncStatusStore(s => s.lastSyncAt)
   const lastError = useSyncStatusStore(s => s.lastError)
+  const elapsedSeconds = useSyncStatusStore(s => s.elapsedSeconds)
 
   const [open, setOpen] = useState(false)
   const reducedMotion = usePrefersReducedMotion()
@@ -110,6 +137,15 @@ export function SyncStatusIndicator(): React.ReactElement {
   const { announce } = useLiveRegion()
 
   const config = STATUS_CONFIG[status] ?? STATUS_CONFIG.synced
+
+  // Heartbeat: tick elapsedSeconds every second while syncing.
+  useEffect(() => {
+    if (status !== 'syncing') return
+    const interval = setInterval(() => {
+      useSyncStatusStore.getState().tickElapsed()
+    }, 1000)
+    return () => clearInterval(interval)
+  }, [status])
 
   // Derived aria-label — silent on normal sync flips; live region (below)
   // only speaks when we transition INTO error/offline, to avoid chatty
@@ -134,7 +170,7 @@ export function SyncStatusIndicator(): React.ReactElement {
       } else if (prev === 'error' && status === 'synced') {
         announce('Sync recovered. All changes saved.')
       } else if (prev === 'error' && status === 'syncing') {
-        announce('Retrying sync\u2026')
+        announce('Retrying sync…')
       }
       // synced → syncing (normal 30s nudge) and syncing → synced (normal completion)
       // remain intentionally silent to avoid chatty announcements.
@@ -182,6 +218,19 @@ export function SyncStatusIndicator(): React.ReactElement {
 
   const showSpinnerAnimation = status === 'syncing' && !reducedMotion
 
+  // Phase-aware body copy:
+  // - syncing + no pending uploads + downloading → show "Downloading changes…" not "Uploading"
+  // - syncing + phase mapping → PHASE_COPY[phase]
+  // - default → config.copy
+  const bodyCopy =
+    status === 'syncing' && PHASE_COPY[phase] ? PHASE_COPY[phase] : config.copy
+
+  // Show elapsed time after 10 s of syncing.
+  const showElapsed = status === 'syncing' && elapsedSeconds >= 10
+
+  // Show stall warning after 30 s.
+  const showStalled = status === 'syncing' && elapsedSeconds >= 30
+
   return (
     <Popover open={open} onOpenChange={setOpen}>
       {/* Live region announcements now route through useLiveRegion → SyncUXShell's
@@ -226,7 +275,28 @@ export function SyncStatusIndicator(): React.ReactElement {
             <p className="font-semibold text-sm">{config.label}</p>
           </div>
 
-          <p className="text-sm text-muted-foreground">{config.copy}</p>
+          <p className="text-sm text-muted-foreground">{bodyCopy}</p>
+
+          {/* Elapsed time during longer syncs */}
+          {showElapsed && (
+            <p className="text-xs text-muted-foreground" data-testid="sync-elapsed">
+              {bodyCopy.replace(/\.$/, '')}&hellip;{' '}
+              <span className="tabular-nums">{formatElapsed(elapsedSeconds)}</span>
+            </p>
+          )}
+
+          {/* Stall warning after 30 s */}
+          {showStalled && (
+            <div
+              role="alert"
+              className="rounded-md border border-warning/30 bg-warning/10 p-2"
+              data-testid="sync-stalled-warning"
+            >
+              <p className="text-xs text-warning">
+                Sync is taking longer than expected.
+              </p>
+            </div>
+          )}
 
           <dl className="text-sm space-y-1">
             <div className="flex items-center justify-between gap-2">

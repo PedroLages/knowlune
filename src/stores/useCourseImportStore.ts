@@ -58,7 +58,7 @@ interface CourseImportState {
   getTagsWithCounts: () => { tag: string; count: number }[]
   renameTagGlobally: (oldTag: string, newTag: string) => Promise<'renamed' | 'merged'>
   deleteTagGlobally: (tag: string) => Promise<void>
-  loadImportedCourses: () => Promise<void>
+  loadImportedCourses: (options?: { silent?: boolean }) => Promise<void>
   resetCoursesLoadState: () => void
   loadThumbnailUrls: (courseIds: string[]) => Promise<void>
   setImporting: (isImporting: boolean) => void
@@ -522,8 +522,17 @@ export const useCourseImportStore = create<CourseImportState>((set, get) => ({
     }
   },
 
-  loadImportedCourses: async () => {
-    if (get().isCoursesLoaded) return
+  /**
+   * Load imported courses from Dexie.
+   *
+   * @param options.silent — When true, bypasses the isCoursesLoaded guard and
+   *   refreshes data from Dexie without resetting isCoursesLoaded. Existing
+   *   data stays visible during the refresh (no skeleton flash). Errors are
+   *   swallowed silently — the stale in-memory data is preserved. Used by
+   *   background sync store refreshes to avoid breaking Learning Tracks.
+   */
+  loadImportedCourses: async (options?: { silent?: boolean }) => {
+    if (!options?.silent && get().isCoursesLoaded) return
     try {
       const courses = await db.importedCourses.toArray()
       set({ importedCourses: courses, isCoursesLoaded: true, importError: null })
@@ -540,7 +549,9 @@ export const useCourseImportStore = create<CourseImportState>((set, get) => ({
       // Do NOT set isCoursesLoaded: true — the guard would prevent retry.
       // Callers (Layout, LearningTracks, sync refresh) reset via
       // resetCoursesLoadState() before re-triggering.
-      set({ importError: 'Failed to load courses from database' })
+      if (!options?.silent) {
+        set({ importError: 'Failed to load courses from database' })
+      }
       console.error('[Database] Failed to load courses:', error)
     }
   },

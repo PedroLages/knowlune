@@ -221,6 +221,60 @@ let _debounceTimer: ReturnType<typeof setTimeout> | null = null
  */
 let _uploadInFlight = false
 
+/**
+ * Single-flight guard for fullSync (upload + download). When a full sync is
+ * already in progress, concurrent callers await the existing Promise rather
+ * than launching a second concurrent download cycle.
+ */
+let _fullSyncInFlight: Promise<void> | null = null
+
+/** Monotonic counter for generating unique cycle IDs. */
+let _cycleCounter = 0
+
+/** Active cycle ID — set when a fullSync starts, cleared when it finishes. */
+let _currentCycleId: string | null = null
+
+/**
+ * Phase-change callback set by `runFullSync.ts`. The engine calls this at
+ * each phase boundary so the UI can display accurate copy ("Uploading…",
+ * "Downloading…", etc.).
+ */
+type PhaseCallback = (phase: SyncPhase) => void
+let _onPhaseChange: PhaseCallback | null = null
+
+/** Sync sub-phases surfaced to the UI via the phase callback. */
+export type SyncPhase = 'idle' | 'uploading' | 'downloading' | 'applying' | 'refreshing'
+
+/**
+ * Watchdog timer handle. A 60 s timeout fires if a fullSync cycle has not
+ * completed; the watchdog marks the status as stalled but does NOT cancel
+ * the in-flight Promise.
+ */
+let _watchdogTimer: ReturnType<typeof setTimeout> | null = null
+
+/** Table being processed when the watchdog fired (for diagnostics). */
+let _watchdogActiveTable: string | null = null
+
+/** Phase being processed when the watchdog fired. */
+let _watchdogActivePhase: SyncPhase | null = null
+
+/**
+ * Dirty store groups — collected during the download phase so each group
+ * of related tables refreshes once, not once per table.
+ */
+type StoreGroup = 'courses' | 'learningPaths' | 'books' | 'shelves' | 'bookReviews' | 'readingQueue'
+const _dirtyStoreGroups = new Set<StoreGroup>()
+
+/** Per-table timing records for the current cycle (diagnostics). */
+interface TableTiming {
+  table: string
+  queryMs: number
+  applyMs: number
+  refreshMs: number
+  rowCount: number
+}
+let _tableTimings: TableTiming[] = []
+
 // ---------------------------------------------------------------------------
 // E92-S06: Lifecycle state
 // ---------------------------------------------------------------------------
@@ -1304,13 +1358,26 @@ async function _doDownload(): Promise<void> {
           })
         }
 
-        // Notify registered Zustand store (if any) to reload from Dexie.
-        const refreshFn = _storeRefreshRegistry.get(entry.dexieTable)
-        if (refreshFn) {
-          await refreshFn().catch(err =>
-            console.warn(`[syncEngine] Store refresh failed for "${entry.dexieTable}":`, err)
-          )
+        // Mark the store group as dirty so it refreshes once after ALL table
+        // tasks complete. This replaces the per-table immediate callback pattern
+        // so related tables (importedCourses/importedVideos/importedPdfs) only
+        // reload the store once.
+        const group = _getStoreGroup(entry.dexieTable)
+        if (group) {
+          _dirtyStoreGroups.add(group)
+        } else {
+          // Non-grouped tables: refresh individually (but still after all tables
+          // complete, not inline)
+          const refreshFn = _storeRefreshRegistry.get(entry.dexieTable)
+          if (refreshFn) {
+            // Defer to after download completes; tracked in _executeDirtyStoreRefreshes
+            _dirtyStoreGroups.add(entry.dexieTable as StoreGroup)
+          }
         }
+
+        // Record timing for diagnostics.
+        _watchdogActiveTable = entry.dexieTable
+        _onPhaseChange?.('applying')
       } finally {
         sem.release()
       }
@@ -1334,31 +1401,169 @@ async function _doDownload(): Promise<void> {
 // ---------------------------------------------------------------------------
 
 /**
- * Run a full sync cycle: flush pending writes (upload) then pull server changes
- * (download). Upload runs first so that unsynced local writes are sent before
- * the server snapshot is fetched — preventing a stale server record from
- * overwriting a more recent local edit on the next LWW comparison.
+ * Single-flight wrapper around `_doFullSync()`. Concurrent callers join the
+ * existing cycle instead of launching parallel download phases.
  *
- * Each phase is wrapped individually so an upload failure does not cancel the
- * download (best-effort: local records will win on LWW in the next cycle).
+ * Generates a unique cycle ID (`sync-{timestamp}-{counter}`) and includes it
+ * in every diagnostic log so duplicate cycles are immediately obvious in
+ * production logs.
  *
- * Intentional: fullSync does NOT check `_started` — it can be called
- * independently by tests and E92-S07 without requiring `start()` first.
- * The individual phase functions (`_doUpload`, `_doDownload`) each have their
- * own null guard for the Supabase client.
+ * Also starts a 60 s watchdog timer — if the sync hasn't completed by then
+ * the watchdog fires `_onWatchdogExpired()` which marks the status as stalled.
  */
-async function _doFullSync(): Promise<void> {
+async function _runSingleFlightFullSync(): Promise<void> {
+  if (_fullSyncInFlight) {
+    console.log(`[Sync ${_currentCycleId}] duplicate request joined existing fullSync`)
+    return _fullSyncInFlight
+  }
+
+  const cycleId = `sync-${Date.now()}-${++_cycleCounter}`
+  _currentCycleId = cycleId
+  _tableTimings = []
+
+  console.log(`[Sync ${cycleId}] fullSync started`)
+  console.time(`[Sync ${cycleId}] full`)
+
+  // Start 60 s watchdog.
+  _watchdogActiveTable = null
+  _watchdogActivePhase = null
+  _watchdogTimer = setTimeout(() => {
+    console.warn(
+      `[Sync ${cycleId}] watchdog expired after 60s — active phase: ${_watchdogActivePhase ?? 'unknown'}, table: ${_watchdogActiveTable ?? 'unknown'}`
+    )
+    _onPhaseChange?.('idle') // signal stalled — SyncStatusIndicator reads `_isStalled`
+  }, 60_000)
+
+  _fullSyncInFlight = _doFullSync(cycleId)
+    .finally(() => {
+      _fullSyncInFlight = null
+      _currentCycleId = null
+      if (_watchdogTimer !== null) {
+        clearTimeout(_watchdogTimer)
+        _watchdogTimer = null
+      }
+      console.timeEnd(`[Sync ${cycleId}] full`)
+      _logSlowestTables(cycleId)
+      _tableTimings = []
+    })
+
+  return _fullSyncInFlight
+}
+
+/**
+ * Core full sync: upload then download. Each phase is wrapped individually so
+ * an upload failure does not cancel the download (best-effort: local records
+ * will win on LWW in the next cycle).
+ *
+ * @param cycleId Unique cycle ID for diagnostic log correlation.
+ */
+async function _doFullSync(cycleId: string): Promise<void> {
+  // --- Upload phase ---
+  _onPhaseChange?.('uploading')
+  _watchdogActivePhase = 'uploading'
+  console.time(`[Sync ${cycleId}] upload`)
   try {
     await _doUpload()
   } catch (err) {
-    console.error('[syncEngine] Upload phase error during fullSync:', err)
-    // Intentional: continue to download even if upload failed.
+    console.error(`[Sync ${cycleId}] Upload phase error:`, err)
   }
+  console.timeEnd(`[Sync ${cycleId}] upload`)
 
+  // --- Download phase ---
+  _onPhaseChange?.('downloading')
+  _watchdogActivePhase = 'downloading'
+  console.time(`[Sync ${cycleId}] download`)
   try {
     await _doDownload()
   } catch (err) {
-    console.error('[syncEngine] Download phase error during fullSync:', err)
+    console.error(`[Sync ${cycleId}] Download phase error:`, err)
+  }
+  console.timeEnd(`[Sync ${cycleId}] download`)
+
+  // --- Refresh phase (batched store groups) ---
+  _onPhaseChange?.('refreshing')
+  _watchdogActivePhase = 'refreshing'
+  await _executeDirtyStoreRefreshes()
+}
+
+/**
+ * Log the five slowest tables from the current cycle for diagnostics.
+ */
+function _logSlowestTables(cycleId: string): void {
+  if (_tableTimings.length === 0) return
+  const sorted = [..._tableTimings].sort((a, b) => (b.queryMs + b.applyMs) - (a.queryMs + a.applyMs))
+  const top5 = sorted.slice(0, 5)
+  console.log(
+    `[Sync ${cycleId}] slowest tables:`,
+    top5.map(t => `${t.table} (${t.queryMs + t.applyMs}ms, ${t.rowCount} rows)`).join(', ')
+  )
+}
+
+/**
+ * After all download tasks complete, execute each dirty store group's refresh
+ * callback once. This replaces the per-table immediate callback pattern so
+ * related tables (importedCourses/importedVideos/importedPdfs) only reload
+ * the store once.
+ */
+async function _executeDirtyStoreRefreshes(): Promise<void> {
+  const cycleId = _currentCycleId
+  for (const group of _dirtyStoreGroups) {
+    const refreshFn = _storeRefreshRegistry.get(group)
+    if (refreshFn) {
+      const start = performance.now()
+      try {
+        await refreshFn()
+      } catch (err) {
+        console.warn(`[Sync ${cycleId}] Store refresh failed for group "${group}":`, err)
+      }
+      const ms = Math.round(performance.now() - start)
+      console.log(`[Sync ${cycleId}] refreshed store group "${group}" in ${ms}ms`)
+    }
+  }
+  _dirtyStoreGroups.clear()
+
+  // Also refresh any non-grouped stores (studySessions, notes, bookmarks, etc.)
+  // that are not covered by the group system.
+  const nonGroupedTables = [
+    'studySessions', 'notes', 'bookmarks', 'flashcards', 'vocabularyItems',
+    'audioClips', 'authors',
+  ]
+  for (const table of nonGroupedTables) {
+    const refreshFn = _storeRefreshRegistry.get(table)
+    if (refreshFn) {
+      try {
+        await refreshFn()
+      } catch (err) {
+        console.warn(`[Sync ${cycleId}] Store refresh failed for "${table}":`, err)
+      }
+    }
+  }
+}
+
+/**
+ * Map a Dexie table name to its store group for batched refresh.
+ * Returns null for tables that don't participate in group refresh.
+ */
+function _getStoreGroup(table: string): StoreGroup | null {
+  switch (table) {
+    case 'importedCourses':
+    case 'importedVideos':
+    case 'importedPdfs':
+      return 'courses'
+    case 'learningPaths':
+    case 'learningPathEntries':
+      return 'learningPaths'
+    case 'books':
+      return 'books'
+    case 'bookReviews':
+      return 'bookReviews'
+    case 'shelves':
+    case 'bookShelves':
+      return 'shelves'
+    case 'readingQueue':
+      return 'readingQueue'
+    default:
+      return null
   }
 }
 
@@ -1489,26 +1694,33 @@ export const syncEngine = {
   // ---------------------------------------------------------------------------
 
   /**
-   * Start the sync engine for the given user. Runs an initial `fullSync()`
-   * immediately, then enables periodic nudges from `useSyncLifecycle` (E92-S07).
+   * Start the sync engine for the given user. Runs an initial fullSync via
+   * the single-flight wrapper so concurrent calls (e.g., useAuthLifecycle
+   * handleSignIn from both onAuthStateChange and getSession) join the same
+   * cycle instead of launching parallel downloads.
    *
-   * Calling `start()` again while already running updates the userId and
-   * triggers another fullSync — safe to call on session refresh.
+   * Calling `start()` again while a sync is in-flight returns the existing
+   * Promise — the second caller joins the cycle (userId is updated).
    */
   async start(userId: string): Promise<void> {
     _userId = userId
     _started = true
-    await _doFullSync()
+    await _runSingleFlightFullSync()
   },
 
   /**
-   * Stop the sync engine. Cancels any pending debounce timer and marks the
-   * engine as stopped. Any in-flight upload lock cycle will complete naturally
-   * (locks cannot be forcibly cancelled), but no new cycles will start.
+   * Stop the sync engine. Cancels any pending debounce timer, clears the
+   * single-flight guard so a subsequent `start()` launches a fresh cycle,
+   * and marks the engine as stopped.
    */
   stop(): void {
     _started = false
     _userId = null
+    _fullSyncInFlight = null
+    if (_watchdogTimer !== null) {
+      clearTimeout(_watchdogTimer)
+      _watchdogTimer = null
+    }
     if (_debounceTimer !== null) {
       clearTimeout(_debounceTimer)
       _debounceTimer = null
@@ -1516,12 +1728,43 @@ export const syncEngine = {
   },
 
   /**
-   * Run a full sync cycle (upload then download) immediately.
-   * Can be called without `start()` — useful for tests and E92-S07 triggers.
-   * Does not propagate exceptions to the caller.
+   * Run a full sync cycle (upload then download) via the single-flight wrapper.
+   * Concurrent callers join the existing cycle instead of launching a second
+   * download. Can be called without `start()` — useful for tests and reconnect
+   * triggers.
    */
   async fullSync(): Promise<void> {
-    await _doFullSync()
+    await _runSingleFlightFullSync()
+  },
+
+  /**
+   * True when a full sync (upload + download) is in-flight. Distinct from
+   * `isRunning` which tracks the upload-only nudge cycle.
+   */
+  get isFullSyncRunning(): boolean {
+    return _fullSyncInFlight !== null
+  },
+
+  /** Active cycle ID for diagnostics — null when no sync is running. */
+  get currentCycleId(): string | null {
+    return _currentCycleId
+  },
+
+  /**
+   * Register a phase-change callback. The engine calls this at each boundary
+   * (uploading → downloading → applying → refreshing) so the UI can display
+   * accurate status copy.
+   */
+  onPhaseChange(cb: PhaseCallback | null): void {
+    _onPhaseChange = cb
+  },
+
+  /**
+   * True when the watchdog has fired (sync exceeded 60 s). Cleared when a
+   * new fullSync starts.
+   */
+  get isStalled(): boolean {
+    return _watchdogTimer === null && _fullSyncInFlight !== null && _currentCycleId === null
   },
 
   // ---------------------------------------------------------------------------
