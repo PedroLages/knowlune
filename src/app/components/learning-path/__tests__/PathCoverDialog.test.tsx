@@ -3,6 +3,7 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { PathCoverDialog } from '../PathCoverDialog'
 import { toast } from 'sonner'
+import { uploadPathCover, deletePathCover } from '@/lib/pathCoverUpload'
 import type { LearningPath } from '@/data/types'
 
 vi.mock('sonner', () => ({
@@ -13,6 +14,9 @@ vi.mock('@/lib/pathCoverUpload', () => ({
   uploadPathCover: vi.fn(),
   deletePathCover: vi.fn(),
 }))
+
+const mockUploadPathCover = vi.mocked(uploadPathCover)
+const mockDeletePathCover = vi.mocked(deletePathCover)
 
 const mockUpdatePathCover = vi.fn().mockResolvedValue(undefined)
 
@@ -106,5 +110,86 @@ describe('PathCoverDialog', () => {
     })
     expect(toast.success).toHaveBeenCalledWith('Cover preset updated')
     expect(onOpenChange).toHaveBeenCalledWith(false)
+  })
+
+  it('closes dialog after successful image upload', async () => {
+    const user = userEvent.setup()
+    mockUploadPathCover.mockResolvedValue('https://example.com/cover.jpg')
+    const { onOpenChange } = renderDialog()
+
+    await waitFor(() => {
+      expect(screen.getByRole('dialog')).toBeInTheDocument()
+    })
+
+    // Upload a file via the hidden input
+    const file = new File(['fake-image'], 'cover.jpg', { type: 'image/jpeg' })
+    const fileInput = screen.getByLabelText('Choose a cover image file')
+    await user.upload(fileInput, file)
+
+    // Wait for preview to appear, then click Save
+    await waitFor(() => {
+      expect(screen.getByAltText('Cover preview')).toBeInTheDocument()
+    })
+    await user.click(screen.getByRole('button', { name: /save/i }))
+
+    await waitFor(() => {
+      expect(mockUploadPathCover).toHaveBeenCalledWith(file, 'path-1')
+      expect(mockUpdatePathCover).toHaveBeenCalledWith('path-1', {
+        coverImageUrl: 'https://example.com/cover.jpg',
+        coverPreset: undefined,
+      })
+      expect(toast.success).toHaveBeenCalledWith('Cover image updated')
+      expect(onOpenChange).toHaveBeenCalledWith(false)
+    })
+  })
+
+  it('closes dialog after successful cover removal', async () => {
+    const user = userEvent.setup()
+    mockDeletePathCover.mockResolvedValue(undefined)
+    const { onOpenChange } = renderDialog(true, {
+      coverImageUrl: 'https://example.com/old-cover.jpg',
+    })
+
+    await waitFor(() => {
+      expect(screen.getByRole('dialog')).toBeInTheDocument()
+    })
+
+    const removeBtn = screen.getByRole('button', { name: /remove cover/i })
+    await user.click(removeBtn)
+
+    await waitFor(() => {
+      expect(mockUpdatePathCover).toHaveBeenCalledWith('path-1', {
+        coverImageUrl: undefined,
+        coverPreset: undefined,
+      })
+      expect(mockDeletePathCover).toHaveBeenCalledWith('path-1')
+      expect(toast.success).toHaveBeenCalledWith('Cover removed')
+      expect(onOpenChange).toHaveBeenCalledWith(false)
+    })
+  })
+
+  it('does not close dialog when upload fails', async () => {
+    const user = userEvent.setup()
+    mockUploadPathCover.mockRejectedValue(new Error('Network error'))
+    const { onOpenChange } = renderDialog()
+
+    await waitFor(() => {
+      expect(screen.getByRole('dialog')).toBeInTheDocument()
+    })
+
+    const file = new File(['fake-image'], 'cover.jpg', { type: 'image/jpeg' })
+    const fileInput = screen.getByLabelText('Choose a cover image file')
+    await user.upload(fileInput, file)
+
+    await waitFor(() => {
+      expect(screen.getByAltText('Cover preview')).toBeInTheDocument()
+    })
+    await user.click(screen.getByRole('button', { name: /save/i }))
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalled()
+    })
+    // Dialog should NOT have been closed on failure
+    expect(onOpenChange).not.toHaveBeenCalledWith(false)
   })
 })

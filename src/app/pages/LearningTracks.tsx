@@ -149,7 +149,6 @@ export function LearningTracks() {
     loadThumbnailUrls,
   } = useCourseImportStore()
   const pathsLoaded = useLearningPathStore(s => s.isLoaded)
-  const coursesLoaded = useCourseImportStore(s => s.isCoursesLoaded)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [isRetrying, setIsRetrying] = useState(false)
   const [search, setSearch] = useState('')
@@ -227,34 +226,57 @@ export function LearningTracks() {
       ])
     }
 
-    /** Poll db.isOpen() up to `maxWaitMs`. Resolves when open or maxWaitMs expires. */
-    async function waitForDbOpen(maxWaitMs = 2000): Promise<void> {
+    /**
+     * Open the IndexedDB database with a bounded timeout.
+     *
+     * Dexie auto-opens lazily on first read/write, but that can race with
+     * React mount (see main.tsx deferInit).  Calling db.open() explicitly
+     * closes the window where the page mounted but the DB isn't open yet.
+     * db.open() is idempotent — if already open it resolves immediately.
+     */
+    async function waitForDbOpen(maxWaitMs = 5000): Promise<void> {
       if (db.isOpen()) return
-      const deadline = Date.now() + maxWaitMs
-      while (Date.now() < deadline) {
-        await new Promise(r => setTimeout(r, 100))
-        if (db.isOpen()) return
+      try {
+        await Promise.race([
+          db.open(),
+          new Promise<never>((_, reject) =>
+            setTimeout(() => reject(new Error('Database open timed out')), maxWaitMs)
+          ),
+        ])
+      } catch (err) {
+        console.warn('[LearningTracks] Database failed to open:', {
+          name: db.name,
+          verno: db.verno,
+          isOpen: db.isOpen(),
+          error: err instanceof Error ? err.message : String(err),
+        })
+        // Rethrow so Promise.allSettled catches it as a load failure.
+        throw err
       }
     }
 
     async function load() {
-      // Give Dexie a chance to finish auto-open before the 8s race starts.
-      // If the DB is already open this returns immediately; otherwise we poll
-      // for up to 2s so the read timeout fires on the query itself, not on
-      // the implicit db.open().
+      // Ensure the database is open before starting timed reads. If the DB
+      // is already open this returns immediately; otherwise it calls db.open()
+      // with a 5s timeout so the 8s read timeout fires on the actual query,
+      // not on the implicit Dexie auto-open.
       await waitForDbOpen()
 
       if (ignore) return
 
-      console.time('[LearningTracks] loadPaths')
-      console.time('[LearningTracks] loadImportedCourses')
+      const startPathsMs = performance.now()
+      const startCoursesMs = performance.now()
 
       const results = await Promise.allSettled([
         withTimeout(loadPaths(), 'loadPaths').then(() => {
-          console.timeEnd('[LearningTracks] loadPaths')
+          console.log('[LearningTracks] loadPaths finished', {
+            elapsedMs: Math.round(performance.now() - startPathsMs),
+          })
         }),
         withTimeout(loadImportedCourses(), 'loadImportedCourses').then(() => {
-          console.timeEnd('[LearningTracks] loadImportedCourses')
+          console.log('[LearningTracks] loadImportedCourses finished', {
+            elapsedMs: Math.round(performance.now() - startCoursesMs),
+          })
         }),
       ])
 
@@ -292,15 +314,6 @@ export function LearningTracks() {
       // already exists" warnings on the second mount.
       for (const id of timeoutIds) clearTimeout(id)
       timeoutIds.clear()
-      // console.timeEnd is safe here even if the timer was already ended by
-      // the promise resolve path — browsers silently ignore duplicate end
-      // calls for the same label.
-      try {
-        console.timeEnd('[LearningTracks] loadPaths')
-      } catch { /* timer may not exist */ }
-      try {
-        console.timeEnd('[LearningTracks] loadImportedCourses')
-      } catch { /* timer may not exist */ }
     }
   }, [loadPaths, loadImportedCourses])
 
@@ -483,7 +496,7 @@ export function LearningTracks() {
               variant="ghost"
               size="sm"
               onClick={handleRetry}
-              disabled={isRetrying || (!pathsLoaded && !coursesLoaded)}
+              disabled={isRetrying}
               className="shrink-0"
             >
               <RefreshCw
@@ -554,16 +567,29 @@ export function LearningTracks() {
 
         {/* Content */}
         {userPaths.length === 0 ? (
-          /* Empty state — no user paths */
-          <motion.div variants={fadeUp}>
-            <EmptyState
-              icon={Route}
-              title="No learning tracks yet"
-              description="Learning tracks help you organize courses into structured journeys. Create a track or import courses to get started."
-              actionLabel="Create Track"
-              onAction={() => setCreateDialogOpen(true)}
-            />
-          </motion.div>
+          pathsLoaded ? (
+            /* Empty state — no user paths (confirmed by successful load) */
+            <motion.div variants={fadeUp}>
+              <EmptyState
+                icon={Route}
+                title="No learning tracks yet"
+                description="Learning tracks help you organize courses into structured journeys. Create a track or import courses to get started."
+                actionLabel="Create Track"
+                onAction={() => setCreateDialogOpen(true)}
+              />
+            </motion.div>
+          ) : loadError ? (
+            /* Load failure — data may exist but couldn't be read */
+            <motion.div variants={fadeUp}>
+              <EmptyState
+                icon={RefreshCw}
+                title="Learning tracks could not be loaded"
+                description="Your existing data has not been removed. Check your connection and try again."
+                actionLabel="Retry"
+                onAction={handleRetry}
+              />
+            </motion.div>
+          ) : null
         ) : filteredPaths.length === 0 && search.trim() ? (
           /* No search results */
           <motion.div variants={fadeUp}>

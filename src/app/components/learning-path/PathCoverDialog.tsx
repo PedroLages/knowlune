@@ -97,6 +97,7 @@ export function PathCoverDialog({ open, onOpenChange, path, triggerRef }: PathCo
 
   const handleSave = useCallback(async () => {
     setIsUploading(true)
+    let shouldClose = false
     try {
       if (uploadFile) {
         // Upload new cover image to Supabase Storage
@@ -115,18 +116,22 @@ export function PathCoverDialog({ open, onOpenChange, path, triggerRef }: PathCo
         toast.success('Cover preset updated')
       }
 
-      handleOpenChange(false)
+      shouldClose = true
     } catch (error) {
       // silent-catch-ok: store already handles errors
       toast.error(error instanceof Error ? error.message : 'Failed to update cover')
     } finally {
       setIsUploading(false)
+      // Close AFTER resetting isUploading so handleOpenChange's isBusy guard
+      // does not block the programmatic close.
+      if (shouldClose) handleOpenChange(false)
     }
   }, [uploadFile, selectedPreset, path.id, updatePathCover, handleOpenChange])
 
   const handleRemove = useCallback(async () => {
     setIsRemoving(true)
     const prevCoverUrl = path.coverImageUrl
+    let shouldClose = false
     try {
       // Update store first so a failed storage delete does not leave state
       // referencing a cover that was already removed from the bucket.
@@ -141,11 +146,12 @@ export function PathCoverDialog({ open, onOpenChange, path, triggerRef }: PathCo
         await deletePathCover(path.id)
       }
       toast.success('Cover removed')
-      handleOpenChange(false)
+      shouldClose = true
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to remove cover')
     } finally {
       setIsRemoving(false)
+      if (shouldClose) handleOpenChange(false)
     }
   }, [path.id, path.coverImageUrl, path.coverPreset, updatePathCover, handleOpenChange])
 
