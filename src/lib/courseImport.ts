@@ -626,6 +626,21 @@ function applyManifestVideoOrder(
 // --- Persist Phase ---
 
 /**
+ * Looks up an existing course by server identity (serverPath).
+ *
+ * Extracted so both {@link persistScannedCourse} and {@link scanCourseFromSource}
+ * use the same resolution logic — critical for canonical ID consistency.
+ */
+async function findExistingCourseByServerIdentity(
+  scanned: ScannedCourse
+): Promise<ImportedCourse | undefined> {
+  if (!scanned.serverPath) return undefined
+  // Uses filter() instead of .where() because serverPath may not be indexed yet.
+  const allCourses = await db.importedCourses.toArray()
+  return allCourses.find(c => c.serverPath === scanned.serverPath)
+}
+
+/**
  * Persists a scanned course to IndexedDB, updates Zustand store,
  * and triggers auto-analysis / Ollama tagging.
  *
@@ -648,10 +663,17 @@ export async function persistScannedCourse(
 ): Promise<ImportedCourse> {
   const now = new Date().toISOString()
 
+  // Resolve the canonical course ID BEFORE constructing any child records.
+  // On reimport of a server-URL course, the existing course's ID takes
+  // precedence — children must reference the canonical ID so they remain
+  // joinable via learningPathEntry.courseId → importedCourses.id.
+  const existingCourse = await findExistingCourseByServerIdentity(scanned)
+  const canonicalCourseId = existingCourse?.id ?? scanned.id
+
   // Build ImportedVideo records (add courseId + metadata fields from E1B-S02)
   const videos: ImportedVideo[] = scanned.videos.map(v => ({
     id: v.id,
-    courseId: scanned.id,
+    courseId: canonicalCourseId,
     filename: v.filename,
     path: v.path,
     duration: v.duration,
@@ -675,7 +697,7 @@ export async function persistScannedCourse(
   // Build ImportedPdf records
   const pdfs: ImportedPdf[] = scanned.pdfs.map(p => ({
     id: p.id,
-    courseId: scanned.id,
+    courseId: canonicalCourseId,
     filename: p.filename,
     path: p.path,
     pageCount: p.pageCount,
@@ -726,7 +748,7 @@ export async function persistScannedCourse(
   const maxResolutionHeight = orderedVideos.reduce((max, v) => Math.max(max, v.height || 0), 0)
 
   const course: ImportedCourse = {
-    id: scanned.id,
+    id: canonicalCourseId,
     name: overrides?.name ?? scanned.name,
     ...(overrides?.description ? { description: overrides.description } : {}),
     importedAt: now,
@@ -785,23 +807,13 @@ export async function persistScannedCourse(
     // actual persisted video ID before writing to videoCaptions.
     const scannedToPersistedVideoId = new Map<string, string>()
 
-    // Unit 8: Re-import safety — upsert instead of insert to prevent duplicates.
-    // Uses Dexie's put() through a helper that checks for existing records by
-    // matching (courseId, serverUrl) for server imports or (courseId, path) for local.
-
-    // Check if this course was already imported (same serverPath).
-    // Uses filter() instead of .where() because serverPath may not be indexed yet.
-    let existingCourse: ImportedCourse | undefined
-    if (scanned.serverPath) {
-      const allCourses = await db.importedCourses.toArray()
-      existingCourse = allCourses.find(c => c.serverPath === scanned.serverPath)
-    }
-
+    // Check whether this is a reimport of an already-imported server course.
+    // canonicalCourseId was already set before children construction so all
+    // records (course, videos, PDFs) consistently use the same canonical ID.
     const isReimport = !!existingCourse
     if (isReimport && existingCourse) {
-      // Re-import: update existing course record, preserve original id
-      const updatedCourse = { ...(course as ImportedCourse), id: existingCourse.id }
-      await syncableWrite('importedCourses', 'put', updatedCourse as unknown as SyncableRecord)
+      // Re-import: upsert the course record (id is already canonicalCourseId).
+      await syncableWrite('importedCourses', 'put', course as unknown as SyncableRecord)
       persistCompleted++
 
       // Collect existing video/PDF IDs for this course to enable upsert
@@ -822,11 +834,15 @@ export async function persistScannedCourse(
       const keptVideoIds = new Set<string>()
       const keptPdfIds = new Set<string>()
 
-      // Build video records for bulkPut — use existing IDs for matching server URLs
+      // Build video records for bulkPut — use existing IDs for matching server URLs.
+      // Explicitly set courseId to course.id so every record uses the canonical ID
+      // regardless of whether the record is new or merged from an existing one.
       const videoRecords: ImportedVideo[] = []
       for (const video of orderedVideos) {
         const existing = video.serverUrl ? existingVidByServerUrl.get(video.serverUrl) : undefined
-        const record = existing ? { ...video, id: existing.id } : video
+        const record = existing
+          ? { ...video, id: existing.id, courseId: course.id }
+          : { ...video, courseId: course.id }
         videoRecords.push(record)
         if (existing) {
           keptVideoIds.add(existing.id)
@@ -840,12 +856,32 @@ export async function persistScannedCourse(
       const pdfRecords: ImportedPdf[] = []
       for (const pdf of pdfs) {
         const existing = pdf.serverUrl ? existingPdfByServerUrl.get(pdf.serverUrl) : undefined
-        const record = existing ? { ...pdf, id: existing.id } : pdf
+        const record = existing
+          ? { ...pdf, id: existing.id, courseId: course.id }
+          : { ...pdf, courseId: course.id }
         pdfRecords.push(record)
         if (existing) {
           keptPdfIds.add(existing.id)
         } else {
           keptPdfIds.add(record.id)
+        }
+      }
+
+      // Invariant: every child record must reference the canonical course ID.
+      if (import.meta.env.DEV) {
+        for (const r of videoRecords) {
+          if (r.courseId !== course.id) {
+            throw new Error(
+              `Course identity mismatch: video ${r.id} has courseId ${r.courseId} !== ${course.id}`
+            )
+          }
+        }
+        for (const r of pdfRecords) {
+          if (r.courseId !== course.id) {
+            throw new Error(
+              `Course identity mismatch: PDF ${r.id} has courseId ${r.courseId} !== ${course.id}`
+            )
+          }
         }
       }
 
@@ -880,8 +916,6 @@ export async function persistScannedCourse(
         }
       }
 
-      // Use the existing course ID for all downstream operations
-      course.id = existingCourse.id
     } else {
       // First import: write course record individually, then bulk-write videos and PDFs.
       // Using put (upsert) so re-import after incomplete delete doesn't fail
@@ -1369,8 +1403,7 @@ export async function scanCourseFromSource(source: {
       // Stronger identity check: match by serverPath (canonical for server imports).
       // This catches cases where the same course was imported under a different folder name.
       if (scannedCourse.serverPath) {
-        const allCourses = await db.importedCourses.toArray()
-        const existingByPath = allCourses.find(c => c.serverPath === scannedCourse.serverPath)
+        const existingByPath = await findExistingCourseByServerIdentity(scannedCourse)
         if (existingByPath) {
           return {
             status: 'duplicate',

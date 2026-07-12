@@ -174,17 +174,22 @@ export function CurriculumComposer({
   const handleBatchImportComplete = useCallback(
     (importedIds: string[], trackId?: string) => {
       if (trackId) {
-        // BulkImportDialog already created the track — close composer and navigate.
-        loadImportedCourses().catch((err) => {
-          console.error('[CurriculumComposer] Failed to refresh imported courses after batch import:', err)
-          toast.error('Failed to refresh course list.')
+        // BulkImportDialog already created the track — refresh both stores
+        // before navigating so the track detail page sees the new data.
+        // Use { silent: true } to bypass the isLoaded/isCoursesLoaded guard
+        // (the stores were already loaded during the initial page render).
+        // Use Promise.all to await both refreshes concurrently.
+        Promise.all([
+          loadImportedCourses({ silent: true }).catch((err) => {
+            console.error('[CurriculumComposer] Failed to refresh imported courses after batch import:', err)
+          }),
+          loadPaths({ silent: true }).catch((err) => {
+            console.error('[CurriculumComposer] Failed to refresh learning paths:', err)
+          }),
+        ]).then(() => {
+          onOpenChange(false)
+          navigate(`${redirectBase}/${trackId}`)
         })
-        loadPaths().catch((err) => {
-          console.error('[CurriculumComposer] Failed to refresh learning paths:', err)
-          toast.error('Failed to refresh learning paths.')
-        })
-        onOpenChange(false)
-        navigate(`${redirectBase}/${trackId}`)
         return
       }
       // No trackId: add imported course IDs to the current selection (existing behavior).

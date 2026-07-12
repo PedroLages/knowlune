@@ -100,6 +100,12 @@ interface ImportItem {
   truncated?: boolean
   /** When status is 'duplicate', the ID of the already-imported course to reuse. */
   resolvedCourseId?: string
+  /**
+   * Canonical course ID returned by persistScannedCourse.
+   * On first import this equals scannedCourse.id; on reimport it is the
+   * existing course's ID. Use this (not scannedCourse.id) for track entries.
+   */
+  persistedCourseId?: string
 }
 
 /** Result of a batch import operation, stored in React state for rendering. */
@@ -363,7 +369,7 @@ export function BulkImportDialog({
           } else {
             ids = importItems
               .filter(i => i.status === 'success' || i.status === 'truncated')
-              .map(i => i.scannedCourse?.id)
+              .map(i => i.persistedCourseId ?? i.scannedCourse?.id)
               .filter((id): id is string => !!id)
           }
           if (ids.length > 0) {
@@ -1005,7 +1011,7 @@ export function BulkImportDialog({
             : {}),
         }
 
-        await persistScannedCourse(item.scannedCourse, overrides)
+        const persistedCourse = await persistScannedCourse(item.scannedCourse, overrides)
         // Yield to the main thread after each course completes so the browser
         // can process pending paint, input, and microtasks — prevents
         // "Page Unresponsive" during large batch imports.
@@ -1013,7 +1019,10 @@ export function BulkImportDialog({
         updateItemInList(
           results,
           item.folderName,
-          { status: item.truncated ? 'truncated' : 'success' },
+          {
+            status: item.truncated ? 'truncated' : 'success',
+            persistedCourseId: persistedCourse.id,
+          },
           setImportItems
         )
         progressStore.completeCourse(item.folderName)
@@ -1056,6 +1065,14 @@ export function BulkImportDialog({
     }
     await useCourseImportStore.getState().loadImportedCourses()
 
+    // Mark import as successfully completed BEFORE track creation, reordering,
+    // and cover upload. If the dialog is closed during those secondary steps,
+    // onComplete will still fire with the imported course IDs. Without this,
+    // closing the dialog in the gap between "all courses done" and the results
+    // step would silently drop the results — track exists in Dexie but the UI
+    // never learns about it (completedSuccessfullyRef was only true in results).
+    completedSuccessfullyRef.current = true
+
     // Server-aware batch import path: when manifest exists but parentHandle is null
     // (server URL import), create a new track with all resolved courses.
     //
@@ -1070,7 +1087,10 @@ export function BulkImportDialog({
       // A duplicate course is not an import failure; it means "reuse the existing library course."
       const resolvedCourses: { folderName: string; courseId: string }[] = []
       for (const r of results) {
-        const courseId = r.scannedCourse?.id ?? r.resolvedCourseId
+        // Use the canonical persisted ID first, fall back to scanned ID
+        // (first import where scanned.id === persisted.id), then fall back
+        // to pre-scan duplicate detection (resolvedCourseId).
+        const courseId = r.persistedCourseId ?? r.scannedCourse?.id ?? r.resolvedCourseId
         if (!courseId) continue
         if (
           r.status !== 'success' &&
@@ -1127,7 +1147,30 @@ export function BulkImportDialog({
           )
           const trackId = newPath.id
 
+          // Refresh the in-memory store so the track is visible if the user
+          // navigates back to Learning Tracks without a full page reload.
+          // { silent: true } bypasses the isLoaded guard (which would otherwise
+          // no-op since loadPaths already ran during page mount).
+          await lpStore.loadPaths({ silent: true }).catch((err) => {
+            console.warn('[BulkImport] loadPaths refresh after track creation failed (non-blocking):', err)
+          })
+
           console.log('[BulkImport] track created', { trackId, courseCount: resolvedCourses.length })
+
+          // Validate referential integrity — ensure every entry.courseId resolves
+          // to an importedCourse and no child records are orphaned. Logs a warning
+          // on mismatch but does not block — the track is already created and data
+          // is preserved for potential repair.
+          import('@/lib/trackIntegrity').then(({ validateCourseReferences }) => {
+            validateCourseReferences(trackId).then(result => {
+              if (!result.valid) {
+                console.warn('[BulkImport] Track integrity check failed — data preserved for repair:', {
+                  trackId,
+                  ...result,
+                })
+              }
+            })
+          })
 
           // Fix 8: Persist trackId in React state IMMEDIATELY after track creation succeeds.
           // Cover upload and reordering are secondary — failures must not erase the track.
@@ -1343,7 +1386,7 @@ export function BulkImportDialog({
               ? { coverImageHandle: courseOverride.coverImageHandle }
               : {}),
           }
-          await persistScannedCourse(scanResult.course, overrides)
+          const persistedCourse = await persistScannedCourse(scanResult.course, overrides)
           if (generation !== generationRef.current) {
             return
           }
@@ -1352,7 +1395,11 @@ export function BulkImportDialog({
             setImportItems(prev =>
               prev.map(i =>
                 i.folderName === folderName
-                  ? { ...i, status: i.truncated ? 'truncated' : 'success' }
+                  ? {
+                      ...i,
+                      status: i.truncated ? 'truncated' : 'success',
+                      persistedCourseId: persistedCourse.id,
+                    }
                   : i
               )
             )
@@ -2375,20 +2422,31 @@ export function BulkImportDialog({
               </>
             )}
 
-            {/* Importing footer — Cancel button */}
-            {step === 'importing' && isStillImporting && (
-              <Button
-                variant="outline"
-                onClick={() => {
-                  abortRef.current = true
-                  useImportProgressStore.getState().cancelImport()
-                }}
-                className="rounded-xl flex-1"
-                data-testid="bulk-cancel-import-btn"
-              >
-                Cancel Import
-              </Button>
-            )}
+            {/* Importing footer — Cancel button while importing, spinner while finalizing */}
+            {step === 'importing' &&
+              (isStillImporting ? (
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    abortRef.current = true
+                    useImportProgressStore.getState().cancelImport()
+                  }}
+                  className="rounded-xl flex-1"
+                  data-testid="bulk-cancel-import-btn"
+                >
+                  Cancel Import
+                </Button>
+              ) : (
+                <div
+                  className="flex items-center justify-center gap-2 text-sm text-muted-foreground py-2 w-full"
+                  role="status"
+                  aria-live="polite"
+                  data-testid="bulk-finalizing-indicator"
+                >
+                  <Loader2 className="size-4 motion-safe:animate-spin" aria-hidden="true" />
+                  {hasManifest ? 'Creating track…' : 'Finalizing…'}
+                </div>
+              ))}
 
             {/* Results footer */}
             {step === 'results' && (
