@@ -351,7 +351,7 @@ describe('BulkImportDialog — batch import flow (F-003)', () => {
       const dialog = screen.getByTestId('bulk-import-dialog')
       const header = screen.getByTestId('bulk-import-header')
       const scrollRegion = screen.getByTestId('bulk-review-scroll-region')
-      const footer = screen.getByTestId('bulk-review-footer')
+      const footer = screen.getByTestId('bulk-import-footer')
       const cover = screen.getByAltText('track-cover.jpg')
       const firstCourseName = screen.getByText('alpha')
 

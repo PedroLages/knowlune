@@ -1,6 +1,7 @@
 import { db } from '@/db'
-import { syncableWrite } from '@/lib/sync/syncableWrite'
+import { syncableWrite, syncableBulkPut } from '@/lib/sync/syncableWrite'
 import type { SyncableRecord } from '@/lib/sync/syncableWrite'
+import { yieldToMainThread } from '@/lib/yieldToMainThread'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
 import { useImportProgressStore } from '@/stores/useImportProgressStore'
 import { useLearningPathStore } from '@/stores/useLearningPathStore'
@@ -756,6 +757,17 @@ export async function persistScannedCourse(
     serverPath: course.serverPath,
   })
 
+  // Idempotency guard: check if this course has a checkpoint from a prior
+  // partial import. If the checkpoint shows videos or PDFs were already
+  // written, we can trust the existing data and skip those phases.
+  // (Captions are intentionally NOT checkpointed — they are derived purely
+  // from on-disk .srt/.vtt files, so skipping them on resume is safe.)
+  const checkpointKey = `import-check:${scanned.id}`
+  const existingCheckpoint = await db.syncMetadata.get(checkpointKey)
+  const checkpointValue = (existingCheckpoint?.value ?? {}) as { phase?: string; at?: string }
+  const skipVideos = checkpointValue.phase === 'videos' || checkpointValue.phase === 'pdfs'
+  const skipPdfs = checkpointValue.phase === 'pdfs'
+
   // Track persist progress so the UI can show per-file progress during the
   // sequential writes below. Without this, the wizard shows only "Importing…"
   // and the user has no indication that work is happening — for courses with
@@ -790,6 +802,7 @@ export async function persistScannedCourse(
       // Re-import: update existing course record, preserve original id
       const updatedCourse = { ...(course as ImportedCourse), id: existingCourse.id }
       await syncableWrite('importedCourses', 'put', updatedCourse as unknown as SyncableRecord)
+      persistCompleted++
 
       // Collect existing video/PDF IDs for this course to enable upsert
       const existingVideos = await db.importedVideos
@@ -809,33 +822,49 @@ export async function persistScannedCourse(
       const keptVideoIds = new Set<string>()
       const keptPdfIds = new Set<string>()
 
+      // Build video records for bulkPut — use existing IDs for matching server URLs
+      const videoRecords: ImportedVideo[] = []
       for (const video of orderedVideos) {
         const existing = video.serverUrl ? existingVidByServerUrl.get(video.serverUrl) : undefined
         const record = existing ? { ...video, id: existing.id } : video
+        videoRecords.push(record)
         if (existing) {
-          await syncableWrite('importedVideos', 'put', record as unknown as SyncableRecord)
           keptVideoIds.add(existing.id)
         } else {
-          await syncableWrite('importedVideos', 'add', record as unknown as SyncableRecord)
           keptVideoIds.add(record.id)
         }
         scannedToPersistedVideoId.set(video.id, record.id)
-        persistCompleted++
-        persistProgress.updateProcessingProgress(scanned.id, persistCompleted, totalPersistItems)
       }
 
+      // Build PDF records for bulkPut
+      const pdfRecords: ImportedPdf[] = []
       for (const pdf of pdfs) {
         const existing = pdf.serverUrl ? existingPdfByServerUrl.get(pdf.serverUrl) : undefined
         const record = existing ? { ...pdf, id: existing.id } : pdf
+        pdfRecords.push(record)
         if (existing) {
-          await syncableWrite('importedPdfs', 'put', record as unknown as SyncableRecord)
           keptPdfIds.add(existing.id)
         } else {
-          await syncableWrite('importedPdfs', 'add', record as unknown as SyncableRecord)
           keptPdfIds.add(record.id)
         }
-        persistCompleted++
+      }
+
+      // Bulk write all videos and PDFs — replaces per-file syncableWrite loop
+      if (videoRecords.length > 0) {
+        await syncableBulkPut('importedVideos', videoRecords as unknown as SyncableRecord[])
+        persistCompleted += videoRecords.length
         persistProgress.updateProcessingProgress(scanned.id, persistCompleted, totalPersistItems)
+        // Checkpoint: videos written — if we crash now, we know videos are done
+        await db.syncMetadata.put({ table: `import-check:${scanned.id}`, value: { phase: 'videos', at: now } })
+        await yieldToMainThread()
+      }
+      if (pdfRecords.length > 0) {
+        await syncableBulkPut('importedPdfs', pdfRecords as unknown as SyncableRecord[])
+        persistCompleted += pdfRecords.length
+        persistProgress.updateProcessingProgress(scanned.id, persistCompleted, totalPersistItems)
+        // Checkpoint: PDFs written
+        await db.syncMetadata.put({ table: `import-check:${scanned.id}`, value: { phase: 'pdfs', at: now } })
+        await yieldToMainThread()
       }
 
       // Prune orphaned records (files removed from server since last import)
@@ -854,22 +883,47 @@ export async function persistScannedCourse(
       // Use the existing course ID for all downstream operations
       course.id = existingCourse.id
     } else {
-      // First import: use put (upsert) instead of add (insert) so that
-      // re-importing a course after an incomplete delete does not fail
+      // First import: write course record individually, then bulk-write videos and PDFs.
+      // Using put (upsert) so re-import after incomplete delete doesn't fail
       // with primary-key constraint violations on orphaned child records.
       await syncableWrite('importedCourses', 'put', course as unknown as SyncableRecord)
       persistCompleted++
       persistProgress.updateProcessingProgress(scanned.id, persistCompleted, totalPersistItems)
 
-      for (const video of orderedVideos) {
-        await syncableWrite('importedVideos', 'put', video as unknown as SyncableRecord)
-        scannedToPersistedVideoId.set(video.id, video.id)
-        persistCompleted++
+      // Bulk write all videos — replaces per-file syncableWrite loop.
+      // On retry (skipVideos), the checkpoint tells us videos already
+      // landed in Dexie via a prior bulkPut — skip the write but still
+      // populate the scanned→persisted ID map and advance progress.
+      if (orderedVideos.length > 0 && !skipVideos) {
+        await syncableBulkPut('importedVideos', orderedVideos as unknown as SyncableRecord[])
+        for (const video of orderedVideos) {
+          scannedToPersistedVideoId.set(video.id, video.id)
+        }
+        persistCompleted += orderedVideos.length
+        persistProgress.updateProcessingProgress(scanned.id, persistCompleted, totalPersistItems)
+        // Checkpoint: videos written
+        await db.syncMetadata.put({ table: `import-check:${scanned.id}`, value: { phase: 'videos', at: now } })
+        await yieldToMainThread()
+      } else if (orderedVideos.length > 0 && skipVideos) {
+        // Videos were already persisted in a prior attempt — populate ID map
+        for (const video of orderedVideos) {
+          scannedToPersistedVideoId.set(video.id, video.id)
+        }
+        persistCompleted += orderedVideos.length
         persistProgress.updateProcessingProgress(scanned.id, persistCompleted, totalPersistItems)
       }
-      for (const pdf of pdfs) {
-        await syncableWrite('importedPdfs', 'put', pdf as unknown as SyncableRecord)
-        persistCompleted++
+
+      // Bulk write all PDFs — replaces per-file syncableWrite loop
+      if (pdfs.length > 0 && !skipPdfs) {
+        await syncableBulkPut('importedPdfs', pdfs as unknown as SyncableRecord[])
+        persistCompleted += pdfs.length
+        persistProgress.updateProcessingProgress(scanned.id, persistCompleted, totalPersistItems)
+        // Checkpoint: PDFs written
+        await db.syncMetadata.put({ table: `import-check:${scanned.id}`, value: { phase: 'pdfs', at: now } })
+        await yieldToMainThread()
+      } else if (pdfs.length > 0 && skipPdfs) {
+        // PDFs were already persisted in a prior attempt
+        persistCompleted += pdfs.length
         persistProgress.updateProcessingProgress(scanned.id, persistCompleted, totalPersistItems)
       }
     }

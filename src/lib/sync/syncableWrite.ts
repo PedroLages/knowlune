@@ -31,6 +31,17 @@ import { toSnakeCase } from './fieldMapper'
 import { syncEngine } from './syncEngine'
 
 // ---------------------------------------------------------------------------
+// Bulk write options
+// ---------------------------------------------------------------------------
+
+export interface SyncableBulkPutOptions {
+  /** If true, skip the sync queue entirely (local-only writes). */
+  skipQueue?: boolean
+  /** AbortSignal — when aborted before the Dexie write starts, the call is skipped. */
+  signal?: AbortSignal
+}
+
+// ---------------------------------------------------------------------------
 // Public types
 // ---------------------------------------------------------------------------
 
@@ -280,4 +291,130 @@ export async function syncableWrite<T extends SyncableRecord>(
     // any records that were written locally but not queued. Log for observability.
     console.error('[syncableWrite] Queue insert failed — write succeeded, sync deferred:', err)
   }
+}
+
+// ---------------------------------------------------------------------------
+// Bulk write — syncableBulkPut
+// ---------------------------------------------------------------------------
+
+/**
+ * Write multiple records to a synced Dexie table in a single bulk operation
+ * and enqueue all of them for Supabase upload.
+ *
+ * Designed for bulk import flows where calling `syncableWrite()` once per
+ * record (e.g. 1,000+ videos) floods the sync queue with individual entries
+ * and triggers excessive `syncEngine.nudge()` calls.
+ *
+ * Behaviour:
+ *   1. Stamps every record with `userId` + `updatedAt` (+ `guestSessionId`).
+ *   2. Calls `db.table(tableName).bulkPut()` — one Dexie write for all records.
+ *   3. Builds queue payloads from the stamped records (so `user_id` and
+ *      `updated_at` are present — required by Supabase RLS and LWW).
+ *   4. Calls `db.syncQueue.bulkAdd()` in chunks of 500 (Dexie practical limit).
+ *   5. Calls `syncEngine.nudge()` **once** at the end (not once per record).
+ *
+ * @param tableName - The Dexie table name (must be registered in tableRegistry).
+ * @param records   - The records to write.
+ * @param options   - Optional flags:
+ *   - `skipQueue`: if true, Dexie write happens but no queue entries are created.
+ *   - `signal`: AbortSignal — checked before the Dexie write; if aborted the
+ *     call is skipped entirely.
+ */
+export async function syncableBulkPut<T extends SyncableRecord>(
+  tableName: string,
+  records: T[],
+  options?: SyncableBulkPutOptions
+): Promise<void> {
+  if (records.length === 0) return
+
+  // Abort check before any work
+  if (options?.signal?.aborted) return
+
+  const now = new Date().toISOString()
+
+  // Registry lookup
+  const entry = tableRegistry.find(e => e.dexieTable === tableName)
+  if (!entry) {
+    throw new Error(
+      `[syncableBulkPut] Unknown table: "${tableName}". ` +
+        `Add it to src/lib/sync/tableRegistry.ts before calling syncableBulkPut.`
+    )
+  }
+
+  // Auth
+  const userId = useAuthStore.getState().user?.id ?? null
+  const guestSessionId =
+    userId === null ? (sessionStorage.getItem('knowlune-guest-id') ?? null) : null
+
+  // Stamp every record
+  const stampedRecords: T[] = records.map(r => ({
+    ...r,
+    userId,
+    ...(guestSessionId !== null ? { guestSessionId } : {}),
+    updatedAt: now,
+  }))
+
+  // Dexie bulkPut — single write for all records
+  await db.table(tableName).bulkPut(stampedRecords as never[])
+
+  // Queue guard — skip if unauthenticated or caller opted out
+  if (!userId || options?.skipQueue) return
+
+  // Build queue entries from stamped records
+  const queueEntries: Array<Omit<SyncQueueEntry, 'id'>> = []
+  for (const r of stampedRecords) {
+    try {
+      const recordId = synthesizeRecordId(r as SyncableRecord, entry, 'put')
+      const payload = toSnakeCase(entry, r as Record<string, unknown>)
+
+      // Ownership guard: verify user_id is present and matches
+      if (
+        typeof payload.user_id !== 'string' ||
+        payload.user_id.length === 0 ||
+        payload.user_id !== userId
+      ) {
+        console.error('[syncableBulkPut] Skipping record — payload ownership guard failed:', {
+          tableName,
+          recordId,
+          expectedUserId: userId,
+          payloadUserId: payload.user_id,
+        })
+        continue
+      }
+
+      queueEntries.push({
+        tableName,
+        recordId,
+        operation: 'put',
+        payload,
+        attempts: 0,
+        status: 'pending',
+        createdAt: now,
+        updatedAt: now,
+      })
+    } catch (err) {
+      // Per-record error: log and skip this record. The Dexie write already
+      // succeeded (optimistic local). The sync engine's backfill path will
+      // re-enqueue stragglers on the next cycle.
+      console.error('[syncableBulkPut] Failed to build queue entry — record skipped:', err)
+    }
+  }
+
+  if (queueEntries.length === 0) return
+
+  // Bulk add to syncQueue in chunks
+  const CHUNK_SIZE = 500
+  try {
+    for (let i = 0; i < queueEntries.length; i += CHUNK_SIZE) {
+      const chunk = queueEntries.slice(i, i + CHUNK_SIZE)
+      await db.syncQueue.bulkAdd(chunk as SyncQueueEntry[])
+    }
+  } catch (err) {
+    // Non-fatal: Dexie writes already succeeded
+    console.error('[syncableBulkPut] Queue bulkAdd failed — writes succeeded, sync deferred:', err)
+    return
+  }
+
+  // Single nudge after all records are enqueued
+  syncEngine.nudge()
 }

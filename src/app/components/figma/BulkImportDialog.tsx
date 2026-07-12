@@ -66,6 +66,7 @@ import { detectAuthorFromFolderName, matchOrCreateAuthor } from '@/lib/authorDet
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
 import { useLearningPathStore } from '@/stores/useLearningPathStore'
 import { useImportProgressStore } from '@/stores/useImportProgressStore'
+import { yieldToMainThread } from '@/lib/yieldToMainThread'
 import { toast } from 'sonner'
 
 // --- Types ---
@@ -108,7 +109,8 @@ type DialogStep =
   | 'importing'
   | 'results'
 
-const MAX_CONCURRENCY = 5
+const MAX_SCAN_CONCURRENCY = 5 // I/O-bound — scanning folders is mostly waiting on network/disk
+const MAX_PERSIST_CONCURRENCY = 2 // CPU/IDB-bound — bulk writes benefit from lower concurrency
 
 /**
  * Auto-selection logic for track covers.
@@ -254,6 +256,7 @@ export function BulkImportDialog({
   const isScanningUrlRef = useRef(false)
   const retryLockRef = useRef(false)
   const originalCourseIdMapRef = useRef<Map<string, string>>(new Map())
+  const currentImportingCourseRef = useRef<string | null>(null)
 
   // Track manifest data for rendering the review-step header and for batch import
   const [trackManifest, setTrackManifest] = useState<{
@@ -786,8 +789,8 @@ export function BulkImportDialog({
         }
       }
 
-      // Concurrent scanning
-      await runWithConcurrency(scanItems, scanFolder, MAX_CONCURRENCY, abortRef)
+      // Concurrent scanning (I/O-bound — higher concurrency is fine)
+      await runWithConcurrency(scanItems, scanFolder, MAX_SCAN_CONCURRENCY, abortRef)
 
       if (abortRef.current || generation !== generationRef.current) {
         return
@@ -960,6 +963,7 @@ export function BulkImportDialog({
       if (!item.scannedCourse) return
 
       updateItemInList(results, item.folderName, { status: 'importing' }, setImportItems)
+      currentImportingCourseRef.current = item.folderName
       const totalFiles = (item.videoCount ?? 0) + (item.pdfCount ?? 0)
       progressStore.updateProcessingProgress(item.folderName, totalFiles, totalFiles)
 
@@ -976,6 +980,10 @@ export function BulkImportDialog({
         }
 
         await persistScannedCourse(item.scannedCourse, overrides)
+        // Yield to the main thread after each course completes so the browser
+        // can process pending paint, input, and microtasks — prevents
+        // "Page Unresponsive" during large batch imports.
+        await yieldToMainThread()
         updateItemInList(
           results,
           item.folderName,
@@ -998,8 +1006,8 @@ export function BulkImportDialog({
       }
     }
 
-    // Concurrent persist
-    await runWithConcurrency(items, persistCourse, MAX_CONCURRENCY, {
+    // Concurrent persist — lower concurrency since bulk writes are CPU/IDB-bound
+    await runWithConcurrency(items, persistCourse, MAX_PERSIST_CONCURRENCY, {
       get current() {
         return abortRef.current || useImportProgressStore.getState().cancelRequested
       },
@@ -1316,9 +1324,7 @@ export function BulkImportDialog({
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent
-        className={`flex max-h-[calc(100dvh-2rem)] min-w-0 flex-col overflow-hidden sm:max-w-lg ${
-          step === 'review' ? 'gap-0 p-0' : 'gap-4 p-6'
-        }`}
+        className="flex max-h-[calc(100dvh-2rem)] w-[min(680px,calc(100vw-2rem))] flex-col overflow-hidden gap-0 p-0"
         data-testid="bulk-import-dialog"
         aria-describedby="bulk-import-description"
         hideClose
@@ -1327,14 +1333,16 @@ export function BulkImportDialog({
           <Button
             variant="ghost"
             size="icon"
-            className="absolute right-3 top-3 z-10 size-11 rounded-sm text-muted-foreground opacity-70 hover:opacity-100"
+            className="absolute right-3 top-4 z-10 size-11 rounded-sm text-muted-foreground opacity-70 hover:opacity-100"
             aria-label="Close"
           >
             <X className="size-4" aria-hidden="true" />
           </Button>
         </DialogClose>
+
+        {/* Fixed Header — always visible, never scrolls */}
         <div
-          className={step === 'review' ? 'shrink-0 px-6 pb-3 pt-6' : 'shrink-0'}
+          className="shrink-0 border-b px-6 py-4"
           data-testid="bulk-import-header"
         >
           <DialogHeader className="pr-12">
@@ -1411,6 +1419,8 @@ export function BulkImportDialog({
           })()}
         </div>
 
+        {/* Scrollable Body — all step content scrolls here */}
+        <div className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
         {/* Step: Choose import mode */}
         {step === 'choose' && (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 py-4">
@@ -1618,26 +1628,6 @@ export function BulkImportDialog({
                 ))}
               </div>
             </ScrollArea>
-
-            <DialogFooter className="w-full max-w-full sm:flex-wrap">
-              <Button
-                variant="outline"
-                onClick={() => setStep('choose')}
-                className="rounded-xl"
-                data-testid="bulk-back-btn"
-              >
-                Back
-              </Button>
-              <Button
-                variant="brand"
-                onClick={handleScanFolders}
-                disabled={selectedCount === 0}
-                className="rounded-xl"
-                data-testid="bulk-start-import-btn"
-              >
-                Scan {selectedCount} {selectedCount === 1 ? 'Folder' : 'Folders'}
-              </Button>
-            </DialogFooter>
           </>
         )}
 
@@ -2038,28 +2028,6 @@ export function BulkImportDialog({
                 </div>
               </ScrollArea>
             </div>
-
-            <DialogFooter
-              className="w-full shrink-0 border-t border-border bg-background px-6 py-4 sm:flex-row sm:justify-between"
-              data-testid="bulk-review-footer"
-            >
-              <Button
-                variant="outline"
-                onClick={() => setStep('select-folders')}
-                className="w-full rounded-xl sm:w-auto"
-                data-testid="bulk-review-back-btn"
-              >
-                Back
-              </Button>
-              <Button
-                variant="brand"
-                onClick={handleConfirmImport}
-                className="w-full rounded-xl sm:w-auto"
-                data-testid="bulk-confirm-import-btn"
-              >
-                Import {scannedCourses.size} {scannedCourses.size === 1 ? 'Course' : 'Courses'}
-              </Button>
-            </DialogFooter>
           </>
         )}
 
@@ -2067,13 +2035,21 @@ export function BulkImportDialog({
         {(step === 'importing' || step === 'results') && (
           <>
             {isStillImporting && (
-              <div className="py-2">
+              <div className="py-2 space-y-1">
                 <Progress
                   value={progressPercent}
                   className="h-2"
                   labelFormat={_v => `${completedItems} of ${importItems.length} complete`}
                   showLabel
                 />
+                {currentImportingCourseRef.current && (
+                  <p className="text-xs text-muted-foreground">
+                    Currently:{' '}
+                    <span className="font-medium text-foreground">
+                      {currentImportingCourseRef.current}
+                    </span>
+                  </p>
+                )}
               </div>
             )}
 
@@ -2254,20 +2230,114 @@ export function BulkImportDialog({
                       </div>
                     )}
                 </div>
-
-                <DialogFooter className="w-full max-w-full sm:flex-wrap">
-                  <Button
-                    variant="brand"
-                    onClick={() => handleOpenChange(false)}
-                    className="rounded-xl"
-                    data-testid="bulk-done-btn"
-                  >
-                    Done
-                  </Button>
-                </DialogFooter>
               </>
             )}
           </>
+        )}
+        </div>
+
+        {/* Fixed Footer — context-dependent, always visible */}
+        {(step === 'select-folders' ||
+          step === 'review' ||
+          step === 'importing' ||
+          step === 'results') && (
+          <DialogFooter
+            className="shrink-0 border-t bg-background px-6 py-4 gap-2"
+            data-testid="bulk-import-footer"
+          >
+            {/* Select Folders footer */}
+            {step === 'select-folders' && (
+              <>
+                <Button
+                  variant="outline"
+                  onClick={() => setStep('choose')}
+                  className="rounded-xl flex-1"
+                  data-testid="bulk-back-btn"
+                >
+                  Back
+                </Button>
+                <Button
+                  variant="brand"
+                  onClick={handleScanFolders}
+                  disabled={selectedCount === 0}
+                  className="rounded-xl flex-1"
+                  data-testid="bulk-start-import-btn"
+                >
+                  Scan {selectedCount} {selectedCount === 1 ? 'Folder' : 'Folders'}
+                </Button>
+              </>
+            )}
+
+            {/* Review footer */}
+            {step === 'review' && (
+              <>
+                <Button
+                  variant="outline"
+                  onClick={() => setStep('select-folders')}
+                  className="rounded-xl flex-1"
+                  data-testid="bulk-review-back-btn"
+                >
+                  Back
+                </Button>
+                <Button
+                  variant="brand"
+                  onClick={handleConfirmImport}
+                  className="rounded-xl flex-1"
+                  data-testid="bulk-confirm-import-btn"
+                >
+                  Import {scannedCourses.size} {scannedCourses.size === 1 ? 'Course' : 'Courses'}
+                </Button>
+              </>
+            )}
+
+            {/* Importing footer — Cancel button */}
+            {step === 'importing' && isStillImporting && (
+              <Button
+                variant="outline"
+                onClick={() => {
+                  abortRef.current = true
+                  useImportProgressStore.getState().cancelImport()
+                }}
+                className="rounded-xl flex-1"
+                data-testid="bulk-cancel-import-btn"
+              >
+                Cancel Import
+              </Button>
+            )}
+
+            {/* Results footer */}
+            {step === 'results' && (
+              <>
+                <Button
+                  variant="outline"
+                  onClick={() => handleOpenChange(false)}
+                  className="rounded-xl flex-1"
+                  data-testid="bulk-done-btn"
+                >
+                  Done
+                </Button>
+                {batchResultRef.current?.trackId && (
+                  <Button
+                    variant="brand"
+                    onClick={() => {
+                      handleOpenChange(false)
+                      onComplete?.(
+                        importItems
+                          .filter(i => i.status === 'success' || i.status === 'truncated')
+                          .map(i => i.scannedCourse?.id)
+                          .filter((id): id is string => !!id),
+                        batchResultRef.current?.trackId
+                      )
+                    }}
+                    className="rounded-xl flex-1"
+                    data-testid="bulk-view-track-btn"
+                  >
+                    View Track
+                  </Button>
+                )}
+              </>
+            )}
+          </DialogFooter>
         )}
       </DialogContent>
     </Dialog>
