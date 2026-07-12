@@ -102,8 +102,10 @@ describe('LinkDataDialog', () => {
   describe('rendering', () => {
     it('renders the dialog heading and description', async () => {
       renderDialog()
-      expect(screen.getByText('You have local data')).toBeDefined()
-      expect(screen.getByText(/We found data saved on this device/i)).toBeDefined()
+      const dialog = screen.getByRole('alertdialog', { name: 'You have local data' })
+      expect(dialog).toHaveAccessibleDescription(
+        'We found data saved on this device. What would you like to do with it?'
+      )
     })
 
     it('renders both action buttons', async () => {

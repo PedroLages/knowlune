@@ -2,6 +2,11 @@ import * as Sentry from '@sentry/react'
 import { createRoot } from 'react-dom/client'
 import App from './app/App.tsx'
 import './styles/index.css'
+import { registerChunkLoadRecovery } from '@/lib/chunkLoadRecovery'
+
+// A deployment can replace lazy chunks while an older tab is still open.
+// Register Vite's recovery event before React begins resolving route imports.
+registerChunkLoadRecovery()
 
 // E2E TEST SUPPORT: Expose test mode control for E2E tests (dev only)
 // Tests can call window.__enableBookContentTestMode__() to enable mock EPUB loading

@@ -1,27 +1,16 @@
 # Cloudflare Pages HTTP headers
-# These apply at the CDN level before the HTML <meta> CSP tag is parsed,
-# providing a first line of defense and proper asset caching.
+# These apply at the CDN level and provide security policy plus HTML caching.
+# /assets/* responses are controlled by functions/assets/[[path]].ts because
+# Cloudflare does not apply this file to requests served by Pages Functions.
 
-# === Security Headers (apply before CSP meta tag is parsed) ===
+# === Security and HTML cache headers ===
 /*
   X-Content-Type-Options: nosniff
   X-Frame-Options: SAMEORIGIN
   Referrer-Policy: strict-origin-when-cross-origin
   Permissions-Policy: geolocation=(), microphone=(), camera=()
-
-# === SPA entry point — never cache (prevents stale SW precache of index.html) ===
-/index.html
-  Cache-Control: no-cache
-
-# === Hashed assets — immutable long-term cache (safe because hashes change on rebuild) ===
-/assets/*.js
-  Cache-Control: public, max-age=31536000, immutable
-
-/assets/*.css
-  Cache-Control: public, max-age=31536000, immutable
-
-/assets/*.woff2
-  Cache-Control: public, max-age=31536000, immutable
+  Cache-Control: no-cache, no-transform
+  Content-Security-Policy: default-src 'self'; manifest-src 'self'; script-src 'self' 'wasm-unsafe-eval' https://www.youtube.com https://static.cloudflareinsights.com 'sha256-uUew0TW/lrngy0J3LVp+D/7ubZJy1tfFlGU/IVg84rQ=' 'sha256-0cSQtHErXrGEos+kbJSujbNhpS2UlOr5nB+0Qt3+miU=' 'sha256-cvKx/M9e7JLqHfYNCEMRravzRCran6GFdp1EXV2S3q4='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https: https://images.unsplash.com https://*.unsplash.com https://*.googleusercontent.com https://*.ytimg.com https://covers.openlibrary.org https://books.google.com https://*.mzstatic.com https://m.media-amazon.com; media-src 'self' blob: https:; font-src 'self'; connect-src 'self' blob: https://huggingface.co https://*.huggingface.co https://*.hf.co https://raw.githubusercontent.com http://titan.local:* http://localhost:* http://127.0.0.1:* https://*.stripe.com https://*.supabase.co https://*.pedrolages.net https://supabase.pedrolages.net https://www.googleapis.com https://books.google.com https://openlibrary.org https://covers.openlibrary.org https://itunes.apple.com https://*.mzstatic.com https://api.audnex.us https://www.youtube.com https://*.ingest.sentry.io https://*.ingest.de.sentry.io https://openrouter.ai https://static.cloudflareinsights.com; frame-src 'self' blob: https://www.youtube.com https://www.youtube-nocookie.com https://checkout.stripe.com https://js.stripe.com https://accounts.google.com; frame-ancestors 'self'; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests; block-all-mixed-content
 
 # === Service worker — short cache to ensure updates propagate quickly ===
 /sw.js

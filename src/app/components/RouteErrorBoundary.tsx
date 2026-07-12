@@ -3,6 +3,7 @@ import { Link } from 'react-router'
 import { AlertTriangle, RefreshCw, Home } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
 import { reportError } from '@/lib/errorTracking'
+import { isChunkLoadError } from '@/lib/chunkLoadRecovery'
 
 interface RouteErrorFallbackProps {
   error: Error | null
@@ -20,6 +21,11 @@ interface RouteErrorFallbackProps {
  */
 export function RouteErrorFallback({ error, onRetry }: RouteErrorFallbackProps) {
   const isDev = import.meta.env.DEV
+  const isStaleBuild = isChunkLoadError(error)
+
+  const reloadLatestVersion = () => {
+    window.location.reload()
+  }
 
   return (
     <div className="flex flex-1 items-center justify-center p-6" role="alert" aria-live="assertive">
@@ -31,10 +37,12 @@ export function RouteErrorFallback({ error, onRetry }: RouteErrorFallbackProps) 
 
         {/* Heading */}
         <h2 className="mb-2 text-xl font-semibold text-card-foreground">
-          Something went wrong in this section
+          {isStaleBuild ? 'A new version is available' : 'Something went wrong in this section'}
         </h2>
         <p className="mb-6 text-sm text-muted-foreground">
-          This page encountered an error, but you can still navigate to other sections.
+          {isStaleBuild
+            ? 'Reload Knowlune to open this page with the latest version.'
+            : 'This page encountered an error, but you can still navigate to other sections.'}
         </p>
 
         {/* Dev-only error details */}
@@ -47,9 +55,13 @@ export function RouteErrorFallback({ error, onRetry }: RouteErrorFallbackProps) 
 
         {/* Actions */}
         <div className="flex gap-3">
-          <Button variant="outline" onClick={onRetry} className="flex-1 gap-2">
+          <Button
+            variant="outline"
+            onClick={isStaleBuild ? reloadLatestVersion : onRetry}
+            className="flex-1 gap-2"
+          >
             <RefreshCw className="size-4" aria-hidden="true" />
-            Try again
+            {isStaleBuild ? 'Reload latest' : 'Try again'}
           </Button>
           <Button variant="brand" asChild className="flex-1 gap-2">
             <Link to="/">
