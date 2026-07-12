@@ -604,19 +604,21 @@ const courseServers: TableRegistryEntry = {
 
 /**
  * `notificationPreferences` is a singleton table: Dexie PK is the literal
- * string `'singleton'`, Supabase PK is `user_id`. The `fieldMap: { id: 'user_id' }`
- * translates the Dexie `id` field to the `user_id` column on upload, and
- * `upsertConflictColumns: 'user_id'` targets the correct conflict column so
- * the upload engine upserts the single row per user (instead of defaulting
- * to `id`). Same mechanism as `chapterMappings`, simplified to a single PK.
+ * string `'singleton'`, Supabase PK is `user_id`. The auto-stamped `userId`
+ * field (from syncableWrite) maps to the `user_id` column via camelToSnake,
+ * satisfying both the PK constraint and RLS (`auth.uid() = user_id`).
+ * The synthetic Dexie `id` is stripped from upload payloads — it has no
+ * corresponding Supabase column. `upsertConflictColumns: 'user_id'` targets
+ * the correct column for singleton-per-user upserts.
  */
 const notificationPreferences: TableRegistryEntry = {
   dexieTable: 'notificationPreferences',
   supabaseTable: 'notification_preferences',
   conflictStrategy: 'lww',
   priority: 3,
-  fieldMap: { id: 'user_id' },
+  fieldMap: {},
   upsertConflictColumns: 'user_id',
+  stripFields: ['id'],
 }
 
 // ---------------------------------------------------------------------------

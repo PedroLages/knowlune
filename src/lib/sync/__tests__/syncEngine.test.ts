@@ -205,19 +205,26 @@ import { syncEngine } from '../syncEngine'
 /** Deterministic ID counter — reset in beforeEach to avoid cross-test bleed. */
 let _idCounter = 1
 
-function makeEntry(overrides: Partial<SyncQueueEntry> = {}): SyncQueueEntry {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function makeEntry(overrides: Record<string, any> = {}): SyncQueueEntry {
+  const { payload: payloadOverride, ...restOverrides } = overrides
   return {
     id: _idCounter++,
     tableName: 'notes',
     recordId: 'rec-1',
     operation: 'put',
-    payload: { id: 'rec-1', content: 'hello' },
+    payload: {
+      id: 'rec-1',
+      content: 'hello',
+      user_id: 'test-user-id',
+      ...(payloadOverride as Record<string, unknown> | undefined),
+    },
     attempts: 0,
     status: 'pending',
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
-    ...overrides,
-  }
+    ...restOverrides,
+  } as SyncQueueEntry
 }
 
 function setQueueEntries(entries: SyncQueueEntry[]) {
@@ -973,9 +980,12 @@ describe('delete operation upload', () => {
 
     // Delete runs first, then upsert for the put.
     expect(mockDeleteIn).toHaveBeenCalledWith('id', ['rec-1'])
-    expect(mockUpsert).toHaveBeenCalledWith([{ id: 'rec-2', content: 'hello' }], {
-      onConflict: 'id',
-    })
+    expect(mockUpsert).toHaveBeenCalledWith(
+      [{ id: 'rec-2', content: 'hello', user_id: 'test-user-id' }],
+      {
+        onConflict: 'id',
+      }
+    )
     // Both groups removed from queue.
     expect(mockBulkDelete).toHaveBeenCalledWith([1])
     expect(mockBulkDelete).toHaveBeenCalledWith([2])
@@ -1003,9 +1013,12 @@ describe('delete operation upload', () => {
     await vi.advanceTimersByTimeAsync(201)
 
     expect(mockDeleteIn).not.toHaveBeenCalled()
-    expect(mockUpsert).toHaveBeenCalledWith([{ id: 'rec-1', content: 'hello' }], {
-      onConflict: 'id',
-    })
+    expect(mockUpsert).toHaveBeenCalledWith(
+      [{ id: 'rec-1', content: 'hello', user_id: 'test-user-id' }],
+      {
+        onConflict: 'id',
+      }
+    )
     expect(mockBulkDelete).toHaveBeenCalledWith([1])
   })
 

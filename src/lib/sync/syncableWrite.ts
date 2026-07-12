@@ -177,6 +177,13 @@ export async function syncableWrite<T extends SyncableRecord>(
   // local-only writes (unauthenticated) are still persisted immediately.
   // Intentional: Dexie write failures propagate to the caller (fatal). No queue
   // entry is created on failure, so there is no orphaned sync state to clean up.
+  //
+  // stampedRecord is lifted to function scope so both the Dexie write and the
+  // queue payload builder reference the same stamped object. (Bug fix: the
+  // payload was previously built from the caller's un-stamped `record`, which
+  // lacked userId/updatedAt — causing every Supabase upload to hit 403 RLS.)
+  let stampedRecord: T | undefined
+
   if (operation === 'delete') {
     // For delete, `record` is the string id.
     await db.table(tableName).delete(record as string)
@@ -186,7 +193,7 @@ export async function syncableWrite<T extends SyncableRecord>(
     // can disambiguate rows from different anonymous sessions.
     const guestSessionId =
       userId === null ? (sessionStorage.getItem('knowlune-guest-id') ?? null) : null
-    const stampedRecord = {
+    stampedRecord = {
       ...(record as T),
       userId,
       ...(guestSessionId !== null ? { guestSessionId } : {}),
@@ -210,7 +217,8 @@ export async function syncableWrite<T extends SyncableRecord>(
   // [5] Build the queue payload and enqueue. `recordId` was derived and
   // validated above (step [1a]) — reuse here so the two paths cannot drift.
   try {
-    // Build the Supabase-compatible payload.
+    // Build the Supabase-compatible payload from stampedRecord so the payload
+    // carries user_id and updated_at (required by Supabase RLS and LWW).
     // `toSnakeCase` automatically strips both `stripFields` (non-serializable
     // browser handles) and `vaultFields` (credentials that must never reach
     // Postgres rows). For delete, the payload is just the id.
@@ -218,7 +226,36 @@ export async function syncableWrite<T extends SyncableRecord>(
     if (operation === 'delete') {
       payload = { id: record as string }
     } else {
-      payload = toSnakeCase(entry, record as Record<string, unknown>)
+      if (!stampedRecord) {
+        throw new Error('[syncableWrite] Missing stamped record for non-delete operation')
+      }
+      payload = toSnakeCase(entry, stampedRecord as Record<string, unknown>)
+    }
+
+    // Ownership guard: verify the payload carries a user_id matching the
+    // current authenticated user. A missing or mismatched user_id would be
+    // rejected by Supabase RLS (403) and dead-lettered — skip the queue entry
+    // so the upload engine does not waste a cycle on a guaranteed failure.
+    // Delete payloads only carry { id } and are validated by RLS against the
+    // existing row, so they are exempt from this check.
+    if (operation !== 'delete') {
+      const payloadUserId = payload.user_id
+      if (
+        typeof payloadUserId !== 'string' ||
+        payloadUserId.length === 0 ||
+        payloadUserId !== userId
+      ) {
+        console.error('[syncableWrite] Payload ownership guard failed:', {
+          tableName,
+          recordId,
+          expectedUserId: userId,
+          payloadUserId,
+          payloadKeys: Object.keys(payload),
+        })
+        // Dexie write already succeeded (optimistic local). The sync engine's
+        // backfill/full-scan path will re-enqueue on the next cycle.
+        return
+      }
     }
 
     const queueEntry: Omit<SyncQueueEntry, 'id'> = {

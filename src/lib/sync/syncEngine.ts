@@ -471,13 +471,41 @@ function _classifyError(status: number | undefined, isNetworkError: boolean): Er
   return 'dead-letter'
 }
 
+/**
+ * Partition write entries into those with a valid user_id in the payload
+ * and those without. Entries lacking user_id would be rejected by Supabase
+ * RLS (403) — filtering them before the Supabase call prevents one malformed
+ * entry from contaminating an entire batch.
+ */
+function _partitionByValidUserId(
+  entries: SyncQueueEntry[]
+): { valid: SyncQueueEntry[]; invalid: SyncQueueEntry[] } {
+  const valid: SyncQueueEntry[] = []
+  const invalid: SyncQueueEntry[] = []
+  for (const entry of entries) {
+    const payload = entry.payload as Record<string, unknown> | undefined
+    if (payload && typeof payload.user_id === 'string' && payload.user_id.length > 0) {
+      valid.push(entry)
+    } else {
+      invalid.push(entry)
+    }
+  }
+  return { valid, invalid }
+}
+
 // ---------------------------------------------------------------------------
 // Helper — handle batch upload error
 // ---------------------------------------------------------------------------
 
 async function _handleBatchError(
   entries: SyncQueueEntry[],
-  supabaseError: { status?: number; message?: string } | null,
+  supabaseError: {
+    status?: number
+    message?: string
+    code?: string
+    details?: string
+    hint?: string
+  } | null,
   isNetworkError: boolean,
   retryCallback: () => Promise<boolean>
 ): Promise<void> {
@@ -502,6 +530,19 @@ async function _handleBatchError(
 
   if (errorClass === 'dead-letter') {
     // 4xx (non-401) → immediate dead-letter.
+    // Log structured error details for 403/RLS diagnostics without private content.
+    if (errStatus === 403) {
+      console.warn('[syncEngine] RLS / permission error during upload:', {
+        status: errStatus,
+        code: supabaseError?.code,
+        details: supabaseError?.details,
+        hint: supabaseError?.hint,
+        tables: [...new Set(entries.map(e => e.tableName))].join(', '),
+        entryCount: entries.length,
+        // Log payload column names, not values — never log user content or tokens.
+        payloadColumns: entries.map(e => Object.keys((e.payload as object) ?? {}).sort()),
+      })
+    }
     for (const entry of entries) {
       await db.syncQueue.update(entry.id!, {
         status: 'dead-letter',
@@ -558,7 +599,32 @@ async function _uploadBatch(
 
   // Split by operation: deletes issue SQL DELETE, writes follow existing path.
   const deleteEntries = entries.filter(e => e.operation === 'delete')
-  const writeEntries = entries.filter(e => e.operation !== 'delete')
+  const rawWriteEntries = entries.filter(e => e.operation !== 'delete')
+
+  // Defensive guard: filter write entries whose payload lacks a valid user_id.
+  // Entries without user_id would be rejected by Supabase RLS (403) and would
+  // contaminate the entire batch. Dead-letter filtered entries so they are
+  // not re-attempted on subsequent cycles.
+  const { valid: writeEntries, invalid: taintedEntries } =
+    _partitionByValidUserId(rawWriteEntries)
+
+  for (const entry of taintedEntries) {
+    console.warn('[syncEngine] Skipping write entry with missing or empty user_id:', {
+      tableName: entry.tableName,
+      recordId: entry.recordId,
+      operation: entry.operation,
+      payloadKeys: Object.keys((entry.payload as Record<string, unknown>) ?? {}),
+    })
+    await db.syncQueue
+      .update(entry.id!, {
+        status: 'dead-letter',
+        lastError: 'Missing user_id in payload — upload rejected by RLS',
+        updatedAt: new Date().toISOString(),
+      })
+      .catch(() => {
+        /* non-fatal */
+      })
+  }
 
   let allSucceeded = true
 
@@ -1705,6 +1771,18 @@ export const syncEngine = {
   async start(userId: string): Promise<void> {
     _userId = userId
     _started = true
+
+    // One-time repair of malformed queue entries whose payload lacks user_id
+    // (bug: syncableWrite built the queue payload from the caller's un-stamped
+    // record, so every upload hit 403 RLS). Fire-and-forget — the repair does
+    // not block the first sync cycle, and the upload engine will process any
+    // repaired entries on the next nudge.
+    import('./queueRepair').then(({ repairMalformedQueueEntries }) =>
+      repairMalformedQueueEntries(userId).catch(err =>
+        console.error('[syncEngine] Queue repair failed:', err)
+      )
+    )
+
     await _runSingleFlightFullSync()
   },
 

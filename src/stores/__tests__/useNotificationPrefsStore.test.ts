@@ -89,7 +89,7 @@ describe('init', () => {
     expect(typeof record!.updatedAt).toBe('string')
   })
 
-  it('enqueues a syncQueue entry with user_id (not id) in payload', async () => {
+  it('enqueues a syncQueue entry with user_id from auto-stamped userId (not synthetic singleton id)', async () => {
     signIn()
     await useNotificationPrefsStore.getState().init()
 
@@ -97,8 +97,11 @@ describe('init', () => {
     expect(queue).toHaveLength(1)
     expect(queue[0].tableName).toBe('notificationPreferences')
     expect(queue[0].operation).toBe('put')
-    // fieldMap { id: 'user_id' } translation produces user_id, not id
-    expect(queue[0].payload).toHaveProperty('user_id', 'singleton')
+    // user_id comes from the auto-stamped userId (camelToSnake), not from the
+    // synthetic Dexie singleton id 'singleton'. This satisfies both the Supabase
+    // PK constraint and RLS (auth.uid() = user_id).
+    expect(queue[0].payload).toHaveProperty('user_id', 'user-1')
+    // The synthetic singleton id is stripped from the upload payload.
     expect(queue[0].payload).not.toHaveProperty('id')
     expect(queue[0].payload).toHaveProperty('course_complete', true)
     expect(queue[0].payload).toHaveProperty('quiet_hours_enabled', false)
