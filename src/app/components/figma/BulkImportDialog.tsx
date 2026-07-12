@@ -98,6 +98,18 @@ interface ImportItem {
   pdfCount?: number
   serverUrl?: string
   truncated?: boolean
+  /** When status is 'duplicate', the ID of the already-imported course to reuse. */
+  resolvedCourseId?: string
+}
+
+/** Result of a batch import operation, stored in React state for rendering. */
+interface BatchImportState {
+  trackId?: string
+  courseIds: string[]
+  /** Distinguishes full success from partial (courses imported but track failed). */
+  completionStatus: 'complete' | 'courses-complete-track-failed' | 'failed'
+  /** Present when completionStatus is 'courses-complete-track-failed' or 'failed'. */
+  error?: string
 }
 
 type DialogStep =
@@ -251,6 +263,8 @@ export function BulkImportDialog({
   const completedSuccessfullyRef = useRef(false)
   const parentHandleRef = useRef<FileSystemDirectoryHandle | null>(null)
   const batchResultRef = useRef<{ trackId?: string; courseIds: string[] } | null>(null)
+  // Fix 6: React state for render-critical batch result (View Track button depends on this).
+  const [batchResult, setBatchResult] = useState<BatchImportState | null>(null)
   const generationRef = useRef(0)
   const batchAbortRef = useRef<AbortController | null>(null)
   const isScanningUrlRef = useRef(false)
@@ -329,6 +343,7 @@ export function BulkImportDialog({
     truncationWarnedRef.current = false
     parentHandleRef.current = null
     batchResultRef.current = null
+    setBatchResult(null)
     originalCourseIdMapRef.current = new Map()
     setTrackManifest(null)
   }, [coverPreviewUrls])
@@ -339,12 +354,12 @@ export function BulkImportDialog({
         // Fire onComplete only when the dialog actually transitioned through the results step
         // (avoiding false positives if the dialog is closed externally)
         if (completedSuccessfullyRef.current) {
-          const batchResult = batchResultRef.current
+          const result = batchResult // React state, not ref
           let ids: string[]
           let trackId: string | undefined
-          if (batchResult) {
-            ids = batchResult.courseIds
-            trackId = batchResult.trackId
+          if (result) {
+            ids = result.courseIds
+            trackId = result.trackId
           } else {
             ids = importItems
               .filter(i => i.status === 'success' || i.status === 'truncated')
@@ -723,7 +738,11 @@ export function BulkImportDialog({
           updateItemInList(
             results,
             item.folderName,
-            { status: 'duplicate', error: 'Already imported' },
+            {
+              status: 'duplicate',
+              error: 'Already imported',
+              resolvedCourseId: scanResult.existingCourseId,
+            },
             setImportItems
           )
           return
@@ -895,12 +914,18 @@ export function BulkImportDialog({
         }))
         setImportItems(items)
 
-        // Store result for onComplete to pass trackId
+        // Store result for onComplete to pass trackId (Fix 6: also set React state)
         if (generation === generationRef.current) {
+          const courseIds = result.courses.filter(r => r.success && r.courseId).map(r => r.courseId!)
           batchResultRef.current = {
             trackId: result.trackId,
-            courseIds: result.courses.filter(r => r.success && r.courseId).map(r => r.courseId!),
+            courseIds,
           }
+          setBatchResult({
+            trackId: result.trackId,
+            courseIds,
+            completionStatus: result.trackId ? 'complete' : 'courses-complete-track-failed',
+          })
         }
 
         // Apply track cover after track creation
@@ -950,6 +975,7 @@ export function BulkImportDialog({
     }))
     setImportItems(items)
     batchResultRef.current = null
+    setBatchResult(null)
     setStep('importing')
 
     for (const item of items) {
@@ -1031,95 +1057,152 @@ export function BulkImportDialog({
     await useCourseImportStore.getState().loadImportedCourses()
 
     // Server-aware batch import path: when manifest exists but parentHandle is null
-    // (server URL import), create or update the track with successfully imported courses.
+    // (server URL import), create a new track with all resolved courses.
+    //
+    // Fixes 1-8: duplicate courses reuse existing IDs, always create new track,
+    // persist trackId before secondary work, separate import from track-creation status.
     if (trackManifest && !parentHandle && !abortRef.current && generation === generationRef.current) {
       const manifestPositions = new Map(
         trackManifest.manifest.track.courses.map(c => [c.folder, c.position])
       )
-      const successResults = results
-        .filter(r => r.status === 'success')
-        .sort((a, b) => {
-          const posA = manifestPositions.get(a.folderName) ?? Infinity
-          const posB = manifestPositions.get(b.folderName) ?? Infinity
-          return posA - posB
+
+      // Fix 2: Build resolvedCourses — include success, truncated, AND duplicates with resolvedCourseId.
+      // A duplicate course is not an import failure; it means "reuse the existing library course."
+      const resolvedCourses: { folderName: string; courseId: string }[] = []
+      for (const r of results) {
+        const courseId = r.scannedCourse?.id ?? r.resolvedCourseId
+        if (!courseId) continue
+        if (
+          r.status !== 'success' &&
+          r.status !== 'truncated' &&
+          r.status !== 'duplicate'
+        ) {
+          continue
+        }
+        resolvedCourses.push({ folderName: r.folderName, courseId })
+      }
+
+      // Sort by manifest positions
+      resolvedCourses.sort((a, b) => {
+        const posA = manifestPositions.get(a.folderName) ?? Infinity
+        const posB = manifestPositions.get(b.folderName) ?? Infinity
+        return posA - posB
+      })
+
+      if (resolvedCourses.length > 0) {
+        const importedCount = resolvedCourses.filter(rc => {
+          const r = results.find(r2 => r2.folderName === rc.folderName)
+          return r?.status === 'success' || r?.status === 'truncated'
+        }).length
+        const reusedCount = resolvedCourses.filter(rc => {
+          const r = results.find(r2 => r2.folderName === rc.folderName)
+          return r?.status === 'duplicate'
+        }).length
+
+        // Fix 9: Structured diagnostic logging
+        console.log('[BulkImport] track creation started', {
+          importSessionId: generation,
+          requestedTrackName: trackManifest.manifest.track.name,
+          destinationMode: 'create',
+          importedCourseCount: importedCount,
+          reusedCourseCount: reusedCount,
+          unresolvedDuplicateCount: results.filter(r => r.status === 'duplicate' && !r.resolvedCourseId).length,
         })
-      if (successResults.length > 0) {
+
         try {
           const lpStore = useLearningPathStore.getState()
           const trackName = trackManifest.manifest.track.name
           const trackDesc = trackManifest.manifest.track.description
-          const existingPath = lpStore.paths.find(
-            p => p.name.toLowerCase() === trackName.toLowerCase()
-          )
-          const coursesToAdd = successResults
-            .filter(r => r.scannedCourse?.id)
-            .map(r => ({
-              courseId: r.scannedCourse!.id,
+
+          // Fix 3: Always create a new track — never silently update by name match.
+          // The user entered via "Create Track" workflow; inferring update from
+          // a case-insensitive name match violates that intent.
+          const newPath = await lpStore.createPathWithCourses(
+            trackName,
+            trackDesc,
+            resolvedCourses.map(rc => ({
+              courseId: rc.courseId,
               courseType: 'imported' as const,
             }))
-          let trackId: string
-          if (existingPath) {
-            trackId = existingPath.id
-            await lpStore.batchAddCoursesToPath(trackId, coursesToAdd)
-          } else {
-            const newPath = await lpStore.createPathWithCourses(trackName, trackDesc, coursesToAdd)
-            trackId = newPath.id
+          )
+          const trackId = newPath.id
+
+          console.log('[BulkImport] track created', { trackId, courseCount: resolvedCourses.length })
+
+          // Fix 8: Persist trackId in React state IMMEDIATELY after track creation succeeds.
+          // Cover upload and reordering are secondary — failures must not erase the track.
+          setBatchResult({
+            trackId,
+            courseIds: resolvedCourses.map(rc => rc.courseId),
+            completionStatus: 'complete',
+          })
+          // Keep ref in sync for code paths that still read it (handleOpenChange)
+          batchResultRef.current = {
+            trackId,
+            courseIds: resolvedCourses.map(rc => rc.courseId),
           }
 
-          // Apply manifest-specified positions via reorder (matching the pattern
-          // in batchImportTrackCourses).  Courses may have been added in scan
-          // completion order — reorder to match the manifest's declared positions.
-          //
-          // Re-read live store state each iteration — reorderCourse mutates
-          // entries, so a static snapshot captured before the loop would go stale.
+          // Apply manifest-specified positions via reorder.
+          // Re-read live store state each iteration — reorderCourse mutates entries.
           const positions = trackManifest.manifest.track.courses
           const sortedPositions = [...positions].sort((a, b) => a.position - b.position)
 
           for (const { folder, position } of sortedPositions) {
-            const result = successResults.find(r => r.folderName === folder)
-            if (!result?.scannedCourse?.id) continue
+            const rc = resolvedCourses.find(r => r.folderName === folder)
+            if (!rc) continue
 
             const currentEntries = useLearningPathStore
               .getState()
               .entries.filter(e => e.pathId === trackId)
               .sort((a, b) => a.position - b.position)
 
-            const entryIndex = currentEntries.findIndex(
-              e => e.courseId === result.scannedCourse!.id
-            )
-            // Clamp target to valid range — when courses fail to import, the
-            // entries array may be shorter than the highest manifest position.
+            const entryIndex = currentEntries.findIndex(e => e.courseId === rc.courseId)
             const targetIndex = Math.min(position - 1, currentEntries.length - 1)
             if (entryIndex >= 0 && entryIndex !== targetIndex) {
-              await lpStore.reorderCourse(trackId, entryIndex, targetIndex)
+              try {
+                await lpStore.reorderCourse(trackId, entryIndex, targetIndex)
+              } catch (reorderErr) {
+                // Fix 8: Reordering failure is non-blocking — track already exists.
+                console.warn('[BulkImport] course reorder failed (non-blocking):', reorderErr)
+              }
             }
           }
 
-          // Apply track cover after server-URL track creation
+          // Apply track cover — secondary, non-blocking (Fix 8).
           if (generation === generationRef.current) {
             const selectedCandidate = trackCoverCandidates.find(c => c.id === selectedTrackCoverId)
             if (selectedCandidate) {
-              const coverStatus = await applyImportedTrackCover({
-                trackId,
-                candidate: selectedCandidate,
-                isExplicitSelection: trackCoverSelectionSource === 'manual',
-                preserveExisting: true,
-              })
-              if (generation === generationRef.current) {
-                setTrackCoverResult(coverStatus)
+              try {
+                const coverStatus = await applyImportedTrackCover({
+                  trackId,
+                  candidate: selectedCandidate,
+                  isExplicitSelection: trackCoverSelectionSource === 'manual',
+                  preserveExisting: true,
+                })
+                if (generation === generationRef.current) {
+                  setTrackCoverResult(coverStatus)
+                }
+              } catch (coverErr) {
+                // Fix 8: Cover upload failure doesn't block track access.
+                console.warn('[BulkImport] track cover upload failed (non-blocking):', coverErr)
+                if (generation === generationRef.current) {
+                  setTrackCoverResult('track-cover-upload-failed')
+                }
               }
             }
-
-            batchResultRef.current = {
-              trackId,
-              courseIds: successResults
-                .filter(r => r.scannedCourse?.id)
-                .map(r => r.scannedCourse!.id),
-            }
           }
+
+          console.log('[BulkImport] result state committed', { trackId, completionStatus: 'complete' })
         } catch (err) {
-          console.error('[BulkImport] Failed to create/update track from server courses:', err)
-          toast.warning('Courses imported but track could not be created')
+          console.error('[BulkImport] track creation failed:', err)
+          // Fix 7: Separate course-import from track-creation status.
+          // Courses are imported (they're in the library), but the track couldn't be created.
+          setBatchResult({
+            courseIds: resolvedCourses.map(rc => rc.courseId),
+            completionStatus: 'courses-complete-track-failed',
+            error: err instanceof Error ? err.message : 'Failed to create learning track',
+          })
+          toast.warning('Courses are available, but the learning track could not be created.')
         }
       }
     }
@@ -1369,9 +1452,11 @@ export function BulkImportDialog({
                   : `${scannedCourses.size} courses ready. Edit details before importing.`)}
               {step === 'importing' && `Importing ${importItems.length} courses...`}
               {step === 'results' &&
-                (batchResultRef.current?.trackId
+                (batchResult?.trackId
                   ? `${successItems.length + truncatedItems.length} of ${importItems.length} courses imported into track.`
-                  : `${successItems.length + truncatedItems.length} of ${importItems.length} courses imported.`)}
+                  : batchResult?.completionStatus === 'courses-complete-track-failed'
+                    ? `${successItems.length + truncatedItems.length} courses imported, but track creation failed.`
+                    : `${successItems.length + truncatedItems.length} of ${importItems.length} courses imported.`)}
             </DialogDescription>
           </DialogHeader>
 
@@ -2221,7 +2306,7 @@ export function BulkImportDialog({
                   )}
                   {!trackCoverResult &&
                     trackCoverCandidates.length > 0 &&
-                    batchResultRef.current?.trackId && (
+                    batchResult?.trackId && (
                       <div className="pt-1 border-t border-border/50">
                         <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
                           <ImageIcon className="size-4" aria-hidden="true" />
@@ -2316,25 +2401,32 @@ export function BulkImportDialog({
                 >
                   Done
                 </Button>
-                {batchResultRef.current?.trackId && (
+                {batchResult?.trackId ? (
                   <Button
                     variant="brand"
                     onClick={() => {
                       handleOpenChange(false)
-                      onComplete?.(
-                        importItems
-                          .filter(i => i.status === 'success' || i.status === 'truncated')
-                          .map(i => i.scannedCourse?.id)
-                          .filter((id): id is string => !!id),
-                        batchResultRef.current?.trackId
-                      )
+                      onComplete(batchResult.courseIds, batchResult.trackId)
                     }}
                     className="rounded-xl flex-1"
                     data-testid="bulk-view-track-btn"
                   >
                     View Track
                   </Button>
-                )}
+                ) : batchResult?.completionStatus === 'courses-complete-track-failed' ? (
+                  <Button
+                    variant="brand"
+                    onClick={() => {
+                      // Fix 7: Retry track creation — reset to review step so user can
+                      // trigger import again (which will skip already-imported courses).
+                      setStep('review')
+                    }}
+                    className="rounded-xl flex-1"
+                    data-testid="bulk-retry-track-btn"
+                  >
+                    Retry Create Track
+                  </Button>
+                ) : null}
               </>
             )}
           </DialogFooter>

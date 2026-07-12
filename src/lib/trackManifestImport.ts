@@ -235,15 +235,21 @@ export async function batchImportTrackCourses(
       const scanResult: BulkScanResult = await scanCourseFolderFromHandle(dirHandle)
 
       if (scanResult.status === 'duplicate') {
-        const existingCourse = await db.importedCourses
-          .where('name')
-          .equals(entry.folder)
-          .first()
-        if (existingCourse) {
-          results.push({ folder: entry.folder, success: true, courseId: existingCourse.id })
+        // Use the existingCourseId from the scan result (Fix 1: BulkScanResult now carries it).
+        if (scanResult.existingCourseId) {
+          results.push({ folder: entry.folder, success: true, courseId: scanResult.existingCourseId })
         } else {
-          results.push({ folder: entry.folder, success: false, error: 'Course not found in database' })
-          toast.warning(`"${entry.folder}" appears to be imported but could not be found`)
+          // Fallback: query by name (should be rare with the updated type)
+          const existingCourse = await db.importedCourses
+            .where('name')
+            .equals(entry.folder)
+            .first()
+          if (existingCourse) {
+            results.push({ folder: entry.folder, success: true, courseId: existingCourse.id })
+          } else {
+            results.push({ folder: entry.folder, success: false, error: 'Course not found in database' })
+            toast.warning(`"${entry.folder}" appears to be imported but could not be found`)
+          }
         }
         continue
       }

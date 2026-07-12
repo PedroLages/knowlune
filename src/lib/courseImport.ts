@@ -1176,7 +1176,14 @@ export async function persistScannedCourse(
 export type BulkScanResult =
   | { status: 'success'; course: ScannedCourse; truncated?: boolean }
   | { status: 'no-files'; folderName: string }
-  | { status: 'duplicate'; folderName: string }
+  | {
+      status: 'duplicate'
+      folderName: string
+      /** The ID of the already-imported course that matches this folder. */
+      existingCourseId: string
+      /** The existing ImportedCourse record (if found). */
+      existingCourse?: ImportedCourse
+    }
   | { status: 'error'; folderName: string; message: string }
 
 /**
@@ -1190,10 +1197,15 @@ export async function scanCourseFolderFromHandle(
   dirHandle: FileSystemDirectoryHandle
 ): Promise<BulkScanResult> {
   try {
-    // Check for duplicate import
+    // Check for duplicate import — match by folder name (canonical for local imports).
     const existingCourse = await db.importedCourses.where('name').equals(dirHandle.name).first()
     if (existingCourse) {
-      return { status: 'duplicate', folderName: dirHandle.name }
+      return {
+        status: 'duplicate',
+        folderName: dirHandle.name,
+        existingCourseId: existingCourse.id,
+        existingCourse,
+      }
     }
 
     // Scan directory for supported files
@@ -1338,16 +1350,37 @@ export async function scanCourseFromSource(source: {
 }): Promise<BulkScanResult> {
   if (source.serverUrl) {
     try {
-      // Check for duplicate by folder name before scanning (same as local handle path)
-      const existingCourse = await db.importedCourses
+      // Duplicate detection (Fix 1): match by name first, then by serverPath after scan.
+      const existingByName = await db.importedCourses
         .where('name')
         .equals(source.folderName)
         .first()
-      if (existingCourse) {
-        return { status: 'duplicate', folderName: source.folderName }
+      if (existingByName) {
+        return {
+          status: 'duplicate',
+          folderName: source.folderName,
+          existingCourseId: existingByName.id,
+          existingCourse: existingByName,
+        }
       }
 
       const scannedCourse = await scanCourseFolderFromServer(source.serverUrl)
+
+      // Stronger identity check: match by serverPath (canonical for server imports).
+      // This catches cases where the same course was imported under a different folder name.
+      if (scannedCourse.serverPath) {
+        const allCourses = await db.importedCourses.toArray()
+        const existingByPath = allCourses.find(c => c.serverPath === scannedCourse.serverPath)
+        if (existingByPath) {
+          return {
+            status: 'duplicate',
+            folderName: source.folderName,
+            existingCourseId: existingByPath.id,
+            existingCourse: existingByPath,
+          }
+        }
+      }
+
       return {
         status: 'success',
         course: scannedCourse,
