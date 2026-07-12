@@ -124,6 +124,9 @@ test.describe('Learning Tracks — empty state', () => {
     await page.reload({ waitUntil: 'load' })
 
     await expect(page.getByText('No learning tracks yet')).toBeVisible()
+    await expect(
+      page.getByText('Create a track or import courses to get started.')
+    ).toBeVisible()
     // There are two "Create Track" buttons: header and empty state. The empty state
     // one is visible when there are no paths, so first() works.
     await expect(page.getByRole('button', { name: 'Create Track' }).first()).toBeVisible()
@@ -140,6 +143,136 @@ test.describe('Learning Tracks — empty state', () => {
 
     await expect(page.getByRole('dialog')).toBeVisible()
     await expect(page.getByText('Create Learning Path')).toBeVisible()
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Template removal — no templates shown on Learning Tracks
+// ---------------------------------------------------------------------------
+
+test.describe('Learning Tracks — no templates shown', () => {
+  test('does not render "Start with a template" heading', async ({ page }) => {
+    await goToLearningTracks(page)
+
+    // Seed only template paths — no user paths
+    const templates = [
+      createLearningPath({
+        id: 'tpl-data-science',
+        name: 'Data Science Foundations',
+        isTemplate: true,
+      }),
+      createLearningPath({
+        id: 'tpl-web-dev',
+        name: 'Full-Stack Web Development',
+        isTemplate: true,
+      }),
+    ]
+
+    await clearLearningPath(page)
+    await seedPaths(page, templates)
+    await page.reload({ waitUntil: 'load' })
+
+    // Should NOT show the template heading
+    await expect(page.getByText('Start with a template')).not.toBeVisible()
+    // Should show the empty state instead
+    await expect(page.getByText('No learning tracks yet')).toBeVisible()
+  })
+
+  test('template paths are not shown as user tracks', async ({ page }) => {
+    await goToLearningTracks(page)
+
+    const templates = [
+      createLearningPath({
+        id: 'tpl-ml',
+        name: 'Machine Learning Engineering',
+        isTemplate: true,
+      }),
+    ]
+
+    await clearLearningPath(page)
+    await seedPaths(page, templates)
+    await page.reload({ waitUntil: 'load' })
+
+    // Template name should not appear as a track card
+    await expect(page.getByText('Machine Learning Engineering')).not.toBeVisible()
+    // Empty state should be shown instead
+    await expect(page.getByText('No learning tracks yet')).toBeVisible()
+  })
+
+  test('shows empty state with zero user paths even when templates exist', async ({ page }) => {
+    await goToLearningTracks(page)
+
+    const templates = [
+      createLearningPath({
+        id: 'tpl-ios',
+        name: 'iOS Development',
+        isTemplate: true,
+      }),
+    ]
+
+    await clearLearningPath(page)
+    await seedPaths(page, templates)
+    await page.reload({ waitUntil: 'load' })
+
+    // Should show the clean empty state
+    await expect(page.getByText('No learning tracks yet')).toBeVisible()
+    await expect(
+      page.getByText('Create a track or import courses to get started.')
+    ).toBeVisible()
+    // "Or create your own track" should be gone
+    await expect(page.getByText('Or create your own track')).not.toBeVisible()
+  })
+
+  test('Create Track in empty state opens CurriculumComposer', async ({ page }) => {
+    await goToLearningTracks(page)
+
+    await clearLearningPath(page)
+    await page.reload({ waitUntil: 'load' })
+
+    await page.getByText('No learning tracks yet').waitFor()
+    // Click the empty state CTA button
+    const emptyStateButton = page
+      .locator('[data-testid="empty-state"]')
+      .getByRole('button', { name: 'Create Track' })
+    // Fall back to the visible Create Track button if data-testid isn't present
+    const createButtons = page.getByRole('button', { name: 'Create Track' })
+    await createButtons.first().click()
+
+    await expect(page.getByRole('dialog')).toBeVisible()
+    await expect(page.getByText('Create Learning Path')).toBeVisible()
+  })
+
+  test('Import Course button in header opens ImportWizardDialog', async ({ page }) => {
+    await goToLearningTracks(page)
+
+    await clearLearningPath(page)
+    await page.reload({ waitUntil: 'load' })
+
+    const importButton = page.getByRole('button', { name: 'Import Course' })
+    await expect(importButton).toBeVisible()
+    await importButton.click()
+
+    // Import Wizard should open
+    await expect(page.getByRole('dialog')).toBeVisible()
+  })
+
+  test('existing user tracks render normally', async ({ page }) => {
+    await goToLearningTracks(page)
+
+    const userPaths = [
+      createLearningPath({ id: 'up-1', name: 'My React Journey' }),
+      createLearningPath({ id: 'up-2', name: 'Python Basics' }),
+    ]
+
+    await clearLearningPath(page)
+    await seedPaths(page, userPaths)
+    await page.reload({ waitUntil: 'load' })
+
+    // Both user tracks should be visible as cards
+    await expect(page.getByText('My React Journey')).toBeVisible()
+    await expect(page.getByText('Python Basics')).toBeVisible()
+    // No empty state should be shown
+    await expect(page.getByText('No learning tracks yet')).not.toBeVisible()
   })
 })
 
