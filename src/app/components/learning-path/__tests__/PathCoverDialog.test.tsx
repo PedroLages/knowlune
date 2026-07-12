@@ -168,6 +168,45 @@ describe('PathCoverDialog', () => {
     })
   })
 
+  it('disables Save button when path already has the selected preset', async () => {
+    const user = userEvent.setup()
+    renderDialog(true, { coverPreset: 'cyan-blue' })
+    await waitFor(() => {
+      expect(screen.getByRole('dialog')).toBeInTheDocument()
+    })
+
+    const save = screen.getByRole('button', { name: /save/i })
+    expect(save).toBeDisabled()
+
+    // Selecting a different preset should enable Save
+    const emerald = screen.getByLabelText('Emerald → Green gradient')
+    await user.click(emerald)
+    expect(save).not.toBeDisabled()
+  })
+
+  it('shows error toast when file exceeds max size', async () => {
+    const user = userEvent.setup()
+    renderDialog()
+    await waitFor(() => {
+      expect(screen.getByRole('dialog')).toBeInTheDocument()
+    })
+
+    // Create a file that exceeds 10 MB
+    const largeFile = new File(
+      [new ArrayBuffer(11 * 1024 * 1024)],
+      'large.jpg',
+      { type: 'image/jpeg' }
+    )
+    const fileInput = screen.getByLabelText('Choose a cover image file')
+    await user.upload(fileInput, largeFile)
+
+    expect(toast.error).toHaveBeenCalledWith(
+      expect.stringContaining('too large')
+    )
+    // No preview should appear
+    expect(screen.queryByAltText('Cover preview')).not.toBeInTheDocument()
+  })
+
   it('does not close dialog when upload fails', async () => {
     const user = userEvent.setup()
     mockUploadPathCover.mockRejectedValue(new Error('Network error'))

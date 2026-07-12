@@ -35,9 +35,11 @@ export function PathCoverDialog({ open, onOpenChange, path, triggerRef }: PathCo
   const [uploadFile, setUploadFile] = useState<File | null>(null)
   const [isUploading, setIsUploading] = useState(false)
   const [isRemoving, setIsRemoving] = useState(false)
+  const initialPresetRef = useRef<string | null>(path.coverPreset ?? null)
 
   const hasExistingCover = !!path.coverImageUrl
   const isBusy = isUploading || isRemoving
+  const hasChange = (selectedPreset !== initialPresetRef.current) || !!uploadFile
 
   const revokeObjectPreview = useCallback(() => {
     if (objectPreviewUrlRef.current) {
@@ -55,6 +57,10 @@ export function PathCoverDialog({ open, onOpenChange, path, triggerRef }: PathCo
     }
   }, [])
 
+  useEffect(() => {
+    initialPresetRef.current = path.coverPreset ?? null
+  }, [path.coverPreset])
+
   // Reset state when dialog opens
   const handleOpenChange = useCallback(
     (open: boolean) => {
@@ -67,6 +73,7 @@ export function PathCoverDialog({ open, onOpenChange, path, triggerRef }: PathCo
         setUploadFile(null)
         setIsUploading(false)
         setIsRemoving(false)
+        if (fileInputRef.current) fileInputRef.current.value = ''
         // Restore focus to the trigger element (R9) — use rAF for reliable timing
         requestAnimationFrame(() => triggerRef?.current?.focus())
       }
@@ -82,6 +89,12 @@ export function PathCoverDialog({ open, onOpenChange, path, triggerRef }: PathCo
 
       if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
         toast.error('Unsupported format. Use JPEG, PNG, or WebP.')
+        return
+      }
+
+      const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10 MB
+      if (file.size > MAX_FILE_SIZE) {
+        toast.error('File too large. Maximum size is 10 MB.')
         return
       }
 
@@ -155,10 +168,10 @@ export function PathCoverDialog({ open, onOpenChange, path, triggerRef }: PathCo
     }
   }, [path.id, path.coverImageUrl, path.coverPreset, updatePathCover, handleOpenChange])
 
-  const canSave = selectedPreset || uploadFile
+  const canSave = hasChange
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
+    <Dialog key={path.id} open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="flex max-h-[min(85vh,calc(100dvh-2rem))] min-h-0 flex-col gap-4 sm:max-w-md">
         <DialogHeader className="shrink-0 text-center sm:text-left">
           <DialogTitle>Change Cover</DialogTitle>
@@ -179,7 +192,7 @@ export function PathCoverDialog({ open, onOpenChange, path, triggerRef }: PathCo
               type="file"
               accept="image/jpeg,image/png,image/webp"
               onChange={handleFileSelect}
-              className="hidden"
+              className="sr-only"
               aria-label="Choose a cover image file"
             />
             {uploadPreview ? (

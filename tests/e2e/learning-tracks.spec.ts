@@ -864,3 +864,103 @@ test.describe('Learning Tracks — uploaded cover hero', () => {
     await expect(page.getByRole('heading', { name: 'Preset Track', level: 1 })).toBeVisible()
   })
 })
+
+// ---------------------------------------------------------------------------
+// Cover picker dialog — file chooser, preview, save-disabled behavior
+// ---------------------------------------------------------------------------
+
+test.describe('Learning Tracks — cover picker dialog', () => {
+  /**
+   * Helper: open the Change Cover dialog for the first learning-path card.
+   * The "Change Cover" action lives in a dropdown menu behind a three-dot
+   * ("...") button that only appears on card hover.
+   */
+  async function openCoverDialog(page: import('@playwright/test').Page) {
+    // Hover the first card to reveal the three-dot actions trigger button
+    await page.locator('[data-purpose="learning-path-card"]').first().hover()
+    // Click the actions trigger
+    await page.getByRole('button', { name: /^Actions for / }).click()
+    // Click "Change Cover" in the dropdown menu
+    await page.getByRole('menuitem', { name: 'Change Cover' }).click()
+    // Wait for the dialog
+    await expect(page.getByRole('dialog', { name: /Change Cover/i })).toBeVisible()
+  }
+
+  test('cover dialog file picker opens on click', async ({ page }) => {
+    await goToLearningTracks(page)
+
+    const paths = [
+      createLearningPath({ id: 'lt-cfp', name: 'Cover File Picker Test' }),
+    ]
+    await clearTrackStores(page)
+    await seedPaths(page, paths)
+    await page.reload({ waitUntil: 'load' })
+
+    await openCoverDialog(page)
+
+    // Click "Choose image file" and verify the native file chooser opens
+    const chooseBtn = page.getByRole('button', { name: /choose image file/i })
+    const [fileChooser] = await Promise.all([
+      page.waitForEvent('filechooser'),
+      chooseBtn.click(),
+    ])
+    expect(fileChooser).toBeTruthy()
+    expect(fileChooser.isMultiple()).toBe(false)
+  })
+
+  test('cover dialog shows preview after file selection', async ({ page }) => {
+    await goToLearningTracks(page)
+
+    const paths = [
+      createLearningPath({ id: 'lt-cprev', name: 'Cover Preview Test' }),
+    ]
+    await clearTrackStores(page)
+    await seedPaths(page, paths)
+    await page.reload({ waitUntil: 'load' })
+
+    await openCoverDialog(page)
+
+    // Use setInputFiles directly on the hidden file input
+    const fileInput = page.locator('input[type="file"]')
+    await fileInput.setInputFiles({
+      name: 'test-cover.png',
+      mimeType: 'image/png',
+      buffer: Buffer.from(
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+        'base64'
+      ),
+    })
+
+    // Verify preview image appears
+    await expect(page.getByAltText('Cover preview')).toBeVisible()
+
+    // Save button should now be enabled
+    const saveBtn = page.getByRole('button', { name: /save/i })
+    await expect(saveBtn).toBeEnabled()
+  })
+
+  test('save button disabled when no change made for path with preset', async ({ page }) => {
+    await goToLearningTracks(page)
+
+    const paths = [
+      createLearningPath({
+        id: 'lt-csave',
+        name: 'Save Disabled Test',
+        coverPreset: 'cyan-blue',
+      }),
+    ]
+    await clearTrackStores(page)
+    await seedPaths(page, paths)
+    await page.reload({ waitUntil: 'load' })
+
+    await openCoverDialog(page)
+
+    // Save should be disabled — the path already has this preset selected
+    const saveBtn = page.getByRole('button', { name: /save/i })
+    await expect(saveBtn).toBeDisabled()
+
+    // Selecting a different preset should enable Save
+    await page.getByLabel('Emerald → Green gradient').click()
+    await expect(saveBtn).toBeEnabled()
+  })
+})

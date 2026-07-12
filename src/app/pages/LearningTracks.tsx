@@ -732,6 +732,7 @@ export function LearningTracks() {
       {/* Path Cover Dialog */}
       {coverDialogPath && (
         <PathCoverDialog
+          key={coverDialogPath.id}
           open={!!coverDialogPath}
           onOpenChange={open => {
             if (!open) setCoverDialogPath(null)
