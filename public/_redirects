@@ -1,24 +1,6 @@
-# Static assets — 404 instead of HTML fallback.
-# When the SPA catch-all serves index.html for a missing JS/CSS file, the browser
-# receives text/html but expects application/javascript or text/css. Strict MIME
-# type checking then blocks the resource with "Expected a JavaScript module but
-# the server responded with a MIME type of text/html". Returning 404 is the correct
-# behavior — it lets the browser (and our error boundary) surface a clear error
-# instead of a cryptic MIME type failure.
-# These rules only trigger when the file doesnʼt exist on disk; existing assets
-# are served directly by Cloudflare Pages.
-/assets/*.js      /404.html   404
-/assets/*.css     /404.html   404
-/assets/*.woff2   /404.html   404
-
-# Root-level JS/CSS — same reasoning as /assets/ above (service worker, init scripts, etc.)
-/*.js             /404.html   404
-/*.css            /404.html   404
-
 # Cloudflare Pages SPA fallback.
 # Without this, direct navigation to client-side routes (e.g. /courses) 404s
 # because the static host tries to resolve them as files before React Router
-# can handle them. The `200` status is critical — using 301/302 breaks deep
-# links by changing the URL. Asset paths are excluded above so only actual
-# SPA routes get the fallback.
+# can handle them. Missing /assets/* requests are intercepted by the Pages
+# Function in functions/assets/[[path]].ts before this fallback is evaluated.
 /*    /index.html   200

@@ -13,29 +13,6 @@
 
     <!-- E51-S02: Synchronously apply .reduce-motion before first paint to prevent flash of animations -->
     <script src="/reduce-motion-init.js"></script>
-    <!-- script-src hashes:
-         sha256-uUew0TW/... — framer-motion runtime on Learning Track pages
-         sha256-0cSQtHErXr... — dynamically-injected inline script on /learning-tracks page
-         sha256-cvKx/M9e7JL... — dynamically-injected inline script on /learning-tracks page (added 2026-06-29)
-         If any library version changes, regenerate the hash from the CSP violation console error. -->
-    <meta http-equiv="Content-Security-Policy" content="
-        default-src 'self';
-        manifest-src 'self';
-        script-src  'self' 'wasm-unsafe-eval' https://www.youtube.com https://static.cloudflareinsights.com 'sha256-uUew0TW/lrngy0J3LVp+D/7ubZJy1tfFlGU/IVg84rQ=' 'sha256-0cSQtHErXrGEos+kbJSujbNhpS2UlOr5nB+0Qt3+miU=' 'sha256-cvKx/M9e7JLqHfYNCEMRravzRCran6GFdp1EXV2S3q4=';
-        style-src   'self' 'unsafe-inline';
-        img-src     'self' data: blob: https: https://images.unsplash.com https://*.unsplash.com https://*.googleusercontent.com https://*.ytimg.com https://covers.openlibrary.org https://books.google.com https://*.mzstatic.com https://m.media-amazon.com;
-        media-src   'self' blob: https:;
-        font-src    'self';
-        connect-src 'self' blob: https://huggingface.co https://*.huggingface.co https://*.hf.co https://raw.githubusercontent.com http://titan.local:* http://localhost:* http://127.0.0.1:* https://*.stripe.com https://*.supabase.co https://*.pedrolages.net https://supabase.pedrolages.net https://www.googleapis.com https://books.google.com https://openlibrary.org https://covers.openlibrary.org https://itunes.apple.com https://*.mzstatic.com https://api.audnex.us https://www.youtube.com https://*.ingest.sentry.io https://*.ingest.de.sentry.io https://openrouter.ai https://static.cloudflareinsights.com;
-        frame-src   'self' blob: https://www.youtube.com https://www.youtube-nocookie.com https://checkout.stripe.com https://js.stripe.com https://accounts.google.com;
-        frame-ancestors 'self';
-        worker-src  'self' blob:;
-        object-src  'none';
-        base-uri    'self';
-        form-action 'self';
-        upgrade-insecure-requests;
-        block-all-mixed-content;
-      ">
     <meta name="mobile-web-app-capable" content="yes">
     <link rel="apple-touch-startup-image" href="public/splash/apple-splash-2048-2732.jpg" media="(device-width: 1024px) and (device-height: 1366px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)">
     <link rel="apple-touch-startup-image" href="public/splash/apple-splash-2732-2048.jpg" media="(device-width: 1024px) and (device-height: 1366px) and (-webkit-device-pixel-ratio: 2) and (orientation: landscape)">

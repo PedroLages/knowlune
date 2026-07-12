@@ -8,7 +8,8 @@ import { AI_PROVIDERS } from '../aiConfiguration'
  * 1. Proxy mode (default): Requests route through /api/ai/ollama on the same origin,
  *    so no CSP connect-src changes are needed. The Vite dev server proxies /api/ai
  *    to the Express proxy server (localhost:3001).
- * 2. Direct mode: A dynamic meta tag in index.html is updated at runtime.
+ * 2. Direct mode: localhost/LAN endpoints are permitted by the production CSP
+ *    in public/_headers.
  *
  * This test verifies the architectural pieces exist:
  * - Ollama provider is registered with usesServerUrl (not API key)

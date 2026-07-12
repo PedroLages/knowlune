@@ -81,10 +81,9 @@ registerRoute(navigationRoute)
 setDefaultHandler(new NetworkOnly())
 
 // ─── SW Lifecycle ────────────────────────────────────────────────────────
-// skipWaiting intentionally omitted from install event — registerType:'autoUpdate'
-// means vite-plugin-pwa calls skipWaiting() automatically after a new SW
-// takes over. The SKIP_WAITING message listener below is retained for
-// backward-compatible manual updates via the message protocol.
+// skipWaiting intentionally omitted from install event. registerType:'prompt'
+// keeps the new worker waiting until the user accepts the update through
+// PWAUpdatePrompt. The listener below applies that explicit choice.
 
 self.addEventListener('activate', event => {
   event.waitUntil(

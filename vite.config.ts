@@ -453,31 +453,6 @@ function serveLocalMedia(): Plugin {
   };
 }
 
-/**
- * Vite plugin that removes `upgrade-insecure-requests` and `block-all-mixed-content`
- * CSP directives from index.html during E2E test runs (PLAYWRIGHT_TEST=1).
- *
- * Why: WebKit (Mobile Safari) interprets `upgrade-insecure-requests` literally —
- * it upgrades all http://localhost subresource requests (Vite's JS modules) to
- * https://localhost, which fails with a TLS error because the dev server is plain HTTP.
- * This causes the React app to never mount, producing a blank page in Mobile Safari E2E tests.
- *
- * These directives are safe to omit in dev mode: all resources are served from the
- * same http://localhost origin anyway, so mixed content and upgrades are irrelevant.
- */
-function testModeCspPlugin(): Plugin {
-  return {
-    name: 'test-mode-csp',
-    apply: 'serve',
-    transformIndexHtml(html) {
-      if (!process.env.PLAYWRIGHT_TEST) return html
-      return html
-        .replace(/\s*upgrade-insecure-requests;\s*/g, '\n        ')
-        .replace(/\s*block-all-mixed-content;\s*/g, '\n        ')
-    },
-  }
-}
-
 export default defineConfig({
   define: {
     __APP_VERSION__: JSON.stringify(pkg.version),
@@ -495,14 +470,15 @@ export default defineConfig({
     },
   }),
   tailwindcss(),
-  testModeCspPlugin(),
   serveLocalMedia(),
   ollamaDevProxy(),
   modelDiscoveryDevProxy(),
   youtubeTranscriptProxy(),
   premiumImportGuard({ enabled: !process.env.PREMIUM_BUILD }),
   VitePWA({
-    registerType: 'autoUpdate',
+    // Keep the active worker and its old precache alive until the user accepts
+    // the update. Auto-activation can evict chunks that an already-open tab needs.
+    registerType: 'prompt',
     includeAssets: ['favicon.svg', 'apple-touch-icon-180x180.png'],
     manifest: {
       name: 'Knowlune',
@@ -612,10 +588,9 @@ export default defineConfig({
         'Cross-Origin-Opener-Policy': 'same-origin',
       }),
 
-      // CSP is defined in index.html <meta> tag (comprehensive policy with worker-src,
-      // script-src wasm-unsafe-eval, etc.). Do NOT add a partial CSP header here —
-      // browsers enforce both simultaneously, and a partial header can restrict
-      // directives the meta tag intentionally allows (e.g., worker-src for PDF.js).
+      // Production CSP is delivered by public/_headers so frame-ancestors is
+      // enforceable. Dev intentionally omits CSP; localhost E2E covers behavior,
+      // while deploymentSecurityConfig.test.ts verifies the production policy.
     },
   },
   optimizeDeps: {

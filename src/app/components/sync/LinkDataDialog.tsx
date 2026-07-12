@@ -162,15 +162,21 @@ export function LinkDataDialog({ open, userId, onResolved, guestSessionId }: Lin
           <div className="flex flex-col gap-2">
             <div className="flex items-center gap-2">
               <Link2 className="text-brand size-5" />
-              <h2 id="link-dialog-title" className="text-foreground text-lg font-semibold">
+              <DialogPrimitive.Title
+                id="link-dialog-title"
+                className="text-foreground text-lg font-semibold"
+              >
                 {isGuestMigration ? 'Keep your guest progress?' : 'You have local data'}
-              </h2>
+              </DialogPrimitive.Title>
             </div>
-            <p id="link-dialog-description" className="text-muted-foreground text-sm">
+            <DialogPrimitive.Description
+              id="link-dialog-description"
+              className="text-muted-foreground text-sm"
+            >
               {isGuestMigration
                 ? 'You explored Knowlune as a guest. Would you like to bring your progress to your new account?'
                 : 'We found data saved on this device. What would you like to do with it?'}
-            </p>
+            </DialogPrimitive.Description>
           </div>
 
           {/* Category counts */}

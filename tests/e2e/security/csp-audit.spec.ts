@@ -12,7 +12,7 @@ import { test, expect } from '@playwright/test'
  *
  * Each test navigates a route and asserts zero CSP violations.
  * A failing test logs the violating domain for triage:
- *   - If legitimate: add the domain to the CSP connect-src in index.html
+ *   - If legitimate: add the domain to the CSP connect-src in public/_headers
  *   - If unexpected: investigate the source of the blocked request
  */
 
@@ -63,7 +63,7 @@ test.describe('Security — CSP Audit', () => {
           .join('\n  - ')
         throw new Error(
           `CSP violations detected on ${route.name} (${route.path}):\n  - ${domainList}\n\n` +
-          `Action: Add legitimate domains to CSP connect-src in index.html, or investigate unexpected connections.`
+            `Action: Add legitimate domains to CSP connect-src in public/_headers, or investigate unexpected connections.`
         )
       }
 

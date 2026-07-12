@@ -42,6 +42,7 @@ import { uploadStorageFilesForTable, STORAGE_TABLES } from './storageSync'
 import { downloadStorageFilesForTable, STORAGE_DOWNLOAD_TABLES } from './storageDownload'
 import type { Note, Shelf } from '@/data/types'
 import { toast } from 'sonner'
+import { getMissingCompoundPkFields, InvalidSyncRecordError } from './recordValidation'
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -55,6 +56,9 @@ const BATCH_SIZE = 100
 
 /** Debounce delay in milliseconds. */
 const DEBOUNCE_MS = 200
+
+/** Tables already surfaced to the user for a per-record download failure. */
+const downloadApplyFailureToasted = new Set<string>()
 
 // ---------------------------------------------------------------------------
 // Download throttle + 429 retry (fix/E-ABS-QA, 2026-04-24)
@@ -867,6 +871,11 @@ async function _applyRecord(
     return
   }
 
+  const missingCompoundFields = getMissingCompoundPkFields(entry.compoundPkFields, record)
+  if (missingCompoundFields.length > 0) {
+    throw new InvalidSyncRecordError(entry.dexieTable, missingCompoundFields)
+  }
+
   // Soft-delete guard: if the downloaded record is marked deleted, remove it
   // from Dexie instead of applying it as a live record. This handles compound-PK
   // tables (e.g. chapterMappings) and simple-PK tables uniformly.
@@ -1127,25 +1136,42 @@ async function _doDownload(): Promise<void> {
           }
         }
 
+        let applyFailureCount = 0
         for (const record of recordsToApply) {
           try {
             await _applyRecord(entry, record)
           } catch (err) {
+            applyFailureCount += 1
             // Surface record identity to make production minified errors debuggable.
             const recordId =
               (record as Record<string, unknown>).id ?? (record as Record<string, unknown>).recordId
             const idSuffix = recordId !== undefined ? ` (id=${String(recordId)})` : ''
+            const compoundKey = Object.fromEntries(
+              (entry.compoundPkFields ?? []).map(field => [field, record[field]])
+            )
+            const errorDetails =
+              err instanceof Error
+                ? { name: err.name, message: err.message, stack: err.stack, compoundKey }
+                : { message: String(err), compoundKey }
             console.error(
               `[syncEngine] Error applying record from "${entry.dexieTable}"${idSuffix}:`,
-              err
+              errorDetails
             )
             // Intentional: continue processing remaining records — one bad record
             // should not abort the whole table.
           }
         }
 
-        // Advance the cursor to the max updated_at seen in this batch.
-        if (maxUpdatedAt !== null) {
+        if (applyFailureCount > 0 && !downloadApplyFailureToasted.has(entry.dexieTable)) {
+          downloadApplyFailureToasted.add(entry.dexieTable)
+          toast.warning(
+            `Some ${entry.dexieTable} data could not be restored. Knowlune will retry automatically.`
+          )
+        }
+
+        // Do not move past records that failed to apply. Successful writes are
+        // idempotent and may safely repeat while a migration or repair lands.
+        if (maxUpdatedAt !== null && applyFailureCount === 0) {
           await db.syncMetadata.put({
             table: entry.dexieTable,
             lastSyncTimestamp: maxUpdatedAt,
