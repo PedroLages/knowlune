@@ -1,100 +1,208 @@
 /**
- * Tests for the vite:preloadError stale-chunk recovery listener in main.tsx.
+ * Tests for the vite:preloadError stale-chunk recovery listener.
  *
- * The listener is registered before React renders. When Vite detects a failed
- * dynamic import(), it dispatches a vite:preloadError event. The listener:
- * 1. Prevents the default error handling
- * 2. Reloads the page once (guarded by sessionStorage)
- * 3. After successful load, clears the sessionStorage marker
+ * Tests the initChunkRecovery() function from @/lib/chunkRecovery.
  *
- * These tests simulate the event flow without actually navigating.
+ * Recovery strategy:
+ * 1. Prevents the default error handling (synchronous)
+ * 2. Purges the failed chunk from SW caches and reloads (first failure)
+ * 3. Shows a recovery screen on second failure (no reload loop)
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import {
+  initChunkRecovery,
+  clearRecoveryMarker,
+  CHUNK_RECOVERY_KEY,
+  RECOVERY_SCREEN_KEY,
+} from '@/lib/chunkRecovery'
 
-const CHUNK_RECOVERY_KEY = 'knowlune-chunk-recovery'
+// Helper to wait for async operations to settle
+const flushPromises = () => new Promise<void>(resolve => setImmediate(resolve))
 
 describe('vite:preloadError chunk recovery', () => {
+  let replaceSpy: ReturnType<typeof vi.fn>
+  let reloadSpy: ReturnType<typeof vi.fn>
+
   beforeEach(() => {
     sessionStorage.clear()
-    vi.useFakeTimers()
+
+    // Mock caches API
+    Object.defineProperty(window, 'caches', {
+      value: {
+        open: vi.fn().mockResolvedValue({
+          delete: vi.fn().mockResolvedValue(true),
+          match: vi.fn().mockResolvedValue(null),
+          keys: vi.fn().mockResolvedValue([]),
+          put: vi.fn().mockResolvedValue(undefined),
+        }),
+        keys: vi.fn().mockResolvedValue([]),
+        delete: vi.fn().mockResolvedValue(true),
+        match: vi.fn().mockResolvedValue(null),
+      },
+      writable: true,
+      configurable: true,
+    })
+
+    // Mock service worker registration
+    Object.defineProperty(navigator, 'serviceWorker', {
+      value: {
+        getRegistration: vi.fn().mockResolvedValue({
+          active: {
+            scriptURL: 'https://knowlune.pedrolages.net/sw.js',
+            postMessage: vi.fn(),
+          },
+          waiting: null,
+          installing: null,
+          update: vi.fn().mockResolvedValue(undefined),
+        }),
+        ready: Promise.resolve({
+          active: { scriptURL: 'https://knowlune.pedrolages.net/sw.js', postMessage: vi.fn() },
+        }),
+        controller: null,
+      },
+      writable: true,
+      configurable: true,
+    })
+
+    // Mock document.getElementById for recovery screen
+    const existingRoot = document.getElementById('root')
+    if (!existingRoot) {
+      const mockRoot = document.createElement('div')
+      mockRoot.id = 'root'
+      document.body.appendChild(mockRoot)
+    }
+
     // Mock window.location
+    replaceSpy = vi.fn()
+    reloadSpy = vi.fn()
     Object.defineProperty(window, 'location', {
       value: {
         href: 'https://knowlune.pedrolages.net/courses',
-        replace: vi.fn(),
+        replace: replaceSpy,
+        reload: reloadSpy,
       },
       writable: true,
+      configurable: true,
     })
+
+    // Register the listener
+    initChunkRecovery()
   })
 
   afterEach(() => {
-    vi.useRealTimers()
+    sessionStorage.clear()
   })
 
-  it('reloads the page exactly once on first preload error', () => {
-    const replaceSpy = vi.spyOn(window.location, 'replace')
-    const event = new Event('vite:preloadError')
-    Object.defineProperty(event, 'preventDefault', { value: vi.fn() })
-
+  function dispatchPreloadError(): CustomEvent {
+    const event = new Event('vite:preloadError') as CustomEvent
+    vi.spyOn(event, 'preventDefault')
     window.dispatchEvent(event)
+    return event
+  }
+
+  it('prevents default error behavior synchronously', () => {
+    const event = dispatchPreloadError()
+
+    // preventDefault is called synchronously before any async work
+    expect(event.preventDefault).toHaveBeenCalledTimes(1)
+  })
+
+  it('reloads the page on first preload error (after async cleanup)', async () => {
+    dispatchPreloadError()
+
+    // Reload happens after async cache/SW operations
+    await flushPromises()
 
     expect(replaceSpy).toHaveBeenCalledTimes(1)
     const calledUrl = replaceSpy.mock.calls[0][0] as string
     expect(calledUrl).toContain('__reload=')
   })
 
-  it('does not reload on second preload error (loop guard)', () => {
-    const replaceSpy = vi.spyOn(window.location, 'replace')
+  it('sets sessionStorage marker on first error', async () => {
+    dispatchPreloadError()
 
-    // First error — should reload
-    const event1 = new Event('vite:preloadError')
-    Object.defineProperty(event1, 'preventDefault', { value: vi.fn() })
-    window.dispatchEvent(event1)
-    expect(replaceSpy).toHaveBeenCalledTimes(1)
-
-    // Second error — should NOT reload (sessionStorage key already set)
-    const event2 = new Event('vite:preloadError')
-    Object.defineProperty(event2, 'preventDefault', { value: vi.fn() })
-    window.dispatchEvent(event2)
-    expect(replaceSpy).toHaveBeenCalledTimes(1) // still only 1
+    await flushPromises()
+    expect(sessionStorage.getItem(CHUNK_RECOVERY_KEY)).toBe('1')
   })
 
-  it('clears the sessionStorage marker on successful load', () => {
+  it('shows recovery screen on second preload error instead of reloading', async () => {
+    // Simulate first error already happened
+    sessionStorage.setItem(CHUNK_RECOVERY_KEY, '1')
+
+    dispatchPreloadError()
+
+    await flushPromises()
+
+    // Should NOT have reloaded again
+    expect(replaceSpy).not.toHaveBeenCalled()
+
+    // Recovery screen key should be set
+    expect(sessionStorage.getItem(RECOVERY_SCREEN_KEY)).toBe('1')
+
+    // Recovery screen should be in the DOM
+    const rootEl = document.getElementById('root')
+    expect(rootEl?.innerHTML).toContain('Knowlune was updated')
+  })
+
+  it('recovery screen Reload Cleanly button clears caches and reloads', async () => {
+    // Trigger second failure
+    sessionStorage.setItem(CHUNK_RECOVERY_KEY, '1')
+    dispatchPreloadError()
+    await flushPromises()
+
+    // Click the Reload Cleanly button
+    const btn = document.getElementById('recovery-reload-btn')
+    expect(btn).not.toBeNull()
+    ;(btn as HTMLButtonElement).click()
+
+    await flushPromises()
+
+    // Should have called reload
+    expect(reloadSpy).toHaveBeenCalledTimes(1)
+  })
+
+  it('does NOT clear recovery marker on window.load (deferred to App mount)', () => {
     sessionStorage.setItem(CHUNK_RECOVERY_KEY, '1')
     expect(sessionStorage.getItem(CHUNK_RECOVERY_KEY)).toBe('1')
 
     window.dispatchEvent(new Event('load'))
 
-    expect(sessionStorage.getItem(CHUNK_RECOVERY_KEY)).toBeNull()
+    // Marker is NOT cleared on load — it's cleared by clearRecoveryMarker()
+    expect(sessionStorage.getItem(CHUNK_RECOVERY_KEY)).toBe('1')
   })
 
-  it('allows recovery reload after successful page load (cleared marker)', () => {
-    const replaceSpy = vi.spyOn(window.location, 'replace')
+  it('clears recovery-screen key on window.load', () => {
+    sessionStorage.setItem(RECOVERY_SCREEN_KEY, '1')
+    expect(sessionStorage.getItem(RECOVERY_SCREEN_KEY)).toBe('1')
 
-    // First error cycle
-    const event1 = new Event('vite:preloadError')
-    Object.defineProperty(event1, 'preventDefault', { value: vi.fn() })
-    window.dispatchEvent(event1)
-    expect(replaceSpy).toHaveBeenCalledTimes(1)
-
-    // Simulate successful load (clears the marker)
     window.dispatchEvent(new Event('load'))
 
-    // Second error cycle — should trigger another reload (marker was cleared)
-    const event2 = new Event('vite:preloadError')
-    Object.defineProperty(event2, 'preventDefault', { value: vi.fn() })
-    window.dispatchEvent(event2)
-    expect(replaceSpy).toHaveBeenCalledTimes(2)
+    expect(sessionStorage.getItem(RECOVERY_SCREEN_KEY)).toBeNull()
   })
 
-  it('prevents default error behavior', () => {
-    const preventDefaultSpy = vi.fn()
-    const event = new Event('vite:preloadError')
-    Object.defineProperty(event, 'preventDefault', { value: preventDefaultSpy })
+  it('clearRecoveryMarker() clears both sessionStorage keys', () => {
+    sessionStorage.setItem(CHUNK_RECOVERY_KEY, '1')
+    sessionStorage.setItem(RECOVERY_SCREEN_KEY, '1')
 
-    window.dispatchEvent(event)
+    clearRecoveryMarker()
 
-    expect(preventDefaultSpy).toHaveBeenCalledTimes(1)
+    expect(sessionStorage.getItem(CHUNK_RECOVERY_KEY)).toBeNull()
+    expect(sessionStorage.getItem(RECOVERY_SCREEN_KEY)).toBeNull()
+  })
+
+  it('recovery screen button clears both sessionStorage keys', async () => {
+    sessionStorage.setItem(CHUNK_RECOVERY_KEY, '1')
+    sessionStorage.setItem(RECOVERY_SCREEN_KEY, '1')
+
+    dispatchPreloadError()
+    await flushPromises()
+
+    const btn = document.getElementById('recovery-reload-btn')
+    ;(btn as HTMLButtonElement).click()
+    await flushPromises()
+
+    expect(sessionStorage.getItem(CHUNK_RECOVERY_KEY)).toBeNull()
+    expect(sessionStorage.getItem(RECOVERY_SCREEN_KEY)).toBeNull()
   })
 })

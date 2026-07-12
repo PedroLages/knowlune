@@ -51,12 +51,12 @@ export const onRequest: PagesFunction = async (context: PagesFunctionContext) =>
   // Check if the asset exists in the deployment manifest.
   // env.ASSETS.fetch() returns the file from Cloudflare's asset manifest
   // without applying _redirects SPA fallback rules.
-  const assetResponse = await env.ASSETS.fetch(request.url)
-
-  if (assetResponse.status === 404 || assetResponse.status === 500) {
-    // Asset genuinely does not exist — return a proper 404.
-    // text/plain ensures the browser won't try to parse this as JS/CSS
-    // and won't trigger MIME type errors.
+  let assetResponse: Response
+  try {
+    assetResponse = await env.ASSETS.fetch(request.url)
+  } catch {
+    // If env.ASSETS.fetch() itself throws (e.g., malformed request),
+    // return a safe 404 instead of falling through to the SPA fallback
     return new Response('404 Not Found', {
       status: 404,
       headers: {
@@ -67,8 +67,80 @@ export const onRequest: PagesFunction = async (context: PagesFunctionContext) =>
     })
   }
 
-  // Asset exists — return it directly. The immutable cache headers from
-  // public/_headers are applied automatically by Cloudflare Pages for
-  // existing static files.
+  // Guard 1: Asset genuinely does not exist (404 or server error)
+  if (assetResponse.status === 404 || assetResponse.status >= 500) {
+    return new Response('404 Not Found', {
+      status: 404,
+      headers: {
+        'Content-Type': 'text/plain; charset=utf-8',
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'X-Content-Type-Options': 'nosniff',
+      },
+    })
+  }
+
+  // Guard 2: Defense-in-depth — even if env.ASSETS.fetch() returned 200,
+  // verify the Content-Type matches the file extension. Some Cloudflare
+  // Pages configurations may return the SPA fallback HTML for missing
+  // assets despite using env.ASSETS.fetch().
+  const contentType = assetResponse.headers.get('Content-Type') || ''
+  const pathname = url.pathname.toLowerCase()
+
+  // If the response is HTML but the URL is for a JS/CSS/asset file,
+  // the SPA fallback was incorrectly applied — return 404 instead.
+  if (/^text\/html/i.test(contentType)) {
+    console.warn(
+      `[asset-guard] SPA fallback detected for asset: ${pathname} (Content-Type: ${contentType})`
+    )
+    return new Response('404 Not Found', {
+      status: 404,
+      headers: {
+        'Content-Type': 'text/plain; charset=utf-8',
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'X-Content-Type-Options': 'nosniff',
+      },
+    })
+  }
+
+  // Guard 3: Validate MIME type matches extension
+  // .js / .mjs → javascript | ecmascript | wasm
+  // .css → text/css
+  // .woff2 → font-woff2 | octet-stream
+  // .wasm → wasm
+  if (pathname.endsWith('.js') || pathname.endsWith('.mjs') || pathname.endsWith('.worker.js')) {
+    if (!/javascript|ecmascript|wasm/i.test(contentType)) {
+      console.warn(
+        `[asset-guard] MIME mismatch for JS asset: ${pathname} (Content-Type: ${contentType})`
+      )
+      return new Response('404 Not Found', {
+        status: 404,
+        headers: {
+          'Content-Type': 'text/plain; charset=utf-8',
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'X-Content-Type-Options': 'nosniff',
+        },
+      })
+    }
+  }
+
+  if (pathname.endsWith('.css')) {
+    if (!/^text\/css/i.test(contentType)) {
+      console.warn(
+        `[asset-guard] MIME mismatch for CSS asset: ${pathname} (Content-Type: ${contentType})`
+      )
+      return new Response('404 Not Found', {
+        status: 404,
+        headers: {
+          'Content-Type': 'text/plain; charset=utf-8',
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'X-Content-Type-Options': 'nosniff',
+        },
+      })
+    }
+  }
+
+  // Asset exists with correct MIME type — return it directly.
+  // The immutable cache headers from public/_headers are applied
+  // automatically by Cloudflare Pages for existing static files.
   return assetResponse
 }

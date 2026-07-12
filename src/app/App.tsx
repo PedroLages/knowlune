@@ -35,6 +35,22 @@ export default function App() {
   const { shouldReduceMotion } = useReducedMotion()
   const { initialize: initWizard } = useWelcomeWizardStore()
 
+  // Chunk recovery: clear the recovery marker after the app renders
+  // successfully. We use a timeout to ensure at least one lazy route has
+  // had a chance to load. The key is only removed from sessionStorage if
+  // the app hasn't crashed (i.e., this effect runs = React rendered).
+  useEffect(() => {
+    let cleanupTimer: ReturnType<typeof setTimeout> | null = null
+    import('@/lib/chunkRecovery').then(({ clearRecoveryMarker }) => {
+      cleanupTimer = setTimeout(() => {
+        clearRecoveryMarker()
+      }, 3000) // Give lazy routes time to load before clearing
+    })
+    return () => {
+      if (cleanupTimer !== null) clearTimeout(cleanupTimer)
+    }
+  }, [])
+
   // Apply font scaling from persisted settings
   useFontScale()
 

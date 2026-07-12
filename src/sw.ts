@@ -24,6 +24,159 @@ import { CacheFirst, StaleWhileRevalidate, NetworkOnly } from 'workbox-strategie
 import { ExpirationPlugin } from 'workbox-expiration'
 import { CacheableResponsePlugin } from 'workbox-cacheable-response'
 import { skipWaiting } from 'workbox-core'
+import type { WorkboxPlugin } from 'workbox-core/types'
+
+// ─── Cache version ─────────────────────────────────────────────────────────
+// Bump this when changing cache validation rules to force migration of
+// potentially poisoned entries (e.g., HTML cached under a .js URL by
+// a previous SW version that lacked MIME-type validation).
+
+const ROUTE_CHUNKS_CACHE = 'knowlune-route-chunks-v2'
+const OLD_ROUTE_CHUNKS_CACHE = 'knowlune-route-chunks'
+
+// ─── MIME-type validation helpers ──────────────────────────────────────────
+
+/**
+ * Valid MIME types per file extension.
+ *
+ * .js  → javascript
+ * .mjs → javascript
+ * .css → css
+ * .woff2 → font-woff2 or octet-stream
+ * .wasm → wasm
+ */
+const EXTENSION_MIME_MAP: Record<string, RegExp> = {
+  '.js': /javascript|ecmascript|wasm/i,
+  '.mjs': /javascript|ecmascript|wasm/i,
+  '.worker.js': /javascript|ecmascript|wasm/i,
+  '.css': /^text\/css/i,
+  '.woff2': /font-woff2|octet-stream/i,
+  '.wasm': /wasm/i,
+}
+
+/**
+ * Strictly forbidden MIME types — a response with any of these MUST NOT be
+ * cached under an asset URL regardless of the file extension.
+ */
+const FORBIDDEN_MIME = /^text\/html/i
+
+function getFileExtension(url: string): string {
+  try {
+    const pathname = new URL(url).pathname
+    // Handle compound extensions: .worker.js should match as .worker.js first
+    if (/\.worker\.js$/i.test(pathname)) return '.worker.js'
+    const match = pathname.match(/\.([a-z0-9]+)$/i)
+    return match ? `.${match[1].toLowerCase()}` : ''
+  } catch {
+    return ''
+  }
+}
+
+/**
+ * Returns true if the response Content-Type is acceptable for the given URL.
+ *
+ * Rules:
+ * 1. text/html is ALWAYS rejected (never cache HTML under an asset URL)
+ * 2. The Content-Type must match the file extension's expected MIME
+ * 3. Missing Content-Type header is accepted (some CDNs omit it for fonts)
+ */
+function isValidAssetResponse(response: Response, url: string): boolean {
+  const contentType = response.headers.get('Content-Type') || ''
+
+  // Rule 1: Never cache HTML responses under asset URLs (defense-in-depth)
+  if (FORBIDDEN_MIME.test(contentType)) {
+    console.warn(
+      `[SW] Refusing to cache HTML response for asset: ${url} (Content-Type: ${contentType})`
+    )
+    return false
+  }
+
+  const ext = getFileExtension(url)
+  if (!ext) return true // Unknown extension — accept
+
+  const expectedMime = EXTENSION_MIME_MAP[ext]
+  if (!expectedMime) return true // No specific expectation for this extension
+
+  // Rule 2: Content-Type must match
+  if (!expectedMime.test(contentType)) {
+    console.warn(
+      `[SW] MIME mismatch for ${url} — expected ${ext} but got Content-Type: ${contentType}`
+    )
+    return false
+  }
+
+  return true
+}
+
+/**
+ * Workbox plugin: cacheWillUpdate — validates network responses before caching.
+ * Rejects responses whose MIME type doesn't match the URL extension.
+ */
+const assetValidationPlugin: WorkboxPlugin = {
+  cacheWillUpdate: async ({ request, response }) => {
+    if (!response) return null
+    if (!isValidAssetResponse(response, request.url)) {
+      return null // Don't cache this response
+    }
+    return response
+  },
+
+  /**
+   * Workbox plugin: cachedResponseWillBeUsed — validates cached responses
+   * before serving them. Deletes invalid entries so the next request falls
+   * through to the network.
+   */
+  cachedResponseWillBeUsed: async ({ request, cachedResponse, cacheName }) => {
+    if (!cachedResponse) return cachedResponse
+
+    const url = request.url
+    if (!isValidAssetResponse(cachedResponse, url)) {
+      // This entry is poisoned — delete it so the strategy continues to network
+      console.warn(`[SW] Purging poisoned cache entry: ${url} from ${cacheName}`)
+      try {
+        const cache = await caches.open(cacheName)
+        await cache.delete(request)
+      } catch (err) {
+        console.error(`[SW] Failed to delete poisoned entry ${url}:`, err)
+      }
+      return null // Let the strategy fall through to network
+    }
+
+    return cachedResponse
+  },
+}
+
+/**
+ * Worker-specific validation — same as assetValidationPlugin but also
+ * accepts wasm MIME type (some worker builds use wasm).
+ */
+const workerValidationPlugin: WorkboxPlugin = {
+  cacheWillUpdate: async ({ request, response }) => {
+    if (!response) return null
+    if (!isValidAssetResponse(response, request.url)) {
+      return null
+    }
+    return response
+  },
+
+  cachedResponseWillBeUsed: async ({ request, cachedResponse, cacheName }) => {
+    if (!cachedResponse) return cachedResponse
+
+    const url = request.url
+    if (!isValidAssetResponse(cachedResponse, url)) {
+      console.warn(`[SW] Purging poisoned worker cache entry: ${url}`)
+      try {
+        const cache = await caches.open(cacheName)
+        await cache.delete(request)
+      } catch (err) {
+        console.error(`[SW] Failed to delete poisoned worker entry ${url}:`, err)
+      }
+      return null
+    }
+
+    return cachedResponse
+  },
+}
 
 // ─── Precache ────────────────────────────────────────────────────────────
 
@@ -82,15 +235,17 @@ registerRoute(/\/api\/abs\/proxy\//, new NetworkOnly())
 // chunks remain in this cache (up to 30 days) even if they're no
 // longer in the precache manifest.
 //
-// Uses a dedicated cache name (knowlune-route-chunks) separate from the
-// precache so it survives across SW updates.
+// MIME-type validation prevents cache poisoning: if the server returns
+// index.html (SPA fallback) for a missing JS chunk, the HTML response
+// is rejected before caching and the browser gets a proper 404.
 registerRoute(
   /^\/assets\/.+\.(?:js|css|woff2?)$/i,
   new CacheFirst({
-    cacheName: 'knowlune-route-chunks',
+    cacheName: ROUTE_CHUNKS_CACHE,
     plugins: [
       new ExpirationPlugin({ maxEntries: 500, maxAgeSeconds: 30 * 24 * 60 * 60 }),
       new CacheableResponsePlugin({ statuses: [200] }),
+      assetValidationPlugin,
     ],
   })
 )
@@ -100,10 +255,11 @@ registerRoute(
 registerRoute(
   /\.worker\.js$/i,
   new CacheFirst({
-    cacheName: 'knowlune-route-chunks',
+    cacheName: ROUTE_CHUNKS_CACHE,
     plugins: [
       new ExpirationPlugin({ maxEntries: 50, maxAgeSeconds: 30 * 24 * 60 * 60 }),
       new CacheableResponsePlugin({ statuses: [200] }),
+      workerValidationPlugin,
     ],
   })
 )
@@ -192,12 +348,62 @@ self.addEventListener('activate', event => {
     console.log('[SW] Activate')
   }
 
-  // Clean up old precache revisions (Workbox default behavior).
-  // We intentionally omit clients.claim() — see lifecycle comment above.
+  // Clean up old precache revisions (Workbox default behavior) and migrate
+  // the old route-chunks cache to the v2 cache with MIME-type validation.
   event.waitUntil(
     (async () => {
+      // ─── Migration: clean old knowlune-route-chunks cache ────────────
+      // The old cache (knowlune-route-chunks) may contain poisoned entries
+      // where HTML (SPA fallback) was cached under .js URLs due to a
+      // missing Cloudflare Function or a previous SW that lacked MIME-type
+      // validation. Migrate valid entries to the v2 cache and delete the
+      // rest.
+      try {
+        const oldCache = await caches.open(OLD_ROUTE_CHUNKS_CACHE)
+        const newCache = await caches.open(ROUTE_CHUNKS_CACHE)
+        const oldKeys = await oldCache.keys()
+        let migrated = 0
+        let deleted = 0
+
+        for (const request of oldKeys) {
+          try {
+            const response = await oldCache.match(request)
+            if (response && isValidAssetResponse(response, request.url)) {
+              // Valid entry — migrate to v2 cache
+              await newCache.put(request, response.clone())
+              migrated++
+            } else {
+              // Poisoned or invalid — discard
+              console.warn(
+                `[SW] Migration: discarding poisoned entry: ${request.url}`
+              )
+              deleted++
+            }
+          } catch {
+            // Corrupted entry — discard
+            deleted++
+          }
+        }
+
+        // Delete the old cache entirely after migration
+        await caches.delete(OLD_ROUTE_CHUNKS_CACHE)
+
+        if (migrated > 0 || deleted > 0) {
+          console.log(
+            `[SW] Migration: ${migrated} valid entries migrated, ${deleted} poisoned entries deleted`
+          )
+        }
+      } catch (err) {
+        // If migration fails for any reason, just delete the old cache
+        console.warn('[SW] Migration failed, deleting old cache:', err)
+        try {
+          await caches.delete(OLD_ROUTE_CHUNKS_CACHE)
+        } catch {
+          // Best-effort
+        }
+      }
+
       // Workbox automatically cleans outdated precache entries during activate.
-      // No additional cleanup needed.
     })()
   )
 })
@@ -215,6 +421,64 @@ self.addEventListener('controllerchange', () => {
 self.addEventListener('message', event => {
   if (event.data?.type === 'SKIP_WAITING') {
     skipWaiting()
+  }
+
+  // ─── PURGE_INVALID_ASSET_CACHE ─────────────────────────────────────────
+  // The application can request this when chunk recovery detects a MIME
+  // mismatch. It deletes all entries from the route-chunks caches whose
+  // Content-Type doesn't match the URL extension, forcing a fresh network
+  // fetch on the next request.
+  if (event.data?.type === 'PURGE_INVALID_ASSET_CACHE') {
+    event.waitUntil(
+      (async () => {
+        console.log('[SW] Purging invalid asset cache entries...')
+        const cacheNames = [ROUTE_CHUNKS_CACHE, OLD_ROUTE_CHUNKS_CACHE]
+        let purged = 0
+
+        for (const cacheName of cacheNames) {
+          try {
+            const cache = await caches.open(cacheName)
+            const keys = await cache.keys()
+            for (const request of keys) {
+              try {
+                const response = await cache.match(request)
+                if (!response || !isValidAssetResponse(response, request.url)) {
+                  await cache.delete(request)
+                  purged++
+                  console.warn(`[SW] Purged invalid entry: ${request.url} from ${cacheName}`)
+                }
+              } catch {
+                // Best-effort per-entry purge
+              }
+            }
+          } catch {
+            // Cache may not exist
+          }
+        }
+
+        console.log(`[SW] Purge complete: ${purged} invalid entries removed`)
+
+        // Notify all clients that purge is done
+        const clients = await self.clients.matchAll()
+        for (const client of clients) {
+          client.postMessage({ type: 'PURGE_INVALID_ASSET_CACHE_COMPLETE', purged })
+        }
+      })()
+    )
+  }
+
+  // ─── GET_BUILD_VERSION ──────────────────────────────────────────────────
+  // Returns the SW's build version string so the app can detect version
+  // mismatches between the controlling SW and the current page.
+  if (event.data?.type === 'GET_BUILD_VERSION') {
+    const source = event.source as WindowClient | null
+    if (source && 'postMessage' in source) {
+      source.postMessage({
+        type: 'BUILD_VERSION',
+        version: BUILD_VERSION,
+        cacheName: ROUTE_CHUNKS_CACHE,
+      })
+    }
   }
 })
 

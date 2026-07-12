@@ -1,17 +1,19 @@
 #!/usr/bin/env node
 
 /**
- * verify-dist.js — Post-build asset integrity verification
+ * verify-dist.cjs — Post-build asset integrity verification
  *
- * Parses dist/index.html and verifies that every referenced asset file
- * actually exists in the dist/ directory. Also scans generated JS chunks
- * for dynamic import() references and checks those too.
+ * Parses dist/index.html, dist/.vite/manifest.json, and ALL JavaScript files
+ * in dist/assets/ to verify that every referenced asset actually exists.
  *
- * Purpose: catch build inconsistencies BEFORE deployment. A missing chunk
- * reference in the HTML or a JS entry point causes "Failed to fetch
- * dynamically imported module" errors in production.
+ * Unlike the previous version that only scanned select entry chunks, this
+ * version performs recursive dependency graph verification across every
+ * emitted JavaScript file. It catches missing chunk references that would
+ * cause "Failed to fetch dynamically imported module" errors in production.
  *
- * Usage: node scripts/verify-dist.js
+ * Also verifies CSS references inside JS chunks and worker URLs.
+ *
+ * Usage: node scripts/verify-dist.cjs
  * Exit: 0 if all references resolve, 1 if any are broken.
  */
 
@@ -20,8 +22,9 @@ const path = require('path')
 
 const DIST_DIR = path.resolve(__dirname, '..', 'dist')
 const INDEX_HTML = path.join(DIST_DIR, 'index.html')
+const MANIFEST_JSON = path.join(DIST_DIR, '.vite', 'manifest.json')
 
-// ─── Helpers ──────────────────────────────────────────────────────────────
+// ─── Helpers ────────────────────────────────────────────────────────────────
 
 function fileExists(filePath) {
   return fs.existsSync(path.join(DIST_DIR, filePath))
@@ -30,18 +33,40 @@ function fileExists(filePath) {
 function normalizeAssetPath(src, baseDir = '') {
   // Remove leading ./ or /
   let normalized = src.replace(/^\.?\//, '')
-  // If it's an absolute path within the site, resolve it
   if (normalized.startsWith('/')) {
     normalized = normalized.slice(1)
   }
-  // If baseDir is provided and path is relative
-  if (baseDir && !normalized.startsWith('assets/') && !normalized.startsWith('/')) {
+  // Resolve relative to baseDir
+  if (baseDir && !normalized.startsWith('assets/')) {
     normalized = path.join(baseDir, normalized)
+  }
+  // Normalize any .. or redundant segments
+  if (normalized.includes('/')) {
+    normalized = path.normalize(normalized)
   }
   return normalized
 }
 
-// ─── Extract references from index.html ────────────────────────────────────
+// ─── Get all JS/CSS files in dist/assets ────────────────────────────────────
+
+function findAllDistFiles() {
+  const assetsDir = path.join(DIST_DIR, 'assets')
+  if (!fs.existsSync(assetsDir)) return []
+
+  return fs.readdirSync(assetsDir).map(f => path.join('assets', f))
+}
+
+function findAllJsFiles() {
+  const assetsDir = path.join(DIST_DIR, 'assets')
+  if (!fs.existsSync(assetsDir)) return []
+
+  return fs
+    .readdirSync(assetsDir)
+    .filter(f => f.endsWith('.js'))
+    .map(f => path.join('assets', f))
+}
+
+// ─── Extract references from index.html ─────────────────────────────────────
 
 function extractHtmlReferences() {
   if (!fs.existsSync(INDEX_HTML)) {
@@ -53,55 +78,199 @@ function extractHtmlReferences() {
   const references = []
 
   // <script src="...">
-  const scriptRegex = /<script[^>]+src=["']([^"']+)["']/gi
-  let match
-  while ((match = scriptRegex.exec(html)) !== null) {
-    references.push({ src: match[1], type: 'script' })
+  for (const [, src] of html.matchAll(/<script[^>]+src=["']([^"']+)["']/gi)) {
+    references.push({ src, type: 'script' })
   }
 
   // <link href="..." rel="modulepreload">
-  const modulepreloadRegex = /<link[^>]+href=["']([^"']+)["'][^>]+rel=["']modulepreload["']/gi
-  while ((match = modulepreloadRegex.exec(html)) !== null) {
-    references.push({ src: match[1], type: 'modulepreload' })
+  for (const [, href] of html.matchAll(
+    /<link[^>]+href=["']([^"']+)["'][^>]+rel=["']modulepreload["']/gi
+  )) {
+    references.push({ src: href, type: 'modulepreload' })
   }
 
   // <link href="..." rel="stylesheet">
-  const stylesheetRegex = /<link[^>]+href=["']([^"']+)["'][^>]+rel=["']stylesheet["']/gi
-  while ((match = stylesheetRegex.exec(html)) !== null) {
-    references.push({ src: match[1], type: 'stylesheet' })
+  for (const [, href] of html.matchAll(
+    /<link[^>]+href=["']([^"']+)["'][^>]+rel=["']stylesheet["']/gi
+  )) {
+    references.push({ src: href, type: 'stylesheet' })
   }
 
   // <link href="..." rel="preload">
-  const preloadRegex = /<link[^>]+href=["']([^"']+)["'][^>]+rel=["']preload["']/gi
-  while ((match = preloadRegex.exec(html)) !== null) {
-    references.push({ src: match[1], type: 'preload' })
+  for (const [, href] of html.matchAll(
+    /<link[^>]+href=["']([^"']+)["'][^>]+rel=["']preload["']/gi
+  )) {
+    references.push({ src: href, type: 'preload' })
   }
 
   return references
 }
 
-// ─── Extract dynamic imports from JS files ─────────────────────────────────
+// ─── Extract imports from a JS file ─────────────────────────────────────────
 
-function extractJsImports(filePath) {
-  if (!fs.existsSync(filePath)) return []
-  const content = fs.readFileSync(filePath, 'utf-8')
+/**
+ * Extracts all local asset references from a JS file.
+ *
+ * Handles:
+ *   - import ... from "./chunk.js"  (static import)
+ *   - import "./chunk.js"           (side-effect import)
+ *   - import("./chunk.js")          (dynamic import)
+ *   - new URL("./worker.js", ...)   (worker constructor)
+ *
+ * Returns an array of relative paths.
+ */
+function extractJsReferences(filePath) {
+  const fullPath = path.join(DIST_DIR, filePath)
+  if (!fs.existsSync(fullPath)) return []
+  const content = fs.readFileSync(fullPath, 'utf-8')
   const references = []
 
-  // Dynamic import('...') or import("...")
-  const importRegex = /import\s*\(\s*["']([^"']+)["']\s*\)/g
+  // Combined regex that matches all forms of JS module references.
+  // We use a character class [^"'` ] that captures path-like strings.
+  // Patterns matched:
+  //   import("...")  or  import('...')
+  //   from"..."  or  from'...'  (static imports)
+  //   import"..."  or  import'...'  (side-effect imports)
+  //   new URL("...",  (worker references)
+
+  // Dynamic imports: import("./chunk.js")
+  const dynamicImportRe = /import\s*\(\s*["']([^"']+\.(?:js|css))["']\s*\)/g
   let match
-  while ((match = importRegex.exec(content)) !== null) {
-    const importPath = match[1]
-    // Only check relative imports (skip bare specifiers like 'react')
-    if (importPath.startsWith('.') || importPath.startsWith('/')) {
-      references.push(importPath)
+  while ((match = dynamicImportRe.exec(content)) !== null) {
+    if (match[1].startsWith('.') || match[1].startsWith('/')) {
+      references.push(match[1])
+    }
+  }
+
+  // Static imports: from "./chunk.js" or import "./chunk.js"
+  // "from" form: from"./chunk.js"
+  const staticImportRe = /(?:from|import)\s*["']([^"']+\.(?:js|css|json))["']/g
+  while ((match = staticImportRe.exec(content)) !== null) {
+    if (match[1].startsWith('.') || match[1].startsWith('/')) {
+      references.push(match[1])
+    }
+  }
+
+  // Worker constructors: new URL("./worker.js", import.meta.url)
+  // or: new Worker(new URL("./worker.js", import.meta.url))
+  const workerRe = /new\s+(?:Worker|URL)\s*\(\s*(?:new\s+URL\s*\()?\s*["']([^"']+\.(?:worker\.)?js)["']/g
+  while ((match = workerRe.exec(content)) !== null) {
+    if (match[1].startsWith('.') || match[1].startsWith('/')) {
+      references.push(match[1])
     }
   }
 
   return references
 }
 
-// ─── Main ──────────────────────────────────────────────────────────────────
+// ─── Parse manifest.json ────────────────────────────────────────────────────
+
+function parseManifest() {
+  if (!fs.existsSync(MANIFEST_JSON)) {
+    console.warn('[verify-dist] No manifest.json found — skipping manifest-based verification')
+    return null
+  }
+
+  try {
+    const manifest = JSON.parse(fs.readFileSync(MANIFEST_JSON, 'utf-8'))
+    return manifest
+  } catch (err) {
+    console.warn('[verify-dist] Failed to parse manifest.json:', err.message)
+    return null
+  }
+}
+
+/**
+ * Extract all referenced asset files from the Vite manifest.
+ * The manifest maps entry names to their chunk info, including:
+ *   - file: the chunk's output file
+ *   - imports: static imports
+ *   - dynamicImports: lazy-loaded chunks
+ *   - css: associated CSS files
+ *   - assets: other assets
+ */
+function extractManifestReferences(manifest) {
+  const references = []
+
+  for (const [, chunk] of Object.entries(manifest)) {
+    // Static imports
+    if (chunk.imports) {
+      for (const imp of chunk.imports) {
+        const resolved = manifest[imp]?.file
+        if (resolved) references.push({ src: resolved, type: 'manifest-static-import' })
+      }
+    }
+    // Dynamic imports
+    if (chunk.dynamicImports) {
+      for (const imp of chunk.dynamicImports) {
+        const resolved = manifest[imp]?.file
+        if (resolved) references.push({ src: resolved, type: 'manifest-dynamic-import' })
+      }
+    }
+    // CSS files
+    if (chunk.css) {
+      for (const css of chunk.css) {
+        references.push({ src: css, type: 'manifest-css' })
+      }
+    }
+    // Other assets
+    if (chunk.assets) {
+      for (const asset of chunk.assets) {
+        references.push({ src: asset, type: 'manifest-asset' })
+      }
+    }
+  }
+
+  return references
+}
+
+// ─── Recursive dependency graph verification ────────────────────────────────
+
+function verifyRecursive(allJsFiles) {
+  const missing = []
+  const checked = new Set()
+  const queue = [...allJsFiles] // Start with all JS files
+
+  // Breadth-first traversal of the import graph
+  while (queue.length > 0) {
+    const currentFile = queue.shift()
+
+    if (checked.has(currentFile)) continue
+    checked.add(currentFile)
+
+    // Verify that the current file exists on disk
+    if (!fileExists(currentFile)) {
+      missing.push({ src: currentFile, type: 'js-chunk' })
+      continue
+    }
+
+    // Extract all references from this file
+    const baseDir = path.dirname(currentFile)
+    const refs = extractJsReferences(currentFile)
+
+    for (const importPath of refs) {
+      const normalized = normalizeAssetPath(importPath, baseDir)
+
+      // Verify the referenced file exists
+      if (!fileExists(normalized)) {
+        if (!missing.some(m => m.src === normalized)) {
+          missing.push({
+            src: normalized,
+            type: 'js-import',
+            from: currentFile,
+          })
+        }
+      } else if (!checked.has(normalized) && normalized.endsWith('.js')) {
+        // Queue JS files for recursive checking
+        queue.push(normalized)
+      }
+    }
+  }
+
+  return { missing, checked }
+}
+
+// ─── Main ────────────────────────────────────────────────────────────────────
 
 function main() {
   console.log('[verify-dist] Checking asset integrity...\n')
@@ -124,29 +293,65 @@ function main() {
     }
   }
 
-  // 2. Check dynamic imports in all JS entry chunks
-  const entryJsFiles = findEntryJsFiles()
-  console.log(`[verify-dist] Scanning ${entryJsFiles.length} entry JS chunks for dynamic imports`)
+  // 2. Manifest-based verification (if available)
+  const manifest = parseManifest()
+  if (manifest) {
+    const manifestRefs = extractManifestReferences(manifest)
+    console.log(`[verify-dist] Found ${manifestRefs.length} references in manifest.json`)
 
-  for (const jsFile of entryJsFiles) {
-    const imports = extractJsImports(jsFile)
-    for (const importPath of imports) {
-      const baseDir = path.dirname(path.relative(DIST_DIR, jsFile))
-      const normalized = normalizeAssetPath(importPath, baseDir)
+    for (const ref of manifestRefs) {
+      const normalized = normalizeAssetPath(ref.src)
       if (checked.has(normalized)) continue
       checked.add(normalized)
 
       if (!fileExists(normalized)) {
-        console.error(`  MISSING [dynamic-import]: ${importPath} → ${normalized} (in ${path.relative(DIST_DIR, jsFile)})`)
+        console.error(`  MISSING [${ref.type}]: ${ref.src} → ${normalized}`)
         missingCount++
       }
     }
   }
 
-  // 3. Check dist/assets for orphaned chunks (warn only)
-  console.log(`[verify-dist] Checked ${checked.size} unique asset references`)
+  // 3. Recursive dependency graph verification — scan ALL JS files
+  const allJsFiles = findAllJsFiles()
+  console.log(`[verify-dist] Scanning ${allJsFiles.length} JS files for recursive dependencies...`)
 
-  // 4. Report
+  const { missing: recMissing, checked: recChecked } = verifyRecursive(allJsFiles)
+
+  for (const m of recMissing) {
+    const fromInfo = m.from ? ` (referenced from ${m.from})` : ''
+    console.error(`  MISSING [${m.type}]: ${m.src}${fromInfo}`)
+    missingCount++
+  }
+
+  // Merge checked sets
+  for (const c of recChecked) {
+    checked.add(c)
+  }
+
+  // 4. Also verify CSS and other static files referenced by all JS
+  const allDistFiles = new Set(findAllDistFiles())
+  console.log(`[verify-dist] Total dist assets: ${allDistFiles.size}`)
+
+  // 5. Verify non-JS references from all scanned JS files
+  for (const jsFile of allJsFiles) {
+    const refs = extractJsReferences(jsFile)
+    for (const importPath of refs) {
+      const baseDir = path.dirname(jsFile)
+      const normalized = normalizeAssetPath(importPath, baseDir)
+      if (checked.has(normalized)) continue
+      checked.add(normalized)
+
+      if (!fileExists(normalized)) {
+        console.error(`  MISSING [js-ref]: ${importPath} → ${normalized} (from ${jsFile})`)
+        missingCount++
+      }
+    }
+  }
+
+  // 6. Summary
+  console.log(`\n[verify-dist] Checked ${checked.size} unique asset references`)
+  console.log(`[verify-dist] Total JS chunks scanned: ${allJsFiles.length}`)
+
   if (missingCount > 0) {
     console.error(`\n[verify-dist] FAILED: ${missingCount} missing asset(s)`)
     process.exit(1)
@@ -154,17 +359,6 @@ function main() {
 
   console.log('[verify-dist] PASSED: All referenced assets exist')
   process.exit(0)
-}
-
-function findEntryJsFiles() {
-  const assetsDir = path.join(DIST_DIR, 'assets')
-  if (!fs.existsSync(assetsDir)) return []
-
-  // Find index-*.js and react-vendor-*.js (the main entry + eager chunks)
-  const files = fs.readdirSync(assetsDir)
-  return files
-    .filter(f => /^(index|react-vendor|radix-ui|react-router|dexie|style-utils|sonner|motion-vendor)-.+\.js$/.test(f))
-    .map(f => path.join(assetsDir, f))
 }
 
 main()
