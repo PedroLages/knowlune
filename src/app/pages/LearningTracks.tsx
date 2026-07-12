@@ -179,8 +179,13 @@ export function LearningTracks() {
   // If another tab holds an older schema version, db.open() hangs indefinitely —
   // these listeners surface the blocked state so we can time out and show content.
   useEffect(() => {
-    const onBlocked = () =>
+    const onBlocked = () => {
       console.warn('[DB] IndexedDB upgrade blocked — another tab may hold an older schema version')
+      toast.warning(
+        'Database is blocked by another tab. Close other Knowlune tabs and reload this page.',
+        { duration: Infinity, dismissible: true }
+      )
+    }
     const onVersionChange = () =>
       console.warn('[DB] IndexedDB versionchange — another tab upgraded the database')
 
