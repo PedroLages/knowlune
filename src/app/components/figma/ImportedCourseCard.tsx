@@ -11,7 +11,6 @@ import {
   Info,
   Camera,
   Trash2,
-  Loader2,
   Pencil,
   Clock,
   X,
@@ -50,8 +49,6 @@ import {
   DialogClose,
 } from '@/app/components/ui/dialog'
 import { Checkbox } from '@/app/components/ui/checkbox'
-import { TagBadgeList } from '@/app/components/figma/TagBadgeList'
-import { TagEditor } from '@/app/components/figma/TagEditor'
 import { VideoPlayer } from '@/app/components/figma/VideoPlayer'
 import { ThumbnailPickerDialog } from '@/app/components/figma/ThumbnailPickerDialog'
 import { EditCourseDialog } from '@/app/components/figma/EditCourseDialog'
@@ -65,7 +62,6 @@ import { useVideoFromHandle } from '@/hooks/useVideoFromHandle'
 import { getAvatarSrc } from '@/lib/authors'
 import { db } from '@/db/schema'
 import { formatCourseDuration, formatFileSize, getResolutionLabel } from '@/lib/format'
-import { MomentumBadge } from './MomentumBadge'
 import { ProgressRing } from './ProgressRing'
 import {
   CardCover,
@@ -75,7 +71,6 @@ import {
   OVERLAY_SCRIM_CLASS,
 } from './CourseCardShell'
 import type { ImportedCourse, ImportedVideo, LearnerCourseStatus } from '@/data/types'
-import type { MomentumScore } from '@/lib/momentum'
 
 const statusConfig: Record<
   LearnerCourseStatus,
@@ -117,7 +112,6 @@ interface ImportedCourseCardProps {
   course: ImportedCourse
   allTags: string[]
   completionPercent?: number
-  momentumScore?: MomentumScore
   /** Hides editing controls (camera overlay, edit/delete menu, tag editing). Status changes remain available. */
   readOnly?: boolean
   /** When provided, enables selection mode with a checkbox overlay */
@@ -129,16 +123,13 @@ export function ImportedCourseCard({
   course,
   allTags,
   completionPercent = 0,
-  momentumScore,
   readOnly = false,
   selected = false,
   onToggleSelect,
 }: ImportedCourseCardProps) {
-  const updateCourseTags = useCourseImportStore(state => state.updateCourseTags)
   const updateCourseStatus = useCourseImportStore(state => state.updateCourseStatus)
   const removeImportedCourse = useCourseImportStore(state => state.removeImportedCourse)
   const thumbnailUrls = useCourseImportStore(state => state.thumbnailUrls)
-  const analysisStatus = useCourseImportStore(state => state.autoAnalysisStatus[course.id])
   const navigate = useNavigate()
 
   // Subscribe to author store so card re-renders when authors load
@@ -264,17 +255,6 @@ export function ImportedCourseCard({
       }
       navigate(`/courses/${course.id}/overview`)
     }
-  }
-
-  function handleRemoveTag(tag: string) {
-    updateCourseTags(
-      course.id,
-      course.tags.filter(t => t !== tag)
-    )
-  }
-
-  function handleAddTag(tag: string) {
-    updateCourseTags(course.id, [...course.tags, tag])
   }
 
   function handleStatusChange(newStatus: LearnerCourseStatus) {
@@ -593,16 +573,6 @@ export function ImportedCourseCard({
                       )}
                     </div>
 
-                    {course.tags.length > 0 && (
-                      <div className="flex flex-wrap gap-1">
-                        {course.tags.slice(0, 4).map(tag => (
-                          <Badge key={tag} variant="secondary" className="text-xs px-2 py-0.5">
-                            {tag}
-                          </Badge>
-                        ))}
-                      </div>
-                    )}
-
                     {course.videoCount > 0 && (
                       <Button
                         size="sm"
@@ -660,13 +630,7 @@ export function ImportedCourseCard({
           >
             {course.name}
           </h3>
-          {/* Author + inline "+ add tag" row.
-                When there are no tags yet (and the card is editable), the tag-add
-                affordance folds into this row as a muted text trigger — avoiding
-                the standalone "+" button under the title. Hidden at rest and
-                revealed on hover/focus so empty cards stay visually calm.
-                When tags exist, they render in their own row below with the
-                original pill-style "+" for adding more. */}
+          {/* Author */}
           <div className="flex items-center gap-2 mb-1 min-h-5">
             {authorData ? (
               <button
@@ -700,52 +664,7 @@ export function ImportedCourseCard({
                 aria-hidden="true"
               />
             )}
-            {!readOnly && course.tags.length === 0 && analysisStatus !== 'analyzing' && (
-              <>
-                {authorData && (
-                  <span className="text-muted-foreground/40" aria-hidden="true">
-                    ·
-                  </span>
-                )}
-                <span className="opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity duration-200 motion-reduce:transition-none">
-                  <TagEditor
-                    variant="inline"
-                    currentTags={course.tags}
-                    allTags={allTags}
-                    onAddTag={handleAddTag}
-                  />
-                </span>
-              </>
-            )}
           </div>
-          {(course.tags.length > 0 || analysisStatus === 'analyzing') && (
-            <div className="flex items-center gap-1.5 mt-1 mb-2">
-              <span aria-live="polite" className="contents">
-                {analysisStatus === 'analyzing' && (
-                  <span
-                    data-testid="ai-tagging-indicator"
-                    className="text-xs text-muted-foreground animate-pulse flex items-center gap-1"
-                  >
-                    <Loader2 className="size-3 animate-spin" aria-hidden="true" />
-                    AI tagging...
-                  </span>
-                )}
-                {analysisStatus === 'complete' && course.tags.length > 0 && (
-                  <span className="sr-only">
-                    AI tagging complete. {course.tags.length} tags added.
-                  </span>
-                )}
-              </span>
-              <TagBadgeList
-                tags={course.tags}
-                onRemove={readOnly ? undefined : handleRemoveTag}
-                maxVisible={3}
-              />
-              {!readOnly && course.tags.length > 0 && (
-                <TagEditor currentTags={course.tags} allTags={allTags} onAddTag={handleAddTag} />
-              )}
-            </div>
-          )}
           <div className="mt-auto flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs text-muted-foreground">
             {course.videoCount > 0 && (
               <span data-testid="course-card-video-count" className="flex items-center gap-1">
@@ -809,11 +728,6 @@ export function ImportedCourseCard({
                 </Button>
               )}
             </>
-          )}
-          {momentumScore && momentumScore.score > 0 && (
-            <div className="mt-2">
-              <MomentumBadge score={momentumScore.score} tier={momentumScore.tier} />
-            </div>
           )}
         </div>
       </article>

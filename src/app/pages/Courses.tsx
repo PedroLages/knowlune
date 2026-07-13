@@ -657,7 +657,6 @@ export function Courses() {
                         course={course}
                         allTags={allTags}
                         completionPercent={importedCompletionMap.get(course.id) ?? 0}
-                        momentumScore={momentumMap.get(course.id)}
                         selected={selectedIds.has(course.id)}
                         onToggleSelect={selectionMode ? handleToggleSelect : undefined}
                       />

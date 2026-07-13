@@ -137,10 +137,6 @@ vi.mock('@/app/components/figma/ThumbnailPickerDialog', () => ({
   ThumbnailPickerDialog: () => null,
 }))
 
-vi.mock('@/app/components/figma/MomentumBadge', () => ({
-  MomentumBadge: () => null,
-}))
-
 vi.mock('@/stores/useAuthorStore', () => ({
   useAuthorStore: (selector: (state: Record<string, unknown>) => unknown) =>
     selector({

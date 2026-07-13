@@ -35,7 +35,6 @@ import {
 } from '@/app/components/ui/alert-dialog'
 import { toast } from 'sonner'
 import { useImportedCourseStartFlow } from '@/app/hooks/useImportedCourseStartFlow'
-import { TagBadgeList } from '@/app/components/figma/TagBadgeList'
 import { EditCourseDialog } from '@/app/components/figma/EditCourseDialog'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
 import { Checkbox } from '@/app/components/ui/checkbox'
@@ -199,7 +198,7 @@ export function ImportedCourseListRow({
         {/* Thumbnail */}
         <div
           data-testid="course-list-row-thumbnail"
-          className="shrink-0 w-12 h-12 sm:w-16 sm:h-16 rounded-lg overflow-hidden bg-gradient-to-br from-emerald-50 to-teal-100 dark:from-emerald-950/50 dark:to-teal-950/50 flex items-center justify-center"
+          className="shrink-0 w-12 h-12 sm:w-16 sm:h-16 rounded-lg overflow-hidden bg-muted flex items-center justify-center"
         >
           {thumbnailUrl ? (
             <img
@@ -213,10 +212,7 @@ export function ImportedCourseListRow({
               }}
             />
           ) : (
-            <FolderOpen
-              className="size-6 sm:size-7 text-emerald-300 dark:text-emerald-600"
-              aria-hidden="true"
-            />
+            <FolderOpen className="size-6 sm:size-7 text-muted-foreground/40" aria-hidden="true" />
           )}
         </div>
 
@@ -270,11 +266,6 @@ export function ImportedCourseListRow({
               />
             </div>
           )}
-        </div>
-
-        {/* Tag badges — hidden on mobile, capped on desktop */}
-        <div className="hidden md:flex shrink-0 max-w-48">
-          {course.tags.length > 0 && <TagBadgeList tags={course.tags} maxVisible={2} />}
         </div>
 
         {/* Status badge */}
