@@ -667,7 +667,7 @@ describe('ImportWizardDialog', () => {
     await waitFor(() => {
       expect(screen.getByTestId('wizard-no-images')).toBeInTheDocument()
     })
-    expect(screen.getByText(/no images found in folder/i)).toBeInTheDocument()
+    expect(screen.getByText(/no root images found/i)).toBeInTheDocument()
   })
 
   it('shows image grid when images are found', async () => {
@@ -713,7 +713,7 @@ describe('ImportWizardDialog', () => {
     expect(screen.getByTestId('wizard-image-count')).toHaveTextContent('1 image')
   })
 
-  it('passes coverImageHandle to persistScannedCourse when image selected', async () => {
+  it('passes the auto-selected root image to persistScannedCourse', async () => {
     const user = userEvent.setup()
     const coverHandle = makeMockFileHandle('cover.jpg')
     const scanned = makeScannedCourse({
@@ -742,8 +742,69 @@ describe('ImportWizardDialog', () => {
 
     await waitFor(() => {
       expect(mockPersistScannedCourse).toHaveBeenCalledWith(scanned, {
-        coverImageHandle: coverHandle,
+        coverImage: scanned.images[0],
       })
+    })
+  })
+
+  it('requires an explicit cover choice when multiple root images are found', async () => {
+    const user = userEvent.setup()
+    const scanned = makeScannedCourse({
+      images: [
+        { filename: 'cover.jpg', path: '/cover.jpg', fileHandle: makeMockFileHandle('cover.jpg') },
+        {
+          filename: 'banner.png',
+          path: '/banner.png',
+          fileHandle: makeMockFileHandle('banner.png'),
+        },
+      ],
+    })
+    mockScanCourseFolder.mockResolvedValueOnce(scanned)
+
+    render(<ImportWizardDialog open={true} onOpenChange={vi.fn()} />)
+    await user.click(screen.getByTestId('wizard-select-folder-btn'))
+
+    await waitFor(() => {
+      expect(screen.getByText('Choose a cover before continuing.')).toBeInTheDocument()
+    })
+    expect(screen.getByTestId('wizard-import-btn')).toBeDisabled()
+
+    await user.click(screen.getByTestId('wizard-image-option-banner.png'))
+    expect(screen.getByTestId('wizard-import-btn')).toBeEnabled()
+  })
+
+  it('allows video-frame fallback when multiple root images are found', async () => {
+    const user = userEvent.setup()
+    const scanned = makeScannedCourse({
+      images: [
+        { filename: 'cover.jpg', path: '/cover.jpg', fileHandle: makeMockFileHandle('cover.jpg') },
+        {
+          filename: 'banner.png',
+          path: '/banner.png',
+          fileHandle: makeMockFileHandle('banner.png'),
+        },
+      ],
+    })
+    mockScanCourseFolder.mockResolvedValueOnce(scanned)
+    mockPersistScannedCourse.mockResolvedValueOnce({
+      ...scanned,
+      importedAt: '2026-03-25T10:00:00.000Z',
+      category: '',
+      tags: [],
+      status: 'active',
+      videoCount: 2,
+      pdfCount: 1,
+    })
+
+    render(<ImportWizardDialog open={true} onOpenChange={vi.fn()} />)
+    await user.click(screen.getByTestId('wizard-select-folder-btn'))
+    await user.click(await screen.findByTestId('wizard-use-video-frame'))
+
+    expect(screen.getByTestId('wizard-import-btn')).toBeEnabled()
+    await user.click(screen.getByTestId('wizard-import-btn'))
+
+    await waitFor(() => {
+      expect(mockPersistScannedCourse).toHaveBeenCalledWith(scanned, undefined)
     })
   })
 

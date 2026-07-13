@@ -19,7 +19,11 @@ import { autoGenerateThumbnail } from '@/lib/autoThumbnail'
 import { fetchDirectoryListing, isValidImportUrl } from '@/lib/courseServerService'
 import type { ServerResult } from '@/lib/courseServerService'
 import { generateStoryboard, saveVideoStoryboard, loadVideoStoryboard } from '@/lib/videoStoryboard'
-import { loadThumbnailFromFile, saveCourseThumbnail } from '@/lib/thumbnailService'
+import {
+  fetchThumbnailFromUrl,
+  loadThumbnailFromFile,
+  saveCourseThumbnail,
+} from '@/lib/thumbnailService'
 import {
   showDirectoryPicker,
   scanDirectory,
@@ -93,6 +97,10 @@ export interface ScannedImage {
   filename: string
   path: string
   fileHandle?: FileSystemFileHandle // absent for server-imported files
+  /** In-memory source used by drag-and-drop imports. Never persisted to course records. */
+  file?: File
+  /** Full HTTP URL for a root image discovered during server import. */
+  serverUrl?: string
 }
 
 type VideoExtractionResult = {
@@ -593,6 +601,8 @@ export async function persistScannedCourse(
     description?: string
     category?: string
     tags?: string[]
+    coverImage?: ScannedImage
+    /** @deprecated Prefer coverImage so non-handle import sources are supported. */
     coverImageHandle?: FileSystemFileHandle
     authorId?: string
     skipStoreUpdate?: boolean
@@ -601,6 +611,16 @@ export async function persistScannedCourse(
   }
 ): Promise<ImportedCourse> {
   const now = new Date().toISOString()
+  const selectedCoverImage =
+    overrides?.coverImage ??
+    (overrides?.coverImageHandle
+      ? {
+          filename: overrides.coverImageHandle.name,
+          path: overrides.coverImageHandle.name,
+          fileHandle: overrides.coverImageHandle,
+        }
+      : undefined)
+  const selectedCoverHandle = selectedCoverImage?.fileHandle
 
   // A serverPath is the stable identity for server imports. Resolve it before
   // building any child records so a re-import repairs the existing course
@@ -701,7 +721,7 @@ export async function persistScannedCourse(
     videoCount: orderedVideos.length,
     pdfCount: pdfs.length,
     directoryHandle: scanned.directoryHandle,
-    ...(overrides?.coverImageHandle ? { coverImageHandle: overrides.coverImageHandle } : {}),
+    ...(selectedCoverHandle ? { coverImageHandle: selectedCoverHandle } : {}),
     ...(authorId ? { authorId } : {}),
     totalDuration: totalDuration > 0 ? totalDuration : undefined,
     totalFileSize: totalFileSize > 0 ? totalFileSize : undefined,
@@ -900,7 +920,7 @@ export async function persistScannedCourse(
 
   // Auto-generate thumbnail from first video at 10% mark (E1B-S04 AC1)
   // Skip if user selected a cover image in the wizard — don't overwrite their choice
-  if (!overrides?.coverImageHandle && orderedVideos.length > 0 && orderedVideos[0].fileHandle) {
+  if (!selectedCoverImage && orderedVideos.length > 0 && orderedVideos[0].fileHandle) {
     autoGenerateThumbnail(course.id, orderedVideos[0].fileHandle).catch(() => {
       // silent-catch-ok: thumbnail generation failure is non-fatal — card shows placeholder icon (E1B-S04 AC3)
     })
@@ -931,19 +951,40 @@ export async function persistScannedCourse(
     })()
   }
 
-  // Persist user-selected cover image to courseThumbnails table so card renders it
-  if (overrides?.coverImageHandle) {
+  // Persist the selected root image regardless of whether it came from a local
+  // handle, drag-and-drop File, or server URL.
+  if (selectedCoverImage) {
     try {
-      const file = await overrides.coverImageHandle.getFile()
-      const resizedBlob = await loadThumbnailFromFile(file)
-      await saveCourseThumbnail(course.id, resizedBlob, 'local')
+      let resizedBlob: Blob
+      let source: 'local' | 'url'
+      if (selectedCoverImage.fileHandle) {
+        const file = await selectedCoverImage.fileHandle.getFile()
+        resizedBlob = await loadThumbnailFromFile(file)
+        source = 'local'
+      } else if (selectedCoverImage.file) {
+        resizedBlob = await loadThumbnailFromFile(selectedCoverImage.file)
+        source = 'local'
+      } else if (selectedCoverImage.serverUrl) {
+        resizedBlob = await fetchThumbnailFromUrl(selectedCoverImage.serverUrl)
+        source = 'url'
+      } else {
+        throw new Error('Selected cover image has no readable source')
+      }
+
+      await saveCourseThumbnail(course.id, resizedBlob, source)
       const url = URL.createObjectURL(resizedBlob)
       useCourseImportStore.setState(state => ({
         thumbnailUrls: { ...state.thumbnailUrls, [course.id]: url },
       }))
     } catch (error) {
-      // silent-catch-ok: thumbnail persistence failure is non-fatal — card shows placeholder icon
       console.warn('[Import] Failed to save user-selected cover image:', error)
+      toast.warning('Course imported, but its cover could not be saved. Using the default instead.')
+      const fallbackVideo = orderedVideos[0]
+      if (fallbackVideo?.fileHandle) {
+        autoGenerateThumbnail(course.id, fallbackVideo.fileHandle).catch(() => {
+          // silent-catch-ok: cover fallback is non-fatal; the card retains its placeholder.
+        })
+      }
     }
   }
 
@@ -1346,7 +1387,7 @@ export async function scanFromDroppedFiles(
     const images: ScannedImage[] = imageFileList.map(file => ({
       filename: file.name,
       path: file.name,
-      fileHandle: null as unknown as FileSystemFileHandle, // No handle for dropped files
+      file,
     }))
 
     const manifestData = await readCourseManifestFromFiles(files)
@@ -1597,6 +1638,7 @@ export async function scanCourseFolderFromServer(
     format: 'mp4' | 'webm' | 'mkv' | 'ts' | 'avi'
   }[] = []
   const allPdfs: { name: string; url: string; path: string }[] = []
+  const rootImages: { name: string; url: string }[] = []
   const allCaptions: {
     rawStem: string
     cleanStem: string
@@ -1627,6 +1669,7 @@ export async function scanCourseFolderFromServer(
       batch.map(async dirUrl => {
         if (seen.has(dirUrl)) return
         seen.add(dirUrl)
+        const isRootDirectory = dirUrl.replace(/\/+$/, '') === courseBaseUrl
 
         const result = await fetchDirectoryListing(dirUrl)
         if (!result.ok) {
@@ -1671,6 +1714,8 @@ export async function scanCourseFolderFromServer(
               name: file.name,
               url: file.url,
             })
+          } else if (file.type === 'image' && isRootDirectory) {
+            rootImages.push({ name: file.name, url: file.url })
           }
         }
 
@@ -1737,6 +1782,14 @@ export async function scanCourseFolderFromServer(
       moduleTitle: deriveModuleTitle(fileDirMap.get(p.url)),
     }))
 
+  const images: ScannedImage[] = rootImages
+    .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }))
+    .map(image => ({
+      filename: image.name,
+      path: image.name,
+      serverUrl: image.url,
+    }))
+
   // Post-scan caption matching: match SRT/VTT files to videos by stem
   const captions: ScannedCaption[] = []
   for (const cap of allCaptions) {
@@ -1791,7 +1844,7 @@ export async function scanCourseFolderFromServer(
     directoryHandle: null,
     videos,
     pdfs,
-    images: [],
+    images,
     source: 'server',
     captions: captions.length > 0 ? captions : undefined,
     ...(serverId ? { serverId } : {}),

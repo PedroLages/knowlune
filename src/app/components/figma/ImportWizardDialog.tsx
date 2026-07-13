@@ -10,6 +10,7 @@ import {
   DialogFooter,
 } from '@/app/components/ui/dialog'
 import { Button } from '@/app/components/ui/button'
+import { cn } from '@/app/components/ui/utils'
 import { Progress } from '@/app/components/ui/progress'
 import { Input } from '@/app/components/ui/input'
 import { Label } from '@/app/components/ui/label'
@@ -183,6 +184,7 @@ export function ImportWizardDialog({
   const [tags, setTags] = useState<string[]>([])
   const [tagInput, setTagInput] = useState('')
   const [selectedCoverImage, setSelectedCoverImage] = useState<ScannedImage | null>(null)
+  const [useVideoFrameCover, setUseVideoFrameCover] = useState(false)
   const [coverPreviewUrl, setCoverPreviewUrl] = useState<string | null>(null)
   const [imagePreviewUrls, setImagePreviewUrls] = useState<Map<string, string>>(new Map())
   const [description, setDescription] = useState('')
@@ -336,6 +338,7 @@ export function ImportWizardDialog({
     setTagInput('')
     setDescription('')
     setSelectedCoverImage(null)
+    setUseVideoFrameCover(false)
     setCoverPreviewUrl(null)
     setImagePreviewUrls(new Map())
     setIsScanning(false)
@@ -398,8 +401,12 @@ export function ImportWizardDialog({
       for (const image of scannedCourse!.images) {
         if (cancelled) return
         try {
-          if (!image.fileHandle) continue
-          const file = await image.fileHandle.getFile()
+          if (image.serverUrl) {
+            urls.set(image.path, image.serverUrl)
+            continue
+          }
+          const file = image.file ?? (await image.fileHandle?.getFile())
+          if (!file) continue
           const url = URL.createObjectURL(file)
           urls.set(image.path, url)
           objectUrls.push(url)
@@ -412,9 +419,14 @@ export function ImportWizardDialog({
 
       setImagePreviewUrls(new Map(urls))
 
-      // Auto-select first image as cover if available (use ref-like callback to avoid stale closure)
+      // A single root image is an unambiguous cover. Multiple images require an
+      // explicit choice unless the manifest already selected one.
       setSelectedCoverImage(prev => {
-        if (prev) return prev // already selected, don't override
+        if (prev && scannedCourse!.images.some(image => image.path === prev.path)) return prev
+        if (scannedCourse!.images.length !== 1) {
+          setCoverPreviewUrl(null)
+          return null
+        }
         const firstImage = scannedCourse!.images[0]
         const firstUrl = urls.get(firstImage.path)
         if (firstUrl) setCoverPreviewUrl(firstUrl)
@@ -636,6 +648,10 @@ export function ImportWizardDialog({
 
   const handleImport = useCallback(async () => {
     if (!scannedCourse) return
+    if (scannedCourse.images.length > 1 && !selectedCoverImage && !useVideoFrameCover) {
+      toast.error('Choose a cover image or use a video frame before importing.')
+      return
+    }
 
     setIsPersisting(true)
     try {
@@ -660,7 +676,7 @@ export function ImportWizardDialog({
           ? {
               ...(hasNameChange ? { name: trimmedName } : {}),
               ...(hasTags ? { tags } : {}),
-              ...(hasCover ? { coverImageHandle: selectedCoverImage.fileHandle } : {}),
+              ...(selectedCoverImage ? { coverImage: selectedCoverImage } : {}),
               ...(hasDescription ? { description: trimmedDescription } : {}),
               ...(hasDifficulty ? { difficulty: selectedDifficulty } : {}),
               ...(hasCategory ? { category: selectedCategory } : {}),
@@ -728,6 +744,7 @@ export function ImportWizardDialog({
     description,
     tags,
     selectedCoverImage,
+    useVideoFrameCover,
     selectedDifficulty,
     selectedCategory,
     handleOpenChange,
@@ -746,6 +763,7 @@ export function ImportWizardDialog({
     setTagInput('')
     setDescription('')
     setSelectedCoverImage(null)
+    setUseVideoFrameCover(false)
     setCoverPreviewUrl(null)
     setImagePreviewUrls(new Map())
     setAiTagsApplied(false)
@@ -783,6 +801,7 @@ export function ImportWizardDialog({
   const handleSelectCoverImage = useCallback(
     (image: ScannedImage | null) => {
       setSelectedCoverImage(image)
+      setUseVideoFrameCover(false)
       if (image) {
         const url = imagePreviewUrls.get(image.path)
         setCoverPreviewUrl(url ?? null)
@@ -793,7 +812,16 @@ export function ImportWizardDialog({
     [imagePreviewUrls]
   )
 
+  const handleUseVideoFrameCover = useCallback(() => {
+    setSelectedCoverImage(null)
+    setCoverPreviewUrl(null)
+    setUseVideoFrameCover(true)
+  }, [])
+
   const isNameValid = courseName.trim().length > 0
+  const coverChoiceRequired =
+    (scannedCourse?.images.length ?? 0) > 1 && !selectedCoverImage && !useVideoFrameCover
+  const isDetailsValid = isNameValid && !coverChoiceRequired
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -1234,6 +1262,11 @@ export function ImportWizardDialog({
                     Cover Image
                   </span>
                 </Label>
+                {scannedCourse.images.length > 1 && (
+                  <p className="text-xs text-muted-foreground">
+                    Choose one root-folder image, or generate the cover from the first video.
+                  </p>
+                )}
                 {scannedCourse.images.length > 0 ? (
                   <>
                     {/* Current selection preview */}
@@ -1304,7 +1337,35 @@ export function ImportWizardDialog({
                           </button>
                         )
                       })}
+                      <button
+                        type="button"
+                        role="radio"
+                        aria-checked={useVideoFrameCover}
+                        aria-label="Use a frame from the first video as the course cover"
+                        onClick={handleUseVideoFrameCover}
+                        className={cn(
+                          'relative aspect-square rounded-lg overflow-hidden border-2 transition-colors',
+                          'flex flex-col items-center justify-center gap-1 bg-muted/50 px-2 text-center',
+                          useVideoFrameCover
+                            ? 'border-brand ring-2 ring-brand/30 text-foreground'
+                            : 'border-border text-muted-foreground hover:border-muted-foreground'
+                        )}
+                        data-testid="wizard-use-video-frame"
+                      >
+                        <Video className="size-5" aria-hidden="true" />
+                        <span className="text-[10px] font-medium leading-tight">
+                          Use Video Frame
+                        </span>
+                        {useVideoFrameCover && (
+                          <span className="absolute inset-0 bg-brand/10" aria-hidden="true" />
+                        )}
+                      </button>
                     </div>
+                    {coverChoiceRequired && (
+                      <p className="text-xs text-destructive" role="alert">
+                        Choose a cover before continuing.
+                      </p>
+                    )}
                   </>
                 ) : (
                   <div
@@ -1313,7 +1374,7 @@ export function ImportWizardDialog({
                   >
                     <ImageIcon className="size-6 text-muted-foreground" aria-hidden="true" />
                     <p className="text-xs text-muted-foreground">
-                      No images found in folder. A default cover will be used.
+                      No root images found. A cover will be generated from the first video.
                     </p>
                   </div>
                 )}
@@ -1553,7 +1614,7 @@ export function ImportWizardDialog({
               <Button
                 variant="brand"
                 onClick={handleGoToPathStep}
-                disabled={!isNameValid}
+                disabled={!isDetailsValid}
                 data-testid="wizard-next-btn"
                 className="rounded-xl"
               >
@@ -1564,7 +1625,7 @@ export function ImportWizardDialog({
               <Button
                 variant="brand"
                 onClick={handleImport}
-                disabled={!isNameValid || isPersisting}
+                disabled={!isDetailsValid || isPersisting}
                 data-testid="wizard-import-btn"
                 className="rounded-xl"
               >
