@@ -174,20 +174,26 @@ export function ImportedCourseCard({
   } = useCourseCardPreview()
   const [firstVideo, setFirstVideo] = useState<ImportedVideo | null>(null)
   const [searching, setSearching] = useState(false)
-  const [previewHandle, setPreviewHandle] = useState<FileSystemFileHandle | null>(null)
+  const [previewVideo, setPreviewVideo] = useState<ImportedVideo | null>(null)
 
-  const videoHandle = previewOpen && !searching && firstVideo ? firstVideo.fileHandle : undefined
+  const modalUsesRemoteSource = Boolean(firstVideo?.serverUrl)
+  const videoHandle =
+    previewOpen && !searching && firstVideo && !modalUsesRemoteSource
+      ? firstVideo.fileHandle
+      : undefined
   const { blobUrl, error: videoError, loading: videoLoading } = useVideoFromHandle(videoHandle)
-  const activePreviewHandle = showPreview ? previewHandle : undefined
-  const {
-    blobUrl: previewBlobUrl,
-    loading: previewLoading,
-    error: previewError,
-  } = useVideoFromHandle(activePreviewHandle)
+  const modalVideoSrc = firstVideo?.serverUrl ?? blobUrl
+  const modalVideoError = modalUsesRemoteSource ? null : videoError
+  const modalVideoLoading = searching || (!modalUsesRemoteSource && videoLoading)
+
+  const activePreviewHandle =
+    showPreview && previewVideo?.fileHandle ? previewVideo.fileHandle : undefined
+  const { blobUrl: previewBlobUrl } = useVideoFromHandle(activePreviewHandle)
+  const previewVideoSrc = previewVideo?.serverUrl ?? previewBlobUrl
 
   useEffect(() => {
     if (!showPreview || course.videoCount === 0 || course.source === 'youtube') {
-      setPreviewHandle(null)
+      setPreviewVideo(null)
       setVideoReady(false)
       return
     }
@@ -200,25 +206,26 @@ export function ImportedCourseCard({
         if (cancelled) return
         if (!vids[0]) {
           console.warn('[CourseCardPreview] No videos found for course', course.id)
-          setPreviewHandle(null)
+          setPreviewVideo(null)
           setVideoReady(false)
           return
         }
-        if (!vids[0].fileHandle) {
+        if (!vids[0].fileHandle && !vids[0].serverUrl) {
           console.warn(
-            '[CourseCardPreview] First video has null fileHandle',
+            '[CourseCardPreview] First video has no previewable source',
             vids[0].filename,
             course.id
           )
-          setPreviewHandle(null)
+          setPreviewVideo(null)
           setVideoReady(false)
           return
         }
-        setPreviewHandle(vids[0].fileHandle)
+        setPreviewVideo(vids[0])
       })
       .catch(err => {
+        // silent-catch-ok: hover preview is optional; the poster remains visible on failure.
         console.warn('[CourseCardPreview] DB query failed for course', course.id, err)
-        setPreviewHandle(null)
+        setPreviewVideo(null)
         setVideoReady(false)
       })
     return () => {
@@ -307,7 +314,7 @@ export function ImportedCourseCard({
     }
   }
 
-  const isLoading = searching || videoLoading
+  const isLoading = modalVideoLoading
 
   // Derive a single completion state to avoid Play+Complete overlay collision when
   // cross-device sync produces inconsistent (status='not-started', completion=100%) pairs.
@@ -346,21 +353,21 @@ export function ImportedCourseCard({
         data-preview={showPreview && videoReady ? '' : undefined}
         className={cn(
           'group cursor-default focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 outline-none rounded-lg',
-          'relative hover:-translate-y-0.5 hover:z-10 hover:shadow-lg motion-safe:transition-all motion-reduce:transition-none motion-reduce:hover:-translate-y-0'
+          'relative hover:-translate-y-0.5 hover:z-10 hover:shadow-lg motion-safe:transition-[transform,box-shadow] motion-reduce:transition-none motion-reduce:hover:-translate-y-0'
         )}
       >
-        <div className="group-hover:translate-y-2 motion-safe:transition-all motion-reduce:transition-none motion-reduce:group-hover:translate-y-0">
+        <div className="group-hover:translate-y-2 motion-safe:transition-transform motion-reduce:transition-none motion-reduce:group-hover:translate-y-0">
           <CardCover heightClass="aspect-video w-full">
-            {/* Background: gradient placeholder or lazy-loaded thumbnail */}
+            {/* Keep the poster mounted beneath the preview so loading never exposes a flash. */}
             <div
               data-testid="course-card-placeholder"
-              className="absolute inset-0 bg-gradient-to-br from-emerald-50 to-teal-100 dark:from-emerald-950/50 dark:to-teal-950/50 flex items-center justify-center"
+              className="absolute inset-0 bg-muted flex items-center justify-center"
             >
-              {(!thumbnailUrl || !isCardVisible) && !showPreview && (
-                <FolderOpen className="size-16 text-emerald-300 dark:text-emerald-600" />
+              {(!thumbnailUrl || !isCardVisible) && (
+                <FolderOpen className="size-16 text-muted-foreground/40" aria-hidden="true" />
               )}
             </div>
-            {thumbnailUrl && !showPreview && isCardVisible && (
+            {thumbnailUrl && isCardVisible && (
               <img
                 src={thumbnailUrl}
                 alt=""
@@ -369,13 +376,13 @@ export function ImportedCourseCard({
                 className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 motion-reduce:transition-none motion-reduce:group-hover:scale-100"
               />
             )}
-            {/* Inline video preview — matches legacy CourseCard behavior (no status gate) */}
-            {showPreview && previewBlobUrl && (
+            {/* Fade the first rendered frame over the poster only after playback begins. */}
+            {showPreview && previewVideoSrc && (
               // width/height attrs prevent the browser from using intrinsic video dimensions before layout.
               // This was the root cause of the pixelated/cropped preview on non-16:9 source videos.
               <video
-                key={previewBlobUrl}
-                src={previewBlobUrl}
+                key={previewVideoSrc}
+                src={previewVideoSrc}
                 muted
                 autoPlay
                 playsInline
@@ -384,27 +391,13 @@ export function ImportedCourseCard({
                 aria-hidden="true"
                 width="100%"
                 height="100%"
-                onCanPlay={() => setVideoReady(true)}
+                onLoadStart={() => setVideoReady(false)}
+                onPlaying={() => setVideoReady(true)}
                 className={cn(
-                  'absolute inset-0 block w-full h-full object-cover pointer-events-none transition-opacity duration-500',
+                  'absolute inset-0 block w-full h-full object-cover pointer-events-none transition-opacity duration-200 motion-reduce:transition-none',
                   videoReady ? 'opacity-100' : 'opacity-0'
                 )}
               />
-            )}
-            {/* Loading overlay — shown while preview is being prepared */}
-            {showPreview && previewLoading && (
-              <div className="absolute inset-0 z-10 bg-black/60 backdrop-blur-sm flex items-center justify-center">
-                <Loader2 className="size-5 text-white/80 animate-spin" aria-hidden="true" />
-              </div>
-            )}
-            {/* Error indicator — shown when preview cannot load */}
-            {showPreview && previewError && !previewLoading && course.source !== 'youtube' && (
-              <div
-                className="absolute top-2 left-2 z-30 rounded-full px-2 py-1 bg-black/60 text-white backdrop-blur-sm border border-white/10 text-[11px] font-medium"
-                role="status"
-              >
-                Preview unavailable
-              </div>
             )}
 
             {/* Selection checkbox — top-left, only when selection mode is active */}
@@ -886,15 +879,15 @@ export function ImportedCourseCard({
           </DialogHeader>
           <div className="relative aspect-video w-full rounded-2xl overflow-hidden bg-black shadow-2xl">
             {isLoading && <Skeleton className="absolute inset-0 rounded-2xl" />}
-            {!isLoading && videoError && (
+            {!isLoading && modalVideoError && (
               <p className="absolute inset-0 flex items-center justify-center text-white/90 text-sm text-center px-6">
-                {videoError}
+                {modalVideoError}
               </p>
             )}
-            {!isLoading && !videoError && blobUrl && (
-              <VideoPlayer src={blobUrl} title={firstVideo?.filename} autoplay />
+            {!isLoading && !modalVideoError && modalVideoSrc && (
+              <VideoPlayer src={modalVideoSrc} title={firstVideo?.filename} autoplay />
             )}
-            {!isLoading && !videoError && !blobUrl && (
+            {!isLoading && !modalVideoError && !modalVideoSrc && (
               <p className="absolute inset-0 flex items-center justify-center text-white/70 text-sm text-center px-6">
                 No video found in this course.
               </p>
