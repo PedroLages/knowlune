@@ -42,13 +42,11 @@ vi.mock('../ChapterProgressBar', () => ({
     onSeek,
     src,
     buffered,
-    disabled,
   }: {
     progress: number
     onSeek: (p: number) => void
     src: string
     buffered?: Array<{ start: number; end: number }>
-    disabled?: boolean
   }) => (
     <div
       data-testid="chapter-progress-bar"
@@ -62,7 +60,6 @@ vi.mock('../ChapterProgressBar', () => ({
         min={0}
         max={100}
         value={progress}
-        disabled={disabled}
         onChange={e => onSeek(Number(e.target.value))}
       />
     </div>
@@ -1239,17 +1236,6 @@ describe('VideoPlayer', () => {
       fireEvent.change(input, { target: { value: '50' } })
 
       expect(getVideo().currentTime).toBe(50)
-    })
-
-    it('disables scrubbing and shows feedback when byte ranges are unsupported', () => {
-      const reason =
-        'Seeking is unavailable because this media server does not support byte ranges.'
-      renderPlayer({ seekDisabledReason: reason })
-      fireLoadedMetadata(100)
-
-      expect(screen.getByTestId('progress-input')).toBeDisabled()
-      expect(screen.getByText(reason)).toBeVisible()
-      expect(getVideo().currentTime).toBe(0)
     })
   })
 

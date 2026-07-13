@@ -30,12 +30,10 @@ export interface DirectoryListing {
 }
 
 export type ServerResult<T> = { ok: true; data: T } | { ok: false; error: string; status?: number }
-export type ByteRangeCapability = 'supported' | 'unsupported' | 'unknown'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const FETCH_TIMEOUT_MS = 15_000
-const byteRangeCapabilityCache = new Map<string, ByteRangeCapability>()
 
 /** Recognized video extensions. */
 const VIDEO_EXTENSIONS = new Set([
@@ -215,48 +213,6 @@ export async function fetchDirectoryListing(url: string): Promise<ServerResult<D
       error: err instanceof TypeError ? 'Network error — server unreachable' : String(err),
     }
   }
-}
-
-/**
- * Probe byte-range support without consuming a media response body.
- * A confirmed 200 response to a non-zero Range request means seeking is unsafe;
- * network/CORS ambiguity remains `unknown` so normal browser behavior is retained.
- */
-export function probeByteRangeSupport(
-  mediaUrl: string,
-  signal?: AbortSignal
-): Promise<ByteRangeCapability> {
-  let cacheKey: string
-  try {
-    cacheKey = new URL(mediaUrl).origin
-  } catch {
-    return Promise.resolve('unknown')
-  }
-
-  const cached = byteRangeCapabilityCache.get(cacheKey)
-  if (cached) return Promise.resolve(cached)
-
-  const probe = (async (): Promise<ByteRangeCapability> => {
-    try {
-      const response = await fetch(mediaUrl, {
-        method: 'GET',
-        headers: { Range: 'bytes=1-1' },
-        cache: 'no-store',
-        signal,
-      })
-      await response.body?.cancel()
-      if (response.status === 206) return 'supported'
-      if (response.status === 200) return 'unsupported'
-      return 'unknown'
-    } catch {
-      return 'unknown'
-    }
-  })()
-
-  return probe.then(capability => {
-    if (capability !== 'unknown') byteRangeCapabilityCache.set(cacheKey, capability)
-    return capability
-  })
 }
 
 /**
