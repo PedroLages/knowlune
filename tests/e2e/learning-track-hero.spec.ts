@@ -8,7 +8,11 @@
  * learning-tracks.spec.ts and learning-track-reorder.spec.ts.
  */
 import { test, expect } from '../support/fixtures'
-import { seedIndexedDBStore, clearLearningPath, clearIndexedDBStore } from '../support/helpers/seed-helpers'
+import {
+  seedIndexedDBStore,
+  clearLearningPath,
+  clearIndexedDBStore,
+} from '../support/helpers/seed-helpers'
 import { navigateAndWait } from '../support/helpers/navigation'
 import { FIXED_DATE, getRelativeDate } from '../utils/test-time'
 
@@ -64,7 +68,10 @@ async function seedPaths(
 /**
  * Parse a CSS color string into sRGB via 1×1 canvas (handles oklch/color() spaces).
  */
-async function parseCssColor(page: import('@playwright/test').Page, color: string): Promise<[number, number, number, number] | null> {
+async function parseCssColor(
+  page: import('@playwright/test').Page,
+  color: string
+): Promise<[number, number, number, number] | null> {
   return page.evaluate((c: string) => {
     const canvas = document.createElement('canvas')
     canvas.width = 1
@@ -140,7 +147,8 @@ test.describe('Learning Tracks — cinematic hero', () => {
       createLearningPath({
         id: 'lt-cover',
         name: 'Cover Image Track',
-        coverImageUrl: 'data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22100%22%20height%3D%22100%22%3E%3Crect%20width%3D%22100%22%20height%3D%22100%22%20fill%3D%22%234F46E5%22%2F%3E%3C%2Fsvg%3E',
+        coverImageUrl:
+          'data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22100%22%20height%3D%22100%22%3E%3Crect%20width%3D%22100%22%20height%3D%22100%22%20fill%3D%22%234F46E5%22%2F%3E%3C%2Fsvg%3E',
         coverPreset: 'cyan-blue',
       }),
     ]
@@ -310,6 +318,96 @@ test.describe('Learning Tracks — cinematic hero', () => {
       // Brand color (#5e6ad2) has R≈94, G≈106, B≈210 — verify it's not a transparent/neutral color
       expect(parsed[2]).toBeGreaterThan(150) // Blue channel is dominant
     }
+  })
+
+  test('continue-learning card uses the current server lesson as a static preview', async ({
+    page,
+  }) => {
+    const pathId = 'lt-server-preview'
+    const courseId = 'c-server-preview'
+    const firstVideoId = 'v-server-preview-1'
+    const currentVideoId = 'v-server-preview-2'
+    const firstVideoUrl = 'https://media.example/preview/first.mp4'
+    const currentVideoUrl = 'https://media.example/preview/current.mp4'
+
+    await page.route('https://media.example/preview/*.mp4', route => route.abort())
+    await page.goto('/')
+    await page.waitForLoadState('load')
+    await clearLearningPath(page)
+    await Promise.all([
+      clearIndexedDBStore(page, DB_NAME, 'learningPathEntries'),
+      clearIndexedDBStore(page, DB_NAME, 'importedCourses'),
+      clearIndexedDBStore(page, DB_NAME, 'importedVideos'),
+      clearIndexedDBStore(page, DB_NAME, 'contentProgress'),
+      clearIndexedDBStore(page, DB_NAME, 'progress'),
+    ])
+
+    await seedPaths(
+      page,
+      [createLearningPath({ id: pathId, name: 'Server Preview Track' })],
+      [createLearningPathEntry({ pathId, courseId, position: 1 })]
+    )
+    await seedIndexedDBStore(page, DB_NAME, 'importedCourses', [
+      {
+        id: courseId,
+        name: 'Server Preview Course',
+        importedAt: FIXED_DATE,
+        category: 'technology',
+        tags: [],
+        status: 'not-started',
+        videoCount: 2,
+        pdfCount: 0,
+        directoryHandle: null,
+        source: 'server',
+        serverPath: 'preview/server-course',
+      },
+    ])
+    await seedIndexedDBStore(page, DB_NAME, 'importedVideos', [
+      {
+        id: firstVideoId,
+        courseId,
+        filename: '0. Welcome.mp4',
+        path: '0. Welcome.mp4',
+        duration: 120,
+        format: 'mp4',
+        order: 1,
+        fileHandle: null,
+        serverUrl: firstVideoUrl,
+      },
+      {
+        id: currentVideoId,
+        courseId,
+        filename: '1. Introduction.mp4',
+        path: '1. Introduction.mp4',
+        duration: 180,
+        format: 'mp4',
+        order: 2,
+        fileHandle: null,
+        serverUrl: currentVideoUrl,
+      },
+    ])
+    await seedIndexedDBStore(page, DB_NAME, 'contentProgress', [
+      {
+        courseId,
+        itemId: firstVideoId,
+        contentType: 'lesson',
+        status: 'completed',
+        progressPct: 100,
+        updatedAt: FIXED_DATE,
+      },
+    ])
+
+    await page.goto(`/learning-tracks/${pathId}`, { waitUntil: 'load' })
+
+    const card = page.getByTestId('continue-learning-card')
+    const preview = card.getByTestId('continue-learning-video-preview')
+    await expect(preview).toHaveAttribute('src', currentVideoUrl)
+    await expect(preview).toHaveAttribute('preload', 'metadata')
+    await expect(preview).not.toHaveAttribute('autoplay')
+    await expect(card.getByRole('link', { name: 'Resume Server Preview Course' })).toHaveAttribute(
+      'href',
+      `/courses/${courseId}/lessons/${currentVideoId}`
+    )
   })
 
   // ── Bounding box overlap ──────────────────────────────────────

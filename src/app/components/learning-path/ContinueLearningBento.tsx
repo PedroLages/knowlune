@@ -1,3 +1,4 @@
+import { useState, type SyntheticEvent } from 'react'
 import { Link } from 'react-router'
 import { BookOpen, Play, ArrowRight, Clock, FileText } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
@@ -8,6 +9,8 @@ interface ContinueLearningBentoProps {
   entry: LearningPathEntry
   courseInfo?: PathCourseInfo
   thumbnailUrl?: string
+  /** Playable server-hosted lesson URL used as a static-frame fallback. */
+  videoPreviewUrl?: string
   /** Optional: navigate directly to a specific lesson within the course */
   targetLessonId?: string
   onViewCurriculum?: () => void
@@ -26,6 +29,98 @@ interface ContinueLearningBentoProps {
   lessonsRemaining?: number
   /** Estimated remaining minutes for this course */
   estimatedRemainingMinutes?: number
+}
+
+const PREVIEW_FRAME_FRACTION = 0.1
+const MAX_PREVIEW_SEEK_SECONDS = 3
+
+function seekToPreviewFrame(event: SyntheticEvent<HTMLVideoElement>) {
+  const video = event.currentTarget
+  const seekTo = Math.min(video.duration * PREVIEW_FRAME_FRACTION, MAX_PREVIEW_SEEK_SECONDS)
+  if (Number.isFinite(seekTo) && seekTo > 0) {
+    video.currentTime = seekTo
+  }
+}
+
+interface ContinueLearningMediaProps {
+  courseName: string
+  thumbnailUrl?: string
+  videoPreviewUrl?: string
+}
+
+function ContinueLearningMedia({
+  courseName,
+  thumbnailUrl,
+  videoPreviewUrl,
+}: ContinueLearningMediaProps) {
+  const [failedThumbnailUrl, setFailedThumbnailUrl] = useState<string>()
+  const [failedVideoUrl, setFailedVideoUrl] = useState<string>()
+  const [readyVideoUrl, setReadyVideoUrl] = useState<string>()
+
+  const activeThumbnailUrl =
+    thumbnailUrl && thumbnailUrl !== failedThumbnailUrl ? thumbnailUrl : undefined
+  const activeVideoUrl = activeThumbnailUrl ? undefined : videoPreviewUrl
+  const isVideoReady =
+    activeVideoUrl !== undefined &&
+    activeVideoUrl !== failedVideoUrl &&
+    activeVideoUrl === readyVideoUrl
+
+  return (
+    <div className="relative h-full min-h-[180px] md:min-h-[240px]">
+      <div
+        data-testid="continue-learning-placeholder"
+        className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-brand/10 to-brand/30 gap-3"
+      >
+        <BookOpen className="size-12 text-brand/30" aria-hidden="true" />
+        <p className="text-sm font-semibold text-brand/50 text-center px-4 line-clamp-2">
+          {courseName}
+        </p>
+      </div>
+
+      {activeThumbnailUrl ? (
+        <div className="absolute inset-0">
+          <img
+            data-testid="continue-learning-thumbnail"
+            src={activeThumbnailUrl}
+            alt=""
+            className="h-full w-full object-cover group-hover:scale-105 motion-reduce:group-hover:scale-100 motion-safe:transition-transform motion-safe:duration-300"
+            loading="lazy"
+            onError={() => setFailedThumbnailUrl(activeThumbnailUrl)}
+          />
+          <div
+            className="absolute inset-0 bg-gradient-to-br from-brand-soft/40 via-transparent to-black/30 pointer-events-none"
+            aria-hidden="true"
+          />
+        </div>
+      ) : activeVideoUrl ? (
+        <>
+          <video
+            data-testid="continue-learning-video-preview"
+            src={activeVideoUrl}
+            muted
+            playsInline
+            preload="metadata"
+            tabIndex={-1}
+            aria-hidden="true"
+            onLoadedMetadata={seekToPreviewFrame}
+            onLoadedData={() => setReadyVideoUrl(activeVideoUrl)}
+            onSeeked={() => setReadyVideoUrl(activeVideoUrl)}
+            onError={() => setFailedVideoUrl(activeVideoUrl)}
+            className={cn(
+              'absolute inset-0 block h-full w-full object-cover pointer-events-none motion-safe:transition-opacity motion-safe:duration-300',
+              isVideoReady ? 'opacity-100' : 'opacity-0'
+            )}
+          />
+          {isVideoReady && (
+            <div
+              className="absolute inset-0 bg-gradient-to-br from-brand-soft/40 via-transparent to-black/30 pointer-events-none"
+              aria-hidden="true"
+            />
+          )}
+        </>
+      ) : null}
+    </div>
+  )
 }
 
 function formatRemainingTime(minutes: number): string {
@@ -47,6 +142,7 @@ export function ContinueLearningBento({
   entry,
   courseInfo,
   thumbnailUrl,
+  videoPreviewUrl,
   targetLessonId,
   onViewCurriculum,
   className,
@@ -80,27 +176,11 @@ export function ContinueLearningBento({
 
         {/* Left: Thumbnail with play overlay */}
         <div className="md:w-2/5 relative bg-muted overflow-hidden group min-h-[180px] md:min-h-[240px]">
-          {thumbnailUrl ? (
-            <div className="relative h-full">
-              <img
-                src={thumbnailUrl}
-                alt=""
-                className="h-full w-full object-cover group-hover:scale-105 motion-reduce:group-hover:scale-100 motion-safe:transition-transform motion-safe:duration-300"
-                loading="lazy"
-              />
-              <div
-                className="absolute inset-0 bg-gradient-to-br from-brand-soft/40 via-transparent to-black/30 pointer-events-none"
-                aria-hidden="true"
-              />
-            </div>
-          ) : (
-            <div className="h-full min-h-[180px] flex flex-col items-center justify-center bg-gradient-to-br from-brand/10 to-brand/30 gap-3">
-              <BookOpen className="size-12 text-brand/30" aria-hidden="true" />
-              <p className="text-sm font-semibold text-brand/50 text-center px-4 line-clamp-2">
-                {courseInfo?.name || 'Course'}
-              </p>
-            </div>
-          )}
+          <ContinueLearningMedia
+            courseName={courseInfo?.name || 'Course'}
+            thumbnailUrl={thumbnailUrl}
+            videoPreviewUrl={videoPreviewUrl}
+          />
           {/* Centered play button overlay with brand glow */}
           <div className="absolute inset-0 flex items-center justify-center">
             <Link

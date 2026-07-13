@@ -556,25 +556,24 @@ export function LearningTrackDetail() {
     return courseInfo.get(currentEntry.courseId)?.completionPct
   }, [currentEntry, courseInfo])
 
-  // Thumbnail for ContinueLearningBento: prefer next lesson's video thumbnail →
-  // first video thumbnail → course cover thumbnail → undefined (fallback)
-  const continueThumbnailUrl = useMemo(() => {
+  // Media for ContinueLearningBento: prefer lesson/course images, then use a
+  // server-hosted lesson as a paused static-frame fallback.
+  const continueMedia = useMemo(() => {
     const courseId = currentEntry?.courseId
-    if (!courseId) return undefined
-    const videos = videosByCourse.get(courseId)
-    if (!videos || videos.length === 0) {
-      // No videos loaded — fall back to course cover thumbnail
-      return thumbnailUrls[courseId]
+    if (!courseId) return { thumbnailUrl: undefined, videoPreviewUrl: undefined }
+
+    const videos = videosByCourse.get(courseId) ?? []
+    const targetVideo = currentEntryTargetLessonId
+      ? videos.find(v => v.id === currentEntryTargetLessonId)
+      : undefined
+    const firstVideo = videos[0]
+    const firstServerVideo = videos.find(v => v.serverUrl)
+
+    return {
+      thumbnailUrl:
+        targetVideo?.thumbnailUrl ?? firstVideo?.thumbnailUrl ?? thumbnailUrls[courseId],
+      videoPreviewUrl: targetVideo?.serverUrl ?? firstServerVideo?.serverUrl,
     }
-    // Try the target (next incomplete) lesson first
-    if (currentEntryTargetLessonId) {
-      const targetVideo = videos.find(v => v.id === currentEntryTargetLessonId)
-      if (targetVideo?.thumbnailUrl) return targetVideo.thumbnailUrl
-    }
-    // Try the first video's thumbnail
-    if (videos[0]?.thumbnailUrl) return videos[0].thumbnailUrl
-    // Fall back to course cover
-    return thumbnailUrls[courseId]
   }, [currentEntry, videosByCourse, currentEntryTargetLessonId, thumbnailUrls])
 
   // Next milestone (first non-completed course)
@@ -761,7 +760,8 @@ export function LearningTrackDetail() {
                         <ContinueLearningBento
                           entry={currentEntry}
                           courseInfo={courseInfo.get(currentEntry.courseId)}
-                          thumbnailUrl={continueThumbnailUrl}
+                          thumbnailUrl={continueMedia.thumbnailUrl}
+                          videoPreviewUrl={continueMedia.videoPreviewUrl}
                           targetLessonId={currentEntryTargetLessonId}
                           trackId={trackId}
                           trackName={path.name}
