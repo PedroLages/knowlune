@@ -34,7 +34,6 @@ import { syncableWrite } from '@/lib/sync/syncableWrite'
 import { loadVideoStoryboard, generateStoryboard, saveVideoStoryboard } from '@/lib/videoStoryboard'
 import type { StoryboardProp } from '@/app/components/figma/ScrubPreview'
 import type { ImportedVideo, VideoBookmark } from '@/data/types'
-import { probeByteRangeSupport } from '@/lib/courseServerService'
 
 interface LocalVideoContentProps {
   courseId: string
@@ -187,27 +186,8 @@ export const LocalVideoContent = forwardRef<VideoPlayerHandle, LocalVideoContent
     // Server-sourced videos use the server URL directly as <video src>.
     // On network error, fall back to fileHandle blob URL if available.
     const [serverError, setServerError] = useState(false)
-    const [seekDisabledReason, setSeekDisabledReason] = useState<string | undefined>()
     const effectiveSrc = isServerSource && !serverError ? (video?.serverUrl ?? null) : blobUrl
     const loading = isDriveSource ? driveLoading : isServerSource ? false : localLoading
-
-    useEffect(() => {
-      const serverUrl = video?.serverUrl
-      if (!serverUrl || serverError) {
-        setSeekDisabledReason(undefined)
-        return
-      }
-      const controller = new AbortController()
-      setSeekDisabledReason(undefined)
-      probeByteRangeSupport(serverUrl, controller.signal).then(capability => {
-        if (capability === 'unsupported') {
-          setSeekDisabledReason(
-            'Seeking is unavailable because this media server does not support byte ranges.'
-          )
-        }
-      })
-      return () => controller.abort()
-    }, [video?.serverUrl, serverError])
 
     // F008: Clear recovery overlay once blob URL loading completes (URL arrived or error).
     // Prevents the spinner from showing indefinitely if blob generation fails.
@@ -847,7 +827,6 @@ export const LocalVideoContent = forwardRef<VideoPlayerHandle, LocalVideoContent
             autoplay={autoplay}
             storyboard={storyboard}
             showRecoveryOverlay={showRecoveryOverlay}
-            seekDisabledReason={seekDisabledReason}
           />
         )}
       </div>

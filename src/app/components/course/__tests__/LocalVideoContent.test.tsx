@@ -3,22 +3,18 @@
  *
  * @module LocalVideoContent.test
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { LocalVideoContent } from '../LocalVideoContent'
 
 // Mock DB
 const mockProgressFirst = vi.fn()
+const mockImportedVideoGet = vi.fn()
 vi.mock('@/db/schema', () => ({
   db: {
     importedVideos: {
-      get: vi.fn().mockResolvedValue({
-        id: 'lesson-1',
-        courseId: 'course-1',
-        filename: 'test.mp4',
-        fileHandle: { kind: 'file', name: 'test.mp4' },
-      }),
+      get: (...args: unknown[]) => mockImportedVideoGet(...args),
     },
     progress: {
       where: vi.fn(() => ({
@@ -90,6 +86,51 @@ const DEFAULT_PROPS = {
 beforeEach(() => {
   vi.clearAllMocks()
   mockProgressFirst.mockReset()
+  mockImportedVideoGet.mockReset()
+  mockImportedVideoGet.mockResolvedValue({
+    id: 'lesson-1',
+    courseId: 'course-1',
+    filename: 'test.mp4',
+    fileHandle: { kind: 'file', name: 'test.mp4' },
+  })
+})
+
+afterEach(() => {
+  vi.unstubAllGlobals()
+})
+
+describe('LocalVideoContent server video seeking', () => {
+  it('keeps seeking enabled without issuing a byte-range capability probe', async () => {
+    const serverUrl = 'https://media.example/course/test.mp4'
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(null, {
+        status: 200,
+      })
+    )
+    vi.stubGlobal('fetch', fetchMock)
+    mockImportedVideoGet.mockResolvedValue({
+      id: 'lesson-1',
+      courseId: 'course-1',
+      filename: 'test.mp4',
+      fileHandle: null,
+      serverUrl,
+    })
+    mockProgressFirst.mockResolvedValue(undefined)
+
+    const { container } = render(<LocalVideoContent {...DEFAULT_PROPS} />)
+
+    await waitFor(() => {
+      expect(container.querySelector('video')).toHaveAttribute('src', serverUrl)
+    })
+
+    expect(screen.getByRole('slider', { name: 'Video progress' })).toBeEnabled()
+    expect(
+      screen.queryByText(
+        'Seeking is unavailable because this media server does not support byte ranges.'
+      )
+    ).not.toBeInTheDocument()
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
 })
 
 describe('LocalVideoContent resume dialog', () => {
