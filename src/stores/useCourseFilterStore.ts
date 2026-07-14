@@ -14,22 +14,30 @@
 
 import { create } from 'zustand'
 import { createJSONStorage, persist } from 'zustand/middleware'
-import type { LearnerCourseStatus } from '@/data/types'
+import type { CourseSource, Difficulty, LearnerCourseStatus } from '@/data/types'
 
-const STORAGE_KEY = 'knowlune-courses-filter-v1'
+const STORAGE_KEY = 'knowlune-courses-filter-v2'
+
+export type CourseSourceFilter = 'all' | CourseSource
 
 export interface CourseFilters {
-  source: 'all' | 'youtube'
+  source: CourseSourceFilter
   showTrackCourses: boolean
   selectedTags: string[]
   selectedStatuses: LearnerCourseStatus[]
+  selectedDifficulties: Difficulty[]
+  selectedCategories: string[]
+  selectedAuthorIds: string[]
 }
 
 interface CourseFilterState {
-  source: 'all' | 'youtube'
+  source: CourseSourceFilter
   showTrackCourses: boolean
   selectedTags: string[]
   selectedStatuses: LearnerCourseStatus[]
+  selectedDifficulties: Difficulty[]
+  selectedCategories: string[]
+  selectedAuthorIds: string[]
 
   setFilter: <K extends keyof CourseFilters>(key: K, value: CourseFilters[K]) => void
   clearFilter: <K extends keyof CourseFilters>(key: K) => void
@@ -39,9 +47,12 @@ interface CourseFilterState {
 
 const DEFAULT_FILTERS: CourseFilters = {
   source: 'all',
-  showTrackCourses: false,
+  showTrackCourses: true,
   selectedTags: [],
   selectedStatuses: [],
+  selectedDifficulties: [],
+  selectedCategories: [],
+  selectedAuthorIds: [],
 }
 
 export const useCourseFilterStore = create<CourseFilterState>()(
@@ -73,21 +84,24 @@ export const useCourseFilterStore = create<CourseFilterState>()(
       },
 
       /**
-       * Returns true when any sidebar-managed filter is active.
-       * Only checks source !== 'all', showTrackCourses === true, selectedTags.length > 0.
-       * Status filters (selectedStatuses) are explicitly excluded so the sidebar
-       * trigger badge reflects only sidebar filter state (R9 intent).
+       * Returns true when any advanced filter is active. Status is intentionally
+       * excluded because it is always visible in the primary toolbar.
        */
       isAnyFilterActive: () => {
         const state = get()
         return (
-          state.source !== 'all' || state.showTrackCourses === true || state.selectedTags.length > 0
+          state.source !== 'all' ||
+          state.showTrackCourses === false ||
+          state.selectedTags.length > 0 ||
+          state.selectedDifficulties.length > 0 ||
+          state.selectedCategories.length > 0 ||
+          state.selectedAuthorIds.length > 0
         )
       },
     }),
     {
       name: STORAGE_KEY,
-      version: 1,
+      version: 2,
       storage: createJSONStorage(() => sessionStorage),
       // Only persist filter dimensions — not derived selectors or actions
       partialize: state => ({
@@ -95,6 +109,9 @@ export const useCourseFilterStore = create<CourseFilterState>()(
         showTrackCourses: state.showTrackCourses,
         selectedTags: state.selectedTags,
         selectedStatuses: state.selectedStatuses,
+        selectedDifficulties: state.selectedDifficulties,
+        selectedCategories: state.selectedCategories,
+        selectedAuthorIds: state.selectedAuthorIds,
       }),
     }
   )

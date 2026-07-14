@@ -165,6 +165,7 @@ vi.mock('@/lib/authors', () => ({
 
 // Import component AFTER all mocks
 import { Courses } from '../Courses'
+import { useCourseFilterStore } from '@/stores/useCourseFilterStore'
 
 function renderCourses() {
   return render(
@@ -175,7 +176,7 @@ function renderCourses() {
 }
 
 describe('Courses page', () => {
-  function getStatusFilterButton(label: 'Not Started' | 'Active' | 'Completed' | 'Paused') {
+  function getStatusFilterButton(label: 'Not Started' | 'In Progress' | 'Completed' | 'Paused') {
     const buttons = screen.getAllByTestId('status-filter-button')
     const match = buttons.find(b => b.textContent?.includes(label))
     if (!match) {
@@ -188,6 +189,8 @@ describe('Courses page', () => {
     storeState.importedCourses = []
     storeState.loadImportedCourses = vi.fn()
     localStorage.clear()
+    useCourseFilterStore.getState().clearAllFilters()
+    sessionStorage.clear()
   })
 
   describe('empty state', () => {
@@ -311,7 +314,7 @@ describe('Courses page', () => {
       const user = userEvent.setup()
       renderCourses()
 
-      await user.click(getStatusFilterButton('Active'))
+      await user.click(getStatusFilterButton('In Progress'))
 
       expect(screen.queryByText('Completed Course')).not.toBeInTheDocument()
 
@@ -344,7 +347,7 @@ describe('Courses page', () => {
       const user = userEvent.setup()
       renderCourses()
 
-      await user.click(getStatusFilterButton('Active'))
+      await user.click(getStatusFilterButton('In Progress'))
 
       // Should show both Active courses (Active Course + Active Beta Course)
       expect(screen.getByText('Active Course')).toBeInTheDocument()
@@ -373,7 +376,7 @@ describe('Courses page', () => {
       expect(screen.getByTestId('sort-select')).toBeInTheDocument()
     })
 
-    it('defaults to "Most Recent" sort (newest importedAt first)', () => {
+    it('defaults to recently imported sort (newest importedAt first)', () => {
       renderCourses()
       const headings = screen.getAllByRole('heading', { level: 3 })
       const importedHeadings = headings.filter(
@@ -389,6 +392,48 @@ describe('Courses page', () => {
     })
   })
 
+  describe('advanced filtering', () => {
+    beforeEach(() => {
+      storeState.importedCourses = [
+        {
+          ...mockCourses[0],
+          id: 'local-beginner',
+          name: 'Local Beginner Course',
+          source: 'local',
+          difficulty: 'beginner',
+          category: 'Development',
+          authorId: 'author-1',
+          tags: ['frontend'],
+        },
+        {
+          ...mockCourses[1],
+          id: 'server-advanced',
+          name: 'Server Advanced Course',
+          source: 'server',
+          difficulty: 'advanced',
+          category: 'Design',
+          authorId: 'author-2',
+          tags: ['ux'],
+        },
+      ]
+    })
+
+    it('combines source, difficulty, category, author, and tag dimensions', () => {
+      const filters = useCourseFilterStore.getState()
+      filters.setFilter('source', 'server')
+      filters.setFilter('selectedDifficulties', ['advanced'])
+      filters.setFilter('selectedCategories', ['Design'])
+      filters.setFilter('selectedAuthorIds', ['author-2'])
+      filters.setFilter('selectedTags', ['ux'])
+
+      renderCourses()
+
+      expect(screen.getByText('Server Advanced Course')).toBeInTheDocument()
+      expect(screen.queryByText('Local Beginner Course')).not.toBeInTheDocument()
+      expect(screen.getByTestId('filtered-course-count')).toHaveTextContent('1 shown')
+    })
+  })
+
   describe('selection mode', () => {
     beforeEach(() => {
       storeState.importedCourses = mockCourses
@@ -398,6 +443,7 @@ describe('Courses page', () => {
     it('clicking "Select" enters selection mode and shows action bar', async () => {
       const user = userEvent.setup()
       renderCourses()
+      await user.click(screen.getByTestId('course-options-menu-btn'))
       await user.click(screen.getByTestId('enter-selection-mode-btn'))
       expect(screen.getByTestId('selection-action-bar')).toBeInTheDocument()
       expect(screen.getByTestId('selected-count')).toHaveTextContent('0 selected')
@@ -406,6 +452,7 @@ describe('Courses page', () => {
     it('exits selection mode and shows control bar when "Cancel" is clicked', async () => {
       const user = userEvent.setup()
       renderCourses()
+      await user.click(screen.getByTestId('course-options-menu-btn'))
       await user.click(screen.getByTestId('enter-selection-mode-btn'))
       expect(screen.getByTestId('selection-action-bar')).toBeInTheDocument()
       await user.click(screen.getByTestId('cancel-selection-btn'))
@@ -415,6 +462,7 @@ describe('Courses page', () => {
     it('"Select All" selects all filtered courses', async () => {
       const user = userEvent.setup()
       renderCourses()
+      await user.click(screen.getByTestId('course-options-menu-btn'))
       await user.click(screen.getByTestId('enter-selection-mode-btn'))
       await user.click(screen.getByTestId('select-all-btn'))
       expect(screen.getByTestId('selected-count')).toHaveTextContent('2 selected')
@@ -423,6 +471,7 @@ describe('Courses page', () => {
     it('"Deselect All" clears selection', async () => {
       const user = userEvent.setup()
       renderCourses()
+      await user.click(screen.getByTestId('course-options-menu-btn'))
       await user.click(screen.getByTestId('enter-selection-mode-btn'))
       await user.click(screen.getByTestId('select-all-btn'))
       expect(screen.getByTestId('selected-count')).toHaveTextContent('2 selected')
@@ -438,6 +487,7 @@ describe('Courses page', () => {
       storeState.removeImportedCourses = vi.fn().mockReturnValue(deferred)
 
       renderCourses()
+      await user.click(screen.getByTestId('course-options-menu-btn'))
       await user.click(screen.getByTestId('enter-selection-mode-btn'))
       await user.click(screen.getByTestId('select-all-btn'))
 
@@ -448,12 +498,13 @@ describe('Courses page', () => {
 
       // Button should be disabled and show loading state while deletion is in progress
       expect(deleteBtn).toBeDisabled()
-      expect(screen.getByText('Deleting...')).toBeInTheDocument()
+      expect(screen.getByText('Deleting…')).toBeInTheDocument()
     })
 
     it('"Delete Selected" is disabled when nothing is selected', async () => {
       const user = userEvent.setup()
       renderCourses()
+      await user.click(screen.getByTestId('course-options-menu-btn'))
       await user.click(screen.getByTestId('enter-selection-mode-btn'))
       const deleteBtn = screen.getByTestId('delete-selected-btn')
       expect(deleteBtn).toBeDisabled()
@@ -462,6 +513,7 @@ describe('Courses page', () => {
     it('pressing Escape exits selection mode and clears selection', async () => {
       const user = userEvent.setup()
       renderCourses()
+      await user.click(screen.getByTestId('course-options-menu-btn'))
       await user.click(screen.getByTestId('enter-selection-mode-btn'))
       await user.click(screen.getByTestId('select-all-btn'))
       expect(screen.getByTestId('selection-action-bar')).toBeInTheDocument()
@@ -469,6 +521,7 @@ describe('Courses page', () => {
       await user.keyboard('{Escape}')
       expect(screen.queryByTestId('selection-action-bar')).not.toBeInTheDocument()
       // Re-enter selection mode to verify selection was cleared
+      await user.click(screen.getByTestId('course-options-menu-btn'))
       await user.click(screen.getByTestId('enter-selection-mode-btn'))
       expect(screen.getByTestId('selected-count')).toHaveTextContent('0 selected')
     })

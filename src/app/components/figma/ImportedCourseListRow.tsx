@@ -204,6 +204,8 @@ export function ImportedCourseListRow({
             <img
               src={thumbnailUrl}
               alt=""
+              width={64}
+              height={64}
               aria-hidden="true"
               loading="lazy"
               className="w-full h-full object-cover"

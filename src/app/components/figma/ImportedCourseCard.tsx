@@ -351,6 +351,8 @@ export function ImportedCourseCard({
               <img
                 src={thumbnailUrl}
                 alt=""
+                width={1280}
+                height={720}
                 aria-hidden="true"
                 loading="lazy"
                 className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 motion-reduce:transition-none motion-reduce:group-hover:scale-100"

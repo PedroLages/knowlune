@@ -447,6 +447,8 @@ export function CourseCard({
           <img
             src={`${course.coverImage}-640w.webp`}
             alt={course.title}
+            width={640}
+            height={360}
             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 motion-reduce:transition-none motion-reduce:group-hover:scale-100"
             loading="lazy"
           />
@@ -474,6 +476,8 @@ export function CourseCard({
             srcSet={buildSrcSet(course.coverImage, 'png')}
             sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, (max-width: 1280px) 25vw, 20vw"
             alt={course.title}
+            width={768}
+            height={432}
             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 motion-reduce:transition-none motion-reduce:group-hover:scale-100"
           />
         </picture>
@@ -491,6 +495,8 @@ export function CourseCard({
         <img
           src={`${course.coverImage}-640w.webp`}
           alt={course.title}
+          width={640}
+          height={360}
           className="w-full h-full object-cover transition-transform duration-200 group-hover:scale-105"
           loading="lazy"
         />

@@ -1278,6 +1278,8 @@ export function ImportWizardDialog({
                         <img
                           src={coverPreviewUrl}
                           alt="Selected cover image"
+                          width={640}
+                          height={256}
                           className="w-full h-full object-cover"
                         />
                         <button
@@ -1322,6 +1324,8 @@ export function ImportWizardDialog({
                               <img
                                 src={previewUrl}
                                 alt={image.filename}
+                                width={160}
+                                height={160}
                                 className="w-full h-full object-cover"
                               />
                             ) : (

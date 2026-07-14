@@ -252,6 +252,8 @@ export function ImportedCourseCompactCard({
             <img
               src={thumbnailUrl}
               alt=""
+              width={400}
+              height={300}
               aria-hidden="true"
               loading="lazy"
               className="absolute inset-0 w-full h-full object-cover"

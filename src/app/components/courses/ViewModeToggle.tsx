@@ -18,6 +18,7 @@ export interface ViewModeToggleProps {
   value: CourseViewMode
   onChange: (value: CourseViewMode) => void
   className?: string
+  showLabels?: boolean
 }
 
 /**
@@ -27,7 +28,12 @@ export interface ViewModeToggleProps {
  * Uses shadcn ToggleGroup (Radix `role="radiogroup"`) so arrow-key navigation
  * and selected-state semantics are provided for free.
  */
-export function ViewModeToggle({ value, onChange, className }: ViewModeToggleProps) {
+export function ViewModeToggle({
+  value,
+  onChange,
+  className,
+  showLabels = true,
+}: ViewModeToggleProps) {
   return (
     <ToggleGroup
       type="single"
@@ -67,7 +73,9 @@ export function ViewModeToggle({ value, onChange, className }: ViewModeTogglePro
           )}
         >
           <Icon className="size-4" aria-hidden="true" />
-          <span className="sr-only md:not-sr-only md:text-sm">{label.replace(' view', '')}</span>
+          <span className={cn(showLabels ? 'sr-only md:not-sr-only md:text-sm' : 'sr-only')}>
+            {label.replace(' view', '')}
+          </span>
         </ToggleGroupItem>
       ))}
     </ToggleGroup>

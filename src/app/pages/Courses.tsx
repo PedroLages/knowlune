@@ -13,7 +13,17 @@ import { ImportedCourseCard } from '@/app/components/figma/ImportedCourseCard'
 import { ImportedCourseCompactCard } from '@/app/components/figma/ImportedCourseCompactCard'
 import { ImportedCourseListRow } from '@/app/components/figma/ImportedCourseListRow'
 import { StatusFilter, statuses as statusFilterOptions } from '@/app/components/figma/StatusFilter'
-import { FolderOpen, BookOpen, Youtube, Trash2, X, Loader2, ListFilter } from 'lucide-react'
+import {
+  FolderOpen,
+  BookOpen,
+  Youtube,
+  Trash2,
+  X,
+  Loader2,
+  ListFilter,
+  Settings2,
+  ListChecks,
+} from 'lucide-react'
 import { getImportedCourseCompletionPercent } from '@/lib/progress'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
 import { useLazyStore } from '@/hooks/useLazyStore'
@@ -24,18 +34,48 @@ import { db } from '@/db'
 import { calculateMomentumScore } from '@/lib/momentum'
 import { HeaderSearchButton } from '@/app/components/figma/HeaderSearchButton'
 import { ViewModeToggle } from '@/app/components/courses/ViewModeToggle'
-import { GridColumnControl } from '@/app/components/courses/GridColumnControl'
-import { ControlBarSection } from '@/app/components/courses/ControlBarSection'
 import { getGridClassName } from '@/app/components/courses/gridClassName'
-import { useEngagementPrefsStore } from '@/stores/useEngagementPrefsStore'
-import { Separator } from '@/app/components/ui/separator'
+import { useEngagementPrefsStore, type CourseGridColumns } from '@/stores/useEngagementPrefsStore'
 import { useCourseFilterStore } from '@/stores/useCourseFilterStore'
 import { useLearningPathStore } from '@/stores/useLearningPathStore'
+import { useAuthorStore } from '@/stores/useAuthorStore'
 import { CourseFilterSidebar } from '@/app/components/courses/CourseFilterSidebar'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/app/components/ui/dropdown-menu'
 
 import type { MomentumScore } from '@/lib/momentum'
 
-type SortMode = 'recent' | 'momentum'
+type SortMode = 'recent' | 'name' | 'progress' | 'momentum'
+
+function parseGridColumns(value: string): CourseGridColumns {
+  if (value === 'auto') return 'auto'
+  const columns = Number(value)
+  return columns === 2 || columns === 3 || columns === 4 || columns === 5 ? columns : 'auto'
+}
+
+function ActiveFilterChip({ label, onRemove }: { label: string; onRemove: () => void }) {
+  return (
+    <span className="inline-flex min-h-9 items-center gap-1 rounded-full bg-brand-soft px-2.5 text-xs font-medium text-brand-soft-foreground">
+      {label}
+      <button
+        type="button"
+        onClick={onRemove}
+        className="inline-flex size-8 items-center justify-center rounded-full hover:bg-brand/10 hover:text-destructive"
+        aria-label={`Remove ${label} filter`}
+      >
+        <X className="size-3" aria-hidden="true" />
+      </button>
+    </span>
+  )
+}
 
 export function Courses() {
   const [sortMode, setSortMode] = useState<SortMode>('recent')
@@ -64,16 +104,22 @@ export function Courses() {
   const sourceFilter = useCourseFilterStore(s => s.source)
   const showTrackCourses = useCourseFilterStore(s => s.showTrackCourses)
   const selectedTags = useCourseFilterStore(s => s.selectedTags)
+  const selectedDifficulties = useCourseFilterStore(s => s.selectedDifficulties)
+  const selectedCategories = useCourseFilterStore(s => s.selectedCategories)
+  const selectedAuthorIds = useCourseFilterStore(s => s.selectedAuthorIds)
   const isAnyFilterActive = useCourseFilterStore(s => s.isAnyFilterActive)
 
   // Learning path store — for track membership computation
   const learningPathEntries = useLearningPathStore(s => s.entries)
   const isLoaded = useLearningPathStore(s => s.isLoaded)
   const loadPaths = useLearningPathStore(s => s.loadPaths)
+  const authors = useAuthorStore(s => s.authors)
+  const loadAuthors = useAuthorStore(s => s.loadAuthors)
 
   // Lazy-load stores on mount
   useLazyStore(loadImportedCourses)
   useLazyStore(loadPaths)
+  useLazyStore(loadAuthors)
 
   useEffect(() => {
     let ignore = false
@@ -135,7 +181,7 @@ export function Courses() {
     }
   }, [importedCourses])
 
-  // Keep legacy allTags for ImportedCourseCard (imported-only tags)
+  // Tags remain editable in the course editor even though card surfaces stay uncluttered.
   const allTags = useMemo(() => getAllTags(), [getAllTags])
 
   // Compute distinct course IDs in any learning track
@@ -149,34 +195,48 @@ export function Courses() {
     return ids
   }, [learningPathEntries])
 
-  // Filter chain: track → source → status (pre-tag) → tags (final) — R7 fix
-  // preTagFilteredCourses is passed to the sidebar so all tag counts remain accurate
-  const preTagFilteredCourses = useMemo(() => {
-    // Apply track visibility filter (R1)
+  const finalFilteredCourses = useMemo(() => {
     let result = showTrackCourses
       ? importedCourses
       : importedCourses.filter(c => !courseIdsInTracks.has(c.id))
 
-    // Apply source filter (R4)
-    if (sourceFilter === 'youtube') {
-      result = result.filter(c => c.source === 'youtube')
+    if (sourceFilter !== 'all') {
+      result = result.filter(c => (c.source ?? 'local') === sourceFilter)
     }
 
-    // Apply status filter
     if (selectedStatuses.length > 0) {
       result = result.filter(c => selectedStatuses.includes(c.status))
     }
 
+    if (selectedDifficulties.length > 0) {
+      result = result.filter(c => c.difficulty && selectedDifficulties.includes(c.difficulty))
+    }
+
+    if (selectedCategories.length > 0) {
+      result = result.filter(c => selectedCategories.includes(c.category))
+    }
+
+    if (selectedAuthorIds.length > 0) {
+      result = result.filter(c => c.authorId && selectedAuthorIds.includes(c.authorId))
+    }
+
+    if (selectedTags.length > 0) {
+      const tagSet = new Set(selectedTags.map(tag => tag.toLowerCase()))
+      result = result.filter(c => c.tags.some(tag => tagSet.has(tag.toLowerCase())))
+    }
+
     return result
-  }, [importedCourses, courseIdsInTracks, showTrackCourses, sourceFilter, selectedStatuses])
-
-  const finalFilteredCourses = useMemo(() => {
-    // Apply tag filter — OR semantics within tags, AND with other filters (R6, R8)
-    if (selectedTags.length === 0) return preTagFilteredCourses
-
-    const tagSet = new Set(selectedTags.map(t => t.toLowerCase()))
-    return preTagFilteredCourses.filter(c => c.tags.some(t => tagSet.has(t.toLowerCase())))
-  }, [preTagFilteredCourses, selectedTags])
+  }, [
+    importedCourses,
+    courseIdsInTracks,
+    showTrackCourses,
+    sourceFilter,
+    selectedStatuses,
+    selectedDifficulties,
+    selectedCategories,
+    selectedAuthorIds,
+    selectedTags,
+  ])
 
   // AC1-AC4 (E1C-S05): Sort imported courses by momentum or importedAt
   const sortedImportedCourses = useMemo(() => {
@@ -189,10 +249,15 @@ export function Courses() {
         // AC4: Zero-momentum (and equal-score) tiebreaker: importedAt newest first
         return new Date(b.importedAt).getTime() - new Date(a.importedAt).getTime()
       }
-      // AC3: "Most Recent" sorts by importedAt (newest first)
+      if (sortMode === 'name') return a.name.localeCompare(b.name)
+      if (sortMode === 'progress') {
+        const progressDifference =
+          (importedCompletionMap.get(b.id) ?? 0) - (importedCompletionMap.get(a.id) ?? 0)
+        return progressDifference || a.name.localeCompare(b.name)
+      }
       return new Date(b.importedAt).getTime() - new Date(a.importedAt).getTime()
     })
-  }, [finalFilteredCourses, sortMode, momentumMap])
+  }, [finalFilteredCourses, sortMode, momentumMap, importedCompletionMap])
 
   function handleOpenBulkImport() {
     setBulkImportOpen(true)
@@ -219,7 +284,18 @@ export function Courses() {
     return map
   }, [])
 
-  const filterSummaryLabel = selectedStatuses.map(s => statusLabelMap.get(s) ?? s).join(', ')
+  const authorNameMap = useMemo(
+    () => new Map(authors.map(author => [author.id, author.name])),
+    [authors]
+  )
+  const advancedFilterCount =
+    (sourceFilter !== 'all' ? 1 : 0) +
+    (!showTrackCourses ? 1 : 0) +
+    selectedTags.length +
+    selectedDifficulties.length +
+    selectedCategories.length +
+    selectedAuthorIds.length
+  const hasAnyActiveFilters = selectedStatuses.length > 0 || isAnyFilterActive()
 
   // Selection mode handlers
   function handleToggleSelect(courseId: string) {
@@ -344,13 +420,12 @@ export function Courses() {
         </Card>
       ) : (
         <>
-          {/* Selection mode action bar replaces the control bar */}
           {selectionMode ? (
             <div
-              className="flex flex-wrap items-center gap-x-4 gap-y-2"
+              className="mb-4 flex min-h-16 flex-wrap items-center gap-2 rounded-2xl border border-border bg-card px-3 py-2"
               data-testid="selection-action-bar"
             >
-              <span className="text-sm font-medium" data-testid="selected-count">
+              <span className="mr-2 text-sm font-semibold" data-testid="selected-count">
                 {selectedIds.size} selected
               </span>
               <Button
@@ -366,6 +441,7 @@ export function Courses() {
                 size="sm"
                 onClick={handleDeselectAll}
                 data-testid="deselect-all-btn"
+                disabled={selectedIds.size === 0}
               >
                 Deselect All
               </Button>
@@ -379,7 +455,7 @@ export function Courses() {
                 {isDeleting ? (
                   <>
                     <Loader2 className="size-4 mr-1 animate-spin" aria-hidden="true" />
-                    Deleting...
+                    Deleting…
                   </>
                 ) : (
                   <>
@@ -393,190 +469,212 @@ export function Courses() {
                 size="sm"
                 onClick={handleCancelSelection}
                 data-testid="cancel-selection-btn"
+                className="ml-auto"
               >
                 <X className="size-4 mr-1" aria-hidden="true" />
                 Cancel
               </Button>
             </div>
           ) : (
-            /* Grouped control bar: Filter, Sort, Select, View sections */
             <div
-              className="flex w-full min-w-0 flex-nowrap items-center gap-x-4 overflow-x-auto overflow-y-visible pb-1 scroll-smooth sm:gap-x-6"
+              className="mb-3 flex w-full flex-wrap items-center gap-2 rounded-2xl border border-border bg-card/60 p-2"
               data-testid="courses-control-bar"
             >
-              {importedCourses.length > 0 && (
-                <ControlBarSection label="Filter" showDivider={false}>
-                  <StatusFilter
-                    selectedStatuses={selectedStatuses}
-                    onSelectedStatusesChange={statuses => setFilter('selectedStatuses', statuses)}
-                  />
-                </ControlBarSection>
-              )}
-              <ControlBarSection label="Filters">
-                <button
-                  type="button"
-                  onClick={() => setFilterSidebarOpen(true)}
-                  className="relative inline-flex items-center gap-1.5 min-h-[44px] px-3 py-2 rounded-full border border-input bg-background text-xs font-semibold text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
-                  data-testid="open-filter-sidebar-btn"
-                  aria-label={
-                    isAnyFilterActive()
-                      ? 'Active filters — open filter sidebar'
-                      : 'Open filter sidebar'
-                  }
+              <StatusFilter
+                selectedStatuses={selectedStatuses}
+                onSelectedStatusesChange={statuses => setFilter('selectedStatuses', statuses)}
+              />
+
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setFilterSidebarOpen(true)}
+                className="min-h-11 rounded-full px-3 text-xs"
+                data-testid="open-filter-sidebar-btn"
+                aria-label={
+                  advancedFilterCount > 0
+                    ? `${advancedFilterCount} active advanced filters — open more filters`
+                    : 'Open more course filters'
+                }
+              >
+                <ListFilter className="size-4" aria-hidden="true" />
+                More Filters
+                {advancedFilterCount > 0 && (
+                  <span className="inline-flex size-5 items-center justify-center rounded-full bg-brand text-[10px] font-bold text-brand-foreground">
+                    {advancedFilterCount}
+                  </span>
+                )}
+              </Button>
+
+              <div className="ml-auto flex w-full flex-wrap items-center justify-end gap-2 pb-0.5 lg:w-auto">
+                <span
+                  className="whitespace-nowrap px-1 text-xs tabular-nums text-muted-foreground"
+                  aria-live="polite"
+                  data-testid="filtered-course-count"
                 >
-                  <ListFilter className="size-4" aria-hidden="true" />
-                  Filters
-                  {isAnyFilterActive() && (
-                    <span
-                      className="absolute -top-0.5 -right-0.5 size-2 rounded-full bg-brand"
-                      aria-hidden="true"
-                    />
-                  )}
-                </button>
-              </ControlBarSection>
-              <ControlBarSection label="Sort">
-                <Select value={sortMode} onValueChange={v => setSortMode(v as SortMode)}>
+                  {finalFilteredCourses.length} shown
+                </span>
+
+                <Select value={sortMode} onValueChange={value => setSortMode(value as SortMode)}>
                   <SelectTrigger
                     data-testid="sort-select"
                     aria-label="Sort courses"
-                    className="w-full sm:w-[180px] rounded-xl min-h-[44px]"
+                    className="min-h-11 w-[172px] rounded-xl"
                   >
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="recent">Most Recent</SelectItem>
-                    <SelectItem value="momentum">Sort by Momentum</SelectItem>
+                    <SelectItem value="recent">Recently Imported</SelectItem>
+                    <SelectItem value="name">Name A–Z</SelectItem>
+                    <SelectItem value="progress">Progress</SelectItem>
+                    <SelectItem value="momentum">Momentum</SelectItem>
                   </SelectContent>
                 </Select>
-              </ControlBarSection>
-              <ControlBarSection label="Select">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setSelectionMode(true)}
-                  data-testid="enter-selection-mode-btn"
-                  className="min-h-[44px]"
-                >
-                  Select
-                </Button>
-              </ControlBarSection>
-              <ControlBarSection label="View">
-                <div className="flex items-center gap-3">
-                  <ViewModeToggle
-                    value={courseViewMode}
-                    onChange={mode => setEngagementPref('courseViewMode', mode)}
-                  />
-                  {/* E99-S02: grid column control. Visible only in grid view. */}
-                  {courseViewMode === 'grid' && (
-                    <>
-                      <Separator orientation="vertical" className="!h-6" />
-                      <GridColumnControl
-                        value={courseGridColumns}
-                        onChange={cols => setEngagementPref('courseGridColumns', cols)}
-                      />
-                    </>
-                  )}
-                </div>
-              </ControlBarSection>
+
+                <ViewModeToggle
+                  value={courseViewMode}
+                  onChange={mode => setEngagementPref('courseViewMode', mode)}
+                  showLabels={false}
+                />
+
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="size-11 rounded-xl"
+                      aria-label="Course display and selection options"
+                      data-testid="course-options-menu-btn"
+                    >
+                      <Settings2 className="size-4" aria-hidden="true" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-52">
+                    {courseViewMode === 'grid' && (
+                      <>
+                        <DropdownMenuLabel>Grid Columns</DropdownMenuLabel>
+                        <DropdownMenuRadioGroup
+                          value={String(courseGridColumns)}
+                          onValueChange={value =>
+                            setEngagementPref('courseGridColumns', parseGridColumns(value))
+                          }
+                        >
+                          {['auto', '2', '3', '4', '5'].map(value => (
+                            <DropdownMenuRadioItem
+                              key={value}
+                              value={value}
+                              data-testid={`course-grid-columns-${value}`}
+                            >
+                              {value === 'auto' ? 'Automatic' : `${value} Columns`}
+                            </DropdownMenuRadioItem>
+                          ))}
+                        </DropdownMenuRadioGroup>
+                        <DropdownMenuSeparator />
+                      </>
+                    )}
+                    <DropdownMenuItem
+                      onSelect={() => setSelectionMode(true)}
+                      data-testid="enter-selection-mode-btn"
+                      className="min-h-11"
+                    >
+                      <ListChecks className="size-4" aria-hidden="true" />
+                      Select Courses
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
             </div>
           )}
 
-          {/* Filter summary chip — visible when any status filter is active */}
-          {selectedStatuses.length > 0 && (
-            <div className="mb-4 flex items-center gap-2">
-              <span className="inline-flex items-center gap-1.5 bg-muted/50 rounded-full px-3 py-1 text-xs text-muted-foreground">
-                Filtered by: {filterSummaryLabel}
-              </span>
+          {hasAnyActiveFilters && (
+            <div className="mb-4 flex flex-wrap items-center gap-2" data-testid="filter-chips-row">
+              {selectedStatuses.map(status => (
+                <ActiveFilterChip
+                  key={status}
+                  label={statusLabelMap.get(status) ?? status}
+                  onRemove={() =>
+                    setFilter(
+                      'selectedStatuses',
+                      selectedStatuses.filter(item => item !== status)
+                    )
+                  }
+                />
+              ))}
+              {sourceFilter !== 'all' && (
+                <ActiveFilterChip
+                  label={
+                    {
+                      local: 'Local Folder',
+                      server: 'Course Server',
+                      youtube: 'YouTube',
+                      drive: 'Google Drive',
+                    }[sourceFilter]
+                  }
+                  onRemove={() => setFilter('source', 'all')}
+                />
+              )}
+              {!showTrackCourses && (
+                <ActiveFilterChip
+                  label="Outside Learning Tracks"
+                  onRemove={() => setFilter('showTrackCourses', true)}
+                />
+              )}
+              {selectedDifficulties.map(difficulty => (
+                <ActiveFilterChip
+                  key={difficulty}
+                  label={difficulty.charAt(0).toUpperCase() + difficulty.slice(1)}
+                  onRemove={() =>
+                    setFilter(
+                      'selectedDifficulties',
+                      selectedDifficulties.filter(item => item !== difficulty)
+                    )
+                  }
+                />
+              ))}
+              {selectedCategories.map(category => (
+                <ActiveFilterChip
+                  key={category}
+                  label={category}
+                  onRemove={() =>
+                    setFilter(
+                      'selectedCategories',
+                      selectedCategories.filter(item => item !== category)
+                    )
+                  }
+                />
+              ))}
+              {selectedAuthorIds.map(authorId => (
+                <ActiveFilterChip
+                  key={authorId}
+                  label={authorNameMap.get(authorId) ?? 'Unknown author'}
+                  onRemove={() =>
+                    setFilter(
+                      'selectedAuthorIds',
+                      selectedAuthorIds.filter(item => item !== authorId)
+                    )
+                  }
+                />
+              ))}
+              {selectedTags.map(tag => (
+                <ActiveFilterChip
+                  key={tag}
+                  label={tag}
+                  onRemove={() =>
+                    setFilter(
+                      'selectedTags',
+                      selectedTags.filter(item => item !== tag)
+                    )
+                  }
+                />
+              ))}
               <button
                 type="button"
-                onClick={() => setFilter('selectedStatuses', [])}
-                className="inline-flex min-h-11 items-center px-2 text-xs text-muted-foreground hover:text-foreground underline"
+                onClick={clearAllFilters}
+                className="inline-flex min-h-9 items-center px-2 text-xs font-medium text-muted-foreground hover:text-foreground"
                 data-testid="clear-all-filters"
               >
-                Clear all
+                Clear All
               </button>
-            </div>
-          )}
-
-          {/* Info message: track courses are hidden (R2) */}
-          {!showTrackCourses && courseIdsInTracks.size > 0 && (
-            <div
-              className="mb-4 flex items-center gap-2 rounded-xl bg-brand-soft px-4 py-3 text-sm text-brand-soft-foreground"
-              data-testid="track-courses-info"
-              role="status"
-            >
-              <span>
-                {courseIdsInTracks.size}{' '}
-                {courseIdsInTracks.size === 1 ? 'course is' : 'courses are'} organized in learning
-                tracks.
-              </span>
-              <button
-                type="button"
-                onClick={() => {
-                  setFilterSidebarOpen(true)
-                  setFilter('showTrackCourses', true)
-                }}
-                className="font-bold underline hover:no-underline whitespace-nowrap"
-                data-testid="show-track-courses-link"
-              >
-                Show &rarr;
-              </button>
-            </div>
-          )}
-
-          {/* Sidebar filter chips (Unit 4 — R10) */}
-          {isAnyFilterActive() && (
-            <div
-              className="mb-4 flex items-center gap-2 flex-wrap overflow-x-auto"
-              data-testid="filter-chips-row"
-            >
-              {sourceFilter === 'youtube' && (
-                <span className="inline-flex items-center gap-1 bg-brand-soft text-brand-soft-foreground rounded-full px-3 py-1 text-xs font-bold whitespace-nowrap">
-                  YouTube
-                  <button
-                    type="button"
-                    onClick={() => setFilter('source', 'all')}
-                    className="hover:text-destructive transition-colors"
-                    aria-label="Remove YouTube filter"
-                  >
-                    <X className="size-3" />
-                  </button>
-                </span>
-              )}
-              {showTrackCourses && (
-                <span className="inline-flex items-center gap-1 bg-brand-soft text-brand-soft-foreground rounded-full px-3 py-1 text-xs font-bold whitespace-nowrap">
-                  Including tracks
-                  <button
-                    type="button"
-                    onClick={() => setFilter('showTrackCourses', false)}
-                    className="hover:text-destructive transition-colors"
-                    aria-label="Remove track filter"
-                  >
-                    <X className="size-3" />
-                  </button>
-                </span>
-              )}
-              {selectedTags.map(tag => (
-                <span
-                  key={tag}
-                  className="inline-flex items-center gap-1 bg-brand-soft text-brand-soft-foreground rounded-full px-3 py-1 text-xs font-bold whitespace-nowrap"
-                >
-                  {tag}
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setFilter(
-                        'selectedTags',
-                        selectedTags.filter(t => t !== tag)
-                      )
-                    }
-                    className="hover:text-destructive transition-colors"
-                    aria-label={`Remove ${tag} filter`}
-                  >
-                    <X className="size-3" />
-                  </button>
-                </span>
-              ))}
             </div>
           )}
 
@@ -621,7 +719,7 @@ export function Courses() {
                     onClick={clearAllFilters}
                     data-testid="clear-all-filters-empty"
                   >
-                    Clear all filters
+                    Clear All Filters
                   </Button>
                 </div>
               ) : (
@@ -671,7 +769,8 @@ export function Courses() {
           <CourseFilterSidebar
             open={filterSidebarOpen}
             onOpenChange={setFilterSidebarOpen}
-            availableCourses={preTagFilteredCourses}
+            availableCourses={importedCourses}
+            availableAuthors={authors}
             courseIdsInTracks={courseIdsInTracks}
           />
         </>

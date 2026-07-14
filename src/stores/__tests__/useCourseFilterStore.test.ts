@@ -18,9 +18,12 @@ describe('useCourseFilterStore', () => {
   it('initializes with defaults', () => {
     const state = useCourseFilterStore.getState()
     expect(state.source).toBe('all')
-    expect(state.showTrackCourses).toBe(false)
+    expect(state.showTrackCourses).toBe(true)
     expect(state.selectedTags).toEqual([])
     expect(state.selectedStatuses).toEqual([])
+    expect(state.selectedDifficulties).toEqual([])
+    expect(state.selectedCategories).toEqual([])
+    expect(state.selectedAuthorIds).toEqual([])
   })
 
   it('setFilter updates only the specified dimension', () => {
@@ -29,20 +32,20 @@ describe('useCourseFilterStore', () => {
     })
     const state = useCourseFilterStore.getState()
     expect(state.source).toBe('youtube')
-    expect(state.showTrackCourses).toBe(false)
+    expect(state.showTrackCourses).toBe(true)
     expect(state.selectedTags).toEqual([])
     expect(state.selectedStatuses).toEqual([])
   })
 
   it('setFilter for selectedTags does not affect other dimensions', () => {
     act(() => {
-      useCourseFilterStore.getState().setFilter('showTrackCourses', true)
+      useCourseFilterStore.getState().setFilter('showTrackCourses', false)
     })
     act(() => {
       useCourseFilterStore.getState().setFilter('selectedTags', ['react', 'typescript'])
     })
     const state = useCourseFilterStore.getState()
-    expect(state.showTrackCourses).toBe(true)
+    expect(state.showTrackCourses).toBe(false)
     expect(state.selectedTags).toEqual(['react', 'typescript'])
     expect(state.source).toBe('all')
   })
@@ -62,7 +65,7 @@ describe('useCourseFilterStore', () => {
   it('clearFilter resets a single dimension to default', () => {
     act(() => {
       useCourseFilterStore.getState().setFilter('source', 'youtube')
-      useCourseFilterStore.getState().setFilter('showTrackCourses', true)
+      useCourseFilterStore.getState().setFilter('showTrackCourses', false)
       useCourseFilterStore.getState().setFilter('selectedTags', ['react'])
     })
 
@@ -73,13 +76,13 @@ describe('useCourseFilterStore', () => {
     expect(state.selectedTags).toEqual([])
     // Other dimensions remain unchanged
     expect(state.source).toBe('youtube')
-    expect(state.showTrackCourses).toBe(true)
+    expect(state.showTrackCourses).toBe(false)
   })
 
   it('clearAllFilters resets all dimensions to defaults', () => {
     act(() => {
       useCourseFilterStore.getState().setFilter('source', 'youtube')
-      useCourseFilterStore.getState().setFilter('showTrackCourses', true)
+      useCourseFilterStore.getState().setFilter('showTrackCourses', false)
       useCourseFilterStore.getState().setFilter('selectedTags', ['react'])
       useCourseFilterStore.getState().setFilter('selectedStatuses', ['active'])
     })
@@ -89,9 +92,12 @@ describe('useCourseFilterStore', () => {
     })
     const state = useCourseFilterStore.getState()
     expect(state.source).toBe('all')
-    expect(state.showTrackCourses).toBe(false)
+    expect(state.showTrackCourses).toBe(true)
     expect(state.selectedTags).toEqual([])
     expect(state.selectedStatuses).toEqual([])
+    expect(state.selectedDifficulties).toEqual([])
+    expect(state.selectedCategories).toEqual([])
+    expect(state.selectedAuthorIds).toEqual([])
   })
 
   it('isAnyFilterActive returns false when all sidebar filters are at defaults', () => {
@@ -105,9 +111,9 @@ describe('useCourseFilterStore', () => {
     expect(useCourseFilterStore.getState().isAnyFilterActive()).toBe(true)
   })
 
-  it('isAnyFilterActive returns true when showTrackCourses is true', () => {
+  it('isAnyFilterActive returns true when track courses are excluded', () => {
     act(() => {
-      useCourseFilterStore.getState().setFilter('showTrackCourses', true)
+      useCourseFilterStore.getState().setFilter('showTrackCourses', false)
     })
     expect(useCourseFilterStore.getState().isAnyFilterActive()).toBe(true)
   })
@@ -115,6 +121,15 @@ describe('useCourseFilterStore', () => {
   it('isAnyFilterActive returns true when tags are selected', () => {
     act(() => {
       useCourseFilterStore.getState().setFilter('selectedTags', ['react'])
+    })
+    expect(useCourseFilterStore.getState().isAnyFilterActive()).toBe(true)
+  })
+
+  it('isAnyFilterActive returns true for difficulty, category, and author filters', () => {
+    act(() => {
+      useCourseFilterStore.getState().setFilter('selectedDifficulties', ['advanced'])
+      useCourseFilterStore.getState().setFilter('selectedCategories', ['Design'])
+      useCourseFilterStore.getState().setFilter('selectedAuthorIds', ['author-1'])
     })
     expect(useCourseFilterStore.getState().isAnyFilterActive()).toBe(true)
   })
@@ -130,14 +145,14 @@ describe('useCourseFilterStore', () => {
   it('persists state to sessionStorage', () => {
     act(() => {
       useCourseFilterStore.getState().setFilter('source', 'youtube')
-      useCourseFilterStore.getState().setFilter('showTrackCourses', true)
+      useCourseFilterStore.getState().setFilter('showTrackCourses', false)
     })
 
-    const stored = sessionStorage.getItem('knowlune-courses-filter-v1')
+    const stored = sessionStorage.getItem('knowlune-courses-filter-v2')
     expect(stored).not.toBeNull()
     const parsed = JSON.parse(stored!)
     expect(parsed.state.source).toBe('youtube')
-    expect(parsed.state.showTrackCourses).toBe(true)
+    expect(parsed.state.showTrackCourses).toBe(false)
   })
 
   it('rehydrates from sessionStorage on initialization', () => {
@@ -145,13 +160,16 @@ describe('useCourseFilterStore', () => {
     const savedState = {
       state: {
         source: 'youtube',
-        showTrackCourses: true,
+        showTrackCourses: false,
         selectedTags: ['react'],
         selectedStatuses: ['active'],
+        selectedDifficulties: ['advanced'],
+        selectedCategories: ['Development'],
+        selectedAuthorIds: ['author-1'],
       },
-      version: 1,
+      version: 2,
     }
-    sessionStorage.setItem('knowlune-courses-filter-v1', JSON.stringify(savedState))
+    sessionStorage.setItem('knowlune-courses-filter-v2', JSON.stringify(savedState))
 
     // Force rehydration from sessionStorage
     act(() => {
@@ -161,9 +179,12 @@ describe('useCourseFilterStore', () => {
     const state = useCourseFilterStore.getState()
     // After rehydration, the store should reflect the saved state
     expect(state.source).toBe('youtube')
-    expect(state.showTrackCourses).toBe(true)
+    expect(state.showTrackCourses).toBe(false)
     expect(state.selectedTags).toEqual(['react'])
     expect(state.selectedStatuses).toEqual(['active'])
+    expect(state.selectedDifficulties).toEqual(['advanced'])
+    expect(state.selectedCategories).toEqual(['Development'])
+    expect(state.selectedAuthorIds).toEqual(['author-1'])
   })
 
   it('falls back to defaults when sessionStorage is unavailable', () => {
@@ -189,7 +210,7 @@ describe('useCourseFilterStore', () => {
     })
     const state = useCourseFilterStore.getState()
     expect(state.source).toBe('all')
-    expect(state.showTrackCourses).toBe(false)
+    expect(state.showTrackCourses).toBe(true)
     expect(state.selectedTags).toEqual([])
 
     // Restore
