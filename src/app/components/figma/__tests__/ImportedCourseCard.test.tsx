@@ -11,6 +11,7 @@ const mockUpdateCourseDetails = vi.fn().mockResolvedValue(undefined)
 const mockRemoveImportedCourse = vi.fn().mockResolvedValue(undefined)
 const mockNavigate = vi.fn()
 const mockOnToggleSelect = vi.fn()
+const mockAuthors = vi.hoisted(() => [] as Array<{ id: string; name: string; photoUrl?: string }>)
 
 // `getState()` is mutated per-test to drive error-path branches.
 let mockImportError: string | null = null
@@ -78,7 +79,7 @@ vi.mock('@/hooks/useLazyVisible', () => ({
 vi.mock('@/stores/useAuthorStore', () => ({
   useAuthorStore: (selector: (state: Record<string, unknown>) => unknown) =>
     selector({
-      authors: [],
+      authors: mockAuthors,
       loadAuthors: vi.fn(),
     }),
 }))
@@ -154,6 +155,7 @@ beforeEach(() => {
   mockVideoFromHandle.blobUrl = null
   mockVideoFromHandle.error = null
   mockVideoFromHandle.loading = false
+  mockAuthors.length = 0
 })
 
 afterEach(() => {
@@ -174,6 +176,33 @@ describe('ImportedCourseCard', () => {
   it('renders PDF count', () => {
     renderCard({ pdfCount: 7 })
     expect(screen.getByText('7 PDFs')).toBeInTheDocument()
+  })
+
+  it('keeps metadata next to the author and places flexible space before actions', () => {
+    mockAuthors.push({ id: 'author-1', name: 'Real Vision Academy' })
+    renderCard({ authorId: 'author-1', status: 'active', videoCount: 97, pdfCount: 24 })
+
+    const authorRow = screen.getByTestId('course-card-author').parentElement
+    const metadata = screen.getByTestId('course-card-metadata')
+    const actions = screen.getByTestId('course-card-actions')
+
+    expect(authorRow?.nextElementSibling).toBe(metadata)
+    expect(metadata).toHaveClass('mt-1')
+    expect(metadata).not.toHaveClass('mt-auto')
+    expect(actions).toHaveClass('mt-auto')
+  })
+
+  it('does not reserve an empty author row when the course has no author', () => {
+    renderCard({ authorId: undefined, name: 'A title that may wrap onto two lines' })
+
+    const title = screen.getByTestId('course-card-title')
+    const fallback = screen.getByTestId('course-card-unknown-author')
+    const metadata = screen.getByTestId('course-card-metadata')
+
+    expect(fallback).toHaveClass('sr-only')
+    expect(title.nextElementSibling).toBe(fallback)
+    expect(fallback.nextElementSibling).toBe(metadata)
+    expect(metadata).not.toHaveClass('mt-auto')
   })
 
   it('does not render import date in card body (moved to info popover)', () => {

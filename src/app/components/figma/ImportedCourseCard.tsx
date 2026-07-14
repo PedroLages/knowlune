@@ -633,8 +633,8 @@ export function ImportedCourseCard({
             {course.name}
           </h3>
           {/* Author */}
-          <div className="flex items-center gap-2 mb-1 min-h-5">
-            {authorData ? (
+          {authorData ? (
+            <div className="flex min-h-5 items-center gap-2">
               <button
                 type="button"
                 data-testid="course-card-author"
@@ -656,18 +656,17 @@ export function ImportedCourseCard({
                 </Avatar>
                 <span>{authorData.name}</span>
               </button>
-            ) : (
-              // Author row is hidden when no author is set — exposing "Unknown Author"
-              // as user-facing text reads as a bug. A visually hidden span preserves
-              // the data-testid for any tests that rely on the fallback element.
-              <span
-                data-testid="course-card-unknown-author"
-                className="sr-only"
-                aria-hidden="true"
-              />
-            )}
-          </div>
-          <div className="mt-auto flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs text-muted-foreground">
+            </div>
+          ) : (
+            // Author row is hidden when no author is set — exposing "Unknown Author"
+            // as user-facing text reads as a bug. A visually hidden span preserves
+            // the data-testid for any tests that rely on the fallback element.
+            <span data-testid="course-card-unknown-author" className="sr-only" aria-hidden="true" />
+          )}
+          <div
+            data-testid="course-card-metadata"
+            className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs text-muted-foreground"
+          >
             {course.videoCount > 0 && (
               <span data-testid="course-card-video-count" className="flex items-center gap-1">
                 <Video className="size-4" aria-hidden="true" />
@@ -701,36 +700,37 @@ export function ImportedCourseCard({
           </div>
 
           {/* Action buttons — always visible, no hover needed */}
-          {!readOnly && (
-            <>
-              {showPlay && (
-                <Button
-                  variant="brand"
-                  size="sm"
-                  data-testid="start-course-btn"
-                  onClick={startStudying}
-                  aria-label={`Start studying "${course.name}"`}
-                  className="mt-3 w-full button-press gap-2"
-                >
-                  <PlayCircle className="size-4" aria-hidden="true" />
-                  Start Learning
-                </Button>
-              )}
-              {(status === 'active' || status === 'paused') && !isCompleted && (
-                <Button
-                  variant="brand-outline"
-                  size="sm"
-                  data-testid="continue-course-btn"
-                  aria-label={`Continue "${course.name}"`}
-                  className="mt-3 w-full button-press gap-2"
-                  onClick={handleContinueLearning}
-                >
-                  <PlayCircle className="size-4" aria-hidden="true" />
-                  Continue Learning
-                </Button>
-              )}
-            </>
-          )}
+          {!readOnly &&
+            (showPlay || ((status === 'active' || status === 'paused') && !isCompleted)) && (
+              <div data-testid="course-card-actions" className="mt-auto pt-3">
+                {showPlay && (
+                  <Button
+                    variant="brand"
+                    size="sm"
+                    data-testid="start-course-btn"
+                    onClick={startStudying}
+                    aria-label={`Start studying "${course.name}"`}
+                    className="w-full button-press gap-2"
+                  >
+                    <PlayCircle className="size-4" aria-hidden="true" />
+                    Start Learning
+                  </Button>
+                )}
+                {(status === 'active' || status === 'paused') && !isCompleted && (
+                  <Button
+                    variant="brand-outline"
+                    size="sm"
+                    data-testid="continue-course-btn"
+                    aria-label={`Continue "${course.name}"`}
+                    className="w-full button-press gap-2"
+                    onClick={handleContinueLearning}
+                  >
+                    <PlayCircle className="size-4" aria-hidden="true" />
+                    Continue Learning
+                  </Button>
+                )}
+              </div>
+            )}
         </div>
       </article>
 
