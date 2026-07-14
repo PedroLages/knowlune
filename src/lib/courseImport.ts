@@ -20,9 +20,10 @@ import { fetchDirectoryListing, isValidImportUrl } from '@/lib/courseServerServi
 import type { ServerResult } from '@/lib/courseServerService'
 import { generateStoryboard, saveVideoStoryboard, loadVideoStoryboard } from '@/lib/videoStoryboard'
 import {
+  extractThumbnailFromVideo,
   fetchThumbnailFromUrl,
   loadThumbnailFromFile,
-  saveCourseThumbnail,
+  ThumbnailFetchError,
 } from '@/lib/thumbnailService'
 import {
   showDirectoryPicker,
@@ -43,6 +44,8 @@ import type {
   ImportedPdf,
   VideoCaptionRecord,
   Difficulty,
+  CourseThumbnail,
+  ThumbnailSource,
 } from '@/data/types'
 import { toast } from 'sonner'
 import { decodeUriComponentRepeated } from '@/lib/textUtils'
@@ -157,6 +160,8 @@ export interface ScannedCourse {
   serverId?: string
   /** Relative path from server root to this course folder (E133-S01). */
   serverPath?: string
+  /** Exact folder URL used during this scan. Kept only for validating remote cover references. */
+  serverFolderUrl?: string
   /**
    * Whether the file collection was truncated by MAX_SERVER_SCAN_FILES cap.
    * Only set for server-sourced imports. When true, the import result is
@@ -587,6 +592,90 @@ function applyManifestVideoOrder(
 
 // --- Persist Phase ---
 
+const REMOTE_COVER_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp'] as const
+
+type PreparedThumbnail =
+  | { blob: Blob; remoteUrl?: never; source: ThumbnailSource }
+  | { blob?: never; remoteUrl: string; source: 'server' }
+
+function isValidatedServerCover(scanned: ScannedCourse, image: ScannedImage): boolean {
+  if (scanned.source !== 'server' || !scanned.serverFolderUrl || !image.serverUrl) return false
+  if (
+    !scanned.images.some(
+      candidate => candidate.path === image.path && candidate.serverUrl === image.serverUrl
+    )
+  ) {
+    return false
+  }
+
+  const lowerFilename = image.filename.toLowerCase()
+  if (!REMOTE_COVER_EXTENSIONS.some(extension => lowerFilename.endsWith(extension))) return false
+
+  try {
+    const folderUrl = new URL(scanned.serverFolderUrl)
+    const imageUrl = new URL(image.serverUrl)
+    if (!['http:', 'https:'].includes(imageUrl.protocol) || imageUrl.origin !== folderUrl.origin) {
+      return false
+    }
+
+    const folderPath = folderUrl.pathname.endsWith('/')
+      ? folderUrl.pathname
+      : `${folderUrl.pathname}/`
+    return imageUrl.pathname.startsWith(folderPath) && imageUrl.pathname !== folderPath
+  } catch {
+    return false
+  }
+}
+
+async function prepareCourseThumbnail(
+  scanned: ScannedCourse,
+  selectedCoverImage: ScannedImage | undefined,
+  useVideoFrameCover: boolean,
+  firstVideoHandle: FileSystemFileHandle | undefined
+): Promise<PreparedThumbnail | null> {
+  if (selectedCoverImage?.fileHandle) {
+    const file = await selectedCoverImage.fileHandle.getFile()
+    return { blob: await loadThumbnailFromFile(file), source: 'local' }
+  }
+
+  if (selectedCoverImage?.file) {
+    return { blob: await loadThumbnailFromFile(selectedCoverImage.file), source: 'local' }
+  }
+
+  if (selectedCoverImage?.serverUrl) {
+    if (!isValidatedServerCover(scanned, selectedCoverImage)) {
+      throw new Error('The selected server cover is outside this course folder.')
+    }
+
+    try {
+      return {
+        blob: await fetchThumbnailFromUrl(selectedCoverImage.serverUrl, {
+          expectedFilename: selectedCoverImage.filename,
+        }),
+        source: 'url',
+      }
+    } catch (error) {
+      if (error instanceof ThumbnailFetchError && error.failure === 'network') {
+        return { remoteUrl: selectedCoverImage.serverUrl, source: 'server' }
+      }
+      throw error
+    }
+  }
+
+  if (selectedCoverImage) {
+    throw new Error('The selected cover image has no readable source.')
+  }
+
+  if (useVideoFrameCover) {
+    if (!firstVideoHandle) {
+      throw new Error('A video frame is unavailable for this server course.')
+    }
+    return { blob: await extractThumbnailFromVideo(firstVideoHandle), source: 'auto' }
+  }
+
+  return null
+}
+
 /**
  * Persists a scanned course to IndexedDB, updates Zustand store,
  * and triggers auto-analysis / Ollama tagging.
@@ -602,6 +691,7 @@ export async function persistScannedCourse(
     category?: string
     tags?: string[]
     coverImage?: ScannedImage
+    useVideoFrameCover?: boolean
     /** @deprecated Prefer coverImage so non-handle import sources are supported. */
     coverImageHandle?: FileSystemFileHandle
     authorId?: string
@@ -668,6 +758,20 @@ export async function persistScannedCourse(
     ...(p.moduleTitle ? { moduleTitle: p.moduleTitle } : {}),
   }))
 
+  let preparedThumbnail: PreparedThumbnail | null
+  try {
+    preparedThumbnail = await prepareCourseThumbnail(
+      scanned,
+      selectedCoverImage,
+      overrides?.useVideoFrameCover === true,
+      orderedVideos[0]?.fileHandle ?? undefined
+    )
+  } catch (error) {
+    console.warn('[Import] Failed to prepare selected cover:', error)
+    const coverName = selectedCoverImage?.filename ?? 'the first video frame'
+    throw new Error(`We couldn't use "${coverName}" as the course cover. Choose another cover.`)
+  }
+
   // Author detection: use explicit override (authorId or authorName from manifest),
   // fall back to manifest author name, or auto-detect from folder name (AC1-AC3, AC5)
   let authorId: string | undefined = overrides?.authorId
@@ -721,7 +825,11 @@ export async function persistScannedCourse(
     videoCount: orderedVideos.length,
     pdfCount: pdfs.length,
     directoryHandle: scanned.directoryHandle,
-    ...(selectedCoverHandle ? { coverImageHandle: selectedCoverHandle } : {}),
+    ...(selectedCoverHandle
+      ? { coverImageHandle: selectedCoverHandle }
+      : existingCourse?.coverImageHandle
+        ? { coverImageHandle: existingCourse.coverImageHandle }
+        : {}),
     ...(authorId ? { authorId } : {}),
     totalDuration: totalDuration > 0 ? totalDuration : undefined,
     totalFileSize: totalFileSize > 0 ? totalFileSize : undefined,
@@ -732,6 +840,14 @@ export async function persistScannedCourse(
     ...(scanned.serverPath ? { serverPath: scanned.serverPath } : {}),
   }
 
+  const thumbnailRecord: CourseThumbnail | null = preparedThumbnail
+    ? {
+        courseId: targetCourseId,
+        ...preparedThumbnail,
+        createdAt: now,
+      }
+    : null
+
   // Track persist progress so the UI can show per-file progress during the
   // sequential writes below. Without this, the wizard shows only "Importing…"
   // and the user has no indication that work is happening — for courses with
@@ -740,7 +856,8 @@ export async function persistScannedCourse(
     1 +
     orderedVideos.length +
     pdfs.length +
-    (scanned.captions?.filter(c => c.srtContent).length ?? 0)
+    (scanned.captions?.filter(c => c.srtContent).length ?? 0) +
+    (thumbnailRecord ? 1 : 0)
   let persistCompleted = 0
   const persistProgress = useImportProgressStore.getState()
   persistProgress.startImport(scanned.id, course.name)
@@ -766,8 +883,21 @@ export async function persistScannedCourse(
 
     await db.transaction(
       'rw',
-      [db.importedCourses, db.importedVideos, db.importedPdfs, db.videoCaptions, db.syncQueue],
+      [
+        db.importedCourses,
+        db.importedVideos,
+        db.importedPdfs,
+        db.videoCaptions,
+        db.courseThumbnails,
+        db.syncQueue,
+      ],
       async () => {
+        if (thumbnailRecord) {
+          await db.courseThumbnails.put(thumbnailRecord)
+          persistCompleted++
+          persistProgress.updateProcessingProgress(scanned.id, persistCompleted, totalPersistItems)
+        }
+
         await syncableWrite(
           'importedCourses',
           isReimport ? 'put' : 'add',
@@ -896,7 +1026,22 @@ export async function persistScannedCourse(
   // Update Zustand store (skip when caller handles batch refresh)
   if (!overrides?.skipStoreUpdate) {
     useCourseImportStore.setState(state => ({
-      importedCourses: [...state.importedCourses, course],
+      importedCourses: existingCourse
+        ? state.importedCourses.map(existing => (existing.id === course.id ? course : existing))
+        : [...state.importedCourses, course],
+    }))
+  }
+
+  if (thumbnailRecord) {
+    const thumbnailUrl = thumbnailRecord.blob
+      ? URL.createObjectURL(thumbnailRecord.blob)
+      : thumbnailRecord.remoteUrl
+    const previousUrl = useCourseImportStore.getState().thumbnailUrls[course.id]
+    if (previousUrl?.startsWith('blob:') && previousUrl !== thumbnailUrl) {
+      URL.revokeObjectURL(previousUrl)
+    }
+    useCourseImportStore.setState(state => ({
+      thumbnailUrls: { ...state.thumbnailUrls, [course.id]: thumbnailUrl },
     }))
   }
 
@@ -920,7 +1065,12 @@ export async function persistScannedCourse(
 
   // Auto-generate thumbnail from first video at 10% mark (E1B-S04 AC1)
   // Skip if user selected a cover image in the wizard — don't overwrite their choice
-  if (!selectedCoverImage && orderedVideos.length > 0 && orderedVideos[0].fileHandle) {
+  if (
+    !selectedCoverImage &&
+    !overrides?.useVideoFrameCover &&
+    orderedVideos.length > 0 &&
+    orderedVideos[0].fileHandle
+  ) {
     autoGenerateThumbnail(course.id, orderedVideos[0].fileHandle).catch(() => {
       // silent-catch-ok: thumbnail generation failure is non-fatal — card shows placeholder icon (E1B-S04 AC3)
     })
@@ -949,43 +1099,6 @@ export async function persistScannedCourse(
         }
       }
     })()
-  }
-
-  // Persist the selected root image regardless of whether it came from a local
-  // handle, drag-and-drop File, or server URL.
-  if (selectedCoverImage) {
-    try {
-      let resizedBlob: Blob
-      let source: 'local' | 'url'
-      if (selectedCoverImage.fileHandle) {
-        const file = await selectedCoverImage.fileHandle.getFile()
-        resizedBlob = await loadThumbnailFromFile(file)
-        source = 'local'
-      } else if (selectedCoverImage.file) {
-        resizedBlob = await loadThumbnailFromFile(selectedCoverImage.file)
-        source = 'local'
-      } else if (selectedCoverImage.serverUrl) {
-        resizedBlob = await fetchThumbnailFromUrl(selectedCoverImage.serverUrl)
-        source = 'url'
-      } else {
-        throw new Error('Selected cover image has no readable source')
-      }
-
-      await saveCourseThumbnail(course.id, resizedBlob, source)
-      const url = URL.createObjectURL(resizedBlob)
-      useCourseImportStore.setState(state => ({
-        thumbnailUrls: { ...state.thumbnailUrls, [course.id]: url },
-      }))
-    } catch (error) {
-      console.warn('[Import] Failed to save user-selected cover image:', error)
-      toast.warning('Course imported, but its cover could not be saved. Using the default instead.')
-      const fallbackVideo = orderedVideos[0]
-      if (fallbackVideo?.fileHandle) {
-        autoGenerateThumbnail(course.id, fallbackVideo.fileHandle).catch(() => {
-          // silent-catch-ok: cover fallback is non-fatal; the card retains its placeholder.
-        })
-      }
-    }
   }
 
   // E32-S03: Check storage quota after import (fire-and-forget)
@@ -1652,7 +1765,6 @@ export async function scanCourseFolderFromServer(
   // Breadth-first traversal with concurrency limit
   const pendingDirs: string[] = [folderUrl]
   const seen = new Set<string>()
-  let dirsScanned = 0
   let hitCap = false
 
   while (pendingDirs.length > 0) {
@@ -1719,11 +1831,9 @@ export async function scanCourseFolderFromServer(
           }
         }
 
-        dirsScanned++
-        // Update progress: dirsScanned / approximate total (pending + scanned + current batch)
-        const total = pendingDirs.length + seen.size
+        // Directory traversal cannot know the final file total until recursion ends.
         const fileCount = allVideos.length + allPdfs.length
-        progressStore.updateScanProgress(courseId, fileCount, total > 0 ? total : null)
+        progressStore.updateScanProgress(courseId, fileCount, null)
       })
     )
 
@@ -1846,6 +1956,7 @@ export async function scanCourseFolderFromServer(
     pdfs,
     images,
     source: 'server',
+    serverFolderUrl: courseBaseUrl,
     captions: captions.length > 0 ? captions : undefined,
     ...(serverId ? { serverId } : {}),
     serverPath,

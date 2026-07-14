@@ -780,3 +780,42 @@ describe('removeImportedCourses (bulk delete)', () => {
     )
   })
 })
+
+describe('loadThumbnailUrls race handling', () => {
+  it('keeps a newer URL and revokes only the stale blob returned by an older load', async () => {
+    vi.resetModules()
+
+    let resolveThumbnail!: (url: string | null) => void
+    const pendingThumbnail = new Promise<string | null>(resolve => {
+      resolveThumbnail = resolve
+    })
+
+    vi.doMock('@/lib/thumbnailService', async () => {
+      const actual =
+        await vi.importActual<typeof import('@/lib/thumbnailService')>('@/lib/thumbnailService')
+      return {
+        ...actual,
+        loadCourseThumbnailUrl: vi.fn(() => pendingThumbnail),
+      }
+    })
+
+    const { useCourseImportStore: raceStore } = await import('@/stores/useCourseImportStore')
+    const revokeSpy = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {})
+    const loadPromise = raceStore.getState().loadThumbnailUrls(['course-race'])
+
+    raceStore.setState({
+      thumbnailUrls: { 'course-race': 'https://courses.example.test/newer.jpg' },
+    })
+    resolveThumbnail('blob:stale-load')
+    await loadPromise
+
+    expect(raceStore.getState().thumbnailUrls['course-race']).toBe(
+      'https://courses.example.test/newer.jpg'
+    )
+    expect(revokeSpy).toHaveBeenCalledWith('blob:stale-load')
+    expect(revokeSpy).not.toHaveBeenCalledWith('https://courses.example.test/newer.jpg')
+
+    revokeSpy.mockRestore()
+    vi.doUnmock('@/lib/thumbnailService')
+  })
+})

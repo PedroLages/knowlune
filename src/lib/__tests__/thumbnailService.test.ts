@@ -34,8 +34,9 @@ beforeEach(async () => {
   mod = await import('@/lib/thumbnailService')
 })
 
-afterEach(() => {
+afterEach(async () => {
   vi.restoreAllMocks()
+  await Dexie.delete('ElearningDB')
 })
 
 // ── Helpers ─────────────────────────────────────────────────────
@@ -112,6 +113,19 @@ describe('loadCourseThumbnailUrl', () => {
     expect(spy).toHaveBeenCalledOnce()
     spy.mockRestore()
   })
+
+  it('returns a validated remote URL for a server fallback thumbnail', async () => {
+    await db.courseThumbnails.put({
+      courseId: 'course-remote',
+      remoteUrl: 'https://courses.example.test/course/0x0.jpg',
+      source: 'server',
+      createdAt: FIXED_DATE,
+    })
+
+    await expect(mod.loadCourseThumbnailUrl('course-remote')).resolves.toBe(
+      'https://courses.example.test/course/0x0.jpg'
+    )
+  })
 })
 
 // ── deleteCourseThumbnail ───────────────────────────────────────
@@ -175,6 +189,21 @@ describe('loadThumbnailFromFile', () => {
 
     const file = new File(['data'], 'photo.jpg', { type: 'image/jpeg' })
     await expect(mod.loadThumbnailFromFile(file)).rejects.toThrow('Canvas toBlob returned null')
+  })
+
+  it('uses a centered 16:9 crop instead of stretching portrait images', async () => {
+    const { canvas, ctx } = createMockCanvas()
+    const mockBitmap = {
+      width: 900,
+      height: 1600,
+      close: vi.fn(),
+    } as unknown as ImageBitmap
+    vi.stubGlobal('createImageBitmap', vi.fn().mockResolvedValue(mockBitmap))
+    vi.spyOn(document, 'createElement').mockReturnValueOnce(canvas as unknown as HTMLCanvasElement)
+
+    await mod.loadThumbnailFromFile(new File(['data'], 'portrait.jpg', { type: 'image/jpeg' }))
+
+    expect(ctx.drawImage).toHaveBeenCalledWith(mockBitmap, 0, 546.875, 900, 506.25, 0, 0, 1280, 720)
   })
 })
 
@@ -252,6 +281,57 @@ describe('fetchThumbnailFromUrl', () => {
 
     await expect(mod.fetchThumbnailFromUrl('https://example.com/noheader')).rejects.toThrow(
       'URL did not return an image'
+    )
+  })
+
+  it('accepts a generic binary response when the expected filename is a raster image', async () => {
+    const resultBlob = new Blob(['resized'], { type: 'image/jpeg' })
+    const { canvas } = createMockCanvas(resultBlob)
+    const mockResponse = {
+      ok: true,
+      headers: new Headers({ 'content-type': 'application/octet-stream' }),
+      arrayBuffer: vi.fn().mockResolvedValue(new ArrayBuffer(8)),
+    } as unknown as Response
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(mockResponse))
+    vi.stubGlobal(
+      'createImageBitmap',
+      vi.fn().mockResolvedValue({ width: 1280, height: 720, close: vi.fn() })
+    )
+    vi.spyOn(document, 'createElement').mockReturnValueOnce(canvas as unknown as HTMLCanvasElement)
+
+    await expect(
+      mod.fetchThumbnailFromUrl('https://example.com/0x0.jpg', {
+        expectedFilename: '0x0.jpg',
+      })
+    ).resolves.toBe(resultBlob)
+  })
+
+  it('rejects generic binary content without a supported raster filename', async () => {
+    const mockResponse = {
+      ok: true,
+      headers: new Headers({ 'content-type': 'application/octet-stream' }),
+      arrayBuffer: vi.fn(),
+    } as unknown as Response
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(mockResponse))
+
+    await expect(
+      mod.fetchThumbnailFromUrl('https://example.com/download', {
+        expectedFilename: 'cover.svg',
+      })
+    ).rejects.toMatchObject({ failure: 'content-type' })
+  })
+
+  it('rejects responses that claim to be images but cannot be decoded', async () => {
+    const mockResponse = {
+      ok: true,
+      headers: new Headers({ 'content-type': 'image/jpeg' }),
+      arrayBuffer: vi.fn().mockResolvedValue(new ArrayBuffer(8)),
+    } as unknown as Response
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(mockResponse))
+    vi.stubGlobal('createImageBitmap', vi.fn().mockRejectedValue(new Error('invalid image')))
+
+    await expect(mod.fetchThumbnailFromUrl('https://example.com/broken.jpg')).rejects.toMatchObject(
+      { failure: 'decode' }
     )
   })
 })

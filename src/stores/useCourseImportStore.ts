@@ -147,7 +147,9 @@ export const useCourseImportStore = create<CourseImportState>((set, get) => ({
       // Revoke thumbnail object URL to free memory
       const { thumbnailUrls } = get()
       if (thumbnailUrls[courseId]) {
-        URL.revokeObjectURL(thumbnailUrls[courseId])
+        if (thumbnailUrls[courseId].startsWith('blob:')) {
+          URL.revokeObjectURL(thumbnailUrls[courseId])
+        }
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const { [courseId]: _removed, ...rest } = thumbnailUrls
         set({ thumbnailUrls: rest })
@@ -365,12 +367,17 @@ export const useCourseImportStore = create<CourseImportState>((set, get) => ({
   updateCourseThumbnail: async (courseId: string, blob: Blob, source: ThumbnailSource) => {
     await saveCourseThumbnail(courseId, blob, source)
     const url = URL.createObjectURL(blob)
+    const previousUrl = get().thumbnailUrls[courseId]
+    if (previousUrl?.startsWith('blob:') && previousUrl !== url) {
+      URL.revokeObjectURL(previousUrl)
+    }
     set(state => ({
       thumbnailUrls: { ...state.thumbnailUrls, [courseId]: url },
     }))
   },
 
   loadThumbnailUrls: async (courseIds: string[]) => {
+    const urlsAtStart = get().thumbnailUrls
     const entries = await Promise.all(
       courseIds.map(async id => {
         try {
@@ -385,11 +392,23 @@ export const useCourseImportStore = create<CourseImportState>((set, get) => ({
         }
       })
     )
-    const urls: Record<string, string> = {}
-    for (const [id, url] of entries) {
-      if (url) urls[id] = url
-    }
-    set({ thumbnailUrls: urls })
+    set(state => {
+      const urls = { ...state.thumbnailUrls }
+      for (const [id, url] of entries) {
+        const currentUrl = state.thumbnailUrls[id]
+        if (currentUrl !== urlsAtStart[id]) {
+          if (url?.startsWith('blob:')) URL.revokeObjectURL(url)
+          continue
+        }
+
+        if (currentUrl?.startsWith('blob:') && currentUrl !== url) {
+          URL.revokeObjectURL(currentUrl)
+        }
+        if (url) urls[id] = url
+        else delete urls[id]
+      }
+      return { thumbnailUrls: urls }
+    })
   },
 
   getAllTags: () => {

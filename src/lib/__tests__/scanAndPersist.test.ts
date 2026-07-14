@@ -2,12 +2,24 @@ import 'fake-indexeddb/auto'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import Dexie from 'dexie'
 
-const thumbnailMocks = vi.hoisted(() => ({
-  extractThumbnailFromVideo: vi.fn(),
-  loadThumbnailFromFile: vi.fn(),
-  fetchThumbnailFromUrl: vi.fn(),
-  saveCourseThumbnail: vi.fn(),
-}))
+const thumbnailMocks = vi.hoisted(() => {
+  class ThumbnailFetchError extends Error {
+    constructor(
+      message: string,
+      public readonly failure: 'network' | 'http' | 'content-type' | 'decode'
+    ) {
+      super(message)
+      this.name = 'ThumbnailFetchError'
+    }
+  }
+
+  return {
+    extractThumbnailFromVideo: vi.fn(),
+    loadThumbnailFromFile: vi.fn(),
+    fetchThumbnailFromUrl: vi.fn(),
+    ThumbnailFetchError,
+  }
+})
 
 // Mock sonner toast
 vi.mock('sonner', () => ({
@@ -70,7 +82,6 @@ beforeEach(async () => {
   thumbnailMocks.extractThumbnailFromVideo.mockResolvedValue(thumbnailBlob)
   thumbnailMocks.loadThumbnailFromFile.mockResolvedValue(thumbnailBlob)
   thumbnailMocks.fetchThumbnailFromUrl.mockResolvedValue(thumbnailBlob)
-  thumbnailMocks.saveCourseThumbnail.mockResolvedValue(undefined)
   await Dexie.delete('ElearningDB')
   vi.resetModules()
 
@@ -367,16 +378,22 @@ describe('persistScannedCourse', () => {
   })
 
   it('rolls back the full course batch when a child record fails', async () => {
-    const scanned = createScannedCourse()
+    const cover = new File(['cover'], 'cover.jpg', { type: 'image/jpeg' })
+    const scanned = createScannedCourse({
+      images: [{ filename: cover.name, path: cover.name, file: cover }],
+    })
     const videoTable = db.table('importedVideos')
     const addSpy = vi
       .spyOn(videoTable, 'add')
       .mockRejectedValueOnce(new Error('video write failed'))
 
-    await expect(persistScannedCourse(scanned)).rejects.toThrow('video write failed')
+    await expect(persistScannedCourse(scanned, { coverImage: scanned.images[0] })).rejects.toThrow(
+      'video write failed'
+    )
 
     expect(await db.importedCourses.get(scanned.id)).toBeUndefined()
     expect(await db.importedPdfs.where('courseId').equals(scanned.id).count()).toBe(0)
+    expect(await db.courseThumbnails.get(scanned.id)).toBeUndefined()
     addSpy.mockRestore()
   })
 
@@ -496,35 +513,85 @@ describe('persistScannedCourse', () => {
     )
   })
 
-  it('should apply coverImageHandle override from wizard', async () => {
-    const coverHandle = createMockFileHandle('cover.jpg')
+  it('should apply a local cover override from the wizard', async () => {
+    const file = new File(['cover'], 'cover.jpg', { type: 'image/jpeg' })
     const scanned = createScannedCourse()
     const course = await persistScannedCourse(scanned, {
-      coverImageHandle: coverHandle,
+      coverImage: { filename: file.name, path: file.name, file },
     })
 
-    expect(course.coverImageHandle).toBe(coverHandle)
-    const storedCourse = await db.importedCourses.get(course.id)
-    expect(storedCourse!.coverImageHandle).toBeDefined()
+    expect(course.coverImageHandle).toBeUndefined()
+    expect(await db.courseThumbnails.get(course.id)).toMatchObject({ source: 'local' })
   })
 
   it('should persist a server root image as the course thumbnail', async () => {
-    const scanned = createScannedCourse({ source: 'server', directoryHandle: null })
     const coverImage = {
       filename: 'cover.jpg',
       path: 'cover.jpg',
       serverUrl: 'https://courses.example.test/course/cover.jpg',
     }
+    const scanned = createScannedCourse({
+      source: 'server',
+      directoryHandle: null,
+      serverFolderUrl: 'https://courses.example.test/course',
+      images: [coverImage],
+    })
 
     const course = await persistScannedCourse(scanned, { coverImage })
 
-    expect(thumbnailMocks.fetchThumbnailFromUrl).toHaveBeenCalledWith(coverImage.serverUrl)
-    expect(thumbnailMocks.saveCourseThumbnail).toHaveBeenCalledWith(
-      course.id,
-      expect.any(Blob),
-      'url'
-    )
+    expect(thumbnailMocks.fetchThumbnailFromUrl).toHaveBeenCalledWith(coverImage.serverUrl, {
+      expectedFilename: 'cover.jpg',
+    })
+    const thumbnail = await db.courseThumbnails.get(course.id)
+    expect(thumbnail).toMatchObject({
+      courseId: course.id,
+      source: 'url',
+    })
+    expect(thumbnail?.blob).toBeDefined()
     expect(course.coverImageHandle).toBeUndefined()
+  })
+
+  it('persists a validated remote cover when CORS blocks reading a scanned server image', async () => {
+    const coverImage = {
+      filename: '0x0.jpg',
+      path: '0x0.jpg',
+      serverUrl: 'https://courses.example.test/course/0x0.jpg',
+    }
+    const scanned = createScannedCourse({
+      source: 'server',
+      directoryHandle: null,
+      serverFolderUrl: 'https://courses.example.test/course',
+      images: [coverImage],
+    })
+    thumbnailMocks.fetchThumbnailFromUrl.mockRejectedValueOnce(
+      new thumbnailMocks.ThumbnailFetchError('blocked', 'network')
+    )
+
+    const course = await persistScannedCourse(scanned, { coverImage })
+
+    expect(await db.courseThumbnails.get(course.id)).toMatchObject({
+      courseId: course.id,
+      source: 'server',
+      remoteUrl: coverImage.serverUrl,
+    })
+  })
+
+  it('rejects a remote fallback outside the scanned course folder without partial writes', async () => {
+    const coverImage = {
+      filename: 'cover.jpg',
+      path: 'cover.jpg',
+      serverUrl: 'https://untrusted.example/cover.jpg',
+    }
+    const scanned = createScannedCourse({
+      source: 'server',
+      directoryHandle: null,
+      serverFolderUrl: 'https://courses.example.test/course',
+      images: [coverImage],
+    })
+
+    await expect(persistScannedCourse(scanned, { coverImage })).rejects.toThrow("We couldn't use")
+    expect(await db.importedCourses.get(scanned.id)).toBeUndefined()
+    expect(await db.courseThumbnails.get(scanned.id)).toBeUndefined()
   })
 
   it('should persist a dropped root image as the course thumbnail', async () => {
@@ -535,11 +602,53 @@ describe('persistScannedCourse', () => {
     const course = await persistScannedCourse(scanned, { coverImage })
 
     expect(thumbnailMocks.loadThumbnailFromFile).toHaveBeenCalledWith(file)
-    expect(thumbnailMocks.saveCourseThumbnail).toHaveBeenCalledWith(
-      course.id,
-      expect.any(Blob),
-      'local'
+    const thumbnail = await db.courseThumbnails.get(course.id)
+    expect(thumbnail).toMatchObject({
+      courseId: course.id,
+      source: 'local',
+    })
+    expect(thumbnail?.blob).toBeDefined()
+  })
+
+  it('keeps an existing thumbnail when a server course is re-imported without a replacement', async () => {
+    const cover = new File(['cover'], 'cover.jpg', { type: 'image/jpeg' })
+    const firstScan = createScannedCourse({
+      source: 'server',
+      serverPath: 'library/course',
+      images: [{ filename: cover.name, path: cover.name, file: cover }],
+      pdfs: [],
+    })
+    const original = await persistScannedCourse(firstScan, { coverImage: firstScan.images[0] })
+
+    const reimport = createScannedCourse({
+      id: 'new-scan-id',
+      source: 'server',
+      serverPath: 'library/course',
+      videos: [{ ...createScannedCourse().videos[0], id: 'video-reimport' }],
+      pdfs: [],
+    })
+    await persistScannedCourse(reimport)
+
+    const thumbnail = await db.courseThumbnails.get(original.id)
+    expect(thumbnail).toMatchObject({
+      courseId: original.id,
+      source: 'local',
+    })
+    expect(thumbnail?.blob).toBeDefined()
+  })
+
+  it('does not write a course when an explicitly selected local cover cannot be decoded', async () => {
+    const cover = new File(['broken'], 'broken.jpg', { type: 'image/jpeg' })
+    const scanned = createScannedCourse({
+      images: [{ filename: cover.name, path: cover.name, file: cover }],
+    })
+    thumbnailMocks.loadThumbnailFromFile.mockRejectedValueOnce(new Error('decode failed'))
+
+    await expect(persistScannedCourse(scanned, { coverImage: scanned.images[0] })).rejects.toThrow(
+      'Choose another cover'
     )
+    expect(await db.importedCourses.get(scanned.id)).toBeUndefined()
+    expect(toastMocks.success).not.toHaveBeenCalled()
   })
 })
 

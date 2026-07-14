@@ -42,12 +42,12 @@ function getProgressText(course: CourseImportProgress): string {
   const total = course.totalFiles
   const processed = course.filesProcessed
 
-  if (course.phase === 'scanning' && (total === null || total === 0)) {
-    return `Scanning folder\u2026 ${processed} of ? files processed`
+  if (course.phase === 'scanning') {
+    return `Scanning folder\u2026 ${processed} ${processed === 1 ? 'file' : 'files'} found`
   }
 
   if (total && total > 0) {
-    const percent = Math.round((processed / total) * 100)
+    const percent = Math.min(100, Math.max(0, Math.round((processed / total) * 100)))
     return `${processed} of ${total} files processed (${percent}%)`
   }
 
@@ -59,7 +59,7 @@ function CourseProgressItem({ course }: { course: CourseImportProgress }) {
   const progressText = getProgressText(course)
   const progressPercent =
     course.totalFiles && course.totalFiles > 0
-      ? Math.round((course.filesProcessed / course.totalFiles) * 100)
+      ? Math.min(100, Math.max(0, Math.round((course.filesProcessed / course.totalFiles) * 100)))
       : 0
 
   return (

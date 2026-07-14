@@ -39,7 +39,41 @@ function resizeImageToBlob(
     }
     ctx.imageSmoothingEnabled = true
     ctx.imageSmoothingQuality = 'high'
-    ctx.drawImage(source, 0, 0, width, height)
+
+    const sourceWidth =
+      'videoWidth' in source && source.videoWidth > 0
+        ? source.videoWidth
+        : 'naturalWidth' in source && source.naturalWidth > 0
+          ? source.naturalWidth
+          : source.width
+    const sourceHeight =
+      'videoHeight' in source && source.videoHeight > 0
+        ? source.videoHeight
+        : 'naturalHeight' in source && source.naturalHeight > 0
+          ? source.naturalHeight
+          : source.height
+
+    if (sourceWidth > 0 && sourceHeight > 0) {
+      const sourceRatio = sourceWidth / sourceHeight
+      const targetRatio = width / height
+      let cropX = 0
+      let cropY = 0
+      let cropWidth = sourceWidth
+      let cropHeight = sourceHeight
+
+      if (sourceRatio > targetRatio) {
+        cropWidth = sourceHeight * targetRatio
+        cropX = (sourceWidth - cropWidth) / 2
+      } else if (sourceRatio < targetRatio) {
+        cropHeight = sourceWidth / targetRatio
+        cropY = (sourceHeight - cropHeight) / 2
+      }
+
+      ctx.drawImage(source, cropX, cropY, cropWidth, cropHeight, 0, 0, width, height)
+    } else {
+      // Defensive fallback for browser/test doubles that do not expose dimensions.
+      ctx.drawImage(source, 0, 0, width, height)
+    }
     canvas.toBlob(
       blob => {
         if (blob) resolve(blob)
@@ -100,42 +134,96 @@ export async function extractThumbnailFromVideo(videoHandle: FileSystemFileHandl
 
 export async function loadThumbnailFromFile(file: File): Promise<Blob> {
   const bitmap = await createImageBitmap(file)
-  const blob = await resizeImageToBlob(bitmap)
-  bitmap.close()
-  return blob
+  try {
+    return await resizeImageToBlob(bitmap)
+  } finally {
+    bitmap.close()
+  }
 }
 
 // ---------------------------------------------------------------------------
 // Source 3: Fetch image from URL
 // ---------------------------------------------------------------------------
 
-export async function fetchThumbnailFromUrl(url: string): Promise<Blob> {
+const GENERIC_BINARY_CONTENT_TYPE = 'application/octet-stream'
+const RASTER_MIME_BY_EXTENSION: Readonly<Record<string, string>> = {
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.png': 'image/png',
+  '.gif': 'image/gif',
+  '.webp': 'image/webp',
+  '.bmp': 'image/bmp',
+}
+
+export type ThumbnailFetchFailure = 'network' | 'http' | 'content-type' | 'decode'
+
+export class ThumbnailFetchError extends Error {
+  constructor(
+    message: string,
+    public readonly failure: ThumbnailFetchFailure
+  ) {
+    super(message)
+    this.name = 'ThumbnailFetchError'
+  }
+}
+
+function inferRasterMimeType(filename: string | undefined): string | null {
+  if (!filename) return null
+  const lower = filename.toLowerCase()
+  const extension = Object.keys(RASTER_MIME_BY_EXTENSION).find(ext => lower.endsWith(ext))
+  return extension ? RASTER_MIME_BY_EXTENSION[extension] : null
+}
+
+export async function fetchThumbnailFromUrl(
+  url: string,
+  options: { expectedFilename?: string } = {}
+): Promise<Blob> {
   let response: Response
   try {
     response = await fetch(url, { mode: 'cors' })
   } catch {
-    throw new Error(
-      'Could not fetch this URL. The server may block cross-origin requests. Try downloading the image and uploading it instead.'
+    throw new ThumbnailFetchError(
+      'Could not fetch this URL because the server blocked browser access.',
+      'network'
     )
   }
 
   if (!response.ok) {
-    throw new Error(`Fetch failed: ${response.status} ${response.statusText}`)
+    throw new ThumbnailFetchError(`Fetch failed: ${response.status} ${response.statusText}`, 'http')
   }
 
-  const contentType = response.headers.get('content-type') ?? ''
-  if (!contentType.startsWith('image/')) {
-    throw new Error(
-      'URL did not return an image. Make sure the link points directly to an image file.'
+  const responseContentType = (response.headers.get('content-type') ?? '')
+    .split(';', 1)[0]
+    .trim()
+    .toLowerCase()
+  const inferredContentType = inferRasterMimeType(options.expectedFilename)
+  const contentType = responseContentType.startsWith('image/')
+    ? responseContentType
+    : responseContentType === GENERIC_BINARY_CONTENT_TYPE
+      ? inferredContentType
+      : null
+
+  if (!contentType) {
+    throw new ThumbnailFetchError(
+      'URL did not return an image or supported raster file.',
+      'content-type'
     )
   }
 
   const arrayBuffer = await response.arrayBuffer()
   const srcBlob = new Blob([arrayBuffer], { type: contentType })
-  const bitmap = await createImageBitmap(srcBlob)
-  const result = await resizeImageToBlob(bitmap)
-  bitmap.close()
-  return result
+  let bitmap: ImageBitmap
+  try {
+    bitmap = await createImageBitmap(srcBlob)
+  } catch {
+    throw new ThumbnailFetchError('The selected image could not be decoded.', 'decode')
+  }
+
+  try {
+    return await resizeImageToBlob(bitmap)
+  } finally {
+    bitmap.close()
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -199,9 +287,11 @@ export async function generateThumbnailWithGemini(
   const srcBlob = new Blob([bytes], { type: mimeType })
 
   const bitmap = await createImageBitmap(srcBlob)
-  const result = await resizeImageToBlob(bitmap)
-  bitmap.close()
-  return result
+  try {
+    return await resizeImageToBlob(bitmap)
+  } finally {
+    bitmap.close()
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -225,7 +315,8 @@ export async function saveCourseThumbnail(
 export async function loadCourseThumbnailUrl(courseId: string): Promise<string | null> {
   const record = await db.courseThumbnails.get(courseId)
   if (!record) return null
-  return URL.createObjectURL(record.blob)
+  if (record.blob) return URL.createObjectURL(record.blob)
+  return record.remoteUrl
 }
 
 export async function deleteCourseThumbnail(courseId: string): Promise<void> {

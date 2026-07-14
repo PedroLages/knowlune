@@ -329,12 +329,28 @@ export interface Screenshot {
 
 export type ThumbnailSource = 'auto' | 'local' | 'url' | 'ai' | 'server'
 
-export interface CourseThumbnail {
+interface CourseThumbnailBase {
   courseId: string // Primary key
-  blob: Blob // 200×112px JPEG
   source: ThumbnailSource
   createdAt: string // ISO 8601
 }
+
+/**
+ * Course covers are normally stored as resized JPEG blobs. Server imports can
+ * retain a validated remote image reference when browser CORS rules allow an
+ * <img> preview but prevent the app from reading and resizing the response.
+ */
+export type CourseThumbnail = CourseThumbnailBase &
+  (
+    | {
+        blob: Blob // 1280×720px JPEG
+        remoteUrl?: never
+      }
+    | {
+        blob?: never
+        remoteUrl: string
+      }
+  )
 
 /** Per-video storyboard sprite sheet for instant scrub previews (local-only, not synced) */
 export interface VideoStoryboard {

@@ -54,7 +54,7 @@ export function humanizeFilename(filename: string): string {
  * unmount) to avoid memory leaks from unreleased object URLs.
  */
 export function revokeObjectUrl(url: string): void {
-  URL.revokeObjectURL(url)
+  if (url.startsWith('blob:')) URL.revokeObjectURL(url)
 }
 
 // ---------------------------------------------------------------------------
@@ -292,6 +292,7 @@ export class LocalCourseAdapter implements CourseAdapter {
     if (thumb?.blob) {
       return URL.createObjectURL(thumb.blob)
     }
+    if (thumb?.remoteUrl) return thumb.remoteUrl
 
     return null
   }
@@ -439,6 +440,7 @@ export class YouTubeCourseAdapter implements CourseAdapter {
     if (thumb?.blob) {
       return URL.createObjectURL(thumb.blob)
     }
+    if (thumb?.remoteUrl) return thumb.remoteUrl
 
     return null
   }
