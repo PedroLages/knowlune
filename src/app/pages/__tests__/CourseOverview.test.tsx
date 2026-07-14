@@ -299,6 +299,23 @@ describe('CourseOverview Syllabus — module EntryActionButton states', () => {
     expect(screen.getByText('Getting Started')).toBeInTheDocument()
     expect(screen.getByText('Module 1')).toBeInTheDocument()
   })
+
+  it('renders URI-encoded server folder names as readable module titles', async () => {
+    seedTestData([
+      makeVideo({
+        id: 'v1',
+        order: 0,
+        title: 'Investing Lesson',
+        path: '02-The%20Game%20of%20Investing/lesson.mp4',
+        serverUrl: 'https://courses.example.test/02-The%20Game%20of%20Investing/lesson.mp4',
+      }),
+    ])
+
+    renderOverview()
+
+    expect(await screen.findByText('02-The Game of Investing')).toBeInTheDocument()
+    expect(screen.queryByText('02-The%20Game%20of%20Investing')).not.toBeInTheDocument()
+  })
 })
 
 // ---------------------------------------------------------------------------

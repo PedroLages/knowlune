@@ -1,5 +1,6 @@
 import { sortImportedVideosForCurriculum } from '@/lib/sortImportedVideosForCurriculum'
 import type { ImportedVideo, ImportedPdf, YouTubeCourseChapter } from '@/data/types'
+import { decodeUriComponentRepeated } from '@/lib/textUtils'
 
 export interface ChapterGroup {
   title: string
@@ -9,7 +10,7 @@ export interface ChapterGroup {
 
 function getFolderName(path: string): string {
   const parts = path.split('/')
-  return parts.length > 1 ? parts[0] : ''
+  return parts.length > 1 ? decodeUriComponentRepeated(parts[0]) : ''
 }
 
 export function groupByFolder(videos: ImportedVideo[], pdfs: ImportedPdf[] = []): ChapterGroup[] {
