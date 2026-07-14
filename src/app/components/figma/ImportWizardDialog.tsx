@@ -1,6 +1,5 @@
 import { useState, useCallback, useEffect, useRef, useMemo, type KeyboardEvent } from 'react'
 import { COURSE_IMPORTED } from './CurriculumComposer'
-import { Link } from 'react-router'
 import {
   Dialog,
   DialogContent,
@@ -36,8 +35,6 @@ import {
   Sparkles,
   Route,
   Plus,
-  Settings,
-  AlertTriangle,
   FileJson,
   ExternalLink,
   Globe,
@@ -56,7 +53,6 @@ import { ImportDropZone } from './ImportDropZone'
 import { useAISuggestions } from '@/ai/hooks/useAISuggestions'
 import { usePathPlacementSuggestion } from '@/ai/hooks/usePathPlacementSuggestion'
 import { useLearningPathStore } from '@/stores/useLearningPathStore'
-import { isPathPlacementAvailable } from '@/ai/learningPath/suggestPlacement'
 import { toast } from 'sonner'
 import { useImportProgressStore } from '@/stores/useImportProgressStore'
 import { PremiumGate } from '@/app/components/PremiumGate'
@@ -98,7 +94,9 @@ function ScanProgressIndicator() {
   const totalFiles = current.totalFiles
   const processed = current.filesProcessed
   const percent =
-    totalFiles && totalFiles > 0 ? Math.round((processed / totalFiles) * 100) : undefined
+    totalFiles && totalFiles > 0
+      ? Math.min(100, Math.max(0, Math.round((processed / totalFiles) * 100)))
+      : undefined
 
   return (
     <div
@@ -116,8 +114,8 @@ function ScanProgressIndicator() {
       </div>
       <Progress value={percent ?? 0} className="h-1.5" aria-label="Scan progress" />
       <p className="text-xs text-muted-foreground">
-        {isScanning && (totalFiles === null || totalFiles === 0)
-          ? `Scanning folder\u2026 ${processed} of ? files processed`
+        {isScanning
+          ? `Scanning folder\u2026 ${processed} ${processed === 1 ? 'file' : 'files'} found`
           : percent !== undefined
             ? `${processed} of ${totalFiles} files processed (${percent}%)`
             : `Scanning\u2026 ${processed} files found`}
@@ -158,7 +156,7 @@ const CATEGORY_OPTIONS: { value: string; label: string }[] = [
  * Guides the user through three steps:
  * 1. **Select** — choose a source (local folder, drag-drop, server URL, Google Drive)
  * 2. **Details** — review/edit course name, description, tags, difficulty, cover image
- * 3. **Path** — optionally place the course into a learning path (or resolve a gap entry)
+ * 3. **Organize** — optionally place the course into a Learning Track (or resolve a gap entry)
  *
  * After import, dispatches a `COURSE_IMPORTED` custom event so sibling components
  * (InlineCoursePicker, CurriculumComposer) can react to the new course.
@@ -209,24 +207,33 @@ export function ImportWizardDialog({
     isScanningRef.current = isScanning
   }, [isScanning])
 
-  // Path placement state (E26-S04)
+  // Optional Learning Track organization state (E26-S04)
   const [selectedPathId, setSelectedPathId] = useState<string | null>(null)
-  const [selectedPosition, setSelectedPosition] = useState<number>(1)
-  const [pathChoice, setPathChoice] = useState<'accept' | 'choose' | 'skip' | 'new'>('accept')
+  const [pathChoice, setPathChoice] = useState<'none' | 'existing' | 'new'>('none')
   const [newPathName, setNewPathName] = useState('')
+  const [acceptedAiPlacement, setAcceptedAiPlacement] = useState(false)
 
-  // Learning path store
-  const { paths: learningPaths, loadPaths, addCourseToPath, createPath } = useLearningPathStore()
+  // Learning Track store. Templates are examples, not destinations for imported courses.
+  const {
+    paths: learningPaths,
+    loadPaths,
+    addCourseToPath,
+    createPath,
+    applyPlacementSuggestion,
+  } = useLearningPathStore()
+  const userTracks = useMemo(() => learningPaths.filter(path => !path.isTemplate), [learningPaths])
 
   // Refs for singleton guard and target path tracking
   const targetPathIdRef = useRef(targetPathId)
   const gapEntryIdRef = useRef(gapEntryId)
   const searchTermRef = useRef(searchTerm)
   const prevOpenRef = useRef(false)
+  const targetPrefilledRef = useRef(false)
 
   // Keep refs in sync with props
   useEffect(() => {
     targetPathIdRef.current = targetPathId
+    targetPrefilledRef.current = false
   }, [targetPathId])
   useEffect(() => {
     gapEntryIdRef.current = gapEntryId
@@ -261,10 +268,14 @@ export function ImportWizardDialog({
         }
       }
       // When target is updated while wizard is open, update step 3 UI
-      if (newTarget && scannedCourse) {
+      const targetIsUserTrack = useLearningPathStore
+        .getState()
+        .paths.some(path => path.id === newTarget && !path.isTemplate)
+      if (newTarget && scannedCourse && targetIsUserTrack) {
+        targetPrefilledRef.current = true
         setSelectedPathId(newTarget)
-        setPathChoice('choose')
-        setSelectedPosition(1)
+        setPathChoice('existing')
+        setAcceptedAiPlacement(false)
         setStep('path')
       }
     }
@@ -291,10 +302,8 @@ export function ImportWizardDialog({
     }
   }, [open, isScanning, isPersisting])
 
-  // Determine if path step should be shown
-  const showPathStep = useMemo(() => {
-    return learningPaths.length > 0 || isPathPlacementAvailable()
-  }, [learningPaths.length])
+  // Organization is always offered, but defaults to importing without a track.
+  const showPathStep = true
 
   // AI suggestions hook — fires automatically when Ollama is configured
   const aiSuggestions = useAISuggestions(scannedCourse)
@@ -304,31 +313,27 @@ export function ImportWizardDialog({
     courseName,
     tags,
     description,
-    step === 'path' && showPathStep,
+    step === 'path' && userTracks.length > 0,
     targetPathIdRef.current ?? undefined
   )
 
-  // Apply AI suggestion when it arrives
-  useEffect(() => {
-    if (pathPlacement.hasFetched && pathPlacement.suggestion && pathChoice === 'accept') {
-      if (pathPlacement.suggestion.pathId) {
-        setSelectedPathId(pathPlacement.suggestion.pathId)
-        setSelectedPosition(pathPlacement.suggestion.position)
-      }
-    }
-  }, [pathPlacement.hasFetched, pathPlacement.suggestion, pathChoice])
-
   // Pre-fill step 3 when targetPathId is provided (R3, R4)
   useEffect(() => {
-    if (step === 'path' && targetPathIdRef.current && learningPaths.length > 0) {
-      const targetPathExists = learningPaths.some(p => p.id === targetPathIdRef.current)
-      if (targetPathExists && !selectedPathId) {
+    if (
+      step === 'path' &&
+      targetPathIdRef.current &&
+      userTracks.length > 0 &&
+      !targetPrefilledRef.current
+    ) {
+      targetPrefilledRef.current = true
+      const targetPathExists = userTracks.some(p => p.id === targetPathIdRef.current)
+      if (targetPathExists) {
         setSelectedPathId(targetPathIdRef.current)
-        setPathChoice('choose')
-        setSelectedPosition(1)
+        setPathChoice('existing')
+        setAcceptedAiPlacement(false)
       }
     }
-  }, [step, learningPaths, selectedPathId])
+  }, [step, userTracks])
 
   const resetWizard = useCallback(() => {
     setStep('select')
@@ -352,9 +357,10 @@ export function ImportWizardDialog({
     setServerUrlInput('')
     setShowServerUrlInput(false)
     setSelectedPathId(null)
-    setSelectedPosition(1)
-    setPathChoice('accept')
+    setPathChoice('none')
     setNewPathName('')
+    setAcceptedAiPlacement(false)
+    targetPrefilledRef.current = false
   }, [])
 
   // Apply AI-suggested tags when they arrive (only if user hasn't manually added tags yet)
@@ -652,14 +658,26 @@ export function ImportWizardDialog({
       toast.error('Choose a cover image or use a video frame before importing.')
       return
     }
+    if (pathChoice === 'new' && !newPathName.trim()) {
+      toast.error('Enter a name for the new Learning Track.')
+      return
+    }
+    if (
+      pathChoice === 'existing' &&
+      (!selectedPathId || !userTracks.some(track => track.id === selectedPathId))
+    ) {
+      toast.error('Choose an existing Learning Track or select No track.')
+      return
+    }
 
     setIsPersisting(true)
+    let courseImported = false
     try {
       const trimmedName = courseName.trim()
       const trimmedDescription = description.trim()
       const hasNameChange = trimmedName !== scannedCourse.name
       const hasTags = tags.length > 0
-      const hasCover = selectedCoverImage !== null
+      const hasCover = selectedCoverImage !== null || useVideoFrameCover
       const hasDescription = trimmedDescription.length > 0
       const hasDifficulty = selectedDifficulty !== undefined
       const hasCategory = selectedCategory !== ''
@@ -677,6 +695,7 @@ export function ImportWizardDialog({
               ...(hasNameChange ? { name: trimmedName } : {}),
               ...(hasTags ? { tags } : {}),
               ...(selectedCoverImage ? { coverImage: selectedCoverImage } : {}),
+              ...(useVideoFrameCover ? { useVideoFrameCover: true } : {}),
               ...(hasDescription ? { description: trimmedDescription } : {}),
               ...(hasDifficulty ? { difficulty: selectedDifficulty } : {}),
               ...(hasCategory ? { category: selectedCategory } : {}),
@@ -689,6 +708,7 @@ export function ImportWizardDialog({
       useImportProgressStore.getState().setDialogOpen(false)
 
       const importedCourse = await persistScannedCourse(scannedCourse, overrides)
+      courseImported = true
 
       // Dispatch course-imported event so the InlineCoursePicker (or CurriculumComposer)
       // can react to the new course and add it to the selection.
@@ -707,36 +727,67 @@ export function ImportWizardDialog({
         const currentTargetPathId = targetPathIdRef.current
 
         try {
-          if (currentGapEntryId && currentTargetPathId) {
+          const eligibleTarget = currentTargetPathId
+            ? userTracks.find(track => track.id === currentTargetPathId)
+            : undefined
+
+          if (currentGapEntryId && eligibleTarget) {
             // Resolve the gap entry: replace the placeholder with the newly imported course
             await useLearningPathStore
               .getState()
-              .replaceGapEntry(currentTargetPathId, currentGapEntryId, courseId, 'imported')
-            toast.success('Gap entry resolved with imported course')
-          } else if (pathChoice !== 'skip') {
+              .replaceGapEntry(eligibleTarget.id, currentGapEntryId, courseId, 'imported')
+            const wasAssigned = useLearningPathStore
+              .getState()
+              .entries.some(
+                entry =>
+                  entry.pathId === eligibleTarget.id &&
+                  entry.id === currentGapEntryId &&
+                  entry.courseId === courseId
+              )
+            if (!wasAssigned) throw new Error('Gap entry was not updated')
+            toast.success('Course added to the Learning Track')
+          } else if (pathChoice !== 'none') {
             if (pathChoice === 'new' && newPathName.trim()) {
               const newPath = await createPath(newPathName.trim())
               await addCourseToPath(newPath.id, courseId, 'imported')
-              toast.success(`Added to new path "${newPathName.trim()}"`)
-            } else if (selectedPathId) {
+              const wasAssigned = useLearningPathStore
+                .getState()
+                .entries.some(entry => entry.pathId === newPath.id && entry.courseId === courseId)
+              if (!wasAssigned) throw new Error('Course entry was not created')
+              toast.success(`Added to new Learning Track "${newPathName.trim()}"`)
+            } else if (selectedPathId && userTracks.some(track => track.id === selectedPathId)) {
               await addCourseToPath(selectedPathId, courseId, 'imported')
-              const pathName = learningPaths.find(p => p.id === selectedPathId)?.name
-              toast.success(`Added to "${pathName}"`)
+              const wasAssigned = useLearningPathStore
+                .getState()
+                .entries.some(
+                  entry => entry.pathId === selectedPathId && entry.courseId === courseId
+                )
+              if (!wasAssigned) throw new Error('Course entry was not created')
+              if (acceptedAiPlacement && pathPlacement.suggestion?.pathId === selectedPathId) {
+                await applyPlacementSuggestion(
+                  selectedPathId,
+                  courseId,
+                  pathPlacement.suggestion.position,
+                  pathPlacement.suggestion.justification
+                )
+              }
+              const trackName = userTracks.find(track => track.id === selectedPathId)?.name
+              toast.success(`Added to "${trackName}"`)
             }
           }
-        } catch {
-          toast.error('Course imported, but failed to add to learning path')
+        } catch (error) {
+          console.error('[Import] Learning Track assignment failed:', error)
+          toast.error('Course imported, but it was not added to the Learning Track.')
         }
       }
-    } catch {
-      // persistScannedCourse already shows its own error toasts; surface a
-      // generic message here so the user sees feedback even if they missed the
-      // earlier toast. The dialog always closes (see finally) so the user
-      // isn't left staring at a frozen wizard.
-      toast.error('Course import failed. Please try again.')
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Course import failed. Please try again.'
+      toast.error(message)
+      useImportProgressStore.getState().setDialogOpen(true)
     } finally {
       setIsPersisting(false)
-      handleOpenChange(false)
+      if (courseImported) handleOpenChange(false)
     }
   }, [
     scannedCourse,
@@ -753,7 +804,10 @@ export function ImportWizardDialog({
     newPathName,
     createPath,
     addCourseToPath,
-    learningPaths,
+    applyPlacementSuggestion,
+    acceptedAiPlacement,
+    pathPlacement.suggestion,
+    userTracks,
   ])
 
   const handleRescan = useCallback(() => {
@@ -819,9 +873,13 @@ export function ImportWizardDialog({
   }, [])
 
   const isNameValid = courseName.trim().length > 0
+  const canUseVideoFrame = typeof scannedCourse?.videos[0]?.fileHandle?.getFile === 'function'
   const coverChoiceRequired =
     (scannedCourse?.images.length ?? 0) > 1 && !selectedCoverImage && !useVideoFrameCover
   const isDetailsValid = isNameValid && !coverChoiceRequired
+  const suggestedTrack = pathPlacement.suggestion?.pathId
+    ? userTracks.find(track => track.id === pathPlacement.suggestion?.pathId)
+    : undefined
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -836,14 +894,14 @@ export function ImportWizardDialog({
               ? 'Import Course'
               : step === 'details'
                 ? 'Course Details'
-                : 'Learning Path'}
+                : 'Organize Course'}
           </DialogTitle>
           <DialogDescription id="import-wizard-description" aria-live="polite">
             {step === 'select'
               ? 'Select a folder containing your course videos and PDFs.'
               : step === 'details'
                 ? 'Review and edit the course details before importing.'
-                : 'Choose where to place this course in your learning journey.'}
+                : 'Optionally add this course to a Learning Track. You can also organize it later.'}
           </DialogDescription>
         </DialogHeader>
 
@@ -854,7 +912,7 @@ export function ImportWizardDialog({
           const steps = [
             { num: 1, label: 'Select Folder' },
             { num: 2, label: 'Details' },
-            ...(showPathStep ? [{ num: 3, label: 'Learning Path' }] : []),
+            ...(showPathStep ? [{ num: 3, label: 'Organize (optional)' }] : []),
           ]
 
           return (
@@ -1250,7 +1308,8 @@ export function ImportWizardDialog({
                   />
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Press Enter to add a tag. Click the X to remove.
+                  Optional. Tags make courses easier to filter and help Knowlune connect related
+                  topics. You can edit them later.
                 </p>
               </div>
 
@@ -1341,29 +1400,31 @@ export function ImportWizardDialog({
                           </button>
                         )
                       })}
-                      <button
-                        type="button"
-                        role="radio"
-                        aria-checked={useVideoFrameCover}
-                        aria-label="Use a frame from the first video as the course cover"
-                        onClick={handleUseVideoFrameCover}
-                        className={cn(
-                          'relative aspect-square rounded-lg overflow-hidden border-2 transition-colors',
-                          'flex flex-col items-center justify-center gap-1 bg-muted/50 px-2 text-center',
-                          useVideoFrameCover
-                            ? 'border-brand ring-2 ring-brand/30 text-foreground'
-                            : 'border-border text-muted-foreground hover:border-muted-foreground'
-                        )}
-                        data-testid="wizard-use-video-frame"
-                      >
-                        <Video className="size-5" aria-hidden="true" />
-                        <span className="text-[10px] font-medium leading-tight">
-                          Use Video Frame
-                        </span>
-                        {useVideoFrameCover && (
-                          <span className="absolute inset-0 bg-brand/10" aria-hidden="true" />
-                        )}
-                      </button>
+                      {canUseVideoFrame && (
+                        <button
+                          type="button"
+                          role="radio"
+                          aria-checked={useVideoFrameCover}
+                          aria-label="Use a frame from the first video as the course cover"
+                          onClick={handleUseVideoFrameCover}
+                          className={cn(
+                            'relative aspect-square rounded-lg overflow-hidden border-2 transition-colors',
+                            'flex flex-col items-center justify-center gap-1 bg-muted/50 px-2 text-center',
+                            useVideoFrameCover
+                              ? 'border-brand ring-2 ring-brand/30 text-foreground'
+                              : 'border-border text-muted-foreground hover:border-muted-foreground'
+                          )}
+                          data-testid="wizard-use-video-frame"
+                        >
+                          <Video className="size-5" aria-hidden="true" />
+                          <span className="text-[10px] font-medium leading-tight">
+                            Use Video Frame
+                          </span>
+                          {useVideoFrameCover && (
+                            <span className="absolute inset-0 bg-brand/10" aria-hidden="true" />
+                          )}
+                        </button>
+                      )}
                     </div>
                     {coverChoiceRequired && (
                       <p className="text-xs text-destructive" role="alert">
@@ -1378,7 +1439,9 @@ export function ImportWizardDialog({
                   >
                     <ImageIcon className="size-6 text-muted-foreground" aria-hidden="true" />
                     <p className="text-xs text-muted-foreground">
-                      No root images found. A cover will be generated from the first video.
+                      {canUseVideoFrame
+                        ? 'No root images found. A cover will be generated from the first video.'
+                        : 'No root images found. You can import this course without a cover.'}
                     </p>
                   </div>
                 )}
@@ -1418,7 +1481,7 @@ export function ImportWizardDialog({
                   {selectedCoverImage && (
                     <div className="flex items-center gap-1.5" data-testid="wizard-cover-selected">
                       <ImageIcon className="size-4" aria-hidden="true" />
-                      Cover: {selectedCoverImage.filename}
+                      Selected cover file: {selectedCoverImage.filename}
                     </div>
                   )}
                 </div>
@@ -1433,12 +1496,12 @@ export function ImportWizardDialog({
           </div>
         )}
 
-        {/* Learning Path Step (E26-S04) */}
+        {/* Optional Learning Track organization (E26-S04) */}
         {step === 'path' && (
           <div className="max-h-[60vh] overflow-y-auto">
             <div className="flex flex-col gap-4 pr-1" data-testid="wizard-path-step">
               {/* AI suggestion */}
-              {pathPlacement.isAvailable && pathPlacement.isLoading && (
+              {pathPlacement.isAvailable && userTracks.length > 0 && pathPlacement.isLoading && (
                 <div
                   className="flex items-center gap-2 rounded-xl border border-brand/20 bg-brand-soft/30 px-3 py-2"
                   data-testid="wizard-path-ai-loading"
@@ -1450,153 +1513,207 @@ export function ImportWizardDialog({
                     aria-hidden="true"
                   />
                   <span className="text-xs text-brand-soft-foreground">
-                    AI is analyzing path placement...
+                    AI is checking your Learning Tracks...
                   </span>
                 </div>
               )}
 
               {/* AI suggestion card */}
-              {pathPlacement.hasFetched &&
-                pathPlacement.suggestion &&
-                pathPlacement.suggestion.pathId && (
-                  <div
-                    className="rounded-xl border border-brand/20 bg-brand-soft/30 p-4 space-y-3"
-                    data-testid="wizard-path-ai-suggestion"
+              {pathPlacement.hasFetched && pathPlacement.suggestion && suggestedTrack && (
+                <div
+                  className="rounded-xl border border-brand/20 bg-brand-soft/30 p-4 space-y-3"
+                  data-testid="wizard-path-ai-suggestion"
+                >
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="size-4 text-brand" aria-hidden="true" />
+                    <span className="text-sm font-medium">AI Suggestion</span>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Add to{' '}
+                    <span className="font-medium text-foreground">{suggestedTrack.name}</span>{' '}
+                  </p>
+                  <p className="text-xs text-muted-foreground italic">
+                    {pathPlacement.suggestion.justification}
+                  </p>
+                  <Button
+                    variant="brand"
+                    size="sm"
+                    onClick={() => {
+                      setPathChoice('existing')
+                      setSelectedPathId(pathPlacement.suggestion!.pathId)
+                      setAcceptedAiPlacement(true)
+                    }}
+                    data-testid="wizard-path-accept-suggestion"
+                    className="rounded-xl"
                   >
-                    <div className="flex items-center gap-2">
-                      <Sparkles className="size-4 text-brand" aria-hidden="true" />
-                      <span className="text-sm font-medium">AI Suggestion</span>
-                    </div>
-                    <p className="text-sm text-muted-foreground">
-                      Place in{' '}
-                      <span className="font-medium text-foreground">
-                        {pathPlacement.suggestion.pathName}
-                      </span>{' '}
-                      at position{' '}
-                      <span className="font-medium text-foreground">
-                        #{pathPlacement.suggestion.position}
-                      </span>
-                    </p>
-                    <p className="text-xs text-muted-foreground italic">
-                      {pathPlacement.suggestion.justification}
-                    </p>
-                    <Button
-                      variant="brand"
-                      size="sm"
-                      onClick={() => {
-                        setPathChoice('accept')
-                        setSelectedPathId(pathPlacement.suggestion!.pathId)
-                        setSelectedPosition(pathPlacement.suggestion!.position)
+                    <Check className="size-4 mr-1.5" aria-hidden="true" />
+                    Accept Suggestion
+                  </Button>
+                </div>
+              )}
+
+              <div
+                className="space-y-2"
+                role="radiogroup"
+                aria-label="Choose Learning Track organization"
+              >
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked={pathChoice === 'none'}
+                  onClick={() => {
+                    setPathChoice('none')
+                    setSelectedPathId(null)
+                    setAcceptedAiPlacement(false)
+                  }}
+                  className={cn(
+                    'flex w-full items-start gap-3 rounded-xl border p-3 text-left transition-colors',
+                    pathChoice === 'none'
+                      ? 'border-brand bg-brand-soft/30'
+                      : 'border-border hover:bg-accent'
+                  )}
+                  data-testid="wizard-track-none"
+                >
+                  <span
+                    className={cn(
+                      'mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-full border',
+                      pathChoice === 'none' ? 'border-brand' : 'border-muted-foreground'
+                    )}
+                    aria-hidden="true"
+                  >
+                    {pathChoice === 'none' && <span className="size-2 rounded-full bg-brand" />}
+                  </span>
+                  <span>
+                    <span className="block text-sm font-medium text-foreground">No track</span>
+                    <span className="block text-xs text-muted-foreground">
+                      Import now and organize later.
+                    </span>
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked={pathChoice === 'existing'}
+                  disabled={userTracks.length === 0}
+                  onClick={() => {
+                    setPathChoice('existing')
+                    setAcceptedAiPlacement(false)
+                  }}
+                  className={cn(
+                    'flex w-full items-start gap-3 rounded-xl border p-3 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-50',
+                    pathChoice === 'existing'
+                      ? 'border-brand bg-brand-soft/30'
+                      : 'border-border hover:bg-accent'
+                  )}
+                  data-testid="wizard-track-existing"
+                >
+                  <span
+                    className={cn(
+                      'mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-full border',
+                      pathChoice === 'existing' ? 'border-brand' : 'border-muted-foreground'
+                    )}
+                    aria-hidden="true"
+                  >
+                    {pathChoice === 'existing' && <span className="size-2 rounded-full bg-brand" />}
+                  </span>
+                  <span>
+                    <span className="block text-sm font-medium text-foreground">
+                      Existing track
+                    </span>
+                    <span className="block text-xs text-muted-foreground">
+                      Add this course to one of your Learning Tracks.
+                    </span>
+                  </span>
+                </button>
+
+                {pathChoice === 'existing' && (
+                  <div className="pl-7 pb-1">
+                    <Label htmlFor="wizard-track-select" className="sr-only">
+                      Choose a Learning Track
+                    </Label>
+                    <Select
+                      value={selectedPathId || ''}
+                      onValueChange={value => {
+                        setSelectedPathId(value)
+                        setAcceptedAiPlacement(false)
                       }}
-                      data-testid="wizard-path-accept-suggestion"
-                      className="rounded-xl"
                     >
-                      <Check className="size-4 mr-1.5" aria-hidden="true" />
-                      Accept Suggestion
-                    </Button>
+                      <SelectTrigger
+                        id="wizard-track-select"
+                        data-testid="wizard-path-select"
+                        className="rounded-xl"
+                        aria-label="Choose a Learning Track"
+                      >
+                        <SelectValue placeholder="Choose a Learning Track..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {userTracks.map(track => (
+                          <SelectItem key={track.id} value={track.id}>
+                            <span className="flex items-center gap-2">
+                              <Route className="size-3.5" aria-hidden="true" />
+                              {track.name}
+                            </span>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 )}
 
-              {/* AI not configured message */}
-              {!pathPlacement.isAvailable && learningPaths.length > 0 && (
-                <div
-                  className="flex items-start gap-3 rounded-xl border border-warning/30 bg-warning/5 p-3"
-                  data-testid="wizard-path-no-ai"
-                >
-                  <AlertTriangle
-                    className="size-4 mt-0.5 shrink-0 text-warning"
-                    aria-hidden="true"
-                  />
-                  <div className="space-y-1">
-                    <p className="text-sm text-muted-foreground">
-                      AI placement suggestions require a configured AI provider.
-                    </p>
-                    <Link
-                      to="/settings"
-                      className="text-xs text-brand hover:underline"
-                      onClick={() => handleOpenChange(false)}
-                    >
-                      <Settings className="size-3 inline mr-1" aria-hidden="true" />
-                      Configure in Settings
-                    </Link>
-                  </div>
-                </div>
-              )}
-
-              {/* Manual path selection */}
-              {learningPaths.length > 0 && (
-                <div className="space-y-3">
-                  <Label>Choose a Learning Path</Label>
-                  <Select
-                    value={selectedPathId || ''}
-                    onValueChange={value => {
-                      setSelectedPathId(value)
-                      setPathChoice('choose')
-                    }}
-                  >
-                    <SelectTrigger
-                      data-testid="wizard-path-select"
-                      className="rounded-xl"
-                      aria-label="Select a learning path"
-                    >
-                      <SelectValue placeholder="Select a path..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {learningPaths.map(path => (
-                        <SelectItem key={path.id} value={path.id}>
-                          <span className="flex items-center gap-2">
-                            <Route className="size-3.5" aria-hidden="true" />
-                            {path.name}
-                          </span>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-
-                  {selectedPathId && pathChoice !== 'skip' && pathChoice !== 'new' && (
-                    <div className="flex items-center gap-2">
-                      <Label htmlFor="wizard-position" className="shrink-0">
-                        Position
-                      </Label>
-                      <Input
-                        id="wizard-position"
-                        data-testid="wizard-path-position"
-                        type="number"
-                        min={1}
-                        value={selectedPosition}
-                        onChange={e =>
-                          setSelectedPosition(Math.max(1, parseInt(e.target.value) || 1))
-                        }
-                        className="w-20 rounded-xl"
-                        aria-label="Position in path"
-                      />
-                    </div>
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked={pathChoice === 'new'}
+                  onClick={() => {
+                    setPathChoice('new')
+                    setSelectedPathId(null)
+                    setAcceptedAiPlacement(false)
+                  }}
+                  className={cn(
+                    'flex w-full items-start gap-3 rounded-xl border p-3 text-left transition-colors',
+                    pathChoice === 'new'
+                      ? 'border-brand bg-brand-soft/30'
+                      : 'border-border hover:bg-accent'
                   )}
-                </div>
-              )}
-
-              {/* Create new path option */}
-              <div className="space-y-2">
-                <Button
-                  variant={pathChoice === 'new' ? 'brand-outline' : 'outline'}
-                  size="sm"
-                  onClick={() => setPathChoice('new')}
                   data-testid="wizard-path-create-new"
-                  className="rounded-xl"
                 >
-                  <Plus className="size-4 mr-1.5" aria-hidden="true" />
-                  Create New Path
-                </Button>
+                  <span
+                    className={cn(
+                      'mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-full border',
+                      pathChoice === 'new' ? 'border-brand' : 'border-muted-foreground'
+                    )}
+                    aria-hidden="true"
+                  >
+                    {pathChoice === 'new' && <span className="size-2 rounded-full bg-brand" />}
+                  </span>
+                  <span className="flex gap-2">
+                    <Plus className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+                    <span>
+                      <span className="block text-sm font-medium text-foreground">
+                        Create a new track
+                      </span>
+                      <span className="block text-xs text-muted-foreground">
+                        Start a Learning Track with this course.
+                      </span>
+                    </span>
+                  </span>
+                </button>
+
                 {pathChoice === 'new' && (
-                  <Input
-                    data-testid="wizard-new-path-name"
-                    value={newPathName}
-                    onChange={e => setNewPathName(e.target.value)}
-                    placeholder="e.g., Web Development Fundamentals"
-                    className="rounded-xl"
-                    autoFocus
-                    aria-label="New path name"
-                  />
+                  <div className="space-y-1.5 pl-7 pb-1">
+                    <Label htmlFor="wizard-new-path-name">Learning Track name</Label>
+                    <Input
+                      id="wizard-new-path-name"
+                      data-testid="wizard-new-path-name"
+                      value={newPathName}
+                      onChange={e => setNewPathName(e.target.value)}
+                      placeholder="e.g., Behavioral Analysis Foundations"
+                      className="rounded-xl"
+                      autoFocus
+                      aria-label="New Learning Track name"
+                    />
+                  </div>
                 )}
               </div>
             </div>
@@ -1647,19 +1764,7 @@ export function ImportWizardDialog({
         )}
 
         {step === 'path' && (
-          <DialogFooter className="flex-col sm:flex-row gap-2">
-            <Button
-              variant="ghost"
-              onClick={() => {
-                setPathChoice('skip')
-                handleImport()
-              }}
-              disabled={isPersisting}
-              data-testid="wizard-path-skip"
-              className="rounded-xl sm:mr-auto"
-            >
-              Add Later
-            </Button>
+          <DialogFooter className="gap-2">
             <Button
               variant="outline"
               onClick={() => setStep('details')}
@@ -1675,7 +1780,8 @@ export function ImportWizardDialog({
               disabled={
                 isPersisting ||
                 (pathChoice === 'new' && !newPathName.trim()) ||
-                (pathChoice !== 'skip' && pathChoice !== 'new' && !selectedPathId)
+                (pathChoice === 'existing' &&
+                  (!selectedPathId || !userTracks.some(track => track.id === selectedPathId)))
               }
               data-testid="wizard-path-import-btn"
               className="rounded-xl"

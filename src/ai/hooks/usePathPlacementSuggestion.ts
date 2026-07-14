@@ -7,7 +7,7 @@
  * @module
  */
 
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import {
   isPathPlacementAvailable,
   suggestPathPlacement,
@@ -63,7 +63,8 @@ export function usePathPlacementSuggestion(
   const { importedCourses } = useCourseImportStore()
 
   const isAvailable = isPathPlacementAvailable()
-  const hasExistingPaths = paths.length > 0
+  const userPaths = useMemo(() => paths.filter(path => !path.isTemplate), [paths])
+  const hasExistingPaths = userPaths.length > 0
 
   const retry = useCallback(() => {
     setSuggestion(null)
@@ -97,7 +98,7 @@ export function usePathPlacementSuggestion(
         // Catalog courses table dropped (E89-S01) — no catalog course names to load
 
         // Build path contexts — filter to target path if provided (R3 constrained context)
-        let allPathContexts = paths.map(path => ({
+        let allPathContexts = userPaths.map(path => ({
           path,
           entries: getEntriesForPath(path.id),
         }))
@@ -143,7 +144,7 @@ export function usePathPlacementSuggestion(
     hasExistingPaths,
     courseName,
     retryCount,
-    paths,
+    userPaths,
     getEntriesForPath,
     importedCourses,
     courseTags,

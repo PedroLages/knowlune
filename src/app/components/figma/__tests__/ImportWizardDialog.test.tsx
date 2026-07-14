@@ -81,16 +81,19 @@ const mockLearningPathState = {
     name: string
     description: string
     isAIGenerated: boolean
+    isTemplate?: boolean
     createdAt: string
     updatedAt: string
   }>,
-  entries: [] as Array<unknown>,
+  entries: [] as Array<{ id: string; pathId: string; courseId: string }>,
   activePath: null,
   isGenerating: false,
   error: null,
   loadPaths: vi.fn(),
   addCourseToPath: vi.fn(),
   createPath: vi.fn(),
+  applyPlacementSuggestion: vi.fn(),
+  replaceGapEntry: vi.fn(),
 }
 
 vi.mock('@/stores/useLearningPathStore', () => ({
@@ -105,12 +108,23 @@ vi.mock('@/stores/useLearningPathStore', () => ({
   ),
 }))
 
+const mockPathPlacement = {
+  isAvailable: false,
+  isLoading: false,
+  suggestion: null as null | {
+    pathId: string
+    pathName: string
+    position: number
+    justification: string
+  },
+  hasFetched: false,
+  error: null as string | null,
+  hasExistingPaths: false,
+  retry: vi.fn(),
+}
+
 vi.mock('@/ai/hooks/usePathPlacementSuggestion', () => ({
-  usePathPlacementSuggestion: () => ({
-    suggestion: null,
-    isLoading: false,
-    error: null,
-  }),
+  usePathPlacementSuggestion: () => mockPathPlacement,
 }))
 
 vi.mock('@/ai/learningPath/suggestPlacement', () => ({
@@ -151,7 +165,7 @@ function makeScannedCourse(overrides: Partial<ScannedCourse> = {}): ScannedCours
         duration: 300,
         format: 'mp4',
         order: 1,
-        fileHandle: {} as FileSystemFileHandle,
+        fileHandle: makeMockFileHandle('lesson1.mp4'),
         fileSize: 50_000_000,
         width: 1920,
         height: 1080,
@@ -163,7 +177,7 @@ function makeScannedCourse(overrides: Partial<ScannedCourse> = {}): ScannedCours
         duration: 600,
         format: 'mp4',
         order: 2,
-        fileHandle: {} as FileSystemFileHandle,
+        fileHandle: makeMockFileHandle('lesson2.mp4'),
         fileSize: 100_000_000,
         width: 1920,
         height: 1080,
@@ -181,6 +195,11 @@ function makeScannedCourse(overrides: Partial<ScannedCourse> = {}): ScannedCours
     images: [],
     ...overrides,
   }
+}
+
+async function importWithNoTrack(user: ReturnType<typeof userEvent.setup>): Promise<void> {
+  await user.click(screen.getByTestId('wizard-next-btn'))
+  await user.click(screen.getByTestId('wizard-path-import-btn'))
 }
 
 describe('ImportWizardDialog', () => {
@@ -210,12 +229,21 @@ describe('ImportWizardDialog', () => {
     mockAISuggestions.suggestedTags = []
     mockAISuggestions.suggestedDescription = ''
     mockAISuggestions.hasFetched = false
+    mockPathPlacement.isAvailable = false
+    mockPathPlacement.isLoading = false
+    mockPathPlacement.suggestion = null
+    mockPathPlacement.hasFetched = false
+    mockPathPlacement.error = null
+    mockPathPlacement.hasExistingPaths = false
+    mockPathPlacement.retry = vi.fn()
     // Reset learning path store mock state
     mockLearningPathState.paths = []
     mockLearningPathState.entries = []
     mockLearningPathState.loadPaths = vi.fn()
     mockLearningPathState.addCourseToPath = vi.fn()
     mockLearningPathState.createPath = vi.fn()
+    mockLearningPathState.applyPlacementSuggestion = vi.fn()
+    mockLearningPathState.replaceGapEntry = vi.fn()
     // Default: guest user (not premium) — PremiumGate shows upgrade CTA
     mockUseIsPremium.mockReturnValue({
       isPremium: false,
@@ -316,8 +344,7 @@ describe('ImportWizardDialog', () => {
     const nameInput = screen.getByTestId('wizard-course-name-input')
     await user.clear(nameInput)
 
-    const importBtn = screen.getByTestId('wizard-import-btn')
-    expect(importBtn).toBeDisabled()
+    expect(screen.getByTestId('wizard-next-btn')).toBeDisabled()
   })
 
   it('calls persistScannedCourse with overrides when name is changed', async () => {
@@ -348,7 +375,7 @@ describe('ImportWizardDialog', () => {
     await user.clear(nameInput)
     await user.type(nameInput, 'Custom Name')
 
-    await user.click(screen.getByTestId('wizard-import-btn'))
+    await importWithNoTrack(user)
 
     await waitFor(() => {
       expect(mockPersistScannedCourse).toHaveBeenCalledWith(scanned, { name: 'Custom Name' })
@@ -377,10 +404,10 @@ describe('ImportWizardDialog', () => {
     await user.click(screen.getByTestId('wizard-select-folder-btn'))
 
     await waitFor(() => {
-      expect(screen.getByTestId('wizard-import-btn')).toBeInTheDocument()
+      expect(screen.getByTestId('wizard-next-btn')).toBeInTheDocument()
     })
 
-    await user.click(screen.getByTestId('wizard-import-btn'))
+    await importWithNoTrack(user)
 
     await waitFor(() => {
       expect(mockPersistScannedCourse).toHaveBeenCalledWith(scanned, undefined)
@@ -628,7 +655,7 @@ describe('ImportWizardDialog', () => {
     await user.type(tagInput, 'react{Enter}')
     await user.type(tagInput, 'frontend{Enter}')
 
-    await user.click(screen.getByTestId('wizard-import-btn'))
+    await importWithNoTrack(user)
 
     await waitFor(() => {
       expect(mockPersistScannedCourse).toHaveBeenCalledWith(scanned, {
@@ -738,7 +765,7 @@ describe('ImportWizardDialog', () => {
     })
 
     // The first image is auto-selected, so just import directly
-    await user.click(screen.getByTestId('wizard-import-btn'))
+    await importWithNoTrack(user)
 
     await waitFor(() => {
       expect(mockPersistScannedCourse).toHaveBeenCalledWith(scanned, {
@@ -767,10 +794,10 @@ describe('ImportWizardDialog', () => {
     await waitFor(() => {
       expect(screen.getByText('Choose a cover before continuing.')).toBeInTheDocument()
     })
-    expect(screen.getByTestId('wizard-import-btn')).toBeDisabled()
+    expect(screen.getByTestId('wizard-next-btn')).toBeDisabled()
 
     await user.click(screen.getByTestId('wizard-image-option-banner.png'))
-    expect(screen.getByTestId('wizard-import-btn')).toBeEnabled()
+    expect(screen.getByTestId('wizard-next-btn')).toBeEnabled()
   })
 
   it('allows video-frame fallback when multiple root images are found', async () => {
@@ -800,11 +827,13 @@ describe('ImportWizardDialog', () => {
     await user.click(screen.getByTestId('wizard-select-folder-btn'))
     await user.click(await screen.findByTestId('wizard-use-video-frame'))
 
-    expect(screen.getByTestId('wizard-import-btn')).toBeEnabled()
-    await user.click(screen.getByTestId('wizard-import-btn'))
+    expect(screen.getByTestId('wizard-next-btn')).toBeEnabled()
+    await importWithNoTrack(user)
 
     await waitFor(() => {
-      expect(mockPersistScannedCourse).toHaveBeenCalledWith(scanned, undefined)
+      expect(mockPersistScannedCourse).toHaveBeenCalledWith(scanned, {
+        useVideoFrameCover: true,
+      })
     })
   })
 
@@ -824,7 +853,9 @@ describe('ImportWizardDialog', () => {
     await waitFor(() => {
       expect(screen.getByTestId('wizard-cover-selected')).toBeInTheDocument()
     })
-    expect(screen.getByTestId('wizard-cover-selected')).toHaveTextContent('Cover: cover.jpg')
+    expect(screen.getByTestId('wizard-cover-selected')).toHaveTextContent(
+      'Selected cover file: cover.jpg'
+    )
   })
 
   // --- AI suggestions tests ---
@@ -941,7 +972,7 @@ describe('ImportWizardDialog', () => {
       expect(screen.getByTestId('wizard-description-input')).toHaveValue('AI generated description')
     })
 
-    await user.click(screen.getByTestId('wizard-import-btn'))
+    await importWithNoTrack(user)
 
     await waitFor(() => {
       expect(mockPersistScannedCourse).toHaveBeenCalledWith(scanned, {
@@ -969,7 +1000,7 @@ describe('ImportWizardDialog', () => {
     await user.click(screen.getByTestId('wizard-select-folder-btn'))
 
     await waitFor(() => {
-      expect(screen.getByTestId('wizard-import-btn')).toBeInTheDocument()
+      expect(screen.getByTestId('wizard-next-btn')).toBeInTheDocument()
     })
 
     // No AI indicators
@@ -978,10 +1009,213 @@ describe('ImportWizardDialog', () => {
     expect(screen.queryByTestId('wizard-ai-description-badge')).not.toBeInTheDocument()
 
     // Import should still work
-    await user.click(screen.getByTestId('wizard-import-btn'))
+    await importWithNoTrack(user)
     await waitFor(() => {
       expect(mockPersistScannedCourse).toHaveBeenCalledWith(scanned, undefined)
     })
+  })
+
+  it('explains optional tags and defaults organization to no track', async () => {
+    const user = userEvent.setup()
+    mockScanCourseFolder.mockResolvedValueOnce(makeScannedCourse())
+
+    render(<ImportWizardDialog open={true} onOpenChange={vi.fn()} />)
+    await user.click(screen.getByTestId('wizard-select-folder-btn'))
+
+    expect(
+      screen.getByText(
+        'Optional. Tags make courses easier to filter and help Knowlune connect related topics. You can edit them later.'
+      )
+    ).toBeInTheDocument()
+
+    await user.click(screen.getByTestId('wizard-next-btn'))
+
+    expect(screen.getByText('Organize Course')).toBeInTheDocument()
+    expect(screen.getByTestId('wizard-track-none')).toHaveAttribute('aria-checked', 'true')
+    expect(screen.queryByText('Add Later')).not.toBeInTheDocument()
+    expect(screen.getByTestId('wizard-path-import-btn')).toBeEnabled()
+  })
+
+  it('excludes template tracks from existing-track destinations', async () => {
+    const user = userEvent.setup()
+    mockLearningPathState.paths = [
+      {
+        id: 'track-user',
+        name: 'My Learning Track',
+        description: '',
+        isAIGenerated: false,
+        createdAt: '2026-01-01',
+        updatedAt: '2026-01-01',
+      },
+      {
+        id: 'track-template',
+        name: 'Data Science Foundations',
+        description: '',
+        isAIGenerated: false,
+        isTemplate: true,
+        createdAt: '2026-01-01',
+        updatedAt: '2026-01-01',
+      },
+    ]
+    mockScanCourseFolder.mockResolvedValueOnce(makeScannedCourse())
+
+    render(<ImportWizardDialog open={true} onOpenChange={vi.fn()} targetPathId="track-user" />)
+    await user.click(screen.getByTestId('wizard-select-folder-btn'))
+    await user.click(screen.getByTestId('wizard-next-btn'))
+
+    expect(await screen.findByText('My Learning Track')).toBeInTheDocument()
+    expect(screen.queryByText('Data Science Foundations')).not.toBeInTheDocument()
+  })
+
+  it('requires a name before creating a new Learning Track', async () => {
+    const user = userEvent.setup()
+    mockScanCourseFolder.mockResolvedValueOnce(makeScannedCourse())
+
+    render(<ImportWizardDialog open={true} onOpenChange={vi.fn()} />)
+    await user.click(screen.getByTestId('wizard-select-folder-btn'))
+    await user.click(screen.getByTestId('wizard-next-btn'))
+    await user.click(screen.getByTestId('wizard-path-create-new'))
+
+    expect(screen.getByTestId('wizard-path-import-btn')).toBeDisabled()
+    await user.type(screen.getByTestId('wizard-new-path-name'), 'Behavioral Analysis')
+    expect(screen.getByTestId('wizard-path-import-btn')).toBeEnabled()
+  })
+
+  it('applies an accepted AI placement only to an eligible user track', async () => {
+    const user = userEvent.setup()
+    const scanned = makeScannedCourse()
+    const track = {
+      id: 'track-user',
+      name: 'Behavioral Analysis',
+      description: '',
+      isAIGenerated: false,
+      createdAt: '2026-01-01',
+      updatedAt: '2026-01-01',
+    }
+    mockLearningPathState.paths = [track]
+    mockPathPlacement.isAvailable = true
+    mockPathPlacement.hasFetched = true
+    mockPathPlacement.hasExistingPaths = true
+    mockPathPlacement.suggestion = {
+      pathId: track.id,
+      pathName: track.name,
+      position: 1,
+      justification: 'A strong foundation for this track.',
+    }
+    mockScanCourseFolder.mockResolvedValueOnce(scanned)
+    mockPersistScannedCourse.mockResolvedValueOnce({
+      ...scanned,
+      importedAt: '2026-03-25T10:00:00.000Z',
+      category: '',
+      tags: [],
+      status: 'active',
+      videoCount: 2,
+      pdfCount: 1,
+    })
+    mockLearningPathState.addCourseToPath.mockImplementationOnce(
+      async (pathId: string, courseId: string) => {
+        mockLearningPathState.entries.push({ id: 'entry-1', pathId, courseId })
+      }
+    )
+
+    render(<ImportWizardDialog open={true} onOpenChange={vi.fn()} />)
+    await user.click(screen.getByTestId('wizard-select-folder-btn'))
+    await user.click(screen.getByTestId('wizard-next-btn'))
+    await user.click(await screen.findByTestId('wizard-path-accept-suggestion'))
+    await user.click(screen.getByTestId('wizard-path-import-btn'))
+
+    await waitFor(() => {
+      expect(mockLearningPathState.applyPlacementSuggestion).toHaveBeenCalledWith(
+        track.id,
+        scanned.id,
+        1,
+        'A strong foundation for this track.'
+      )
+    })
+  })
+
+  it('reports when an imported course was not actually added to the selected track', async () => {
+    const user = userEvent.setup()
+    const scanned = makeScannedCourse()
+    mockLearningPathState.paths = [
+      {
+        id: 'track-user',
+        name: 'Behavioral Analysis',
+        description: '',
+        isAIGenerated: false,
+        createdAt: '2026-01-01',
+        updatedAt: '2026-01-01',
+      },
+    ]
+    mockScanCourseFolder.mockResolvedValueOnce(scanned)
+    mockPersistScannedCourse.mockResolvedValueOnce({
+      ...scanned,
+      importedAt: '2026-03-25T10:00:00.000Z',
+      category: '',
+      tags: [],
+      status: 'active',
+      videoCount: 2,
+      pdfCount: 1,
+    })
+
+    render(<ImportWizardDialog open={true} onOpenChange={vi.fn()} targetPathId="track-user" />)
+    await user.click(screen.getByTestId('wizard-select-folder-btn'))
+    await user.click(screen.getByTestId('wizard-next-btn'))
+    await user.click(screen.getByTestId('wizard-path-import-btn'))
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith(
+        'Course imported, but it was not added to the Learning Track.'
+      )
+    })
+  })
+
+  it('keeps the wizard open when cover preparation fails', async () => {
+    const user = userEvent.setup()
+    const onOpenChange = vi.fn()
+    mockScanCourseFolder.mockResolvedValueOnce(makeScannedCourse())
+    mockPersistScannedCourse.mockRejectedValueOnce(
+      new Error('We could not decode the selected cover.')
+    )
+
+    render(<ImportWizardDialog open={true} onOpenChange={onOpenChange} />)
+    await user.click(screen.getByTestId('wizard-select-folder-btn'))
+    await importWithNoTrack(user)
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith('We could not decode the selected cover.')
+    })
+    expect(screen.getByTestId('wizard-path-step')).toBeInTheDocument()
+    expect(onOpenChange).not.toHaveBeenCalledWith(false)
+  })
+
+  it('hides video-frame selection when the first video cannot be read locally', async () => {
+    const user = userEvent.setup()
+    const base = makeScannedCourse()
+    mockScanCourseFolder.mockResolvedValueOnce(
+      makeScannedCourse({
+        videos: base.videos.map(video => ({ ...video, fileHandle: undefined })),
+        images: [
+          {
+            filename: '0x0.jpg',
+            path: '0x0.jpg',
+            serverUrl: 'https://courses.example.test/course/0x0.jpg',
+          },
+          {
+            filename: 'banner.jpg',
+            path: 'banner.jpg',
+            serverUrl: 'https://courses.example.test/course/banner.jpg',
+          },
+        ],
+      })
+    )
+
+    render(<ImportWizardDialog open={true} onOpenChange={vi.fn()} />)
+    await user.click(screen.getByTestId('wizard-select-folder-btn'))
+
+    await screen.findByTestId('wizard-image-grid')
+    expect(screen.queryByTestId('wizard-use-video-frame')).not.toBeInTheDocument()
+    expect(screen.getByTestId('wizard-next-btn')).toBeDisabled()
   })
 
   // --- targetPathId and singleton guard tests (Unit 1) ---
@@ -1011,6 +1245,8 @@ describe('ImportWizardDialog', () => {
       mockLearningPathState.loadPaths = vi.fn()
       mockLearningPathState.addCourseToPath = vi.fn()
       mockLearningPathState.createPath = vi.fn()
+      mockLearningPathState.applyPlacementSuggestion = vi.fn()
+      mockLearningPathState.replaceGapEntry = vi.fn()
       __resetWizardOpenCount()
     })
 
@@ -1044,7 +1280,7 @@ describe('ImportWizardDialog', () => {
       })
     })
 
-    it('allows skipping path placement even when targetPathId is provided', async () => {
+    it('allows choosing no track even when targetPathId is provided', async () => {
       const user = userEvent.setup()
       const scanned = makeScannedCourse()
       mockScanCourseFolder.mockResolvedValueOnce(scanned)
@@ -1073,12 +1309,8 @@ describe('ImportWizardDialog', () => {
 
       await user.click(screen.getByTestId('wizard-next-btn'))
 
-      await waitFor(() => {
-        expect(screen.getByTestId('wizard-path-skip')).toBeInTheDocument()
-      })
-
-      // Click "Add Later" to skip path placement
-      await user.click(screen.getByTestId('wizard-path-skip'))
+      await user.click(screen.getByTestId('wizard-track-none'))
+      await user.click(screen.getByTestId('wizard-path-import-btn'))
 
       await waitFor(() => {
         expect(mockPersistScannedCourse).toHaveBeenCalled()
@@ -1115,12 +1347,10 @@ describe('ImportWizardDialog', () => {
         expect(screen.getByTestId('wizard-path-step')).toBeInTheDocument()
       })
 
-      // Without targetPathId, no path is pre-selected — user must choose or skip
-      // Verify "Select a path..." placeholder is shown (no pre-selection)
-      expect(screen.getByText('Select a path...')).toBeInTheDocument()
+      // Without targetPathId, the explicit no-track option is selected by default.
+      expect(screen.getByTestId('wizard-track-none')).toHaveAttribute('aria-checked', 'true')
 
-      // Use "Add Later" to skip and complete import
-      await user.click(screen.getByTestId('wizard-path-skip'))
+      await user.click(screen.getByTestId('wizard-path-import-btn'))
 
       await waitFor(() => {
         expect(mockPersistScannedCourse).toHaveBeenCalled()
@@ -1150,8 +1380,7 @@ describe('ImportWizardDialog', () => {
         expect(screen.getByTestId('wizard-path-step')).toBeInTheDocument()
       })
 
-      // The select should show placeholder text since no path matches
-      expect(screen.getByText('Select a path...')).toBeInTheDocument()
+      expect(screen.getByTestId('wizard-track-none')).toHaveAttribute('aria-checked', 'true')
     })
   })
 
