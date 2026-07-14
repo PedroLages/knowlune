@@ -14,9 +14,12 @@ vi.mock('@/stores/useCourseFilterStore', () => ({
   useCourseFilterStore: (selector: any) => {
     const state = {
       source: 'all',
-      showTrackCourses: false,
+      showTrackCourses: true,
       selectedTags: mockSelectedTags,
       selectedStatuses: [],
+      selectedDifficulties: [],
+      selectedCategories: [],
+      selectedAuthorIds: [],
       setFilter: mockSetFilter,
       clearFilter: mockClearFilter,
       isAnyFilterActive: mockIsAnyFilterActive,
@@ -55,6 +58,7 @@ vi.mock('@/app/components/ui/sheet', () => ({
     </div>
   ),
   SheetTitle: ({ children }: any) => <div data-testid="sheet-title">{children}</div>,
+  SheetDescription: ({ children }: any) => <div>{children}</div>,
 }))
 
 vi.mock('@/app/components/ui/drawer', () => ({
@@ -62,6 +66,7 @@ vi.mock('@/app/components/ui/drawer', () => ({
   DrawerContent: ({ children }: any) => <div data-testid="drawer-content">{children}</div>,
   DrawerHeader: ({ children }: any) => <div data-testid="drawer-header">{children}</div>,
   DrawerTitle: ({ children }: any) => <div data-testid="drawer-title">{children}</div>,
+  DrawerDescription: ({ children }: any) => <div>{children}</div>,
 }))
 
 vi.mock('@/app/components/ui/radio-group', () => ({
@@ -73,6 +78,9 @@ vi.mock('@/app/components/ui/radio-group', () => ({
       </button>
       <button data-testid="mock-radio-youtube" onClick={() => onValueChange('youtube')}>
         Set YouTube
+      </button>
+      <button data-testid="mock-radio-server" onClick={() => onValueChange('server')}>
+        Set Server
       </button>
     </div>
   ),
@@ -132,7 +140,7 @@ describe('CourseFilterSidebar', () => {
     mockSelectedTags.length = 0
   })
 
-  it('renders source section with All Courses and YouTube options', () => {
+  it('renders all supported source options', () => {
     render(
       <CourseFilterSidebar
         open={true}
@@ -141,8 +149,11 @@ describe('CourseFilterSidebar', () => {
       />
     )
 
-    expect(screen.getByText('All Courses')).toBeInTheDocument()
+    expect(screen.getByText('All Sources')).toBeInTheDocument()
+    expect(screen.getByText('Local Folder')).toBeInTheDocument()
+    expect(screen.getByText('Course Server')).toBeInTheDocument()
     expect(screen.getByText('YouTube')).toBeInTheDocument()
+    expect(screen.getByText('Google Drive')).toBeInTheDocument()
     expect(screen.getByText('Source')).toBeInTheDocument()
   })
 
@@ -169,7 +180,7 @@ describe('CourseFilterSidebar', () => {
       />
     )
 
-    expect(screen.getByText(/No tags available/i)).toBeInTheDocument()
+    expect(screen.getByText('No tags available.')).toBeInTheDocument()
   })
 
   it('selecting YouTube calls setFilter with source youtube', async () => {
@@ -188,18 +199,17 @@ describe('CourseFilterSidebar', () => {
   })
 
   it('shows learning tracks section when tracks exist', () => {
-    mockEntries.push({ courseId: 'course-1', courseType: 'imported' })
-
     render(
       <CourseFilterSidebar
         open={true}
         onOpenChange={() => {}}
         availableCourses={createMockCourses([['react']])}
+        courseIdsInTracks={new Set(['course-1'])}
       />
     )
 
     expect(screen.getByText('Learning Tracks')).toBeInTheDocument()
-    expect(screen.getByText('Include courses in tracks')).toBeInTheDocument()
+    expect(screen.getByText(/Include Track Courses/)).toBeInTheDocument()
   })
 
   it('hides learning tracks section when no tracks exist', () => {
@@ -215,19 +225,18 @@ describe('CourseFilterSidebar', () => {
   })
 
   it('toggling track switch calls setFilter with showTrackCourses', async () => {
-    mockEntries.push({ courseId: 'course-1', courseType: 'imported' })
-
     const user = userEvent.setup()
     render(
       <CourseFilterSidebar
         open={true}
         onOpenChange={() => {}}
         availableCourses={createMockCourses([['react']])}
+        courseIdsInTracks={new Set(['course-1'])}
       />
     )
 
     await user.click(screen.getByTestId('mock-switch'))
-    expect(mockSetFilter).toHaveBeenCalledWith('showTrackCourses', true)
+    expect(mockSetFilter).toHaveBeenCalledWith('showTrackCourses', false)
   })
 
   it('shows Clear All button when filters are active', () => {
@@ -256,7 +265,7 @@ describe('CourseFilterSidebar', () => {
     expect(screen.queryByText('Clear All')).not.toBeInTheDocument()
   })
 
-  it('Clear All calls clearFilter for source, showTrackCourses, and selectedTags', async () => {
+  it('Clear all resets every advanced filter dimension', async () => {
     mockSelectedTags.push('react')
 
     const user = userEvent.setup()
@@ -272,6 +281,9 @@ describe('CourseFilterSidebar', () => {
     expect(mockClearFilter).toHaveBeenCalledWith('source')
     expect(mockClearFilter).toHaveBeenCalledWith('showTrackCourses')
     expect(mockClearFilter).toHaveBeenCalledWith('selectedTags')
+    expect(mockClearFilter).toHaveBeenCalledWith('selectedDifficulties')
+    expect(mockClearFilter).toHaveBeenCalledWith('selectedCategories')
+    expect(mockClearFilter).toHaveBeenCalledWith('selectedAuthorIds')
   })
 
   it('displays tag count next to each tag', () => {
@@ -291,23 +303,19 @@ describe('CourseFilterSidebar', () => {
   })
 
   it('shows track count badge with correct number', () => {
-    mockEntries.push(
-      { courseId: 'course-1', courseType: 'imported' },
-      { courseId: 'course-2', courseType: 'imported' }
-    )
-
     render(
       <CourseFilterSidebar
         open={true}
         onOpenChange={() => {}}
         availableCourses={createMockCourses([['react']])}
+        courseIdsInTracks={new Set(['course-1', 'course-2'])}
       />
     )
 
     expect(screen.getByText('2')).toBeInTheDocument()
   })
 
-  it('renders title as Filters', () => {
+  it('renders title as More filters', () => {
     render(
       <CourseFilterSidebar
         open={true}
@@ -316,7 +324,7 @@ describe('CourseFilterSidebar', () => {
       />
     )
 
-    expect(screen.getByText('Filters')).toBeInTheDocument()
+    expect(screen.getByText('More Filters')).toBeInTheDocument()
   })
 
   it('shows show less/more button when more than 12 tags exist', () => {
@@ -329,7 +337,7 @@ describe('CourseFilterSidebar', () => {
       />
     )
 
-    expect(screen.getByText('+3 more')).toBeInTheDocument()
+    expect(screen.getByText('Show 3 More')).toBeInTheDocument()
   })
 
   it('includes selected tags outside the top 12 in the visible tag list', () => {
@@ -357,6 +365,7 @@ describe('mobile (Drawer)', () => {
     vi.mocked(useMediaQuery).mockReturnValue(true)
     mockIsAnyFilterActive.mockReturnValue(false)
     mockEntries.length = 0
+    mockSelectedTags.length = 0
   })
 
   it('renders Drawer instead of Sheet on mobile', () => {
@@ -375,13 +384,12 @@ describe('mobile (Drawer)', () => {
   })
 
   it('renders all three filter sections inside Drawer', () => {
-    mockEntries.push({ courseId: 'course-1', courseType: 'imported' })
-
     render(
       <CourseFilterSidebar
         open={true}
         onOpenChange={() => {}}
         availableCourses={createMockCourses([['react']])}
+        courseIdsInTracks={new Set(['course-1'])}
       />
     )
 
@@ -391,7 +399,7 @@ describe('mobile (Drawer)', () => {
     expect(screen.getByText('Tags')).toBeInTheDocument()
   })
 
-  it('renders Filters title in Drawer header', () => {
+  it('renders More filters title in Drawer header', () => {
     render(
       <CourseFilterSidebar
         open={true}
@@ -400,7 +408,7 @@ describe('mobile (Drawer)', () => {
       />
     )
 
-    expect(screen.getByText('Filters')).toBeInTheDocument()
+    expect(screen.getByText('More Filters')).toBeInTheDocument()
   })
 
   it('shows Clear All button when filters are active in Drawer', () => {

@@ -3,7 +3,9 @@ import { useHoverPreview } from './useHoverPreview'
 import { useReducedMotion } from './useReducedMotion'
 
 export function useCourseCardPreview() {
-  const { active: previewActive, handlers: previewHandlers } = useHoverPreview(1000)
+  // A short intent delay avoids loading video while the pointer merely crosses a
+  // card, without making the preview feel unresponsive.
+  const { active: previewActive, handlers: previewHandlers } = useHoverPreview(450)
   const [videoReady, setVideoReady] = useState(false)
   const [previewOpen, setPreviewOpen] = useState(false)
   const [infoOpen, setInfoOpen] = useState(false)

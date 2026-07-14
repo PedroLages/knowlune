@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router'
 import { ImportedCourseCard } from '../ImportedCourseCard'
@@ -69,6 +69,10 @@ vi.mock('@/hooks/useCourseCardPreview', () => ({
 
 vi.mock('@/hooks/useVideoFromHandle', () => ({
   useVideoFromHandle: () => mockVideoFromHandle,
+}))
+
+vi.mock('@/hooks/useLazyVisible', () => ({
+  useLazyVisible: () => [{ current: null }, true],
 }))
 
 vi.mock('@/stores/useAuthorStore', () => ({
@@ -269,46 +273,12 @@ describe('ImportedCourseCard', () => {
     })
   })
 
-  describe('E22-S04 AC5: AI-generated tag editing/removal', () => {
-    it('renders AI-generated tags on the course card', () => {
+  describe('card metadata', () => {
+    it('keeps tags off the card surface', () => {
       renderCard({ tags: ['Python', 'Machine Learning', 'Data Science'] })
-      const tagContainer = screen.getByTestId('course-card-tags')
-      expect(tagContainer).toBeInTheDocument()
-      expect(screen.getByText('Python')).toBeInTheDocument()
-      expect(screen.getByText('Machine Learning')).toBeInTheDocument()
-      expect(screen.getByText('Data Science')).toBeInTheDocument()
-    })
-
-    it('renders remove buttons on tag badges', () => {
-      renderCard({ tags: ['Python', 'AI'] })
-      const removeButtons = screen.getAllByRole('button', { name: /Remove tag:/ })
-      expect(removeButtons.length).toBe(2)
-      expect(screen.getByRole('button', { name: 'Remove tag: Python' })).toBeInTheDocument()
-      expect(screen.getByRole('button', { name: 'Remove tag: AI' })).toBeInTheDocument()
-    })
-
-    it('calls updateCourseTags without the removed tag when X is clicked', async () => {
-      const user = userEvent.setup()
-      renderCard({ id: 'c1', tags: ['Python', 'AI', 'Web'] })
-
-      const removeButton = screen.getByRole('button', { name: 'Remove tag: AI' })
-      await user.click(removeButton)
-
-      expect(mockUpdateCourseTags).toHaveBeenCalledWith('c1', ['Python', 'Web'])
-    })
-
-    it('renders an add-tag button for adding new tags', () => {
-      renderCard({ tags: ['Python'] })
-      expect(screen.getByTestId('add-tag-button')).toBeInTheDocument()
-    })
-
-    it('respects maxVisible and shows overflow badge', () => {
-      renderCard({ tags: ['Python', 'AI', 'Web', 'Data', 'ML'] })
-      // TagBadgeList maxVisible=3, so 3 visible + overflow badge
-      const tagBadges = screen.getAllByTestId('tag-badge')
-      expect(tagBadges.length).toBe(3)
-      expect(screen.getByTestId('tag-overflow-badge')).toBeInTheDocument()
-      expect(screen.getByText('+2 more')).toBeInTheDocument()
+      expect(screen.queryByText('Python')).not.toBeInTheDocument()
+      expect(screen.queryByText('Machine Learning')).not.toBeInTheDocument()
+      expect(screen.queryByTestId('add-tag-button')).not.toBeInTheDocument()
     })
   })
 
@@ -693,25 +663,78 @@ describe('ImportedCourseCard', () => {
       expect(container.querySelector('video')).toBeNull()
     })
 
-    it('shows loading spinner when preview is loading', () => {
+    it('keeps the poster visible while preview is loading', () => {
       mockCourseCardPreview.showPreview = true
       mockVideoFromHandle.blobUrl = null
       mockVideoFromHandle.loading = true
       mockVideoFromHandle.error = null
-      const { container } = renderCard({ videoCount: 1 })
-      const spinner = container.querySelector('.animate-spin')
-      expect(spinner).toBeInTheDocument()
+      const { container } = renderCard({
+        videoCount: 1,
+        youtubeThumbnailUrl: 'https://example.com/poster.jpg',
+      })
+      expect(
+        container.querySelector('img[src="https://example.com/poster.jpg"]')
+      ).toBeInTheDocument()
+      expect(screen.queryByText('Preview unavailable')).not.toBeInTheDocument()
     })
 
-    it('shows error indicator when preview fails', () => {
+    it('quietly keeps the poster when preview fails', () => {
       mockCourseCardPreview.showPreview = true
       mockVideoFromHandle.blobUrl = null
       mockVideoFromHandle.loading = false
       mockVideoFromHandle.error = 'permission-denied'
-      renderCard({ videoCount: 1 })
-      const errorBadge = screen.getByRole('status')
-      expect(errorBadge).toBeInTheDocument()
-      expect(errorBadge).toHaveTextContent('Preview unavailable')
+      const { container } = renderCard({
+        videoCount: 1,
+        youtubeThumbnailUrl: 'https://example.com/poster.jpg',
+      })
+      expect(
+        container.querySelector('img[src="https://example.com/poster.jpg"]')
+      ).toBeInTheDocument()
+      expect(screen.queryByText('Preview unavailable')).not.toBeInTheDocument()
+    })
+
+    it('keeps the poster under the video until playback begins', () => {
+      mockCourseCardPreview.showPreview = true
+      mockVideoFromHandle.blobUrl = 'blob:test'
+      const { container } = renderCard({
+        videoCount: 1,
+        youtubeThumbnailUrl: 'https://example.com/poster.jpg',
+      })
+
+      const video = container.querySelector('video')
+      expect(
+        container.querySelector('img[src="https://example.com/poster.jpg"]')
+      ).toBeInTheDocument()
+      expect(video).toHaveClass('opacity-0')
+
+      fireEvent.playing(video!)
+      expect(mockCourseCardPreview.setVideoReady).toHaveBeenCalledWith(true)
+    })
+
+    it('uses the first server video URL for hover preview', async () => {
+      mockCourseCardPreview.showPreview = true
+      mockDBSortBy.mockResolvedValue([
+        {
+          id: 'video-1',
+          courseId: 'course-1',
+          filename: 'lesson.mp4',
+          path: 'lesson.mp4',
+          duration: 0,
+          format: 'mp4',
+          order: 1,
+          fileHandle: null,
+          serverUrl: 'https://media.example.com/lesson.mp4',
+        },
+      ])
+
+      const { container } = renderCard({ source: 'server', videoCount: 1 })
+
+      await waitFor(() => {
+        expect(container.querySelector('video')).toHaveAttribute(
+          'src',
+          'https://media.example.com/lesson.mp4'
+        )
+      })
     })
 
     it('shows preview for not-started courses (post-Unit-1 fix)', () => {

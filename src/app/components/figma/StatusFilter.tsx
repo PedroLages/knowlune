@@ -18,7 +18,7 @@ export const statuses: {
   },
   {
     value: 'active',
-    label: 'Active',
+    label: 'In Progress',
     icon: Circle,
     activeClass:
       'data-[state=on]:bg-brand data-[state=on]:text-brand-foreground data-[state=on]:hover:bg-brand-hover',
@@ -46,13 +46,28 @@ interface StatusFilterProps {
 
 export function StatusFilter({ selectedStatuses, onSelectedStatusesChange }: StatusFilterProps) {
   return (
-    <div data-testid="status-filter-bar" className="flex flex-wrap items-center gap-2">
+    <div data-testid="status-filter-bar" className="flex flex-wrap items-center gap-1.5">
+      <button
+        type="button"
+        aria-pressed={selectedStatuses.length === 0}
+        onClick={() => onSelectedStatusesChange([])}
+        data-testid="status-filter-all"
+        className={cn(
+          'inline-flex min-h-11 items-center rounded-full border px-3 text-xs font-semibold',
+          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2',
+          selectedStatuses.length === 0
+            ? 'border-transparent bg-foreground text-background'
+            : 'border-input bg-transparent text-muted-foreground hover:bg-accent hover:text-foreground'
+        )}
+      >
+        All
+      </button>
       <ToggleGroup
         type="multiple"
         value={selectedStatuses}
         onValueChange={value => onSelectedStatusesChange(value as LearnerCourseStatus[])}
         aria-label="Filter by status"
-        className="flex w-auto flex-wrap gap-2 items-center rounded-none bg-transparent shadow-none"
+        className="flex w-auto flex-wrap items-center gap-1.5 rounded-none bg-transparent shadow-none"
       >
         {statuses.map(({ value, label, icon: Icon, activeClass }) => (
           <ToggleGroupItem

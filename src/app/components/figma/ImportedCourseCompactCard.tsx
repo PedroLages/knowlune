@@ -241,13 +241,10 @@ export function ImportedCourseCompactCard({
           {/* Placeholder background (always present) */}
           <div
             data-testid="compact-card-placeholder"
-            className="absolute inset-0 bg-gradient-to-br from-emerald-50 to-teal-100 dark:from-emerald-950/50 dark:to-teal-950/50 flex items-center justify-center"
+            className="absolute inset-0 bg-muted flex items-center justify-center"
           >
             {(!thumbnailUrl || !isCardVisible) && (
-              <FolderOpen
-                className="size-8 text-emerald-300 dark:text-emerald-600"
-                aria-hidden="true"
-              />
+              <FolderOpen className="size-8 text-muted-foreground/40" aria-hidden="true" />
             )}
           </div>
 
@@ -255,6 +252,8 @@ export function ImportedCourseCompactCard({
             <img
               src={thumbnailUrl}
               alt=""
+              width={400}
+              height={300}
               aria-hidden="true"
               loading="lazy"
               className="absolute inset-0 w-full h-full object-cover"

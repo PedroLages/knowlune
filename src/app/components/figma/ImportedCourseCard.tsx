@@ -11,7 +11,6 @@ import {
   Info,
   Camera,
   Trash2,
-  Loader2,
   Pencil,
   Clock,
   X,
@@ -50,8 +49,6 @@ import {
   DialogClose,
 } from '@/app/components/ui/dialog'
 import { Checkbox } from '@/app/components/ui/checkbox'
-import { TagBadgeList } from '@/app/components/figma/TagBadgeList'
-import { TagEditor } from '@/app/components/figma/TagEditor'
 import { VideoPlayer } from '@/app/components/figma/VideoPlayer'
 import { ThumbnailPickerDialog } from '@/app/components/figma/ThumbnailPickerDialog'
 import { EditCourseDialog } from '@/app/components/figma/EditCourseDialog'
@@ -65,7 +62,6 @@ import { useVideoFromHandle } from '@/hooks/useVideoFromHandle'
 import { getAvatarSrc } from '@/lib/authors'
 import { db } from '@/db/schema'
 import { formatCourseDuration, formatFileSize, getResolutionLabel } from '@/lib/format'
-import { MomentumBadge } from './MomentumBadge'
 import { ProgressRing } from './ProgressRing'
 import {
   CardCover,
@@ -75,7 +71,6 @@ import {
   OVERLAY_SCRIM_CLASS,
 } from './CourseCardShell'
 import type { ImportedCourse, ImportedVideo, LearnerCourseStatus } from '@/data/types'
-import type { MomentumScore } from '@/lib/momentum'
 
 const statusConfig: Record<
   LearnerCourseStatus,
@@ -117,7 +112,6 @@ interface ImportedCourseCardProps {
   course: ImportedCourse
   allTags: string[]
   completionPercent?: number
-  momentumScore?: MomentumScore
   /** Hides editing controls (camera overlay, edit/delete menu, tag editing). Status changes remain available. */
   readOnly?: boolean
   /** When provided, enables selection mode with a checkbox overlay */
@@ -129,16 +123,13 @@ export function ImportedCourseCard({
   course,
   allTags,
   completionPercent = 0,
-  momentumScore,
   readOnly = false,
   selected = false,
   onToggleSelect,
 }: ImportedCourseCardProps) {
-  const updateCourseTags = useCourseImportStore(state => state.updateCourseTags)
   const updateCourseStatus = useCourseImportStore(state => state.updateCourseStatus)
   const removeImportedCourse = useCourseImportStore(state => state.removeImportedCourse)
   const thumbnailUrls = useCourseImportStore(state => state.thumbnailUrls)
-  const analysisStatus = useCourseImportStore(state => state.autoAnalysisStatus[course.id])
   const navigate = useNavigate()
 
   // Subscribe to author store so card re-renders when authors load
@@ -174,20 +165,26 @@ export function ImportedCourseCard({
   } = useCourseCardPreview()
   const [firstVideo, setFirstVideo] = useState<ImportedVideo | null>(null)
   const [searching, setSearching] = useState(false)
-  const [previewHandle, setPreviewHandle] = useState<FileSystemFileHandle | null>(null)
+  const [previewVideo, setPreviewVideo] = useState<ImportedVideo | null>(null)
 
-  const videoHandle = previewOpen && !searching && firstVideo ? firstVideo.fileHandle : undefined
+  const modalUsesRemoteSource = Boolean(firstVideo?.serverUrl)
+  const videoHandle =
+    previewOpen && !searching && firstVideo && !modalUsesRemoteSource
+      ? firstVideo.fileHandle
+      : undefined
   const { blobUrl, error: videoError, loading: videoLoading } = useVideoFromHandle(videoHandle)
-  const activePreviewHandle = showPreview ? previewHandle : undefined
-  const {
-    blobUrl: previewBlobUrl,
-    loading: previewLoading,
-    error: previewError,
-  } = useVideoFromHandle(activePreviewHandle)
+  const modalVideoSrc = firstVideo?.serverUrl ?? blobUrl
+  const modalVideoError = modalUsesRemoteSource ? null : videoError
+  const modalVideoLoading = searching || (!modalUsesRemoteSource && videoLoading)
+
+  const activePreviewHandle =
+    showPreview && previewVideo?.fileHandle ? previewVideo.fileHandle : undefined
+  const { blobUrl: previewBlobUrl } = useVideoFromHandle(activePreviewHandle)
+  const previewVideoSrc = previewVideo?.serverUrl ?? previewBlobUrl
 
   useEffect(() => {
     if (!showPreview || course.videoCount === 0 || course.source === 'youtube') {
-      setPreviewHandle(null)
+      setPreviewVideo(null)
       setVideoReady(false)
       return
     }
@@ -200,25 +197,26 @@ export function ImportedCourseCard({
         if (cancelled) return
         if (!vids[0]) {
           console.warn('[CourseCardPreview] No videos found for course', course.id)
-          setPreviewHandle(null)
+          setPreviewVideo(null)
           setVideoReady(false)
           return
         }
-        if (!vids[0].fileHandle) {
+        if (!vids[0].fileHandle && !vids[0].serverUrl) {
           console.warn(
-            '[CourseCardPreview] First video has null fileHandle',
+            '[CourseCardPreview] First video has no previewable source',
             vids[0].filename,
             course.id
           )
-          setPreviewHandle(null)
+          setPreviewVideo(null)
           setVideoReady(false)
           return
         }
-        setPreviewHandle(vids[0].fileHandle)
+        setPreviewVideo(vids[0])
       })
       .catch(err => {
+        // silent-catch-ok: hover preview is optional; the poster remains visible on failure.
         console.warn('[CourseCardPreview] DB query failed for course', course.id, err)
-        setPreviewHandle(null)
+        setPreviewVideo(null)
         setVideoReady(false)
       })
     return () => {
@@ -259,17 +257,6 @@ export function ImportedCourseCard({
     }
   }
 
-  function handleRemoveTag(tag: string) {
-    updateCourseTags(
-      course.id,
-      course.tags.filter(t => t !== tag)
-    )
-  }
-
-  function handleAddTag(tag: string) {
-    updateCourseTags(course.id, [...course.tags, tag])
-  }
-
   function handleStatusChange(newStatus: LearnerCourseStatus) {
     if (newStatus !== status) {
       updateCourseStatus(course.id, newStatus)
@@ -307,7 +294,7 @@ export function ImportedCourseCard({
     }
   }
 
-  const isLoading = searching || videoLoading
+  const isLoading = modalVideoLoading
 
   // Derive a single completion state to avoid Play+Complete overlay collision when
   // cross-device sync produces inconsistent (status='not-started', completion=100%) pairs.
@@ -346,36 +333,38 @@ export function ImportedCourseCard({
         data-preview={showPreview && videoReady ? '' : undefined}
         className={cn(
           'group cursor-default focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 outline-none rounded-lg',
-          'relative hover:-translate-y-0.5 hover:z-10 hover:shadow-lg motion-safe:transition-all motion-reduce:transition-none motion-reduce:hover:-translate-y-0'
+          'relative hover:-translate-y-0.5 hover:z-10 hover:shadow-lg motion-safe:transition-[transform,box-shadow] motion-reduce:transition-none motion-reduce:hover:-translate-y-0'
         )}
       >
-        <div className="group-hover:translate-y-2 motion-safe:transition-all motion-reduce:transition-none motion-reduce:group-hover:translate-y-0">
+        <div className="group-hover:translate-y-2 motion-safe:transition-transform motion-reduce:transition-none motion-reduce:group-hover:translate-y-0">
           <CardCover heightClass="aspect-video w-full">
-            {/* Background: gradient placeholder or lazy-loaded thumbnail */}
+            {/* Keep the poster mounted beneath the preview so loading never exposes a flash. */}
             <div
               data-testid="course-card-placeholder"
-              className="absolute inset-0 bg-gradient-to-br from-emerald-50 to-teal-100 dark:from-emerald-950/50 dark:to-teal-950/50 flex items-center justify-center"
+              className="absolute inset-0 bg-muted flex items-center justify-center"
             >
-              {(!thumbnailUrl || !isCardVisible) && !showPreview && (
-                <FolderOpen className="size-16 text-emerald-300 dark:text-emerald-600" />
+              {(!thumbnailUrl || !isCardVisible) && (
+                <FolderOpen className="size-16 text-muted-foreground/40" aria-hidden="true" />
               )}
             </div>
-            {thumbnailUrl && !showPreview && isCardVisible && (
+            {thumbnailUrl && isCardVisible && (
               <img
                 src={thumbnailUrl}
                 alt=""
+                width={1280}
+                height={720}
                 aria-hidden="true"
                 loading="lazy"
                 className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 motion-reduce:transition-none motion-reduce:group-hover:scale-100"
               />
             )}
-            {/* Inline video preview — matches legacy CourseCard behavior (no status gate) */}
-            {showPreview && previewBlobUrl && (
+            {/* Fade the first rendered frame over the poster only after playback begins. */}
+            {showPreview && previewVideoSrc && (
               // width/height attrs prevent the browser from using intrinsic video dimensions before layout.
               // This was the root cause of the pixelated/cropped preview on non-16:9 source videos.
               <video
-                key={previewBlobUrl}
-                src={previewBlobUrl}
+                key={previewVideoSrc}
+                src={previewVideoSrc}
                 muted
                 autoPlay
                 playsInline
@@ -384,27 +373,13 @@ export function ImportedCourseCard({
                 aria-hidden="true"
                 width="100%"
                 height="100%"
-                onCanPlay={() => setVideoReady(true)}
+                onLoadStart={() => setVideoReady(false)}
+                onPlaying={() => setVideoReady(true)}
                 className={cn(
-                  'absolute inset-0 block w-full h-full object-cover pointer-events-none transition-opacity duration-500',
+                  'absolute inset-0 block w-full h-full object-cover pointer-events-none transition-opacity duration-200 motion-reduce:transition-none',
                   videoReady ? 'opacity-100' : 'opacity-0'
                 )}
               />
-            )}
-            {/* Loading overlay — shown while preview is being prepared */}
-            {showPreview && previewLoading && (
-              <div className="absolute inset-0 z-10 bg-black/60 backdrop-blur-sm flex items-center justify-center">
-                <Loader2 className="size-5 text-white/80 animate-spin" aria-hidden="true" />
-              </div>
-            )}
-            {/* Error indicator — shown when preview cannot load */}
-            {showPreview && previewError && !previewLoading && course.source !== 'youtube' && (
-              <div
-                className="absolute top-2 left-2 z-30 rounded-full px-2 py-1 bg-black/60 text-white backdrop-blur-sm border border-white/10 text-[11px] font-medium"
-                role="status"
-              >
-                Preview unavailable
-              </div>
             )}
 
             {/* Selection checkbox — top-left, only when selection mode is active */}
@@ -600,16 +575,6 @@ export function ImportedCourseCard({
                       )}
                     </div>
 
-                    {course.tags.length > 0 && (
-                      <div className="flex flex-wrap gap-1">
-                        {course.tags.slice(0, 4).map(tag => (
-                          <Badge key={tag} variant="secondary" className="text-xs px-2 py-0.5">
-                            {tag}
-                          </Badge>
-                        ))}
-                      </div>
-                    )}
-
                     {course.videoCount > 0 && (
                       <Button
                         size="sm"
@@ -667,13 +632,7 @@ export function ImportedCourseCard({
           >
             {course.name}
           </h3>
-          {/* Author + inline "+ add tag" row.
-                When there are no tags yet (and the card is editable), the tag-add
-                affordance folds into this row as a muted text trigger — avoiding
-                the standalone "+" button under the title. Hidden at rest and
-                revealed on hover/focus so empty cards stay visually calm.
-                When tags exist, they render in their own row below with the
-                original pill-style "+" for adding more. */}
+          {/* Author */}
           <div className="flex items-center gap-2 mb-1 min-h-5">
             {authorData ? (
               <button
@@ -707,52 +666,7 @@ export function ImportedCourseCard({
                 aria-hidden="true"
               />
             )}
-            {!readOnly && course.tags.length === 0 && analysisStatus !== 'analyzing' && (
-              <>
-                {authorData && (
-                  <span className="text-muted-foreground/40" aria-hidden="true">
-                    ·
-                  </span>
-                )}
-                <span className="opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity duration-200 motion-reduce:transition-none">
-                  <TagEditor
-                    variant="inline"
-                    currentTags={course.tags}
-                    allTags={allTags}
-                    onAddTag={handleAddTag}
-                  />
-                </span>
-              </>
-            )}
           </div>
-          {(course.tags.length > 0 || analysisStatus === 'analyzing') && (
-            <div className="flex items-center gap-1.5 mt-1 mb-2">
-              <span aria-live="polite" className="contents">
-                {analysisStatus === 'analyzing' && (
-                  <span
-                    data-testid="ai-tagging-indicator"
-                    className="text-xs text-muted-foreground animate-pulse flex items-center gap-1"
-                  >
-                    <Loader2 className="size-3 animate-spin" aria-hidden="true" />
-                    AI tagging...
-                  </span>
-                )}
-                {analysisStatus === 'complete' && course.tags.length > 0 && (
-                  <span className="sr-only">
-                    AI tagging complete. {course.tags.length} tags added.
-                  </span>
-                )}
-              </span>
-              <TagBadgeList
-                tags={course.tags}
-                onRemove={readOnly ? undefined : handleRemoveTag}
-                maxVisible={3}
-              />
-              {!readOnly && course.tags.length > 0 && (
-                <TagEditor currentTags={course.tags} allTags={allTags} onAddTag={handleAddTag} />
-              )}
-            </div>
-          )}
           <div className="mt-auto flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs text-muted-foreground">
             {course.videoCount > 0 && (
               <span data-testid="course-card-video-count" className="flex items-center gap-1">
@@ -816,11 +730,6 @@ export function ImportedCourseCard({
                 </Button>
               )}
             </>
-          )}
-          {momentumScore && momentumScore.score > 0 && (
-            <div className="mt-2">
-              <MomentumBadge score={momentumScore.score} tier={momentumScore.tier} />
-            </div>
           )}
         </div>
       </article>
@@ -886,15 +795,15 @@ export function ImportedCourseCard({
           </DialogHeader>
           <div className="relative aspect-video w-full rounded-2xl overflow-hidden bg-black shadow-2xl">
             {isLoading && <Skeleton className="absolute inset-0 rounded-2xl" />}
-            {!isLoading && videoError && (
+            {!isLoading && modalVideoError && (
               <p className="absolute inset-0 flex items-center justify-center text-white/90 text-sm text-center px-6">
-                {videoError}
+                {modalVideoError}
               </p>
             )}
-            {!isLoading && !videoError && blobUrl && (
-              <VideoPlayer src={blobUrl} title={firstVideo?.filename} autoplay />
+            {!isLoading && !modalVideoError && modalVideoSrc && (
+              <VideoPlayer src={modalVideoSrc} title={firstVideo?.filename} autoplay />
             )}
-            {!isLoading && !videoError && !blobUrl && (
+            {!isLoading && !modalVideoError && !modalVideoSrc && (
               <p className="absolute inset-0 flex items-center justify-center text-white/70 text-sm text-center px-6">
                 No video found in this course.
               </p>

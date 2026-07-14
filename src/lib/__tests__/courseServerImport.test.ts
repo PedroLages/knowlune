@@ -190,6 +190,45 @@ describe('scanCourseFromSource', () => {
     }
   })
 
+  it('discovers only root-folder images as course cover candidates', async () => {
+    mockFetch
+      .mockResolvedValueOnce(
+        makeAutoindexResponse(
+          `<html><body><pre>
+            <a href="../">../</a>
+            <a href="cover.jpg">cover.jpg</a>
+            <a href="Module1/">Module1/</a>
+          </pre></body></html>`
+        )
+      )
+      .mockResolvedValueOnce(
+        makeAutoindexResponse(
+          `<html><body><pre>
+            <a href="../">../</a>
+            <a href="lesson.mp4">lesson.mp4</a>
+            <a href="slide.png">slide.png</a>
+          </pre></body></html>`
+        )
+      )
+
+    const result = await scanCourseFromSource({
+      serverUrl: 'http://example.com/MyCourse/',
+      handle: null,
+      folderName: 'MyCourse',
+    })
+
+    expect(result.status).toBe('success')
+    if (result.status === 'success') {
+      expect(result.course.images).toEqual([
+        {
+          filename: 'cover.jpg',
+          path: 'cover.jpg',
+          serverUrl: 'http://example.com/MyCourse/cover.jpg',
+        },
+      ])
+    }
+  })
+
   // Name matches do not block server re-scan; stable serverPath handles upsert later.
   it('rescans a server folder even when a course has the same display name', async () => {
     // Pre-seed a course with the same name

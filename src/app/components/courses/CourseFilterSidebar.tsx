@@ -1,287 +1,350 @@
-/**
- * CourseFilterSidebar — filter sidebar for the Courses page.
- *
- * Provides source (All Courses / YouTube), track visibility toggle, and
- * tag-based filtering. Uses Sheet at ≥768px and Drawer below 768px.
- * Follows the FilterSidebar pattern from the library page.
- *
- * @module CourseFilterSidebar
- * @since feat: courses-content-separation
- */
-
-import { useState, useMemo } from 'react'
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/app/components/ui/sheet'
-import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/app/components/ui/drawer'
+import { useMemo, useState, type ReactNode } from 'react'
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from '@/app/components/ui/sheet'
+import {
+  Drawer,
+  DrawerContent,
+  DrawerDescription,
+  DrawerHeader,
+  DrawerTitle,
+} from '@/app/components/ui/drawer'
 import { Checkbox } from '@/app/components/ui/checkbox'
 import { RadioGroup, RadioGroupItem } from '@/app/components/ui/radio-group'
 import { Switch } from '@/app/components/ui/switch'
 import { ScrollArea } from '@/app/components/ui/scroll-area'
-import { useCourseFilterStore } from '@/stores/useCourseFilterStore'
+import { useCourseFilterStore, type CourseSourceFilter } from '@/stores/useCourseFilterStore'
 import { useMediaQuery } from '@/app/hooks/useMediaQuery'
 import { cn } from '@/app/components/ui/utils'
-import type { ImportedCourse } from '@/data/types'
+import type { Difficulty, ImportedAuthor, ImportedCourse } from '@/data/types'
 
 const DEFAULT_VISIBLE_TAGS = 12
+
+const SOURCE_OPTIONS: ReadonlyArray<{ value: CourseSourceFilter; label: string }> = [
+  { value: 'all', label: 'All Sources' },
+  { value: 'local', label: 'Local Folder' },
+  { value: 'server', label: 'Course Server' },
+  { value: 'youtube', label: 'YouTube' },
+  { value: 'drive', label: 'Google Drive' },
+]
+
+const DIFFICULTY_OPTIONS: ReadonlyArray<{ value: Difficulty; label: string }> = [
+  { value: 'beginner', label: 'Beginner' },
+  { value: 'intermediate', label: 'Intermediate' },
+  { value: 'advanced', label: 'Advanced' },
+  { value: 'expert', label: 'Expert' },
+]
 
 interface CourseFilterSidebarProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   availableCourses: ImportedCourse[]
-  /** Pre-computed set of course IDs that belong to any learning track (from Courses.tsx). */
+  availableAuthors?: ImportedAuthor[]
   courseIdsInTracks?: Set<string>
 }
 
-/**
- * SidebarHeaderContent — separate component that independently subscribes
- * to the Zustand store so the Clear All button re-renders inside the Radix
- * Sheet portal when filter state changes (R7 fix).
- */
+function FilterSection({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <section className="border-b border-border py-5 last:border-b-0">
+      <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+        {title}
+      </h3>
+      {children}
+    </section>
+  )
+}
+
+function FilterCheckbox({
+  checked,
+  label,
+  count,
+  onCheckedChange,
+}: {
+  checked: boolean
+  label: string
+  count?: number
+  onCheckedChange: () => void
+}) {
+  return (
+    <label className="flex min-h-11 cursor-pointer items-center gap-3 rounded-md px-1 text-sm hover:bg-muted/50">
+      <Checkbox checked={checked} onCheckedChange={onCheckedChange} aria-label={label} />
+      <span className="min-w-0 flex-1 truncate">{label}</span>
+      {count !== undefined && (
+        <span
+          className="text-xs tabular-nums text-muted-foreground"
+          aria-label={`${count} courses`}
+        >
+          {count}
+        </span>
+      )}
+    </label>
+  )
+}
+
 function SidebarHeaderContent({ isDrawer = false }: { isDrawer?: boolean }) {
-  // Subscribe to primitive values so Zustand triggers re-renders when filter
-  // state changes inside the Radix Sheet portal (R7 fix — stable function
-  // reference selector was preventing reactivity).
-  const source = useCourseFilterStore(s => s.source)
-  const showTrackCourses = useCourseFilterStore(s => s.showTrackCourses)
-  const selectedTags = useCourseFilterStore(s => s.selectedTags)
-  const isAnyActive = source !== 'all' || showTrackCourses || selectedTags.length > 0
-  const clearFilter = useCourseFilterStore(s => s.clearFilter)
+  const source = useCourseFilterStore(state => state.source)
+  const showTrackCourses = useCourseFilterStore(state => state.showTrackCourses)
+  const selectedTags = useCourseFilterStore(state => state.selectedTags)
+  const selectedDifficulties = useCourseFilterStore(state => state.selectedDifficulties)
+  const selectedCategories = useCourseFilterStore(state => state.selectedCategories)
+  const selectedAuthorIds = useCourseFilterStore(state => state.selectedAuthorIds)
+  const clearFilter = useCourseFilterStore(state => state.clearFilter)
+
+  const isAnyActive =
+    source !== 'all' ||
+    !showTrackCourses ||
+    selectedTags.length > 0 ||
+    selectedDifficulties.length > 0 ||
+    selectedCategories.length > 0 ||
+    selectedAuthorIds.length > 0
 
   const handleClearAll = () => {
     clearFilter('source')
     clearFilter('showTrackCourses')
     clearFilter('selectedTags')
+    clearFilter('selectedDifficulties')
+    clearFilter('selectedCategories')
+    clearFilter('selectedAuthorIds')
   }
+
+  const title = 'More Filters'
+  const clearButton = isAnyActive ? (
+    <button
+      type="button"
+      onClick={handleClearAll}
+      className="min-h-11 px-2 text-sm font-semibold text-brand hover:text-brand-hover"
+      data-testid="sidebar-clear-all-filters"
+    >
+      Clear All
+    </button>
+  ) : null
 
   if (isDrawer) {
     return (
-      <DrawerHeader className="flex flex-row items-center justify-between px-6 pt-6 pb-4">
-        <DrawerTitle className="text-lg font-bold">Filters</DrawerTitle>
-        {isAnyActive && (
-          <button
-            onClick={handleClearAll}
-            className="text-sm font-bold text-brand hover:text-brand-hover transition-colors"
-            data-testid="sidebar-clear-all-filters"
-          >
-            Clear All
-          </button>
-        )}
+      <DrawerHeader className="flex flex-row items-center justify-between px-6 pb-3 pt-6">
+        <div>
+          <DrawerTitle className="text-lg font-semibold">{title}</DrawerTitle>
+          <DrawerDescription className="sr-only">
+            Narrow courses by source, track membership, difficulty, category, author, or tag.
+          </DrawerDescription>
+        </div>
+        {clearButton}
       </DrawerHeader>
     )
   }
 
   return (
-    <SheetHeader className="flex flex-row items-center justify-between px-6 pt-6 pb-4">
-      <SheetTitle className="text-lg font-bold">Filters</SheetTitle>
-      {isAnyActive && (
-        <button
-          onClick={handleClearAll}
-          className="text-sm font-bold text-brand hover:text-brand-hover transition-colors"
-          data-testid="sidebar-clear-all-filters"
-        >
-          Clear All
-        </button>
-      )}
+    <SheetHeader className="flex flex-row items-center justify-between px-6 pb-3 pt-6">
+      <div>
+        <SheetTitle className="text-lg font-semibold">{title}</SheetTitle>
+        <SheetDescription className="sr-only">
+          Narrow courses by source, track membership, difficulty, category, author, or tag.
+        </SheetDescription>
+      </div>
+      {clearButton}
     </SheetHeader>
   )
+}
+
+function toggleValue<T extends string>(values: T[], value: T): T[] {
+  return values.includes(value) ? values.filter(item => item !== value) : [...values, value]
 }
 
 export function CourseFilterSidebar({
   open,
   onOpenChange,
   availableCourses,
+  availableAuthors = [],
   courseIdsInTracks: courseIdsInTracksProp,
 }: CourseFilterSidebarProps) {
-  const source = useCourseFilterStore(s => s.source)
-  const showTrackCourses = useCourseFilterStore(s => s.showTrackCourses)
-  const selectedTags = useCourseFilterStore(s => s.selectedTags)
-  const setFilter = useCourseFilterStore(s => s.setFilter)
+  const source = useCourseFilterStore(state => state.source)
+  const showTrackCourses = useCourseFilterStore(state => state.showTrackCourses)
+  const selectedTags = useCourseFilterStore(state => state.selectedTags)
+  const selectedDifficulties = useCourseFilterStore(state => state.selectedDifficulties)
+  const selectedCategories = useCourseFilterStore(state => state.selectedCategories)
+  const selectedAuthorIds = useCourseFilterStore(state => state.selectedAuthorIds)
+  const setFilter = useCourseFilterStore(state => state.setFilter)
 
   const isMobile = useMediaQuery('(max-width: 767px)')
   const [tagExpanded, setTagExpanded] = useState(false)
-
-  // Use pre-computed set from parent (Courses.tsx); fall back to empty if not provided
   const courseIdsInTracks = courseIdsInTracksProp ?? new Set<string>()
 
-  // Number of courses in any learning track (unaffected by filters)
-  const totalTrackCourseCount = courseIdsInTracks.size
-  const hasTracks = totalTrackCourseCount > 0
+  const facets = useMemo(() => {
+    const tagCounts = new Map<string, number>()
+    const categoryCounts = new Map<string, number>()
+    const difficultyCounts = new Map<Difficulty, number>()
+    const authorCounts = new Map<string, number>()
 
-  // Derive available tags with counts from the filtered courses prop
-  const { availableTags, tagCounts } = useMemo(() => {
-    const countMap = new Map<string, number>()
     for (const course of availableCourses) {
-      for (const tag of course.tags) {
-        countMap.set(tag, (countMap.get(tag) ?? 0) + 1)
+      for (const tag of course.tags) tagCounts.set(tag, (tagCounts.get(tag) ?? 0) + 1)
+      if (course.category.trim()) {
+        categoryCounts.set(course.category, (categoryCounts.get(course.category) ?? 0) + 1)
+      }
+      if (course.difficulty) {
+        difficultyCounts.set(course.difficulty, (difficultyCounts.get(course.difficulty) ?? 0) + 1)
+      }
+      if (course.authorId) {
+        authorCounts.set(course.authorId, (authorCounts.get(course.authorId) ?? 0) + 1)
       }
     }
-    const sorted = Array.from(countMap.entries()).sort((a, b) => {
-      // Sort by count descending, then alphabetically
-      if (b[1] !== a[1]) return b[1] - a[1]
-      return a[0].localeCompare(b[0])
+
+    const tags = Array.from(tagCounts.keys()).sort((a, b) => {
+      const countDifference = (tagCounts.get(b) ?? 0) - (tagCounts.get(a) ?? 0)
+      return countDifference || a.localeCompare(b)
     })
-    return {
-      availableTags: sorted.map(([tag]) => tag),
-      tagCounts: countMap,
-    }
-  }, [availableCourses])
+    const categories = Array.from(categoryCounts.keys()).sort((a, b) => a.localeCompare(b))
+    const authors = availableAuthors
+      .filter(author => authorCounts.has(author.id) || selectedAuthorIds.includes(author.id))
+      .sort((a, b) => a.name.localeCompare(b.name))
 
-  const hasTags = availableTags.length > 0
-  const needsCollapse = availableTags.length > DEFAULT_VISIBLE_TAGS
+    return { tagCounts, categoryCounts, difficultyCounts, authorCounts, tags, categories, authors }
+  }, [availableAuthors, availableCourses, selectedAuthorIds])
 
+  const needsTagCollapse = facets.tags.length > DEFAULT_VISIBLE_TAGS
   const visibleTags = useMemo(() => {
-    if (tagExpanded || !needsCollapse) return availableTags
-    const topTags = availableTags.slice(0, DEFAULT_VISIBLE_TAGS)
-    const selectedOutside = selectedTags.filter(tag => !topTags.includes(tag))
-    return [...topTags, ...selectedOutside]
-  }, [availableTags, selectedTags, tagExpanded, needsCollapse])
-
-  const hiddenTagCount = availableTags.length - visibleTags.length
-
-  const handleTagToggle = (tag: string) => {
-    const next = selectedTags.includes(tag)
-      ? selectedTags.filter(t => t !== tag)
-      : [...selectedTags, tag]
-    setFilter('selectedTags', next)
-  }
+    if (tagExpanded || !needsTagCollapse) return facets.tags
+    const topTags = facets.tags.slice(0, DEFAULT_VISIBLE_TAGS)
+    return [...topTags, ...selectedTags.filter(tag => !topTags.includes(tag))]
+  }, [facets.tags, needsTagCollapse, selectedTags, tagExpanded])
 
   const sidebarContent = (
-    <div className="flex flex-col h-full group/sidebar">
-      {/* Scrollable filter sections */}
-      <div className="flex-1 overflow-y-auto px-6 pb-20">
-        {/* Source filter */}
-        <div className="mb-8">
-          <h4 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-4">
-            Source
-          </h4>
+    <div className="flex h-full flex-col">
+      <div className="flex-1 overflow-y-auto px-6 pb-12">
+        <FilterSection title="Source">
           <RadioGroup
             value={source}
-            onValueChange={value => setFilter('source', value as 'all' | 'youtube')}
+            onValueChange={value => setFilter('source', value as CourseSourceFilter)}
             aria-label="Filter by source"
-            className="space-y-3"
+            className="gap-1"
           >
-            <label className="flex items-center justify-between cursor-pointer group">
-              <span
-                className={cn(
-                  'text-sm font-medium transition-colors',
-                  source === 'all'
-                    ? 'text-foreground'
-                    : 'text-muted-foreground group-hover:text-foreground'
-                )}
+            {SOURCE_OPTIONS.map(option => (
+              <label
+                key={option.value}
+                className="flex min-h-11 cursor-pointer items-center justify-between rounded-md px-1 text-sm hover:bg-muted/50"
               >
-                All Courses
-              </span>
-              <RadioGroupItem
-                value="all"
-                id="source-all"
-                className="border-muted-foreground/30 data-[state=checked]:border-brand data-[state=checked]:text-brand"
-              />
-            </label>
-            <label className="flex items-center justify-between cursor-pointer group">
-              <span
-                className={cn(
-                  'text-sm font-medium transition-colors',
-                  source === 'youtube'
-                    ? 'text-foreground'
-                    : 'text-muted-foreground group-hover:text-foreground'
-                )}
-              >
-                YouTube
-              </span>
-              <RadioGroupItem
-                value="youtube"
-                id="source-youtube"
-                className="border-muted-foreground/30 data-[state=checked]:border-brand data-[state=checked]:text-brand"
-              />
-            </label>
-          </RadioGroup>
-        </div>
-
-        {/* Separator */}
-        <div className="h-px bg-border mb-8" />
-
-        {/* Track visibility toggle */}
-        {hasTracks && (
-          <>
-            <div className="mb-8">
-              <h4 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-4">
-                Learning Tracks
-              </h4>
-              <label className="flex items-center justify-between cursor-pointer group">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium text-foreground">
-                    Include courses in tracks
-                  </span>
-                  <span
-                    className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-brand-soft text-brand-soft-foreground text-[10px] font-bold"
-                    aria-label={`${totalTrackCourseCount} courses in tracks`}
-                  >
-                    {totalTrackCourseCount}
-                  </span>
-                </div>
-                <Switch
-                  checked={showTrackCourses}
-                  onCheckedChange={checked => setFilter('showTrackCourses', checked)}
-                  aria-label="Include courses in learning tracks"
-                  className="data-[state=checked]:bg-brand"
-                />
+                <span>{option.label}</span>
+                <RadioGroupItem value={option.value} aria-label={option.label} />
               </label>
-            </div>
+            ))}
+          </RadioGroup>
+        </FilterSection>
 
-            <div className="h-px bg-border mb-8" />
-          </>
+        {courseIdsInTracks.size > 0 && (
+          <FilterSection title="Learning Tracks">
+            <label className="flex min-h-11 cursor-pointer items-center justify-between gap-4">
+              <span className="text-sm">
+                Include Track Courses
+                <span className="ml-2 text-xs text-muted-foreground">{courseIdsInTracks.size}</span>
+              </span>
+              <Switch
+                checked={showTrackCourses}
+                onCheckedChange={checked => setFilter('showTrackCourses', checked)}
+                aria-label="Include courses in learning tracks"
+              />
+            </label>
+          </FilterSection>
         )}
 
-        {/* Tag filter */}
-        <div className="mb-8">
-          <h4 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-4">
-            Tags
-          </h4>
-          {hasTags ? (
-            <ScrollArea
-              className={cn(needsCollapse && !tagExpanded ? 'max-h-[300px]' : 'max-h-[400px]')}
-            >
-              <div className="space-y-3 pr-1">
-                {visibleTags.map(tag => (
-                  <label key={tag} className="flex items-center gap-3 cursor-pointer group">
-                    <Checkbox
+        {facets.difficultyCounts.size > 0 && (
+          <FilterSection title="Difficulty">
+            <div className="space-y-1">
+              {DIFFICULTY_OPTIONS.filter(
+                option =>
+                  facets.difficultyCounts.has(option.value) ||
+                  selectedDifficulties.includes(option.value)
+              ).map(option => (
+                <FilterCheckbox
+                  key={option.value}
+                  label={option.label}
+                  count={facets.difficultyCounts.get(option.value) ?? 0}
+                  checked={selectedDifficulties.includes(option.value)}
+                  onCheckedChange={() =>
+                    setFilter(
+                      'selectedDifficulties',
+                      toggleValue(selectedDifficulties, option.value)
+                    )
+                  }
+                />
+              ))}
+            </div>
+          </FilterSection>
+        )}
+
+        {facets.categories.length > 0 && (
+          <FilterSection title="Category">
+            <div className="space-y-1">
+              {facets.categories.map(category => (
+                <FilterCheckbox
+                  key={category}
+                  label={category}
+                  count={facets.categoryCounts.get(category)}
+                  checked={selectedCategories.includes(category)}
+                  onCheckedChange={() =>
+                    setFilter('selectedCategories', toggleValue(selectedCategories, category))
+                  }
+                />
+              ))}
+            </div>
+          </FilterSection>
+        )}
+
+        {facets.authors.length > 0 && (
+          <FilterSection title="Author">
+            <div className="space-y-1">
+              {facets.authors.map(author => (
+                <FilterCheckbox
+                  key={author.id}
+                  label={author.name}
+                  count={facets.authorCounts.get(author.id) ?? 0}
+                  checked={selectedAuthorIds.includes(author.id)}
+                  onCheckedChange={() =>
+                    setFilter('selectedAuthorIds', toggleValue(selectedAuthorIds, author.id))
+                  }
+                />
+              ))}
+            </div>
+          </FilterSection>
+        )}
+
+        <FilterSection title="Tags">
+          {facets.tags.length > 0 ? (
+            <>
+              <ScrollArea className={cn(tagExpanded ? 'max-h-[400px]' : 'max-h-[300px]')}>
+                <div className="space-y-1 pr-2">
+                  {visibleTags.map(tag => (
+                    <FilterCheckbox
+                      key={tag}
+                      label={tag}
+                      count={facets.tagCounts.get(tag)}
                       checked={selectedTags.includes(tag)}
-                      onCheckedChange={() => handleTagToggle(tag)}
-                      className="border-muted-foreground/30 data-[state=checked]:border-brand data-[state=checked]:bg-brand"
+                      onCheckedChange={() =>
+                        setFilter('selectedTags', toggleValue(selectedTags, tag))
+                      }
                     />
-                    <span className="text-sm font-medium text-foreground flex-1">{tag}</span>
-                    {tagCounts.has(tag) && (
-                      <span
-                        className="text-[10px] text-muted-foreground"
-                        aria-label={`${tagCounts.get(tag)} courses`}
-                      >
-                        {tagCounts.get(tag)}
-                      </span>
-                    )}
-                  </label>
-                ))}
-              </div>
-            </ScrollArea>
+                  ))}
+                </div>
+              </ScrollArea>
+              {needsTagCollapse && (
+                <button
+                  type="button"
+                  onClick={() => setTagExpanded(expanded => !expanded)}
+                  aria-expanded={tagExpanded}
+                  className="mt-2 min-h-11 text-xs font-semibold text-muted-foreground hover:text-foreground"
+                >
+                  {tagExpanded
+                    ? 'Show Fewer'
+                    : `Show ${facets.tags.length - visibleTags.length} More`}
+                </button>
+              )}
+            </>
           ) : (
-            <p className="text-xs text-muted-foreground py-2">
-              No tags available for the current selection.
-            </p>
+            <p className="py-2 text-xs text-muted-foreground">No tags available.</p>
           )}
-          {needsCollapse && (
-            <button
-              type="button"
-              onClick={() => setTagExpanded(prev => !prev)}
-              aria-expanded={tagExpanded}
-              aria-label={
-                tagExpanded
-                  ? `Show fewer tags, currently showing all ${availableTags.length}`
-                  : `Show all ${availableTags.length} tags, currently showing ${visibleTags.length}`
-              }
-              className="mt-2 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-            >
-              {tagExpanded ? 'Show less' : `+${hiddenTagCount} more`}
-            </button>
-          )}
-        </div>
+        </FilterSection>
       </div>
     </div>
   )
@@ -289,7 +352,7 @@ export function CourseFilterSidebar({
   if (isMobile) {
     return (
       <Drawer open={open} onOpenChange={onOpenChange}>
-        <DrawerContent className="max-h-[85vh]">
+        <DrawerContent className="max-h-[90vh] overscroll-contain">
           <SidebarHeaderContent isDrawer />
           {sidebarContent}
         </DrawerContent>
@@ -301,9 +364,9 @@ export function CourseFilterSidebar({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="right"
-        className="w-[320px] sm:w-[380px] flex flex-col p-0"
+        className="flex w-[340px] flex-col overscroll-contain p-0 sm:w-[400px]"
         data-testid="course-filter-sidebar"
-        showCloseButton={false}
+        showCloseButton
       >
         <SidebarHeaderContent />
         {sidebarContent}

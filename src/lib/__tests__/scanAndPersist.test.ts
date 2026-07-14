@@ -2,13 +2,23 @@ import 'fake-indexeddb/auto'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import Dexie from 'dexie'
 
+const thumbnailMocks = vi.hoisted(() => ({
+  extractThumbnailFromVideo: vi.fn(),
+  loadThumbnailFromFile: vi.fn(),
+  fetchThumbnailFromUrl: vi.fn(),
+  saveCourseThumbnail: vi.fn(),
+}))
+
 // Mock sonner toast
 vi.mock('sonner', () => ({
   toast: {
     success: vi.fn(),
     error: vi.fn(),
+    warning: vi.fn(),
   },
 }))
+
+vi.mock('@/lib/thumbnailService', () => thumbnailMocks)
 
 // Mock fileSystem module
 vi.mock('@/lib/fileSystem', () => ({
@@ -38,7 +48,11 @@ let fileSystemMocks: {
   isImageFile: ReturnType<typeof vi.fn>
   getVideoFormat: ReturnType<typeof vi.fn>
 }
-let toastMocks: { success: ReturnType<typeof vi.fn>; error: ReturnType<typeof vi.fn> }
+let toastMocks: {
+  success: ReturnType<typeof vi.fn>
+  error: ReturnType<typeof vi.fn>
+  warning: ReturnType<typeof vi.fn>
+}
 let useCourseImportStore: (typeof import('@/stores/useCourseImportStore'))['useCourseImportStore']
 let db: (typeof import('@/db'))['db']
 
@@ -52,6 +66,11 @@ function createMockDirHandle(name: string): FileSystemDirectoryHandle {
 
 beforeEach(async () => {
   vi.clearAllMocks()
+  const thumbnailBlob = new Blob(['thumbnail'], { type: 'image/jpeg' })
+  thumbnailMocks.extractThumbnailFromVideo.mockResolvedValue(thumbnailBlob)
+  thumbnailMocks.loadThumbnailFromFile.mockResolvedValue(thumbnailBlob)
+  thumbnailMocks.fetchThumbnailFromUrl.mockResolvedValue(thumbnailBlob)
+  thumbnailMocks.saveCourseThumbnail.mockResolvedValue(undefined)
   await Dexie.delete('ElearningDB')
   vi.resetModules()
 
@@ -487,6 +506,40 @@ describe('persistScannedCourse', () => {
     expect(course.coverImageHandle).toBe(coverHandle)
     const storedCourse = await db.importedCourses.get(course.id)
     expect(storedCourse!.coverImageHandle).toBeDefined()
+  })
+
+  it('should persist a server root image as the course thumbnail', async () => {
+    const scanned = createScannedCourse({ source: 'server', directoryHandle: null })
+    const coverImage = {
+      filename: 'cover.jpg',
+      path: 'cover.jpg',
+      serverUrl: 'https://courses.example.test/course/cover.jpg',
+    }
+
+    const course = await persistScannedCourse(scanned, { coverImage })
+
+    expect(thumbnailMocks.fetchThumbnailFromUrl).toHaveBeenCalledWith(coverImage.serverUrl)
+    expect(thumbnailMocks.saveCourseThumbnail).toHaveBeenCalledWith(
+      course.id,
+      expect.any(Blob),
+      'url'
+    )
+    expect(course.coverImageHandle).toBeUndefined()
+  })
+
+  it('should persist a dropped root image as the course thumbnail', async () => {
+    const scanned = createScannedCourse()
+    const file = new File(['cover'], 'cover.png', { type: 'image/png' })
+    const coverImage = { filename: file.name, path: file.name, file }
+
+    const course = await persistScannedCourse(scanned, { coverImage })
+
+    expect(thumbnailMocks.loadThumbnailFromFile).toHaveBeenCalledWith(file)
+    expect(thumbnailMocks.saveCourseThumbnail).toHaveBeenCalledWith(
+      course.id,
+      expect.any(Blob),
+      'local'
+    )
   })
 })
 

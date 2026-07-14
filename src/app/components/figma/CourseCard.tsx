@@ -14,7 +14,6 @@ import {
   DialogClose,
 } from '@/app/components/ui/dialog'
 import { ProgressRing } from './ProgressRing'
-import { MomentumBadge } from './MomentumBadge'
 import { AtRiskBadge } from './AtRiskBadge'
 import { CompletionEstimate } from './CompletionEstimate'
 import { VideoPlayer } from './VideoPlayer'
@@ -31,7 +30,6 @@ import { cn } from '@/app/components/ui/utils'
 import { useCourseCardPreview } from '@/hooks/useCourseCardPreview'
 import { getAuthorForCourse, getAvatarSrc } from '@/lib/authors'
 import type { Course, CourseCategory } from '@/data/types'
-import type { MomentumScore } from '@/lib/momentum'
 import type { AtRiskStatus } from '@/lib/atRisk'
 import type { CompletionEstimate as CompletionEstimateType } from '@/lib/completionEstimate'
 
@@ -131,7 +129,6 @@ interface CourseCardProps {
   completionPercent?: number
   status?: 'in-progress' | 'completed' | 'not-started'
   lastAccessedAt?: string
-  momentumScore?: MomentumScore
   atRiskStatus?: AtRiskStatus
   completionEstimate?: CompletionEstimateType
 }
@@ -144,7 +141,6 @@ export function CourseCard({
   completionPercent = 0,
   status,
   lastAccessedAt,
-  momentumScore,
   atRiskStatus,
   completionEstimate,
 }: CourseCardProps) {
@@ -256,16 +252,6 @@ export function CourseCard({
           <Clock className="size-3.5" aria-hidden="true" />~{course.estimatedHours}h
         </span>
       </div>
-
-      {course.tags.length > 0 && (
-        <div className="flex flex-wrap gap-1">
-          {course.tags.slice(0, 4).map(tag => (
-            <Badge key={tag} variant="secondary" className="text-xs px-2 py-0.5">
-              {tag}
-            </Badge>
-          ))}
-        </div>
-      )}
 
       {completionPercent > 0 && <Progress value={completionPercent} showLabel className="h-1.5" />}
 
@@ -461,6 +447,8 @@ export function CourseCard({
           <img
             src={`${course.coverImage}-640w.webp`}
             alt={course.title}
+            width={640}
+            height={360}
             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 motion-reduce:transition-none motion-reduce:group-hover:scale-100"
             loading="lazy"
           />
@@ -488,6 +476,8 @@ export function CourseCard({
             srcSet={buildSrcSet(course.coverImage, 'png')}
             sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, (max-width: 1280px) 25vw, 20vw"
             alt={course.title}
+            width={768}
+            height={432}
             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 motion-reduce:transition-none motion-reduce:group-hover:scale-100"
           />
         </picture>
@@ -505,6 +495,8 @@ export function CourseCard({
         <img
           src={`${course.coverImage}-640w.webp`}
           alt={course.title}
+          width={640}
+          height={360}
           className="w-full h-full object-cover transition-transform duration-200 group-hover:scale-105"
           loading="lazy"
         />
@@ -586,11 +578,6 @@ export function CourseCard({
                   sessionsNeeded={completionEstimate.sessionsNeeded}
                   estimatedDays={completionEstimate.estimatedDays}
                 />
-              </div>
-            )}
-            {momentumScore && momentumScore.score > 0 && (
-              <div className="mt-2">
-                <MomentumBadge score={momentumScore.score} tier={momentumScore.tier} />
               </div>
             )}
           </div>
