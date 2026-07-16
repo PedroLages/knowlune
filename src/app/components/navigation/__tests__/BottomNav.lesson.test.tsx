@@ -308,7 +308,7 @@ describe('BottomNav lesson mode', () => {
   it('uses lesson-specific aria-label on nav in lesson mode', () => {
     renderBottomNav({ mode: 'lesson', courseId: 'course-1', lessonId: 'lesson-1' })
 
-    const nav = screen.getByLabelText('Lesson navigation')
+    const nav = screen.getByLabelText('Lesson actions')
     expect(nav).toBeInTheDocument()
     expect(nav.tagName).toBe('NAV')
   })
@@ -325,7 +325,7 @@ describe('BottomNav lesson mode', () => {
   it('preserves safe area inset padding in lesson mode', () => {
     renderBottomNav({ mode: 'lesson', courseId: 'course-1', lessonId: 'lesson-1' })
 
-    const nav = screen.getByLabelText('Lesson navigation')
+    const nav = screen.getByLabelText('Lesson actions')
     expect(nav.className).toContain('pb-[env(safe-area-inset-bottom)]')
   })
 })

@@ -225,14 +225,14 @@ describe('FloatingNotesPanel', () => {
       expect(panel?.getAttribute('aria-label')).toBe('Lesson notes')
     })
 
-    it('shows "Saved" indicator via aria-live region', () => {
+    it('keeps a quiet aria-live region until a save starts', () => {
       const { baseElement } = render(
         <FloatingNotesPanel courseId="course-1" lessonId="lesson-1" portalTarget={portalTarget} />
       )
 
       const liveRegion = baseElement.querySelector('[aria-live="polite"]')
       expect(liveRegion).toBeTruthy()
-      expect(liveRegion?.textContent).toContain('Saved')
+      expect(liveRegion?.textContent).toBe('')
     })
   })
 
