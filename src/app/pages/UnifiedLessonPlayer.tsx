@@ -8,7 +8,7 @@
  *
  * Sub-components:
  * - LessonContentRenderer: PDF, YouTube, or local video content
- * - LessonHeaderCard: title, description, badges, tags, actions slot
+ * - LessonWorkspaceHeader: course context, title, progress, and lesson actions
  * - BelowVideoTabs: Notes, Bookmarks, Transcript, AI Summary, Materials
  * - NotesPanel: resizable desktop side panel for note-taking
  * - LessonsTab: sidebar lesson list with search
@@ -28,26 +28,19 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router'
 import { recordVisit } from '@/lib/searchFrecency'
-import {
-  ChevronLeft,
-  ChevronRight,
-  PanelRight,
-  PencilLine,
-  Video,
-  ClipboardCheck,
-} from 'lucide-react'
+import { ClipboardCheck } from 'lucide-react'
 import { useCourseAdapter } from '@/hooks/useCourseAdapter'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
 import { useContentProgressStore } from '@/stores/useContentProgressStore'
 import { useSessionTracking } from '@/app/hooks/useSessionTracking'
 import { useLessonNavigation } from '@/app/hooks/useLessonNavigation'
-import { useIsDesktop, useIsTablet } from '@/app/hooks/useMediaQuery'
+import { useMediaQuery } from '@/app/hooks/useMediaQuery'
 import { useLessonPlayerState } from '@/app/hooks/useLessonPlayerState'
 import { useCompletionFlow } from '@/app/hooks/useCompletionFlow'
 import { useMiniPlayerState } from '@/app/hooks/useMiniPlayerState'
 import { useDeepLinkEffects } from '@/app/hooks/useDeepLinkEffects'
-import { useLessonFocusEffects } from '@/app/hooks/useLessonFocusEffects'
 import { useFrameCapture } from '@/app/hooks/useFrameCapture'
+import { useLessonSessionState } from '@/app/hooks/useLessonSessionState'
 
 import { AutoAdvanceCountdown } from '@/app/components/figma/AutoAdvanceCountdown'
 import { CompletionModal } from '@/app/components/celebrations/CompletionModal'
@@ -55,13 +48,27 @@ import { LessonContentRenderer } from '@/app/components/course/LessonContentRend
 import { BelowVideoTabs } from '@/app/components/course/BelowVideoTabs'
 import { NotesPanel } from '@/app/components/course/NotesPanel'
 import { FloatingNotesPanel } from '@/app/components/course/FloatingNotesPanel'
-import { LessonsTab } from '@/app/components/course/tabs/LessonsTab'
-import { NotesTab } from '@/app/components/course/tabs/NotesTab'
+import { LessonNavigation } from '@/app/components/course/LessonNavigation'
+import { LessonWorkspaceHeader } from '@/app/components/course/LessonWorkspaceHeader'
+import { CourseSyllabusPanel } from '@/app/components/course/CourseSyllabusPanel'
 import type { VideoPlayerHandle } from '@/app/components/figma/VideoPlayer'
 import { Skeleton } from '@/app/components/ui/skeleton'
 import { DelayedFallback } from '@/app/components/DelayedFallback'
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/app/components/ui/resizable'
-import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/app/components/ui/sheet'
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from '@/app/components/ui/sheet'
+import {
+  Drawer,
+  DrawerContent,
+  DrawerDescription,
+  DrawerHeader,
+  DrawerTitle,
+} from '@/app/components/ui/drawer'
 import { Button } from '@/app/components/ui/button'
 import { cn } from '@/app/components/ui/utils'
 import { usePanelRef } from 'react-resizable-panels'
@@ -89,6 +96,52 @@ import { useNextBestCourse } from '@/app/hooks/useNextBestCourse'
 function parseLocationFlag(state: unknown, flag: string): boolean {
   if (typeof state !== 'object' || state === null) return false
   return (state as Record<string, unknown>)[flag] === true
+}
+
+function LessonWorkspaceSkeleton({ showSyllabus }: { showSyllabus: boolean }) {
+  return (
+    <div className="mx-auto w-full max-w-[1920px] overflow-x-hidden" aria-hidden="true">
+      <div className="mb-4 rounded-2xl border border-border bg-card p-4 sm:p-5">
+        <Skeleton className="mb-4 h-4 w-56 max-w-[60%]" />
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0 flex-1 space-y-2">
+            <Skeleton className="h-3 w-32" />
+            <Skeleton className="h-7 w-[min(34rem,80%)]" />
+          </div>
+          <Skeleton className="size-11 shrink-0" />
+        </div>
+      </div>
+
+      <div className="flex min-w-0 gap-[min(var(--content-gap),1.5rem)]">
+        <div className="min-w-0 flex-1">
+          <Skeleton className="aspect-video max-h-[72svh] w-full rounded-2xl" />
+          <div className="mt-3 grid grid-cols-2 gap-2 rounded-2xl border border-border bg-card p-2 sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]">
+            <Skeleton className="h-14 w-full" />
+            <Skeleton className="hidden h-4 w-12 self-center sm:block" />
+            <Skeleton className="h-14 w-full" />
+          </div>
+          <Skeleton className="mt-4 h-14 w-full rounded-2xl" />
+          <Skeleton className="mt-4 h-64 w-full rounded-2xl" />
+        </div>
+
+        {showSyllabus ? (
+          <aside className="hidden w-[clamp(352px,24vw,400px)] shrink-0 overflow-hidden rounded-2xl border border-border bg-card min-[1440px]:block">
+            <div className="space-y-3 border-b border-border p-4">
+              <Skeleton className="h-4 w-4/5" />
+              <Skeleton className="h-3 w-28" />
+              <Skeleton className="h-1.5 w-full" />
+            </div>
+            <div className="space-y-3 p-4">
+              <Skeleton className="h-11 w-full" />
+              {Array.from({ length: 6 }, (_, index) => (
+                <Skeleton key={index} className="h-12 w-full" />
+              ))}
+            </div>
+          </aside>
+        ) : null}
+      </div>
+    </div>
+  )
 }
 
 export function UnifiedLessonPlayer() {
@@ -130,8 +183,10 @@ export function UnifiedLessonPlayer() {
   const adapterCourse = adapter?.getCourse?.()
   const courseName = adapterCourse?.name ?? course?.name ?? 'Course'
 
-  const isDesktop = useIsDesktop()
-  const isTablet = useIsTablet()
+  const isMobile = useMediaQuery('(max-width: 767px)')
+  const isTabletNotesLayout = useMediaQuery('(min-width: 768px) and (max-width: 1023px)')
+  const isWideNotesLayout = useMediaQuery('(min-width: 1200px)')
+  const isWideWorkspace = useMediaQuery('(min-width: 1440px)')
   const { isTheater, toggleTheater } = useTheaterMode()
   const isLesson = Boolean(courseId && lessonId)
   const {
@@ -145,6 +200,11 @@ export function UnifiedLessonPlayer() {
   const openNotesWithFocus = useLessonChromeStore(s => s.openNotesWithFocus)
   const focusNotesEditor = useLessonChromeStore(s => s.focusNotesEditor)
   const closeNotesPanel = useLessonChromeStore(s => s.resetNotesPanelOnLessonChange)
+  const setNotesOpen = useLessonChromeStore(s => s.setNotesOpen)
+  const syllabusOpen = useLessonChromeStore(s => s.syllabusOpen)
+  const setSyllabusOpen = useLessonChromeStore(s => s.setSyllabusOpen)
+  const toggleSyllabus = useLessonChromeStore(s => s.toggleSyllabus)
+  const [syllabusOverlayOpen, setSyllabusOverlayOpen] = useState(false)
 
   // B3: Sync hasNotes to the store so indicator dots in LessonHeaderTools / BottomNav work.
   // useNoteStore.notes is replaced by NotesTab's loadNotesByLesson() on lesson change.
@@ -166,7 +226,15 @@ export function UnifiedLessonPlayer() {
   }, [])
 
   // Lesson navigation: prev/next lesson via adapter
-  const { prevLesson, nextLesson, totalLessons, lessons } = useLessonNavigation(adapter, lessonId)
+  const {
+    prevLesson,
+    nextLesson,
+    parentLesson,
+    currentIndex,
+    currentSection,
+    totalLessons,
+    lessons,
+  } = useLessonNavigation(adapter, lessonId)
 
   // Quiz availability: check if a quiz exists for this lesson
   const { hasQuiz } = useHasQuiz(lessonId)
@@ -194,10 +262,8 @@ export function UnifiedLessonPlayer() {
 
   // Compute "Lesson X of Y" display (1-indexed)
   const currentLessonPosition = useMemo(() => {
-    if (!lessonId || lessons.length === 0) return null
-    const index = lessons.findIndex(l => l.id === lessonId)
-    return index >= 0 ? index + 1 : null
-  }, [lessonId, lessons])
+    return currentIndex >= 0 ? currentIndex + 1 : null
+  }, [currentIndex])
 
   // Ensure course progress is loaded so getItemStatus has data for checkCourseCompletion.
   useEffect(() => {
@@ -209,17 +275,27 @@ export function UnifiedLessonPlayer() {
   // All local state: auto-advance, celebration, video time, mini-player, metadata, notes, etc.
   const state = useLessonPlayerState(adapter, lessonId)
 
+  const { activeTool, setActiveTool } = useLessonSessionState({
+    courseId: courseId ?? '',
+    lessonId: lessonId ?? '',
+    isPdf: state.isPdf,
+    titleRef,
+  })
+
   const handleFocusNotes = useCallback(() => {
-    if (isDesktop) {
+    if (isWideNotesLayout) {
       if (notesOpen) {
         focusNotesEditor()
       } else {
         openNotesWithFocus()
       }
     } else {
-      state.handleFocusNotes()
+      openNotesWithFocus()
+      if (isMobile) {
+        useLessonChromeStore.getState().setMobileNotesPanel('expanded')
+      }
     }
-  }, [isDesktop, notesOpen, focusNotesEditor, openNotesWithFocus, state.handleFocusNotes])
+  }, [isMobile, isWideNotesLayout, notesOpen, focusNotesEditor, openNotesWithFocus])
 
   // Close notes panel when navigating to a different lesson (R5b)
   useEffect(() => {
@@ -301,12 +377,9 @@ export function UnifiedLessonPlayer() {
   useDeepLinkEffects({
     setSeekToTime: state.setSeekToTime,
     setFocusTab: state.setFocusTab,
-    isDesktop,
+    isDesktop: !isMobile,
     openNotesWithFocus,
   })
-
-  // Scroll-to-top + title focus on lesson change
-  useLessonFocusEffects(lessonId, titleRef)
 
   // Session tracking: start on mount, pause/resume on idle, end on leave.
   useSessionTracking(
@@ -317,13 +390,13 @@ export function UnifiedLessonPlayer() {
 
   // Notes panel: imperatively collapse/expand via usePanelRef API
   useEffect(() => {
-    if (!isDesktop) return
+    if (!isWideNotesLayout) return
     if (notesOpen) {
       notesPanelRef.current?.resize('40%')
     } else {
       notesPanelRef.current?.collapse()
     }
-  }, [notesOpen, isDesktop, notesPanelRef])
+  }, [notesOpen, isWideNotesLayout, notesPanelRef])
 
   // Theater mode: DOM attribute managed by useLessonChromeStore (single source of truth).
   // Initialization from localStorage handled after store creation.
@@ -339,16 +412,54 @@ export function UnifiedLessonPlayer() {
   useEffect(() => {
     if (isTheater) {
       useLessonChromeStore.getState().resetNotesPanelOnLessonChange()
+      setSyllabusOverlayOpen(false)
     }
   }, [isTheater])
+
+  const handleSyllabusOpenChange = useCallback(
+    (open: boolean) => {
+      if (open) {
+        setNotesOpen(false)
+        useLessonChromeStore.getState().setMobileNotesPanel('closed')
+      }
+      setSyllabusOverlayOpen(open)
+    },
+    [setNotesOpen]
+  )
+
+  const handleToggleSyllabus = useCallback(() => {
+    if (isWideWorkspace) {
+      toggleSyllabus()
+      return
+    }
+    handleSyllabusOpenChange(!syllabusOverlayOpen)
+  }, [handleSyllabusOpenChange, isWideWorkspace, syllabusOverlayOpen, toggleSyllabus])
+
+  // Notes and syllabus overlays are mutually exclusive below the wide workspace breakpoint.
+  useEffect(() => {
+    if (notesOpen) setSyllabusOverlayOpen(false)
+  }, [notesOpen])
+
+  useEffect(() => {
+    setSyllabusOverlayOpen(false)
+  }, [lessonId])
 
   // Keyboard shortcut: T toggles theater mode (only when not in input/textarea)
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
-      const tag = (e.target as HTMLElement)?.tagName?.toLowerCase()
+      if (e.defaultPrevented || e.repeat || e.isComposing || e.metaKey || e.ctrlKey || e.altKey) {
+        return
+      }
+      const target = e.target as HTMLElement | null
+      const tag = target?.tagName?.toLowerCase()
       if (tag === 'input' || tag === 'textarea' || tag === 'select') return
-      if ((e.target as HTMLElement)?.isContentEditable) return
-      if (e.key === 't' || e.key === 'T') {
+      if (target?.isContentEditable || target?.closest('[role="dialog"]')) return
+      if (e.shiftKey && e.key.toLowerCase() === 's') {
+        e.preventDefault()
+        handleToggleSyllabus()
+        return
+      }
+      if (!e.shiftKey && e.key.toLowerCase() === 't') {
         e.preventDefault()
         toggleTheater()
       }
@@ -361,7 +472,7 @@ export function UnifiedLessonPlayer() {
     }
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [toggleTheater, isTheater])
+  }, [handleToggleSyllabus, toggleTheater, isTheater])
 
   // Next course suggestion (E91-S08) — computed via useMemo
   const courseSuggestion = useMemo(() => {
@@ -407,19 +518,12 @@ export function UnifiedLessonPlayer() {
       <DelayedFallback>
         <div
           data-testid="lesson-player-content"
-          className="flex flex-col h-full"
+          className="flex h-full flex-col"
           role="status"
           aria-busy="true"
           aria-label="Loading lesson"
         >
-          <div className="flex items-center gap-3 px-4 py-3 border-b shrink-0">
-            <Skeleton className="size-4" />
-            <div className="flex flex-col gap-1 flex-1">
-              <Skeleton className="h-4 w-48" />
-              <Skeleton className="h-3 w-32" />
-            </div>
-          </div>
-          <Skeleton className="flex-1 m-4 rounded-xl" />
+          <LessonWorkspaceSkeleton showSyllabus={isWideWorkspace && syllabusOpen} />
         </div>
       </DelayedFallback>
     )
@@ -442,6 +546,10 @@ export function UnifiedLessonPlayer() {
 
   const source = adapter.getSource()
   const capabilities = adapter.getCapabilities()
+  const displayLessonTitle = state.lessonTitle.replace(/\.\w{2,4}$/, '')
+  const currentLessonStatus = lessonId
+    ? (statusMap[`${courseId}:${lessonId}`] ?? 'not-started')
+    : 'not-started'
 
   // "Take Quiz" button — visible when quiz exists and adapter supports it
   const showQuizButton = capabilities.supportsQuiz && hasQuiz
@@ -503,14 +611,10 @@ export function UnifiedLessonPlayer() {
             positioned absolutely over it. Rendered outside overflow-hidden
             so the floating panel (which uses fixed positioning) has the right
             stacking context and is not clipped. */}
-        <div
-          ref={floatingPanelPortalRef}
-          className="absolute inset-0 pointer-events-none"
-          aria-hidden="true"
-        />
+        <div ref={floatingPanelPortalRef} className="absolute inset-0 pointer-events-none" />
 
         {/* Floating notes panel (mobile only, portal-rendered into the sibling div above) */}
-        {!isDesktop && !isTablet && !state.isPdf && (
+        {isMobile && (
           <FloatingNotesPanel
             courseId={courseId!}
             lessonId={lessonId!}
@@ -522,13 +626,18 @@ export function UnifiedLessonPlayer() {
         )}
       </div>
 
-      {/* Lesson title — below video, matching YouTube/Udemy/Coursera pattern */}
-      <h1
-        className="text-lg font-semibold mt-3 mb-1 truncate text-center"
-        data-testid="lesson-title"
-      >
-        {state.lessonTitle.replace(/\.\w{2,4}$/, '')}
-      </h1>
+      {capabilities.supportsPrevNext ? (
+        <LessonNavigation
+          courseId={courseId!}
+          prevLesson={prevLesson}
+          nextLesson={nextLesson}
+          parentLesson={parentLesson}
+          currentIndex={currentIndex}
+          totalLessons={totalLessons}
+          isCurrentCompleted={currentLessonStatus === 'completed'}
+          onNavigate={() => setSyllabusOverlayOpen(false)}
+        />
+      ) : null}
 
       {/* Auto-advance countdown — fixed overlay, no spacing wrapper needed */}
       {state.showAutoAdvance && nextLesson && (
@@ -594,52 +703,18 @@ export function UnifiedLessonPlayer() {
         focusTab={state.focusTab}
         focusTabKey={state.focusTabCounter.current}
         isPdf={state.isPdf}
-        hideNotesTab={isDesktop && notesOpen}
+        hideNotesTab={isWideNotesLayout && notesOpen}
         onCaptureFrame={handleCaptureFrame}
         courseName={courseName}
         lessonTitle={state.lessonTitle}
         lessonPosition={
-          lessonId && totalLessons
-            ? `${(lessons?.findIndex(l => l.id === lessonId) ?? 0) + 1} of ${totalLessons}`
+          currentLessonPosition && totalLessons
+            ? `${currentLessonPosition} of ${totalLessons}`
             : undefined
         }
+        activeTool={activeTool}
+        onActiveToolChange={setActiveTool}
       />
-
-      {/* Inline prev/next navigation (classic style, inside scroll) */}
-      {capabilities.supportsPrevNext && (
-        <div className="flex items-center justify-between mt-6">
-          {prevLesson ? (
-            <Button
-              variant="outline"
-              onClick={() =>
-                navigate(`/courses/${courseId}/lessons/${prevLesson.id}`, {
-                  state: { ...location.state },
-                })
-              }
-            >
-              <ChevronLeft className="mr-1 size-4" aria-hidden="true" />
-              Previous
-            </Button>
-          ) : (
-            <div />
-          )}
-          {nextLesson ? (
-            <Button
-              variant="brand"
-              onClick={() =>
-                navigate(`/courses/${courseId}/lessons/${nextLesson.id}`, {
-                  state: { ...location.state },
-                })
-              }
-            >
-              Next
-              <ChevronRight className="ml-1 size-4" aria-hidden="true" />
-            </Button>
-          ) : (
-            <div />
-          )}
-        </div>
-      )}
     </>
   )
 
@@ -670,164 +745,131 @@ export function UnifiedLessonPlayer() {
       <div role="status" aria-live="polite" className="sr-only">
         {readingModeAnnouncement}
       </div>
-      {/* Content area: classic horizontal layout — scrolls via #main-content (no nested scroll) */}
-      {isDesktop ? (
-        <div className={cn('flex gap-[var(--content-gap)]')}>
-          {/* Main content + Notes panel (resizable) */}
-          <ResizablePanelGroup
-            orientation="horizontal"
-            className="flex-1 min-w-0"
-            // eslint-disable-next-line react-best-practices/no-inline-styles -- overflow:visible needed for sticky sidebar
-            style={{ overflow: 'visible' }}
-          >
-            <ResizablePanel defaultSize={notesOpen ? '60%' : '100%'} minSize="40%">
-              <div data-testid="lesson-content-scroll">{mainContent}</div>
-            </ResizablePanel>
-
-            <ResizableHandle
-              withHandle={notesOpen}
-              disabled={!notesOpen}
-              className={cn(notesOpen ? 'mx-2' : 'invisible w-0')}
-              onDoubleClick={() => notesPanelRef.current?.resize('40%')}
+      <div className="mx-auto w-full max-w-[1920px] overflow-x-hidden">
+        {!isTheater ? (
+          <div data-theater-hide>
+            <LessonWorkspaceHeader
+              courseId={courseId!}
+              courseName={courseName}
+              sectionTitle={currentSection}
+              lessonTitle={displayLessonTitle}
+              currentPosition={currentLessonPosition}
+              totalLessons={totalLessons}
+              titleRef={titleRef}
+              syllabusVisible={isWideWorkspace ? syllabusOpen && !notesOpen : syllabusOverlayOpen}
+              onToggleSyllabus={handleToggleSyllabus}
             />
+          </div>
+        ) : null}
 
-            <ResizablePanel
-              panelRef={notesPanelRef}
-              collapsible
-              collapsedSize="0%"
-              defaultSize={notesOpen ? '40%' : '0%'}
-              minSize="25%"
-            >
-              {notesOpen && (
-                <div className="h-full min-h-0 flex flex-col">
-                  <NotesPanel
-                    courseId={courseId!}
-                    lessonId={lessonId!}
-                    currentTime={state.currentTime}
-                    onSeek={state.handleTranscriptSeek}
-                    onClose={closeNotesPanel}
-                    onCaptureFrame={handleCaptureFrame}
-                    isTheater={isTheater}
-                  />
-                </div>
-              )}
-            </ResizablePanel>
-          </ResizablePanelGroup>
+        <div className="flex min-w-0 gap-[min(var(--content-gap),1.5rem)]">
+          <div className="min-w-0 flex-1">
+            {isWideNotesLayout ? (
+              <ResizablePanelGroup
+                orientation="horizontal"
+                className="min-w-0"
+                // eslint-disable-next-line react-best-practices/no-inline-styles -- overflow:visible preserves the page-level scroll model
+                style={{ overflow: 'visible' }}
+              >
+                <ResizablePanel defaultSize={notesOpen ? '65%' : '100%'} minSize="55%">
+                  <div data-testid="lesson-content-scroll">{mainContent}</div>
+                </ResizablePanel>
 
-          {/* Sticky sidebar: lesson list (hidden in theater or when notes panel open) */}
-          <div
-            data-testid="desktop-sidebar"
-            className={cn(
-              'sticky top-0 self-start flex-shrink-0 w-[360px] xl:w-[380px] bg-card rounded-2xl shadow-sm overflow-hidden flex flex-col max-h-[calc(100svh-3rem)] transition-all duration-200',
-              isTheater || notesOpen ? 'hidden' : 'hidden lg:flex'
-            )}
-          >
-            <div className="px-4 py-3 border-b border-border flex-shrink-0 space-y-1.5">
-              <h3 className="text-sm font-semibold line-clamp-1" title={course?.name}>
-                {course?.name ?? 'Course Content'}
-              </h3>
-              <div className="flex items-center justify-between gap-2">
-                <p className="text-xs text-muted-foreground">
-                  {currentLessonPosition != null && totalLessons > 0
-                    ? `Lesson ${currentLessonPosition} of ${totalLessons}`
-                    : 'Course Content'}
-                </p>
-                {courseProgressPercent != null && (
-                  <div className="flex items-center gap-1.5">
-                    <div className="w-12 h-1.5 bg-muted rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-success rounded-full transition-all duration-300"
-                        style={{ width: `${courseProgressPercent}%` }}
+                <ResizableHandle
+                  withHandle={notesOpen}
+                  disabled={!notesOpen}
+                  className={cn(notesOpen ? 'mx-2' : 'invisible w-0')}
+                  onDoubleClick={() => notesPanelRef.current?.resize('35%')}
+                />
+
+                <ResizablePanel
+                  panelRef={notesPanelRef}
+                  collapsible
+                  collapsedSize="0%"
+                  defaultSize={notesOpen ? '35%' : '0%'}
+                  minSize="30%"
+                  maxSize="40%"
+                >
+                  {notesOpen ? (
+                    <div className="flex h-full min-h-0 flex-col">
+                      <NotesPanel
+                        courseId={courseId!}
+                        lessonId={lessonId!}
+                        currentTime={state.currentTime}
+                        onSeek={state.handleTranscriptSeek}
+                        onClose={closeNotesPanel}
+                        onCaptureFrame={handleCaptureFrame}
+                        isTheater={isTheater}
                       />
                     </div>
-                    <span className="text-xs text-muted-foreground tabular-nums">
-                      {courseProgressPercent}%
-                    </span>
-                  </div>
-                )}
-              </div>
-            </div>
-            <div className="flex-1 min-h-0 overflow-y-auto">
-              <LessonsTab
+                  ) : null}
+                </ResizablePanel>
+              </ResizablePanelGroup>
+            ) : (
+              <div data-testid="lesson-content-scroll">{mainContent}</div>
+            )}
+          </div>
+
+          <CourseSyllabusPanel
+            courseId={courseId!}
+            lessonId={lessonId!}
+            courseName={courseName}
+            adapter={adapter}
+            currentPosition={currentLessonPosition}
+            totalLessons={totalLessons}
+            progressPercent={courseProgressPercent}
+            inlineOpen={syllabusOpen && !notesOpen && !isTheater}
+            overlayOpen={syllabusOverlayOpen && !isTheater}
+            onInlineClose={() => setSyllabusOpen(false)}
+            onOverlayOpenChange={handleSyllabusOpenChange}
+            onFocusMaterials={state.handleFocusMaterials}
+          />
+        </div>
+      </div>
+
+      {isTabletNotesLayout ? (
+        <Drawer open={notesOpen} onOpenChange={setNotesOpen}>
+          <DrawerContent className="max-h-[85svh] overflow-hidden pb-[env(safe-area-inset-bottom)]">
+            <DrawerHeader className="sr-only">
+              <DrawerTitle>Lesson Notes</DrawerTitle>
+              <DrawerDescription>Write and review notes for this lesson.</DrawerDescription>
+            </DrawerHeader>
+            <div className="min-h-0 flex-1 overflow-hidden pt-3">
+              <NotesPanel
                 courseId={courseId!}
                 lessonId={lessonId!}
-                adapter={adapter}
-                onFocusMaterials={state.handleFocusMaterials}
+                currentTime={state.currentTime}
+                onSeek={state.handleTranscriptSeek}
+                onClose={closeNotesPanel}
+                onCaptureFrame={handleCaptureFrame}
+                isTheater={isTheater}
               />
             </div>
-          </div>
-        </div>
-      ) : (
-        /* Mobile + Tablet: stacked layout */
-        <div className={cn(!isTheater && 'mt-3')}>
-          {/* Tablet Video/Notes toggle */}
-          {isTablet && (
-            <div
-              data-testid="tablet-view-toggle"
-              className="flex gap-1 mb-4 bg-muted rounded-lg p-1"
-            >
-              <Button
-                variant={!state.tabletNotesOpen ? 'default' : 'ghost'}
-                size="sm"
-                className="flex-1 gap-1.5"
-                onClick={() => state.setTabletNotesOpen(false)}
-              >
-                <Video className="size-4" aria-hidden="true" />
-                Video
-              </Button>
-              <Button
-                variant={state.tabletNotesOpen ? 'default' : 'ghost'}
-                size="sm"
-                className="flex-1 gap-1.5"
-                onClick={() => state.setTabletNotesOpen(true)}
-              >
-                <PencilLine className="size-4" aria-hidden="true" />
-                Notes
-              </Button>
-            </div>
-          )}
-
-          {/* On tablet with notes open: show NotesTab instead of video+tabs */}
-          {isTablet && state.tabletNotesOpen ? (
-            <NotesTab
+          </DrawerContent>
+        </Drawer>
+      ) : !isWideNotesLayout && !isMobile ? (
+        <Sheet open={notesOpen} onOpenChange={setNotesOpen}>
+          <SheetContent
+            side="right"
+            showCloseButton={false}
+            className="w-[420px] max-w-[calc(100vw-2rem)] gap-0 overflow-hidden p-0 sm:max-w-[420px]"
+          >
+            <SheetHeader className="sr-only">
+              <SheetTitle>Lesson Notes</SheetTitle>
+              <SheetDescription>Write and review notes for this lesson.</SheetDescription>
+            </SheetHeader>
+            <NotesPanel
               courseId={courseId!}
               lessonId={lessonId!}
-              onSeek={state.handleTranscriptSeek}
               currentTime={state.currentTime}
+              onSeek={state.handleTranscriptSeek}
+              onClose={closeNotesPanel}
               onCaptureFrame={handleCaptureFrame}
+              isTheater={isTheater}
             />
-          ) : (
-            mainContent
-          )}
-
-          {/* Mobile sheet trigger for lesson list */}
-          <Sheet>
-            <SheetTrigger asChild>
-              <Button
-                variant="outline"
-                size="icon"
-                className="fixed bottom-16 right-4 z-50 rounded-full shadow-lg md:bottom-4"
-                aria-label="Open course lesson list"
-              >
-                <PanelRight className="size-4" />
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="bottom" className="h-[70vh]">
-              <SheetTitle className="text-sm px-4 pt-2 flex-shrink-0">
-                {course?.name ?? 'Course Content'}
-              </SheetTitle>
-              <div className="flex-1 min-h-0 overflow-y-auto">
-                <LessonsTab
-                  courseId={courseId!}
-                  lessonId={lessonId!}
-                  adapter={adapter}
-                  onFocusMaterials={state.handleFocusMaterials}
-                />
-              </div>
-            </SheetContent>
-          </Sheet>
-        </div>
-      )}
+          </SheetContent>
+        </Sheet>
+      ) : null}
 
       {/* Mini-player for local video lessons (E91-S04) */}
       {!capabilities.requiresNetwork && !state.isPdf && state.localVideoBlobUrl && (

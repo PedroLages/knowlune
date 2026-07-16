@@ -12,7 +12,7 @@
  */
 
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
-import { Link } from 'react-router'
+import { Link, useLocation } from 'react-router'
 import {
   Video,
   PlayCircle,
@@ -39,10 +39,8 @@ import { EmptyState } from '@/app/components/EmptyState'
 import type { CourseAdapter } from '@/lib/courseAdapter'
 import type { CourseSection, LessonGroup, LessonGroupItem } from '@/lib/lessonBasedCurriculum'
 import { useContentProgressStore } from '@/stores/useContentProgressStore'
-import {
-  formatLessonDuration,
-  HighlightedLessonTitle,
-} from './LessonsTabHighlightedTitle'
+import { useVirtualizer } from '@tanstack/react-virtual'
+import { formatLessonDuration, HighlightedLessonTitle } from './LessonsTabHighlightedTitle'
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -73,9 +71,21 @@ function StatusCircle({
   status: 'not-started' | 'in-progress' | 'completed'
   isActive: boolean
 }) {
+  const statusLabel = isActive
+    ? 'Now playing'
+    : status === 'completed'
+      ? 'Completed'
+      : status === 'in-progress'
+        ? 'In progress'
+        : 'Not started'
+
   if (isActive) {
     return (
-      <span className="flex-shrink-0 size-7 rounded-lg bg-brand flex items-center justify-center shadow-sm shadow-brand/20">
+      <span
+        className="flex-shrink-0 size-7 rounded-lg bg-brand flex items-center justify-center shadow-sm shadow-brand/20"
+        role="img"
+        aria-label={statusLabel}
+      >
         <PlayCircle className="size-3.5 text-brand-foreground" aria-hidden="true" />
       </span>
     )
@@ -83,7 +93,11 @@ function StatusCircle({
 
   if (status === 'completed') {
     return (
-      <span className="flex-shrink-0 size-7 rounded-lg bg-success/15 flex items-center justify-center">
+      <span
+        className="flex-shrink-0 size-7 rounded-lg bg-success/15 flex items-center justify-center"
+        role="img"
+        aria-label={statusLabel}
+      >
         <CheckCircle2 className="size-3.5 text-success" aria-hidden="true" />
       </span>
     )
@@ -91,7 +105,11 @@ function StatusCircle({
 
   if (status === 'in-progress') {
     return (
-      <span className="flex-shrink-0 size-7 rounded-lg bg-brand-soft/60 flex items-center justify-center">
+      <span
+        className="flex-shrink-0 size-7 rounded-lg bg-brand-soft/60 flex items-center justify-center"
+        role="img"
+        aria-label={statusLabel}
+      >
         <Clock className="size-3.5 text-brand" aria-hidden="true" />
       </span>
     )
@@ -99,7 +117,11 @@ function StatusCircle({
 
   // Not started — empty circle
   return (
-    <span className="flex-shrink-0 size-7 rounded-lg bg-muted flex items-center justify-center">
+    <span
+      className="flex-shrink-0 size-7 rounded-lg bg-muted flex items-center justify-center"
+      role="img"
+      aria-label={statusLabel}
+    >
       <Circle className="size-3 text-muted-foreground/40" aria-hidden="true" />
     </span>
   )
@@ -117,6 +139,9 @@ function LessonRow({
   activeRef,
   searchQuery,
   hasMaterials,
+  navigationSearch,
+  navigationState,
+  onLessonSelect,
 }: {
   lesson: LessonGroupItem
   courseId: string
@@ -125,6 +150,9 @@ function LessonRow({
   activeRef?: React.Ref<HTMLAnchorElement>
   searchQuery: string
   hasMaterials: boolean
+  navigationSearch: string
+  navigationState: unknown
+  onLessonSelect?: () => void
 }) {
   const completionStatus = useContentProgressStore(
     state => state.statusMap[courseId + ':' + lesson.id] ?? 'not-started'
@@ -140,23 +168,23 @@ function LessonRow({
   return (
     <Link
       ref={activeRef}
-      to={'/courses/' + courseId + '/lessons/' + lesson.id}
+      to={{
+        pathname: '/courses/' + courseId + '/lessons/' + lesson.id,
+        search: navigationSearch,
+      }}
+      state={navigationState}
+      onClick={onLessonSelect}
       title={lesson.displayTitle}
       className={cn(
         'flex items-start gap-2.5 rounded-xl px-2.5 py-3 transition-colors group',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-1',
-        isActive
-          ? 'bg-brand-soft'
-          : 'hover:bg-accent'
+        isActive ? 'bg-brand-soft' : 'hover:bg-accent'
       )}
       aria-current={isActive ? 'page' : undefined}
       data-active={isActive ? 'true' : undefined}
     >
       {/* Status indicator */}
-      <StatusCircle
-        status={completionStatus}
-        isActive={isActive}
-      />
+      <StatusCircle status={completionStatus} isActive={isActive} />
 
       {/* Lesson info */}
       <div className="flex-1 min-w-0 pt-0.5">
@@ -181,9 +209,7 @@ function LessonRow({
           <span
             className={cn(
               'inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-medium',
-              isActive
-                ? 'bg-brand/10 text-brand'
-                : 'bg-muted text-muted-foreground'
+              isActive ? 'bg-brand/10 text-brand' : 'bg-muted text-muted-foreground'
             )}
           >
             {badge.icon}
@@ -195,9 +221,7 @@ function LessonRow({
           )}
           {/* Material count */}
           {hasMaterials && (
-            <span className="text-[10px] text-muted-foreground/50">
-              +{materialCount}
-            </span>
+            <span className="text-[10px] text-muted-foreground/50">+{materialCount}</span>
           )}
         </div>
       </div>
@@ -214,25 +238,37 @@ function MaterialRow({
   courseId,
   lessonId,
   searchQuery,
+  activeRef,
+  navigationSearch,
+  navigationState,
+  onLessonSelect,
 }: {
   material: LessonGroupItem
   courseId: string
   lessonId: string
   searchQuery: string
+  activeRef?: React.Ref<HTMLAnchorElement>
+  navigationSearch: string
+  navigationState: unknown
+  onLessonSelect?: () => void
 }) {
   const isActive = material.id === lessonId
   const badge = getTypeBadge(material.type)
 
   return (
     <Link
-      to={'/courses/' + courseId + '/lessons/' + material.id}
+      ref={activeRef}
+      to={{
+        pathname: '/courses/' + courseId + '/lessons/' + material.id,
+        search: navigationSearch,
+      }}
+      state={navigationState}
+      onClick={onLessonSelect}
       title={material.displayTitle}
       className={cn(
         'flex items-center gap-2 rounded-lg px-2 py-2 transition-colors',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-1',
-        isActive
-          ? 'bg-brand-soft/70'
-          : 'hover:bg-accent/50'
+        isActive ? 'bg-brand-soft/70' : 'hover:bg-accent/50'
       )}
       aria-current={isActive ? 'page' : undefined}
       data-testid={'material-link-' + material.id}
@@ -240,7 +276,13 @@ function MaterialRow({
     >
       {/* Small dot indicator */}
       <span className="flex-shrink-0 size-5 flex items-center justify-center">
-        <Circle className={cn('size-1.5', isActive ? 'fill-brand text-brand' : 'fill-muted-foreground/30 text-muted-foreground/30')} aria-hidden="true" />
+        <Circle
+          className={cn(
+            'size-1.5',
+            isActive ? 'fill-brand text-brand' : 'fill-muted-foreground/30 text-muted-foreground/30'
+          )}
+          aria-hidden="true"
+        />
       </span>
       <div className="flex-1 min-w-0">
         <p
@@ -272,6 +314,9 @@ function LessonGroupRow({
   searchQuery,
   isExpanded,
   onToggleExpand,
+  navigationSearch,
+  navigationState,
+  onLessonSelect,
 }: {
   group: LessonGroup
   courseId: string
@@ -280,6 +325,9 @@ function LessonGroupRow({
   searchQuery: string
   isExpanded: boolean
   onToggleExpand: () => void
+  navigationSearch: string
+  navigationState: unknown
+  onLessonSelect?: () => void
 }) {
   const isPrimaryActive = group.primary.id === lessonId
   const hasMaterials = group.materials.length > 0
@@ -297,6 +345,9 @@ function LessonGroupRow({
         activeRef={isPrimaryActive ? activeRef : undefined}
         searchQuery={searchQuery}
         hasMaterials={false}
+        navigationSearch={navigationSearch}
+        navigationState={navigationState}
+        onLessonSelect={onLessonSelect}
       />
     )
   }
@@ -312,23 +363,23 @@ function LessonGroupRow({
           activeRef={isPrimaryActive ? activeRef : undefined}
           searchQuery={searchQuery}
           hasMaterials
+          navigationSearch={navigationSearch}
+          navigationState={navigationState}
+          onLessonSelect={onLessonSelect}
         />
         {/* Expand/collapse toggle */}
         <CollapsibleTrigger asChild>
           <button
             type="button"
             className={cn(
-              'flex items-center gap-1 ml-9 px-2 py-0.5 rounded-md text-[10px] text-muted-foreground/70 hover:text-muted-foreground transition-colors w-full text-left',
+              'ml-9 flex min-h-11 w-[calc(100%-2.25rem)] items-center gap-1 rounded-md px-2 text-left text-[10px] text-muted-foreground/70 transition-colors hover:bg-accent hover:text-muted-foreground',
               'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring'
             )}
             aria-label={isExpanded ? 'Hide materials' : 'Show materials'}
             data-testid={'materials-collapse-' + group.primary.id}
           >
             <ChevronDown
-              className={cn(
-                'size-3 transition-transform',
-                isExpanded && 'rotate-180'
-              )}
+              className={cn('size-3 transition-transform', isExpanded && 'rotate-180')}
               aria-hidden="true"
             />
             {group.materials.length} material{group.materials.length !== 1 ? 's' : ''}
@@ -344,6 +395,10 @@ function LessonGroupRow({
               courseId={courseId}
               lessonId={lessonId}
               searchQuery={searchQuery}
+              activeRef={material.id === lessonId ? activeRef : undefined}
+              navigationSearch={navigationSearch}
+              navigationState={navigationState}
+              onLessonSelect={onLessonSelect}
             />
           ))}
         </div>
@@ -366,6 +421,10 @@ function SectionHeader({
   expandedMaterialGroups,
   toggleMaterialGroup,
   activeRef,
+  navigationSearch,
+  navigationState,
+  onLessonSelect,
+  renderChildren = true,
 }: {
   section: CourseSection
   courseId: string
@@ -376,6 +435,10 @@ function SectionHeader({
   expandedMaterialGroups: Set<string>
   toggleMaterialGroup: (id: string) => void
   activeRef: React.RefObject<HTMLAnchorElement | null>
+  navigationSearch: string
+  navigationState: unknown
+  onLessonSelect?: () => void
+  renderChildren?: boolean
 }) {
   const hasActiveLesson = section.lessons.some(
     g => g.primary.id === lessonId || g.materials.some(m => m.id === lessonId)
@@ -391,18 +454,18 @@ function SectionHeader({
     <Collapsible open={isExpanded} onOpenChange={onToggle}>
       <CollapsibleTrigger
         className={cn(
-          'flex w-full items-center gap-2.5 px-2.5 py-2.5 rounded-xl transition-colors',
+          'flex min-h-11 w-full items-center gap-2.5 px-2.5 py-2.5 rounded-xl transition-colors',
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-1',
-          hasActiveLesson
-            ? 'bg-brand-soft/40'
-            : 'hover:bg-accent'
+          hasActiveLesson ? 'bg-brand-soft/40' : 'hover:bg-accent'
         )}
         aria-expanded={isExpanded}
       >
-        <span className={cn(
-          'flex-1 text-left text-sm font-semibold line-clamp-1',
-          hasActiveLesson ? 'text-brand-soft-foreground' : 'text-foreground'
-        )}>
+        <span
+          className={cn(
+            'flex-1 text-left text-sm font-semibold line-clamp-1',
+            hasActiveLesson ? 'text-brand-soft-foreground' : 'text-foreground'
+          )}
+        >
           {section.title}
         </span>
         <span className="text-[10px] text-muted-foreground tabular-nums flex-shrink-0">
@@ -416,22 +479,27 @@ function SectionHeader({
           aria-hidden="true"
         />
       </CollapsibleTrigger>
-      <CollapsibleContent>
-        <div className="ml-2 pl-3 border-l border-border/40 space-y-px pt-1">
-          {section.lessons.map(group => (
-            <LessonGroupRow
-              key={group.primary.id}
-              group={group}
-              courseId={courseId}
-              lessonId={lessonId}
-              activeRef={group.primary.id === lessonId ? activeRef : undefined}
-              searchQuery={searchQuery}
-              isExpanded={expandedMaterialGroups.has(group.primary.id)}
-              onToggleExpand={() => toggleMaterialGroup(group.primary.id)}
-            />
-          ))}
-        </div>
-      </CollapsibleContent>
+      {renderChildren ? (
+        <CollapsibleContent>
+          <div className="ml-2 pl-3 border-l border-border/40 space-y-px pt-1">
+            {section.lessons.map(group => (
+              <LessonGroupRow
+                key={group.primary.id}
+                group={group}
+                courseId={courseId}
+                lessonId={lessonId}
+                activeRef={group.primary.id === lessonId ? activeRef : undefined}
+                searchQuery={searchQuery}
+                isExpanded={expandedMaterialGroups.has(group.primary.id)}
+                onToggleExpand={() => toggleMaterialGroup(group.primary.id)}
+                navigationSearch={navigationSearch}
+                navigationState={navigationState}
+                onLessonSelect={onLessonSelect}
+              />
+            ))}
+          </div>
+        </CollapsibleContent>
+      ) : null}
     </Collapsible>
   )
 }
@@ -445,21 +513,33 @@ export interface LessonsTabProps {
   lessonId: string
   adapter: CourseAdapter
   onFocusMaterials?: () => void
+  onLessonSelect?: () => void
 }
 
-export function LessonsTab({ courseId, lessonId, adapter, onFocusMaterials: _onFocusMaterials }: LessonsTabProps) {
+const SYLLABUS_SCROLL_PREFIX = 'knowlune:lesson-syllabus-scroll:v1'
+
+export function LessonsTab({
+  courseId,
+  lessonId,
+  adapter,
+  onFocusMaterials: _onFocusMaterials,
+  onLessonSelect,
+}: LessonsTabProps) {
+  const location = useLocation()
   const [sections, setSections] = useState<CourseSection[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [loadError, setLoadError] = useState(false)
   const [retryCount, setRetryCount] = useState(0)
   const [searchQuery, setSearchQuery] = useState('')
   const activeRef = useRef<HTMLAnchorElement>(null)
+  const scrollParentRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     let ignore = false
     setIsLoading(true)
     setLoadError(false)
 
+    // silent-catch-ok — failure renders the visible retry state below
     adapter
       .getLessonBasedCurriculum()
       .then(data => {
@@ -480,12 +560,33 @@ export function LessonsTab({ courseId, lessonId, adapter, onFocusMaterials: _onF
     }
   }, [adapter, retryCount])
 
-  // Scroll active lesson into view on mount
   useEffect(() => {
-    if (!isLoading && activeRef.current) {
-      activeRef.current.scrollIntoView({ block: 'nearest', behavior: 'instant' })
+    if (isLoading) return
+    const scrollParent = scrollParentRef.current
+    if (!scrollParent) return
+    const key = `${SYLLABUS_SCROLL_PREFIX}:${courseId}:${lessonId}`
+
+    try {
+      const stored = sessionStorage.getItem(key)
+      if (stored !== null) scrollParent.scrollTop = Number(stored) || 0
+    } catch {
+      // silent-catch-ok — syllabus scroll restoration is a progressive enhancement
     }
-  }, [isLoading, lessonId])
+
+    const persistScroll = () => {
+      try {
+        sessionStorage.setItem(key, String(scrollParent.scrollTop))
+      } catch {
+        // silent-catch-ok — sessionStorage can be unavailable or full
+      }
+    }
+    scrollParent.addEventListener('scroll', persistScroll, { passive: true })
+
+    return () => {
+      persistScroll()
+      scrollParent.removeEventListener('scroll', persistScroll)
+    }
+  }, [courseId, isLoading, lessonId])
 
   // Total lesson count (primary lessons only)
   const totalLessons = useMemo(
@@ -591,6 +692,51 @@ export function LessonsTab({ courseId, lessonId, adapter, onFocusMaterials: _onF
     }
   }
 
+  const visibleRows = useMemo<
+    Array<
+      | { type: 'section'; section: CourseSection }
+      | { type: 'lesson'; section: CourseSection; group: LessonGroup }
+    >
+  >(() => {
+    const rows: Array<
+      | { type: 'section'; section: CourseSection }
+      | { type: 'lesson'; section: CourseSection; group: LessonGroup }
+    > = []
+
+    for (const section of searchedSections) {
+      if (hasMultipleSections) {
+        rows.push({ type: 'section', section })
+        if (!expandedSections.has(section.title)) continue
+      }
+      for (const group of section.lessons) {
+        rows.push({ type: 'lesson', section, group })
+      }
+    }
+    return rows
+  }, [expandedSections, hasMultipleSections, searchedSections])
+
+  const shouldVirtualize = visibleRows.length > 100
+  const rowVirtualizer = useVirtualizer({
+    count: shouldVirtualize ? visibleRows.length : 0,
+    getScrollElement: () => scrollParentRef.current,
+    estimateSize: index => (visibleRows[index]?.type === 'section' ? 52 : 76),
+    overscan: 8,
+  })
+
+  useEffect(() => {
+    if (isLoading) return
+    if (shouldVirtualize) {
+      const activeIndex = visibleRows.findIndex(
+        row =>
+          row.type === 'lesson' &&
+          (row.group.primary.id === lessonId || row.group.materials.some(m => m.id === lessonId))
+      )
+      if (activeIndex >= 0) rowVirtualizer.scrollToIndex(activeIndex, { align: 'center' })
+      return
+    }
+    activeRef.current?.scrollIntoView({ block: 'nearest', behavior: 'instant' })
+  }, [isLoading, lessonId, rowVirtualizer, shouldVirtualize, visibleRows])
+
   // --- Loading state ---
   if (isLoading) {
     return (
@@ -639,7 +785,11 @@ export function LessonsTab({ courseId, lessonId, adapter, onFocusMaterials: _onF
 
   // --- Render ---
   return (
-    <div className="p-2 space-y-1" data-testid="lessons-tab-list">
+    <div
+      ref={scrollParentRef}
+      className="h-full space-y-1 overflow-y-auto overscroll-contain p-2"
+      data-testid="lessons-tab-list"
+    >
       {/* Search input */}
       <div className="px-1 pt-1 pb-2">
         <div className="relative">
@@ -649,7 +799,7 @@ export function LessonsTab({ courseId, lessonId, adapter, onFocusMaterials: _onF
           />
           <Input
             type="search"
-            placeholder="Search lessons..."
+            placeholder="Search lessons…"
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
             className="pl-9 pr-9 rounded-xl"
@@ -659,7 +809,7 @@ export function LessonsTab({ courseId, lessonId, adapter, onFocusMaterials: _onF
           {searchQuery && (
             <button
               type="button"
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+              className="absolute right-0 top-1/2 flex size-11 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
               onClick={() => setSearchQuery('')}
               aria-label="Clear search"
               data-testid="lesson-search-clear"
@@ -687,9 +837,7 @@ export function LessonsTab({ courseId, lessonId, adapter, onFocusMaterials: _onF
         >
           <Search className="size-10 mb-3 opacity-50" aria-hidden="true" />
           <p className="text-sm mb-1">No lessons match</p>
-          <p className="text-xs text-muted-foreground/70 mb-3">
-            Try a different search term.
-          </p>
+          <p className="text-xs text-muted-foreground/70 mb-3">Try a different search term.</p>
           <Button
             variant="outline"
             size="sm"
@@ -698,6 +846,68 @@ export function LessonsTab({ courseId, lessonId, adapter, onFocusMaterials: _onF
           >
             Clear search
           </Button>
+        </div>
+      ) : shouldVirtualize ? (
+        <div
+          className="relative w-full"
+          style={{ height: `${rowVirtualizer.getTotalSize()}px` }}
+          data-testid="virtualized-lesson-list"
+        >
+          {rowVirtualizer.getVirtualItems().map(virtualRow => {
+            const row = visibleRows[virtualRow.index]
+            if (!row) return null
+            return (
+              <div
+                key={
+                  row.type === 'section'
+                    ? `section:${row.section.title}`
+                    : `lesson:${row.group.primary.id}`
+                }
+                data-index={virtualRow.index}
+                ref={rowVirtualizer.measureElement}
+                className="absolute left-0 top-0 w-full pb-1"
+                style={{ transform: `translateY(${virtualRow.start}px)` }}
+              >
+                {row.type === 'section' ? (
+                  <SectionHeader
+                    section={row.section}
+                    courseId={courseId}
+                    lessonId={lessonId}
+                    isExpanded={expandedSections.has(row.section.title)}
+                    onToggle={() => toggleSection(row.section.title)}
+                    searchQuery={searchQuery}
+                    expandedMaterialGroups={expandedMaterialGroups}
+                    toggleMaterialGroup={toggleMaterialGroup}
+                    activeRef={activeRef}
+                    navigationSearch={location.search}
+                    navigationState={location.state}
+                    onLessonSelect={onLessonSelect}
+                    renderChildren={false}
+                  />
+                ) : (
+                  <div className={hasMultipleSections ? 'ml-2 border-l border-border/40 pl-3' : ''}>
+                    <LessonGroupRow
+                      group={row.group}
+                      courseId={courseId}
+                      lessonId={lessonId}
+                      activeRef={
+                        row.group.primary.id === lessonId ||
+                        row.group.materials.some(material => material.id === lessonId)
+                          ? activeRef
+                          : undefined
+                      }
+                      searchQuery={searchQuery}
+                      isExpanded={expandedMaterialGroups.has(row.group.primary.id)}
+                      onToggleExpand={() => toggleMaterialGroup(row.group.primary.id)}
+                      navigationSearch={location.search}
+                      navigationState={location.state}
+                      onLessonSelect={onLessonSelect}
+                    />
+                  </div>
+                )}
+              </div>
+            )
+          })}
         </div>
       ) : hasMultipleSections ? (
         /* Multi-section layout */
@@ -713,6 +923,9 @@ export function LessonsTab({ courseId, lessonId, adapter, onFocusMaterials: _onF
             expandedMaterialGroups={expandedMaterialGroups}
             toggleMaterialGroup={toggleMaterialGroup}
             activeRef={activeRef}
+            navigationSearch={location.search}
+            navigationState={location.state}
+            onLessonSelect={onLessonSelect}
           />
         ))
       ) : (
@@ -728,6 +941,9 @@ export function LessonsTab({ courseId, lessonId, adapter, onFocusMaterials: _onF
               searchQuery={searchQuery}
               isExpanded={expandedMaterialGroups.has(group.primary.id)}
               onToggleExpand={() => toggleMaterialGroup(group.primary.id)}
+              navigationSearch={location.search}
+              navigationState={location.state}
+              onLessonSelect={onLessonSelect}
             />
           ))
         )

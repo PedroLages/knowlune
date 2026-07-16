@@ -8,8 +8,9 @@
  * @see E89-S08
  */
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import type { CourseAdapter, LessonItem } from '@/lib/courseAdapter'
+import type { CourseSection } from '@/lib/lessonBasedCurriculum'
 
 export interface LessonNavigationResult {
   prevLesson: LessonItem | null
@@ -17,6 +18,9 @@ export interface LessonNavigationResult {
   currentIndex: number
   totalLessons: number
   lessons: LessonItem[]
+  currentSection: string | null
+  parentLesson: LessonItem | null
+  isCompanionMaterial: boolean
   loading: boolean
 }
 
@@ -25,11 +29,13 @@ export function useLessonNavigation(
   lessonId: string | undefined
 ): LessonNavigationResult {
   const [lessons, setLessons] = useState<LessonItem[]>([])
+  const [sections, setSections] = useState<CourseSection[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     if (!adapter) {
       setLessons([])
+      setSections([])
       setLoading(false)
       return
     }
@@ -38,11 +44,18 @@ export function useLessonNavigation(
     setLoading(true)
 
     // silent-catch-ok: background data load, graceful degradation to empty list
-    adapter
-      .getLessons()
-      .then(items => {
+    Promise.all([
+      adapter.getLessons(),
+      // silent-catch-ok — navigation degrades to the primary lesson sequence
+      adapter.getLessonBasedCurriculum().catch(error => {
+        console.error('Failed to load lesson curriculum for navigation:', error)
+        return []
+      }),
+    ])
+      .then(([items, curriculum]) => {
         if (!ignore) {
           setLessons(items)
+          setSections(curriculum)
           setLoading(false)
         }
       })
@@ -50,6 +63,7 @@ export function useLessonNavigation(
         console.error('Failed to load lessons for navigation:', err)
         if (!ignore) {
           setLessons([])
+          setSections([])
           setLoading(false)
         }
       })
@@ -59,7 +73,40 @@ export function useLessonNavigation(
     }
   }, [adapter])
 
-  const currentIndex = lessonId ? lessons.findIndex(l => l.id === lessonId) : -1
+  const context = useMemo(() => {
+    let currentSection: string | null = null
+    let parentLesson: LessonItem | null = null
+
+    if (lessonId) {
+      for (const section of sections) {
+        for (const group of section.lessons) {
+          if (group.primary.id === lessonId) {
+            currentSection = section.title
+            break
+          }
+          if (group.materials.some(material => material.id === lessonId)) {
+            currentSection = section.title
+            parentLesson = lessons.find(lesson => lesson.id === group.primary.id) ?? null
+            break
+          }
+        }
+        if (currentSection) break
+      }
+    }
+
+    const directIndex = lessonId ? lessons.findIndex(lesson => lesson.id === lessonId) : -1
+    const parentIndex = parentLesson
+      ? lessons.findIndex(lesson => lesson.id === parentLesson.id)
+      : -1
+
+    return {
+      currentSection,
+      parentLesson,
+      currentIndex: directIndex >= 0 ? directIndex : parentIndex,
+    }
+  }, [lessonId, lessons, sections])
+
+  const currentIndex = context.currentIndex
 
   // Navigate to the immediate next/previous lesson regardless of type (video or PDF).
   const nextLesson =
@@ -73,6 +120,9 @@ export function useLessonNavigation(
     currentIndex,
     totalLessons: lessons.length,
     lessons,
+    currentSection: context.currentSection,
+    parentLesson: context.parentLesson,
+    isCompanionMaterial: context.parentLesson !== null,
     loading,
   }
 }

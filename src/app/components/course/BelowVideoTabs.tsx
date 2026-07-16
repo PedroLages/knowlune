@@ -9,7 +9,7 @@
  * @see Plan: Merge Classic Features into Modern UnifiedLessonPlayer
  */
 
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import {
   PencilLine,
   Bookmark,
@@ -24,7 +24,9 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/app/components/ui/ta
 import { cn } from '@/app/components/ui/utils'
 import { Button } from '@/app/components/ui/button'
 import { useMediaQuery } from '@/app/hooks/useMediaQuery'
+import { STUDY_TOOLS, type StudyTool } from '@/app/hooks/useLessonSessionState'
 import { useLessonChromeStore } from '@/stores/useLessonChromeStore'
+import { StudyToolSelector } from '@/app/components/course/StudyToolSelector'
 import { AISummaryPanel } from '@/app/components/figma/AISummaryPanel'
 import type { CourseAdapter } from '@/lib/courseAdapter'
 import type { CapturedFrame } from '@/lib/frame-capture'
@@ -60,6 +62,10 @@ interface BelowVideoTabsProps {
   lessonTitle?: string
   /** Lesson position string (e.g. "3 of 12") for tutor context */
   lessonPosition?: string
+  /** Controlled active study tool. */
+  activeTool?: StudyTool
+  /** Called when the learner selects another study tool. */
+  onActiveToolChange?: (tool: StudyTool) => void
 }
 
 export function BelowVideoTabs({
@@ -76,14 +82,23 @@ export function BelowVideoTabs({
   courseName,
   lessonTitle,
   lessonPosition,
+  activeTool: controlledActiveTool,
+  onActiveToolChange,
 }: BelowVideoTabsProps) {
   const capabilities = adapter.getCapabilities()
-  const isMobile = useMediaQuery('(max-width: 768px)')
+  const isMobile = useMediaQuery('(max-width: 767px)')
   const aiAvailable = isAIAvailable()
 
-  // Default to notes (or materials for PDF lessons)
-  const defaultTab = isPdf ? 'materials' : 'notes'
-  const [activeTab, setActiveTab] = useState(defaultTab)
+  const defaultTab: StudyTool = isPdf ? 'materials' : 'notes'
+  const [uncontrolledActiveTool, setUncontrolledActiveTool] = useState<StudyTool>(defaultTab)
+  const activeTool = controlledActiveTool ?? uncontrolledActiveTool
+  const changeActiveTool = useCallback(
+    (tool: StudyTool) => {
+      if (controlledActiveTool === undefined) setUncontrolledActiveTool(tool)
+      onActiveToolChange?.(tool)
+    },
+    [controlledActiveTool, onActiveToolChange]
+  )
 
   // Transcript version counter — incremented when TranscriptTab generates a new
   // transcript. Forces BelowVideoTabs to rebuild the blob URL for AISummaryPanel.
@@ -94,31 +109,33 @@ export function BelowVideoTabs({
 
   // Reset tab when lesson changes
   useEffect(() => {
-    setActiveTab(isPdf ? 'materials' : 'notes')
-  }, [lessonId, isPdf])
+    if (controlledActiveTool === undefined) {
+      setUncontrolledActiveTool(isPdf ? 'materials' : 'notes')
+    }
+  }, [controlledActiveTool, lessonId, isPdf])
 
   // Programmatic tab switching (e.g. N key -> Notes, badge click -> Materials)
   useEffect(() => {
-    if (focusTab) {
-      setActiveTab(focusTab)
+    if (focusTab && STUDY_TOOLS.includes(focusTab as StudyTool)) {
+      changeActiveTool(focusTab as StudyTool)
     }
-  }, [focusTab, focusTabKey])
+  }, [changeActiveTool, focusTab, focusTabKey])
 
   // Auto-switch away from notes tab when desktop notes panel is open
   useEffect(() => {
-    if (hideNotesTab && activeTab === 'notes') {
+    if (hideNotesTab && activeTool === 'notes') {
       // Fallback priority: bookmarks → transcript → materials → ai-summary
       if (!isPdf) {
-        setActiveTab('bookmarks')
+        changeActiveTool('bookmarks')
       } else if (capabilities.hasTranscript) {
-        setActiveTab('transcript')
+        changeActiveTool('transcript')
       } else if (capabilities.hasPdf) {
-        setActiveTab('materials')
+        changeActiveTool('materials')
       } else {
-        setActiveTab('ai-summary')
+        changeActiveTool('summary')
       }
     }
-  }, [hideNotesTab, activeTab, isPdf, capabilities])
+  }, [hideNotesTab, activeTool, isPdf, capabilities, changeActiveTool])
 
   // Build transcript blob URL for AISummaryPanel
   const [transcriptSrc, setTranscriptSrc] = useState<string | null>(null)
@@ -177,7 +194,12 @@ export function BelowVideoTabs({
   const closeFullscreenNotes = useCallback(() => {
     setIsNotesFullscreen(false)
     setMobileNotesPanel('expanded')
-    requestAnimationFrame(() => fullscreenTriggerRef.current?.focus())
+    requestAnimationFrame(() => {
+      const floatingTrigger = document.querySelector<HTMLElement>(
+        '[data-testid="floating-notes-maximize"]'
+      )
+      ;(floatingTrigger ?? fullscreenTriggerRef.current)?.focus()
+    })
   }, [setMobileNotesPanel])
 
   // ESC handler + focus trap for fullscreen notes overlay
@@ -230,27 +252,80 @@ export function BelowVideoTabs({
   }, [isNotesFullscreen])
 
   // On mobile, tapping the Notes tab opens the floating panel instead of inline content.
-  const handleTabsValueChange = useCallback(
+  const handleToolChange = useCallback(
     (value: string) => {
+      if (!STUDY_TOOLS.includes(value as StudyTool)) return
+      const tool = value as StudyTool
       if (isMobile && value === 'notes') {
-        // Open the floating notes panel instead of switching to inline content
+        changeActiveTool(tool)
+        useLessonChromeStore.getState().setNotesOpen(true)
         useLessonChromeStore.getState().setMobileNotesPanel('expanded')
         return
       }
-      setActiveTab(value)
+      changeActiveTool(tool)
     },
-    [isMobile]
+    [changeActiveTool, isMobile]
   )
+
+  const availableTools = useMemo(
+    () =>
+      [
+        {
+          value: 'notes' as const,
+          label: 'Notes',
+          icon: PencilLine,
+          hidden: Boolean(hideNotesTab),
+        },
+        {
+          value: 'bookmarks' as const,
+          label: 'Bookmarks',
+          icon: Bookmark,
+          hidden: Boolean(isPdf),
+        },
+        {
+          value: 'transcript' as const,
+          label: 'Transcript',
+          icon: FileText,
+          hidden: !capabilities.hasTranscript,
+        },
+        {
+          value: 'summary' as const,
+          label: 'AI Summary',
+          icon: Sparkles,
+          hidden: !capabilities.hasTranscript,
+        },
+        {
+          value: 'materials' as const,
+          label: 'Materials',
+          icon: FolderOpen,
+          hidden: !capabilities.hasPdf,
+        },
+        { value: 'tutor' as const, label: 'Tutor', icon: GraduationCap, hidden: !aiAvailable },
+      ].filter(tool => !tool.hidden),
+    [aiAvailable, capabilities.hasPdf, capabilities.hasTranscript, hideNotesTab, isPdf]
+  )
+
+  useEffect(() => {
+    if (availableTools.some(tool => tool.value === activeTool)) return
+    const fallback = availableTools[0]?.value
+    if (fallback) changeActiveTool(fallback)
+  }, [activeTool, availableTools, changeActiveTool])
 
   return (
     <>
       <Tabs
-        value={activeTab}
-        onValueChange={handleTabsValueChange}
+        value={activeTool}
+        onValueChange={handleToolChange}
         className="mt-4"
         data-testid="below-video-tabs"
       >
-        <TabsList variant="brand-pill">
+        <StudyToolSelector
+          value={activeTool}
+          tools={availableTools}
+          onValueChange={handleToolChange}
+        />
+
+        <TabsList variant="brand-pill" className="hidden sm:flex">
           <TabsTrigger value="notes" variant="brand-pill" className={cn(hideNotesTab && 'hidden')}>
             <PencilLine className="size-3.5" aria-hidden="true" />
             Notes
@@ -268,7 +343,7 @@ export function BelowVideoTabs({
             </TabsTrigger>
           )}
           {capabilities.hasTranscript && (
-            <TabsTrigger value="ai-summary" variant="brand-pill">
+            <TabsTrigger value="summary" variant="brand-pill">
               <Sparkles className="size-3.5" aria-hidden="true" />
               AI Summary
             </TabsTrigger>
@@ -290,8 +365,12 @@ export function BelowVideoTabs({
         <TabsContent
           value="notes"
           forceMount
-          className={cn('mt-4', hideNotesTab && 'hidden', 'data-[state=inactive]:hidden')}
-          aria-hidden={activeTab !== 'notes'}
+          className={cn(
+            'mt-4',
+            (hideNotesTab || isMobile) && 'hidden',
+            'data-[state=inactive]:hidden'
+          )}
+          aria-hidden={activeTool !== 'notes'}
         >
           <div className="bg-card rounded-2xl shadow-sm overflow-hidden">
             {isMobile && (
@@ -313,13 +392,7 @@ export function BelowVideoTabs({
                 </Button>
               </div>
             )}
-            {/* On mobile, NotesTab content is rendered in the FloatingNotesPanel.
-                  Here we show a brief message. The actual editor is in the floating panel. */}
-            {isMobile ? (
-              <div className="p-4 text-sm text-muted-foreground text-center">
-                Notes are open in the floating panel below the video.
-              </div>
-            ) : (
+            {!isMobile ? (
               <NotesTab
                 courseId={courseId}
                 lessonId={lessonId}
@@ -327,7 +400,7 @@ export function BelowVideoTabs({
                 currentTime={currentTime}
                 onCaptureFrame={onCaptureFrame}
               />
-            )}
+            ) : null}
           </div>
         </TabsContent>
 
@@ -362,7 +435,7 @@ export function BelowVideoTabs({
         )}
 
         {capabilities.hasTranscript && (
-          <TabsContent value="ai-summary" className="mt-4">
+          <TabsContent value="summary" className="mt-4">
             <div className="bg-card rounded-2xl shadow-sm">
               {transcriptSrc ? (
                 <AISummaryPanel transcriptSrc={transcriptSrc} />
