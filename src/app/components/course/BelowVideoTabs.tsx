@@ -420,7 +420,7 @@ export function BelowVideoTabs({
 
         {capabilities.hasTranscript && (
           <TabsContent value="transcript" className="mt-4">
-            <div className="bg-card rounded-2xl shadow-sm overflow-hidden h-[400px]">
+            <div className="h-[65svh] min-h-96 overflow-hidden rounded-2xl bg-card shadow-sm sm:h-[min(68svh,40rem)] sm:min-h-[30rem]">
               <TranscriptTab
                 courseId={courseId}
                 lessonId={lessonId}
