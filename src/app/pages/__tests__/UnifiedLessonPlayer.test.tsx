@@ -45,12 +45,14 @@ vi.mock('@/stores/useContentProgressStore', () => ({
         setItemStatus: mockSetItemStatus,
         getItemStatus: mockGetItemStatus,
         loadCourseProgress: vi.fn(),
+        statusMap: {},
       }),
     {
       getState: () => ({
         setItemStatus: mockSetItemStatus,
         getItemStatus: mockGetItemStatus,
         loadCourseProgress: vi.fn(),
+        statusMap: {},
       }),
     }
   ),
@@ -98,6 +100,9 @@ const mockUseLessonNavigation = vi.fn(() => ({
   prevLesson: null as (typeof MOCK_LESSONS)[number] | null,
   nextLesson: MOCK_LESSONS[1] as (typeof MOCK_LESSONS)[number] | null,
   currentIndex: 0,
+  currentSection: 'Section 1',
+  parentLesson: null,
+  isCompanionMaterial: false,
   totalLessons: 3,
   lessons: MOCK_LESSONS as (typeof MOCK_LESSONS)[number][],
   loading: false as boolean,
@@ -108,8 +113,7 @@ vi.mock('@/app/hooks/useLessonNavigation', () => ({
 }))
 
 vi.mock('@/app/hooks/useMediaQuery', () => ({
-  useIsDesktop: () => true,
-  useIsTablet: () => false,
+  useMediaQuery: (query: string) => query.includes('min-width'),
 }))
 
 vi.mock('@/app/hooks/useTheaterMode', () => ({
@@ -147,6 +151,12 @@ vi.mock('@/app/components/course/CourseBreadcrumb', () => ({
 }))
 vi.mock('@/app/components/course/LessonNavigation', () => ({
   LessonNavigation: () => <div data-testid="lesson-navigation">Nav</div>,
+}))
+vi.mock('@/app/components/course/LessonWorkspaceHeader', () => ({
+  LessonWorkspaceHeader: () => <div data-testid="lesson-workspace-header">Header</div>,
+}))
+vi.mock('@/app/components/course/CourseSyllabusPanel', () => ({
+  CourseSyllabusPanel: () => <div data-testid="course-syllabus-panel">Syllabus</div>,
 }))
 vi.mock('@/app/components/figma/AutoAdvanceCountdown', () => ({
   AutoAdvanceCountdown: ({ nextLessonTitle }: { nextLessonTitle: string }) => (
@@ -319,6 +329,9 @@ describe('UnifiedLessonPlayer — E54-S01 callbacks', () => {
       prevLesson: MOCK_LESSONS[1],
       nextLesson: null,
       currentIndex: 2,
+      currentSection: 'Section 1',
+      parentLesson: null,
+      isCompanionMaterial: false,
       totalLessons: 3,
       lessons: MOCK_LESSONS,
       loading: false,

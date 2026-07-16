@@ -21,6 +21,7 @@ import { db } from '@/db'
 import type { Note } from '@/data/types'
 import type { NoteLinkSuggestion } from '@/ai/knowledgeGaps/types'
 import type { CapturedFrame } from '@/lib/frame-capture'
+import type { NoteSaveStatus } from '@/app/components/notes/NoteEditor'
 
 export interface NotesTabProps {
   courseId: string
@@ -32,7 +33,7 @@ export interface NotesTabProps {
   /** Callback to capture the current video frame as a JPEG for embedding in notes */
   onCaptureFrame?: () => Promise<CapturedFrame | null>
   /** Callback when save status changes (for parent toolbar "Saved" indicator). */
-  onSaveStatusChange?: (status: 'idle' | 'saved') => void
+  onSaveStatusChange?: (status: NoteSaveStatus) => void
   /** When true, stretch editor to fill available vertical space (desktop side panel). */
   fillHeight?: boolean
 }
@@ -74,6 +75,7 @@ export function NotesTab({
   useEffect(() => {
     if (existingNote || isLoading) return
     let ignore = false
+    // silent-catch-ok — video description is optional seed data
     db.importedVideos
       .get(lessonId)
       .then(v => {
@@ -86,7 +88,6 @@ export function NotesTab({
           setVideoDescription(html)
         }
       })
-      // silent-catch-ok: video description is optional seed data; failure is non-critical
       .catch(() => {})
     return () => {
       ignore = true

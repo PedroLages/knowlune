@@ -2,6 +2,7 @@ import { create } from 'zustand'
 
 const STORAGE_KEY = 'lesson-theater-mode'
 const AUTO_PLAY_KEY = 'lesson-auto-play'
+const SYLLABUS_OPEN_KEY = 'knowlune:lesson-syllabus-open:v1'
 
 function readStoredTheater(): boolean {
   try {
@@ -37,6 +38,24 @@ function persistAutoPlay(value: boolean): void {
     localStorage.setItem(AUTO_PLAY_KEY, String(value))
   } catch {
     // silent-catch-ok
+  }
+}
+
+function readStoredSyllabusOpen(): boolean {
+  try {
+    const raw = localStorage.getItem(SYLLABUS_OPEN_KEY)
+    return raw === null ? true : raw === 'true'
+  } catch {
+    // silent-catch-ok — localStorage unavailable; default to the wide-screen layout
+    return true
+  }
+}
+
+function persistSyllabusOpen(value: boolean): void {
+  try {
+    localStorage.setItem(SYLLABUS_OPEN_KEY, String(value))
+  } catch {
+    // silent-catch-ok — persistence is a progressive enhancement
   }
 }
 
@@ -88,6 +107,13 @@ export interface LessonChromeState {
   autoPlay: boolean
   /** Toggle auto-play preference. Updates localStorage. */
   toggleAutoPlay: () => void
+
+  /** Preferred visibility of the inline course syllabus on wide screens. */
+  syllabusOpen: boolean
+  /** Set and persist the preferred inline syllabus visibility. */
+  setSyllabusOpen: (open: boolean) => void
+  /** Toggle and persist the preferred inline syllabus visibility. */
+  toggleSyllabus: () => void
 
   /** Whether the QA chat panel is open. */
   qaPanelOpen: boolean
@@ -192,6 +218,19 @@ export const useLessonChromeStore = create<LessonChromeState>((set, get) => ({
     const next = !get().autoPlay
     persistAutoPlay(next)
     set({ autoPlay: next })
+  },
+
+  syllabusOpen: readStoredSyllabusOpen(),
+
+  setSyllabusOpen: (open: boolean) => {
+    persistSyllabusOpen(open)
+    set({ syllabusOpen: open })
+  },
+
+  toggleSyllabus: () => {
+    const next = !get().syllabusOpen
+    persistSyllabusOpen(next)
+    set({ syllabusOpen: next })
   },
 
   qaPanelOpen: false,

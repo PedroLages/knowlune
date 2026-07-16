@@ -14,6 +14,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import type { ButtonHTMLAttributes, ReactNode } from 'react'
 import { LessonHeaderTools } from '../LessonHeaderTools'
 
 // ---------------------------------------------------------------------------
@@ -93,12 +94,36 @@ vi.mock('@/app/components/figma/QAChatPanel', () => ({
   QAChatPanel: () => <div data-testid="qa-chat-panel">QA Chat</div>,
 }))
 
+// Keep this component test focused on lesson actions rather than Radix portal mechanics.
+vi.mock('@/app/components/ui/dropdown-menu', () => ({
+  DropdownMenu: ({ children }: { children: ReactNode }) => <>{children}</>,
+  DropdownMenuTrigger: ({ children }: { children: ReactNode }) => <>{children}</>,
+  DropdownMenuContent: ({ children }: { children: ReactNode }) => <>{children}</>,
+  DropdownMenuItem: ({
+    children,
+    onSelect,
+    ...props
+  }: ButtonHTMLAttributes<HTMLButtonElement> & { onSelect?: () => void }) => (
+    <button type="button" onClick={onSelect} {...props}>
+      {children}
+    </button>
+  ),
+}))
+
 // ---------------------------------------------------------------------------
 // Helper
 // ---------------------------------------------------------------------------
 
 function setGuestMode(guest: boolean) {
   mockIsGuest = guest
+}
+
+function openMoreMenu() {
+  fireEvent.pointerDown(screen.getByTestId('tablet-kebab-trigger'), {
+    button: 0,
+    ctrlKey: false,
+    pointerType: 'mouse',
+  })
 }
 
 // ---------------------------------------------------------------------------
@@ -135,32 +160,38 @@ describe('LessonHeaderTools', () => {
     })
 
     expect(screen.getByTestId('pomodoro-timer')).toBeInTheDocument()
-    expect(screen.getByTestId('reading-mode-toggle')).toBeInTheDocument()
-    expect(screen.getByTestId('theater-mode-toggle')).toBeInTheDocument()
+    expect(screen.getByTestId('tablet-kebab-trigger')).toHaveAccessibleName('More lesson tools')
     expect(screen.getByTestId('notes-toggle')).toBeInTheDocument()
     expect(screen.getByTestId('completion-toggle')).toBeInTheDocument()
+
+    openMoreMenu()
+    expect(screen.getByTestId('kebab-reading-mode')).toBeInTheDocument()
+    expect(screen.getByTestId('kebab-theater-mode')).toBeInTheDocument()
+    expect(screen.getByTestId('kebab-autoplay')).toBeInTheDocument()
+    expect(screen.getByTestId('kebab-qa-panel')).toBeInTheDocument()
   })
 
   // -- Theater toggle ---------------------------------------------------------
 
   it('calls toggleTheater when theater button is clicked', () => {
     render(<LessonHeaderTools />)
-    fireEvent.click(screen.getByTestId('theater-mode-toggle'))
+    openMoreMenu()
+    fireEvent.click(screen.getByTestId('kebab-theater-mode'))
     expect(toggleTheater).toHaveBeenCalledTimes(1)
   })
 
-  it('shows Minimize2 icon when theater mode is active', () => {
+  it('shows an exit action when theater mode is active', () => {
     mockIsTheater = true
     render(<LessonHeaderTools />)
-    const btn = screen.getByTestId('theater-mode-toggle')
-    expect(btn.getAttribute('aria-label')).toContain('Exit theater mode')
+    openMoreMenu()
+    expect(screen.getByTestId('kebab-theater-mode')).toHaveTextContent('Exit Theater')
   })
 
-  it('shows Maximize2 icon when theater mode is inactive', () => {
+  it('shows an enter action when theater mode is inactive', () => {
     mockIsTheater = false
     render(<LessonHeaderTools />)
-    const btn = screen.getByTestId('theater-mode-toggle')
-    expect(btn.getAttribute('aria-label')).toContain('Enter theater mode')
+    openMoreMenu()
+    expect(screen.getByTestId('kebab-theater-mode')).toHaveTextContent('Theater Mode')
   })
 
   // -- Notes toggle -----------------------------------------------------------
@@ -210,9 +241,10 @@ describe('LessonHeaderTools', () => {
     })
 
     expect(screen.getByTestId('pomodoro-timer')).toBeInTheDocument()
-    expect(screen.getByTestId('reading-mode-toggle')).toBeInTheDocument()
-    expect(screen.getByTestId('theater-mode-toggle')).toBeInTheDocument()
     expect(screen.getByTestId('notes-toggle')).toBeInTheDocument()
+    openMoreMenu()
+    expect(screen.getByTestId('kebab-reading-mode')).toBeInTheDocument()
+    expect(screen.getByTestId('kebab-theater-mode')).toBeInTheDocument()
   })
 
   // -- data-theater-hide attribute --------------------------------------------
@@ -225,49 +257,54 @@ describe('LessonHeaderTools', () => {
 
   // -- Reading mode toggle ----------------------------------------------------
 
-  it('sets aria-pressed on reading mode button', () => {
+  it('shows an exit action when reading mode is active', () => {
     mockIsReadingMode = true
     render(<LessonHeaderTools />)
-    expect(screen.getByTestId('reading-mode-toggle').getAttribute('aria-pressed')).toBe('true')
+    openMoreMenu()
+    expect(screen.getByTestId('kebab-reading-mode')).toHaveTextContent('Exit Reading Mode')
   })
 
   it('calls toggleReadingMode when reading mode button is clicked', () => {
     render(<LessonHeaderTools />)
-    fireEvent.click(screen.getByTestId('reading-mode-toggle'))
+    openMoreMenu()
+    fireEvent.click(screen.getByTestId('kebab-reading-mode'))
     expect(toggleReadingMode).toHaveBeenCalledTimes(1)
   })
 
   // -- Auto-play toggle --------------------------------------------------------
 
-  it('renders auto-play toggle with aria-pressed="true" when autoPlay is ON', () => {
+  it('shows auto-play as on in the More menu', () => {
     mockAutoPlay = true
     render(<LessonHeaderTools />)
-    expect(screen.getByTestId('autoplay-toggle').getAttribute('aria-pressed')).toBe('true')
+    openMoreMenu()
+    expect(screen.getByTestId('kebab-autoplay')).toHaveTextContent('Auto-play: On')
   })
 
-  it('renders auto-play toggle with aria-pressed="false" when autoPlay is OFF', () => {
+  it('shows auto-play as off in the More menu', () => {
     mockAutoPlay = false
     render(<LessonHeaderTools />)
-    expect(screen.getByTestId('autoplay-toggle').getAttribute('aria-pressed')).toBe('false')
+    openMoreMenu()
+    expect(screen.getByTestId('kebab-autoplay')).toHaveTextContent('Auto-play: Off')
   })
 
   it('calls toggleAutoPlay when auto-play button is clicked', () => {
     render(<LessonHeaderTools />)
-    fireEvent.click(screen.getByTestId('autoplay-toggle'))
+    openMoreMenu()
+    fireEvent.click(screen.getByTestId('kebab-autoplay'))
     expect(toggleAutoPlay).toHaveBeenCalledTimes(1)
   })
 
-  it('shows "Auto-play: On" tooltip when autoPlay is ON', () => {
+  it('labels auto-play as on when autoPlay is ON', () => {
     mockAutoPlay = true
     render(<LessonHeaderTools />)
-    expect(screen.getByTestId('autoplay-toggle').getAttribute('aria-label')).toBe('Auto-play is on')
+    openMoreMenu()
+    expect(screen.getByTestId('kebab-autoplay')).toHaveAccessibleName('Auto-play: On')
   })
 
-  it('shows "Auto-play: Off" tooltip when autoPlay is OFF', () => {
+  it('labels auto-play as off when autoPlay is OFF', () => {
     mockAutoPlay = false
     render(<LessonHeaderTools />)
-    expect(screen.getByTestId('autoplay-toggle').getAttribute('aria-label')).toBe(
-      'Auto-play is off'
-    )
+    openMoreMenu()
+    expect(screen.getByTestId('kebab-autoplay')).toHaveAccessibleName('Auto-play: Off')
   })
 })

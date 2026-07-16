@@ -1,325 +1,195 @@
 import 'fake-indexeddb/auto'
-import { describe, it, expect, beforeAll, beforeEach, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
 import Dexie from 'dexie'
+import { LessonsTab } from '@/app/components/course/tabs/LessonsTab'
+import { formatLessonDuration } from '@/app/components/course/tabs/LessonsTabHighlightedTitle'
+import { useContentProgressStore } from '@/stores/useContentProgressStore'
+import type { CourseAdapter } from '@/lib/courseAdapter'
+import type { CourseSection, LessonGroupItem } from '@/lib/lessonBasedCurriculum'
 
-// jsdom does not implement scrollIntoView on HTMLAnchorElement.
-// The LessonsTab scroll-into-view effect calls it on the active lesson link.
 beforeAll(() => {
   if (!HTMLAnchorElement.prototype.scrollIntoView) {
-    HTMLAnchorElement.prototype.scrollIntoView = vi.fn() as unknown as (
-      arg?: boolean | ScrollIntoViewOptions
-    ) => void
+    HTMLAnchorElement.prototype.scrollIntoView = vi.fn()
   }
 })
-import {
-  LessonsTab,
-  formatLessonDuration,
-  LESSON_SEARCH_THRESHOLD,
-} from '@/app/components/course/tabs/LessonsTab'
-import { useContentProgressStore } from '@/stores/useContentProgressStore'
-import type { CourseAdapter, LessonItem, MaterialGroup } from '@/lib/courseAdapter'
 
-function makeLesson(overrides: Partial<LessonItem> = {}): LessonItem {
+function makeItem(overrides: Partial<LessonGroupItem> = {}): LessonGroupItem {
   return {
     id: 'lesson-1',
     title: 'Test Lesson',
-    order: 1,
+    displayTitle: 'Test Lesson',
     type: 'video',
     duration: 300,
-    thumbnailUrl: '',
-    resources: [],
+    filename: '001 Test Lesson.mp4',
+    path: 'Section 1/001 Test Lesson.mp4',
+    isPrimary: true,
     ...overrides,
-  } as LessonItem
+  }
 }
 
-function makeGroup(lesson: LessonItem, materials: LessonItem[] = []): MaterialGroup {
-  return { primary: lesson, materials }
-}
-
-function makeAdapter(groups: MaterialGroup[]): CourseAdapter {
+function makeSection(
+  title: string,
+  lessons: Array<{ primary: LessonGroupItem; materials?: LessonGroupItem[] }>
+): CourseSection {
   return {
-    getGroupedLessons: vi.fn().mockResolvedValue(groups),
-    getCapabilities: vi.fn().mockReturnValue({
-      hasVideo: true,
-      hasPdf: false,
-      hasTranscript: false,
-      supportsNotes: true,
-      supportsQuiz: false,
-      supportsPrevNext: true,
-      supportsBreadcrumbs: true,
-      requiresNetwork: false,
-      supportsRefresh: false,
-      supportsFileVerification: false,
-    }),
+    numericPrefix: '1',
+    title,
+    lessons: lessons.map(({ primary, materials = [] }, index) => ({
+      numericPrefix: String(index + 1),
+      primary,
+      materials,
+    })),
+  }
+}
+
+function makeAdapter(sections: CourseSection[], pending = false): CourseAdapter {
+  return {
+    getLessonBasedCurriculum: vi
+      .fn()
+      .mockReturnValue(pending ? new Promise(() => undefined) : Promise.resolve(sections)),
   } as unknown as CourseAdapter
+}
+
+function renderTab(
+  sections: CourseSection[],
+  lessonId = 'lesson-1',
+  initialEntry = '/courses/course-1/lessons/lesson-1?tool=transcript'
+) {
+  const onLessonSelect = vi.fn()
+  render(
+    <MemoryRouter initialEntries={[initialEntry]}>
+      <LessonsTab
+        courseId="course-1"
+        lessonId={lessonId}
+        adapter={makeAdapter(sections)}
+        onLessonSelect={onLessonSelect}
+      />
+    </MemoryRouter>
+  )
+  return { onLessonSelect }
 }
 
 beforeEach(async () => {
   await Dexie.delete('ElearningDB')
-  vi.resetModules()
+  useContentProgressStore.setState({ statusMap: {}, isLoading: false, error: null })
 })
 
 describe('LessonsTab', () => {
-  it('renders lesson rows', async () => {
-    const lesson = makeLesson({ id: 'les-1', title: 'Hello World' })
-    const adapter = makeAdapter([makeGroup(lesson)])
+  it('renders primary lessons with current status and preserved tool query', async () => {
+    const lesson = makeItem({ id: 'lesson-1', displayTitle: 'Linux Fundamentals' })
+    renderTab([makeSection('Foundations', [{ primary: lesson }])])
 
+    const link = await screen.findByRole('link', { name: /Linux Fundamentals/i })
+    expect(link).toHaveAttribute('href', '/courses/course-1/lessons/lesson-1?tool=transcript')
+    expect(screen.getByRole('img', { name: 'Now playing' })).toBeInTheDocument()
+    expect(screen.getByText('Now Playing')).toBeInTheDocument()
+  })
+
+  it('shows stable skeleton rows while curriculum loads', () => {
     render(
       <MemoryRouter>
-        <LessonsTab courseId="course-1" lessonId="les-1" adapter={adapter} />
+        <LessonsTab courseId="course-1" lessonId="lesson-1" adapter={makeAdapter([], true)} />
       </MemoryRouter>
     )
 
-    expect(await screen.findByText('Hello World')).toBeDefined()
+    expect(document.querySelectorAll('.animate-shimmer')).toHaveLength(6)
   })
 
-  it('renders index numbers for not-started lessons', async () => {
-    const lesson = makeLesson({ id: 'les-1' })
-    const adapter = makeAdapter([makeGroup(lesson)])
-
-    render(
-      <MemoryRouter>
-        <LessonsTab courseId="course-1" lessonId="les-2" adapter={adapter} />
-      </MemoryRouter>
-    )
-
-    expect(await screen.findByText('1')).toBeDefined()
-  })
-
-  it('renders loading skeletons while adapter resolves', () => {
-    const adapter = {
-      getGroupedLessons: vi.fn().mockReturnValue(new Promise(() => {})),
-    } as unknown as CourseAdapter
-
-    render(
-      <MemoryRouter>
-        <LessonsTab courseId="course-1" lessonId="les-1" adapter={adapter} />
-      </MemoryRouter>
-    )
-
-    // Skeleton defaults to shimmer=true which uses animate-shimmer class
-    const skeletons = document.querySelectorAll('.animate-shimmer')
-    expect(skeletons.length).toBeGreaterThan(0)
-  })
-})
-
-describe('LessonLink completion checkmark', () => {
-  it('shows CheckCircle2 when lesson is completed', async () => {
+  it('communicates completed and in-progress states with accessible text', async () => {
     useContentProgressStore.setState({
-      statusMap: { 'course-1:les-1': 'completed' },
+      statusMap: {
+        'course-1:lesson-1': 'completed',
+        'course-1:lesson-2': 'in-progress',
+      },
     })
+    const sections = [
+      makeSection('Foundations', [
+        { primary: makeItem({ id: 'lesson-1', displayTitle: 'Completed Lesson' }) },
+        { primary: makeItem({ id: 'lesson-2', displayTitle: 'Current Lesson' }) },
+      ]),
+    ]
+    renderTab(sections, 'missing')
 
-    const lesson = makeLesson({ id: 'les-1', title: 'Completed Lesson' })
-    const adapter = makeAdapter([makeGroup(lesson)])
-
-    render(
-      <MemoryRouter>
-        <LessonsTab courseId="course-1" lessonId="les-2" adapter={adapter} />
-      </MemoryRouter>
-    )
-
-    const checkmark = await screen.findByTestId('completion-check-les-1')
-    expect(checkmark).toBeDefined()
-
-    const title = screen.getByText('Completed Lesson')
-    expect(title.className).toContain('line-through')
+    expect(await screen.findByRole('img', { name: 'Completed' })).toBeInTheDocument()
+    expect(screen.getByRole('img', { name: 'In progress' })).toBeInTheDocument()
   })
 
-  it('shows index number when lesson is in-progress', async () => {
-    useContentProgressStore.setState({
-      statusMap: { 'course-1:les-1': 'in-progress' },
-    })
+  it('filters by primary lesson and material titles', async () => {
+    const sections = [
+      makeSection('Foundations', [
+        { primary: makeItem({ id: 'lesson-1', displayTitle: 'Shell Basics' }) },
+        { primary: makeItem({ id: 'lesson-2', displayTitle: 'Permissions' }) },
+      ]),
+    ]
+    renderTab(sections)
+    const search = await screen.findByRole('searchbox', { name: 'Filter lessons by title' })
 
-    const lesson = makeLesson({ id: 'les-1', title: 'In Progress Lesson' })
-    const adapter = makeAdapter([makeGroup(lesson)])
-
-    render(
-      <MemoryRouter>
-        <LessonsTab courseId="course-1" lessonId="les-2" adapter={adapter} />
-      </MemoryRouter>
-    )
-
-    expect(await screen.findByText('1')).toBeDefined()
-    expect(screen.queryByTestId('completion-check-les-1')).toBeNull()
+    fireEvent.change(search, { target: { value: 'permissions' } })
+    expect(screen.queryByText('Shell Basics')).not.toBeInTheDocument()
+    expect(screen.getByText('Permissions')).toBeInTheDocument()
+    expect(screen.getByText('Showing 1 of 2 lessons')).toBeInTheDocument()
   })
 
-  it('shows index number when lesson is not-started', async () => {
-    useContentProgressStore.setState({
-      statusMap: { 'course-1:les-1': 'not-started' },
+  it('renders and collapses companion materials with 44px toggle targets', async () => {
+    const primary = makeItem({ id: 'lesson-1', displayTitle: 'Directory Structure' })
+    const material = makeItem({
+      id: 'material-1',
+      displayTitle: 'Directory Cheat Sheet',
+      type: 'pdf',
+      filename: '001 cheat-sheet.pdf',
+      isPrimary: false,
     })
+    renderTab([makeSection('Foundations', [{ primary, materials: [material] }])], 'material-1')
 
-    const lesson = makeLesson({ id: 'les-1', title: 'Not Started Lesson' })
-    const adapter = makeAdapter([makeGroup(lesson)])
+    expect(await screen.findByText('Directory Cheat Sheet')).toBeInTheDocument()
+    const toggle = screen.getByTestId('materials-collapse-lesson-1')
+    expect(toggle.className).toContain('min-h-11')
+    fireEvent.click(toggle)
+    await waitFor(() => expect(screen.queryByText('Directory Cheat Sheet')).not.toBeInTheDocument())
+  })
 
-    render(
-      <MemoryRouter>
-        <LessonsTab courseId="course-1" lessonId="les-2" adapter={adapter} />
-      </MemoryRouter>
-    )
+  it('expands only the active section by default', async () => {
+    const sections = [
+      makeSection('Overview', [{ primary: makeItem({ id: 'lesson-1', displayTitle: 'Welcome' }) }]),
+      makeSection('Advanced', [
+        { primary: makeItem({ id: 'lesson-2', displayTitle: 'Networking' }) },
+      ]),
+    ]
+    renderTab(sections, 'lesson-2')
 
-    expect(await screen.findByText('1')).toBeDefined()
-    expect(screen.queryByTestId('completion-check-les-1')).toBeNull()
+    expect(await screen.findByText('Networking')).toBeInTheDocument()
+    expect(screen.queryByText('Welcome')).not.toBeInTheDocument()
+  })
+
+  it('closes an overlay through onLessonSelect after choosing a lesson', async () => {
+    const sections = [
+      makeSection('Foundations', [
+        { primary: makeItem({ id: 'lesson-1', displayTitle: 'Choose Me' }) },
+      ]),
+    ]
+    const { onLessonSelect } = renderTab(sections)
+    fireEvent.click(await screen.findByRole('link', { name: /Choose Me/i }))
+    expect(onLessonSelect).toHaveBeenCalledOnce()
+  })
+
+  it('virtualizes when more than 100 rows are visible', async () => {
+    const lessons = Array.from({ length: 500 }, (_, index) => ({
+      primary: makeItem({
+        id: `lesson-${index + 1}`,
+        displayTitle: `Lesson ${index + 1}`,
+      }),
+    }))
+    renderTab([makeSection('Large Course', lessons)], 'lesson-250')
+
+    expect(await screen.findByTestId('virtualized-lesson-list')).toBeInTheDocument()
   })
 })
 
 describe('formatLessonDuration', () => {
-  it('formats seconds as M:SS', () => {
+  it('formats minutes and hours with tabular-friendly padding', () => {
     expect(formatLessonDuration(65)).toBe('1:05')
-  })
-
-  it('formats hours', () => {
     expect(formatLessonDuration(3661)).toBe('1:01:01')
-  })
-})
-
-describe('MaterialGroupRow - companion PDFs', () => {
-  it('auto-expands groups with companion materials on first load', async () => {
-    const video = makeLesson({ id: 'vid-1', title: 'Video Lesson', type: 'video' })
-    const pdf = makeLesson({
-      id: 'pdf-1',
-      title: 'Companion PDF',
-      type: 'pdf',
-      duration: undefined,
-    })
-    const adapter = makeAdapter([makeGroup(video, [pdf])])
-
-    render(
-      <MemoryRouter>
-        <LessonsTab courseId="course-1" lessonId="vid-1" adapter={adapter} />
-      </MemoryRouter>
-    )
-
-    // The companion PDF sub-row should be visible (collapsible is open)
-    const pdfLink = await screen.findByTestId('material-link-pdf-1')
-    expect(pdfLink).toBeDefined()
-    expect(screen.getByText('Companion PDF')).toBeDefined()
-  })
-
-  it('shows material count badge on video row with companion PDFs', async () => {
-    const video = makeLesson({ id: 'vid-1', title: 'Video Lesson', type: 'video' })
-    const pdf1 = makeLesson({ id: 'pdf-1', title: 'PDF 1', type: 'pdf', duration: undefined })
-    const pdf2 = makeLesson({ id: 'pdf-2', title: 'PDF 2', type: 'pdf', duration: undefined })
-    const adapter = makeAdapter([makeGroup(video, [pdf1, pdf2])])
-
-    render(
-      <MemoryRouter>
-        <LessonsTab courseId="course-1" lessonId="vid-1" adapter={adapter} />
-      </MemoryRouter>
-    )
-
-    await screen.findByTestId('material-link-pdf-1')
-
-    // The badge should show "2" for the two companion PDFs
-    const badges = screen.getAllByText('2')
-    expect(badges.length).toBeGreaterThan(0)
-  })
-
-  it('does not show material count badge on video row without companion PDFs', async () => {
-    const video = makeLesson({ id: 'vid-1', title: 'Solo Video', type: 'video' })
-    const adapter = makeAdapter([makeGroup(video, [])])
-
-    render(
-      <MemoryRouter>
-        <LessonsTab courseId="course-1" lessonId="vid-1" adapter={adapter} />
-      </MemoryRouter>
-    )
-
-    await screen.findByText('Solo Video')
-
-    // No collapse toggle for groups without materials
-    expect(screen.queryByTestId('materials-collapse-vid-1')).toBeNull()
-  })
-
-  it('allows manual collapse of an auto-expanded material group', async () => {
-    const video = makeLesson({ id: 'vid-1', title: 'Video Lesson', type: 'video' })
-    const pdf = makeLesson({
-      id: 'pdf-1',
-      title: 'Companion PDF',
-      type: 'pdf',
-      duration: undefined,
-    })
-    const adapter = makeAdapter([makeGroup(video, [pdf])])
-
-    render(
-      <MemoryRouter>
-        <LessonsTab courseId="course-1" lessonId="vid-1" adapter={adapter} />
-      </MemoryRouter>
-    )
-
-    // Collapse toggle should exist
-    const toggle = await screen.findByTestId('materials-collapse-vid-1')
-    expect(toggle).toBeDefined()
-  })
-})
-
-describe('Standalone PDFs (R4 regression)', () => {
-  it('renders standalone PDF as a primary lesson row', async () => {
-    const pdf = makeLesson({
-      id: 'standalone-pdf',
-      title: 'Standalone Document',
-      type: 'pdf',
-      duration: undefined,
-    })
-    const adapter = makeAdapter([makeGroup(pdf, [])])
-
-    render(
-      <MemoryRouter>
-        <LessonsTab courseId="course-1" lessonId="standalone-pdf" adapter={adapter} />
-      </MemoryRouter>
-    )
-
-    const link = await screen.findByText('Standalone Document')
-    expect(link).toBeDefined()
-
-    // Standalone PDF should have a link to its lesson page
-    const parentLink = link.closest('a')
-    expect(parentLink?.getAttribute('href')).toContain('/lessons/standalone-pdf')
-  })
-
-  it('standalone PDF shows page count when available', async () => {
-    const pdf = makeLesson({
-      id: 'standalone-pdf',
-      title: 'Long PDF',
-      type: 'pdf',
-      duration: undefined,
-      sourceMetadata: { path: 'docs/doc.pdf', pageCount: 42 },
-    })
-    const adapter = makeAdapter([makeGroup(pdf, [])])
-
-    render(
-      <MemoryRouter>
-        <LessonsTab courseId="course-1" lessonId="standalone-pdf" adapter={adapter} />
-      </MemoryRouter>
-    )
-
-    expect(await screen.findByText('Long PDF')).toBeDefined()
-    expect(screen.getByText('42 pgs')).toBeDefined()
-  })
-
-  it('standalone PDF does not render a collapse toggle', async () => {
-    const pdf = makeLesson({
-      id: 'standalone-pdf',
-      title: 'Solo PDF',
-      type: 'pdf',
-      duration: undefined,
-    })
-    const adapter = makeAdapter([makeGroup(pdf, [])])
-
-    render(
-      <MemoryRouter>
-        <LessonsTab courseId="course-1" lessonId="standalone-pdf" adapter={adapter} />
-      </MemoryRouter>
-    )
-
-    await screen.findByText('Solo PDF')
-    expect(screen.queryByTestId('materials-collapse-standalone-pdf')).toBeNull()
-  })
-})
-
-describe('LESSON_SEARCH_THRESHOLD', () => {
-  it('is a positive number', () => {
-    expect(LESSON_SEARCH_THRESHOLD).toBeGreaterThan(0)
   })
 })

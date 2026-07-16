@@ -148,9 +148,9 @@ describe('setItemStatus', () => {
     vi.spyOn(db.table('contentProgress'), 'put').mockRejectedValue(new Error('DB write failed'))
 
     await act(async () => {
-      await useContentProgressStore
-        .getState()
-        .setItemStatus('c1', 'les-1', 'in-progress', mockModules)
+      await expect(
+        useContentProgressStore.getState().setItemStatus('c1', 'les-1', 'in-progress', mockModules)
+      ).rejects.toThrow('DB write failed')
     })
 
     // Should rollback Zustand state to previous value

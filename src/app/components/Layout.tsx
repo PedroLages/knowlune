@@ -73,7 +73,6 @@ import { PWAUpdatePrompt } from './PWAUpdatePrompt'
 import { cn } from '@/app/components/ui/utils'
 import { useCourseRoute } from '@/app/hooks/useCourseRoute'
 import { useLessonChromeStore } from '@/stores/useLessonChromeStore'
-import { LessonHeaderTools } from '@/app/components/course/LessonHeaderTools'
 import type { QualityFactors } from '@/data/types'
 import { QualityScoreDialog } from '@/app/components/session/QualityScoreDialog'
 
@@ -658,9 +657,8 @@ export function Layout() {
             </div>
           </div>
 
-          {/* Right slot: Lesson tools + User Actions */}
+          {/* Right slot: global app actions. Lesson tools live inside the lesson workspace. */}
           <div className="flex items-center gap-4">
-            {isLessonRoute && <LessonHeaderTools />}
             <TrialIndicator />
             <SyncStatusIndicator />
             <Button

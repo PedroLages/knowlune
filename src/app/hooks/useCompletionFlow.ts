@@ -183,7 +183,7 @@ export function useCompletionFlow(params: CompletionFlowParams): CompletionFlowR
     setShowAutoAdvance(false)
   }, [setShowAutoAdvance])
 
-  // Handle manual completion toggle from PlayerHeader (AC7)
+  // Handle manual completion toggle from the lesson workspace controls (AC7)
   const handleManualStatusChange = useCallback(
     (status: CompletionStatus) => {
       if (status === 'completed') {

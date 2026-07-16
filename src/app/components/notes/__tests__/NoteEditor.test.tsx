@@ -8,7 +8,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, act } from '@testing-library/react'
+import { render, act, fireEvent, screen } from '@testing-library/react'
 
 // ---------------------------------------------------------------------------
 // Mock state shared between test setup and the mocked modules
@@ -49,6 +49,8 @@ function createMockEditor() {
   }
 }
 
+let mockEditor: ReturnType<typeof createMockEditor> | null = null
+
 // ---------------------------------------------------------------------------
 // Mocks
 // ---------------------------------------------------------------------------
@@ -57,7 +59,8 @@ vi.mock('@tiptap/react', () => ({
   useEditor: vi.fn(({ onUpdate, onCreate }: { onUpdate?: any; onCreate?: any }) => {
     mockOnUpdate = onUpdate ?? null
     mockOnCreate = onCreate ?? null
-    return createMockEditor()
+    mockEditor ??= createMockEditor()
+    return mockEditor
   }),
   EditorContent: () => <div data-testid="mock-editor-content" />,
   ReactNodeViewRenderer: () => () => null,
@@ -176,6 +179,7 @@ describe('NoteEditor — eager-first-save (finding 6)', () => {
     mockOnUpdate = null
     mockOnCreate = null
     mockGetHtml = vi.fn().mockReturnValue('<p>initial</p>')
+    mockEditor = null
   })
 
   afterEach(() => {
@@ -307,5 +311,49 @@ describe('NoteEditor — eager-first-save (finding 6)', () => {
     expect(onSave).toHaveBeenCalledWith('<p>second</p>', [])
 
     vi.useRealTimers()
+  })
+
+  it('announces Saving before an async write resolves, then Saved', async () => {
+    let resolveSave: (() => void) | undefined
+    const onSave = vi.fn(
+      () =>
+        new Promise<void>(resolve => {
+          resolveSave = resolve
+        })
+    )
+    render(<NoteEditor courseId="c1" lessonId="l1" onSave={onSave} />)
+
+    await vi.waitFor(() => expect(mockOnCreate).not.toBeNull())
+    act(() => {
+      mockGetHtml.mockReturnValue('<p>pending content</p>')
+      mockOnUpdate?.({
+        editor: { storage: { characterCount: { words: () => 2 } }, getHTML: mockGetHtml },
+      } as any)
+    })
+
+    expect(screen.getByTestId('note-autosave-indicator')).toHaveTextContent('Saving…')
+    await act(async () => resolveSave?.())
+    expect(screen.getByTestId('note-autosave-indicator')).toHaveTextContent('Saved')
+  })
+
+  it('shows a persistent retry action when the async write fails', async () => {
+    const onSave = vi
+      .fn<() => Promise<void>>()
+      .mockRejectedValueOnce(new Error('write failed'))
+      .mockResolvedValueOnce(undefined)
+    render(<NoteEditor courseId="c1" lessonId="l1" onSave={onSave} />)
+
+    await vi.waitFor(() => expect(mockOnCreate).not.toBeNull())
+    act(() => {
+      mockGetHtml.mockReturnValue('<p>retry content</p>')
+      mockOnUpdate?.({
+        editor: { storage: { characterCount: { words: () => 2 } }, getHTML: mockGetHtml },
+      } as any)
+    })
+
+    expect(await screen.findByText('Not saved')).toBeInTheDocument()
+    await act(async () => fireEvent.click(screen.getByRole('button', { name: 'Retry' })))
+    expect(await screen.findByText('Saved')).toBeInTheDocument()
+    expect(onSave).toHaveBeenCalledTimes(2)
   })
 })

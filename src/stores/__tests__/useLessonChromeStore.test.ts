@@ -159,6 +159,28 @@ describe('toggleNotes', () => {
   })
 })
 
+describe('syllabus preference', () => {
+  it('defaults to open and persists explicit changes', () => {
+    expect(useLessonChromeStore.getState().syllabusOpen).toBe(true)
+
+    act(() => {
+      useLessonChromeStore.getState().setSyllabusOpen(false)
+    })
+
+    expect(useLessonChromeStore.getState().syllabusOpen).toBe(false)
+    expect(localStorage.getItem('knowlune:lesson-syllabus-open:v1')).toBe('false')
+  })
+
+  it('toggles without being cleared by the route reset', () => {
+    act(() => {
+      useLessonChromeStore.getState().toggleSyllabus()
+      useLessonChromeStore.getState().reset()
+    })
+
+    expect(useLessonChromeStore.getState().syllabusOpen).toBe(false)
+  })
+})
+
 describe('hasNotes / setHasNotes', () => {
   it('should default to false', () => {
     expect(useLessonChromeStore.getState().hasNotes).toBe(false)
