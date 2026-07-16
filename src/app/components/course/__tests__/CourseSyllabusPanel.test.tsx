@@ -49,7 +49,9 @@ describe('CourseSyllabusPanel', () => {
     media.mobile = false
     const { onInlineClose } = renderPanel()
 
-    expect(screen.getByRole('complementary', { name: 'Course content' })).toBeVisible()
+    expect(screen.getByRole('complementary', { name: 'Course content' })).toHaveClass(
+      'h-[calc(100dvh-7rem)]'
+    )
     expect(screen.getByText('Linux Administration')).toBeVisible()
     expect(screen.getByText('Lesson 2 of 10')).toBeVisible()
     expect(screen.getByRole('progressbar', { name: 'Course progress' })).toHaveAttribute(

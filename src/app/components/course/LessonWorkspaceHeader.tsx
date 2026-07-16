@@ -44,10 +44,6 @@ export function LessonWorkspaceHeader({
 
       <div className="flex min-w-0 items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <p className="mb-1 text-xs font-medium text-muted-foreground tabular-nums">
-            {positionLabel}
-            {sectionTitle ? ` · ${sectionTitle}` : ''}
-          </p>
           <h1
             ref={titleRef}
             tabIndex={-1}

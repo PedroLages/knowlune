@@ -143,7 +143,7 @@ export function CourseSyllabusPanel(props: CourseSyllabusPanelProps) {
       <aside
         data-testid="desktop-sidebar"
         aria-label="Course content"
-        className="sticky top-0 hidden max-h-[calc(100svh-3rem)] w-[clamp(352px,24vw,400px)] shrink-0 self-start overflow-hidden rounded-2xl border border-border bg-card shadow-sm min-[1440px]:flex min-[1440px]:flex-col"
+        className="sticky top-0 hidden h-[calc(100dvh-7rem)] w-[clamp(352px,24vw,400px)] shrink-0 self-start overflow-hidden rounded-2xl border border-border bg-card shadow-sm min-[1440px]:flex min-[1440px]:flex-col"
       >
         <SyllabusBody {...bodyProps} onClose={props.onInlineClose} />
       </aside>
