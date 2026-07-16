@@ -17,6 +17,7 @@ import { db } from '@/db/schema'
 import { Button } from '@/app/components/ui/button'
 import { useWhisperTranscription } from '@/lib/whisper/useWhisperTranscription'
 import { consentService } from '@/lib/compliance/consentService'
+import { parseVTT } from '@/lib/captions'
 import { useAuthStore } from '@/stores/useAuthStore'
 import { Sparkles, Loader2, AlertCircle, RotateCcw, Lock, FileText } from 'lucide-react'
 
@@ -24,39 +25,10 @@ import { Sparkles, Loader2, AlertCircle, RotateCcw, Lock, FileText } from 'lucid
 // VTT parser (for local transcript text)
 // ---------------------------------------------------------------------------
 
-export function parseTime(t: string): number {
-  const parts = t.replace(',', '.').split(':')
-  if (parts.length === 3) {
-    return parseFloat(parts[0]) * 3600 + parseFloat(parts[1]) * 60 + parseFloat(parts[2])
-  }
-  return parseFloat(parts[0]) * 60 + parseFloat(parts[1])
-}
+export { parseTime } from '@/lib/captions'
 
-export function parseTranscriptText(text: string): TranscriptCue[] {
-  const blocks = text.trim().split(/\n\n+/)
-  const cues: TranscriptCue[] = []
-
-  for (const block of blocks) {
-    const lines = block.trim().split('\n')
-    const timestampLine = lines.find(l => l.includes('-->'))
-    if (!timestampLine) continue
-
-    const match = timestampLine.match(
-      /(\d+:\d{2}(?::\d{2})?(?:[.,]\d+)?)\s*-->\s*(\d+:\d{2}(?::\d{2})?(?:[.,]\d+)?)/
-    )
-    if (!match) continue
-
-    const startTime = parseTime(match[1])
-    const endTime = parseTime(match[2])
-
-    const tsIdx = lines.indexOf(timestampLine)
-    const textLines = lines.slice(tsIdx + 1).filter(l => l.trim())
-    if (!textLines.length) continue
-
-    cues.push({ startTime, endTime, text: textLines.join(' ') })
-  }
-
-  return cues
+export function parseTranscriptText(text: string) {
+  return parseVTT(text)
 }
 
 // ---------------------------------------------------------------------------

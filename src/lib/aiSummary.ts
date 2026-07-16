@@ -19,7 +19,7 @@
  */
 
 import { sanitizeAIRequestPayload } from './aiConfiguration'
-import type { TranscriptCue } from '@/data/types'
+import { parseVTT } from './captions'
 import { withModelFallback } from '@/ai/llm/factory'
 import type { LLMMessage } from '@/ai/llm/types'
 
@@ -37,45 +37,6 @@ const getTimeout = (): number => {
     ? // @ts-expect-error - Test-only global variable accessed from window object
       window.__AI_SUMMARY_TIMEOUT__
     : 30000
-}
-
-// ---------------------------------------------------------------------------
-// VTT Parser (extracted from TranscriptPanel for reuse)
-// ---------------------------------------------------------------------------
-
-function parseTime(t: string): number {
-  const parts = t.replace(',', '.').split(':')
-  if (parts.length === 3) {
-    return parseFloat(parts[0]) * 3600 + parseFloat(parts[1]) * 60 + parseFloat(parts[2])
-  }
-  return parseFloat(parts[0]) * 60 + parseFloat(parts[1])
-}
-
-function parseVTT(text: string): TranscriptCue[] {
-  const blocks = text.trim().split(/\n\n+/)
-  const cues: TranscriptCue[] = []
-
-  for (const block of blocks) {
-    const lines = block.trim().split('\n')
-    const timestampLine = lines.find(l => l.includes('-->'))
-    if (!timestampLine) continue
-
-    const match = timestampLine.match(
-      /(\d+:\d{2}(?::\d{2})?(?:[.,]\d+)?)\s*-->\s*(\d+:\d{2}(?::\d{2})?(?:[.,]\d+)?)/
-    )
-    if (!match) continue
-
-    const startTime = parseTime(match[1])
-    const endTime = parseTime(match[2])
-
-    const tsIdx = lines.indexOf(timestampLine)
-    const textLines = lines.slice(tsIdx + 1).filter(l => l.trim())
-    if (!textLines.length) continue
-
-    cues.push({ startTime, endTime, text: textLines.join(' ') })
-  }
-
-  return cues
 }
 
 // ---------------------------------------------------------------------------

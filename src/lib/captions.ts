@@ -39,30 +39,55 @@ export function parseTime(t: string): number {
 const TIMESTAMP_RE = /(\d+:\d{2}(?::\d{2})?(?:[.,]\d+)?)\s*-->\s*(\d+:\d{2}(?::\d{2})?(?:[.,]\d+)?)/
 
 export function parseVTT(text: string): TranscriptCue[] {
-  // Normalize Windows line endings
-  const normalized = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n')
-  const blocks = normalized.trim().split(/\n\n+/)
+  // Parse line-by-line instead of relying on blank-line cue separators.
+  // Some imported and generated transcripts are valid enough to contain
+  // timestamps but omit those separators, which previously collapsed an
+  // entire lesson into one unreadable cue.
+  const normalized = text.replace(/^\uFEFF/, '').replace(/\r\n/g, '\n').replace(/\r/g, '\n')
+  const lines = normalized.split('\n')
+  const timestampRows: Array<{
+    lineIndex: number
+    contentBoundary: number
+    startTime: number
+    endTime: number
+  }> = []
+
+  for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {
+    const line = lines[lineIndex]
+    if (!line.includes('-->')) continue
+
+    const match = line.match(TIMESTAMP_RE)
+    const startTime = match ? parseTime(match[1]) : NaN
+    const endTime = match ? parseTime(match[2]) : NaN
+    const identifierIndex = lineIndex - 1
+    const identifier = lines[identifierIndex]?.trim() ?? ''
+    const followsSeparator = identifierIndex === 0 || lines[identifierIndex - 1]?.trim() === ''
+    const isSequentialIdentifier =
+      /^\d+$/.test(identifier) && Number(identifier) === timestampRows.length + 1
+
+    timestampRows.push({
+      lineIndex,
+      contentBoundary:
+        identifier && (followsSeparator || isSequentialIdentifier) ? identifierIndex : lineIndex,
+      startTime,
+      endTime,
+    })
+  }
+
   const cues: TranscriptCue[] = []
 
-  for (const block of blocks) {
-    const lines = block.trim().split('\n')
-    const timestampLine = lines.find(l => l.includes('-->'))
-    if (!timestampLine) continue
+  for (let rowIndex = 0; rowIndex < timestampRows.length; rowIndex++) {
+    const row = timestampRows[rowIndex]
+    if (isNaN(row.startTime) || isNaN(row.endTime)) continue
 
-    const match = timestampLine.match(TIMESTAMP_RE)
-    if (!match) continue
-
-    const startTime = parseTime(match[1])
-    const endTime = parseTime(match[2])
-
-    // Skip cues with invalid timestamps
-    if (isNaN(startTime) || isNaN(endTime)) continue
-
-    const tsIdx = lines.indexOf(timestampLine)
-    const textLines = lines.slice(tsIdx + 1).filter(l => l.trim())
+    const nextBoundary = timestampRows[rowIndex + 1]?.contentBoundary ?? lines.length
+    const textLines = lines
+      .slice(row.lineIndex + 1, nextBoundary)
+      .map(line => line.trim())
+      .filter(Boolean)
     if (!textLines.length) continue
 
-    cues.push({ startTime, endTime, text: textLines.join(' ') })
+    cues.push({ startTime: row.startTime, endTime: row.endTime, text: textLines.join(' ') })
   }
 
   return cues
