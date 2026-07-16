@@ -14,7 +14,7 @@
  * @see docs/plans/2026-05-02-001-feat-merge-lesson-toolbar-into-header-plan.md  Unit 3
  */
 
-import { lazy, Suspense, useCallback, useEffect } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useState } from 'react'
 import {
   BookOpen,
   CheckCircle2,
@@ -26,6 +26,7 @@ import {
   MoreHorizontal,
   PencilLine,
   SkipForward,
+  LoaderCircle,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/app/components/ui/utils'
@@ -36,7 +37,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/app/components/ui/dropdown-menu'
-import { Tooltip, TooltipTrigger, TooltipContent } from '@/app/components/ui/tooltip'
 import { PomodoroTimer } from '@/app/components/figma/PomodoroTimer'
 import { useLessonChromeStore } from '@/stores/useLessonChromeStore'
 import { useContentProgressStore } from '@/stores/useContentProgressStore'
@@ -94,6 +94,7 @@ export function LessonHeaderTools() {
   const setItemStatus = useContentProgressStore(s => s.setItemStatus)
   const loadCourseProgress = useContentProgressStore(s => s.loadCourseProgress)
   const currentStatus = useLessonItemCompletionStatus(courseId ?? undefined, lessonId ?? undefined)
+  const [isSavingStatus, setIsSavingStatus] = useState(false)
 
   useEffect(() => {
     if (courseId) {
@@ -106,11 +107,14 @@ export function LessonHeaderTools() {
   const handleStatusChange = useCallback(
     async (status: CompletionStatus) => {
       if (!courseId || !lessonId) return
+      setIsSavingStatus(true)
       try {
         await setItemStatus(courseId, lessonId, status, [])
         toast.success(`Marked as ${STATUS_LABELS[status]}`)
       } catch {
-        toast.error('Failed to update completion status')
+        toast.error('Failed to update completion status. Please try again.')
+      } finally {
+        setIsSavingStatus(false)
       }
     },
     [courseId, lessonId, setItemStatus]
@@ -118,76 +122,25 @@ export function LessonHeaderTools() {
 
   return (
     <div data-theater-hide className="hidden md:flex items-center gap-2">
-      {/* Secondary tools group — visible inline on desktop, collapsed into kebab on tablet */}
-      <span className="hidden lg:contents">
+      {/* The timer owns a popover trigger; keep it compact while other secondary tools use More. */}
+      <span className="contents">
         <PomodoroTimer tooltipLabel="Focus Timer" />
+      </span>
 
+      {/* QA panel is opened from the labelled More menu without adding another header control. */}
+      <span className="hidden">
         <Suspense fallback={null}>
           <QAChatPanel open={qaPanelOpen} onOpenChange={setQAPanelOpen} tooltipLabel="Ask AI" />
         </Suspense>
-
-        {/* Reading mode toggle */}
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={toggleReadingMode}
-              aria-label={isReadingMode ? 'Exit reading mode' : 'Enter reading mode (Cmd+Option+R)'}
-              aria-pressed={isReadingMode}
-              data-testid="reading-mode-toggle"
-            >
-              <BookOpen className="size-5" aria-hidden="true" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>Reading mode (Cmd+Option+R)</TooltipContent>
-        </Tooltip>
-
-        {/* Theater mode toggle */}
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={toggleTheater}
-              aria-label={isTheater ? 'Exit theater mode' : 'Enter theater mode'}
-              data-testid="theater-mode-toggle"
-            >
-              {isTheater ? (
-                <Minimize2 className="size-5" aria-hidden="true" />
-              ) : (
-                <Maximize2 className="size-5" aria-hidden="true" />
-              )}
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>{isTheater ? 'Exit theater mode' : 'Enter theater mode'}</TooltipContent>
-        </Tooltip>
-
-        {/* Auto-play toggle */}
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant={autoPlay ? 'brand-ghost' : 'ghost'}
-              size="icon"
-              onClick={toggleAutoPlay}
-              aria-label={autoPlay ? 'Auto-play is on' : 'Auto-play is off'}
-              aria-pressed={autoPlay}
-              data-testid="autoplay-toggle"
-            >
-              <SkipForward className="size-5" aria-hidden="true" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>Auto-play: {autoPlay ? 'On' : 'Off'}</TooltipContent>
-        </Tooltip>
       </span>
 
-      {/* Tablet kebab menu — secondary tools */}
+      {/* Secondary lesson tools stay behind one labelled menu at every workspace width. */}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button
             variant="ghost"
             size="icon"
-            className="hidden md:inline-flex lg:hidden"
+            className="inline-flex"
             aria-label="More lesson tools"
             data-testid="tablet-kebab-trigger"
           >
@@ -221,7 +174,7 @@ export function LessonHeaderTools() {
       {/* Notes toggle — visible on tablet and desktop */}
       <Button
         variant="outline"
-        size="sm"
+        size="default"
         onClick={toggleNotesWithFocus}
         aria-expanded={notesOpen}
         aria-controls="lesson-notes-panel"
@@ -243,13 +196,27 @@ export function LessonHeaderTools() {
           <DropdownMenuTrigger asChild>
             <Button
               variant="outline"
-              size="sm"
+              size="default"
               className={cn('gap-1.5', STATUS_COLORS[currentStatus])}
               data-testid="completion-toggle"
-              aria-label={`Completion status: ${STATUS_LABELS[currentStatus]}`}
+              aria-label={
+                isSavingStatus
+                  ? 'Saving completion status'
+                  : `Completion status: ${STATUS_LABELS[currentStatus]}`
+              }
+              disabled={isSavingStatus}
             >
-              <StatusIcon className="size-5" aria-hidden="true" />
-              <span className="hidden sm:inline">{STATUS_LABELS[currentStatus]}</span>
+              {isSavingStatus ? (
+                <LoaderCircle
+                  className="size-5 animate-spin motion-reduce:animate-none"
+                  aria-hidden="true"
+                />
+              ) : (
+                <StatusIcon className="size-5" aria-hidden="true" />
+              )}
+              <span className="hidden sm:inline">
+                {isSavingStatus ? 'Saving…' : STATUS_LABELS[currentStatus]}
+              </span>
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
@@ -262,6 +229,7 @@ export function LessonHeaderTools() {
                   onSelect={() => handleStatusChange(status)}
                   data-testid={`status-option-${status}`}
                   className={cn(STATUS_COLORS[status], isActive && 'font-semibold bg-accent')}
+                  disabled={isSavingStatus}
                 >
                   <Icon className="size-5 mr-2" aria-hidden="true" />
                   {STATUS_LABELS[status]}

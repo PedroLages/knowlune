@@ -65,7 +65,7 @@ export function NotesPanel({
           <Button
             variant="ghost"
             size="icon"
-            className="size-7"
+            className="size-11"
             onClick={onClose}
             aria-label="Close notes panel"
           >

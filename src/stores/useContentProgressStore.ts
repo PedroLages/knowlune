@@ -209,6 +209,7 @@ export const useContentProgressStore = create<ContentProgressState>((set, get) =
         markLessonComplete(courseId, itemId)
       }
       console.error('[ContentProgressStore] Failed to persist:', error)
+      throw error
     }
   },
 

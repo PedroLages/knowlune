@@ -15,12 +15,20 @@
 
 import { useState, useRef, useCallback, useEffect, useMemo } from 'react'
 import { createPortal } from 'react-dom'
-import { PencilLine, ChevronDown, Maximize2, Check } from 'lucide-react'
+import {
+  PencilLine,
+  ChevronDown,
+  Maximize2,
+  AlertTriangle,
+  Check,
+  LoaderCircle,
+} from 'lucide-react'
 import { NotesTab } from '@/app/components/course/tabs/NotesTab'
 import { useLessonChromeStore } from '@/stores/useLessonChromeStore'
 import { useNoteStore } from '@/stores/useNoteStore'
 import { cn } from '@/app/components/ui/utils'
 import type { CapturedFrame } from '@/lib/frame-capture'
+import type { NoteSaveStatus } from '@/app/components/notes/NoteEditor'
 
 interface FloatingNotesPanelProps {
   courseId: string
@@ -43,6 +51,19 @@ export function FloatingNotesPanel({
   const mobileNotesPanel = useLessonChromeStore(s => s.mobileNotesPanel)
   const setMobileNotesPanel = useLessonChromeStore(s => s.setMobileNotesPanel)
   const closeMobileNotesPanel = useLessonChromeStore(s => s.closeMobileNotesPanel)
+  const notesOpen = useLessonChromeStore(s => s.notesOpen)
+  const setNotesOpen = useLessonChromeStore(s => s.setNotesOpen)
+
+  const closePanel = useCallback(() => {
+    closeMobileNotesPanel()
+    setNotesOpen(false)
+  }, [closeMobileNotesPanel, setNotesOpen])
+
+  useEffect(() => {
+    if (notesOpen && mobileNotesPanel === 'closed') {
+      setMobileNotesPanel('expanded')
+    }
+  }, [mobileNotesPanel, notesOpen, setMobileNotesPanel])
 
   // Note count for the pill badge — useMemo to avoid infinite re-renders
   // from .filter() producing a new array reference on every selector call.
@@ -60,10 +81,10 @@ export function FloatingNotesPanel({
   )
 
   // Save status indicator
-  const [saveStatus, setSaveStatus] = useState<'idle' | 'saved'>('idle')
+  const [saveStatus, setSaveStatus] = useState<NoteSaveStatus>('idle')
   const fadeTimeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined)
 
-  const handleSaveStatusChange = useCallback((status: 'idle' | 'saved') => {
+  const handleSaveStatusChange = useCallback((status: NoteSaveStatus) => {
     setSaveStatus(status)
     // Auto-clear "Saved" after 2s (matches NoteEditor's fade timeout)
     if (status === 'saved') {
@@ -122,11 +143,11 @@ export function FloatingNotesPanel({
     // 48px min drag distance to trigger collapse (prevents accidental closes)
     // Read from ref (not state) to avoid stale closure on fast swipes
     if (swipeDeltaRef.current >= 48) {
-      closeMobileNotesPanel()
+      closePanel()
     }
     swipeDeltaRef.current = 0
     setSwipeDelta(0)
-  }, [closeMobileNotesPanel])
+  }, [closePanel])
 
   // Don't render pill when no notes exist and panel is closed (R8)
   const showPill = nonEmptyCount > 0 || mobileNotesPanel !== 'closed'
@@ -149,13 +170,16 @@ export function FloatingNotesPanel({
         <button
           type="button"
           className={cn(
-            'fixed bottom-20 right-4 z-50 flex items-center gap-2 px-3 py-2.5',
+            'pointer-events-auto fixed bottom-20 right-4 z-50 flex items-center gap-2 px-3 py-2.5',
             'bg-brand text-brand-foreground rounded-full shadow-lg',
-            'transition-transform duration-200 hover:scale-105',
+            'transition-colors duration-200 hover:bg-brand-hover',
             'motion-reduce:transition-none',
             'min-w-[44px] min-h-[44px]'
           )}
-          onClick={() => setMobileNotesPanel('expanded')}
+          onClick={() => {
+            setNotesOpen(true)
+            setMobileNotesPanel('expanded')
+          }}
           aria-label="Open notes panel"
           data-testid="floating-notes-pill"
         >
@@ -168,7 +192,7 @@ export function FloatingNotesPanel({
       {mobileNotesPanel === 'expanded' && (
         <div
           className={cn(
-            'fixed inset-x-0 bottom-0 z-50',
+            'pointer-events-auto fixed inset-x-0 bottom-0 z-50',
             'bg-card border-t rounded-t-2xl shadow-lg',
             'transition-transform duration-300',
             'motion-reduce:transition-none',
@@ -201,29 +225,48 @@ export function FloatingNotesPanel({
           <div className="flex items-center justify-between px-4 py-1.5 border-b">
             <button
               type="button"
-              className="flex items-center justify-center size-8 rounded-md hover:bg-accent transition-colors"
-              onClick={closeMobileNotesPanel}
+              className="flex size-11 items-center justify-center rounded-md transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
+              onClick={closePanel}
               aria-label="Close notes panel"
               data-testid="floating-notes-collapse"
             >
               <ChevronDown className="size-4" aria-hidden="true" />
             </button>
 
-            {/* Saved indicator */}
+            {/* Save status */}
             <span
               className={cn(
-                'text-xs text-success transition-opacity duration-300 flex items-center gap-1',
-                saveStatus === 'saved' ? 'opacity-100' : 'opacity-0'
+                'flex min-h-11 items-center gap-1 text-xs transition-opacity duration-200 motion-reduce:transition-none',
+                saveStatus === 'saved' && 'text-success',
+                saveStatus === 'error' && 'text-destructive',
+                saveStatus === 'idle' ? 'opacity-0' : 'opacity-100'
               )}
               aria-live="polite"
             >
-              <Check className="size-3" aria-hidden="true" />
-              Saved
+              {saveStatus === 'saving' ? (
+                <>
+                  <LoaderCircle
+                    className="size-3 animate-spin motion-reduce:animate-none"
+                    aria-hidden="true"
+                  />
+                  Saving…
+                </>
+              ) : saveStatus === 'saved' ? (
+                <>
+                  <Check className="size-3" aria-hidden="true" />
+                  Saved
+                </>
+              ) : saveStatus === 'error' ? (
+                <>
+                  <AlertTriangle className="size-3" aria-hidden="true" />
+                  Not saved
+                </>
+              ) : null}
             </span>
 
             <button
               type="button"
-              className="flex items-center justify-center size-8 rounded-md hover:bg-accent transition-colors"
+              className="flex size-11 items-center justify-center rounded-md transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
               onClick={() => setMobileNotesPanel('fullscreen')}
               aria-label="Maximize notes to fullscreen"
               data-testid="floating-notes-maximize"

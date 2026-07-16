@@ -63,6 +63,10 @@ import {
   Search,
   ChevronsUpDown,
   Table2,
+  AlertTriangle,
+  Check,
+  LoaderCircle,
+  RefreshCw,
 } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
 import { Separator } from '@/app/components/ui/separator'
@@ -105,6 +109,8 @@ const lowlight = createLowlight({ javascript, typescript, python, css, xml, bash
 
 const IMAGE_MAX_SIZE = 5 * 1024 * 1024 // 5MB
 
+export type NoteSaveStatus = 'idle' | 'saving' | 'saved' | 'error'
+
 interface NoteEditorProps {
   courseId: string
   lessonId: string
@@ -119,7 +125,7 @@ interface NoteEditorProps {
   fillHeight?: boolean
   className?: string
   /** Callback when save status changes (for parent toolbar indicators). */
-  onSaveStatusChange?: (status: 'idle' | 'saved') => void
+  onSaveStatusChange?: (status: NoteSaveStatus) => void
 }
 
 /**
@@ -169,7 +175,7 @@ export function NoteEditor({
   className,
   onSaveStatusChange,
 }: NoteEditorProps) {
-  const [saveStatus, setSaveStatus] = useState<'idle' | 'saved'>('idle')
+  const [saveStatus, setSaveStatus] = useState<NoteSaveStatus>('idle')
   const [wordCount, setWordCount] = useState(0)
   const [linkDialogOpen, setLinkDialogOpen] = useState(false)
   const [linkUrl, setLinkUrl] = useState('')
@@ -187,6 +193,8 @@ export function NoteEditor({
   const fadeTimeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined)
   const lastSavedContentRef = useRef(initialContent)
   const pendingSaveContentRef = useRef<string | null>(null)
+  const failedSaveContentRef = useRef<string | null>(null)
+  const saveSequenceRef = useRef(0)
   const hasEverSavedRef = useRef(!!noteId)
 
   // Latest-ref pattern to avoid stale closures
@@ -209,39 +217,41 @@ export function NoteEditor({
 
     // Track this content as pending so unmount cleanup doesn't duplicate the save
     pendingSaveContentRef.current = html
+    failedSaveContentRef.current = null
+    const sequence = ++saveSequenceRef.current
+    setSaveStatus('saving')
+    clearTimeout(fadeTimeoutRef.current)
 
     const text = html.replace(/<[^>]*>/g, ' ')
     const tags = extractTags(text)
-    const result = onSaveRef.current?.(html, tags)
 
-    // If the save is async, only update lastSavedContentRef after it completes.
-    // This prevents a race where the component unmounts before the Dexie write
-    // finishes, causing the unmount cleanup to skip the save.
-    if (result && typeof result.then === 'function') {
-      result
-        .then(() => {
-          if (pendingSaveContentRef.current === html) {
-            lastSavedContentRef.current = html
-            pendingSaveContentRef.current = null
-          }
-        })
-        .catch(() => {
-          toast.error('Failed to save note')
-          if (pendingSaveContentRef.current === html) {
-            pendingSaveContentRef.current = null
-          }
-        })
-    } else {
-      // Synchronous save — update ref immediately
-      lastSavedContentRef.current = html
+    let saveOperation: Promise<void>
+    try {
+      saveOperation = Promise.resolve(onSaveRef.current?.(html, tags))
+    } catch {
+      toast.error('Failed to save note. Retry from the editor status bar.')
+      pendingSaveContentRef.current = null
+      failedSaveContentRef.current = html
+      setSaveStatus('error')
+      return
     }
 
-    // Show "Saved" indicator
-    setSaveStatus('saved')
-    clearTimeout(fadeTimeoutRef.current)
-    fadeTimeoutRef.current = setTimeout(() => {
-      setSaveStatus('idle')
-    }, 2000)
+    void saveOperation
+      .then(() => {
+        if (pendingSaveContentRef.current === html) {
+          lastSavedContentRef.current = html
+          pendingSaveContentRef.current = null
+        }
+        if (sequence !== saveSequenceRef.current) return
+        setSaveStatus('saved')
+        fadeTimeoutRef.current = setTimeout(() => setSaveStatus('idle'), 2000)
+      })
+      .catch(() => {
+        toast.error('Failed to save note. Retry from the editor status bar.')
+        if (pendingSaveContentRef.current === html) pendingSaveContentRef.current = null
+        failedSaveContentRef.current = html
+        if (sequence === saveSequenceRef.current) setSaveStatus('error')
+      })
   }, [])
 
   // Sync save status to parent via callback (for FloatingNotesPanel toolbar)
@@ -420,6 +430,8 @@ export function NoteEditor({
     },
     onUpdate: ({ editor: ed }) => {
       setWordCount(ed.storage.characterCount.words())
+      saveSequenceRef.current += 1
+      setSaveStatus('idle')
       const html = ed.getHTML()
 
       // Eager-first-save: persist new notes immediately on first content change.
@@ -1138,12 +1150,37 @@ export function NoteEditor({
         <span data-testid="note-word-count">
           {wordCount} {wordCount === 1 ? 'word' : 'words'}
         </span>
-        <div
-          data-testid="note-autosave-indicator"
-          hidden={saveStatus !== 'saved'}
-          aria-live="polite"
-        >
-          {saveStatus === 'saved' ? 'Saved' : ''}
+        <div data-testid="note-autosave-indicator" aria-live="polite" aria-atomic="true">
+          {saveStatus === 'saving' ? (
+            <span className="flex items-center gap-1.5">
+              <LoaderCircle
+                className="size-3 animate-spin motion-reduce:animate-none"
+                aria-hidden="true"
+              />
+              Saving…
+            </span>
+          ) : saveStatus === 'saved' ? (
+            <span className="flex items-center gap-1.5 text-success">
+              <Check className="size-3" aria-hidden="true" />
+              Saved
+            </span>
+          ) : saveStatus === 'error' ? (
+            <span className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="size-3" aria-hidden="true" />
+              Not saved
+              <button
+                type="button"
+                className="inline-flex min-h-11 items-center gap-1 rounded-md px-2 font-medium underline underline-offset-2 transition-colors hover:bg-destructive/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
+                onClick={() => {
+                  const failedContent = failedSaveContentRef.current
+                  if (failedContent) doSave(failedContent)
+                }}
+              >
+                <RefreshCw className="size-3" aria-hidden="true" />
+                Retry
+              </button>
+            </span>
+          ) : null}
         </div>
       </div>
 

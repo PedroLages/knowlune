@@ -12,6 +12,7 @@ import {
   Clock,
   MessageCircle,
   Circle,
+  LoaderCircle,
 } from 'lucide-react'
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/app/components/ui/drawer'
 import { cn } from '@/app/components/ui/utils'
@@ -69,6 +70,7 @@ function LessonDrawerContent({
   const setItemStatus = useContentProgressStore(s => s.setItemStatus)
   const loadCourseProgress = useContentProgressStore(s => s.loadCourseProgress)
   const currentStatus = useLessonItemCompletionStatus(courseId, lessonId)
+  const [isSavingStatus, setIsSavingStatus] = useState(false)
 
   useEffect(() => {
     if (courseId) {
@@ -81,12 +83,15 @@ function LessonDrawerContent({
   const handleToggleCompletion = useCallback(async () => {
     if (!courseId || !lessonId) return
     const nextStatus: CompletionStatus = isCompleted ? 'not-started' : 'completed'
+    setIsSavingStatus(true)
     try {
       await setItemStatus(courseId, lessonId, nextStatus, [])
       toast.success(nextStatus === 'completed' ? 'Lesson completed' : 'Marked as not started')
       onClose()
     } catch {
-      toast.error('Failed to update completion status')
+      toast.error('Failed to update completion status. Please try again.')
+    } finally {
+      setIsSavingStatus(false)
     }
   }, [courseId, lessonId, isCompleted, setItemStatus, onClose])
 
@@ -109,19 +114,25 @@ function LessonDrawerContent({
             <button
               type="button"
               onClick={handleToggleCompletion}
+              disabled={isSavingStatus}
               data-testid="drawer-completion-toggle"
               className={cn(
                 'flex items-center gap-3 px-4 py-3 rounded-xl transition-colors duration-150 w-full',
                 isCompleted ? 'text-success' : 'text-foreground hover:bg-accent active:bg-accent'
               )}
             >
-              {isCompleted ? (
+              {isSavingStatus ? (
+                <LoaderCircle
+                  className="size-5 animate-spin motion-reduce:animate-none"
+                  aria-hidden="true"
+                />
+              ) : isCompleted ? (
                 <CircleCheck className="size-5" aria-hidden="true" />
               ) : (
                 <Circle className="size-5" aria-hidden="true" />
               )}
               <span className="text-sm font-medium">
-                {isCompleted ? 'Completed' : 'Mark Complete'}
+                {isSavingStatus ? 'Saving…' : isCompleted ? 'Completed' : 'Mark Complete'}
               </span>
             </button>
           </li>
@@ -249,15 +260,19 @@ export function BottomNav({
   }, [mode, courseId, loadCourseProgress])
 
   const isLessonCompleted = completionStatus === 'completed'
+  const [isSavingCompletion, setIsSavingCompletion] = useState(false)
 
   const handleCompletionToggle = useCallback(async () => {
     if (!courseId || !lessonId) return
     const nextStatus: CompletionStatus = isLessonCompleted ? 'not-started' : 'completed'
+    setIsSavingCompletion(true)
     try {
       await setItemStatus(courseId, lessonId, nextStatus, [])
       toast.success(nextStatus === 'completed' ? 'Lesson completed' : 'Marked as not started')
     } catch {
-      toast.error('Failed to update completion status')
+      toast.error('Failed to update completion status. Please try again.')
+    } finally {
+      setIsSavingCompletion(false)
     }
   }, [courseId, lessonId, isLessonCompleted, setItemStatus])
 
@@ -306,16 +321,30 @@ export function BottomNav({
         <button
           type="button"
           onClick={handleCompletionToggle}
-          aria-label={isLessonCompleted ? 'Mark as not started' : 'Mark as completed'}
+          aria-label={
+            isSavingCompletion
+              ? 'Saving completion status'
+              : isLessonCompleted
+                ? 'Mark as not started'
+                : 'Mark as completed'
+          }
+          disabled={isSavingCompletion}
           data-testid="bottomnav-completion-toggle"
           className={cn(
             'flex flex-col items-center justify-center gap-1 flex-1 h-14 transition-colors duration-150',
             isLessonCompleted ? 'text-success' : 'text-muted-foreground active:text-brand'
           )}
         >
-          <CircleCheck className="size-6" aria-hidden="true" />
+          {isSavingCompletion ? (
+            <LoaderCircle
+              className="size-6 animate-spin motion-reduce:animate-none"
+              aria-hidden="true"
+            />
+          ) : (
+            <CircleCheck className="size-6" aria-hidden="true" />
+          )}
           <span className="text-[10px] font-medium leading-none">
-            {isLessonCompleted ? 'Done' : 'Complete'}
+            {isSavingCompletion ? 'Saving…' : isLessonCompleted ? 'Done' : 'Complete'}
           </span>
         </button>
       )}
@@ -346,7 +375,7 @@ export function BottomNav({
       {/* Bottom Navigation Bar */}
       <nav
         className="fixed bottom-0 left-0 right-0 bg-card border-t border-border z-40 pb-[env(safe-area-inset-bottom)]"
-        aria-label={isLessonMode ? 'Lesson navigation' : 'Mobile navigation'}
+        aria-label={isLessonMode ? 'Lesson actions' : 'Mobile navigation'}
       >
         <div className="flex items-center justify-around h-14">
           {isLessonMode ? (
