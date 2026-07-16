@@ -91,7 +91,7 @@ export interface TranscriptPanelProps {
 export function TranscriptPanel({ cues, currentTime, onSeek, loadingState }: TranscriptPanelProps) {
   const [searchQuery, setSearchQuery] = useState('')
   const activeCueRef = useRef<HTMLButtonElement>(null)
-  const scrollContainerRef = useRef<HTMLDivElement>(null)
+  const scrollContainerRef = useRef<HTMLOListElement>(null)
   const isUserScrollingRef = useRef(false)
   const userScrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -153,16 +153,6 @@ export function TranscriptPanel({ cues, currentTime, onSeek, loadingState }: Tra
     [onSeek]
   )
 
-  const handleCueKeyDown = useCallback(
-    (event: React.KeyboardEvent, time: number) => {
-      if (event.key === 'Enter' || event.key === ' ') {
-        event.preventDefault()
-        onSeek(time)
-      }
-    },
-    [onSeek]
-  )
-
   // Loading skeleton state
   if (loadingState === 'loading') {
     return (
@@ -177,7 +167,7 @@ export function TranscriptPanel({ cues, currentTime, onSeek, loadingState }: Tra
           <Loader2 className="size-4 text-muted-foreground animate-spin" aria-hidden="true" />
           <h2 className="font-semibold text-sm">Transcript</h2>
         </div>
-        <p className="text-xs text-muted-foreground mb-3">Fetching transcript...</p>
+        <p className="text-xs text-muted-foreground mb-3">Fetching transcript…</p>
         <div className="space-y-3" aria-label="Loading transcript">
           {Array.from({ length: 6 }).map((_, i) => (
             <div key={i} className="space-y-1.5">
@@ -238,7 +228,9 @@ export function TranscriptPanel({ cues, currentTime, onSeek, loadingState }: Tra
         <div className="flex items-center gap-2">
           <FileText className="size-4 text-muted-foreground" aria-hidden="true" />
           <h2 className="font-semibold text-sm">Transcript</h2>
-          <span className="text-xs text-muted-foreground ml-auto">{cues.length} segments</span>
+          <span className="ml-auto text-xs text-muted-foreground">
+            {cues.length} {cues.length === 1 ? 'segment' : 'segments'}
+          </span>
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -252,7 +244,7 @@ export function TranscriptPanel({ cues, currentTime, onSeek, loadingState }: Tra
                     downloadAsFile(lines.join('\n'), 'transcript.txt', 'text/plain')
                   }}
                 >
-                  <Download className="size-4" />
+                  <Download className="size-4" aria-hidden="true" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>Download transcript</TooltipContent>
@@ -261,15 +253,15 @@ export function TranscriptPanel({ cues, currentTime, onSeek, loadingState }: Tra
         </div>
         <div className="relative">
           <Search
-            className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground"
+            className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
             aria-hidden="true"
           />
           <Input
             type="search"
-            placeholder="Search transcript..."
+            placeholder="Search transcript…"
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
-            className="pl-8 h-8 text-xs"
+            className="h-11 pl-9 text-sm"
             aria-label="Search transcript"
             data-testid="transcript-search-input"
           />
@@ -282,11 +274,10 @@ export function TranscriptPanel({ cues, currentTime, onSeek, loadingState }: Tra
       </div>
 
       {/* Cue list */}
-      <div
+      <ol
         ref={scrollContainerRef}
-        className="flex-1 overflow-y-auto p-2 space-y-0.5"
+        className="flex-1 space-y-1 overflow-y-auto p-2"
         onScroll={handleScroll}
-        role="list"
         aria-label="Transcript segments"
       >
         {cues.map((cue, idx) => {
@@ -297,37 +288,34 @@ export function TranscriptPanel({ cues, currentTime, onSeek, loadingState }: Tra
           const isDimmed = isSearchActive && !isMatch
 
           return (
-            <button
-              key={idx}
-              ref={isActive ? activeCueRef : undefined}
-              role="listitem"
-              data-testid={isActive ? 'transcript-cue-active' : 'transcript-cue'}
-              className={cn(
-                'w-full text-left px-3 py-2 rounded-lg text-sm transition-colors',
-                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-1',
-                isActive
-                  ? 'bg-brand-soft border-l-2 border-brand text-foreground font-medium'
-                  : 'hover:bg-accent text-muted-foreground',
-                isMatch && !isActive && 'bg-warning/10',
-                isDimmed && 'opacity-40'
-              )}
-              onClick={() => handleCueClick(cue.startTime)}
-              onKeyDown={e => handleCueKeyDown(e, cue.startTime)}
-              aria-label={`${formatCueTime(cue.startTime)} — ${cue.text}`}
-              aria-current={isActive ? 'true' : undefined}
-              tabIndex={0}
-            >
-              <span
-                className="text-xs text-muted-foreground block mb-0.5 font-mono"
-                aria-hidden="true"
+            <li key={`${cue.startTime}-${idx}`}>
+              <button
+                ref={isActive ? activeCueRef : undefined}
+                data-testid={isActive ? 'transcript-cue-active' : 'transcript-cue'}
+                className={cn(
+                  'grid min-h-11 w-full grid-cols-[3.5rem_minmax(0,1fr)] items-start gap-3 rounded-lg border-l-2 border-transparent px-3 py-2.5 text-left text-sm transition-colors',
+                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-1',
+                  isActive
+                    ? 'border-brand bg-brand-soft font-medium text-foreground'
+                    : 'text-foreground hover:bg-accent',
+                  isMatch && !isActive && 'bg-warning/10',
+                  isDimmed && 'opacity-40'
+                )}
+                onClick={() => handleCueClick(cue.startTime)}
+                aria-label={`${formatCueTime(cue.startTime)} — ${cue.text}`}
+                aria-current={isActive ? 'true' : undefined}
               >
-                {formatCueTime(cue.startTime)}
-              </span>
-              {isSearchActive ? highlightText(cue.text, searchQuery) : cue.text}
-            </button>
+                <span className="pt-0.5 font-mono text-xs text-muted-foreground" aria-hidden="true">
+                  {formatCueTime(cue.startTime)}
+                </span>
+                <span className="max-w-[75ch] leading-6">
+                  {isSearchActive ? highlightText(cue.text, searchQuery) : cue.text}
+                </span>
+              </button>
+            </li>
           )
         })}
-      </div>
+      </ol>
     </div>
   )
 }

@@ -131,6 +131,27 @@ Line two
     expect(cues).toHaveLength(1)
     expect(cues[0].text).toBe('Line one Line two')
   })
+
+  it('parses compact transcripts without blank lines between numbered cues', () => {
+    const vtt = `WEBVTT
+1
+00:00:01.000 --> 00:00:04.000
+First subtitle line
+2
+00:00:05.000 --> 00:00:08.000
+Second subtitle line
+3 00:00:09.000 --> 00:00:12.000
+Third subtitle line`
+
+    const cues = parseVTT(vtt)
+
+    expect(cues).toHaveLength(3)
+    expect(cues.map(cue => cue.text)).toEqual([
+      'First subtitle line',
+      'Second subtitle line',
+      'Third subtitle line',
+    ])
+  })
 })
 
 // ---------------------------------------------------------------------------

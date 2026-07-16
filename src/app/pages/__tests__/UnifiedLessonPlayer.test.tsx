@@ -259,6 +259,7 @@ describe('UnifiedLessonPlayer — E54-S01 callbacks', () => {
   it('renders lesson player content', async () => {
     renderPlayer()
     expect(await screen.findByTestId('lesson-player-content')).toBeInTheDocument()
+    expect(screen.getByTestId('lesson-workspace-frame')).not.toHaveClass('overflow-x-hidden')
   })
 
   it('does NOT show celebration when a single lesson completes (course not fully done)', async () => {

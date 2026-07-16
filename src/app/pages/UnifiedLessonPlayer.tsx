@@ -100,7 +100,7 @@ function parseLocationFlag(state: unknown, flag: string): boolean {
 
 function LessonWorkspaceSkeleton({ showSyllabus }: { showSyllabus: boolean }) {
   return (
-    <div className="mx-auto w-full max-w-[1920px] overflow-x-hidden" aria-hidden="true">
+    <div className="mx-auto w-full min-w-0 max-w-[1920px]" aria-hidden="true">
       <div className="mb-4 rounded-2xl border border-border bg-card p-4 sm:p-5">
         <Skeleton className="mb-4 h-4 w-56 max-w-[60%]" />
         <div className="flex items-start justify-between gap-4">
@@ -745,7 +745,7 @@ export function UnifiedLessonPlayer() {
       <div role="status" aria-live="polite" className="sr-only">
         {readingModeAnnouncement}
       </div>
-      <div className="mx-auto w-full max-w-[1920px] overflow-x-hidden">
+      <div className="mx-auto w-full min-w-0 max-w-[1920px]" data-testid="lesson-workspace-frame">
         {!isTheater ? (
           <div data-theater-hide>
             <LessonWorkspaceHeader
