@@ -56,6 +56,23 @@ describe('useHasQuiz', () => {
     expect(result.current.hasQuiz).toBe(false)
   })
 
+  it('does not expose the previous lesson quiz while the next lesson loads', async () => {
+    mockQuizzesWhere.mockImplementation(() => ({
+      equals: vi.fn((lessonId: string) => ({
+        count: vi.fn(() => Promise.resolve(lessonId === 'lesson-1' ? 1 : 0)),
+      })),
+    }))
+
+    const { result, rerender } = renderHook(({ lessonId }) => useHasQuiz(lessonId), {
+      initialProps: { lessonId: 'lesson-1' },
+    })
+    await waitFor(() => expect(result.current.hasQuiz).toBe(true))
+
+    rerender({ lessonId: 'lesson-2' })
+    expect(result.current.hasQuiz).toBe(false)
+    await waitFor(() => expect(result.current.loading).toBe(false))
+  })
+
   it('handles db errors gracefully', async () => {
     mockQuizzesWhere.mockReturnValue({
       equals: vi.fn(() => ({

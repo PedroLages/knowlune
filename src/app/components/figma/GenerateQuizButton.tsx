@@ -31,6 +31,7 @@ import {
 } from '@/app/components/ui/select'
 import type { BloomsLevel } from '@/ai/quizPrompts'
 import type { Quiz } from '@/types/quiz'
+import type { QuizTranscriptState } from '@/hooks/useQuizGeneration'
 
 interface GenerateQuizButtonProps {
   /** Whether quiz generation is in progress */
@@ -45,6 +46,10 @@ interface GenerateQuizButtonProps {
   onGenerate: (bloomsLevel: BloomsLevel) => void
   /** Callback to trigger regeneration (new quiz, preserves old) */
   onRegenerate?: (bloomsLevel: BloomsLevel) => void
+  /** Canonical transcript readiness for this lesson */
+  transcript: QuizTranscriptState
+  /** Opens the transcript tool so the learner can generate or recover it */
+  onRequestTranscript: () => void
 }
 
 const BLOOMS_OPTIONS: { value: BloomsLevel; label: string }[] = [
@@ -60,10 +65,13 @@ export function GenerateQuizButton({
   cachedQuiz,
   onGenerate,
   onRegenerate,
+  transcript,
+  onRequestTranscript,
 }: GenerateQuizButtonProps) {
   const [bloomsLevel, setBloomsLevel] = useState<BloomsLevel>('remember')
 
-  const isDisabled = !aiAvailable || checkingAvailability || isGenerating
+  const transcriptReady = transcript.status === 'ready'
+  const isDisabled = !aiAvailable || checkingAvailability || isGenerating || !transcriptReady
   // Only show "Regenerate" label/icon when onRegenerate handler is provided.
   // When cachedQuiz exists but onRegenerate is undefined, onGenerate returns
   // the cached quiz — so we keep the "Generate Quiz" label to avoid confusion.
@@ -109,53 +117,81 @@ export function GenerateQuizButton({
   )
 
   return (
-    <div
-      className="flex flex-col gap-3 sm:flex-row sm:items-end"
-      data-testid="quiz-generation-controls"
-    >
-      {/* Bloom's level picker */}
-      <div className="flex flex-col gap-1.5">
-        <label htmlFor="blooms-level-select" className="text-xs font-medium text-muted-foreground">
-          Difficulty Level
-        </label>
-        <Select
-          value={bloomsLevel}
-          onValueChange={val => setBloomsLevel(val as BloomsLevel)}
-          disabled={isDisabled}
-        >
-          <SelectTrigger
-            id="blooms-level-select"
-            className="w-[160px] rounded-xl min-h-[44px]"
-            data-testid="blooms-level-select"
+    <div className="space-y-3" data-testid="quiz-generation-controls">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+        {/* Bloom's level picker */}
+        <div className="flex flex-col gap-1.5">
+          <label
+            htmlFor="blooms-level-select"
+            className="text-xs font-medium text-muted-foreground"
           >
-            <SelectValue placeholder="Select level" />
-          </SelectTrigger>
-          <SelectContent>
-            {BLOOMS_OPTIONS.map(opt => (
-              <SelectItem key={opt.value} value={opt.value}>
-                {opt.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+            Thinking Level
+          </label>
+          <Select
+            value={bloomsLevel}
+            onValueChange={val => setBloomsLevel(val as BloomsLevel)}
+            disabled={isDisabled}
+          >
+            <SelectTrigger
+              id="blooms-level-select"
+              className="w-[160px] rounded-xl min-h-[44px]"
+              data-testid="blooms-level-select"
+            >
+              <SelectValue placeholder="Select level" />
+            </SelectTrigger>
+            <SelectContent>
+              {BLOOMS_OPTIONS.map(opt => (
+                <SelectItem key={opt.value} value={opt.value}>
+                  {opt.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Button with tooltip when disabled */}
+        {!aiAvailable && !checkingAvailability ? (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span tabIndex={0} role="button" aria-disabled="true">
+                  {button}
+                </span>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Quiz generation unavailable — AI provider is offline or not configured</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        ) : (
+          button
+        )}
       </div>
 
-      {/* Button with tooltip when disabled */}
-      {!aiAvailable && !checkingAvailability ? (
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <span tabIndex={0} role="button" aria-disabled="true">
-                {button}
-              </span>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Quiz generation unavailable — AI provider is offline or not configured</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-      ) : (
-        button
+      {!transcriptReady && transcript.status !== 'loading' && (
+        <div
+          className="flex flex-col items-start gap-2 rounded-xl border border-border bg-muted/40 p-3 sm:flex-row sm:items-center sm:justify-between"
+          role="status"
+          aria-live="polite"
+        >
+          <p className="text-sm text-muted-foreground">{transcript.reason}</p>
+          <Button
+            type="button"
+            variant="outline"
+            className="min-h-11 shrink-0 rounded-xl"
+            onClick={onRequestTranscript}
+          >
+            {transcript.status === 'processing'
+              ? 'View Transcript Progress'
+              : 'Generate Transcript First'}
+          </Button>
+        </div>
+      )}
+
+      {transcript.status === 'loading' && (
+        <p className="text-sm text-muted-foreground" role="status" aria-live="polite">
+          Checking transcript availability…
+        </p>
       )}
 
       {/* ARIA live region — idle state (only rendered when message is non-empty) */}

@@ -35,6 +35,7 @@ import {
 } from './quizPrompts'
 import { runQualityControl } from './quizQualityControl'
 import type { Quiz, Question } from '@/types/quiz'
+import { selectNewestQuiz } from '@/lib/quizVersions'
 import { getLLMClient, assertAIFeatureConsent } from '@/ai/llm/factory'
 import type { LLMClient } from '@/ai/llm/client'
 import type { LLMMessage } from '@/ai/llm/types'
@@ -502,10 +503,10 @@ function parseAndValidate(content: string): GeneratedQuestion[] | null {
 async function findCachedQuiz(lessonId: string, transcriptHash: string): Promise<Quiz | null> {
   const quizzes = await db.quizzes.where('lessonId').equals(lessonId).toArray()
 
-  // Find one with matching transcriptHash
+  // Keep every version, but always reopen the newest matching generation.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const match = quizzes.find((q: any) => q.transcriptHash === transcriptHash)
-  return (match as Quiz | undefined) ?? null
+  const matches = quizzes.filter((q: any) => q.transcriptHash === transcriptHash) as Quiz[]
+  return selectNewestQuiz(matches)
 }
 
 /**

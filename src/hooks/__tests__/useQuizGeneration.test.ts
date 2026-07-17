@@ -6,6 +6,7 @@ const {
   mockGenerateQuizForLesson,
   mockGetQuizGenerationAvailability,
   mockQuizzesWhere,
+  mockResolveLessonTranscript,
 } = vi.hoisted(() => ({
   mockToastError: vi.fn(),
   mockGenerateQuizForLesson: vi.fn(),
@@ -15,6 +16,7 @@ const {
       toArray: vi.fn(() => Promise.resolve([])),
     })),
   })),
+  mockResolveLessonTranscript: vi.fn(),
 }))
 
 vi.mock('sonner', () => ({ toast: { error: mockToastError } }))
@@ -25,6 +27,10 @@ vi.mock('@/ai/quizGenerationService', () => ({
 
 vi.mock('@/lib/aiConfiguration', () => ({
   getQuizGenerationAvailability: (...args: unknown[]) => mockGetQuizGenerationAvailability(...args),
+}))
+
+vi.mock('@/lib/lessonTranscript', () => ({
+  resolveLessonTranscript: (...args: unknown[]) => mockResolveLessonTranscript(...args),
 }))
 
 vi.mock('@/db', () => ({
@@ -45,6 +51,14 @@ describe('useQuizGeneration', () => {
       provider: 'anthropic',
       providerName: 'Anthropic',
       model: 'claude-haiku-4-5',
+    })
+    mockResolveLessonTranscript.mockResolvedValue({
+      status: 'ready',
+      text: 'Lesson transcript',
+      cues: [],
+      fingerprint: 'transcript-fingerprint',
+      source: 'youtube',
+      videoId: 'youtube-video-1',
     })
     mockQuizzesWhere.mockReturnValue({
       equals: vi.fn(() => ({
@@ -121,7 +135,7 @@ describe('useQuizGeneration', () => {
       equals: vi.fn(() => ({
         toArray: vi.fn(() => Promise.resolve([mockQuiz])),
       })),
-    } as any)
+    } as never)
 
     const { result } = renderHook(() => useQuizGeneration('lesson-1', 'course-1'))
 
@@ -130,6 +144,57 @@ describe('useQuizGeneration', () => {
     })
     expect(result.current.quiz).toEqual(mockQuiz)
     expect(result.current.allQuizzes).toEqual([mockQuiz])
+  })
+
+  it('loads the newest cached quiz first while retaining history', async () => {
+    const older = {
+      id: 'quiz-old',
+      lessonId: 'lesson-1',
+      createdAt: '2026-01-01T00:00:00Z',
+    }
+    const newer = {
+      id: 'quiz-new',
+      lessonId: 'lesson-1',
+      createdAt: '2026-02-01T00:00:00Z',
+    }
+
+    mockQuizzesWhere.mockReturnValue({
+      equals: vi.fn(() => ({
+        toArray: vi.fn(() => Promise.resolve([older, newer])),
+      })),
+    } as never)
+
+    const { result } = renderHook(() => useQuizGeneration('lesson-1', 'course-1'))
+
+    await waitFor(() => expect(result.current.cachedQuiz?.id).toBe('quiz-new'))
+    expect(result.current.allQuizzes.map(quiz => quiz.id)).toEqual(['quiz-new', 'quiz-old'])
+  })
+
+  it('clears lesson-specific quiz state when navigating to another lesson', async () => {
+    const oldQuiz = {
+      id: 'quiz-old',
+      lessonId: 'lesson-1',
+      createdAt: '2026-01-01T00:00:00Z',
+    }
+    mockQuizzesWhere.mockImplementation(
+      () =>
+        ({
+          equals: vi.fn((id: string) => ({
+            toArray: vi.fn(() => Promise.resolve(id === 'lesson-1' ? [oldQuiz] : [])),
+          })),
+        }) as never
+    )
+
+    const { result, rerender } = renderHook(
+      ({ lessonId }) => useQuizGeneration(lessonId, 'course-1'),
+      { initialProps: { lessonId: 'lesson-1' } }
+    )
+
+    await waitFor(() => expect(result.current.quiz?.id).toBe('quiz-old'))
+    rerender({ lessonId: 'lesson-2' })
+
+    expect(result.current.quiz).toBeNull()
+    await waitFor(() => expect(result.current.allQuizzes).toEqual([]))
   })
 
   it('clears cache when lessonId is undefined', () => {
@@ -178,12 +243,51 @@ describe('useQuizGeneration', () => {
 
     const { result } = renderHook(() => useQuizGeneration('lesson-1', 'course-1'))
 
+    await waitFor(() => expect(result.current.transcript.status).toBe('ready'))
     await act(async () => {
       await result.current.generate()
     })
 
     expect(result.current.quiz).toEqual(mockQuiz)
     expect(result.current.error).toBeNull()
+  })
+
+  it('blocks generation until the shared transcript resolver is ready', async () => {
+    mockResolveLessonTranscript.mockResolvedValue({
+      status: 'missing',
+      reason: 'No transcript is available for this lesson.',
+    })
+    const { result } = renderHook(() => useQuizGeneration('lesson-1', 'course-1'))
+
+    await waitFor(() => expect(result.current.transcript.status).toBe('missing'))
+    await act(async () => {
+      await result.current.generate()
+    })
+
+    expect(mockGenerateQuizForLesson).not.toHaveBeenCalled()
+    expect(mockToastError).toHaveBeenCalledWith('No transcript is available for this lesson.')
+  })
+
+  it('rechecks transcript readiness after transcript generation', async () => {
+    mockResolveLessonTranscript
+      .mockResolvedValueOnce({ status: 'missing', reason: 'No transcript yet.' })
+      .mockResolvedValueOnce({
+        status: 'ready',
+        text: 'New transcript',
+        cues: [],
+        fingerprint: 'new-fingerprint',
+        source: 'whisper',
+        videoId: 'lesson-1',
+      })
+
+    const { result, rerender } = renderHook(
+      ({ version }) => useQuizGeneration('lesson-1', 'course-1', version),
+      { initialProps: { version: 0 } }
+    )
+    await waitFor(() => expect(result.current.transcript.status).toBe('missing'))
+
+    rerender({ version: 1 })
+    await waitFor(() => expect(result.current.transcript.status).toBe('ready'))
   })
 
   it('generate() handles error from service', async () => {
@@ -194,6 +298,7 @@ describe('useQuizGeneration', () => {
 
     const { result } = renderHook(() => useQuizGeneration('lesson-1', 'course-1'))
 
+    await waitFor(() => expect(result.current.transcript.status).toBe('ready'))
     await act(async () => {
       await result.current.generate()
     })
@@ -207,6 +312,7 @@ describe('useQuizGeneration', () => {
 
     const { result } = renderHook(() => useQuizGeneration('lesson-1', 'course-1'))
 
+    await waitFor(() => expect(result.current.transcript.status).toBe('ready'))
     await act(async () => {
       await result.current.generate()
     })
@@ -230,6 +336,7 @@ describe('useQuizGeneration', () => {
 
     const { result } = renderHook(() => useQuizGeneration('lesson-1', 'course-1'))
 
+    await waitFor(() => expect(result.current.transcript.status).toBe('ready'))
     await act(async () => {
       await result.current.regenerate()
     })
@@ -256,6 +363,7 @@ describe('useQuizGeneration', () => {
 
     const { result } = renderHook(() => useQuizGeneration('lesson-1', 'course-1'))
 
+    await waitFor(() => expect(result.current.transcript.status).toBe('ready'))
     await act(async () => {
       await result.current.generate()
     })

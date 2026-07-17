@@ -42,6 +42,27 @@ beforeEach(async () => {
 // ---------------------------------------------------------------------------
 
 describe('startQuiz', () => {
+  it('opens the newest quiz version for a lesson', async () => {
+    await db.quizzes.bulkAdd([
+      makeQuiz({
+        id: 'quiz-old',
+        lessonId: 'les-versioned',
+        createdAt: '2026-01-01T00:00:00.000Z',
+      }),
+      makeQuiz({
+        id: 'quiz-new',
+        lessonId: 'les-versioned',
+        createdAt: '2026-02-01T00:00:00.000Z',
+      }),
+    ])
+
+    await act(async () => {
+      await useQuizStore.getState().startQuiz('les-versioned')
+    })
+
+    expect(useQuizStore.getState().currentQuiz?.id).toBe('quiz-new')
+  })
+
   it('loads quiz and initializes progress with shuffled order when shuffleQuestions is true', async () => {
     const quiz = {
       id: 'quiz-1',

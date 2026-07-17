@@ -131,9 +131,22 @@ vi.mock('@/hooks/useHasQuiz', () => ({
 vi.mock('@/hooks/useQuizGeneration', () => ({
   useQuizGeneration: () => ({
     generate: vi.fn(),
+    regenerate: vi.fn(),
     isGenerating: false,
     error: null,
-    quizId: null,
+    quiz: null,
+    cachedQuiz: null,
+    allQuizzes: [],
+    aiAvailable: true,
+    checkingAvailability: false,
+    transcript: {
+      status: 'ready',
+      text: 'Lesson transcript',
+      cues: [],
+      fingerprint: 'fingerprint',
+      source: 'youtube',
+      videoId: 'video-1',
+    },
   }),
 }))
 

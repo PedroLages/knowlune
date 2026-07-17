@@ -66,6 +66,8 @@ interface BelowVideoTabsProps {
   activeTool?: StudyTool
   /** Called when the learner selects another study tool. */
   onActiveToolChange?: (tool: StudyTool) => void
+  /** Notifies parent controls that transcript-dependent actions can be rechecked. */
+  onTranscriptGenerated?: () => void
 }
 
 export function BelowVideoTabs({
@@ -84,6 +86,7 @@ export function BelowVideoTabs({
   lessonPosition,
   activeTool: controlledActiveTool,
   onActiveToolChange,
+  onTranscriptGenerated,
 }: BelowVideoTabsProps) {
   const capabilities = adapter.getCapabilities()
   const isMobile = useMediaQuery('(max-width: 767px)')
@@ -104,7 +107,8 @@ export function BelowVideoTabs({
   const [transcriptVersion, setTranscriptVersion] = useState(0)
   const handleTranscriptGenerated = useCallback(() => {
     setTranscriptVersion(v => v + 1)
-  }, [])
+    onTranscriptGenerated?.()
+  }, [onTranscriptGenerated])
 
   // Reset tab when lesson changes
   useEffect(() => {
