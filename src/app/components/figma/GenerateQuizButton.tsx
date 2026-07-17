@@ -84,8 +84,8 @@ export function GenerateQuizButton({
       <div data-testid="quiz-generation-loading" className="space-y-3">
         <Skeleton className="h-10 w-full rounded-xl" />
         <Skeleton className="h-4 w-48 rounded" />
-        <p className="text-sm text-muted-foreground animate-pulse">
-          Generating quiz from transcript...
+        <p className="text-sm text-muted-foreground motion-safe:animate-pulse">
+          Generating quiz from transcript…
         </p>
         {/* ARIA live region for screen readers */}
         <div role="status" aria-live="polite" className="sr-only">
@@ -106,7 +106,7 @@ export function GenerateQuizButton({
       data-testid="generate-quiz-button"
     >
       {checkingAvailability ? (
-        <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+        <Loader2 className="size-4 motion-safe:animate-spin" aria-hidden="true" />
       ) : canRegenerate ? (
         <RefreshCw className="size-4" aria-hidden="true" />
       ) : (

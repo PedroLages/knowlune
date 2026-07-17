@@ -291,37 +291,45 @@ export function BelowVideoTabs({
           onValueChange={handleToolChange}
         />
 
-        <TabsList variant="brand-pill" className="hidden sm:flex">
-          <TabsTrigger value="notes" variant="brand-pill" className={cn(hideNotesTab && 'hidden')}>
+        <TabsList
+          variant="brand-pill"
+          className="hidden w-full justify-start overflow-x-auto sm:flex"
+          aria-label="Lesson study tools"
+        >
+          <TabsTrigger
+            value="notes"
+            variant="brand-pill"
+            className={cn('shrink-0', hideNotesTab && 'hidden')}
+          >
             <PencilLine className="size-3.5" aria-hidden="true" />
             Notes
           </TabsTrigger>
           {!isPdf && (
-            <TabsTrigger value="bookmarks" variant="brand-pill">
+            <TabsTrigger value="bookmarks" variant="brand-pill" className="shrink-0">
               <Bookmark className="size-3.5" aria-hidden="true" />
               Bookmarks
             </TabsTrigger>
           )}
           {capabilities.hasTranscript && (
-            <TabsTrigger value="transcript" variant="brand-pill">
+            <TabsTrigger value="transcript" variant="brand-pill" className="shrink-0">
               <FileText className="size-3.5" aria-hidden="true" />
               Transcript
             </TabsTrigger>
           )}
           {capabilities.hasTranscript && (
-            <TabsTrigger value="summary" variant="brand-pill">
+            <TabsTrigger value="summary" variant="brand-pill" className="shrink-0">
               <Sparkles className="size-3.5" aria-hidden="true" />
               AI Summary
             </TabsTrigger>
           )}
           {capabilities.hasPdf && (
-            <TabsTrigger value="materials" variant="brand-pill">
+            <TabsTrigger value="materials" variant="brand-pill" className="shrink-0">
               <FolderOpen className="size-3.5" aria-hidden="true" />
               Materials
             </TabsTrigger>
           )}
           {aiAvailable && (
-            <TabsTrigger value="tutor" variant="brand-pill">
+            <TabsTrigger value="tutor" variant="brand-pill" className="shrink-0">
               <GraduationCap className="size-3.5" aria-hidden="true" />
               Tutor
             </TabsTrigger>
@@ -447,7 +455,7 @@ export function BelowVideoTabs({
       {isNotesFullscreen && (
         <div
           ref={fullscreenOverlayRef}
-          className="fixed inset-0 z-50 bg-background flex flex-col animate-in fade-in slide-in-from-bottom-4 duration-200"
+          className="fixed inset-0 z-50 bg-background flex flex-col motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-4 motion-safe:duration-200"
           role="dialog"
           aria-modal="true"
           aria-label="Notes fullscreen editor"

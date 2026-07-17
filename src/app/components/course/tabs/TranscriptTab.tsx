@@ -291,24 +291,24 @@ export function TranscriptTab({
             aria-busy="true"
           >
             <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
-              <Loader2 className="size-4 animate-spin text-brand" aria-hidden="true" />
-              Generating transcript...
+              <Loader2 className="size-4 text-brand motion-safe:animate-spin" aria-hidden="true" />
+              Generating transcript…
             </div>
             {progress && (
               <div className="w-full max-w-xs space-y-2">
                 <div className="flex justify-between text-xs text-muted-foreground">
                   <span>
                     {progress.stage === 'downloading-model'
-                      ? 'Downloading model...'
+                      ? 'Downloading model…'
                       : progress.stage === 'loading-model'
-                        ? 'Loading model...'
-                        : 'Transcribing audio...'}
+                        ? 'Loading model…'
+                        : 'Transcribing audio…'}
                   </span>
                   <span>{Math.round(progress.percent)}%</span>
                 </div>
                 <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
                   <div
-                    className="bg-brand h-full rounded-full transition-all duration-300"
+                    className="h-full rounded-full bg-brand transition-[width] duration-300 motion-reduce:transition-none"
                     style={{ width: `${Math.round(progress.percent)}%` }}
                     role="progressbar"
                     aria-valuenow={Math.round(progress.percent)}

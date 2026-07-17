@@ -232,7 +232,7 @@ export function AISummaryPanel({
   if (transcript === null) {
     return (
       <div className="flex items-center gap-2 p-4 text-sm text-muted-foreground" role="status">
-        <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+        <Loader2 className="size-4 motion-safe:animate-spin" aria-hidden="true" />
         Checking transcript…
       </div>
     )
@@ -244,7 +244,10 @@ export function AISummaryPanel({
     return (
       <div className="flex flex-col items-center gap-3 p-8 text-center">
         {isProcessing ? (
-          <Loader2 className="size-9 animate-spin text-muted-foreground" aria-hidden="true" />
+          <Loader2
+            className="size-9 text-muted-foreground motion-safe:animate-spin"
+            aria-hidden="true"
+          />
         ) : isError ? (
           <AlertCircle className="size-9 text-destructive" aria-hidden="true" />
         ) : (
@@ -334,7 +337,7 @@ export function AISummaryPanel({
     return (
       <div className="p-4 space-y-3">
         <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
-          <Loader2 className="size-4 animate-spin text-brand" aria-hidden="true" />
+          <Loader2 className="size-4 text-brand motion-safe:animate-spin" aria-hidden="true" />
           Generating summary…
         </div>
         {summaryText && (

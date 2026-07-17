@@ -261,7 +261,7 @@ function PdfSection({ pdf, courseId, isOpen, onToggle, onPdfUpdate }: PdfSection
         >
           <ChevronRight
             className={cn(
-              'size-4 shrink-0 text-muted-foreground transition-transform duration-200',
+              'size-4 shrink-0 text-muted-foreground transition-transform duration-200 motion-reduce:transition-none',
               isOpen && 'rotate-90'
             )}
             aria-hidden="true"
