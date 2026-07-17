@@ -1,8 +1,15 @@
-import { test, expect } from '@playwright/test'
-import { seedImportedCourses } from '../support/helpers/seed-helpers'
+import { test, expect } from '../support/fixtures'
+import {
+  seedImportedCourses,
+  seedImportedVideos,
+  seedIndexedDBStore,
+} from '../support/helpers/seed-helpers'
 import {
   createMockTranscript,
   createMalformedTranscript,
+  mockLLMError,
+  mockLLMHanging,
+  mockLLMStreamingSequence,
   mockOpenAIStreaming,
   createOperativeSixCourse,
   seedAIConfiguration,
@@ -21,6 +28,25 @@ import {
  */
 
 test.describe('E09B-S01: AI Video Summary', () => {
+  const aiUserId = 'ai-summary-e2e-user'
+
+  async function openLesson(page: import('@playwright/test').Page, lessonId: string) {
+    await page.goto(`/courses/operative-six/lessons/${lessonId}`)
+    await page.waitForFunction(() => Boolean((window as Record<string, unknown>).__authStore))
+    await page.evaluate(userId => {
+      localStorage.setItem(`sync:wizard:complete:${userId}`, '2026-01-01T00:00:00.000Z')
+      const store = (
+        window as unknown as {
+          __authStore: { setState: (state: Record<string, unknown>) => void }
+        }
+      ).__authStore
+      store.setState({
+        user: { id: userId, email: 'ai-summary@example.com', user_metadata: {} },
+        initialized: true,
+      })
+    }, aiUserId)
+  }
+
   test.beforeEach(async ({ page }) => {
     // Mock VTT transcript file for operative-six course
     await page.route('**/captions/op6-introduction.vtt', async route => {
@@ -45,6 +71,53 @@ test.describe('E09B-S01: AI Video Summary', () => {
 
     // Seed operative-six course with video that has captions
     await seedImportedCourses(page, [createOperativeSixCourse()])
+    await seedImportedVideos(page, [
+      {
+        id: 'op6-introduction',
+        courseId: 'operative-six',
+        filename: '01-00- Introduction.mp4',
+        path: '01-00- Introduction.mp4',
+        order: 0,
+        duration: 300,
+        format: 'mp4',
+        fileHandle: null,
+        serverUrl: '/01-00- Introduction.mp4',
+      },
+      {
+        id: 'op6-confidence',
+        courseId: 'operative-six',
+        filename: '02-confidence.mp4',
+        path: '02-confidence.mp4',
+        order: 1,
+        duration: 240,
+        format: 'mp4',
+        fileHandle: null,
+        serverUrl: '/02-confidence.mp4',
+      },
+    ])
+    await seedIndexedDBStore(page, 'ElearningDB', 'videoCaptions', [
+      {
+        courseId: 'operative-six',
+        videoId: 'op6-introduction',
+        filename: 'op6-introduction.vtt',
+        content: createMockTranscript(),
+        format: 'vtt',
+        createdAt: '2026-01-01T00:00:00.000Z',
+      },
+    ])
+    await seedIndexedDBStore(page, 'ElearningDB', 'userConsents', [
+      {
+        id: 'ai-summary-consent',
+        userId: aiUserId,
+        purpose: 'ai_tutor',
+        grantedAt: '2026-01-01T00:00:00.000Z',
+        withdrawnAt: null,
+        noticeVersion: '2026-01-01.1',
+        evidence: { provider_id: 'openai' },
+        createdAt: '2026-01-01T00:00:00.000Z',
+        updatedAt: '2026-01-01T00:00:00.000Z',
+      },
+    ])
 
     // Seed AI configuration with test API key
     await seedAIConfiguration(page)
@@ -65,11 +138,11 @@ test.describe('E09B-S01: AI Video Summary', () => {
     await mockOpenAIStreaming(page, summaryText)
 
     // Navigate to video lesson
-    await page.goto('/courses/operative-six/op6-introduction')
+    await openLesson(page, 'op6-introduction')
     await page.waitForLoadState('networkidle')
 
     // Click Summary tab
-    const summaryTab = page.getByRole('tab', { name: 'Summary' })
+    const summaryTab = page.getByRole('tab', { name: 'AI Summary' })
     await expect(summaryTab).toBeVisible()
     await summaryTab.click()
 
@@ -79,11 +152,14 @@ test.describe('E09B-S01: AI Video Summary', () => {
     await generateButton.click()
 
     // Wait for summary to start streaming
-    await expect(page.getByText('Generating summary...')).toBeVisible()
+    await expect(page.getByText('Generating summary…')).toBeVisible()
 
     // Wait for summary to complete
     const summaryTextElement = page.getByTestId('summary-text')
     await expect(summaryTextElement).toBeVisible({ timeout: 10000 })
+
+    // Wait for streaming to finish before checking the complete text.
+    await expect(page.getByTestId('summary-word-count')).toBeVisible()
 
     // Verify summary text appears
     const displayedText = await summaryTextElement.textContent()
@@ -109,15 +185,16 @@ test.describe('E09B-S01: AI Video Summary', () => {
     await mockOpenAIStreaming(page, summaryText)
 
     // Navigate to video lesson and generate summary
-    await page.goto('/courses/operative-six/op6-introduction')
+    await openLesson(page, 'op6-introduction')
     await page.waitForLoadState('networkidle')
 
-    await page.getByRole('tab', { name: 'Summary' }).click()
+    await page.getByRole('tab', { name: 'AI Summary' }).click()
     await page.getByTestId('generate-summary-button').click()
 
     // Wait for summary to complete
     const summaryTextElement = page.getByTestId('summary-text')
     await expect(summaryTextElement).toBeVisible({ timeout: 10000 })
+    await expect(page.getByTestId('summary-word-count')).toBeVisible()
     const originalText = await summaryTextElement.textContent()
 
     // Click collapse button
@@ -152,22 +229,18 @@ test.describe('E09B-S01: AI Video Summary', () => {
       window.__AI_SUMMARY_TIMEOUT__ = 3000
     })
 
-    // Mock slow API response (>3s delay to trigger timeout)
-    await page.route('https://api.openai.com/v1/chat/completions', async route => {
-      await new Promise(resolve => setTimeout(resolve, 3500)) // 3.5s delay (exceeds 3s timeout)
-      await route.fulfill({ status: 200, body: 'data: [DONE]\n\n' })
-    })
+    await mockLLMHanging(page)
 
     // Navigate to video lesson
-    await page.goto('/courses/operative-six/op6-introduction')
+    await openLesson(page, 'op6-introduction')
     await page.waitForLoadState('networkidle')
 
-    await page.getByRole('tab', { name: 'Summary' }).click()
+    await page.getByRole('tab', { name: 'AI Summary' }).click()
     await page.getByTestId('generate-summary-button').click()
 
-    // Wait for timeout error to appear (should happen within 32s)
+    // Wait for the test-overridden timeout error.
     const errorMessage = page.getByTestId('summary-error')
-    await expect(errorMessage).toBeVisible({ timeout: 32000 })
+    await expect(errorMessage).toBeVisible({ timeout: 10000 })
 
     // Verify error message matches AC3 specification
     await expect(errorMessage).toContainText('Summary generation timed out')
@@ -178,19 +251,13 @@ test.describe('E09B-S01: AI Video Summary', () => {
   })
 
   test('AC4: Graceful error fallback - video player remains functional', async ({ page }) => {
-    // Mock API error (500 status)
-    await page.route('https://api.openai.com/v1/chat/completions', async route => {
-      await route.fulfill({
-        status: 500,
-        body: JSON.stringify({ error: { message: 'Internal server error' } }),
-      })
-    })
+    await mockLLMError(page, 'Internal server error')
 
     // Navigate to video lesson
-    await page.goto('/courses/operative-six/op6-introduction')
+    await openLesson(page, 'op6-introduction')
     await page.waitForLoadState('networkidle')
 
-    await page.getByRole('tab', { name: 'Summary' }).click()
+    await page.getByRole('tab', { name: 'AI Summary' }).click()
     await page.getByTestId('generate-summary-button').click()
 
     // Verify error message appears quickly (within 2s)
@@ -227,12 +294,12 @@ test.describe('E09B-S01: AI Video Summary', () => {
       localStorage.setItem('ai-configuration', JSON.stringify(aiConfig))
     })
 
-    await page.goto('/courses/operative-six/op6-introduction')
+    await openLesson(page, 'op6-introduction')
     await page.waitForLoadState('networkidle')
 
     // Summary tab should not be visible when AI is unavailable
     // (Tab is still shown but AISummaryPanel shows unavailable badge)
-    const summaryTab = page.getByRole('tab', { name: 'Summary' })
+    const summaryTab = page.getByRole('tab', { name: 'AI Summary' })
     await expect(summaryTab).toBeVisible()
 
     await summaryTab.click()
@@ -242,14 +309,15 @@ test.describe('E09B-S01: AI Video Summary', () => {
     await expect(page.getByTestId('generate-summary-button')).not.toBeVisible()
   })
 
-  test('should not show Summary tab when video has no transcript', async ({ page }) => {
+  test('should show the transcript prerequisite when video has no transcript', async ({ page }) => {
     // Use operative-six confidence lesson which has video but no captions
-    await page.goto('/courses/operative-six/op6-confidence')
+    await openLesson(page, 'op6-confidence')
     await page.waitForLoadState('networkidle')
 
-    // Summary tab should not be visible without transcript
-    const summaryTab = page.getByRole('tab', { name: 'Summary' })
-    await expect(summaryTab).not.toBeVisible()
+    const summaryTab = page.getByRole('tab', { name: 'AI Summary' })
+    await expect(summaryTab).toBeVisible()
+    await summaryTab.click()
+    await expect(page.getByText('Transcript required')).toBeVisible()
   })
 
   test('should allow regenerating summary', async ({ page }) => {
@@ -258,30 +326,12 @@ test.describe('E09B-S01: AI Video Summary', () => {
     const secondSummary =
       'This is a different summary covering the same topics but with different wording.'
 
-    // Mock first generation
-    let callCount = 0
-    await page.route('https://api.openai.com/v1/chat/completions', async route => {
-      callCount++
-      const summary = callCount === 1 ? firstSummary : secondSummary
+    await mockLLMStreamingSequence(page, [firstSummary, secondSummary])
 
-      // Add delay to ensure loading state is observable
-      await new Promise(resolve => setTimeout(resolve, 200))
-
-      const responseBody = `data: ${JSON.stringify({
-        choices: [{ delta: { content: summary } }],
-      })}\n\ndata: [DONE]\n\n`
-
-      await route.fulfill({
-        status: 200,
-        headers: { 'Content-Type': 'text/event-stream' },
-        body: responseBody,
-      })
-    })
-
-    await page.goto('/courses/operative-six/op6-introduction')
+    await openLesson(page, 'op6-introduction')
     await page.waitForLoadState('networkidle')
 
-    await page.getByRole('tab', { name: 'Summary' }).click()
+    await page.getByRole('tab', { name: 'AI Summary' }).click()
     await page.getByTestId('generate-summary-button').click()
 
     // Wait for first summary
@@ -298,7 +348,7 @@ test.describe('E09B-S01: AI Video Summary', () => {
     await regenerateButton.click()
 
     // Wait for new summary generation to start
-    await expect(page.getByText('Generating summary...')).toBeVisible({ timeout: 5000 })
+    await expect(page.getByText('Generating summary…')).toBeVisible({ timeout: 5000 })
     await expect(summaryTextElement).toContainText('different summary', { timeout: 10000 })
 
     // Verify the summary changed
@@ -318,37 +368,21 @@ test.describe('E09B-S01: AI Video Summary', () => {
     const secondChunk = ' concepts including immutability'
     const thirdChunk = ' and pure functions.'
 
-    // Mock with properly structured SSE stream (all chunks in one body)
-    await page.route('https://api.openai.com/v1/chat/completions', async route => {
-      // Construct SSE stream body with multiple chunks
-      const sseBody =
-        `data: ${JSON.stringify({ choices: [{ delta: { content: firstChunk } }] })}\n\n` +
-        `data: ${JSON.stringify({ choices: [{ delta: { content: secondChunk } }] })}\n\n` +
-        `data: ${JSON.stringify({ choices: [{ delta: { content: thirdChunk } }] })}\n\n` +
-        `data: [DONE]\n\n`
+    await mockOpenAIStreaming(page, firstChunk + secondChunk + thirdChunk, 300)
 
-      // Add delay to ensure loading state is observable
-      await new Promise(resolve => setTimeout(resolve, 300))
-
-      await route.fulfill({
-        status: 200,
-        headers: { 'Content-Type': 'text/event-stream' },
-        body: sseBody,
-      })
-    })
-
-    await page.goto('/courses/operative-six/op6-introduction')
+    await openLesson(page, 'op6-introduction')
     await page.waitForLoadState('networkidle')
 
-    await page.getByRole('tab', { name: 'Summary' }).click()
+    await page.getByRole('tab', { name: 'AI Summary' }).click()
     await page.getByTestId('generate-summary-button').click()
 
     // Verify loading state appears first
-    await expect(page.getByText('Generating summary...')).toBeVisible()
+    await expect(page.getByText('Generating summary…')).toBeVisible()
 
     // Verify text appears in summary container (streaming or immediate)
     const summaryTextElement = page.getByTestId('summary-text')
     await expect(summaryTextElement).toBeVisible({ timeout: 10000 })
+    await expect(page.getByTestId('summary-word-count')).toBeVisible()
 
     // Verify all chunks made it to the final output
     const finalText = await summaryTextElement.textContent()
@@ -365,28 +399,26 @@ test.describe('E09B-S01: AI Video Summary', () => {
   test('H5: should show error when VTT has no parsable cues (malformed transcript)', async ({
     page,
   }) => {
-    // Override VTT mock with malformed transcript (valid structure but no cues)
-    await page.route('**/captions/op6-introduction.vtt', async route => {
-      await route.fulfill({
-        status: 200,
-        headers: { 'Content-Type': 'text/vtt' },
-        body: createMalformedTranscript(),
-      })
-    })
+    await seedIndexedDBStore(page, 'ElearningDB', 'videoCaptions', [
+      {
+        courseId: 'operative-six',
+        videoId: 'op6-introduction',
+        filename: 'op6-introduction.vtt',
+        content: createMalformedTranscript(),
+        format: 'vtt',
+        createdAt: '2026-01-01T00:00:00.000Z',
+      },
+    ])
 
-    await page.goto('/courses/operative-six/op6-introduction')
+    await openLesson(page, 'op6-introduction')
     await page.waitForLoadState('networkidle')
 
-    await page.getByRole('tab', { name: 'Summary' }).click()
-    await page.getByTestId('generate-summary-button').click()
-
-    // Verify error appears (VTT parser throws when no valid cues)
-    const errorMessage = page.getByTestId('summary-error')
-    await expect(errorMessage).toBeVisible({ timeout: 5000 })
-    await expect(errorMessage).toContainText(/transcript|cue|parse/i)
-
-    // Verify retry button available
-    await expect(page.getByTestId('retry-summary-button')).toBeVisible()
+    await page.getByRole('tab', { name: 'AI Summary' }).click()
+    await expect(page.getByText('Transcript required')).toBeVisible()
+    await expect(
+      page.getByTestId('below-video-tabs').getByText(/could not be read|no usable text/i)
+    ).toBeVisible()
+    await expect(page.getByTestId('generate-summary-button')).not.toBeVisible()
   })
 
   test('H6: should continue streaming if consent disabled mid-generation', async ({ page }) => {
@@ -396,14 +428,14 @@ test.describe('E09B-S01: AI Video Summary', () => {
     // Mock streaming with delay
     await mockOpenAIStreaming(page, summaryText, 500)
 
-    await page.goto('/courses/operative-six/op6-introduction')
+    await openLesson(page, 'op6-introduction')
     await page.waitForLoadState('networkidle')
 
-    await page.getByRole('tab', { name: 'Summary' }).click()
+    await page.getByRole('tab', { name: 'AI Summary' }).click()
     await page.getByTestId('generate-summary-button').click()
 
     // Wait for streaming to start
-    await expect(page.getByText('Generating summary...')).toBeVisible()
+    await expect(page.getByText('Generating summary…')).toBeVisible()
 
     // Disable videoSummary consent mid-generation
     await page.evaluate(() => {
@@ -416,6 +448,7 @@ test.describe('E09B-S01: AI Video Summary', () => {
     // Verify streaming continues despite consent change (current behavior)
     const summaryTextElement = page.getByTestId('summary-text')
     await expect(summaryTextElement).toBeVisible({ timeout: 10000 })
+    await expect(page.getByTestId('summary-word-count')).toBeVisible()
 
     // Verify summary completed successfully
     await expect(summaryTextElement).toContainText('functional programming')
