@@ -241,6 +241,30 @@ describe('NoteEditor — eager-first-save (finding 6)', () => {
     expect(onSave).not.toHaveBeenCalled()
   })
 
+  it('does not persist TipTap empty markup before the learner types', async () => {
+    mockGetHtml = vi.fn().mockReturnValue('<p></p>')
+    const onSave = vi.fn()
+    render(<NoteEditor courseId="c1" lessonId="l1" onSave={onSave} />)
+
+    await vi.waitFor(() => expect(mockOnUpdate).not.toBeNull())
+    act(() => {
+      mockOnUpdate?.({
+        editor: { storage: { characterCount: { words: () => 0 } }, getHTML: mockGetHtml },
+      } as any)
+    })
+    expect(onSave).not.toHaveBeenCalled()
+
+    act(() => {
+      mockGetHtml.mockReturnValue('<p>actual learner note</p>')
+      mockOnUpdate?.({
+        editor: { storage: { characterCount: { words: () => 3 } }, getHTML: mockGetHtml },
+      } as any)
+    })
+
+    expect(onSave).toHaveBeenCalledOnce()
+    expect(onSave).toHaveBeenCalledWith('<p>actual learner note</p>', [])
+  })
+
   it('calls onSave with extracted tags on first change', async () => {
     const onSave = vi.fn()
     render(<NoteEditor courseId="c1" lessonId="l1" onSave={onSave} />)

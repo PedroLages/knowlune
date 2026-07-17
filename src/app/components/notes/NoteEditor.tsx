@@ -161,6 +161,22 @@ function isValidYoutubeUrl(url: string): boolean {
   )
 }
 
+const MEANINGFUL_EMBED_PATTERN = /<(?:img|iframe|video|audio|table|details|hr)\b/i
+
+/** TipTap represents an untouched empty editor as `<p></p>` (or `<p><br></p>`). */
+function hasMeaningfulNoteContent(content: string): boolean {
+  if (MEANINGFUL_EMBED_PATTERN.test(content)) return true
+  const text = content
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/&nbsp;|&#160;/gi, ' ')
+    .trim()
+  return text.length > 0
+}
+
+function noteContentsEqual(left: string, right: string): boolean {
+  return left === right || (!hasMeaningfulNoteContent(left) && !hasMeaningfulNoteContent(right))
+}
+
 export function NoteEditor({
   courseId,
   lessonId,
@@ -213,7 +229,7 @@ export function NoteEditor({
 
   const doSave = useCallback((html: string) => {
     // Avoid duplicate saves of identical content
-    if (html === lastSavedContentRef.current) return
+    if (noteContentsEqual(html, lastSavedContentRef.current)) return
 
     // Track this content as pending so unmount cleanup doesn't duplicate the save
     pendingSaveContentRef.current = html
@@ -438,6 +454,7 @@ export function NoteEditor({
       // This ensures the note reaches Dexie before any potential unmount,
       // even from causes other than tab switching (navigation, page refresh, etc.).
       if (!hasEverSavedRef.current) {
+        if (noteContentsEqual(html, lastSavedContentRef.current)) return
         hasEverSavedRef.current = true
         doSave(html)
         return
@@ -474,7 +491,7 @@ export function NoteEditor({
     if (editor && !editor.isDestroyed) {
       // Only update if the content is actually different (lesson navigation)
       const currentHtml = editor.getHTML()
-      if (currentHtml !== initialContent) {
+      if (!noteContentsEqual(currentHtml, initialContent)) {
         editor.commands.setContent(initialContent || '')
         lastSavedContentRef.current = initialContent
         setSaveStatus('idle')
@@ -581,7 +598,10 @@ export function NoteEditor({
       const ed = editorRef.current
       if (ed && !ed.isDestroyed) {
         const html = ed.getHTML()
-        if (html !== lastSavedContentRef.current && html !== pendingSaveContentRef.current) {
+        if (
+          !noteContentsEqual(html, lastSavedContentRef.current) &&
+          html !== pendingSaveContentRef.current
+        ) {
           const text = html.replace(/<[^>]*>/g, ' ')
           const tags = extractTags(text)
           try {
