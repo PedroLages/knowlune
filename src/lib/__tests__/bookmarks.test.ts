@@ -237,12 +237,7 @@ describe('getAllBookmarks', () => {
   it('excludes deleted bookmarks from getAllBookmarks', async () => {
     const { id: id1 } = await bookmarksLib.addBookmark('course-a', 'lesson-1', 60, 'Keep')
     await bookmarksLib.addBookmark('course-a', 'lesson-2', 120, 'Also keep')
-    const { id: id3 } = await bookmarksLib.addBookmark(
-      'course-b',
-      'lesson-3',
-      180,
-      'Delete me'
-    )
+    const { id: id3 } = await bookmarksLib.addBookmark('course-b', 'lesson-3', 180, 'Delete me')
 
     await bookmarksLib.deleteBookmark(id3)
     await bookmarksLib.deleteBookmark(id1)

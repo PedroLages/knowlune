@@ -43,7 +43,10 @@ export function parseVTT(text: string): TranscriptCue[] {
   // Some imported and generated transcripts are valid enough to contain
   // timestamps but omit those separators, which previously collapsed an
   // entire lesson into one unreadable cue.
-  const normalized = text.replace(/^\uFEFF/, '').replace(/\r\n/g, '\n').replace(/\r/g, '\n')
+  const normalized = text
+    .replace(/^\uFEFF/, '')
+    .replace(/\r\n/g, '\n')
+    .replace(/\r/g, '\n')
   const lines = normalized.split('\n')
   const timestampRows: Array<{
     lineIndex: number

@@ -72,9 +72,7 @@ describe('LessonBookmarksTab', () => {
 
   it('clears a previous error when another lesson loads successfully', async () => {
     mockGetLessonBookmarks.mockRejectedValueOnce(new Error('load failed'))
-    const { rerender } = render(
-      <LessonBookmarksTab courseId="course-1" lessonId="lesson-1" />
-    )
+    const { rerender } = render(<LessonBookmarksTab courseId="course-1" lessonId="lesson-1" />)
     expect(await screen.findByText('Failed to load bookmarks')).toBeInTheDocument()
 
     mockGetLessonBookmarks.mockResolvedValueOnce([])

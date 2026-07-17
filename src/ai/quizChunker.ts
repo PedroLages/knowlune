@@ -13,10 +13,7 @@
 
 import { db } from '@/db/schema'
 import type { TranscriptCue, YouTubeCourseChapter } from '@/data/types'
-import {
-  resolveLessonTranscript,
-  type ReadyLessonTranscript,
-} from '@/lib/lessonTranscript'
+import { resolveLessonTranscript, type ReadyLessonTranscript } from '@/lib/lessonTranscript'
 
 // ---------------------------------------------------------------------------
 // Types
