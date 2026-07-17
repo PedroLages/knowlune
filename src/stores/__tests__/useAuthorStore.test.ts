@@ -93,6 +93,19 @@ describe('addAuthor', () => {
     expect(all[0].updatedAt).toBeTruthy()
   })
 
+  it('normalizes and deduplicates specialties before persistence', async () => {
+    await act(async () => {
+      await useAuthorStore.getState().addAuthor({
+        name: 'Specialist',
+        specialties: [' TypeScript, React ', 'typescript', 'Accessibility; React'],
+      })
+    })
+
+    const { db } = await import('@/db')
+    const persisted = await db.authors.toCollection().first()
+    expect(persisted?.specialties).toEqual(['TypeScript', 'React', 'Accessibility'])
+  })
+
   it('should generate a UUID id and ISO timestamps', async () => {
     await act(async () => {
       await useAuthorStore.getState().addAuthor({
@@ -191,6 +204,19 @@ describe('updateAuthor', () => {
     const { db } = await import('@/db')
     const dbAuthor = await db.authors.get(id)
     expect(dbAuthor?.name).toBe('After Update')
+  })
+
+  it('normalizes specialties when updating an author', async () => {
+    await act(async () => {
+      await useAuthorStore.getState().addAuthor({ name: 'Specialist' })
+    })
+    const id = useAuthorStore.getState().authors[0].id
+
+    await act(async () => {
+      await useAuthorStore.getState().updateAuthor(id, { specialties: ['Cloud | DevOps', 'cloud'] })
+    })
+
+    expect(useAuthorStore.getState().authors[0].specialties).toEqual(['Cloud', 'DevOps'])
   })
 
   it('should rollback on persistence failure', async () => {

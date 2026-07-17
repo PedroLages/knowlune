@@ -11,6 +11,23 @@ import { resolvePhotoHandle, revokePhotoUrl } from '@/lib/authorPhotoResolver'
 const SILENT_AUTHORS_REFRESH_TOAST_COOLDOWN_MS = 60_000
 let lastSilentAuthorsRefreshWarnAt = 0
 
+function normalizeSpecialties(values: string[] | undefined): string[] | undefined {
+  if (values === undefined) return undefined
+
+  const seen = new Set<string>()
+  const normalized: string[] = []
+  for (const value of values) {
+    for (const part of value.split(/[,;|]/)) {
+      const specialty = part.trim()
+      const key = specialty.toLocaleLowerCase()
+      if (!specialty || seen.has(key)) continue
+      seen.add(key)
+      normalized.push(specialty)
+    }
+  }
+  return normalized
+}
+
 /** Shown when a background (sync) authors reload fails; matches toast copy. */
 export const AUTHORS_REFRESH_FAILED_MESSAGE = 'Could not refresh authors. Showing saved data.'
 
@@ -158,7 +175,7 @@ export const useAuthorStore = create<AuthorStoreState>((set, get) => ({
       photoUrl: data.photoUrl,
       photoHandle: data.photoHandle,
       courseIds: data.courseIds ?? [],
-      specialties: data.specialties,
+      specialties: normalizeSpecialties(data.specialties),
       yearsExperience: data.yearsExperience,
       education: data.education,
       socialLinks: data.socialLinks,
@@ -197,9 +214,13 @@ export const useAuthorStore = create<AuthorStoreState>((set, get) => ({
     const existing = authors.find(a => a.id === id)
     if (!existing) return
 
+    const normalizedData =
+      data.specialties === undefined
+        ? data
+        : { ...data, specialties: normalizeSpecialties(data.specialties) }
     const updated: ImportedAuthor = {
       ...existing,
-      ...data,
+      ...normalizedData,
       updatedAt: new Date().toISOString(),
     }
 
