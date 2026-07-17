@@ -39,7 +39,11 @@ vi.mock('@/app/components/course/tabs/MaterialsTab', () => ({
 }))
 
 vi.mock('@/app/components/figma/AISummaryPanel', () => ({
-  AISummaryPanel: () => <div data-testid="ai-summary-content">AI Summary</div>,
+  AISummaryPanel: ({ courseId, lessonId }: { courseId: string; lessonId: string }) => (
+    <div data-testid="ai-summary-content" data-course-id={courseId} data-lesson-id={lessonId}>
+      AI Summary
+    </div>
+  ),
 }))
 
 vi.mock('@/app/hooks/useMediaQuery', () => ({
@@ -259,6 +263,19 @@ describe('BelowVideoTabs', () => {
     // Switch back to Notes
     await user.click(within(tabList).getByText('Notes'))
     expect(screen.getByTestId('notes-tab-content')).toBeInTheDocument()
+  })
+
+  it('keeps AI Summary mounted while switching tabs', async () => {
+    const user = userEvent.setup()
+    renderTabs({ capabilities: { hasTranscript: true } })
+    const summary = screen.getByTestId('ai-summary-content')
+    expect(summary).toHaveAttribute('data-lesson-id', 'lesson-1')
+
+    const tabList = screen.getByRole('tablist')
+    await user.click(within(tabList).getByText('AI Summary'))
+    await user.click(within(tabList).getByText('Bookmarks'))
+
+    expect(screen.getByTestId('ai-summary-content')).toBe(summary)
   })
 
   // ---------------------------------------------------------------------------

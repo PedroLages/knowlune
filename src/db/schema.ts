@@ -102,6 +102,19 @@ export interface FrecencyRow {
   lastOpenedAt: string
 }
 
+/** Device-local AI summary derived from the current lesson transcript. */
+export interface LessonSummaryRecord {
+  courseId: string
+  lessonId: string
+  text: string
+  wordCount: number
+  transcriptFingerprint: string
+  provider: string
+  model: string
+  createdAt: string
+  updatedAt: string
+}
+
 /** Typed Dexie database interface for ElearningDB */
 export type ElearningDatabase = Dexie & {
   importedCourses: EntityTable<ImportedCourse, 'id'>
@@ -173,6 +186,8 @@ export type ElearningDatabase = Dexie & {
   videoStoryboards: EntityTable<VideoStoryboard, 'videoId'>
   // v68 (E133-S01): course content server connections
   courseServers: EntityTable<import('@/data/types').CourseServer, 'id'>
+  // v69: local-only generated summaries; deliberately excluded from cloud sync.
+  lessonSummaries: Table<LessonSummaryRecord, [string, string]>
 }
 
 /**
@@ -1777,6 +1792,17 @@ function _declareLegacyMigrations(database: Dexie): void {
     })
     .upgrade(async _tx => {
       // No backfill. Table is new; populated by settings UI on first server add.
+    })
+
+  // v69: Persist completed AI summaries per lesson on this device. The table is
+  // local-only because generated content should not silently expand cloud data.
+  // Re-declare the complete checkpoint schema so no existing table can be
+  // dropped when upgrading from an older database.
+  database
+    .version(69)
+    .stores(CHECKPOINT_SCHEMA)
+    .upgrade(async _tx => {
+      // No backfill. Summaries are created after successful generation.
     })
 } // end _declareLegacyMigrations
 

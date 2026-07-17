@@ -100,8 +100,7 @@ export function BelowVideoTabs({
     [controlledActiveTool, onActiveToolChange]
   )
 
-  // Transcript version counter — incremented when TranscriptTab generates a new
-  // transcript. Forces BelowVideoTabs to rebuild the blob URL for AISummaryPanel.
+  // Transcript version counter — revalidates persisted summaries after generation.
   const [transcriptVersion, setTranscriptVersion] = useState(0)
   const handleTranscriptGenerated = useCallback(() => {
     setTranscriptVersion(v => v + 1)
@@ -136,43 +135,6 @@ export function BelowVideoTabs({
       }
     }
   }, [hideNotesTab, activeTool, isPdf, capabilities, changeActiveTool])
-
-  // Build transcript blob URL for AISummaryPanel
-  const [transcriptSrc, setTranscriptSrc] = useState<string | null>(null)
-  const transcriptBlobUrlRef = useRef<string | null>(null)
-
-  useEffect(() => {
-    let cancelled = false
-
-    adapter.getTranscript(lessonId).then(text => {
-      if (cancelled || !text) {
-        setTranscriptSrc(null)
-        return
-      }
-
-      if (transcriptBlobUrlRef.current) {
-        URL.revokeObjectURL(transcriptBlobUrlRef.current)
-        transcriptBlobUrlRef.current = null
-      }
-
-      const vttText = text.includes('-->')
-        ? text
-        : `WEBVTT\n\n00:00:00.000 --> 99:59:59.999\n${text}`
-
-      const blob = new Blob([vttText], { type: 'text/vtt' })
-      const url = URL.createObjectURL(blob)
-      transcriptBlobUrlRef.current = url
-      if (!cancelled) setTranscriptSrc(url)
-    })
-
-    return () => {
-      cancelled = true
-      if (transcriptBlobUrlRef.current) {
-        URL.revokeObjectURL(transcriptBlobUrlRef.current)
-        transcriptBlobUrlRef.current = null
-      }
-    }
-  }, [adapter, lessonId, transcriptVersion])
 
   // Fullscreen notes overlay (mobile)
   // Synced with useLessonChromeStore.mobileNotesPanel for dual-state coordination
@@ -435,20 +397,20 @@ export function BelowVideoTabs({
         )}
 
         {capabilities.hasTranscript && (
-          <TabsContent value="summary" className="mt-4">
+          <TabsContent
+            value="summary"
+            forceMount
+            className="mt-4 data-[state=inactive]:hidden"
+            aria-hidden={activeTool !== 'summary'}
+          >
             <div className="bg-card rounded-2xl shadow-sm">
-              {transcriptSrc ? (
-                <AISummaryPanel transcriptSrc={transcriptSrc} />
-              ) : (
-                <div className="p-4 text-sm text-muted-foreground">
-                  <div className="flex flex-col items-center gap-3 py-8">
-                    <FileText className="size-10 text-muted-foreground/50" aria-hidden="true" />
-                    <p className="text-center">
-                      No transcript available for AI summary generation.
-                    </p>
-                  </div>
-                </div>
-              )}
+              <AISummaryPanel
+                key={`${courseId}:${lessonId}`}
+                courseId={courseId}
+                lessonId={lessonId}
+                transcriptVersion={transcriptVersion}
+                onRequestTranscript={() => changeActiveTool('transcript')}
+              />
             </div>
           </TabsContent>
         )}
