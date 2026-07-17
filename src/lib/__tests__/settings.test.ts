@@ -16,15 +16,19 @@ Object.defineProperty(window, 'location', {
 
 // ── Supabase mock shared by saveSettingsToSupabase and hydrateSettingsFromSupabase tests ──
 // Must use vi.hoisted so variables are available when vi.mock factory runs (hoisting requirement).
-const { mockRpc, mockFrom, mockGetUser } = vi.hoisted(() => ({
+const { mockRpc, mockFrom, mockGetSession, mockRefreshSession, mockGetUser } = vi.hoisted(() => ({
   mockRpc: vi.fn(),
   mockFrom: vi.fn(),
+  mockGetSession: vi.fn(),
+  mockRefreshSession: vi.fn(),
   mockGetUser: vi.fn(),
 }))
 
 vi.mock('@/lib/auth/supabase', () => ({
   supabase: {
     auth: {
+      getSession: mockGetSession,
+      refreshSession: mockRefreshSession,
       getUser: mockGetUser,
       updateUser: vi.fn().mockResolvedValue({ error: null }),
     },
@@ -618,6 +622,10 @@ describe('settings', () => {
     beforeEach(() => {
       mockRpc.mockReset()
       mockGetUser.mockReset()
+      mockGetSession.mockReset().mockResolvedValue({
+        data: { session: { user: { id: 'session-user' } } },
+      })
+      mockRefreshSession.mockReset()
     })
 
     it('calls supabase.rpc with correct args when authenticated', async () => {

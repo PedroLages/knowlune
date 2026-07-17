@@ -12,6 +12,36 @@ import 'fake-indexeddb/auto'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { coordinator } from '@/ai/workers/coordinator'
 
+const importedWorkerSeams = vi.hoisted(() => {
+  function createWithClassicFallback(url: string): Worker {
+    try {
+      return new globalThis.Worker(url, { type: 'module' })
+    } catch (error) {
+      if (error instanceof TypeError || error instanceof SyntaxError) {
+        return new globalThis.Worker(url)
+      }
+      throw error
+    }
+  }
+
+  return {
+    createEmbeddingWorker: vi.fn(() => createWithClassicFallback('embedding.worker.js')),
+    createSearchWorker: vi.fn(() => createWithClassicFallback('search.worker.js')),
+  }
+})
+
+vi.mock('@/ai/workers/embedding.worker.ts?worker', () => ({
+  default: function EmbeddingWorkerWrapper() {
+    return importedWorkerSeams.createEmbeddingWorker()
+  },
+}))
+
+vi.mock('@/ai/workers/search.worker.ts?worker', () => ({
+  default: function SearchWorkerWrapper() {
+    return importedWorkerSeams.createSearchWorker()
+  },
+}))
+
 // ============================================================================
 // Dedup utility (imported from vector-store which has side effects)
 // We import these lazily to avoid side-effect conflicts with test setup
@@ -299,6 +329,7 @@ describe('Safari module-worker fallback', () => {
 
   beforeEach(() => {
     MockModuleFailingWorker.wasModuleAttempt = false
+    importedWorkerSeams.createEmbeddingWorker.mockClear()
     Object.defineProperty(globalThis, 'caches', {
       value: { has: vi.fn().mockResolvedValue(true) },
       writable: true,
@@ -325,7 +356,8 @@ describe('Safari module-worker fallback', () => {
     })
 
     expect(result.embeddings).toHaveLength(1)
-    // Verify that the module worker was attempted first
+    expect(importedWorkerSeams.createEmbeddingWorker).toHaveBeenCalledTimes(1)
+    // Verify that the imported wrapper attempted module construction before its classic fallback.
     expect(MockModuleFailingWorker.wasModuleAttempt).toBe(true)
   })
 })

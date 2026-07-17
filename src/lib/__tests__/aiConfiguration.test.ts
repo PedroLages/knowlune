@@ -54,7 +54,7 @@ const vaultMocks = vi.hoisted(() => ({
   storeCredential: vi.fn().mockResolvedValue(undefined),
   storeCredentialWithStatus: vi.fn().mockResolvedValue({ ok: true }),
   checkCredential: vi.fn(),
-  readCredentialWithStatus: vi.fn(),
+  readCredentialWithStatus: vi.fn().mockResolvedValue({ ok: true, value: null }),
 }))
 
 vi.mock('@/lib/vaultCredentials', () => vaultMocks)
@@ -732,7 +732,7 @@ describe('aiConfiguration.ts', () => {
 
   describe('getDecryptedApiKeyForProvider', () => {
     beforeEach(() => {
-      vaultMocks.readCredentialWithStatus.mockReset()
+      vaultMocks.readCredentialWithStatus.mockReset().mockResolvedValue({ ok: true, value: null })
       vaultMocks.storeCredential.mockClear()
     })
 

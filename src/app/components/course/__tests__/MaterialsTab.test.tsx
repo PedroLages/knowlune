@@ -54,12 +54,39 @@ vi.mock('@/lib/courseAdapter', async () => {
 
 import { MaterialsTab } from '../tabs/MaterialsTab'
 import type { CourseAdapter, MaterialGroup } from '@/lib/courseAdapter'
+import type { CourseSection, LessonGroupItem } from '@/lib/lessonBasedCurriculum'
 
 // ---------------------------------------------------------------------------
 // Mock adapter factory
 // ---------------------------------------------------------------------------
 
 function makeMockAdapter(groups: MaterialGroup[]): CourseAdapter {
+  const toCurriculumItem = (
+    item: MaterialGroup['primary'],
+    isPrimary: boolean
+  ): LessonGroupItem => ({
+    id: item.id,
+    title: item.title,
+    displayTitle: item.title.replace(/\.[^.]+$/, ''),
+    type: item.type,
+    duration: item.duration,
+    filename: item.title,
+    path: '',
+    isPrimary,
+    sourceMetadata: item.sourceMetadata,
+  })
+  const curriculum: CourseSection[] = [
+    {
+      numericPrefix: '1',
+      title: 'Course Content',
+      lessons: groups.map((group, index) => ({
+        numericPrefix: String(index + 1),
+        primary: toCurriculumItem(group.primary, true),
+        materials: group.materials.map(material => toCurriculumItem(material, false)),
+      })),
+    },
+  ]
+
   return {
     getCourse: vi.fn() as unknown as CourseAdapter['getCourse'],
     getSource: vi.fn().mockReturnValue('local') as unknown as CourseAdapter['getSource'],
@@ -72,6 +99,7 @@ function makeMockAdapter(groups: MaterialGroup[]): CourseAdapter {
         )
       ),
     getGroupedLessons: vi.fn().mockResolvedValue(groups),
+    getLessonBasedCurriculum: vi.fn().mockResolvedValue(curriculum),
     getMediaUrl: vi.fn().mockResolvedValue(null),
     getTranscript: vi.fn().mockResolvedValue(null),
     getThumbnailUrl: vi.fn().mockResolvedValue(null),

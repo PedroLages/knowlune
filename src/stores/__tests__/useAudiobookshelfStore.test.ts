@@ -33,7 +33,7 @@ const {
 }))
 
 vi.mock('@/lib/vaultCredentials', () => ({
-  storeCredential: storeMock,
+  storeCredentialWithStatus: storeMock,
   deleteCredential: deleteMock,
   readCredential: readMock,
   readCredentialWithStatus: readStatusMock,
@@ -81,7 +81,7 @@ function makeServer(overrides: Partial<AudiobookshelfServer> = {}): Audiobookshe
 beforeEach(async () => {
   await Dexie.delete('ElearningDB')
   vi.resetModules()
-  storeMock.mockReset().mockResolvedValue(undefined)
+  storeMock.mockReset().mockResolvedValue({ ok: true })
   deleteMock.mockReset().mockResolvedValue(undefined)
   readMock.mockReset().mockResolvedValue(null)
   readStatusMock.mockReset().mockResolvedValue({ ok: true, value: null })

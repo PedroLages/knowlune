@@ -6,8 +6,9 @@ import type { PathProgressSummary, CourseProgressInfo } from '@/app/hooks/usePat
 
 // Hoisted constant for mock — vi.mock is hoisted above imports, so constants
 // used inside mock factories must also be hoisted.
-const { PROGRESS_UPDATED_EVENT } = vi.hoisted(() => ({
+const { PROGRESS_UPDATED_EVENT, mockLoadCoursesProgress } = vi.hoisted(() => ({
   PROGRESS_UPDATED_EVENT: 'course-progress-updated',
+  mockLoadCoursesProgress: vi.fn(),
 }))
 
 // --- Mocks ---
@@ -110,7 +111,7 @@ vi.mock('@/stores/useContentProgressStore', () => ({
   useContentProgressStore: (selector: (s: Record<string, unknown>) => unknown) => {
     const store = {
       statusMap: mockStatusMapStore,
-      loadCourseProgress: async () => {},
+      loadCoursesProgress: mockLoadCoursesProgress,
     }
     return selector(store as unknown as Record<string, unknown>)
   },
@@ -213,6 +214,7 @@ function createWrapper() {
 describe('useNextBestCourse', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mockLoadCoursesProgress.mockResolvedValue(undefined)
     mockProgressMap = new Map<string, PathProgressSummary>()
     mockProgressMap.set('path-1', mockPathProgressSummary)
     mockStatusMapStore = { ...mockStatusMap }
@@ -227,6 +229,7 @@ describe('useNextBestCourse', () => {
       expect(result.current.action).toBe('resume')
     })
 
+    expect(mockLoadCoursesProgress).toHaveBeenCalledWith(['course-1', 'course-2', 'course-3'])
     expect(result.current.entry?.courseId).toBe('course-1')
     expect(result.current.course?.name).toBe('Course One')
     expect(result.current.targetLessonId).toBe('lesson-2') // first incomplete
