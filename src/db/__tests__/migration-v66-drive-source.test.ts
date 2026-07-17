@@ -4,6 +4,7 @@ import Dexie from 'dexie'
 import type { DriveFileRef } from '@/data/types'
 
 const DB_NAME = 'MigrationV66Test'
+const IMPORTED_AT = '2026-01-01T00:00:00.000Z'
 
 beforeEach(async () => {
   await Dexie.delete(DB_NAME)
@@ -21,10 +22,51 @@ async function openWithFullMigrations(): Promise<Dexie> {
   return newDb
 }
 
+async function seedVersion65Records(courseId: string, videoId: string): Promise<void> {
+  const oldDb = new Dexie(DB_NAME)
+  oldDb.version(65).stores({
+    importedCourses: 'id, name, importedAt, status, *tags',
+    importedVideos: 'id, courseId, filename',
+  })
+  await oldDb.open()
+  await oldDb.table('importedCourses').add({
+    id: courseId,
+    name: 'Legacy Drive Course',
+    importedAt: IMPORTED_AT,
+    status: 'active',
+    tags: [],
+  })
+  await oldDb.table('importedVideos').add({
+    id: videoId,
+    courseId,
+    filename: 'legacy-video.mp4',
+  })
+  oldDb.close()
+}
+
 describe('v66 drive source migration', () => {
-  it('should be at version 66', async () => {
+  it('preserves v65 records and accepts Drive metadata after upgrading', async () => {
+    const courseId = crypto.randomUUID()
+    const videoId = crypto.randomUUID()
+    const folderId = crypto.randomUUID()
+    const driveFileRef: DriveFileRef = {
+      fileId: crypto.randomUUID(),
+      driveSource: 'google',
+    }
+
+    await seedVersion65Records(courseId, videoId)
     const db = await openWithFullMigrations()
-    expect(db.verno).toBe(66)
+
+    const legacyCourse = await db.table('importedCourses').get(courseId)
+    const legacyVideo = await db.table('importedVideos').get(videoId)
+    expect(legacyCourse?.sourceDriveId).toBeUndefined()
+    expect(legacyVideo?.driveFileRef).toBeUndefined()
+
+    await db.table('importedCourses').update(courseId, { sourceDriveId: folderId })
+    await db.table('importedVideos').update(videoId, { driveFileRef })
+
+    expect((await db.table('importedCourses').get(courseId))?.sourceDriveId).toBe(folderId)
+    expect((await db.table('importedVideos').get(videoId))?.driveFileRef).toEqual(driveFileRef)
     db.close()
   })
 
@@ -36,7 +78,7 @@ describe('v66 drive source migration', () => {
     await db.table('importedCourses').add({
       id: courseId,
       name: 'Drive Course',
-      importedAt: new Date().toISOString(),
+      importedAt: IMPORTED_AT,
       category: '',
       tags: [],
       status: 'not-started' as const,
@@ -87,7 +129,7 @@ describe('v66 drive source migration', () => {
     await db.table('importedCourses').add({
       id: courseId,
       name: 'Legacy Course',
-      importedAt: new Date().toISOString(),
+      importedAt: IMPORTED_AT,
       category: '',
       tags: [],
       status: 'active' as const,

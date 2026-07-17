@@ -25,7 +25,7 @@ sync via the parity test in `src/lib/compliance/__tests__/retentionParity.test.t
 
 ---
 
-## Sync Tables (39 tables)
+## Sync Tables (40 tables)
 
 | Artefact | Data Categories | Lawful Basis | Retention Period | Deletion Mechanism | Owner | Notes |
 |---|---|---|---|---|---|---|
@@ -64,6 +64,7 @@ sync via the parity test in `src/lib/compliance/__tests__/retentionParity.test.t
 | `study_schedules` | Study schedule configurations | Contract (service provision) | Account lifetime + 30d | hardDeleteUser cascade | Pedro | P3 sync |
 | `opds_catalogs` | OPDS server configs (password in Vault) | Contract (service provision) | Account lifetime + 30d | hardDeleteUser cascade | Pedro | P3 sync; password in Supabase Vault |
 | `audiobookshelf_servers` | ABS server configs (apiKey in Vault) | Contract (service provision) | Account lifetime + 30d | hardDeleteUser cascade | Pedro | P3 sync; apiKey in Supabase Vault |
+| `course_servers` | Course server configs (authToken in Vault) | Contract (service provision) | Account lifetime + 30d | hardDeleteUser cascade | Pedro | P3 sync; authToken in Supabase Vault |
 | `notification_preferences` | Notification preference singleton | Contract (service provision) | Account lifetime + 30d | hardDeleteUser cascade | Pedro | P3 sync; singleton per user |
 | `quizzes` | User quiz content (UGC) | Contract (service provision) | Account lifetime + 30d | hardDeleteUser cascade | Pedro | P4 sync |
 | `quiz_attempts` | Quiz attempt history | Contract (service provision) | Account lifetime + 30d | hardDeleteUser cascade | Pedro | Insert-only; P4 sync |

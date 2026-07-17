@@ -71,6 +71,7 @@ describe('ElearningDB schema', () => {
       'contentProgress',
       'courseEmbeddings',
       'courseReminders',
+      'courseServers',
       'courseThumbnails',
       'downloads',
       'embeddings',
@@ -112,8 +113,8 @@ describe('ElearningDB schema', () => {
     ])
   })
 
-  it('should be at version 66 (drive source metadata)', () => {
-    expect(db.verno).toBe(66)
+  it('should be at version 68 (course content servers)', () => {
+    expect(db.verno).toBe(68)
   })
 
   it('should have searchFrecency table with compound primary key [entityType+entityId] (v53)', () => {
