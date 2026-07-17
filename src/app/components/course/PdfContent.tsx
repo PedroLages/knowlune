@@ -13,8 +13,8 @@ import { Link } from 'react-router'
 import { FileWarning, FolderSearch, RefreshCw, ShieldAlert } from 'lucide-react'
 import { toast } from 'sonner'
 import { db } from '@/db/schema'
-import { syncableWrite } from '@/lib/sync/syncableWrite'
-import { revokeObjectUrl } from '@/lib/courseAdapter'
+import { syncableWrite, type SyncableRecord } from '@/lib/sync/syncableWrite'
+import { releasePdfSource, resolvePdfSource, type ReadyPdfSource } from '@/lib/pdfSource'
 import { PdfViewer } from '@/app/components/figma/PdfViewer'
 import { Button } from '@/app/components/ui/button'
 import { Skeleton } from '@/app/components/ui/skeleton'
@@ -31,9 +31,16 @@ export function PdfContent({ courseId, lessonId }: PdfContentProps) {
   const [loadError, setLoadError] = useState<string | null>(null)
   const [dexieLoading, setDexieLoading] = useState(false)
   const [permissionPending, setPermissionPending] = useState(false)
-  const [blobUrl, setBlobUrl] = useState<string | null>(null)
+  const [source, setSource] = useState<ReadyPdfSource | null>(null)
   const [fileError, setFileError] = useState<'permission-denied' | 'not-found' | null>(null)
   const [blobLoading, setBlobLoading] = useState(false)
+  const sourceRef = useRef<ReadyPdfSource | null>(null)
+
+  const replaceSource = useCallback((nextSource: ReadyPdfSource | null) => {
+    releasePdfSource(sourceRef.current)
+    sourceRef.current = nextSource
+    setSource(nextSource)
+  }, [])
 
   // Load PDF record from Dexie
   const loadPdf = useCallback(() => {
@@ -43,6 +50,7 @@ export function PdfContent({ courseId, lessonId }: PdfContentProps) {
     }
     setLoadError(null)
     setPdf(undefined)
+    replaceSource(null)
     setDexieLoading(true)
     let ignore = false
 
@@ -66,88 +74,60 @@ export function PdfContent({ courseId, lessonId }: PdfContentProps) {
     return () => {
       ignore = true
     }
-  }, [lessonId])
+  }, [lessonId, replaceSource])
 
   useEffect(() => {
     return loadPdf()
   }, [loadPdf])
 
-  // Resolve blob URL from FileSystemFileHandle, or use server URL directly (E133-S01)
+  // Resolve server URLs, stored blobs, and file handles through one shared path.
   useEffect(() => {
-    // Server-sourced PDFs use the server URL directly — no blob conversion needed
-    if (pdf?.serverUrl) {
-      setBlobUrl(pdf.serverUrl)
-      setBlobLoading(false)
-      setFileError(null)
-      return
-    }
-
-    if (!pdf?.fileHandle) return
+    if (!pdf) return
 
     let ignore = false
     setBlobLoading(true)
     setFileError(null)
 
-    async function resolveBlobUrl(handle: FileSystemFileHandle) {
-      try {
-        const permission = await handle.queryPermission({ mode: 'read' })
-        if (permission !== 'granted') {
-          const result = await handle.requestPermission({ mode: 'read' })
-          if (result !== 'granted') {
-            if (!ignore) {
-              setFileError('permission-denied')
-              setBlobLoading(false)
-            }
-            return
-          }
-        }
-        const file = await handle.getFile()
-        const url = URL.createObjectURL(file)
-        if (!ignore) {
-          setBlobUrl(url)
-          setBlobLoading(false)
-        } else {
-          // Component unmounted before we could set state — revoke immediately
-          revokeObjectUrl(url)
-        }
-      } catch {
-        // silent-catch-ok: error surfaced to user via setFileError state
-        if (!ignore) {
-          setFileError('not-found')
-          setBlobLoading(false)
-        }
+    void resolvePdfSource(pdf).then(result => {
+      if (ignore) {
+        if (result.status === 'ready') releasePdfSource(result)
+        return
       }
-    }
-
-    resolveBlobUrl(pdf.fileHandle)
+      if (result.status === 'ready') {
+        replaceSource(result)
+      } else {
+        replaceSource(null)
+        setFileError(result.status)
+      }
+      setBlobLoading(false)
+    })
 
     return () => {
       ignore = true
     }
-  }, [pdf])
+  }, [pdf, replaceSource])
 
-  // Revoke blob URL on unmount or when it changes
+  // Release object URLs on unmount.
   useEffect(() => {
     return () => {
-      if (blobUrl) {
-        revokeObjectUrl(blobUrl)
-      }
+      releasePdfSource(sourceRef.current)
+      sourceRef.current = null
     }
-  }, [blobUrl])
+  }, [])
 
   // Re-grant permission flow (AC5)
   const handleReGrantPermission = useCallback(async () => {
     if (!pdf?.fileHandle) return
     setPermissionPending(true)
     try {
-      const result = await pdf.fileHandle.requestPermission({ mode: 'read' })
-      if (result === 'granted') {
-        // Re-load PDF record to trigger blob URL resolution
-        const updated = await db.importedPdfs.get(lessonId)
-        setPdf(updated ?? null)
+      const result = await resolvePdfSource(pdf, { requestPermission: true })
+      if (result.status === 'ready') {
+        replaceSource(result)
         setFileError(null)
+        setBlobLoading(false)
         toast.success('Permission granted')
       } else {
+        setFileError(result.status)
         toast.error('Permission was denied')
       }
     } catch {
@@ -155,7 +135,7 @@ export function PdfContent({ courseId, lessonId }: PdfContentProps) {
     } finally {
       setPermissionPending(false)
     }
-  }, [pdf, lessonId])
+  }, [pdf, replaceSource])
 
   // Locate file picker for moved/missing PDFs
   const supportsFilePicker = 'showOpenFilePicker' in window
@@ -188,23 +168,23 @@ export function PdfContent({ courseId, lessonId }: PdfContentProps) {
         return
       }
 
-      const updatedCount = await db.importedPdfs.update(lessonId, { fileHandle })
-      if (updatedCount === 0) {
-        console.warn(
-          `[PdfContent:handleLocateFile] Dexie update returned 0 — no record found for lessonId "${lessonId}"`
-        )
-        toast.error('Could not save file location. The lesson record was not found.')
-        return
+      if (!pdf) return
+      const updated: ImportedPdf = {
+        ...pdf,
+        fileHandle,
+        fileBlob: undefined,
+        serverUrl: undefined,
       }
-
-      const updated = await db.importedPdfs.get(lessonId)
-      setPdf(updated ?? null)
+      await syncableWrite('importedPdfs', 'put', updated as unknown as SyncableRecord)
+      setPdf(updated)
       setFileError(null)
+      setBlobLoading(true)
       toast.success(`Located: ${fileHandle.name}`)
-    } catch {
-      // silent-catch-ok: User cancelled the picker (AbortError) or unsupported browser
+    } catch (error) {
+      if (error instanceof DOMException && error.name === 'AbortError') return
+      toast.error('Could not access the selected PDF')
     }
-  }, [lessonId])
+  }, [pdf])
 
   // PDF page tracking: restore last-viewed page from progress table
   const [savedPage, setSavedPage] = useState<number | undefined>(undefined)
@@ -343,7 +323,7 @@ export function PdfContent({ courseId, lessonId }: PdfContentProps) {
               disabled={permissionPending}
             >
               <ShieldAlert className="size-4" aria-hidden="true" />
-              {permissionPending ? 'Requesting...' : 'Grant Permission'}
+              {permissionPending ? 'Requesting…' : 'Grant Permission'}
             </Button>
           ) : supportsFilePicker ? (
             <Button onClick={handleLocateFile} className="gap-2">
@@ -360,11 +340,11 @@ export function PdfContent({ courseId, lessonId }: PdfContentProps) {
   }
 
   // PDF display
-  if (!blobUrl) return null
+  if (!source) return null
 
   return (
     <PdfViewer
-      src={blobUrl}
+      src={source.url}
       title={pdf.filename}
       className="h-full"
       initialPage={savedPage ?? 1}
