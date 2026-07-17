@@ -18,6 +18,7 @@ import { Button } from '@/app/components/ui/button'
 import { useWhisperTranscription } from '@/lib/whisper/useWhisperTranscription'
 import { consentService } from '@/lib/compliance/consentService'
 import { parseVTT } from '@/lib/captions'
+import { resolveLessonTranscript } from '@/lib/lessonTranscript'
 import { useAuthStore } from '@/stores/useAuthStore'
 import { Sparkles, Loader2, AlertCircle, RotateCcw, Lock, FileText } from 'lucide-react'
 
@@ -93,56 +94,23 @@ export function TranscriptTab({
   const latestLessonIdRef = useRef(lessonId)
   latestLessonIdRef.current = lessonId
 
-  // Single effect for transcript loading. For YouTube sources, prefer Dexie
-  // (richer cue data with timing) and fall back to adapter.getTranscript().
-  // For local sources, use adapter.getTranscript() only.
+  // Keep transcript availability consistent with AI Summary and Quiz.
   useEffect(() => {
     let cancelled = false
     setLoadingState('loading')
     setCues([])
 
     const loadTranscript = async () => {
-      // Network sources (YouTube): try Dexie first for richer cue data
-      if (capabilities.requiresNetwork) {
-        try {
-          const video = await db.importedVideos.get(lessonId)
-          if (!cancelled && video?.youtubeVideoId) {
-            const transcript = await db.youtubeTranscripts
-              .where('[courseId+videoId]')
-              .equals([courseId, video.youtubeVideoId])
-              .first()
+      const transcript = await resolveLessonTranscript(courseId, lessonId)
+      if (cancelled) return
 
-            if (!cancelled && transcript?.status === 'done' && transcript.cues?.length) {
-              setCues(transcript.cues)
-              setLoadingState('ready')
-              return
-            }
-          }
-        } catch {
-          // silent-catch-ok — fall through to adapter.getTranscript()
-        }
-      }
-
-      // Fallback (all sources): use adapter.getTranscript()
-      try {
-        const transcriptText = await adapter.getTranscript(lessonId)
-        if (cancelled) return
-
-        if (!transcriptText) {
-          setLoadingState('empty')
-          return
-        }
-
-        const parsed = parseTranscriptText(transcriptText)
-        if (parsed.length === 0) {
-          setLoadingState('empty')
-          return
-        }
-
-        setCues(parsed)
+      if (transcript.status === 'ready') {
+        setCues(transcript.cues)
         setLoadingState('ready')
-      } catch {
-        if (!cancelled) setLoadingState('error')
+      } else if (transcript.status === 'error') {
+        setLoadingState('error')
+      } else {
+        setLoadingState('empty')
       }
     }
 
@@ -222,6 +190,7 @@ export function TranscriptTab({
       try {
         file = await video.fileHandle.getFile()
       } catch {
+        // silent-catch-ok — the recovery message is rendered inline below
         setGenerationError('File access lost — re-import the video to enable transcription.')
         setGenerationState('error')
         return
@@ -267,6 +236,7 @@ export function TranscriptTab({
       setGenerationState('completed')
       onTranscriptGenerated?.()
     } catch (err) {
+      // silent-catch-ok — the transcription error is rendered inline below
       if (err instanceof DOMException && err.name === 'AbortError') return
       if (controller.signal.aborted) return
       const message = err instanceof Error ? err.message : 'Transcription failed'

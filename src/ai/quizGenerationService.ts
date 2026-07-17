@@ -42,6 +42,7 @@ import { collectStreamWithTimeout } from '@/ai/llm/streamUtils'
 import { LLMError } from '@/ai/llm/types'
 import { ConsentError } from '@/ai/lib/ConsentError'
 import { ProviderReconsentError } from '@/ai/lib/ProviderReconsentError'
+import { resolveLessonTranscript } from '@/lib/lessonTranscript'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -125,6 +126,12 @@ export async function generateQuizForLesson(
     })
   }
 
+  const transcript = await resolveLessonTranscript(courseId, lessonId)
+  if (transcript.status !== 'ready') {
+    emitTracking('error', { errorCode: `transcript_${transcript.status}` })
+    return { quiz: null, cached: false, error: transcript.reason }
+  }
+
   // Resolve feature model and assert consent
   let resolved: FeatureModelConfig
   let client: LLMClient
@@ -155,19 +162,7 @@ export async function generateQuizForLesson(
     return { quiz: null, cached: false, error: 'AI provider not configured for quiz generation.' }
   }
 
-  // Fetch transcript for hash computation
-  const transcript = await db.youtubeTranscripts
-    .where('[courseId+videoId]')
-    .equals([courseId, lessonId])
-    .first()
-
-  if (!transcript || transcript.status !== 'done' || !transcript.fullText) {
-    emitTracking('error', { errorCode: 'no_transcript' })
-    return { quiz: null, cached: false, error: 'No valid transcript available' }
-  }
-
-  // Compute transcript hash for cache lookup
-  const transcriptHash = await computeSHA256(transcript.fullText)
+  const transcriptHash = transcript.fingerprint
 
   // Cache check: look for existing quiz with matching transcriptHash (skip on regenerate)
   if (!regenerate) {
@@ -178,7 +173,7 @@ export async function generateQuizForLesson(
   }
 
   // Stage 1: Chunk transcript
-  const chunks = await chunkTranscript(lessonId, courseId)
+  const chunks = await chunkTranscript(lessonId, courseId, transcript)
   if (chunks.length === 0) {
     emitTracking('error', { errorCode: 'no_chunks' })
     return { quiz: null, cached: false, error: 'Transcript produced no chunks' }
@@ -500,17 +495,6 @@ function parseAndValidate(content: string): GeneratedQuestion[] | null {
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-/**
- * Compute SHA-256 hash of a string using Web Crypto API.
- */
-async function computeSHA256(text: string): Promise<string> {
-  const encoder = new TextEncoder()
-  const data = encoder.encode(text)
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data)
-  const hashArray = Array.from(new Uint8Array(hashBuffer))
-  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
-}
 
 /**
  * Look up a cached quiz by lessonId and transcriptHash.
