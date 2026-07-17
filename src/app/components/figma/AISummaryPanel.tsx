@@ -27,26 +27,40 @@ import {
   ChevronDown,
   ChevronUp,
   Lock,
+  FileText,
 } from 'lucide-react'
 import { AIUnavailableBadge } from './AIUnavailableBadge'
-import { isFeatureEnabled, isAIAvailable } from '@/lib/aiConfiguration'
-import { fetchAndParseTranscript, generateVideoSummary } from '@/lib/aiSummary'
+import { isFeatureEnabled, isAIAvailable, resolveFeatureModel } from '@/lib/aiConfiguration'
+import { generateVideoSummary } from '@/lib/aiSummary'
 import { trackAIUsage } from '@/lib/aiEventTracking'
 import { ConsentError } from '@/ai/lib/ConsentError'
+import { db } from '@/db/schema'
+import { resolveLessonTranscript, type ResolvedLessonTranscript } from '@/lib/lessonTranscript'
 
 type PanelState = 'idle' | 'generating' | 'completed' | 'error' | 'consent-required'
 
 interface AISummaryPanelProps {
-  /** URL to VTT transcript file */
-  transcriptSrc: string
+  courseId: string
+  lessonId: string
+  /** Incremented after transcript generation so cached summaries are revalidated. */
+  transcriptVersion?: number
+  onRequestTranscript?: () => void
 }
 
-export function AISummaryPanel({ transcriptSrc }: AISummaryPanelProps) {
+export function AISummaryPanel({
+  courseId,
+  lessonId,
+  transcriptVersion = 0,
+  onRequestTranscript,
+}: AISummaryPanelProps) {
   const [state, setState] = useState<PanelState>('idle')
   const [summaryText, setSummaryText] = useState('')
   const [isCollapsed, setIsCollapsed] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string>()
   const [wordCount, setWordCount] = useState(0)
+  const [transcript, setTranscript] = useState<ResolvedLessonTranscript | null>(null)
+  const [isOutdated, setIsOutdated] = useState(false)
+  const [transcriptReloadKey, setTranscriptReloadKey] = useState(0)
 
   // AbortController ref for cancelling in-flight requests on unmount or re-invocation
   const abortControllerRef = useRef<AbortController | null>(null)
@@ -69,17 +83,56 @@ export function AISummaryPanel({ transcriptSrc }: AISummaryPanelProps) {
     }
   }, [])
 
-  // Cancel in-flight request on component unmount
+  // Resolve the lesson transcript and restore a matching local summary.
   useEffect(() => {
-    return () => {
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort()
+    let cancelled = false
+    abortControllerRef.current?.abort()
+    const controller = new AbortController()
+    abortControllerRef.current = controller
+
+    setTranscript(null)
+    setState('idle')
+    setSummaryText('')
+    setWordCount(0)
+    setErrorMessage(undefined)
+    setIsOutdated(false)
+
+    const load = async () => {
+      const resolved = await resolveLessonTranscript(courseId, lessonId)
+      if (cancelled || controller.signal.aborted) return
+      setTranscript(resolved)
+
+      if (resolved.status !== 'ready') return
+
+      try {
+        const saved = await db.lessonSummaries.get([courseId, lessonId])
+        if (cancelled || controller.signal.aborted) return
+
+        if (saved?.transcriptFingerprint === resolved.fingerprint) {
+          setSummaryText(saved.text)
+          setWordCount(saved.wordCount)
+          setState('completed')
+        } else {
+          setIsOutdated(Boolean(saved))
+        }
+      } catch (error) {
+        // silent-catch-ok — the failure and retry action are rendered inline
+        console.error('[AISummaryPanel] Failed to restore summary:', error)
+        setErrorMessage('The saved summary could not be loaded. Please try again.')
+        setState('error')
       }
     }
-  }, [])
+
+    void load()
+
+    return () => {
+      cancelled = true
+      controller.abort()
+    }
+  }, [courseId, lessonId, transcriptVersion, transcriptReloadKey])
 
   async function handleGenerate() {
-    if (!aiAvailable || !consentEnabled) return
+    if (!aiAvailable || !consentEnabled || transcript?.status !== 'ready') return
 
     // Cancel any existing in-flight request (handles rapid re-invocation)
     if (abortControllerRef.current) {
@@ -98,12 +151,11 @@ export function AISummaryPanel({ transcriptSrc }: AISummaryPanelProps) {
     const startTime = Date.now()
 
     try {
-      // Fetch and parse transcript (with cancellation support)
-      const transcript = await fetchAndParseTranscript(transcriptSrc, controller.signal)
+      const resolvedModel = resolveFeatureModel('videoSummary')
 
       // Stream summary generation with cancellation support
       let fullText = ''
-      const generator = generateVideoSummary(transcript, controller.signal)
+      const generator = generateVideoSummary(transcript.text, controller.signal)
 
       for await (const chunk of generator) {
         fullText += chunk
@@ -112,12 +164,36 @@ export function AISummaryPanel({ transcriptSrc }: AISummaryPanelProps) {
       }
 
       // Display final word count (AC1 target: 100-300 words, prompt-enforced only)
-      const finalWordCount = fullText.split(/\s+/).filter(w => w.length > 0).length
-      setWordCount(finalWordCount)
+      const completedText = fullText.trim()
+      if (!completedText) throw new Error('The AI provider returned an empty summary.')
 
+      const finalWordCount = completedText.split(/\s+/).filter(w => w.length > 0).length
+      const now = new Date().toISOString()
+      const existing = await db.lessonSummaries.get([courseId, lessonId])
+
+      await db.lessonSummaries.put({
+        courseId,
+        lessonId,
+        text: completedText,
+        wordCount: finalWordCount,
+        transcriptFingerprint: transcript.fingerprint,
+        provider: resolvedModel.provider,
+        model: resolvedModel.model,
+        createdAt: existing?.createdAt ?? now,
+        updatedAt: now,
+      })
+
+      if (controller.signal.aborted) return
+
+      setSummaryText(completedText)
+      setWordCount(finalWordCount)
+      setIsOutdated(false)
       setState('completed')
 
-      trackAIUsage('summary', { durationMs: Date.now() - startTime }).catch(() => {
+      trackAIUsage('summary', {
+        courseId,
+        durationMs: Date.now() - startTime,
+      }).catch(() => {
         // silent-catch-ok — non-critical analytics tracking
       })
     } catch (error) {
@@ -148,7 +224,60 @@ export function AISummaryPanel({ transcriptSrc }: AISummaryPanelProps) {
       }
 
       setState('error')
+    } finally {
+      if (abortControllerRef.current === controller) abortControllerRef.current = null
     }
+  }
+
+  if (transcript === null) {
+    return (
+      <div className="flex items-center gap-2 p-4 text-sm text-muted-foreground" role="status">
+        <Loader2 className="size-4 motion-safe:animate-spin" aria-hidden="true" />
+        Checking transcript…
+      </div>
+    )
+  }
+
+  if (transcript.status !== 'ready') {
+    const isProcessing = transcript.status === 'processing'
+    const isError = transcript.status === 'error'
+    return (
+      <div className="flex flex-col items-center gap-3 p-8 text-center">
+        {isProcessing ? (
+          <Loader2
+            className="size-9 text-muted-foreground motion-safe:animate-spin"
+            aria-hidden="true"
+          />
+        ) : isError ? (
+          <AlertCircle className="size-9 text-destructive" aria-hidden="true" />
+        ) : (
+          <FileText className="size-9 text-muted-foreground/60" aria-hidden="true" />
+        )}
+        <div className="space-y-1" role={isError ? 'alert' : 'status'}>
+          <p className="text-sm font-medium text-foreground">
+            {isProcessing ? 'Transcript generation is in progress' : 'Transcript required'}
+          </p>
+          <p className="text-sm text-muted-foreground">{transcript.reason}</p>
+        </div>
+        <div className="flex flex-wrap justify-center gap-2">
+          {isError && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setTranscriptReloadKey(key => key + 1)}
+            >
+              <RotateCcw className="size-4" aria-hidden="true" />
+              Check Again
+            </Button>
+          )}
+          {onRequestTranscript && (
+            <Button variant="brand-outline" size="sm" onClick={onRequestTranscript}>
+              {isProcessing ? 'Open Transcript' : 'Generate Transcript First'}
+            </Button>
+          )}
+        </div>
+      </div>
+    )
   }
 
   // Idle state: Show generate button
@@ -177,6 +306,15 @@ export function AISummaryPanel({ transcriptSrc }: AISummaryPanelProps) {
 
     return (
       <div className="p-4 space-y-3">
+        {isOutdated && (
+          <div
+            className="rounded-xl border border-warning/40 bg-warning/10 p-3 text-sm text-foreground"
+            role="status"
+          >
+            The transcript changed since this summary was created. Generate a new summary to keep it
+            accurate.
+          </div>
+        )}
         <p className="text-sm text-muted-foreground">
           Generate an AI-powered summary of this video's content to quickly understand key concepts
           and main takeaways.
@@ -199,8 +337,8 @@ export function AISummaryPanel({ transcriptSrc }: AISummaryPanelProps) {
     return (
       <div className="p-4 space-y-3">
         <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
-          <Loader2 className="size-4 animate-spin text-brand" aria-hidden="true" />
-          Generating summary...
+          <Loader2 className="size-4 text-brand motion-safe:animate-spin" aria-hidden="true" />
+          Generating summary…
         </div>
         {summaryText && (
           <div
@@ -226,7 +364,7 @@ export function AISummaryPanel({ transcriptSrc }: AISummaryPanelProps) {
       >
         <Lock className="size-4 flex-shrink-0 mt-0.5 text-muted-foreground" aria-hidden="true" />
         <p className="text-sm text-muted-foreground">
-          AI features require your consent. Enable <strong>AI Tutor</strong> in{' '}
+          AI features require your consent. Enable <strong>Video Summary</strong> in{' '}
           <a
             href="/settings?section=privacy"
             className="text-brand underline underline-offset-2 hover:text-brand-hover"

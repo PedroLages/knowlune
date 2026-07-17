@@ -20,7 +20,7 @@
  * a single `db.version(CHECKPOINT_VERSION).stores(CHECKPOINT_SCHEMA)` call
  * for fresh installs.
  */
-export const CHECKPOINT_VERSION = 68
+export const CHECKPOINT_VERSION = 69
 
 /**
  * Shared `searchFrecency` index string. Used by both the v53 `.stores()` call
@@ -145,6 +145,8 @@ export const CHECKPOINT_SCHEMA: Record<string, string> = {
   videoStoryboards: 'videoId, courseId',
   // v68 (E133-S01): course content servers — HTTP file servers for course video/PDF access.
   courseServers: 'id, name, url, status, createdAt, updatedAt, userId, [userId+updatedAt]',
+  // v69: locally persisted AI summaries, invalidated by transcript fingerprint.
+  lessonSummaries: '[courseId+lessonId], courseId, lessonId, updatedAt',
 }
 
 // v42 (E109-S01): vocabularyItems table added
@@ -167,3 +169,4 @@ export const CHECKPOINT_SCHEMA: Record<string, string> = {
 //                Local-only (keyed by userId but per-device-cache; not synced).
 // v57 (E95-S05): Credential-off-the-row marker. No schema/index change — see schema.ts comment.
 // v58 (E119-S07): userConsents table for GDPR consent ledger (Art. 6(1)(a)).
+// v69: lessonSummaries table for device-local AI summary persistence.

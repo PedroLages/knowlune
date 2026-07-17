@@ -13,6 +13,7 @@
 
 import { db } from '@/db/schema'
 import type { TranscriptCue, YouTubeCourseChapter } from '@/data/types'
+import { resolveLessonTranscript, type ReadyLessonTranscript } from '@/lib/lessonTranscript'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -50,8 +51,8 @@ const FIXED_WINDOW_SECONDS = 300
 /**
  * Chunk a lesson transcript for quiz generation.
  *
- * Looks up the transcript from `youtubeTranscripts` and chapters from
- * `youtubeChapters`. If chapters exist, splits by chapter boundaries.
+ * Resolves the lesson transcript through the shared transcript service and
+ * looks up matching chapters from `youtubeChapters`. If chapters exist, splits by chapter boundaries.
  * Otherwise falls back to fixed 5-minute time windows.
  *
  * @param lessonId - The videoId of the lesson (YouTube video ID)
@@ -60,15 +61,12 @@ const FIXED_WINDOW_SECONDS = 300
  */
 export async function chunkTranscript(
   lessonId: string,
-  courseId: string
+  courseId: string,
+  resolvedTranscript?: ReadyLessonTranscript
 ): Promise<TranscriptChunk[]> {
-  // Fetch transcript
-  const transcript = await db.youtubeTranscripts
-    .where('[courseId+videoId]')
-    .equals([courseId, lessonId])
-    .first()
+  const transcript = resolvedTranscript ?? (await resolveLessonTranscript(courseId, lessonId))
 
-  if (!transcript || transcript.status !== 'done' || !transcript.cues?.length) {
+  if (transcript.status !== 'ready' || transcript.cues.length === 0) {
     console.warn('[QuizChunker] No valid transcript found for', lessonId)
     return []
   }
@@ -77,7 +75,7 @@ export async function chunkTranscript(
   const chapters = await db.youtubeChapters.where('courseId').equals(courseId).sortBy('order')
 
   // Filter chapters to only those matching this video
-  const videoChapters = chapters.filter(ch => ch.videoId === lessonId)
+  const videoChapters = chapters.filter(ch => ch.videoId === transcript.videoId)
 
   if (videoChapters.length > 0) {
     return chunkByChapters(transcript.cues, videoChapters)

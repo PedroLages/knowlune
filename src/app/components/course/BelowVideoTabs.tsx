@@ -66,6 +66,8 @@ interface BelowVideoTabsProps {
   activeTool?: StudyTool
   /** Called when the learner selects another study tool. */
   onActiveToolChange?: (tool: StudyTool) => void
+  /** Notifies parent controls that transcript-dependent actions can be rechecked. */
+  onTranscriptGenerated?: () => void
 }
 
 export function BelowVideoTabs({
@@ -84,6 +86,7 @@ export function BelowVideoTabs({
   lessonPosition,
   activeTool: controlledActiveTool,
   onActiveToolChange,
+  onTranscriptGenerated,
 }: BelowVideoTabsProps) {
   const capabilities = adapter.getCapabilities()
   const isMobile = useMediaQuery('(max-width: 767px)')
@@ -100,12 +103,12 @@ export function BelowVideoTabs({
     [controlledActiveTool, onActiveToolChange]
   )
 
-  // Transcript version counter — incremented when TranscriptTab generates a new
-  // transcript. Forces BelowVideoTabs to rebuild the blob URL for AISummaryPanel.
+  // Transcript version counter — revalidates persisted summaries after generation.
   const [transcriptVersion, setTranscriptVersion] = useState(0)
   const handleTranscriptGenerated = useCallback(() => {
     setTranscriptVersion(v => v + 1)
-  }, [])
+    onTranscriptGenerated?.()
+  }, [onTranscriptGenerated])
 
   // Reset tab when lesson changes
   useEffect(() => {
@@ -136,43 +139,6 @@ export function BelowVideoTabs({
       }
     }
   }, [hideNotesTab, activeTool, isPdf, capabilities, changeActiveTool])
-
-  // Build transcript blob URL for AISummaryPanel
-  const [transcriptSrc, setTranscriptSrc] = useState<string | null>(null)
-  const transcriptBlobUrlRef = useRef<string | null>(null)
-
-  useEffect(() => {
-    let cancelled = false
-
-    adapter.getTranscript(lessonId).then(text => {
-      if (cancelled || !text) {
-        setTranscriptSrc(null)
-        return
-      }
-
-      if (transcriptBlobUrlRef.current) {
-        URL.revokeObjectURL(transcriptBlobUrlRef.current)
-        transcriptBlobUrlRef.current = null
-      }
-
-      const vttText = text.includes('-->')
-        ? text
-        : `WEBVTT\n\n00:00:00.000 --> 99:59:59.999\n${text}`
-
-      const blob = new Blob([vttText], { type: 'text/vtt' })
-      const url = URL.createObjectURL(blob)
-      transcriptBlobUrlRef.current = url
-      if (!cancelled) setTranscriptSrc(url)
-    })
-
-    return () => {
-      cancelled = true
-      if (transcriptBlobUrlRef.current) {
-        URL.revokeObjectURL(transcriptBlobUrlRef.current)
-        transcriptBlobUrlRef.current = null
-      }
-    }
-  }, [adapter, lessonId, transcriptVersion])
 
   // Fullscreen notes overlay (mobile)
   // Synced with useLessonChromeStore.mobileNotesPanel for dual-state coordination
@@ -325,37 +291,45 @@ export function BelowVideoTabs({
           onValueChange={handleToolChange}
         />
 
-        <TabsList variant="brand-pill" className="hidden sm:flex">
-          <TabsTrigger value="notes" variant="brand-pill" className={cn(hideNotesTab && 'hidden')}>
+        <TabsList
+          variant="brand-pill"
+          className="hidden w-full justify-start overflow-x-auto sm:flex"
+          aria-label="Lesson study tools"
+        >
+          <TabsTrigger
+            value="notes"
+            variant="brand-pill"
+            className={cn('shrink-0', hideNotesTab && 'hidden')}
+          >
             <PencilLine className="size-3.5" aria-hidden="true" />
             Notes
           </TabsTrigger>
           {!isPdf && (
-            <TabsTrigger value="bookmarks" variant="brand-pill">
+            <TabsTrigger value="bookmarks" variant="brand-pill" className="shrink-0">
               <Bookmark className="size-3.5" aria-hidden="true" />
               Bookmarks
             </TabsTrigger>
           )}
           {capabilities.hasTranscript && (
-            <TabsTrigger value="transcript" variant="brand-pill">
+            <TabsTrigger value="transcript" variant="brand-pill" className="shrink-0">
               <FileText className="size-3.5" aria-hidden="true" />
               Transcript
             </TabsTrigger>
           )}
           {capabilities.hasTranscript && (
-            <TabsTrigger value="summary" variant="brand-pill">
+            <TabsTrigger value="summary" variant="brand-pill" className="shrink-0">
               <Sparkles className="size-3.5" aria-hidden="true" />
               AI Summary
             </TabsTrigger>
           )}
           {capabilities.hasPdf && (
-            <TabsTrigger value="materials" variant="brand-pill">
+            <TabsTrigger value="materials" variant="brand-pill" className="shrink-0">
               <FolderOpen className="size-3.5" aria-hidden="true" />
               Materials
             </TabsTrigger>
           )}
           {aiAvailable && (
-            <TabsTrigger value="tutor" variant="brand-pill">
+            <TabsTrigger value="tutor" variant="brand-pill" className="shrink-0">
               <GraduationCap className="size-3.5" aria-hidden="true" />
               Tutor
             </TabsTrigger>
@@ -435,20 +409,20 @@ export function BelowVideoTabs({
         )}
 
         {capabilities.hasTranscript && (
-          <TabsContent value="summary" className="mt-4">
+          <TabsContent
+            value="summary"
+            forceMount
+            className="mt-4 data-[state=inactive]:hidden"
+            aria-hidden={activeTool !== 'summary'}
+          >
             <div className="bg-card rounded-2xl shadow-sm">
-              {transcriptSrc ? (
-                <AISummaryPanel transcriptSrc={transcriptSrc} />
-              ) : (
-                <div className="p-4 text-sm text-muted-foreground">
-                  <div className="flex flex-col items-center gap-3 py-8">
-                    <FileText className="size-10 text-muted-foreground/50" aria-hidden="true" />
-                    <p className="text-center">
-                      No transcript available for AI summary generation.
-                    </p>
-                  </div>
-                </div>
-              )}
+              <AISummaryPanel
+                key={`${courseId}:${lessonId}`}
+                courseId={courseId}
+                lessonId={lessonId}
+                transcriptVersion={transcriptVersion}
+                onRequestTranscript={() => changeActiveTool('transcript')}
+              />
             </div>
           </TabsContent>
         )}
@@ -481,7 +455,7 @@ export function BelowVideoTabs({
       {isNotesFullscreen && (
         <div
           ref={fullscreenOverlayRef}
-          className="fixed inset-0 z-50 bg-background flex flex-col animate-in fade-in slide-in-from-bottom-4 duration-200"
+          className="fixed inset-0 z-50 bg-background flex flex-col motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-4 motion-safe:duration-200"
           role="dialog"
           aria-modal="true"
           aria-label="Notes fullscreen editor"

@@ -14,6 +14,10 @@ import { getQuizGenerationAvailability } from '@/lib/aiConfiguration'
 import { db } from '@/db'
 import type { Quiz } from '@/types/quiz'
 import type { BloomsLevel } from '@/ai/quizPrompts'
+import { resolveLessonTranscript, type ResolvedLessonTranscript } from '@/lib/lessonTranscript'
+import { selectNewestQuiz, sortQuizzesNewestFirst } from '@/lib/quizVersions'
+
+export type QuizTranscriptState = ResolvedLessonTranscript | { status: 'loading'; reason: string }
 
 export interface UseQuizGenerationReturn {
   /** The generated or cached quiz */
@@ -34,6 +38,8 @@ export interface UseQuizGenerationReturn {
   aiAvailable: boolean
   /** Whether availability check is still in progress */
   checkingAvailability: boolean
+  /** Whether the lesson transcript is ready to generate from */
+  transcript: QuizTranscriptState
 }
 
 /** AI availability re-check interval (30 seconds) */
@@ -41,7 +47,8 @@ const HEALTH_CHECK_INTERVAL_MS = 30_000
 
 export function useQuizGeneration(
   lessonId: string | undefined,
-  courseId: string | undefined
+  courseId: string | undefined,
+  transcriptVersion = 0
 ): UseQuizGenerationReturn {
   const [quiz, setQuiz] = useState<Quiz | null>(null)
   const [isGenerating, setIsGenerating] = useState(false)
@@ -50,12 +57,23 @@ export function useQuizGeneration(
   const [allQuizzes, setAllQuizzes] = useState<Quiz[]>([])
   const [aiAvailable, setAiAvailable] = useState(false)
   const [checkingAvailability, setCheckingAvailability] = useState(true)
+  const [transcript, setTranscript] = useState<QuizTranscriptState>({
+    status: 'loading',
+    reason: 'Checking transcript availability…',
+  })
   const abortRef = useRef<AbortController | null>(null)
   const isFirstCheckRef = useRef(true)
 
-  // Check for cached quizzes on mount (load all for this lesson)
+  // Reset lesson-specific state immediately after navigation and load all versions.
   useEffect(() => {
-    if (!lessonId) {
+    abortRef.current?.abort()
+    setQuiz(null)
+    setCachedQuiz(null)
+    setAllQuizzes([])
+    setError(null)
+    setIsGenerating(false)
+
+    if (!lessonId || !courseId) {
       setCachedQuiz(null)
       setAllQuizzes([])
       return
@@ -69,16 +87,11 @@ export function useQuizGeneration(
       .toArray()
       .then(existing => {
         if (ignore) return
-        const quizzes = existing as Quiz[]
+        const quizzes = sortQuizzesNewestFirst(existing as Quiz[])
+        const newest = selectNewestQuiz(quizzes)
         setAllQuizzes(quizzes)
-        if (quizzes.length > 0) {
-          // Use most recent quiz as the active one
-          const sorted = [...quizzes].sort(
-            (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-          )
-          setCachedQuiz(sorted[0])
-          setQuiz(sorted[0])
-        }
+        setCachedQuiz(newest)
+        setQuiz(newest)
       })
       .catch(err => {
         // silent-catch-ok: cache miss is non-critical, falls through to generate
@@ -87,8 +100,28 @@ export function useQuizGeneration(
 
     return () => {
       ignore = true
+      abortRef.current?.abort()
     }
-  }, [lessonId])
+  }, [courseId, lessonId])
+
+  // Quiz generation and transcript UI share the same canonical resolver.
+  useEffect(() => {
+    let ignore = false
+    setTranscript({ status: 'loading', reason: 'Checking transcript availability…' })
+
+    if (!courseId || !lessonId) {
+      setTranscript({ status: 'missing', reason: 'Lesson context is unavailable.' })
+      return
+    }
+
+    void resolveLessonTranscript(courseId, lessonId).then(result => {
+      if (!ignore) setTranscript(result)
+    })
+
+    return () => {
+      ignore = true
+    }
+  }, [courseId, lessonId, transcriptVersion])
 
   // Check AI availability on mount and on interval
   useEffect(() => {
@@ -141,6 +174,13 @@ export function useQuizGeneration(
         return
       }
 
+      if (transcript.status !== 'ready') {
+        const reason = transcript.reason || 'Generate a transcript before creating a quiz.'
+        setError(reason)
+        toast.error(reason)
+        return
+      }
+
       // Abort any in-progress generation
       abortRef.current?.abort()
       const controller = new AbortController()
@@ -165,7 +205,7 @@ export function useQuizGeneration(
             // Refresh all quizzes list
             try {
               const all = await db.quizzes.where('lessonId').equals(lessonId).toArray()
-              setAllQuizzes(all as Quiz[])
+              setAllQuizzes(sortQuizzesNewestFirst(all as Quiz[]))
             } catch {
               // silent-catch-ok: non-critical list refresh
             }
@@ -190,7 +230,7 @@ export function useQuizGeneration(
         }
       }
     },
-    [lessonId, courseId]
+    [lessonId, courseId, transcript]
   )
 
   const generate = useCallback(
@@ -204,14 +244,15 @@ export function useQuizGeneration(
   )
 
   return {
-    quiz,
+    quiz: quiz?.lessonId === lessonId ? quiz : null,
     isGenerating,
     error,
     generate,
     regenerate: regenerateQuiz,
-    cachedQuiz,
-    allQuizzes,
+    cachedQuiz: cachedQuiz?.lessonId === lessonId ? cachedQuiz : null,
+    allQuizzes: allQuizzes.filter(candidate => candidate.lessonId === lessonId),
     aiAvailable,
     checkingAvailability,
+    transcript,
   }
 }

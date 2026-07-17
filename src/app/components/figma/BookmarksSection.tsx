@@ -7,7 +7,7 @@ import { Button } from '@/app/components/ui/button'
 import {
   getAllBookmarks,
   deleteBookmark,
-  addBookmark,
+  restoreBookmark,
   formatBookmarkTimestamp,
 } from '@/lib/bookmarks'
 import { toastWithUndo, toastError } from '@/lib/toastHelpers'
@@ -65,13 +65,8 @@ export function BookmarksSection() {
       toastWithUndo({
         message: `Bookmark at ${formatBookmarkTimestamp(bookmark.timestamp)} deleted`,
         onUndo: async () => {
-          await addBookmark(
-            bookmarkBackup.courseId,
-            bookmarkBackup.lessonId,
-            bookmarkBackup.timestamp,
-            bookmarkBackup.label
-          )
-          setBookmarks(prev => [...prev, bookmarkBackup])
+          const restored = await restoreBookmark(bookmarkBackup)
+          setBookmarks(prev => [...prev, restored])
           toast.success('Bookmark restored')
         },
         duration: 5000,
@@ -89,7 +84,7 @@ export function BookmarksSection() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-16 text-muted-foreground text-sm">
-        Loading bookmarks...
+        Loading bookmarks…
       </div>
     )
   }
@@ -145,7 +140,7 @@ export function BookmarksSection() {
                 <p className="text-sm font-medium truncate">{lessonTitle}</p>
                 <p className="text-xs text-muted-foreground truncate">
                   {courseTitle} &middot;{' '}
-                  {new Date(bookmark.createdAt).toLocaleDateString('en-US', {
+                  {new Date(bookmark.createdAt).toLocaleDateString(undefined, {
                     month: 'short',
                     day: 'numeric',
                     year: 'numeric',

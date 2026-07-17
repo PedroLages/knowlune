@@ -17,6 +17,7 @@ import { getQuizPreferences } from '@/lib/quizPreferences'
 import { logStudyAction } from '@/lib/studyLog'
 import { useContentProgressStore } from '@/stores/useContentProgressStore'
 import { syncableWrite, type SyncableRecord } from '@/lib/sync/syncableWrite'
+import { selectNewestQuiz } from '@/lib/quizVersions'
 
 interface QuizState {
   currentQuiz: Quiz | null
@@ -62,7 +63,9 @@ export const useQuizStore = create<QuizState>()(
         set({ isLoading: true, error: null })
 
         try {
-          const quiz = await db.quizzes.where('lessonId').equals(lessonId).first()
+          const quiz = selectNewestQuiz(
+            await db.quizzes.where('lessonId').equals(lessonId).toArray()
+          )
           if (!quiz) {
             set({
               currentQuiz: null,

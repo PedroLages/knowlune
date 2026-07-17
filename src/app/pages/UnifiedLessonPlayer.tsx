@@ -239,8 +239,10 @@ export function UnifiedLessonPlayer() {
   // Quiz availability: check if a quiz exists for this lesson
   const { hasQuiz } = useHasQuiz(lessonId)
 
-  // Quiz generation: hook for generating quizzes from transcripts
-  const quizGen = useQuizGeneration(lessonId, courseId)
+  const [transcriptVersion, setTranscriptVersion] = useState(0)
+
+  // Quiz generation: uses the same transcript resolver as Transcript and AI Summary.
+  const quizGen = useQuizGeneration(lessonId, courseId, transcriptVersion)
 
   // Progress store for marking lessons complete on video end
   const setItemStatus = useContentProgressStore(s => s.setItemStatus)
@@ -552,7 +554,7 @@ export function UnifiedLessonPlayer() {
     : 'not-started'
 
   // "Take Quiz" button — visible when quiz exists and adapter supports it
-  const showQuizButton = capabilities.supportsQuiz && hasQuiz
+  const showQuizButton = capabilities.supportsQuiz && (hasQuiz || quizGen.quiz !== null)
   const quizButton = showQuizButton ? (
     <div className="mt-4">
       <Button
@@ -685,6 +687,8 @@ export function UnifiedLessonPlayer() {
           cachedQuiz={quizGen.cachedQuiz}
           onGenerate={quizGen.generate}
           onRegenerate={quizGen.regenerate}
+          transcript={quizGen.transcript}
+          onRequestTranscript={() => setActiveTool('transcript')}
         />
         {quizGen.quiz && (
           <div className="mt-2">
@@ -714,6 +718,7 @@ export function UnifiedLessonPlayer() {
         }
         activeTool={activeTool}
         onActiveToolChange={setActiveTool}
+        onTranscriptGenerated={() => setTranscriptVersion(version => version + 1)}
       />
     </>
   )
