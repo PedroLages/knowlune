@@ -1,7 +1,7 @@
 /**
- * Dexie Migration Checkpoint — v68
+ * Dexie Migration Checkpoint — v69
  *
- * This file provides a frozen snapshot of the complete IndexedDB schema at version 68.
+ * This file provides a frozen snapshot of the complete IndexedDB schema at version 69.
  * Fresh installs skip the incremental version declarations and create the full
  * schema in a single step. Existing users at lower versions still run incremental
  * migrations through the legacy version chain in schema.ts.
@@ -20,7 +20,7 @@
  * a single `db.version(CHECKPOINT_VERSION).stores(CHECKPOINT_SCHEMA)` call
  * for fresh installs.
  */
-export const CHECKPOINT_VERSION = 68
+export const CHECKPOINT_VERSION = 69
 
 /**
  * Shared `searchFrecency` index string. Used by both the v53 `.stores()` call
@@ -31,7 +31,7 @@ export const SEARCH_FRECENCY_INDEXES = '[entityType+entityId], entityType, lastO
 
 /**
  * Complete schema snapshot at CHECKPOINT_VERSION.
- * This is the result of applying all migrations v1–v68 on a fresh database.
+ * This is the result of applying all migrations v1–v69 on a fresh database.
  *
  * IMPORTANT: This must exactly match the schema produced by running all
  * incremental migrations. The unit test `schema-checkpoint.test.ts`
@@ -67,6 +67,8 @@ export const SEARCH_FRECENCY_INDEXES = '[entityType+entityId], entityType, lastO
  *                No schema/index change — the TypeScript types drop `auth.password` / `apiKey`,
  *                and the post-boot `migrateCredentialsToVault()` clears legacy values from Dexie
  *                once the user authenticates.
+ * v68 (E133-S01): courseServers table for HTTP course content servers.
+ * v69: lessonSummaries table for device-local AI summary persistence.
  *
  * Versions beyond this checkpoint (applied incrementally in schema.ts):
  *   (none)
@@ -145,6 +147,8 @@ export const CHECKPOINT_SCHEMA: Record<string, string> = {
   videoStoryboards: 'videoId, courseId',
   // v68 (E133-S01): course content servers — HTTP file servers for course video/PDF access.
   courseServers: 'id, name, url, status, createdAt, updatedAt, userId, [userId+updatedAt]',
+  // v69: locally persisted AI summaries, invalidated by transcript fingerprint.
+  lessonSummaries: '[courseId+lessonId], courseId, lessonId, updatedAt',
 }
 
 // v42 (E109-S01): vocabularyItems table added
@@ -167,3 +171,4 @@ export const CHECKPOINT_SCHEMA: Record<string, string> = {
 //                Local-only (keyed by userId but per-device-cache; not synced).
 // v57 (E95-S05): Credential-off-the-row marker. No schema/index change — see schema.ts comment.
 // v58 (E119-S07): userConsents table for GDPR consent ledger (Art. 6(1)(a)).
+// v69: lessonSummaries table for device-local AI summary persistence.

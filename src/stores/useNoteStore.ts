@@ -134,6 +134,7 @@ export const useNoteStore = create<NoteState>((set, get) => ({
       // Rollback on failure
       set({ notes: oldNotes, error: 'Failed to save note' })
       console.error('[NoteStore] Failed to persist note:', error)
+      throw error
     }
   },
 
@@ -160,6 +161,7 @@ export const useNoteStore = create<NoteState>((set, get) => ({
         error: 'Failed to add note',
       })
       console.error('[NoteStore] Failed to persist new note:', error)
+      throw error
     }
   },
 

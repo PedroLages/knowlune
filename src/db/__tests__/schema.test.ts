@@ -83,6 +83,7 @@ describe('ElearningDB schema', () => {
       'learnerModels',
       'learningPathEntries',
       'learningPaths',
+      'lessonSummaries',
       'notes',
       'notificationPreferences',
       'notifications',
@@ -113,8 +114,28 @@ describe('ElearningDB schema', () => {
     ])
   })
 
-  it('should be at version 68 (course content servers)', () => {
-    expect(db.verno).toBe(68)
+  it('should be at version 69 (local AI summary persistence)', () => {
+    expect(db.verno).toBe(69)
+  })
+
+  it('should persist lesson summaries by course and lesson', async () => {
+    const summary = {
+      courseId: 'course-summary',
+      lessonId: 'lesson-summary',
+      text: 'A concise lesson summary.',
+      wordCount: 4,
+      transcriptFingerprint: 'fingerprint-1',
+      provider: 'openai',
+      model: 'gpt-test',
+      createdAt: '2026-01-01T00:00:00.000Z',
+      updatedAt: '2026-01-01T00:00:00.000Z',
+    }
+
+    await db.lessonSummaries.put(summary)
+
+    await expect(db.lessonSummaries.get(['course-summary', 'lesson-summary'])).resolves.toEqual(
+      summary
+    )
   })
 
   it('should have searchFrecency table with compound primary key [entityType+entityId] (v53)', () => {

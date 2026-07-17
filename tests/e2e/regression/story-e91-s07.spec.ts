@@ -7,9 +7,9 @@
  *   - AC3: New bookmark appears in correct chronological position (optimistic UI)
  *   - AC6: "Add Bookmark" button hidden for PDF lessons
  */
-import { test, expect } from '../support/fixtures'
-import { createImportedCourse } from '../support/fixtures/factories/imported-course-factory'
-import { FIXED_DATE } from '../utils/test-time'
+import { test, expect } from '../../support/fixtures'
+import { createImportedCourse } from '../../support/fixtures/factories/imported-course-factory'
+import { FIXED_DATE } from '../../utils/test-time'
 import type { Page } from '@playwright/test'
 
 // ---------------------------------------------------------------------------
@@ -178,10 +178,8 @@ test.describe('E91-S07: Bookmark Seek + Add in Side Panel', () => {
 
     await page.goto('/courses/course-bookmark-test/lessons/pdf-lesson-1')
 
-    // Switch to bookmarks tab
-    await page.getByRole('tab', { name: 'Bookmarks' }).click()
-
-    // Add Bookmark button should NOT be visible
+    // Bookmark controls are unavailable for PDF lessons.
+    await expect(page.getByRole('tab', { name: 'Bookmarks' })).toHaveCount(0)
     const addBtn = page.getByTestId('add-bookmark-button')
     await expect(addBtn).toHaveCount(0)
   })

@@ -350,6 +350,23 @@ Real content`
         await expect(collectGenerator(gen)).rejects.toThrow('The operation was aborted.')
       })
 
+      it('should stop a stream that never settles when the timeout expires', async () => {
+        Object.assign(window, { __AI_SUMMARY_TIMEOUT__: 50 })
+        mockStreamCompletion.mockImplementation(async function* () {
+          await new Promise(() => undefined)
+          yield { content: 'unreachable' }
+        })
+
+        const result = collectGenerator(generateVideoSummary('transcript'))
+        const assertion = expect(result).rejects.toThrow(
+          'Summary generation timed out. Please try again.'
+        )
+        await vi.advanceTimersByTimeAsync(50)
+
+        await assertion
+        delete (window as unknown as Record<string, unknown>).__AI_SUMMARY_TIMEOUT__
+      })
+
       it('should clear timeout after successful completion', async () => {
         const clearTimeoutSpy = vi.spyOn(globalThis, 'clearTimeout')
         mockStreamCompletion.mockImplementation(() => createMockStream(['done']))

@@ -28,8 +28,8 @@ function extractSchema(db: Dexie): Record<string, string> {
 }
 
 describe('Dexie migration checkpoint', () => {
-  it('CHECKPOINT_VERSION should be 68', () => {
-    expect(CHECKPOINT_VERSION).toBe(68)
+  it('CHECKPOINT_VERSION should be 69', () => {
+    expect(CHECKPOINT_VERSION).toBe(69)
   })
 
   it('CHECKPOINT_SCHEMA should define all expected tables', () => {
@@ -53,6 +53,7 @@ describe('Dexie migration checkpoint', () => {
     // downloads added in v64 (offline downloads)
     // videoStoryboards added in v65 (scrub-preview storyboard sprite sheets)
     // courseServers added in v68 (HTTP course content servers)
+    // lessonSummaries added in v69 (device-local AI summary persistence)
     const expectedTables = [
       'absCollections',
       'absSeries',
@@ -86,6 +87,7 @@ describe('Dexie migration checkpoint', () => {
       'learnerModels',
       'learningPathEntries',
       'learningPaths',
+      'lessonSummaries',
       'notes',
       'notificationPreferences',
       'notifications',
@@ -118,7 +120,7 @@ describe('Dexie migration checkpoint', () => {
   })
 
   it('checkpoint-created DB should have identical schema to migration-created DB', async () => {
-    // 1. Create DB via full migration chain (all 27 versions)
+    // 1. Create DB via the full migration chain
     const { declareLegacyMigrations } = await import('../schema')
 
     const migrationDb = new Dexie(MIGRATION_DB_NAME)

@@ -1,6 +1,8 @@
 import { db } from '@/db/schema'
 import type { VideoBookmark } from '@/data/types'
 import { formatTimestamp } from '@/lib/format'
+import { persistWithRetry } from '@/lib/persistWithRetry'
+import { syncableWrite, type SyncableRecord } from '@/lib/sync/syncableWrite'
 
 const LEGACY_STORAGE_KEY = 'video-bookmarks'
 
@@ -12,8 +14,9 @@ export async function addBookmark(
   lessonId: string,
   timestamp: number,
   label?: string
-): Promise<string> {
+): Promise<VideoBookmark> {
   const defaultLabel = formatTimestamp(timestamp)
+  const now = new Date().toISOString()
 
   const bookmark: VideoBookmark = {
     id: crypto.randomUUID(),
@@ -21,11 +24,23 @@ export async function addBookmark(
     lessonId,
     timestamp: Math.floor(timestamp),
     label: label || defaultLabel,
-    createdAt: new Date().toISOString(),
+    createdAt: now,
+    updatedAt: now,
   }
 
-  await db.bookmarks.add(bookmark)
-  return bookmark.id
+  await persistWithRetry(() =>
+    syncableWrite('bookmarks', 'add', bookmark as unknown as SyncableRecord)
+  )
+  return (await db.bookmarks.get(bookmark.id)) ?? bookmark
+}
+
+/** Restore a deleted bookmark without changing its identity or creation time. */
+export async function restoreBookmark(bookmark: VideoBookmark): Promise<VideoBookmark> {
+  const restored: VideoBookmark = { ...bookmark, updatedAt: new Date().toISOString() }
+  await persistWithRetry(() =>
+    syncableWrite('bookmarks', 'put', restored as unknown as SyncableRecord)
+  )
+  return (await db.bookmarks.get(restored.id)) ?? restored
 }
 
 /**
@@ -51,15 +66,19 @@ export async function getCourseBookmarks(courseId: string): Promise<VideoBookmar
  * Update bookmark label
  */
 export async function updateBookmarkLabel(bookmarkId: string, label: string): Promise<boolean> {
-  const updated = await db.bookmarks.update(bookmarkId, { label })
-  return updated === 1
+  const bookmark = await db.bookmarks.get(bookmarkId)
+  if (!bookmark) return false
+  await persistWithRetry(() =>
+    syncableWrite('bookmarks', 'put', { ...bookmark, label } as unknown as SyncableRecord)
+  )
+  return true
 }
 
 /**
  * Delete a bookmark
  */
 export async function deleteBookmark(bookmarkId: string): Promise<void> {
-  await db.bookmarks.delete(bookmarkId)
+  await persistWithRetry(() => syncableWrite('bookmarks', 'delete', bookmarkId))
 }
 
 /**

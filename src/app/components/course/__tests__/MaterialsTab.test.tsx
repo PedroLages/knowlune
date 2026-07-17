@@ -8,7 +8,7 @@
  * - "Show all" fallback
  * - Document count display
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { afterEach, describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router'
@@ -36,7 +36,11 @@ vi.mock('@/db/schema', () => ({
 
 // Mock PdfViewer to avoid pulling in pdf.js in tests
 vi.mock('@/app/components/figma/PdfViewer', () => ({
-  PdfViewer: ({ title }: { title?: string }) => <div data-testid="pdf-viewer">{title}</div>,
+  PdfViewer: ({ title, src }: { title?: string; src: string }) => (
+    <div data-testid="pdf-viewer" data-src={src}>
+      {title}
+    </div>
+  ),
 }))
 
 // Mock courseAdapter — keep revokeObjectUrl mock but let real types through
@@ -190,6 +194,12 @@ describe('MaterialsTab', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockToArray.mockResolvedValue(mockPdfs)
+    vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:materials-pdf')
+    vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined)
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
   })
 
   it('renders the materials tab with lesson-scoped materials', async () => {
@@ -332,5 +342,59 @@ describe('MaterialsTab', () => {
     })
     // Ensure it does NOT say "1 pages"
     expect(screen.queryByText('1 pages')).not.toBeInTheDocument()
+  })
+
+  it('opens server-backed PDFs without creating an object URL', async () => {
+    const user = userEvent.setup()
+    mockToArray.mockResolvedValue([
+      { ...mockPdfs[0], fileHandle: null, serverUrl: 'https://courses.example/lesson.pdf' },
+    ])
+    renderMaterials('video-1')
+
+    await user.click(await screen.findByText('01-Chapter1'))
+
+    expect(await screen.findByTestId('pdf-viewer')).toHaveAttribute(
+      'data-src',
+      'https://courses.example/lesson.pdf'
+    )
+    expect(URL.createObjectURL).not.toHaveBeenCalled()
+  })
+
+  it('opens stored PDF blobs and releases their object URLs', async () => {
+    const user = userEvent.setup()
+    mockToArray.mockResolvedValue([
+      {
+        ...mockPdfs[0],
+        fileHandle: null,
+        fileBlob: new Blob(['pdf'], { type: 'application/pdf' }),
+      },
+    ])
+    const { unmount } = renderMaterials('video-1')
+
+    await user.click(await screen.findByText('01-Chapter1'))
+    expect(await screen.findByTestId('pdf-viewer')).toHaveAttribute(
+      'data-src',
+      'blob:materials-pdf'
+    )
+
+    unmount()
+    expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:materials-pdf')
+  })
+
+  it('loads the PDF immediately after permission is granted', async () => {
+    const user = userEvent.setup()
+    const fileHandle = {
+      queryPermission: vi.fn().mockResolvedValue('prompt'),
+      requestPermission: vi.fn().mockResolvedValueOnce('denied').mockResolvedValueOnce('granted'),
+      getFile: vi.fn().mockResolvedValue(new File(['pdf'], '01-Chapter1.pdf')),
+    } as unknown as FileSystemFileHandle
+    mockToArray.mockResolvedValue([{ ...mockPdfs[0], fileHandle }])
+    renderMaterials('video-1')
+
+    await user.click(await screen.findByText('01-Chapter1'))
+    await user.click(await screen.findByRole('button', { name: 'Grant Permission' }))
+
+    expect(await screen.findByTestId('pdf-viewer')).toBeInTheDocument()
+    expect(fileHandle.getFile).toHaveBeenCalledTimes(1)
   })
 })

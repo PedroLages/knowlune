@@ -22,6 +22,7 @@ const {
   mockAssertAIFeatureConsent,
   mockGetLLMClient,
   mockIsFeatureEnabled,
+  mockResolveLessonTranscript,
 } = vi.hoisted(() => ({
   mockTranscriptFirst: vi.fn(),
   mockQuizzesWhere: vi.fn(),
@@ -39,6 +40,7 @@ const {
   mockAssertAIFeatureConsent: vi.fn(async () => {}),
   mockGetLLMClient: vi.fn(),
   mockIsFeatureEnabled: vi.fn(() => true),
+  mockResolveLessonTranscript: vi.fn(),
 }))
 
 vi.mock('@/lib/aiConfiguration', () => ({
@@ -55,6 +57,10 @@ vi.mock('@/ai/llm/factory', () => ({
 
 vi.mock('@/lib/sync/syncableWrite', () => ({
   syncableWrite: mockSyncableWrite,
+}))
+
+vi.mock('@/lib/lessonTranscript', () => ({
+  resolveLessonTranscript: mockResolveLessonTranscript,
 }))
 
 vi.mock('@/db/schema', () => ({
@@ -120,6 +126,14 @@ function resetMockDefaults() {
   }))
   mockStreamCompletion.mockReset()
   mockIsFeatureEnabled.mockReturnValue(true)
+  mockResolveLessonTranscript.mockResolvedValue({
+    status: 'ready',
+    text: 'A default transcript for setup and consent checks.',
+    cues: [{ startTime: 0, endTime: 10, text: 'A default transcript.' }],
+    fingerprint: '0'.repeat(64),
+    source: 'youtube',
+    videoId: 'vid1',
+  })
 }
 
 function configureAIProvider(provider: 'anthropic' | 'ollama' = 'anthropic') {
@@ -152,10 +166,13 @@ function mockTranscript(
       text: words.slice(i, i + 5).join(' '),
     })
   }
-  mockTranscriptFirst.mockResolvedValue({
-    status: 'done',
+  mockResolveLessonTranscript.mockResolvedValue({
+    status: 'ready',
+    text: fullText,
     cues,
-    fullText,
+    fingerprint: '0'.repeat(64),
+    source: 'youtube',
+    videoId: 'vid1',
   })
 }
 
@@ -275,7 +292,10 @@ describe('generateQuizForLesson', () => {
 
   it('returns error when no transcript found', async () => {
     configureAIProvider('anthropic')
-    mockTranscriptFirst.mockResolvedValue(null)
+    mockResolveLessonTranscript.mockResolvedValue({
+      status: 'missing',
+      reason: 'No transcript is available for this lesson.',
+    })
 
     const result = await generateQuizForLesson('vid1', 'course1')
     expect(result.quiz).toBeNull()

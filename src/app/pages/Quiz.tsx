@@ -28,6 +28,7 @@ import { ReviewSummary } from '@/app/components/quiz/ReviewSummary'
 import { Skeleton } from '@/app/components/ui/skeleton'
 import { dispatchFocusRequest, dispatchFocusRelease } from '@/lib/focusModeEvents'
 import { getSettings } from '@/lib/settings'
+import { selectNewestQuiz } from '@/lib/quizVersions'
 import {
   AlertDialog,
   AlertDialogContent,
@@ -145,7 +146,9 @@ export function Quiz() {
     setHasCompletedBefore(false)
     ;(async () => {
       try {
-        const found = await db.quizzes.where('lessonId').equals(lessonId).first()
+        const found = selectNewestQuiz(
+          await db.quizzes.where('lessonId').equals(lessonId).toArray()
+        )
         if (ignore) return
         if (!found) {
           setFetchState('error')

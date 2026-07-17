@@ -32,6 +32,23 @@ vi.mock('@/db/schema', () => ({
   },
 }))
 
+vi.mock('@/lib/lessonTranscript', () => ({
+  resolveLessonTranscript: async () => {
+    const transcript = await mockTranscriptFirst()
+    if (!transcript || transcript.status !== 'done' || !transcript.cues?.length) {
+      return { status: 'missing', reason: 'No transcript is available for this lesson.' }
+    }
+    return {
+      status: 'ready',
+      text: transcript.fullText,
+      cues: transcript.cues,
+      fingerprint: 'transcript-hash',
+      source: 'youtube',
+      videoId: 'vid1',
+    }
+  },
+}))
+
 import { chunkTranscript } from '../quizChunker'
 
 // --- Test Helpers ---

@@ -15,16 +15,19 @@ export function useHasQuiz(lessonId: string | undefined): {
 } {
   const [hasQuiz, setHasQuiz] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [checkedLessonId, setCheckedLessonId] = useState<string | undefined>()
 
   useEffect(() => {
     if (!lessonId) {
       setHasQuiz(false)
+      setCheckedLessonId(undefined)
       setLoading(false)
       return
     }
 
     let ignore = false
     setLoading(true)
+    setCheckedLessonId(undefined)
 
     // silent-catch-ok: background data check, graceful degradation to no quiz
     db.quizzes
@@ -34,6 +37,7 @@ export function useHasQuiz(lessonId: string | undefined): {
       .then(count => {
         if (!ignore) {
           setHasQuiz(count > 0)
+          setCheckedLessonId(lessonId)
           setLoading(false)
         }
       })
@@ -41,6 +45,7 @@ export function useHasQuiz(lessonId: string | undefined): {
         console.error('[useHasQuiz] Failed to check quiz existence:', err)
         if (!ignore) {
           setHasQuiz(false)
+          setCheckedLessonId(lessonId)
           setLoading(false)
         }
       })
@@ -50,5 +55,9 @@ export function useHasQuiz(lessonId: string | undefined): {
     }
   }, [lessonId])
 
-  return { hasQuiz, loading }
+  const resultMatchesLesson = checkedLessonId === lessonId
+  return {
+    hasQuiz: resultMatchesLesson ? hasQuiz : false,
+    loading: lessonId ? !resultMatchesLesson || loading : false,
+  }
 }

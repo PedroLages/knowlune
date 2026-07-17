@@ -9,7 +9,14 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { FileText, ChevronRight, Loader2, ShieldAlert } from 'lucide-react'
+import {
+  FileText,
+  ChevronRight,
+  Loader2,
+  ShieldAlert,
+  FolderSearch,
+  FileWarning,
+} from 'lucide-react'
 import { cn } from '@/app/components/ui/utils'
 import { toast } from 'sonner'
 import { Badge } from '@/app/components/ui/badge'
@@ -23,8 +30,8 @@ import { EmptyState } from '@/app/components/EmptyState'
 import { Skeleton } from '@/app/components/ui/skeleton'
 import { PdfViewer } from '@/app/components/figma/PdfViewer'
 import { db } from '@/db/schema'
-import { syncableWrite } from '@/lib/sync/syncableWrite'
-import { revokeObjectUrl } from '@/lib/courseAdapter'
+import { syncableWrite, type SyncableRecord } from '@/lib/sync/syncableWrite'
+import { releasePdfSource, resolvePdfSource, type ReadyPdfSource } from '@/lib/pdfSource'
 import type { ImportedPdf } from '@/data/types'
 
 import type { CourseAdapter } from '@/lib/courseAdapter'
@@ -47,20 +54,53 @@ interface PdfSectionProps {
   isOpen: boolean
   /** Called when the section wants to open/close */
   onToggle: (pdfId: string, open: boolean) => void
+  onPdfUpdate: (pdf: ImportedPdf) => void
 }
 
-function PdfSection({ pdf, courseId, isOpen, onToggle }: PdfSectionProps) {
-  const [blobUrl, setBlobUrl] = useState<string | null>(null)
+function PdfSection({ pdf, courseId, isOpen, onToggle, onPdfUpdate }: PdfSectionProps) {
+  const [source, setSource] = useState<ReadyPdfSource | null>(null)
   const [blobLoading, setBlobLoading] = useState(false)
   const [fileError, setFileError] = useState<'permission-denied' | 'not-found' | null>(null)
   const [permissionPending, setPermissionPending] = useState(false)
   const [savedPage, setSavedPage] = useState<number | undefined>(undefined)
   const pageRestored = useRef(false)
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const sourceRef = useRef<ReadyPdfSource | null>(null)
+  const sourceRequestRef = useRef(0)
 
   const displayName = pdf.filename.replace(/\.pdf$/i, '')
 
-  // Handle trigger click — resolve blob URL in user-gesture context so
+  const replaceSource = useCallback((nextSource: ReadyPdfSource | null) => {
+    releasePdfSource(sourceRef.current)
+    sourceRef.current = nextSource
+    setSource(nextSource)
+  }, [])
+
+  const loadSource = useCallback(
+    async (targetPdf: ImportedPdf, requestPermission: boolean) => {
+      const requestId = ++sourceRequestRef.current
+      setBlobLoading(true)
+      setFileError(null)
+
+      const result = await resolvePdfSource(targetPdf, { requestPermission })
+      if (requestId !== sourceRequestRef.current) {
+        if (result.status === 'ready') releasePdfSource(result)
+        return result
+      }
+
+      if (result.status === 'ready') {
+        replaceSource(result)
+      } else {
+        replaceSource(null)
+        setFileError(result.status)
+      }
+      setBlobLoading(false)
+      return result
+    },
+    [replaceSource]
+  )
+
+  // Handle trigger click — resolve file handles in user-gesture context so
   // the File System Access API's requestPermission() is allowed by the browser.
   // We call e.preventDefault() when opening to stop Radix from toggling, then
   // manually set isOpen after permission + blob URL are resolved.
@@ -72,8 +112,8 @@ function PdfSection({ pdf, courseId, isOpen, onToggle }: PdfSectionProps) {
         return
       }
 
-      // Re-opening with blob already resolved
-      if (blobUrl) {
+      // Re-opening with a source already resolved
+      if (source) {
         onToggle(pdf.id, true)
         return
       }
@@ -81,44 +121,20 @@ function PdfSection({ pdf, courseId, isOpen, onToggle }: PdfSectionProps) {
       // Opening for the first time — intercept Radix toggle
       e.preventDefault()
 
-      if (!pdf.fileHandle) {
-        setFileError('not-found')
-        onToggle(pdf.id, true)
-        return
-      }
-
-      setBlobLoading(true)
       onToggle(pdf.id, true)
-
-      try {
-        const permission = await pdf.fileHandle.queryPermission({ mode: 'read' })
-        if (permission !== 'granted') {
-          const result = await pdf.fileHandle.requestPermission({ mode: 'read' })
-          if (result !== 'granted') {
-            setFileError('permission-denied')
-            setBlobLoading(false)
-            return
-          }
-        }
-        const file = await pdf.fileHandle.getFile()
-        const url = URL.createObjectURL(file)
-        setBlobUrl(url)
-        setBlobLoading(false)
-      } catch {
-        // silent-catch-ok — error surfaced via fileError state (shows "not found" UI)
-        setFileError('not-found')
-        setBlobLoading(false)
-      }
+      await loadSource(pdf, true)
     },
-    [isOpen, blobUrl, pdf.fileHandle]
+    [isOpen, source, pdf, onToggle, loadSource]
   )
 
-  // Revoke blob URL on unmount
+  // Release object URLs and invalidate pending source requests on unmount.
   useEffect(() => {
     return () => {
-      if (blobUrl) revokeObjectUrl(blobUrl)
+      sourceRequestRef.current += 1
+      releasePdfSource(sourceRef.current)
+      sourceRef.current = null
     }
-  }, [blobUrl])
+  }, [])
 
   // Restore saved page from progress table
   useEffect(() => {
@@ -187,11 +203,8 @@ function PdfSection({ pdf, courseId, isOpen, onToggle }: PdfSectionProps) {
     if (!pdf.fileHandle) return
     setPermissionPending(true)
     try {
-      const result = await pdf.fileHandle.requestPermission({ mode: 'read' })
-      if (result === 'granted') {
-        setFileError(null)
-        setBlobUrl(null)
-        setBlobLoading(false)
+      const result = await loadSource(pdf, true)
+      if (result.status === 'ready') {
         toast.success('Permission granted')
       } else {
         toast.error('Permission was denied')
@@ -201,7 +214,38 @@ function PdfSection({ pdf, courseId, isOpen, onToggle }: PdfSectionProps) {
     } finally {
       setPermissionPending(false)
     }
-  }, [pdf.fileHandle])
+  }, [pdf, loadSource])
+
+  const supportsFilePicker = 'showOpenFilePicker' in window
+  const handleLocateFile = useCallback(async () => {
+    try {
+      const [fileHandle] = await window.showOpenFilePicker({
+        types: [
+          {
+            description: 'PDF files',
+            accept: { 'application/pdf': ['.pdf'] },
+          },
+        ],
+        multiple: false,
+      })
+      await fileHandle.getFile()
+
+      const updatedPdf: ImportedPdf = {
+        ...pdf,
+        fileHandle,
+        fileBlob: undefined,
+        serverUrl: undefined,
+      }
+      await syncableWrite('importedPdfs', 'put', updatedPdf as unknown as SyncableRecord)
+      onPdfUpdate(updatedPdf)
+
+      const result = await loadSource(updatedPdf, false)
+      if (result.status === 'ready') toast.success(`Located: ${fileHandle.name}`)
+    } catch (error) {
+      if (error instanceof DOMException && error.name === 'AbortError') return
+      toast.error('Could not access the selected PDF')
+    }
+  }, [pdf, onPdfUpdate, loadSource])
 
   return (
     <Collapsible
@@ -217,7 +261,7 @@ function PdfSection({ pdf, courseId, isOpen, onToggle }: PdfSectionProps) {
         >
           <ChevronRight
             className={cn(
-              'size-4 shrink-0 text-muted-foreground transition-transform duration-200',
+              'size-4 shrink-0 text-muted-foreground transition-transform duration-200 motion-reduce:transition-none',
               isOpen && 'rotate-90'
             )}
             aria-hidden="true"
@@ -241,7 +285,9 @@ function PdfSection({ pdf, courseId, isOpen, onToggle }: PdfSectionProps) {
                 className="size-6 text-muted-foreground motion-safe:animate-spin"
                 aria-hidden="true"
               />
-              <p className="text-sm text-muted-foreground">Loading PDF...</p>
+              <p className="text-sm text-muted-foreground" role="status">
+                Loading PDF…
+              </p>
             </div>
           )}
 
@@ -256,8 +302,14 @@ function PdfSection({ pdf, courseId, isOpen, onToggle }: PdfSectionProps) {
                 size="sm"
                 disabled={permissionPending}
               >
-                {permissionPending ? 'Requesting...' : 'Grant Permission'}
+                {permissionPending ? 'Requesting…' : 'Grant Permission'}
               </Button>
+              {supportsFilePicker && (
+                <Button onClick={handleLocateFile} variant="outline" size="sm">
+                  <FolderSearch className="size-4" aria-hidden="true" />
+                  Locate File
+                </Button>
+              )}
             </div>
           )}
 
@@ -266,13 +318,19 @@ function PdfSection({ pdf, courseId, isOpen, onToggle }: PdfSectionProps) {
             <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-border bg-muted p-6 text-center">
               <FileText className="size-8 text-muted-foreground" aria-hidden="true" />
               <p className="text-sm text-muted-foreground">PDF file not found or inaccessible.</p>
+              {supportsFilePicker && (
+                <Button onClick={handleLocateFile} variant="brand" size="sm">
+                  <FolderSearch className="size-4" aria-hidden="true" />
+                  Locate File
+                </Button>
+              )}
             </div>
           )}
 
           {/* PDF Viewer */}
-          {blobUrl && !blobLoading && !fileError && (
+          {source && !blobLoading && !fileError && (
             <PdfViewer
-              src={blobUrl}
+              src={source.url}
               title={pdf.filename}
               compact
               initialPage={savedPage ?? 1}
@@ -294,6 +352,8 @@ export function MaterialsTab({ courseId, lessonId, adapter }: MaterialsTabProps)
   const [allPdfs, setAllPdfs] = useState<ImportedPdf[]>([])
   const [materials, setMaterials] = useState<LessonGroupItem[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
+  const [reloadKey, setReloadKey] = useState(0)
   const [showAll, setShowAll] = useState(false)
   const [openPdfId, setOpenPdfId] = useState<string | null>(null)
 
@@ -301,11 +361,15 @@ export function MaterialsTab({ courseId, lessonId, adapter }: MaterialsTabProps)
   const handlePdfToggle = useCallback((pdfId: string, open: boolean) => {
     setOpenPdfId(open ? pdfId : null)
   }, [])
+  const handlePdfUpdate = useCallback((updatedPdf: ImportedPdf) => {
+    setAllPdfs(pdfs => pdfs.map(pdf => (pdf.id === updatedPdf.id ? updatedPdf : pdf)))
+  }, [])
 
   // Load all PDFs and lesson-based curriculum in parallel
   useEffect(() => {
     let ignore = false
     setIsLoading(true)
+    setLoadError(null)
     setShowAll(false)
 
     Promise.all([
@@ -336,15 +400,19 @@ export function MaterialsTab({ courseId, lessonId, adapter }: MaterialsTabProps)
           setIsLoading(false)
         }
       })
-      .catch(() => {
-        // silent-catch-ok — handled by empty state
-        if (!ignore) setIsLoading(false)
+      .catch(error => {
+        // silent-catch-ok — the failure and retry action are rendered inline
+        console.error('[MaterialsTab] Failed to load materials:', error)
+        if (!ignore) {
+          setLoadError('Materials could not be loaded.')
+          setIsLoading(false)
+        }
       })
 
     return () => {
       ignore = true
     }
-  }, [courseId, lessonId, adapter])
+  }, [courseId, lessonId, adapter, reloadKey])
 
   // Reset view state when lesson changes
   useEffect(() => {
@@ -354,10 +422,22 @@ export function MaterialsTab({ courseId, lessonId, adapter }: MaterialsTabProps)
 
   if (isLoading) {
     return (
-      <div className="p-4 space-y-3">
+      <div className="p-4 space-y-3" aria-busy="true" aria-label="Loading materials">
         <Skeleton className="h-4 w-32" />
         <Skeleton className="h-12 w-full" />
         <Skeleton className="h-12 w-full" />
+      </div>
+    )
+  }
+
+  if (loadError) {
+    return (
+      <div className="flex flex-col items-center gap-3 p-8 text-center" role="alert">
+        <FileWarning className="size-9 text-destructive" aria-hidden="true" />
+        <p className="text-sm text-muted-foreground">{loadError}</p>
+        <Button variant="outline" size="sm" onClick={() => setReloadKey(key => key + 1)}>
+          Retry
+        </Button>
       </div>
     )
   }
@@ -398,6 +478,7 @@ export function MaterialsTab({ courseId, lessonId, adapter }: MaterialsTabProps)
             courseId={courseId}
             isOpen={openPdfId === pdf.id}
             onToggle={handlePdfToggle}
+            onPdfUpdate={handlePdfUpdate}
           />
         ))}
       </div>
@@ -445,6 +526,7 @@ export function MaterialsTab({ courseId, lessonId, adapter }: MaterialsTabProps)
           courseId={courseId}
           isOpen={openPdfId === pdf.id}
           onToggle={handlePdfToggle}
+          onPdfUpdate={handlePdfUpdate}
         />
       ))}
     </div>

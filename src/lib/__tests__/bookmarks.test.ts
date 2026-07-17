@@ -13,10 +13,11 @@ beforeEach(async () => {
 })
 
 describe('addBookmark', () => {
-  it('returns a bookmark id string', async () => {
-    const id = await bookmarksLib.addBookmark('c1', 'l1', 90, 'My label')
-    expect(typeof id).toBe('string')
-    expect(id.length).toBeGreaterThan(0)
+  it('returns the stored bookmark record', async () => {
+    const bookmark = await bookmarksLib.addBookmark('c1', 'l1', 90, 'My label')
+    expect(typeof bookmark.id).toBe('string')
+    expect(bookmark.id.length).toBeGreaterThan(0)
+    expect(bookmark).toMatchObject({ courseId: 'c1', lessonId: 'l1', timestamp: 90 })
   })
 
   it('stores bookmark with correct fields', async () => {
@@ -107,13 +108,13 @@ describe('getCourseBookmarks', () => {
 
 describe('updateBookmarkLabel', () => {
   it('returns true when bookmark is updated', async () => {
-    const id = await bookmarksLib.addBookmark('c1', 'l1', 60, 'Original')
+    const { id } = await bookmarksLib.addBookmark('c1', 'l1', 60, 'Original')
     const result = await bookmarksLib.updateBookmarkLabel(id, 'Updated')
     expect(result).toBe(true)
   })
 
   it('persists the updated label', async () => {
-    const id = await bookmarksLib.addBookmark('c1', 'l1', 60, 'Original')
+    const { id } = await bookmarksLib.addBookmark('c1', 'l1', 60, 'Original')
     await bookmarksLib.updateBookmarkLabel(id, 'New label')
 
     const bookmarks = await bookmarksLib.getLessonBookmarks('c1', 'l1')
@@ -128,7 +129,7 @@ describe('updateBookmarkLabel', () => {
 
 describe('deleteBookmark', () => {
   it('removes the bookmark', async () => {
-    const id = await bookmarksLib.addBookmark('c1', 'l1', 60, 'To delete')
+    const { id } = await bookmarksLib.addBookmark('c1', 'l1', 60, 'To delete')
     await bookmarksLib.deleteBookmark(id)
 
     const bookmarks = await bookmarksLib.getLessonBookmarks('c1', 'l1')
@@ -137,6 +138,18 @@ describe('deleteBookmark', () => {
 
   it('does not throw for non-existent bookmark', async () => {
     await expect(bookmarksLib.deleteBookmark('nonexistent')).resolves.toBeUndefined()
+  })
+
+  it('restores the same bookmark identity and supports deleting it again', async () => {
+    const original = await bookmarksLib.addBookmark('c1', 'l1', 60, 'Restore me')
+    await bookmarksLib.deleteBookmark(original.id)
+
+    const restored = await bookmarksLib.restoreBookmark(original)
+    expect(restored.id).toBe(original.id)
+    expect(await bookmarksLib.getLessonBookmarks('c1', 'l1')).toHaveLength(1)
+
+    await bookmarksLib.deleteBookmark(restored.id)
+    expect(await bookmarksLib.getLessonBookmarks('c1', 'l1')).toHaveLength(0)
   })
 })
 
@@ -222,9 +235,9 @@ describe('getAllBookmarks', () => {
   })
 
   it('excludes deleted bookmarks from getAllBookmarks', async () => {
-    const id1 = await bookmarksLib.addBookmark('course-a', 'lesson-1', 60, 'Keep')
+    const { id: id1 } = await bookmarksLib.addBookmark('course-a', 'lesson-1', 60, 'Keep')
     await bookmarksLib.addBookmark('course-a', 'lesson-2', 120, 'Also keep')
-    const id3 = await bookmarksLib.addBookmark('course-b', 'lesson-3', 180, 'Delete me')
+    const { id: id3 } = await bookmarksLib.addBookmark('course-b', 'lesson-3', 180, 'Delete me')
 
     await bookmarksLib.deleteBookmark(id3)
     await bookmarksLib.deleteBookmark(id1)

@@ -35,6 +35,7 @@ import {
 } from './quizPrompts'
 import { runQualityControl } from './quizQualityControl'
 import type { Quiz, Question } from '@/types/quiz'
+import { selectNewestQuiz } from '@/lib/quizVersions'
 import { getLLMClient, assertAIFeatureConsent } from '@/ai/llm/factory'
 import type { LLMClient } from '@/ai/llm/client'
 import type { LLMMessage } from '@/ai/llm/types'
@@ -42,6 +43,7 @@ import { collectStreamWithTimeout } from '@/ai/llm/streamUtils'
 import { LLMError } from '@/ai/llm/types'
 import { ConsentError } from '@/ai/lib/ConsentError'
 import { ProviderReconsentError } from '@/ai/lib/ProviderReconsentError'
+import { resolveLessonTranscript } from '@/lib/lessonTranscript'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -125,6 +127,12 @@ export async function generateQuizForLesson(
     })
   }
 
+  const transcript = await resolveLessonTranscript(courseId, lessonId)
+  if (transcript.status !== 'ready') {
+    emitTracking('error', { errorCode: `transcript_${transcript.status}` })
+    return { quiz: null, cached: false, error: transcript.reason }
+  }
+
   // Resolve feature model and assert consent
   let resolved: FeatureModelConfig
   let client: LLMClient
@@ -155,19 +163,7 @@ export async function generateQuizForLesson(
     return { quiz: null, cached: false, error: 'AI provider not configured for quiz generation.' }
   }
 
-  // Fetch transcript for hash computation
-  const transcript = await db.youtubeTranscripts
-    .where('[courseId+videoId]')
-    .equals([courseId, lessonId])
-    .first()
-
-  if (!transcript || transcript.status !== 'done' || !transcript.fullText) {
-    emitTracking('error', { errorCode: 'no_transcript' })
-    return { quiz: null, cached: false, error: 'No valid transcript available' }
-  }
-
-  // Compute transcript hash for cache lookup
-  const transcriptHash = await computeSHA256(transcript.fullText)
+  const transcriptHash = transcript.fingerprint
 
   // Cache check: look for existing quiz with matching transcriptHash (skip on regenerate)
   if (!regenerate) {
@@ -178,7 +174,7 @@ export async function generateQuizForLesson(
   }
 
   // Stage 1: Chunk transcript
-  const chunks = await chunkTranscript(lessonId, courseId)
+  const chunks = await chunkTranscript(lessonId, courseId, transcript)
   if (chunks.length === 0) {
     emitTracking('error', { errorCode: 'no_chunks' })
     return { quiz: null, cached: false, error: 'Transcript produced no chunks' }
@@ -502,26 +498,15 @@ function parseAndValidate(content: string): GeneratedQuestion[] | null {
 // ---------------------------------------------------------------------------
 
 /**
- * Compute SHA-256 hash of a string using Web Crypto API.
- */
-async function computeSHA256(text: string): Promise<string> {
-  const encoder = new TextEncoder()
-  const data = encoder.encode(text)
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data)
-  const hashArray = Array.from(new Uint8Array(hashBuffer))
-  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
-}
-
-/**
  * Look up a cached quiz by lessonId and transcriptHash.
  */
 async function findCachedQuiz(lessonId: string, transcriptHash: string): Promise<Quiz | null> {
   const quizzes = await db.quizzes.where('lessonId').equals(lessonId).toArray()
 
-  // Find one with matching transcriptHash
+  // Keep every version, but always reopen the newest matching generation.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const match = quizzes.find((q: any) => q.transcriptHash === transcriptHash)
-  return (match as Quiz | undefined) ?? null
+  const matches = quizzes.filter((q: any) => q.transcriptHash === transcriptHash) as Quiz[]
+  return selectNewestQuiz(matches)
 }
 
 /**

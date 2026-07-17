@@ -49,25 +49,70 @@ NOTE Another note, still no actual cues with timestamps`
  * @param delayMs - Minimum delay for "Generating summary..." state to be observable in Playwright (default: 200ms)
  */
 export async function mockOpenAIStreaming(page: Page, summaryText: string, delayMs = 200) {
-  await page.route('https://api.openai.com/v1/chat/completions', async route => {
-    const chunks = summaryText.split(' ')
-    let responseBody = ''
+  await page.addInitScript(
+    ({ text, delay }) => {
+      const words = text.split(' ')
+      ;(window as unknown as Record<string, unknown>).__mockLLMClient = {
+        getProviderId: () => 'openai',
+        async *streamCompletion() {
+          for (const word of words) {
+            await new Promise(resolve => setTimeout(resolve, delay / words.length))
+            yield { content: `${word} ` }
+          }
+          yield { content: '', finishReason: 'stop' as const }
+        },
+      }
+    },
+    { text: summaryText, delay: delayMs }
+  )
+}
 
-    for (const chunk of chunks) {
-      responseBody += `data: ${JSON.stringify({
-        choices: [{ delta: { content: chunk + ' ' } }],
-      })}\n\n`
+/** Injects deterministic responses for consecutive summary generations. */
+export async function mockLLMStreamingSequence(page: Page, summaryTexts: string[], delayMs = 200) {
+  await page.addInitScript(
+    ({ texts, delay }) => {
+      let callIndex = 0
+      ;(window as unknown as Record<string, unknown>).__mockLLMClient = {
+        getProviderId: () => 'openai',
+        async *streamCompletion() {
+          const text = texts[Math.min(callIndex, texts.length - 1)] ?? ''
+          callIndex += 1
+          const words = text.split(' ')
+          for (const word of words) {
+            await new Promise(resolve => setTimeout(resolve, delay / Math.max(words.length, 1)))
+            yield { content: `${word} ` }
+          }
+          yield { content: '', finishReason: 'stop' as const }
+        },
+      }
+    },
+    { texts: summaryTexts, delay: delayMs }
+  )
+}
+
+/** Injects a provider failure without calling a real AI endpoint. */
+export async function mockLLMError(page: Page, message: string) {
+  await page.addInitScript(errorMessage => {
+    ;(window as unknown as Record<string, unknown>).__mockLLMClient = {
+      getProviderId: () => 'openai',
+      async *streamCompletion() {
+        yield { content: '' }
+        throw new Error(errorMessage)
+      },
     }
-    responseBody += 'data: [DONE]\n\n'
+  }, message)
+}
 
-    // Simulate streaming with delay to allow UI state transitions to be observable
-    await new Promise(resolve => setTimeout(resolve, delayMs))
-
-    await route.fulfill({
-      status: 200,
-      headers: { 'Content-Type': 'text/event-stream' },
-      body: responseBody,
-    })
+/** Injects a stream that remains pending until the summary timeout cancels it. */
+export async function mockLLMHanging(page: Page) {
+  await page.addInitScript(() => {
+    ;(window as unknown as Record<string, unknown>).__mockLLMClient = {
+      getProviderId: () => 'openai',
+      async *streamCompletion() {
+        await new Promise(() => undefined)
+        yield { content: 'unreachable' }
+      },
+    }
   })
 }
 
@@ -78,55 +123,18 @@ export async function mockOpenAIStreaming(page: Page, summaryText: string, delay
  * @param videoWithoutCaption - Lesson ID that should NOT have captions (default: 'op6-confidence')
  */
 export function createOperativeSixCourse(
-  videoWithCaption = 'op6-introduction',
-  videoWithoutCaption = 'op6-confidence'
+  _videoWithCaption = 'op6-introduction',
+  _videoWithoutCaption = 'op6-confidence'
 ) {
   return {
     id: 'operative-six',
     name: 'The Operative Six',
+    importedAt: '2026-01-01T00:00:00.000Z',
+    category: 'Development',
     tags: ['security', 'profiling'],
-    status: 'ready' as const,
-    modules: [
-      {
-        id: 'op6-module-1',
-        title: 'Foundations',
-        order: 1,
-        lessons: [
-          {
-            id: videoWithCaption,
-            title: 'Introduction',
-            order: 1,
-            resources: [
-              {
-                type: 'video',
-                src: '/path/to/01-00- Introduction.mp4',
-                metadata: {
-                  captions: [
-                    {
-                      src: '/captions/op6-introduction.vtt',
-                      srclang: 'en',
-                      label: 'English',
-                    },
-                  ],
-                },
-              },
-            ],
-          },
-          {
-            id: videoWithoutCaption,
-            title: 'Confidence',
-            order: 2,
-            resources: [
-              {
-                type: 'video',
-                src: '/path/to/02-confidence.mp4',
-                // No captions for this video (used in test for missing transcript)
-              },
-            ],
-          },
-        ],
-      },
-    ],
+    status: 'active' as const,
+    videoCount: 2,
+    pdfCount: 0,
   }
 }
 
@@ -156,6 +164,9 @@ export async function seedAIConfiguration(
         provider,
         connectionStatus: 'connected',
         _testApiKey: apiKey, // Test-only field (type-safe, DEV mode only)
+        featureModels: {
+          videoSummary: { provider: 'openai', model: 'gpt-4o-mini' },
+        },
         consentSettings: {
           videoSummary: videoSummaryConsent,
           noteQA: true,
