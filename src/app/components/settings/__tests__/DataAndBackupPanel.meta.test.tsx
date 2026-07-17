@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { DataAndBackupPanel } from '@/app/components/settings/DataAndBackupPanel'
 
@@ -8,6 +8,8 @@ import { DataAndBackupPanel } from '@/app/components/settings/DataAndBackupPanel
 
 const mockGetSettings = vi.fn()
 const mockGetDriveToken = vi.fn()
+const FIXED_DATE = new Date('2026-07-17T09:00:00.000Z')
+const FIXED_NOW = FIXED_DATE.getTime()
 
 vi.mock('@/lib/settings', () => ({
   getSettings: () => mockGetSettings(),
@@ -42,6 +44,12 @@ vi.mock('date-fns', () => ({
 
 beforeEach(() => {
   vi.clearAllMocks()
+  vi.useFakeTimers()
+  vi.setSystemTime(FIXED_DATE)
+})
+
+afterEach(() => {
+  vi.useRealTimers()
 })
 
 // ---------------------------------------------------------------------------
@@ -73,7 +81,7 @@ describe('DataAndBackupPanel — backup metadata display (E77A-S04)', () => {
     mockGetSettings.mockReturnValue(
       createSettings({
         backupMeta: {
-          lastLocalAt: Date.now() - 30_000, // 30 seconds ago
+          lastLocalAt: FIXED_NOW - 30_000,
           lastDestination: 'local',
         },
       })
@@ -90,7 +98,7 @@ describe('DataAndBackupPanel — backup metadata display (E77A-S04)', () => {
     mockGetSettings.mockReturnValue(
       createSettings({
         backupMeta: {
-          lastDriveAt: Date.now() - 30_000, // 30 seconds ago
+          lastDriveAt: FIXED_NOW - 30_000,
           lastDestination: 'drive',
         },
       })
@@ -113,7 +121,7 @@ describe('DataAndBackupPanel — backup metadata display (E77A-S04)', () => {
   })
 
   it('shows red stale warning when last backup is >30 days ago', () => {
-    const thirtyOneDaysAgo = Date.now() - 31 * 24 * 60 * 60 * 1000
+    const thirtyOneDaysAgo = FIXED_NOW - 31 * 24 * 60 * 60 * 1000
     mockGetSettings.mockReturnValue(
       createSettings({
         backupMeta: {
@@ -132,7 +140,7 @@ describe('DataAndBackupPanel — backup metadata display (E77A-S04)', () => {
   })
 
   it('shows stale warning even when only lastLocalAt exists and is old', () => {
-    const fortyDaysAgo = Date.now() - 40 * 24 * 60 * 60 * 1000
+    const fortyDaysAgo = FIXED_NOW - 40 * 24 * 60 * 60 * 1000
     mockGetSettings.mockReturnValue(
       createSettings({
         backupMeta: {
@@ -157,7 +165,7 @@ describe('DataAndBackupPanel — backup metadata display (E77A-S04)', () => {
   })
 
   it('falls back to latest timestamp source when no lastDestination is set', () => {
-    const twoHoursAgo = Date.now() - 2 * 60 * 60 * 1000
+    const twoHoursAgo = FIXED_NOW - 2 * 60 * 60 * 1000
     mockGetSettings.mockReturnValue(
       createSettings({
         backupMeta: {
@@ -172,8 +180,8 @@ describe('DataAndBackupPanel — backup metadata display (E77A-S04)', () => {
   })
 
   it('shows Drive label when Drive was more recent but no lastDestination set', () => {
-    const twoHoursAgo = Date.now() - 2 * 60 * 60 * 1000
-    const threeHoursAgo = Date.now() - 3 * 60 * 60 * 1000
+    const twoHoursAgo = FIXED_NOW - 2 * 60 * 60 * 1000
+    const threeHoursAgo = FIXED_NOW - 3 * 60 * 60 * 1000
     mockGetSettings.mockReturnValue(
       createSettings({
         backupMeta: {
