@@ -162,14 +162,16 @@ export async function submitFeedback(payload: {
   labels: string[]
 }): Promise<SubmitResult | SubmitError> {
   let accessToken: string | undefined
-  try {
-    const {
-      data: { session },
-    } = await supabase.auth.getSession()
-    accessToken = session?.access_token
-  } catch {
-    // Auth unavailable — proceed without token; Edge Function will return 401
-    // and the hook will show the fallback email path
+  if (supabase) {
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
+      accessToken = session?.access_token
+    } catch {
+      // Auth unavailable — proceed without token; Edge Function will return 401
+      // and the hook will show the fallback email path
+    }
   }
 
   const controller = new AbortController()

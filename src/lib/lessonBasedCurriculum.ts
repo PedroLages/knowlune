@@ -186,16 +186,20 @@ export function buildLessonBasedCurriculum(opts: {
   // Outer key: section path (e.g. "01 - Overview")
   // Inner key: numeric prefix (e.g. "001")
   // This prevents prefix collisions across sections.
-  const sectionBuckets = new Map()
+  const sectionBuckets = new Map<string, Map<string, LessonGroupBuilder>>()
 
-  function getSectionMap(sectionKey) {
+  function getSectionMap(sectionKey: string): Map<string, LessonGroupBuilder> {
     if (!sectionBuckets.has(sectionKey)) {
-      sectionBuckets.set(sectionKey, new Map())
+      sectionBuckets.set(sectionKey, new Map<string, LessonGroupBuilder>())
     }
-    return sectionBuckets.get(sectionKey)
+    return sectionBuckets.get(sectionKey)!
   }
 
-  function getBuilder(sectionKey, prefix, fallbackPath) {
+  function getBuilder(
+    sectionKey: string,
+    prefix: string,
+    fallbackPath: string
+  ): LessonGroupBuilder {
     const sectionMap = getSectionMap(sectionKey)
     if (!sectionMap.has(prefix)) {
       sectionMap.set(prefix, {
@@ -207,7 +211,7 @@ export function buildLessonBasedCurriculum(opts: {
         path: fallbackPath,
       })
     }
-    return sectionMap.get(prefix)
+    return sectionMap.get(prefix)!
   }
 
   // Process videos into section-scoped builders
@@ -276,10 +280,10 @@ export function buildLessonBasedCurriculum(opts: {
   }
 
   // Build sections: resolve lesson groups within each section bucket
-  const sections = []
+  const sections: CourseSection[] = []
 
   for (const [sectionPath, prefixMap] of sectionBuckets) {
-    const sectionGroups = []
+    const sectionGroups: LessonGroup[] = []
 
     for (const [, builder] of prefixMap) {
       const group = resolveLessonGroup(builder)
@@ -450,18 +454,20 @@ function resolveLessonGroup(builder: LessonGroupBuilder): LessonGroup | null {
   // Everything else is a material
   const materials: LessonGroupItem[] = allItems
     .filter(i => i.id !== primaryItem.id)
-    .map(i => ({
-      id: i.id,
-      title: i.title,
-      displayTitle: i.displayTitle,
-      type: i.type === 'material' ? 'material' : i.type,
-      duration: i.duration,
-      pageCount: i.pageCount,
-      filename: i.filename,
-      path: i.path,
-      isPrimary: false,
-      sourceMetadata: i.sourceMetadata,
-    }))
+    .map(
+      (i): LessonGroupItem => ({
+        id: i.id,
+        title: i.title,
+        displayTitle: i.displayTitle,
+        type: i.type === 'material' ? 'material' : i.type,
+        duration: i.duration,
+        pageCount: i.pageCount,
+        filename: i.filename,
+        path: i.path,
+        isPrimary: false,
+        sourceMetadata: i.sourceMetadata,
+      })
+    )
     .sort((a, b) => {
       // Sort: PDFs first, then text, then other
       const typeOrder: Record<string, number> = { pdf: 0, text: 1, material: 2, video: 3 }
@@ -523,52 +529,6 @@ function cleanSectionTitle(folderName: string): string {
 
   // Humanize: replace hyphens/underscores with spaces
   return cleaned.replace(/[-_]+/g, ' ').replace(/\s+/g, ' ').trim()
-}
-
-/**
- * Build sections from lesson groups.
- * Groups lessons by their folder path's first segment.
- */
-function buildSections(lessonGroups: LessonGroup[]): CourseSection[] {
-  if (lessonGroups.length === 0) return []
-
-  // Check if all lessons are in the same section (flat structure)
-  const sections = new Map<string, { path: string; lessons: LessonGroup[] }>()
-
-  for (const group of lessonGroups) {
-    const sectionName = getSectionName(group.primary.path)
-    if (!sections.has(sectionName)) {
-      sections.set(sectionName, { path: sectionName, lessons: [] })
-    }
-    sections.get(sectionName)!.lessons.push(group)
-  }
-
-  // If only one section (or all empty), return flat
-  if (sections.size <= 1) {
-    const onlySection = Array.from(sections.values())[0]
-    const title = cleanSectionTitle(onlySection?.path || '')
-    return [
-      {
-        numericPrefix: onlySection ? parseSectionPrefix(onlySection.path) : '1',
-        title,
-        lessons: onlySection?.lessons || lessonGroups,
-      },
-    ]
-  }
-
-  // Multiple sections — sort by section prefix
-  return Array.from(sections.entries())
-    .sort(([a], [b]) =>
-      parseSectionPrefix(a).localeCompare(parseSectionPrefix(b), undefined, { numeric: true })
-    )
-    .map(([_name, { path, lessons }]) => {
-      const section: CourseSection = {
-        numericPrefix: parseSectionPrefix(path),
-        title: cleanSectionTitle(path),
-        lessons,
-      }
-      return section
-    })
 }
 
 // ---------------------------------------------------------------------------

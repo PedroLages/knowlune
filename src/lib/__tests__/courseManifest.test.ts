@@ -513,8 +513,16 @@ describe('parseTrackManifest', () => {
     )
     expect(result.value.track.difficulty).toBe('advanced')
     expect(result.value.track.courses).toHaveLength(3)
-    expect(result.value.track.courses[0]).toMatchObject({ id: '01-foundations', folder: '01-foundations', position: 1 })
-    expect(result.value.track.courses[2]).toMatchObject({ id: '03-capstone-project', folder: '03-capstone-project', position: 3 })
+    expect(result.value.track.courses[0]).toMatchObject({
+      id: '01-foundations',
+      folder: '01-foundations',
+      position: 1,
+    })
+    expect(result.value.track.courses[2]).toMatchObject({
+      id: '03-capstone-project',
+      folder: '03-capstone-project',
+      position: 3,
+    })
   })
 
   it('parses course notes field', () => {
@@ -977,9 +985,7 @@ describe('parseTrackManifest', () => {
       version: '1.1',
       track: {
         name: 'Test Track',
-        courses: [
-          { id: 'custom-id', folder: 'Some Folder Name', position: 1 },
-        ],
+        courses: [{ id: 'custom-id', folder: 'Some Folder Name', position: 1 }],
       },
     })
 
@@ -993,9 +999,7 @@ describe('parseTrackManifest', () => {
       version: '1.0',
       track: {
         name: 'Legacy Track',
-        courses: [
-          { folder: 'legacy-course', position: 1, notes: 'Old notes' },
-        ],
+        courses: [{ folder: 'legacy-course', position: 1, notes: 'Old notes' }],
       },
     })
 

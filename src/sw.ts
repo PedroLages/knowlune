@@ -116,10 +116,7 @@ function validateNavigationUrl(url: string): string | null {
     }
     // Absolute URLs must be same-origin https
     const parsed = new URL(url)
-    if (
-      parsed.protocol === 'https:' &&
-      parsed.origin === self.location.origin
-    ) {
+    if (parsed.protocol === 'https:' && parsed.origin === self.location.origin) {
       return url
     }
     console.warn('[SW] Blocked unsafe navigation URL:', url)
@@ -169,16 +166,14 @@ self.addEventListener('push', event => {
           // Whitelist: only safe display fields pass through from the payload.
           // Reject actions, requireInteraction, renotify, silent, and other
           // fields that a malicious push server could abuse.
-          const ALLOWED_PAYLOAD_FIELDS: (keyof NotificationOptions)[] = [
-            'body', 'icon', 'badge', 'tag', 'image',
-            'vibrate', 'dir', 'lang', 'timestamp',
-          ]
-
-          const safePayload: Record<string, unknown> = {}
-          for (const field of ALLOWED_PAYLOAD_FIELDS) {
-            if (field in payload) {
-              safePayload[field] = payload[field]
-            }
+          const safePayload: NotificationOptions = {}
+          if (typeof payload.body === 'string') safePayload.body = payload.body
+          if (typeof payload.icon === 'string') safePayload.icon = payload.icon
+          if (typeof payload.badge === 'string') safePayload.badge = payload.badge
+          if (typeof payload.tag === 'string') safePayload.tag = payload.tag
+          if (typeof payload.lang === 'string') safePayload.lang = payload.lang
+          if (payload.dir === 'auto' || payload.dir === 'ltr' || payload.dir === 'rtl') {
+            safePayload.dir = payload.dir
           }
 
           // Validate and sanitize the navigation URL
@@ -268,11 +263,7 @@ self.addEventListener('pushsubscriptionchange', event => {
           body: JSON.stringify(newSubscription.toJSON()),
         })
         if (!response.ok) {
-          console.error(
-            '[SW] Push subscription POST failed:',
-            response.status,
-            response.statusText
-          )
+          console.error('[SW] Push subscription POST failed:', response.status, response.statusText)
         }
       } catch (error) {
         // Intentional: log but don't throw — subscription loss is recoverable

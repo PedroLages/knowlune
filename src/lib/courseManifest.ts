@@ -636,10 +636,12 @@ export function parseTrackManifest(json: unknown): ParseResult<TrackManifest> {
     if (entry.expected !== undefined) {
       if (isRecord(entry.expected)) {
         expected = {
-          sections: typeof entry.expected.sections === 'number' ? entry.expected.sections : undefined,
+          sections:
+            typeof entry.expected.sections === 'number' ? entry.expected.sections : undefined,
           videos: typeof entry.expected.videos === 'number' ? entry.expected.videos : undefined,
           pdfs: typeof entry.expected.pdfs === 'number' ? entry.expected.pdfs : undefined,
-          captions: typeof entry.expected.captions === 'number' ? entry.expected.captions : undefined,
+          captions:
+            typeof entry.expected.captions === 'number' ? entry.expected.captions : undefined,
         }
       } else {
         errors.push({

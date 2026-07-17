@@ -1,15 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router'
-import {
-  Check,
-  Lock,
-  ArrowRight,
-  ChevronDown,
-  Clock,
-  BookOpen,
-  Play,
-  Target,
-} from 'lucide-react'
+import { Check, Lock, ArrowRight, ChevronDown, BookOpen, Play, Target } from 'lucide-react'
 import { cn } from '@/app/components/ui/utils'
 import type { LearningPathEntry, PathCourseInfo } from '@/data/types'
 
@@ -91,14 +82,8 @@ export function RoadmapPhases({
         if (phaseCourses.length === 0) return null
 
         // Phase metadata
-        const totalLessons = phaseCourses.reduce(
-          (sum, c) => sum + (c.info?.videoCount ?? 0),
-          0
-        )
-        const totalDuration = phaseCourses.reduce(
-          (sum, c) => sum + (c.info?.totalDuration ?? 0),
-          0
-        )
+        const totalLessons = phaseCourses.reduce((sum, c) => sum + (c.info?.videoCount ?? 0), 0)
+        const totalDuration = phaseCourses.reduce((sum, c) => sum + (c.info?.totalDuration ?? 0), 0)
         const phaseHours = totalDuration > 0 ? Math.round(totalDuration / 3600) : undefined
 
         // Find the current course index in this phase (-1 if none)
@@ -115,12 +100,9 @@ export function RoadmapPhases({
                 <h3 className="font-display text-lg font-bold text-foreground">{phase.name}</h3>
                 <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1.5 text-sm text-muted-foreground">
                   <span>
-                    {phaseCourses.length}{' '}
-                    {phaseCourses.length === 1 ? 'course' : 'courses'}
+                    {phaseCourses.length} {phaseCourses.length === 1 ? 'course' : 'courses'}
                   </span>
-                  {phaseHours != null && phaseHours > 0 && (
-                    <span>~{phaseHours}h</span>
-                  )}
+                  {phaseHours != null && phaseHours > 0 && <span>~{phaseHours}h</span>}
                   {totalLessons > 0 && (
                     <span>
                       {totalLessons} {totalLessons === 1 ? 'lesson' : 'lessons'}
@@ -135,16 +117,13 @@ export function RoadmapPhases({
 
             {/* ── Course Cards ── */}
             <div className="space-y-3 pl-[52px]">
-              {phaseCourses.map(({ courseId, info, entry }, idx) => {
+              {phaseCourses.map(({ courseId, info }, idx) => {
                 const pct = info?.completionPct ?? 0
                 const isCompleted = pct >= 100
                 const isCurrent = courseId === currentCourseId
                 // "Next" = the first non-completed course after current
                 const isNext =
-                  !isCompleted &&
-                  !isCurrent &&
-                  currentIdx >= 0 &&
-                  idx === currentIdx + 1
+                  !isCompleted && !isCurrent && currentIdx >= 0 && idx === currentIdx + 1
                 const isLocked = !isCompleted && !isCurrent && !isNext
                 const isExpanded = expandedCourses.has(courseId)
 
@@ -227,8 +206,7 @@ export function RoadmapPhases({
                         <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-sm text-muted-foreground">
                           {(info?.videoCount ?? 0) > 0 && (
                             <span>
-                              {info?.videoCount}{' '}
-                              {info?.videoCount === 1 ? 'lesson' : 'lessons'}
+                              {info?.videoCount} {info?.videoCount === 1 ? 'lesson' : 'lessons'}
                             </span>
                           )}
                           {pct > 0 && !isCompleted && (
@@ -289,8 +267,7 @@ export function RoadmapPhases({
                             </Link>
                             {(info?.videoCount ?? 0) > 0 && (
                               <span className="text-sm text-muted-foreground">
-                                {info?.videoCount}{' '}
-                                {info?.videoCount === 1 ? 'lesson' : 'lessons'}
+                                {info?.videoCount} {info?.videoCount === 1 ? 'lesson' : 'lessons'}
                                 {info?.totalDuration != null &&
                                   info.totalDuration > 0 &&
                                   ` · ${formatDuration(info.totalDuration)}`}
