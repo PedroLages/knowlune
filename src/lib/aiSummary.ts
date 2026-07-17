@@ -127,16 +127,43 @@ export async function* generateVideoSummary(
 
   // Link external signal to internal controller (for unmount cancellation)
   if (externalSignal) {
-    externalSignal.addEventListener('abort', () => abortController.abort(), { once: true })
+    if (externalSignal.aborted) {
+      abortController.abort()
+    } else {
+      externalSignal.addEventListener('abort', () => abortController.abort(), { once: true })
+    }
   }
+
+  const stream = withModelFallback('videoSummary', messages)[Symbol.asyncIterator]()
+  let removeAbortListener: (() => void) | undefined
+
+  const abortPromise = new Promise<never>((_, reject) => {
+    const rejectWithAbort = () =>
+      reject(new DOMException('The operation was aborted.', 'AbortError'))
+
+    if (abortController.signal.aborted) {
+      rejectWithAbort()
+      return
+    }
+
+    abortController.signal.addEventListener('abort', rejectWithAbort, { once: true })
+    removeAbortListener = () => abortController.signal.removeEventListener('abort', rejectWithAbort)
+  })
 
   try {
     // Use feature-aware LLM client with automatic model fallback (AC8)
-    for await (const chunk of withModelFallback('videoSummary', messages)) {
-      yield chunk
+    while (true) {
+      const result = await Promise.race([stream.next(), abortPromise])
+      if (result.done) break
+      yield result.value
     }
   } catch (error) {
-    if (error instanceof Error && error.name === 'AbortError') {
+    if (
+      error !== null &&
+      typeof error === 'object' &&
+      'name' in error &&
+      error.name === 'AbortError'
+    ) {
       if (externalSignal?.aborted) {
         throw error
       }
@@ -145,5 +172,12 @@ export async function* generateVideoSummary(
     throw error
   } finally {
     clearTimeout(timeoutId)
+    removeAbortListener?.()
+
+    // Ask the provider stream to release its resources. Some third-party
+    // generators cannot settle return() until their pending request finishes,
+    // so cleanup must not delay the visible timeout/cancellation result.
+    const returnPromise = stream.return?.()
+    void returnPromise?.catch(() => undefined)
   }
 }
