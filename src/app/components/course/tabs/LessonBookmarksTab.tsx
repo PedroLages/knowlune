@@ -4,7 +4,7 @@
  * Extracted from PlayerSidePanel.tsx to reduce god-component complexity.
  */
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { toast } from 'sonner'
 import { Trash2, BookmarkIcon, BookmarkPlus, AlertTriangle } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
@@ -13,6 +13,7 @@ import {
   getLessonBookmarks,
   deleteBookmark,
   addBookmark,
+  restoreBookmark,
   formatBookmarkTimestamp,
 } from '@/lib/bookmarks'
 import { toastWithUndo, toastError } from '@/lib/toastHelpers'
@@ -39,10 +40,14 @@ export function LessonBookmarksTab({
   const [bookmarks, setBookmarks] = useState<VideoBookmark[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const lessonKey = `${courseId}:${lessonId}`
+  const activeLessonKeyRef = useRef(lessonKey)
+  activeLessonKeyRef.current = lessonKey
 
   const loadBookmarks = useCallback(() => {
     let ignore = false
     setIsLoading(true)
+    setError(null)
 
     getLessonBookmarks(courseId, lessonId)
       .then(bm => {
@@ -91,16 +96,21 @@ export function LessonBookmarksTab({
     toast.success(`Bookmarked at ${formatBookmarkTimestamp(timestamp)}`)
 
     try {
-      await addBookmark(courseId, lessonId, time)
-      // Refresh from DB to get the real ID
-      const fresh = await getLessonBookmarks(courseId, lessonId)
-      setBookmarks(fresh)
+      const created = await addBookmark(courseId, lessonId, time)
+      if (activeLessonKeyRef.current !== lessonKey) return
+      setBookmarks(prev =>
+        [...prev.filter(bookmark => bookmark.id !== optimisticBookmark.id), created].sort(
+          (a, b) => a.timestamp - b.timestamp
+        )
+      )
     } catch {
       // Revert optimistic update
-      setBookmarks(prev => prev.filter(b => b.id !== optimisticBookmark.id))
+      if (activeLessonKeyRef.current === lessonKey) {
+        setBookmarks(prev => prev.filter(b => b.id !== optimisticBookmark.id))
+      }
       toast.error('Failed to add bookmark')
     }
-  }, [courseId, lessonId, currentTime])
+  }, [courseId, lessonId, lessonKey, currentTime])
 
   const handleDelete = async (bookmark: VideoBookmark) => {
     const bookmarkBackup = { ...bookmark }
@@ -112,19 +122,18 @@ export function LessonBookmarksTab({
       toastWithUndo({
         message: `Bookmark at ${formatBookmarkTimestamp(bookmark.timestamp)} deleted`,
         onUndo: async () => {
-          await addBookmark(
-            bookmarkBackup.courseId,
-            bookmarkBackup.lessonId,
-            bookmarkBackup.timestamp,
-            bookmarkBackup.label
-          )
-          setBookmarks(prev => [...prev, bookmarkBackup])
+          const restored = await restoreBookmark(bookmarkBackup)
+          if (activeLessonKeyRef.current === lessonKey) {
+            setBookmarks(prev => [...prev, restored].sort((a, b) => a.timestamp - b.timestamp))
+          }
           toast.success('Bookmark restored')
         },
         duration: 5000,
       })
     } catch {
-      setBookmarks(prev => [...prev, bookmarkBackup])
+      if (activeLessonKeyRef.current === lessonKey) {
+        setBookmarks(prev => [...prev, bookmarkBackup].sort((a, b) => a.timestamp - b.timestamp))
+      }
       toastError.deleteFailed('bookmark')
     }
   }
@@ -132,7 +141,9 @@ export function LessonBookmarksTab({
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-16 text-muted-foreground text-sm">
-        Loading bookmarks...
+        <span role="status" aria-live="polite">
+          Loading bookmarks…
+        </span>
       </div>
     )
   }
@@ -211,7 +222,7 @@ export function LessonBookmarksTab({
                 {bookmark.label || formatBookmarkTimestamp(bookmark.timestamp)}
               </p>
               <p className="text-xs text-muted-foreground">
-                {new Date(bookmark.createdAt).toLocaleDateString('en-US', {
+                {new Date(bookmark.createdAt).toLocaleDateString(undefined, {
                   month: 'short',
                   day: 'numeric',
                 })}
