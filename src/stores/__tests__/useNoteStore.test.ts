@@ -251,9 +251,11 @@ describe('addNote error handling', () => {
     vi.spyOn(notesTable, 'add').mockRejectedValue(new Error('Write fail'))
 
     const note = makeNote()
-    await act(async () => {
-      await useNoteStore.getState().addNote(note)
-    })
+    await expect(
+      act(async () => {
+        await useNoteStore.getState().addNote(note)
+      })
+    ).rejects.toThrow('Write fail')
 
     expect(useNoteStore.getState().notes).toHaveLength(0)
     expect(useNoteStore.getState().error).toBe('Failed to add note')
@@ -272,9 +274,11 @@ describe('saveNote error handling', () => {
     const notesTable = db.table('notes')
     vi.spyOn(notesTable, 'put').mockRejectedValue(new Error('fail'))
 
-    await act(async () => {
-      await useNoteStore.getState().saveNote({ ...note, content: 'Updated' })
-    })
+    await expect(
+      act(async () => {
+        await useNoteStore.getState().saveNote({ ...note, content: 'Updated' })
+      })
+    ).rejects.toThrow('fail')
 
     expect(useNoteStore.getState().notes[0].content).toBe('Original')
     expect(useNoteStore.getState().error).toBe('Failed to save note')

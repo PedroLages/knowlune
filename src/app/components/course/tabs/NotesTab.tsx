@@ -71,7 +71,14 @@ export function NotesTab({
   const existingNote = notes.find(n => n.courseId === courseId && n.videoId === lessonId)
 
   // Seed notes with YouTube video description when no note exists yet
-  const [videoDescription, setVideoDescription] = useState('')
+  const lessonKey = `${courseId}:${lessonId}`
+  const [videoDescription, setVideoDescription] = useState<{
+    lessonKey: string
+    html: string
+  } | null>(null)
+  const currentVideoDescription =
+    videoDescription?.lessonKey === lessonKey ? videoDescription.html : ''
+
   useEffect(() => {
     if (existingNote || isLoading) return
     let ignore = false
@@ -85,14 +92,14 @@ export function NotesTab({
             .split(/\n{2,}/)
             .map(p => `<p>${p.replace(/\n/g, '<br>')}</p>`)
             .join('')
-          setVideoDescription(html)
+          setVideoDescription({ lessonKey, html })
         }
       })
       .catch(() => {})
     return () => {
       ignore = true
     }
-  }, [lessonId, existingNote, isLoading])
+  }, [lessonId, lessonKey, existingNote, isLoading])
 
   const handleSave = useCallback(
     async (content: string, tags: string[]) => {
@@ -254,10 +261,11 @@ export function NotesTab({
         </div>
       )}
       <NoteEditor
+        key={lessonKey}
         courseId={courseId}
         lessonId={lessonId}
         noteId={existingNote?.id}
-        initialContent={existingNote?.content ?? videoDescription}
+        initialContent={existingNote?.content ?? currentVideoDescription}
         onSave={handleSave}
         onVideoSeek={onSeek}
         currentVideoTime={currentTime}

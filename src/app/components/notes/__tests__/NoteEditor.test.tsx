@@ -356,4 +356,43 @@ describe('NoteEditor — eager-first-save (finding 6)', () => {
     expect(await screen.findByText('Saved')).toBeInTheDocument()
     expect(onSave).toHaveBeenCalledTimes(2)
   })
+
+  it('flushes pending content to the previous lesson when the keyed editor changes', async () => {
+    vi.useFakeTimers()
+    const saveLessonOne = vi.fn().mockResolvedValue(undefined)
+    const saveLessonTwo = vi.fn().mockResolvedValue(undefined)
+    const { rerender } = render(
+      <NoteEditor
+        key="c1:l1"
+        courseId="c1"
+        lessonId="l1"
+        noteId="note-1"
+        initialContent="<p>initial</p>"
+        onSave={saveLessonOne}
+      />
+    )
+
+    act(() => {
+      mockGetHtml.mockReturnValue('<p>lesson one draft</p>')
+      mockOnUpdate?.({
+        editor: { storage: { characterCount: { words: () => 3 } }, getHTML: mockGetHtml },
+      } as any)
+    })
+
+    expect(saveLessonOne).not.toHaveBeenCalled()
+
+    rerender(
+      <NoteEditor
+        key="c1:l2"
+        courseId="c1"
+        lessonId="l2"
+        initialContent=""
+        onSave={saveLessonTwo}
+      />
+    )
+
+    expect(saveLessonOne).toHaveBeenCalledWith('<p>lesson one draft</p>', [])
+    expect(saveLessonTwo).not.toHaveBeenCalled()
+    vi.useRealTimers()
+  })
 })
