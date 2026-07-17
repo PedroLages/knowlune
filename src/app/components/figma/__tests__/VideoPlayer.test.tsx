@@ -898,19 +898,33 @@ describe('VideoPlayer', () => {
       expect(screen.getByText('Recovering...')).toBeInTheDocument()
     })
 
-    it('calls onRecoveryNeeded for decode errors (code 3)', () => {
+    it('tries three progressive skips for decode errors before showing the retry overlay', () => {
       const onRecoveryNeeded = vi.fn()
       renderPlayer({ onRecoveryNeeded })
-      fireLoadedMetadata()
+      fireLoadedMetadata(120)
 
       const video = getVideo()
       Object.defineProperty(video, 'error', {
         configurable: true,
         value: { code: 3 },
       })
-      fireEvent.error(video)
+      Object.defineProperty(video, 'currentTime', {
+        value: 10,
+        writable: true,
+        configurable: true,
+      })
 
-      expect(onRecoveryNeeded).toHaveBeenCalledWith(0)
+      fireEvent.error(video)
+      expect(video.currentTime).toBe(12)
+      fireEvent.error(video)
+      expect(video.currentTime).toBe(16)
+      fireEvent.error(video)
+      expect(video.currentTime).toBe(22)
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+
+      fireEvent.error(video)
+      expect(screen.getByRole('alert')).toBeInTheDocument()
+      expect(onRecoveryNeeded).not.toHaveBeenCalled()
     })
 
     it('error overlay has role="alert" and aria-live="assertive"', () => {
@@ -930,6 +944,9 @@ describe('VideoPlayer', () => {
         configurable: true,
         value: { code: 3 },
       })
+      fireEvent.error(video)
+      fireEvent.error(video)
+      fireEvent.error(video)
       fireEvent.error(video)
 
       await user.click(screen.getByRole('button', { name: /retry/i }))

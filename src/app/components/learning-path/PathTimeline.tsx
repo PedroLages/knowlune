@@ -748,7 +748,12 @@ export function PathTimeline({
 
   // Read-only mode (existing behavior)
   return (
-    <div ref={timelineRef} className={cn('space-y-0 max-w-[900px]', className)} role="list" aria-label="Timeline">
+    <div
+      ref={timelineRef}
+      className={cn('space-y-0 max-w-[900px]', className)}
+      role="list"
+      aria-label="Timeline"
+    >
       {filteredEntries.map((entry, i) => {
         // Gap entry — render with resolution actions
         if (entry.courseId === '' || gapEntryIds.has(entry.id)) {

@@ -145,6 +145,7 @@ describe('EditCourseDialog', () => {
         category: 'programming',
         tags: ['python', 'ai'],
         authorId: null,
+        difficulty: null,
       })
     })
   })

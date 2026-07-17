@@ -29,9 +29,9 @@ describe('useFontScale', () => {
     vi.restoreAllMocks()
   })
 
-  it('sets --font-size on mount', () => {
+  it('uses the CSS cascade for medium on mount', () => {
     renderHook(() => useFontScale())
-    expect(document.documentElement.style.getPropertyValue('--font-size')).toBe('16px')
+    expect(document.documentElement.style.getPropertyValue('--font-size')).toBe('')
   })
 
   it('applies correct px for different font sizes', () => {
@@ -60,9 +60,9 @@ describe('useFontScale', () => {
     expect(removed).toContain('storage')
   })
 
-  it('defaults to 16px when fontSize is undefined', () => {
+  it('uses the CSS cascade when fontSize is undefined', () => {
     mockGetSettings.mockReturnValue({} as { fontSize: 'medium' })
     renderHook(() => useFontScale())
-    expect(document.documentElement.style.getPropertyValue('--font-size')).toBe('16px')
+    expect(document.documentElement.style.getPropertyValue('--font-size')).toBe('')
   })
 })

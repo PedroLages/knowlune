@@ -19,14 +19,17 @@ function makeProgress(overrides: Partial<PathProgressSummary> = {}): PathProgres
 describe('PathProgressSidebar', () => {
   it('renders progress ring with correct percentage', () => {
     render(<PathProgressSidebar progress={makeProgress({ completionPct: 42 })} />)
-    expect(screen.getByText('42%')).toBeInTheDocument()
+    expect(screen.getByRole('progressbar', { name: '42% completed' })).toHaveAttribute(
+      'aria-valuenow',
+      '42'
+    )
   })
 
   it('renders modules completed stat', () => {
     render(
       <PathProgressSidebar progress={makeProgress({ completedCourses: 3, totalCourses: 5 })} />
     )
-    expect(screen.getByText('3/5')).toBeInTheDocument()
+    expect(screen.getByText('Courses completed').parentElement).toHaveTextContent('3 / 5')
   })
 
   it('renders estimated time left', () => {
@@ -71,8 +74,11 @@ describe('PathProgressSidebar', () => {
     render(
       <PathProgressSidebar progress={makeProgress({ completionPct: 0, completedCourses: 0 })} />
     )
-    expect(screen.getByText('0%')).toBeInTheDocument()
-    expect(screen.getByText('0/5')).toBeInTheDocument()
+    expect(screen.getByRole('progressbar', { name: '0% completed' })).toHaveAttribute(
+      'aria-valuenow',
+      '0'
+    )
+    expect(screen.getByText('Courses completed').parentElement).toHaveTextContent('0 / 5')
   })
 
   it('renders 100% state correctly', () => {
@@ -85,8 +91,11 @@ describe('PathProgressSidebar', () => {
         })}
       />
     )
-    expect(screen.getByText('100%')).toBeInTheDocument()
-    expect(screen.getByText('5/5')).toBeInTheDocument()
+    expect(screen.getByRole('progressbar', { name: '100% completed' })).toHaveAttribute(
+      'aria-valuenow',
+      '100'
+    )
+    expect(screen.getByText('Courses completed').parentElement).toHaveTextContent('5 / 5')
     expect(screen.getByText('0h')).toBeInTheDocument()
   })
 })
