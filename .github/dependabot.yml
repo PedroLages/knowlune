@@ -1,0 +1,37 @@
+version: 2
+
+updates:
+  # Update npm dependencies from package.json/package-lock.json
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "Europe/Amsterdam"
+
+    # Prevent Dependabot from opening too many PRs
+    open-pull-requests-limit: 5
+
+    # Put compatible minor and patch updates into one PR
+    groups:
+      npm-minor-and-patch:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+
+  # Update actions used inside .github/workflows
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:15"
+      timezone: "Europe/Amsterdam"
+
+    groups:
+      github-actions:
+        patterns:
+          - "*"
