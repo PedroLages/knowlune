@@ -10,6 +10,9 @@ import {
 } from '@/app/components/overview/OverviewLearningFocus'
 import { OverviewLibrary } from '@/app/components/overview/OverviewLibrary'
 import { OverviewMetrics } from '@/app/components/overview/OverviewMetrics'
+import { OverviewProgress } from '@/app/components/overview/OverviewProgress'
+import { OverviewConsistency } from '@/app/components/overview/OverviewConsistency'
+import { OverviewInsights } from '@/app/components/overview/OverviewInsights'
 import { useOverviewDashboardModel } from '@/hooks/useOverviewDashboardModel'
 import { getFirstLesson, getLastWatchedLesson } from '@/lib/progress'
 import type { LearningFocus, OverviewLearnerState } from '@/lib/overviewDashboard'
@@ -216,6 +219,20 @@ export function Overview() {
           )}
 
           <OverviewMetrics metrics={model.metrics} />
+
+          {model.learnerState !== 'early' && (
+            <>
+              <OverviewProgress
+                learnerState={model.learnerState}
+                sevenDays={model.studyTrend.sevenDays}
+                thirtyDays={model.studyTrend.thirtyDays}
+                activeCourses={model.activeCourses}
+              />
+              <OverviewConsistency heatmap={model.heatmap} recentActivity={model.recentActivity} />
+              <OverviewInsights insights={model.insights} />
+            </>
+          )}
+
           <OverviewLibrary courses={model.library} allTags={model.allTags} />
         </>
       )}

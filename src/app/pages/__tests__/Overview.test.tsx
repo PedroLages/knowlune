@@ -132,6 +132,8 @@ describe('Overview page', () => {
     expect(screen.getByTestId('overview-today')).toBeInTheDocument()
     expect(screen.getByTestId('metric-study-minutes')).toHaveTextContent('0')
     expect(screen.getByTestId('imported-course-course-1')).toHaveTextContent('Decision Science')
+    expect(screen.queryByTestId('section-progress')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('section-consistency')).not.toBeInTheDocument()
   })
 
   it('marks a new course active and navigates directly to its first lesson', async () => {
