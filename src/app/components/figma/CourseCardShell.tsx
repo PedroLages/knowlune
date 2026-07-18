@@ -10,9 +10,20 @@ import { cn } from '@/app/components/ui/utils'
 
 const OVERLAY_SCRIM_CLASS = 'bg-black/60 text-white backdrop-blur-sm border border-white/10'
 
+/**
+ * Shared responsive cover treatment for full-size course cards.
+ *
+ * Mobile keeps the artwork near 2.1:1 without exceeding 170px. Tablet and
+ * desktop use the fixed heights from the course-card visual hierarchy so a
+ * row of cards stays aligned even when card widths differ slightly.
+ */
+const COURSE_CARD_COVER_HEIGHT_CLASS =
+  'aspect-[2.1/1] max-h-[170px] w-full sm:aspect-auto sm:h-[150px] sm:max-h-none lg:h-40'
+
 interface CardCoverProps {
   heightClass: string
   children: ReactNode
+  'data-testid'?: string
 }
 
 /**
@@ -20,9 +31,10 @@ interface CardCoverProps {
  * rounded-2xl, overflow-hidden, shadow-card-ambient, -translate-y-2 hover lift.
  * `heightClass` is required to prevent zero-height containers.
  */
-function CardCover({ heightClass, children }: CardCoverProps) {
+function CardCover({ heightClass, children, 'data-testid': testId }: CardCoverProps) {
   return (
     <div
+      data-testid={testId}
       className={cn(
         'relative rounded-2xl overflow-hidden shadow-card-ambient',
         'group-hover:-translate-y-2 group-hover:shadow-[0_10px_30px_var(--shadow-brand)]',
@@ -103,4 +115,11 @@ function CoverCornerChip({ position, children, 'data-testid': testId }: CoverCor
   )
 }
 
-export { CardCover, CoverProgressBar, CompletionOverlay, CoverCornerChip, OVERLAY_SCRIM_CLASS }
+export {
+  CardCover,
+  CoverProgressBar,
+  CompletionOverlay,
+  CoverCornerChip,
+  COURSE_CARD_COVER_HEIGHT_CLASS,
+  OVERLAY_SCRIM_CLASS,
+}
