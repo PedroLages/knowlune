@@ -13,14 +13,24 @@
  * (last backup date, current schema version).
  */
 
-import { useCallback, useRef, useState } from 'react'
-import { Download, HardDrive, Upload } from 'lucide-react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import {
+  Cloud,
+  Download,
+  ExternalLink,
+  HardDrive,
+  Loader2,
+  ShieldCheck,
+  Upload,
+} from 'lucide-react'
 import { toast } from 'sonner'
+import { formatDistanceToNow } from 'date-fns'
 
 import { Button } from '@/app/components/ui/button'
 import { Card, CardContent, CardHeader } from '@/app/components/ui/card'
 import { Separator } from '@/app/components/ui/separator'
 import { Spinner } from '@/app/components/ui/spinner'
+import { Progress } from '@/app/components/ui/progress'
 import {
   Tooltip,
   TooltipContent,
@@ -30,12 +40,27 @@ import {
 import { toastError } from '@/lib/toastHelpers'
 import { CHECKPOINT_VERSION } from '@/db/checkpoint'
 
-import { type BackupPayload, exportAllAsBlob } from '@/lib/exportService'
+import {
+  type BackupPayload,
+  exportAllAsBlob,
+  exportAllAsJson,
+  updateBackupMeta,
+} from '@/lib/exportService'
 import { restoreFromBackup } from '@/lib/importService'
+import { getDriveToken } from '@/lib/googleDriveToken'
+import {
+  DriveNetworkError,
+  DrivePermissionError,
+  DriveQuotaError,
+  uploadBackupToDrive,
+} from '@/lib/googleDriveUpload'
+import { getSettings } from '@/lib/settings'
+import { TOAST_DURATION } from '@/lib/toastConfig'
 import {
   RestoreConfirmationDialog,
   type BackupPreview,
 } from '@/app/components/settings/RestoreConfirmationDialog'
+import { ReconnectGoogleDialog } from '@/app/components/settings/ReconnectGoogleDialog'
 
 // ---------------------------------------------------------------------------
 // Download helper
@@ -65,6 +90,48 @@ function formatDateTime(date: Date): string {
   })
 }
 
+const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000
+
+function formatRelativeTime(timestamp: number): string {
+  const elapsed = Date.now() - timestamp
+  if (elapsed < 60_000) return 'just now'
+
+  try {
+    return formatDistanceToNow(new Date(timestamp), { addSuffix: true })
+  } catch {
+    return 'unknown'
+  }
+}
+
+function getLastBackupDisplay(settings: ReturnType<typeof getSettings>): {
+  label: string
+  isStale: boolean
+} | null {
+  const meta = settings.backupMeta
+  if (!meta) return null
+
+  const timestamps = [meta.lastLocalAt, meta.lastDriveAt].filter(
+    (timestamp): timestamp is number => timestamp !== undefined
+  )
+  if (timestamps.length === 0) return null
+
+  const latestTimestamp = Math.max(...timestamps)
+  const destination =
+    meta.lastDestination === 'drive' && meta.lastDriveAt !== undefined
+      ? 'Drive'
+      : meta.lastDestination === 'local' && meta.lastLocalAt !== undefined
+        ? 'Local'
+        : meta.lastDriveAt !== undefined &&
+            (meta.lastLocalAt === undefined || meta.lastDriveAt > meta.lastLocalAt)
+          ? 'Drive'
+          : 'Local'
+
+  return {
+    label: `${formatRelativeTime(latestTimestamp)} (${destination})`,
+    isStale: Date.now() - latestTimestamp > THIRTY_DAYS_MS,
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
@@ -72,6 +139,15 @@ function formatDateTime(date: Date): string {
 export function DataAndBackupPanel() {
   const [isExporting, setIsExporting] = useState(false)
   const [isRestoring, setIsRestoring] = useState(false)
+  const [isUploading, setIsUploading] = useState(false)
+  const [uploadProgress, setUploadProgress] = useState(0)
+  const [uploadPhase, setUploadPhase] = useState('')
+  const [reconnectOpen, setReconnectOpen] = useState(false)
+  const [knownTokenState, setKnownTokenState] = useState<'untested' | 'present' | 'absent'>(
+    'untested'
+  )
+  const [settings, setSettings] = useState(getSettings)
+  const backupDisplay = getLastBackupDisplay(settings)
 
   // Restore flow state
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -85,6 +161,15 @@ export function DataAndBackupPanel() {
     return stored ? new Date(stored) : null
   })
 
+  useEffect(() => {
+    function refreshBackupStatus() {
+      setSettings(getSettings())
+    }
+
+    window.addEventListener('settingsUpdated', refreshBackupStatus)
+    return () => window.removeEventListener('settingsUpdated', refreshBackupStatus)
+  }, [])
+
   // ── Download backup ──────────────────────────────────────────────────────
 
   const handleDownloadBackup = useCallback(async () => {
@@ -97,6 +182,8 @@ export function DataAndBackupPanel() {
       const now = new Date()
       localStorage.setItem('knowlune-last-backup-at', now.toISOString())
       setLastBackupAt(now)
+      updateBackupMeta('local')
+      setSettings(getSettings())
 
       toast.success('Backup downloaded')
     } catch (error) {
@@ -105,6 +192,85 @@ export function DataAndBackupPanel() {
       setIsExporting(false)
     }
   }, [])
+
+  // ── Google Drive backup ─────────────────────────────────────────────────
+
+  const handleSendToDrive = useCallback(async () => {
+    if (isUploading) return
+
+    let tokenAvailable = knownTokenState === 'present'
+    if (knownTokenState === 'untested') {
+      const token = await getDriveToken()
+      tokenAvailable = token !== null
+      setKnownTokenState(tokenAvailable ? 'present' : 'absent')
+    }
+
+    if (!tokenAvailable) {
+      setReconnectOpen(true)
+      return
+    }
+
+    setIsUploading(true)
+    setUploadProgress(0)
+    setUploadPhase('Exporting data...')
+    let phase: 'export' | 'upload' = 'export'
+
+    try {
+      const exportData = await exportAllAsJson((percent, message) => {
+        setUploadProgress(Math.round(percent * 0.7))
+        setUploadPhase(message || 'Exporting data...')
+      })
+
+      phase = 'upload'
+      setUploadProgress(70)
+      setUploadPhase('Uploading to Google Drive...')
+
+      const blob = new Blob([JSON.stringify(exportData, null, 2)], {
+        type: 'application/json',
+      })
+      const date = new Date().toLocaleDateString('sv-SE')
+      const result = await uploadBackupToDrive(blob, `knowlune-backup-${date}.json`)
+
+      setUploadProgress(100)
+      setUploadPhase('Complete!')
+      updateBackupMeta('drive')
+      setSettings(getSettings())
+
+      toast.success(
+        <>
+          Saved to Drive.{' '}
+          <a
+            href={result.webViewLink}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-medium underline"
+          >
+            View
+            <ExternalLink className="ml-1 inline size-3" aria-hidden="true" />
+          </a>
+        </>,
+        { duration: TOAST_DURATION.SHORT }
+      )
+    } catch (error) {
+      if (error instanceof DriveQuotaError) {
+        toast.error(error.message)
+      } else if (error instanceof DrivePermissionError) {
+        setKnownTokenState('absent')
+        setReconnectOpen(true)
+        toast.error('Google Drive access needed. Please reconnect.')
+      } else if (error instanceof DriveNetworkError) {
+        toast.error(error.message)
+      } else if (phase === 'export') {
+        console.error('Drive export error:', error)
+        toast.error('Export failed. Try again?')
+      } else {
+        console.error('Drive upload error:', error)
+        toast.error('Upload failed. Try again?')
+      }
+    } finally {
+      setIsUploading(false)
+    }
+  }, [isUploading, knownTokenState])
 
   // ── Restore flow ─────────────────────────────────────────────────────────
 
@@ -256,6 +422,73 @@ export function DataAndBackupPanel() {
           Backups include all courses, progress, notes, books, and settings.
         </p>
 
+        <div
+          className="mb-4 rounded-xl border border-border bg-surface-elevated p-4 transition-colors data-[never=true]:border-warning/30 data-[stale=true]:border-destructive/40"
+          data-testid="backup-status-banner"
+          data-stale={backupDisplay?.isStale ?? false}
+          data-never={backupDisplay === null}
+          role="status"
+          aria-live="polite"
+        >
+          <div className="flex items-start gap-3">
+            <div
+              className={
+                backupDisplay?.isStale
+                  ? 'mt-0.5 rounded-lg bg-destructive/10 p-2'
+                  : backupDisplay === null
+                    ? 'mt-0.5 rounded-lg bg-warning/10 p-2'
+                    : 'mt-0.5 rounded-lg bg-brand-soft p-2'
+              }
+            >
+              <ShieldCheck
+                className={
+                  backupDisplay?.isStale
+                    ? 'size-4 text-destructive'
+                    : backupDisplay === null
+                      ? 'size-4 text-warning'
+                      : 'size-4 text-brand'
+                }
+                aria-hidden="true"
+              />
+            </div>
+            <div className="min-w-0 flex-1">
+              {backupDisplay === null ? (
+                <>
+                  <p
+                    className="text-sm font-medium text-warning"
+                    data-testid="never-backed-up-text"
+                  >
+                    No backup yet
+                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Download a backup or connect Google Drive to keep a safe copy of your data.
+                  </p>
+                </>
+              ) : backupDisplay.isStale ? (
+                <>
+                  <p
+                    className="text-sm font-medium text-destructive"
+                    data-testid="stale-backup-text"
+                  >
+                    Last backup was {backupDisplay.label}
+                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Your backup is more than 30 days old. Create a fresh backup to protect your
+                    data.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="text-sm font-medium" data-testid="recent-backup-text">
+                    Last backup: {backupDisplay.label}
+                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground">Your data is up to date.</p>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+
         <Card>
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
@@ -334,6 +567,65 @@ export function DataAndBackupPanel() {
             </div>
           </CardContent>
         </Card>
+
+        <Card className="mt-4">
+          <CardContent className="p-4">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+              <div className="flex items-start gap-3">
+                <div className="mt-0.5 rounded-lg bg-brand-soft p-2">
+                  <Cloud className="size-4 text-brand" aria-hidden="true" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-medium">Send to Google Drive</h3>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Upload your backup JSON to Google Drive for safekeeping
+                  </p>
+                </div>
+              </div>
+              <Button
+                variant="brand"
+                size="sm"
+                onClick={handleSendToDrive}
+                disabled={isUploading || isExporting || isRestoring}
+                className="min-h-[44px] gap-2"
+                aria-label={
+                  knownTokenState === 'absent'
+                    ? 'Reconnect Google Drive'
+                    : 'Upload backup to Google Drive'
+                }
+                data-testid="send-to-drive-button"
+              >
+                {isUploading ? (
+                  <>
+                    <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+                    Uploading...
+                  </>
+                ) : (
+                  <>
+                    <Cloud className="size-4" aria-hidden="true" />
+                    {knownTokenState === 'absent' ? 'Reconnect Google' : 'Send to Drive'}
+                  </>
+                )}
+              </Button>
+            </div>
+
+            {isUploading && (
+              <div
+                className="mt-3 space-y-1.5"
+                data-testid="drive-upload-progress"
+                role="status"
+                aria-live="polite"
+              >
+                <Progress
+                  value={uploadProgress}
+                  className="h-1.5 bg-brand-soft"
+                  aria-label="Drive upload progress"
+                />
+                <p className="text-center text-xs text-muted-foreground">{uploadPhase}</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </section>
 
       {/* Restore confirmation dialog */}
@@ -346,6 +638,7 @@ export function DataAndBackupPanel() {
           isRestoring={isRestoring}
         />
       )}
+      <ReconnectGoogleDialog open={reconnectOpen} onOpenChange={setReconnectOpen} />
     </>
   )
 }

@@ -20,29 +20,44 @@ if (typeof globalThis.IntersectionObserver === 'undefined') {
   } as unknown as typeof IntersectionObserver
 }
 
-// Node 22+ ships a native localStorage that conflicts with jsdom's
-// implementation — its API is incomplete (e.g. clear() is not a function).
-// Override globalThis.localStorage with a standards-compliant in-memory
-// Storage backed by Storage.prototype so vi.spyOn(Storage.prototype, ...)
-// works correctly in tests that mock localStorage methods.
-const store = new Map<string, string>()
-Storage.prototype.getItem = (key: string) => store.get(key) ?? null
-Storage.prototype.setItem = (key: string, value: string) => {
-  store.set(key, String(value))
+// Node 22+ exposes a native localStorage global that can shadow jsdom's Storage.
+// Install distinct in-memory Storage instances so local/session fallback behavior
+// and Storage.prototype spies work consistently on the Node version used by CI.
+const storageData = new WeakMap<Storage, Map<string, string>>()
+
+function createTestStorage(): Storage {
+  const storage = Object.create(Storage.prototype) as Storage
+  storageData.set(storage, new Map())
+  return storage
 }
-Storage.prototype.removeItem = (key: string) => {
-  store.delete(key)
+
+Storage.prototype.getItem = function (key: string) {
+  return storageData.get(this)?.get(key) ?? null
 }
-Storage.prototype.clear = () => {
-  store.clear()
+Storage.prototype.setItem = function (key: string, value: string) {
+  storageData.get(this)?.set(key, String(value))
 }
-Object.defineProperty(Storage.prototype, 'length', { get: () => store.size, configurable: true })
-Storage.prototype.key = (index: number) => [...store.keys()][index] ?? null
-// Ensure globalThis.localStorage is a Storage instance so prototype methods resolve
-if (!(globalThis.localStorage instanceof Storage)) {
-  Object.defineProperty(globalThis, 'localStorage', {
-    value: Object.create(Storage.prototype),
+Storage.prototype.removeItem = function (key: string) {
+  storageData.get(this)?.delete(key)
+}
+Storage.prototype.clear = function () {
+  storageData.get(this)?.clear()
+}
+Object.defineProperty(Storage.prototype, 'length', {
+  get(this: Storage) {
+    return storageData.get(this)?.size ?? 0
+  },
+  configurable: true,
+})
+Storage.prototype.key = function (index: number) {
+  return [...(storageData.get(this)?.keys() ?? [])][index] ?? null
+}
+
+for (const storageName of ['localStorage', 'sessionStorage'] as const) {
+  Object.defineProperty(globalThis, storageName, {
+    value: createTestStorage(),
     writable: true,
+    configurable: true,
   })
 }
 

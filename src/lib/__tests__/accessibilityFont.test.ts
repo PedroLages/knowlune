@@ -37,13 +37,12 @@ describe('accessibilityFont', () => {
   })
 
   describe('unloadAccessibilityFont', () => {
-    it('restores --font-body to DM Sans font stack', () => {
+    it('removes --font-body so the active theme controls the font stack', () => {
+      document.documentElement.style.setProperty('--font-body', 'temporary-font')
+
       unloadAccessibilityFont()
 
-      expect(setPropertySpy).toHaveBeenCalledWith(
-        '--font-body',
-        "'DM Sans', system-ui, -apple-system, sans-serif"
-      )
+      expect(document.documentElement.style.getPropertyValue('--font-body')).toBe('')
     })
   })
 })

@@ -53,9 +53,13 @@ vi.mock('@/lib/motion', () => ({
 }))
 
 // ── Mock date-fns ──
-vi.mock('date-fns', () => ({
-  format: (date: Date, _fmt: string) => date.toISOString().slice(0, 10),
-}))
+vi.mock('date-fns', async importOriginal => {
+  const actual = await importOriginal<typeof import('date-fns')>()
+  return {
+    ...actual,
+    format: (date: Date, _fmt: string) => date.toISOString().slice(0, 10),
+  }
+})
 
 // ── Course store setup (replaces vi.mock('@/data/courses')) ──
 

@@ -121,9 +121,7 @@ describe('useNoteQAAvailability', () => {
     })
 
     vi.mocked(getNoteQAAvailability).mockClear()
-    window.dispatchEvent(
-      new StorageEvent('storage', { key: 'unrelated-key', storageArea: localStorage })
-    )
+    window.dispatchEvent(new StorageEvent('storage', { key: 'unrelated-key' }))
 
     await new Promise(resolve => setTimeout(resolve, 0))
     expect(getNoteQAAvailability).not.toHaveBeenCalled()
@@ -140,9 +138,7 @@ describe('useNoteQAAvailability', () => {
       expect(result.current.status).toBe('available')
     })
 
-    window.dispatchEvent(
-      new StorageEvent('storage', { key: 'ai-configuration', storageArea: localStorage })
-    )
+    window.dispatchEvent(new StorageEvent('storage', { key: 'ai-configuration' }))
 
     await waitFor(() => {
       expect(result.current.status).toBe('unavailable')

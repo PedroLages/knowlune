@@ -24,6 +24,9 @@ import {
 // ---------------------------------------------------------------------------
 
 const mockStorage: Record<string, string> = {}
+const FIXED_DATE = new Date('2026-07-17T09:00:00.000Z')
+const FIXED_ISO = FIXED_DATE.toISOString()
+const SEVEN_DAYS_AGO_ISO = '2026-07-10T09:00:00.000Z'
 
 beforeEach(() => {
   // Clear mock storage
@@ -45,8 +48,26 @@ beforeEach(() => {
 // ---------------------------------------------------------------------------
 
 describe('constants', () => {
-  it('DEFAULT_ORDER contains 12 sections', () => {
-    expect(DEFAULT_ORDER).toHaveLength(12)
+  it('DEFAULT_ORDER contains every section exactly once in the intended order', () => {
+    const expectedOrder: DashboardSectionId[] = [
+      'recommended-next',
+      'metrics-strip',
+      'continue-learning-path',
+      'quiz-performance',
+      'engagement-zone',
+      'study-history',
+      'study-schedule',
+      'todays-study-plan',
+      'skill-proficiency',
+      'knowledge-map',
+      'insight-action',
+      'reading-overview',
+      'course-gallery',
+    ]
+
+    expect(new Set(DEFAULT_ORDER).size).toBe(DEFAULT_ORDER.length)
+    expect(DEFAULT_ORDER).toEqual(expectedOrder)
+    expect(Object.keys(SECTION_LABELS).sort()).toEqual([...expectedOrder].sort())
   })
 
   it('SECTION_LABELS has entry for every default section', () => {
@@ -192,27 +213,25 @@ describe('computeRelevanceScore', () => {
   })
 
   it('returns higher score for recent access', () => {
-    // Uses real Date.now() intentionally: this test validates that the recency
-    // decay function treats "now" as more relevant than "7 days ago". The
-    // assertion only compares relative scores, so the absolute wall-clock time
-    // does not affect correctness.
+    vi.useFakeTimers()
+    vi.setSystemTime(FIXED_DATE)
     const recent: SectionStats = {
       views: 1,
       timeSpentMs: 60000,
-      lastAccessedAt: new Date().toISOString(),
+      lastAccessedAt: FIXED_ISO,
     }
     const old: SectionStats = {
       views: 1,
       timeSpentMs: 60000,
-      lastAccessedAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+      lastAccessedAt: SEVEN_DAYS_AGO_ISO,
     }
     expect(computeRelevanceScore(recent)).toBeGreaterThan(computeRelevanceScore(old))
+    vi.useRealTimers()
   })
 
   it('returns higher score for more views', () => {
-    const now = new Date().toISOString()
-    const moreViews: SectionStats = { views: 100, timeSpentMs: 0, lastAccessedAt: now }
-    const fewerViews: SectionStats = { views: 1, timeSpentMs: 0, lastAccessedAt: now }
+    const moreViews: SectionStats = { views: 100, timeSpentMs: 0, lastAccessedAt: FIXED_ISO }
+    const fewerViews: SectionStats = { views: 1, timeSpentMs: 0, lastAccessedAt: FIXED_ISO }
     expect(computeRelevanceScore(moreViews)).toBeGreaterThan(computeRelevanceScore(fewerViews))
   })
 })
@@ -237,7 +256,7 @@ describe('computeAutoOrder', () => {
   it('sorts unpinned sections by relevance when interactions exist', () => {
     const stats = getSectionStats()
     stats['study-history'].views = 100
-    stats['study-history'].lastAccessedAt = new Date().toISOString()
+    stats['study-history'].lastAccessedAt = FIXED_ISO
     stats['study-history'].timeSpentMs = 300000
 
     const order = computeAutoOrder(stats, [])

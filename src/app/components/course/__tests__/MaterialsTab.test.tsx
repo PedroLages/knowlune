@@ -58,29 +58,38 @@ vi.mock('@/lib/courseAdapter', async () => {
 
 import { MaterialsTab } from '../tabs/MaterialsTab'
 import type { CourseAdapter, MaterialGroup } from '@/lib/courseAdapter'
+import type { CourseSection, LessonGroupItem } from '@/lib/lessonBasedCurriculum'
 
 // ---------------------------------------------------------------------------
 // Mock adapter factory
 // ---------------------------------------------------------------------------
 
 function makeMockAdapter(groups: MaterialGroup[]): CourseAdapter {
-  const lessonGroups = groups.map((group, index) => ({
-    numericPrefix: String(index + 1),
-    primary: {
-      ...group.primary,
-      displayTitle: group.primary.title,
-      filename: group.primary.title,
-      path: '',
-      isPrimary: true,
+  const toCurriculumItem = (
+    item: MaterialGroup['primary'],
+    isPrimary: boolean
+  ): LessonGroupItem => ({
+    id: item.id,
+    title: item.title,
+    displayTitle: item.title.replace(/\.[^.]+$/, ''),
+    type: item.type,
+    duration: item.duration,
+    filename: item.title,
+    path: '',
+    isPrimary,
+    sourceMetadata: item.sourceMetadata,
+  })
+  const curriculum: CourseSection[] = [
+    {
+      numericPrefix: '1',
+      title: 'Course Content',
+      lessons: groups.map((group, index) => ({
+        numericPrefix: String(index + 1),
+        primary: toCurriculumItem(group.primary, true),
+        materials: group.materials.map(material => toCurriculumItem(material, false)),
+      })),
     },
-    materials: group.materials.map(material => ({
-      ...material,
-      displayTitle: material.title,
-      filename: material.title,
-      path: '',
-      isPrimary: false,
-    })),
-  }))
+  ]
 
   return {
     getCourse: vi.fn() as unknown as CourseAdapter['getCourse'],
@@ -94,13 +103,7 @@ function makeMockAdapter(groups: MaterialGroup[]): CourseAdapter {
         )
       ),
     getGroupedLessons: vi.fn().mockResolvedValue(groups),
-    getLessonBasedCurriculum: vi.fn().mockResolvedValue([
-      {
-        numericPrefix: '1',
-        title: 'Course materials',
-        lessons: lessonGroups,
-      },
-    ]),
+    getLessonBasedCurriculum: vi.fn().mockResolvedValue(curriculum),
     getMediaUrl: vi.fn().mockResolvedValue(null),
     getTranscript: vi.fn().mockResolvedValue(null),
     getThumbnailUrl: vi.fn().mockResolvedValue(null),

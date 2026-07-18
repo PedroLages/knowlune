@@ -98,7 +98,9 @@ export function PathProgressSidebar({
               {currentCoursePct != null && (
                 <>
                   <div className="flex items-center justify-between mt-2 text-sm">
-                    <span className="text-muted-foreground">{Math.round(currentCoursePct)}% complete</span>
+                    <span className="text-muted-foreground">
+                      {Math.round(currentCoursePct)}% complete
+                    </span>
                   </div>
                   <div className="w-full bg-muted h-1.5 rounded-full overflow-hidden mt-1">
                     <div
@@ -142,234 +144,239 @@ export function PathProgressSidebar({
       )}
 
       {/* ── Default: full progress sidebar (overview + any unrecognized tab) ── */}
-      {(tab == null || tab === '' || tab === 'overview' || (tab !== 'courses' && tab !== 'roadmap')) && (
+      {(tab == null ||
+        tab === '' ||
+        tab === 'overview' ||
+        (tab !== 'courses' && tab !== 'roadmap')) && (
         <>
-      {/* Progress card — cinematic glass surface */}
-      <Card className="rounded-[24px] border border-border/50 bg-card shadow-card-ambient">
-        <CardContent className="p-6">
-          {/* Your Progress heading */}
-          <h3 className="font-display text-lg font-bold mb-6">Your Progress</h3>
+          {/* Progress card — cinematic glass surface */}
+          <Card className="rounded-[24px] border border-border/50 bg-card shadow-card-ambient">
+            <CardContent className="p-6">
+              {/* Your Progress heading */}
+              <h3 className="font-display text-lg font-bold mb-6">Your Progress</h3>
 
-          {/* Progress ring with soft brand glow wrapper */}
-          <div className="flex justify-center mb-6 relative">
-            <div
-              className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 size-36 rounded-full bg-brand/5 blur-2xl pointer-events-none"
-              aria-hidden="true"
-            />
-            <PathProgressRing percentage={completionPct} size="xl" strokeWidth={6}>
-              <div className="text-center" aria-live="polite" aria-atomic="true">
-                <span className="block text-2xl font-extrabold text-foreground">
-                  {completionPct > 0 && Math.round(completionPct) === 0
-                    ? '< 1%'
-                    : `${Math.round(completionPct)}%`}
-                </span>
-                <span className="block text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-                  Complete
-                </span>
-              </div>
-            </PathProgressRing>
-          </div>
-
-          {/* Stats with explicit labels */}
-          <div className="space-y-3">
-            {/* Track progress */}
-            <div className="flex items-center gap-3 text-sm">
-              <TrendingUp className="size-4 text-brand flex-shrink-0" aria-hidden="true" />
-              <span className="text-muted-foreground">Track progress</span>
-              <span className="ml-auto font-bold text-foreground tabular-nums">
-                {completionPct > 0 && Math.round(completionPct) === 0
-                  ? '< 1%'
-                  : `${Math.round(completionPct)}%`}
-              </span>
-            </div>
-
-            {/* Current course progress */}
-            {currentCourseName != null && currentCoursePct != null && (
-              <div className="flex items-center gap-3 text-sm">
-                <BookOpen className="size-4 text-brand flex-shrink-0" aria-hidden="true" />
-                <span
-                  className="text-muted-foreground truncate max-w-[140px]"
-                  title={currentCourseName}
-                >
-                  Current course
-                </span>
-                <span className="ml-auto font-bold text-foreground tabular-nums">
-                  {Math.round(currentCoursePct)}%
-                </span>
-              </div>
-            )}
-
-            {/* Courses completed */}
-            <div className="flex items-center gap-3 text-sm">
-              <Flag className="size-4 text-brand flex-shrink-0" aria-hidden="true" />
-              <span className="text-muted-foreground">Courses completed</span>
-              <span className="ml-auto font-bold text-foreground tabular-nums">
-                {completedCourses} / {totalCourses}
-              </span>
-            </div>
-
-            {/* Estimated time left */}
-            <div className="flex items-center gap-3 text-sm">
-              <Clock className="size-4 text-brand flex-shrink-0" aria-hidden="true" />
-              <span className="text-muted-foreground">Estimated time left</span>
-              <span className="ml-auto font-bold text-foreground tabular-nums">
-                {formattedTime}
-              </span>
-            </div>
-          </div>
-
-          {/* Divider + skills */}
-          {skillTags && skillTags.length > 0 && (
-            <>
-              <hr className="my-6 border-border/50" />
-              <div>
-                <h3 className="text-sm font-bold mb-3">Skills you&apos;ll gain</h3>
-                <div className="flex flex-wrap gap-2">
-                  {skillTags.map(tag => (
-                    <span
-                      key={tag}
-                      className="px-2 py-1 bg-muted border border-border/50 rounded-md text-xs font-bold text-muted-foreground"
-                    >
-                      {tag}
+              {/* Progress ring with soft brand glow wrapper */}
+              <div className="flex justify-center mb-6 relative">
+                <div
+                  className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 size-36 rounded-full bg-brand/5 blur-2xl pointer-events-none"
+                  aria-hidden="true"
+                />
+                <PathProgressRing percentage={completionPct} size="xl" strokeWidth={6}>
+                  <div className="text-center" aria-live="polite" aria-atomic="true">
+                    <span className="block text-2xl font-extrabold text-foreground">
+                      {completionPct > 0 && Math.round(completionPct) === 0
+                        ? '< 1%'
+                        : `${Math.round(completionPct)}%`}
                     </span>
-                  ))}
-                </div>
+                    <span className="block text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                      Complete
+                    </span>
+                  </div>
+                </PathProgressRing>
               </div>
-            </>
-          )}
-        </CardContent>
-      </Card>
 
-      {/* This Week card */}
-      <Card className="rounded-[24px] border border-border/50 bg-card shadow-card-ambient">
-        <CardContent className="p-5">
-          <h3 className="font-display text-sm font-bold mb-4 flex items-center gap-2">
-            <Target className="size-4 text-brand" aria-hidden="true" />
-            This Week
-          </h3>
-          {weeklyStudyMinutes != null ? (
-            <div className="space-y-3">
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">
-                  {formatHours(weeklyStudyMinutes)} studied
-                </span>
-                {weeklyGoalMinutes != null && weeklyGoalMinutes > 0 && (
-                  <span className="font-medium text-foreground tabular-nums">
-                    Goal: {formatHours(weeklyGoalMinutes)}
+              {/* Stats with explicit labels */}
+              <div className="space-y-3">
+                {/* Track progress */}
+                <div className="flex items-center gap-3 text-sm">
+                  <TrendingUp className="size-4 text-brand flex-shrink-0" aria-hidden="true" />
+                  <span className="text-muted-foreground">Track progress</span>
+                  <span className="ml-auto font-bold text-foreground tabular-nums">
+                    {completionPct > 0 && Math.round(completionPct) === 0
+                      ? '< 1%'
+                      : `${Math.round(completionPct)}%`}
                   </span>
+                </div>
+
+                {/* Current course progress */}
+                {currentCourseName != null && currentCoursePct != null && (
+                  <div className="flex items-center gap-3 text-sm">
+                    <BookOpen className="size-4 text-brand flex-shrink-0" aria-hidden="true" />
+                    <span
+                      className="text-muted-foreground truncate max-w-[140px]"
+                      title={currentCourseName}
+                    >
+                      Current course
+                    </span>
+                    <span className="ml-auto font-bold text-foreground tabular-nums">
+                      {Math.round(currentCoursePct)}%
+                    </span>
+                  </div>
                 )}
-              </div>
-              {weeklyGoalMinutes != null && weeklyGoalMinutes > 0 && (
-                <div className="w-full bg-muted h-2 rounded-full overflow-hidden">
-                  <div
-                    className="bg-brand h-full rounded-full motion-safe:transition-all motion-safe:duration-500"
-                    style={{
-                      width: `${Math.min(100, Math.round((weeklyStudyMinutes / weeklyGoalMinutes) * 100))}%`,
-                    }}
-                  />
-                </div>
-              )}
-              {weeklyGoalMinutes == null && onSetWeeklyGoal && (
-                <Button
-                  variant="brand-outline"
-                  size="sm"
-                  className="w-full text-xs"
-                  onClick={onSetWeeklyGoal}
-                >
-                  Set weekly goal
-                </Button>
-              )}
-            </div>
-          ) : (
-            <p className="text-sm text-muted-foreground mb-3">Start studying to track your time.</p>
-          )}
-        </CardContent>
-      </Card>
 
-      {/* Next Milestone card */}
-      {nextMilestoneName && (
-        <Card className="rounded-[24px] border border-border/50 bg-card shadow-card-ambient">
-          <CardContent className="p-5">
-            <h3 className="font-display text-sm font-bold mb-3 flex items-center gap-2">
-              <Flag className="size-4 text-brand" aria-hidden="true" />
-              Next Milestone
-            </h3>
-            <p className="text-sm font-semibold text-foreground">{nextMilestoneName}</p>
-            {nextMilestoneEstimate && (
-              <p className="text-xs text-muted-foreground mt-1">{nextMilestoneEstimate}</p>
-            )}
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Track Info card */}
-      {(difficultyLabel ||
-        estimatedHours != null ||
-        courseCount != null ||
-        createdAt ||
-        updatedAt) && (
-        <Card className="rounded-[24px] border border-border/50 bg-card shadow-card-ambient">
-          <CardContent className="p-5">
-            <h3 className="font-display text-sm font-bold mb-4">Track Info</h3>
-            <div className="space-y-2.5 text-sm">
-              {difficultyLabel && (
-                <div className="flex items-center gap-2.5">
-                  <BarChart3 className="size-4 text-brand flex-shrink-0" aria-hidden="true" />
-                  <span className="text-muted-foreground">Difficulty</span>
-                  <span className="ml-auto font-medium text-foreground">{difficultyLabel}</span>
+                {/* Courses completed */}
+                <div className="flex items-center gap-3 text-sm">
+                  <Flag className="size-4 text-brand flex-shrink-0" aria-hidden="true" />
+                  <span className="text-muted-foreground">Courses completed</span>
+                  <span className="ml-auto font-bold text-foreground tabular-nums">
+                    {completedCourses} / {totalCourses}
+                  </span>
                 </div>
-              )}
-              {estimatedHours != null && estimatedHours > 0 && (
-                <div className="flex items-center gap-2.5">
+
+                {/* Estimated time left */}
+                <div className="flex items-center gap-3 text-sm">
                   <Clock className="size-4 text-brand flex-shrink-0" aria-hidden="true" />
-                  <span className="text-muted-foreground">Est. Hours</span>
-                  <span className="ml-auto font-medium text-foreground tabular-nums">
-                    ~{estimatedHours}h
+                  <span className="text-muted-foreground">Estimated time left</span>
+                  <span className="ml-auto font-bold text-foreground tabular-nums">
+                    {formattedTime}
                   </span>
                 </div>
-              )}
-              {courseCount != null && (
-                <div className="flex items-center gap-2.5">
-                  <BookOpen className="size-4 text-brand flex-shrink-0" aria-hidden="true" />
-                  <span className="text-muted-foreground">Courses</span>
-                  <span className="ml-auto font-medium text-foreground tabular-nums">
-                    {courseCount}
-                  </span>
-                </div>
-              )}
-              {createdAt && (
-                <div className="flex items-center gap-2.5">
-                  <Calendar className="size-4 text-brand flex-shrink-0" aria-hidden="true" />
-                  <span className="text-muted-foreground">Created</span>
-                  <span className="ml-auto font-medium text-foreground">
-                    {formatDate(createdAt)}
-                  </span>
-                </div>
-              )}
-              {updatedAt && updatedAt !== createdAt && (
-                <div className="flex items-center gap-2.5">
-                  <Pencil className="size-4 text-brand flex-shrink-0" aria-hidden="true" />
-                  <span className="text-muted-foreground">Updated</span>
-                  <span className="ml-auto font-medium text-foreground">
-                    {formatDate(updatedAt)}
-                  </span>
-                </div>
-              )}
-              {courseCount != null && courseCount > 1 && onProgressionModeChange != null && (
+              </div>
+
+              {/* Divider + skills */}
+              {skillTags && skillTags.length > 0 && (
                 <>
-                  <hr className="my-3 border-border/50" />
-                  <ProgressionModeToggle
-                    mode={progressionMode ?? 'sequential'}
-                    onChange={onProgressionModeChange}
-                  />
+                  <hr className="my-6 border-border/50" />
+                  <div>
+                    <h3 className="text-sm font-bold mb-3">Skills you&apos;ll gain</h3>
+                    <div className="flex flex-wrap gap-2">
+                      {skillTags.map(tag => (
+                        <span
+                          key={tag}
+                          className="px-2 py-1 bg-muted border border-border/50 rounded-md text-xs font-bold text-muted-foreground"
+                        >
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
                 </>
               )}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-      {/* Close the default overview block opened above */}
-      </>
+            </CardContent>
+          </Card>
+
+          {/* This Week card */}
+          <Card className="rounded-[24px] border border-border/50 bg-card shadow-card-ambient">
+            <CardContent className="p-5">
+              <h3 className="font-display text-sm font-bold mb-4 flex items-center gap-2">
+                <Target className="size-4 text-brand" aria-hidden="true" />
+                This Week
+              </h3>
+              {weeklyStudyMinutes != null ? (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">
+                      {formatHours(weeklyStudyMinutes)} studied
+                    </span>
+                    {weeklyGoalMinutes != null && weeklyGoalMinutes > 0 && (
+                      <span className="font-medium text-foreground tabular-nums">
+                        Goal: {formatHours(weeklyGoalMinutes)}
+                      </span>
+                    )}
+                  </div>
+                  {weeklyGoalMinutes != null && weeklyGoalMinutes > 0 && (
+                    <div className="w-full bg-muted h-2 rounded-full overflow-hidden">
+                      <div
+                        className="bg-brand h-full rounded-full motion-safe:transition-all motion-safe:duration-500"
+                        style={{
+                          width: `${Math.min(100, Math.round((weeklyStudyMinutes / weeklyGoalMinutes) * 100))}%`,
+                        }}
+                      />
+                    </div>
+                  )}
+                  {weeklyGoalMinutes == null && onSetWeeklyGoal && (
+                    <Button
+                      variant="brand-outline"
+                      size="sm"
+                      className="w-full text-xs"
+                      onClick={onSetWeeklyGoal}
+                    >
+                      Set weekly goal
+                    </Button>
+                  )}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground mb-3">
+                  Start studying to track your time.
+                </p>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Next Milestone card */}
+          {nextMilestoneName && (
+            <Card className="rounded-[24px] border border-border/50 bg-card shadow-card-ambient">
+              <CardContent className="p-5">
+                <h3 className="font-display text-sm font-bold mb-3 flex items-center gap-2">
+                  <Flag className="size-4 text-brand" aria-hidden="true" />
+                  Next Milestone
+                </h3>
+                <p className="text-sm font-semibold text-foreground">{nextMilestoneName}</p>
+                {nextMilestoneEstimate && (
+                  <p className="text-xs text-muted-foreground mt-1">{nextMilestoneEstimate}</p>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Track Info card */}
+          {(difficultyLabel ||
+            estimatedHours != null ||
+            courseCount != null ||
+            createdAt ||
+            updatedAt) && (
+            <Card className="rounded-[24px] border border-border/50 bg-card shadow-card-ambient">
+              <CardContent className="p-5">
+                <h3 className="font-display text-sm font-bold mb-4">Track Info</h3>
+                <div className="space-y-2.5 text-sm">
+                  {difficultyLabel && (
+                    <div className="flex items-center gap-2.5">
+                      <BarChart3 className="size-4 text-brand flex-shrink-0" aria-hidden="true" />
+                      <span className="text-muted-foreground">Difficulty</span>
+                      <span className="ml-auto font-medium text-foreground">{difficultyLabel}</span>
+                    </div>
+                  )}
+                  {estimatedHours != null && estimatedHours > 0 && (
+                    <div className="flex items-center gap-2.5">
+                      <Clock className="size-4 text-brand flex-shrink-0" aria-hidden="true" />
+                      <span className="text-muted-foreground">Est. Hours</span>
+                      <span className="ml-auto font-medium text-foreground tabular-nums">
+                        ~{estimatedHours}h
+                      </span>
+                    </div>
+                  )}
+                  {courseCount != null && (
+                    <div className="flex items-center gap-2.5">
+                      <BookOpen className="size-4 text-brand flex-shrink-0" aria-hidden="true" />
+                      <span className="text-muted-foreground">Courses</span>
+                      <span className="ml-auto font-medium text-foreground tabular-nums">
+                        {courseCount}
+                      </span>
+                    </div>
+                  )}
+                  {createdAt && (
+                    <div className="flex items-center gap-2.5">
+                      <Calendar className="size-4 text-brand flex-shrink-0" aria-hidden="true" />
+                      <span className="text-muted-foreground">Created</span>
+                      <span className="ml-auto font-medium text-foreground">
+                        {formatDate(createdAt)}
+                      </span>
+                    </div>
+                  )}
+                  {updatedAt && updatedAt !== createdAt && (
+                    <div className="flex items-center gap-2.5">
+                      <Pencil className="size-4 text-brand flex-shrink-0" aria-hidden="true" />
+                      <span className="text-muted-foreground">Updated</span>
+                      <span className="ml-auto font-medium text-foreground">
+                        {formatDate(updatedAt)}
+                      </span>
+                    </div>
+                  )}
+                  {courseCount != null && courseCount > 1 && onProgressionModeChange != null && (
+                    <>
+                      <hr className="my-3 border-border/50" />
+                      <ProgressionModeToggle
+                        mode={progressionMode ?? 'sequential'}
+                        onChange={onProgressionModeChange}
+                      />
+                    </>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+          {/* Close the default overview block opened above */}
+        </>
       )}
     </aside>
   )

@@ -27,7 +27,7 @@ export interface ImportedCourseTestData {
   importedAt: string
   category: string
   tags: string[]
-  status: 'active' | 'completed' | 'paused'
+  status: 'not-started' | 'active' | 'completed' | 'paused'
   videoCount: number
   pdfCount: number
   authorId?: string

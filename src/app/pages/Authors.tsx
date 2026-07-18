@@ -7,6 +7,7 @@ import { Card, CardContent } from '@/app/components/ui/card'
 import { Button } from '@/app/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/app/components/ui/avatar'
 import { Skeleton } from '@/app/components/ui/skeleton'
+import { Badge } from '@/app/components/ui/badge'
 import {
   Select,
   SelectContent,
@@ -292,6 +293,21 @@ function AuthorCard({
               <p className="text-sm text-muted-foreground mt-1 line-clamp-2 max-w-[260px]">
                 {author.shortBio}
               </p>
+            )}
+
+            {author.specialties.length > 0 && (
+              <div className="mt-3 flex min-w-0 max-w-full flex-wrap justify-center gap-1.5">
+                {author.specialties.slice(0, 4).map(specialty => (
+                  <Badge
+                    key={specialty.toLocaleLowerCase()}
+                    variant="secondary"
+                    className="min-w-0 max-w-full"
+                    title={specialty}
+                  >
+                    <span className="max-w-full truncate">{specialty}</span>
+                  </Badge>
+                ))}
+              </div>
             )}
 
             {/* Social Links */}

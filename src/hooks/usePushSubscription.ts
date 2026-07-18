@@ -57,7 +57,8 @@ export function usePushSubscription() {
 
     let ignore = false
 
-    reg.pushManager.getSubscription()
+    reg.pushManager
+      .getSubscription()
       .then(sub => {
         if (ignore) return
         subscriptionCheckCompleteRef.current = true
@@ -69,7 +70,8 @@ export function usePushSubscription() {
           setIsSubscribed(false)
         }
       })
-      .catch(err => { // silent-catch-ok
+      .catch(err => {
+        // silent-catch-ok
         if (ignore) return
         subscriptionCheckCompleteRef.current = true
         console.error('[Push] getSubscription failed:', err)
@@ -101,7 +103,8 @@ export function usePushSubscription() {
 
         const reg = registrationRef.current
         if (reg) {
-          reg.pushManager.getSubscription()
+          reg.pushManager
+            .getSubscription()
             .then(sub => {
               if (sub) {
                 subscriptionRef.current = sub
@@ -111,7 +114,8 @@ export function usePushSubscription() {
                 setIsSubscribed(false)
               }
             })
-            .catch(() => { // silent-catch-ok
+            .catch(() => {
+              // silent-catch-ok
               subscriptionRef.current = null
               setIsSubscribed(false)
             })
@@ -133,7 +137,8 @@ export function usePushSubscription() {
           permStatus = status
           status.addEventListener('change', handlePermissionChange)
         })
-        .catch(() => { // silent-catch-ok
+        .catch(() => {
+          // silent-catch-ok
           // Permissions API not supported for 'notifications' in this browser
         })
     }

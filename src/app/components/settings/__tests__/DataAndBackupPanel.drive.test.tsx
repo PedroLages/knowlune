@@ -12,6 +12,7 @@ const mockGetDriveToken = vi.fn()
 const mockUploadBackupToDrive = vi.fn()
 const mockExportAllAsJson = vi.fn()
 const mockSignInWithGoogle = vi.fn()
+const FIXED_ISO = '2026-07-17T09:00:00.000Z'
 
 vi.mock('@/lib/googleDriveToken', () => ({
   getDriveToken: () => mockGetDriveToken(),
@@ -125,7 +126,7 @@ describe('DataAndBackupPanel', () => {
           resolve => {
             setTimeout(() => {
               onProgress?.(50, 'Exporting courses...')
-              resolve({ schemaVersion: 14, exportedAt: new Date().toISOString(), data: {} })
+              resolve({ schemaVersion: 14, exportedAt: FIXED_ISO, data: {} })
             }, 100)
           }
         )
@@ -174,7 +175,7 @@ describe('DataAndBackupPanel', () => {
     mockGetDriveToken.mockResolvedValue('valid-token')
     mockExportAllAsJson.mockResolvedValue({
       schemaVersion: 14,
-      exportedAt: new Date().toISOString(),
+      exportedAt: FIXED_ISO,
       data: {},
     })
     mockUploadBackupToDrive.mockResolvedValue({
@@ -227,7 +228,7 @@ describe('DataAndBackupPanel', () => {
     mockGetDriveToken.mockResolvedValue('valid-token')
     mockExportAllAsJson.mockResolvedValue({
       schemaVersion: 14,
-      exportedAt: new Date().toISOString(),
+      exportedAt: FIXED_ISO,
       data: {},
     })
     const uploadError = new Error('Unexpected upload failure')

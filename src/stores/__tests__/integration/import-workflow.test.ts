@@ -72,6 +72,12 @@ const AUTHOR_ID = 'author-import-1'
 const LESSON_ID = 'lesson-import-1'
 const MODULE_ID = 'mod-import-1'
 
+function requireCreated<T>(value: T | null): T {
+  expect(value).not.toBeNull()
+  if (value === null) throw new Error('Expected author creation to succeed')
+  return value
+}
+
 const testModules: Module[] = [
   {
     id: MODULE_ID,
@@ -161,11 +167,13 @@ describe('Import Workflow: Cross-Store Integration', () => {
 
     // Now add the author and link the course
     await act(async () => {
-      const author = await useAuthorStore.getState().addAuthor({
-        name: 'Test Author',
-        title: 'Instructor',
-        courseIds: [COURSE_ID],
-      })
+      const author = requireCreated(
+        await useAuthorStore.getState().addAuthor({
+          name: 'Test Author',
+          title: 'Instructor',
+          courseIds: [COURSE_ID],
+        })
+      )
       expect(author.id).toBeDefined()
     })
 
@@ -227,11 +235,13 @@ describe('Import Workflow: Cross-Store Integration', () => {
 
   it('author linkCourseToAuthor updates author courseIds in DB', async () => {
     // Create author without course link
-    const author = await useAuthorStore.getState().addAuthor({
-      name: 'Unlinked Author',
-      title: 'Professor',
-      courseIds: [],
-    })
+    const author = requireCreated(
+      await useAuthorStore.getState().addAuthor({
+        name: 'Unlinked Author',
+        title: 'Professor',
+        courseIds: [],
+      })
+    )
 
     expect(author.courseIds).toEqual([])
 

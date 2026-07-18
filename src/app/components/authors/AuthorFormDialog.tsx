@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { X } from 'lucide-react'
 import { toast } from 'sonner'
 import {
   Dialog,
@@ -47,6 +48,23 @@ function isValidUrl(value: string): boolean {
   }
 }
 
+function normalizeSpecialties(values: string[]): string[] {
+  const seen = new Set<string>()
+  const normalized: string[] = []
+
+  for (const value of values) {
+    for (const part of value.split(/[,;]/)) {
+      const specialty = part.trim()
+      const key = specialty.toLocaleLowerCase()
+      if (!specialty || seen.has(key)) continue
+      seen.add(key)
+      normalized.push(specialty)
+    }
+  }
+
+  return normalized
+}
+
 export function AuthorFormDialog({ open, onOpenChange, author }: AuthorFormDialogProps) {
   const addAuthor = useAuthorStore(s => s.addAuthor)
   const updateAuthor = useAuthorStore(s => s.updateAuthor)
@@ -58,6 +76,8 @@ export function AuthorFormDialog({ open, onOpenChange, author }: AuthorFormDialo
   const [shortBio, setShortBio] = useState('')
   const [yearsExperience, setYearsExperience] = useState('')
   const [education, setEducation] = useState('')
+  const [specialties, setSpecialties] = useState<string[]>([])
+  const [specialtyInput, setSpecialtyInput] = useState('')
   const [avatar, setAvatar] = useState('')
   const [website, setWebsite] = useState('')
   const [linkedin, setLinkedin] = useState('')
@@ -83,6 +103,8 @@ export function AuthorFormDialog({ open, onOpenChange, author }: AuthorFormDialo
     setShortBio(author.shortBio ?? '')
     setYearsExperience(author.yearsExperience ? String(author.yearsExperience) : '')
     setEducation(author.education ?? '')
+    setSpecialties(normalizeSpecialties(author.specialties ?? []))
+    setSpecialtyInput('')
     setAvatar(author.photoUrl ?? '')
     setWebsite(author.socialLinks?.website ?? '')
     setLinkedin(author.socialLinks?.linkedin ?? '')
@@ -100,6 +122,8 @@ export function AuthorFormDialog({ open, onOpenChange, author }: AuthorFormDialo
     setShortBio('')
     setYearsExperience('')
     setEducation('')
+    setSpecialties([])
+    setSpecialtyInput('')
     setAvatar('')
     setWebsite('')
     setLinkedin('')
@@ -162,6 +186,7 @@ export function AuthorFormDialog({ open, onOpenChange, author }: AuthorFormDialo
     if (instagram.trim()) socialLinks.instagram = instagram.trim()
     if (youtube.trim()) socialLinks.youtube = youtube.trim()
 
+    const normalizedSpecialties = normalizeSpecialties([...specialties, specialtyInput])
     const authorData = {
       name: name.trim(),
       title: title.trim() || undefined,
@@ -172,6 +197,7 @@ export function AuthorFormDialog({ open, onOpenChange, author }: AuthorFormDialo
       photoUrl: avatar.trim() || undefined,
       socialLinks,
       education: education.trim() || undefined,
+      specialties: normalizedSpecialties,
       featuredQuote: featuredQuote.trim() || undefined,
     }
 
@@ -196,6 +222,17 @@ export function AuthorFormDialog({ open, onOpenChange, author }: AuthorFormDialo
     } finally {
       setIsSubmitting(false)
     }
+  }
+
+  function addSpecialties(values: string[]) {
+    setSpecialties(current => normalizeSpecialties([...current, ...values]))
+    setSpecialtyInput('')
+    setIsDirty(true)
+  }
+
+  function commitSpecialtyInput() {
+    if (!specialtyInput.trim()) return
+    addSpecialties([specialtyInput])
   }
 
   return (
@@ -298,6 +335,67 @@ export function AuthorFormDialog({ open, onOpenChange, author }: AuthorFormDialo
                     onChange={e => setBio(e.target.value)}
                     className="border-2"
                   />
+                </div>
+
+                {/* Specialties */}
+                <div className="space-y-1.5">
+                  <Label htmlFor="author-specialties">Specialties</Label>
+                  <div className="rounded-md border-2 border-input bg-background p-2 focus-within:ring-2 focus-within:ring-ring/50">
+                    {specialties.length > 0 && (
+                      <div
+                        className="mb-2 flex min-w-0 flex-wrap gap-1.5"
+                        aria-label="Added specialties"
+                      >
+                        {specialties.map(specialty => (
+                          <span
+                            key={specialty.toLocaleLowerCase()}
+                            className="inline-flex min-w-0 max-w-full items-center gap-1 rounded-md bg-muted px-2 py-1 text-xs text-foreground"
+                          >
+                            <span className="max-w-full truncate" title={specialty}>
+                              {specialty}
+                            </span>
+                            <button
+                              type="button"
+                              className="-my-2.5 -mr-2.5 grid size-11 shrink-0 place-items-center rounded-sm text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                              aria-label={`Remove ${specialty}`}
+                              onClick={() => {
+                                setSpecialties(current =>
+                                  current.filter(item => item !== specialty)
+                                )
+                                setIsDirty(true)
+                              }}
+                            >
+                              <X className="size-3" aria-hidden="true" />
+                            </button>
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    <Input
+                      id="author-specialties"
+                      value={specialtyInput}
+                      onChange={event => setSpecialtyInput(event.target.value)}
+                      onBlur={commitSpecialtyInput}
+                      onKeyDown={event => {
+                        if (event.key === 'Enter' || event.key === ',' || event.key === ';') {
+                          event.preventDefault()
+                          commitSpecialtyInput()
+                        }
+                      }}
+                      onPaste={event => {
+                        const pasted = event.clipboardData.getData('text')
+                        if (!/[,;]/.test(pasted)) return
+                        event.preventDefault()
+                        addSpecialties([pasted])
+                      }}
+                      placeholder="Type a specialty, then press Enter"
+                      aria-describedby="author-specialties-help"
+                      className="h-8 border-0 px-0 shadow-none focus-visible:ring-0"
+                    />
+                  </div>
+                  <p id="author-specialties-help" className="text-xs text-muted-foreground">
+                    Press Enter, comma, or semicolon to add a specialty.
+                  </p>
                 </div>
 
                 {/* Years of Experience */}

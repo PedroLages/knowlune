@@ -16,11 +16,7 @@ import type {
   YouTubeCourseChapter,
 } from '@/data/types'
 import { db } from '@/db'
-import {
-  matchMaterialsToLessons,
-  getCompanionPdfIds,
-  type MaterialGroup,
-} from './lessonMaterialMatcher'
+import { matchMaterialsToLessons, type MaterialGroup } from './lessonMaterialMatcher'
 export type { MaterialGroup } from './lessonMaterialMatcher'
 import { buildLessonBasedCurriculum, type CourseSection } from './lessonBasedCurriculum'
 import { decodeUriComponentRepeated } from './textUtils'
@@ -183,6 +179,13 @@ export class LocalCourseAdapter implements CourseAdapter {
     const lessons: LessonItem[] = []
     for (const section of sections) {
       for (const group of section.lessons) {
+        if (
+          group.primary.type !== 'video' &&
+          group.primary.type !== 'pdf' &&
+          group.primary.type !== 'text'
+        ) {
+          continue
+        }
         lessons.push({
           id: group.primary.id,
           title: group.primary.displayTitle,

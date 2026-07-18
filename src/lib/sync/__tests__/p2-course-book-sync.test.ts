@@ -67,6 +67,12 @@ async function getQueueEntries(table: string) {
   return queue.filter(q => q.tableName === table)
 }
 
+function requireCreated<T>(value: T | null): T {
+  expect(value).not.toBeNull()
+  if (value === null) throw new Error('Expected author creation to succeed')
+  return value
+}
+
 // ---------------------------------------------------------------------------
 // Setup
 // ---------------------------------------------------------------------------
@@ -156,7 +162,7 @@ describe('E94-S02 P2 sync wiring — authors', () => {
       courseIds: [],
     }
 
-    const created = await useAuthorStore.getState().addAuthor(authorData)
+    const created = requireCreated(await useAuthorStore.getState().addAuthor(authorData))
 
     const stored = await db.authors.get(created.id)
     expect(stored).toBeDefined()
@@ -175,7 +181,7 @@ describe('E94-S02 P2 sync wiring — authors', () => {
       photoHandle: { name: 'photo.jpg' } as unknown as FileSystemFileHandle,
     }
 
-    const created = await useAuthorStore.getState().addAuthor(authorData)
+    const created = requireCreated(await useAuthorStore.getState().addAuthor(authorData))
 
     const entries = await getQueueEntries('authors')
     const addEntry = entries.find(e => e.recordId === created.id && e.operation === 'add')
@@ -185,7 +191,7 @@ describe('E94-S02 P2 sync wiring — authors', () => {
 
   it('deleteAuthor produces a syncQueue delete entry for authors', async () => {
     const authorData = { name: 'Delete Me', courseIds: [] }
-    const created = await useAuthorStore.getState().addAuthor(authorData)
+    const created = requireCreated(await useAuthorStore.getState().addAuthor(authorData))
     await db.syncQueue.clear()
 
     await useAuthorStore.getState().deleteAuthor(created.id, { silent: true })
@@ -198,7 +204,7 @@ describe('E94-S02 P2 sync wiring — authors', () => {
 
   it('linkCourseToAuthor produces a put entry with updated courseIds', async () => {
     const authorData = { name: 'Link Author', courseIds: [] }
-    const created = await useAuthorStore.getState().addAuthor(authorData)
+    const created = requireCreated(await useAuthorStore.getState().addAuthor(authorData))
     await db.syncQueue.clear()
 
     const courseId = crypto.randomUUID()

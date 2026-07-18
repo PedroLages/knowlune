@@ -26,6 +26,14 @@ vi.mock('@/lib/settings', () => ({
   hydrateSettingsFromSupabase: vi.fn().mockResolvedValue(undefined),
 }))
 
+vi.mock('@/lib/sync/observedHydrate', () => ({
+  observedHydrate: vi.fn().mockResolvedValue(undefined),
+}))
+
+vi.mock('@/lib/credentials/migrateCredentialsToVault', () => ({
+  runCredentialsToVaultMigration: vi.fn().mockResolvedValue(undefined),
+}))
+
 vi.mock('@/lib/sync/backfill', () => ({
   backfillUserId: vi
     .fn()
@@ -93,6 +101,7 @@ describe('useAuthLifecycle', () => {
     vi.clearAllMocks()
     resetMocks()
     localStorage.clear()
+    sessionStorage.clear()
     // Reset auth store to defaults
     useAuthStore.setState({
       user: null,
@@ -221,7 +230,18 @@ describe('useAuthLifecycle', () => {
       authChangeCallback!('SIGNED_IN', makeSession('user-1'))
     })
 
-    await vi.waitFor(() => expect(backfillUserId).toHaveBeenCalledWith('user-1'))
+    await vi.waitFor(() => expect(backfillUserId).toHaveBeenCalledWith('user-1', null))
+  })
+
+  it('passes the guest session id to backfillUserId before clearing guest state', async () => {
+    sessionStorage.setItem('knowlune-guest-id', 'guest-session-1')
+
+    renderHook(() => useAuthLifecycle())
+    act(() => {
+      authChangeCallback!('SIGNED_IN', makeSession('user-1'))
+    })
+
+    await vi.waitFor(() => expect(backfillUserId).toHaveBeenCalledWith('user-1', 'guest-session-1'))
   })
 
   it('sets the localStorage linked flag when no unlinked records', async () => {

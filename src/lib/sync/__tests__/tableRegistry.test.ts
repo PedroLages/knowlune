@@ -9,12 +9,53 @@ const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 
 // ---------------------------------------------------------------------------
-// AC2 / 3.12 — All 39 tables registered (38 + userConsents added in E119-S07)
+// AC2 / 3.12 — Required sync tables registered in priority order
 // ---------------------------------------------------------------------------
 
 describe('tableRegistry — completeness', () => {
-  it('has exactly 39 entries', () => {
-    expect(tableRegistry).toHaveLength(39)
+  it('contains the complete ordered set of required Dexie tables', () => {
+    expect(tableRegistry.map(entry => entry.dexieTable)).toEqual([
+      'contentProgress',
+      'studySessions',
+      'progress',
+      'notes',
+      'bookmarks',
+      'flashcards',
+      'reviewRecords',
+      'embeddings',
+      'bookHighlights',
+      'vocabularyItems',
+      'audioBookmarks',
+      'audioClips',
+      'chatConversations',
+      'learnerModels',
+      'userConsents',
+      'importedCourses',
+      'importedVideos',
+      'importedPdfs',
+      'authors',
+      'books',
+      'bookReviews',
+      'shelves',
+      'bookShelves',
+      'readingQueue',
+      'chapterMappings',
+      'learningPaths',
+      'learningPathEntries',
+      'challenges',
+      'courseReminders',
+      'notifications',
+      'careerPaths',
+      'pathEnrollments',
+      'studySchedules',
+      'opdsCatalogs',
+      'audiobookshelfServers',
+      'courseServers',
+      'notificationPreferences',
+      'quizzes',
+      'quizAttempts',
+      'aiUsageEvents',
+    ])
   })
 
   it('does not include flashcard_reviews (Supabase-only table)', () => {

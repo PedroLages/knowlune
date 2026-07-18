@@ -14,7 +14,7 @@
  * motion.div) and expanded-lesson rendering paths, making a shared
  * abstraction more costly than the duplication.
  */
-import { useRef, useState, useEffect } from 'react'
+import { useRef, useState, useEffect, type Ref } from 'react'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { AnimatePresence, motion } from 'motion/react'
@@ -22,6 +22,7 @@ import { Check, Lock, GripVertical, ChevronDown, Video, Clock } from 'lucide-rea
 import { Card, CardContent } from '@/app/components/ui/card'
 import { cn } from '@/app/components/ui/utils'
 import { EntryActionButton, LessonRow } from '@/app/components/learning-path/TimelinePrimitives'
+import { MoveUpDownButtons } from '@/app/components/figma/MoveUpDownButtons'
 import { formatClockDuration } from '@/lib/formatDuration'
 import type { ChapterGroup } from '@/lib/curriculumGrouping'
 import type {
@@ -49,6 +50,12 @@ interface SortableCourseTimelineEntryProps {
   videoProgressMap?: Map<string, VideoProgress>
   progressionMode?: PathProgressionMode
   suppressAnimations?: boolean
+  sortableIndex?: number
+  sortableTotal?: number
+  onMoveUp?: () => void
+  onMoveDown?: () => void
+  moveUpRef?: Ref<HTMLButtonElement>
+  moveDownRef?: Ref<HTMLButtonElement>
 }
 
 export function SortableCourseTimelineEntry({
@@ -67,6 +74,12 @@ export function SortableCourseTimelineEntry({
   videoProgressMap,
   progressionMode,
   suppressAnimations,
+  sortableIndex,
+  sortableTotal,
+  onMoveUp,
+  onMoveDown,
+  moveUpRef,
+  moveDownRef,
 }: SortableCourseTimelineEntryProps) {
   const isFreeMode = progressionMode === 'free'
   const isLocked = isFreeMode ? false : !isCompleted && !isInProgress
@@ -177,7 +190,10 @@ export function SortableCourseTimelineEntry({
                   role: 'button',
                   tabIndex: 0,
                   'aria-label': `Module ${index + 1}: ${info?.name || 'Course'} — ${statusLabel}`,
-                  onClick: () => setIsExpanded(prev => !prev),
+                  onClick: (event: React.MouseEvent) => {
+                    if ((event.target as HTMLElement).closest('button')) return
+                    setIsExpanded(prev => !prev)
+                  },
                   onKeyDown: (e: React.KeyboardEvent) => {
                     if (e.key === 'Enter' || e.key === ' ') {
                       e.preventDefault()
@@ -198,6 +214,23 @@ export function SortableCourseTimelineEntry({
                 >
                   <GripVertical className="size-4" aria-hidden="true" />
                 </button>
+
+                {sortableIndex !== undefined &&
+                  sortableTotal !== undefined &&
+                  onMoveUp &&
+                  onMoveDown && (
+                    <MoveUpDownButtons
+                      index={sortableIndex}
+                      total={sortableTotal}
+                      itemLabel={info?.name || `module ${index + 1}`}
+                      onMoveUp={onMoveUp}
+                      onMoveDown={onMoveDown}
+                      size="sm"
+                      upRef={moveUpRef}
+                      downRef={moveDownRef}
+                      testIdPrefix={`learning-path-${entry.courseId}-move`}
+                    />
+                  )}
 
                 <div className="flex-1 min-w-0">
                   {/* Row 1: Module number + status badge */}

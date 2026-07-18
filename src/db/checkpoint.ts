@@ -1,7 +1,7 @@
 /**
- * Dexie Migration Checkpoint — v68
+ * Dexie Migration Checkpoint — v69
  *
- * This file provides a frozen snapshot of the complete IndexedDB schema at version 67.
+ * This file provides a frozen snapshot of the complete IndexedDB schema at version 69.
  * Fresh installs skip the incremental version declarations and create the full
  * schema in a single step. Existing users at lower versions still run incremental
  * migrations through the legacy version chain in schema.ts.
@@ -31,7 +31,7 @@ export const SEARCH_FRECENCY_INDEXES = '[entityType+entityId], entityType, lastO
 
 /**
  * Complete schema snapshot at CHECKPOINT_VERSION.
- * This is the result of applying all migrations v1–v66 on a fresh database.
+ * This is the result of applying all migrations v1–v69 on a fresh database.
  *
  * IMPORTANT: This must exactly match the schema produced by running all
  * incremental migrations. The unit test `schema-checkpoint.test.ts`
@@ -67,6 +67,8 @@ export const SEARCH_FRECENCY_INDEXES = '[entityType+entityId], entityType, lastO
  *                No schema/index change — the TypeScript types drop `auth.password` / `apiKey`,
  *                and the post-boot `migrateCredentialsToVault()` clears legacy values from Dexie
  *                once the user authenticates.
+ * v68 (E133-S01): courseServers table for HTTP course content servers.
+ * v69: lessonSummaries table for device-local AI summary persistence.
  *
  * Versions beyond this checkpoint (applied incrementally in schema.ts):
  *   (none)

@@ -38,6 +38,7 @@
     "test:e2e": "playwright test",
     "test:e2e:ci": "npm run test:e2e 2>&1 | bash scripts/filter-test-output.sh",
     "test:e2e:ui": "playwright test --ui",
+    "capture:demo-reel": "tsx scripts/capture-demo-reel.ts",
     "ci": "npm run typecheck && npm run lint && npm run format:check && npm run build && npm run test:unit",
     "preview": "vite preview",
     "lighthouse": "lhci autorun",

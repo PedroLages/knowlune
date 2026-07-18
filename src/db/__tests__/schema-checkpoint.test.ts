@@ -52,6 +52,8 @@ describe('Dexie migration checkpoint', () => {
     // reorderHistory added in v63 (AI-first path building)
     // downloads added in v64 (offline downloads)
     // videoStoryboards added in v65 (scrub-preview storyboard sprite sheets)
+    // courseServers added in v68 (HTTP course content servers)
+    // lessonSummaries added in v69 (device-local AI summary persistence)
     const expectedTables = [
       'absCollections',
       'absSeries',
@@ -118,7 +120,7 @@ describe('Dexie migration checkpoint', () => {
   })
 
   it('checkpoint-created DB should have identical schema to migration-created DB', async () => {
-    // 1. Create DB via full migration chain (all 27 versions)
+    // 1. Create DB via the full migration chain
     const { declareLegacyMigrations } = await import('../schema')
 
     const migrationDb = new Dexie(MIGRATION_DB_NAME)

@@ -14,6 +14,7 @@ vi.mock('@/lib/aiConfiguration', () => ({
   getDecryptedApiKeyForProvider: vi.fn().mockResolvedValue(null),
   saveProviderApiKey: vi.fn().mockResolvedValue(undefined),
   deleteProviderApiKey: vi.fn().mockResolvedValue(undefined),
+  getAPIKeyHealth: vi.fn().mockReturnValue('ok'),
   AI_PROVIDERS: {
     openai: {
       id: 'openai',

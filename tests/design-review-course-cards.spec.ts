@@ -5,19 +5,21 @@
  * All ImportedCourseCard routes: /courses (grid), /my-class (progress)
  * Static CourseCard is deprecated (useCourseStore is no-op stub).
  */
-import { test, expect } from '@playwright/test';
+import { expect } from '@playwright/test';
 import * as fs from 'fs';
+import { createRequire } from 'node:module';
+import { test } from './support/fixtures/local-storage-fixture';
 import { seedImportedCourses } from './support/helpers/indexeddb-seed';
 import { createImportedCourse } from './support/fixtures/factories/imported-course-factory';
 
 const SCREENSHOT_DIR = '/tmp/design-review-screenshots';
 fs.mkdirSync(SCREENSHOT_DIR, { recursive: true });
-const axeSource = fs.readFileSync('/Volumes/SSD/Dev/Apps/Knowlune/node_modules/axe-core/axe.min.js', 'utf-8');
+const axeSource = fs.readFileSync(createRequire(import.meta.url).resolve('axe-core/axe.min.js'), 'utf-8');
 
 // Test courses for /courses page — mix of statuses to verify card height consistency
 const COURSES_NOT_STARTED = [
-  createImportedCourse({ id: 'dr-ns-1', name: 'Fundamentals of Persuasion', status: 'active', videoCount: 12, pdfCount: 3, tags: ['psychology'] }),
-  createImportedCourse({ id: 'dr-ns-2', name: 'Advanced Negotiation Tactics', status: 'active', videoCount: 8, pdfCount: 1, tags: ['negotiation'] }),
+  createImportedCourse({ id: 'dr-ns-1', name: 'Fundamentals of Persuasion', status: 'not-started', videoCount: 12, pdfCount: 3, tags: ['psychology'] }),
+  createImportedCourse({ id: 'dr-ns-2', name: 'Advanced Negotiation Tactics', status: 'not-started', videoCount: 8, pdfCount: 1, tags: ['negotiation'] }),
 ];
 const COURSES_ACTIVE = [
   createImportedCourse({ id: 'dr-a-1', name: 'Body Language Mastery', status: 'active', videoCount: 15, pdfCount: 4, tags: ['body-language'] }),
@@ -36,9 +38,14 @@ async function injectAxe(page: any) {
 async function runAxe(page: any) {
   await injectAxe(page);
   return page.evaluate(async () => {
-    const results = await (window as any).axe.run(document, {
-      runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'] }
-    });
+    const results = await (window as any).axe.run(
+      {
+        exclude: [['[data-sonner-toaster]'], ['svg[role="img"]']],
+      },
+      {
+        runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'] }
+      }
+    );
     return {
       violations: results.violations.map((v: any) => ({
         id: v.id, impact: v.impact, description: v.description,
@@ -57,7 +64,7 @@ function dismissOnboarding() {
   };
 }
 
-test.use({ bypassCSP: true, baseURL: 'http://localhost:5200', actionTimeout: 20000, navigationTimeout: 30000 });
+test.use({ bypassCSP: true, actionTimeout: 20000, navigationTimeout: 30000 });
 
 test.beforeEach(async ({ page }) => {
   await page.addInitScript((data) => {

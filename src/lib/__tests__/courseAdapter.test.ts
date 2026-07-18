@@ -88,8 +88,8 @@ function makePdf(overrides: Partial<ImportedPdf> = {}): ImportedPdf {
   return {
     id: 'pdf-1',
     courseId: 'local-course-1',
-    filename: 'cheatsheet.pdf',
-    path: 'docs/cheatsheet.pdf',
+    filename: '02-reading.pdf',
+    path: 'docs/02-reading.pdf',
     pageCount: 10,
     fileHandle: null as unknown as FileSystemFileHandle,
     ...overrides,
@@ -217,10 +217,10 @@ describe('LessonItem normalization', () => {
     expect(lessons).toHaveLength(1)
     expect(lessons[0]).toMatchObject({
       id: 'vid-1',
-      title: 'intro', // humanizeFilename strips extension and numeric prefix
+      title: 'Intro',
       type: 'video',
       duration: 600,
-      order: 1,
+      order: 0,
     })
     expect(lessons[0].sourceMetadata).toBeDefined()
   })
@@ -232,8 +232,9 @@ describe('LessonItem normalization', () => {
     expect(lessons).toHaveLength(1)
     expect(lessons[0]).toMatchObject({
       id: 'pdf-1',
-      title: 'cheatsheet', // humanizeFilename strips extension
+      title: 'Reading',
       type: 'pdf',
+      order: 0,
     })
     expect(lessons[0].sourceMetadata).toBeDefined()
     expect(lessons[0].sourceMetadata).toHaveProperty('pageCount', 10)
@@ -302,17 +303,29 @@ describe('ContentCapabilities', () => {
 describe('LocalCourseAdapter.getLessons()', () => {
   it('combines videos and PDFs sorted by order', async () => {
     const videos = [
-      makeVideo({ id: 'v2', order: 3, filename: '03-advanced.mp4' }),
-      makeVideo({ id: 'v1', order: 1, filename: '01-intro.mp4' }),
+      makeVideo({
+        id: 'v2',
+        order: 3,
+        filename: '03-advanced.mp4',
+        path: 'content/03-advanced.mp4',
+      }),
+      makeVideo({ id: 'v1', order: 1, filename: '01-intro.mp4', path: 'content/01-intro.mp4' }),
     ]
-    const pdfs = [makePdf({ id: 'p1', filename: '02-resources.pdf', pageCount: 10 })]
+    const pdfs = [
+      makePdf({
+        id: 'p1',
+        filename: '02-reading.pdf',
+        path: 'content/02-reading.pdf',
+        pageCount: 10,
+      }),
+    ]
 
     const adapter = new adapterLib.LocalCourseAdapter(makeLocalCourse(), videos, pdfs)
     const lessons = await adapter.getLessons()
 
     expect(lessons).toHaveLength(3)
     expect(lessons[0].id).toBe('v1') // order 1 (01-intro.mp4)
-    expect(lessons[1].id).toBe('p1') // order 2 (02-resources.pdf — filename prefix)
+    expect(lessons[1].id).toBe('p1') // order 2 (02-reading.pdf — filename prefix)
     expect(lessons[2].id).toBe('v2') // order 3 (03-advanced.mp4)
   })
 
@@ -443,7 +456,7 @@ describe('LocalCourseAdapter.getGroupedLessons()', () => {
       makeVideo({ id: 'v2', order: 2, filename: '02-Advanced.mp4' }),
     ]
     const pdfs = [
-      makePdf({ id: 'p1', filename: '01-Intro.pdf', pageCount: 5 }),
+      makePdf({ id: 'p1', filename: '01-Intro.pdf', path: 'videos/01-Intro.pdf', pageCount: 5 }),
       makePdf({ id: 'p2', filename: 'Resources.pdf', pageCount: 20 }),
     ]
 
@@ -477,7 +490,7 @@ describe('LocalCourseAdapter.getLessons() companion exclusion', () => {
   it('excludes companion PDFs that are matched to videos', async () => {
     const videos = [makeVideo({ id: 'v1', order: 1, filename: '01-Intro.mp4' })]
     const pdfs = [
-      makePdf({ id: 'p1', filename: '01-Intro.pdf', pageCount: 5 }),
+      makePdf({ id: 'p1', filename: '01-Intro.pdf', path: 'videos/01-Intro.pdf', pageCount: 5 }),
       makePdf({ id: 'p2', filename: 'Resources.pdf', pageCount: 20 }),
     ]
 
@@ -488,7 +501,7 @@ describe('LocalCourseAdapter.getLessons() companion exclusion', () => {
     const ids = lessons.map(l => l.id)
     expect(ids).toContain('v1')
     expect(ids).not.toContain('p1') // companion — excluded
-    expect(ids).toContain('p2') // standalone — included
+    expect(ids).not.toContain('p2') // unnumbered resource — material-only curriculum entry
   })
 })
 
