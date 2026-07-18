@@ -105,8 +105,8 @@ function extractTagsFromContent(content: string): string[] {
 
 /**
  * Get the last-watched lesson for a course by querying the Dexie `progress` table.
- * Returns the lesson with the most recent activity (highest completionPercentage
- * as tiebreaker), or null if no progress exists.
+ * Returns the lesson with the most recent activity. Modern rows use `updatedAt`;
+ * legacy rows fall back to watch time and completion percentage.
  */
 export async function getLastWatchedLesson(
   courseId: string
@@ -114,12 +114,12 @@ export async function getLastWatchedLesson(
   const rows = await db.progress.where('courseId').equals(courseId).toArray()
   if (rows.length === 0) return null
 
-  // Pick the most recently active lesson — use currentTime > 0 as a signal,
-  // then highest completionPercentage as tiebreaker.
-  // NOTE: VideoProgress has no `updatedAt` field (only completedAt for finished
-  // lessons), so completionPercentage serves as a proxy for recency. This is
-  // imperfect but acceptable until an updatedAt timestamp is added to the schema.
+  // Prefer the canonical mutation timestamp. Older rows may not have updatedAt,
+  // so retain the former deterministic watch-time/completion fallback.
   const sorted = [...rows].sort((a, b) => {
+    const aUpdatedAt = a.updatedAt ? new Date(a.updatedAt).getTime() : 0
+    const bUpdatedAt = b.updatedAt ? new Date(b.updatedAt).getTime() : 0
+    if (aUpdatedAt !== bUpdatedAt) return bUpdatedAt - aUpdatedAt
     // Prefer lessons with actual watch time
     if (a.currentTime > 0 && b.currentTime <= 0) return -1
     if (b.currentTime > 0 && a.currentTime <= 0) return 1
