@@ -55,17 +55,31 @@ async function seedLearningPath(page: import('@playwright/test').Page) {
 
 test.describe('Courses Filtering', () => {
   test.beforeEach(async ({ page }) => {
-    // Clear the filter store session to get clean defaults
-    await page.addInitScript(() => {
-      sessionStorage.removeItem('knowlune-courses-filter-v1')
+    // Establish the app origin and initialize IndexedDB before seeding test data.
+    await page.goto('/')
+    // Clear the filter store once so reload-based persistence tests remain meaningful.
+    await page.evaluate(() => {
+      sessionStorage.removeItem('knowlune-courses-filter-v2')
     })
   })
 
-  test('default view hides track-assigned courses and shows info message', async ({ page }) => {
+  test('default view includes track-assigned courses', async ({ page }) => {
     // Seed courses: 2 standalone, 1 track-assigned
-    const standalone1 = createImportedCourse({ id: 'course-a', name: 'Standalone A', tags: ['react'] })
-    const standalone2 = createImportedCourse({ id: 'course-b', name: 'Standalone B', tags: ['vue'] })
-    const trackCourse = createImportedCourse({ id: 'course-c', name: 'Track Course', tags: ['typescript'] })
+    const standalone1 = createImportedCourse({
+      id: 'course-a',
+      name: 'Standalone A',
+      tags: ['react'],
+    })
+    const standalone2 = createImportedCourse({
+      id: 'course-b',
+      name: 'Standalone B',
+      tags: ['vue'],
+    })
+    const trackCourse = createImportedCourse({
+      id: 'course-c',
+      name: 'Track Course',
+      tags: ['typescript'],
+    })
 
     await seedImportedCourses(page, [standalone1, standalone2, trackCourse])
     await seedLearningPath(page)
@@ -73,20 +87,19 @@ test.describe('Courses Filtering', () => {
 
     await goToCourses(page)
 
-    // Standalone courses should be visible
+    // Standalone and track-assigned courses should all be visible by default
     await expect(page.getByText('Standalone A')).toBeVisible()
     await expect(page.getByText('Standalone B')).toBeVisible()
+    await expect(page.getByText('Track Course')).toBeVisible()
 
-    // Track-assigned course should be hidden by default
-    await expect(page.getByText('Track Course')).toBeHidden()
-
-    // Info message should be visible
-    const infoBanner = page.getByTestId('track-courses-info')
-    await expect(infoBanner).toBeVisible()
-    await expect(infoBanner).toContainText('1 course is organized in learning tracks')
+    // The filter control should reflect the inclusive default
+    await page.getByTestId('open-filter-sidebar-btn').click()
+    await expect(
+      page.getByRole('switch', { name: 'Include courses in learning tracks' })
+    ).toBeChecked()
   })
 
-  test('info message "Show →" opens sidebar and enables track courses', async ({ page }) => {
+  test('track courses can be excluded and included again from the sidebar', async ({ page }) => {
     const standalone = createImportedCourse({ id: 'course-d', name: 'Standalone D', tags: [] })
     const trackCourse = createImportedCourse({ id: 'course-e', name: 'Track Course E', tags: [] })
 
@@ -96,32 +109,42 @@ test.describe('Courses Filtering', () => {
 
     await goToCourses(page)
 
-    // Click the Show → link
-    await page.getByTestId('show-track-courses-link').click()
-
-    // The track course should now be visible
     await expect(page.getByText('Track Course E')).toBeVisible()
 
-    // The info message should disappear
-    await expect(page.getByTestId('track-courses-info')).toBeHidden()
+    await page.getByTestId('open-filter-sidebar-btn').click()
+    const includeTrackCourses = page.getByRole('switch', {
+      name: 'Include courses in learning tracks',
+    })
 
-    // The sidebar should be open (has filter content)
-    await expect(page.getByTestId('course-filter-sidebar')).toBeVisible()
+    await expect(includeTrackCourses).toBeChecked()
+    await includeTrackCourses.click()
+    await expect(includeTrackCourses).not.toBeChecked()
+    await expect(page.getByText('Track Course E')).toBeHidden()
+
+    await includeTrackCourses.click()
+    await expect(includeTrackCourses).toBeChecked()
+    await expect(page.getByText('Track Course E')).toBeVisible()
   })
 
-  test('no info message when no learning tracks exist', async ({ page }) => {
+  test('track-course toggle is omitted when no learning tracks exist', async ({ page }) => {
     const course = createImportedCourse({ id: 'course-f', name: 'No Track Course', tags: [] })
     await seedImportedCourses(page, [course])
 
     await goToCourses(page)
 
-    // No info banner
-    await expect(page.getByTestId('track-courses-info')).toBeHidden()
+    await page.getByTestId('open-filter-sidebar-btn').click()
+    await expect(
+      page.getByRole('switch', { name: 'Include courses in learning tracks' })
+    ).toHaveCount(0)
   })
 
   test('filter chips appear and can be dismissed', async ({ page }) => {
     // Seed a couple courses with tags
-    const course1 = createImportedCourse({ id: 'course-g', name: 'Course G', tags: ['react', 'typescript'] })
+    const course1 = createImportedCourse({
+      id: 'course-g',
+      name: 'Course G',
+      tags: ['react', 'typescript'],
+    })
     const course2 = createImportedCourse({ id: 'course-h', name: 'Course H', tags: ['vue'] })
 
     await seedImportedCourses(page, [course1, course2])
@@ -132,24 +155,37 @@ test.describe('Courses Filtering', () => {
     await expect(page.getByTestId('course-filter-sidebar')).toBeVisible()
 
     // Select YouTube source filter
-    await page.getByTestId('radio-item-youtube').click()
+    await page.getByRole('radio', { name: 'YouTube' }).click()
     // YouTube chip should appear
-    await expect(page.getByText('YouTube')).toBeVisible()
-
-    // Enable track courses via filter sidebar
-    // ... (track toggle tested in another scenario)
+    await expect(page.getByLabel('Remove YouTube filter')).toBeVisible()
 
     // Dismiss the YouTube chip
+    await page.keyboard.press('Escape')
+    await expect(page.getByTestId('course-filter-sidebar')).toBeHidden()
     await page.getByLabel('Remove YouTube filter').click()
     // YouTube chip should disappear
-    await expect(page.getByText('YouTube')).toBeHidden()
+    await expect(page.getByLabel('Remove YouTube filter')).toBeHidden()
   })
 
-  test('tag filter OR semantics — courses matching any selected tag are shown', async ({ page }) => {
+  test('tag filter OR semantics — courses matching any selected tag are shown', async ({
+    page,
+  }) => {
     // Seed courses with different tags to verify OR behavior (R8)
-    const courseReact = createImportedCourse({ id: 'tag-course-1', name: 'React Course', tags: ['react'] })
-    const courseVue = createImportedCourse({ id: 'tag-course-2', name: 'Vue Course', tags: ['vue'] })
-    const courseTypeScript = createImportedCourse({ id: 'tag-course-3', name: 'TypeScript Course', tags: ['typescript'] })
+    const courseReact = createImportedCourse({
+      id: 'tag-course-1',
+      name: 'React Course',
+      tags: ['react'],
+    })
+    const courseVue = createImportedCourse({
+      id: 'tag-course-2',
+      name: 'Vue Course',
+      tags: ['vue'],
+    })
+    const courseTypeScript = createImportedCourse({
+      id: 'tag-course-3',
+      name: 'TypeScript Course',
+      tags: ['typescript'],
+    })
 
     await seedImportedCourses(page, [courseReact, courseVue, courseTypeScript])
     await goToCourses(page)
@@ -159,10 +195,11 @@ test.describe('Courses Filtering', () => {
     await expect(page.getByTestId('course-filter-sidebar')).toBeVisible()
 
     // Select 'react' tag (click the first matching checkbox label)
-    await page.getByText('react').click()
+    const filterSidebar = page.getByTestId('course-filter-sidebar')
+    await filterSidebar.getByText('react', { exact: true }).click()
 
     // Select 'vue' tag
-    await page.getByText('vue').click()
+    await filterSidebar.getByText('vue', { exact: true }).click()
 
     // Both React Course and Vue Course should be visible
     await expect(page.getByText('React Course')).toBeVisible()
@@ -187,7 +224,7 @@ test.describe('Courses Filtering', () => {
     // Open sidebar
     await page.getByTestId('open-filter-sidebar-btn').click()
     await expect(page.getByTestId('course-filter-sidebar')).toBeVisible()
-    await expect(page.getByText('Filters')).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'More Filters' })).toBeVisible()
 
     // Close by pressing Escape
     await page.keyboard.press('Escape')
@@ -205,7 +242,7 @@ test.describe('Courses Filtering', () => {
     await expect(page.getByTestId('course-filter-sidebar')).toBeVisible()
 
     // Select YouTube source filter (none of our seeded courses are YouTube)
-    await page.getByTestId('radio-item-youtube').click()
+    await page.getByRole('radio', { name: 'YouTube' }).click()
 
     // Empty state should be visible
     const emptyState = page.getByTestId('filtered-empty-state')
@@ -213,13 +250,17 @@ test.describe('Courses Filtering', () => {
     await expect(emptyState).toContainText('No courses match the active filters')
 
     // Click "Clear all filters"
+    await page.keyboard.press('Escape')
+    await expect(page.getByTestId('course-filter-sidebar')).toBeHidden()
     await page.getByTestId('clear-all-filters-empty').click()
 
     // Course should reappear
     await expect(page.getByText('Course J')).toBeVisible()
   })
 
-  test('rehydrated empty state from sessionStorage shows clear all filters button', async ({ page }) => {
+  test('rehydrated empty state from sessionStorage shows clear all filters button', async ({
+    page,
+  }) => {
     // Seed a course
     const course = createImportedCourse({ id: 'course-j2', name: 'Course J2', tags: ['react'] })
     await seedImportedCourses(page, [course])
@@ -228,10 +269,15 @@ test.describe('Courses Filtering', () => {
     // Set filter via sessionStorage to force empty state (tests rehydration, not UI interaction)
     await page.evaluate(() => {
       sessionStorage.setItem(
-        'knowlune-courses-filter-v1',
+        'knowlune-courses-filter-v2',
         JSON.stringify({
-          state: { source: 'youtube', showTrackCourses: false, selectedTags: [], selectedStatuses: [] },
-          version: 1,
+          state: {
+            source: 'youtube',
+            showTrackCourses: false,
+            selectedTags: [],
+            selectedStatuses: [],
+          },
+          version: 2,
         })
       )
     })
@@ -250,7 +296,9 @@ test.describe('Courses Filtering', () => {
     await expect(page.getByText('Course J2')).toBeVisible()
   })
 
-  test('sidebar trigger button shows active indicator when filters are active', async ({ page }) => {
+  test('sidebar trigger button shows active indicator when filters are active', async ({
+    page,
+  }) => {
     // Seed a course
     const course = createImportedCourse({ id: 'course-k', name: 'Course K', tags: ['react'] })
     await seedImportedCourses(page, [course])
@@ -259,10 +307,15 @@ test.describe('Courses Filtering', () => {
     // Set a filter via sessionStorage
     await page.evaluate(() => {
       sessionStorage.setItem(
-        'knowlune-courses-filter-v1',
+        'knowlune-courses-filter-v2',
         JSON.stringify({
-          state: { source: 'youtube', showTrackCourses: false, selectedTags: [], selectedStatuses: [] },
-          version: 1,
+          state: {
+            source: 'youtube',
+            showTrackCourses: false,
+            selectedTags: [],
+            selectedStatuses: [],
+          },
+          version: 2,
         })
       )
     })

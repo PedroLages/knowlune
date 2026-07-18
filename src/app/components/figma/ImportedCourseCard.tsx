@@ -68,6 +68,7 @@ import {
   CoverProgressBar,
   CompletionOverlay,
   CoverCornerChip,
+  COURSE_CARD_COVER_HEIGHT_CLASS,
   OVERLAY_SCRIM_CLASS,
 } from './CourseCardShell'
 import type { ImportedCourse, ImportedVideo, LearnerCourseStatus } from '@/data/types'
@@ -337,7 +338,7 @@ export function ImportedCourseCard({
         )}
       >
         <div className="group-hover:translate-y-2 motion-safe:transition-transform motion-reduce:transition-none motion-reduce:group-hover:translate-y-0">
-          <CardCover heightClass="aspect-video w-full">
+          <CardCover heightClass={COURSE_CARD_COVER_HEIGHT_CLASS} data-testid="course-card-cover">
             {/* Keep the poster mounted beneath the preview so loading never exposes a flash. */}
             <div
               data-testid="course-card-placeholder"
@@ -355,7 +356,7 @@ export function ImportedCourseCard({
                 height={720}
                 aria-hidden="true"
                 loading="lazy"
-                className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 motion-reduce:transition-none motion-reduce:group-hover:scale-100"
+                className="absolute inset-0 w-full h-full object-cover object-center transition-transform duration-500 group-hover:scale-105 motion-reduce:transition-none motion-reduce:group-hover:scale-100"
               />
             )}
             {/* Fade the first rendered frame over the poster only after playback begins. */}
@@ -376,7 +377,7 @@ export function ImportedCourseCard({
                 onLoadStart={() => setVideoReady(false)}
                 onPlaying={() => setVideoReady(true)}
                 className={cn(
-                  'absolute inset-0 block w-full h-full object-cover pointer-events-none transition-opacity duration-200 motion-reduce:transition-none',
+                  'absolute inset-0 block w-full h-full object-cover object-center pointer-events-none transition-opacity duration-200 motion-reduce:transition-none',
                   videoReady ? 'opacity-100' : 'opacity-0'
                 )}
               />
@@ -702,7 +703,7 @@ export function ImportedCourseCard({
           {/* Action buttons — always visible, no hover needed */}
           {!readOnly &&
             (showPlay || ((status === 'active' || status === 'paused') && !isCompleted)) && (
-              <div data-testid="course-card-actions" className="mt-auto pt-3">
+              <div data-testid="course-card-actions" className="mt-3 border-t border-border pt-3">
                 {showPlay && (
                   <Button
                     variant="brand"
@@ -710,7 +711,7 @@ export function ImportedCourseCard({
                     data-testid="start-course-btn"
                     onClick={startStudying}
                     aria-label={`Start studying "${course.name}"`}
-                    className="w-full button-press gap-2"
+                    className="min-h-11 w-full button-press gap-2"
                   >
                     <PlayCircle className="size-4" aria-hidden="true" />
                     Start Learning
@@ -722,7 +723,7 @@ export function ImportedCourseCard({
                     size="sm"
                     data-testid="continue-course-btn"
                     aria-label={`Continue "${course.name}"`}
-                    className="w-full button-press gap-2"
+                    className="min-h-11 w-full button-press gap-2"
                     onClick={handleContinueLearning}
                   >
                     <PlayCircle className="size-4" aria-hidden="true" />

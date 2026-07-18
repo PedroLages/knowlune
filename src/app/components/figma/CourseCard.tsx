@@ -22,6 +22,7 @@ import {
   CoverProgressBar,
   CompletionOverlay,
   CoverCornerChip,
+  COURSE_CARD_COVER_HEIGHT_CLASS,
   OVERLAY_SCRIM_CLASS,
 } from './CourseCardShell'
 import { getProgress } from '@/lib/progress'
@@ -198,7 +199,7 @@ export function CourseCard({
       height="100%"
       onCanPlay={() => setVideoReady(true)}
       className={cn(
-        'absolute inset-0 block w-full h-full object-cover pointer-events-none transition-opacity duration-500',
+        'absolute inset-0 block w-full h-full object-cover object-center pointer-events-none transition-opacity duration-500',
         videoReady ? 'opacity-100' : 'opacity-0'
       )}
     />
@@ -433,8 +434,6 @@ export function CourseCard({
 
   // ── Thumbnail section ─────────────────────────────────────────────
 
-  const thumbnailHeight = 'aspect-video w-full'
-
   function renderThumbnailContent() {
     if (variant === 'progress') {
       return course.coverImage ? (
@@ -449,7 +448,7 @@ export function CourseCard({
             alt={course.title}
             width={640}
             height={360}
-            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 motion-reduce:transition-none motion-reduce:group-hover:scale-100"
+            className="w-full h-full object-cover object-center transition-transform duration-500 group-hover:scale-105 motion-reduce:transition-none motion-reduce:group-hover:scale-100"
             loading="lazy"
           />
         </picture>
@@ -478,7 +477,7 @@ export function CourseCard({
             alt={course.title}
             width={768}
             height={432}
-            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 motion-reduce:transition-none motion-reduce:group-hover:scale-100"
+            className="w-full h-full object-cover object-center transition-transform duration-500 group-hover:scale-105 motion-reduce:transition-none motion-reduce:group-hover:scale-100"
           />
         </picture>
       )
@@ -497,7 +496,7 @@ export function CourseCard({
           alt={course.title}
           width={640}
           height={360}
-          className="w-full h-full object-cover transition-transform duration-200 group-hover:scale-105"
+          className="w-full h-full object-cover object-center transition-transform duration-200 group-hover:scale-105"
           loading="lazy"
         />
       </picture>
@@ -507,7 +506,7 @@ export function CourseCard({
   function renderThumbnail() {
     const showDurationChip = variant !== 'overview' && course.estimatedHours > 0
     return (
-      <CardCover heightClass={thumbnailHeight}>
+      <CardCover heightClass={COURSE_CARD_COVER_HEIGHT_CLASS}>
         {renderThumbnailContent()}
         {inlineVideoPreview}
         {renderThumbnailOverlays()}

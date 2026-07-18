@@ -178,7 +178,7 @@ describe('ImportedCourseCard', () => {
     expect(screen.getByText('7 PDFs')).toBeInTheDocument()
   })
 
-  it('keeps metadata next to the author and places flexible space before actions', () => {
+  it('keeps metadata and actions compact without a flexible spacer', () => {
     mockAuthors.push({ id: 'author-1', name: 'Real Vision Academy' })
     renderCard({ authorId: 'author-1', status: 'active', videoCount: 97, pdfCount: 24 })
 
@@ -189,7 +189,20 @@ describe('ImportedCourseCard', () => {
     expect(authorRow?.nextElementSibling).toBe(metadata)
     expect(metadata).toHaveClass('mt-1')
     expect(metadata).not.toHaveClass('mt-auto')
-    expect(actions).toHaveClass('mt-auto')
+    expect(actions).toHaveClass('mt-3', 'border-t', 'pt-3')
+    expect(actions).not.toHaveClass('mt-auto')
+    expect(screen.getByTestId('continue-course-btn')).toHaveClass('min-h-11')
+  })
+
+  it('uses the standardized responsive course-cover height', () => {
+    renderCard()
+
+    expect(screen.getByTestId('course-card-cover')).toHaveClass(
+      'aspect-[2.1/1]',
+      'max-h-[170px]',
+      'sm:h-[150px]',
+      'lg:h-40'
+    )
   })
 
   it('does not reserve an empty author row when the course has no author', () => {
