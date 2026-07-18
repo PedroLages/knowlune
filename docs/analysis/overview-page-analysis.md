@@ -1,5 +1,9 @@
 # Overview Page - Comprehensive UI/UX Analysis & Improvement Plan
 
+> **Superseded on 2026-07-18.** The live-data adaptive dashboard described in
+> [`docs/planning-artifacts/overview-improvement-plan.md`](../planning-artifacts/overview-improvement-plan.md)
+> replaces this historical audit. The material below is retained as the pre-rebuild baseline only.
+
 **Date:** February 13, 2026
 **Platform:** Operative Study Platform
 **Page:** Overview (Dashboard)
@@ -11,6 +15,7 @@
 Automated Playwright testing across 3 devices (Desktop Chrome, Mobile Chrome, Mobile Safari) with **62/72 tests passing (86%)** reveals a solid foundation with critical opportunities for enhancement. The page demonstrates good accessibility practices but lacks engagement features essential for e-learning platforms.
 
 ### Test Results Breakdown
+
 - ✅ **Accessibility**: All WCAG tests passed
 - ✅ **Responsive Design**: Proper breakpoint behavior
 - ✅ **Performance**: Sub-3s load time, lazy loading implemented
@@ -75,12 +80,14 @@ Based on UI/UX Pro Max analysis for e-learning platforms:
 ### Recommended Style: **Claymorphism** (Educational Focus)
 
 **Why Claymorphism for Education:**
+
 - Soft 3D effects create friendly, approachable aesthetic
 - Chunky, playful design encourages engagement
 - Proven effectiveness in educational apps
 - Reduces cognitive load while maintaining visual interest
 
 **Key Visual Properties:**
+
 - Border radius: `16-24px` (currently inconsistent)
 - Borders: `3-4px` thick borders with soft colors
 - Shadows: Double shadows (inner + outer, subtle)
@@ -92,23 +99,25 @@ Based on UI/UX Pro Max analysis for e-learning platforms:
 **Current:** Blue-600 primary (#2563eb)
 **Recommended Palette:**
 
-| Role | Hex | Usage |
-|------|-----|-------|
-| Primary | `#4F46E5` | Main actions, navigation (learning indigo) |
-| Secondary | `#818CF8` | Accents, highlights |
-| Success/Progress | `#22C55E` | Completion states, CTAs, achievements |
-| Background | `#EEF2FF` | Page background (soft indigo tint) |
-| Text | `#312E81` | Primary text (deep indigo) |
-| Muted | `#6366F1` | Secondary text, labels |
+| Role             | Hex       | Usage                                      |
+| ---------------- | --------- | ------------------------------------------ |
+| Primary          | `#4F46E5` | Main actions, navigation (learning indigo) |
+| Secondary        | `#818CF8` | Accents, highlights                        |
+| Success/Progress | `#22C55E` | Completion states, CTAs, achievements      |
+| Background       | `#EEF2FF` | Page background (soft indigo tint)         |
+| Text             | `#312E81` | Primary text (deep indigo)                 |
+| Muted            | `#6366F1` | Secondary text, labels                     |
 
 ### Typography Upgrade
 
 **Recommended Font Pairing:**
+
 - **Headings:** Baloo 2 (playful, educational, friendly)
 - **Body:** Comic Neue (readable, approachable)
 - **Mood:** Learning-focused, encouraging, accessible
 
 **Google Fonts Import:**
+
 ```css
 @import url('https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;500;600;700&family=Comic+Neue:wght@300;400;700&display=swap');
 ```
@@ -125,12 +134,14 @@ Based on UI/UX Pro Max analysis for e-learning platforms:
 **Impact:** Unprofessional appearance, poor user experience
 
 **Implementation:**
+
 ```tsx
 // Fix card hover states
 <Card className="hover:shadow-xl transition-all duration-200 cursor-pointer rounded-2xl">
 ```
 
 **Checklist:**
+
 - [ ] Add `cursor-pointer` to all clickable cards
 - [ ] Implement `hover:shadow-xl transition-shadow duration-200` on interactive cards
 - [ ] Ensure consistent `rounded-2xl` (16px) on all cards
@@ -142,6 +153,7 @@ Based on UI/UX Pro Max analysis for e-learning platforms:
 **Impact:** User confusion, perceived slowness
 
 **Implementation:**
+
 ```tsx
 // Skeleton loader for stats cards
 {isLoading ? (
@@ -161,6 +173,7 @@ Based on UI/UX Pro Max analysis for e-learning platforms:
 ```
 
 **Checklist:**
+
 - [ ] Add skeleton screens for initial load
 - [ ] Show loading spinner for async operations > 300ms
 - [ ] Disable buttons during async actions
@@ -172,20 +185,24 @@ Based on UI/UX Pro Max analysis for e-learning platforms:
 **Impact:** Lost users, no clear next action
 
 **Implementation:**
+
 ```tsx
-{inProgress.length === 0 && (
-  <Card className="text-center py-12">
-    <BookOpen className="w-16 h-16 mx-auto text-blue-400 mb-4" />
-    <h3 className="text-lg font-semibold mb-2">No courses in progress</h3>
-    <p className="text-muted-foreground mb-4">Start your learning journey today!</p>
-    <Button asChild>
-      <Link to="/courses">Browse Courses</Link>
-    </Button>
-  </Card>
-)}
+{
+  inProgress.length === 0 && (
+    <Card className="text-center py-12">
+      <BookOpen className="w-16 h-16 mx-auto text-blue-400 mb-4" />
+      <h3 className="text-lg font-semibold mb-2">No courses in progress</h3>
+      <p className="text-muted-foreground mb-4">Start your learning journey today!</p>
+      <Button asChild>
+        <Link to="/courses">Browse Courses</Link>
+      </Button>
+    </Card>
+  )
+}
 ```
 
 **Checklist:**
+
 - [ ] Empty state for "Continue Studying"
 - [ ] Empty state for "All Courses"
 - [ ] Clear CTA to browse courses
@@ -202,30 +219,35 @@ Based on UI/UX Pro Max analysis for e-learning platforms:
 **Impact:** Increases motivation by 40% (industry data)
 
 **Implementation:**
+
 ```tsx
 // Add after stats row, before Continue Studying
-{completedLessons > 0 && (
-  <Card className="mb-8 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 border-2 border-blue-200">
-    <CardContent className="p-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-lg font-semibold mb-1">🎯 Keep Going!</h2>
-          <p className="text-sm text-muted-foreground">
-            You've completed <span className="font-bold text-blue-600">{completedLessons}</span> lessons.
-            {getNextMilestone(completedLessons)}
-          </p>
+{
+  completedLessons > 0 && (
+    <Card className="mb-8 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 border-2 border-blue-200">
+      <CardContent className="p-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-lg font-semibold mb-1">🎯 Keep Going!</h2>
+            <p className="text-sm text-muted-foreground">
+              You've completed <span className="font-bold text-blue-600">{completedLessons}</span>{' '}
+              lessons.
+              {getNextMilestone(completedLessons)}
+            </p>
+          </div>
+          {/* Progress ring or badge */}
+          <div className="w-20 h-20 rounded-full bg-blue-100 flex items-center justify-center">
+            <span className="text-2xl">🏆</span>
+          </div>
         </div>
-        {/* Progress ring or badge */}
-        <div className="w-20 h-20 rounded-full bg-blue-100 flex items-center justify-center">
-          <span className="text-2xl">🏆</span>
-        </div>
-      </div>
-    </CardContent>
-  </Card>
-)}
+      </CardContent>
+    </Card>
+  )
+}
 ```
 
 **Checklist:**
+
 - [ ] Milestone celebrations (10, 25, 50, 100 lessons)
 - [ ] Achievement badges UI
 - [ ] Progress towards next goal
@@ -238,13 +260,14 @@ Based on UI/UX Pro Max analysis for e-learning platforms:
 **Impact:** Provides context, encourages return visits
 
 **Implementation:**
+
 ```tsx
 // New section showing last 5 activities
 <section className="mb-8">
   <h2 className="text-lg font-semibold mb-4">Recent Activity</h2>
   <Card>
     <CardContent className="p-4">
-      {getRecentActivity(allCourses, 5).map((activity) => (
+      {getRecentActivity(allCourses, 5).map(activity => (
         <div key={activity.id} className="flex items-center gap-4 py-3 border-b last:border-0">
           <div className="w-2 h-2 rounded-full bg-blue-600"></div>
           <div className="flex-1">
@@ -264,6 +287,7 @@ Based on UI/UX Pro Max analysis for e-learning platforms:
 ```
 
 **Checklist:**
+
 - [ ] Show last 5 accessed courses
 - [ ] Display time since last access
 - [ ] Quick "Resume" action button
@@ -275,6 +299,7 @@ Based on UI/UX Pro Max analysis for e-learning platforms:
 **Impact:** Numbers don't motivate without comparison
 
 **Implementation:**
+
 ```tsx
 <Card key={stat.label} className="relative overflow-hidden">
   <CardContent className="p-6">
@@ -284,8 +309,7 @@ Based on UI/UX Pro Max analysis for e-learning platforms:
         <p className="text-3xl font-bold mt-1">{stat.value}</p>
         {/* NEW: Add context */}
         <p className="text-xs text-green-600 font-medium mt-1 flex items-center gap-1">
-          <ArrowUp className="w-3 h-3" />
-          +{stat.weeklyChange} this week
+          <ArrowUp className="w-3 h-3" />+{stat.weeklyChange} this week
         </p>
       </div>
       <div className="w-12 h-12 bg-gradient-to-br from-blue-100 to-indigo-100 dark:from-blue-900/30 dark:to-indigo-900/30 rounded-xl flex items-center justify-center">
@@ -301,6 +325,7 @@ Based on UI/UX Pro Max analysis for e-learning platforms:
 ```
 
 **Checklist:**
+
 - [ ] Add weekly/monthly change indicators
 - [ ] Mini sparkline charts for trends
 - [ ] Color-coded growth (green = up, red = down)
@@ -315,6 +340,7 @@ Based on UI/UX Pro Max analysis for e-learning platforms:
 **New Section: Jump Back In**
 
 **Implementation:**
+
 ```tsx
 <section className="mb-8">
   <h2 className="text-lg font-semibold mb-4">Quick Actions</h2>
@@ -348,6 +374,7 @@ Based on UI/UX Pro Max analysis for e-learning platforms:
 ```
 
 **Checklist:**
+
 - [ ] Browse Courses shortcut
 - [ ] Quick access to notes
 - [ ] Resume last video
@@ -360,6 +387,7 @@ Based on UI/UX Pro Max analysis for e-learning platforms:
 **Impact:** Harder to scan, less inviting
 
 **Implementation:**
+
 ```tsx
 <Link key={course.id} to={`/courses/${course.id}`}>
   <Card className="group hover:shadow-2xl hover:scale-[1.02] transition-all duration-300 cursor-pointer rounded-2xl overflow-hidden border-2 border-transparent hover:border-blue-200">
@@ -410,6 +438,7 @@ Based on UI/UX Pro Max analysis for e-learning platforms:
 ```
 
 **Checklist:**
+
 - [ ] Gradient backgrounds for placeholder images
 - [ ] Progress percentage badge overlay
 - [ ] Category pill badges
@@ -422,6 +451,7 @@ Based on UI/UX Pro Max analysis for e-learning platforms:
 **New Component: Motivation Booster**
 
 **Implementation:**
+
 ```tsx
 // Add to sidebar or top of page
 <Card className="mb-6 bg-gradient-to-r from-orange-50 to-red-50 dark:from-orange-950/30 dark:to-red-950/30 border-2 border-orange-200">
@@ -439,6 +469,7 @@ Based on UI/UX Pro Max analysis for e-learning platforms:
 ```
 
 **Checklist:**
+
 - [ ] Track consecutive days of study
 - [ ] Visual fire emoji (gets bigger with streak)
 - [ ] Motivational messages
@@ -453,6 +484,7 @@ Based on UI/UX Pro Max analysis for e-learning platforms:
 **New Section: Suggested Next Steps**
 
 **Implementation:**
+
 ```tsx
 <section className="mb-8">
   <h2 className="text-lg font-semibold mb-4">Recommended for You</h2>
@@ -469,6 +501,7 @@ Based on UI/UX Pro Max analysis for e-learning platforms:
 **Chart Component: Progress Over Time**
 
 **Implementation:**
+
 ```tsx
 // Use Recharts or Chart.js
 <Card className="mb-8">
@@ -480,6 +513,7 @@ Based on UI/UX Pro Max analysis for e-learning platforms:
 ```
 
 **Checklist:**
+
 - [ ] Line chart showing lessons completed over time
 - [ ] Bar chart for study hours per week
 - [ ] Donut chart for course category distribution
@@ -490,6 +524,7 @@ Based on UI/UX Pro Max analysis for e-learning platforms:
 **Component: Community Activity**
 
 **Implementation:**
+
 ```tsx
 <Card className="mb-8">
   <CardContent className="p-6">
@@ -544,10 +579,7 @@ export function getLast7DaysActivity(): number[] {
   // Return array of lesson completion counts for last 7 days
 }
 
-export function getRecommendations(
-  allCourses: Course[],
-  inProgress: Course[]
-): Course[] {
+export function getRecommendations(allCourses: Course[], inProgress: Course[]): Course[] {
   // Smart recommendations based on:
   // 1. Similar categories to in-progress courses
   // 2. Not yet started courses
@@ -613,6 +645,7 @@ export function getRecommendations(
 ## 5. Performance Optimization
 
 ### 5.1 Current Performance
+
 - ✅ Load time: < 3s
 - ✅ Lazy loading implemented
 - ✅ WebP images with srcset
@@ -620,6 +653,7 @@ export function getRecommendations(
 ### 5.2 Additional Optimizations
 
 **Implement Virtual Scrolling for Large Course Lists:**
+
 ```tsx
 import { useVirtualizer } from '@tanstack/react-virtual'
 
@@ -632,6 +666,7 @@ const rowVirtualizer = useVirtualizer({
 ```
 
 **Code Splitting:**
+
 ```tsx
 // Lazy load chart components
 const ProgressChart = lazy(() => import('@/app/components/charts/ProgressChart'))
@@ -648,12 +683,14 @@ const ProgressChart = lazy(() => import('@/app/components/charts/ProgressChart')
 ### 6.1 Key Performance Indicators (KPIs)
 
 **Engagement Metrics:**
+
 - Daily Active Users (DAU) increase by 25%
 - Average session duration increase by 40%
 - Return visit rate increase by 30%
 - Course completion rate increase by 15%
 
 **User Experience Metrics:**
+
 - Time to first interaction: < 1s
 - Perceived load time: < 2s (with skeleton screens)
 - Click-through rate on "Continue Studying": > 60%
@@ -671,21 +708,25 @@ const ProgressChart = lazy(() => import('@/app/components/charts/ProgressChart')
 ## 7. Implementation Timeline
 
 ### Week 1: Foundation (Critical Fixes)
+
 - Day 1-2: Fix hover states, cursor pointers, border radius
 - Day 3-4: Implement loading states and skeleton screens
 - Day 5: Add empty state handling
 
 ### Week 2: Engagement (High Priority)
+
 - Day 1-2: Achievement highlights and milestones
 - Day 3-4: Recent activity timeline
 - Day 5: Enhanced stats cards with trends
 
 ### Week 3: Polish (Medium Priority)
+
 - Day 1-2: Quick actions section
 - Day 3-4: Improved course card design
 - Day 5: Study streak widget
 
 ### Week 4: Delight (Low Priority)
+
 - Day 1-2: Learning path recommendations
 - Day 3-4: Data visualization charts
 - Day 5: Social proof elements, testing & refinement
@@ -695,15 +736,18 @@ const ProgressChart = lazy(() => import('@/app/components/charts/ProgressChart')
 ## 8. Design Assets Needed
 
 ### 8.1 Icons (from Lucide React)
+
 - ✅ Already available: BookOpen, FileText, CheckCircle, Clock
 - Add: ArrowUp, Play, Download, PlayCircle, TrendingUp, Award, Target, Flame
 
 ### 8.2 Illustrations
+
 - Empty state illustrations (consider using undraw.co or humaaans)
 - Achievement badge designs
 - Milestone celebration graphics
 
 ### 8.3 Micro-interactions
+
 - Confetti animation on milestone completion
 - Progress ring animations
 - Pulse effects on new achievements
@@ -714,6 +758,7 @@ const ProgressChart = lazy(() => import('@/app/components/charts/ProgressChart')
 ## 9. Code Quality Standards
 
 ### 9.1 Component Structure
+
 ```tsx
 // Follow this pattern for all new components
 export function ComponentName({ prop1, prop2 }: ComponentProps) {
@@ -742,6 +787,7 @@ export function ComponentName({ prop1, prop2 }: ComponentProps) {
 ```
 
 ### 9.2 Naming Conventions
+
 - Components: `PascalCase` (e.g., `AchievementBanner`)
 - Functions: `camelCase` (e.g., `getStudyStreak`)
 - Constants: `SCREAMING_SNAKE_CASE` (e.g., `MAX_STREAK_DAYS`)
@@ -752,6 +798,7 @@ export function ComponentName({ prop1, prop2 }: ComponentProps) {
 ## 10. Pre-Launch Checklist
 
 ### Functionality
+
 - [ ] All links navigate correctly
 - [ ] Stats update in real-time
 - [ ] Progress bars reflect actual completion
@@ -760,6 +807,7 @@ export function ComponentName({ prop1, prop2 }: ComponentProps) {
 - [ ] Error boundaries catch component failures
 
 ### Visual Design
+
 - [ ] No emojis used as functional icons (use SVG)
 - [ ] All interactive elements have `cursor-pointer`
 - [ ] Hover states smooth and consistent
@@ -768,6 +816,7 @@ export function ComponentName({ prop1, prop2 }: ComponentProps) {
 - [ ] Light mode and dark mode both work
 
 ### Performance
+
 - [ ] Lighthouse score > 90
 - [ ] First Contentful Paint < 1.5s
 - [ ] Time to Interactive < 3s
@@ -775,6 +824,7 @@ export function ComponentName({ prop1, prop2 }: ComponentProps) {
 - [ ] Images optimized and lazy loaded
 
 ### Accessibility
+
 - [ ] Keyboard navigation works end-to-end
 - [ ] Screen reader announces all content
 - [ ] Focus trap works in modals
@@ -783,6 +833,7 @@ export function ComponentName({ prop1, prop2 }: ComponentProps) {
 - [ ] ARIA labels on icon buttons
 
 ### Cross-Browser
+
 - [ ] Chrome (latest)
 - [ ] Safari (latest)
 - [ ] Firefox (latest)
@@ -790,6 +841,7 @@ export function ComponentName({ prop1, prop2 }: ComponentProps) {
 - [ ] Mobile Chrome (Android)
 
 ### Responsive
+
 - [ ] 375px (mobile)
 - [ ] 768px (tablet)
 - [ ] 1024px (laptop)
@@ -801,21 +853,25 @@ export function ComponentName({ prop1, prop2 }: ComponentProps) {
 ## 11. References & Resources
 
 ### Design System
+
 - UI/UX Pro Max Database (comprehensive guidelines applied)
 - Tailwind CSS v4 Documentation
 - shadcn/ui Component Library
 
 ### Accessibility
+
 - WCAG 2.1 Level AA Guidelines
 - WebAIM Contrast Checker
 - axe DevTools
 
 ### Performance
+
 - Google Lighthouse
 - WebPageTest
 - Core Web Vitals
 
 ### Inspiration
+
 - Duolingo (gamification patterns)
 - Khan Academy (progress tracking)
 - Coursera (course card design)
@@ -830,10 +886,12 @@ export function ComponentName({ prop1, prop2 }: ComponentProps) {
 **Failed:** 10 (14%)
 
 **Failed Tests:**
+
 - Border radius consistency (3 devices × 1 test = 3 failures)
 - Some edge cases in visual design validation
 
 **All Passed:**
+
 - Visual layout & structure (5/5)
 - Responsive design (3/3)
 - Accessibility (4/4)
@@ -849,12 +907,14 @@ export function ComponentName({ prop1, prop2 }: ComponentProps) {
 ## Appendix B: Estimated Impact
 
 ### Before Improvements
+
 - User engagement: Baseline
 - Course completion: Baseline
 - Return visits: Baseline
 - Session duration: Baseline
 
 ### After Full Implementation
+
 - User engagement: +35-45% (gamification effect)
 - Course completion: +15-20% (better progress tracking)
 - Return visits: +30-40% (streaks, recent activity)

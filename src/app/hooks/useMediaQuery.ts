@@ -24,15 +24,15 @@ export function useMediaQuery(query: string): boolean {
   return matches
 }
 
-// Predefined breakpoint hooks following Tailwind CSS defaults
+// App-shell breakpoints: persistent navigation starts at 1280px.
 export function useIsMobile(): boolean {
   return useMediaQuery('(max-width: 639px)')
 }
 
 export function useIsTablet(): boolean {
-  return useMediaQuery('(min-width: 640px) and (max-width: 1023px)')
+  return useMediaQuery('(min-width: 640px) and (max-width: 1279px)')
 }
 
 export function useIsDesktop(): boolean {
-  return useMediaQuery('(min-width: 1024px)')
+  return useMediaQuery('(min-width: 1280px)')
 }

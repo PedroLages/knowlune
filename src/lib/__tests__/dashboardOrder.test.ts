@@ -1,37 +1,22 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
-  getSectionStats,
-  saveSectionStats,
-  recordSectionView,
-  recordSectionTime,
-  getOrderConfig,
-  saveOrderConfig,
-  computeRelevanceScore,
-  computeAutoOrder,
-  pinSection,
-  unpinSection,
-  setManualOrder,
-  resetToDefaultOrder,
+  applyDashboardPreset,
   clearDashboardData,
+  DASHBOARD_PREFERENCES_KEY,
   DEFAULT_ORDER,
+  getDashboardPreferences,
+  getPresetPreferences,
+  resetDashboardPreferences,
   SECTION_LABELS,
+  setManualOrder,
+  setSectionVisibility,
   type DashboardSectionId,
-  type SectionStats,
 } from '@/lib/dashboardOrder'
 
-// ---------------------------------------------------------------------------
-// Setup
-// ---------------------------------------------------------------------------
-
 const mockStorage: Record<string, string> = {}
-const FIXED_DATE = new Date('2026-07-17T09:00:00.000Z')
-const FIXED_ISO = FIXED_DATE.toISOString()
-const SEVEN_DAYS_AGO_ISO = '2026-07-10T09:00:00.000Z'
 
 beforeEach(() => {
-  // Clear mock storage
-  Object.keys(mockStorage).forEach(k => delete mockStorage[k])
-
+  for (const key of Object.keys(mockStorage)) delete mockStorage[key]
   vi.stubGlobal('localStorage', {
     getItem: vi.fn((key: string) => mockStorage[key] ?? null),
     setItem: vi.fn((key: string, value: string) => {
@@ -43,285 +28,118 @@ beforeEach(() => {
   })
 })
 
-// ---------------------------------------------------------------------------
-// Constants
-// ---------------------------------------------------------------------------
-
-describe('constants', () => {
-  it('DEFAULT_ORDER contains every section exactly once in the intended order', () => {
-    const expectedOrder: DashboardSectionId[] = [
-      'recommended-next',
-      'metrics-strip',
-      'continue-learning-path',
-      'quiz-performance',
-      'engagement-zone',
-      'study-history',
-      'study-schedule',
-      'todays-study-plan',
-      'skill-proficiency',
-      'knowledge-map',
-      'insight-action',
-      'reading-overview',
-      'course-gallery',
+describe('dashboard preferences V2', () => {
+  it('defines six unique replacement groups in the product order', () => {
+    const expected: DashboardSectionId[] = [
+      'focus',
+      'pulse',
+      'progress',
+      'consistency',
+      'insights',
+      'library',
     ]
-
+    expect(DEFAULT_ORDER).toEqual(expected)
     expect(new Set(DEFAULT_ORDER).size).toBe(DEFAULT_ORDER.length)
-    expect(DEFAULT_ORDER).toEqual(expectedOrder)
-    expect(Object.keys(SECTION_LABELS).sort()).toEqual([...expectedOrder].sort())
+    expect(Object.keys(SECTION_LABELS).sort()).toEqual([...expected].sort())
   })
 
-  it('SECTION_LABELS has entry for every default section', () => {
-    for (const id of DEFAULT_ORDER) {
-      expect(SECTION_LABELS[id]).toBeTruthy()
-    }
-  })
-})
-
-// ---------------------------------------------------------------------------
-// getSectionStats / saveSectionStats
-// ---------------------------------------------------------------------------
-
-describe('getSectionStats', () => {
-  it('returns default stats when nothing saved', () => {
-    const stats = getSectionStats()
-    for (const id of DEFAULT_ORDER) {
-      expect(stats[id]).toEqual({ views: 0, timeSpentMs: 0, lastAccessedAt: '' })
-    }
+  it('uses Balanced when no preference exists', () => {
+    expect(getDashboardPreferences()).toEqual({
+      version: 2,
+      preset: 'balanced',
+      order: DEFAULT_ORDER,
+      hidden: [],
+    })
   })
 
-  it('returns saved stats from localStorage', () => {
-    const saved: Record<string, SectionStats> = {
-      'recommended-next': { views: 5, timeSpentMs: 1000, lastAccessedAt: '2026-01-01T00:00:00Z' },
-    }
-    mockStorage['dashboard-section-stats'] = JSON.stringify(saved)
+  it('provides stable Focus and Analytics presets without shared arrays', () => {
+    const focus = applyDashboardPreset('focus')
+    const analytics = getPresetPreferences('analytics')
+    focus.order.reverse()
 
-    const stats = getSectionStats()
-    expect(stats['recommended-next'].views).toBe(5)
+    expect(focus.hidden).toEqual(['consistency', 'insights'])
+    expect(analytics.order.slice(0, 4)).toEqual(['pulse', 'progress', 'consistency', 'insights'])
+    expect(getPresetPreferences('focus').order[0]).toBe('focus')
+    expect(getDashboardPreferences().preset).toBe('focus')
   })
 
-  it('returns defaults on corrupted JSON', () => {
-    mockStorage['dashboard-section-stats'] = '{{invalid'
+  it('normalizes duplicate, missing, hidden, and stale V2 sections', () => {
+    mockStorage[DASHBOARD_PREFERENCES_KEY] = JSON.stringify({
+      version: 2,
+      preset: 'custom',
+      order: ['library', 'library', 'retired-widget'],
+      hidden: ['insights', 'insights', 'retired-widget'],
+    })
 
-    const stats = getSectionStats()
-    expect(stats['recommended-next'].views).toBe(0)
-  })
-})
-
-describe('saveSectionStats', () => {
-  it('persists stats to localStorage', () => {
-    const stats = getSectionStats()
-    stats['quiz-performance'].views = 42
-    saveSectionStats(stats)
-
-    expect(mockStorage['dashboard-section-stats']).toBeDefined()
-    const parsed = JSON.parse(mockStorage['dashboard-section-stats'])
-    expect(parsed['quiz-performance'].views).toBe(42)
-  })
-})
-
-// ---------------------------------------------------------------------------
-// recordSectionView / recordSectionTime
-// ---------------------------------------------------------------------------
-
-describe('recordSectionView', () => {
-  it('increments view count', () => {
-    recordSectionView('quiz-performance')
-    recordSectionView('quiz-performance')
-
-    const stats = getSectionStats()
-    expect(stats['quiz-performance'].views).toBe(2)
+    const preferences = getDashboardPreferences()
+    expect(preferences.order).toEqual([
+      'library',
+      'focus',
+      'pulse',
+      'progress',
+      'consistency',
+      'insights',
+    ])
+    expect(preferences.hidden).toEqual(['insights'])
   })
 
-  it('sets lastAccessedAt', () => {
-    vi.useFakeTimers()
-    vi.setSystemTime(new Date('2026-04-06T12:00:00Z'))
+  it('marks manual reorder and visibility changes as custom', () => {
+    applyDashboardPreset('analytics')
+    const reordered = setManualOrder(['library', 'focus'])
+    const hidden = setSectionVisibility('pulse', false)
+    const shown = setSectionVisibility('pulse', true)
 
-    recordSectionView('metrics-strip')
-
-    const stats = getSectionStats()
-    expect(stats['metrics-strip'].lastAccessedAt).toBe('2026-04-06T12:00:00.000Z')
-
-    vi.useRealTimers()
-  })
-})
-
-describe('recordSectionTime', () => {
-  it('accumulates time spent', () => {
-    recordSectionTime('study-history', 5000)
-    recordSectionTime('study-history', 3000)
-
-    const stats = getSectionStats()
-    expect(stats['study-history'].timeSpentMs).toBe(8000)
-  })
-})
-
-// ---------------------------------------------------------------------------
-// getOrderConfig / saveOrderConfig
-// ---------------------------------------------------------------------------
-
-describe('getOrderConfig', () => {
-  it('returns default config when nothing saved', () => {
-    const config = getOrderConfig()
-    expect(config.order).toEqual(DEFAULT_ORDER)
-    expect(config.pinnedSections).toEqual([])
-    expect(config.isManuallyOrdered).toBe(false)
+    expect(reordered.preset).toBe('custom')
+    expect(reordered.order.slice(0, 2)).toEqual(['library', 'focus'])
+    expect(hidden.preset).toBe('custom')
+    expect(hidden.hidden).toContain('pulse')
+    expect(shown.hidden).not.toContain('pulse')
   })
 
-  it('adds missing sections to saved config', () => {
-    const partial = {
-      order: ['recommended-next', 'metrics-strip'] as DashboardSectionId[],
-      pinnedSections: [],
-      isManuallyOrdered: false,
-    }
-    mockStorage['dashboard-section-order'] = JSON.stringify(partial)
+  it('resets a custom layout to Balanced', () => {
+    setManualOrder([...DEFAULT_ORDER].reverse())
+    setSectionVisibility('library', false)
 
-    const config = getOrderConfig()
-    // Should include all DEFAULT_ORDER sections
-    expect(config.order.length).toBe(DEFAULT_ORDER.length)
-    expect(config.order[0]).toBe('recommended-next')
-    expect(config.order[1]).toBe('metrics-strip')
+    expect(resetDashboardPreferences()).toEqual({
+      version: 2,
+      preset: 'balanced',
+      order: DEFAULT_ORDER,
+      hidden: [],
+    })
   })
 
-  it('removes stale sections from saved config', () => {
-    const stale = {
-      order: [...DEFAULT_ORDER, 'nonexistent-section'] as unknown as DashboardSectionId[],
-      pinnedSections: ['nonexistent-section'] as unknown as DashboardSectionId[],
-      isManuallyOrdered: false,
-    }
-    mockStorage['dashboard-section-order'] = JSON.stringify(stale)
+  it('migrates the legacy order once into replacement groups and removes tracking stats', () => {
+    mockStorage['dashboard-section-order'] = JSON.stringify({
+      order: ['metrics-strip', 'quiz-performance', 'study-history', 'recommended-next'],
+      pinnedSections: ['course-gallery'],
+      isManuallyOrdered: true,
+    })
+    mockStorage['dashboard-section-stats'] = JSON.stringify({ 'metrics-strip': { views: 10 } })
 
-    const config = getOrderConfig()
-    expect(config.order).not.toContain('nonexistent-section')
-    expect(config.pinnedSections).not.toContain('nonexistent-section')
+    const migrated = getDashboardPreferences()
+    expect(migrated.preset).toBe('custom')
+    expect(migrated.order.slice(0, 5)).toEqual([
+      'library',
+      'pulse',
+      'insights',
+      'consistency',
+      'focus',
+    ])
+    expect(mockStorage[DASHBOARD_PREFERENCES_KEY]).toBeDefined()
+    expect(mockStorage['dashboard-section-order']).toBeUndefined()
+    expect(mockStorage['dashboard-section-stats']).toBeUndefined()
+
+    expect(getDashboardPreferences()).toEqual(migrated)
   })
 
-  it('returns defaults on corrupted JSON', () => {
+  it('falls back from malformed legacy data and clears all dashboard keys on request', () => {
     mockStorage['dashboard-section-order'] = '{{invalid'
-    const config = getOrderConfig()
-    expect(config.order).toEqual(DEFAULT_ORDER)
-  })
-})
+    mockStorage['dashboard-section-stats'] = '{}'
+    expect(getDashboardPreferences().preset).toBe('balanced')
 
-// ---------------------------------------------------------------------------
-// computeRelevanceScore
-// ---------------------------------------------------------------------------
-
-describe('computeRelevanceScore', () => {
-  it('returns 0 for no interactions', () => {
-    const stats: SectionStats = { views: 0, timeSpentMs: 0, lastAccessedAt: '' }
-    expect(computeRelevanceScore(stats)).toBeCloseTo(0, 2)
-  })
-
-  it('returns higher score for recent access', () => {
-    vi.useFakeTimers()
-    vi.setSystemTime(FIXED_DATE)
-    const recent: SectionStats = {
-      views: 1,
-      timeSpentMs: 60000,
-      lastAccessedAt: FIXED_ISO,
-    }
-    const old: SectionStats = {
-      views: 1,
-      timeSpentMs: 60000,
-      lastAccessedAt: SEVEN_DAYS_AGO_ISO,
-    }
-    expect(computeRelevanceScore(recent)).toBeGreaterThan(computeRelevanceScore(old))
-    vi.useRealTimers()
-  })
-
-  it('returns higher score for more views', () => {
-    const moreViews: SectionStats = { views: 100, timeSpentMs: 0, lastAccessedAt: FIXED_ISO }
-    const fewerViews: SectionStats = { views: 1, timeSpentMs: 0, lastAccessedAt: FIXED_ISO }
-    expect(computeRelevanceScore(moreViews)).toBeGreaterThan(computeRelevanceScore(fewerViews))
-  })
-})
-
-// ---------------------------------------------------------------------------
-// computeAutoOrder
-// ---------------------------------------------------------------------------
-
-describe('computeAutoOrder', () => {
-  it('returns default order when no interactions', () => {
-    const stats = getSectionStats()
-    const order = computeAutoOrder(stats, [])
-    expect(order).toEqual(DEFAULT_ORDER)
-  })
-
-  it('places pinned sections first', () => {
-    const stats = getSectionStats()
-    const order = computeAutoOrder(stats, ['course-gallery'])
-    expect(order[0]).toBe('course-gallery')
-  })
-
-  it('sorts unpinned sections by relevance when interactions exist', () => {
-    const stats = getSectionStats()
-    stats['study-history'].views = 100
-    stats['study-history'].lastAccessedAt = FIXED_ISO
-    stats['study-history'].timeSpentMs = 300000
-
-    const order = computeAutoOrder(stats, [])
-    expect(order[0]).toBe('study-history')
-  })
-})
-
-// ---------------------------------------------------------------------------
-// pinSection / unpinSection
-// ---------------------------------------------------------------------------
-
-describe('pinSection', () => {
-  it('adds section to pinnedSections', () => {
-    const config = pinSection('course-gallery')
-    expect(config.pinnedSections).toContain('course-gallery')
-    expect(config.order[0]).toBe('course-gallery')
-  })
-
-  it('does not duplicate already pinned section', () => {
-    pinSection('course-gallery')
-    const config = pinSection('course-gallery')
-    expect(config.pinnedSections.filter(id => id === 'course-gallery')).toHaveLength(1)
-  })
-})
-
-describe('unpinSection', () => {
-  it('removes section from pinnedSections', () => {
-    pinSection('course-gallery')
-    const config = unpinSection('course-gallery')
-    expect(config.pinnedSections).not.toContain('course-gallery')
-  })
-})
-
-// ---------------------------------------------------------------------------
-// setManualOrder / resetToDefaultOrder / clearDashboardData
-// ---------------------------------------------------------------------------
-
-describe('setManualOrder', () => {
-  it('sets manual order and flags isManuallyOrdered', () => {
-    const reversed = [...DEFAULT_ORDER].reverse() as DashboardSectionId[]
-    const config = setManualOrder(reversed)
-    expect(config.order).toEqual(reversed)
-    expect(config.isManuallyOrdered).toBe(true)
-  })
-})
-
-describe('resetToDefaultOrder', () => {
-  it('resets to default and clears pins and manual flag', () => {
-    pinSection('study-history')
-    setManualOrder([...DEFAULT_ORDER].reverse() as DashboardSectionId[])
-
-    const config = resetToDefaultOrder()
-    expect(config.order).toEqual(DEFAULT_ORDER)
-    expect(config.pinnedSections).toEqual([])
-    expect(config.isManuallyOrdered).toBe(false)
-  })
-})
-
-describe('clearDashboardData', () => {
-  it('removes both storage keys', () => {
-    saveSectionStats(getSectionStats())
-    saveOrderConfig(getOrderConfig())
-
+    applyDashboardPreset('focus')
     clearDashboardData()
-
+    expect(mockStorage[DASHBOARD_PREFERENCES_KEY]).toBeUndefined()
     expect(localStorage.removeItem).toHaveBeenCalledWith('dashboard-section-order')
     expect(localStorage.removeItem).toHaveBeenCalledWith('dashboard-section-stats')
   })

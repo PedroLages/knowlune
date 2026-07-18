@@ -3,6 +3,18 @@
 @import './theme.css';
 @import './animations.css';
 
+/*
+ * Keep the keyboard indicator above component utility layers. The paired
+ * foreground/background rings ensure at least one edge contrasts with light,
+ * dark, and brand-filled surfaces without introducing hardcoded colors.
+ */
+*:focus-visible {
+  outline: 2px solid var(--foreground);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 2px var(--background);
+  transition-duration: 0s;
+}
+
 /* Global thin scrollbar styling
  * Standards: Chrome 121+, Firefox 64+, Safari 26.2+, Edge 121+
  * WebKit fallback: older Chrome/Safari versions */

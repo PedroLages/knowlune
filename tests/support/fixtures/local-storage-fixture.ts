@@ -28,6 +28,7 @@ const STORAGE_KEYS = [
   'streak-milestones',
   'dashboard-section-order',
   'dashboard-section-stats',
+  'knowlune-dashboard-preferences-v2',
   'video-playback-speed',
 ] as const
 

@@ -54,9 +54,10 @@ export async function navigateAndWait(page: Page, path: string): Promise<void> {
 
 /** Navigate to the Overview (home) page. */
 export async function goToOverview(page: Page): Promise<void> {
-  await navigateAndWait(page, '/')
-  // Wait for stats grid to be visible (ensures loading state is complete)
-  await page.waitForSelector('[data-testid="stats-grid"]', { state: 'visible', timeout: 10000 })
+  await navigateAndWait(page, '/overview')
+  // The live-query dashboard may resolve to any learner state. The page heading
+  // is the shared ready-state contract; query failures render a different h1.
+  await page.waitForSelector('h1:has-text("Overview")', { state: 'visible', timeout: 10000 })
 }
 
 /** Navigate to the Courses page. */

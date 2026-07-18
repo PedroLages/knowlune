@@ -1,180 +1,177 @@
-import React from 'react'
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
-import { MemoryRouter } from 'react-router'
-import { useCourseStore } from '@/stores/useCourseStore'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { MemoryRouter, Route, Routes } from 'react-router'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import type { OverviewDashboardModel } from '@/hooks/useOverviewDashboardModel'
+import type { ImportedCourse } from '@/data/types'
 
-// Mock all heavy dependencies before importing the component
+const mocks = vi.hoisted(() => ({
+  model: null as OverviewDashboardModel | null,
+  retry: vi.fn(),
+  updateCourseStatus: vi.fn(),
+  getLastWatchedLesson: vi.fn(),
+  getFirstLesson: vi.fn(),
+}))
+
+vi.mock('@/hooks/useOverviewDashboardModel', () => ({
+  useOverviewDashboardModel: () => mocks.model,
+}))
+
+vi.mock('@/stores/useCourseImportStore', () => ({
+  useCourseImportStore: (
+    selector: (state: { updateCourseStatus: typeof mocks.updateCourseStatus }) => unknown
+  ) => selector({ updateCourseStatus: mocks.updateCourseStatus }),
+}))
 
 vi.mock('@/lib/progress', () => ({
-  getCoursesInProgress: () => [],
-  getCompletedCourses: () => [],
-  getTotalCompletedLessons: () => 0,
-  getTotalStudyNotes: () => Promise.resolve(0),
-  getRecentActivity: () => [],
-  getLast7DaysLessonCompletions: () => [0, 0, 0, 0, 0, 0, 0],
-  getWeeklyChange: () => 0,
-  getAllProgress: () => ({}),
-  getCourseCompletionPercent: () => 0,
+  getLastWatchedLesson: mocks.getLastWatchedLesson,
+  getFirstLesson: mocks.getFirstLesson,
 }))
 
-vi.mock('@/lib/studyLog', () => ({
-  getActionsPerDay: () => [],
-}))
-
-vi.mock('@/lib/motion', () => ({
-  staggerContainer: {},
-  fadeUp: {},
-}))
-
-vi.mock('@/stores/useSessionStore', () => ({
-  useSessionStore: () => ({
-    loadSessionStats: vi.fn(),
-    getTotalStudyTime: () => 0,
-  }),
-}))
-
-// Stub child components that do heavy lifting
-vi.mock('@/app/components/AchievementBanner', () => ({
-  AchievementBanner: () => <div data-testid="achievement-banner" />,
-}))
-
-vi.mock('@/app/components/ContinueLearning', () => ({
-  ContinueLearning: () => <div data-testid="continue-learning" />,
-}))
-
-vi.mock('@/app/components/RecentActivity', () => ({
-  RecentActivity: () => <div data-testid="recent-activity" />,
-}))
-
-vi.mock('@/app/components/StatsCard', () => ({
-  StatsCard: ({ label }: { label: string }) => <div data-testid="stats-card">{label}</div>,
-}))
-
-vi.mock('@/app/components/QuickActions', () => ({
-  QuickActions: () => <div data-testid="quick-actions" />,
-}))
-
-vi.mock('@/app/components/StudyStreakCalendar', () => ({
-  StudyStreakCalendar: () => <div data-testid="study-streak" />,
-}))
-
-vi.mock('@/app/components/StudyGoalsWidget', () => ({
-  StudyGoalsWidget: () => <div data-testid="study-goals" />,
-}))
-
-vi.mock('@/app/components/StudyHistoryCalendar', () => ({
-  StudyHistoryCalendar: () => <div data-testid="study-history" />,
-}))
-
-vi.mock('@/app/components/figma/CourseCard', () => ({
-  CourseCard: () => <div data-testid="course-card" />,
-}))
-
-vi.mock('@/app/components/charts/ProgressChart', () => ({
-  ProgressChart: () => <div data-testid="progress-chart" />,
-}))
-
-vi.mock('@/app/components/RecommendedNext', () => ({
-  RecommendedNext: () => <div data-testid="recommended-next" />,
-  RecommendedNextSkeleton: () => <div data-testid="recommended-next-skeleton" />,
-}))
-
-vi.mock('@/app/components/StudyScheduleWidget', () => ({
-  StudyScheduleWidget: () => <div data-testid="study-schedule-widget" />,
-}))
-
-// Mock motion/react to render children synchronously
-vi.mock('motion/react', () => ({
-  motion: new Proxy(
-    {},
-    {
-      get: (_target, prop) => {
-        // Return a simple component that renders children
-        const Component = ({
-          children,
-          ...props
-        }: React.PropsWithChildren<Record<string, unknown>>) => {
-          const tag = String(prop)
-          const safeProps: Record<string, unknown> = {}
-          for (const [k, v] of Object.entries(props)) {
-            if (['className', 'style', 'id', 'role', 'data-testid'].includes(k)) {
-              safeProps[k] = v
-            }
-          }
-          return React.createElement(tag, safeProps, children)
-        }
-        Component.displayName = `motion.${String(prop)}`
-        return Component
-      },
-    }
+vi.mock('@/app/components/figma/ImportedCourseCard', () => ({
+  ImportedCourseCard: ({ course }: { course: ImportedCourse }) => (
+    <div data-testid={`imported-course-${course.id}`}>{course.name}</div>
   ),
-  MotionConfig: ({ children }: React.PropsWithChildren) => <>{children}</>,
-  useReducedMotion: () => false,
+}))
+
+vi.mock('@/app/components/figma/ImportWizardDialog', () => ({
+  ImportWizardDialog: ({ open }: { open: boolean }) =>
+    open ? <div role="dialog">Import wizard</div> : null,
 }))
 
 import { Overview } from '../Overview'
 
-beforeEach(() => {
-  useCourseStore.setState({
-    courses: [
-      {
-        id: 'test-course-1',
-        title: 'Test Course',
-        shortTitle: 'Test',
-        description: 'A test course',
-        category: 'behavioral-analysis',
-        difficulty: 'beginner',
-        totalLessons: 5,
-        totalVideos: 5,
-        totalPDFs: 0,
-        estimatedHours: 2,
-        tags: [],
-        modules: [{ id: 'm1', title: 'Module 1', description: '', order: 1, lessons: [] }],
-        isSequential: false,
-        basePath: '/test',
-        authorId: 'i1',
-      },
-    ],
-    isLoaded: true,
-  })
-})
+const course: ImportedCourse = {
+  id: 'course-1',
+  name: 'Decision Science',
+  importedAt: '2025-01-01T12:00:00.000Z',
+  category: 'Psychology',
+  tags: ['thinking'],
+  status: 'not-started',
+  videoCount: 1,
+  pdfCount: 0,
+  directoryHandle: null,
+}
 
-afterEach(() => {
-  useCourseStore.setState({ courses: [], isLoaded: false })
-})
+function readyModel(overrides: Partial<Extract<OverviewDashboardModel, { status: 'ready' }>> = {}) {
+  return {
+    status: 'ready' as const,
+    learnerState: 'early' as const,
+    learningFocus: {
+      courseId: course.id,
+      courseName: course.name,
+      courseStatus: course.status,
+      category: course.category,
+      completionPercent: 0,
+      completedItems: 0,
+      totalItems: 1,
+      variant: 'start' as const,
+      lessonId: 'lesson-1',
+      lessonTitle: 'Introduction',
+      lessonOptions: [{ id: 'lesson-1', title: 'Introduction', type: 'video' as const }],
+      lastActivityAt: course.importedAt,
+    },
+    today: { dueReviews: 0, nextSchedule: null, focusArea: null },
+    metrics: {
+      studyMinutes: { value: 0, previousValue: 0, deltaPercent: 0 },
+      activeDays: { value: 0, previousValue: 0, deltaPercent: 0 },
+      currentStreak: 0,
+      reviewsDue: 0,
+    },
+    studyTrend: { sevenDays: [], thirtyDays: [] },
+    activeCourses: [],
+    heatmap: [],
+    recentActivity: [],
+    insights: { mastery: [], assessment: null, reading: null },
+    library: [{ course, completionPercent: 0 }],
+    allTags: course.tags,
+    retry: mocks.retry,
+    ...overrides,
+  }
+}
 
 function renderOverview() {
   return render(
-    <MemoryRouter>
-      <Overview />
+    <MemoryRouter initialEntries={['/overview']}>
+      <Routes>
+        <Route path="/overview" element={<Overview />} />
+        <Route path="/courses/:courseId/lessons/:lessonId" element={<div>Lesson opened</div>} />
+      </Routes>
     </MemoryRouter>
   )
 }
 
+beforeEach(() => {
+  localStorage.clear()
+  mocks.model = readyModel()
+  mocks.retry.mockReset()
+  mocks.updateCourseStatus.mockReset().mockResolvedValue(undefined)
+  mocks.getLastWatchedLesson.mockReset().mockResolvedValue(null)
+  mocks.getFirstLesson.mockReset().mockResolvedValue({
+    lessonId: 'lesson-1',
+    lessonTitle: 'Introduction',
+  })
+})
+
 describe('Overview page', () => {
-  it('renders without crashing and includes RecommendedNext', async () => {
+  it('shows one activation experience for a new learner', async () => {
+    mocks.model = readyModel({ learnerState: 'new', learningFocus: null, library: [] })
     renderOverview()
-    expect(await screen.findByTestId('recommended-next')).toBeInTheDocument()
+
+    expect(screen.getByRole('heading', { name: 'Overview' })).toBeInTheDocument()
+    expect(screen.getByTestId('overview-new-learner')).toBeInTheDocument()
+    expect(screen.queryByTestId('section-pulse')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('section-library')).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByTestId('overview-import-course'))
+    expect(await screen.findByRole('dialog')).toHaveTextContent('Import wizard')
   })
 
-  it('displays the page heading', async () => {
+  it('leads an early learner with focus, today, truthful KPIs, and library', () => {
     renderOverview()
-    // The loading state shows for 500ms, then the real content appears.
-    // Use findByText which waits for the element.
-    const heading = await screen.findByText('Your Learning Studio')
-    expect(heading).toBeInTheDocument()
+
+    expect(screen.getByTestId('overview-learning-focus')).toBeInTheDocument()
+    expect(screen.getByTestId('overview-today')).toBeInTheDocument()
+    expect(screen.getByTestId('metric-study-minutes')).toHaveTextContent('0')
+    expect(screen.getByTestId('imported-course-course-1')).toHaveTextContent('Decision Science')
+    expect(screen.queryByTestId('section-progress')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('section-consistency')).not.toBeInTheDocument()
   })
 
-  it('renders stats cards section', async () => {
+  it('marks a new course active and navigates directly to its first lesson', async () => {
     renderOverview()
-    const statsCards = await screen.findAllByTestId('stats-card')
-    expect(statsCards.length).toBe(5)
+    fireEvent.click(screen.getByTestId('overview-primary-action'))
+
+    await waitFor(() => {
+      expect(mocks.updateCourseStatus).toHaveBeenCalledWith('course-1', 'active')
+    })
+    expect(await screen.findByText('Lesson opened')).toBeInTheDocument()
   })
 
-  it('renders the "Your Library" section heading', async () => {
+  it('persists explicit section customization across reloads', async () => {
+    const firstRender = renderOverview()
+    fireEvent.click(screen.getByTestId('customize-dashboard-toggle'))
+    fireEvent.click(await screen.findByRole('checkbox', { name: 'Show Library' }))
+
+    expect(screen.queryByTestId('section-library')).not.toBeInTheDocument()
+    expect(
+      JSON.parse(localStorage.getItem('knowlune-dashboard-preferences-v2') ?? '{}')
+    ).toMatchObject({
+      version: 2,
+      preset: 'custom',
+      hidden: ['library'],
+    })
+
+    firstRender.unmount()
     renderOverview()
-    const libraryHeading = await screen.findByText('Your Library')
-    expect(libraryHeading).toBeInTheDocument()
+    expect(screen.queryByTestId('section-library')).not.toBeInTheDocument()
+  })
+
+  it('renders a visible retry state when dashboard loading fails', () => {
+    mocks.model = { status: 'error', error: 'IndexedDB is unavailable', retry: mocks.retry }
+    renderOverview()
+
+    expect(screen.getByRole('alert')).toHaveTextContent('IndexedDB is unavailable')
+    fireEvent.click(screen.getByRole('button', { name: 'Try again' }))
+    expect(mocks.retry).toHaveBeenCalledOnce()
   })
 })

@@ -68,8 +68,8 @@ issues:
     discovered_on: 2026-03-25
     status: fixed
     scheduled_for: null
-    fixed_by: post-epic-cleanup-2026-03-25
-    notes: "Fixed — added overlay dismissal fallback in navigateAndWait() for race condition where onboarding shows despite localStorage seed."
+    fixed_by: overview-dashboard-rebuild-2026-07-18
+    notes: "Replaced by live IndexedDB coverage for new, early, active, and returning learner states. The new-user test asserts a single activation experience and opens the import flow."
 
   - id: KI-005
     type: test
@@ -301,8 +301,8 @@ issues:
     discovered_on: 2026-03-26
     status: fixed
     scheduled_for: null
-    fixed_by: E105-S02
-    notes: "Two fixes: (1) WelcomeWizard/Onboarding dialog blocked interactions — fixed by seeding dismissal keys in localStorage fixture addInitScript. (2) DEFAULT_SECTION_ORDER had 7 items but lib/dashboardOrder.ts DEFAULT_ORDER now has 10 — updated test to reflect current 9 rendered sections (skill-proficiency is conditional) and 10 drag handles."
+    fixed_by: overview-dashboard-rebuild-2026-07-18
+    notes: "Replaced viewport-driven auto-reordering with six stable V2 section groups, Focus/Balanced/Analytics presets, explicit visibility/order controls, one-time legacy migration, and persistence E2E coverage."
 
   - id: KI-024
     type: test
