@@ -1,6 +1,14 @@
 import { lazy, Suspense, useCallback, useState } from 'react'
 import { useNavigate } from 'react-router'
-import { ArrowRight, BookOpen, FileText, FolderOpen, RefreshCw, Video } from 'lucide-react'
+import {
+  ArrowRight,
+  BookOpen,
+  FileText,
+  FolderOpen,
+  RefreshCw,
+  Settings2,
+  Video,
+} from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/app/components/ui/button'
 import { Skeleton } from '@/app/components/ui/skeleton'
@@ -13,9 +21,12 @@ import { OverviewMetrics } from '@/app/components/overview/OverviewMetrics'
 import { OverviewProgress } from '@/app/components/overview/OverviewProgress'
 import { OverviewConsistency } from '@/app/components/overview/OverviewConsistency'
 import { OverviewInsights } from '@/app/components/overview/OverviewInsights'
+import { DashboardCustomizer } from '@/app/components/DashboardCustomizer'
 import { useOverviewDashboardModel } from '@/hooks/useOverviewDashboardModel'
+import { useDashboardOrder } from '@/hooks/useDashboardOrder'
 import { getFirstLesson, getLastWatchedLesson } from '@/lib/progress'
 import type { LearningFocus, OverviewLearnerState } from '@/lib/overviewDashboard'
+import type { DashboardSectionId } from '@/lib/dashboardOrder'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
 
 const ImportWizardDialog = lazy(() =>
@@ -149,6 +160,7 @@ function NewLearnerPanel({ onImport }: { onImport: () => void }) {
 
 export function Overview() {
   const model = useOverviewDashboardModel()
+  const dashboardOrder = useDashboardOrder()
   const navigate = useNavigate()
   const updateCourseStatus = useCourseImportStore(state => state.updateCourseStatus)
   const [importOpen, setImportOpen] = useState(false)
@@ -185,10 +197,52 @@ export function Overview() {
     return <OverviewError message={model.error} onRetry={model.retry} />
   }
 
+  const renderSection = (sectionId: DashboardSectionId) => {
+    if (dashboardOrder.hiddenSections.has(sectionId)) return null
+    switch (sectionId) {
+      case 'focus':
+        return model.learningFocus ? (
+          <section className="grid grid-cols-1 gap-4 xl:grid-cols-12" data-testid="section-focus">
+            <div className="xl:col-span-8">
+              <OverviewLearningFocus
+                focus={model.learningFocus}
+                learnerState={model.learnerState}
+                onAction={() => void handleFocusAction(model.learningFocus!)}
+              />
+            </div>
+            <div className="xl:col-span-4">
+              <OverviewToday today={model.today} />
+            </div>
+          </section>
+        ) : null
+      case 'pulse':
+        return <OverviewMetrics metrics={model.metrics} />
+      case 'progress':
+        return model.learnerState !== 'early' ? (
+          <OverviewProgress
+            learnerState={model.learnerState}
+            sevenDays={model.studyTrend.sevenDays}
+            thirtyDays={model.studyTrend.thirtyDays}
+            activeCourses={model.activeCourses}
+          />
+        ) : null
+      case 'consistency':
+        return model.learnerState !== 'early' ? (
+          <OverviewConsistency heatmap={model.heatmap} recentActivity={model.recentActivity} />
+        ) : null
+      case 'insights':
+        return model.learnerState !== 'early' ? (
+          <OverviewInsights insights={model.insights} />
+        ) : null
+      case 'library':
+        return <OverviewLibrary courses={model.library} allTags={model.allTags} />
+    }
+  }
+
   return (
     <div className="mx-auto w-full max-w-[1360px] space-y-8 pb-10 sm:space-y-10 xl:px-2">
-      <header className="flex items-end justify-between gap-4">
-        <div>
+      <header className="flex items-start justify-between gap-3 sm:gap-4">
+        <div className="min-w-0">
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
             {getGreeting()}
           </p>
@@ -197,43 +251,47 @@ export function Overview() {
             {learnerSubtitle(model.learnerState)}
           </p>
         </div>
+        {model.learnerState !== 'new' && (
+          <Button
+            type="button"
+            variant="outline"
+            className="min-h-11 shrink-0"
+            onClick={() => dashboardOrder.setIsCustomizing(!dashboardOrder.isCustomizing)}
+            aria-expanded={dashboardOrder.isCustomizing}
+            aria-controls="dashboard-customizer-panel"
+            data-testid="customize-dashboard-toggle"
+          >
+            <Settings2 className="size-4" aria-hidden="true" />
+            <span className="hidden sm:inline">Customize</span>
+            <span className="sr-only sm:hidden">Customize overview</span>
+          </Button>
+        )}
       </header>
 
       {model.learnerState === 'new' ? (
         <NewLearnerPanel onImport={() => setImportOpen(true)} />
       ) : (
         <>
-          {model.learningFocus && (
-            <section className="grid grid-cols-1 gap-4 xl:grid-cols-12" data-testid="section-focus">
-              <div className="xl:col-span-8">
-                <OverviewLearningFocus
-                  focus={model.learningFocus}
-                  learnerState={model.learnerState}
-                  onAction={() => void handleFocusAction(model.learningFocus!)}
-                />
+          <DashboardCustomizer
+            sectionOrder={dashboardOrder.sectionOrder}
+            hiddenSections={dashboardOrder.hiddenSections}
+            preset={dashboardOrder.preset}
+            isOpen={dashboardOrder.isCustomizing}
+            onClose={() => dashboardOrder.setIsCustomizing(false)}
+            onPreset={dashboardOrder.handlePreset}
+            onVisibility={dashboardOrder.handleVisibility}
+            onReorder={dashboardOrder.handleReorder}
+            onReset={dashboardOrder.handleReset}
+          />
+
+          {dashboardOrder.sectionOrder.map(sectionId => {
+            const section = renderSection(sectionId)
+            return section ? (
+              <div key={sectionId} data-dashboard-section={sectionId}>
+                {section}
               </div>
-              <div className="xl:col-span-4">
-                <OverviewToday today={model.today} />
-              </div>
-            </section>
-          )}
-
-          <OverviewMetrics metrics={model.metrics} />
-
-          {model.learnerState !== 'early' && (
-            <>
-              <OverviewProgress
-                learnerState={model.learnerState}
-                sevenDays={model.studyTrend.sevenDays}
-                thirtyDays={model.studyTrend.thirtyDays}
-                activeCourses={model.activeCourses}
-              />
-              <OverviewConsistency heatmap={model.heatmap} recentActivity={model.recentActivity} />
-              <OverviewInsights insights={model.insights} />
-            </>
-          )}
-
-          <OverviewLibrary courses={model.library} allTags={model.allTags} />
+            ) : null
+          })}
         </>
       )}
 

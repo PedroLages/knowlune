@@ -1,118 +1,96 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { renderHook, act } from '@testing-library/react'
+import { act, renderHook } from '@testing-library/react'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-// Mock dashboardOrder lib
-const mockConfig = {
-  order: ['recommended-next', 'metrics-strip', 'quiz-performance'] as string[],
-  pinnedSections: [] as string[],
-  isManuallyOrdered: false,
-}
+const mocks = vi.hoisted(() => ({
+  preferences: {
+    version: 2 as const,
+    preset: 'balanced' as 'balanced' | 'focus' | 'analytics' | 'custom',
+    order: ['focus', 'pulse', 'progress', 'consistency', 'insights', 'library'],
+    hidden: [] as string[],
+  },
+  applyPreset: vi.fn(),
+  setManualOrder: vi.fn(),
+  setVisibility: vi.fn(),
+  reset: vi.fn(),
+}))
 
 vi.mock('@/lib/dashboardOrder', () => ({
-  getOrderConfig: () => ({ ...mockConfig, pinnedSections: [...mockConfig.pinnedSections] }),
-  saveOrderConfig: vi.fn(),
-  getSectionStats: vi.fn(() => ({})),
-  recordSectionView: vi.fn(),
-  recordSectionTime: vi.fn(),
-  computeAutoOrder: vi.fn(() => mockConfig.order),
-  pinSection: vi.fn((id: string) => ({
-    ...mockConfig,
-    pinnedSections: [id],
-  })),
-  unpinSection: vi.fn((id: string) => ({
-    ...mockConfig,
-    pinnedSections: mockConfig.pinnedSections.filter((s: string) => s !== id),
-  })),
-  setManualOrder: vi.fn((order: string[]) => ({
-    ...mockConfig,
-    order,
-    isManuallyOrdered: true,
-  })),
-  resetToDefaultOrder: vi.fn(() => ({
-    ...mockConfig,
-    isManuallyOrdered: false,
-  })),
+  getDashboardPreferences: () => ({
+    ...mocks.preferences,
+    order: [...mocks.preferences.order],
+    hidden: [...mocks.preferences.hidden],
+  }),
+  applyDashboardPreset: mocks.applyPreset,
+  setManualOrder: mocks.setManualOrder,
+  setSectionVisibility: mocks.setVisibility,
+  resetDashboardPreferences: mocks.reset,
 }))
 
 import { useDashboardOrder } from '../useDashboardOrder'
-import type { DashboardSectionId } from '@/lib/dashboardOrder'
+import type { DashboardPreferencesV2, DashboardSectionId } from '@/lib/dashboardOrder'
+
+const customPreferences: DashboardPreferencesV2 = {
+  version: 2,
+  preset: 'custom',
+  order: ['library', 'focus', 'pulse', 'progress', 'consistency', 'insights'],
+  hidden: ['insights'],
+}
+
+beforeEach(() => {
+  mocks.preferences.preset = 'balanced'
+  mocks.preferences.order = ['focus', 'pulse', 'progress', 'consistency', 'insights', 'library']
+  mocks.preferences.hidden = []
+  mocks.applyPreset.mockReset().mockReturnValue({ ...customPreferences, preset: 'focus' })
+  mocks.setManualOrder.mockReset().mockReturnValue(customPreferences)
+  mocks.setVisibility.mockReset().mockReturnValue(customPreferences)
+  mocks.reset.mockReset().mockReturnValue({
+    version: 2,
+    preset: 'balanced',
+    order: ['focus', 'pulse', 'progress', 'consistency', 'insights', 'library'],
+    hidden: [],
+  })
+})
 
 describe('useDashboardOrder', () => {
-  beforeEach(() => {
-    mockConfig.order = ['recommended-next', 'metrics-strip', 'quiz-performance']
-    mockConfig.pinnedSections = []
-    mockConfig.isManuallyOrdered = false
-  })
-
-  afterEach(() => {
-    vi.restoreAllMocks()
-  })
-
-  it('returns initial section order from config', () => {
+  it('exposes the saved preset, order, and hidden section set', () => {
+    mocks.preferences.preset = 'custom'
+    mocks.preferences.hidden = ['insights']
     const { result } = renderHook(() => useDashboardOrder())
-    expect(result.current.sectionOrder).toEqual([
-      'recommended-next',
-      'metrics-strip',
-      'quiz-performance',
-    ])
+
+    expect(result.current.preset).toBe('custom')
+    expect(result.current.sectionOrder[0]).toBe('focus')
+    expect(result.current.hiddenSections.has('insights')).toBe(true)
   })
 
-  it('returns empty pinnedSections set initially', () => {
+  it('applies presets without viewport-driven reordering', () => {
     const { result } = renderHook(() => useDashboardOrder())
-    expect(result.current.pinnedSections.size).toBe(0)
+    act(() => result.current.handlePreset('focus'))
+
+    expect(mocks.applyPreset).toHaveBeenCalledWith('focus')
+    expect(result.current.preset).toBe('focus')
   })
 
-  it('handlePin pins a section', () => {
+  it('updates manual order and visibility as custom preferences', () => {
     const { result } = renderHook(() => useDashboardOrder())
-    act(() => {
-      result.current.handlePin('metrics-strip' as DashboardSectionId)
-    })
-    expect(result.current.pinnedSections.has('metrics-strip' as DashboardSectionId)).toBe(true)
+    const newOrder = customPreferences.order as DashboardSectionId[]
+
+    act(() => result.current.handleReorder(newOrder))
+    expect(mocks.setManualOrder).toHaveBeenCalledWith(newOrder)
+    expect(result.current.sectionOrder[0]).toBe('library')
+
+    act(() => result.current.handleVisibility('insights', false))
+    expect(mocks.setVisibility).toHaveBeenCalledWith('insights', false)
+    expect(result.current.hiddenSections.has('insights')).toBe(true)
   })
 
-  it('handleUnpin unpins a section', () => {
-    mockConfig.pinnedSections = ['metrics-strip']
+  it('resets to Balanced and manages the customization panel', () => {
     const { result } = renderHook(() => useDashboardOrder())
-    act(() => {
-      result.current.handleUnpin('metrics-strip' as DashboardSectionId)
-    })
-    expect(result.current.pinnedSections.has('metrics-strip' as DashboardSectionId)).toBe(false)
-  })
 
-  it('handleReorder sets manual order', () => {
-    const newOrder = [
-      'quiz-performance',
-      'recommended-next',
-      'metrics-strip',
-    ] as DashboardSectionId[]
-    const { result } = renderHook(() => useDashboardOrder())
-    act(() => {
-      result.current.handleReorder(newOrder)
-    })
-    expect(result.current.sectionOrder).toEqual(newOrder)
-    expect(result.current.isManuallyOrdered).toBe(true)
-  })
-
-  it('handleReset resets to default order', () => {
-    const { result } = renderHook(() => useDashboardOrder())
-    act(() => {
-      result.current.handleReset()
-    })
-    expect(result.current.isManuallyOrdered).toBe(false)
-  })
-
-  it('manages isCustomizing state', () => {
-    const { result } = renderHook(() => useDashboardOrder())
-    expect(result.current.isCustomizing).toBe(false)
-    act(() => {
-      result.current.setIsCustomizing(true)
-    })
+    act(() => result.current.setIsCustomizing(true))
     expect(result.current.isCustomizing).toBe(true)
-  })
 
-  it('createSectionRef returns a callback ref function', () => {
-    const { result } = renderHook(() => useDashboardOrder())
-    const ref = result.current.createSectionRef('metrics-strip' as DashboardSectionId)
-    expect(typeof ref).toBe('function')
+    act(() => result.current.handleReset())
+    expect(mocks.reset).toHaveBeenCalledOnce()
+    expect(result.current.preset).toBe('balanced')
   })
 })

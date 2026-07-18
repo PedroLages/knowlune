@@ -101,6 +101,7 @@ function renderOverview() {
 }
 
 beforeEach(() => {
+  localStorage.clear()
   mocks.model = readyModel()
   mocks.retry.mockReset()
   mocks.updateCourseStatus.mockReset().mockResolvedValue(undefined)
@@ -144,6 +145,25 @@ describe('Overview page', () => {
       expect(mocks.updateCourseStatus).toHaveBeenCalledWith('course-1', 'active')
     })
     expect(await screen.findByText('Lesson opened')).toBeInTheDocument()
+  })
+
+  it('persists explicit section customization across reloads', () => {
+    const firstRender = renderOverview()
+    fireEvent.click(screen.getByTestId('customize-dashboard-toggle'))
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Show Library' }))
+
+    expect(screen.queryByTestId('section-library')).not.toBeInTheDocument()
+    expect(
+      JSON.parse(localStorage.getItem('knowlune-dashboard-preferences-v2') ?? '{}')
+    ).toMatchObject({
+      version: 2,
+      preset: 'custom',
+      hidden: ['library'],
+    })
+
+    firstRender.unmount()
+    renderOverview()
+    expect(screen.queryByTestId('section-library')).not.toBeInTheDocument()
   })
 
   it('renders a visible retry state when dashboard loading fails', () => {

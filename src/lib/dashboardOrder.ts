@@ -1,270 +1,255 @@
-/**
- * Dashboard section ordering system.
- *
- * Tracks user interactions with dashboard sections (views, time spent)
- * and computes an optimal display order based on usage patterns.
- * Supports manual pinning, drag-and-drop reordering, and reset to default.
- *
- * All data persisted to localStorage under 'dashboard-section-order'
- * and 'dashboard-section-stats'.
- */
+/** Stable, user-controlled Overview dashboard preferences. */
 
-const ORDER_KEY = 'dashboard-section-order'
-const STATS_KEY = 'dashboard-section-stats'
+const PREFERENCES_KEY = 'knowlune-dashboard-preferences-v2'
+const LEGACY_ORDER_KEY = 'dashboard-section-order'
+const LEGACY_STATS_KEY = 'dashboard-section-stats'
 
-/** Identifiers for each reorderable dashboard section */
 export type DashboardSectionId =
-  | 'recommended-next'
-  | 'metrics-strip'
-  | 'continue-learning-path'
-  | 'quiz-performance'
-  | 'engagement-zone'
-  | 'study-history'
-  | 'study-schedule'
-  | 'skill-proficiency'
-  | 'knowledge-map'
-  | 'todays-study-plan'
-  | 'insight-action'
-  | 'reading-overview'
-  | 'course-gallery'
+  | 'focus'
+  | 'pulse'
+  | 'progress'
+  | 'consistency'
+  | 'insights'
+  | 'library'
 
-/** Human-readable labels for dashboard sections */
-export const SECTION_LABELS: Record<DashboardSectionId, string> = {
-  'recommended-next': 'Recommended Next',
-  'metrics-strip': 'Metrics & Achievements',
-  'continue-learning-path': 'Continue Learning Paths',
-  'quiz-performance': 'Quiz Performance',
-  'engagement-zone': 'Study Streak & Goals',
-  'study-history': 'Study History',
-  'study-schedule': 'Suggested Study Time',
-  'skill-proficiency': 'Skill Proficiency',
-  'knowledge-map': 'Knowledge Map',
-  'todays-study-plan': "Today's Study Plan",
-  'insight-action': 'Progress & Quick Actions',
-  'reading-overview': 'Reading Overview',
-  'course-gallery': 'Your Library',
+export type DashboardPreset = 'focus' | 'balanced' | 'analytics' | 'custom'
+
+export interface DashboardPreferencesV2 {
+  version: 2
+  preset: DashboardPreset
+  order: DashboardSectionId[]
+  hidden: DashboardSectionId[]
 }
 
-/** Default section order (initial experience for new users) */
+export const SECTION_LABELS: Record<DashboardSectionId, string> = {
+  focus: 'Learning Focus',
+  pulse: 'Learning Pulse',
+  progress: 'Progress',
+  consistency: 'Consistency',
+  insights: 'Learning Insights',
+  library: 'Library',
+}
+
 export const DEFAULT_ORDER: DashboardSectionId[] = [
-  'recommended-next',
-  'metrics-strip',
-  'continue-learning-path',
-  'quiz-performance',
-  'engagement-zone',
-  'study-history',
-  'study-schedule',
-  'todays-study-plan',
-  'skill-proficiency',
-  'knowledge-map',
-  'insight-action',
-  'reading-overview',
-  'course-gallery',
+  'focus',
+  'pulse',
+  'progress',
+  'consistency',
+  'insights',
+  'library',
 ]
 
-/** Interaction statistics for a single section */
-export interface SectionStats {
-  /** Total number of times section entered the viewport */
-  views: number
-  /** Cumulative time (ms) the section was visible */
-  timeSpentMs: number
-  /** ISO timestamp of last view */
-  lastAccessedAt: string
+export const PRESET_LABELS: Record<Exclude<DashboardPreset, 'custom'>, string> = {
+  focus: 'Focus',
+  balanced: 'Balanced',
+  analytics: 'Analytics',
 }
 
-/** Persisted ordering configuration */
-export interface DashboardOrderConfig {
-  /** Ordered list of section IDs */
-  order: DashboardSectionId[]
-  /** Sections manually pinned to the top */
-  pinnedSections: DashboardSectionId[]
-  /** Whether user has manually reordered (disables auto-reorder) */
-  isManuallyOrdered: boolean
+export const PRESET_DESCRIPTIONS: Record<Exclude<DashboardPreset, 'custom'>, string> = {
+  focus: 'Keep next actions and progress prominent.',
+  balanced: 'Show every section in the product order.',
+  analytics: 'Lead with trends, consistency, and insights.',
 }
 
-/** Get saved section statistics */
-export function getSectionStats(): Record<DashboardSectionId, SectionStats> {
+const PRESETS: Record<Exclude<DashboardPreset, 'custom'>, DashboardPreferencesV2> = {
+  balanced: {
+    version: 2,
+    preset: 'balanced',
+    order: [...DEFAULT_ORDER],
+    hidden: [],
+  },
+  focus: {
+    version: 2,
+    preset: 'focus',
+    order: ['focus', 'pulse', 'progress', 'library', 'consistency', 'insights'],
+    hidden: ['consistency', 'insights'],
+  },
+  analytics: {
+    version: 2,
+    preset: 'analytics',
+    order: ['pulse', 'progress', 'consistency', 'insights', 'focus', 'library'],
+    hidden: [],
+  },
+}
+
+const LEGACY_SECTION_GROUPS: Record<string, DashboardSectionId> = {
+  'recommended-next': 'focus',
+  'continue-learning-path': 'focus',
+  'study-schedule': 'focus',
+  'todays-study-plan': 'focus',
+  'metrics-strip': 'pulse',
+  'insight-action': 'progress',
+  'engagement-zone': 'consistency',
+  'study-history': 'consistency',
+  'quiz-performance': 'insights',
+  'skill-proficiency': 'insights',
+  'knowledge-map': 'insights',
+  'reading-overview': 'insights',
+  'course-gallery': 'library',
+}
+
+function clonePreferences(preferences: DashboardPreferencesV2): DashboardPreferencesV2 {
+  return {
+    version: 2,
+    preset: preferences.preset,
+    order: [...preferences.order],
+    hidden: [...preferences.hidden],
+  }
+}
+
+function isSectionId(value: unknown): value is DashboardSectionId {
+  return typeof value === 'string' && DEFAULT_ORDER.includes(value as DashboardSectionId)
+}
+
+function isPreset(value: unknown): value is DashboardPreset {
+  return value === 'focus' || value === 'balanced' || value === 'analytics' || value === 'custom'
+}
+
+function normalizeOrder(value: unknown): DashboardSectionId[] {
+  const saved = Array.isArray(value) ? value.filter(isSectionId) : []
+  const unique = saved.filter((sectionId, index) => saved.indexOf(sectionId) === index)
+  return [...unique, ...DEFAULT_ORDER.filter(sectionId => !unique.includes(sectionId))]
+}
+
+function normalizePreferences(value: unknown): DashboardPreferencesV2 | null {
+  if (!value || typeof value !== 'object') return null
+  const candidate = value as Partial<DashboardPreferencesV2>
+  if (candidate.version !== 2 || !isPreset(candidate.preset)) return null
+  return {
+    version: 2,
+    preset: candidate.preset,
+    order: normalizeOrder(candidate.order),
+    hidden: Array.isArray(candidate.hidden)
+      ? candidate.hidden
+          .filter(isSectionId)
+          .filter((id, index, items) => items.indexOf(id) === index)
+      : [],
+  }
+}
+
+function migrateLegacyPreferences(raw: string): DashboardPreferencesV2 {
   try {
-    const raw = localStorage.getItem(STATS_KEY)
-    if (raw) return JSON.parse(raw)
-  } catch {
-    // silent-catch-ok: localStorage fallback to defaults
-    // Corrupted data - return defaults
-  }
-  return createDefaultStats()
-}
+    const legacy = JSON.parse(raw) as { order?: unknown; pinnedSections?: unknown }
+    const legacyOrder = [
+      ...(Array.isArray(legacy.pinnedSections) ? legacy.pinnedSections : []),
+      ...(Array.isArray(legacy.order) ? legacy.order : []),
+    ]
+    const mapped = legacyOrder
+      .map(sectionId =>
+        typeof sectionId === 'string' ? LEGACY_SECTION_GROUPS[sectionId] : undefined
+      )
+      .filter((sectionId): sectionId is DashboardSectionId => Boolean(sectionId))
+      .filter((sectionId, index, items) => items.indexOf(sectionId) === index)
 
-function createDefaultStats(): Record<DashboardSectionId, SectionStats> {
-  const stats = {} as Record<DashboardSectionId, SectionStats>
-  for (const id of DEFAULT_ORDER) {
-    stats[id] = { views: 0, timeSpentMs: 0, lastAccessedAt: '' }
-  }
-  return stats
-}
-
-/** Save section statistics */
-export function saveSectionStats(stats: Record<DashboardSectionId, SectionStats>): void {
-  try {
-    localStorage.setItem(STATS_KEY, JSON.stringify(stats))
-  } catch {
-    // silent-catch-ok: localStorage quota exceeded, stats non-critical
-    // Storage quota exceeded - silently fail
-  }
-}
-
-/** Record a view for a section */
-export function recordSectionView(sectionId: DashboardSectionId): void {
-  const stats = getSectionStats()
-  if (!stats[sectionId]) {
-    stats[sectionId] = { views: 0, timeSpentMs: 0, lastAccessedAt: '' }
-  }
-  stats[sectionId].views += 1
-  stats[sectionId].lastAccessedAt = new Date().toISOString()
-  saveSectionStats(stats)
-}
-
-/** Record time spent viewing a section */
-export function recordSectionTime(sectionId: DashboardSectionId, durationMs: number): void {
-  const stats = getSectionStats()
-  if (!stats[sectionId]) {
-    stats[sectionId] = { views: 0, timeSpentMs: 0, lastAccessedAt: '' }
-  }
-  stats[sectionId].timeSpentMs += durationMs
-  saveSectionStats(stats)
-}
-
-/** Get saved order configuration */
-export function getOrderConfig(): DashboardOrderConfig {
-  try {
-    const raw = localStorage.getItem(ORDER_KEY)
-    if (raw) {
-      const config = JSON.parse(raw) as DashboardOrderConfig
-      // Ensure all sections are present (handles new sections added over time)
-      const missing = DEFAULT_ORDER.filter(id => !config.order.includes(id))
-      if (missing.length > 0) {
-        config.order = [...config.order, ...missing]
+    if (mapped.length > 0) {
+      return {
+        version: 2,
+        preset: 'custom',
+        order: [...mapped, ...DEFAULT_ORDER.filter(sectionId => !mapped.includes(sectionId))],
+        hidden: [],
       }
-      // Remove sections that no longer exist
-      config.order = config.order.filter(id => DEFAULT_ORDER.includes(id))
-      config.pinnedSections = config.pinnedSections.filter(id => DEFAULT_ORDER.includes(id))
-      return config
     }
   } catch {
-    // silent-catch-ok: localStorage fallback to defaults
-    // Corrupted data - return defaults
+    // silent-catch-ok: corrupted legacy preferences safely fall back to Balanced
   }
-  return {
-    order: [...DEFAULT_ORDER],
-    pinnedSections: [],
-    isManuallyOrdered: false,
-  }
+  return getPresetPreferences('balanced')
 }
 
-/** Save order configuration */
-export function saveOrderConfig(config: DashboardOrderConfig): void {
+function removeLegacyStorage(): void {
   try {
-    localStorage.setItem(ORDER_KEY, JSON.stringify(config))
+    localStorage.removeItem(LEGACY_ORDER_KEY)
+    localStorage.removeItem(LEGACY_STATS_KEY)
   } catch {
-    // silent-catch-ok: localStorage quota exceeded, order non-critical
-    // Storage quota exceeded - silently fail
+    // silent-catch-ok: storage cleanup is non-critical
   }
 }
 
-/**
- * Compute relevance score for a section.
- * Weighs recency (40%), view count (30%), and time spent (30%).
- */
-export function computeRelevanceScore(stats: SectionStats, now: number = Date.now()): number {
-  const lastAccessed = stats.lastAccessedAt ? new Date(stats.lastAccessedAt).getTime() : 0
-  const hoursSinceAccess = lastAccessed > 0 ? (now - lastAccessed) / (1000 * 60 * 60) : 999
-
-  // Recency: exponential decay (half-life = 24 hours)
-  const recencyScore = Math.exp(-hoursSinceAccess / 24)
-
-  // View count: logarithmic scaling (diminishing returns)
-  const viewScore = Math.log2(stats.views + 1) / 10
-
-  // Time spent: logarithmic scaling (minutes)
-  const timeMinutes = stats.timeSpentMs / 60000
-  const timeScore = Math.log2(timeMinutes + 1) / 10
-
-  return recencyScore * 0.4 + viewScore * 0.3 + timeScore * 0.3
+export function getPresetPreferences(
+  preset: Exclude<DashboardPreset, 'custom'>
+): DashboardPreferencesV2 {
+  return clonePreferences(PRESETS[preset])
 }
 
-/**
- * Compute the auto-ordered section list based on usage stats.
- * Pinned sections always come first (in pin order), then
- * remaining sections sorted by relevance score descending.
- */
-export function computeAutoOrder(
-  stats: Record<DashboardSectionId, SectionStats>,
-  pinnedSections: DashboardSectionId[]
-): DashboardSectionId[] {
-  const pinned = pinnedSections.filter(id => DEFAULT_ORDER.includes(id))
-  const unpinned = DEFAULT_ORDER.filter(id => !pinned.includes(id))
+export function saveDashboardPreferences(preferences: DashboardPreferencesV2): void {
+  try {
+    localStorage.setItem(PREFERENCES_KEY, JSON.stringify(preferences))
+  } catch {
+    // silent-catch-ok: localStorage may be unavailable or full; in-memory UI still works
+  }
+}
 
-  // Sort unpinned by relevance score
-  const scored = unpinned.map(id => ({
-    id,
-    score: stats[id] ? computeRelevanceScore(stats[id]) : 0,
-  }))
-  scored.sort((a, b) => b.score - a.score)
+export function getDashboardPreferences(): DashboardPreferencesV2 {
+  try {
+    const raw = localStorage.getItem(PREFERENCES_KEY)
+    if (raw) {
+      const normalized = normalizePreferences(JSON.parse(raw))
+      if (normalized) {
+        saveDashboardPreferences(normalized)
+        removeLegacyStorage()
+        return normalized
+      }
+    }
 
-  // If all scores are 0 (no interactions yet), keep default order
-  const hasInteractions = scored.some(s => s.score > 0)
-  if (!hasInteractions) {
-    return [...pinned, ...unpinned]
+    const legacyRaw = localStorage.getItem(LEGACY_ORDER_KEY)
+    if (legacyRaw) {
+      const migrated = migrateLegacyPreferences(legacyRaw)
+      saveDashboardPreferences(migrated)
+      removeLegacyStorage()
+      return migrated
+    }
+  } catch {
+    // silent-catch-ok: corrupted or unavailable storage safely falls back to Balanced
   }
 
-  return [...pinned, ...scored.map(s => s.id)]
+  const balanced = getPresetPreferences('balanced')
+  removeLegacyStorage()
+  return balanced
 }
 
-/** Pin a section to the top */
-export function pinSection(sectionId: DashboardSectionId): DashboardOrderConfig {
-  const config = getOrderConfig()
-  if (!config.pinnedSections.includes(sectionId)) {
-    config.pinnedSections.push(sectionId)
+export function applyDashboardPreset(
+  preset: Exclude<DashboardPreset, 'custom'>
+): DashboardPreferencesV2 {
+  const preferences = getPresetPreferences(preset)
+  saveDashboardPreferences(preferences)
+  return preferences
+}
+
+export function setManualOrder(newOrder: DashboardSectionId[]): DashboardPreferencesV2 {
+  const current = getDashboardPreferences()
+  const preferences: DashboardPreferencesV2 = {
+    ...current,
+    preset: 'custom',
+    order: normalizeOrder(newOrder),
   }
-  // Recompute order: pinned first, then rest
-  const stats = getSectionStats()
-  config.order = computeAutoOrder(stats, config.pinnedSections)
-  saveOrderConfig(config)
-  return config
+  saveDashboardPreferences(preferences)
+  return preferences
 }
 
-/** Unpin a section */
-export function unpinSection(sectionId: DashboardSectionId): DashboardOrderConfig {
-  const config = getOrderConfig()
-  config.pinnedSections = config.pinnedSections.filter(id => id !== sectionId)
-  // Recompute order
-  const stats = getSectionStats()
-  config.order = computeAutoOrder(stats, config.pinnedSections)
-  saveOrderConfig(config)
-  return config
+export function setSectionVisibility(
+  sectionId: DashboardSectionId,
+  visible: boolean
+): DashboardPreferencesV2 {
+  const current = getDashboardPreferences()
+  const hidden = visible
+    ? current.hidden.filter(id => id !== sectionId)
+    : [...current.hidden.filter(id => id !== sectionId), sectionId]
+  const preferences: DashboardPreferencesV2 = { ...current, preset: 'custom', hidden }
+  saveDashboardPreferences(preferences)
+  return preferences
 }
 
-/** Set manual order (from drag-and-drop) */
-export function setManualOrder(newOrder: DashboardSectionId[]): DashboardOrderConfig {
-  const config = getOrderConfig()
-  config.order = newOrder
-  config.isManuallyOrdered = true
-  saveOrderConfig(config)
-  return config
+export function resetDashboardPreferences(): DashboardPreferencesV2 {
+  return applyDashboardPreset('balanced')
 }
 
-/** Reset to default order, clear pins and manual flag */
-export function resetToDefaultOrder(): DashboardOrderConfig {
-  const config: DashboardOrderConfig = {
-    order: [...DEFAULT_ORDER],
-    pinnedSections: [],
-    isManuallyOrdered: false,
-  }
-  saveOrderConfig(config)
-  return config
-}
-
-/** Clear all stats and order data */
 export function clearDashboardData(): void {
-  localStorage.removeItem(ORDER_KEY)
-  localStorage.removeItem(STATS_KEY)
+  try {
+    localStorage.removeItem(PREFERENCES_KEY)
+    localStorage.removeItem(LEGACY_ORDER_KEY)
+    localStorage.removeItem(LEGACY_STATS_KEY)
+  } catch {
+    // silent-catch-ok: storage cleanup is non-critical
+  }
 }
+
+export const DASHBOARD_PREFERENCES_KEY = PREFERENCES_KEY
