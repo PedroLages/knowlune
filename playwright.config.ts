@@ -80,5 +80,12 @@ export default defineConfig({
     reuseExistingServer: !process.env.CI,
     stdout: 'pipe',
     stderr: 'pipe',
+    // GitHub Actions intentionally has no production Supabase secrets. A
+    // deterministic test client lets auth lifecycle and page.route() mocks
+    // initialize without making the E2E suite depend on a live backend.
+    env: {
+      VITE_SUPABASE_URL: process.env.VITE_SUPABASE_URL || 'https://knowlune.supabase.co',
+      VITE_SUPABASE_ANON_KEY: process.env.VITE_SUPABASE_ANON_KEY || 'test-anon-key',
+    },
   },
 })

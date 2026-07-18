@@ -65,6 +65,7 @@ async function mockAudioElement(page: import('@playwright/test').Page): Promise<
     Object.defineProperty(HTMLMediaElement.prototype, 'play', {
       configurable: true,
       value: function () {
+        ;(window as Window & { __TEST_AUDIO__?: HTMLMediaElement }).__TEST_AUDIO__ = this
         return Promise.resolve()
       },
     })
@@ -164,17 +165,23 @@ test.describe('E101-S05: Audio Bookmarks', () => {
     await bookmarkButton.click()
     await expect(page.getByTestId('bookmark-count-badge')).toBeVisible()
 
+    // The review opens on a playing -> stopped transition. Starting playback
+    // first mirrors a real natural end instead of dispatching `ended` while
+    // the player is already paused.
+    await page.getByRole('button', { name: /^play$/i }).click()
+    await expect(page.getByRole('button', { name: /^pause$/i })).toBeVisible()
+    await page.evaluate(
+      () =>
+        new Promise<void>(resolve => {
+          requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
+        })
+    )
+
     // Simulate audio ended event (natural end of track) to trigger deliberate stop
     await page.evaluate(() => {
-      const audioElements = document.querySelectorAll('audio')
-      if (audioElements.length > 0) {
-        audioElements[0].dispatchEvent(new Event('ended'))
-      } else {
-        // Audio() is detached; dispatch on any audio-like mock via prototype
-        ;(HTMLMediaElement.prototype as unknown as { _testEnded?: () => void })._testEnded?.()
-        // Fallback: dispatch ended globally for the singleton audio
-        window.dispatchEvent(new CustomEvent('__test_audio_ended__'))
-      }
+      const audio = (window as Window & { __TEST_AUDIO__?: HTMLMediaElement }).__TEST_AUDIO__
+      if (!audio) throw new Error('The audiobook singleton did not start playback')
+      audio.dispatchEvent(new Event('ended'))
     })
 
     // Post-session review panel should open
