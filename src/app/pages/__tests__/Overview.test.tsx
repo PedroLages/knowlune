@@ -147,10 +147,10 @@ describe('Overview page', () => {
     expect(await screen.findByText('Lesson opened')).toBeInTheDocument()
   })
 
-  it('persists explicit section customization across reloads', () => {
+  it('persists explicit section customization across reloads', async () => {
     const firstRender = renderOverview()
     fireEvent.click(screen.getByTestId('customize-dashboard-toggle'))
-    fireEvent.click(screen.getByRole('checkbox', { name: 'Show Library' }))
+    fireEvent.click(await screen.findByRole('checkbox', { name: 'Show Library' }))
 
     expect(screen.queryByTestId('section-library')).not.toBeInTheDocument()
     expect(

@@ -38,8 +38,12 @@ function StudyMinutesChart({
   const [range, setRange] = useState<7 | 30>(learnerState === 'returning' ? 30 : 7)
   const data = range === 7 ? sevenDays : thirtyDays
   const summary = useMemo(() => {
-    const total = data.reduce((sum, point) => sum + point.minutes, 0)
-    const best = [...data].sort((a, b) => b.minutes - a.minutes)[0]
+    let total = 0
+    let best: StudyTrendPoint | undefined
+    for (const point of data) {
+      total += point.minutes
+      if (!best || point.minutes > best.minutes) best = point
+    }
     return { total, best }
   }, [data])
 
@@ -90,6 +94,7 @@ function StudyMinutesChart({
       <ChartContainer
         config={chartConfig}
         className="mt-4 h-[210px] w-full aspect-auto"
+        role="img"
         aria-label={`Focused minutes for the last ${range} days`}
       >
         <BarChart

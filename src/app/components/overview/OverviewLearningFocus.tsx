@@ -78,7 +78,7 @@ export function OverviewLearningFocus({
         aria-hidden="true"
       />
       <div className="flex items-center justify-between gap-4">
-        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-foreground/75">
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-foreground/90">
           {copy.eyebrow}
         </p>
         <span className="inline-flex size-10 items-center justify-center rounded-full bg-brand-foreground/10">
@@ -87,18 +87,18 @@ export function OverviewLearningFocus({
       </div>
 
       <div className="mt-4 max-w-2xl">
-        <p className="text-sm font-medium text-brand-foreground/75">{focus.courseName}</p>
+        <p className="text-sm font-medium text-brand-foreground/90">{focus.courseName}</p>
         <h2 id="learning-focus-title" className="mt-1 text-2xl font-semibold sm:text-3xl">
           {copy.title}
         </h2>
-        <p className="mt-2 max-w-xl text-sm leading-relaxed text-brand-foreground/80 sm:text-base">
+        <p className="mt-2 max-w-xl text-sm leading-relaxed text-brand-foreground/90 sm:text-base">
           {copy.description}
         </p>
       </div>
 
       <div className="mt-auto flex flex-col gap-4 pt-6 sm:flex-row sm:items-end sm:justify-between">
         <div className="min-w-0 flex-1 sm:max-w-sm">
-          <div className="mb-2 flex items-center justify-between gap-4 text-xs text-brand-foreground/75">
+          <div className="mb-2 flex items-center justify-between gap-4 text-xs text-brand-foreground/90">
             <span>
               {focus.completedItems} of {focus.totalItems} items
             </span>

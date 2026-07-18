@@ -32,16 +32,18 @@ describe('OverviewConsistency', () => {
     expect(cells).toHaveLength(84)
     expect(cells.filter(cell => cell.getAttribute('tabindex') === '0')).toHaveLength(1)
 
-    const today = cells[83]
+    const today = screen.getByRole('gridcell', { name: /83 minutes$/ })
+    const priorWeek = screen.getByRole('gridcell', { name: /76 minutes$/ })
+    const priorDay = screen.getByRole('gridcell', { name: /75 minutes$/ })
     today.focus()
     fireEvent.keyDown(today, { key: 'ArrowLeft' })
-    expect(cells[76]).toHaveFocus()
+    expect(priorWeek).toHaveFocus()
 
-    fireEvent.keyDown(cells[76], { key: 'ArrowUp' })
-    expect(cells[75]).toHaveFocus()
+    fireEvent.keyDown(priorWeek, { key: 'ArrowUp' })
+    expect(priorDay).toHaveFocus()
     expect(screen.getByText(/75 min$/)).toBeInTheDocument()
 
-    fireEvent.keyDown(cells[75], { key: 'Home' })
+    fireEvent.keyDown(priorDay, { key: 'Home' })
     expect(cells[0]).toHaveFocus()
     expect(cells.filter(cell => cell.getAttribute('tabindex') === '0')).toHaveLength(1)
   })

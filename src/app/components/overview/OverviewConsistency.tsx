@@ -119,27 +119,35 @@ function StudyHeatmap({ days }: { days: DashboardHeatmapDay[] }) {
               role="grid"
               aria-label="Study minutes by day for the last 12 weeks"
               aria-describedby="heatmap-instructions heatmap-detail"
-              className="grid grid-flow-col grid-rows-7 gap-1 sm:gap-1.5"
+              className="grid grid-rows-7 gap-1 sm:gap-1.5"
             >
-              {days.map((day, index) => (
-                <button
-                  key={day.date}
-                  ref={element => {
-                    cellRefs.current[index] = element
-                  }}
-                  type="button"
-                  role="gridcell"
-                  tabIndex={index === activeIndex ? 0 : -1}
-                  aria-current={day.isToday ? 'date' : undefined}
-                  aria-label={`${formatDay(day.date)}: ${day.minutes} ${day.minutes === 1 ? 'minute' : 'minutes'}`}
-                  className={cn(
-                    'size-3 rounded-[3px] border border-border/30 focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 sm:size-4 sm:rounded-[4px]',
-                    levelClasses[day.level]
-                  )}
-                  onClick={() => setActiveIndex(index)}
-                  onFocus={() => setActiveIndex(index)}
-                  onKeyDown={event => handleKeyDown(event, index)}
-                />
+              {Array.from({ length: 7 }, (_, rowIndex) => (
+                <div key={rowIndex} role="row" className="grid grid-cols-12 gap-1 sm:gap-1.5">
+                  {Array.from({ length: 12 }, (_, weekIndex) => {
+                    const index = weekIndex * 7 + rowIndex
+                    const day = days[index]
+                    return day ? (
+                      <button
+                        key={day.date}
+                        ref={element => {
+                          cellRefs.current[index] = element
+                        }}
+                        type="button"
+                        role="gridcell"
+                        tabIndex={index === activeIndex ? 0 : -1}
+                        aria-current={day.isToday ? 'date' : undefined}
+                        aria-label={`${formatDay(day.date)}: ${day.minutes} ${day.minutes === 1 ? 'minute' : 'minutes'}`}
+                        className={cn(
+                          'size-3 rounded-[3px] border border-border/30 focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 sm:size-4 sm:rounded-[4px]',
+                          levelClasses[day.level]
+                        )}
+                        onClick={() => setActiveIndex(index)}
+                        onFocus={() => setActiveIndex(index)}
+                        onKeyDown={event => handleKeyDown(event, index)}
+                      />
+                    ) : null
+                  })}
+                </div>
               ))}
             </div>
           </div>

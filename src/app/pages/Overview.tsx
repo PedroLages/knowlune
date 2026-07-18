@@ -1,14 +1,6 @@
 import { lazy, Suspense, useCallback, useState } from 'react'
 import { useNavigate } from 'react-router'
-import {
-  ArrowRight,
-  BookOpen,
-  FileText,
-  FolderOpen,
-  RefreshCw,
-  Settings2,
-  Video,
-} from 'lucide-react'
+import { RefreshCw, Settings2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/app/components/ui/button'
 import { Skeleton } from '@/app/components/ui/skeleton'
@@ -18,10 +10,7 @@ import {
 } from '@/app/components/overview/OverviewLearningFocus'
 import { OverviewLibrary } from '@/app/components/overview/OverviewLibrary'
 import { OverviewMetrics } from '@/app/components/overview/OverviewMetrics'
-import { OverviewProgress } from '@/app/components/overview/OverviewProgress'
-import { OverviewConsistency } from '@/app/components/overview/OverviewConsistency'
-import { OverviewInsights } from '@/app/components/overview/OverviewInsights'
-import { DashboardCustomizer } from '@/app/components/DashboardCustomizer'
+import { OverviewNewLearner } from '@/app/components/overview/OverviewNewLearner'
 import { useOverviewDashboardModel } from '@/hooks/useOverviewDashboardModel'
 import { useDashboardOrder } from '@/hooks/useDashboardOrder'
 import { getFirstLesson, getLastWatchedLesson } from '@/lib/progress'
@@ -32,6 +21,30 @@ import { useCourseImportStore } from '@/stores/useCourseImportStore'
 const ImportWizardDialog = lazy(() =>
   import('@/app/components/figma/ImportWizardDialog').then(module => ({
     default: module.ImportWizardDialog,
+  }))
+)
+
+const DashboardCustomizer = lazy(() =>
+  import('@/app/components/DashboardCustomizer').then(module => ({
+    default: module.DashboardCustomizer,
+  }))
+)
+
+const OverviewProgress = lazy(() =>
+  import('@/app/components/overview/OverviewProgress').then(module => ({
+    default: module.OverviewProgress,
+  }))
+)
+
+const OverviewConsistency = lazy(() =>
+  import('@/app/components/overview/OverviewConsistency').then(module => ({
+    default: module.OverviewConsistency,
+  }))
+)
+
+const OverviewInsights = lazy(() =>
+  import('@/app/components/overview/OverviewInsights').then(module => ({
+    default: module.OverviewInsights,
   }))
 )
 
@@ -100,61 +113,9 @@ function OverviewError({ message, onRetry }: { message: string; onRetry: () => v
   )
 }
 
-function NewLearnerPanel({ onImport }: { onImport: () => void }) {
+function OverviewSectionFallback({ height = 'h-72' }: { height?: string }) {
   return (
-    <section
-      className="relative isolate overflow-hidden rounded-3xl border border-border bg-card p-6 sm:p-10"
-      aria-labelledby="new-learner-title"
-      data-testid="overview-new-learner"
-    >
-      <div
-        className="pointer-events-none absolute -right-20 -top-24 -z-10 size-72 rounded-full bg-brand-soft/60"
-        aria-hidden="true"
-      />
-      <div className="max-w-2xl">
-        <span className="inline-flex size-11 items-center justify-center rounded-2xl bg-brand text-brand-foreground">
-          <BookOpen className="size-5" aria-hidden="true" />
-        </span>
-        <p className="mt-5 text-xs font-semibold uppercase tracking-[0.18em] text-brand">
-          Your first step
-        </p>
-        <h2
-          id="new-learner-title"
-          className="mt-2 text-3xl font-semibold tracking-tight sm:text-4xl"
-        >
-          Bring one course. We will organize the rest.
-        </h2>
-        <p className="mt-3 max-w-xl text-base leading-relaxed text-muted-foreground">
-          Import a folder of lessons and Knowlune will turn your videos and PDFs into a focused,
-          trackable learning path.
-        </p>
-        <Button
-          type="button"
-          size="lg"
-          className="mt-6 min-h-11"
-          onClick={onImport}
-          data-testid="overview-import-course"
-        >
-          <FolderOpen className="size-4" aria-hidden="true" />
-          Import your first course
-          <ArrowRight className="size-4" aria-hidden="true" />
-        </Button>
-      </div>
-
-      <div className="mt-8 grid max-w-3xl grid-cols-1 gap-3 sm:grid-cols-3">
-        {[
-          { icon: Video, label: 'Video lessons', detail: 'Resume from your last position' },
-          { icon: FileText, label: 'PDF material', detail: 'Keep reading progress together' },
-          { icon: RefreshCw, label: 'Smart review', detail: 'See what deserves attention next' },
-        ].map(item => (
-          <div key={item.label} className="rounded-2xl bg-muted/60 p-4">
-            <item.icon className="size-4 text-brand" aria-hidden="true" />
-            <p className="mt-3 text-sm font-medium">{item.label}</p>
-            <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{item.detail}</p>
-          </div>
-        ))}
-      </div>
-    </section>
+    <Skeleton className={`${height} w-full rounded-3xl`} aria-label="Loading dashboard section" />
   )
 }
 
@@ -169,10 +130,11 @@ export function Overview() {
     async (focus: LearningFocus) => {
       try {
         const lastWatched = await getLastWatchedLesson(focus.courseId)
-        const firstLesson = await getFirstLesson({
-          getLessons: async () => focus.lessonOptions,
-        })
-        const target = lastWatched ?? firstLesson
+        const target =
+          lastWatched ??
+          (await getFirstLesson({
+            getLessons: async () => focus.lessonOptions,
+          }))
 
         if (focus.courseStatus === 'not-started') {
           await updateCourseStatus(focus.courseId, 'active')
@@ -219,20 +181,26 @@ export function Overview() {
         return <OverviewMetrics metrics={model.metrics} />
       case 'progress':
         return model.learnerState !== 'early' ? (
-          <OverviewProgress
-            learnerState={model.learnerState}
-            sevenDays={model.studyTrend.sevenDays}
-            thirtyDays={model.studyTrend.thirtyDays}
-            activeCourses={model.activeCourses}
-          />
+          <Suspense fallback={<OverviewSectionFallback height="h-[340px]" />}>
+            <OverviewProgress
+              learnerState={model.learnerState}
+              sevenDays={model.studyTrend.sevenDays}
+              thirtyDays={model.studyTrend.thirtyDays}
+              activeCourses={model.activeCourses}
+            />
+          </Suspense>
         ) : null
       case 'consistency':
         return model.learnerState !== 'early' ? (
-          <OverviewConsistency heatmap={model.heatmap} recentActivity={model.recentActivity} />
+          <Suspense fallback={<OverviewSectionFallback height="h-[360px]" />}>
+            <OverviewConsistency heatmap={model.heatmap} recentActivity={model.recentActivity} />
+          </Suspense>
         ) : null
       case 'insights':
         return model.learnerState !== 'early' ? (
-          <OverviewInsights insights={model.insights} />
+          <Suspense fallback={<OverviewSectionFallback />}>
+            <OverviewInsights insights={model.insights} />
+          </Suspense>
         ) : null
       case 'library':
         return <OverviewLibrary courses={model.library} allTags={model.allTags} />
@@ -269,20 +237,24 @@ export function Overview() {
       </header>
 
       {model.learnerState === 'new' ? (
-        <NewLearnerPanel onImport={() => setImportOpen(true)} />
+        <OverviewNewLearner onImport={() => setImportOpen(true)} />
       ) : (
         <>
-          <DashboardCustomizer
-            sectionOrder={dashboardOrder.sectionOrder}
-            hiddenSections={dashboardOrder.hiddenSections}
-            preset={dashboardOrder.preset}
-            isOpen={dashboardOrder.isCustomizing}
-            onClose={() => dashboardOrder.setIsCustomizing(false)}
-            onPreset={dashboardOrder.handlePreset}
-            onVisibility={dashboardOrder.handleVisibility}
-            onReorder={dashboardOrder.handleReorder}
-            onReset={dashboardOrder.handleReset}
-          />
+          {dashboardOrder.isCustomizing ? (
+            <Suspense fallback={<OverviewSectionFallback height="h-80" />}>
+              <DashboardCustomizer
+                sectionOrder={dashboardOrder.sectionOrder}
+                hiddenSections={dashboardOrder.hiddenSections}
+                preset={dashboardOrder.preset}
+                isOpen
+                onClose={() => dashboardOrder.setIsCustomizing(false)}
+                onPreset={dashboardOrder.handlePreset}
+                onVisibility={dashboardOrder.handleVisibility}
+                onReorder={dashboardOrder.handleReorder}
+                onReset={dashboardOrder.handleReset}
+              />
+            </Suspense>
+          ) : null}
 
           {dashboardOrder.sectionOrder.map(sectionId => {
             const section = renderSection(sectionId)
