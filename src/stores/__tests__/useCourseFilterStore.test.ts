@@ -18,7 +18,7 @@ describe('useCourseFilterStore', () => {
   it('initializes with defaults', () => {
     const state = useCourseFilterStore.getState()
     expect(state.source).toBe('all')
-    expect(state.showTrackCourses).toBe(true)
+    expect(state.showTrackCourses).toBe(false)
     expect(state.selectedTags).toEqual([])
     expect(state.selectedStatuses).toEqual([])
     expect(state.selectedDifficulties).toEqual([])
@@ -32,7 +32,7 @@ describe('useCourseFilterStore', () => {
     })
     const state = useCourseFilterStore.getState()
     expect(state.source).toBe('youtube')
-    expect(state.showTrackCourses).toBe(true)
+    expect(state.showTrackCourses).toBe(false)
     expect(state.selectedTags).toEqual([])
     expect(state.selectedStatuses).toEqual([])
   })
@@ -82,7 +82,7 @@ describe('useCourseFilterStore', () => {
   it('clearAllFilters resets all dimensions to defaults', () => {
     act(() => {
       useCourseFilterStore.getState().setFilter('source', 'youtube')
-      useCourseFilterStore.getState().setFilter('showTrackCourses', false)
+      useCourseFilterStore.getState().setFilter('showTrackCourses', true)
       useCourseFilterStore.getState().setFilter('selectedTags', ['react'])
       useCourseFilterStore.getState().setFilter('selectedStatuses', ['active'])
     })
@@ -92,7 +92,7 @@ describe('useCourseFilterStore', () => {
     })
     const state = useCourseFilterStore.getState()
     expect(state.source).toBe('all')
-    expect(state.showTrackCourses).toBe(true)
+    expect(state.showTrackCourses).toBe(false)
     expect(state.selectedTags).toEqual([])
     expect(state.selectedStatuses).toEqual([])
     expect(state.selectedDifficulties).toEqual([])
@@ -111,9 +111,9 @@ describe('useCourseFilterStore', () => {
     expect(useCourseFilterStore.getState().isAnyFilterActive()).toBe(true)
   })
 
-  it('isAnyFilterActive returns true when track courses are excluded', () => {
+  it('isAnyFilterActive returns true when track courses are included', () => {
     act(() => {
-      useCourseFilterStore.getState().setFilter('showTrackCourses', false)
+      useCourseFilterStore.getState().setFilter('showTrackCourses', true)
     })
     expect(useCourseFilterStore.getState().isAnyFilterActive()).toBe(true)
   })
@@ -210,7 +210,7 @@ describe('useCourseFilterStore', () => {
     })
     const state = useCourseFilterStore.getState()
     expect(state.source).toBe('all')
-    expect(state.showTrackCourses).toBe(true)
+    expect(state.showTrackCourses).toBe(false)
     expect(state.selectedTags).toEqual([])
 
     // Restore

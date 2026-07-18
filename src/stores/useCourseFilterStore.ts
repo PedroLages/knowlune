@@ -47,7 +47,7 @@ interface CourseFilterState {
 
 const DEFAULT_FILTERS: CourseFilters = {
   source: 'all',
-  showTrackCourses: true,
+  showTrackCourses: false,
   selectedTags: [],
   selectedStatuses: [],
   selectedDifficulties: [],
@@ -91,7 +91,7 @@ export const useCourseFilterStore = create<CourseFilterState>()(
         const state = get()
         return (
           state.source !== 'all' ||
-          state.showTrackCourses === false ||
+          state.showTrackCourses !== DEFAULT_FILTERS.showTrackCourses ||
           state.selectedTags.length > 0 ||
           state.selectedDifficulties.length > 0 ||
           state.selectedCategories.length > 0 ||
