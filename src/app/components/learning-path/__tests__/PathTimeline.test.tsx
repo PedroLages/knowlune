@@ -576,5 +576,31 @@ describe('PathTimeline', () => {
       expect(screen.getByTestId('drag-handle-c1')).toBeInTheDocument()
       expect(screen.getByTestId('drag-handle-c2')).toBeInTheDocument()
     })
+
+    it('offers accessible move buttons and reorders by course ID', () => {
+      const onReorderByCourseId = vi.fn()
+      const entries = [makeEntry({ courseId: 'c1' }), makeEntry({ courseId: 'c2' })]
+      const infoMap = new Map([
+        ['c1', makeCourseInfo({ name: 'First' })],
+        ['c2', makeCourseInfo({ name: 'Second' })],
+      ])
+
+      render(
+        <PathTimeline
+          {...defaultProps}
+          entries={entries}
+          courseInfoMap={infoMap}
+          editable
+          onReorderByCourseId={onReorderByCourseId}
+        />
+      )
+
+      expect(screen.getByRole('button', { name: 'Move First up' })).toHaveAttribute(
+        'aria-disabled',
+        'true'
+      )
+      fireEvent.click(screen.getByRole('button', { name: 'Move First down' }))
+      expect(onReorderByCourseId).toHaveBeenCalledWith('c1', 'c2')
+    })
   })
 })

@@ -52,8 +52,7 @@ const SORTABLE_FILES_REQUIRING_MOVE_BUTTONS = [
   'src/app/components/figma/YouTubeChapterEditor.tsx',
   'src/app/components/DashboardCustomizer.tsx',
   'src/app/components/library/ReadingQueueView.tsx',
-  'src/app/pages/AILearningPath.tsx',
-  'src/app/pages/LearningPathDetail.tsx',
+  'src/app/components/learning-path/SortableCourseTimelineEntry.tsx',
 ] as const
 
 // Matches `aria-label="Move ... up"` or `aria-label={`Move ... up`}` style
@@ -130,8 +129,10 @@ test.describe('WCAG 2.2 Compliance Suite', () => {
       await emailTab.click().catch(() => {})
     }
 
-    const emailInput = page.locator('input[type="email"]').first()
-    const passwordInput = page.locator('input[type="password"]').first()
+    // Landing renders desktop and mobile auth variants together; target the
+    // active responsive form rather than whichever input appears first in DOM order.
+    const emailInput = page.locator('input[type="email"]:visible').first()
+    const passwordInput = page.locator('input[type="password"]:visible').first()
 
     await expect(emailInput, 'login page must render an email input').toBeVisible()
     await expect(passwordInput, 'login page must render a password input').toBeVisible()
@@ -159,7 +160,7 @@ test.describe('WCAG 2.2 Compliance Suite', () => {
     await page.goto('/login')
     await page.waitForLoadState('networkidle')
 
-    const passwordInput = page.locator('input[type="password"]').first()
+    const passwordInput = page.locator('input[type="password"]:visible').first()
     await expect(passwordInput).toBeVisible()
 
     // Dispatch a synthetic paste event and assert the page does not call

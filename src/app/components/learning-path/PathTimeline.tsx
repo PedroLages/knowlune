@@ -589,6 +589,40 @@ export function PathTimeline({
     [filteredEntries, gapEntryIds]
   )
 
+  const moveUpRefs = useRef<Map<string, HTMLButtonElement | null>>(new Map())
+  const moveDownRefs = useRef<Map<string, HTMLButtonElement | null>>(new Map())
+  const registerMoveUpRef = useCallback((id: string, element: HTMLButtonElement | null) => {
+    if (element) moveUpRefs.current.set(id, element)
+    else moveUpRefs.current.delete(id)
+  }, [])
+  const registerMoveDownRef = useCallback((id: string, element: HTMLButtonElement | null) => {
+    if (element) moveDownRefs.current.set(id, element)
+    else moveDownRefs.current.delete(id)
+  }, [])
+
+  const handleMoveByOffset = useCallback(
+    (courseId: string, offset: -1 | 1) => {
+      const sortableIndex = sortableEntryIds.indexOf(courseId)
+      const targetCourseId = sortableEntryIds[sortableIndex + offset]
+      if (sortableIndex === -1 || !targetCourseId) return
+
+      if (onReorderByCourseId) {
+        onReorderByCourseId(courseId, targetCourseId)
+      } else if (onReorder) {
+        const fromIndex = filteredEntries.findIndex(entry => entry.courseId === courseId)
+        const toIndex = filteredEntries.findIndex(entry => entry.courseId === targetCourseId)
+        if (fromIndex === -1 || toIndex === -1) return
+        onReorder(fromIndex, toIndex)
+      } else {
+        return
+      }
+
+      const focusRefs = offset === -1 ? moveUpRefs : moveDownRefs
+      requestAnimationFrame(() => focusRefs.current.get(courseId)?.focus())
+    },
+    [filteredEntries, onReorder, onReorderByCourseId, sortableEntryIds]
+  )
+
   const handleDragStart = useCallback((event: DragStartEvent) => {
     setActiveId(event.active.id as string)
   }, [])
@@ -701,6 +735,8 @@ export function PathTimeline({
                 (!hasAnyProgress && i === firstNonGapIndex && !isCompleted) ||
                 hasRealProgress ||
                 i === nextUnlockedIndex
+              const sortableIndex = sortableEntryIds.indexOf(entry.courseId)
+              const canReorder = Boolean(onReorder || onReorderByCourseId)
 
               return (
                 <div key={entry.courseId} role="listitem">
@@ -720,6 +756,14 @@ export function PathTimeline({
                     videoProgressMap={videoProgressMap}
                     progressionMode={progressionMode}
                     suppressAnimations={suppressAnimations}
+                    sortableIndex={sortableIndex}
+                    sortableTotal={sortableEntryIds.length}
+                    onMoveUp={canReorder ? () => handleMoveByOffset(entry.courseId, -1) : undefined}
+                    onMoveDown={
+                      canReorder ? () => handleMoveByOffset(entry.courseId, 1) : undefined
+                    }
+                    moveUpRef={element => registerMoveUpRef(entry.courseId, element)}
+                    moveDownRef={element => registerMoveDownRef(entry.courseId, element)}
                   />
                 </div>
               )
