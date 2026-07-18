@@ -67,9 +67,9 @@ function OverviewLoading() {
         <Skeleton className="h-9 w-44" />
         <Skeleton className="h-4 w-full max-w-lg" />
       </div>
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-12">
-        <Skeleton className="h-[248px] rounded-3xl xl:col-span-8" />
-        <Skeleton className="h-[248px] rounded-3xl xl:col-span-4" />
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-12">
+        <Skeleton className="h-[248px] rounded-3xl md:col-span-8" />
+        <Skeleton className="h-[248px] rounded-3xl md:col-span-4" />
       </div>
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {Array.from({ length: 4 }, (_, index) => (
@@ -202,15 +202,15 @@ export function Overview() {
     switch (sectionId) {
       case 'focus':
         return model.learningFocus ? (
-          <section className="grid grid-cols-1 gap-4 xl:grid-cols-12" data-testid="section-focus">
-            <div className="xl:col-span-8">
+          <section className="grid grid-cols-1 gap-4 md:grid-cols-12" data-testid="section-focus">
+            <div className="md:col-span-8">
               <OverviewLearningFocus
                 focus={model.learningFocus}
                 learnerState={model.learnerState}
                 onAction={() => void handleFocusAction(model.learningFocus!)}
               />
             </div>
-            <div className="xl:col-span-4">
+            <div className="md:col-span-4">
               <OverviewToday today={model.today} />
             </div>
           </section>

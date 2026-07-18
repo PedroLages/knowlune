@@ -189,7 +189,7 @@ export function OverviewInsights({ insights }: OverviewInsightsProps) {
           Signals grounded in your own learning data
         </h2>
       </div>
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
         <MasteryCard insights={insights} />
         <AssessmentCard insights={insights} />
         <ReadingCard insights={insights} />

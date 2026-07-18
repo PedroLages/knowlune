@@ -154,7 +154,8 @@ describe('Progress', () => {
       const { container } = render(<Progress value={50} />)
       const indicator = container.querySelector('[data-slot="progress-indicator"]')
       expect(indicator).toHaveClass('motion-reduce:transition-none')
-      expect(indicator).toHaveClass('motion-safe:transition-all')
+      expect(indicator).toHaveClass('motion-safe:transition-transform')
+      expect(indicator).not.toHaveClass('motion-safe:transition-all')
     })
   })
 

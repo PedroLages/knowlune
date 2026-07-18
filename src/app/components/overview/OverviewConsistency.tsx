@@ -25,6 +25,13 @@ function formatDay(date: string): string {
   }).format(new Date(`${date}T12:00:00`))
 }
 
+function formatWeekLabel(date?: string): string {
+  if (!date) return ''
+  return new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' }).format(
+    new Date(`${date}T12:00:00`)
+  )
+}
+
 function StudyHeatmap({ days }: { days: DashboardHeatmapDay[] }) {
   const initialIndex = Math.max(
     0,
@@ -82,31 +89,37 @@ function StudyHeatmap({ days }: { days: DashboardHeatmapDay[] }) {
       </div>
 
       <div className="mt-5 overflow-x-auto pb-2">
-        <div className="min-w-[620px]">
-          <div className="mb-2 grid grid-cols-[42px_1fr] gap-3 text-[11px] text-muted-foreground">
+        <div className="min-w-[240px]">
+          <div className="mb-2 grid grid-cols-[28px_1fr] gap-2 text-[10px] text-muted-foreground sm:grid-cols-[42px_1fr] sm:gap-3 sm:text-[11px]">
             <span aria-hidden="true" />
-            <div className="grid grid-cols-12 gap-1.5" aria-hidden="true">
-              {Array.from({ length: 12 }, (_, index) => (
+            <div className="grid grid-cols-4 gap-1" aria-hidden="true">
+              {Array.from({ length: 4 }, (_, index) => (
                 <span key={index} className="truncate">
-                  {formatDay(days[index * 7]?.date ?? '')}
+                  {formatWeekLabel(days[index * 21]?.date)}
                 </span>
               ))}
             </div>
           </div>
-          <div className="grid grid-cols-[42px_1fr] gap-3">
+          <div className="grid grid-cols-[28px_1fr] gap-2 sm:grid-cols-[42px_1fr] sm:gap-3">
             <div
-              className="grid grid-rows-7 gap-1.5 text-[11px] leading-4 text-muted-foreground"
+              className="grid grid-rows-7 gap-1 text-[10px] leading-3 text-muted-foreground sm:gap-1.5 sm:text-[11px] sm:leading-4"
               aria-hidden="true"
             >
-              {['Mon', '', 'Wed', '', 'Fri', '', 'Sun'].map((label, index) => (
-                <span key={`${label}-${index}`}>{label}</span>
-              ))}
+              {Array.from({ length: 7 }, (_, index) => {
+                const date = days[index]?.date
+                const label = date
+                  ? new Intl.DateTimeFormat(undefined, { weekday: 'narrow' }).format(
+                      new Date(`${date}T12:00:00`)
+                    )
+                  : ''
+                return <span key={`${date ?? 'day'}-${index}`}>{label}</span>
+              })}
             </div>
             <div
               role="grid"
               aria-label="Study minutes by day for the last 12 weeks"
               aria-describedby="heatmap-instructions heatmap-detail"
-              className="grid grid-flow-col grid-rows-7 gap-1.5"
+              className="grid grid-flow-col grid-rows-7 gap-1 sm:gap-1.5"
             >
               {days.map((day, index) => (
                 <button
@@ -120,7 +133,7 @@ function StudyHeatmap({ days }: { days: DashboardHeatmapDay[] }) {
                   aria-current={day.isToday ? 'date' : undefined}
                   aria-label={`${formatDay(day.date)}: ${day.minutes} ${day.minutes === 1 ? 'minute' : 'minutes'}`}
                   className={cn(
-                    'size-4 rounded-[4px] border border-border/30 focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2',
+                    'size-3 rounded-[3px] border border-border/30 focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 sm:size-4 sm:rounded-[4px]',
                     levelClasses[day.level]
                   )}
                   onClick={() => setActiveIndex(index)}
@@ -236,11 +249,11 @@ export function OverviewConsistency({ heatmap, recentActivity }: OverviewConsist
           A sustainable rhythm, not a perfect streak
         </h2>
       </div>
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-12">
-        <div className="xl:col-span-8">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-12">
+        <div className="md:col-span-8">
           <StudyHeatmap days={heatmap} />
         </div>
-        <div className="xl:col-span-4">
+        <div className="md:col-span-4">
           <RecentActivity activity={recentActivity} />
         </div>
       </div>

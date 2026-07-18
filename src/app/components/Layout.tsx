@@ -493,7 +493,7 @@ export function Layout() {
         Skip to content
       </a>
 
-      {/* Desktop Sidebar - Persistent on desktop (≥1024px), collapsible by user */}
+      {/* Desktop Sidebar - Persistent on desktop (≥1280px), collapsible by user */}
       {isDesktop && (
         <div
           data-theater-hide
@@ -518,7 +518,7 @@ export function Layout() {
             onClick={toggleSidebar}
             aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
             aria-keyshortcuts="Meta+B Control+B"
-            className={`absolute top-1/2 -translate-y-1/2 -right-5 z-50 flex items-center justify-center size-11 rounded-full bg-card border border-border shadow-sm text-muted-foreground hover:text-foreground hover:scale-110 focus-visible:opacity-100 focus-visible:pointer-events-auto focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-none transition-all duration-150 cursor-pointer ${
+            className={`absolute top-1/2 -translate-y-1/2 -right-5 z-50 flex items-center justify-center size-11 rounded-full bg-card border border-border shadow-sm text-muted-foreground hover:text-foreground hover:scale-110 focus-visible:opacity-100 focus-visible:pointer-events-auto focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-none transition-[color,opacity,transform] duration-150 cursor-pointer ${
               sidebarHovered || !sidebarCollapsed ? 'opacity-100' : 'opacity-0 pointer-events-none'
             }`}
           >
@@ -531,7 +531,7 @@ export function Layout() {
         </div>
       )}
 
-      {/* Tablet Sidebar - Collapsible Sheet on tablet (640-1023px) */}
+      {/* Tablet Sidebar - Collapsible Sheet on tablet (640-1279px) */}
       {isTablet && (
         <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
           <SheetContent side="left" className="w-[280px] p-6 flex flex-col" aria-label="Sidebar">
@@ -658,9 +658,11 @@ export function Layout() {
           </div>
 
           {/* Right slot: global app actions. Lesson tools live inside the lesson workspace. */}
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-1 sm:gap-4">
             <TrialIndicator />
-            <SyncStatusIndicator />
+            <div className="hidden sm:block">
+              <SyncStatusIndicator />
+            </div>
             <Button
               variant="ghost"
               size="icon"
@@ -682,14 +684,14 @@ export function Layout() {
                     aria-label="User menu"
                   >
                     <div className="relative">
-                      <Avatar className="size-10 ring-2 ring-transparent transition-all duration-200 hover:ring-brand/30 hover:shadow-md">
+                      <Avatar className="size-10 ring-2 ring-transparent transition-shadow duration-200 hover:ring-brand/30 hover:shadow-md">
                         <AvatarImage
                           src={settings.profilePhotoUrl || undefined}
                           alt={settings.displayName}
                           className="object-cover"
                           referrerPolicy="no-referrer"
                         />
-                        <AvatarFallback className="bg-brand-soft text-brand-soft-foreground font-semibold transition-colors duration-200 hover:bg-brand hover:text-white">
+                        <AvatarFallback className="bg-brand-soft text-brand-soft-foreground font-semibold transition-colors duration-200 hover:bg-brand hover:text-brand-foreground">
                           {getInitials(settings.displayName)}
                         </AvatarFallback>
                       </Avatar>

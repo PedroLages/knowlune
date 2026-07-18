@@ -212,15 +212,15 @@ export function OverviewProgress({
           Time invested and courses in motion
         </h2>
       </div>
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-12">
-        <div className="xl:col-span-8">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-12">
+        <div className="md:col-span-8">
           <StudyMinutesChart
             learnerState={learnerState}
             sevenDays={sevenDays}
             thirtyDays={thirtyDays}
           />
         </div>
-        <div className="xl:col-span-4">
+        <div className="md:col-span-4">
           <ActiveCourses courses={activeCourses} />
         </div>
       </div>
