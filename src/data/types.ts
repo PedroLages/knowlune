@@ -478,12 +478,7 @@ export interface TranscriptEmbedding {
 // --- AI Usage Events (Story 9B.6) ---
 
 export type AIFeatureType =
-  | 'summary'
-  | 'qa'
-  | 'learning_path'
-  | 'auto_analysis'
-  | 'note_organization'
-  | 'knowledge_gaps'
+  'summary' | 'qa' | 'learning_path' | 'auto_analysis' | 'note_organization' | 'knowledge_gaps'
 
 export interface AIUsageEvent {
   id: string // UUID
@@ -596,13 +591,7 @@ export interface TemplatePathEntry {
 // --- Spaced Review System (Story 11.1) ---
 
 export type DayOfWeek =
-  | 'monday'
-  | 'tuesday'
-  | 'wednesday'
-  | 'thursday'
-  | 'friday'
-  | 'saturday'
-  | 'sunday'
+  'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday'
 
 export interface CourseReminder {
   id: string // UUID

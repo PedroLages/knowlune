@@ -23,8 +23,7 @@ export interface DriveFolderBrowserResult {
 }
 
 export type DriveListResult<T> =
-  | { ok: true; data: T }
-  | { ok: false; error: string; status?: number }
+  { ok: true; data: T } | { ok: false; error: string; status?: number }
 
 // ── Error classes ──────────────────────────────────────────────
 

@@ -93,6 +93,25 @@ async function seedSyncData(page: import('@playwright/test').Page): Promise<void
     string,
     unknown
   >[])
+  await page.evaluate(async () => {
+    const modulePath = '/src/lib/credentials/cache.ts'
+    const { credentialCache } = (await import(modulePath)) as {
+      credentialCache: {
+        set: (kind: 'abs-server', id: string, value: string) => void
+      }
+    }
+    credentialCache.set('abs-server', 'abs-server-1', 'test-api-key-abc')
+  })
+}
+
+async function openSyncBook(page: import('@playwright/test').Page): Promise<void> {
+  await page.getByRole('link', { name: 'Books', exact: true }).click()
+  await page.waitForURL('**/library')
+  await page
+    .getByRole('link', { name: `Play ${ABS_BOOK.title}` })
+    .first()
+    .click()
+  await page.waitForURL(`**/library/${ABS_BOOK.id}/read`)
 }
 
 /**
@@ -141,7 +160,7 @@ test.describe('E102-S01: Bidirectional Progress Sync', () => {
     })
 
     // Navigate to the book
-    await page.goto(`/library/book/${ABS_BOOK.id}`)
+    await openSyncBook(page)
     await page.waitForLoadState('domcontentloaded')
 
     // Wait a moment for any async sync attempts to complete
@@ -172,14 +191,18 @@ test.describe('E102-S01: Bidirectional Progress Sync', () => {
 
     await seedSyncData(page)
 
-    await page.goto(`/library/book/${ABS_BOOK.id}`)
+    await openSyncBook(page)
     await page.waitForLoadState('domcontentloaded')
 
     // Wait for async fetch-on-open to complete
     await page.waitForTimeout(1500) // hard-wait-ok: waiting for async fire-and-forget sync
 
     // Page should load without crashing — verify the book title is visible
-    await expect(page.getByText(ABS_BOOK.title, { exact: false })).toBeVisible()
+    await expect(
+      page
+        .getByTestId('audiobook-reader')
+        .getByRole('heading', { name: ABS_BOOK.title, exact: true })
+    ).toBeVisible()
 
     // No error toasts from sync
     const errorToast = page.locator('[data-sonner-toast][data-type="error"]')
@@ -215,14 +238,18 @@ test.describe('E102-S01: Bidirectional Progress Sync', () => {
 
     await seedSyncData(page)
 
-    await page.goto(`/library/book/${ABS_BOOK.id}`)
+    await openSyncBook(page)
     await page.waitForLoadState('domcontentloaded')
 
     // Wait for async fetch-on-open to complete
     await page.waitForTimeout(1500) // hard-wait-ok: waiting for async fire-and-forget sync
 
     // Page should load without crashing
-    await expect(page.getByText(ABS_BOOK.title, { exact: false })).toBeVisible()
+    await expect(
+      page
+        .getByTestId('audiobook-reader')
+        .getByRole('heading', { name: ABS_BOOK.title, exact: true })
+    ).toBeVisible()
   })
 
   test('AC4: pushes local progress to ABS when local is ahead (PATCH call)', async ({ page }) => {
@@ -248,7 +275,7 @@ test.describe('E102-S01: Bidirectional Progress Sync', () => {
     await page.route(`${ABS_URL}/api/items/**`, route => route.fulfill({ status: 404, body: '' }))
 
     await seedSyncData(page)
-    await page.goto(`/library/book/${ABS_BOOK.id}`)
+    await openSyncBook(page)
     await page.waitForLoadState('domcontentloaded')
 
     // Wait for async fetch-on-open + push cycle to complete
@@ -273,14 +300,18 @@ test.describe('E102-S01: Bidirectional Progress Sync', () => {
 
     await seedSyncData(page)
 
-    await page.goto(`/library/book/${ABS_BOOK.id}`)
+    await openSyncBook(page)
     await page.waitForLoadState('domcontentloaded')
 
     // Wait for async operations
     await page.waitForTimeout(1500) // hard-wait-ok: waiting for async fire-and-forget sync
 
     // Page should still load — 404 on progress is not a fatal error
-    await expect(page.getByText(ABS_BOOK.title, { exact: false })).toBeVisible()
+    await expect(
+      page
+        .getByTestId('audiobook-reader')
+        .getByRole('heading', { name: ABS_BOOK.title, exact: true })
+    ).toBeVisible()
 
     // No error toasts
     const errorToast = page.locator('[data-sonner-toast][data-type="error"]')

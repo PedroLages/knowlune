@@ -345,8 +345,7 @@ function useReconcile<T extends { id: string; updatedAt?: string }>(
   // Some entity types (AuthorView) don't have a native `updatedAt` field;
   // the caller can supply a replacement getter.
   updatedAtGetter?:
-    | ((row: T) => string | undefined)
-    | React.MutableRefObject<(row: T) => string | undefined>
+    ((row: T) => string | undefined) | React.MutableRefObject<(row: T) => string | undefined>
 ): void {
   useEffect(() => {
     if (!rows) return

@@ -14,12 +14,7 @@ import { checkStorageQuota } from '@/lib/storageQuotaMonitor'
 import type { Book, ContentSource } from '@/data/types'
 
 export type DownloadStatus =
-  | 'pending'
-  | 'downloading'
-  | 'downloaded'
-  | 'failed'
-  | 'paused'
-  | 'retrying'
+  'pending' | 'downloading' | 'downloaded' | 'failed' | 'paused' | 'retrying'
 
 export interface DownloadRecord {
   id: string

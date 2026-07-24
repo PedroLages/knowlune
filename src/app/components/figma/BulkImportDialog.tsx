@@ -97,13 +97,7 @@ interface ImportItem {
 }
 
 type DialogStep =
-  | 'choose'
-  | 'enter-url'
-  | 'select-folders'
-  | 'scanning'
-  | 'review'
-  | 'importing'
-  | 'results'
+  'choose' | 'enter-url' | 'select-folders' | 'scanning' | 'review' | 'importing' | 'results'
 
 const MAX_CONCURRENCY = 5
 const MAX_PERSIST_CONCURRENCY = 1

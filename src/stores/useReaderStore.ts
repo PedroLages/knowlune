@@ -12,13 +12,7 @@ import { saveSettingsToSupabase } from '@/lib/settings'
 
 export type ReaderTheme = 'white' | 'sepia' | 'gray' | 'dark' | 'black'
 export type ReaderFontFamily =
-  | 'default'
-  | 'literata'
-  | 'inter'
-  | 'atkinson'
-  | 'serif'
-  | 'sans'
-  | 'mono'
+  'default' | 'literata' | 'inter' | 'atkinson' | 'serif' | 'sans' | 'mono'
 
 const STORAGE_KEY = 'knowlune-reader-settings-v1'
 const VALID_READER_THEMES: ReaderTheme[] = ['white', 'sepia', 'gray', 'dark', 'black']

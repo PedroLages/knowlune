@@ -170,6 +170,25 @@ async function seedAndNavigate(page: import('@playwright/test').Page): Promise<v
     'books',
     ABS_BOOKS as unknown as Record<string, unknown>[]
   )
+  await seedIndexedDBStore(
+    page,
+    DB_NAME,
+    'absSeries',
+    MOCK_SERIES_RESPONSE.results.map(series => ({
+      ...series,
+      serverId: ABS_SERVER.id,
+      libraryId: ABS_SERVER.libraryIds[0],
+    })) as unknown as Record<string, unknown>[]
+  )
+  await page.evaluate(async () => {
+    const modulePath = '/src/lib/credentials/cache.ts'
+    const { credentialCache } = (await import(modulePath)) as {
+      credentialCache: {
+        set: (kind: 'abs-server', id: string, value: string) => void
+      }
+    }
+    credentialCache.set('abs-server', 'abs-server-1', 'test-api-key')
+  })
   await page.goto('/library?tab=browse')
   await page.waitForLoadState('domcontentloaded')
 }
@@ -231,10 +250,15 @@ test.describe('E102-S02: Series Browsing', () => {
     await expect(booksPanel.getByText("Caliban's War")).toBeVisible()
     await expect(booksPanel.getByText("Abaddon's Gate")).toBeVisible()
 
-    // Sequence numbers
-    await expect(booksPanel.getByText('#1')).toBeVisible()
-    await expect(booksPanel.getByText('#2')).toBeVisible()
-    await expect(booksPanel.getByText('#3')).toBeVisible()
+    // Rows remain in sequence order and use zero-padded sequence labels.
+    const bookRows = booksPanel.getByRole('listitem')
+    await expect(bookRows).toHaveCount(3)
+    await expect(bookRows.nth(0)).toContainText('01')
+    await expect(bookRows.nth(0)).toContainText('Leviathan Wakes')
+    await expect(bookRows.nth(1)).toContainText('02')
+    await expect(bookRows.nth(1)).toContainText("Caliban's War")
+    await expect(bookRows.nth(2)).toContainText('03')
+    await expect(bookRows.nth(2)).toContainText("Abaddon's Gate")
 
     // "Continue" badge on the next unfinished book (Caliban's War, item-2)
     await expect(page.getByTestId('continue-badge-item-2')).toBeVisible()
@@ -291,6 +315,15 @@ test.describe('E102-S02: Series Browsing', () => {
       'books',
       ABS_BOOKS as unknown as Record<string, unknown>[]
     )
+    await page.evaluate(async () => {
+      const modulePath = '/src/lib/credentials/cache.ts'
+      const { credentialCache } = (await import(modulePath)) as {
+        credentialCache: {
+          set: (kind: 'abs-server', id: string, value: string) => void
+        }
+      }
+      credentialCache.set('abs-server', 'abs-server-1', 'test-api-key')
+    })
     await page.goto('/library?tab=browse')
     await page.waitForLoadState('domcontentloaded')
 

@@ -35,8 +35,7 @@ export interface OpdsCatalogMeta {
 
 /** Discriminated result from catalog validation. */
 export type ValidateCatalogResult =
-  | { ok: true; meta: OpdsCatalogMeta }
-  | { ok: false; error: string }
+  { ok: true; meta: OpdsCatalogMeta } | { ok: false; error: string }
 
 /**
  * Fetch and validate an OPDS catalog URL.

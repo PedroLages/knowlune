@@ -454,20 +454,18 @@ function resolveLessonGroup(builder: LessonGroupBuilder): LessonGroup | null {
   // Everything else is a material
   const materials: LessonGroupItem[] = allItems
     .filter(i => i.id !== primaryItem.id)
-    .map(
-      (i): LessonGroupItem => ({
-        id: i.id,
-        title: i.title,
-        displayTitle: i.displayTitle,
-        type: i.type === 'material' ? 'material' : i.type,
-        duration: i.duration,
-        pageCount: i.pageCount,
-        filename: i.filename,
-        path: i.path,
-        isPrimary: false,
-        sourceMetadata: i.sourceMetadata,
-      })
-    )
+    .map((i): LessonGroupItem => ({
+      id: i.id,
+      title: i.title,
+      displayTitle: i.displayTitle,
+      type: i.type === 'material' ? 'material' : i.type,
+      duration: i.duration,
+      pageCount: i.pageCount,
+      filename: i.filename,
+      path: i.path,
+      isPrimary: false,
+      sourceMetadata: i.sourceMetadata,
+    }))
     .sort((a, b) => {
       // Sort: PDFs first, then text, then other
       const typeOrder: Record<string, number> = { pdf: 0, text: 1, material: 2, video: 3 }

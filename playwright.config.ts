@@ -9,8 +9,12 @@ export default defineConfig({
   ].filter(Boolean),
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : undefined,
+  // Pull-request failures should be actionable on the first run. The scheduled
+  // burn-in job owns repeat coverage instead of multiplying every CI failure.
+  retries: 0,
+  // Two workers fit the hosted runner while workflow-level sharding supplies
+  // the remaining parallelism.
+  workers: process.env.CI ? 2 : undefined,
 
   // Standardized timeouts (TEA knowledge base: playwright-config)
   timeout: 60_000,
@@ -31,7 +35,9 @@ export default defineConfig({
     // Failure-only artifact capture
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
-    video: 'retain-on-failure',
+    // CI traces and screenshots are sufficient for diagnosis. Failure videos
+    // made each timed-out shard artifact hundreds of megabytes.
+    video: process.env.CI ? 'off' : 'retain-on-failure',
   },
 
   projects: [

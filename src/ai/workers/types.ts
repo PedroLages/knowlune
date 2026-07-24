@@ -7,11 +7,7 @@
 
 export type WorkerRequestType = 'embed' | 'search' | 'infer' | 'load-index'
 export type WorkerResponseType =
-  | 'success'
-  | 'error'
-  | 'stream-chunk'
-  | 'stream-end'
-  | 'download-progress'
+  'success' | 'error' | 'stream-chunk' | 'stream-end' | 'download-progress'
 
 // ============================================================================
 // Request Messages
@@ -70,10 +66,7 @@ export interface ProgressMessage {
 }
 
 export type WorkerResponse<T = unknown> =
-  | WorkerSuccessResponse<T>
-  | WorkerErrorResponse
-  | WorkerStreamChunk
-  | WorkerProgressUpdate
+  WorkerSuccessResponse<T> | WorkerErrorResponse | WorkerStreamChunk | WorkerProgressUpdate
 
 // ============================================================================
 // Task Payloads
