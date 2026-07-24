@@ -190,11 +190,7 @@ export async function getTimeOfDayPattern(): Promise<TimeOfDayPattern | null> {
   if (total === 0) return null
 
   const dominant = (Object.entries(buckets).sort(([, a], [, b]) => b - a)[0]?.[0] ?? null) as
-    | 'Morning'
-    | 'Afternoon'
-    | 'Evening'
-    | 'Night'
-    | null
+    'Morning' | 'Afternoon' | 'Evening' | 'Night' | null
 
   return {
     buckets: Object.entries(buckets).map(([period, count]) => ({

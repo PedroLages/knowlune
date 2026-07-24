@@ -115,7 +115,11 @@ function OverviewError({ message, onRetry }: { message: string; onRetry: () => v
 
 function OverviewSectionFallback({ height = 'h-72' }: { height?: string }) {
   return (
-    <Skeleton className={`${height} w-full rounded-3xl`} aria-label="Loading dashboard section" />
+    <Skeleton
+      className={`${height} w-full rounded-3xl`}
+      role="status"
+      aria-label="Loading dashboard section"
+    />
   )
 }
 

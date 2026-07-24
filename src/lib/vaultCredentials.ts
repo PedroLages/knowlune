@@ -33,8 +33,7 @@ function buildQuery(credentialType: CredentialType, credentialId: string): strin
  * "API key missing" errors at sync time with no breadcrumb at save time.
  */
 export type StoreCredentialResult =
-  | { ok: true }
-  | { ok: false; reason: 'unauthenticated' | 'error'; message?: string }
+  { ok: true } | { ok: false; reason: 'unauthenticated' | 'error'; message?: string }
 
 /**
  * Discriminated-result variant of `storeCredential`. Prefer this at

@@ -31,7 +31,7 @@ export default {
             if (node.name.name !== 'style') return
 
             // Get the file path
-            const filename = context.getFilename()
+            const filename = context.filename || context.getFilename?.() || ''
 
             // Skip exception directories
             if (
@@ -45,7 +45,8 @@ export default {
 
             // Check if the style value contains dynamic identifiers (Framer Motion pattern)
             // e.g., style={{ rotateX, rotateY }} or style={{ transform: someVar }}
-            const hasDynamicProps = node.value &&
+            const hasDynamicProps =
+              node.value &&
               node.value.type === 'JSXExpressionContainer' &&
               node.value.expression.type === 'ObjectExpression' &&
               node.value.expression.properties.some(prop => {
@@ -56,8 +57,7 @@ export default {
                 // If it's a template literal or expression, it's dynamic
                 if (
                   prop.value &&
-                  (prop.value.type === 'TemplateLiteral' ||
-                    prop.value.type === 'CallExpression')
+                  (prop.value.type === 'TemplateLiteral' || prop.value.type === 'CallExpression')
                 ) {
                   return true
                 }

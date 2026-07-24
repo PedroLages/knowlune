@@ -106,8 +106,7 @@ async function clearLegacyField(row: LegacyRow): Promise<void> {
   // this). .put() with the field omitted reliably removes it from the row.
   if (row.table === 'audiobookshelfServers') {
     const existing = (await db.audiobookshelfServers.get(row.id)) as unknown as
-      | LegacyAudiobookshelfServer
-      | undefined
+      LegacyAudiobookshelfServer | undefined
     if (!existing) return
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { apiKey: _drop, ...rest } = existing

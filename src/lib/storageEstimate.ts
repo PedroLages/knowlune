@@ -16,12 +16,7 @@ import type { Table } from 'dexie'
 // --- Types ---
 
 export type StorageCategory =
-  | 'courses'
-  | 'notes'
-  | 'flashcards'
-  | 'embeddings'
-  | 'thumbnails'
-  | 'transcripts'
+  'courses' | 'notes' | 'flashcards' | 'embeddings' | 'thumbnails' | 'transcripts'
 
 export interface CategoryEstimate {
   category: StorageCategory

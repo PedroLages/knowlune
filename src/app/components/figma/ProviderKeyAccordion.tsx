@@ -194,8 +194,7 @@ export function ProviderKeyAccordion({ onConfigChanged }: ProviderKeyAccordionPr
 
           // E97-S05 AC3: Vault/local/missing status for this provider
           const vaultStatus = credentialStatusByKey[`ai-provider:${providerId}`] as
-            | CredentialStatus
-            | undefined
+            CredentialStatus | undefined
 
           return (
             <AccordionItem

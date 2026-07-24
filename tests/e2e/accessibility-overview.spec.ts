@@ -12,13 +12,31 @@ async function expectNoSeriousAxeViolations(page: import('@playwright/test').Pag
     .last()
     .waitFor({ state: 'hidden', timeout: 7000 })
     .catch(() => {})
-  const results = await new AxeBuilder({ page })
-    .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
-    .exclude('[data-agentation]')
-    .exclude('[data-feedback-toolbar]')
-    .analyze()
+  await page
+    .locator('[data-slot="skeleton"]')
+    .last()
+    .waitFor({ state: 'hidden', timeout: 7000 })
+    .catch(() => {})
 
-  const serious = results.violations.filter(
+  let results: Awaited<ReturnType<AxeBuilder['analyze']>> | undefined
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      results = await new AxeBuilder({ page })
+        .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+        .exclude('[data-agentation]')
+        .exclude('[data-feedback-toolbar]')
+        .analyze()
+      break
+    } catch (error) {
+      const isViteReload =
+        error instanceof Error && error.message.includes('Execution context was destroyed')
+      if (!isViteReload || attempt === 1) throw error
+      await page.waitForLoadState('domcontentloaded')
+    }
+  }
+
+  expect(results).toBeDefined()
+  const serious = results!.violations.filter(
     violation => violation.impact === 'serious' || violation.impact === 'critical'
   )
   expect(serious).toEqual([])

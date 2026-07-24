@@ -60,6 +60,26 @@ const setupTestData = async page => {
   }, FIXED_DATE)
 }
 
+async function analyzeContrast(page: import('@playwright/test').Page) {
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      return await new AxeBuilder({ page })
+        .withTags(['wcag2aa'])
+        .disableRules(['region', 'landmark-one-main'])
+        .exclude('[data-agentation]')
+        .exclude('[data-feedback-toolbar]')
+        .analyze()
+    } catch (error) {
+      const isViteReload =
+        error instanceof Error && error.message.includes('Execution context was destroyed')
+      if (!isViteReload || attempt === 1) throw error
+      await page.waitForLoadState('domcontentloaded')
+    }
+  }
+
+  throw new Error('Accessibility scan did not produce results')
+}
+
 test.describe('Accessibility - Courses Pages', () => {
   test.beforeEach(async ({ page }) => {
     // Seed sidebar state to prevent overlay blocking on tablet/mobile viewports
@@ -362,12 +382,7 @@ test.describe('Accessibility - Courses Pages', () => {
       await page.waitForLoadState('networkidle')
 
       // Run axe focused on color contrast
-      const accessibilityScanResults = await new AxeBuilder({ page })
-        .withTags(['wcag2aa'])
-        .disableRules(['region', 'landmark-one-main']) // Focus only on color contrast
-        .exclude('[data-agentation]')
-        .exclude('[data-feedback-toolbar]')
-        .analyze()
+      const accessibilityScanResults = await analyzeContrast(page)
 
       // Filter for color contrast violations
       const contrastViolations = accessibilityScanResults.violations.filter(

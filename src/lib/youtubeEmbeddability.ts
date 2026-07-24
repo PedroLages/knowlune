@@ -26,8 +26,7 @@ export type { UnembeddableReason }
 const OEMBED_ENDPOINT = 'https://www.youtube.com/oembed'
 
 export type EmbeddabilityResult =
-  | { embeddable: true }
-  | { embeddable: false; reason: UnembeddableReason }
+  { embeddable: true } | { embeddable: false; reason: UnembeddableReason }
 
 const cache = new Map<string, EmbeddabilityResult>()
 

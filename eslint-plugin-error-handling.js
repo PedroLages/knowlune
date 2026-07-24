@@ -113,27 +113,19 @@ export default {
          */
         function containsRethrow(catchBody) {
           if (!catchBody || !catchBody.body) return false
-          return catchBody.body.some(
-            (stmt) => stmt.type === 'ThrowStatement'
-          )
+          return catchBody.body.some(stmt => stmt.type === 'ThrowStatement')
         }
 
         /**
          * Check if catch block has a "silent-catch-ok" comment
          */
         function hasSilentCatchComment(node) {
-          const sourceCode = context.getSourceCode
-            ? context.getSourceCode()
-            : context.sourceCode
+          const sourceCode = context.getSourceCode ? context.getSourceCode() : context.sourceCode
           if (!sourceCode) return false
 
           // Check comments inside the catch block
-          const comments = sourceCode.getCommentsInside
-            ? sourceCode.getCommentsInside(node)
-            : []
-          return comments.some((comment) =>
-            comment.value.includes('silent-catch-ok')
-          )
+          const comments = sourceCode.getCommentsInside ? sourceCode.getCommentsInside(node) : []
+          return comments.some(comment => comment.value.includes('silent-catch-ok'))
         }
 
         /**
@@ -216,16 +208,12 @@ export default {
          * before the entire statement or as a leading comment on the .catch() call
          */
         function hasSilentCatchCommentBefore(node) {
-          const sourceCode = context.getSourceCode
-            ? context.getSourceCode()
-            : context.sourceCode
+          const sourceCode = context.getSourceCode ? context.getSourceCode() : context.sourceCode
           if (!sourceCode) return false
 
           // Check comments before the .catch() call expression
-          const comments = sourceCode.getCommentsBefore
-            ? sourceCode.getCommentsBefore(node)
-            : []
-          if (comments.some((c) => c.value.includes('silent-catch-ok'))) {
+          const comments = sourceCode.getCommentsBefore ? sourceCode.getCommentsBefore(node) : []
+          if (comments.some(c => c.value.includes('silent-catch-ok'))) {
             return true
           }
 
@@ -234,7 +222,7 @@ export default {
             const parentComments = sourceCode.getCommentsBefore
               ? sourceCode.getCommentsBefore(node.parent)
               : []
-            if (parentComments.some((c) => c.value.includes('silent-catch-ok'))) {
+            if (parentComments.some(c => c.value.includes('silent-catch-ok'))) {
               return true
             }
           }
@@ -245,7 +233,7 @@ export default {
             const innerComments = sourceCode.getCommentsInside
               ? sourceCode.getCommentsInside(handler)
               : []
-            if (innerComments.some((c) => c.value.includes('silent-catch-ok'))) {
+            if (innerComments.some(c => c.value.includes('silent-catch-ok'))) {
               return true
             }
           }
@@ -255,7 +243,7 @@ export default {
 
         return {
           CatchClause(node) {
-            const filename = context.getFilename()
+            const filename = context.filename || context.getFilename?.() || ''
 
             if (shouldSkipFile(filename)) {
               return
@@ -303,7 +291,7 @@ export default {
            *   promise.catch(console.error)
            */
           CallExpression(node) {
-            const filename = context.getFilename()
+            const filename = context.filename || context.getFilename?.() || ''
 
             if (shouldSkipFile(filename)) {
               return
@@ -371,10 +359,7 @@ export default {
               const body = handler.body
 
               // Empty body: .catch(() => {})
-              if (
-                body.type === 'BlockStatement' &&
-                (!body.body || body.body.length === 0)
-              ) {
+              if (body.type === 'BlockStatement' && (!body.body || body.body.length === 0)) {
                 context.report({
                   node,
                   messageId: 'silentPromiseCatch',

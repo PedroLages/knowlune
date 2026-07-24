@@ -59,8 +59,7 @@ async function fetchTableRows(
   userId: string
 ): Promise<SupabaseRow[]> {
   const entry = tableRegistry.find(e => e.dexieTable === dexieTable) as
-    | TableRegistryEntry
-    | undefined
+    TableRegistryEntry | undefined
   if (!entry) {
     console.error(`[hydrateP3P4] Unknown dexieTable: ${dexieTable}`)
     return []

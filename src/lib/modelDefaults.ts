@@ -15,13 +15,7 @@
 
 /** Supported AI provider IDs */
 export type AIProviderId =
-  | 'openai'
-  | 'anthropic'
-  | 'groq'
-  | 'glm'
-  | 'gemini'
-  | 'ollama'
-  | 'openrouter'
+  'openai' | 'anthropic' | 'groq' | 'glm' | 'gemini' | 'ollama' | 'openrouter'
 
 // ---------------------------------------------------------------------------
 // AI Feature Identification

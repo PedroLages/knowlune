@@ -147,9 +147,8 @@ async function mockAudioElement(page: import('@playwright/test').Page): Promise<
       },
       set(value: string) {
         ;(this as HTMLMediaElement & { _fakeSrc?: string })._fakeSrc = value
-        if (srcDescriptor?.set)
-          srcDescriptor.set.call(this, value)
-          // Mirror to global so tests can poll deterministically
+        if (srcDescriptor?.set) srcDescriptor.set.call(this, value)
+        // Mirror to global so tests can poll deterministically
         ;(window as Window & { __TEST_AUDIO_SRC__?: string }).__TEST_AUDIO_SRC__ = value
       },
     })
@@ -216,19 +215,30 @@ async function seedStreamingData(page: import('@playwright/test').Page): Promise
   })
 }
 
+async function openBookReader(
+  page: import('@playwright/test').Page,
+  bookId: string
+): Promise<void> {
+  await page.goto(`/library/${bookId}/read`)
+  await page
+    .getByRole('status', { name: 'Loading page' })
+    .waitFor({ state: 'hidden', timeout: 30000 })
+}
+
 test.describe('E101-S04: Streaming Playback', () => {
   test('AC1+AC2: ABS audiobook opens in AudiobookRenderer with stream URL', async ({ page }) => {
     await seedStreamingData(page)
 
     // Navigate directly to the book reader for the ABS audiobook
-    await page.goto(`/library/${ABS_AUDIOBOOK.id}/read`)
-    await page.waitForLoadState('domcontentloaded')
+    await openBookReader(page, ABS_AUDIOBOOK.id)
 
     // AudiobookRenderer should be visible
-    await expect(page.getByTestId('audiobook-reader')).toBeVisible({ timeout: 10000 })
+    await expect(page.getByTestId('audiobook-reader')).toBeVisible({ timeout: 30000 })
 
     // Book title should be displayed
-    await expect(page.getByText('Test Streaming Book')).toBeVisible()
+    await expect(
+      page.getByRole('heading', { name: 'Test Streaming Book', exact: true })
+    ).toBeVisible()
 
     // Wait for loadChapter (async) to set the stream URL on the audio element.
     // Audio() creates a detached element not in the DOM, so we poll the global
@@ -248,7 +258,7 @@ test.describe('E101-S04: Streaming Playback', () => {
 
   test('AC4: play/pause button toggles state', async ({ page }) => {
     await seedStreamingData(page)
-    await page.goto(`/library/${ABS_AUDIOBOOK.id}/read`)
+    await openBookReader(page, ABS_AUDIOBOOK.id)
 
     // Wait for AudiobookRenderer to mount
     await expect(page.getByTestId('audiobook-reader')).toBeVisible({ timeout: 10000 })
@@ -270,7 +280,7 @@ test.describe('E101-S04: Streaming Playback', () => {
         lastOpenedAt: FIXED_DATE,
       },
     ] as unknown as Record<string, unknown>[])
-    await page.goto(`/library/${ABS_AUDIOBOOK.id}/read`)
+    await openBookReader(page, ABS_AUDIOBOOK.id)
 
     await expect(page.getByTestId('audiobook-reader')).toBeVisible({ timeout: 10000 })
     await expect(page.getByTestId('current-time-display')).toHaveText('8:24', { timeout: 10000 })
@@ -278,7 +288,7 @@ test.describe('E101-S04: Streaming Playback', () => {
 
   test('AC7: chapter list displays ABS chapter metadata', async ({ page }) => {
     await seedStreamingData(page)
-    await page.goto(`/library/${ABS_AUDIOBOOK.id}/read`)
+    await openBookReader(page, ABS_AUDIOBOOK.id)
 
     await expect(page.getByTestId('audiobook-reader')).toBeVisible({ timeout: 10000 })
 
@@ -292,7 +302,7 @@ test.describe('E101-S04: Streaming Playback', () => {
 
   test('AC2: stream URL contains token query parameter with encoded API key', async ({ page }) => {
     await seedStreamingData(page)
-    await page.goto(`/library/${ABS_AUDIOBOOK.id}/read`)
+    await openBookReader(page, ABS_AUDIOBOOK.id)
 
     await expect(page.getByTestId('audiobook-reader')).toBeVisible({ timeout: 10000 })
 
@@ -312,7 +322,7 @@ test.describe('E101-S04: Streaming Playback', () => {
 
   test('AC3 REGRESSION: local audiobook does NOT use streaming URL', async ({ page }) => {
     await seedStreamingData(page)
-    await page.goto(`/library/${LOCAL_AUDIOBOOK.id}/read`)
+    await openBookReader(page, LOCAL_AUDIOBOOK.id)
 
     await expect(page.getByTestId('audiobook-reader')).toBeVisible({ timeout: 10000 })
 

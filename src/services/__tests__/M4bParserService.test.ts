@@ -74,8 +74,7 @@ function mockMusicMetadata({
   duration = 3600,
   sampleRate = 44100,
   chaptersField = undefined as
-    | Array<{ title?: string; startTime?: number; sampleOffset?: number }>
-    | undefined,
+    Array<{ title?: string; startTime?: number; sampleOffset?: number }> | undefined,
   itunesTags = undefined as Array<{ id: string; value: unknown }> | undefined,
   picture = undefined as { format: string; data: number[] } | undefined,
 } = {}) {

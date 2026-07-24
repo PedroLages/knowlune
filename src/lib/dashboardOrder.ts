@@ -5,12 +5,7 @@ const LEGACY_ORDER_KEY = 'dashboard-section-order'
 const LEGACY_STATS_KEY = 'dashboard-section-stats'
 
 export type DashboardSectionId =
-  | 'focus'
-  | 'pulse'
-  | 'progress'
-  | 'consistency'
-  | 'insights'
-  | 'library'
+  'focus' | 'pulse' | 'progress' | 'consistency' | 'insights' | 'library'
 
 export type DashboardPreset = 'focus' | 'balanced' | 'analytics' | 'custom'
 

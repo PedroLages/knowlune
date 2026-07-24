@@ -27,8 +27,7 @@ import { parseVTT } from '@/lib/captions'
 // ---------------------------------------------------------------------------
 
 export type TranscriptResult =
-  | { ok: true; record: YouTubeTranscriptRecord }
-  | { ok: false; code: string; message: string }
+  { ok: true; record: YouTubeTranscriptRecord } | { ok: false; code: string; message: string }
 
 // ---------------------------------------------------------------------------
 // Constants

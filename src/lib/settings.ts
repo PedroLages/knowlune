@@ -547,8 +547,7 @@ export async function hydrateSettingsFromSupabase(
 
       // Check providerKeys map (E90-S03 multi-provider keys)
       const providerKeys = aiConfig.providerKeys as
-        | Record<string, { iv: string; encryptedData: string }>
-        | undefined
+        Record<string, { iv: string; encryptedData: string }> | undefined
       if (providerKeys && typeof providerKeys === 'object') {
         const { decryptData, storeCredential } = await Promise.all([
           import('@/lib/crypto').then(m => ({ decryptData: m.decryptData })),
