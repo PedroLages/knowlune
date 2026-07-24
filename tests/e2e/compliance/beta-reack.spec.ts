@@ -238,8 +238,10 @@ test.describe('Beta Re-ack — happy path', () => {
   })
 
   test('banner does not appear when user has already acked current version', async ({ page }) => {
+    let acknowledgementRead = false
     await page.route('**/rest/v1/notice_acknowledgements*', async route => {
       if (route.request().method() === 'GET') {
+        acknowledgementRead = true
         await route.fulfill({
           status: 200,
           contentType: 'application/json',
@@ -250,15 +252,9 @@ test.describe('Beta Re-ack — happy path', () => {
       }
     })
 
-    // Set up response waiter BEFORE injecting session to avoid race condition
-    const ackResponsePromise = page.waitForResponse(
-      resp => resp.url().includes('notice_acknowledgements') && resp.request().method() === 'GET',
-      { timeout: 8000 }
-    )
-
     await page.goto('/')
     await injectSessionAfterNav(page)
-    await ackResponsePromise
+    await expect.poll(() => acknowledgementRead).toBe(true)
 
     const banner = page.locator('[role="alert"]').filter({ hasText: /privacy notice/i })
     await expect(banner).not.toBeVisible()

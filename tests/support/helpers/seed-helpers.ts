@@ -34,56 +34,66 @@ export async function seedIndexedDBStore(
   storeName: string,
   data: Record<string, unknown>[]
 ): Promise<void> {
-  await page.evaluate(
-    async ({ dbName, storeName, data, maxRetries, retryDelay }) => {
-      for (let attempt = 0; attempt < maxRetries; attempt++) {
-        const result = await new Promise<'ok' | 'store-missing'>((resolve, reject) => {
-          const request = indexedDB.open(dbName)
-          request.onsuccess = () => {
-            const db = request.result
-            if (!db.objectStoreNames.contains(storeName)) {
-              db.close()
-              resolve('store-missing')
-              return
-            }
-            const tx = db.transaction(storeName, 'readwrite')
-            const store = tx.objectStore(storeName)
-            for (const item of data) {
-              store.put(item)
-            }
-            tx.oncomplete = () => {
-              db.close()
-              resolve('ok')
-            }
-            tx.onerror = () => {
-              db.close()
-              reject(tx.error)
-            }
+  for (let navigationAttempt = 0; navigationAttempt < 2; navigationAttempt++) {
+    try {
+      await page.evaluate(
+        async ({ dbName, storeName, data, maxRetries, retryDelay }) => {
+          for (let attempt = 0; attempt < maxRetries; attempt++) {
+            const result = await new Promise<'ok' | 'store-missing'>((resolve, reject) => {
+              const request = indexedDB.open(dbName)
+              request.onsuccess = () => {
+                const db = request.result
+                if (!db.objectStoreNames.contains(storeName)) {
+                  db.close()
+                  resolve('store-missing')
+                  return
+                }
+                const tx = db.transaction(storeName, 'readwrite')
+                const store = tx.objectStore(storeName)
+                for (const item of data) {
+                  store.put(item)
+                }
+                tx.oncomplete = () => {
+                  db.close()
+                  resolve('ok')
+                }
+                tx.onerror = () => {
+                  db.close()
+                  reject(tx.error)
+                }
+              }
+              request.onerror = () => reject(request.error)
+            })
+            if (result === 'ok') return
+            await new Promise<void>(resolve => {
+              let ticks = 0
+              const targetTicks = Math.ceil(retryDelay / 16.67)
+              const tick = () => {
+                ticks++
+                if (ticks >= targetTicks) resolve()
+                else requestAnimationFrame(tick)
+              }
+              requestAnimationFrame(tick)
+            })
           }
-          request.onerror = () => reject(request.error)
-        })
-        if (result === 'ok') return
-        await new Promise<void>(resolve => {
-          let ticks = 0
-          const targetTicks = Math.ceil(retryDelay / 16.67)
-          const tick = () => {
-            ticks++
-            if (ticks >= targetTicks) resolve()
-            else requestAnimationFrame(tick)
-          }
-          requestAnimationFrame(tick)
-        })
-      }
-      throw new Error(`Store "${storeName}" not found in "${dbName}" after ${maxRetries} retries`)
-    },
-    {
-      dbName,
-      storeName,
-      data,
-      maxRetries: RETRY_CONFIG.MAX_ATTEMPTS,
-      retryDelay: RETRY_CONFIG.POLL_INTERVAL,
+          throw new Error(`Store "${storeName}" not found in "${dbName}" after ${maxRetries} retries`)
+        },
+        {
+          dbName,
+          storeName,
+          data,
+          maxRetries: RETRY_CONFIG.MAX_ATTEMPTS,
+          retryDelay: RETRY_CONFIG.POLL_INTERVAL,
+        }
+      )
+      return
+    } catch (error) {
+      const isViteReload =
+        error instanceof Error && error.message.includes('Execution context was destroyed')
+      if (!isViteReload || navigationAttempt === 1) throw error
+      await page.waitForLoadState('domcontentloaded')
     }
-  )
+  }
 }
 
 /**

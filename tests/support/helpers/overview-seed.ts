@@ -31,39 +31,51 @@ export async function clearOverviewData(page: Page): Promise<void> {
 }
 
 async function replaceOverviewData(page: Page, records: OverviewStoreRecords): Promise<void> {
-  await page.evaluate(
-    async ({ dbName, stores, recordsByStore }) => {
-      await new Promise<void>((resolve, reject) => {
-        const request = indexedDB.open(dbName)
-        request.onsuccess = () => {
-          const database = request.result
-          const availableStores = stores.filter(store => database.objectStoreNames.contains(store))
-          if (availableStores.length === 0) {
-            database.close()
-            resolve()
-            return
-          }
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      await page.evaluate(
+        async ({ dbName, stores, recordsByStore }) => {
+          await new Promise<void>((resolve, reject) => {
+            const request = indexedDB.open(dbName)
+            request.onsuccess = () => {
+              const database = request.result
+              const availableStores = stores.filter(store =>
+                database.objectStoreNames.contains(store)
+              )
+              if (availableStores.length === 0) {
+                database.close()
+                resolve()
+                return
+              }
 
-          const transaction = database.transaction(availableStores, 'readwrite')
-          for (const storeName of availableStores) {
-            const store = transaction.objectStore(storeName)
-            store.clear()
-            for (const record of recordsByStore[storeName] ?? []) store.put(record)
-          }
-          transaction.oncomplete = () => {
-            database.close()
-            resolve()
-          }
-          transaction.onerror = () => {
-            database.close()
-            reject(transaction.error)
-          }
-        }
-        request.onerror = () => reject(request.error)
-      })
-    },
-    { dbName: DB_NAME, stores: [...OVERVIEW_STORES], recordsByStore: records }
-  )
+              const transaction = database.transaction(availableStores, 'readwrite')
+              for (const storeName of availableStores) {
+                const store = transaction.objectStore(storeName)
+                store.clear()
+                for (const record of recordsByStore[storeName] ?? []) store.put(record)
+              }
+              transaction.oncomplete = () => {
+                database.close()
+                resolve()
+              }
+              transaction.onerror = () => {
+                database.close()
+                reject(transaction.error)
+              }
+            }
+            request.onerror = () => reject(request.error)
+          })
+        },
+        { dbName: DB_NAME, stores: [...OVERVIEW_STORES], recordsByStore: records }
+      )
+      return
+    } catch (error) {
+      const isViteReload =
+        error instanceof Error && error.message.includes('Execution context was destroyed')
+      if (!isViteReload || attempt === 1) throw error
+      await page.waitForLoadState('domcontentloaded')
+    }
+  }
 }
 
 function completedSession(id: string, daysAgo: number, duration: number) {

@@ -12,6 +12,11 @@ async function expectNoSeriousAxeViolations(page: import('@playwright/test').Pag
     .last()
     .waitFor({ state: 'hidden', timeout: 7000 })
     .catch(() => {})
+  await page
+    .locator('[data-slot="skeleton"]')
+    .last()
+    .waitFor({ state: 'hidden', timeout: 7000 })
+    .catch(() => {})
 
   let results: Awaited<ReturnType<AxeBuilder['analyze']>> | undefined
   for (let attempt = 0; attempt < 2; attempt++) {

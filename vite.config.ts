@@ -595,7 +595,9 @@ export default defineConfig({
   },
   optimizeDeps: {
     exclude: ['@mlc-ai/web-llm'],
-    include: ['@number-flow/react'], // React wrapper for NumberFlow animations
+    // Pre-bundle lazy worker dependencies up front. Discovering transformers
+    // during a browser test otherwise makes Vite reload the page mid-flow.
+    include: ['@number-flow/react', '@xenova/transformers'],
   },
   // File types to support raw imports. Never add .css, .tsx, or .ts files to this.
   assetsInclude: ['**/*.svg', '**/*.csv'],
