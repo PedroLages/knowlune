@@ -89,13 +89,7 @@ const PREMIUM_FEATURES = [
 ]
 
 type CardState =
-  | 'loading'
-  | 'free'
-  | 'trial'
-  | 'premium'
-  | 'activating'
-  | 'activated'
-  | 'offline-cached'
+  'loading' | 'free' | 'trial' | 'premium' | 'activating' | 'activated' | 'offline-cached'
 
 interface SubscriptionCardProps {
   checkoutStatus?: 'success' | 'cancel' | null

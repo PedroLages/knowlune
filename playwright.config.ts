@@ -10,7 +10,9 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : undefined,
+  // GitHub's four shards were timing out with a single worker. Two workers
+  // keep the full browser matrix while staying within hosted-runner capacity.
+  workers: process.env.CI ? 2 : undefined,
 
   // Standardized timeouts (TEA knowledge base: playwright-config)
   timeout: 60_000,

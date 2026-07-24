@@ -62,12 +62,8 @@ jobs:
         run: npx playwright install-deps
 
       - name: Run E2E tests (shard ${{ matrix.shard }}/4)
-        uses: nick-invision/retry@v4
-        with:
-          timeout_minutes: 30
-          max_attempts: 2
-          retry_on: error
-          command: npx playwright test --shard=${{ matrix.shard }}/${{ strategy.job-total }}
+        timeout-minutes: 30
+        run: npx playwright test --shard=${{ matrix.shard }}/${{ strategy.job-total }}
 
       - name: Upload test results
         if: failure()
@@ -94,7 +90,9 @@ jobs:
   burn-in:
     name: Flaky Test Detection (10 iterations)
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request' || github.event_name == 'schedule'
+    # The full 10x matrix takes several hours and made every dependency PR
+    # permanently pending. Keep it as the scheduled deep reliability check.
+    if: github.event_name == 'schedule'
     steps:
       - name: Checkout code
         uses: actions/checkout@v7

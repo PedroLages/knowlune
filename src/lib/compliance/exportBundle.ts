@@ -55,9 +55,7 @@ export interface ExportSuccessResponse {
 
 /** Union of all possible callExportDataFunction outcomes. */
 export type ExportDataResponse =
-  | ExportSuccessResponse
-  | ExportTooLargeResponse
-  | ExportQueuedResponse
+  ExportSuccessResponse | ExportTooLargeResponse | ExportQueuedResponse
 
 // ---------------------------------------------------------------------------
 // Helper

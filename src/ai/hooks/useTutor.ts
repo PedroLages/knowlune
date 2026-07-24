@@ -228,7 +228,9 @@ export function useTutor(options: UseTutorOptions): UseTutorResult {
           if (!hasEmbeddings) {
             // Trigger lazy embedding — get cues from transcript record
             try {
-              const transcript = await (await import('@/db')).db.youtubeTranscripts
+              const transcript = await (
+                await import('@/db')
+              ).db.youtubeTranscripts
                 .where('[courseId+videoId]')
                 .equals([courseId, youtubeVideoId])
                 .first()

@@ -11,10 +11,7 @@ import { TrueFalseQuestion } from './questions/TrueFalseQuestion'
  * - review-*: read-only with correct/incorrect styling (Epic 16)
  */
 export type QuestionDisplayMode =
-  | 'active'
-  | 'review-correct'
-  | 'review-incorrect'
-  | 'review-disabled'
+  'active' | 'review-correct' | 'review-incorrect' | 'review-disabled'
 
 interface QuestionDisplayProps {
   question: Question

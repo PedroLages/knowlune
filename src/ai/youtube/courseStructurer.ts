@@ -47,8 +47,7 @@ export interface CourseStructureProposal {
 
 /** Result from structureCourseWithAI */
 export type StructuringResult =
-  | { ok: true; proposal: CourseStructureProposal }
-  | { ok: false; error: string }
+  { ok: true; proposal: CourseStructureProposal } | { ok: false; error: string }
 
 // --- Constants ---
 

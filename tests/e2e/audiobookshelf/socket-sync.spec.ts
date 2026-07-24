@@ -190,6 +190,25 @@ async function seedSocketData(page: import('@playwright/test').Page): Promise<vo
     string,
     unknown
   >[])
+  await page.evaluate(async () => {
+    const modulePath = '/src/lib/credentials/cache.ts'
+    const { credentialCache } = (await import(modulePath)) as {
+      credentialCache: {
+        set: (kind: 'abs-server', id: string, value: string) => void
+      }
+    }
+    credentialCache.set('abs-server', 'abs-server-1', 'test-api-key-abc')
+  })
+}
+
+async function openSocketBook(page: import('@playwright/test').Page): Promise<void> {
+  await page.getByRole('link', { name: 'Books', exact: true }).click()
+  await page.waitForURL('**/library')
+  await page
+    .getByRole('link', { name: `Play ${ABS_BOOK.title}` })
+    .first()
+    .click()
+  await page.waitForURL(`**/library/${ABS_BOOK.id}/read`)
 }
 
 test.describe('E102-S04: Socket.IO Real-Time Sync', () => {
@@ -202,10 +221,14 @@ test.describe('E102-S04: Socket.IO Real-Time Sync', () => {
     await page.route(`${ABS_URL}/api/items/**`, route => route.fulfill({ status: 404, body: '' }))
 
     await seedSocketData(page)
-    await page.goto(`/library/${ABS_BOOK.id}/read`)
+    await openSocketBook(page)
 
     // Wait for the AudiobookRenderer to render (book title visible = page is loaded)
-    await expect(page.getByText(ABS_BOOK.title, { exact: false })).toBeVisible({ timeout: 10000 })
+    await expect(
+      page
+        .getByTestId('audiobook-reader')
+        .getByRole('heading', { name: ABS_BOOK.title, exact: true })
+    ).toBeVisible({ timeout: 10000 })
 
     // Wait until the socket.io WebSocket is created (polls until store hydration + socket connect)
     await page.waitForFunction(
@@ -237,10 +260,14 @@ test.describe('E102-S04: Socket.IO Real-Time Sync', () => {
     await page.route(`${ABS_URL}/**`, route => route.fulfill({ status: 200, body: '' }))
 
     await seedSocketData(page)
-    await page.goto(`/library/${ABS_BOOK.id}/read`)
+    await openSocketBook(page)
 
     // Wait for the book to render
-    await expect(page.getByText(ABS_BOOK.title, { exact: false })).toBeVisible({ timeout: 10000 })
+    await expect(
+      page
+        .getByTestId('audiobook-reader')
+        .getByRole('heading', { name: ABS_BOOK.title, exact: true })
+    ).toBeVisible({ timeout: 10000 })
 
     // Give toasts time to appear (if any)
     await page.waitForTimeout(500) // hard-wait-ok: waiting for any error toasts to manifest
@@ -263,7 +290,7 @@ test.describe('E102-S04: Socket.IO Real-Time Sync', () => {
     await page.route(`${ABS_URL}/api/items/**`, route => route.fulfill({ status: 404, body: '' }))
 
     await seedSocketData(page)
-    await page.goto(`/library/${ABS_BOOK.id}/read`)
+    await openSocketBook(page)
     await page.waitForLoadState('domcontentloaded')
 
     // Wait for socket to be ready
@@ -333,10 +360,14 @@ test.describe('E102-S04: Socket.IO Real-Time Sync', () => {
     await page.route(`${ABS_URL}/api/items/**`, route => route.fulfill({ status: 404, body: '' }))
 
     await seedSocketData(page)
-    await page.goto(`/library/${ABS_BOOK.id}/read`)
+    await openSocketBook(page)
 
     // Wait for the book to render and socket to connect
-    await expect(page.getByText(ABS_BOOK.title, { exact: false })).toBeVisible({ timeout: 10000 })
+    await expect(
+      page
+        .getByTestId('audiobook-reader')
+        .getByRole('heading', { name: ABS_BOOK.title, exact: true })
+    ).toBeVisible({ timeout: 10000 })
     await page.waitForFunction(
       () => {
         const instances =
@@ -375,7 +406,11 @@ test.describe('E102-S04: Socket.IO Real-Time Sync', () => {
     expect(await errorToasts.count()).toBeLessThanOrEqual(3)
 
     // The socket disconnected without crashing the page — page still renders
-    await expect(page.getByText(ABS_BOOK.title, { exact: false })).toBeVisible()
+    await expect(
+      page
+        .getByTestId('audiobook-reader')
+        .getByRole('heading', { name: ABS_BOOK.title, exact: true })
+    ).toBeVisible()
 
     // Verify REST calls were made (fetch-on-open happens via REST regardless,
     // confirming the REST path is functional alongside socket)
@@ -390,10 +425,14 @@ test.describe('E102-S04: Socket.IO Real-Time Sync', () => {
     await page.route(`${ABS_URL}/api/items/**`, route => route.fulfill({ status: 404, body: '' }))
 
     await seedSocketData(page)
-    await page.goto(`/library/${ABS_BOOK.id}/read`)
+    await openSocketBook(page)
 
     // Wait for the book to render
-    await expect(page.getByText(ABS_BOOK.title, { exact: false })).toBeVisible({ timeout: 10000 })
+    await expect(
+      page
+        .getByTestId('audiobook-reader')
+        .getByRole('heading', { name: ABS_BOOK.title, exact: true })
+    ).toBeVisible({ timeout: 10000 })
 
     // Wait until the Socket.IO connect packet (40{...}) has been sent
     await page.waitForFunction(
