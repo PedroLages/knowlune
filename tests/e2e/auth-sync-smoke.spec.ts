@@ -3,10 +3,10 @@
  *
  * Validates the core signed-out/signed-in UX contract introduced in the
  * 2026-04-23 auth-sync-ux fix:
- *   - Signed-out: navbar shows Sign In; /login renders; Settings → Sync
- *     shows the new informational card (not a blank page).
- *   - Signed-in (fake user via window.__authStore): navbar swaps to the
- *     avatar dropdown; Settings → Sync shows the real sync controls.
+ *   - Anonymous: the closed-app landing page renders its sign-in form.
+ *   - Guest: navbar still exposes the Sign In action.
+ *   - Signed-in (fake user via window.__authStore): Settings → Sync shows
+ *     the real sync controls.
  *
  * Auth is driven via the dev-only `window.__authStore` shim from
  * src/stores/useAuthStore.ts:157-160 — no Supabase network calls required.
@@ -48,7 +48,7 @@ test.describe('Auth + Sync smoke flow', () => {
     await dismissOnboarding(page)
   })
 
-  test('signed-out: navbar shows Sign In and /login is reachable', async ({ page }) => {
+  test('guest navbar shows Sign In', async ({ page }) => {
     await page.goto('/')
     await page.waitForLoadState('domcontentloaded')
 
@@ -56,38 +56,27 @@ test.describe('Auth + Sync smoke flow', () => {
     // "Sign in to your account" (Layout.tsx); match loosely.
     const signInCta = page.getByRole('button', { name: /sign in/i }).first()
     await expect(signInCta).toBeVisible()
-
-    // /login renders the standalone auth page
-    await page.goto('/login')
-    await page.waitForLoadState('domcontentloaded')
-    await expect(page).toHaveURL(/\/login/)
   })
 
-  test('signed-out Settings → Sync shows the informational card (not blank)', async ({
-    page,
-  }) => {
-    await page.goto('/settings?section=sync')
+  test('anonymous users see the closed-app sign-in landing page', async ({ page }) => {
+    await page.addInitScript(() => {
+      sessionStorage.removeItem('knowlune-guest')
+      sessionStorage.removeItem('knowlune-guest-id')
+    })
+    await page.goto('/')
     await page.waitForLoadState('domcontentloaded')
 
-    await expect(page.getByTestId('sync-section-signed-out')).toBeVisible()
-    await expect(page.getByTestId('sync-signed-out-sign-in')).toBeVisible()
-    await expect(page.getByTestId('sync-signed-out-sign-up')).toBeVisible()
-    // Signed-in controls must not render
-    await expect(page.getByTestId('sync-section')).toHaveCount(0)
+    await expect(page.getByRole('heading', { name: 'Sign in to Knowlune' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Sign In', exact: true })).toBeVisible()
   })
 
-  test('signed-in: Settings → Sync swaps to real controls', async ({ page }) => {
+  test('signed-in: Settings → Sync shows real controls', async ({ page }) => {
     await page.goto('/settings?section=sync')
     await page.waitForLoadState('domcontentloaded')
-
-    // Confirm signed-out card first, then flip auth and assert swap
-    await expect(page.getByTestId('sync-section-signed-out')).toBeVisible()
-
     await setFakeAuthUser(page)
 
     await expect(page.getByTestId('sync-section')).toBeVisible()
     await expect(page.getByTestId('auto-sync-switch')).toBeVisible()
     await expect(page.getByTestId('sync-now-button')).toBeVisible()
-    await expect(page.getByTestId('sync-section-signed-out')).toHaveCount(0)
   })
 })

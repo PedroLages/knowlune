@@ -22,7 +22,10 @@ env:
 
 jobs:
   # ──────────────────────────────────────────────
-  # E2E Tests — 4 parallel shards
+  # E2E Tests — 8 parallel shards
+  #
+  # Pull requests and pushes run the fast Chromium + accessibility gate.
+  # The weekly schedule retains the complete responsive-device matrix.
   # ──────────────────────────────────────────────
   e2e-tests:
     name: E2E Tests (Shard ${{ matrix.shard }}/${{ strategy.job-total }})
@@ -30,7 +33,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2, 3, 4]
+        shard: [1, 2, 3, 4, 5, 6, 7, 8]
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
@@ -61,9 +64,18 @@ jobs:
         if: steps.playwright-cache.outputs.cache-hit == 'true'
         run: npx playwright install-deps
 
-      - name: Run E2E tests (shard ${{ matrix.shard }}/4)
+      - name: Run E2E tests (shard ${{ matrix.shard }}/${{ strategy.job-total }})
         timeout-minutes: 30
-        run: npx playwright test --shard=${{ matrix.shard }}/${{ strategy.job-total }}
+        run: |
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            npx playwright test --shard=${{ matrix.shard }}/${{ strategy.job-total }}
+          else
+            npx playwright test tests/e2e \
+              --project=chromium \
+              --project=a11y-mobile \
+              --project=a11y-desktop \
+              --shard=${{ matrix.shard }}/${{ strategy.job-total }}
+          fi
 
       - name: Upload test results
         if: failure()
@@ -71,21 +83,13 @@ jobs:
         with:
           name: test-results-shard-${{ matrix.shard }}
           path: |
-            test-results/
             playwright-report/
-          retention-days: 30
-
-      - name: Upload trace artifacts
-        if: failure()
-        uses: actions/upload-artifact@v7
-        with:
-          name: traces-shard-${{ matrix.shard }}
-          path: test-results/**/*.zip
+            test-results/junit.xml
           retention-days: 30
 
   # ──────────────────────────────────────────────
   # Burn-In — Flaky test detection
-  # Runs on PRs and weekly schedule
+  # Runs on the weekly schedule
   # ──────────────────────────────────────────────
   burn-in:
     name: Flaky Test Detection (10 iterations)

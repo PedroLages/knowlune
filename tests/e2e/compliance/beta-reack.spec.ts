@@ -21,7 +21,6 @@
 
 import { test, expect } from '../../support/fixtures'
 import { CURRENT_NOTICE_VERSION } from '../../../src/lib/compliance/noticeVersion'
-import { FIXED_TIMESTAMP } from '../../utils/test-time'
 
 // ── Constants ──────────────────────────────────────────────────────────────
 
@@ -84,7 +83,7 @@ async function setupAuthInjection(page: import('@playwright/test').Page) {
       localStorage.setItem('knowlune-onboarding-v1', JSON.stringify({ completedAt: ts }))
       localStorage.setItem('knowlune-welcome-wizard-v1', JSON.stringify({ completedAt: ts }))
     },
-    { data: SESSION_DATA, userId: MOCK_USER_ID },
+    { data: SESSION_DATA, userId: MOCK_USER_ID }
   )
 }
 
@@ -92,16 +91,15 @@ async function setupAuthInjection(page: import('@playwright/test').Page) {
 async function injectSessionAfterNav(page: import('@playwright/test').Page) {
   await page.waitForFunction(
     () => typeof (window as Record<string, unknown>).__authStore !== 'undefined',
-    { timeout: 5000 },
+    { timeout: 5000 }
   )
   await page.evaluate(
     ({ data }) => {
       const store = (window as Record<string, unknown>).__authStore as
-        | { getState: () => { setSession: (s: typeof data) => void } }
-        | undefined
+        { getState: () => { setSession: (s: typeof data) => void } } | undefined
       store?.getState().setSession(data as never)
     },
-    { data: SESSION_DATA },
+    { data: SESSION_DATA }
   )
 }
 
@@ -129,7 +127,7 @@ async function mockSupabaseRestEmpty(page: import('@playwright/test').Page) {
  */
 async function mockAuthEndpoints(page: import('@playwright/test').Page) {
   // Use page.context().route() to ensure all frames and requests are intercepted
-  await page.context().route(/supabase\.pedrolages\.net/, async route => {
+  await page.context().route('**/auth/v1/**', async route => {
     const url = route.request().url()
     if (url.includes('/auth/v1/user') || url.includes('/auth/v1/token')) {
       await route.fulfill({
@@ -190,7 +188,9 @@ test.describe('Beta Re-ack — happy path', () => {
         await route.fulfill({
           status: 200,
           contentType: 'application/json',
-          body: JSON.stringify([{ version: PREVIOUS_NOTICE_VERSION }]),
+          body: JSON.stringify([
+            { version: postCount > 0 ? CURRENT_NOTICE_VERSION : PREVIOUS_NOTICE_VERSION },
+          ]),
         })
       } else if (method === 'POST') {
         postCount++
@@ -208,14 +208,12 @@ test.describe('Beta Re-ack — happy path', () => {
 
     await banner.getByRole('button', { name: /acknowledge/i }).click()
 
-    // After Acknowledge: banner disappears (LegalUpdateBanner setVisible(false))
-    // This works because writeNoticeAck gets the user from supabase.auth.getUser()
-    // which is mocked by mockAuthEndpoints to return MOCK_USER
+    // After Acknowledge, refetch sees the current version and clears the banner.
     await expect(banner).not.toBeVisible({ timeout: 8000 })
     expect(postCount).toBeGreaterThan(0)
   })
 
-  test('"View Privacy Notice" link points to /legal/privacy', async ({ page }) => {
+  test('"View Privacy Notice" link points to /privacy', async ({ page }) => {
     await page.route('**/rest/v1/notice_acknowledgements*', async route => {
       if (route.request().method() === 'GET') {
         await route.fulfill({
@@ -236,7 +234,7 @@ test.describe('Beta Re-ack — happy path', () => {
 
     const privacyLink = banner.getByRole('link', { name: /view privacy notice/i })
     await expect(privacyLink).toBeVisible()
-    await expect(privacyLink).toHaveAttribute('href', /\/legal\/privacy/)
+    await expect(privacyLink).toHaveAttribute('href', '/privacy')
   })
 
   test('banner does not appear when user has already acked current version', async ({ page }) => {
@@ -254,9 +252,8 @@ test.describe('Beta Re-ack — happy path', () => {
 
     // Set up response waiter BEFORE injecting session to avoid race condition
     const ackResponsePromise = page.waitForResponse(
-      resp =>
-        resp.url().includes('notice_acknowledgements') && resp.request().method() === 'GET',
-      { timeout: 8000 },
+      resp => resp.url().includes('notice_acknowledgements') && resp.request().method() === 'GET',
+      { timeout: 8000 }
     )
 
     await page.goto('/')
@@ -392,8 +389,8 @@ test.describe('Beta Re-ack — error path', () => {
     await expect(banner).toBeVisible({ timeout: 5000 })
 
     // Error toast should appear
-    await expect(
-      page.locator('[data-sonner-toast][data-mounted=true]').first(),
-    ).toBeVisible({ timeout: 5000 })
+    await expect(page.locator('[data-sonner-toast][data-mounted=true]').first()).toBeVisible({
+      timeout: 5000,
+    })
   })
 })

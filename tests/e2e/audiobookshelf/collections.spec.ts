@@ -147,6 +147,21 @@ async function seedAndNavigate(
     'books',
     ABS_BOOKS as unknown as Record<string, unknown>[]
   )
+  const cachedCollections = (
+    collectionsResponse as { results?: Record<string, unknown>[] }
+  ).results?.map(collection => ({ ...collection, serverId: ABS_SERVER.id }))
+  if (cachedCollections && cachedCollections.length > 0) {
+    await seedIndexedDBStore(page, DB_NAME, 'absCollections', cachedCollections)
+  }
+  await page.evaluate(async () => {
+    const modulePath = '/src/lib/credentials/cache.ts'
+    const { credentialCache } = (await import(modulePath)) as {
+      credentialCache: {
+        set: (kind: 'abs-server', id: string, value: string) => void
+      }
+    }
+    credentialCache.set('abs-server', 'abs-server-1', 'test-api-key')
+  })
   await page.goto('/library?tab=browse')
   await page.waitForLoadState('domcontentloaded')
 }
@@ -175,12 +190,13 @@ test.describe('E102-S03: Collections Browsing', () => {
     await page.getByTestId('source-tab-audiobookshelf').click()
     await page.getByTestId('abs-view-collections').click()
 
-    // Collection card should be visible
-    await expect(page.getByTestId('collection-card-col-1')).toBeVisible({ timeout: 10000 })
+    // The first collection is expanded by default in the redesigned view.
+    const collectionCard = page.getByTestId('collection-card-col-1')
+    await expect(collectionCard).toBeVisible({ timeout: 10000 })
 
     // Collection name and book count
-    await expect(page.getByText('Lord of the Rings')).toBeVisible()
-    await expect(page.getByTestId('collection-count-col-1')).toHaveText('2')
+    await expect(collectionCard.getByRole('heading', { name: 'Lord of the Rings' })).toBeVisible()
+    await expect(collectionCard).toContainText('2 Books')
   })
 
   test('expanding collection card shows its books', async ({ page }) => {
@@ -191,18 +207,17 @@ test.describe('E102-S03: Collections Browsing', () => {
     await page.getByTestId('source-tab-audiobookshelf').click()
     await page.getByTestId('abs-view-collections').click()
 
-    await expect(page.getByTestId('collection-card-col-1')).toBeVisible({ timeout: 10000 })
-
-    // Click to expand
-    await page.getByTestId('collection-toggle-col-1').click()
-
-    // Books panel should be visible
-    const booksPanel = page.getByTestId('collection-books-col-1')
-    await expect(booksPanel).toBeVisible()
+    const collectionCard = page.getByTestId('collection-card-col-1')
+    await expect(collectionCard).toBeVisible({ timeout: 10000 })
+    await expect(
+      collectionCard.getByRole('heading', { name: 'Inside this Collection' })
+    ).toBeVisible()
 
     // Both books should be listed
-    await expect(booksPanel.getByText('The Fellowship of the Ring')).toBeVisible()
-    await expect(booksPanel.getByText('The Two Towers')).toBeVisible()
+    await expect(
+      collectionCard.getByRole('heading', { name: 'The Fellowship of the Ring' })
+    ).toBeVisible()
+    await expect(collectionCard.getByRole('heading', { name: 'The Two Towers' })).toBeVisible()
   })
 
   test('empty state is shown when no collections exist', async ({ page }) => {

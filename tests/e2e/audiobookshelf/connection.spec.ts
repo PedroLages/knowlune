@@ -25,13 +25,32 @@ const ABS_SERVER = {
   updatedAt: FIXED_DATE,
 }
 
-const PING_RESPONSE = {
-  success: true,
-  serverVersion: '2.7.0',
+const AUTHORIZE_RESPONSE = {
+  user: { id: 'abs-user-1' },
+  serverSettings: { version: '2.26.0' },
 }
 
 const LIBRARIES_RESPONSE = {
   libraries: [{ id: 'lib-1', name: 'Audiobooks', mediaType: 'book' }],
+}
+
+const AUTH_USER = {
+  id: 'abs-settings-user',
+  aud: 'authenticated',
+  role: 'authenticated',
+  email: 'abs-settings@test.local',
+  app_metadata: { provider: 'email' },
+  user_metadata: {},
+  created_at: '2026-01-01T00:00:00.000Z',
+}
+
+const AUTH_SESSION = {
+  access_token: 'abs-settings-access-token',
+  refresh_token: 'abs-settings-refresh-token',
+  expires_at: 4_070_908_800,
+  expires_in: 3600,
+  token_type: 'bearer',
+  user: AUTH_USER,
 }
 
 async function seedOnboarding(page: import('@playwright/test').Page): Promise<void> {
@@ -46,6 +65,26 @@ async function seedOnboarding(page: import('@playwright/test').Page): Promise<vo
     )
     localStorage.setItem('knowlune-sidebar-v1', 'false')
   })
+}
+
+async function seedAuthenticatedUser(page: import('@playwright/test').Page): Promise<void> {
+  await page.addInitScript(session => {
+    localStorage.setItem('sb-knowlune-auth-token', JSON.stringify(session))
+  }, AUTH_SESSION)
+  await page.route('**/auth/v1/user', route =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(AUTH_USER),
+    })
+  )
+  await page.route('**/functions/v1/vault-credentials/store-credential', route =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: '{}',
+    })
+  )
 }
 
 async function seedServerData(page: import('@playwright/test').Page): Promise<void> {
@@ -66,12 +105,12 @@ async function openAbsSettings(page: import('@playwright/test').Page): Promise<v
 
 test.describe('ABS Server Connection', () => {
   test('Add server — fill form, test connection, save, verify server in list', async ({ page }) => {
-    // Mock ABS ping and libraries endpoints
-    await page.route(`${ABS_URL}/api/ping`, route =>
+    // Mock ABS authorization and libraries endpoints
+    await page.route(`${ABS_URL}/api/authorize`, route =>
       route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify(PING_RESPONSE),
+        body: JSON.stringify(AUTHORIZE_RESPONSE),
       })
     )
     await page.route(`${ABS_URL}/api/libraries`, route =>
@@ -83,6 +122,7 @@ test.describe('ABS Server Connection', () => {
     )
 
     await seedOnboarding(page)
+    await seedAuthenticatedUser(page)
     await openAbsSettings(page)
 
     // Click "Add Server"
@@ -131,8 +171,8 @@ test.describe('ABS Server Connection', () => {
   })
 
   test('CORS error handling — mock CORS failure, verify user-friendly error', async ({ page }) => {
-    // Mock ping to simulate a CORS/network failure
-    await page.route(`${ABS_URL}/api/ping`, route => route.abort('failed'))
+    // Mock authorization to simulate a CORS/network failure
+    await page.route(`${ABS_URL}/api/authorize`, route => route.abort('failed'))
 
     await seedOnboarding(page)
     await openAbsSettings(page)
@@ -157,14 +197,14 @@ test.describe('ABS Server Connection', () => {
   test('Reconnect after failure — mock offline then online, verify recovery', async ({ page }) => {
     // Start with all requests failing
     let shouldFail = true
-    await page.route(`${ABS_URL}/api/ping`, route => {
+    await page.route(`${ABS_URL}/api/authorize`, route => {
       if (shouldFail) {
         return route.abort('connectionrefused')
       }
       return route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify(PING_RESPONSE),
+        body: JSON.stringify(AUTHORIZE_RESPONSE),
       })
     })
     await page.route(`${ABS_URL}/api/libraries`, route =>

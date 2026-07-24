@@ -119,28 +119,28 @@ async function seedProgressData(page: import('@playwright/test').Page): Promise<
 }
 
 test.describe('E101-S06: Progress Tracking & Streaks', () => {
-  test('AC4: Library book card shows progress percentage for ABS book', async ({ page }) => {
+  test('AC4: Library book card exposes progress percentage for ABS book', async ({ page }) => {
     await seedProgressData(page)
     await page.goto('/library?tab=browse')
     await page.waitForLoadState('domcontentloaded')
 
-    // Book card should show 42% progress
+    // The compact audiobook card exposes percentage in its accessible name.
     const bookCard = page.getByTestId(`book-card-${ABS_BOOK_WITH_PROGRESS.id}`)
     await expect(bookCard).toBeVisible({ timeout: 10000 })
-    await expect(bookCard.getByText('42%')).toBeVisible()
+    await expect(bookCard).toHaveAttribute('aria-label', /42% complete/)
   })
 
-  test('AC4: Library book card shows chapter title for ABS book with position', async ({
+  test('AC4: Library book card shows time remaining for ABS book with position', async ({
     page,
   }) => {
     await seedProgressData(page)
     await page.goto('/library?tab=browse')
     await page.waitForLoadState('domcontentloaded')
 
-    // Book at 504s is in Chapter 1 (0-599s range)
-    const chapterText = page.getByTestId(`chapter-${ABS_BOOK_WITH_PROGRESS.id}`)
-    await expect(chapterText).toBeVisible({ timeout: 10000 })
-    await expect(chapterText).toContainText('Chapter 1: Getting Started')
+    // 1200s total - 504s elapsed = 696s, displayed as 11m left.
+    const durationText = page.getByTestId(`duration-${ABS_BOOK_WITH_PROGRESS.id}`)
+    await expect(durationText).toBeVisible({ timeout: 10000 })
+    await expect(durationText).toContainText('11m left')
   })
 
   test('AC4: Library book card shows time remaining for ABS book', async ({ page }) => {
@@ -213,7 +213,7 @@ test.describe('E101-S06: Progress Tracking & Streaks', () => {
     // Book card should be visible with progress (loaded from Dexie, not ABS)
     const bookCard = page.getByTestId(`book-card-${ABS_BOOK_WITH_PROGRESS.id}`)
     await expect(bookCard).toBeVisible({ timeout: 10000 })
-    await expect(bookCard.getByText('42%')).toBeVisible()
+    await expect(bookCard).toHaveAttribute('aria-label', /42% complete/)
 
     // No requests should have been made to the ABS server for progress data
     expect(absRequests).toHaveLength(0)

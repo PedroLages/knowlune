@@ -147,9 +147,8 @@ async function mockAudioElement(page: import('@playwright/test').Page): Promise<
       },
       set(value: string) {
         ;(this as HTMLMediaElement & { _fakeSrc?: string })._fakeSrc = value
-        if (srcDescriptor?.set)
-          srcDescriptor.set.call(this, value)
-          // Mirror to global so tests can poll deterministically
+        if (srcDescriptor?.set) srcDescriptor.set.call(this, value)
+        // Mirror to global so tests can poll deterministically
         ;(window as Window & { __TEST_AUDIO_SRC__?: string }).__TEST_AUDIO_SRC__ = value
       },
     })
@@ -228,7 +227,9 @@ test.describe('E101-S04: Streaming Playback', () => {
     await expect(page.getByTestId('audiobook-reader')).toBeVisible({ timeout: 10000 })
 
     // Book title should be displayed
-    await expect(page.getByText('Test Streaming Book')).toBeVisible()
+    await expect(
+      page.getByRole('heading', { name: 'Test Streaming Book', exact: true })
+    ).toBeVisible()
 
     // Wait for loadChapter (async) to set the stream URL on the audio element.
     // Audio() creates a detached element not in the DOM, so we poll the global
