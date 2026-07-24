@@ -594,10 +594,10 @@ export default defineConfig({
     },
   },
   optimizeDeps: {
-    exclude: ['@mlc-ai/web-llm'],
-    // Pre-bundle lazy worker dependencies up front. Discovering transformers
-    // during a browser test otherwise makes Vite reload the page mid-flow.
-    include: ['@number-flow/react', '@xenova/transformers'],
+    // Keep heavyweight, lazy worker dependencies out of Vite's eager scan.
+    // Optimizing transformers during a browser flow reloads every open page.
+    exclude: ['@mlc-ai/web-llm', '@xenova/transformers'],
+    include: ['@number-flow/react'], // React wrapper for NumberFlow animations
   },
   // File types to support raw imports. Never add .css, .tsx, or .ts files to this.
   assetsInclude: ['**/*.svg', '**/*.csv'],

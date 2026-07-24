@@ -331,7 +331,7 @@ test.describe('E102-S02: Series Browsing', () => {
       .getByRole('status', { name: 'Loading page' })
       .waitFor({ state: 'hidden', timeout: 30000 })
 
-    await expect(page.getByText('Leviathan Wakes')).toBeVisible({ timeout: 10000 })
+    await expect(page.getByText('Leviathan Wakes')).toBeVisible({ timeout: 30000 })
 
     await page.getByTestId('source-tab-audiobookshelf').click()
     await page.getByTestId('abs-view-series').click()

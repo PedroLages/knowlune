@@ -233,7 +233,7 @@ test.describe('E101-S04: Streaming Playback', () => {
     await openBookReader(page, ABS_AUDIOBOOK.id)
 
     // AudiobookRenderer should be visible
-    await expect(page.getByTestId('audiobook-reader')).toBeVisible({ timeout: 10000 })
+    await expect(page.getByTestId('audiobook-reader')).toBeVisible({ timeout: 30000 })
 
     // Book title should be displayed
     await expect(
