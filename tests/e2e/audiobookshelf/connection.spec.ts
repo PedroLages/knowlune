@@ -85,6 +85,20 @@ async function seedAuthenticatedUser(page: import('@playwright/test').Page): Pro
       body: '{}',
     })
   )
+  await page.route('**/functions/v1/vault-credentials/read-credential*', route =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ secret: 'test-api-key-123' }),
+    })
+  )
+  await page.route('**/functions/v1/vault-credentials/check-credential*', route =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ configured: true }),
+    })
+  )
 }
 
 async function seedServerData(page: import('@playwright/test').Page): Promise<void> {

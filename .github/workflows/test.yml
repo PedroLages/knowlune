@@ -70,7 +70,7 @@ jobs:
           if [ "${{ github.event_name }}" = "schedule" ]; then
             npx playwright test --shard=${{ matrix.shard }}/${{ strategy.job-total }}
           else
-            npx playwright test tests/e2e \
+            PLAYWRIGHT_FAST_GATE=1 npx playwright test tests/e2e \
               --project=chromium \
               --project=a11y-mobile \
               --project=a11y-desktop \

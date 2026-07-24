@@ -31,9 +31,7 @@ test.describe('App Navigation', () => {
   test('should load Overview page at root', async ({ page }) => {
     await goToOverview(page)
 
-    await expect(
-      page.getByRole('heading', { name: 'Your Learning Studio', level: 1 })
-    ).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Overview', level: 1 })).toBeVisible()
   })
 
   test('should navigate to Courses page', async ({ page }) => {

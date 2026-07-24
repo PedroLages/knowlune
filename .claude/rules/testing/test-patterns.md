@@ -173,11 +173,17 @@ npx playwright test --project=chromium      # Explicit Chromium
 **CI/CD pull requests and pushes** (fast Chromium + accessibility gate):
 
 ```bash
-CI=1 npx playwright test tests/e2e \
+CI=1 PLAYWRIGHT_FAST_GATE=1 npx playwright test tests/e2e \
   --project=chromium \
   --project=a11y-mobile \
   --project=a11y-desktop
 ```
+
+The Chromium project uses the maintained `FAST_GATE_TESTS` manifest in
+`playwright.config.ts` for pull requests. Both accessibility projects run every
+`accessibility-*.spec.ts` file at their dedicated viewport. Add a spec to the
+manifest when it protects a current critical journey and is deterministic
+without a live backend.
 
 **Scheduled CI** (full browser matrix):
 
@@ -187,7 +193,8 @@ CI=1 npx playwright test                    # 6-project matrix
 
 **Active vs Archived Tests**:
 
-- Active: `tests/e2e/*.spec.ts` (3 smoke tests) + current story spec
+- Pull-request gate: `FAST_GATE_TESTS` plus `accessibility-*.spec.ts`
+- Scheduled catalogue: all active tests under `tests/e2e/`
 - Archived: `tests/e2e/regression/*.spec.ts` (manual execution only)
 - Full regression: Opt-in at end-of-epic
 

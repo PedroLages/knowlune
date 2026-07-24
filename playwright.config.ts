@@ -1,5 +1,28 @@
 import { defineConfig, devices } from '@playwright/test'
 
+const isFastGate = process.env.PLAYWRIGHT_FAST_GATE === '1'
+
+/**
+ * Maintained pull-request coverage. The scheduled workflow still runs the
+ * complete E2E catalogue across every device project, while this list keeps
+ * routine change feedback focused on current critical journeys.
+ */
+const FAST_GATE_TESTS = [
+  '**/audiobookshelf/collections.spec.ts',
+  '**/audiobookshelf/connection.spec.ts',
+  '**/audiobookshelf/progress.spec.ts',
+  '**/audiobookshelf/series.spec.ts',
+  '**/audiobookshelf/streaming.spec.ts',
+  '**/auth-flow.spec.ts',
+  '**/auth-landing-bugs.spec.ts',
+  '**/auth-sync-smoke.spec.ts',
+  '**/compliance/beta-reack.spec.ts',
+  '**/courses.spec.ts',
+  '**/landing.spec.ts',
+  '**/navigation.spec.ts',
+  '**/overview.spec.ts',
+]
+
 export default defineConfig({
   testDir: './tests',
   testIgnore: [
@@ -44,6 +67,7 @@ export default defineConfig({
     {
       name: 'chromium',
       use: { ...devices['Desktop Chrome'] },
+      testMatch: isFastGate ? FAST_GATE_TESTS : undefined,
     },
     {
       name: 'Mobile Chrome',
@@ -67,7 +91,7 @@ export default defineConfig({
         ...devices['Pixel 5'],
         viewport: { width: 375, height: 667 },
       },
-      testMatch: '**/accessibility.spec.ts',
+      testMatch: '**/accessibility-*.spec.ts',
     },
     {
       name: 'a11y-desktop',
@@ -75,7 +99,7 @@ export default defineConfig({
         ...devices['Desktop Chrome'],
         viewport: { width: 1440, height: 900 },
       },
-      testMatch: '**/accessibility.spec.ts',
+      testMatch: '**/accessibility-*.spec.ts',
     },
   ],
 
