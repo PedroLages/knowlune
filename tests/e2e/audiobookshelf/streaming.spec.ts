@@ -215,13 +215,22 @@ async function seedStreamingData(page: import('@playwright/test').Page): Promise
   })
 }
 
+async function openBookReader(
+  page: import('@playwright/test').Page,
+  bookId: string
+): Promise<void> {
+  await page.goto(`/library/${bookId}/read`)
+  await page
+    .getByRole('status', { name: 'Loading page' })
+    .waitFor({ state: 'hidden', timeout: 30000 })
+}
+
 test.describe('E101-S04: Streaming Playback', () => {
   test('AC1+AC2: ABS audiobook opens in AudiobookRenderer with stream URL', async ({ page }) => {
     await seedStreamingData(page)
 
     // Navigate directly to the book reader for the ABS audiobook
-    await page.goto(`/library/${ABS_AUDIOBOOK.id}/read`)
-    await page.waitForLoadState('domcontentloaded')
+    await openBookReader(page, ABS_AUDIOBOOK.id)
 
     // AudiobookRenderer should be visible
     await expect(page.getByTestId('audiobook-reader')).toBeVisible({ timeout: 10000 })
@@ -249,7 +258,7 @@ test.describe('E101-S04: Streaming Playback', () => {
 
   test('AC4: play/pause button toggles state', async ({ page }) => {
     await seedStreamingData(page)
-    await page.goto(`/library/${ABS_AUDIOBOOK.id}/read`)
+    await openBookReader(page, ABS_AUDIOBOOK.id)
 
     // Wait for AudiobookRenderer to mount
     await expect(page.getByTestId('audiobook-reader')).toBeVisible({ timeout: 10000 })
@@ -271,7 +280,7 @@ test.describe('E101-S04: Streaming Playback', () => {
         lastOpenedAt: FIXED_DATE,
       },
     ] as unknown as Record<string, unknown>[])
-    await page.goto(`/library/${ABS_AUDIOBOOK.id}/read`)
+    await openBookReader(page, ABS_AUDIOBOOK.id)
 
     await expect(page.getByTestId('audiobook-reader')).toBeVisible({ timeout: 10000 })
     await expect(page.getByTestId('current-time-display')).toHaveText('8:24', { timeout: 10000 })
@@ -279,7 +288,7 @@ test.describe('E101-S04: Streaming Playback', () => {
 
   test('AC7: chapter list displays ABS chapter metadata', async ({ page }) => {
     await seedStreamingData(page)
-    await page.goto(`/library/${ABS_AUDIOBOOK.id}/read`)
+    await openBookReader(page, ABS_AUDIOBOOK.id)
 
     await expect(page.getByTestId('audiobook-reader')).toBeVisible({ timeout: 10000 })
 
@@ -293,7 +302,7 @@ test.describe('E101-S04: Streaming Playback', () => {
 
   test('AC2: stream URL contains token query parameter with encoded API key', async ({ page }) => {
     await seedStreamingData(page)
-    await page.goto(`/library/${ABS_AUDIOBOOK.id}/read`)
+    await openBookReader(page, ABS_AUDIOBOOK.id)
 
     await expect(page.getByTestId('audiobook-reader')).toBeVisible({ timeout: 10000 })
 
@@ -313,7 +322,7 @@ test.describe('E101-S04: Streaming Playback', () => {
 
   test('AC3 REGRESSION: local audiobook does NOT use streaming URL', async ({ page }) => {
     await seedStreamingData(page)
-    await page.goto(`/library/${LOCAL_AUDIOBOOK.id}/read`)
+    await openBookReader(page, LOCAL_AUDIOBOOK.id)
 
     await expect(page.getByTestId('audiobook-reader')).toBeVisible({ timeout: 10000 })
 

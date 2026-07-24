@@ -190,7 +190,9 @@ async function seedAndNavigate(page: import('@playwright/test').Page): Promise<v
     credentialCache.set('abs-server', 'abs-server-1', 'test-api-key')
   })
   await page.goto('/library?tab=browse')
-  await page.waitForLoadState('domcontentloaded')
+  await page
+    .getByRole('status', { name: 'Loading page' })
+    .waitFor({ state: 'hidden', timeout: 30000 })
 }
 
 test.describe('E102-S02: Series Browsing', () => {
@@ -325,7 +327,9 @@ test.describe('E102-S02: Series Browsing', () => {
       credentialCache.set('abs-server', 'abs-server-1', 'test-api-key')
     })
     await page.goto('/library?tab=browse')
-    await page.waitForLoadState('domcontentloaded')
+    await page
+      .getByRole('status', { name: 'Loading page' })
+      .waitFor({ state: 'hidden', timeout: 30000 })
 
     await expect(page.getByText('Leviathan Wakes')).toBeVisible({ timeout: 10000 })
 
