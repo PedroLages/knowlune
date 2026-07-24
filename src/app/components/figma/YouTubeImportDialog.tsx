@@ -109,6 +109,9 @@ export function YouTubeImportDialog({ open, onOpenChange }: YouTubeImportDialogP
   const aiAbortRef = useRef<AbortController | null>(null)
   const { isPremium } = useIsPremium()
 
+  // Resolves playlist contents before Step 2 so Preview never opens empty.
+  const [isPreparingPreview, setIsPreparingPreview] = useState(false)
+
   // Local state for playlist choice prompt
   const [playlistPrompt, setPlaylistPrompt] = useState<{
     parseResult: YouTubeUrlParseResult
@@ -136,6 +139,7 @@ export function YouTubeImportDialog({ open, onOpenChange }: YouTubeImportDialogP
         store.reset()
         setPlaylistPrompt(null)
         fetchAbortRef.current = true
+        setIsPreparingPreview(false)
         aiAbortRef.current?.abort()
         aiAbortRef.current = null
         setIsAIStructuring(false)
@@ -236,81 +240,128 @@ export function YouTubeImportDialog({ open, onOpenChange }: YouTubeImportDialogP
   // --- Step 1 → Step 2: Fetch metadata ---
 
   const handleNextToPreview = useCallback(async () => {
+    if (isPreparingPreview) return
+
     const validEntries = store.parsedUrls.filter(e => e.parseResult.valid)
     if (validEntries.length === 0) return
 
-    store.setCurrentStep(2)
+    setIsPreparingPreview(true)
     fetchAbortRef.current = false
 
-    // Collect all video IDs to fetch
     const videoIds: string[] = []
     const playlistsToFetch: string[] = []
 
-    for (const entry of validEntries) {
-      const { type, videoId, playlistId } = entry.parseResult
+    try {
+      // Collect direct video IDs and playlists that must be resolved first.
+      for (const entry of validEntries) {
+        const { type, videoId, playlistId } = entry.parseResult
 
-      if (type === 'playlist' && playlistId) {
-        playlistsToFetch.push(playlistId)
-      } else if (type === 'video-in-playlist') {
-        if (entry.playlistChoice === 'full-playlist' && playlistId) {
+        if (type === 'playlist' && playlistId) {
           playlistsToFetch.push(playlistId)
+        } else if (type === 'video-in-playlist') {
+          if (entry.playlistChoice === 'full-playlist' && playlistId) {
+            playlistsToFetch.push(playlistId)
+          } else if (videoId) {
+            videoIds.push(videoId)
+          }
         } else if (videoId) {
           videoIds.push(videoId)
         }
-      } else if (videoId) {
-        videoIds.push(videoId)
       }
-    }
 
-    // Fetch playlist items first to get video IDs
-    for (const plId of playlistsToFetch) {
-      if (fetchAbortRef.current) return
+      // Resolve every playlist before entering Preview. A failed playlist aborts
+      // the whole transition so mixed imports are never silently partial.
+      for (const playlistId of playlistsToFetch) {
+        if (fetchAbortRef.current) return
 
-      const result = await getPlaylistItems(plId)
-      if (result.ok) {
+        const result = await getPlaylistItems(playlistId)
+        if (fetchAbortRef.current) return
+
+        if (!result.ok) {
+          const message = `Could not load playlist: ${result.error}`
+          store.setFeedback(message, 'error')
+          toast.error('Could not load YouTube playlist', {
+            description: result.error,
+          })
+          return
+        }
+
         for (const item of result.data) {
           if (!videoIds.includes(item.videoId)) {
             videoIds.push(item.videoId)
           }
         }
       }
-    }
 
-    if (fetchAbortRef.current || videoIds.length === 0) return
-
-    // Deduplicate
-    const uniqueIds = [...new Set(videoIds)]
-    store.setVideosForFetch(uniqueIds)
-
-    // Fetch metadata in batches
-    const batchResults = await getVideoMetadataBatch(uniqueIds)
-
-    if (fetchAbortRef.current) return
-
-    let fetchedCount = 0
-    for (const [id, result] of batchResults) {
       if (fetchAbortRef.current) return
 
-      if (result.ok) {
-        // Classify embeddability (Data API status OR oEmbed probe fallback).
-        await store.applyLoadedMetadata(id, result.data)
-      } else if (result.code === 'NOT_FOUND') {
-        store.updateVideoMetadata(id, {
-          status: 'unavailable',
-          error: result.error,
+      const uniqueIds = [...new Set(videoIds)]
+      if (uniqueIds.length === 0) {
+        const message =
+          'No public videos were found in this playlist. Check that it is public and try again.'
+        store.setFeedback(message, 'error')
+        toast.error('Could not load YouTube playlist', {
+          description: message,
         })
-      } else {
-        store.updateVideoMetadata(id, {
-          status: 'error',
-          error: result.error,
-        })
+        return
       }
-      fetchedCount++
-      store.updateFetchProgress(fetchedCount, uniqueIds.length)
+
+      // Initialize rows before changing steps so Preview always has content.
+      store.setVideosForFetch(uniqueIds)
+      store.setCurrentStep(2)
+    } catch (error) {
+      if (fetchAbortRef.current) return
+
+      const message =
+        error instanceof Error ? error.message : 'Unexpected error while loading the playlist.'
+      store.setFeedback(`Could not load playlist: ${message}`, 'error')
+      toast.error('Could not load YouTube playlist', {
+        description: message,
+      })
+      return
+    } finally {
+      setIsPreparingPreview(false)
     }
 
-    store.setIsFetchingMetadata(false)
-  }, [store])
+    try {
+      const uniqueIds = [...new Set(videoIds)]
+      const batchResults = await getVideoMetadataBatch(uniqueIds)
+
+      if (fetchAbortRef.current) return
+
+      let fetchedCount = 0
+      for (const [id, result] of batchResults) {
+        if (fetchAbortRef.current) return
+
+        if (result.ok) {
+          // Classify embeddability (Data API status OR oEmbed probe fallback).
+          await store.applyLoadedMetadata(id, result.data)
+        } else if (result.code === 'NOT_FOUND') {
+          store.updateVideoMetadata(id, {
+            status: 'unavailable',
+            error: result.error,
+          })
+        } else {
+          store.updateVideoMetadata(id, {
+            status: 'error',
+            error: result.error,
+          })
+        }
+        fetchedCount++
+        store.updateFetchProgress(fetchedCount, uniqueIds.length)
+      }
+    } catch (error) {
+      if (!fetchAbortRef.current) {
+        const message =
+          error instanceof Error ? error.message : 'Unexpected error while loading video details.'
+        toast.error('Could not load YouTube video details', {
+          description: message,
+        })
+      }
+    } finally {
+      store.setIsFetchingMetadata(false)
+    }
+  }, [isPreparingPreview, store])
 
   // Clean up debounce on unmount
   useEffect(() => {
@@ -371,6 +422,7 @@ export function YouTubeImportDialog({ open, onOpenChange }: YouTubeImportDialogP
                   }
                   value={store.urlInput}
                   onChange={e => handleUrlChange(e.target.value)}
+                  disabled={isPreparingPreview}
                   className={`min-h-[140px] resize-none font-mono text-sm ${
                     store.feedbackType === 'error'
                       ? 'border-destructive focus-visible:ring-destructive'
@@ -427,6 +479,7 @@ export function YouTubeImportDialog({ open, onOpenChange }: YouTubeImportDialogP
                       size="sm"
                       className="rounded-xl min-h-[44px]"
                       onClick={() => handlePlaylistChoice('full-playlist')}
+                      disabled={isPreparingPreview}
                       data-testid="choice-full-playlist"
                     >
                       <ListVideo className="size-4 mr-1.5" aria-hidden="true" />
@@ -437,6 +490,7 @@ export function YouTubeImportDialog({ open, onOpenChange }: YouTubeImportDialogP
                       size="sm"
                       className="rounded-xl min-h-[44px]"
                       onClick={() => handlePlaylistChoice('single-video')}
+                      disabled={isPreparingPreview}
                       data-testid="choice-single-video"
                     >
                       <Play className="size-4 mr-1.5" aria-hidden="true" />
@@ -653,12 +707,12 @@ export function YouTubeImportDialog({ open, onOpenChange }: YouTubeImportDialogP
             <Button
               variant="brand"
               disabled={
-                (store.currentStep === 1 && !canProceed) ||
+                (store.currentStep === 1 && (!canProceed || isPreparingPreview)) ||
                 (store.currentStep === 2 && (store.isFetchingMetadata || activeVideos.length === 0))
               }
               onClick={async () => {
                 if (store.currentStep === 1) {
-                  handleNextToPreview()
+                  await handleNextToPreview()
                 } else if (store.currentStep === 2) {
                   // Build video list for grouping
                   const groupingVideos: GroupingVideo[] = activeVideos
@@ -756,10 +810,10 @@ export function YouTubeImportDialog({ open, onOpenChange }: YouTubeImportDialogP
               className="rounded-xl min-h-[44px]"
               data-testid="wizard-next-btn"
             >
-              {store.currentStep === 1 && store.isFetchingMetadata ? (
+              {store.currentStep === 1 && isPreparingPreview ? (
                 <>
                   <Loader2 className="size-4 mr-1.5 animate-spin" aria-hidden="true" />
-                  Loading...
+                  Preparing...
                 </>
               ) : (
                 <>
