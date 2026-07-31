@@ -30,6 +30,9 @@ import {
 import {
   generateActionSuggestions,
   type ActionSuggestion,
+  type ActionType,
+  type TopicActionTarget,
+  type TopicLesson,
   type TopicWithScore,
 } from '@/lib/actionSuggestions'
 // predictRetention is now called via calculateAggregateRetention in knowledgeScore.ts
@@ -55,6 +58,8 @@ export interface ScoredTopic {
   daysSinceLastEngagement: number
   /** Suggested review actions */
   suggestedActions: SuggestedAction[]
+  /** Valid destinations for actions available on this topic. */
+  actionTargets?: Partial<Record<ActionType, TopicActionTarget>>
   /** FSRS aggregate retention 0-100, or null if no reviewed flashcards */
   aggregateRetention: number | null
   /** Predicted date when retention drops below 70%, or null */
@@ -89,6 +94,8 @@ interface KnowledgeMapState {
   lastComputedAt: string | null
   /** Most recent engagement timestamp across ALL session types (incl. book/audio) */
   globalLastEngagement: string | null
+  /** Number of imported courses available when no topics resolve. */
+  sourceCourseCount: number
 
   /** Compute/recompute all knowledge scores */
   computeScores: (now?: Date) => Promise<void>
@@ -110,6 +117,17 @@ function daysBetween(from: Date, to: Date): number {
   return Math.max(0, ms / (1000 * 60 * 60 * 24))
 }
 
+const ACTION_TYPE_BY_LABEL: Record<SuggestedAction, ActionType> = {
+  'Review Flashcards': 'flashcard-review',
+  'Retake Quiz': 'quiz-refresh',
+  'Rewatch Lesson': 'lesson-rewatch',
+}
+
+function progressPercent(progress: { status: string; progressPct?: number }): number {
+  if (typeof progress.progressPct === 'number') return progress.progressPct
+  return progress.status === 'completed' ? 100 : 0
+}
+
 // ---------------------------------------------------------------------------
 // Store
 // ---------------------------------------------------------------------------
@@ -123,6 +141,7 @@ export const useKnowledgeMapStore = create<KnowledgeMapState>((set, get) => ({
   error: null,
   lastComputedAt: null,
   globalLastEngagement: null,
+  sourceCourseCount: 0,
 
   computeScores: async (now?: Date) => {
     const currentTime = now ?? new Date()
@@ -138,15 +157,23 @@ export const useKnowledgeMapStore = create<KnowledgeMapState>((set, get) => ({
 
     try {
       // ── Step 1: Fetch raw data from Dexie ──────────────────────
-      const [importedCourses, allQuizzes, allAttempts, allFlashcards, allSessions, allProgress] =
-        await Promise.all([
-          db.importedCourses.toArray(),
-          db.quizzes.toArray(),
-          db.quizAttempts.toArray(),
-          db.flashcards.toArray(),
-          db.studySessions.toArray(),
-          db.contentProgress.toArray(),
-        ])
+      const [
+        importedCourses,
+        allQuizzes,
+        allAttempts,
+        allFlashcards,
+        allSessions,
+        allProgress,
+        allVideos,
+      ] = await Promise.all([
+        db.importedCourses.toArray(),
+        db.quizzes.toArray(),
+        db.quizAttempts.toArray(),
+        db.flashcards.toArray(),
+        db.studySessions.toArray(),
+        db.contentProgress.toArray(),
+        db.importedVideos.toArray(),
+      ])
 
       // ── Step 2: Resolve topics ─────────────────────────────────
       // Build TopicCourseInput from ImportedCourses
@@ -155,6 +182,14 @@ export const useKnowledgeMapStore = create<KnowledgeMapState>((set, get) => ({
         category: c.category,
         tags: c.tags,
       }))
+
+      const courseById = new Map(importedCourses.map(course => [course.id, course]))
+      const videosByCourseId = new Map<string, typeof allVideos>()
+      for (const video of allVideos) {
+        const existing = videosByCourseId.get(video.courseId) ?? []
+        existing.push(video)
+        videosByCourseId.set(video.courseId, existing)
+      }
 
       // Build quiz-to-course mapping via contentProgress: quiz.lessonId → courseId
       // Since the legacy courses table was dropped (v30), we derive the mapping from
@@ -194,6 +229,7 @@ export const useKnowledgeMapStore = create<KnowledgeMapState>((set, get) => ({
           suggestions: [],
           isLoading: false,
           lastComputedAt: currentTime.toISOString(),
+          sourceCourseCount: importedCourses.length,
         })
         return
       }
@@ -219,6 +255,59 @@ export const useKnowledgeMapStore = create<KnowledgeMapState>((set, get) => ({
           existing.total += 1
           if (answer.isCorrect) existing.correct += 1
           quizScoreByTopic.set(canonical, existing)
+        }
+      }
+
+      // 3a.1 Real quiz destinations per topic. When several quizzes cover a
+      // topic, prefer the lowest-scoring one, then the most recently attempted
+      // one, so the action points to the most useful remediation path.
+      const quizTargetsByTopic = new Map<
+        string,
+        Array<{
+          courseId: string
+          lessonId: string
+          title: string
+          score: number | null
+          latestAttempt: string | null
+        }>
+      >()
+      for (const quiz of allQuizzes) {
+        const courseId = quizToCourseId.get(quiz.id)
+        if (!courseId) continue
+
+        const topicCanonicals = new Set(
+          quiz.questions
+            .filter(question => question.topic)
+            .map(question => canonicalize(normalizeTopic(question.topic!)))
+        )
+        const quizAttempts = allAttempts.filter(attempt => attempt.quizId === quiz.id)
+
+        for (const canonical of topicCanonicals) {
+          let correct = 0
+          let total = 0
+          let latestAttempt: string | null = null
+          for (const attempt of quizAttempts) {
+            if (!latestAttempt || attempt.completedAt > latestAttempt) {
+              latestAttempt = attempt.completedAt
+            }
+            for (const answer of attempt.answers) {
+              const question = quiz.questions.find(q => q.id === answer.questionId)
+              if (!question?.topic) continue
+              if (canonicalize(normalizeTopic(question.topic)) !== canonical) continue
+              total += 1
+              if (answer.isCorrect) correct += 1
+            }
+          }
+
+          const candidates = quizTargetsByTopic.get(canonical) ?? []
+          candidates.push({
+            courseId,
+            lessonId: quiz.lessonId,
+            title: quiz.title,
+            score: total > 0 ? Math.round((correct / total) * 100) : null,
+            latestAttempt,
+          })
+          quizTargetsByTopic.set(canonical, candidates)
         }
       }
 
@@ -348,6 +437,71 @@ export const useKnowledgeMapStore = create<KnowledgeMapState>((set, get) => ({
           completionPercent,
         })
 
+        const flashcardCourseId = topic.courseIds.find(
+          courseId => (flashcardsByCourseId.get(courseId)?.length ?? 0) > 0
+        )
+        const actionTargets: Partial<Record<ActionType, TopicActionTarget>> = {}
+
+        if (flashcardCourseId) {
+          const courseName = courseById.get(flashcardCourseId)?.name ?? 'this course'
+          actionTargets['flashcard-review'] = {
+            actionType: 'flashcard-review',
+            route: `/courses/${encodeURIComponent(flashcardCourseId)}/flashcards`,
+            label: `Review flashcards in ${courseName}`,
+            estimatedMinutes: 5,
+          }
+        }
+
+        const quizTarget = [...(quizTargetsByTopic.get(topic.canonicalName) ?? [])].sort(
+          (a, b) =>
+            (a.score ?? -1) - (b.score ?? -1) ||
+            (b.latestAttempt ?? '').localeCompare(a.latestAttempt ?? '') ||
+            a.lessonId.localeCompare(b.lessonId)
+        )[0]
+        if (quizTarget) {
+          actionTargets['quiz-refresh'] = {
+            actionType: 'quiz-refresh',
+            route: `/courses/${encodeURIComponent(quizTarget.courseId)}/lessons/${encodeURIComponent(quizTarget.lessonId)}/quiz`,
+            label: `Retake ${quizTarget.title}`,
+            estimatedMinutes: 10,
+          }
+        }
+
+        const lessonTargets: TopicLesson[] = topic.courseIds.flatMap(courseId =>
+          (videosByCourseId.get(courseId) ?? []).map(video => {
+            const progress = allProgress.find(
+              item => item.courseId === courseId && item.itemId === video.id
+            )
+            return {
+              lessonId: video.id,
+              courseId,
+              title: video.title ?? video.filename,
+              completionPct: progress ? progressPercent(progress) : 0,
+              durationMinutes:
+                video.duration > 0 ? Math.max(1, Math.round(video.duration / 60)) : 15,
+            }
+          })
+        )
+        const lowestLesson = [...lessonTargets].sort(
+          (a, b) =>
+            a.completionPct - b.completionPct ||
+            a.title.localeCompare(b.title) ||
+            a.lessonId.localeCompare(b.lessonId)
+        )[0]
+        if (lowestLesson) {
+          actionTargets['lesson-rewatch'] = {
+            actionType: 'lesson-rewatch',
+            route: `/courses/${encodeURIComponent(lowestLesson.courseId)}/lessons/${encodeURIComponent(lowestLesson.lessonId)}`,
+            label: `Rewatch ${lowestLesson.title}`,
+            estimatedMinutes: lowestLesson.durationMinutes ?? 15,
+            lessonTitle: lowestLesson.title,
+          }
+        }
+
+        const availableActions = actions.filter(
+          action => actionTargets[ACTION_TYPE_BY_LABEL[action]]
+        )
+
         return {
           name: topic.name,
           canonicalName: topic.canonicalName,
@@ -356,7 +510,8 @@ export const useKnowledgeMapStore = create<KnowledgeMapState>((set, get) => ({
           scoreResult,
           urgency,
           daysSinceLastEngagement: Math.round(daysAgo),
-          suggestedActions: actions,
+          suggestedActions: availableActions,
+          actionTargets,
           aggregateRetention,
           predictedDecayDate,
           avgStability,
@@ -385,9 +540,9 @@ export const useKnowledgeMapStore = create<KnowledgeMapState>((set, get) => ({
       const focusAreas = [...scoredTopics].sort((a, b) => b.urgency - a.urgency).slice(0, 3)
 
       // ── Step 7: Pre-compute action suggestions ─────────────────
-      // TODO(E56-S02): The ScoredTopic → TopicWithScore adapter below approximates hasFlashcards,
-      // hasQuizzes, and lessons from derived signals (suggestedActions, courseIds). Replace with
-      // direct per-topic data once E56-S02 provides a richer TopicWithScore shape from the store.
+      // Use the real action targets built from persisted records above. This
+      // keeps suggestion ranking separate from route construction while
+      // guaranteeing every emitted CTA has a destination the router serves.
       const topicsWithScores: TopicWithScore[] = scoredTopics.map(t => ({
         topicName: t.name,
         canonicalName: t.canonicalName,
@@ -400,15 +555,8 @@ export const useKnowledgeMapStore = create<KnowledgeMapState>((set, get) => ({
               ? 'stable'
               : 'improving',
         recencyScore: Math.max(0, 100 - t.daysSinceLastEngagement * 2),
-        hasFlashcards: t.suggestedActions.some(a => a === 'Review Flashcards'),
-        hasQuizzes: t.suggestedActions.some(a => a === 'Retake Quiz'),
-        // TODO(E56-S04): Lesson data approximated from courseIds — replace with actual lesson data when E56 provides per-lesson tracking
-        lessons: t.courseIds.map(courseId => ({
-          lessonId: courseId,
-          courseId,
-          title: `${t.name} Lesson`,
-          completionPct: t.scoreResult.score,
-        })),
+        actionTargets: t.actionTargets,
+        lessons: [],
       }))
       // E62-S01: Build FSRS stability map for action suggestions decay factor
       const fsrsStabilityMap = new Map<string, number>()
@@ -429,6 +577,7 @@ export const useKnowledgeMapStore = create<KnowledgeMapState>((set, get) => ({
         isLoading: false,
         lastComputedAt: currentTime.toISOString(),
         globalLastEngagement,
+        sourceCourseCount: importedCourses.length,
       })
     } catch (error) {
       console.error('[KnowledgeMapStore] Failed to compute scores:', error)
@@ -441,7 +590,7 @@ export const useKnowledgeMapStore = create<KnowledgeMapState>((set, get) => ({
   },
 
   invalidateCache: () => {
-    set({ lastComputedAt: null, suggestions: [] })
+    set({ lastComputedAt: null, suggestions: [], error: null })
   },
 
   getTopicsByCategory: (category: string) => {

@@ -24,6 +24,21 @@ export interface ActionSuggestion {
   lessonTitle?: string
 }
 
+/**
+ * A real learning destination for a topic action.
+ *
+ * Routes are resolved by the knowledge-map store from persisted course,
+ * lesson, quiz, and flashcard records. Keeping the target separate from the
+ * ranked suggestion prevents the UI from inventing routes from a topic name.
+ */
+export interface TopicActionTarget {
+  actionType: ActionType
+  route: string
+  label: string
+  estimatedMinutes: number
+  lessonTitle?: string
+}
+
 export interface TopicLesson {
   lessonId: string
   courseId: string
@@ -39,8 +54,12 @@ export interface TopicWithScore {
   tier: 'strong' | 'fading' | 'weak'
   trend: ScoreTrend
   recencyScore?: number
-  hasFlashcards: boolean
-  hasQuizzes: boolean
+  /** @deprecated Use actionTargets; retained for callers migrating to targets. */
+  hasFlashcards?: boolean
+  /** @deprecated Use actionTargets; retained for callers migrating to targets. */
+  hasQuizzes?: boolean
+  /** Real routes for actions available on this topic. */
+  actionTargets?: Partial<Record<ActionType, TopicActionTarget>>
   lessons: TopicLesson[]
 }
 
@@ -102,53 +121,40 @@ export function recencyDecayFactor(recencyScore: number): number {
 
 // ── Per-Topic Suggestion Generation ─────────────────────────────
 
-function generateFlashcardSuggestion(topic: TopicWithScore, urgency: number): ActionSuggestion {
+function generateFlashcardSuggestion(
+  topic: TopicWithScore,
+  urgency: number
+): ActionSuggestion | null {
+  const target = topic.actionTargets?.['flashcard-review']
+  if (!target) return null
+
   return {
     topicName: topic.topicName,
     canonicalName: topic.canonicalName,
     score: topic.score,
     trend: topic.trend,
     actionType: 'flashcard-review',
-    actionLabel: `Review 5 flashcards on ${topic.topicName}`,
-    actionRoute: `/flashcards?topic=${encodeURIComponent(topic.canonicalName)}`,
-    estimatedMinutes: FLASHCARD_DURATION,
+    actionLabel: target.label,
+    actionRoute: target.route,
+    estimatedMinutes: target.estimatedMinutes || FLASHCARD_DURATION,
     urgencyScore: urgency,
   }
 }
 
-function generateQuizSuggestion(topic: TopicWithScore, urgency: number): ActionSuggestion {
+function generateQuizSuggestion(topic: TopicWithScore, urgency: number): ActionSuggestion | null {
+  const target = topic.actionTargets?.['quiz-refresh']
+  if (!target) return null
+
   return {
     topicName: topic.topicName,
     canonicalName: topic.canonicalName,
     score: topic.score,
     trend: topic.trend,
     actionType: 'quiz-refresh',
-    actionLabel: `Take a refresher quiz on ${topic.topicName}`,
-    actionRoute: `/quiz?topic=${encodeURIComponent(topic.canonicalName)}`,
-    estimatedMinutes: QUIZ_DURATION,
+    actionLabel: target.label,
+    actionRoute: target.route,
+    estimatedMinutes: target.estimatedMinutes || QUIZ_DURATION,
     urgencyScore: urgency,
-  }
-}
-
-function generateLessonSuggestion(topic: TopicWithScore, urgency: number): ActionSuggestion | null {
-  if (topic.lessons.length === 0) return null
-
-  // Target the lesson with the lowest completion percentage
-  const lowestLesson = topic.lessons.reduce((lowest, lesson) =>
-    lesson.completionPct < lowest.completionPct ? lesson : lowest
-  )
-
-  return {
-    topicName: topic.topicName,
-    canonicalName: topic.canonicalName,
-    score: topic.score,
-    trend: topic.trend,
-    actionType: 'lesson-rewatch',
-    actionLabel: `Rewatch ${lowestLesson.title}`,
-    actionRoute: `/courses/${encodeURIComponent(lowestLesson.courseId)}/lessons/${encodeURIComponent(lowestLesson.lessonId)}`,
-    estimatedMinutes: lowestLesson.durationMinutes ?? DEFAULT_LESSON_DURATION,
-    urgencyScore: urgency,
-    lessonTitle: lowestLesson.title,
   }
 }
 
@@ -158,17 +164,30 @@ function generateLessonSuggestion(topic: TopicWithScore, urgency: number): Actio
 function generateTopicSuggestions(topic: TopicWithScore, urgency: number): ActionSuggestion[] {
   const suggestions: ActionSuggestion[] = []
 
-  if (topic.hasFlashcards) {
-    suggestions.push(generateFlashcardSuggestion(topic, urgency))
+  if (topic.actionTargets?.['flashcard-review']) {
+    const suggestion = generateFlashcardSuggestion(topic, urgency)
+    if (suggestion) suggestions.push(suggestion)
   }
 
-  if (topic.hasQuizzes) {
-    suggestions.push(generateQuizSuggestion(topic, urgency))
+  if (topic.actionTargets?.['quiz-refresh']) {
+    const suggestion = generateQuizSuggestion(topic, urgency)
+    if (suggestion) suggestions.push(suggestion)
   }
 
-  const lessonSuggestion = generateLessonSuggestion(topic, urgency)
-  if (lessonSuggestion) {
-    suggestions.push(lessonSuggestion)
+  const lessonTarget = topic.actionTargets?.['lesson-rewatch']
+  if (lessonTarget) {
+    suggestions.push({
+      topicName: topic.topicName,
+      canonicalName: topic.canonicalName,
+      score: topic.score,
+      trend: topic.trend,
+      actionType: 'lesson-rewatch',
+      actionLabel: lessonTarget.label,
+      actionRoute: lessonTarget.route,
+      estimatedMinutes: lessonTarget.estimatedMinutes || DEFAULT_LESSON_DURATION,
+      urgencyScore: urgency,
+      lessonTitle: lessonTarget.lessonTitle,
+    })
   }
 
   return suggestions

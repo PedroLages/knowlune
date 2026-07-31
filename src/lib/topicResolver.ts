@@ -2,8 +2,9 @@
  * Topic Resolution Service (E56-S01)
  *
  * Extracts, normalizes, deduplicates, and categorizes topics from available
- * data signals: ImportedCourse.tags[], ImportedCourse.category, and
- * Question.topic. Pure functions — no DB calls, no side effects.
+ * data signals: ImportedCourse.tags[] and Question.topic. Course categories
+ * remain grouping metadata and are only used as a fallback when a course has
+ * no usable topic signal at all. Pure functions — no DB calls, no side effects.
  *
  * Pattern reference: src/lib/qualityScore.ts
  */
@@ -172,6 +173,8 @@ export function resolveTopics(
       categoryVotes: Map<string, number>
     }
   >()
+  const courseById = new Map(courses.map(course => [course.id, course]))
+  const coursesWithTopicSignal = new Set<string>()
 
   function getOrCreate(canonical: string) {
     let entry = topicMap.get(canonical)
@@ -197,22 +200,11 @@ export function resolveTopics(
       const entry = getOrCreate(canonical)
       entry.courseIds.add(course.id)
       entry.categoryVotes.set(course.category, (entry.categoryVotes.get(course.category) ?? 0) + 1)
+      coursesWithTopicSignal.add(course.id)
     }
   }
 
-  // --- Phase 2: Extract topics from course categories ---
-  // Each category itself is a topic signal
-  for (const course of courses) {
-    const normalized = normalizeTopic(course.category)
-    if (!normalized || isNoiseTopic(normalized)) continue
-    const canonical = canonicalize(normalized)
-
-    const entry = getOrCreate(canonical)
-    entry.courseIds.add(course.id)
-    entry.categoryVotes.set(course.category, (entry.categoryVotes.get(course.category) ?? 0) + 1)
-  }
-
-  // --- Phase 3: Map Question.topic values ---
+  // --- Phase 2: Map Question.topic values ---
   for (const question of questions) {
     if (!question.topic) continue
     const normalized = normalizeTopic(question.topic)
@@ -222,6 +214,26 @@ export function resolveTopics(
     const entry = getOrCreate(canonical)
     entry.questionTopics.add(question.topic)
     entry.courseIds.add(question.courseId)
+    const course = courseById.get(question.courseId)
+    if (course) {
+      entry.categoryVotes.set(course.category, (entry.categoryVotes.get(course.category) ?? 0) + 1)
+    }
+    coursesWithTopicSignal.add(question.courseId)
+  }
+
+  // --- Phase 3: Preserve a useful fallback for untagged courses ---
+  // A category is not a topic when more specific metadata exists. For a
+  // course with no usable tags or question topics, the category is the only
+  // honest signal available and keeps the map from appearing empty.
+  for (const course of courses) {
+    if (coursesWithTopicSignal.has(course.id)) continue
+
+    const normalized = normalizeTopic(course.category)
+    if (!normalized || isNoiseTopic(normalized)) continue
+    const canonical = canonicalize(normalized)
+    const entry = getOrCreate(canonical)
+    entry.courseIds.add(course.id)
+    entry.categoryVotes.set(course.category, (entry.categoryVotes.get(course.category) ?? 0) + 1)
   }
 
   // --- Phase 4: Build output ---
