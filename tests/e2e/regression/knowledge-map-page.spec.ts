@@ -196,7 +196,7 @@ test.describe('Knowledge Map Page (E56-S04)', () => {
     await expect(emptyTitle).toBeVisible({ timeout: 10000 })
   })
 
-  test('6 — AC3: clicking a treemap cell opens TopicDetailPopover with score breakdown', async ({
+  test('6 — AC3: clicking a treemap cell opens TopicDetailPanel with score breakdown', async ({
     page,
   }) => {
     // Pre-set sidebar as expanded to avoid mobile-sheet overlay
@@ -227,19 +227,19 @@ test.describe('Knowledge Map Page (E56-S04)', () => {
     await expect(treemapCell).toBeAttached({ timeout: 10000 })
 
     // Use evaluate to dispatch click on the g element — Playwright's click can miss SVG elements
-    await treemapCell.evaluate((el: SVGGElement) => el.dispatchEvent(new MouseEvent('click', { bubbles: true, clientX: 200, clientY: 200 })))
+    await treemapCell.evaluate((el: SVGGElement) =>
+      el.dispatchEvent(new MouseEvent('click', { bubbles: true, clientX: 200, clientY: 200 }))
+    )
 
-    // TopicDetailPopover should open — it renders a PopoverContent with the topic name
-    // Score breakdown rows contain "Quiz score" text
-    const popoverContent = page.locator('[data-slot="popover-content"]')
-    await expect(popoverContent).toBeVisible({ timeout: 10000 })
+    const detailPanel = page.getByTestId('topic-detail-panel')
+    await expect(detailPanel).toBeVisible({ timeout: 10000 })
 
-    // Verify score breakdown is shown in the popover
-    await expect(popoverContent.getByText('Quiz score')).toBeVisible()
-    await expect(popoverContent.getByText('Completion')).toBeVisible()
+    // Verify score breakdown is shown in the slide-in panel
+    await expect(detailPanel.getByText('Quiz score')).toBeVisible()
+    await expect(detailPanel.getByText('Completion')).toBeVisible()
   })
 
-  test('7 — AC4: action button in TopicDetailPopover navigates to correct route', async ({
+  test('7 — AC4: action button in TopicDetailPanel navigates to correct route', async ({
     page,
   }) => {
     // Pre-set sidebar as expanded to avoid mobile-sheet overlay
@@ -262,16 +262,18 @@ test.describe('Knowledge Map Page (E56-S04)', () => {
     const treemapContainer = page.locator('[data-treemap-container]')
     await expect(treemapContainer).toBeVisible({ timeout: 10000 })
 
-    // Open the popover by clicking a treemap cell
+    // Open the detail panel by clicking a treemap cell
     const treemapCell = treemapContainer.locator('g[role="button"]').first()
     await expect(treemapCell).toBeAttached({ timeout: 10000 })
-    await treemapCell.evaluate((el: SVGGElement) => el.dispatchEvent(new MouseEvent('click', { bubbles: true, clientX: 200, clientY: 200 })))
+    await treemapCell.evaluate((el: SVGGElement) =>
+      el.dispatchEvent(new MouseEvent('click', { bubbles: true, clientX: 200, clientY: 200 }))
+    )
 
-    const popoverContent = page.locator('[data-slot="popover-content"]')
-    await expect(popoverContent).toBeVisible({ timeout: 10000 })
+    const detailPanel = page.getByTestId('topic-detail-panel')
+    await expect(detailPanel).toBeVisible({ timeout: 10000 })
 
-    // Click the first action button in the popover (e.g. "Retake Quiz", "Rewatch Lesson", etc.)
-    const actionButton = popoverContent.locator('button').first()
+    // Click the first action button in the panel (e.g. "Retake Quiz", "Rewatch Lesson", etc.)
+    const actionButton = detailPanel.locator('button[aria-label*=" for "]').first()
     await expect(actionButton).toBeVisible({ timeout: 5000 })
     await actionButton.click()
 

@@ -7,6 +7,7 @@
  * and suggested action buttons.
  */
 
+import { useId } from 'react'
 import { useNavigate } from 'react-router'
 import { X } from 'lucide-react'
 import { Badge } from '@/app/components/ui/badge'
@@ -73,6 +74,7 @@ function colorClassToBadgeVariant(
 
 export function TopicDetailPanel({ topic, onClose }: TopicDetailPanelProps) {
   const navigate = useNavigate()
+  const titleId = useId()
   const { scoreResult, daysSinceLastEngagement, suggestedActions } = topic
   const { score, tier, factors, effectiveWeights, confidence } = scoreResult
 
@@ -100,8 +102,10 @@ export function TopicDetailPanel({ topic, onClose }: TopicDetailPanelProps) {
 
   return (
     <div
-      className="absolute inset-y-0 right-0 w-full sm:w-96 bg-background border-l border-border shadow-2xl z-10 flex flex-col animate-in slide-in-from-right duration-300"
+      className="absolute inset-y-0 right-0 z-10 flex w-full flex-col border-l border-border bg-background shadow-2xl motion-safe:animate-in motion-safe:slide-in-from-right motion-safe:duration-300 sm:w-96"
       data-testid="topic-detail-panel"
+      role="region"
+      aria-labelledby={titleId}
     >
       {/* Header */}
       <div className="p-4 border-b border-border flex items-center justify-between shrink-0">
@@ -120,7 +124,9 @@ export function TopicDetailPanel({ topic, onClose }: TopicDetailPanelProps) {
       {/* Scrollable content */}
       <div className="p-5 flex-1 overflow-y-auto">
         {/* Topic name + tier badge */}
-        <h2 className="text-xl font-bold mb-3">{topic.name}</h2>
+        <h2 id={titleId} className="mb-3 text-xl font-bold">
+          {topic.name}
+        </h2>
 
         <div className="mb-6">
           {tier === 'weak' && (

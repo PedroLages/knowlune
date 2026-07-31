@@ -6,15 +6,16 @@
  * sorted card list grouped by category.
  */
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
 import { useKnowledgeMapStore } from '@/stores/useKnowledgeMapStore'
 import type { ScoredTopic } from '@/stores/useKnowledgeMapStore'
 import { TopicTreemap } from '@/app/components/knowledge/TopicTreemap'
-import type { TreemapDataItem, TreemapCategoryData } from '@/app/components/knowledge/TopicTreemap'
-import { FocusAreasPanel } from '@/app/components/knowledge/FocusAreasPanel'
+import type { TreemapDataItem } from '@/app/components/knowledge/TopicTreemap'
 import { SuggestedActionsPanel } from '@/app/components/knowledge/SuggestedActionsPanel'
 import { TopicDetailPopover } from '@/app/components/knowledge/TopicDetailPopover'
 import { TopicDetailPanel } from '@/app/components/knowledge/TopicDetailPanel'
+import { KnowledgeMapSummary } from '@/app/components/knowledge/KnowledgeMapSummary'
+import { PriorityTopicsCard } from '@/app/components/knowledge/PriorityTopicsCard'
 import { Badge } from '@/app/components/ui/badge'
 import { Card } from '@/app/components/ui/card'
 import { Progress } from '@/app/components/ui/progress'
@@ -33,65 +34,68 @@ import { Brain } from 'lucide-react'
 const ALL_CATEGORIES = 'All Categories'
 
 export function KnowledgeMap() {
-  const { topics, categories, focusAreas, suggestions, isLoading, error, computeScores } =
-    useKnowledgeMapStore()
+  const topics = useKnowledgeMapStore(state => state.topics)
+  const categories = useKnowledgeMapStore(state => state.categories)
+  const focusAreas = useKnowledgeMapStore(state => state.focusAreas)
+  const suggestions = useKnowledgeMapStore(state => state.suggestions)
+  const isLoading = useKnowledgeMapStore(state => state.isLoading)
+  const error = useKnowledgeMapStore(state => state.error)
+  const computeScores = useKnowledgeMapStore(state => state.computeScores)
   const [selectedCategory, setSelectedCategory] = useState(ALL_CATEGORIES)
-  const [selectedTopicName, setSelectedTopicName] = useState<string | null>(null)
+  const [selectedTopicId, setSelectedTopicId] = useState<string | null>(null)
   const isMobile = useIsMobile()
 
   useEffect(() => {
     void computeScores()
   }, [computeScores])
 
-  const filteredTopics =
-    selectedCategory === ALL_CATEGORIES
-      ? topics
-      : topics.filter(t => t.category === selectedCategory)
-
-  // Build nested treemap data grouped by category (desktop) or flat (mobile data source)
-  const nestedTreemapData: TreemapCategoryData[] = (
-    selectedCategory === ALL_CATEGORIES
-      ? categories
-      : categories.filter(c => c.category === selectedCategory)
+  const filteredTopics = useMemo(
+    () =>
+      selectedCategory === ALL_CATEGORIES
+        ? topics
+        : topics.filter(topic => topic.category === selectedCategory),
+    [selectedCategory, topics]
   )
-    .map(cat => {
-      const catTopics = filteredTopics.filter(t => t.category === cat.category)
-      if (catTopics.length === 0) return null
-      return {
-        name: cat.category,
-        children: catTopics.map(t => ({
-          name: t.name,
-          size: Math.max(t.courseIds.length, 1),
-          score: t.scoreResult.score,
-          tier: t.scoreResult.tier,
-          aggregateRetention: t.aggregateRetention,
-          predictedDecayDate: t.predictedDecayDate,
-        })),
-      }
-    })
-    .filter((item): item is TreemapCategoryData => item !== null)
 
-  // Also build flat data for fallback (single-category view with no children nesting needed)
-  const flatTreemapData: TreemapDataItem[] = filteredTopics.map(t => ({
-    name: t.name,
-    size: Math.max(t.courseIds.length, 1),
-    score: t.scoreResult.score,
-    tier: t.scoreResult.tier,
-    aggregateRetention: t.aggregateRetention,
-    predictedDecayDate: t.predictedDecayDate,
-  }))
+  // A flat topic map is more robust and preserves usable tile area. Category
+  // context remains available in each tile's label and through the filter.
+  const treemapData: TreemapDataItem[] = useMemo(
+    () =>
+      filteredTopics.map(topic => ({
+        name: topic.name,
+        canonicalName: topic.canonicalName,
+        category: topic.category,
+        size: Math.max(topic.courseIds.length, 1),
+        score: topic.scoreResult.score,
+        tier: topic.scoreResult.tier,
+        aggregateRetention: topic.aggregateRetention,
+        predictedDecayDate: topic.predictedDecayDate,
+      })),
+    [filteredTopics]
+  )
 
-  // Use nested data when showing all categories, flat when filtered to one category
-  const treemapData = selectedCategory === ALL_CATEGORIES ? nestedTreemapData : flatTreemapData
-
-  const selectedTopic = selectedTopicName
-    ? (topics.find(t => t.name === selectedTopicName) ?? null)
+  const selectedTopic = selectedTopicId
+    ? (topics.find(topic => topic.canonicalName === selectedTopicId) ?? null)
     : null
 
-  const categoryNames = [ALL_CATEGORIES, ...categories.map(c => c.category)]
+  const categoryFilters = useMemo(
+    () => [
+      { name: ALL_CATEGORIES, count: topics.length },
+      ...categories.map(category => ({
+        name: category.category,
+        count: category.topics.length,
+      })),
+    ],
+    [categories, topics.length]
+  )
 
-  const handleCellClick = useCallback((name: string) => {
-    setSelectedTopicName(prev => (prev === name ? null : name))
+  const handleCellClick = useCallback((canonicalName: string) => {
+    setSelectedTopicId(previous => (previous === canonicalName ? null : canonicalName))
+  }, [])
+
+  const handleCategoryChange = useCallback((category: string) => {
+    setSelectedCategory(category)
+    setSelectedTopicId(null)
   }, [])
 
   if (isLoading) {
@@ -136,27 +140,39 @@ export function KnowledgeMap() {
   return (
     <div className="space-y-6 p-1">
       {/* Page header */}
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Knowledge Map</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Explore your topic knowledge across all courses
-        </p>
+      <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Knowledge Map</h1>
+          <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
+            See what is holding, what is fading, and where a short review will have the most impact.
+          </p>
+        </div>
+        <KnowledgeMapSummary topics={topics} />
       </div>
 
       {/* Category filter chips */}
-      <div className="flex flex-wrap gap-2" role="group" aria-label="Filter by category">
-        {categoryNames.map(cat => (
+      <div
+        className="flex items-center gap-2 overflow-x-auto pb-1"
+        role="group"
+        aria-label="Filter by category"
+      >
+        <span className="mr-1 shrink-0 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          View
+        </span>
+        {categoryFilters.map(category => (
           <button
-            key={cat}
-            onClick={() => setSelectedCategory(cat)}
-            className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors min-h-[44px] sm:min-h-0 ${
-              selectedCategory === cat
+            key={category.name}
+            type="button"
+            onClick={() => handleCategoryChange(category.name)}
+            className={`min-h-[44px] shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition-colors sm:min-h-0 ${
+              selectedCategory === category.name
                 ? 'bg-brand text-brand-foreground'
                 : 'bg-muted text-muted-foreground hover:bg-accent hover:text-foreground'
             }`}
-            aria-pressed={selectedCategory === cat}
+            aria-pressed={selectedCategory === category.name}
           >
-            {cat}
+            {category.name}
+            <span className="ml-1.5 opacity-70">{category.count}</span>
           </button>
         ))}
       </div>
@@ -165,9 +181,9 @@ export function KnowledgeMap() {
       {isMobile && <SuggestedActionsPanel suggestions={suggestions} />}
 
       {/* Main content: treemap + sidebars */}
-      <div className="flex flex-col lg:flex-row gap-6">
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_20rem]">
         {/* Treemap / Mobile list */}
-        <div className="flex-1 min-w-0">
+        <div className="min-w-0">
           {isMobile ? (
             <MobileTopicList
               topics={filteredTopics}
@@ -176,13 +192,24 @@ export function KnowledgeMap() {
                 .map(c => c.category)}
             />
           ) : (
-            <Card className="p-4 overflow-hidden">
-              <div className="relative">
+            <Card className="gap-0 overflow-hidden">
+              <div className="flex flex-col gap-1 border-b border-border px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <h2 className="text-base font-semibold">Topic landscape</h2>
+                  <p className="text-xs text-muted-foreground">
+                    Tile size shows topic reach across courses; color shows current strength.
+                  </p>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Select a topic for its score breakdown
+                </p>
+              </div>
+              <div className="relative p-4">
                 <TopicTreemap data={treemapData} onCellClick={handleCellClick} />
                 {selectedTopic && (
                   <TopicDetailPanel
                     topic={selectedTopic}
-                    onClose={() => setSelectedTopicName(null)}
+                    onClose={() => setSelectedTopicId(null)}
                   />
                 )}
               </div>
@@ -191,19 +218,16 @@ export function KnowledgeMap() {
         </div>
 
         {/* Right sidebar column — desktop only; Focus Areas rendered once for all viewports */}
-        <div className="lg:w-80 shrink-0 flex flex-col gap-6 lg:sticky lg:top-6 lg:self-start lg:max-h-[calc(100vh-8rem)] lg:overflow-y-auto">
+        <aside className="flex min-w-0 flex-col gap-6 xl:sticky xl:top-6 xl:self-start">
           {/* Suggested Actions — desktop sidebar only (mobile version rendered above) */}
-          {!isMobile && <SuggestedActionsPanel suggestions={suggestions} />}
+          {!isMobile && <SuggestedActionsPanel suggestions={suggestions} maxVisible={3} />}
 
-          {/* Focus Areas — single instance, shown on all viewports */}
-          <Card className="p-4">
-            <h2 className="text-base font-semibold mb-1">Focus Areas</h2>
-            <p className="text-xs text-muted-foreground mb-3">
-              Topics that need your attention most
-            </p>
-            <FocusAreasPanel focusAreas={focusAreas} />
-          </Card>
-        </div>
+          <PriorityTopicsCard
+            topics={focusAreas}
+            selectedTopicId={selectedTopicId}
+            onSelect={handleCellClick}
+          />
+        </aside>
       </div>
     </div>
   )
