@@ -5,6 +5,8 @@ import { Skeleton } from '@/app/components/ui/skeleton'
 import { cn } from '@/app/components/ui/utils'
 import { db } from '@/db'
 import { getProgressColor, getProgressTextClass } from '@/lib/progress-colors'
+import { getStudyGoal } from '@/lib/studyGoals'
+import { toast } from 'sonner'
 
 const DEFAULT_WEEKLY_GOAL_MINUTES = 5 * 60
 
@@ -22,6 +24,12 @@ export function ThisWeekSection() {
   const [dailyData, setDailyData] = useState<DailyBar[]>([])
   const [activeDays, setActiveDays] = useState(0)
   const [bestDay, setBestDay] = useState<{ label: string; hours: number } | null>(null)
+  const [goalMinutes, setGoalMinutes] = useState(() => {
+    const goal = getStudyGoal()
+    return goal?.frequency === 'weekly' && goal.metric === 'time'
+      ? goal.target
+      : DEFAULT_WEEKLY_GOAL_MINUTES
+  })
 
   useEffect(() => {
     let ignore = false
@@ -73,6 +81,7 @@ export function ThisWeekSection() {
         }
       } catch (err) {
         console.error('[ThisWeekSection] Failed to load sessions:', err)
+        toast.error('Could not load this week’s study sessions')
         if (!ignore) setLoading(false)
       }
     }
@@ -84,14 +93,23 @@ export function ThisWeekSection() {
     }
     window.addEventListener('study-session-recorded', handler)
     window.addEventListener('study-session-updated', handler)
+    const goalHandler = () => {
+      const goal = getStudyGoal()
+      setGoalMinutes(
+        goal?.frequency === 'weekly' && goal.metric === 'time'
+          ? goal.target
+          : DEFAULT_WEEKLY_GOAL_MINUTES
+      )
+    }
+    window.addEventListener('study-goals-updated', goalHandler)
     return () => {
       ignore = true
       window.removeEventListener('study-session-recorded', handler)
       window.removeEventListener('study-session-updated', handler)
+      window.removeEventListener('study-goals-updated', goalHandler)
     }
   }, [])
 
-  const goalMinutes = DEFAULT_WEEKLY_GOAL_MINUTES
   const percentage = goalMinutes > 0 ? Math.round((currentMinutes / goalMinutes) * 100) : 0
   const displayPercent = Math.min(percentage, 100)
   const color = getProgressColor(percentage)
