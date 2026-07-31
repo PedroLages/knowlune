@@ -1,8 +1,7 @@
 // eslint-disable-next-line component-size/max-lines -- page orchestrator: study/quiz/ai tabs with multiple chart sections and per-section error handling
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useSearchParams } from 'react-router'
-import { BookOpen, CheckCircle, Target, WifiOff, Flame } from 'lucide-react'
-import { HeroStat } from '@/app/components/reports/HeroStat'
+import { Target, WifiOff } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/card'
 import {
   ChartContainer,
@@ -14,21 +13,15 @@ import { Progress } from '@/app/components/ui/progress'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/app/components/ui/tabs'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, AreaChart, Area } from 'recharts'
 import { motion } from 'motion/react'
-import { format } from 'date-fns'
-import { db } from '@/db'
-import { useCourseStore } from '@/stores/useCourseStore'
+import { endOfDay, format, startOfDay, subDays } from 'date-fns'
+import { useCourseImportStore } from '@/stores/useCourseImportStore'
 import {
-  getCoursesInProgress,
   getTotalCompletedLessons,
-  getTotalStudyNotes,
-  getWeeklyChange,
 } from '@/lib/progress'
-import { getActionsPerDay, getCurrentStreak, getLongestStreak } from '@/lib/studyLog'
+import { getActionsPerDay } from '@/lib/studyLog'
 import {
   calculateCompletionRate,
-  calculateQuizAnalytics,
   type CompletionRateResult,
-  type QuizAnalyticsSummary,
 } from '@/lib/analytics'
 import {
   getCourseCompletionData,
@@ -45,13 +38,13 @@ import { PathAnalyticsTab } from '@/app/components/reports/PathAnalyticsTab'
 import { CategoryRadar } from '@/app/components/reports/CategoryRadar'
 import { SkillsRadar } from '@/app/components/reports/SkillsRadar'
 import { RecentActivityTimeline } from '@/app/components/reports/RecentActivityTimeline'
-import { ActivityHeatmap } from '@/app/components/reports/ActivityHeatmap'
 import { QuizExportCard } from '@/app/components/reports/QuizExportCard'
 import { ReadingSection } from '@/app/components/reports/ReadingSection'
 import { ThisWeekSection } from '@/app/components/reports/ThisWeekSection'
 import { toast } from 'sonner'
 import { staggerContainer, fadeUp } from '@/lib/motion'
-import { generateStudyInsight } from '@/lib/insights'
+import { ReportsOverview } from '@/app/components/reports/ReportsOverview'
+import { ReportsExportActions } from '@/app/components/reports/ReportsExportActions'
 
 /* ------------------------------------------------------------------ */
 /*  Chart configs                                                      */
@@ -75,7 +68,7 @@ const areaChartConfig = {
 /*  Component                                                          */
 /* ------------------------------------------------------------------ */
 
-const VALID_TABS = ['study', 'quizzes', 'ai', 'paths'] as const
+const VALID_TABS = ['overview', 'study', 'quizzes', 'ai', 'paths'] as const
 
 function InlineSectionError({
   error,
@@ -102,41 +95,27 @@ export default function Reports() {
   const rawTab = searchParams.get('tab')
   const activeTab = VALID_TABS.includes(rawTab as (typeof VALID_TABS)[number])
     ? (rawTab as string)
-    : 'study'
+    : 'overview'
 
-  const [dateRange, setDateRange] = useState<DateRange>({ from: null, to: null })
+  const [dateRange, setDateRange] = useState<DateRange>(() => {
+    const today = startOfDay(new Date())
+    return { from: startOfDay(subDays(today, 29)), to: endOfDay(today) }
+  })
   const [hasInteracted, setHasInteracted] = useState(false)
 
-  const allCourses = useCourseStore(s => s.courses)
+  const importedCourses = useCourseImportStore(s => s.importedCourses)
   const isOnline = useOnlineStatus()
 
-  const [studyNotes, setStudyNotes] = useState(0)
   const [completionData, setCompletionData] = useState<CompletionRateResult>({
     completionRate: 0,
     completedCount: 0,
     startedCount: 0,
   })
-  const [quizAttemptCount, setQuizAttemptCount] = useState(0)
-  const [quizAnalytics, setQuizAnalytics] = useState<QuizAnalyticsSummary | null>(null)
 
   // Per-section error states
-  const [notesError, setNotesError] = useState<string | null>(null)
   const [completionError, setCompletionError] = useState<string | null>(null)
-  const [quizCountError, setQuizCountError] = useState<string | null>(null)
 
   const offlineMsg = "You're offline. Please check your connection and try again."
-
-  const loadStudyNotes = useCallback(async () => {
-    setNotesError(null)
-    try {
-      const notes = await getTotalStudyNotes()
-      setStudyNotes(notes)
-    } catch (err) {
-      console.error('Failed to load study notes:', err)
-      toast.error('Failed to load study notes')
-      setNotesError(isOnline ? 'Failed to load study notes.' : offlineMsg)
-    }
-  }, [isOnline])
 
   const loadCompletionRate = useCallback(async () => {
     setCompletionError(null)
@@ -150,37 +129,11 @@ export default function Reports() {
     }
   }, [isOnline])
 
-  const loadQuizAttemptCount = useCallback(async () => {
-    setQuizCountError(null)
-    try {
-      const count = await db.quizAttempts.count()
-      setQuizAttemptCount(count)
-    } catch (err) {
-      console.error('Failed to load quiz attempt count:', err)
-      toast.error('Failed to load quiz attempt count')
-      setQuizCountError(isOnline ? 'Failed to load quiz attempt count.' : offlineMsg)
-    }
-  }, [isOnline])
-
-  const loadQuizAnalytics = useCallback(async () => {
-    try {
-      const summary = await calculateQuizAnalytics()
-      setQuizAnalytics(summary)
-    } catch (err) {
-      console.error('Failed to load quiz analytics:', err)
-      toast.error('Failed to load quiz analytics')
-    }
-  }, [])
-
   useEffect(() => {
-    void loadStudyNotes()
     void loadCompletionRate()
-    void loadQuizAttemptCount()
-    void loadQuizAnalytics()
-  }, [loadStudyNotes, loadCompletionRate, loadQuizAttemptCount, loadQuizAnalytics])
+  }, [loadCompletionRate])
 
   // ── Memoized data ──
-  const lessonsChange = useMemo(() => getWeeklyChange('lessons'), [])
   const courseCompletionData = useMemo(() => getCourseCompletionData(), [])
   const categoryColorMap = useMemo(() => getCategoryColorMap(), [])
   const categoryRadarData = useMemo(() => getCategoryCompletionForRadar(), [])
@@ -196,33 +149,9 @@ export default function Reports() {
   }, [])
 
   const completedLessons = useMemo(() => getTotalCompletedLessons(), [])
-  const inProgressCount = useMemo(() => getCoursesInProgress(allCourses).length, [allCourses])
-
-  const currentStreak = useMemo(() => getCurrentStreak(), [])
-  const longestStreak = useMemo(() => getLongestStreak(), [])
-  const activeDaysThisMonth = useMemo(() => {
-    const now = new Date()
-    const month = now.getMonth()
-    const year = now.getFullYear()
-    const calendarMonthActive = activityData.filter(d => {
-      const dDate = new Date(d.fullDate + 'T12:00:00')
-      return dDate.getMonth() === month && dDate.getFullYear() === year && d.activities > 0
-    }).length
-    const thirtyDayActive = activityData.filter(d => d.activities > 0).length
-    // Use the larger count so early-month views (1st-2nd) aren't severely undercounted
-    return Math.max(calendarMonthActive, thirtyDayActive)
-  }, [activityData])
-
-  const insightText = useMemo(
-    () =>
-      generateStudyInsight({
-        activeDaysThisMonth,
-        currentStreak,
-        previousBestStreak: longestStreak,
-        weeklyChange: lessonsChange,
-        totalCompletedLessons: completedLessons,
-      }),
-    [activeDaysThisMonth, currentStreak, longestStreak, lessonsChange, completedLessons]
+  const inProgressCount = useMemo(
+    () => importedCourses.filter(course => course.status === 'active').length,
+    [importedCourses]
   )
 
   // ── Dynamic height for horizontal bar chart ──
@@ -230,45 +159,20 @@ export default function Reports() {
 
   const roundedCompletionRate = Math.round(completionData.completionRate)
 
-  const hasActivity =
-    completedLessons > 0 ||
-    studyNotes > 0 ||
-    activityData.some(d => d.activities > 0) ||
-    completionData.startedCount > 0 ||
-    quizAttemptCount > 0
-
   return (
     <motion.div variants={staggerContainer} initial="hidden" animate="visible">
-      {/* ── Hero block ── */}
-      <motion.div
-        variants={fadeUp}
-        className="rounded-2xl border border-border/50 bg-card p-6 mb-6"
-      >
-        <h1 className="text-2xl font-bold mb-3">Reports</h1>
-        <p className="text-lg font-semibold mb-4">{insightText}</p>
-        <div className="flex justify-center mb-4">
-          <ActivityHeatmap compact />
-        </div>
-        {!hasActivity ? (
-          <p className="text-sm text-muted-foreground text-center mb-4">
-            Study sessions will appear here once you start learning.
+      <header className="mb-6 flex flex-col gap-4 border-b border-border pb-6 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+            Learning intelligence
           </p>
-        ) : null}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <HeroStat label="Lessons" value={String(completedLessons)} icon={CheckCircle} />
-          <HeroStat
-            label="Courses"
-            value={`${inProgressCount}/${allCourses.length}`}
-            icon={BookOpen}
-          />
-          <HeroStat label="Streak" value={`${currentStreak}d`} icon={Flame} />
-          <HeroStat
-            label="Quiz Avg"
-            value={quizAnalytics ? `${Math.round(quizAnalytics.averageScore)}%` : '—'}
-            icon={Target}
-          />
+          <h1 className="mt-1 text-3xl font-semibold tracking-tight sm:text-4xl">Reports</h1>
+          <p className="mt-2 max-w-2xl text-sm text-muted-foreground sm:text-base">
+            See what is moving, what needs attention, and where to focus next.
+          </p>
         </div>
-      </motion.div>
+        <ReportsExportActions range={dateRange} />
+      </header>
 
       {/* Live region for tab/filter change announcements */}
       <span role="status" aria-live="polite" className="sr-only">
@@ -295,13 +199,18 @@ export default function Reports() {
         className="mb-6"
       >
         <motion.div variants={fadeUp}>
-          <TabsList className="min-h-[44px]" aria-label="Reports navigation">
+          <TabsList className="min-h-11 max-w-full justify-start overflow-x-auto" aria-label="Reports navigation">
+            <TabsTrigger value="overview" className="min-h-11 shrink-0">Overview</TabsTrigger>
             <TabsTrigger value="study">Study Analytics</TabsTrigger>
             <TabsTrigger value="quizzes">Quiz Analytics</TabsTrigger>
             <TabsTrigger value="ai">AI Analytics</TabsTrigger>
             <TabsTrigger value="paths">Learning Paths</TabsTrigger>
           </TabsList>
         </motion.div>
+
+        <TabsContent value="overview" className="mt-6">
+          <ReportsOverview />
+        </TabsContent>
 
         <TabsContent value="quizzes" className="mt-6">
           <QuizAnalyticsDashboard />
@@ -317,12 +226,6 @@ export default function Reports() {
 
         <TabsContent value="study" className="mt-6">
           <h2 className="sr-only">Study Analytics</h2>
-
-          {notesError && (
-            <motion.div variants={fadeUp}>
-              <InlineSectionError error={notesError} isOnline={isOnline} onRetry={loadStudyNotes} />
-            </motion.div>
-          )}
 
           {/* ── Section 1: This Week ── */}
           <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-1">
@@ -550,14 +453,6 @@ export default function Reports() {
                 )}
               </CardContent>
             </Card>
-
-            {quizCountError && (
-              <InlineSectionError
-                error={quizCountError}
-                isOnline={isOnline}
-                onRetry={loadQuizAttemptCount}
-              />
-            )}
 
             <QuizExportCard />
 

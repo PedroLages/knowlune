@@ -10,9 +10,10 @@ export interface DateRange {
 }
 
 const PRESETS = [
-  { label: 'Last 7 days', days: 7 },
-  { label: 'Last 30 days', days: 30 },
-  { label: 'Last 90 days', days: 90 },
+  { label: '7D', days: 6 },
+  { label: '30D', days: 29 },
+  { label: '90D', days: 89 },
+  { label: '1Y', days: 364 },
   { label: 'All time', days: null },
 ] as const
 
@@ -79,7 +80,7 @@ export function DateRangeFilter({ value, onChange }: DateRangeFilterProps) {
             key={preset.label}
             variant={activePreset === preset.label ? 'brand' : 'outline'}
             size="sm"
-            className="min-h-[36px] text-xs"
+            className="min-h-11 min-w-11 text-xs"
             onClick={() => applyPreset(preset.days)}
             aria-pressed={activePreset === preset.label}
           >
@@ -94,7 +95,7 @@ export function DateRangeFilter({ value, onChange }: DateRangeFilterProps) {
         <Input
           id="date-from"
           type="date"
-          className="h-8 w-[140px] text-xs"
+          className="h-11 w-[140px] text-xs"
           value={value.from ? format(value.from, 'yyyy-MM-dd') : ''}
           onChange={e => updateFrom(e.target.value)}
           max={format(today, 'yyyy-MM-dd')}
@@ -106,7 +107,7 @@ export function DateRangeFilter({ value, onChange }: DateRangeFilterProps) {
         <Input
           id="date-to"
           type="date"
-          className="h-8 w-[140px] text-xs"
+          className="h-11 w-[140px] text-xs"
           value={value.to ? format(value.to, 'yyyy-MM-dd') : ''}
           onChange={e => updateTo(e.target.value)}
           max={format(today, 'yyyy-MM-dd')}
