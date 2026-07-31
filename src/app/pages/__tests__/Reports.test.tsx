@@ -158,6 +158,10 @@ vi.mock('@/app/components/reports/QuizAnalyticsDashboard', () => ({
   ),
 }))
 
+vi.mock('@/app/components/reports/ReportsOverview', () => ({
+  ReportsOverview: () => <div data-testid="reports-overview">Reports overview mock</div>,
+}))
+
 vi.mock('@/app/components/reports/CategoryRadar', () => ({
   CategoryRadar: () => <div data-testid="category-radar">CategoryRadar</div>,
 }))
@@ -259,30 +263,23 @@ describe('Reports page', () => {
     expect(screen.getByText('Reports')).toBeInTheDocument()
   })
 
-  it('renders stat labels in the hero', () => {
+  it('renders report controls in the compact header', () => {
     render(
       <MemoryRouter>
         <Reports />
       </MemoryRouter>
     )
-    expect(screen.getByText('Lessons')).toBeInTheDocument()
-    const coursesElements = screen.getAllByText('Courses')
-    expect(coursesElements.length).toBeGreaterThanOrEqual(1)
-    expect(screen.getByText('Streak')).toBeInTheDocument()
-    expect(screen.getByText('Quiz Avg')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /export pdf report/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /export csv bundle/i })).toBeInTheDocument()
   })
 
-  it('renders section headers', () => {
+  it('defaults to the action-first overview tab', () => {
     render(
       <MemoryRouter>
         <Reports />
       </MemoryRouter>
     )
-    expect(screen.getByRole('heading', { name: 'This Week', level: 2 })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: 'Courses', level: 2 })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: 'Learning Behavior', level: 2 })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: 'Reading', level: 2 })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: 'Activity', level: 2 })).toBeInTheDocument()
+    expect(screen.getByTestId('reports-overview')).toBeInTheDocument()
   })
 
   it('mounts QuizAnalyticsDashboard when navigating to ?tab=quizzes', () => {
@@ -294,22 +291,24 @@ describe('Reports page', () => {
     expect(screen.getByTestId('quiz-analytics-dashboard')).toBeInTheDocument()
   })
 
-  it('defaults to study tab for unknown ?tab= values', () => {
+  it('defaults to overview for unknown ?tab= values', () => {
     render(
       <MemoryRouter initialEntries={['/reports?tab=unknown']}>
         <Reports />
       </MemoryRouter>
     )
-    expect(screen.getByText('Course Completion')).toBeInTheDocument()
+    expect(screen.getByTestId('reports-overview')).toBeInTheDocument()
     expect(screen.queryByTestId('quiz-analytics-dashboard')).not.toBeInTheDocument()
   })
 
-  it('renders the insight headline', () => {
+  it('renders the action-oriented subtitle', () => {
     render(
       <MemoryRouter>
         <Reports />
       </MemoryRouter>
     )
-    expect(screen.getByText('Test insight message.')).toBeInTheDocument()
+    expect(
+      screen.getByText('See what is moving, what needs attention, and where to focus next.')
+    ).toBeInTheDocument()
   })
 })

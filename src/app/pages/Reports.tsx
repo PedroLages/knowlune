@@ -13,7 +13,7 @@ import { Progress } from '@/app/components/ui/progress'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/app/components/ui/tabs'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, AreaChart, Area } from 'recharts'
 import { motion } from 'motion/react'
-import { endOfDay, format, startOfDay, subDays } from 'date-fns'
+import { endOfDay, format, isSameDay, startOfDay, subDays } from 'date-fns'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
 import {
   getTotalCompletedLessons,
@@ -70,6 +70,46 @@ const areaChartConfig = {
 
 const VALID_TABS = ['overview', 'study', 'quizzes', 'ai', 'paths'] as const
 
+function defaultDateRange(): DateRange {
+  const today = startOfDay(new Date())
+  return { from: startOfDay(subDays(today, 29)), to: endOfDay(today) }
+}
+
+function parseDateRange(params: URLSearchParams): DateRange {
+  const today = startOfDay(new Date())
+  const preset = params.get('range')
+  if (preset === 'all') return { from: null, to: null }
+  if (preset === '7d' || preset === '30d' || preset === '90d' || preset === '1y') {
+    const days = preset === '7d' ? 6 : preset === '30d' ? 29 : preset === '90d' ? 89 : 364
+    return { from: startOfDay(subDays(today, days)), to: endOfDay(today) }
+  }
+  if (preset === 'custom') {
+    const from = params.get('from')
+    const to = params.get('to')
+    const parsedFrom = from ? startOfDay(new Date(`${from}T00:00:00`)) : null
+    const parsedTo = to ? endOfDay(new Date(`${to}T00:00:00`)) : null
+    if (parsedFrom && parsedTo && parsedFrom <= parsedTo && parsedFrom <= today) {
+      return { from: parsedFrom, to: parsedTo > endOfDay(today) ? endOfDay(today) : parsedTo }
+    }
+  }
+  return defaultDateRange()
+}
+
+function rangeKey(range: DateRange): string {
+  const today = startOfDay(new Date())
+  if (!range.from && !range.to) return 'all'
+  const presets = [
+    ['7d', 6],
+    ['30d', 29],
+    ['90d', 89],
+    ['1y', 364],
+  ] as const
+  for (const [key, days] of presets) {
+    if (range.from && range.to && isSameDay(range.from, subDays(today, days)) && isSameDay(range.to, endOfDay(today))) return key
+  }
+  return 'custom'
+}
+
 function InlineSectionError({
   error,
   isOnline,
@@ -97,10 +137,7 @@ export default function Reports() {
     ? (rawTab as string)
     : 'overview'
 
-  const [dateRange, setDateRange] = useState<DateRange>(() => {
-    const today = startOfDay(new Date())
-    return { from: startOfDay(subDays(today, 29)), to: endOfDay(today) }
-  })
+  const [dateRange, setDateRange] = useState<DateRange>(() => parseDateRange(searchParams))
   const [hasInteracted, setHasInteracted] = useState(false)
 
   const importedCourses = useCourseImportStore(s => s.importedCourses)
@@ -187,14 +224,35 @@ export default function Reports() {
 
       {/* Date Range Filter */}
       <div className="mb-4">
-        <DateRangeFilter value={dateRange} onChange={setDateRange} />
+        <DateRangeFilter
+          value={dateRange}
+          onChange={nextRange => {
+            setDateRange(nextRange)
+            const nextParams = new URLSearchParams(searchParams)
+            nextParams.set('tab', activeTab)
+            const nextKey = rangeKey(nextRange)
+            nextParams.set('range', nextKey)
+            if (nextKey === 'custom') {
+              if (nextRange.from) nextParams.set('from', format(nextRange.from, 'yyyy-MM-dd'))
+              else nextParams.delete('from')
+              if (nextRange.to) nextParams.set('to', format(nextRange.to, 'yyyy-MM-dd'))
+              else nextParams.delete('to')
+            } else {
+              nextParams.delete('from')
+              nextParams.delete('to')
+            }
+            setSearchParams(nextParams, { replace: true })
+          }}
+        />
       </div>
 
       <Tabs
         value={activeTab}
         onValueChange={value => {
           setHasInteracted(true)
-          setSearchParams({ tab: value }, { replace: true })
+          const nextParams = new URLSearchParams(searchParams)
+          nextParams.set('tab', value)
+          setSearchParams(nextParams, { replace: true })
         }}
         className="mb-6"
       >
@@ -217,7 +275,7 @@ export default function Reports() {
         </TabsContent>
 
         <TabsContent value="ai" className="mt-6">
-          <AIAnalyticsTab />
+          <AIAnalyticsTab dateRange={dateRange} />
         </TabsContent>
 
         <TabsContent value="paths" className="mt-6">

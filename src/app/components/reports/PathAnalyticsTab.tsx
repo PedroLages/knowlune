@@ -8,7 +8,7 @@ import {
   ChartTooltipContent,
   type ChartConfig,
 } from '@/app/components/ui/chart'
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, LineChart, Line } from 'recharts'
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts'
 import { Skeleton } from '@/app/components/ui/skeleton'
 import { Button } from '@/app/components/ui/button'
 import { db } from '@/db'
@@ -26,9 +26,9 @@ const stackedBarConfig = {
   '75-100': { label: '75–100%', color: 'var(--chart-4)' },
 } satisfies ChartConfig
 
-const cumulativeHoursConfig = {
+const pathHoursConfig = {
   hours: {
-    label: 'Cumulative Hours',
+    label: 'Study hours',
     color: 'var(--brand)',
   },
 } satisfies ChartConfig
@@ -52,8 +52,8 @@ interface Props {
 
 /**
  * Learning Paths analytics tab for Reports.
- * Shows stacked bar chart (completion distribution), cumulative hours
- * line chart (filterable by date range), and a sortable stats table.
+ * Shows stacked bar chart (completion distribution), study hours by path,
+ * and a sortable stats table.
  */
 export function PathAnalyticsTab({ dateRange }: Props) {
   const { paths, entries, loadPaths } = useLearningPathStore()
@@ -69,9 +69,11 @@ export function PathAnalyticsTab({ dateRange }: Props) {
       .then(() => {
         if (!ignore) setIsLoading(false)
       })
-      .catch(() => {
-        if (!ignore) {
-          setError('Failed to load learning paths.')
+    .catch(error => {
+      console.error('[PathAnalyticsTab] Failed to load learning paths:', error)
+      toast.error('Could not load learning paths')
+      if (!ignore) {
+        setError('Failed to load learning paths.')
           setIsLoading(false)
         }
       })
@@ -182,7 +184,7 @@ export function PathAnalyticsTab({ dateRange }: Props) {
     return [buckets]
   }, [pathRows])
 
-  // ── Cumulative hours line chart data ──
+  // ── Study hours by path data ──
   const cumulativeHoursData = useMemo(() => {
     if (!dateRange.from && !dateRange.to) return []
     // Simplified: aggregate hours per path as single data points
@@ -293,7 +295,7 @@ export function PathAnalyticsTab({ dateRange }: Props) {
         </CardContent>
       </Card>
 
-      {/* Cumulative hours line chart (filterable by date range) */}
+      {/* Study hours by path (filterable by date range) */}
       <Card>
         <CardHeader>
           <CardTitle className="text-base flex items-center gap-2">
@@ -314,12 +316,12 @@ export function PathAnalyticsTab({ dateRange }: Props) {
             </p>
           ) : (
             <ChartContainer
-              config={cumulativeHoursConfig}
+              config={pathHoursConfig}
               className="h-[250px] w-full"
               aria-label="Line chart showing study hours per learning path"
               role="img"
             >
-              <LineChart data={cumulativeHoursData}>
+              <BarChart data={cumulativeHoursData}>
                 <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.3} />
                 <XAxis
                   dataKey="name"
@@ -332,15 +334,8 @@ export function PathAnalyticsTab({ dateRange }: Props) {
                 <ChartTooltip
                   content={<ChartTooltipContent labelFormatter={label => `${label}`} />}
                 />
-                <Line
-                  type="monotone"
-                  dataKey="hours"
-                  stroke="var(--color-hours)"
-                  strokeWidth={2}
-                  dot={{ r: 4 }}
-                  activeDot={{ r: 6 }}
-                />
-              </LineChart>
+                <Bar dataKey="hours" fill="var(--color-hours)" radius={[6, 6, 0, 0]} />
+              </BarChart>
             </ChartContainer>
           )}
         </CardContent>
