@@ -11,10 +11,17 @@ import { Badge } from '@/app/components/ui/badge'
 import { Button } from '@/app/components/ui/button'
 import type { ScoredTopic } from '@/stores/useKnowledgeMapStore'
 import type { SuggestedAction } from '@/lib/knowledgeScore'
+import type { ActionType } from '@/lib/actionSuggestions'
 import { tierBadgeClass, tierLabel } from '@/lib/knowledgeTierUtils'
 
 interface FocusAreasPanelProps {
   focusAreas: ScoredTopic[]
+}
+
+const ACTION_TYPE_BY_LABEL: Record<SuggestedAction, ActionType> = {
+  'Review Flashcards': 'flashcard-review',
+  'Retake Quiz': 'quiz-refresh',
+  'Rewatch Lesson': 'lesson-rewatch',
 }
 
 function formatDaysAgo(days: number): string {
@@ -31,21 +38,8 @@ export function FocusAreasPanel({ focusAreas }: FocusAreasPanelProps) {
   if (focusAreas.length === 0) return null
 
   function handleAction(topic: ScoredTopic, action: SuggestedAction) {
-    const courseId = topic.courseIds[0]
-
-    switch (action) {
-      case 'Review Flashcards':
-        void navigate(courseId ? `/courses/${courseId}/flashcards` : '/flashcards')
-        break
-      case 'Retake Quiz':
-        if (!courseId) return
-        void navigate(`/courses/${courseId}/quiz`)
-        break
-      case 'Rewatch Lesson':
-        if (!courseId) return
-        void navigate(`/courses/${courseId}`)
-        break
-    }
+    const target = topic.actionTargets?.[ACTION_TYPE_BY_LABEL[action]]
+    if (target) void navigate(target.route)
   }
 
   return (

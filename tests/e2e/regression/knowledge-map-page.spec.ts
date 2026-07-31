@@ -22,7 +22,7 @@ const TEST_COURSE = {
   name: 'Introduction to TypeScript',
   importedAt: '2026-01-01T00:00:00.000Z',
   category: 'Programming',
-  tags: ['typescript', 'programming'],
+  tags: ['typescript'],
   status: 'active',
   videoCount: 1,
   pdfCount: 0,
@@ -56,16 +56,17 @@ const TEST_CONTENT_PROGRESS = {
   id: 'km-page-progress-1',
   courseId: 'km-page-course-1',
   itemId: 'km-page-lesson-1',
-  completed: true,
-  completedAt: '2026-01-01T00:00:00.000Z',
+  status: 'in-progress',
+  progressPct: 20,
+  updatedAt: '2026-01-01T00:00:00.000Z',
 }
 
 /** Minimal QuizAttempt record for the test quiz */
 const TEST_QUIZ_ATTEMPT = {
   id: 'km-page-attempt-1',
   quizId: 'km-page-quiz-1',
-  answers: [0],
-  score: 85,
+  answers: [{ questionId: 'q1', selectedIndex: 1, isCorrect: false }],
+  score: 0,
   completedAt: '2026-01-01T00:00:00.000Z',
   durationSeconds: 60,
 }

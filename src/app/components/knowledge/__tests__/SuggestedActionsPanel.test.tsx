@@ -35,7 +35,7 @@ function makeSuggestion(
     trend: 'stable',
     actionType,
     actionLabel: `Take a refresher quiz on Topic ${index}`,
-    actionRoute: `/quiz?topic=topic-${index}`,
+    actionRoute: `/courses/course-${index}/lessons/lesson-${index}/quiz`,
     estimatedMinutes: 10,
     urgencyScore: 47,
   }

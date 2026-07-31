@@ -16,10 +16,18 @@ import { Progress } from '@/app/components/ui/progress'
 import { formatDecayLabel } from '@/lib/decayFormatting'
 import type { ScoredTopic } from '@/stores/useKnowledgeMapStore'
 import type { SuggestedAction, ConfidenceLevel } from '@/lib/knowledgeScore'
+import type { ActionType } from '@/lib/actionSuggestions'
 
 interface TopicDetailPanelProps {
   topic: ScoredTopic
   onClose: () => void
+  embedded?: boolean
+}
+
+const ACTION_TYPE_BY_LABEL: Record<SuggestedAction, ActionType> = {
+  'Review Flashcards': 'flashcard-review',
+  'Retake Quiz': 'quiz-refresh',
+  'Rewatch Lesson': 'lesson-rewatch',
 }
 
 function formatDaysAgo(days: number): string {
@@ -72,37 +80,33 @@ function colorClassToBadgeVariant(
   return 'outline'
 }
 
-export function TopicDetailPanel({ topic, onClose }: TopicDetailPanelProps) {
+export function TopicDetailPanel({ topic, onClose, embedded = false }: TopicDetailPanelProps) {
   const navigate = useNavigate()
   const titleId = useId()
-  const { scoreResult, daysSinceLastEngagement, suggestedActions } = topic
+  const { scoreResult, daysSinceLastEngagement } = topic
   const { score, tier, factors, effectiveWeights, confidence } = scoreResult
 
   const decayInfo =
     topic.aggregateRetention !== null ? formatDecayLabel(topic.predictedDecayDate) : null
 
   function handleAction(action: SuggestedAction) {
-    const courseId = topic.courseIds[0]
-
-    switch (action) {
-      case 'Review Flashcards':
-        void navigate(courseId ? `/courses/${courseId}/flashcards` : '/flashcards')
-        break
-      case 'Retake Quiz':
-        if (!courseId) return
-        void navigate(`/courses/${courseId}/quiz`)
-        break
-      case 'Rewatch Lesson':
-        if (!courseId) return
-        void navigate(`/courses/${courseId}`)
-        break
-    }
+    const target = topic.actionTargets?.[ACTION_TYPE_BY_LABEL[action]]
+    if (!target) return
+    void navigate(target.route)
     onClose()
   }
 
+  const actionTargets = topic.suggestedActions.filter(
+    action => topic.actionTargets?.[ACTION_TYPE_BY_LABEL[action]]
+  )
+
   return (
     <div
-      className="absolute inset-y-0 right-0 z-10 flex w-full flex-col border-l border-border bg-background shadow-2xl motion-safe:animate-in motion-safe:slide-in-from-right motion-safe:duration-300 sm:w-96"
+      className={
+        embedded
+          ? 'flex min-h-0 w-full flex-1 flex-col bg-background'
+          : 'absolute inset-y-0 right-0 z-10 flex w-full flex-col border-l border-border bg-background shadow-2xl motion-safe:animate-in motion-safe:slide-in-from-right motion-safe:duration-300 sm:w-96'
+      }
       data-testid="topic-detail-panel"
       role="region"
       aria-labelledby={titleId}
@@ -212,13 +216,13 @@ export function TopicDetailPanel({ topic, onClose }: TopicDetailPanelProps) {
         </div>
 
         {/* Action buttons */}
-        {suggestedActions.length > 0 && (
+        {actionTargets.length > 0 && (
           <div>
             <span className="text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-3 block">
               Recommended Actions
             </span>
             <div className="flex flex-col gap-2">
-              {suggestedActions.map((action, i) => (
+              {actionTargets.map((action, i) => (
                 <Button
                   key={action}
                   variant={i === 0 ? 'brand' : 'outline'}

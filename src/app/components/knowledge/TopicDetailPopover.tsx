@@ -16,12 +16,19 @@ import { Progress } from '@/app/components/ui/progress'
 import { tierBadgeClass, tierLabel } from '@/lib/knowledgeTierUtils'
 import type { ScoredTopic } from '@/stores/useKnowledgeMapStore'
 import type { SuggestedAction, ConfidenceLevel } from '@/lib/knowledgeScore'
+import type { ActionType } from '@/lib/actionSuggestions'
 
 interface TopicDetailPopoverProps {
   topic: ScoredTopic
   open: boolean
   onOpenChange: (open: boolean) => void
   children: React.ReactNode
+}
+
+const ACTION_TYPE_BY_LABEL: Record<SuggestedAction, ActionType> = {
+  'Review Flashcards': 'flashcard-review',
+  'Retake Quiz': 'quiz-refresh',
+  'Rewatch Lesson': 'lesson-rewatch',
 }
 
 function formatDaysAgo(days: number): string {
@@ -122,23 +129,15 @@ export function TopicDetailPopover({
   const { factors, effectiveWeights, confidence } = scoreResult
 
   function handleAction(action: SuggestedAction) {
-    const courseId = topic.courseIds[0]
-
-    switch (action) {
-      case 'Review Flashcards':
-        void navigate(courseId ? `/courses/${courseId}/flashcards` : '/flashcards')
-        break
-      case 'Retake Quiz':
-        if (!courseId) return
-        void navigate(`/courses/${courseId}/quiz`)
-        break
-      case 'Rewatch Lesson':
-        if (!courseId) return
-        void navigate(`/courses/${courseId}`)
-        break
-    }
+    const target = topic.actionTargets?.[ACTION_TYPE_BY_LABEL[action]]
+    if (!target) return
+    void navigate(target.route)
     onOpenChange(false)
   }
+
+  const actionTargets = suggestedActions.filter(
+    action => topic.actionTargets?.[ACTION_TYPE_BY_LABEL[action]]
+  )
 
   return (
     <Popover open={open} onOpenChange={onOpenChange}>
@@ -204,9 +203,9 @@ export function TopicDetailPopover({
         </div>
 
         {/* Action buttons */}
-        {suggestedActions.length > 0 && (
+        {actionTargets.length > 0 && (
           <div className="flex flex-wrap gap-2">
-            {suggestedActions.map((action, i) => (
+            {actionTargets.map((action, i) => (
               <Button
                 key={action}
                 variant={i === 0 ? 'brand-outline' : 'outline'}

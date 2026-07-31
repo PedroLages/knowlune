@@ -12,7 +12,6 @@ import type { ScoredTopic } from '@/stores/useKnowledgeMapStore'
 import { TopicTreemap } from '@/app/components/knowledge/TopicTreemap'
 import type { TreemapDataItem } from '@/app/components/knowledge/TopicTreemap'
 import { SuggestedActionsPanel } from '@/app/components/knowledge/SuggestedActionsPanel'
-import { TopicDetailPopover } from '@/app/components/knowledge/TopicDetailPopover'
 import { TopicDetailPanel } from '@/app/components/knowledge/TopicDetailPanel'
 import { KnowledgeMapSummary } from '@/app/components/knowledge/KnowledgeMapSummary'
 import { PriorityTopicsCard } from '@/app/components/knowledge/PriorityTopicsCard'
@@ -30,6 +29,7 @@ import { tierBadgeClass, tierLabel } from '@/lib/knowledgeTierUtils'
 import { useIsMobile } from '@/app/hooks/useMediaQuery'
 import { EmptyState } from '@/app/components/EmptyState'
 import { Brain } from 'lucide-react'
+import { Sheet, SheetContent, SheetDescription, SheetTitle } from '@/app/components/ui/sheet'
 
 const ALL_CATEGORIES = 'All Categories'
 
@@ -41,6 +41,8 @@ export function KnowledgeMap() {
   const isLoading = useKnowledgeMapStore(state => state.isLoading)
   const error = useKnowledgeMapStore(state => state.error)
   const computeScores = useKnowledgeMapStore(state => state.computeScores)
+  const invalidateCache = useKnowledgeMapStore(state => state.invalidateCache)
+  const sourceCourseCount = useKnowledgeMapStore(state => state.sourceCourseCount)
   const [selectedCategory, setSelectedCategory] = useState(ALL_CATEGORIES)
   const [selectedTopicId, setSelectedTopicId] = useState<string | null>(null)
   const isMobile = useIsMobile()
@@ -98,6 +100,11 @@ export function KnowledgeMap() {
     setSelectedTopicId(null)
   }, [])
 
+  const handleRetry = useCallback(() => {
+    invalidateCache()
+    void computeScores()
+  }, [computeScores, invalidateCache])
+
   if (isLoading) {
     return (
       <div
@@ -120,7 +127,13 @@ export function KnowledgeMap() {
   if (error) {
     return (
       <div className="p-1">
-        <EmptyState icon={Brain} title="Unable to load Knowledge Map" description={error} />
+        <EmptyState
+          icon={Brain}
+          title="Unable to load Knowledge Map"
+          description={error}
+          actionLabel="Try again"
+          onAction={handleRetry}
+        />
       </div>
     )
   }
@@ -130,8 +143,14 @@ export function KnowledgeMap() {
       <div className="p-1">
         <EmptyState
           icon={Brain}
-          title="No knowledge data yet"
-          description="Complete some course lessons, quizzes, or flashcard reviews to build your knowledge map."
+          title={sourceCourseCount > 0 ? 'Add topics to your courses' : 'No knowledge data yet'}
+          description={
+            sourceCourseCount > 0
+              ? 'Add course tags or complete quizzes with topic labels to unlock a more useful map.'
+              : 'Import a course, then complete lessons, quizzes, or flashcard reviews to build your knowledge map.'
+          }
+          actionLabel={sourceCourseCount > 0 ? 'Browse courses' : 'Import a course'}
+          actionHref="/courses"
         />
       </div>
     )
@@ -187,6 +206,8 @@ export function KnowledgeMap() {
           {isMobile ? (
             <MobileTopicList
               topics={filteredTopics}
+              onSelect={handleCellClick}
+              selectedTopicId={selectedTopicId}
               categories={categories
                 .filter(c => selectedCategory === ALL_CATEGORIES || c.category === selectedCategory)
                 .map(c => c.category)}
@@ -206,12 +227,6 @@ export function KnowledgeMap() {
               </div>
               <div className="relative p-4">
                 <TopicTreemap data={treemapData} onCellClick={handleCellClick} />
-                {selectedTopic && (
-                  <TopicDetailPanel
-                    topic={selectedTopic}
-                    onClose={() => setSelectedTopicId(null)}
-                  />
-                )}
               </div>
             </Card>
           )}
@@ -229,6 +244,35 @@ export function KnowledgeMap() {
           />
         </aside>
       </div>
+
+      {selectedTopic && (
+        <Sheet
+          open={Boolean(selectedTopic)}
+          onOpenChange={open => {
+            if (!open) setSelectedTopicId(null)
+          }}
+        >
+          <SheetContent
+            side={isMobile ? 'bottom' : 'right'}
+            showCloseButton={false}
+            className={
+              isMobile
+                ? 'h-[min(42rem,85dvh)] w-full max-w-none rounded-t-2xl p-0'
+                : 'w-full p-0 sm:max-w-md'
+            }
+          >
+            <SheetTitle className="sr-only">{selectedTopic.name} topic details</SheetTitle>
+            <SheetDescription className="sr-only">
+              Knowledge score breakdown and recommended actions for {selectedTopic.name}.
+            </SheetDescription>
+            <TopicDetailPanel
+              topic={selectedTopic}
+              embedded
+              onClose={() => setSelectedTopicId(null)}
+            />
+          </SheetContent>
+        </Sheet>
+      )}
     </div>
   )
 }
@@ -236,7 +280,17 @@ export function KnowledgeMap() {
 /**
  * Mobile fallback: sorted topic list with accordion groups by category.
  */
-function MobileTopicList({ topics, categories }: { topics: ScoredTopic[]; categories: string[] }) {
+function MobileTopicList({
+  topics,
+  categories,
+  onSelect,
+  selectedTopicId,
+}: {
+  topics: ScoredTopic[]
+  categories: string[]
+  onSelect: (canonicalName: string) => void
+  selectedTopicId: string | null
+}) {
   // Group topics by category, sorted worst-first within each category
   const grouped = categories
     .map(cat => ({
@@ -266,7 +320,12 @@ function MobileTopicList({ topics, categories }: { topics: ScoredTopic[]; catego
           <AccordionContent>
             <div className="space-y-2">
               {group.topics.map(topic => (
-                <MobileTopicCard key={topic.canonicalName} topic={topic} />
+                <MobileTopicCard
+                  key={topic.canonicalName}
+                  topic={topic}
+                  onSelect={onSelect}
+                  selected={selectedTopicId === topic.canonicalName}
+                />
               ))}
             </div>
           </AccordionContent>
@@ -276,35 +335,42 @@ function MobileTopicList({ topics, categories }: { topics: ScoredTopic[]; catego
   )
 }
 
-function MobileTopicCard({ topic }: { topic: ScoredTopic }) {
-  const [expanded, setExpanded] = useState(false)
-
+function MobileTopicCard({
+  topic,
+  onSelect,
+  selected,
+}: {
+  topic: ScoredTopic
+  onSelect: (canonicalName: string) => void
+  selected: boolean
+}) {
   return (
-    <TopicDetailPopover topic={topic} open={expanded} onOpenChange={setExpanded}>
-      <Card
-        className="p-3 cursor-pointer hover:bg-accent/50 transition-colors"
-        role="button"
-        tabIndex={0}
-        aria-label={`Topic: ${topic.name}, knowledge score: ${topic.scoreResult.score} percent, status: ${tierLabel(topic.scoreResult.tier)}`}
-        onKeyDown={e => {
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault()
-            setExpanded(true)
-          }
-        }}
-      >
-        <div className="flex items-center justify-between gap-2">
-          <span className="text-sm font-medium truncate">{topic.name}</span>
-          <Badge className={tierBadgeClass(topic.scoreResult.tier)}>
-            {topic.scoreResult.score}% {tierLabel(topic.scoreResult.tier)}
-          </Badge>
-        </div>
-        <Progress
-          value={topic.scoreResult.score}
-          className="mt-2 h-1.5"
-          aria-label={`${topic.name} score: ${topic.scoreResult.score}%`}
-        />
-      </Card>
-    </TopicDetailPopover>
+    <Card
+      className="cursor-pointer p-3 transition-colors hover:bg-accent/50"
+      role="button"
+      tabIndex={0}
+      aria-haspopup="dialog"
+      aria-expanded={selected}
+      aria-label={`Topic: ${topic.name}, knowledge score: ${topic.scoreResult.score} percent, status: ${tierLabel(topic.scoreResult.tier)}`}
+      onClick={() => onSelect(topic.canonicalName)}
+      onKeyDown={e => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          onSelect(topic.canonicalName)
+        }
+      }}
+    >
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-sm font-medium truncate">{topic.name}</span>
+        <Badge className={tierBadgeClass(topic.scoreResult.tier)}>
+          {topic.scoreResult.score}% {tierLabel(topic.scoreResult.tier)}
+        </Badge>
+      </div>
+      <Progress
+        value={topic.scoreResult.score}
+        className="mt-2 h-1.5"
+        aria-label={`${topic.name} score: ${topic.scoreResult.score}%`}
+      />
+    </Card>
   )
 }

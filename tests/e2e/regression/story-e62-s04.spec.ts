@@ -2,12 +2,12 @@
  * E62-S04: E2E Tests for Knowledge Map FSRS Integration
  *
  * Validates retention gradient treemap cells, decay prediction tooltips,
- * Memory Decay section in TopicDetailPopover, and dark mode rendering.
+ * Memory Decay section in the topic detail sheet, and dark mode rendering.
  *
  * Seed data uses FSRS flashcards with known stability values so retention
  * gradient and decay labels are deterministic.
  */
-import { test, expect } from '@playwright/test'
+import { test, expect } from '../../support/fixtures'
 import { dismissOnboarding } from '../../helpers/dismiss-onboarding'
 import {
   seedImportedCourses,
@@ -299,7 +299,7 @@ test.describe('E62-S04: Knowledge Map FSRS Integration', () => {
     await expect(tooltip).toContainText(/[Ss]table/)
   })
 
-  test('AC-4: TopicDetailPopover shows Memory Decay section for topic with FSRS data', async ({
+  test('AC-4: topic detail shows Memory Decay section for topic with FSRS data', async ({
     page,
   }) => {
     await seedAllData(page)
@@ -310,25 +310,25 @@ test.describe('E62-S04: Knowledge Map FSRS Integration', () => {
     await expect(highRetCell).toBeVisible({ timeout: POPOVER_TIMEOUT })
     await highRetCell.click()
 
-    // Popover should appear with Memory Decay section
-    const popover = page.getByTestId('topic-detail-popover')
-    await expect(popover).toBeVisible()
+    // Topic detail sheet should appear with Memory Decay section
+    const detail = page.getByTestId('topic-detail-panel')
+    await expect(detail).toBeVisible()
 
     // Memory Decay label should be present
-    await expect(popover.getByText('Memory Decay')).toBeVisible()
+    await expect(detail.getByText('Memory Decay')).toBeVisible()
 
     // Retention percentage text should be visible (the "NN%" span next to the progress bar)
     // The progress bar has aria-label="Retention: NN%" — verify it exists in the DOM
-    const retentionBar = popover.locator('[aria-label^="Retention:"]')
+    const retentionBar = detail.locator('[aria-label^="Retention:"]')
     await expect(retentionBar).toHaveCount(1)
     const ariaLabel = await retentionBar.getAttribute('aria-label')
     expect(ariaLabel).toMatch(/Retention: \d+%/)
 
     // Decay date text should be present — either a date string or "days" from decay prediction
-    await expect(popover).toContainText(/\d{1,2}|\bdays\b/i)
+    await expect(detail).toContainText(/\d{1,2}|\bdays\b/i)
   })
 
-  test('AC-5: TopicDetailPopover does NOT show Memory Decay for topic without flashcards', async ({
+  test('AC-5: topic detail does NOT show Memory Decay for topic without flashcards', async ({
     page,
   }) => {
     await seedAllData(page)
@@ -339,12 +339,16 @@ test.describe('E62-S04: Knowledge Map FSRS Integration', () => {
     await expect(noFcCell).toBeVisible({ timeout: POPOVER_TIMEOUT })
     await noFcCell.click()
 
-    // Popover should appear
-    const popover = page.getByTestId('topic-detail-popover')
-    await expect(popover).toBeVisible()
+    // Topic detail sheet should appear
+    const detail = page.getByTestId('topic-detail-panel')
+    await expect(detail).toBeVisible()
 
     // Memory Decay section should NOT be present
-    await expect(popover.getByText('Memory Decay')).not.toBeVisible()
+    await expect(detail.getByText('Memory Decay')).not.toBeVisible()
+
+    // Close the detail sheet before hovering the underlying treemap cell.
+    await detail.getByRole('button', { name: 'Close topic detail' }).click()
+    await expect(detail).not.toBeVisible()
 
     // Hovering over a no-FC cell should not show retention status labels in a tooltip
     await noFcCell.hover()
@@ -361,7 +365,15 @@ test.describe('E62-S04: Knowledge Map FSRS Integration', () => {
     // Collect console errors
     const consoleErrors: string[] = []
     page.on('console', msg => {
-      if (msg.type() === 'error') consoleErrors.push(msg.text())
+      // The test server intentionally has no sync-beacon API route; ignore its
+      // expected 404 while still failing on application/runtime console errors.
+      if (
+        msg.type() === 'error' &&
+        msg.text() !==
+          'Failed to load resource: the server responded with a status of 404 (Not Found)'
+      ) {
+        consoleErrors.push(msg.text())
+      }
     })
 
     // Enable dark mode via localStorage — the goto('/knowledge-map') below will pick

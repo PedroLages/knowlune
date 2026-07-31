@@ -5,7 +5,7 @@
  * Validates panel visibility, action card rendering, CTA navigation,
  * empty state, and responsive layout.
  */
-import { test, expect } from '@playwright/test'
+import { test, expect } from '../support/fixtures'
 import { dismissOnboarding } from '../helpers/dismiss-onboarding'
 import {
   seedImportedCourses,
