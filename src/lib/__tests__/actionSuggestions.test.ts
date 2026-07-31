@@ -4,6 +4,8 @@ import {
   calculateUrgencyScore,
   fsrsDecayFactor,
   recencyDecayFactor,
+  type ActionType,
+  type TopicActionTarget,
   type TopicWithScore,
 } from '@/lib/actionSuggestions'
 
@@ -14,7 +16,7 @@ void FIXED_DATE // Referenced for pattern compliance; pure functions don't use d
 // ── Test Helpers ────────────────────────────────────────────────
 
 function makeTopic(overrides: Partial<TopicWithScore> = {}): TopicWithScore {
-  return {
+  const topic: TopicWithScore = {
     topicName: 'Linear Algebra',
     canonicalName: 'linear-algebra',
     score: 50,
@@ -26,6 +28,43 @@ function makeTopic(overrides: Partial<TopicWithScore> = {}): TopicWithScore {
     lessons: [],
     ...overrides,
   }
+
+  const actionTargets: Partial<Record<ActionType, TopicActionTarget>> = {
+    ...(topic.hasFlashcards
+      ? {
+          'flashcard-review': {
+            actionType: 'flashcard-review' as const,
+            route: `/courses/course-${topic.canonicalName}/flashcards`,
+            label: `Review 5 flashcards on ${topic.topicName}`,
+            estimatedMinutes: 5,
+          },
+        }
+      : {}),
+    ...(topic.hasQuizzes
+      ? {
+          'quiz-refresh': {
+            actionType: 'quiz-refresh' as const,
+            route: `/courses/course-${topic.canonicalName}/lessons/lesson-${topic.canonicalName}/quiz`,
+            label: `Take a refresher quiz on ${topic.topicName}`,
+            estimatedMinutes: 10,
+          },
+        }
+      : {}),
+  }
+  if (topic.lessons.length > 0) {
+    const lesson = [...topic.lessons].sort(
+      (a, b) => a.completionPct - b.completionPct || a.lessonId.localeCompare(b.lessonId)
+    )[0]
+    actionTargets['lesson-rewatch'] = {
+      actionType: 'lesson-rewatch',
+      route: `/courses/${lesson.courseId}/lessons/${lesson.lessonId}`,
+      label: `Rewatch ${lesson.title}`,
+      estimatedMinutes: lesson.durationMinutes ?? 15,
+      lessonTitle: lesson.title,
+    }
+  }
+
+  return { ...topic, actionTargets: overrides.actionTargets ?? actionTargets }
 }
 
 // ── AC 1: Weak topic with flashcard data → flashcard-review ─────
@@ -46,7 +85,7 @@ describe('generateActionSuggestions', () => {
     expect(result[0]).toMatchObject({
       actionType: 'flashcard-review',
       actionLabel: 'Review 5 flashcards on Calculus',
-      actionRoute: '/flashcards?topic=calculus',
+      actionRoute: '/courses/course-calculus/flashcards',
       estimatedMinutes: 5,
     })
   })
@@ -68,7 +107,7 @@ describe('generateActionSuggestions', () => {
     expect(result[0]).toMatchObject({
       actionType: 'quiz-refresh',
       actionLabel: 'Take a refresher quiz on Organic Chemistry',
-      actionRoute: '/quiz?topic=organic-chemistry',
+      actionRoute: '/courses/course-organic-chemistry/lessons/lesson-organic-chemistry/quiz',
       estimatedMinutes: 10,
     })
   })

@@ -30,7 +30,7 @@ function makeFlashcardSuggestion(overrides: Partial<ActionSuggestion> = {}): Act
     trend: 'declining',
     actionType: 'flashcard-review',
     actionLabel: 'Review 5 flashcards on JavaScript Closures',
-    actionRoute: '/flashcards?topic=javascript-closures',
+    actionRoute: '/courses/course-js/flashcards',
     estimatedMinutes: 5,
     urgencyScore: 79,
     ...overrides,
@@ -45,7 +45,7 @@ function makeQuizSuggestion(overrides: Partial<ActionSuggestion> = {}): ActionSu
     trend: 'stable',
     actionType: 'quiz-refresh',
     actionLabel: 'Take a refresher quiz on Async/Await',
-    actionRoute: '/quiz?topic=async-await',
+    actionRoute: '/courses/course-js/lessons/lesson-async-await/quiz',
     estimatedMinutes: 10,
     urgencyScore: 47,
     ...overrides,
@@ -96,7 +96,7 @@ describe('ActionCard — flashcard-review (GAP-01)', () => {
   it('links CTA to the flashcard action route', () => {
     render(<ActionCard suggestion={makeFlashcardSuggestion()} />)
     const link = screen.getByRole('link', { name: 'Start Review' })
-    expect(link).toHaveAttribute('href', '/flashcards?topic=javascript-closures')
+    expect(link).toHaveAttribute('href', '/courses/course-js/flashcards')
   })
 
   it('renders article with role="listitem"', () => {

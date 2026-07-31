@@ -131,11 +131,10 @@ describe('resolveTopics', () => {
     const courses = [makeCourse('c1', 'Psychology', ['Body Language', 'Deception Detection'])]
     const result = resolveTopics(courses)
 
-    expect(result).toHaveLength(3) // 2 tags + 1 category
+    expect(result).toHaveLength(2) // Categories group topics; they are not duplicated as tiles
     const names = result.map(t => t.canonicalName)
     expect(names).toContain('nonverbal communication') // body language → canonical
     expect(names).toContain('deception detection')
-    expect(names).toContain('psychology')
   })
 
   it('merges synonyms into a single canonical topic', () => {
@@ -222,6 +221,14 @@ describe('resolveTopics', () => {
     // Only the category itself should appear
     expect(result).toHaveLength(1)
     expect(result[0].canonicalName).toBe('psychology')
+  })
+
+  it('uses the course category only when no topic metadata exists', () => {
+    const tagged = resolveTopics([makeCourse('c1', 'Psychology', ['negotiation'])])
+    expect(tagged.map(topic => topic.canonicalName)).toEqual(['negotiation'])
+
+    const untagged = resolveTopics([makeCourse('c2', 'Psychology', [])])
+    expect(untagged.map(topic => topic.canonicalName)).toEqual(['psychology'])
   })
 
   it('handles courses with no quizzes', () => {
