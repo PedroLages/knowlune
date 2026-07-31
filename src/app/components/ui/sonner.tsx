@@ -18,24 +18,26 @@ const Toaster = ({ style, ...props }: ToasterProps) => {
       richColors={true}
       closeButton={true}
       duration={4000}
-      style={{
-        '--normal-bg': 'var(--popover)',
-        '--normal-text': 'var(--popover-foreground)',
-        '--normal-border': 'var(--border)',
-        '--success-bg': 'var(--success-soft)',
-        '--success-text': 'var(--success)',
-        '--success-border': 'var(--success)',
-        '--error-bg': 'var(--destructive-foreground)',
-        '--error-text': 'var(--destructive)',
-        '--error-border': 'var(--destructive)',
-        '--warning-bg': 'var(--warning-foreground)',
-        '--warning-text': 'var(--warning)',
-        '--warning-border': 'var(--warning)',
-        '--info-bg': 'var(--brand-soft)',
-        '--info-text': 'var(--info)',
-        '--info-border': 'var(--info)',
-        ...style,
-      } as React.CSSProperties}
+      style={
+        {
+          '--normal-bg': 'var(--popover)',
+          '--normal-text': 'var(--popover-foreground)',
+          '--normal-border': 'var(--border)',
+          '--success-bg': 'var(--success-soft)',
+          '--success-text': 'var(--success)',
+          '--success-border': 'var(--success)',
+          '--error-bg': 'var(--destructive-foreground)',
+          '--error-text': 'var(--destructive)',
+          '--error-border': 'var(--destructive)',
+          '--warning-bg': 'var(--warning-foreground)',
+          '--warning-text': 'var(--warning)',
+          '--warning-border': 'var(--warning)',
+          '--info-bg': 'var(--brand-soft)',
+          '--info-text': 'var(--info)',
+          '--info-border': 'var(--info)',
+          ...style,
+        } as React.CSSProperties
+      }
       {...props}
     />
   )
