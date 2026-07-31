@@ -6,6 +6,7 @@
  * Falls back to discrete tier coloring when aggregateRetention is null.
  */
 
+import { useMemo } from 'react'
 import { Treemap, ResponsiveContainer } from 'recharts'
 import type { KnowledgeTier } from '@/lib/knowledgeScore'
 import { formatDecayLabel } from '@/lib/decayFormatting'
@@ -13,6 +14,10 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/app/components/ui/too
 
 export interface TreemapDataItem {
   name: string
+  /** Stable topic identifier used for selection when display names collide. */
+  canonicalName?: string
+  /** Optional category context shown to assistive technology and in the tooltip. */
+  category?: string
   size: number
   score: number
   tier: KnowledgeTier
@@ -33,8 +38,8 @@ export interface TreemapCategoryData {
 interface TopicTreemapProps {
   /** Flat or nested data. Nested data renders category wrappers around topic cells. */
   data: TreemapDataItem[] | TreemapCategoryData[]
-  /** Called when a topic cell (depth=2) is clicked with the cell name */
-  onCellClick?: (name: string) => void
+  /** Called when a topic cell is clicked with its stable identifier. */
+  onCellClick?: (canonicalName: string) => void
 }
 
 /** Map tier to CSS variable color values */
@@ -221,32 +226,39 @@ function CustomCell(props: Record<string, unknown>) {
     y,
     width,
     height,
-    depth,
     name,
     score,
     tier,
     aggregateRetention,
     predictedDecayDate,
     onCellClick,
+    canonicalName,
+    category,
+    children,
   } = props as {
     x: number
     y: number
     width: number
     height: number
-    depth: number
     name: string
     score: number
     tier: KnowledgeTier
     aggregateRetention: number | null
     predictedDecayDate: string | null
-    onCellClick?: (name: string) => void
+    onCellClick?: (canonicalName: string) => void
+    canonicalName?: string
+    category?: string
+    children?: TreemapDataItem[]
   }
 
   // Guard: Recharts passes root/parent nodes with undefined name — skip rendering them
   if (!name) return <g />
 
-  // ── Category wrapper (depth=1) ──────────────────────────────────────────
-  if (depth === 1) {
+  // Recharts places flat topic data at depth=1 too. Detect group nodes by
+  // their children instead of depth so filtered maps remain interactive.
+  const isCategoryGroup = Array.isArray(children) && children.length > 0
+
+  if (isCategoryGroup) {
     const showCategoryLabel = width > 80 && height > 30
 
     return (
@@ -290,17 +302,19 @@ function CustomCell(props: Record<string, unknown>) {
   const showLabel = width > 60 && height > 30
   const showScore = width > 40 && height > 45
   const decayInfo = formatDecayLabel(predictedDecayDate)
+  const topicId = canonicalName ?? name
+  const categoryLabel = category ? `, category: ${category}` : ''
 
   const cellContent = (
     <g
       role="button"
       tabIndex={0}
-      aria-label={`Topic: ${name}, knowledge score: ${score} percent, status: ${tier}${decayInfo ? `, ${decayInfo.label}` : ''}`}
-      onClick={() => onCellClick?.(name)}
+      aria-label={`Topic: ${name}${categoryLabel}, knowledge score: ${score} percent, status: ${tier}${decayInfo ? `, ${decayInfo.label}` : ''}`}
+      onClick={() => onCellClick?.(topicId)}
       onKeyDown={e => {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault()
-          onCellClick?.(name)
+          onCellClick?.(topicId)
         }
       }}
       className="group"
@@ -381,6 +395,7 @@ function CustomCell(props: Record<string, unknown>) {
               — {score}% ({tier})
             </span>
           </div>
+          {category && <div className="text-xs text-muted-foreground">{category}</div>}
           {decayInfo && <div className={`text-xs ${decayInfo.colorClass}`}>{decayInfo.label}</div>}
         </div>
       </TooltipContent>
@@ -392,7 +407,7 @@ function CustomCell(props: Record<string, unknown>) {
 function TreemapLegend() {
   return (
     <div
-      className="absolute bottom-3 right-3 flex items-center gap-3 rounded-lg border border-border bg-background/80 backdrop-blur-sm px-3 py-2 shadow-sm text-xs"
+      className="flex flex-wrap items-center justify-end gap-x-4 gap-y-2 pt-3 text-xs"
       aria-label="Knowledge tier color legend"
     >
       <div className="flex items-center gap-1.5">
@@ -421,28 +436,39 @@ function TreemapLegend() {
 }
 
 export function TopicTreemap({ data, onCellClick }: TopicTreemapProps) {
+  // Recharts compares data by reference and restarts its transition whenever
+  // that reference changes. Keep the enriched data stable between real updates.
+  const enrichedData = useMemo(
+    () =>
+      data.map(item => {
+        const base = { ...item, onCellClick }
+        if ('children' in base && Array.isArray(base.children)) {
+          base.children = base.children.map(child => ({ ...child, onCellClick }))
+        }
+        return base
+      }),
+    [data, onCellClick]
+  )
+
   if (data.length === 0) return null
 
-  // Inject onCellClick into every data item, including nested children
-  const enrichedData = data.map(item => {
-    const base = { ...item, onCellClick }
-    if ('children' in base && Array.isArray(base.children)) {
-      base.children = base.children.map(child => ({ ...child, onCellClick }))
-    }
-    return base
-  })
-
   return (
-    <div className="relative">
-      <ResponsiveContainer width="100%" minHeight={200} aspect={16 / 9}>
-        <Treemap
-          data={enrichedData}
-          dataKey="size"
-          aspectRatio={4 / 3}
-          stroke="var(--border)"
-          content={<CustomCell />}
-        />
-      </ResponsiveContainer>
+    <div className="relative" data-treemap-container>
+      <div className="h-[clamp(22rem,52vh,34rem)] min-h-[22rem] w-full">
+        <ResponsiveContainer width="100%" height="100%" minWidth={0} debounce={80}>
+          <Treemap
+            data={enrichedData}
+            dataKey="size"
+            aspectRatio={4 / 3}
+            nodeInset={4}
+            nodeGap={3}
+            stroke="var(--border)"
+            content={<CustomCell />}
+            isAnimationActive={false}
+            isUpdateAnimationActive={false}
+          />
+        </ResponsiveContainer>
+      </div>
       <TreemapLegend />
     </div>
   )
