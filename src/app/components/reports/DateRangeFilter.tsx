@@ -74,7 +74,10 @@ export function DateRangeFilter({ value, onChange }: DateRangeFilterProps) {
   const rangeError = value.from && value.to && value.from > value.to
 
   return (
-    <div className="flex flex-wrap items-center gap-3" aria-describedby={rangeError ? 'date-range-error' : undefined}>
+    <div
+      className="flex flex-wrap items-center gap-3"
+      aria-describedby={rangeError ? 'date-range-error' : undefined}
+    >
       <CalendarDays className="size-4 text-muted-foreground shrink-0" aria-hidden="true" />
       <div role="group" aria-label="Date range presets" className="flex gap-1">
         {PRESETS.map(preset => (

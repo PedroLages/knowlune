@@ -116,7 +116,8 @@ function buildChartData(events: AIUsageEvent[], period: TimePeriod) {
 
 function buildRangeStats(events: AIUsageEvent[], period: TimePeriod): AIUsageStats {
   const counts = new Map<AIFeatureType, number>()
-  for (const event of events) counts.set(event.featureType, (counts.get(event.featureType) ?? 0) + 1)
+  for (const event of events)
+    counts.set(event.featureType, (counts.get(event.featureType) ?? 0) + 1)
   return {
     period,
     totalEvents: events.length,

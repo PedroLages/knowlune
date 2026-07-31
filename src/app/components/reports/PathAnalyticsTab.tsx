@@ -69,11 +69,11 @@ export function PathAnalyticsTab({ dateRange }: Props) {
       .then(() => {
         if (!ignore) setIsLoading(false)
       })
-    .catch(error => {
-      console.error('[PathAnalyticsTab] Failed to load learning paths:', error)
-      toast.error('Could not load learning paths')
-      if (!ignore) {
-        setError('Failed to load learning paths.')
+      .catch(error => {
+        console.error('[PathAnalyticsTab] Failed to load learning paths:', error)
+        toast.error('Could not load learning paths')
+        if (!ignore) {
+          setError('Failed to load learning paths.')
           setIsLoading(false)
         }
       })

@@ -24,12 +24,17 @@ export function StudyAnalyticsTab() {
 
   if (model.status === 'error') {
     return (
-      <section className="flex min-h-[360px] items-center justify-center rounded-3xl border border-destructive/30 bg-card p-8 text-center" role="alert">
+      <section
+        className="flex min-h-[360px] items-center justify-center rounded-3xl border border-destructive/30 bg-card p-8 text-center"
+        role="alert"
+      >
         <div>
           <RefreshCw className="mx-auto size-6 text-destructive" aria-hidden="true" />
           <h2 className="mt-3 text-xl font-semibold">Study analytics need another try</h2>
           <p className="mt-2 text-sm text-muted-foreground">{model.error}</p>
-          <Button className="mt-5 min-h-11" onClick={model.retry}>Try again</Button>
+          <Button className="mt-5 min-h-11" onClick={model.retry}>
+            Try again
+          </Button>
         </div>
       </section>
     )
@@ -39,8 +44,12 @@ export function StudyAnalyticsTab() {
     <div className="space-y-8">
       <section aria-labelledby="study-goal-title">
         <div className="mb-3">
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">Goal</p>
-          <h2 id="study-goal-title" className="mt-1 text-xl font-semibold">Your weekly rhythm</h2>
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+            Goal
+          </p>
+          <h2 id="study-goal-title" className="mt-1 text-xl font-semibold">
+            Your weekly rhythm
+          </h2>
         </div>
         <ThisWeekSection />
       </section>
@@ -62,8 +71,12 @@ export function StudyAnalyticsTab() {
 
       <section aria-labelledby="study-reading-title">
         <div className="mb-3">
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">Reading</p>
-          <h2 id="study-reading-title" className="mt-1 text-xl font-semibold">Reading momentum</h2>
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+            Reading
+          </p>
+          <h2 id="study-reading-title" className="mt-1 text-xl font-semibold">
+            Reading momentum
+          </h2>
         </div>
         <ReadingSection />
       </section>

@@ -51,7 +51,10 @@ export async function exportReportsCsv(range: DateRange): Promise<void> {
         content: csv([
           ['Metric', 'Value'],
           ['Courses', courses.length],
-          ['Study minutes', Math.round(filteredSessions.reduce((sum, item) => sum + item.duration, 0) / 60)],
+          [
+            'Study minutes',
+            Math.round(filteredSessions.reduce((sum, item) => sum + item.duration, 0) / 60),
+          ],
           ['Active days', new Set(filteredSessions.map(item => item.startTime.slice(0, 10))).size],
           ['Quiz attempts', filteredAttempts.length],
         ]),
@@ -101,14 +104,24 @@ export async function exportReportsCsv(range: DateRange): Promise<void> {
         name: 'ai-usage.csv',
         content: csv([
           ['Feature', 'Created', 'Tokens', 'Model'],
-          ...filteredAiUsage.map(item => [item.featureType, item.timestamp, item.status, item.durationMs ?? '']),
+          ...filteredAiUsage.map(item => [
+            item.featureType,
+            item.timestamp,
+            item.status,
+            item.durationMs ?? '',
+          ]),
         ]),
       },
       {
         name: 'learning-paths.csv',
         content: csv([
           ['Path ID', 'Title', 'Status', 'Created'],
-          ...paths.map(item => [item.id, item.name, item.isAIGenerated ? 'AI generated' : 'Manual', item.createdAt]),
+          ...paths.map(item => [
+            item.id,
+            item.name,
+            item.isAIGenerated ? 'AI generated' : 'Manual',
+            item.createdAt,
+          ]),
         ]),
       },
     ],
@@ -137,18 +150,32 @@ export async function exportReportsPdf(range: DateRange): Promise<void> {
     startY: 40,
     head: [['Metric', 'Value']],
     body: [
-      ['Focused study time', `${Math.round(filteredSessions.reduce((sum, item) => sum + item.duration, 0) / 60)} minutes`],
-      ['Active days', String(new Set(filteredSessions.map(item => item.startTime.slice(0, 10))).size)],
+      [
+        'Focused study time',
+        `${Math.round(filteredSessions.reduce((sum, item) => sum + item.duration, 0) / 60)} minutes`,
+      ],
+      [
+        'Active days',
+        String(new Set(filteredSessions.map(item => item.startTime.slice(0, 10))).size),
+      ],
       ['Quiz attempts', String(filteredAttempts.length)],
-      ['Average quiz score', filteredAttempts.length ? `${Math.round(filteredAttempts.reduce((sum, item) => sum + item.percentage, 0) / filteredAttempts.length)}%` : '—'],
+      [
+        'Average quiz score',
+        filteredAttempts.length
+          ? `${Math.round(filteredAttempts.reduce((sum, item) => sum + item.percentage, 0) / filteredAttempts.length)}%`
+          : '—',
+      ],
     ],
     theme: 'grid',
     headStyles: { fillColor: [38, 74, 66] },
   })
-  const finalY = (doc as typeof doc & { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY ?? 80
+  const finalY =
+    (doc as typeof doc & { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY ?? 80
   doc.setFontSize(9)
   doc.setTextColor(90)
-  doc.text('Generated locally from your Knowlune learning data.', pageWidth / 2, finalY + 14, { align: 'center' })
+  doc.text('Generated locally from your Knowlune learning data.', pageWidth / 2, finalY + 14, {
+    align: 'center',
+  })
   const blob = doc.output('blob')
   downloadBlob(blob, `knowlune-report-${dateLabel(range)}.pdf`)
 }

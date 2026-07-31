@@ -33,7 +33,13 @@ function parseDateRange(params: URLSearchParams): DateRange {
     const toValue = params.get('to')
     const from = fromValue ? startOfDay(new Date(`${fromValue}T00:00:00`)) : null
     const to = toValue ? endOfDay(new Date(`${toValue}T00:00:00`)) : null
-    if (from && to && Number.isFinite(from.getTime()) && Number.isFinite(to.getTime()) && from <= to) {
+    if (
+      from &&
+      to &&
+      Number.isFinite(from.getTime()) &&
+      Number.isFinite(to.getTime()) &&
+      from <= to
+    ) {
       return { from, to: to > endOfDay(today) ? endOfDay(today) : to }
     }
   }
@@ -123,12 +129,25 @@ export default function Reports() {
         className="mb-6"
       >
         <motion.div variants={fadeUp}>
-          <TabsList className="min-h-11 max-w-full justify-start overflow-x-auto" aria-label="Reports navigation">
-            <TabsTrigger value="overview" className="min-h-11 shrink-0">Overview</TabsTrigger>
-            <TabsTrigger value="study" className="min-h-11 shrink-0">Study Analytics</TabsTrigger>
-            <TabsTrigger value="quizzes" className="min-h-11 shrink-0">Quiz Analytics</TabsTrigger>
-            <TabsTrigger value="ai" className="min-h-11 shrink-0">AI Analytics</TabsTrigger>
-            <TabsTrigger value="paths" className="min-h-11 shrink-0">Learning Paths</TabsTrigger>
+          <TabsList
+            className="min-h-11 max-w-full justify-start overflow-x-auto"
+            aria-label="Reports navigation"
+          >
+            <TabsTrigger value="overview" className="min-h-11 shrink-0">
+              Overview
+            </TabsTrigger>
+            <TabsTrigger value="study" className="min-h-11 shrink-0">
+              Study Analytics
+            </TabsTrigger>
+            <TabsTrigger value="quizzes" className="min-h-11 shrink-0">
+              Quiz Analytics
+            </TabsTrigger>
+            <TabsTrigger value="ai" className="min-h-11 shrink-0">
+              AI Analytics
+            </TabsTrigger>
+            <TabsTrigger value="paths" className="min-h-11 shrink-0">
+              Learning Paths
+            </TabsTrigger>
           </TabsList>
         </motion.div>
 
