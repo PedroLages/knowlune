@@ -3,7 +3,7 @@
 import { useTheme } from 'next-themes'
 import { Toaster as Sonner, ToasterProps } from 'sonner'
 
-const Toaster = ({ ...props }: ToasterProps) => {
+const Toaster = ({ style, ...props }: ToasterProps) => {
   const { theme = 'system' } = useTheme()
 
   return (
@@ -35,6 +35,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
           '--info-bg': 'var(--brand-soft)',
           '--info-text': 'var(--info)',
           '--info-border': 'var(--info)',
+          ...style,
         } as React.CSSProperties
       }
       {...props}

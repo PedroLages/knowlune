@@ -8,7 +8,8 @@ import { createRequire } from 'node:module';
 const _require = createRequire(import.meta.url);
 const pkg = _require('./package.json') as { version: string };
 import tailwindcss from '@tailwindcss/vite';
-import react from '@vitejs/plugin-react';
+import react, { reactCompilerPreset } from '@vitejs/plugin-react';
+import babel from '@rolldown/plugin-babel';
 import { VitePWA } from 'vite-plugin-pwa';
 import { premiumImportGuard } from './vite-plugin-premium-guard';
 import { youtubeTranscriptProxy } from './vite-plugin-youtube-transcript';
@@ -462,12 +463,9 @@ export default defineConfig({
   plugins: [
   // The React and Tailwind plugins are both required for Make, even if
   // Tailwind is not being actively used – do not remove them
-  react({
-    babel: {
-      plugins: [
-        ['babel-plugin-react-compiler', {}],
-      ],
-    },
+  react(),
+  babel({
+    presets: [reactCompilerPreset()],
   }),
   tailwindcss(),
   serveLocalMedia(),
@@ -597,7 +595,12 @@ export default defineConfig({
     // Keep heavyweight, lazy worker dependencies out of Vite's eager scan.
     // Optimizing transformers during a browser flow reloads every open page.
     exclude: ['@mlc-ai/web-llm', '@xenova/transformers'],
-    include: ['@number-flow/react'], // React wrapper for NumberFlow animations
+    include: [
+      '@number-flow/react', // React wrapper for NumberFlow animations
+      // Transformers.js 2 resolves the ONNX browser build to a UMD bundle.
+      // Vite 8 must prebundle it so the worker receives real ESM exports.
+      'onnxruntime-web',
+    ],
   },
   // File types to support raw imports. Never add .css, .tsx, or .ts files to this.
   assetsInclude: ['**/*.svg', '**/*.csv'],
