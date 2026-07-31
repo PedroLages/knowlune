@@ -145,6 +145,7 @@ const TermsOfService = React.lazy(() =>
 // Default exports work directly with React.lazy
 const MyClass = React.lazy(() => import('./pages/MyClass'))
 const Reports = React.lazy(() => import('./pages/Reports'))
+const QuizReport = React.lazy(() => import('./pages/QuizReport'))
 const Settings = React.lazy(() => import('./pages/Settings'))
 
 // E84: Book reader — code-split; mounted via BookReaderRoute inside Layout
@@ -587,6 +588,14 @@ export const router = createBrowserRouter([
             element: (
               <SuspensePage>
                 <Reports />
+              </SuspensePage>
+            ),
+          },
+          {
+            path: 'reports/quiz/:quizId',
+            element: (
+              <SuspensePage>
+                <QuizReport />
               </SuspensePage>
             ),
           },

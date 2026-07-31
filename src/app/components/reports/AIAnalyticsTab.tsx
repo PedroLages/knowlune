@@ -27,7 +27,9 @@ import { Badge } from '@/app/components/ui/badge'
 import { Skeleton } from '@/app/components/ui/skeleton'
 import { cn } from '@/app/components/ui/utils'
 import { Link } from 'react-router'
+import { toast } from 'sonner'
 import { isAIAvailable } from '@/lib/aiConfiguration'
+import { db } from '@/db'
 import {
   getAIUsageStats,
   getAIUsageTimeline,
@@ -38,6 +40,7 @@ import {
   type AIUsageStats,
 } from '@/lib/aiEventTracking'
 import type { AIFeatureType, AIUsageEvent } from '@/data/types'
+import type { DateRange } from './DateRangeFilter'
 
 const PERIOD_LABELS: Record<TimePeriod, string> = {
   daily: 'Daily',
@@ -111,7 +114,30 @@ function buildChartData(events: AIUsageEvent[], period: TimePeriod) {
   }))
 }
 
-export function AIAnalyticsTab() {
+function buildRangeStats(events: AIUsageEvent[], period: TimePeriod): AIUsageStats {
+  const counts = new Map<AIFeatureType, number>()
+  for (const event of events)
+    counts.set(event.featureType, (counts.get(event.featureType) ?? 0) + 1)
+  return {
+    period,
+    totalEvents: events.length,
+    features: AI_FEATURES.map(featureType => ({
+      featureType,
+      count: counts.get(featureType) ?? 0,
+      previousCount: 0,
+      trend: 'stable' as const,
+    })),
+  }
+}
+
+function eventIsInRange(event: AIUsageEvent, range: DateRange): boolean {
+  const timestamp = new Date(event.timestamp).getTime()
+  if (range.from && timestamp < range.from.getTime()) return false
+  if (range.to && timestamp > range.to.getTime()) return false
+  return Number.isFinite(timestamp)
+}
+
+export function AIAnalyticsTab({ dateRange }: { dateRange?: DateRange }) {
   const [period, setPeriod] = useState<TimePeriod>('weekly')
   const [stats, setStats] = useState<AIUsageStats | null>(null)
   const [chartData, setChartData] = useState<Record<string, unknown>[]>([])
@@ -128,10 +154,12 @@ export function AIAnalyticsTab() {
       setIsLoading(true)
       setError(null)
       try {
-        const [usageStats, timeline] = await Promise.all([
-          getAIUsageStats(period),
-          getAIUsageTimeline(period),
-        ])
+        const [usageStats, timeline] = dateRange
+          ? await db.aiUsageEvents.toArray().then(events => {
+              const filtered = events.filter(event => eventIsInRange(event, dateRange))
+              return [buildRangeStats(filtered, period), filtered] as const
+            })
+          : await Promise.all([getAIUsageStats(period), getAIUsageTimeline(period)])
         if (!ignore) {
           setStats(usageStats)
           setChartData(buildChartData(timeline, period))
@@ -152,7 +180,7 @@ export function AIAnalyticsTab() {
     return () => {
       ignore = true
     }
-  }, [period, retryCount])
+  }, [dateRange, period, retryCount])
 
   useEffect(() => {
     let ignore = false
@@ -162,6 +190,7 @@ export function AIAnalyticsTab() {
       })
       .catch(err => {
         console.error('[AIAnalyticsTab] Failed to load monthly stats:', err)
+        toast.error('Could not load monthly AI usage')
       })
     return () => {
       ignore = true

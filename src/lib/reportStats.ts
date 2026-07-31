@@ -11,6 +11,7 @@ import {
 import { getActionsPerDay, getCurrentStreak } from '@/lib/studyLog'
 import { db } from '@/db/schema'
 import type { StudySession } from '@/data/types'
+import { getStudyGoal } from '@/lib/studyGoals'
 
 /* ------------------------------------------------------------------ */
 /*  Stat card trends (reuse with StatsCard component)                  */
@@ -233,7 +234,11 @@ export interface WeeklyGoalProgress {
 const DEFAULT_WEEKLY_GOAL_MINUTES = 5 * 60 // 5 hours
 
 export async function computeWeeklyGoalProgress(): Promise<WeeklyGoalProgress> {
-  const goalMinutes = DEFAULT_WEEKLY_GOAL_MINUTES
+  const savedGoal = getStudyGoal()
+  const goalMinutes =
+    savedGoal?.frequency === 'weekly' && savedGoal.metric === 'time'
+      ? savedGoal.target
+      : DEFAULT_WEEKLY_GOAL_MINUTES
 
   try {
     // Get sessions from this week (Monday to now)
