@@ -29,9 +29,17 @@ export async function autoGenerateThumbnail(
   if (existing) return
 
   const blob = await extractThumbnailFromVideo(videoHandle)
-  await saveCourseThumbnail(courseId, blob, 'auto')
+  // Route through the store action so the local card update and cloud-sync
+  // queue stay in lockstep with manual thumbnail changes.
+  const updateCourseThumbnail = useCourseImportStore.getState().updateCourseThumbnail
+  if (typeof updateCourseThumbnail === 'function') {
+    await updateCourseThumbnail(courseId, blob, 'auto')
+    return
+  }
 
-  // Update Zustand store so card shows thumbnail without a page reload
+  // Keep isolated import flows and older store mocks working while callers
+  // migrate to the centralized update action above.
+  await saveCourseThumbnail(courseId, blob, 'auto')
   const url = URL.createObjectURL(blob)
   useCourseImportStore.setState(state => ({
     thumbnailUrls: { ...state.thumbnailUrls, [courseId]: url },
