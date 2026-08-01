@@ -654,6 +654,10 @@ export default defineConfig({
           'ai-google',
           'ai-groq',
           'ai-zhipu',
+          // Route-specific visualization and PDF runtimes should be fetched
+          // when their route is rendered, not during the first app load.
+          'chart-',
+          'pdf-',
         ]
         return deps.filter(
           (dep) => !excludePatterns.some((pattern) => dep.includes(pattern))

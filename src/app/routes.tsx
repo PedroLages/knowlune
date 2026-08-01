@@ -7,7 +7,6 @@ import {
   useParams,
   useLocation,
 } from 'react-router'
-import { Layout } from './components/Layout'
 import { DelayedFallback } from './components/DelayedFallback'
 import { Skeleton } from './components/ui/skeleton'
 import { RouteErrorBoundary } from './components/RouteErrorBoundary'
@@ -180,6 +179,12 @@ const KnowledgeMap = React.lazy(() =>
 
 // E57-S01: AI Tutor — standalone tutor page
 const Tutor = React.lazy(() => import('./pages/Tutor').then(m => ({ default: m.Tutor })))
+
+// Keep the navigation shell out of the initial public/redirect bundle. It is
+// only needed once a guarded route renders the authenticated app shell.
+const Layout = React.lazy(() =>
+  import('./components/Layout').then(module => ({ default: module.Layout }))
+)
 
 function PageLoader() {
   return (
@@ -356,7 +361,11 @@ export const router = createBrowserRouter([
   // E86-S02: Highlight Review — daily highlight review page (inside Layout for nav access)
   {
     path: 'highlight-review',
-    Component: Layout,
+    element: (
+      <Suspense fallback={<PageLoader />}>
+        <Layout />
+      </Suspense>
+    ),
     children: [
       {
         index: true,
@@ -373,7 +382,11 @@ export const router = createBrowserRouter([
     element: <RouteGuard />,
     children: [
       {
-        Component: Layout,
+        element: (
+          <Suspense fallback={<PageLoader />}>
+            <Layout />
+          </Suspense>
+        ),
         children: [
           {
             index: true,
