@@ -254,7 +254,7 @@ export class TaskGraphVisualizer {
       case 'hybrid':
         return 'HYBRID (mix of parallel + sequential)'
       default:
-        return strategy.toUpperCase()
+        return strategy
     }
   }
 
