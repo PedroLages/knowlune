@@ -33,10 +33,7 @@ describe('CourseThumbnailMedia', () => {
     const firstImage = document.querySelector('img') as HTMLImageElement
     fireEvent.error(firstImage)
 
-    expect(document.querySelector('img')).toHaveAttribute(
-      'src',
-      'https://example.com/good.jpg'
-    )
+    expect(document.querySelector('img')).toHaveAttribute('src', 'https://example.com/good.jpg')
   })
 
   it('offers a recovery action after all candidates fail', () => {

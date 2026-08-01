@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { RouterProvider } from 'react-router'
 import { ThemeProvider } from 'next-themes'
@@ -10,12 +10,7 @@ import { ErrorBoundary } from '@/app/components/ErrorBoundary'
 import { PWAInstallBanner } from '@/app/components/PWAInstallBanner'
 import { WelcomeWizard } from '@/app/components/WelcomeWizard'
 import { initErrorTracking } from '@/lib/errorTracking'
-import { vectorStorePersistence } from '@/ai/vector-store'
-import { embeddingPipeline } from '@/ai/embeddingPipeline'
-import { initWorkerCrashTelemetry } from '@/ai/workers/workerCrashTelemetry'
 import { supportsWorkers } from '@/ai/lib/workerCapabilities'
-import { EmbeddingModelProgressToast } from '@/app/components/embeddings/EmbeddingModelProgressToast'
-import { refreshStaleMetadata } from '@/lib/youtubeMetadataRefresh'
 import { useFontScale } from '@/hooks/useFontScale'
 import { useWelcomeWizardStore } from '@/stores/useWelcomeWizardStore'
 import { useColorScheme } from '@/hooks/useColorScheme'
@@ -24,13 +19,19 @@ import { useAccessibilityFont } from '@/hooks/useAccessibilityFont'
 import { useContentDensity } from '@/hooks/useContentDensity'
 import { MotionConfig } from 'motion/react'
 import { SyncUXShell } from '@/app/components/sync/SyncUXShell'
-import { initNotificationService, destroyNotificationService } from '@/services/NotificationService'
 import { useNotificationPrefsStore } from '@/stores/useNotificationPrefsStore'
+
+const EmbeddingModelProgressToast = lazy(() =>
+  import('@/app/components/embeddings/EmbeddingModelProgressToast').then(module => ({
+    default: module.EmbeddingModelProgressToast,
+  }))
+)
 
 // Register global error handlers (window.onerror, unhandledrejection)
 initErrorTracking()
 
 export default function App() {
+  const [showEmbeddingProgress, setShowEmbeddingProgress] = useState(false)
   useColorScheme() // Applies .vibrant class on <html> based on settings (E21-S04)
   const { shouldReduceMotion } = useReducedMotion()
   const { initialize: initWizard } = useWelcomeWizardStore()
@@ -65,6 +66,13 @@ export default function App() {
     initWizard()
   }, [initWizard])
 
+  // This background-only toast is not needed for the first render. Defer its
+  // module until the page has had a chance to become interactive.
+  useEffect(() => {
+    const timer = window.setTimeout(() => setShowEmbeddingProgress(true), 1000)
+    return () => window.clearTimeout(timer)
+  }, [])
+
   // Load notification preferences before subscribing to domain events
   useEffect(() => {
     useNotificationPrefsStore.getState().init()
@@ -72,34 +80,54 @@ export default function App() {
 
   // E43-S07: Initialize notification service (subscribe to domain events)
   useEffect(() => {
-    initNotificationService()
-    return () => destroyNotificationService()
+    let disposed = false
+    let destroy: (() => void) | undefined
+
+    void import('@/services/NotificationService').then(
+      ({ initNotificationService, destroyNotificationService }) => {
+        if (disposed) return
+        initNotificationService()
+        destroy = destroyNotificationService
+      }
+    )
+
+    return () => {
+      disposed = true
+      destroy?.()
+    }
   }, [])
 
   // Load vector embeddings from IndexedDB on startup
   useEffect(() => {
     if (supportsWorkers()) {
-      vectorStorePersistence.loadAll().catch(err => {
-        // silent-catch-ok — non-critical background initialization
-        console.error('[App] Vector store init failed:', err)
-      })
+      void import('@/ai/vector-store')
+        .then(({ vectorStorePersistence }) => vectorStorePersistence.loadAll())
+        .catch(err => {
+          // silent-catch-ok — non-critical background initialization
+          console.error('[App] Vector store init failed:', err)
+        })
     }
   }, [])
 
   // E28-S12: Background refresh of stale YouTube metadata (non-blocking, rate-limited)
   useEffect(() => {
-    refreshStaleMetadata().catch(err => {
-      // silent-catch-ok — non-critical background task
-      console.warn('[App] YouTube metadata refresh failed:', err)
-    })
+    void import('@/lib/youtubeMetadataRefresh')
+      .then(({ refreshStaleMetadata }) => refreshStaleMetadata())
+      .catch(err => {
+        // silent-catch-ok — non-critical background task
+        console.warn('[App] YouTube metadata refresh failed:', err)
+      })
   }, [])
 
   // E68-S03: Initialize worker crash telemetry subscriber.
   // Subscribes to 'worker-crash' CustomEvent and logs structured telemetry.
   // Deduplicates repeated crashes with the same requestId.
   useEffect(() => {
-    const unsubscribe = initWorkerCrashTelemetry()
-    return () => unsubscribe()
+    let unsubscribe: (() => void) | undefined
+    void import('@/ai/workers/workerCrashTelemetry').then(({ initWorkerCrashTelemetry }) => {
+      unsubscribe = initWorkerCrashTelemetry()
+    })
+    return () => unsubscribe?.()
   }, [])
 
   // E68-S01: Pre-warm the embedding model after a brief idle period so the first
@@ -121,15 +149,19 @@ export default function App() {
 
       if ('requestIdleCallback' in window) {
         requestIdleCallback(() => {
-          embeddingPipeline.warmUp().catch(() => {
-            // Best-effort — silent catch
-          })
+          void import('@/ai/embeddingPipeline')
+            .then(({ embeddingPipeline }) => embeddingPipeline.warmUp())
+            .catch(() => {
+              // Best-effort — silent catch
+            })
         })
       } else {
         // Fallback for browsers without requestIdleCallback
-        embeddingPipeline.warmUp().catch(() => {
-          // Best-effort — silent catch
-        })
+        void import('@/ai/embeddingPipeline')
+          .then(({ embeddingPipeline }) => embeddingPipeline.warmUp())
+          .catch(() => {
+            // Best-effort — silent catch
+          })
       }
     }, 3000)
 
@@ -143,7 +175,11 @@ export default function App() {
           <SyncUXShell>
             <RouterProvider router={router} />
             <Toaster style={{ zIndex: 51 }} />
-            <EmbeddingModelProgressToast />
+            {showEmbeddingProgress && (
+              <Suspense fallback={null}>
+                <EmbeddingModelProgressToast />
+              </Suspense>
+            )}
             <WelcomeWizard />
             <PWAInstallBanner />
             {process.env.NODE_ENV === 'development' &&
