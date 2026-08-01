@@ -18,6 +18,8 @@ const OVERLAY_SCRIM_CLASS = 'bg-black/60 text-white backdrop-blur-sm border bord
  * how unusual artwork should be fitted.
  */
 const COURSE_CARD_COVER_HEIGHT_CLASS = 'aspect-video w-full'
+const COURSE_CARD_COMPACT_COVER_HEIGHT_CLASS =
+  'aspect-[2.1/1] max-h-[170px] w-full sm:aspect-auto sm:h-[150px] sm:max-h-none lg:h-40'
 
 interface CardCoverProps {
   heightClass: string
@@ -120,5 +122,6 @@ export {
   CompletionOverlay,
   CoverCornerChip,
   COURSE_CARD_COVER_HEIGHT_CLASS,
+  COURSE_CARD_COMPACT_COVER_HEIGHT_CLASS,
   OVERLAY_SCRIM_CLASS,
 }

@@ -69,6 +69,7 @@ import {
   CompletionOverlay,
   CoverCornerChip,
   COURSE_CARD_COVER_HEIGHT_CLASS,
+  COURSE_CARD_COMPACT_COVER_HEIGHT_CLASS,
   OVERLAY_SCRIM_CLASS,
 } from './CourseCardShell'
 import type { ImportedCourse, ImportedVideo, LearnerCourseStatus } from '@/data/types'
@@ -115,6 +116,8 @@ interface ImportedCourseCardProps {
   completionPercent?: number
   /** Hides editing controls (camera overlay, edit/delete menu, tag editing). Status changes remain available. */
   readOnly?: boolean
+  /** Uses the denser cover height intended for dashboard grids. */
+  coverSize?: 'standard' | 'compact'
   /** When provided, enables selection mode with a checkbox overlay */
   selected?: boolean
   onToggleSelect?: (courseId: string) => void
@@ -125,6 +128,7 @@ export function ImportedCourseCard({
   allTags,
   completionPercent = 0,
   readOnly = false,
+  coverSize = 'standard',
   selected = false,
   onToggleSelect,
 }: ImportedCourseCardProps) {
@@ -320,6 +324,10 @@ export function ImportedCourseCard({
   }
 
   const isLoading = modalVideoLoading
+  const coverHeightClass =
+    coverSize === 'compact'
+      ? COURSE_CARD_COMPACT_COVER_HEIGHT_CLASS
+      : COURSE_CARD_COVER_HEIGHT_CLASS
 
   // Derive a single completion state to avoid Play+Complete overlay collision when
   // cross-device sync produces inconsistent (status='not-started', completion=100%) pairs.
@@ -362,13 +370,13 @@ export function ImportedCourseCard({
         )}
       >
         <div className="group-hover:translate-y-2 motion-safe:transition-transform motion-reduce:transition-none motion-reduce:group-hover:translate-y-0">
-          <CardCover heightClass={COURSE_CARD_COVER_HEIGHT_CLASS} data-testid="course-card-cover">
+          <CardCover heightClass={coverHeightClass} data-testid="course-card-cover">
             {/* Keep the fallback mounted beneath the poster so loading and broken URLs stay calm. */}
             <CourseThumbnailMedia
               candidates={isCardVisible ? thumbnailCandidates : []}
               loading={!isCardVisible}
               fallbackLabel="No cover yet"
-              onAddCover={() => void handleThumbnailPickerClick()}
+              onAddCover={readOnly ? undefined : () => void handleThumbnailPickerClick()}
               className="absolute inset-0"
               imageClassName="transition-transform duration-500 group-hover:scale-100 motion-reduce:transition-none"
             />

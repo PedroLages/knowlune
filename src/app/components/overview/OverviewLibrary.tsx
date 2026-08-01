@@ -40,6 +40,7 @@ export function OverviewLibrary({ courses, allTags }: OverviewLibraryProps) {
             course={course}
             allTags={allTags}
             completionPercent={completionPercent}
+            coverSize="compact"
             readOnly
           />
         ))}

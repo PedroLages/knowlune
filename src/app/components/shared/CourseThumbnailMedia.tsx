@@ -92,24 +92,44 @@ export function CourseThumbnailMedia({
       )}
 
       {activeCandidate && (
-        <img
-          key={activeCandidate.url}
-          src={activeCandidate.url}
-          alt={alt}
-          aria-hidden={alt ? undefined : true}
-          width={1280}
-          height={720}
-          loading="lazy"
-          decoding="async"
-          onLoad={() => setLoadedUrl(activeCandidate.url)}
-          onError={() => handleImageError(activeCandidate.url)}
-          className={cn(
-            'absolute inset-0 h-full w-full transition-opacity duration-300 motion-reduce:transition-none',
-            activeCandidate.fit === 'contain' ? 'object-contain' : 'object-cover',
-            isReady ? 'opacity-100' : 'opacity-0',
-            imageClassName
+        <>
+          {activeCandidate.fit === 'contain' && (
+            <img
+              src={activeCandidate.url}
+              alt=""
+              aria-hidden="true"
+              width={1280}
+              height={720}
+              loading="lazy"
+              decoding="async"
+              data-testid="course-thumbnail-backdrop"
+              className={cn(
+                'absolute inset-0 h-full w-full scale-110 object-cover blur-2xl saturate-75',
+                'transition-opacity duration-300 motion-reduce:transition-none',
+                isReady ? 'opacity-40' : 'opacity-0'
+              )}
+            />
           )}
-        />
+          <img
+            key={activeCandidate.url}
+            src={activeCandidate.url}
+            alt={alt}
+            aria-hidden={alt ? undefined : true}
+            width={1280}
+            height={720}
+            loading="lazy"
+            decoding="async"
+            data-testid="course-thumbnail-image"
+            onLoad={() => setLoadedUrl(activeCandidate.url)}
+            onError={() => handleImageError(activeCandidate.url)}
+            className={cn(
+              'absolute inset-0 h-full w-full transition-opacity duration-300 motion-reduce:transition-none',
+              activeCandidate.fit === 'contain' ? 'object-contain' : 'object-cover',
+              isReady ? 'opacity-100' : 'opacity-0',
+              imageClassName
+            )}
+          />
+        </>
       )}
 
       {hasFallback && onAddCover && (

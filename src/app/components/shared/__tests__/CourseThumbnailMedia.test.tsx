@@ -11,13 +11,15 @@ describe('CourseThumbnailMedia', () => {
       />
     )
 
-    const image = document.querySelector('img') as HTMLImageElement
+    const image = screen.getByTestId('course-thumbnail-image')
     expect(image).toHaveClass('object-contain', 'opacity-0')
+    expect(screen.getByTestId('course-thumbnail-backdrop')).toHaveClass('object-cover', 'opacity-0')
     expect(screen.getByTestId('course-thumbnail-placeholder')).toBeVisible()
 
     fireEvent.load(image)
 
     expect(image).toHaveClass('opacity-100')
+    expect(screen.getByTestId('course-thumbnail-backdrop')).toHaveClass('opacity-40')
   })
 
   it('moves to the next candidate after a failed image', () => {
@@ -30,10 +32,13 @@ describe('CourseThumbnailMedia', () => {
       />
     )
 
-    const firstImage = document.querySelector('img') as HTMLImageElement
+    const firstImage = screen.getByTestId('course-thumbnail-image')
     fireEvent.error(firstImage)
 
-    expect(document.querySelector('img')).toHaveAttribute('src', 'https://example.com/good.jpg')
+    expect(screen.getByTestId('course-thumbnail-image')).toHaveAttribute(
+      'src',
+      'https://example.com/good.jpg'
+    )
   })
 
   it('offers a recovery action after all candidates fail', () => {
@@ -45,7 +50,7 @@ describe('CourseThumbnailMedia', () => {
       />
     )
 
-    fireEvent.error(document.querySelector('img') as HTMLImageElement)
+    fireEvent.error(screen.getByTestId('course-thumbnail-image'))
     fireEvent.click(screen.getByTestId('course-thumbnail-add-cover'))
 
     expect(onAddCover).toHaveBeenCalledOnce()

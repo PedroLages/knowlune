@@ -131,7 +131,11 @@ function makeCourse(overrides: Partial<ImportedCourse> = {}): ImportedCourse {
 function renderCard(
   overrides: Partial<ImportedCourse> = {},
   allTags: string[] = [],
-  extraProps: { readOnly?: boolean; completionPercent?: number } = {}
+  extraProps: {
+    readOnly?: boolean
+    completionPercent?: number
+    coverSize?: 'standard' | 'compact'
+  } = {}
 ) {
   return render(
     <MemoryRouter>
@@ -198,6 +202,17 @@ describe('ImportedCourseCard', () => {
     renderCard()
 
     expect(screen.getByTestId('course-card-cover')).toHaveClass('aspect-video', 'w-full')
+  })
+
+  it('uses a capped cover height in compact dashboard grids', () => {
+    renderCard({}, [], { coverSize: 'compact' })
+
+    expect(screen.getByTestId('course-card-cover')).toHaveClass(
+      'max-h-[170px]',
+      'sm:h-[150px]',
+      'lg:h-40'
+    )
+    expect(screen.getByTestId('course-card-cover')).not.toHaveClass('aspect-video')
   })
 
   it('does not reserve an empty author row when the course has no author', () => {
@@ -573,6 +588,12 @@ describe('ImportedCourseCard', () => {
       expect(screen.queryByTestId('delete-course-menu-item')).toBeNull()
       // Status options remain (4 menu items, no edit/delete separator block)
       expect(screen.getAllByRole('menuitem').length).toBe(4)
+    })
+
+    it('hides the add-cover recovery action when readOnly=true', () => {
+      renderCard({}, [], { readOnly: true })
+
+      expect(screen.queryByTestId('course-thumbnail-add-cover')).not.toBeInTheDocument()
     })
   })
 
