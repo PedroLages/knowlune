@@ -1,6 +1,5 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
-  FolderOpen,
   Circle,
   CheckCircle2,
   PauseCircle,
@@ -35,6 +34,7 @@ import { useCourseImportStore } from '@/stores/useCourseImportStore'
 import { Checkbox } from '@/app/components/ui/checkbox'
 import { useImportedCourseStartFlow } from '@/app/hooks/useImportedCourseStartFlow'
 import { useLazyVisible } from '@/hooks/useLazyVisible'
+import { CourseThumbnailMedia } from '@/app/components/shared/CourseThumbnailMedia'
 import type { ImportedCourse, LearnerCourseStatus } from '@/data/types'
 
 const LONG_PRESS_MS = 500
@@ -98,6 +98,18 @@ export function ImportedCourseCompactCard({
   const removeImportedCourse = useCourseImportStore(state => state.removeImportedCourse)
   const thumbnailUrls = useCourseImportStore(state => state.thumbnailUrls)
   const thumbnailUrl = thumbnailUrls[course.id] ?? course.youtubeThumbnailUrl ?? null
+  const thumbnailCandidates = useMemo(
+    () =>
+      thumbnailUrl
+        ? [
+            {
+              url: thumbnailUrl,
+              fit: course.source === 'youtube' ? ('cover' as const) : ('contain' as const),
+            },
+          ]
+        : [],
+    [course.source, thumbnailUrl]
+  )
 
   const [lazyRef, isCardVisible] = useLazyVisible<HTMLElement>()
 
@@ -237,28 +249,15 @@ export function ImportedCourseCompactCard({
         )}
       >
         {/* Thumbnail wrapper */}
-        <div className="relative aspect-[4/3] rounded-lg overflow-hidden bg-muted">
-          {/* Placeholder background (always present) */}
-          <div
-            data-testid="compact-card-placeholder"
-            className="absolute inset-0 bg-muted flex items-center justify-center"
-          >
-            {(!thumbnailUrl || !isCardVisible) && (
-              <FolderOpen className="size-8 text-muted-foreground/40" aria-hidden="true" />
-            )}
-          </div>
-
-          {thumbnailUrl && isCardVisible && (
-            <img
-              src={thumbnailUrl}
-              alt=""
-              width={400}
-              height={300}
-              aria-hidden="true"
-              loading="lazy"
-              className="absolute inset-0 w-full h-full object-cover"
-            />
-          )}
+        <div className="relative aspect-video overflow-hidden rounded-lg bg-muted">
+          <CourseThumbnailMedia
+            candidates={isCardVisible ? thumbnailCandidates : []}
+            loading={!isCardVisible}
+            fallbackLabel="No cover yet"
+            onAddCover={() => navigate(`/courses/${course.id}/overview`)}
+            className="absolute inset-0"
+            data-testid="compact-card-thumbnail"
+          />
 
           {/* Completion overlay (subtle dim + check) */}
           {isCompleted && (

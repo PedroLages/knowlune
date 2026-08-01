@@ -13,12 +13,11 @@ const OVERLAY_SCRIM_CLASS = 'bg-black/60 text-white backdrop-blur-sm border bord
 /**
  * Shared responsive cover treatment for full-size course cards.
  *
- * Mobile keeps the artwork near 2.1:1 without exceeding 170px. Tablet and
- * desktop use the fixed heights from the course-card visual hierarchy so a
- * row of cards stays aligned even when card widths differ slightly.
+ * Every card density uses the source media's native 16:9 composition. This
+ * keeps standard video frames intact and lets the shared media surface decide
+ * how unusual artwork should be fitted.
  */
-const COURSE_CARD_COVER_HEIGHT_CLASS =
-  'aspect-[2.1/1] max-h-[170px] w-full sm:aspect-auto sm:h-[150px] sm:max-h-none lg:h-40'
+const COURSE_CARD_COVER_HEIGHT_CLASS = 'aspect-video w-full'
 
 interface CardCoverProps {
   heightClass: string
