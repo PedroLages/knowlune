@@ -13,6 +13,7 @@ import {
 } from '@/lib/thumbnailService'
 import { deleteVideoStoryboardsForCourse } from '@/lib/videoStoryboard'
 import type { ThumbnailSource } from '@/data/types'
+import { findCourseThumbnailRepair, toCourseThumbnailRecord } from '@/lib/courseThumbnailRepair'
 import type { AutoAnalysisStatus } from '@/lib/autoAnalysis'
 import { refreshCourseEmbeddingIfChanged } from '@/ai/courseEmbeddingService'
 import { useAuthorStore } from './useAuthorStore'
@@ -25,6 +26,11 @@ function normalizeTags(tags: string[]): string[] {
   unique.sort()
   return unique
 }
+
+// Course loading can be triggered by several route-level surfaces at once.
+// Keep background thumbnail repair idempotent so repeated loads do not race
+// to create duplicate object URLs or queue duplicate sync writes.
+const thumbnailRepairsInFlight = new Set<string>()
 
 export interface CourseDetailsUpdate {
   name?: string
@@ -60,6 +66,7 @@ interface CourseImportState {
   deleteTagGlobally: (tag: string) => Promise<void>
   loadImportedCourses: () => Promise<void>
   loadThumbnailUrls: (courseIds: string[]) => Promise<void>
+  repairMissingThumbnails: (courseIds: string[]) => Promise<void>
   setImporting: (isImporting: boolean) => void
   setImportError: (error: string | null) => void
   setImportProgress: (progress: { current: number; total: number } | null) => void
@@ -374,6 +381,19 @@ export const useCourseImportStore = create<CourseImportState>((set, get) => ({
     set(state => ({
       thumbnailUrls: { ...state.thumbnailUrls, [courseId]: url },
     }))
+
+    // Touch the course row so the existing storage-sync handler uploads the
+    // newly saved blob. The local thumbnail remains usable if cloud sync is
+    // temporarily unavailable.
+    try {
+      const course = await db.importedCourses.get(courseId)
+      if (course) {
+        await syncableWrite('importedCourses', 'put', course as unknown as SyncableRecord)
+      }
+    } catch (error) {
+      console.warn('[Thumbnail] Saved locally but could not queue cloud sync:', error)
+      toast.warning('Cover saved on this device; cloud sync will retry later.')
+    }
   },
 
   loadThumbnailUrls: async (courseIds: string[]) => {
@@ -409,6 +429,67 @@ export const useCourseImportStore = create<CourseImportState>((set, get) => ({
       }
       return { thumbnailUrls: urls }
     })
+  },
+
+  repairMissingThumbnails: async (courseIds: string[]) => {
+    const courses = get().importedCourses.filter(course => courseIds.includes(course.id))
+    const concurrency = 2
+
+    for (let index = 0; index < courses.length; index += concurrency) {
+      const batch = courses.slice(index, index + concurrency)
+      await Promise.all(
+        batch.map(async course => {
+          if (thumbnailRepairsInFlight.has(course.id)) return
+          thumbnailRepairsInFlight.add(course.id)
+
+          try {
+            const repair = await findCourseThumbnailRepair(course)
+            if (!repair) return
+
+            const record = toCourseThumbnailRecord(course.id, repair, new Date().toISOString())
+            await db.courseThumbnails.put(record)
+
+            const url = record.blob ? URL.createObjectURL(record.blob) : record.remoteUrl
+            const previousUrl = get().thumbnailUrls[course.id]
+            if (previousUrl?.startsWith('blob:') && previousUrl !== url) {
+              URL.revokeObjectURL(previousUrl)
+            }
+            set(state => ({
+              thumbnailUrls: { ...state.thumbnailUrls, [course.id]: url },
+            }))
+
+            const currentCourse = await db.importedCourses.get(course.id)
+            if (currentCourse) {
+              // Remote YouTube fallbacks cannot be uploaded to the thumbnail
+              // bucket. Persist the URL on the course itself so other devices
+              // can render the recovered cover without a local blob record.
+              const courseForSync =
+                repair.kind === 'remote'
+                  ? { ...currentCourse, youtubeThumbnailUrl: repair.url }
+                  : currentCourse
+              if (repair.kind === 'remote') {
+                set(state => ({
+                  importedCourses: state.importedCourses.map(item =>
+                    item.id === course.id ? courseForSync : item
+                  ),
+                }))
+              }
+              await syncableWrite(
+                'importedCourses',
+                'put',
+                courseForSync as unknown as SyncableRecord
+              )
+            }
+          } catch (error) {
+            // Repair is intentionally best-effort. The shared card surface
+            // exposes the Add cover action when no candidate is recoverable.
+            console.warn(`[Thumbnail] Could not repair course "${course.name}":`, error)
+          } finally {
+            thumbnailRepairsInFlight.delete(course.id)
+          }
+        })
+      )
+    }
   },
 
   getAllTags: () => {
@@ -550,6 +631,7 @@ export const useCourseImportStore = create<CourseImportState>((set, get) => ({
             err instanceof Error ? err.message : err
           )
         })
+      void get().repairMissingThumbnails(courses.map(c => c.id))
     } catch (error) {
       set({ isCoursesLoaded: true, importError: 'Failed to load courses from database' })
       console.error('[Database] Failed to load courses:', error)

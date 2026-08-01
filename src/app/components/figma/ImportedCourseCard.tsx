@@ -1,6 +1,5 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import {
-  FolderOpen,
   Video,
   FileText,
   Circle,
@@ -60,6 +59,7 @@ import { useCourseCardPreview } from '@/hooks/useCourseCardPreview'
 import { useLazyVisible } from '@/hooks/useLazyVisible'
 import { useVideoFromHandle } from '@/hooks/useVideoFromHandle'
 import { getAvatarSrc } from '@/lib/authors'
+import { CourseThumbnailMedia } from '@/app/components/shared/CourseThumbnailMedia'
 import { db } from '@/db/schema'
 import { formatCourseDuration, formatFileSize, getResolutionLabel } from '@/lib/format'
 import { ProgressRing } from './ProgressRing'
@@ -183,6 +183,19 @@ export function ImportedCourseCard({
   const { blobUrl: previewBlobUrl } = useVideoFromHandle(activePreviewHandle)
   const previewVideoSrc = previewVideo?.serverUrl ?? previewBlobUrl
 
+  const thumbnailCandidates = useMemo(
+    () =>
+      thumbnailUrl
+        ? [
+            {
+              url: thumbnailUrl,
+              fit: course.source === 'youtube' ? ('cover' as const) : ('contain' as const),
+            },
+          ]
+        : [],
+    [course.source, thumbnailUrl]
+  )
+
   useEffect(() => {
     if (!showPreview || course.videoCount === 0 || course.source === 'youtube') {
       setPreviewVideo(null)
@@ -274,6 +287,17 @@ export function ImportedCourseCard({
     setSearching(false)
   }
 
+  async function handleThumbnailPickerClick() {
+    try {
+      const vids = await db.importedVideos.where('courseId').equals(course.id).sortBy('order')
+      setFirstVideo(vids[0] ?? null)
+      setThumbnailPickerOpen(true)
+    } catch (error) {
+      console.error('[CourseCard] Failed to load first video for thumbnail picker:', error)
+      toast.error('We could not open the cover picker. Please try again.')
+    }
+  }
+
   function handleDialogChange(open: boolean) {
     setPreviewOpen(open)
     if (!open) {
@@ -339,26 +363,15 @@ export function ImportedCourseCard({
       >
         <div className="group-hover:translate-y-2 motion-safe:transition-transform motion-reduce:transition-none motion-reduce:group-hover:translate-y-0">
           <CardCover heightClass={COURSE_CARD_COVER_HEIGHT_CLASS} data-testid="course-card-cover">
-            {/* Keep the poster mounted beneath the preview so loading never exposes a flash. */}
-            <div
-              data-testid="course-card-placeholder"
-              className="absolute inset-0 bg-muted flex items-center justify-center"
-            >
-              {(!thumbnailUrl || !isCardVisible) && (
-                <FolderOpen className="size-16 text-muted-foreground/40" aria-hidden="true" />
-              )}
-            </div>
-            {thumbnailUrl && isCardVisible && (
-              <img
-                src={thumbnailUrl}
-                alt=""
-                width={1280}
-                height={720}
-                aria-hidden="true"
-                loading="lazy"
-                className="absolute inset-0 w-full h-full object-cover object-center transition-transform duration-500 group-hover:scale-105 motion-reduce:transition-none motion-reduce:group-hover:scale-100"
-              />
-            )}
+            {/* Keep the fallback mounted beneath the poster so loading and broken URLs stay calm. */}
+            <CourseThumbnailMedia
+              candidates={isCardVisible ? thumbnailCandidates : []}
+              loading={!isCardVisible}
+              fallbackLabel="No cover yet"
+              onAddCover={() => void handleThumbnailPickerClick()}
+              className="absolute inset-0"
+              imageClassName="transition-transform duration-500 group-hover:scale-100 motion-reduce:transition-none"
+            />
             {/* Fade the first rendered frame over the poster only after playback begins. */}
             {showPreview && previewVideoSrc && (
               // width/height attrs prevent the browser from using intrinsic video dimensions before layout.
@@ -377,7 +390,7 @@ export function ImportedCourseCard({
                 onLoadStart={() => setVideoReady(false)}
                 onPlaying={() => setVideoReady(true)}
                 className={cn(
-                  'absolute inset-0 block w-full h-full object-cover object-center pointer-events-none transition-opacity duration-200 motion-reduce:transition-none',
+                  'absolute inset-0 block w-full h-full object-contain object-center bg-background pointer-events-none transition-opacity duration-200 motion-reduce:transition-none',
                   videoReady ? 'opacity-100' : 'opacity-0'
                 )}
               />

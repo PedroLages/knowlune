@@ -194,15 +194,10 @@ describe('ImportedCourseCard', () => {
     expect(screen.getByTestId('continue-course-btn')).toHaveClass('min-h-11')
   })
 
-  it('uses the standardized responsive course-cover height', () => {
+  it('uses a native 16:9 course-cover frame', () => {
     renderCard()
 
-    expect(screen.getByTestId('course-card-cover')).toHaveClass(
-      'aspect-[2.1/1]',
-      'max-h-[170px]',
-      'sm:h-[150px]',
-      'lg:h-40'
-    )
+    expect(screen.getByTestId('course-card-cover')).toHaveClass('aspect-video', 'w-full')
   })
 
   it('does not reserve an empty author row when the course has no author', () => {

@@ -1,6 +1,5 @@
-import { useState, useEffect, useRef } from 'react'
+import { useMemo, useState, useEffect, useRef } from 'react'
 import {
-  FolderOpen,
   Video,
   FileText,
   Circle,
@@ -40,6 +39,7 @@ import { useCourseImportStore } from '@/stores/useCourseImportStore'
 import { Checkbox } from '@/app/components/ui/checkbox'
 import { useAuthorStore } from '@/stores/useAuthorStore'
 import { formatCourseDuration } from '@/lib/format'
+import { CourseThumbnailMedia } from '@/app/components/shared/CourseThumbnailMedia'
 import type { ImportedCourse, LearnerCourseStatus } from '@/data/types'
 
 const statusConfig: Record<
@@ -105,6 +105,18 @@ export function ImportedCourseListRow({
   const menuTriggerRef = useRef<HTMLButtonElement>(null)
 
   const thumbnailUrl = thumbnailUrls[course.id] ?? course.youtubeThumbnailUrl ?? null
+  const thumbnailCandidates = useMemo(
+    () =>
+      thumbnailUrl
+        ? [
+            {
+              url: thumbnailUrl,
+              fit: course.source === 'youtube' ? ('cover' as const) : ('contain' as const),
+            },
+          ]
+        : [],
+    [course.source, thumbnailUrl]
+  )
   const status = course.status
   const config = statusConfig[status]
   const StatusIcon = config.icon
@@ -198,24 +210,15 @@ export function ImportedCourseListRow({
         {/* Thumbnail */}
         <div
           data-testid="course-list-row-thumbnail"
-          className="shrink-0 w-12 h-12 sm:w-16 sm:h-16 rounded-lg overflow-hidden bg-muted flex items-center justify-center"
+          className="relative aspect-video w-20 shrink-0 overflow-hidden rounded-lg bg-muted sm:w-24"
         >
-          {thumbnailUrl ? (
-            <img
-              src={thumbnailUrl}
-              alt=""
-              width={64}
-              height={64}
-              aria-hidden="true"
-              loading="lazy"
-              className="w-full h-full object-cover"
-              onError={e => {
-                e.currentTarget.style.display = 'none'
-              }}
-            />
-          ) : (
-            <FolderOpen className="size-6 sm:size-7 text-muted-foreground/40" aria-hidden="true" />
-          )}
+          <CourseThumbnailMedia
+            candidates={thumbnailCandidates}
+            fallbackLabel="No cover"
+            onAddCover={navigateToCourse}
+            className="absolute inset-0"
+            data-testid="course-list-row-thumbnail-media"
+          />
         </div>
 
         {/* Metadata column */}
