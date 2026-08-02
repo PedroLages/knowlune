@@ -215,6 +215,13 @@ describe('ImportedCourseCard', () => {
     expect(screen.getByTestId('course-card-cover')).not.toHaveClass('aspect-video')
   })
 
+  it('fills imported cover artwork with cover fitting', () => {
+    renderCard({ youtubeThumbnailUrl: 'https://example.com/course-cover.jpg' })
+
+    expect(screen.getByTestId('course-thumbnail-image')).toHaveClass('object-cover')
+    expect(screen.getByTestId('course-thumbnail-image')).not.toHaveClass('object-contain')
+  })
+
   it('does not reserve an empty author row when the course has no author', () => {
     renderCard({ authorId: undefined, name: 'A title that may wrap onto two lines' })
 
@@ -713,6 +720,8 @@ describe('ImportedCourseCard', () => {
       const video = container.querySelector('video')
       expect(video).toBeInTheDocument()
       expect(video).toHaveAttribute('src', 'blob:test')
+      expect(video).toHaveClass('object-cover')
+      expect(video).not.toHaveClass('object-contain')
     })
 
     it('does NOT render video when showPreview is false', () => {

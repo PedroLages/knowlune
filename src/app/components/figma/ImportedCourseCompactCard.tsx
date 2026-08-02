@@ -104,7 +104,8 @@ export function ImportedCourseCompactCard({
         ? [
             {
               url: thumbnailUrl,
-              fit: course.source === 'youtube' ? ('cover' as const) : ('contain' as const),
+              // Compact card covers use the same fill treatment as full-size cards.
+              fit: 'cover' as const,
             },
           ]
         : [],

@@ -115,6 +115,13 @@ describe('ImportedCourseCompactCard — minimal metadata', () => {
     expect(card.className).toContain('focus-visible:ring-2')
     expect(card.className).toContain('focus-visible:ring-brand')
   })
+
+  it('fills imported cover artwork with cover fitting', () => {
+    renderCard({ youtubeThumbnailUrl: 'https://example.com/course-cover.jpg' })
+
+    expect(screen.getByTestId('course-thumbnail-image')).toHaveClass('object-cover')
+    expect(screen.getByTestId('course-thumbnail-image')).not.toHaveClass('object-contain')
+  })
 })
 
 describe('ImportedCourseCompactCard — progress overlay', () => {
