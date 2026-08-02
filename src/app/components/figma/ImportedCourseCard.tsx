@@ -59,7 +59,10 @@ import { useCourseCardPreview } from '@/hooks/useCourseCardPreview'
 import { useLazyVisible } from '@/hooks/useLazyVisible'
 import { useVideoFromHandle } from '@/hooks/useVideoFromHandle'
 import { getAvatarSrc } from '@/lib/authors'
-import { CourseThumbnailMedia } from '@/app/components/shared/CourseThumbnailMedia'
+import {
+  CourseThumbnailMedia,
+  createCourseThumbnailCandidates,
+} from '@/app/components/shared/CourseThumbnailMedia'
 import { db } from '@/db/schema'
 import { formatCourseDuration, formatFileSize, getResolutionLabel } from '@/lib/format'
 import { ProgressRing } from './ProgressRing'
@@ -152,7 +155,7 @@ export function ImportedCourseCard({
   const statusBadgeRef = useRef<HTMLButtonElement>(null)
   const continuingRef = useRef(false)
   const { startStudying } = useImportedCourseStartFlow(course.id)
-  const thumbnailUrl = thumbnailUrls[course.id] ?? course.youtubeThumbnailUrl ?? null
+  const persistedThumbnailUrl = thumbnailUrls[course.id]
 
   // Lazy-load thumbnail: only render <img> when card enters viewport (E1B-S04 AC5)
   const [lazyRef, isCardVisible] = useLazyVisible<HTMLElement>()
@@ -188,17 +191,8 @@ export function ImportedCourseCard({
   const previewVideoSrc = previewVideo?.serverUrl ?? previewBlobUrl
 
   const thumbnailCandidates = useMemo(
-    () =>
-      thumbnailUrl
-        ? [
-            {
-              url: thumbnailUrl,
-              // Course covers are fixed-size surfaces; crop artwork to fill them consistently.
-              fit: 'cover' as const,
-            },
-          ]
-        : [],
-    [course.source, thumbnailUrl]
+    () => createCourseThumbnailCandidates(persistedThumbnailUrl, course.youtubeThumbnailUrl),
+    [course.youtubeThumbnailUrl, persistedThumbnailUrl]
   )
 
   useEffect(() => {

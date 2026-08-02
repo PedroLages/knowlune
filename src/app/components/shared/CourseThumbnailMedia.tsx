@@ -9,6 +9,21 @@ export interface CourseThumbnailCandidate {
   fit?: CourseThumbnailFit
 }
 
+/**
+ * Build the ordered thumbnail fallback chain shared by every imported-course surface.
+ * Persisted covers win, while a distinct YouTube URL remains available when that
+ * first candidate is stale or no longer reachable.
+ */
+export function createCourseThumbnailCandidates(
+  persistedUrl: string | null | undefined,
+  youtubeUrl: string | null | undefined,
+  fit: CourseThumbnailFit = 'cover'
+): CourseThumbnailCandidate[] {
+  return [...new Set([persistedUrl, youtubeUrl].filter((url): url is string => Boolean(url)))].map(
+    url => ({ url, fit })
+  )
+}
+
 interface CourseThumbnailMediaProps {
   candidates: readonly CourseThumbnailCandidate[]
   alt?: string

@@ -1,8 +1,27 @@
 import { describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen } from '@testing-library/react'
-import { CourseThumbnailMedia } from '../CourseThumbnailMedia'
+import { CourseThumbnailMedia, createCourseThumbnailCandidates } from '../CourseThumbnailMedia'
 
 describe('CourseThumbnailMedia', () => {
+  it('builds a deduplicated persisted-to-YouTube fallback chain', () => {
+    expect(
+      createCourseThumbnailCandidates(
+        'https://example.com/persisted.jpg',
+        'https://example.com/youtube.jpg'
+      )
+    ).toEqual([
+      { url: 'https://example.com/persisted.jpg', fit: 'cover' },
+      { url: 'https://example.com/youtube.jpg', fit: 'cover' },
+    ])
+
+    expect(
+      createCourseThumbnailCandidates(
+        'https://example.com/same.jpg',
+        'https://example.com/same.jpg'
+      )
+    ).toEqual([{ url: 'https://example.com/same.jpg', fit: 'cover' }])
+  })
+
   it('keeps the fallback visible until the image loads', () => {
     render(
       <CourseThumbnailMedia
