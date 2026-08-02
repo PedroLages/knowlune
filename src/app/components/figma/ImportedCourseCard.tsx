@@ -193,7 +193,8 @@ export function ImportedCourseCard({
         ? [
             {
               url: thumbnailUrl,
-              fit: course.source === 'youtube' ? ('cover' as const) : ('contain' as const),
+              // Course covers are fixed-size surfaces; crop artwork to fill them consistently.
+              fit: 'cover' as const,
             },
           ]
         : [],
@@ -398,7 +399,7 @@ export function ImportedCourseCard({
                 onLoadStart={() => setVideoReady(false)}
                 onPlaying={() => setVideoReady(true)}
                 className={cn(
-                  'absolute inset-0 block w-full h-full object-contain object-center bg-background pointer-events-none transition-opacity duration-200 motion-reduce:transition-none',
+                  'absolute inset-0 block w-full h-full object-cover object-center bg-background pointer-events-none transition-opacity duration-200 motion-reduce:transition-none',
                   videoReady ? 'opacity-100' : 'opacity-0'
                 )}
               />

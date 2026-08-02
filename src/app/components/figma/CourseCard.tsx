@@ -199,7 +199,7 @@ export function CourseCard({
       height="100%"
       onCanPlay={() => setVideoReady(true)}
       className={cn(
-        'absolute inset-0 block w-full h-full object-contain object-center bg-background pointer-events-none transition-opacity duration-500',
+        'absolute inset-0 block w-full h-full object-cover object-center bg-background pointer-events-none transition-opacity duration-500',
         videoReady ? 'opacity-100' : 'opacity-0'
       )}
     />
@@ -448,7 +448,7 @@ export function CourseCard({
             alt={course.title}
             width={640}
             height={360}
-            className="w-full h-full object-contain object-center transition-opacity duration-300 motion-reduce:transition-none"
+            className="w-full h-full object-cover object-center transition-opacity duration-300 motion-reduce:transition-none"
             loading="lazy"
           />
         </picture>
@@ -496,7 +496,7 @@ export function CourseCard({
           alt={course.title}
           width={640}
           height={360}
-          className="w-full h-full object-contain object-center transition-opacity duration-200"
+          className="w-full h-full object-cover object-center transition-opacity duration-200"
           loading="lazy"
         />
       </picture>
