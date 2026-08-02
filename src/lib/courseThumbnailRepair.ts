@@ -49,22 +49,27 @@ function isImageReachable(url: string): Promise<boolean> {
   })
 }
 
-async function repairFromYouTube(videos: ImportedVideo[]): Promise<CourseThumbnailRepair | null> {
-  for (const video of videos) {
-    for (const url of youtubeThumbnailCandidates(video)) {
-      if (!(await isImageReachable(url))) continue
+async function repairFromRemoteCandidates(
+  candidates: readonly string[]
+): Promise<CourseThumbnailRepair | null> {
+  for (const url of candidates) {
+    if (!(await isImageReachable(url))) continue
 
-      try {
-        const blob = await fetchThumbnailFromUrl(url)
-        return { kind: 'blob', blob, source: 'url' }
-      } catch {
-        // The browser may display an image even when canvas fetch is blocked by
-        // CORS. Keep the validated URL as a remote fallback in that case.
-        return { kind: 'remote', url, source: 'url' }
-      }
+    try {
+      const blob = await fetchThumbnailFromUrl(url)
+      return { kind: 'blob', blob, source: 'url' }
+    } catch {
+      // The browser may display an image even when canvas fetch is blocked by
+      // CORS. Keep the validated URL as a remote fallback in that case.
+      return { kind: 'remote', url, source: 'url' }
     }
   }
   return null
+}
+
+async function repairFromYouTube(videos: ImportedVideo[]): Promise<CourseThumbnailRepair | null> {
+  const candidates = videos.flatMap(youtubeThumbnailCandidates)
+  return repairFromRemoteCandidates(candidates)
 }
 
 /**
@@ -76,9 +81,15 @@ export async function findCourseThumbnailRepair(
   course: ImportedCourse
 ): Promise<CourseThumbnailRepair | null> {
   const existing = await db.courseThumbnails.get(course.id)
-  if (existing) return null
+  if (existing?.blob && existing.blob.size > 0) return null
+  if (existing?.remoteUrl && (await isImageReachable(existing.remoteUrl))) return null
 
   const videos = await db.importedVideos.where('courseId').equals(course.id).sortBy('order')
+
+  if (course.youtubeThumbnailUrl) {
+    const courseThumbnailRepair = await repairFromRemoteCandidates([course.youtubeThumbnailUrl])
+    if (courseThumbnailRepair) return courseThumbnailRepair
+  }
 
   if (course.source === 'youtube' || videos.some(video => video.youtubeVideoId)) {
     const youtubeRepair = await repairFromYouTube(videos)

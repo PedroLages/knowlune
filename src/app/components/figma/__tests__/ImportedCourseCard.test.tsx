@@ -12,6 +12,7 @@ const mockRemoveImportedCourse = vi.fn().mockResolvedValue(undefined)
 const mockNavigate = vi.fn()
 const mockOnToggleSelect = vi.fn()
 const mockAuthors = vi.hoisted(() => [] as Array<{ id: string; name: string; photoUrl?: string }>)
+const mockThumbnailUrls = vi.hoisted(() => ({}) as Record<string, string>)
 
 // `getState()` is mutated per-test to drive error-path branches.
 let mockImportError: string | null = null
@@ -55,7 +56,7 @@ vi.mock('@/stores/useCourseImportStore', () => ({
         updateCourseStatus: mockUpdateCourseStatus,
         updateCourseDetails: mockUpdateCourseDetails,
         removeImportedCourse: mockRemoveImportedCourse,
-        thumbnailUrls: {},
+        thumbnailUrls: mockThumbnailUrls,
         autoAnalysisStatus: {},
       }),
     {
@@ -160,6 +161,7 @@ beforeEach(() => {
   mockVideoFromHandle.error = null
   mockVideoFromHandle.loading = false
   mockAuthors.length = 0
+  for (const courseId of Object.keys(mockThumbnailUrls)) delete mockThumbnailUrls[courseId]
 })
 
 afterEach(() => {
@@ -220,6 +222,18 @@ describe('ImportedCourseCard', () => {
 
     expect(screen.getByTestId('course-thumbnail-image')).toHaveClass('object-cover')
     expect(screen.getByTestId('course-thumbnail-image')).not.toHaveClass('object-contain')
+  })
+
+  it('falls back from a broken persisted cover to the course YouTube thumbnail', () => {
+    mockThumbnailUrls['course-1'] = 'https://example.com/broken-persisted.jpg'
+    renderCard({ source: 'youtube', youtubeThumbnailUrl: 'https://example.com/youtube.jpg' })
+
+    fireEvent.error(screen.getByTestId('course-thumbnail-image'))
+
+    expect(screen.getByTestId('course-thumbnail-image')).toHaveAttribute(
+      'src',
+      'https://example.com/youtube.jpg'
+    )
   })
 
   it('does not reserve an empty author row when the course has no author', () => {

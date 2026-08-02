@@ -34,7 +34,10 @@ import { useCourseImportStore } from '@/stores/useCourseImportStore'
 import { Checkbox } from '@/app/components/ui/checkbox'
 import { useImportedCourseStartFlow } from '@/app/hooks/useImportedCourseStartFlow'
 import { useLazyVisible } from '@/hooks/useLazyVisible'
-import { CourseThumbnailMedia } from '@/app/components/shared/CourseThumbnailMedia'
+import {
+  CourseThumbnailMedia,
+  createCourseThumbnailCandidates,
+} from '@/app/components/shared/CourseThumbnailMedia'
 import type { ImportedCourse, LearnerCourseStatus } from '@/data/types'
 
 const LONG_PRESS_MS = 500
@@ -97,19 +100,10 @@ export function ImportedCourseCompactCard({
   const updateCourseStatus = useCourseImportStore(state => state.updateCourseStatus)
   const removeImportedCourse = useCourseImportStore(state => state.removeImportedCourse)
   const thumbnailUrls = useCourseImportStore(state => state.thumbnailUrls)
-  const thumbnailUrl = thumbnailUrls[course.id] ?? course.youtubeThumbnailUrl ?? null
+  const persistedThumbnailUrl = thumbnailUrls[course.id]
   const thumbnailCandidates = useMemo(
-    () =>
-      thumbnailUrl
-        ? [
-            {
-              url: thumbnailUrl,
-              // Compact card covers use the same fill treatment as full-size cards.
-              fit: 'cover' as const,
-            },
-          ]
-        : [],
-    [course.source, thumbnailUrl]
+    () => createCourseThumbnailCandidates(persistedThumbnailUrl, course.youtubeThumbnailUrl),
+    [course.youtubeThumbnailUrl, persistedThumbnailUrl]
   )
 
   const [lazyRef, isCardVisible] = useLazyVisible<HTMLElement>()

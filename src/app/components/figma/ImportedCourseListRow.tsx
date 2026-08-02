@@ -39,7 +39,10 @@ import { useCourseImportStore } from '@/stores/useCourseImportStore'
 import { Checkbox } from '@/app/components/ui/checkbox'
 import { useAuthorStore } from '@/stores/useAuthorStore'
 import { formatCourseDuration } from '@/lib/format'
-import { CourseThumbnailMedia } from '@/app/components/shared/CourseThumbnailMedia'
+import {
+  CourseThumbnailMedia,
+  createCourseThumbnailCandidates,
+} from '@/app/components/shared/CourseThumbnailMedia'
 import type { ImportedCourse, LearnerCourseStatus } from '@/data/types'
 
 const statusConfig: Record<
@@ -104,18 +107,10 @@ export function ImportedCourseListRow({
   const [deleting, setDeleting] = useState(false)
   const menuTriggerRef = useRef<HTMLButtonElement>(null)
 
-  const thumbnailUrl = thumbnailUrls[course.id] ?? course.youtubeThumbnailUrl ?? null
+  const persistedThumbnailUrl = thumbnailUrls[course.id]
   const thumbnailCandidates = useMemo(
-    () =>
-      thumbnailUrl
-        ? [
-            {
-              url: thumbnailUrl,
-              fit: course.source === 'youtube' ? ('cover' as const) : ('contain' as const),
-            },
-          ]
-        : [],
-    [course.source, thumbnailUrl]
+    () => createCourseThumbnailCandidates(persistedThumbnailUrl, course.youtubeThumbnailUrl),
+    [course.youtubeThumbnailUrl, persistedThumbnailUrl]
   )
   const status = course.status
   const config = statusConfig[status]

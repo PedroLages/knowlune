@@ -9,6 +9,7 @@ const mockUpdateCourseStatus = vi.fn()
 const mockRemoveImportedCourse = vi.fn().mockResolvedValue(undefined)
 const mockNavigate = vi.fn()
 const mockOnToggleSelect = vi.fn()
+const mockThumbnailUrls = vi.hoisted(() => ({}) as Record<string, string>)
 
 let mockImportError: string | null = null
 
@@ -30,7 +31,7 @@ vi.mock('@/stores/useCourseImportStore', () => ({
       selector({
         updateCourseStatus: mockUpdateCourseStatus,
         removeImportedCourse: mockRemoveImportedCourse,
-        thumbnailUrls: {},
+        thumbnailUrls: mockThumbnailUrls,
       }),
     {
       getState: () => ({ importError: mockImportError }),
@@ -74,6 +75,7 @@ beforeEach(() => {
   mockNavigate.mockClear()
   mockRemoveImportedCourse.mockClear()
   mockImportError = null
+  for (const courseId of Object.keys(mockThumbnailUrls)) delete mockThumbnailUrls[courseId]
 })
 
 describe('ImportedCourseCompactCard — minimal metadata', () => {
@@ -121,6 +123,18 @@ describe('ImportedCourseCompactCard — minimal metadata', () => {
 
     expect(screen.getByTestId('course-thumbnail-image')).toHaveClass('object-cover')
     expect(screen.getByTestId('course-thumbnail-image')).not.toHaveClass('object-contain')
+  })
+
+  it('falls back from a broken persisted cover to the course YouTube thumbnail', () => {
+    mockThumbnailUrls['course-1'] = 'https://example.com/broken-persisted.jpg'
+    renderCard({ source: 'youtube', youtubeThumbnailUrl: 'https://example.com/youtube.jpg' })
+
+    fireEvent.error(screen.getByTestId('course-thumbnail-image'))
+
+    expect(screen.getByTestId('course-thumbnail-image')).toHaveAttribute(
+      'src',
+      'https://example.com/youtube.jpg'
+    )
   })
 })
 

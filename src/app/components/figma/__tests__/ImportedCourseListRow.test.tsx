@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router'
 import { ImportedCourseListRow } from '../ImportedCourseListRow'
@@ -9,6 +9,7 @@ const mockUpdateCourseStatus = vi.fn()
 const mockRemoveImportedCourse = vi.fn().mockResolvedValue(undefined)
 const mockNavigate = vi.fn()
 const mockOnToggleSelect = vi.fn()
+const mockThumbnailUrls = vi.hoisted(() => ({}) as Record<string, string>)
 let mockImportError: string | null = null
 
 vi.mock('react-router', async () => {
@@ -29,7 +30,7 @@ vi.mock('@/stores/useCourseImportStore', () => ({
       selector({
         updateCourseStatus: mockUpdateCourseStatus,
         removeImportedCourse: mockRemoveImportedCourse,
-        thumbnailUrls: {},
+        thumbnailUrls: mockThumbnailUrls,
       }),
     {
       getState: () => ({ importError: mockImportError }),
@@ -82,6 +83,7 @@ describe('ImportedCourseListRow', () => {
     mockRemoveImportedCourse.mockClear()
     mockNavigate.mockClear()
     mockImportError = null
+    for (const courseId of Object.keys(mockThumbnailUrls)) delete mockThumbnailUrls[courseId]
   })
 
   it('renders title, author fallback, and status badge', () => {
@@ -101,6 +103,25 @@ describe('ImportedCourseListRow', () => {
   it('omits progress bar when completionPercent is 0', () => {
     renderRow({ completionPercent: 0 })
     expect(screen.queryByTestId('course-list-row-progress')).not.toBeInTheDocument()
+  })
+
+  it('falls back from a broken persisted cover to the course YouTube thumbnail', () => {
+    mockThumbnailUrls['course-1'] = 'https://example.com/broken-persisted.jpg'
+    renderRow({
+      course: {
+        ...baseCourse,
+        source: 'youtube',
+        youtubeThumbnailUrl: 'https://example.com/youtube.jpg',
+      },
+    })
+
+    fireEvent.error(screen.getByTestId('course-thumbnail-image'))
+
+    expect(screen.getByTestId('course-thumbnail-image')).toHaveAttribute(
+      'src',
+      'https://example.com/youtube.jpg'
+    )
+    expect(screen.getByTestId('course-thumbnail-image')).toHaveClass('object-cover')
   })
 
   it('falls back to FolderOpen icon when no thumbnail URL', () => {
