@@ -5,6 +5,7 @@ import {
   fetchThumbnailFromUrl,
   loadThumbnailFromFile,
 } from '@/lib/thumbnailService'
+import { parseYouTubeUrl } from '@/lib/youtubeUrlParser'
 
 export type CourseThumbnailRepair =
   | { kind: 'blob'; blob: Blob; source: 'auto' | 'local' | 'url' }
@@ -14,17 +15,61 @@ function unique(values: Array<string | undefined>): string[] {
   return [...new Set(values.filter((value): value is string => Boolean(value)))]
 }
 
+function videoIdFromLegacyVideo(video: ImportedVideo): string | undefined {
+  if (video.youtubeVideoId) return video.youtubeVideoId
+
+  if (video.youtubeUrl) {
+    const parsed = parseYouTubeUrl(video.youtubeUrl)
+    if (parsed.valid && parsed.videoId) return parsed.videoId
+  }
+
+  const path = typeof video.path === 'string' ? video.path : ''
+  if (path.startsWith('youtube://')) {
+    const pathId = path.slice('youtube://'.length).split(/[/?#]/, 1)[0]
+    return pathId || undefined
+  }
+
+  return undefined
+}
+
 function youtubeThumbnailCandidates(video: ImportedVideo): string[] {
+  const videoId = videoIdFromLegacyVideo(video)
   return unique([
     video.thumbnailUrl,
-    video.youtubeVideoId
-      ? `https://i.ytimg.com/vi/${video.youtubeVideoId}/hqdefault.jpg`
-      : undefined,
-    video.youtubeVideoId
-      ? `https://i.ytimg.com/vi/${video.youtubeVideoId}/mqdefault.jpg`
-      : undefined,
-    video.youtubeVideoId ? `https://i.ytimg.com/vi/${video.youtubeVideoId}/default.jpg` : undefined,
+    videoId ? `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg` : undefined,
+    videoId ? `https://i.ytimg.com/vi/${videoId}/mqdefault.jpg` : undefined,
+    videoId ? `https://i.ytimg.com/vi/${videoId}/default.jpg` : undefined,
   ])
+}
+
+function hasYouTubeVideoMetadata(video: ImportedVideo): boolean {
+  const path = typeof video.path === 'string' ? video.path : ''
+  return Boolean(
+    video.youtubeVideoId || video.youtubeUrl || path.startsWith('youtube://') || video.thumbnailUrl
+  )
+}
+
+function isLegacyYouTubeCourse(course: ImportedCourse, videos: ImportedVideo[]): boolean {
+  const category = typeof course.category === 'string' ? course.category : ''
+  return (
+    course.source === 'youtube' ||
+    category.trim().toLowerCase() === 'youtube' ||
+    videos.some(hasYouTubeVideoMetadata)
+  )
+}
+
+/** A non-empty Blob can still contain an HTML error page or corrupt image data. */
+async function isThumbnailBlobUsable(blob: Blob): Promise<boolean> {
+  if (blob.size <= 0) return false
+  if (typeof createImageBitmap !== 'function') return true
+
+  try {
+    const bitmap = await createImageBitmap(blob)
+    bitmap.close()
+    return true
+  } catch {
+    return false
+  }
 }
 
 /** Validate a remote image without decoding it into a canvas. */
@@ -81,7 +126,7 @@ export async function findCourseThumbnailRepair(
   course: ImportedCourse
 ): Promise<CourseThumbnailRepair | null> {
   const existing = await db.courseThumbnails.get(course.id)
-  if (existing?.blob && existing.blob.size > 0) return null
+  if (existing?.blob && (await isThumbnailBlobUsable(existing.blob))) return null
   if (existing?.remoteUrl && (await isImageReachable(existing.remoteUrl))) return null
 
   const videos = await db.importedVideos.where('courseId').equals(course.id).sortBy('order')
@@ -91,7 +136,7 @@ export async function findCourseThumbnailRepair(
     if (courseThumbnailRepair) return courseThumbnailRepair
   }
 
-  if (course.source === 'youtube' || videos.some(video => video.youtubeVideoId)) {
+  if (isLegacyYouTubeCourse(course, videos)) {
     const youtubeRepair = await repairFromYouTube(videos)
     if (youtubeRepair) return youtubeRepair
   }
