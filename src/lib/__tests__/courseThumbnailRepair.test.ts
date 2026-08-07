@@ -81,6 +81,7 @@ function makeVideo(overrides: Partial<ImportedVideo> = {}): ImportedVideo {
 
 beforeEach(() => {
   vi.stubGlobal('Image', ReachabilityImage)
+  vi.stubGlobal('createImageBitmap', undefined)
   mocks.getThumbnail.mockReset().mockResolvedValue(undefined)
   mocks.sortVideos.mockReset().mockResolvedValue([])
   mocks.fetchThumbnailFromUrl.mockReset().mockRejectedValue(new Error('CORS blocked'))
@@ -144,6 +145,46 @@ describe('findCourseThumbnailRepair', () => {
     await expect(findCourseThumbnailRepair(makeCourse())).resolves.toEqual({
       kind: 'remote',
       url: 'https://example.com/video.jpg',
+      source: 'url',
+    })
+  })
+
+  it('recognizes a legacy YouTube URL when source and video ID are absent', async () => {
+    const videoId = 'abc123DEF_-'
+    mocks.sortVideos.mockResolvedValue([
+      makeVideo({
+        youtubeVideoId: undefined,
+        youtubeUrl: `https://www.youtube.com/watch?v=${videoId}`,
+        path: `youtube://${videoId}`,
+        thumbnailUrl: undefined,
+      }),
+    ])
+
+    await expect(
+      findCourseThumbnailRepair(makeCourse({ source: undefined, category: 'youtube' }))
+    ).resolves.toEqual({
+      kind: 'remote',
+      url: `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
+      source: 'url',
+    })
+  })
+
+  it('replaces a non-empty but undecodable cached blob', async () => {
+    const invalidBlob = new Blob(['not an image'], { type: 'text/html' })
+    mocks.getThumbnail.mockResolvedValue({
+      courseId: 'course-1',
+      blob: invalidBlob,
+      source: 'url',
+      createdAt: '2026-08-02T10:00:00.000Z',
+    } satisfies CourseThumbnail)
+    vi.stubGlobal('createImageBitmap', vi.fn().mockRejectedValue(new Error('decode failed')))
+    mocks.sortVideos.mockResolvedValue([
+      makeVideo({ thumbnailUrl: 'https://example.com/replacement.jpg' }),
+    ])
+
+    await expect(findCourseThumbnailRepair(makeCourse())).resolves.toEqual({
+      kind: 'remote',
+      url: 'https://example.com/replacement.jpg',
       source: 'url',
     })
   })
