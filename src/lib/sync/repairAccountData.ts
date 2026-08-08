@@ -70,6 +70,17 @@ export async function repairAccountData(userId: string): Promise<RepairResult> {
         continue
       }
       try {
+        if (typeof db.syncQueue.toCollection === 'function') {
+          await db.syncQueue
+            .toCollection()
+            .filter(
+              queued =>
+                queued.tableName === tableName &&
+                queued.recordId === String(id ?? '') &&
+                queued.status !== 'uploading'
+            )
+            .delete()
+        }
         await syncableWrite(tableName, 'put', row as SyncableRecord)
         repaired += 1
       } catch (error) {

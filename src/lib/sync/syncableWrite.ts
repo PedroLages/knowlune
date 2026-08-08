@@ -202,20 +202,6 @@ export async function syncableWrite<T extends SyncableRecord>(
       updatedAt: now,
     }
 
-    // A repair or a rapid edit may supersede an older pending/dead-letter job.
-    // Keep only the newest payload for this record so a corrected write can
-    // recover without manual queue cleanup.
-    if (typeof db.syncQueue.toCollection === 'function') {
-      await db.syncQueue
-        .toCollection()
-        .filter(
-          queued =>
-            queued.tableName === tableName &&
-            queued.recordId === recordId &&
-            queued.status !== 'uploading'
-        )
-        .delete()
-    }
     await db.syncQueue.add(queueEntry as SyncQueueEntry)
 
     // Nudge the engine to process the queue soon (debounced in E92-S05).
