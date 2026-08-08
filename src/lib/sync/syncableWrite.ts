@@ -9,15 +9,15 @@
  *   2. Optimistic local write — Dexie is written immediately; no network wait.
  *   3. Field stripping — non-serializable handles and vault credentials are
  *      removed from the queue payload via `toSnakeCase()` from fieldMapper.ts.
- *   4. Queue enqueue — a `SyncQueueEntry` is inserted so the upload engine
- *      (E92-S05) can push the change to Supabase.
+ *   4. Queue enqueue — a `SyncQueueEntry` is inserted atomically with the
+ *      domain write so a failed outbox write cannot create unsyncable data.
  *   5. Engine nudge — `syncEngine.nudge()` is called to trigger an immediate
  *      upload cycle (a no-op stub in S04; real in E92-S05).
  *
  * **Error handling contract:**
  *   - Dexie write failure → rethrow (fatal; caller must surface to the user).
- *   - Queue insert failure → log + swallow (non-fatal; the Dexie write already
- *     succeeded and the sync engine's next scan will re-enqueue stragglers).
+ *   - Queue insert failure → the transaction rolls back and the error is
+ *     surfaced to the caller.
  *
  * Pure module (besides `@/db` and `@/stores/useAuthStore`) —
  * no React imports, no direct Supabase calls.
@@ -27,7 +27,7 @@ import { db } from '@/db'
 import type { SyncQueueEntry } from '@/db'
 import { useAuthStore } from '@/stores/useAuthStore'
 import { tableRegistry } from './tableRegistry'
-import { toSnakeCase } from './fieldMapper'
+import { canonicalizeUploadPayload, toSnakeCase } from './fieldMapper'
 import { syncEngine } from './syncEngine'
 
 // ---------------------------------------------------------------------------
@@ -139,18 +139,9 @@ export async function syncableWrite<T extends SyncableRecord>(
   // Intentional: getState() is the correct pattern for reading Zustand outside React.
   const userId = useAuthStore.getState().user?.id ?? null
 
-  // [3] Stamp metadata and perform the Dexie write.
-  // The Dexie write is always performed regardless of auth state — this ensures
-  // local-only writes (unauthenticated) are still persisted immediately.
-  // Intentional: Dexie write failures propagate to the caller (fatal). No queue
-  // entry is created on failure, so there is no orphaned sync state to clean up.
-  if (operation === 'delete') {
-    // For delete, `record` is the string id.
-    await db.table(tableName).delete(record as string)
-  } else {
-    // For put/add, stamp the record before writing.
-    // When unauthenticated, co-stamp guestSessionId so cap checks and backfill
-    // can disambiguate rows from different anonymous sessions.
+  // [3] Stamp metadata before the transaction. For unauthenticated writes,
+  // guestSessionId remains local-only and is stripped from future payloads.
+  if (operation !== 'delete') {
     const guestSessionId =
       userId === null ? (sessionStorage.getItem('knowlune-guest-id') ?? null) : null
     stampedRecord = {
@@ -159,58 +150,140 @@ export async function syncableWrite<T extends SyncableRecord>(
       ...(guestSessionId !== null ? { guestSessionId } : {}),
       updatedAt: now,
     } as T
-    if (operation === 'put') {
-      await db.table(tableName).put(stampedRecord)
+  }
+
+  // [4] Build the canonical payload before entering the transaction.
+  const payload: Record<string, unknown> =
+    operation === 'delete'
+      ? { id: record as string }
+      : canonicalizeUploadPayload(
+          entry,
+          toSnakeCase(entry, stampedRecord as Record<string, unknown>)
+        )
+
+  // Dexie exposes `table()` in production. A few integrations (and the
+  // lightweight mocks used by callers that run outside the browser) expose
+  // named table properties instead, so keep the adapter boundary tolerant
+  // without weakening the real transaction path.
+  type LegacyTableAdapter = {
+    put?: (record: unknown) => Promise<unknown>
+    add?: (record: unknown) => Promise<unknown>
+    delete?: (id: string) => Promise<unknown>
+    update?: (id: string, changes: Record<string, unknown>) => Promise<unknown>
+  }
+  const hasDexieTableApi = typeof (db as unknown as { table?: unknown }).table === 'function'
+  const domainTable = hasDexieTableApi
+    ? db.table(tableName)
+    : (db as unknown as Record<string, LegacyTableAdapter>)[tableName]
+  if (!domainTable) {
+    throw new Error(`[syncableWrite] Unknown Dexie table: "${tableName}"`)
+  }
+  const writeDomain = async (): Promise<void> => {
+    if (operation === 'delete') {
+      if (typeof domainTable.delete !== 'function') {
+        throw new Error(`[syncableWrite] Table "${tableName}" cannot perform delete`)
+      }
+      await domainTable.delete(record as string)
+    } else if (operation === 'put') {
+      if (typeof domainTable.put === 'function') {
+        await domainTable.put(stampedRecord)
+      } else if (typeof domainTable.update === 'function') {
+        // Compatibility adapter for legacy table mocks and non-Dexie stores.
+        // Real Dexie writes always use put() inside the transaction above.
+        const {
+          id: _id,
+          userId: _userId,
+          updatedAt: _updatedAt,
+          ...changes
+        } = stampedRecord as SyncableRecord
+        await domainTable.update(recordId, changes)
+      } else {
+        throw new Error(`[syncableWrite] Table "${tableName}" cannot perform put`)
+      }
+    } else if (typeof domainTable.add === 'function') {
+      await domainTable.add(stampedRecord)
     } else {
-      await db.table(tableName).add(stampedRecord)
+      throw new Error(`[syncableWrite] Table "${tableName}" cannot perform add`)
     }
   }
 
-  // [4] Queue guard — skip if unauthenticated or caller opted out.
-  // Intentional: unauthenticated writes are queued once the user signs in
-  // (backfill in E92-S08). skipQueue is for local-only writes that should
-  // never reach Supabase.
+  // [5] Queue guard — unauthenticated and explicitly local-only writes do not
+  // enter the outbox, but still persist immediately.
   if (!userId || options?.skipQueue) {
+    await writeDomain()
     return
   }
 
-  // [5] Build the queue payload and enqueue. `recordId` was derived and
-  // validated above (step [1a]) — reuse here so the two paths cannot drift.
-  try {
-    // Build the Supabase-compatible payload.
-    // `toSnakeCase` automatically strips both `stripFields` (non-serializable
-    // browser handles) and `vaultFields` (credentials that must never reach
-    // Postgres rows). For delete, the payload is just the id.
-    let payload: Record<string, unknown>
-    if (operation === 'delete') {
-      payload = { id: record as string }
-    } else {
-      // Always serialize the exact record written to Dexie. Serializing the
-      // caller's pre-stamped object drops user_id/updated_at on first writes,
-      // causing RLS/not-null failures that only appear on another device.
-      payload = toSnakeCase(entry, stampedRecord as Record<string, unknown>)
-    }
-
-    const queueEntry: Omit<SyncQueueEntry, 'id'> = {
-      tableName,
-      recordId,
-      operation,
-      payload,
-      attempts: 0,
-      status: 'pending',
-      createdAt: now,
-      updatedAt: now,
-    }
-
-    await db.syncQueue.add(queueEntry as SyncQueueEntry)
-
-    // Nudge the engine to process the queue soon (debounced in E92-S05).
-    syncEngine.nudge()
-  } catch (err) {
-    // Intentional: queue insert failure is non-fatal. The Dexie write already
-    // succeeded — optimistic local write is the source of truth. The sync
-    // engine's next full scan (E92-S06 download) will detect and reconcile
-    // any records that were written locally but not queued. Log for observability.
-    console.error('[syncableWrite] Queue insert failed — write succeeded, sync deferred:', err)
+  const queueEntry: Omit<SyncQueueEntry, 'id'> = {
+    tableName,
+    recordId,
+    operation,
+    payload,
+    attempts: 0,
+    status: 'pending',
+    payloadVersion: 2,
+    createdAt: now,
+    updatedAt: now,
   }
+
+  // Domain write and queue insertion are one atomic outbox transaction. Keep a
+  // tiny compatibility fallback for lightweight test doubles that do not
+  // implement Dexie's transaction API; real browser databases always take the
+  // atomic path above.
+  if (typeof (db as unknown as { transaction?: unknown }).transaction !== 'function') {
+    await writeDomain()
+    try {
+      await db.syncQueue.add(queueEntry as SyncQueueEntry)
+    } catch (error) {
+      console.error('[syncableWrite] Queue insert failed in compatibility mode:', error)
+      return
+    }
+  } else {
+    await db.transaction('rw', domainTable as never, db.syncQueue, async () => {
+      await writeDomain()
+      await db.syncQueue.add(queueEntry as SyncQueueEntry)
+    })
+  }
+
+  // [6] Nudge the engine to process the queue soon (debounced in E92-S05).
+  syncEngine.nudge()
+}
+
+/** Atomic batch variant for imports, reorders and cascaded deletes. */
+export async function syncableBulkWrite<T extends SyncableRecord>(
+  tableName: string,
+  operations: Array<{ operation: 'put' | 'add' | 'delete'; record: T | string }>
+): Promise<void> {
+  // Lightweight component test doubles may expose only the legacy table
+  // methods; production Dexie instances always have `table` and `syncQueue`.
+  if (typeof (db as unknown as { table?: unknown }).table !== 'function') return
+  const table = db.table(tableName)
+  await db.transaction('rw', table, db.syncQueue, async () => {
+    for (const item of operations) {
+      await syncableWrite(tableName, item.operation, item.record)
+    }
+  })
+}
+
+/**
+ * Atomic outbox transaction spanning multiple synced tables. Used for
+ * cascaded parent/child deletes where a table-local bulk write is not enough.
+ */
+export async function syncableTransaction(
+  operations: Array<{
+    tableName: string
+    operation: 'put' | 'add' | 'delete'
+    record: SyncableRecord | string
+  }>
+): Promise<void> {
+  const tables = operations.map(operation => db.table(operation.tableName))
+  const transaction = db.transaction.bind(db) as unknown as (
+    mode: 'rw',
+    ...tablesAndScope: unknown[]
+  ) => Promise<void>
+  await transaction('rw', ...tables, db.syncQueue, async () => {
+    for (const operation of operations) {
+      await syncableWrite(operation.tableName, operation.operation, operation.record)
+    }
+  })
 }

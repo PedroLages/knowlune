@@ -29,6 +29,21 @@ import { syncableWrite, type SyncableRecord } from './syncableWrite'
 import { calculateNextReview, fsrsTest } from '@/lib/spacedRepetition'
 import type { ReviewRating } from '@/data/types'
 
+const REVIEW_RATING_LABEL: Record<number, ReviewRating> = {
+  1: 'again',
+  2: 'hard',
+  3: 'good',
+  4: 'easy',
+}
+
+function normalizeReviewRating(value: unknown): ReviewRating | null {
+  if (value === 'again' || value === 'hard' || value === 'good' || value === 'easy') {
+    return value
+  }
+  if (typeof value === 'number') return REVIEW_RATING_LABEL[value] ?? null
+  return null
+}
+
 // ---------------------------------------------------------------------------
 // Replay function
 // ---------------------------------------------------------------------------
@@ -89,9 +104,11 @@ export async function replayFlashcardReviews(flashcardId: string): Promise<void>
   // fsrsTest (no fuzz) ensures identical output regardless of when/where replay runs.
   let accState = null
   for (const review of reviews) {
+    const rating = normalizeReviewRating(review.rating)
+    if (!rating) continue
     accState = calculateNextReview(
       accState,
-      review.rating as ReviewRating,
+      rating,
       new Date(review.reviewed_at as string),
       fsrsTest
     )

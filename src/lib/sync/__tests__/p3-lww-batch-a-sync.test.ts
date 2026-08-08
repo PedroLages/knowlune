@@ -125,6 +125,7 @@ describe('E96-S02 LWW batch A — learningPaths + learningPathEntries', () => {
     const now = new Date().toISOString()
     const remotePath: LearningPath = {
       id: 'remote-path-1',
+      userId: TEST_USER_ID,
       name: 'Remote Path',
       createdAt: now,
       updatedAt: now,
@@ -132,6 +133,7 @@ describe('E96-S02 LWW batch A — learningPaths + learningPathEntries', () => {
     }
     const remoteEntry: LearningPathEntry = {
       id: 'remote-entry-1',
+      userId: TEST_USER_ID,
       pathId: 'remote-path-1',
       courseId: 'remote-course-1',
       courseType: 'imported',

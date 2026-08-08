@@ -101,6 +101,7 @@ function usePrefersReducedMotion(): boolean {
 export function SyncStatusIndicator(): React.ReactElement {
   const status = useSyncStatusStore(s => s.status)
   const pendingCount = useSyncStatusStore(s => s.pendingCount)
+  const failedCount = useSyncStatusStore(s => s.failedCount)
   const lastSyncAt = useSyncStatusStore(s => s.lastSyncAt)
   const lastError = useSyncStatusStore(s => s.lastError)
 
@@ -116,11 +117,11 @@ export function SyncStatusIndicator(): React.ReactElement {
   // announcements on every 30s nudge cycle.
   const ariaLabel = useMemo(() => {
     const countSuffix =
-      pendingCount > 0
-        ? ` ${pendingCount} ${pendingCount === 1 ? 'change' : 'changes'} pending.`
+      pendingCount > 0 || failedCount > 0
+        ? ` ${pendingCount} waiting, ${failedCount} need attention.`
         : ''
     return `Sync status: ${config.label}.${countSuffix}`
-  }, [config.label, pendingCount])
+  }, [config.label, pendingCount, failedCount])
 
   // Announce on transitions INTO error/offline (R4 chatty-SR mitigation) and
   // on recovery transitions (error → synced / error → syncing) — KI-E97-S01-L01.
@@ -226,7 +227,13 @@ export function SyncStatusIndicator(): React.ReactElement {
             <p className="font-semibold text-sm">{config.label}</p>
           </div>
 
-          <p className="text-sm text-muted-foreground">{config.copy}</p>
+          <p className="text-sm text-muted-foreground">
+            {status === 'synced' && failedCount === 0 && pendingCount === 0
+              ? config.copy
+              : status === 'error' || failedCount > 0
+                ? 'Some changes need attention before sync can complete.'
+                : config.copy}
+          </p>
 
           <dl className="text-sm space-y-1">
             <div className="flex items-center justify-between gap-2">
@@ -242,7 +249,11 @@ export function SyncStatusIndicator(): React.ReactElement {
             </div>
             <div className="flex items-center justify-between gap-2">
               <dt className="text-muted-foreground">Pending</dt>
-              <dd className="text-foreground">{formatQueueCopy(pendingCount)}</dd>
+              <dd className="text-foreground">
+                {failedCount > 0
+                  ? `${pendingCount} waiting · ${failedCount} need attention`
+                  : formatQueueCopy(pendingCount)}
+              </dd>
             </div>
           </dl>
 

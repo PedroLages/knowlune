@@ -28,6 +28,7 @@ import {
 import { motion } from 'motion/react'
 import { toast } from 'sonner'
 import { db } from '@/db'
+import { syncableWrite, type SyncableRecord } from '@/lib/sync/syncableWrite'
 import { useCourseAdapter } from '@/hooks/useCourseAdapter'
 import { useAuthorStore } from '@/stores/useAuthorStore'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
@@ -250,12 +251,13 @@ export function CourseOverview() {
             f => f.name.toLowerCase() === video.filename.toLowerCase()
           )
           if (matchingFile) {
-            await db.importedVideos.update(video.id, {
+            await syncableWrite('importedVideos', 'put', {
+              ...video,
               driveFileRef: {
                 fileId: matchingFile.id,
                 driveSource: 'google' as const,
               },
-            })
+            } as unknown as SyncableRecord)
             matchedCount++
           }
         }

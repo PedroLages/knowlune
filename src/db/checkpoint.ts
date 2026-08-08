@@ -1,5 +1,5 @@
 /**
- * Dexie Migration Checkpoint — v69
+ * Dexie Migration Checkpoint — v70
  *
  * This file provides a frozen snapshot of the complete IndexedDB schema at version 69.
  * Fresh installs skip the incremental version declarations and create the full
@@ -20,7 +20,7 @@
  * a single `db.version(CHECKPOINT_VERSION).stores(CHECKPOINT_SCHEMA)` call
  * for fresh installs.
  */
-export const CHECKPOINT_VERSION = 69
+export const CHECKPOINT_VERSION = 70
 
 /**
  * Shared `searchFrecency` index string. Used by both the v53 `.stores()` call
@@ -31,7 +31,7 @@ export const SEARCH_FRECENCY_INDEXES = '[entityType+entityId], entityType, lastO
 
 /**
  * Complete schema snapshot at CHECKPOINT_VERSION.
- * This is the result of applying all migrations v1–v69 on a fresh database.
+ * This is the result of applying all migrations v1–v70 on a fresh database.
  *
  * IMPORTANT: This must exactly match the schema produced by running all
  * incremental migrations. The unit test `schema-checkpoint.test.ts`
@@ -129,6 +129,7 @@ export const CHECKPOINT_SCHEMA: Record<string, string> = {
   learnerModels: 'id, courseId, userId, [userId+updatedAt]',
   // v52 (E92-S02): sync infrastructure tables
   syncQueue: '++id, status, [tableName+recordId], createdAt',
+  assetSyncQueue: '++id, status, [tableName+recordId], createdAt',
   syncMetadata: 'table',
   // v53 (E117-S02): unified-search frecency counters (local-only, no userId).
   searchFrecency: SEARCH_FRECENCY_INDEXES,

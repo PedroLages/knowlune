@@ -934,10 +934,10 @@ export async function persistScannedCourse(
         }
 
         for (const video of existingVideos) {
-          if (!keptVideoIds.has(video.id)) await db.importedVideos.delete(video.id)
+          if (!keptVideoIds.has(video.id)) await syncableWrite('importedVideos', 'delete', video.id)
         }
         for (const pdf of existingPdfs) {
-          if (!keptPdfIds.has(pdf.id)) await db.importedPdfs.delete(pdf.id)
+          if (!keptPdfIds.has(pdf.id)) await syncableWrite('importedPdfs', 'delete', pdf.id)
         }
 
         // Captions are local course content and intentionally bypass the sync

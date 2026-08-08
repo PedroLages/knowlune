@@ -117,7 +117,11 @@ async function fetchTemplateEntries(client: SupabaseClient): Promise<LearningPat
 
   return (data ?? []).map((row: Record<string, unknown>) => ({
     id: row.id as string,
-    pathId: `template_${row.template_id as string}`,
+    // The seed data already uses `template_*` IDs. Older environments stored
+    // the bare template UUID, so normalize exactly once.
+    pathId: String(row.template_id ?? '').startsWith('template_')
+      ? (row.template_id as string)
+      : `template_${row.template_id as string}`,
     courseId: (row.course_id as string) || '',
     courseType: 'catalog' as const,
     position: (row.position as number) || 0,
@@ -127,6 +131,7 @@ async function fetchTemplateEntries(client: SupabaseClient): Promise<LearningPat
         ? `Search for: ${row.match_title as string}`
         : undefined,
     isManuallyOrdered: false,
+    isTemplate: true,
   }))
 }
 

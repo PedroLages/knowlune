@@ -44,6 +44,7 @@ interface FileSystemDirectoryHandle extends FileSystemHandle {
 
 // Build-time constants injected by Vite define (see vite.config.ts)
 declare const __APP_VERSION__: string
+declare const __SYNC_PROTOCOL_VERSION__: number
 declare const __PLAYWRIGHT_TEST__: boolean
 
 interface Window {

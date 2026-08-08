@@ -22,7 +22,7 @@
  */
 
 import { db } from '@/db'
-import type { SyncQueueEntry } from '@/db/schema'
+import type { AssetSyncQueueEntry, SyncQueueEntry } from '@/db/schema'
 import { supabase } from '@/lib/auth/supabase'
 import { opfsStorageService } from '@/services/OpfsStorageService'
 import { uploadBlob } from './storageUpload'
@@ -38,10 +38,17 @@ export const STORAGE_TABLES = new Set(['importedCourses', 'authors', 'importedPd
 const SIZE_LIMITS = {
   'course-thumbnails': 500_000, // 500 KB
   avatars: 1_000_000, // 1 MB
-  pdfs: 100_000_000, // 100 MB
+  pdfs: 50 * 1024 * 1024,
   'book-covers': 2_000_000, // 2 MB
-  'book-files': 209_715_200, // 200 MB
+  'book-files': 50 * 1024 * 1024,
 } as const
+
+export interface AssetSyncFailure {
+  table: string
+  recordId: string
+  message: string
+  retryable: boolean
+}
 
 // ---------------------------------------------------------------------------
 // Public API
@@ -63,8 +70,10 @@ export async function uploadStorageFilesForTable(
   tableName: string,
   entries: SyncQueueEntry[],
   userId: string
-): Promise<void> {
-  if (!STORAGE_TABLES.has(tableName)) return
+): Promise<AssetSyncFailure[]> {
+  if (!STORAGE_TABLES.has(tableName)) return []
+
+  const failures: AssetSyncFailure[] = []
 
   for (const entry of entries) {
     try {
@@ -79,27 +88,128 @@ export async function uploadStorageFilesForTable(
           await _uploadPdfFile(entry, userId)
           break
         case 'books':
-          // E94-S07: cover and file uploads are independent — one failing must not
-          // prevent the other from running. Each has its own try/catch.
-          try {
-            await _uploadBookCover(entry, userId)
-          } catch (err) {
-            console.warn('[storageSync] Cover upload failed', entry.recordId, err)
-          }
-          try {
-            await _uploadBookFile(entry, userId)
-          } catch (err) {
-            console.warn('[storageSync] File upload failed', entry.recordId, err)
+          // Covers and primary files are independent asset jobs. A stale OPFS
+          // cover or failed cover upload must not prevent the book binary from
+          // being retried (and vice versa).
+          {
+            const bookAssetErrors: unknown[] = []
+            try {
+              await _uploadBookCover(entry, userId)
+            } catch (error) {
+              bookAssetErrors.push(error)
+              console.warn(`[storageSync] Cover upload failed for ${entry.recordId}:`, error)
+            }
+            try {
+              await _uploadBookFile(entry, userId)
+            } catch (error) {
+              bookAssetErrors.push(error)
+              console.warn(`[storageSync] File upload failed for ${entry.recordId}:`, error)
+            }
+            if (bookAssetErrors.length > 0) throw bookAssetErrors[0]
           }
           break
       }
+      await clearAssetFailure(entry, userId)
     } catch (err) {
+      const message = err instanceof Error ? err.message : String(err)
+      const failure = {
+        table: tableName,
+        recordId: entry.recordId,
+        message,
+        retryable: !(err instanceof RangeError),
+      }
+      failures.push(failure)
+      await enqueueAssetFailure(entry, userId, message, failure.retryable)
       console.warn(
         `[storageSync] Non-fatal upload failure for table "${tableName}", recordId "${entry.recordId}":`,
         err
       )
     }
   }
+  return failures
+}
+
+/** Retry durable asset jobs after the metadata queue has drained. */
+export async function retryAssetSyncFailures(userId: string): Promise<AssetSyncFailure[]> {
+  if (!db.assetSyncQueue) return []
+  const jobs = await db.assetSyncQueue
+    .toCollection()
+    .filter(
+      job =>
+        job.userId === userId &&
+        (job.status === 'pending' || job.status === 'dead-letter') &&
+        (job.failure?.retryable ?? true)
+    )
+    .toArray()
+  const failures: AssetSyncFailure[] = []
+  for (const job of jobs) {
+    await db.assetSyncQueue.update(job.id!, {
+      status: 'uploading',
+      attempts: job.attempts + 1,
+      updatedAt: new Date().toISOString(),
+    })
+    const retryFailures = await uploadStorageFilesForTable(
+      job.tableName,
+      [
+        {
+          tableName: job.tableName,
+          recordId: job.recordId,
+          operation: 'put',
+          payload: {},
+          attempts: job.attempts + 1,
+          status: 'pending',
+          createdAt: job.createdAt,
+          updatedAt: job.updatedAt,
+        },
+      ],
+      userId
+    )
+    failures.push(...retryFailures)
+  }
+  return failures
+}
+
+async function clearAssetFailure(entry: SyncQueueEntry, userId: string): Promise<void> {
+  if (!db.assetSyncQueue) return
+  await db.assetSyncQueue
+    .toCollection()
+    .filter(
+      row =>
+        row.tableName === entry.tableName &&
+        row.recordId === entry.recordId &&
+        row.userId === userId
+    )
+    .delete()
+}
+
+async function enqueueAssetFailure(
+  entry: SyncQueueEntry,
+  userId: string,
+  message: string,
+  retryable: boolean
+): Promise<void> {
+  if (!db.assetSyncQueue) return
+  const now = new Date().toISOString()
+  const existing = await db.assetSyncQueue
+    .toCollection()
+    .filter(row => row.tableName === entry.tableName && row.recordId === entry.recordId)
+    .first()
+  const queued: AssetSyncQueueEntry = {
+    ...(existing ?? {}),
+    tableName: entry.tableName,
+    recordId: entry.recordId,
+    bucket: 'course-assets',
+    path: entry.recordId,
+    userId,
+    status: 'dead-letter',
+    attempts: existing?.attempts ?? 0,
+    createdAt: existing?.createdAt ?? now,
+    updatedAt: now,
+    payloadVersion: 2,
+    lastError: message,
+    failure: { message, failedAt: now, retryable },
+  }
+  await db.assetSyncQueue.put(queued)
 }
 
 // ---------------------------------------------------------------------------

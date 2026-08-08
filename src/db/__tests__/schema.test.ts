@@ -50,10 +50,12 @@ describe('ElearningDB schema', () => {
     // courses table dropped in v30 (E89-S01)
     // syncQueue, syncMetadata added in v52 (E92-S02)
     // searchFrecency added in v53 (E117-S02)
+    // assetSyncQueue added in v70 (durable supported-file sync jobs)
     expect(db.tables.map(t => t.name).sort()).toEqual([
       'absCollections',
       'absSeries',
       'aiUsageEvents',
+      'assetSyncQueue',
       'audioBookmarks',
       'audioClips',
       'audiobookshelfServers',
@@ -114,8 +116,8 @@ describe('ElearningDB schema', () => {
     ])
   })
 
-  it('should be at version 69 (local AI summary persistence)', () => {
-    expect(db.verno).toBe(69)
+  it('should be at version 70 (durable asset sync queue)', () => {
+    expect(db.verno).toBe(70)
   })
 
   it('should persist lesson summaries by course and lesson', async () => {

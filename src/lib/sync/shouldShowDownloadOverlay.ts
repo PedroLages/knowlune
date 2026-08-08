@@ -71,6 +71,14 @@ async function localHasData(userId: string): Promise<boolean> {
         return await db
           .table(entry.dexieTable)
           .filter((r: Record<string, unknown>) => {
+            if (r.isTemplate === true) return false
+            if (
+              entry.dexieTable === 'learningPathEntries' &&
+              typeof r.pathId === 'string' &&
+              r.pathId.startsWith('template_')
+            ) {
+              return false
+            }
             const rowUserId = r.userId
             // Only count rows that explicitly belong to this user. Rows with no
             // userId field are skipped (they are singleton or pre-backfill rows

@@ -25,6 +25,7 @@ import { apiUrl } from '@/lib/apiBaseUrl'
 import { trackAIUsage } from '@/lib/aiEventTracking'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
 import type { ImportedCourse } from '@/data/types'
+import { syncableWrite, type SyncableRecord } from '@/lib/sync/syncableWrite'
 
 /** Local proxy endpoint for non-streaming completions */
 const PROXY_GENERATE_URL = apiUrl('ai-generate')
@@ -99,7 +100,13 @@ async function runAutoAnalysis(course: ImportedCourse): Promise<void> {
       const freshCourse = await db.importedCourses.get(course.id)
       const existingTags = freshCourse?.tags || []
       const merged = [...new Set([...existingTags, ...tags])]
-      await db.importedCourses.update(course.id, { tags: merged })
+      const persisted = await db.importedCourses.get(course.id)
+      if (persisted) {
+        await syncableWrite('importedCourses', 'put', {
+          ...persisted,
+          tags: merged,
+        } as unknown as SyncableRecord)
+      }
 
       // Update Zustand store
       useCourseImportStore.setState(state => ({

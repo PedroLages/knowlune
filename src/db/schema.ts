@@ -67,6 +67,35 @@ export interface SyncQueueEntry {
   createdAt: string
   updatedAt: string
   lastError?: string
+  /** Serialization protocol used to build this payload. */
+  payloadVersion?: number
+  /** Structured failure metadata retained for truthful UI and operator repair. */
+  failure?: {
+    table: string
+    recordId: string
+    httpStatus?: number
+    code?: string
+    message: string
+    failedAt: string
+    retryable: boolean
+  }
+}
+
+/** Durable queue entry for supported private Storage assets. */
+export interface AssetSyncQueueEntry {
+  id?: number
+  tableName: string
+  recordId: string
+  bucket: string
+  path: string
+  userId: string
+  status: 'pending' | 'uploading' | 'dead-letter'
+  attempts: number
+  createdAt: string
+  updatedAt: string
+  payloadVersion?: number
+  lastError?: string
+  failure?: { message: string; failedAt: string; retryable: boolean }
 }
 
 /**
@@ -170,6 +199,7 @@ export type ElearningDatabase = Dexie & {
   learnerModels: EntityTable<LearnerModel, 'id'>
   // v52: Sync foundation (E92-S02)
   syncQueue: EntityTable<SyncQueueEntry, 'id'>
+  assetSyncQueue: EntityTable<AssetSyncQueueEntry, 'id'>
   syncMetadata: EntityTable<SyncMetadataEntry, 'table'>
   // v53: Unified-search frecency counters (E117-S02). Compound PK: [entityType+entityId].
   searchFrecency: Table<FrecencyRow, [string, string]>
@@ -1803,6 +1833,16 @@ function _declareLegacyMigrations(database: Dexie): void {
     .stores(CHECKPOINT_SCHEMA)
     .upgrade(async _tx => {
       // No backfill. Summaries are created after successful generation.
+    })
+
+  // v70: durable private Storage asset queue. Asset failures are persisted
+  // separately from record uploads so sync health cannot report a false green
+  // state after metadata succeeds but a PDF/book upload fails.
+  database
+    .version(70)
+    .stores(CHECKPOINT_SCHEMA)
+    .upgrade(async _tx => {
+      // No backfill. Existing asset failures are recreated as uploads retry.
     })
 } // end _declareLegacyMigrations
 

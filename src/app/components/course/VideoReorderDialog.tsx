@@ -30,8 +30,8 @@ import {
 import { CSS } from '@dnd-kit/utilities'
 import { GripVertical, Video, ChevronDown, ChevronRight, FolderOpen } from 'lucide-react'
 import { toast } from 'sonner'
-import { db } from '@/db'
 import { persistWithRetry } from '@/lib/persistWithRetry'
+import { syncableBulkWrite, type SyncableRecord } from '@/lib/sync/syncableWrite'
 import { cn } from '@/app/components/ui/utils'
 import { ScrollArea } from '@/app/components/ui/scroll-area'
 import {
@@ -140,11 +140,13 @@ function groupByChapter(videos: ImportedVideo[], chapters: YouTubeCourseChapter[
 
 async function persistVideoOrder(videos: ImportedVideo[]): Promise<void> {
   await persistWithRetry(async () => {
-    await db.transaction('rw', db.importedVideos, async () => {
-      for (const video of videos) {
-        await db.importedVideos.update(video.id, { order: video.order })
-      }
-    })
+    await syncableBulkWrite(
+      'importedVideos',
+      videos.map(video => ({
+        operation: 'put' as const,
+        record: video as unknown as SyncableRecord,
+      }))
+    )
   })
 }
 
