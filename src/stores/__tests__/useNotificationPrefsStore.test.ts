@@ -97,8 +97,9 @@ describe('init', () => {
     expect(queue).toHaveLength(1)
     expect(queue[0].tableName).toBe('notificationPreferences')
     expect(queue[0].operation).toBe('put')
-    // fieldMap { id: 'user_id' } translation produces user_id, not id
-    expect(queue[0].payload).toHaveProperty('user_id', 'singleton')
+    // The stamped auth owner must win the singleton id mapping so Supabase RLS
+    // accepts the first authenticated upload.
+    expect(queue[0].payload).toHaveProperty('user_id', 'user-1')
     expect(queue[0].payload).not.toHaveProperty('id')
     expect(queue[0].payload).toHaveProperty('course_complete', true)
     expect(queue[0].payload).toHaveProperty('quiet_hours_enabled', false)
