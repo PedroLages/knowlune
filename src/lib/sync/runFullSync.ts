@@ -31,7 +31,7 @@ export async function runFullSync(): Promise<void> {
 
   setStatus('syncing')
   try {
-    const result = await syncEngine.fullSync()
+    const result = (await syncEngine.fullSync()) ?? { failedTables: [], deadLetterCount: 0 }
     if (result.failedTables.length > 0 || result.deadLetterCount > 0) {
       const failedTables = result.failedTables.join(', ')
       const message = failedTables
