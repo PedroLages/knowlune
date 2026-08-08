@@ -75,6 +75,11 @@ const downloadApplyFailureToasted = new Set<string>()
  */
 export const MAX_CONCURRENT_DOWNLOADS = 4
 
+export interface SyncRunResult {
+  failedTables: string[]
+  deadLetterCount: number
+}
+
 /** Retry attempts for 429 responses before giving up on a table. */
 const DOWNLOAD_429_MAX_ATTEMPTS = 3
 
@@ -964,12 +969,14 @@ async function _applyRecord(
  * the table. Per-table Supabase errors are caught — one bad table doesn't
  * abort the download.
  */
-async function _doDownload(): Promise<void> {
+async function _doDownload(): Promise<string[]> {
   // Intentional: supabase null-guard — env vars may be missing in dev/test.
   if (!supabase) {
     console.warn('[syncEngine] Supabase client is null — skipping download cycle.')
-    return
+    return []
   }
+
+  const failedTables: string[] = []
 
   // fix/E-ABS-QA: bounded-parallel download — cap concurrent Supabase fetches
   // at MAX_CONCURRENT_DOWNLOADS and retry 429 responses with exponential
@@ -1014,7 +1021,8 @@ async function _doDownload(): Promise<void> {
       await sem.acquire()
       try {
         // Read incremental cursor.
-        const meta = await db.syncMetadata.get(entry.dexieTable)
+        const cursorKey = _userId ? `cursor:${_userId}:${entry.dexieTable}` : entry.dexieTable
+        const meta = await db.syncMetadata.get(cursorKey)
         const cursor = meta?.lastSyncTimestamp ?? null
 
         // Determine the cursor column — defaults to 'updated_at'.
@@ -1029,10 +1037,15 @@ async function _doDownload(): Promise<void> {
           error,
           throttled,
         } = await downloadWithRetry<Record<string, unknown>[]>(async () => {
-          let query = supabase!
-            .from(entry.supabaseTable)
-            .select('*')
-            .order(cursorCol, { ascending: true })
+          let query = supabase!.from(entry.supabaseTable).select('*')
+          // RLS remains the boundary, but an explicit owner filter prevents
+          // accidental cross-account reads if a policy is ever broadened.
+          if (_userId && typeof (query as unknown as { eq?: unknown }).eq === 'function') {
+            query = (
+              query as unknown as { eq: (column: string, value: string) => typeof query }
+            ).eq('user_id', _userId)
+          }
+          query = query.order(cursorCol, { ascending: true })
           if (cursor !== null) {
             query = query.gte(cursorCol, cursor)
           }
@@ -1041,6 +1054,7 @@ async function _doDownload(): Promise<void> {
         }, entry.supabaseTable)
 
         if (error) {
+          failedTables.push(entry.dexieTable)
           const errMsg = (error as { message?: string }).message ?? JSON.stringify(error)
           console.error(`[syncEngine] Download error for table "${entry.supabaseTable}":`, errMsg)
           if (throttled && !throttleToasted.has(entry.supabaseTable)) {
@@ -1162,6 +1176,9 @@ async function _doDownload(): Promise<void> {
           }
         }
 
+        if (applyFailureCount > 0) {
+          failedTables.push(entry.dexieTable)
+        }
         if (applyFailureCount > 0 && !downloadApplyFailureToasted.has(entry.dexieTable)) {
           downloadApplyFailureToasted.add(entry.dexieTable)
           toast.warning(
@@ -1173,7 +1190,7 @@ async function _doDownload(): Promise<void> {
         // idempotent and may safely repeat while a migration or repair lands.
         if (maxUpdatedAt !== null && applyFailureCount === 0) {
           await db.syncMetadata.put({
-            table: entry.dexieTable,
+            table: cursorKey,
             lastSyncTimestamp: maxUpdatedAt,
           })
         }
@@ -1227,6 +1244,7 @@ async function _doDownload(): Promise<void> {
 
   // Launch all table tasks concurrently; the semaphore bounds in-flight work.
   await Promise.all(tableRegistry.map(entry => processEntry(entry)))
+  return failedTables
 }
 
 // ---------------------------------------------------------------------------
@@ -1247,7 +1265,8 @@ async function _doDownload(): Promise<void> {
  * The individual phase functions (`_doUpload`, `_doDownload`) each have their
  * own null guard for the Supabase client.
  */
-async function _doFullSync(): Promise<void> {
+async function _doFullSync(): Promise<SyncRunResult> {
+  const failedTables: string[] = []
   try {
     await _doUpload()
   } catch (err) {
@@ -1256,10 +1275,19 @@ async function _doFullSync(): Promise<void> {
   }
 
   try {
-    await _doDownload()
+    failedTables.push(...(await _doDownload()))
   } catch (err) {
     console.error('[syncEngine] Download phase error during fullSync:', err)
+    failedTables.push('download')
   }
+
+  let deadLetterCount = 0
+  try {
+    deadLetterCount = await db.syncQueue.where('status').equals('dead-letter').count()
+  } catch (err) {
+    console.error('[syncEngine] Failed to inspect dead-letter queue:', err)
+  }
+  return { failedTables: [...new Set(failedTables)], deadLetterCount }
 }
 
 // ---------------------------------------------------------------------------
@@ -1420,8 +1448,8 @@ export const syncEngine = {
    * Can be called without `start()` — useful for tests and E92-S07 triggers.
    * Does not propagate exceptions to the caller.
    */
-  async fullSync(): Promise<void> {
-    await _doFullSync()
+  async fullSync(): Promise<SyncRunResult> {
+    return _doFullSync()
   },
 
   // ---------------------------------------------------------------------------

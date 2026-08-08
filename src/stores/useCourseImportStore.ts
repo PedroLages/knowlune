@@ -620,7 +620,18 @@ export const useCourseImportStore = create<CourseImportState>((set, get) => ({
 
   loadImportedCourses: async () => {
     try {
-      const courses = await db.importedCourses.toArray()
+      const authState = useAuthStore.getState()
+      const isGuest = selectIsGuestMode(authState)
+      const guestSessionId = isGuest ? sessionStorage.getItem('knowlune-guest-id') : null
+      const courses = await db.importedCourses
+        .filter(course => {
+          // During the pre-auth boot window retain legacy local behavior. Once a
+          // session is known, never render another account's IndexedDB rows.
+          if (!authState.user && !isGuest) return true
+          if (isGuest) return course.userId === null && course.guestSessionId === guestSessionId
+          return course.userId === authState.user?.id
+        })
+        .toArray()
       set({ importedCourses: courses, isCoursesLoaded: true, importError: null })
       // Load thumbnail object URLs in parallel (non-blocking)
       get()

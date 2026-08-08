@@ -184,9 +184,19 @@ export function useSyncLifecycle(): void {
       setStatus('syncing')
       syncEngine
         .fullSync()
-        .then(() => {
+        .then(result => {
           if (!mountedRef.current) return
-          markSyncComplete()
+          const syncResult = result ?? { failedTables: [], deadLetterCount: 0 }
+          if (syncResult.failedTables.length > 0 || syncResult.deadLetterCount > 0) {
+            setStatus(
+              'error',
+              syncResult.failedTables.length > 0
+                ? `Sync incomplete for ${syncResult.failedTables.join(', ')}. It will retry automatically.`
+                : `${syncResult.deadLetterCount} sync item(s) failed and will retry automatically.`
+            )
+          } else {
+            markSyncComplete()
+          }
         })
         .catch((err: unknown) => {
           if (!mountedRef.current) return
@@ -237,9 +247,19 @@ export function useSyncLifecycle(): void {
       setState('syncing')
       syncEngine
         .fullSync()
-        .then(() => {
+        .then(result => {
           if (!mountedRef.current) return
-          markComplete()
+          const syncResult = result ?? { failedTables: [], deadLetterCount: 0 }
+          if (syncResult.failedTables.length > 0 || syncResult.deadLetterCount > 0) {
+            setState(
+              'error',
+              syncResult.failedTables.length > 0
+                ? `Sync incomplete for ${syncResult.failedTables.join(', ')}. It will retry automatically.`
+                : `${syncResult.deadLetterCount} sync item(s) failed and will retry automatically.`
+            )
+          } else {
+            markComplete()
+          }
         })
         .catch((err: unknown) => {
           if (!mountedRef.current) return
@@ -310,9 +330,24 @@ export function useSyncLifecycle(): void {
             console.error('[useSyncLifecycle] start after re-enable failed:', err)
           })
           // F2: trigger a fullSync to pick up any changes missed while paused.
-          void syncEngine.fullSync().catch((err: unknown) => {
-            console.error('[useSyncLifecycle] fullSync after re-enable failed:', err)
-          })
+          void syncEngine
+            .fullSync()
+            .then(result => {
+              const syncResult = result ?? { failedTables: [], deadLetterCount: 0 }
+              if (syncResult.failedTables.length > 0 || syncResult.deadLetterCount > 0) {
+                useSyncStatusStore
+                  .getState()
+                  .setStatus(
+                    'error',
+                    syncResult.failedTables.length > 0
+                      ? `Sync incomplete for ${syncResult.failedTables.join(', ')}. It will retry automatically.`
+                      : `${syncResult.deadLetterCount} sync item(s) failed and will retry automatically.`
+                  )
+              }
+            })
+            .catch((err: unknown) => {
+              console.error('[useSyncLifecycle] fullSync after re-enable failed:', err)
+            })
         }
       } else {
         syncEngine.stop()

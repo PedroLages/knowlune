@@ -76,8 +76,13 @@ export const useSyncStatusStore = create<SyncStatusState>(set => ({
 
   refreshPendingCount: async () => {
     try {
-      const count = await db.syncQueue.where('status').equals('pending').count()
-      set({ pendingCount: count })
+      const [pending, failed] = await Promise.all([
+        db.syncQueue.where('status').equals('pending').count(),
+        db.syncQueue.where('status').equals('dead-letter').count(),
+      ])
+      // Keep the existing badge contract while ensuring failed jobs cannot
+      // disappear from the user's sync surface.
+      set({ pendingCount: pending + failed })
     } catch (err) {
       // Intentional: Dexie read errors are non-fatal for status display —
       // pendingCount stays at its last known value.

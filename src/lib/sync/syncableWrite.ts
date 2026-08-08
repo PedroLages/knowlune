@@ -98,6 +98,7 @@ export async function syncableWrite<T extends SyncableRecord>(
   // compound-PK tables — the synthesized recordId would not be available
   // from the bare string the caller passes).
   let recordId: string
+  let stampedRecord: T | null = null
   if (operation === 'delete') {
     const id = record as string | null | undefined
     if (typeof id !== 'string' || id.trim() === '') {
@@ -152,12 +153,12 @@ export async function syncableWrite<T extends SyncableRecord>(
     // can disambiguate rows from different anonymous sessions.
     const guestSessionId =
       userId === null ? (sessionStorage.getItem('knowlune-guest-id') ?? null) : null
-    const stampedRecord = {
+    stampedRecord = {
       ...(record as T),
       userId,
       ...(guestSessionId !== null ? { guestSessionId } : {}),
       updatedAt: now,
-    }
+    } as T
     if (operation === 'put') {
       await db.table(tableName).put(stampedRecord)
     } else {
@@ -184,7 +185,10 @@ export async function syncableWrite<T extends SyncableRecord>(
     if (operation === 'delete') {
       payload = { id: record as string }
     } else {
-      payload = toSnakeCase(entry, record as Record<string, unknown>)
+      // Always serialize the exact record written to Dexie. Serializing the
+      // caller's pre-stamped object drops user_id/updated_at on first writes,
+      // causing RLS/not-null failures that only appear on another device.
+      payload = toSnakeCase(entry, stampedRecord as Record<string, unknown>)
     }
 
     const queueEntry: Omit<SyncQueueEntry, 'id'> = {
@@ -198,6 +202,20 @@ export async function syncableWrite<T extends SyncableRecord>(
       updatedAt: now,
     }
 
+    // A repair or a rapid edit may supersede an older pending/dead-letter job.
+    // Keep only the newest payload for this record so a corrected write can
+    // recover without manual queue cleanup.
+    if (typeof db.syncQueue.toCollection === 'function') {
+      await db.syncQueue
+        .toCollection()
+        .filter(
+          queued =>
+            queued.tableName === tableName &&
+            queued.recordId === recordId &&
+            queued.status !== 'uploading'
+        )
+        .delete()
+    }
     await db.syncQueue.add(queueEntry as SyncQueueEntry)
 
     // Nudge the engine to process the queue soon (debounced in E92-S05).
