@@ -11,7 +11,7 @@ import { SYNCABLE_TABLES } from './backfill'
  * moment the first unlinked record is discovered — ES2020-compatible
  * alternative to `Promise.any()` (which requires ES2021).
  *
- * Called before `syncEngine.start()` on sign-in to determine whether the
+ * Called before the auth lifecycle requests a coordinated sync to determine whether the
  * `LinkDataDialog` should be shown (E92-S08).
  *
  * @returns `true` if unlinked records exist across any syncable table,

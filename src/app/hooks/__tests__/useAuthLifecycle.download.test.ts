@@ -39,11 +39,16 @@ vi.mock('@/lib/sync/backfill', () => ({
   SYNCABLE_TABLES: ['notes', 'books'],
 }))
 
-vi.mock('@/lib/sync/syncEngine', () => ({
-  syncEngine: {
-    start: vi.fn().mockResolvedValue(undefined),
+vi.mock('@/lib/sync/syncCoordinator', () => ({
+  syncCoordinator: {
+    start: vi.fn().mockResolvedValue({ outcome: 'complete' }),
     stop: vi.fn(),
   },
+}))
+
+vi.mock('@/lib/sync/repairAccountData', () => ({
+  repairAccountData: vi.fn().mockResolvedValue({ repaired: 0, failed: 0, skipped: false }),
+  markAccountRepairComplete: vi.fn().mockResolvedValue(undefined),
 }))
 
 vi.mock('@/lib/sync/clearSyncState', () => ({

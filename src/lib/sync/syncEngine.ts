@@ -1717,6 +1717,10 @@ export const syncEngine = {
    */
   setUser(userId: string): void {
     _userId = userId
+    // Coordinators use setUser before their first bounded run. Re-enable
+    // debounced mutation uploads after a previous sign-out without starting a
+    // second fullSync here.
+    _started = true
   },
 
   /**

@@ -11,8 +11,8 @@
  *      removed from the queue payload via `toSnakeCase()` from fieldMapper.ts.
  *   4. Queue enqueue — a `SyncQueueEntry` is inserted atomically with the
  *      domain write so a failed outbox write cannot create unsyncable data.
- *   5. Engine nudge — `syncEngine.nudge()` is called to trigger an immediate
- *      upload cycle (a no-op stub in S04; real in E92-S05).
+ *   5. Coordinator nudge — `syncCoordinator.nudge()` schedules one serialized
+ *      upload + download cycle.
  *
  * **Error handling contract:**
  *   - Dexie write failure → rethrow (fatal; caller must surface to the user).
@@ -28,7 +28,7 @@ import type { SyncQueueEntry } from '@/db'
 import { useAuthStore } from '@/stores/useAuthStore'
 import { tableRegistry } from './tableRegistry'
 import { canonicalizeUploadPayload, toSnakeCase } from './fieldMapper'
-import { syncEngine } from './syncEngine'
+import { syncCoordinator } from './syncCoordinator'
 
 // ---------------------------------------------------------------------------
 // Public types
@@ -61,13 +61,15 @@ export interface SyncableRecord {
  * @param record    - The record to write. For 'delete', pass the string id directly.
  * @param options   - Optional flags:
  *   - `skipQueue`: if true, the Dexie write happens but no queue entry is created
- *     and `syncEngine.nudge()` is not called. Use for local-only writes.
+ *     and no sync is requested. Use for local-only writes.
+ *   - `deferSync`: enqueue the write but leave starting the coordinated sync run
+ *     to the caller. Used by account repair to prepare a complete initial batch.
  */
 export async function syncableWrite<T extends SyncableRecord>(
   tableName: string,
   operation: 'put' | 'add' | 'delete',
   record: T | string,
-  options?: { skipQueue?: boolean }
+  options?: { skipQueue?: boolean; deferSync?: boolean }
 ): Promise<void> {
   // Capture timestamp once — used for both record stamping and queue entry.
   const now = new Date().toISOString()
@@ -245,8 +247,9 @@ export async function syncableWrite<T extends SyncableRecord>(
     })
   }
 
-  // [6] Nudge the engine to process the queue soon (debounced in E92-S05).
-  syncEngine.nudge()
+  // [6] Request one debounced, serialized coordinator run. Account repair can
+  // intentionally defer this until every owned local row has been queued.
+  if (!options?.deferSync) syncCoordinator.nudge()
 }
 
 /** Atomic batch variant for imports, reorders and cascaded deletes. */

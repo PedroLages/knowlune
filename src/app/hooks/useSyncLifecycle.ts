@@ -1,17 +1,16 @@
 /**
  * E92-S07: Sync trigger hook — event-driven sync lifecycle.
  *
- * Registers store refresh callbacks on the sync engine BEFORE the first
- * fullSync(), then wires up all event sources:
- *   - App mount  → fullSync()
- *   - 30s timer  → nudge() [if navigator.onLine]
- *   - tab focus  → nudge() [if visible + navigator.onLine]
- *   - online     → fullSync() (reconnection recovery)
- *   - offline    → setStatus('offline') (no engine pause — that is E92-S08)
+ * Registers store refresh callbacks on the sync engine, then routes every
+ * lifecycle trigger through the serialized sync coordinator:
+ *   - 30s timer  → coordinated incremental upload + download
+ *   - tab focus  → coordinated incremental upload + download
+ *   - online     → coordinated reconnection recovery
+ *   - offline    → setStatus('offline')
  *   - beforeunload → sendBeacon (structural scaffolding — endpoint is future work)
  *
  * Scope boundaries:
- *   - Does NOT call syncEngine.start() or syncEngine.stop() — those are E92-S08.
+ *   - Auth start/stop remains owned by useAuthLifecycle.
  *   - Does NOT register contentProgress store refresh — loadCourseProgress()
  *     requires a mandatory courseId argument; no loadAll() variant exists (S07).
  *   - /api/sync-beacon endpoint does not exist — sendBeacon silently fails.
@@ -21,7 +20,7 @@
 
 import { useEffect, useRef } from 'react'
 import { syncEngine } from '@/lib/sync/syncEngine'
-import { classifyError } from '@/lib/sync/classifyError'
+import { syncCoordinator } from '@/lib/sync/syncCoordinator'
 import { getSettings } from '@/lib/settings'
 import { useAuthStore } from '@/stores/useAuthStore'
 import { useSessionStore } from '@/stores/useSessionStore'
@@ -55,62 +54,18 @@ function isAutoSyncEnabled(): boolean {
 }
 
 export function useSyncLifecycle(): void {
-  const mountedRef = useRef(true)
   // Ref lets event handlers read the live value without a re-render hook cycle.
   const autoSyncEnabledRef = useRef(isAutoSyncEnabled())
 
   useEffect(() => {
-    mountedRef.current = true
     autoSyncEnabledRef.current = isAutoSyncEnabled()
 
-    const { setStatus, setFailures, markSyncComplete, loadPersistedStatus } =
-      useSyncStatusStore.getState()
+    const { loadPersistedStatus } = useSyncStatusStore.getState()
     if (typeof loadPersistedStatus === 'function') void loadPersistedStatus()
 
-    const applySyncResult = (result: Awaited<ReturnType<typeof syncEngine.fullSync>>) => {
-      // Older test doubles and pre-protocol clients returned void; a resolved
-      // void cycle still represents a successful coordinator run.
-      if (!result) {
-        markSyncComplete()
-        void useSyncStatusStore.getState().refreshPendingCount()
-        return
-      }
-      if (
-        result.failedTables.length > 0 ||
-        result.deadLetterCount > 0 ||
-        result.pendingCount > 0 ||
-        (result.assetFailures?.length ?? 0) > 0
-      ) {
-        if (typeof setFailures === 'function') {
-          setFailures([
-            ...(result.tableFailures ?? []).map(failure => ({
-              table: failure.table,
-              message: failure.message,
-              retryable: true,
-            })),
-            ...(result.assetFailures ?? []).map(failure => ({
-              table: failure.table,
-              recordId: failure.recordId,
-              message: failure.message,
-              retryable: failure.retryable,
-            })),
-          ])
-        }
-        setStatus(
-          'error',
-          result.failedTables.length > 0
-            ? `Sync incomplete for ${result.failedTables.join(', ')}. Check the affected records and retry.`
-            : `${result.deadLetterCount} item(s) need attention; ${result.pendingCount} waiting.`
-        )
-      } else {
-        markSyncComplete()
-      }
-      void useSyncStatusStore.getState().refreshPendingCount()
-    }
-
     // -------------------------------------------------------------------------
-    // Store refresh registrations — MUST happen before first fullSync() so that
-    // the download phase of the initial sync notifies stores.
+    // Store refresh registrations must happen before an account-scoped sync so
+    // its download phase can notify the relevant stores.
     // -------------------------------------------------------------------------
 
     syncEngine.registerStoreRefresh('studySessions', () =>
@@ -227,23 +182,9 @@ export function useSyncLifecycle(): void {
     // refresh on next route navigation. A global loadAll() can be added to
     // useContentProgressStore in a later story if cross-session refresh is needed.
 
-    // -------------------------------------------------------------------------
-    // Initial fullSync on mount — gated on autoSyncEnabled (E97-S02).
-    // When disabled, we skip the initial sync entirely so a user who has
-    // explicitly paused sync does not trigger a fullSync on every reload.
-    // -------------------------------------------------------------------------
-
-    if (autoSyncEnabledRef.current) {
-      setStatus('syncing')
-      void syncEngine
-        .fullSync()
-        .then(applySyncResult)
-        .catch((err: unknown) => {
-          if (!mountedRef.current) return
-          console.error('[useSyncLifecycle] Initial fullSync failed:', err)
-          setStatus('error', typeof err === 'string' ? err : classifyError(err))
-        })
-    }
+    // The auth lifecycle owns the first account-scoped run. Starting one here
+    // raced account repair and made the initial-upload dialog observe a queue
+    // that was still being rebuilt.
 
     // -------------------------------------------------------------------------
     // Periodic nudge — 30 second interval
@@ -256,14 +197,10 @@ export function useSyncLifecycle(): void {
       // Intentional: guard prevents nudge calls when offline. The engine's own
       // _started guard also fires, but checking navigator.onLine first avoids
       // queuing a debounced upload that would immediately fail.
-      if (navigator.onLine && useSyncStatusStore.getState().status !== 'syncing') {
-        // Keep the upload nudge for legacy integrations, but the authoritative
-        // periodic operation is a full upload + download cycle.
-        syncEngine.nudge()
-        void syncEngine
-          .fullSync()
-          .then(applySyncResult)
-          .catch(err => console.error('[useSyncLifecycle] Periodic fullSync failed:', err))
+      if (navigator.onLine) {
+        void syncCoordinator
+          .request({ reason: 'periodic' })
+          .catch(err => console.error('[useSyncLifecycle] Periodic sync failed:', err))
       }
     }, NUDGE_INTERVAL_MS)
 
@@ -274,13 +211,9 @@ export function useSyncLifecycle(): void {
     const handleVisibilityChange = () => {
       if (!autoSyncEnabledRef.current) return
       if (document.visibilityState === 'visible' && navigator.onLine) {
-        if (useSyncStatusStore.getState().status !== 'syncing') {
-          syncEngine.nudge()
-          void syncEngine
-            .fullSync()
-            .then(applySyncResult)
-            .catch(err => console.error('[useSyncLifecycle] Focus fullSync failed:', err))
-        }
+        void syncCoordinator
+          .request({ reason: 'focus' })
+          .catch(err => console.error('[useSyncLifecycle] Focus sync failed:', err))
       }
     }
     document.addEventListener('visibilitychange', handleVisibilityChange)
@@ -291,16 +224,9 @@ export function useSyncLifecycle(): void {
 
     const handleOnline = () => {
       if (!autoSyncEnabledRef.current) return
-      const { setStatus: setState } = useSyncStatusStore.getState()
-      setState('syncing')
-      void syncEngine
-        .fullSync()
-        .then(applySyncResult)
-        .catch((err: unknown) => {
-          if (!mountedRef.current) return
-          console.error('[useSyncLifecycle] Reconnection fullSync failed:', err)
-          setState('error', typeof err === 'string' ? err : classifyError(err))
-        })
+      void syncCoordinator
+        .request({ reason: 'online' })
+        .catch(err => console.error('[useSyncLifecycle] Reconnection sync failed:', err))
     }
     window.addEventListener('online', handleOnline)
 
@@ -358,36 +284,12 @@ export function useSyncLifecycle(): void {
       const userId = useAuthStore.getState().user?.id
       if (next) {
         if (userId) {
-          void syncEngine
+          void syncCoordinator
             .start(userId)
-            .then(result => {
-              if (!result) return
-              if (
-                result.failedTables.length > 0 ||
-                result.deadLetterCount > 0 ||
-                result.pendingCount > 0
-              ) {
-                useSyncStatusStore
-                  .getState()
-                  .setStatus(
-                    'error',
-                    result.failedTables.length > 0
-                      ? `Sync incomplete for ${result.failedTables.join(', ')}. Check the affected records and retry.`
-                      : `${result.deadLetterCount} item(s) need attention; ${result.pendingCount} waiting.`
-                  )
-              } else {
-                useSyncStatusStore.getState().markSyncComplete()
-              }
-            })
-            .catch((err: unknown) => {
-              console.error('[useSyncLifecycle] start after re-enable failed:', err)
-              useSyncStatusStore
-                .getState()
-                .setStatus('error', typeof err === 'string' ? err : classifyError(err))
-            })
+            .catch(err => console.error('[useSyncLifecycle] start after re-enable failed:', err))
         }
       } else {
-        syncEngine.stop()
+        syncCoordinator.stop()
       }
     }
     window.addEventListener('settingsUpdated', handleSettingsUpdate)
@@ -397,7 +299,6 @@ export function useSyncLifecycle(): void {
     // -------------------------------------------------------------------------
 
     return () => {
-      mountedRef.current = false
       clearInterval(intervalId)
       document.removeEventListener('visibilitychange', handleVisibilityChange)
       window.removeEventListener('online', handleOnline)

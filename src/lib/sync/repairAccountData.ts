@@ -2,7 +2,6 @@ import { db } from '@/db'
 import { toast } from 'sonner'
 import { syncableWrite, type SyncableRecord } from './syncableWrite'
 import { tableRegistry } from './tableRegistry'
-import { syncEngine } from './syncEngine'
 
 /** Bump when the repair payload or its target set changes. */
 export const ACCOUNT_REPAIR_VERSION = 2
@@ -34,12 +33,30 @@ interface RepairMarker {
   completedAt?: string
 }
 
+const repairInFlightByUser = new Map<string, Promise<RepairResult>>()
+
+/**
+ * Prepare a source browser's owned records for upload exactly once at a time.
+ * This function intentionally does not start sync: callers prepare the entire
+ * batch first, then hand it to syncCoordinator for one bounded run.
+ */
+export async function repairAccountData(userId: string): Promise<RepairResult> {
+  const existing = repairInFlightByUser.get(userId)
+  if (existing) return existing
+
+  const repair = prepareAccountData(userId).finally(() => {
+    repairInFlightByUser.delete(userId)
+  })
+  repairInFlightByUser.set(userId, repair)
+  return repair
+}
+
 /**
  * Requeue owned local records after sign-in. This repairs data written before
  * authentication, and stale queue payloads created before syncableWrite used
  * the stamped record. It is intentionally idempotent and parent-first.
  */
-export async function repairAccountData(userId: string): Promise<RepairResult> {
+async function prepareAccountData(userId: string): Promise<RepairResult> {
   // Keep lightweight UI/unit-test database doubles compatible; real Dexie
   // instances always expose syncMetadata.
   if (!db.syncMetadata || typeof db.syncMetadata.get !== 'function') {
@@ -116,7 +133,7 @@ export async function repairAccountData(userId: string): Promise<RepairResult> {
             )
             .delete()
         }
-        await syncableWrite(tableName, 'put', row as SyncableRecord)
+        await syncableWrite(tableName, 'put', row as SyncableRecord, { deferSync: true })
         repaired += 1
       } catch (error) {
         failed += 1
@@ -135,22 +152,17 @@ export async function repairAccountData(userId: string): Promise<RepairResult> {
     return { repaired, failed, skipped: false }
   }
 
-  // A repair is complete only after the regenerated queue has successfully
-  // drained. If the browser is offline, leave the marker prepared so reload,
-  // reconnect, or the next sign-in resumes instead of skipping the repair.
-  syncEngine.setUser(userId)
-  const syncResult = await syncEngine.fullSync()
-  const pending = await db.syncQueue.where('status').equals('pending').count()
-  const failedQueue = await db.syncQueue.where('status').equals('dead-letter').count()
-  if (
-    pending > 0 ||
-    failedQueue > 0 ||
-    (syncResult !== undefined &&
-      (syncResult.outcome !== 'complete' || syncResult.failedTables.length > 0))
-  ) {
-    return { repaired, failed: 0, skipped: false }
-  }
+  return { repaired, failed: 0, skipped: false }
+}
 
+/** Mark a prepared repair complete only after the coordinator drains the queue. */
+export async function markAccountRepairComplete(userId: string): Promise<void> {
+  const marker = `account-repair:${userId}`
+  const current = await db.syncMetadata.get(marker)
+  const value = current?.value as RepairMarker | undefined
+  if (!value || value.version !== ACCOUNT_REPAIR_VERSION || value.status !== 'prepared') {
+    return
+  }
   await db.syncMetadata.put({
     table: marker,
     value: {
@@ -159,5 +171,4 @@ export async function repairAccountData(userId: string): Promise<RepairResult> {
       completedAt: new Date().toISOString(),
     } satisfies RepairMarker,
   })
-  return { repaired, failed: 0, skipped: false }
 }

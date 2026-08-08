@@ -5,12 +5,12 @@ import { hydrateSettingsFromSupabase } from '@/lib/settings'
 import { observedHydrate } from '@/lib/sync/observedHydrate'
 import { useDownloadStatusStore } from '@/app/stores/useDownloadStatusStore'
 import { backfillUserId } from '@/lib/sync/backfill'
-import { syncEngine } from '@/lib/sync/syncEngine'
+import { syncCoordinator } from '@/lib/sync/syncCoordinator'
 import { clearSyncState } from '@/lib/sync/clearSyncState'
 import { hasUnlinkedRecords } from '@/lib/sync/hasUnlinkedRecords'
 import { credentialCache } from '@/lib/credentials/cache'
 import { runCredentialsToVaultMigration } from '@/lib/credentials/migrateCredentialsToVault'
-import { repairAccountData } from '@/lib/sync/repairAccountData'
+import { markAccountRepairComplete, repairAccountData } from '@/lib/sync/repairAccountData'
 
 /**
  * E43-S04: Subscribes to Supabase auth state changes and manages session lifecycle.
@@ -26,7 +26,7 @@ import { repairAccountData } from '@/lib/sync/repairAccountData'
  *
  * @param options.onUnlinkedDetected  Called with the userId when local data exists
  *   that is not linked to the signing-in user. App.tsx shows the LinkDataDialog in
- *   response. syncEngine.start() is deferred until the user resolves the dialog.
+ *   response. The coordinated initial sync is deferred until the user resolves the dialog.
  *   If omitted, sync starts immediately (safe default).
  *
  * @see LinkDataDialog  – shown by App.tsx when this callback fires.
@@ -50,6 +50,10 @@ export function useAuthLifecycle({ onUnlinkedDetected }: UseAuthLifecycleOptions
     if (!supabase) return
 
     let ignore = false
+    // Supabase can surface the same restored session through both
+    // onAuthStateChange(INITIAL_SESSION) and the getSession safety net. Keep
+    // the preparation + first sync idempotent for the lifetime of this hook.
+    const signInTasks = new Map<string, Promise<void>>()
 
     /**
      * Core sign-in handler shared by both the onAuthStateChange callback and
@@ -58,10 +62,23 @@ export function useAuthLifecycle({ onUnlinkedDetected }: UseAuthLifecycleOptions
      * 1. Hydrates settings.
      * 2. If the user already linked this device (localStorage flag): start sync + backfill.
      * 3. Otherwise: check for unlinked records.
-     *    - Has unlinked → call onUnlinkedDetected; syncEngine.start() deferred.
+     *    - Has unlinked → call onUnlinkedDetected; coordinated sync deferred.
      *    - No unlinked → backfill (idempotent) + start sync immediately.
      */
-    async function handleSignIn(userId: string, userMetadata: Record<string, unknown>) {
+    function handleSignIn(userId: string, userMetadata: Record<string, unknown>): Promise<void> {
+      const existing = signInTasks.get(userId)
+      if (existing) return existing
+      const task = handleSignInOnce(userId, userMetadata).catch(error => {
+        // Keep simultaneous auth events deduplicated, but let a later auth
+        // event retry if preparation itself failed.
+        signInTasks.delete(userId)
+        throw error
+      })
+      signInTasks.set(userId, task)
+      return task
+    }
+
+    async function handleSignInOnce(userId: string, userMetadata: Record<string, unknown>) {
       if (ignore) return
 
       // Read guest session id before any async work so it's stable throughout this call.
@@ -72,8 +89,8 @@ export function useAuthLifecycle({ onUnlinkedDetected }: UseAuthLifecycleOptions
       // E96-S02: fan-out hydrate for the 9 P3/P4 LWW Dexie tables. Uses
       // Promise.allSettled internally — per-table failures are logged and
       // swallowed, matching the settings-hydrate error posture.
-      // F3 fix: await before syncEngine.start() so download-phase bulkPuts
-      // do not race with syncEngine writes (mirrors hydrateSettingsFromSupabase
+      // Await before requesting coordinated sync so download-phase bulkPuts
+      // do not race with repair writes (mirrors hydrateSettingsFromSupabase
       // ordering pattern).
       // E97-S04: Wrapped in `observedHydrate` so `useDownloadStatusStore`
       // tracks the lifecycle (`hydrating-p3p4` → `downloading-p0p2`). Hydrator
@@ -98,12 +115,11 @@ export function useAuthLifecycle({ onUnlinkedDetected }: UseAuthLifecycleOptions
         try {
           await backfillUserId(userId, guestSessionId)
           await repairAccountData(userId)
+          const result = await syncCoordinator.start(userId)
+          if (result.outcome === 'complete') await markAccountRepairComplete(userId)
         } catch (err) {
-          console.error('[useAuthLifecycle] account repair failed:', err)
+          console.error('[useAuthLifecycle] account repair or sync failed:', err)
         }
-        syncEngine.start(userId).catch(err => {
-          console.error('[useAuthLifecycle] syncEngine.start (fast-path) failed:', err)
-        })
         clearGuestFlags()
         return
       }
@@ -122,7 +138,7 @@ export function useAuthLifecycle({ onUnlinkedDetected }: UseAuthLifecycleOptions
       if (ignore) return
 
       if (unlinked && onUnlinkedDetected) {
-        // Defer syncEngine.start() — the dialog handlers (Link / Start fresh)
+        // Defer the coordinated sync — the dialog handlers (Link / Start fresh)
         // will call it after the user resolves their choice.
         onUnlinkedDetected(userId)
         // Guest flags cleared after the user resolves the dialog (in App.tsx handlers)
@@ -131,12 +147,11 @@ export function useAuthLifecycle({ onUnlinkedDetected }: UseAuthLifecycleOptions
         try {
           await backfillUserId(userId, guestSessionId)
           await repairAccountData(userId)
+          const result = await syncCoordinator.start(userId)
+          if (result.outcome === 'complete') await markAccountRepairComplete(userId)
         } catch (err) {
-          console.error('[useAuthLifecycle] account repair failed:', err)
+          console.error('[useAuthLifecycle] account repair or sync failed:', err)
         }
-        syncEngine.start(userId).catch(err => {
-          console.error('[useAuthLifecycle] syncEngine.start failed:', err)
-        })
         // Mark this device as linked so the dialog is not shown again.
         localStorage.setItem(`${LINKED_FLAG_PREFIX}${userId}`, 'true')
         clearGuestFlags()
@@ -193,7 +208,8 @@ export function useAuthLifecycle({ onUnlinkedDetected }: UseAuthLifecycleOptions
         // Stop sync and discard the in-flight upload queue + download cursors.
         // Local content records (notes, books, etc.) are intentionally kept —
         // the next sign-in will offer the Link/Start-fresh dialog.
-        syncEngine.stop()
+        syncCoordinator.stop()
+        if (signedOutUserId) signInTasks.delete(signedOutUserId)
         // E95-S05: drop cached server/catalog credentials on sign-out. The
         // next authenticated session re-reads them through the vault broker.
         credentialCache.clear()

@@ -4,7 +4,7 @@ import { BookOpen, FileText, Brain, Package, Link2 } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
 import { DialogOverlay, DialogPortal } from '@/app/components/ui/dialog'
 import { backfillUserId, SYNCABLE_TABLES } from '@/lib/sync/backfill'
-import { syncEngine } from '@/lib/sync/syncEngine'
+import { syncCoordinator } from '@/lib/sync/syncCoordinator'
 import { clearSyncState } from '@/lib/sync/clearSyncState'
 import { countUnlinkedRecords, type UnlinkedCounts } from '@/lib/sync/countUnlinkedRecords'
 import { db } from '@/db'
@@ -83,9 +83,10 @@ export function LinkDataDialog({ open, userId, onResolved, guestSessionId }: Lin
     try {
       await backfillUserId(userId, guestSessionId)
       await repairAccountData(userId)
-      // start() triggers fullSync internally — uploads the newly-stamped records.
-      syncEngine.start(userId).catch(err => {
-        console.error('[LinkDataDialog] syncEngine.start failed:', err)
+      // The wizard observes this same coordinator run. Starting it only after
+      // repair has finished gives the progress UI one bounded initial batch.
+      syncCoordinator.startInitialUpload({ userId }).catch(err => {
+        console.error('[LinkDataDialog] initial upload failed:', err)
       })
       localStorage.setItem(`${LINKED_FLAG_PREFIX}${userId}`, 'true')
       onResolved()
@@ -119,9 +120,9 @@ export function LinkDataDialog({ open, userId, onResolved, guestSessionId }: Lin
       }
       // Wipe upload queue and download cursors
       await clearSyncState()
-      // start() triggers fullSync internally — downloads fresh server state.
-      syncEngine.start(userId).catch(err => {
-        console.error('[LinkDataDialog] syncEngine.start (fresh) failed:', err)
+      // The single coordinator owns the fresh download and status transition.
+      syncCoordinator.start(userId).catch(err => {
+        console.error('[LinkDataDialog] coordinator start (fresh) failed:', err)
       })
       localStorage.setItem(`${LINKED_FLAG_PREFIX}${userId}`, 'true')
       onResolved()

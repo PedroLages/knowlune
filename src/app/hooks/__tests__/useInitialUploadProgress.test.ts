@@ -1,132 +1,74 @@
-// E97-S03: Tests for useInitialUploadProgress hook
-import 'fake-indexeddb/auto'
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { renderHook, waitFor, act } from '@testing-library/react'
-import Dexie from 'dexie'
-import { db } from '@/db'
-import { useInitialUploadProgress } from '../useInitialUploadProgress'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { renderHook, act } from '@testing-library/react'
+import type { InitialUploadProgress } from '@/lib/sync/syncCoordinator'
 
-// Minimal SYNCABLE_TABLES so unlinked-count path does not touch unused tables.
-vi.mock('@/lib/sync/backfill', () => ({
-  SYNCABLE_TABLES: ['notes'],
-  backfillUserId: vi.fn(),
+let state: InitialUploadProgress
+let listener: (() => void) | null = null
+const mockUnsubscribe = vi.fn()
+
+vi.mock('@/lib/sync/syncCoordinator', () => ({
+  syncCoordinator: {
+    getInitialUploadProgress: () => state,
+    subscribeInitialUpload: (next: () => void) => {
+      listener = next
+      return mockUnsubscribe
+    },
+  },
 }))
 
-const USER = 'user-1'
+import { useInitialUploadProgress } from '../useInitialUploadProgress'
 
-async function addPending(id: number, tableName = 'notes', updatedAt?: string) {
-  await db.syncQueue.add({
-    id,
-    tableName,
-    recordId: `r${id}`,
-    operation: 'put',
-    payload: {},
-    attempts: 0,
-    status: 'pending',
-    createdAt: new Date(id * 1000).toISOString(),
-    updatedAt: updatedAt ?? new Date(id * 1000).toISOString(),
-  })
+function progress(overrides: Partial<InitialUploadProgress> = {}): InitialUploadProgress {
+  return {
+    phase: 'original',
+    processed: 0,
+    total: 63,
+    recentTable: 'importedVideos',
+    done: false,
+    error: null,
+    additionalPendingCount: 0,
+    failures: [],
+    ...overrides,
+  }
 }
 
-beforeEach(async () => {
-  await db.open()
-})
-
-afterEach(async () => {
-  db.close()
-  await Dexie.delete('ElearningDB')
-  vi.clearAllMocks()
-})
-
 describe('useInitialUploadProgress', () => {
-  it('snapshots total and sets done=true immediately when empty', async () => {
-    const { result } = renderHook(() => useInitialUploadProgress(USER, true))
-    await waitFor(() => {
-      expect(result.current.total).toBe(0)
-      expect(result.current.done).toBe(true)
+  beforeEach(() => {
+    vi.clearAllMocks()
+    listener = null
+    state = progress()
+  })
+
+  it('exposes coordinator snapshots without deriving progress from queue depth', () => {
+    const { result } = renderHook(() => useInitialUploadProgress('user-1', true))
+    expect(result.current).toMatchObject({ phase: 'original', processed: 0, total: 63 })
+
+    act(() => {
+      state = progress({ processed: 32 })
+      listener?.()
     })
-  })
+    expect(result.current.processed).toBe(32)
 
-  it('drives processed from total as pending entries are drained', async () => {
-    await addPending(1)
-    await addPending(2)
-    await addPending(3)
-
-    const { result } = renderHook(() => useInitialUploadProgress(USER, true))
-
-    await waitFor(() => {
-      expect(result.current.total).toBe(3)
+    // Later writes belong to the next phase; they cannot turn 32/63 back into
+    // a smaller original value.
+    act(() => {
+      state = progress({ phase: 'additional', processed: 0, total: 31, additionalPendingCount: 31 })
+      listener?.()
     })
-    expect(result.current.done).toBe(false)
-    expect(result.current.processed).toBe(0)
+    expect(result.current).toMatchObject({ phase: 'additional', processed: 0, total: 31 })
+  })
 
-    // Drain one entry, wait for the 500ms poll to pick it up.
-    await db.syncQueue.delete(1)
-    await waitFor(
-      () => {
-        expect(result.current.processed).toBe(1)
-      },
-      { timeout: 2000 }
+  it('does not subscribe while disabled and unsubscribes on unmount', () => {
+    const { result, rerender, unmount } = renderHook(
+      ({ enabled }) => useInitialUploadProgress('user-1', enabled),
+      { initialProps: { enabled: false } }
     )
+    expect(result.current.phase).toBe('original')
+    expect(listener).toBeNull()
 
-    await db.syncQueue.delete(2)
-    await db.syncQueue.delete(3)
-    await waitFor(
-      () => {
-        expect(result.current.done).toBe(true)
-        expect(result.current.processed).toBe(3)
-      },
-      { timeout: 2000 }
-    )
-  })
-
-  it('clamps processed to [0, total] even if new entries are enqueued after snapshot', async () => {
-    await addPending(1)
-    const { result } = renderHook(() => useInitialUploadProgress(USER, true))
-    await waitFor(() => expect(result.current.total).toBe(1))
-
-    // Enqueue more after snapshot — total must stay 1, processed cannot go negative.
-    await addPending(2)
-    await addPending(3)
-
-    // Wait for at least one poll cycle
-    await new Promise(r => setTimeout(r, 700))
-    expect(result.current.total).toBe(1)
-    expect(result.current.processed).toBeGreaterThanOrEqual(0)
-    expect(result.current.processed).toBeLessThanOrEqual(1)
-  })
-
-  it('reports recentTable from the most-recent pending row', async () => {
-    await addPending(1, 'books', '2020-01-01T00:00:00.000Z')
-    await addPending(2, 'flashcards', '2030-01-01T00:00:00.000Z')
-
-    const { result } = renderHook(() => useInitialUploadProgress(USER, true))
-    await waitFor(
-      () => {
-        expect(result.current.recentTable).toBe('flashcards')
-      },
-      { timeout: 2000 }
-    )
-  })
-
-  it('does nothing when enabled is false', async () => {
-    await addPending(1)
-    const { result } = renderHook(() => useInitialUploadProgress(USER, false))
-
-    // Wait one poll cycle; state stays at initial zero values.
-    await new Promise(r => setTimeout(r, 700))
-    expect(result.current.total).toBe(0)
-    expect(result.current.processed).toBe(0)
-    expect(result.current.done).toBe(false)
-  })
-
-  it('clears the interval on unmount', async () => {
-    await addPending(1)
-    const spy = vi.spyOn(window, 'clearInterval')
-    const { unmount } = renderHook(() => useInitialUploadProgress(USER, true))
-    await waitFor(() => expect(spy).not.toHaveBeenCalled())
-    act(() => unmount())
-    expect(spy).toHaveBeenCalled()
-    spy.mockRestore()
+    rerender({ enabled: true })
+    expect(listener).not.toBeNull()
+    unmount()
+    expect(mockUnsubscribe).toHaveBeenCalledTimes(1)
   })
 })

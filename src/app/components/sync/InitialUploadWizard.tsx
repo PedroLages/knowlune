@@ -2,12 +2,12 @@
  * E97-S03: Initial Upload Wizard.
  *
  * One-time modal shown on first sign-in per `{device, userId}` to explain the
- * initial sync upload, show progress (derived from `syncQueue`), and offer
- * "Skip for now" or "Retry" affordances. Upload is performed by the existing
- * `syncEngine.fullSync()` — no new engine primitives (AC6 invariant).
+ * initial sync upload, show bounded progress from the sync coordinator, and
+ * offer "Skip for now" or "Retry" affordances. The coordinator owns the
+ * queue snapshot, follow-up phase, and serialized engine run.
  *
  * State machine:
- *   intro ── Start ──▶ uploading ── status='synced' && done ──▶ success
+ *   intro ── Start ──▶ uploading ── coordinator complete ──▶ success
  *     │                   │
  *     │                   └── status='error' ──▶ error ── Retry ──▶ uploading
  *     └── Skip ──▶ (closed, dismissal flag)        └── Close ──▶ (closed)
@@ -27,11 +27,11 @@ import {
 } from '@/app/components/ui/dialog'
 import { Button } from '@/app/components/ui/button'
 import { Progress } from '@/app/components/ui/progress'
-import { syncEngine } from '@/lib/sync/syncEngine'
-import { useSyncStatusStore } from '@/app/stores/useSyncStatusStore'
+import { syncCoordinator } from '@/lib/sync/syncCoordinator'
 import { useInitialUploadProgress } from '@/app/hooks/useInitialUploadProgress'
 import { wizardCompleteKey, wizardDismissedKey } from '@/lib/sync/shouldShowInitialUploadWizard'
 import { toastSuccess } from '@/lib/toastHelpers'
+import { markAccountRepairComplete } from '@/lib/sync/repairAccountData'
 
 type Phase = 'intro' | 'uploading' | 'success' | 'error'
 
@@ -60,8 +60,6 @@ export interface InitialUploadWizardProps {
 
 export function InitialUploadWizard({ open, userId, onClose }: InitialUploadWizardProps) {
   const [phase, setPhase] = useState<Phase>('intro')
-  const status = useSyncStatusStore(s => s.status)
-  const lastError = useSyncStatusStore(s => s.lastError)
   const { announce } = useLiveRegion()
 
   // Only poll syncQueue while we are actually in the uploading phase.
@@ -69,10 +67,6 @@ export function InitialUploadWizard({ open, userId, onClose }: InitialUploadWiza
 
   const fastPathAppliedRef = useRef(false)
   const successWrittenRef = useRef(false)
-  // After Retry, ignore a stale 'error' status until the engine transitions
-  // to 'syncing' (prevents the error-transition effect from re-firing before
-  // fullSync has had a chance to flip status).
-  const suppressErrorUntilSyncingRef = useRef(false)
 
   // Fast-path: if sync is already in progress on mount, skip intro.
   useEffect(() => {
@@ -84,28 +78,29 @@ export function InitialUploadWizard({ open, userId, onClose }: InitialUploadWiza
     }
     if (fastPathAppliedRef.current) return
     fastPathAppliedRef.current = true
-    if (useSyncStatusStore.getState().status === 'syncing') {
+    const currentProgress = syncCoordinator.getInitialUploadProgress()
+    if (
+      syncCoordinator.isInitialUploadActive ||
+      currentProgress.phase === 'original' ||
+      currentProgress.phase === 'additional'
+    ) {
       setPhase('uploading')
     }
   }, [open, userId])
 
-  // Status transitions → phase transitions.
+  // Coordinator progress transitions → dialog transitions. The wizard never
+  // infers completion from a mutable global pending count.
   useEffect(() => {
     if (!open || !userId) return
-    if (status === 'syncing') {
-      suppressErrorUntilSyncingRef.current = false
-    }
-    if (status === 'error' && phase === 'uploading' && !suppressErrorUntilSyncingRef.current) {
-      announce(`Upload failed. ${lastError ?? 'Please try again.'}`)
+    if (progress.phase === 'error' && phase === 'uploading') {
+      announce(`Upload failed. ${progress.error?.message ?? 'Please try again.'}`)
       setPhase('error')
     }
-    if (
-      status === 'synced' &&
-      phase === 'uploading' &&
-      progress.done &&
-      progress.total > 0 &&
-      !successWrittenRef.current
-    ) {
+    if (progress.phase === 'complete' && phase === 'uploading' && !successWrittenRef.current) {
+      if (progress.total === 0) {
+        onClose()
+        return
+      }
       successWrittenRef.current = true
       try {
         localStorage.setItem(wizardCompleteKey(userId), new Date().toISOString())
@@ -115,32 +110,22 @@ export function InitialUploadWizard({ open, userId, onClose }: InitialUploadWiza
         // shows once more next sign-in and auto-writes on the short-circuit path.
         console.error('[InitialUploadWizard] localStorage write failed:', err)
       }
+      void markAccountRepairComplete(userId).catch(err => {
+        console.error('[InitialUploadWizard] account repair completion marker failed:', err)
+      })
       toastSuccess.saved('Initial upload complete')
       announce('Upload complete. Your data is safely backed up.')
       setPhase('success')
     }
-  }, [status, phase, progress.done, progress.total, open, userId, announce, lastError])
-
-  // Edge case (AC5 belt-and-suspenders): if mounted with total === 0, close silently.
-  // Plan critic note 2: the completion flag was already written by
-  // shouldShowInitialUploadWizard on the short-circuit branch; here we just close.
-  useEffect(() => {
-    if (!open || !userId) return
-    if (phase !== 'uploading') return
-    if (progress.total === 0 && progress.done) {
-      onClose()
-    }
-  }, [progress.total, progress.done, phase, open, userId, onClose])
+  }, [progress.phase, progress.error, progress.total, phase, open, userId, announce, onClose])
 
   if (!open || !userId) return null
 
   function handleStart() {
     announce('Uploading your data. Please wait.')
     setPhase('uploading')
-    // silent-catch-ok — errors surface via useSyncStatusStore.lastError,
-    // which drives the error phase transition above.
-    syncEngine.fullSync().catch(err => {
-      console.error('[InitialUploadWizard] fullSync failed:', err)
+    syncCoordinator.startInitialUpload({ userId }).catch(err => {
+      console.error('[InitialUploadWizard] initial upload failed:', err)
     })
   }
 
@@ -156,17 +141,25 @@ export function InitialUploadWizard({ open, userId, onClose }: InitialUploadWiza
   }
 
   function handleRetry() {
-    suppressErrorUntilSyncingRef.current = true
     announce('Uploading your data. Please wait.')
     setPhase('uploading')
-    // silent-catch-ok — errors surface via useSyncStatusStore.lastError.
-    syncEngine.fullSync().catch(err => {
-      console.error('[InitialUploadWizard] retry fullSync failed:', err)
+    syncCoordinator.startInitialUpload({ userId, rebuildFailed: true }).catch(err => {
+      console.error('[InitialUploadWizard] retry initial upload failed:', err)
     })
   }
 
   const percent = progress.total > 0 ? Math.floor((progress.processed / progress.total) * 100) : 0
   const tableHint = humanizeTable(progress.recentTable)
+  const isAdditionalPhase = progress.phase === 'additional'
+  const progressCopy = isAdditionalPhase
+    ? progress.processed === 0
+      ? `Original upload complete. Saving ${progress.total} additional changes`
+      : `Original upload complete. Saving ${progress.processed} of ${progress.total} additional changes`
+    : `Uploading ${progress.processed} of ${progress.total} original items`
+  const errorMessage =
+    progress.failures[0]?.message ??
+    progress.error?.message ??
+    'Something went wrong. Please try again.'
 
   return (
     <Dialog
@@ -230,7 +223,7 @@ export function InitialUploadWizard({ open, userId, onClose }: InitialUploadWiza
             <div className="space-y-2">
               <Progress value={percent} />
               <p className="text-muted-foreground text-sm" aria-hidden="true">
-                Uploading {progress.processed} of {progress.total}
+                {progressCopy}
                 {tableHint ? ` · ${tableHint}` : ''}
               </p>
             </div>
@@ -273,9 +266,7 @@ export function InitialUploadWizard({ open, userId, onClose }: InitialUploadWiza
                 <AlertTriangle className="text-destructive size-5" aria-hidden="true" />
                 <DialogTitle>Upload didn't finish</DialogTitle>
               </div>
-              <DialogDescription>
-                {lastError ?? 'Something went wrong. Please try again.'}
-              </DialogDescription>
+              <DialogDescription>{errorMessage}</DialogDescription>
             </DialogHeader>
             <div className="flex flex-col gap-2 sm:flex-row">
               <Button

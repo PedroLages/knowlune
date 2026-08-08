@@ -31,7 +31,7 @@ import type { SyncQueueEntry } from '@/db/schema'
 import { db } from '@/db/schema'
 import { storeCredential, deleteCredential } from '@/lib/vaultCredentials'
 import { syncableWrite } from '@/lib/sync/syncableWrite'
-import { syncEngine } from '@/lib/sync/syncEngine'
+import { syncCoordinator } from '@/lib/sync/syncCoordinator'
 import { tableRegistry } from '@/lib/sync/tableRegistry'
 import { toSnakeCase } from '@/lib/sync/fieldMapper'
 import { useAuthStore } from '@/stores/useAuthStore'
@@ -221,7 +221,7 @@ async function writeOpdsRowAndEnqueue(operation: 'put', record: OpdsCatalog): Pr
   }
   try {
     await db.syncQueue.add(queueEntry as SyncQueueEntry)
-    syncEngine.nudge()
+    syncCoordinator.nudge()
   } catch (err) {
     // silent-catch-ok: queue insert failure is non-fatal — the Dexie write
     // already succeeded. The sync engine's next scan will reconcile.

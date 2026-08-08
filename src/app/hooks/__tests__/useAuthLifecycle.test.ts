@@ -9,6 +9,7 @@ import type { AuthChangeEvent, Session } from '@supabase/supabase-js'
 
 let authChangeCallback: ((event: AuthChangeEvent, session: Session | null) => void) | null = null
 const mockUnsubscribe = vi.fn()
+const mockGetSession = vi.hoisted(() => vi.fn())
 
 vi.mock('@/lib/auth/supabase', () => ({
   supabase: {
@@ -17,7 +18,7 @@ vi.mock('@/lib/auth/supabase', () => ({
         authChangeCallback = cb
         return { data: { subscription: { unsubscribe: mockUnsubscribe } } }
       }),
-      getSession: vi.fn(() => Promise.resolve({ data: { session: null }, error: null })),
+      getSession: mockGetSession,
     },
   },
 }))
@@ -41,11 +42,16 @@ vi.mock('@/lib/sync/backfill', () => ({
   SYNCABLE_TABLES: ['notes', 'books'],
 }))
 
-vi.mock('@/lib/sync/syncEngine', () => ({
-  syncEngine: {
+vi.mock('@/lib/sync/syncCoordinator', () => ({
+  syncCoordinator: {
     start: vi.fn().mockResolvedValue(undefined),
     stop: vi.fn(),
   },
+}))
+
+vi.mock('@/lib/sync/repairAccountData', () => ({
+  repairAccountData: vi.fn().mockResolvedValue({ repaired: 0, failed: 0, skipped: false }),
+  markAccountRepairComplete: vi.fn().mockResolvedValue(undefined),
 }))
 
 vi.mock('@/lib/sync/clearSyncState', () => ({
@@ -62,10 +68,11 @@ vi.mock('@/lib/sync/hasUnlinkedRecords', () => ({
 // ---------------------------------------------------------------------------
 import { useAuthLifecycle } from '../useAuthLifecycle'
 import { useAuthStore } from '@/stores/useAuthStore'
-import { syncEngine } from '@/lib/sync/syncEngine'
+import { syncCoordinator } from '@/lib/sync/syncCoordinator'
 import { clearSyncState } from '@/lib/sync/clearSyncState'
 import { hasUnlinkedRecords } from '@/lib/sync/hasUnlinkedRecords'
 import { backfillUserId } from '@/lib/sync/backfill'
+import { repairAccountData } from '@/lib/sync/repairAccountData'
 
 const makeSession = (userId = 'user-1'): Session =>
   ({
@@ -79,14 +86,23 @@ const makeSession = (userId = 'user-1'): Session =>
 // ---------------------------------------------------------------------------
 
 function resetMocks() {
+  mockGetSession.mockResolvedValue({ data: { session: null }, error: null })
   vi.mocked(hasUnlinkedRecords).mockResolvedValue(false)
   vi.mocked(backfillUserId).mockResolvedValue({
     tablesProcessed: 0,
     recordsStamped: 0,
     tablesFailed: [],
   })
-  vi.mocked(syncEngine.start).mockResolvedValue(undefined)
-  vi.mocked(syncEngine.stop).mockReturnValue(undefined as unknown as void)
+  vi.mocked(syncCoordinator.start).mockResolvedValue({
+    failedTables: [],
+    deadLetterCount: 0,
+    pendingCount: 0,
+    tableFailures: [],
+    assetFailures: [],
+    completedAt: '2026-08-08T00:00:00.000Z',
+    outcome: 'complete',
+  })
+  vi.mocked(syncCoordinator.stop).mockReturnValue(undefined)
   vi.mocked(clearSyncState).mockResolvedValue(undefined)
 }
 
@@ -192,12 +208,12 @@ describe('useAuthLifecycle', () => {
 
   // ── E92-S08: sync lifecycle on SIGNED_OUT ──────────────────────────────────
 
-  it('stops syncEngine on SIGNED_OUT', () => {
+  it('stops the coordinator on SIGNED_OUT', () => {
     renderHook(() => useAuthLifecycle())
     act(() => {
       authChangeCallback!('SIGNED_OUT', null)
     })
-    expect(syncEngine.stop).toHaveBeenCalled()
+    expect(syncCoordinator.stop).toHaveBeenCalled()
   })
 
   it('calls clearSyncState on SIGNED_OUT', async () => {
@@ -211,7 +227,7 @@ describe('useAuthLifecycle', () => {
 
   // ── E92-S08: sync lifecycle on SIGNED_IN — no unlinked records ────────────
 
-  it('starts syncEngine when no unlinked records exist', async () => {
+  it('starts the coordinator when no unlinked records exist', async () => {
     vi.mocked(hasUnlinkedRecords).mockResolvedValue(false)
 
     renderHook(() => useAuthLifecycle())
@@ -219,7 +235,7 @@ describe('useAuthLifecycle', () => {
       authChangeCallback!('SIGNED_IN', makeSession('user-1'))
     })
 
-    await vi.waitFor(() => expect(syncEngine.start).toHaveBeenCalledWith('user-1'))
+    await vi.waitFor(() => expect(syncCoordinator.start).toHaveBeenCalledWith('user-1'))
   })
 
   it('calls backfillUserId when no unlinked records exist', async () => {
@@ -257,6 +273,17 @@ describe('useAuthLifecycle', () => {
     })
   })
 
+  it('prepares and starts sync once when INITIAL_SESSION and getSession report the same account', async () => {
+    mockGetSession.mockResolvedValue({ data: { session: makeSession('user-1') }, error: null })
+    renderHook(() => useAuthLifecycle())
+    act(() => {
+      authChangeCallback!('INITIAL_SESSION', makeSession('user-1'))
+    })
+
+    await vi.waitFor(() => expect(syncCoordinator.start).toHaveBeenCalledTimes(1))
+    expect(repairAccountData).toHaveBeenCalledTimes(1)
+  })
+
   // ── E92-S08: sync lifecycle on SIGNED_IN — unlinked records exist ──────────
 
   it('calls onUnlinkedDetected when unlinked records exist', async () => {
@@ -271,7 +298,7 @@ describe('useAuthLifecycle', () => {
     await vi.waitFor(() => expect(onUnlinkedDetected).toHaveBeenCalledWith('user-1'))
   })
 
-  it('does NOT start syncEngine when unlinked records exist (deferred to dialog)', async () => {
+  it('does NOT start the coordinator when unlinked records exist (deferred to dialog)', async () => {
     vi.mocked(hasUnlinkedRecords).mockResolvedValue(true)
     const onUnlinkedDetected = vi.fn()
 
@@ -281,7 +308,7 @@ describe('useAuthLifecycle', () => {
     })
 
     await vi.waitFor(() => expect(onUnlinkedDetected).toHaveBeenCalled())
-    expect(syncEngine.start).not.toHaveBeenCalled()
+    expect(syncCoordinator.start).not.toHaveBeenCalled()
   })
 
   // ── E92-S08: fast-path for already-linked device ───────────────────────────
@@ -294,7 +321,7 @@ describe('useAuthLifecycle', () => {
       authChangeCallback!('SIGNED_IN', makeSession('user-1'))
     })
 
-    await vi.waitFor(() => expect(syncEngine.start).toHaveBeenCalledWith('user-1'))
+    await vi.waitFor(() => expect(syncCoordinator.start).toHaveBeenCalledWith('user-1'))
     // hasUnlinkedRecords should NOT be called — fast path skips it
     expect(hasUnlinkedRecords).not.toHaveBeenCalled()
   })

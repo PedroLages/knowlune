@@ -247,6 +247,7 @@ export function SyncUXShell({ children }: SyncUXShellProps) {
     if (authUser) return
     setDownloadOverlayUserId(null)
     setDeferredOverlayReady(false)
+    setUploadWizardUserId(null)
   }, [authUser])
 
   // Dev/test-only hook: expose a force-mount shim for E2E tests so they can
@@ -278,7 +279,7 @@ export function SyncUXShell({ children }: SyncUXShellProps) {
   }, [])
 
   // E43-S04: Auth lifecycle hook — session expiry detection, token refresh, settings hydration
-  // E92-S08: onUnlinkedDetected defers syncEngine.start() until dialog resolves
+  // E92-S08: onUnlinkedDetected defers the coordinated initial sync until dialog resolves
   useAuthLifecycle({ onUnlinkedDetected: handleUnlinkedDetected })
   // E92-S07: Sync triggers, offline handling, store refresh registrations
   useSyncLifecycle()

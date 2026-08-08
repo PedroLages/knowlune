@@ -4,7 +4,7 @@ import { BruteForceVectorStore } from '@/lib/vectorSearch'
 import { syncableWrite } from '@/lib/sync/syncableWrite'
 import { persistWithRetry } from '@/lib/persistWithRetry'
 import { useAuthStore } from '@/stores/useAuthStore'
-import { syncEngine } from '@/lib/sync/syncEngine'
+import { syncCoordinator } from '@/lib/sync/syncCoordinator'
 import type { Embedding } from '@/data/types'
 
 // ============================================================================
@@ -171,7 +171,7 @@ async function _enqueueEmbeddingDelete(id: string): Promise<void> {
       updatedAt: now,
     }
     await db.syncQueue.add(queueEntry as SyncQueueEntry)
-    syncEngine.nudge()
+    syncCoordinator.nudge()
   } catch (err) {
     // Non-fatal: queue insert failure. The Dexie delete already succeeded.
     // silent-catch-ok — logged, not silenced; matches syncableWrite error contract.

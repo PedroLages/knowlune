@@ -8,6 +8,29 @@ vi.mock('@/lib/toastHelpers', () => ({
   toastWithUndo: vi.fn(),
 }))
 
+const coordinatorMocks = vi.hoisted(() => ({
+  initialUploadActive: false,
+  initialUploadListener: null as (() => void) | null,
+  nudge: vi.fn(),
+}))
+
+vi.mock('@/lib/sync/syncCoordinator', () => ({
+  syncCoordinator: {
+    get isInitialUploadActive() {
+      return coordinatorMocks.initialUploadActive
+    },
+    subscribeInitialUpload(listener: () => void) {
+      coordinatorMocks.initialUploadListener = listener
+      return () => {
+        if (coordinatorMocks.initialUploadListener === listener) {
+          coordinatorMocks.initialUploadListener = null
+        }
+      }
+    },
+    nudge: coordinatorMocks.nudge,
+  },
+}))
+
 let useCourseImportStore: (typeof import('@/stores/useCourseImportStore'))['useCourseImportStore']
 
 function makeCourse(overrides: Partial<ImportedCourse> = {}): ImportedCourse {
@@ -27,6 +50,9 @@ function makeCourse(overrides: Partial<ImportedCourse> = {}): ImportedCourse {
 
 beforeEach(async () => {
   await Dexie.delete('ElearningDB')
+  coordinatorMocks.initialUploadActive = false
+  coordinatorMocks.initialUploadListener = null
+  coordinatorMocks.nudge.mockReset()
   // Force re-import to get fresh store and db instances
   vi.resetModules()
   const mod = await import('@/stores/useCourseImportStore')
@@ -174,6 +200,30 @@ describe('loadImportedCourses', () => {
     const state = useCourseImportStore.getState()
     expect(state.importedCourses).toHaveLength(1)
     expect(state.importedCourses[0].name).toBe('Fresh')
+  })
+
+  it('defers thumbnail-repair writes until an active initial upload is idle', async () => {
+    const { db } = await import('@/db')
+    const course = makeCourse({ id: 'course-deferred-thumbnail' })
+    await db.importedCourses.add(course)
+    const loadThumbnailUrls = vi.fn().mockResolvedValue(undefined)
+    const repairMissingThumbnails = vi.fn().mockResolvedValue(undefined)
+    useCourseImportStore.setState({ loadThumbnailUrls, repairMissingThumbnails })
+    coordinatorMocks.initialUploadActive = true
+
+    await act(async () => {
+      await useCourseImportStore.getState().loadImportedCourses()
+    })
+
+    expect(repairMissingThumbnails).not.toHaveBeenCalled()
+    expect(coordinatorMocks.initialUploadListener).not.toBeNull()
+
+    coordinatorMocks.initialUploadActive = false
+    coordinatorMocks.initialUploadListener?.()
+
+    await vi.waitFor(() => {
+      expect(repairMissingThumbnails).toHaveBeenCalledWith([course.id])
+    })
   })
 })
 

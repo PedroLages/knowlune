@@ -20,6 +20,7 @@ import { useAuthorStore } from './useAuthorStore'
 import { toast } from 'sonner'
 import { toastWithUndo } from '@/lib/toastHelpers'
 import { TOAST_DURATION } from '@/lib/toastConfig'
+import { syncCoordinator } from '@/lib/sync/syncCoordinator'
 
 function normalizeTags(tags: string[]): string[] {
   const unique = [...new Set(tags.map(t => t.trim().toLowerCase()).filter(Boolean))]
@@ -31,6 +32,24 @@ function normalizeTags(tags: string[]): string[] {
 // Keep background thumbnail repair idempotent so repeated loads do not race
 // to create duplicate object URLs or queue duplicate sync writes.
 const thumbnailRepairsInFlight = new Set<string>()
+const deferredThumbnailRepairIds = new Set<string>()
+let deferredThumbnailRepairUnsubscribe: (() => void) | null = null
+
+function deferThumbnailRepair(courseIds: string[]): void {
+  courseIds.forEach(id => deferredThumbnailRepairIds.add(id))
+  if (deferredThumbnailRepairUnsubscribe) return
+
+  deferredThumbnailRepairUnsubscribe = syncCoordinator.subscribeInitialUpload(() => {
+    if (syncCoordinator.isInitialUploadActive) return
+    const queuedIds = [...deferredThumbnailRepairIds]
+    deferredThumbnailRepairIds.clear()
+    deferredThumbnailRepairUnsubscribe?.()
+    deferredThumbnailRepairUnsubscribe = null
+    if (queuedIds.length > 0) {
+      void useCourseImportStore.getState().repairMissingThumbnails(queuedIds)
+    }
+  })
+}
 
 export interface CourseDetailsUpdate {
   name?: string
@@ -641,7 +660,15 @@ export const useCourseImportStore = create<CourseImportState>((set, get) => ({
             err instanceof Error ? err.message : err
           )
         })
-      void get().repairMissingThumbnails(courses.map(c => c.id))
+      const courseIds = courses.map(course => course.id)
+      if (syncCoordinator.isInitialUploadActive) {
+        // Thumbnail discovery writes syncable course metadata. Let the bounded
+        // initial-upload run finish first so its original progress cannot gain
+        // new work and appear to move backwards.
+        deferThumbnailRepair(courseIds)
+      } else {
+        void get().repairMissingThumbnails(courseIds)
+      }
     } catch (error) {
       set({ isCoursesLoaded: true, importError: 'Failed to load courses from database' })
       console.error('[Database] Failed to load courses:', error)

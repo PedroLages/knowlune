@@ -5,9 +5,9 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, act, waitFor, cleanup } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
-const { mockCount, mockFullSync, mockToastError } = vi.hoisted(() => ({
+const { mockCount, mockRunFullSync, mockToastError } = vi.hoisted(() => ({
   mockCount: vi.fn().mockResolvedValue(0),
-  mockFullSync: vi.fn().mockResolvedValue(undefined),
+  mockRunFullSync: vi.fn().mockResolvedValue(undefined),
   mockToastError: vi.fn(),
 }))
 
@@ -23,10 +23,8 @@ vi.mock('@/db', () => ({
   },
 }))
 
-vi.mock('@/lib/sync/syncEngine', () => ({
-  syncEngine: {
-    fullSync: mockFullSync,
-  },
+vi.mock('@/lib/sync/runFullSync', () => ({
+  runFullSync: (...args: unknown[]) => mockRunFullSync(...args),
 }))
 
 vi.mock('sonner', () => ({
@@ -62,7 +60,7 @@ describe('<SyncStatusIndicator />', () => {
   beforeEach(() => {
     resetStore()
     mockCount.mockReset().mockResolvedValue(0)
-    mockFullSync.mockReset().mockResolvedValue(undefined)
+    mockRunFullSync.mockReset().mockResolvedValue(undefined)
     mockToastError.mockClear()
     mockAnnounceDefault.mockClear()
     // Default matchMedia — reduced motion NOT set.
@@ -196,7 +194,7 @@ describe('<SyncStatusIndicator />', () => {
     expect(alert).toHaveTextContent(/network error/i)
   })
 
-  it('Retry invokes syncEngine.fullSync and markSyncComplete on success', async () => {
+  it('Retry invokes the shared coordinated sync action', async () => {
     const user = userEvent.setup()
     resetStore({ status: 'error', lastError: 'Network error' })
     render(<SyncStatusIndicator />)
@@ -207,18 +205,13 @@ describe('<SyncStatusIndicator />', () => {
       await user.click(retry)
     })
 
-    expect(mockFullSync).toHaveBeenCalledTimes(1)
-    await waitFor(() => {
-      const state = useSyncStatusStore.getState()
-      expect(state.status).toBe('synced')
-      expect(state.lastError).toBeNull()
-    })
+    expect(mockRunFullSync).toHaveBeenCalledTimes(1)
   })
 
   it('Retry failure sets status=error with classified message and toasts', async () => {
     const user = userEvent.setup()
     resetStore({ status: 'error', lastError: 'Network error' })
-    mockFullSync.mockRejectedValueOnce(new Error('fetch failed again'))
+    mockRunFullSync.mockRejectedValueOnce('Network error')
 
     render(<SyncStatusIndicator />)
     await user.click(screen.getByTestId('sync-status-indicator'))
@@ -245,7 +238,7 @@ describe('<SyncStatusIndicator />', () => {
     await user.click(screen.getByTestId('sync-status-indicator'))
     const retry = await screen.findByTestId('sync-retry-button')
 
-    // Simulate periodic/online fullSync in-flight.
+    // Simulate a coordinated periodic/online sync already in flight.
     act(() => {
       useSyncStatusStore.setState({ status: 'syncing' })
     })
@@ -254,8 +247,8 @@ describe('<SyncStatusIndicator />', () => {
       await user.click(retry)
     })
 
-    // Race guard early-returned — fullSync should not have been invoked by Retry.
-    expect(mockFullSync).not.toHaveBeenCalled()
+    // Race guard early-returned — the shared sync action must not run twice.
+    expect(mockRunFullSync).not.toHaveBeenCalled()
   })
 
   it('announces "Sync recovered. All changes saved." when transitioning error → synced', async () => {

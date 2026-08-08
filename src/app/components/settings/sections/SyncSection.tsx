@@ -2,10 +2,10 @@
  * E97-S02: Sync Settings Panel.
  *
  * User-facing panel that composes existing sync primitives (useSyncStatusStore,
- * syncEngine, resetLocalData) into a Settings section with:
- *   - Auto-sync toggle (persists via saveSettings, starts/stops engine).
+ * syncCoordinator, resetLocalData) into a Settings section with:
+ *   - Auto-sync toggle (persists via saveSettings, starts/stops coordinated sync).
  *   - Status readout: last-sync time, total-synced items, pending upload count.
- *   - "Sync Now" manual trigger (syncEngine.fullSync).
+ *   - "Sync Now" manual trigger (through the shared coordinator).
  *   - Destructive "Clear local data and re-sync" escape hatch (resetLocalData).
  *
  * Auth-gated: returns null when no user is signed in. The Settings nav entry
@@ -42,7 +42,7 @@ import {
   AlertDialogTrigger,
 } from '@/app/components/ui/alert-dialog'
 import { useSyncStatusStore } from '@/app/stores/useSyncStatusStore'
-import { syncEngine } from '@/lib/sync/syncEngine'
+import { syncCoordinator } from '@/lib/sync/syncCoordinator'
 import { runFullSync } from '@/lib/sync/runFullSync'
 import { resetLocalData } from '@/lib/sync/resetLocalData'
 import { tableRegistry } from '@/lib/sync/tableRegistry'
@@ -184,7 +184,7 @@ export function SyncSection() {
       if (!user) return
       if (!next) {
         try {
-          syncEngine.stop()
+          syncCoordinator.stop()
         } catch (err) {
           // silent-catch-ok — the preference is already persisted; surface engine
           // stop errors only in the console. The user's intent (toggle) succeeded.

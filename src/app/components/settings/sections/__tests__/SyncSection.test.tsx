@@ -21,26 +21,32 @@ import userEvent from '@testing-library/user-event'
 // Hoisted mocks (must be declared before imports that use them)
 // ---------------------------------------------------------------------------
 
-const { mockFullSync, mockStop, mockStart, mockResetLocalData, mockRefreshPendingCount } =
-  vi.hoisted(() => ({
-    mockFullSync: vi.fn().mockResolvedValue(undefined),
-    mockStop: vi.fn(),
-    mockStart: vi.fn().mockResolvedValue(undefined),
-    mockResetLocalData: vi.fn().mockResolvedValue(undefined),
-    mockRefreshPendingCount: vi.fn().mockResolvedValue(undefined),
-  }))
+const {
+  mockRunFullSync,
+  mockStop,
+  mockResetLocalData,
+  mockRefreshPendingCount,
+  mockToastSaveFailed,
+} = vi.hoisted(() => ({
+  mockRunFullSync: vi.fn().mockResolvedValue(undefined),
+  mockStop: vi.fn(),
+  mockResetLocalData: vi.fn().mockResolvedValue(undefined),
+  mockRefreshPendingCount: vi.fn().mockResolvedValue(undefined),
+  mockToastSaveFailed: vi.fn(),
+}))
 
 // ---------------------------------------------------------------------------
 // Module mocks
 // ---------------------------------------------------------------------------
 
-vi.mock('@/lib/sync/syncEngine', () => ({
-  syncEngine: {
-    fullSync: (...args: unknown[]) => mockFullSync(...args),
+vi.mock('@/lib/sync/syncCoordinator', () => ({
+  syncCoordinator: {
     stop: (...args: unknown[]) => mockStop(...args),
-    start: (...args: unknown[]) => mockStart(...args),
-    nudge: vi.fn(),
   },
+}))
+
+vi.mock('@/lib/sync/runFullSync', () => ({
+  runFullSync: (...args: unknown[]) => mockRunFullSync(...args),
 }))
 
 vi.mock('@/lib/sync/resetLocalData', () => ({
@@ -62,7 +68,7 @@ vi.mock('@/lib/settings', () => ({
 
 vi.mock('@/lib/toastHelpers', () => ({
   toastSuccess: { saved: vi.fn(), reset: vi.fn() },
-  toastError: { saveFailed: vi.fn() },
+  toastError: { saveFailed: (...args: unknown[]) => mockToastSaveFailed(...args) },
 }))
 
 vi.mock('@/lib/sync/classifyError', () => ({
@@ -139,11 +145,11 @@ function renderSection() {
 describe('<SyncSection />', () => {
   beforeEach(() => {
     mockUser = { id: 'test-user-id', email: 'test@test.local' }
-    mockFullSync.mockReset().mockResolvedValue(undefined)
+    mockRunFullSync.mockReset().mockResolvedValue(undefined)
     mockStop.mockReset()
-    mockStart.mockReset().mockResolvedValue(undefined)
     mockResetLocalData.mockReset().mockResolvedValue(undefined)
     mockRefreshPendingCount.mockReset().mockResolvedValue(undefined)
+    mockToastSaveFailed.mockReset()
     resetStore()
 
     // Suppress console.error noise from expected error paths
@@ -209,22 +215,22 @@ describe('<SyncSection />', () => {
   })
 
   // -------------------------------------------------------------------------
-  // 4. Sync Now button calls fullSync
+  // 4. Sync Now button calls the shared coordinated sync action
   // -------------------------------------------------------------------------
 
-  it('calls syncEngine.fullSync when Sync Now is clicked', async () => {
+  it('calls runFullSync when Sync Now is clicked', async () => {
     renderSection()
     const user = userEvent.setup()
     const button = screen.getByTestId('sync-now-button')
     await user.click(button)
-    await waitFor(() => expect(mockFullSync).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect(mockRunFullSync).toHaveBeenCalledTimes(1))
   })
 
   // -------------------------------------------------------------------------
   // 5. Sync Now button disabled when already syncing (F1 guard)
   // -------------------------------------------------------------------------
 
-  it('does not call fullSync when store status is already syncing', async () => {
+  it('does not call the shared sync action when store status is already syncing', async () => {
     resetStore({ status: 'syncing' })
     renderSection()
     const user = userEvent.setup()
@@ -232,7 +238,7 @@ describe('<SyncSection />', () => {
     const button = screen.getByTestId('sync-now-button')
     expect(button).toBeDisabled()
     await user.click(button)
-    expect(mockFullSync).not.toHaveBeenCalled()
+    expect(mockRunFullSync).not.toHaveBeenCalled()
   })
 
   // -------------------------------------------------------------------------
@@ -296,11 +302,11 @@ describe('<SyncSection />', () => {
   // 10. Error status displayed (error branch coverage)
   // -------------------------------------------------------------------------
 
-  it('shows error alert when fullSync throws', async () => {
-    mockFullSync.mockRejectedValue(new Error('Network error'))
+  it('shows an error toast when the shared sync action throws', async () => {
+    mockRunFullSync.mockRejectedValue('Network error')
     renderSection()
     const user = userEvent.setup()
     await user.click(screen.getByTestId('sync-now-button'))
-    await waitFor(() => expect(useSyncStatusStore.getState().status).toBe('error'))
+    await waitFor(() => expect(mockToastSaveFailed).toHaveBeenCalledWith('Network error'))
   })
 })

@@ -6,7 +6,7 @@
  * requires a real browser and is exercised in E2E tests instead.
  *
  * The countUnlinkedRecords module is mocked so tests run without IndexedDB.
- * syncEngine, backfillUserId, db, and clearSyncState are all mocked.
+ * syncCoordinator, backfillUserId, db, and clearSyncState are all mocked.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, waitFor, fireEvent } from '@testing-library/react'
@@ -31,10 +31,15 @@ vi.mock('@/lib/sync/backfill', () => ({
   SYNCABLE_TABLES: ['notes', 'books'],
 }))
 
-vi.mock('@/lib/sync/syncEngine', () => ({
-  syncEngine: {
+vi.mock('@/lib/sync/syncCoordinator', () => ({
+  syncCoordinator: {
     start: vi.fn().mockResolvedValue(undefined),
+    startInitialUpload: vi.fn().mockResolvedValue(undefined),
   },
+}))
+
+vi.mock('@/lib/sync/repairAccountData', () => ({
+  repairAccountData: vi.fn().mockResolvedValue({ repaired: 0, failed: 0, skipped: false }),
 }))
 
 vi.mock('@/lib/sync/clearSyncState', () => ({
@@ -52,7 +57,7 @@ vi.mock('@/db', () => ({
 // ─── Import mocked modules after vi.mock ─────────────────────────────────────
 
 import { backfillUserId } from '@/lib/sync/backfill'
-import { syncEngine } from '@/lib/sync/syncEngine'
+import { syncCoordinator } from '@/lib/sync/syncCoordinator'
 import { clearSyncState } from '@/lib/sync/clearSyncState'
 import { db } from '@/db'
 import { countUnlinkedRecords } from '@/lib/sync/countUnlinkedRecords'
@@ -83,7 +88,17 @@ beforeEach(() => {
     recordsStamped: 0,
     tablesFailed: [],
   })
-  vi.mocked(syncEngine.start).mockResolvedValue(undefined)
+  const syncResult = {
+    failedTables: [],
+    deadLetterCount: 0,
+    pendingCount: 0,
+    tableFailures: [],
+    assetFailures: [],
+    completedAt: '2026-08-08T00:00:00.000Z',
+    outcome: 'complete' as const,
+  }
+  vi.mocked(syncCoordinator.start).mockResolvedValue(syncResult)
+  vi.mocked(syncCoordinator.startInitialUpload).mockResolvedValue(syncResult)
   vi.mocked(clearSyncState).mockResolvedValue(undefined)
   vi.mocked(db.table).mockReturnValue({
     clear: vi.fn().mockResolvedValue(undefined),
@@ -152,11 +167,11 @@ describe('LinkDataDialog', () => {
       expect(backfillUserId).toHaveBeenCalledWith(USER_ID, undefined)
     })
 
-    it('starts the sync engine after backfill', async () => {
+    it('starts the bounded initial upload after backfill', async () => {
       const { onResolved } = renderDialog()
       fireEvent.click(screen.getByRole('button', { name: /link to my account/i }))
       await waitFor(() => expect(onResolved).toHaveBeenCalled())
-      expect(syncEngine.start).toHaveBeenCalledWith(USER_ID)
+      expect(syncCoordinator.startInitialUpload).toHaveBeenCalledWith({ userId: USER_ID })
     })
 
     it('sets the localStorage linked flag', async () => {
@@ -207,11 +222,11 @@ describe('LinkDataDialog', () => {
       expect(clearSyncState).toHaveBeenCalled()
     })
 
-    it('starts the sync engine after clearing', async () => {
+    it('starts the coordinator after clearing', async () => {
       const { onResolved } = renderDialog()
       fireEvent.click(screen.getByRole('button', { name: /start fresh/i }))
       await waitFor(() => expect(onResolved).toHaveBeenCalled())
-      expect(syncEngine.start).toHaveBeenCalledWith(USER_ID)
+      expect(syncCoordinator.start).toHaveBeenCalledWith(USER_ID)
     })
 
     it('sets the localStorage linked flag', async () => {
