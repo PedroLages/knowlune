@@ -7,6 +7,7 @@ import { trackAIUsage } from '@/lib/aiEventTracking'
 import { syncableWrite, type SyncableRecord } from '@/lib/sync/syncableWrite'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
 import { extractGapSearchTerm } from '@/data/learningPathUtils'
+import { useAuthStore, selectIsGuestMode } from '@/stores/useAuthStore'
 
 interface LearningPathState {
   // Multi-path state (E26-S01/S02)
@@ -175,8 +176,25 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
   loadPaths: async () => {
     if (get().isLoaded) return
     try {
-      const paths = await db.learningPaths.toArray()
-      const entries = await db.learningPathEntries.toArray()
+      const authState = useAuthStore.getState()
+      const isGuest = selectIsGuestMode(authState)
+      const guestSessionId = isGuest ? sessionStorage.getItem('knowlune-guest-id') : null
+      const belongsToSession = (row: unknown) => {
+        const candidate = row as {
+          userId?: string | null
+          guestSessionId?: string | null
+          isTemplate?: boolean
+        }
+        if (candidate.isTemplate) return true
+        if (!authState.user && !isGuest) return true
+        if (isGuest) return candidate.userId === null && candidate.guestSessionId === guestSessionId
+        return candidate.userId === authState.user?.id
+      }
+      const paths = (await db.learningPaths.toArray()).filter(belongsToSession)
+      const pathIds = new Set(paths.map(path => path.id))
+      const entries = (await db.learningPathEntries.toArray()).filter(
+        entry => belongsToSession(entry) && pathIds.has(entry.pathId)
+      )
       const sorted = paths.sort(
         (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
       )

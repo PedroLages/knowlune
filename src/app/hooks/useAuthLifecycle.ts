@@ -10,6 +10,7 @@ import { clearSyncState } from '@/lib/sync/clearSyncState'
 import { hasUnlinkedRecords } from '@/lib/sync/hasUnlinkedRecords'
 import { credentialCache } from '@/lib/credentials/cache'
 import { runCredentialsToVaultMigration } from '@/lib/credentials/migrateCredentialsToVault'
+import { repairAccountData } from '@/lib/sync/repairAccountData'
 
 /**
  * E43-S04: Subscribes to Supabase auth state changes and manages session lifecycle.
@@ -94,10 +95,12 @@ export function useAuthLifecycle({ onUnlinkedDetected }: UseAuthLifecycleOptions
       // Fast-path: this device already went through the dialog for this userId.
       const alreadyLinked = localStorage.getItem(`${LINKED_FLAG_PREFIX}${userId}`) === 'true'
       if (alreadyLinked) {
-        // silent-catch-ok — backfill is idempotent and self-healing.
-        backfillUserId(userId, guestSessionId).catch(err => {
-          console.error('[useAuthLifecycle] backfillUserId (fast-path) failed:', err)
-        })
+        try {
+          await backfillUserId(userId, guestSessionId)
+          await repairAccountData(userId)
+        } catch (err) {
+          console.error('[useAuthLifecycle] account repair failed:', err)
+        }
         syncEngine.start(userId).catch(err => {
           console.error('[useAuthLifecycle] syncEngine.start (fast-path) failed:', err)
         })
@@ -124,11 +127,13 @@ export function useAuthLifecycle({ onUnlinkedDetected }: UseAuthLifecycleOptions
         onUnlinkedDetected(userId)
         // Guest flags cleared after the user resolves the dialog (in App.tsx handlers)
       } else {
-        // No unlinked records (or no dialog handler): backfill + start sync now.
-        // silent-catch-ok — backfill is self-healing; next sign-in retries.
-        backfillUserId(userId, guestSessionId).catch(err => {
-          console.error('[useAuthLifecycle] backfillUserId failed:', err)
-        })
+        // No unlinked records (or no dialog handler): backfill + repair + start sync.
+        try {
+          await backfillUserId(userId, guestSessionId)
+          await repairAccountData(userId)
+        } catch (err) {
+          console.error('[useAuthLifecycle] account repair failed:', err)
+        }
         syncEngine.start(userId).catch(err => {
           console.error('[useAuthLifecycle] syncEngine.start failed:', err)
         })

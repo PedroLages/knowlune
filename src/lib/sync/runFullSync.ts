@@ -31,7 +31,15 @@ export async function runFullSync(): Promise<void> {
 
   setStatus('syncing')
   try {
-    await syncEngine.fullSync()
+    const result = await syncEngine.fullSync()
+    if (result.failedTables.length > 0 || result.deadLetterCount > 0) {
+      const failedTables = result.failedTables.join(', ')
+      const message = failedTables
+        ? `Sync incomplete for ${failedTables}. It will retry automatically.`
+        : `${result.deadLetterCount} sync item(s) failed and will retry automatically.`
+      setStatus('error', message)
+      throw message
+    }
     markSyncComplete()
     await refreshPendingCount()
   } catch (err) {

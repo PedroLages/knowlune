@@ -9,6 +9,7 @@ import { clearSyncState } from '@/lib/sync/clearSyncState'
 import { countUnlinkedRecords, type UnlinkedCounts } from '@/lib/sync/countUnlinkedRecords'
 import { db } from '@/db'
 import { cn } from '@/app/components/ui/utils'
+import { repairAccountData } from '@/lib/sync/repairAccountData'
 
 /**
  * Non-dismissible modal shown on first sign-in when the device has local data
@@ -81,6 +82,7 @@ export function LinkDataDialog({ open, userId, onResolved, guestSessionId }: Lin
     setLoading(true)
     try {
       await backfillUserId(userId, guestSessionId)
+      await repairAccountData(userId)
       // start() triggers fullSync internally — uploads the newly-stamped records.
       syncEngine.start(userId).catch(err => {
         console.error('[LinkDataDialog] syncEngine.start failed:', err)
