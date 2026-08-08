@@ -32,6 +32,11 @@ interface RepairResult {
  * the stamped record. It is intentionally idempotent and parent-first.
  */
 export async function repairAccountData(userId: string): Promise<RepairResult> {
+  // Keep lightweight UI/unit-test database doubles compatible; real Dexie
+  // instances always expose syncMetadata.
+  if (!db.syncMetadata || typeof db.syncMetadata.get !== 'function') {
+    return { repaired: 0, failed: 0, skipped: true }
+  }
   const marker = `account-repair:${userId}`
   const prior = await db.syncMetadata.get(marker)
   if (prior?.value === ACCOUNT_REPAIR_VERSION) {
