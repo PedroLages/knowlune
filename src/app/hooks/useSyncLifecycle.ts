@@ -38,6 +38,7 @@ import { useBookStore } from '@/stores/useBookStore'
 import { useBookReviewStore } from '@/stores/useBookReviewStore'
 import { useShelfStore } from '@/stores/useShelfStore'
 import { useReadingQueueStore } from '@/stores/useReadingQueueStore'
+import { useLearningPathStore } from '@/stores/useLearningPathStore'
 
 /** Interval between periodic nudge calls (ms). */
 const NUDGE_INTERVAL_MS = 30_000
@@ -62,7 +63,50 @@ export function useSyncLifecycle(): void {
     mountedRef.current = true
     autoSyncEnabledRef.current = isAutoSyncEnabled()
 
-    const { setStatus, markSyncComplete } = useSyncStatusStore.getState()
+    const { setStatus, setFailures, markSyncComplete, loadPersistedStatus } =
+      useSyncStatusStore.getState()
+    if (typeof loadPersistedStatus === 'function') void loadPersistedStatus()
+
+    const applySyncResult = (result: Awaited<ReturnType<typeof syncEngine.fullSync>>) => {
+      // Older test doubles and pre-protocol clients returned void; a resolved
+      // void cycle still represents a successful coordinator run.
+      if (!result) {
+        markSyncComplete()
+        void useSyncStatusStore.getState().refreshPendingCount()
+        return
+      }
+      if (
+        result.failedTables.length > 0 ||
+        result.deadLetterCount > 0 ||
+        result.pendingCount > 0 ||
+        (result.assetFailures?.length ?? 0) > 0
+      ) {
+        if (typeof setFailures === 'function') {
+          setFailures([
+            ...(result.tableFailures ?? []).map(failure => ({
+              table: failure.table,
+              message: failure.message,
+              retryable: true,
+            })),
+            ...(result.assetFailures ?? []).map(failure => ({
+              table: failure.table,
+              recordId: failure.recordId,
+              message: failure.message,
+              retryable: failure.retryable,
+            })),
+          ])
+        }
+        setStatus(
+          'error',
+          result.failedTables.length > 0
+            ? `Sync incomplete for ${result.failedTables.join(', ')}. Check the affected records and retry.`
+            : `${result.deadLetterCount} item(s) need attention; ${result.pendingCount} waiting.`
+        )
+      } else {
+        markSyncComplete()
+      }
+      void useSyncStatusStore.getState().refreshPendingCount()
+    }
 
     // -------------------------------------------------------------------------
     // Store refresh registrations — MUST happen before first fullSync() so that
@@ -132,6 +176,15 @@ export function useSyncLifecycle(): void {
       useCourseImportStore.getState().loadImportedCourses()
     )
 
+    // Tracks are a parent/child pair. Refresh both through the store's
+    // session-filtered selector so downloaded paths become visible immediately.
+    syncEngine.registerStoreRefresh('learningPaths', () =>
+      useLearningPathStore.getState().refreshPaths()
+    )
+    syncEngine.registerStoreRefresh('learningPathEntries', () =>
+      useLearningPathStore.getState().refreshPaths()
+    )
+
     // UX note (authors refresh): sync used to clear `isLoaded` before reload, which swapped
     // author routes into cold-loading skeletons. `loadAuthors({ silent: true })` refreshes Dexie
     // without that. No 10s timer in app src; churn correlates with sync (see NUDGE_INTERVAL_MS).
@@ -182,26 +235,13 @@ export function useSyncLifecycle(): void {
 
     if (autoSyncEnabledRef.current) {
       setStatus('syncing')
-      syncEngine
+      void syncEngine
         .fullSync()
-        .then(result => {
-          if (!mountedRef.current) return
-          const syncResult = result ?? { failedTables: [], deadLetterCount: 0 }
-          if (syncResult.failedTables.length > 0 || syncResult.deadLetterCount > 0) {
-            setStatus(
-              'error',
-              syncResult.failedTables.length > 0
-                ? `Sync incomplete for ${syncResult.failedTables.join(', ')}. It will retry automatically.`
-                : `${syncResult.deadLetterCount} sync item(s) failed and will retry automatically.`
-            )
-          } else {
-            markSyncComplete()
-          }
-        })
+        .then(applySyncResult)
         .catch((err: unknown) => {
           if (!mountedRef.current) return
           console.error('[useSyncLifecycle] Initial fullSync failed:', err)
-          setStatus('error', classifyError(err))
+          setStatus('error', typeof err === 'string' ? err : classifyError(err))
         })
     }
 
@@ -216,13 +256,15 @@ export function useSyncLifecycle(): void {
       // Intentional: guard prevents nudge calls when offline. The engine's own
       // _started guard also fires, but checking navigator.onLine first avoids
       // queuing a debounced upload that would immediately fail.
-      if (navigator.onLine) {
+      if (navigator.onLine && useSyncStatusStore.getState().status !== 'syncing') {
+        // Keep the upload nudge for legacy integrations, but the authoritative
+        // periodic operation is a full upload + download cycle.
         syncEngine.nudge()
+        void syncEngine
+          .fullSync()
+          .then(applySyncResult)
+          .catch(err => console.error('[useSyncLifecycle] Periodic fullSync failed:', err))
       }
-      // E97-S01: opportunistically refresh pendingCount so the header badge
-      // stays in sync with passive queue drift between lifecycle transitions.
-      // Fire-and-forget; refreshPendingCount swallows its own Dexie errors.
-      void useSyncStatusStore.getState().refreshPendingCount()
     }, NUDGE_INTERVAL_MS)
 
     // -------------------------------------------------------------------------
@@ -232,7 +274,13 @@ export function useSyncLifecycle(): void {
     const handleVisibilityChange = () => {
       if (!autoSyncEnabledRef.current) return
       if (document.visibilityState === 'visible' && navigator.onLine) {
-        syncEngine.nudge()
+        if (useSyncStatusStore.getState().status !== 'syncing') {
+          syncEngine.nudge()
+          void syncEngine
+            .fullSync()
+            .then(applySyncResult)
+            .catch(err => console.error('[useSyncLifecycle] Focus fullSync failed:', err))
+        }
       }
     }
     document.addEventListener('visibilitychange', handleVisibilityChange)
@@ -243,28 +291,15 @@ export function useSyncLifecycle(): void {
 
     const handleOnline = () => {
       if (!autoSyncEnabledRef.current) return
-      const { setStatus: setState, markSyncComplete: markComplete } = useSyncStatusStore.getState()
+      const { setStatus: setState } = useSyncStatusStore.getState()
       setState('syncing')
-      syncEngine
+      void syncEngine
         .fullSync()
-        .then(result => {
-          if (!mountedRef.current) return
-          const syncResult = result ?? { failedTables: [], deadLetterCount: 0 }
-          if (syncResult.failedTables.length > 0 || syncResult.deadLetterCount > 0) {
-            setState(
-              'error',
-              syncResult.failedTables.length > 0
-                ? `Sync incomplete for ${syncResult.failedTables.join(', ')}. It will retry automatically.`
-                : `${syncResult.deadLetterCount} sync item(s) failed and will retry automatically.`
-            )
-          } else {
-            markComplete()
-          }
-        })
+        .then(applySyncResult)
         .catch((err: unknown) => {
           if (!mountedRef.current) return
           console.error('[useSyncLifecycle] Reconnection fullSync failed:', err)
-          setState('error', classifyError(err))
+          setState('error', typeof err === 'string' ? err : classifyError(err))
         })
     }
     window.addEventListener('online', handleOnline)
@@ -323,30 +358,32 @@ export function useSyncLifecycle(): void {
       const userId = useAuthStore.getState().user?.id
       if (next) {
         if (userId) {
-          // silent-catch-ok — start() errors surface via useSyncStatusStore
-          // status='error' on the next fullSync attempt; the indicator owns
-          // the user-visible surface for sync lifecycle failures.
-          void syncEngine.start(userId).catch((err: unknown) => {
-            console.error('[useSyncLifecycle] start after re-enable failed:', err)
-          })
-          // F2: trigger a fullSync to pick up any changes missed while paused.
           void syncEngine
-            .fullSync()
+            .start(userId)
             .then(result => {
-              const syncResult = result ?? { failedTables: [], deadLetterCount: 0 }
-              if (syncResult.failedTables.length > 0 || syncResult.deadLetterCount > 0) {
+              if (!result) return
+              if (
+                result.failedTables.length > 0 ||
+                result.deadLetterCount > 0 ||
+                result.pendingCount > 0
+              ) {
                 useSyncStatusStore
                   .getState()
                   .setStatus(
                     'error',
-                    syncResult.failedTables.length > 0
-                      ? `Sync incomplete for ${syncResult.failedTables.join(', ')}. It will retry automatically.`
-                      : `${syncResult.deadLetterCount} sync item(s) failed and will retry automatically.`
+                    result.failedTables.length > 0
+                      ? `Sync incomplete for ${result.failedTables.join(', ')}. Check the affected records and retry.`
+                      : `${result.deadLetterCount} item(s) need attention; ${result.pendingCount} waiting.`
                   )
+              } else {
+                useSyncStatusStore.getState().markSyncComplete()
               }
             })
             .catch((err: unknown) => {
-              console.error('[useSyncLifecycle] fullSync after re-enable failed:', err)
+              console.error('[useSyncLifecycle] start after re-enable failed:', err)
+              useSyncStatusStore
+                .getState()
+                .setStatus('error', typeof err === 'string' ? err : classifyError(err))
             })
         }
       } else {

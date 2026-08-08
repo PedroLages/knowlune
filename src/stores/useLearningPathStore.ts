@@ -4,7 +4,7 @@ import { db } from '@/db'
 import type { LearningPath, LearningPathEntry, PathProgressionMode } from '@/data/types'
 import { persistWithRetry } from '@/lib/persistWithRetry'
 import { trackAIUsage } from '@/lib/aiEventTracking'
-import { syncableWrite, type SyncableRecord } from '@/lib/sync/syncableWrite'
+import { syncableTransaction, syncableWrite, type SyncableRecord } from '@/lib/sync/syncableWrite'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
 import { extractGapSearchTerm } from '@/data/learningPathUtils'
 import { useAuthStore, selectIsGuestMode } from '@/stores/useAuthStore'
@@ -29,6 +29,8 @@ interface LearningPathState {
 
   // Path CRUD
   loadPaths: () => Promise<void>
+  /** Force a session-filtered reload after a sync download. */
+  refreshPaths: () => Promise<void>
   createPath: (name: string, description?: string) => Promise<LearningPath>
   renamePath: (pathId: string, name: string) => Promise<void>
   updateDescription: (pathId: string, description: string) => Promise<void>
@@ -193,7 +195,7 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
       const paths = (await db.learningPaths.toArray()).filter(belongsToSession)
       const pathIds = new Set(paths.map(path => path.id))
       const entries = (await db.learningPathEntries.toArray()).filter(
-        entry => belongsToSession(entry) && pathIds.has(entry.pathId)
+        entry => (belongsToSession(entry) || pathIds.has(entry.pathId)) && pathIds.has(entry.pathId)
       )
       const sorted = paths.sort(
         (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
@@ -209,6 +211,11 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
       console.error('[LearningPathStore] Failed to load paths:', error)
       set({ error: 'Failed to load learning paths from database', isLoaded: true })
     }
+  },
+
+  refreshPaths: async () => {
+    set({ isLoaded: false })
+    await get().loadPaths()
   },
 
   createPath: async (name: string, description?: string) => {
@@ -422,10 +429,14 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
 
     try {
       await persistWithRetry(async () => {
-        for (const entryId of entryIds) {
-          await syncableWrite('learningPathEntries', 'delete', entryId)
-        }
-        await syncableWrite('learningPaths', 'delete', pathId)
+        await syncableTransaction([
+          ...entryIds.map(entryId => ({
+            tableName: 'learningPathEntries',
+            operation: 'delete' as const,
+            record: entryId,
+          })),
+          { tableName: 'learningPaths', operation: 'delete' as const, record: pathId },
+        ])
       })
     } catch (error) {
       // Rollback to full snapshot preserving original state.
@@ -1318,7 +1329,7 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
       })
 
       if (get().forkGeneration !== generation) {
-        db.learningPaths.delete(newPathId).catch(() => {})
+        await syncableWrite('learningPaths', 'delete', newPathId)
         set({ paths: prevPaths, activePath: prevActivePath })
         return null
       }
@@ -1362,15 +1373,11 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
         })
       }
 
-      const freshPaths = await db.learningPaths.toArray()
-      const freshEntries = await db.learningPathEntries.toArray()
-      const sorted = freshPaths.sort(
-        (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
-      )
+      // Reload through the same session-filtered selector used by downloads;
+      // never copy raw Dexie rows from another account into Zustand.
+      await get().refreshPaths()
       set(state => ({
-        paths: sorted,
-        entries: freshEntries,
-        activePath: sorted.find(p => p.id === newPathId) ?? state.activePath,
+        activePath: get().paths.find(path => path.id === newPathId) ?? state.activePath,
       }))
 
       toast.success(`Created "${newPath.name}" from template`)
@@ -1397,17 +1404,10 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
       await db.learningPathEntries.bulkPut(entries)
     }
     if ((paths && paths.length > 0) || (entries && entries.length > 0)) {
-      // Refresh in-memory cache from Dexie to reflect the merged state.
-      const freshPaths = await db.learningPaths.toArray()
-      const freshEntries = await db.learningPathEntries.toArray()
-      const sorted = freshPaths.sort(
-        (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
-      )
-      set(state => ({
-        paths: sorted,
-        entries: freshEntries,
-        activePath: state.activePath ?? sorted[0] ?? null,
-      }))
+      // Always reload through the session-aware selector. Never expose raw
+      // Dexie rows from another user, and ensure template entries are retained
+      // only when their template parent is visible.
+      await get().refreshPaths()
     }
   },
 }))

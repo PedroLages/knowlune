@@ -505,6 +505,8 @@ export interface LearningPathCourse {
 
 export interface LearningPath {
   id: string // Primary key: UUID
+  /** Authenticated owner for portable paths; templates remain unowned. */
+  userId?: string | null
   name: string // User-facing name (e.g., "My Learning Path")
   description?: string // Optional description
   createdAt: string // ISO 8601
@@ -533,6 +535,9 @@ export interface LearningPathEntry {
   position: number // 1-indexed sequence position
   justification?: string // AI-provided reasoning for placement
   isManuallyOrdered: boolean // User manually reordered it
+  /** Public template rows are local-only and must never be stamped to a user. */
+  isTemplate?: boolean
+  userId?: string | null
 }
 
 /** Lightweight course info for path views — shared by FocusPanel and RoadmapListView */

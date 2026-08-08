@@ -15,6 +15,7 @@
 import { db } from '@/db'
 import { getVideoMetadataBatch } from '@/lib/youtubeApi'
 import type { ImportedCourse, ImportedVideo } from '@/data/types'
+import { syncableWrite, type SyncableRecord } from '@/lib/sync/syncableWrite'
 
 /** Staleness threshold: 30 days in milliseconds */
 export const STALE_THRESHOLD_MS = 30 * 24 * 60 * 60 * 1000
@@ -60,9 +61,10 @@ export async function refreshCourseMetadata(course: ImportedCourse): Promise<{
 
   if (videos.length === 0) {
     // Update lastRefreshedAt even if no videos
-    await db.importedCourses.update(course.id, {
+    await syncableWrite('importedCourses', 'put', {
+      ...course,
       lastRefreshedAt: new Date().toISOString(),
-    })
+    } as unknown as SyncableRecord)
     return { updated: 0, removed: 0 }
   }
 
@@ -75,9 +77,10 @@ export async function refreshCourseMetadata(course: ImportedCourse): Promise<{
   }
 
   if (videoIdMap.size === 0) {
-    await db.importedCourses.update(course.id, {
+    await syncableWrite('importedCourses', 'put', {
+      ...course,
       lastRefreshedAt: new Date().toISOString(),
-    })
+    } as unknown as SyncableRecord)
     return { updated: 0, removed: 0 }
   }
 
@@ -119,23 +122,28 @@ export async function refreshCourseMetadata(course: ImportedCourse): Promise<{
       }
 
       if (hasChanges) {
-        await db.importedVideos.update(video.id, updates)
+        await syncableWrite('importedVideos', 'put', {
+          ...video,
+          ...updates,
+        } as unknown as SyncableRecord)
         updated++
       }
     } else if (result.code === 'NOT_FOUND') {
       // Video was removed from YouTube — mark it
-      await db.importedVideos.update(video.id, {
+      await syncableWrite('importedVideos', 'put', {
+        ...video,
         removedFromYouTube: true,
-      })
+      } as unknown as SyncableRecord)
       removed++
     }
     // For NETWORK_ERROR, QUOTA_EXCEEDED etc., skip silently (will retry next time)
   }
 
   // Update lastRefreshedAt on the course
-  await db.importedCourses.update(course.id, {
+  await syncableWrite('importedCourses', 'put', {
+    ...course,
     lastRefreshedAt: new Date().toISOString(),
-  })
+  } as unknown as SyncableRecord)
 
   return { updated, removed }
 }

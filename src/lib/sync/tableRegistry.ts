@@ -29,6 +29,100 @@
  * alongside the Dexie schema in `src/data/types.ts`.
  */
 
+import type { TablesInsert } from '@/lib/supabase/database.types'
+
+type InsertColumns<
+  T extends keyof import('@/lib/supabase/database.types').Database['public']['Tables'],
+> = readonly (keyof TablesInsert<T> & string)[]
+
+const importedCourseUploadColumns = [
+  'id',
+  'user_id',
+  'name',
+  'description',
+  'category',
+  'source',
+  'source_drive_id',
+  'imported_at',
+  'status',
+  'tags',
+  'video_count',
+  'pdf_count',
+  'total_duration',
+  'total_file_size',
+  'max_resolution_height',
+  'author_id',
+  'youtube_playlist_id',
+  'youtube_channel_id',
+  'youtube_channel_title',
+  'youtube_thumbnail_url',
+  'youtube_published_at',
+  'last_refreshed_at',
+  'thumbnail_url',
+  'server_id',
+  'server_path',
+  'updated_at',
+] as const satisfies InsertColumns<'imported_courses'>
+
+const importedVideoUploadColumns = [
+  'id',
+  'user_id',
+  'course_id',
+  'filename',
+  'path',
+  'duration',
+  'format',
+  'order',
+  'file_size',
+  'width',
+  'height',
+  'title',
+  'module_title',
+  'youtube_video_id',
+  'youtube_url',
+  'thumbnail_url',
+  'description',
+  'chapters',
+  'removed_from_youtube',
+  'embeddable',
+  'unembeddable_reason',
+  'drive_file_ref',
+  'server_url',
+  'updated_at',
+] as const satisfies InsertColumns<'imported_videos'>
+
+const learningPathUploadColumns = [
+  'id',
+  'user_id',
+  'name',
+  'description',
+  'is_ai_generated',
+  'is_template',
+  'forked_from',
+  'estimated_hours',
+  'difficulty_label',
+  'progression_mode',
+  'cover_image_url',
+  'cover_preset',
+  'updated_at',
+] as const satisfies InsertColumns<'learning_paths'>
+
+const learningPathEntryUploadColumns = [
+  'id',
+  'path_id',
+  'course_id',
+  'course_type',
+  'user_id',
+  'position',
+  'justification',
+  'is_manually_ordered',
+  'manifest_course_key',
+  'manifest_ordinal',
+  'source',
+  'state',
+  'updated_at',
+] as const satisfies InsertColumns<'learning_path_entries'>
+
 export interface TableRegistryEntry {
   /** Name of the Dexie (IndexedDB) table */
   dexieTable: string
@@ -45,6 +139,17 @@ export interface TableRegistryEntry {
    * to snake_case automatically (e.g. courseId → course_id).
    */
   fieldMap: Record<string, string>
+  /**
+   * Exact Supabase columns that are safe to upload. When present, payloads are
+   * projected onto this allowlist after camelCase → snake_case conversion.
+   * Keeping this explicit prevents newly-added local-only properties from
+   * leaking into PostgREST requests.
+   */
+  uploadColumns?: readonly string[]
+  /** Columns that must be present for a write to be valid. */
+  requiredColumns?: readonly string[]
+  /** Dexie tables that must upload before this table (parent-first ordering). */
+  dependsOn?: readonly string[]
   /**
    * Fields to strip before upload. These are non-serializable browser API
    * handles (FileSystemDirectoryHandle, FileSystemFileHandle) that cannot be
@@ -121,6 +226,7 @@ const contentProgress: TableRegistryEntry = {
   },
   compoundPkFields: ['courseId', 'itemId'],
   monotonicFields: ['progressPct'],
+  dependsOn: ['importedCourses'],
 }
 
 const studySessions: TableRegistryEntry = {
@@ -174,6 +280,7 @@ const progress: TableRegistryEntry = {
   // Monotonic position: watched_seconds (mapped from currentTime) should only increase.
   monotonicFields: ['currentTime'],
   compoundPkFields: ['courseId', 'videoId'],
+  dependsOn: ['importedCourses', 'importedVideos'],
 }
 
 // ---------------------------------------------------------------------------
@@ -348,6 +455,8 @@ const importedCourses: TableRegistryEntry = {
   fieldMap: {},
   stripFields: ['directoryHandle', 'coverImageHandle'],
   serverManagedFields: ['createdAt'],
+  uploadColumns: importedCourseUploadColumns,
+  requiredColumns: ['id', 'user_id'],
 }
 
 /**
@@ -360,6 +469,10 @@ const importedVideos: TableRegistryEntry = {
   priority: 2,
   fieldMap: {},
   stripFields: ['fileHandle'],
+  serverManagedFields: ['createdAt'],
+  uploadColumns: importedVideoUploadColumns,
+  requiredColumns: ['id', 'user_id', 'course_id'],
+  dependsOn: ['importedCourses'],
 }
 
 /**
@@ -373,6 +486,18 @@ const importedPdfs: TableRegistryEntry = {
   fieldMap: {},
   // photoBlob/fileBlob: server-fetched blob, not uploadable (E94-S05)
   stripFields: ['fileHandle', 'fileBlob'],
+  uploadColumns: [
+    'id',
+    'user_id',
+    'course_id',
+    'filename',
+    'path',
+    'page_count',
+    'server_url',
+    'updated_at',
+  ],
+  requiredColumns: ['id', 'user_id', 'course_id'],
+  dependsOn: ['importedCourses'],
 }
 
 /**
@@ -442,6 +567,7 @@ const bookShelves: TableRegistryEntry = {
   conflictStrategy: 'lww',
   priority: 2,
   fieldMap: {},
+  dependsOn: ['shelves'],
 }
 
 // E94-S03: Dexie-side field `sortOrder` is translated to Supabase column
@@ -488,6 +614,8 @@ const learningPaths: TableRegistryEntry = {
   priority: 3,
   fieldMap: {},
   serverManagedFields: ['createdAt'],
+  uploadColumns: learningPathUploadColumns,
+  requiredColumns: ['id', 'user_id'],
 }
 
 const learningPathEntries: TableRegistryEntry = {
@@ -496,6 +624,9 @@ const learningPathEntries: TableRegistryEntry = {
   conflictStrategy: 'lww',
   priority: 3,
   fieldMap: {},
+  uploadColumns: learningPathEntryUploadColumns,
+  requiredColumns: ['id', 'path_id', 'course_id', 'user_id'],
+  dependsOn: ['learningPaths', 'importedCourses'],
 }
 
 /**

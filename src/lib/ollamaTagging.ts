@@ -12,6 +12,7 @@ import { db } from '@/db'
 import { generateCourseTags, isOllamaTaggingAvailable } from '@/ai/courseTagger'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
 import type { ImportedCourse, ImportedVideo, ImportedPdf } from '@/data/types'
+import { syncableWrite, type SyncableRecord } from '@/lib/sync/syncableWrite'
 
 /**
  * Simple promise queue with concurrency control.
@@ -94,7 +95,14 @@ async function runOllamaTagging(
       const merged = [...new Set([...existingTags, ...result.tags])]
 
       // Persist to IndexedDB
-      await db.importedCourses.update(course.id, { tags: merged })
+      const persisted = await db.importedCourses.get(course.id)
+      if (persisted) {
+        await syncableWrite('importedCourses', 'put', {
+          ...persisted,
+          id: course.id,
+          tags: merged,
+        } as unknown as SyncableRecord)
+      }
 
       // Update Zustand store
       useCourseImportStore.setState(state => ({

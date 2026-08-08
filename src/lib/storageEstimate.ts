@@ -12,6 +12,7 @@
 import { db } from '@/db'
 import { getStorageEstimate } from '@/lib/storageQuotaMonitor'
 import type { Table } from 'dexie'
+import { syncableBulkWrite, syncableWrite } from '@/lib/sync/syncableWrite'
 
 // --- Types ---
 
@@ -281,6 +282,10 @@ export async function deleteCourseData(courseIds: string[]): Promise<number> {
   if (courseIds.length === 0) return 0
 
   let bytesFreed = 0
+  const syncOutboxAvailable = Boolean(
+    (db as unknown as { syncQueue?: unknown }).syncQueue &&
+    typeof (db as unknown as { table?: unknown }).table === 'function'
+  )
 
   await db.transaction(
     'rw',
@@ -301,11 +306,16 @@ export async function deleteCourseData(courseIds: string[]): Promise<number> {
       db.quizzes,
       db.quizAttempts,
       db.reviewRecords,
+      ...(syncOutboxAvailable ? [db.syncQueue] : []),
     ],
     async () => {
       for (const courseId of courseIds) {
         // Direct courseId-indexed tables
-        const deleteByIndex = async (table: Table<unknown, unknown>, indexName: string) => {
+        const deleteByIndex = async (
+          table: Table<unknown, unknown>,
+          indexName: string,
+          syncTableName?: string
+        ) => {
           const items = await table.where(indexName).equals(courseId).toArray()
           for (const item of items) {
             for (const val of Object.values(item as Record<string, unknown>)) {
@@ -315,14 +325,42 @@ export async function deleteCourseData(courseIds: string[]): Promise<number> {
             }
             bytesFreed += new Blob([JSON.stringify(item)]).size
           }
-          await table.where(indexName).equals(courseId).delete()
+          if (syncTableName && syncOutboxAvailable) {
+            const deletions = items
+              .map(item => (item as { id?: string }).id)
+              .filter((id): id is string => typeof id === 'string' && id.length > 0)
+              .map(id => ({ operation: 'delete' as const, record: id }))
+            await syncableBulkWrite(syncTableName, deletions)
+          } else {
+            await table.where(indexName).equals(courseId).delete()
+          }
         }
 
-        await deleteByIndex(db.importedVideos as unknown as Table<unknown, unknown>, 'courseId')
-        await deleteByIndex(db.importedPdfs as unknown as Table<unknown, unknown>, 'courseId')
-        await deleteByIndex(db.bookmarks as unknown as Table<unknown, unknown>, 'courseId')
-        await deleteByIndex(db.studySessions as unknown as Table<unknown, unknown>, 'courseId')
-        await deleteByIndex(db.flashcards as unknown as Table<unknown, unknown>, 'courseId')
+        await deleteByIndex(
+          db.importedVideos as unknown as Table<unknown, unknown>,
+          'courseId',
+          'importedVideos'
+        )
+        await deleteByIndex(
+          db.importedPdfs as unknown as Table<unknown, unknown>,
+          'courseId',
+          'importedPdfs'
+        )
+        await deleteByIndex(
+          db.bookmarks as unknown as Table<unknown, unknown>,
+          'courseId',
+          'bookmarks'
+        )
+        await deleteByIndex(
+          db.studySessions as unknown as Table<unknown, unknown>,
+          'courseId',
+          'studySessions'
+        )
+        await deleteByIndex(
+          db.flashcards as unknown as Table<unknown, unknown>,
+          'courseId',
+          'flashcards'
+        )
 
         // Notes and related (screenshots, embeddings linked via noteId)
         const notes = await db.notes.where('courseId').equals(courseId).toArray()
@@ -361,7 +399,11 @@ export async function deleteCourseData(courseIds: string[]): Promise<number> {
         await db.courseThumbnails.delete(courseId)
 
         // The course itself
-        await db.importedCourses.delete(courseId)
+        if (syncOutboxAvailable) {
+          await syncableWrite('importedCourses', 'delete', courseId)
+        } else {
+          await db.importedCourses.delete(courseId)
+        }
       }
     }
   )

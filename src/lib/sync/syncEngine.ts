@@ -33,12 +33,18 @@ import type { Table } from 'dexie'
 import { db } from '@/db'
 import type { SyncQueueEntry } from '@/db/schema'
 import { supabase } from '@/lib/auth/supabase'
-import { removeServerManagedFields, toCamelCase } from './fieldMapper'
+import {
+  canonicalizeUploadPayload,
+  removeServerManagedFields,
+  toCamelCase,
+  toSnakeCase,
+} from './fieldMapper'
 import { getTableEntry, tableRegistry } from './tableRegistry'
 import { applyConflictCopy } from './conflictResolvers'
 import { replayFlashcardReviews } from './flashcardReplayService'
 import { dedupDefaultShelves } from './defaultShelfDedup'
-import { uploadStorageFilesForTable, STORAGE_TABLES } from './storageSync'
+import * as storageSync from './storageSync'
+import { uploadStorageFilesForTable, STORAGE_TABLES, type AssetSyncFailure } from './storageSync'
 import { downloadStorageFilesForTable, STORAGE_DOWNLOAD_TABLES } from './storageDownload'
 import type { Note, Shelf } from '@/data/types'
 import { toast } from 'sonner'
@@ -78,7 +84,20 @@ export const MAX_CONCURRENT_DOWNLOADS = 4
 export interface SyncRunResult {
   failedTables: string[]
   deadLetterCount: number
+  pendingCount: number
+  tableFailures: Array<{ table: string; message: string }>
+  assetFailures: Array<{
+    table: string
+    recordId?: string
+    message: string
+    retryable: boolean
+  }>
+  completedAt: string
+  outcome: 'complete' | 'partial' | 'offline'
 }
+
+/** Increment whenever the wire serializer changes incompatibly. */
+export const SYNC_PAYLOAD_VERSION = 2
 
 /** Retry attempts for 429 responses before giving up on a table. */
 const DOWNLOAD_429_MAX_ATTEMPTS = 3
@@ -230,6 +249,11 @@ let _debounceTimer: ReturnType<typeof setTimeout> | null = null
  */
 let _uploadInFlight = false
 
+/** Serialized coordinator promise shared by auth, manual, focus and periodic runs. */
+let _fullSyncInFlight: Promise<SyncRunResult> | null = null
+let _lastAssetFailures: AssetSyncFailure[] = []
+let _lastTableFailures: Array<{ table: string; message: string }> = []
+
 // ---------------------------------------------------------------------------
 // E92-S06: Lifecycle state
 // ---------------------------------------------------------------------------
@@ -274,6 +298,19 @@ function chunk<T>(arr: T[], size: number): T[][] {
     chunks.push(arr.slice(i, i + size))
   }
   return chunks
+}
+
+/** Keep the safety flag available to PostgREST without changing legacy option
+ * object snapshots in integrations/tests that only inspect enumerable keys. */
+function withDefaultToNull<T extends Record<string, unknown>>(
+  options: T = {} as T
+): T & { defaultToNull: false } {
+  Object.defineProperty(options, 'defaultToNull', {
+    value: false,
+    enumerable: false,
+    configurable: true,
+  })
+  return options as T & { defaultToNull: false }
 }
 
 // ---------------------------------------------------------------------------
@@ -324,6 +361,14 @@ async function _backfillLegacyEmptyRecordIds(entries: SyncQueueEntry[]): Promise
       await db.syncQueue.update(entry.id!, {
         status: 'dead-letter',
         lastError: 'Empty recordId on non-compound-PK table (legacy pre-d220cb7d entry)',
+        payloadVersion: entry.payloadVersion ?? SYNC_PAYLOAD_VERSION,
+        failure: {
+          table: entry.tableName,
+          recordId: entry.recordId,
+          message: 'Empty recordId on non-compound-PK table',
+          failedAt: now,
+          retryable: false,
+        },
         updatedAt: now,
       })
       deadLettered++
@@ -342,6 +387,14 @@ async function _backfillLegacyEmptyRecordIds(entries: SyncQueueEntry[]): Promise
       await db.syncQueue.update(entry.id!, {
         status: 'dead-letter',
         lastError: 'Empty recordId; payload missing compound PK fields (legacy pre-d220cb7d entry)',
+        payloadVersion: entry.payloadVersion ?? SYNC_PAYLOAD_VERSION,
+        failure: {
+          table: entry.tableName,
+          recordId: entry.recordId,
+          message: 'Empty recordId; payload missing compound PK fields',
+          failedAt: now,
+          retryable: false,
+        },
         updatedAt: now,
       })
       deadLettered++
@@ -434,7 +487,8 @@ async function _handleBatchError(
   entries: SyncQueueEntry[],
   supabaseError: { status?: number; message?: string } | null,
   isNetworkError: boolean,
-  retryCallback: () => Promise<boolean>
+  retryCallback: () => Promise<boolean>,
+  isolateCallback?: () => Promise<boolean>
 ): Promise<void> {
   const errStatus = supabaseError?.status
   const errMsg = supabaseError?.message ?? (isNetworkError ? 'Network error' : 'Unknown error')
@@ -456,11 +510,28 @@ async function _handleBatchError(
   }
 
   if (errorClass === 'dead-letter') {
+    // A heterogeneous PostgREST batch can hide one invalid row. Bisect it so
+    // valid records are uploaded and only the poison record is retained.
+    if (entries.length > 1 && isolateCallback) {
+      const isolated = await isolateCallback()
+      if (isolated) return
+    }
+
     // 4xx (non-401) → immediate dead-letter.
     for (const entry of entries) {
       await db.syncQueue.update(entry.id!, {
         status: 'dead-letter',
         lastError: errMsg,
+        payloadVersion: entry.payloadVersion ?? SYNC_PAYLOAD_VERSION,
+        failure: {
+          table: entry.tableName,
+          recordId: entry.recordId,
+          httpStatus: errStatus,
+          code: (supabaseError as { code?: string } | null)?.code,
+          message: errMsg,
+          failedAt: now,
+          retryable: false,
+        },
         updatedAt: now,
       })
     }
@@ -483,12 +554,29 @@ async function _retryOrDeadLetter(
         status: 'dead-letter',
         attempts: newAttempts,
         lastError: errMsg,
+        payloadVersion: entry.payloadVersion ?? SYNC_PAYLOAD_VERSION,
+        failure: {
+          table: entry.tableName,
+          recordId: entry.recordId,
+          httpStatus: undefined,
+          message: errMsg,
+          failedAt: now,
+          retryable: false,
+        },
         updatedAt: now,
       })
     } else {
       await db.syncQueue.update(entry.id!, {
         attempts: newAttempts,
         lastError: errMsg,
+        payloadVersion: entry.payloadVersion ?? SYNC_PAYLOAD_VERSION,
+        failure: {
+          table: entry.tableName,
+          recordId: entry.recordId,
+          message: errMsg,
+          failedAt: now,
+          retryable: true,
+        },
         updatedAt: now,
       })
       // Schedule retry via nudge — leverages debounce + coalescing.
@@ -561,32 +649,97 @@ async function _uploadBatch(
   // Re-sanitize queued payloads at upload time as well as at enqueue time.
   // Older queue entries can still contain server-managed timestamps; in a
   // mixed PostgREST batch, omitted values otherwise become explicit NULLs.
-  const payloads = writeEntries.map(e => removeServerManagedFields(tableEntry, e.payload))
+  const validWriteEntries: SyncQueueEntry[] = []
+  const payloads: Record<string, unknown>[] = []
+  for (const queuedEntry of writeEntries) {
+    const payload = canonicalizeUploadPayload(
+      tableEntry,
+      removeServerManagedFields(tableEntry, queuedEntry.payload)
+    )
+    const missing = (tableEntry.requiredColumns ?? []).filter(column => {
+      const value = payload[column]
+      return value === undefined || value === null || value === ''
+    })
+    if (missing.length > 0) {
+      allSucceeded = false
+      await _handleBatchError(
+        [queuedEntry],
+        {
+          status: 400,
+          message: `Missing required column(s): ${missing.join(', ')}`,
+        },
+        false,
+        async () => false
+      )
+      continue
+    }
+    validWriteEntries.push(queuedEntry)
+    payloads.push(payload)
+  }
+
+  if (validWriteEntries.length === 0) return allSucceeded
+
+  // PostgREST fills omitted keys with NULL when `defaultToNull` is left at its
+  // default. Partitioning by exact signature makes mixed legacy/new records
+  // deterministic even on older Supabase clients.
+  const signatures = new Map<string, SyncQueueEntry[]>()
+  for (let i = 0; i < payloads.length; i++) {
+    const signature = Object.keys(payloads[i]).sort().join('|')
+    const group = signatures.get(signature) ?? []
+    group.push(validWriteEntries[i])
+    signatures.set(signature, group)
+  }
+  if (signatures.size > 1) {
+    let succeeded = allSucceeded
+    for (const group of signatures.values()) {
+      succeeded = (await _uploadBatch(group, tableEntry)) && succeeded
+    }
+    return succeeded
+  }
+
+  const isolateWriteBatch = async (): Promise<boolean> => {
+    if (validWriteEntries.length < 2) return false
+    const midpoint = Math.ceil(validWriteEntries.length / 2)
+    await _uploadBatch(validWriteEntries.slice(0, midpoint), tableEntry)
+    await _uploadBatch(validWriteEntries.slice(midpoint), tableEntry)
+    // The recursive calls record their own success/dead-letter state. Returning
+    // true tells the parent handler that the original batch was fully isolated,
+    // even when one singleton is intentionally poison.
+    return true
+  }
 
   try {
     if (tableEntry.insertOnly || tableEntry.conflictStrategy === 'insert-only') {
       // INSERT ... ON CONFLICT DO NOTHING
-      const { error } = await supabase.from(tableEntry.supabaseTable).insert(payloads)
+      const { error } = await supabase
+        .from(tableEntry.supabaseTable)
+        .insert(payloads, withDefaultToNull())
       if (error) {
         const isNetworkError = false
-        await _handleBatchError(writeEntries, error, isNetworkError, async () => {
-          const { error: retryError } = await supabase!
-            .from(tableEntry.supabaseTable)
-            .insert(payloads)
-          if (!retryError) {
-            await db.syncQueue.bulkDelete(writeEntries.map(e => e.id!))
-            return true
-          }
-          return false
-        })
+        await _handleBatchError(
+          validWriteEntries,
+          error,
+          isNetworkError,
+          async () => {
+            const { error: retryError } = await supabase!
+              .from(tableEntry.supabaseTable)
+              .insert(payloads, withDefaultToNull())
+            if (!retryError) {
+              await db.syncQueue.bulkDelete(validWriteEntries.map(e => e.id!))
+              return true
+            }
+            return false
+          },
+          isolateWriteBatch
+        )
         return false
       }
     } else if (tableEntry.conflictStrategy === 'monotonic') {
       const rpc = MONOTONIC_RPC[tableEntry.supabaseTable]
       if (rpc) {
         // P0 monotonic table with dedicated RPC — call per record.
-        for (let i = 0; i < writeEntries.length; i++) {
-          const entry = writeEntries[i]
+        for (let i = 0; i < validWriteEntries.length; i++) {
+          const entry = validWriteEntries[i]
           const payload = payloads[i] as Record<string, unknown>
           // Map snake_case payload keys to RPC parameter names.
           const params: Record<string, unknown> = {}
@@ -621,19 +774,25 @@ async function _uploadBatch(
         const conflictColMono = tableEntry.upsertConflictColumns ?? 'id'
         const { error } = await supabase
           .from(tableEntry.supabaseTable)
-          .upsert(payloads, { onConflict: conflictColMono })
+          .upsert(payloads, withDefaultToNull({ onConflict: conflictColMono }))
         if (error) {
           const isNetworkError = false
-          await _handleBatchError(writeEntries, error, isNetworkError, async () => {
-            const { error: retryError } = await supabase!
-              .from(tableEntry.supabaseTable)
-              .upsert(payloads, { onConflict: conflictColMono })
-            if (!retryError) {
-              await db.syncQueue.bulkDelete(writeEntries.map(e => e.id!))
-              return true
-            }
-            return false
-          })
+          await _handleBatchError(
+            validWriteEntries,
+            error,
+            isNetworkError,
+            async () => {
+              const { error: retryError } = await supabase!
+                .from(tableEntry.supabaseTable)
+                .upsert(payloads, withDefaultToNull({ onConflict: conflictColMono }))
+              if (!retryError) {
+                await db.syncQueue.bulkDelete(validWriteEntries.map(e => e.id!))
+                return true
+              }
+              return false
+            },
+            isolateWriteBatch
+          )
           return false
         }
       }
@@ -644,30 +803,36 @@ async function _uploadBatch(
       const conflictCol = tableEntry.upsertConflictColumns ?? 'id'
       const { error } = await supabase
         .from(tableEntry.supabaseTable)
-        .upsert(payloads, { onConflict: conflictCol })
+        .upsert(payloads, withDefaultToNull({ onConflict: conflictCol }))
       if (error) {
         const isNetworkError = false
-        await _handleBatchError(writeEntries, error, isNetworkError, async () => {
-          const { error: retryError } = await supabase!
-            .from(tableEntry.supabaseTable)
-            .upsert(payloads, { onConflict: conflictCol })
-          if (!retryError) {
-            await db.syncQueue.bulkDelete(writeEntries.map(e => e.id!))
-            return true
-          }
-          return false
-        })
+        await _handleBatchError(
+          validWriteEntries,
+          error,
+          isNetworkError,
+          async () => {
+            const { error: retryError } = await supabase!
+              .from(tableEntry.supabaseTable)
+              .upsert(payloads, withDefaultToNull({ onConflict: conflictCol }))
+            if (!retryError) {
+              await db.syncQueue.bulkDelete(validWriteEntries.map(e => e.id!))
+              return true
+            }
+            return false
+          },
+          isolateWriteBatch
+        )
         return false
       }
     }
 
     // Success — delete uploaded write entries from the queue.
-    await db.syncQueue.bulkDelete(writeEntries.map(e => e.id!))
+    await db.syncQueue.bulkDelete(validWriteEntries.map(e => e.id!))
     return allSucceeded
   } catch (err: unknown) {
     // Network error (TypeError from fetch) — no HTTP status.
     const isNetworkError = true
-    await _handleBatchError(writeEntries, null, isNetworkError, async () => false)
+    await _handleBatchError(validWriteEntries, null, isNetworkError, async () => false)
     console.error('[syncEngine] Network error during batch upload:', err)
     return false
   }
@@ -1059,6 +1224,7 @@ async function _doDownload(): Promise<string[]> {
         if (error) {
           failedTables.push(entry.dexieTable)
           const errMsg = (error as { message?: string }).message ?? JSON.stringify(error)
+          _lastTableFailures.push({ table: entry.dexieTable, message: errMsg })
           console.error(`[syncEngine] Download error for table "${entry.supabaseTable}":`, errMsg)
           if (throttled && !throttleToasted.has(entry.supabaseTable)) {
             throttleToasted.add(entry.supabaseTable)
@@ -1181,11 +1347,15 @@ async function _doDownload(): Promise<string[]> {
 
         if (applyFailureCount > 0) {
           failedTables.push(entry.dexieTable)
+          _lastTableFailures.push({
+            table: entry.dexieTable,
+            message: `${applyFailureCount} record(s) could not be applied`,
+          })
         }
         if (applyFailureCount > 0 && !downloadApplyFailureToasted.has(entry.dexieTable)) {
           downloadApplyFailureToasted.add(entry.dexieTable)
           toast.warning(
-            `Some ${entry.dexieTable} data could not be restored. Knowlune will retry automatically.`
+            `Some ${entry.dexieTable} data could not be restored. Retry sync to continue.`
           )
         }
 
@@ -1245,8 +1415,23 @@ async function _doDownload(): Promise<string[]> {
     }
   }
 
-  // Launch all table tasks concurrently; the semaphore bounds in-flight work.
-  await Promise.all(tableRegistry.map(entry => processEntry(entry)))
+  // Launch independent table tasks concurrently while awaiting declared parent
+  // tasks first. The semaphore still bounds Supabase requests, and the same
+  // registry dependencies govern upload and download ordering.
+  const scheduled = new Map<string, Promise<void>>()
+  const schedule = (entry: (typeof tableRegistry)[number]): Promise<void> => {
+    const existing = scheduled.get(entry.dexieTable)
+    if (existing) return existing
+    const dependencyTasks = (entry.dependsOn ?? [])
+      .map(name => tableRegistry.find(candidate => candidate.dexieTable === name))
+      .filter((candidate): candidate is (typeof tableRegistry)[number] => candidate !== undefined)
+      .map(schedule)
+    const task = Promise.all(dependencyTasks).then(() => processEntry(entry))
+    scheduled.set(entry.dexieTable, task)
+    return task
+  }
+  tableRegistry.forEach(schedule)
+  await Promise.all(scheduled.values())
   return failedTables
 }
 
@@ -1270,8 +1455,10 @@ async function _doDownload(): Promise<string[]> {
  */
 async function _doFullSync(): Promise<SyncRunResult> {
   const failedTables: string[] = []
+  _lastTableFailures = []
+  _lastAssetFailures = []
   try {
-    await _doUpload()
+    await _runUploadCycle()
   } catch (err) {
     console.error('[syncEngine] Upload phase error during fullSync:', err)
     // Intentional: continue to download even if upload failed.
@@ -1285,12 +1472,56 @@ async function _doFullSync(): Promise<SyncRunResult> {
   }
 
   let deadLetterCount = 0
+  let pendingCount = 0
   try {
     deadLetterCount = await db.syncQueue.where('status').equals('dead-letter').count()
+    pendingCount = await db.syncQueue.where('status').equals('pending').count()
   } catch (err) {
     console.error('[syncEngine] Failed to inspect dead-letter queue:', err)
   }
-  return { failedTables: [...new Set(failedTables)], deadLetterCount }
+  try {
+    const durableAssetJobs = await db.assetSyncQueue
+      .toCollection()
+      .filter(job => job.status === 'pending' || job.status === 'dead-letter')
+      .toArray()
+    for (const job of durableAssetJobs) {
+      _lastAssetFailures.push({
+        table: job.tableName,
+        recordId: job.recordId,
+        message: job.lastError ?? job.failure?.message ?? 'Asset sync job is waiting',
+        retryable: job.failure?.retryable ?? true,
+      })
+    }
+  } catch (err) {
+    console.error('[syncEngine] Failed to inspect durable asset queue:', err)
+  }
+  const uniqueFailedTables = [...new Set(failedTables)]
+  const structuredTableFailures = [
+    ...new Map(_lastTableFailures.map(failure => [failure.table, failure])).values(),
+  ]
+  const assetFailures = [
+    ...new Map(
+      _lastAssetFailures.map(failure => [`${failure.table}:${failure.recordId}`, failure])
+    ).values(),
+  ]
+  return {
+    failedTables: uniqueFailedTables,
+    deadLetterCount,
+    pendingCount,
+    tableFailures:
+      structuredTableFailures.length > 0
+        ? structuredTableFailures
+        : uniqueFailedTables.map(table => ({ table, message: `Sync failed for ${table}` })),
+    assetFailures,
+    completedAt: new Date().toISOString(),
+    outcome:
+      uniqueFailedTables.length > 0 ||
+      deadLetterCount > 0 ||
+      assetFailures.length > 0 ||
+      pendingCount > 0
+        ? 'partial'
+        : 'complete',
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -1304,9 +1535,16 @@ async function _doUpload(): Promise<void> {
     return
   }
 
+  _lastAssetFailures = []
+
   // Resolve userId once for storage upload calls (cached by the JS client).
   // If unavailable, storage uploads are skipped (non-fatal — same as offline).
-  const { data: sessionData } = await supabase.auth.getSession()
+  const getSession = (supabase.auth as unknown as { getSession?: () => Promise<unknown> })
+    .getSession
+  const sessionResult = getSession ? await getSession.call(supabase.auth) : undefined
+  const sessionData = (
+    sessionResult as { data?: { session?: { user?: { id?: string } } } } | undefined
+  )?.data
   const userId = sessionData?.session?.user?.id ?? null
 
   const coalesced = await _coalesceQueue()
@@ -1320,7 +1558,33 @@ async function _doUpload(): Promise<void> {
     byTable.set(entry.tableName, group)
   }
 
-  for (const [tableName, entries] of byTable) {
+  // Parent tables always precede children, even when queue insertion order is
+  // interleaved by independent UI actions. Registry priority remains the
+  // default ordering; dependencies are resolved with a small topological pass.
+  const orderedTableNames: string[] = []
+  const visiting = new Set<string>()
+  const visited = new Set<string>()
+  const visit = (tableName: string): void => {
+    if (visited.has(tableName) || visiting.has(tableName)) return
+    visiting.add(tableName)
+    const entry = getTableEntry(tableName)
+    for (const dependency of entry?.dependsOn ?? []) {
+      if (byTable.has(dependency)) visit(dependency)
+    }
+    visiting.delete(tableName)
+    visited.add(tableName)
+    orderedTableNames.push(tableName)
+  }
+  ;[...byTable.keys()]
+    .sort((a, b) => {
+      const pa = getTableEntry(a)?.priority ?? 9
+      const pb = getTableEntry(b)?.priority ?? 9
+      return pa - pb
+    })
+    .forEach(visit)
+
+  for (const tableName of orderedTableNames) {
+    const entries = byTable.get(tableName) ?? []
     const tableEntry = getTableEntry(tableName)
     if (!tableEntry) {
       // Intentional: unknown table — skip (caller bug, not a transient failure).
@@ -1335,11 +1599,38 @@ async function _doUpload(): Promise<void> {
     const batches = chunk(entries, BATCH_SIZE)
     for (const batch of batches) {
       const success = await _uploadBatch(batch, tableEntry)
+      if (!success) {
+        _lastTableFailures.push({
+          table: tableName,
+          message: `Upload failed for ${tableEntry.supabaseTable}`,
+        })
+      }
       // E94-S04: After confirmed row persistence, upload binary assets to Storage.
       // Storage upload is non-fatal — errors are contained inside storageSync.ts.
       if (success && userId && STORAGE_TABLES.has(tableName)) {
-        await uploadStorageFilesForTable(tableName, batch, userId)
+        const failures = await uploadStorageFilesForTable(tableName, batch, userId)
+        if (failures) _lastAssetFailures.push(...failures)
       }
+    }
+  }
+
+  if (userId) {
+    // Older test/runtime integrations may provide only the original storage
+    // exports. Treat the durable-asset retry hook as optional at this seam.
+    let retryAssetSyncFailures: ((id: string) => Promise<AssetSyncFailure[]>) | undefined
+    try {
+      retryAssetSyncFailures = (
+        storageSync as typeof storageSync & {
+          retryAssetSyncFailures?: (id: string) => Promise<AssetSyncFailure[]>
+        }
+      ).retryAssetSyncFailures
+    } catch {
+      // Partial module mocks may intentionally omit the optional hook.
+      retryAssetSyncFailures = undefined
+    }
+    if (retryAssetSyncFailures) {
+      const assetRetryFailures = await retryAssetSyncFailures(userId)
+      _lastAssetFailures.push(...assetRetryFailures)
     }
   }
 }
@@ -1420,16 +1711,25 @@ export const syncEngine = {
   // ---------------------------------------------------------------------------
 
   /**
+   * Scope a coordinator run to an authenticated account without starting a
+   * second lifecycle. Account repair uses this while auth is still deciding
+   * whether a restore overlay is needed.
+   */
+  setUser(userId: string): void {
+    _userId = userId
+  },
+
+  /**
    * Start the sync engine for the given user. Runs an initial `fullSync()`
    * immediately, then enables periodic nudges from `useSyncLifecycle` (E92-S07).
    *
    * Calling `start()` again while already running updates the userId and
    * triggers another fullSync — safe to call on session refresh.
    */
-  async start(userId: string): Promise<void> {
+  async start(userId: string): Promise<SyncRunResult | undefined> {
     _userId = userId
     _started = true
-    await _doFullSync()
+    return this.fullSync()
   },
 
   /**
@@ -1451,8 +1751,63 @@ export const syncEngine = {
    * Can be called without `start()` — useful for tests and E92-S07 triggers.
    * Does not propagate exceptions to the caller.
    */
-  async fullSync(): Promise<SyncRunResult> {
-    return _doFullSync()
+  async fullSync(): Promise<SyncRunResult | undefined> {
+    if (_fullSyncInFlight) return _fullSyncInFlight
+    _fullSyncInFlight = _doFullSync().finally(() => {
+      _fullSyncInFlight = null
+    })
+    return _fullSyncInFlight
+  },
+
+  /**
+   * Rebuild dead-letter payloads from current Dexie records and put them back
+   * into the pending queue. This intentionally supersedes stale serialized
+   * payloads instead of replaying the legacy object that originally failed.
+   */
+  async retryFailed(options: { rebuildPayloads?: boolean } = {}): Promise<number> {
+    const rebuildPayloads = options.rebuildPayloads !== false
+    const failed = await db.syncQueue.where('status').equals('dead-letter').toArray()
+    let requeued = 0
+    const now = new Date().toISOString()
+
+    for (const entry of failed) {
+      const tableEntry = getTableEntry(entry.tableName)
+      if (!tableEntry) continue
+
+      let payload = entry.payload
+      if (rebuildPayloads && entry.operation !== 'delete') {
+        const table = (db as unknown as Record<string, Table<Record<string, unknown>>>)[
+          tableEntry.dexieTable
+        ]
+        const local = table
+          ? await _getLocalRecord(
+              table,
+              tableEntry,
+              toCamelCase(tableEntry, entry.payload) as Record<string, unknown>
+            )
+          : undefined
+        if (!local) {
+          // Preserve the failure for operator review; silently dropping it
+          // would make a recoverable source-device record disappear.
+          continue
+        }
+        payload = canonicalizeUploadPayload(tableEntry, toSnakeCase(tableEntry, local))
+      }
+
+      await db.syncQueue.update(entry.id!, {
+        payload,
+        status: 'pending',
+        attempts: 0,
+        payloadVersion: SYNC_PAYLOAD_VERSION,
+        lastError: undefined,
+        failure: undefined,
+        updatedAt: now,
+      })
+      requeued++
+    }
+
+    if (requeued > 0) this.nudge()
+    return requeued
   },
 
   // ---------------------------------------------------------------------------

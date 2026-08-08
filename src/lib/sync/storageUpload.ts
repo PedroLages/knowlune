@@ -25,6 +25,84 @@ export interface UploadBlobResult {
   path: string
 }
 
+/** Supabase recommends TUS/resumable uploads for files above roughly 6 MiB. */
+export const RESUMABLE_UPLOAD_THRESHOLD_BYTES = 6 * 1024 * 1024
+const RESUMABLE_CHUNK_BYTES = 6 * 1024 * 1024
+
+function encodeMetadata(value: string): string {
+  // TUS metadata values are base64 encoded and must not contain line breaks.
+  return btoa(unescape(encodeURIComponent(value)))
+}
+
+async function uploadResumable(
+  bucket: string,
+  path: string,
+  blob: Blob,
+  contentType: string
+): Promise<void> {
+  const client = supabase!
+  const { data, error: sessionError } = await client.auth.getSession()
+  const accessToken = data.session?.access_token
+  if (sessionError || !accessToken) {
+    throw new Error('[storageUpload] A signed-in session is required for resumable uploads')
+  }
+
+  const clientConfig = client as unknown as { supabaseUrl?: string; supabaseKey?: string }
+  const baseUrl = clientConfig.supabaseUrl
+  if (!baseUrl) throw new Error('[storageUpload] Supabase URL is unavailable')
+  const authHeaders = {
+    Authorization: `Bearer ${accessToken}`,
+    ...(clientConfig.supabaseKey ? { apikey: clientConfig.supabaseKey } : {}),
+  }
+  const createResponse = await fetch(`${baseUrl}/storage/v1/upload/resumable`, {
+    method: 'POST',
+    headers: {
+      ...authHeaders,
+      'Tus-Resumable': '1.0.0',
+      'Upload-Length': String(blob.size),
+      'Upload-Metadata': [
+        `bucketName ${encodeMetadata(bucket)}`,
+        `objectName ${encodeMetadata(path)}`,
+        `contentType ${encodeMetadata(contentType)}`,
+      ].join(','),
+      'x-upsert': 'true',
+    },
+  })
+  if (!createResponse.ok) {
+    throw new Error(
+      `[storageUpload] Resumable session failed (${createResponse.status} ${createResponse.statusText})`
+    )
+  }
+
+  const location = createResponse.headers.get('Location') ?? createResponse.headers.get('location')
+  if (!location) throw new Error('[storageUpload] Resumable session did not return a location')
+
+  let offset = 0
+  while (offset < blob.size) {
+    const chunk = blob.slice(offset, Math.min(offset + RESUMABLE_CHUNK_BYTES, blob.size))
+    const patchResponse = await fetch(location, {
+      method: 'PATCH',
+      headers: {
+        ...authHeaders,
+        'Tus-Resumable': '1.0.0',
+        'Upload-Offset': String(offset),
+        'Content-Type': 'application/offset+octet-stream',
+      },
+      body: chunk,
+    })
+    if (!patchResponse.ok) {
+      throw new Error(
+        `[storageUpload] Resumable chunk failed (${patchResponse.status} ${patchResponse.statusText})`
+      )
+    }
+    const nextOffset = Number(patchResponse.headers.get('Upload-Offset'))
+    if (!Number.isFinite(nextOffset) || nextOffset <= offset) {
+      throw new Error('[storageUpload] Resumable server returned an invalid upload offset')
+    }
+    offset = nextOffset
+  }
+}
+
 /**
  * Upload a Blob to a Supabase Storage bucket with upsert semantics.
  *
@@ -56,9 +134,18 @@ export async function uploadBlob(
     )
   }
 
-  const { error } = await supabase.storage
-    .from(bucket)
-    .upload(path, blob, { upsert: true, contentType: blob.type || undefined })
+  const contentType = blob.type || 'application/octet-stream'
+  if (blob.size > RESUMABLE_UPLOAD_THRESHOLD_BYTES) {
+    await uploadResumable(bucket, path, blob, contentType)
+  }
+
+  const { error } =
+    blob.size > RESUMABLE_UPLOAD_THRESHOLD_BYTES
+      ? { error: null }
+      : await supabase.storage.from(bucket).upload(path, blob, {
+          upsert: true,
+          contentType,
+        })
 
   if (error) {
     throw new Error(`[storageUpload] Upload failed for "${bucket}/${path}": ${error.message}`)

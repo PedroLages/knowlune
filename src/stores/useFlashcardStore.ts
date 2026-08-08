@@ -4,6 +4,16 @@ import { db } from '@/db'
 import type { ReviewRating, Flashcard, CardState } from '@/data/types'
 import { persistWithRetry } from '@/lib/persistWithRetry'
 import { calculateNextReview, predictRetention, isDue } from '@/lib/spacedRepetition'
+
+// Supabase stores review events as the canonical FSRS integer (1–4), while
+// the UI uses readable labels. Keeping the conversion at the API boundary
+// prevents 22P02 errors when a browser submits a review event.
+const REVIEW_RATING_VALUE: Record<ReviewRating, number> = {
+  again: 1,
+  hard: 2,
+  good: 3,
+  easy: 4,
+}
 import { syncableWrite, type SyncableRecord } from '@/lib/sync/syncableWrite'
 import { useAuthStore } from '@/stores/useAuthStore'
 import { supabase } from '@/lib/auth/supabase'
@@ -195,7 +205,7 @@ export const useFlashcardStore = create<FlashcardState>((set, get) => ({
             id: reviewEventId,
             user_id: user.id,
             flashcard_id: currentCard.id,
-            rating,
+            rating: REVIEW_RATING_VALUE[rating],
             reviewed_at: now.toISOString(),
           }
           const { error: insertError } = await supabase

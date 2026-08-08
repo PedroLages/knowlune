@@ -73,6 +73,16 @@ export function toSnakeCase(
     ...(entry.stripFields ?? []),
     ...(entry.vaultFields ?? []),
     ...(entry.serverManagedFields ?? []),
+    // Session bookkeeping and browser-only handles are never part of the
+    // server contract. Keep this global guard so older registry entries cannot
+    // accidentally start uploading them when a local type gains a property.
+    'guestSessionId',
+    'fileHandle',
+    'directoryHandle',
+    'coverImageHandle',
+    'photoHandle',
+    'fileBlob',
+    'photoBlob',
   ])
 
   const result: Record<string, unknown> = {}
@@ -83,9 +93,48 @@ export function toSnakeCase(
       continue
     }
 
+    // `undefined` means “omitted” in the wire contract. It must not become an
+    // explicit NULL when PostgREST normalizes a heterogeneous bulk payload.
+    // Intentional null values are preserved.
+    if (value === undefined) continue
+
     // Use explicit fieldMap override if present; otherwise auto-convert.
     const mappedKey = entry.fieldMap[key] ?? camelToSnake(key)
     result[mappedKey] = value
+  }
+
+  return result
+}
+
+/**
+ * Canonicalize a payload that is already in Supabase (snake_case) form.
+ * This is used for queue entries written by older builds as well as at upload
+ * time, so retries cannot resurrect stale local-only/server-managed fields.
+ */
+export function canonicalizeUploadPayload(
+  entry: TableRegistryEntry,
+  payload: Record<string, unknown>
+): Record<string, unknown> {
+  const serverKeys = new Set(
+    (entry.serverManagedFields ?? []).map(field => entry.fieldMap[field] ?? camelToSnake(field))
+  )
+  const blockedKeys = new Set([
+    'guest_session_id',
+    'file_handle',
+    'directory_handle',
+    'cover_image_handle',
+    'photo_handle',
+    'file_blob',
+    'photo_blob',
+    ...serverKeys,
+  ])
+  const allowlist = entry.uploadColumns ? new Set(entry.uploadColumns) : null
+  const result: Record<string, unknown> = {}
+
+  for (const [key, value] of Object.entries(payload)) {
+    if (value === undefined || blockedKeys.has(key)) continue
+    if (allowlist && !allowlist.has(key)) continue
+    result[key] = value
   }
 
   return result

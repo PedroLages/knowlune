@@ -13,12 +13,48 @@
  * @since E120-S02
  */
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRegisterSW } from 'virtual:pwa-register/react'
 import { Button } from '@/app/components/ui/button'
 
 export function PWAUpdatePrompt() {
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const [protocolBlocked, setProtocolBlocked] = useState(false)
+
+  useEffect(() => {
+    let active = true
+    const checkVersion = async () => {
+      try {
+        const response = await fetch(
+          `/version.json?sync-check=${encodeURIComponent(__APP_VERSION__)}`,
+          {
+            cache: 'no-store',
+            headers: { 'cache-control': 'no-cache' },
+          }
+        )
+        if (!response.ok) return
+        const remote = (await response.json()) as { syncProtocol?: number }
+        if (active && Number(remote.syncProtocol ?? 0) > __SYNC_PROTOCOL_VERSION__) {
+          setProtocolBlocked(true)
+        }
+      } catch (error) {
+        // silent-catch-ok — update checks are best effort and must not block the app.
+        console.error('[PWA] version check failed:', error)
+      }
+    }
+
+    void checkVersion()
+    const interval = setInterval(checkVersion, 5 * 60 * 1000)
+    const handleRefresh = () => void checkVersion()
+    window.addEventListener('focus', handleRefresh)
+    window.addEventListener('online', handleRefresh)
+    return () => {
+      active = false
+      clearInterval(interval)
+      window.removeEventListener('focus', handleRefresh)
+      window.removeEventListener('online', handleRefresh)
+    }
+  }, [])
 
   useEffect(() => {
     return () => {
@@ -33,14 +69,42 @@ export function PWAUpdatePrompt() {
     onRegisteredSW(_swUrl, registration) {
       if (registration) {
         if (intervalRef.current !== null) clearInterval(intervalRef.current)
-        // Poll for SW updates every hour
-        intervalRef.current = setInterval(() => registration.update(), 60 * 60 * 1000)
+        // Poll for SW updates every five minutes; version checks below use the
+        // same cadence so protocol changes cannot remain stale for an hour.
+        intervalRef.current = setInterval(() => registration.update(), 5 * 60 * 1000)
       }
     },
     onRegisterError(error) {
       console.error('[PWA] SW registration error:', error)
     },
   })
+
+  if (protocolBlocked) {
+    return (
+      <div className="fixed inset-0 z-[100] grid place-items-center bg-background/95 p-6">
+        <div
+          role="alertdialog"
+          aria-modal="true"
+          className="w-full max-w-md rounded-xl border bg-card p-6 shadow-xl"
+        >
+          <h2 className="text-lg font-semibold">Reload required</h2>
+          <p className="mt-2 text-sm text-muted-foreground">
+            This app version cannot safely sync your courses. Reload to continue syncing.
+          </p>
+          <Button
+            className="mt-5 w-full"
+            variant="brand"
+            onClick={() => {
+              void updateServiceWorker(true)
+              window.location.reload()
+            }}
+          >
+            Reload now
+          </Button>
+        </div>
+      </div>
+    )
+  }
 
   if (!needRefresh) return null
 

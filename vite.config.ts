@@ -4,9 +4,36 @@ import { defineConfig, type Plugin } from 'vite';
 import path from 'path';
 import fs from 'fs';
 import { createRequire } from 'node:module';
+import { execSync } from 'node:child_process';
 
 const _require = createRequire(import.meta.url);
 const pkg = _require('./package.json') as { version: string };
+const buildId = process.env.VERCEL_GIT_COMMIT_SHA || process.env.GITHUB_SHA || (() => {
+  try {
+    return execSync('git rev-parse HEAD', { encoding: 'utf8' }).trim();
+  } catch {
+    // silent-catch-ok — source archives without .git use the package version.
+    return pkg.version;
+  }
+})();
+const syncProtocolVersion = 2;
+
+function versionManifestPlugin(): Plugin {
+  return {
+    name: 'version-manifest',
+    generateBundle() {
+      this.emitFile({
+        type: 'asset',
+        fileName: 'version.json',
+        source: JSON.stringify(
+          { build: buildId, syncProtocol: syncProtocolVersion },
+          null,
+          2
+        ),
+      });
+    },
+  };
+}
 import tailwindcss from '@tailwindcss/vite';
 import react, { reactCompilerPreset } from '@vitejs/plugin-react';
 import babel from '@rolldown/plugin-babel';
@@ -456,7 +483,8 @@ function serveLocalMedia(): Plugin {
 
 export default defineConfig({
   define: {
-    __APP_VERSION__: JSON.stringify(pkg.version),
+    __APP_VERSION__: JSON.stringify(buildId),
+    __SYNC_PROTOCOL_VERSION__: JSON.stringify(syncProtocolVersion),
     /** True when Playwright starts the dev server (`PLAYWRIGHT_TEST=1`); skips dev-only overlays. */
     __PLAYWRIGHT_TEST__: JSON.stringify(process.env.PLAYWRIGHT_TEST === '1'),
   },
@@ -468,6 +496,7 @@ export default defineConfig({
     presets: [reactCompilerPreset()],
   }),
   tailwindcss(),
+  versionManifestPlugin(),
   serveLocalMedia(),
   ollamaDevProxy(),
   modelDiscoveryDevProxy(),

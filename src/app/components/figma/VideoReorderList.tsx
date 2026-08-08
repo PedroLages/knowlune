@@ -28,8 +28,8 @@ import {
 import { CSS } from '@dnd-kit/utilities'
 import { GripVertical, Video } from 'lucide-react'
 import { toast } from 'sonner'
-import { db } from '@/db'
 import { persistWithRetry } from '@/lib/persistWithRetry'
+import { syncableBulkWrite, type SyncableRecord } from '@/lib/sync/syncableWrite'
 import { MoveUpDownButtons } from '@/app/components/figma/MoveUpDownButtons'
 import { cn } from '@/app/components/ui/utils'
 import type { ImportedVideo } from '@/data/types'
@@ -202,11 +202,13 @@ export function VideoReorderList({ videos, onReorder }: VideoReorderListProps) {
       setIsSaving(true)
       try {
         await persistWithRetry(async () => {
-          await db.transaction('rw', db.importedVideos, async () => {
-            for (const video of reordered) {
-              await db.importedVideos.update(video.id, { order: video.order })
-            }
-          })
+          await syncableBulkWrite(
+            'importedVideos',
+            reordered.map(video => ({
+              operation: 'put' as const,
+              record: video as unknown as SyncableRecord,
+            }))
+          )
         })
       } catch (error) {
         // silent-catch-ok — toast.error provides visible user feedback

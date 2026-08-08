@@ -199,7 +199,7 @@ describe('E93-S04 — useFlashcardStore authenticated writes', () => {
     expect(mockInsert).toHaveBeenCalledTimes(1)
     const insertPayload = (mockInsert.mock.calls as unknown as [Record<string, unknown>][])[0][0]
     expect(insertPayload.flashcard_id).toBe(TEST_CARD_ID)
-    expect(insertPayload.rating).toBe('good')
+    expect(insertPayload.rating).toBe(3)
     expect(insertPayload.user_id).toBe(TEST_USER_ID)
     expect(insertPayload.reviewed_at).toBe(FIXED_DATE.toISOString())
     expect(typeof insertPayload.id).toBe('string') // UUID

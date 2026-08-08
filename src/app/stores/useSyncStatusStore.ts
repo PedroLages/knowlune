@@ -22,6 +22,7 @@
 
 import { create } from 'zustand'
 import { db } from '@/db'
+import { useAuthStore } from '@/stores/useAuthStore'
 
 export type SyncStatus = 'synced' | 'syncing' | 'offline' | 'error'
 
@@ -30,14 +31,21 @@ interface SyncStatusState {
   status: SyncStatus
   /** Number of pending entries in syncQueue — drives badge count in E97-S01 */
   pendingCount: number
+  /** Dead-letter records requiring attention. */
+  failedCount: number
   /** Timestamp of last completed sync — displayed in E97-S02 settings panel */
   lastSyncAt: Date | null
+  /** Persisted successful completion timestamp (survives reload). */
+  lastSuccessfulSyncAt: Date | null
+  /** Timestamp of the latest attempt, including failed/offline attempts. */
+  lastAttemptAt: Date | null
   /**
    * Human-readable error message from the last sync failure — preserved
    * through subsequent syncing/offline transitions so the indicator can
    * surface it until a successful sync clears it via markSyncComplete().
    */
   lastError: string | null
+  failures: Array<{ table: string; recordId?: string; message: string; retryable: boolean }>
 
   /**
    * Set the sync status directly.
@@ -46,6 +54,9 @@ interface SyncStatusState {
    * so the error context is preserved through retry/offline cycles.
    */
   setStatus: (status: SyncStatus, errorMessage?: string) => void
+  setFailures: (
+    failures: Array<{ table: string; recordId?: string; message: string; retryable: boolean }>
+  ) => void
   /**
    * Called by useSyncLifecycle after a successful fullSync().
    * Advances lastSyncAt and clears lastError.
@@ -56,32 +67,89 @@ interface SyncStatusState {
    * Dexie errors are caught silently — count stays at previous value.
    */
   refreshPendingCount: () => Promise<void>
+  loadPersistedStatus: () => Promise<void>
 }
 
 export const useSyncStatusStore = create<SyncStatusState>(set => ({
   status: 'synced',
   pendingCount: 0,
+  failedCount: 0,
   lastSyncAt: null,
+  lastSuccessfulSyncAt: null,
+  lastAttemptAt: null,
   lastError: null,
+  failures: [],
 
   setStatus: (status, errorMessage) =>
-    set(status === 'error' ? { status, lastError: errorMessage ?? 'Sync failed' } : { status }),
+    set(
+      status === 'error'
+        ? { status, lastError: errorMessage ?? 'Sync failed', lastAttemptAt: new Date() }
+        : status === 'syncing'
+          ? { status, lastAttemptAt: new Date() }
+          : { status }
+    ),
 
-  markSyncComplete: () =>
+  setFailures: failures =>
+    set({
+      failures,
+      failedCount: failures.length,
+    }),
+
+  markSyncComplete: () => {
+    const timestamp = new Date()
     set({
       status: 'synced',
-      lastSyncAt: new Date(),
+      lastSyncAt: timestamp,
+      lastSuccessfulSyncAt: timestamp,
+      lastAttemptAt: timestamp,
       lastError: null,
-    }),
+      failures: [],
+      failedCount: 0,
+    })
+    const userId = useAuthStore.getState().user?.id
+    if (userId) {
+      void db.syncMetadata
+        .put({
+          table: `sync-status:${userId}`,
+          value: { lastSuccessfulSyncAt: timestamp.toISOString() },
+        })
+        .catch(err => console.error('[useSyncStatusStore] persist status failed:', err))
+    }
+  },
 
   refreshPendingCount: async () => {
     try {
-      const count = await db.syncQueue.where('status').equals('pending').count()
-      set({ pendingCount: count })
+      const pendingCount = await db.syncQueue.where('status').equals('pending').count()
+      let failedCount = 0
+      // Keep the legacy lightweight test doubles (which only implement
+      // where().equals().count()) compatible while real Dexie gets an atomic
+      // single-collection count for dead letters.
+      if (typeof db.syncQueue.toCollection === 'function') {
+        failedCount = await db.syncQueue
+          .toCollection()
+          .filter(entry => entry.status === 'dead-letter')
+          .count()
+      }
+      set(state => ({ pendingCount, failedCount: Math.max(failedCount, state.failures.length) }))
     } catch (err) {
       // Intentional: Dexie read errors are non-fatal for status display —
       // pendingCount stays at its last known value.
       console.error('[useSyncStatusStore] refreshPendingCount failed:', err)
+    }
+  },
+
+  loadPersistedStatus: async () => {
+    try {
+      const userId = useAuthStore.getState().user?.id
+      if (!userId) return
+      const row = await db.syncMetadata.get(`sync-status:${userId}`)
+      const value = row?.value as { lastSuccessfulSyncAt?: string } | undefined
+      if (value?.lastSuccessfulSyncAt) {
+        const timestamp = new Date(value.lastSuccessfulSyncAt)
+        set({ lastSuccessfulSyncAt: timestamp, lastSyncAt: timestamp })
+      }
+    } catch (err) {
+      console.error('[useSyncStatusStore] loadPersistedStatus failed:', err)
     }
   },
 }))

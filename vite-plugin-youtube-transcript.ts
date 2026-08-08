@@ -315,6 +315,7 @@ export function youtubeTranscriptProxy(): Plugin {
               videoUrl,
             ], { timeout: 30_000 })
           } catch (dlError) {
+            // silent-catch-ok — the route converts download failures into a visible HTTP error.
             const err = dlError as Error & { code?: string }
             if (err.code === 'ENOENT') {
               sendError(res, 501, 'yt-dlp not found. Install it: https://github.com/yt-dlp/yt-dlp#installation', 'ytdlp-not-installed')
@@ -326,7 +327,11 @@ export function youtubeTranscriptProxy(): Plugin {
           }
 
           // Verify audio file exists
-          const audioStat = await stat(audioPath).catch(() => null)
+          // silent-catch-ok — a missing stat is handled by the explicit 502 below.
+          // eslint-disable-next-line error-handling/no-silent-catch -- missing audio is handled below
+          const audioStat = await stat(audioPath)
+            // silent-catch-ok — a missing stat is handled by the explicit 502 below.
+            .catch(() => null)
           if (!audioStat || audioStat.size === 0) {
             sendError(res, 502, 'yt-dlp produced no audio output', 'audio-download-failed')
             return
@@ -367,6 +372,7 @@ export function youtubeTranscriptProxy(): Plugin {
         } finally {
           // Cleanup temp directory
           if (tempDir) {
+            // silent-catch-ok — temp cleanup is best effort after the response is sent.
             rm(tempDir, { recursive: true, force: true }).catch(() => {})
           }
         }
@@ -641,6 +647,7 @@ async function resolveWhisperModel(serverUrl: string): Promise<string | null> {
     }
     return modelId || null
   } catch {
+    // silent-catch-ok — model discovery is optional and callers handle null.
     return null
   }
 }

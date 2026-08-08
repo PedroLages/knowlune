@@ -63,26 +63,31 @@ export async function backfillUserId(
 
   for (const tableName of SYNCABLE_TABLES) {
     try {
-      // Use a filter (not where-equals) because a missing index value and
-      // an explicit empty string both need to match. Dexie's `where().equals()`
-      // matches only explicitly-indexed values and would miss `undefined`.
-      const count = await db
-        .table(tableName)
-        .filter((record: Record<string, unknown>) => {
-          if (guestSessionId) {
-            // Guest session: only backfill rows from this specific session
-            return record.userId === null && record.guestSessionId === guestSessionId
-          }
+      // Read rows once so template ownership can be determined from the parent
+      // path. Template entries often have no `isTemplate` field of their own.
+      const table = db.table(tableName)
+      const rows = (await table.toArray()) as Array<Record<string, unknown>>
+      let tableStamped = 0
+      for (const record of rows) {
+        if (record.isTemplate === true) continue
+        if (tableName === 'learningPathEntries') {
+          const pathId = typeof record.pathId === 'string' ? record.pathId : ''
+          if (pathId.startsWith('template_')) continue
+          const parent = pathId ? await db.learningPaths.get(pathId) : undefined
+          if (parent?.isTemplate === true) continue
+        }
+        if (guestSessionId) {
+          if (record.userId !== null || record.guestSessionId !== guestSessionId) continue
+        } else {
           const existing = record.userId
-          return existing === undefined || existing === null || existing === ''
-        })
-        .modify((record: Record<string, unknown>) => {
-          record.userId = userId
-          if (!record.updatedAt) {
-            record.updatedAt = now
-          }
-        })
-      recordsStamped += count
+          if (existing !== undefined && existing !== null && existing !== '') continue
+        }
+        record.userId = userId
+        if (!record.updatedAt) record.updatedAt = now
+        await table.put(record)
+        tableStamped++
+      }
+      recordsStamped += tableStamped
       tablesProcessed += 1
     } catch (err) {
       // Per-table failure must not abort the aggregate backfill. Log and keep
