@@ -33,7 +33,7 @@ import type { Table } from 'dexie'
 import { db } from '@/db'
 import type { SyncQueueEntry } from '@/db/schema'
 import { supabase } from '@/lib/auth/supabase'
-import { toCamelCase } from './fieldMapper'
+import { removeServerManagedFields, toCamelCase } from './fieldMapper'
 import { getTableEntry, tableRegistry } from './tableRegistry'
 import { applyConflictCopy } from './conflictResolvers'
 import { replayFlashcardReviews } from './flashcardReplayService'
@@ -558,7 +558,10 @@ async function _uploadBatch(
     return allSucceeded
   }
 
-  const payloads = writeEntries.map(e => e.payload)
+  // Re-sanitize queued payloads at upload time as well as at enqueue time.
+  // Older queue entries can still contain server-managed timestamps; in a
+  // mixed PostgREST batch, omitted values otherwise become explicit NULLs.
+  const payloads = writeEntries.map(e => removeServerManagedFields(tableEntry, e.payload))
 
   try {
     if (tableEntry.insertOnly || tableEntry.conflictStrategy === 'insert-only') {

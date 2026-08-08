@@ -248,6 +248,16 @@ describe('tableRegistry — stripFields', () => {
     expect(entry?.stripFields).toContain('coverImageHandle')
   })
 
+  it('importedCourses marks createdAt as server-managed', () => {
+    const entry = getTableEntry('importedCourses')
+    expect(entry?.serverManagedFields).toContain('createdAt')
+  })
+
+  it('learningPaths marks createdAt as server-managed', () => {
+    const entry = getTableEntry('learningPaths')
+    expect(entry?.serverManagedFields).toContain('createdAt')
+  })
+
   it('importedVideos.stripFields contains fileHandle', () => {
     const entry = getTableEntry('importedVideos')
     expect(entry?.stripFields).toContain('fileHandle')
@@ -661,6 +671,17 @@ describe('fieldMapper — stripFields are removed', () => {
     expect(snaked).not.toHaveProperty('coverImageHandle')
     expect(snaked).not.toHaveProperty('cover_image_handle')
     expect(snaked).toHaveProperty('title', 'My Course')
+  })
+
+  it('importedCourses: server-managed createdAt is omitted from upload payloads', () => {
+    const entry = getTableEntry('importedCourses')!
+    const snaked = toSnakeCase(entry, {
+      id: 'ic1',
+      name: 'My Course',
+      createdAt: null,
+    })
+
+    expect(snaked).not.toHaveProperty('created_at')
   })
 
   it('importedVideos: fileHandle is stripped', () => {

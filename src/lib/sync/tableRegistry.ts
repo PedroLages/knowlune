@@ -51,6 +51,8 @@ export interface TableRegistryEntry {
    * JSON-encoded and have no Supabase column equivalent.
    */
   stripFields?: string[]
+  /** Fields owned by the server and omitted so database defaults can apply. */
+  serverManagedFields?: string[]
   /**
    * Monotonic fields: only sync if the new value is greater than the current
    * remote value. Used for metrics that should only increase (e.g. watchedSeconds).
@@ -345,6 +347,7 @@ const importedCourses: TableRegistryEntry = {
   priority: 2,
   fieldMap: {},
   stripFields: ['directoryHandle', 'coverImageHandle'],
+  serverManagedFields: ['createdAt'],
 }
 
 /**
@@ -484,6 +487,7 @@ const learningPaths: TableRegistryEntry = {
   conflictStrategy: 'lww',
   priority: 3,
   fieldMap: {},
+  serverManagedFields: ['createdAt'],
 }
 
 const learningPathEntries: TableRegistryEntry = {

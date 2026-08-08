@@ -69,7 +69,11 @@ export function toSnakeCase(
   entry: TableRegistryEntry,
   record: Record<string, unknown>
 ): Record<string, unknown> {
-  const stripSet = new Set<string>([...(entry.stripFields ?? []), ...(entry.vaultFields ?? [])])
+  const stripSet = new Set<string>([
+    ...(entry.stripFields ?? []),
+    ...(entry.vaultFields ?? []),
+    ...(entry.serverManagedFields ?? []),
+  ])
 
   const result: Record<string, unknown> = {}
 
@@ -85,6 +89,23 @@ export function toSnakeCase(
   }
 
   return result
+}
+
+/** Remove server-managed columns from payloads created by older app builds. */
+export function removeServerManagedFields(
+  entry: TableRegistryEntry,
+  payload: Record<string, unknown>
+): Record<string, unknown> {
+  const serverKeys = new Set(
+    (entry.serverManagedFields ?? []).map(field => entry.fieldMap[field] ?? camelToSnake(field))
+  )
+  if (serverKeys.size === 0) return payload
+
+  const sanitized: Record<string, unknown> = {}
+  for (const [key, value] of Object.entries(payload)) {
+    if (!serverKeys.has(key)) sanitized[key] = value
+  }
+  return sanitized
 }
 
 /**

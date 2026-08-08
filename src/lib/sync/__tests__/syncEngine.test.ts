@@ -106,6 +106,7 @@ const {
       conflictStrategy: 'lww',
       priority: 2,
       fieldMap: {},
+      serverManagedFields: ['createdAt'],
     },
     {
       dexieTable: 'chapterMappings',
@@ -506,6 +507,30 @@ describe('queue coalescing', () => {
     expect(coalesceCall).toHaveLength(9)
     // The winner is id 10 (latest createdAt).
     expect(coalesceCall).not.toContain(10)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Tests: legacy payload sanitization
+// ---------------------------------------------------------------------------
+
+describe('server-managed upload fields', () => {
+  it('removes legacy created_at values before uploading imported courses', async () => {
+    vi.useFakeTimers()
+    setQueueEntries([
+      makeEntry({
+        tableName: 'importedCourses',
+        recordId: 'course-1',
+        payload: { id: 'course-1', name: 'Course', created_at: null },
+      }),
+    ])
+
+    syncEngine.nudge()
+    await vi.advanceTimersByTimeAsync(201)
+
+    expect(mockUpsert).toHaveBeenCalledWith([{ id: 'course-1', name: 'Course' }], {
+      onConflict: 'id',
+    })
   })
 })
 
