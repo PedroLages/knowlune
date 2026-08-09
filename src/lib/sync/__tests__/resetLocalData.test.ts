@@ -3,8 +3,24 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import Dexie from 'dexie'
 import { db } from '@/db'
 import { resetLocalData } from '../resetLocalData'
-import { syncEngine } from '../syncEngine'
+import { syncCoordinator } from '../syncCoordinator'
+import type { SyncRunResult } from '../syncEngine'
 import * as clearSyncStateMod from '../clearSyncState'
+
+const completeSyncResult: SyncRunResult = {
+  failedTables: [],
+  deadLetterCount: 0,
+  pendingCount: 0,
+  tableFailures: [],
+  assetFailures: [],
+  completedAt: '2026-01-01T00:00:00Z',
+  outcome: 'complete',
+}
+
+const mockCoordinatorStart = () =>
+  vi
+    .spyOn(syncCoordinator, 'start')
+    .mockImplementation(async (_userId: string) => completeSyncResult)
 
 beforeEach(async () => {
   await db.open()
@@ -64,8 +80,8 @@ describe('resetLocalData', () => {
       lastUploadedKey: 'key',
     })
 
-    const stopSpy = vi.spyOn(syncEngine, 'stop')
-    const startSpy = vi.spyOn(syncEngine, 'start').mockResolvedValue(undefined)
+    const stopSpy = vi.spyOn(syncCoordinator, 'stop')
+    const startSpy = mockCoordinatorStart()
     const clearSpy = vi.spyOn(clearSyncStateMod, 'clearSyncState')
 
     await resetLocalData('user-1')
@@ -87,8 +103,8 @@ describe('resetLocalData', () => {
   })
 
   it('leaves the engine stopped when userId is null', async () => {
-    const stopSpy = vi.spyOn(syncEngine, 'stop')
-    const startSpy = vi.spyOn(syncEngine, 'start').mockResolvedValue(undefined)
+    const stopSpy = vi.spyOn(syncCoordinator, 'stop')
+    const startSpy = mockCoordinatorStart()
 
     await resetLocalData(null)
 
@@ -118,7 +134,7 @@ describe('resetLocalData', () => {
     // Force notes.clear() to throw, verify flashcards still clears.
     const originalClear = db.notes.clear.bind(db.notes)
     vi.spyOn(db.notes, 'clear').mockRejectedValueOnce(new Error('boom'))
-    vi.spyOn(syncEngine, 'start').mockResolvedValue(undefined)
+    mockCoordinatorStart()
     const clearSpy = vi.spyOn(clearSyncStateMod, 'clearSyncState')
 
     await resetLocalData('user-1')
@@ -134,11 +150,11 @@ describe('resetLocalData', () => {
     await originalClear().catch(() => {})
   })
 
-  it('continues the reset sequence when syncEngine.stop() throws', async () => {
-    vi.spyOn(syncEngine, 'stop').mockImplementationOnce(() => {
+  it('continues the reset sequence when syncCoordinator.stop() throws', async () => {
+    vi.spyOn(syncCoordinator, 'stop').mockImplementationOnce(() => {
       throw new Error('stop threw')
     })
-    const startSpy = vi.spyOn(syncEngine, 'start').mockResolvedValue(undefined)
+    const startSpy = mockCoordinatorStart()
     const clearSpy = vi.spyOn(clearSyncStateMod, 'clearSyncState')
 
     await resetLocalData('user-1')
@@ -154,7 +170,7 @@ describe('resetLocalData', () => {
       lastSyncTimestamp: '2026-01-01T00:00:00Z',
       lastUploadedKey: 'key',
     })
-    vi.spyOn(syncEngine, 'start').mockResolvedValue(undefined)
+    mockCoordinatorStart()
 
     await resetLocalData('user-1')
 
