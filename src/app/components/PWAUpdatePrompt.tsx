@@ -16,10 +16,12 @@
 import { useEffect, useRef, useState } from 'react'
 import { useRegisterSW } from 'virtual:pwa-register/react'
 import { Button } from '@/app/components/ui/button'
+import { activateLatestServiceWorker } from '@/lib/pwa/serviceWorkerUpdate'
 
 export function PWAUpdatePrompt() {
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const [protocolBlocked, setProtocolBlocked] = useState(false)
+  const [protocolReloading, setProtocolReloading] = useState(false)
 
   useEffect(() => {
     let active = true
@@ -79,6 +81,19 @@ export function PWAUpdatePrompt() {
     },
   })
 
+  const handleProtocolReload = async () => {
+    if (protocolReloading) return
+    setProtocolReloading(true)
+    try {
+      await activateLatestServiceWorker(updateServiceWorker)
+    } catch (error) {
+      // The hard reload below is still the safest recovery when a worker
+      // update fails, and this error remains visible in browser diagnostics.
+      console.error('[PWA] protocol update failed:', error)
+    }
+    window.location.reload()
+  }
+
   if (protocolBlocked) {
     return (
       <div className="fixed inset-0 z-[100] grid place-items-center bg-background/95 p-6">
@@ -94,12 +109,10 @@ export function PWAUpdatePrompt() {
           <Button
             className="mt-5 w-full"
             variant="brand"
-            onClick={() => {
-              void updateServiceWorker(true)
-              window.location.reload()
-            }}
+            disabled={protocolReloading}
+            onClick={() => void handleProtocolReload()}
           >
-            Reload now
+            {protocolReloading ? 'Updating…' : 'Reload now'}
           </Button>
         </div>
       </div>
