@@ -29,6 +29,7 @@ import { useAuthStore } from '@/stores/useAuthStore'
 import { tableRegistry } from './tableRegistry'
 import { canonicalizeUploadPayload, toSnakeCase } from './fieldMapper'
 import { syncCoordinator } from './syncCoordinator'
+import { SYNC_PAYLOAD_VERSION } from './syncProtocol'
 
 // ---------------------------------------------------------------------------
 // Public types
@@ -223,7 +224,7 @@ export async function syncableWrite<T extends SyncableRecord>(
     payload,
     attempts: 0,
     status: 'pending',
-    payloadVersion: 2,
+    payloadVersion: SYNC_PAYLOAD_VERSION,
     createdAt: now,
     updatedAt: now,
   }

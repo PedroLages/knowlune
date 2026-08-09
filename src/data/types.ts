@@ -369,6 +369,8 @@ export interface VideoStoryboard {
 
 export interface StudySession {
   id: string // UUID
+  /** Stable idempotency key for the append-only Supabase row. Older local rows may omit it. */
+  clientRequestId?: string
   courseId: string // Parent course
   contentItemId: string // Lesson/video/PDF ID
   startTime: string // ISO 8601 timestamp

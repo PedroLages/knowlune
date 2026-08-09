@@ -124,6 +124,7 @@ describe('E92-S09 P0 sync wiring — studySessions (INSERT-only)', () => {
     expect(sessionEntries).toHaveLength(1)
     expect(sessionEntries[0].operation).toBe('put')
     expect(sessionEntries[0].payload).toMatchObject({ id: started!.id })
+    expect(sessionEntries[0].payload).toMatchObject({ client_request_id: started!.id })
     // endTime is a Dexie-only field, stripped from Supabase payload (study_sessions
     // has no end_time column). started_at is correctly mapped via fieldMap.
     expect(sessionEntries[0].payload).toHaveProperty('started_at')

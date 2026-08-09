@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 import { tableRegistry, getTableEntry, type TableRegistryEntry } from '../tableRegistry'
-import { toSnakeCase, toCamelCase } from '../fieldMapper'
+import { canonicalizeUploadPayload, toSnakeCase, toCamelCase } from '../fieldMapper'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -414,6 +414,32 @@ describe('tableRegistry — studySessions append-only (bridge-books)', () => {
     expect(getTableEntry('studySessions')?.cursorField).toBe('created_at')
   })
 
+  it('requires and recovers client_request_id from the stable row id', () => {
+    const entry = getTableEntry('studySessions')!
+    expect(entry.requiredColumns).toEqual(['id', 'user_id', 'started_at', 'client_request_id'])
+    expect(entry.uploadColumns).toContain('client_request_id')
+    expect(entry.upsertConflictColumns).toBe('user_id,client_request_id')
+    expect(
+      canonicalizeUploadPayload(entry, {
+        id: 'session-1',
+        user_id: 'user-1',
+        started_at: '2026-04-28T10:00:00Z',
+      })
+    ).toMatchObject({ client_request_id: 'session-1' })
+  })
+
+  it('preserves an existing client_request_id during legacy payload repair', () => {
+    const entry = getTableEntry('studySessions')!
+    expect(
+      canonicalizeUploadPayload(entry, {
+        id: 'session-1',
+        user_id: 'user-1',
+        started_at: '2026-04-28T10:00:00Z',
+        client_request_id: 'request-1',
+      })
+    ).toMatchObject({ client_request_id: 'request-1' })
+  })
+
   it('studySessions.stripFields contains updatedAt', () => {
     expect(getTableEntry('studySessions')?.stripFields).toContain('updatedAt')
   })
@@ -474,7 +500,7 @@ describe('tableRegistry — studySessions append-only (bridge-books)', () => {
     // Pass-through fields
     expect(snaked).toHaveProperty('id', 'ss-1')
     expect(snaked).toHaveProperty('user_id', 'user-1')
-    expect(snaked).toHaveProperty('created_at', '2026-04-28T10:00:00Z')
+    expect(snaked).not.toHaveProperty('created_at')
 
     // Stripped fields (Dexie-only + updatedAt)
     expect(snaked).not.toHaveProperty('courseId')

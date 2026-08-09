@@ -1,4 +1,4 @@
 {
   "build": "runtime",
-  "syncProtocol": 2
+  "syncProtocol": 3
 }

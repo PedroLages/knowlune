@@ -30,7 +30,10 @@ describe('persistStudySession', () => {
     await persistStudySession('add', mockSession)
 
     expect(mockSyncableWrite).toHaveBeenCalledTimes(1)
-    expect(mockSyncableWrite).toHaveBeenCalledWith('studySessions', 'add', mockSession)
+    expect(mockSyncableWrite).toHaveBeenCalledWith('studySessions', 'add', {
+      ...mockSession,
+      clientRequestId: mockSession.id,
+    })
   })
 
   it('calls syncableWrite with table studySessions and operation put', async () => {
@@ -39,7 +42,10 @@ describe('persistStudySession', () => {
     await persistStudySession('put', mockSession)
 
     expect(mockSyncableWrite).toHaveBeenCalledTimes(1)
-    expect(mockSyncableWrite).toHaveBeenCalledWith('studySessions', 'put', mockSession)
+    expect(mockSyncableWrite).toHaveBeenCalledWith('studySessions', 'put', {
+      ...mockSession,
+      clientRequestId: mockSession.id,
+    })
   })
 
   it('passes through the full session record', async () => {
@@ -53,6 +59,9 @@ describe('persistStudySession', () => {
 
     await persistStudySession('add', record)
 
-    expect(mockSyncableWrite).toHaveBeenCalledWith('studySessions', 'add', record)
+    expect(mockSyncableWrite).toHaveBeenCalledWith('studySessions', 'add', {
+      ...record,
+      clientRequestId: record.id,
+    })
   })
 })

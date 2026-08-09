@@ -30,6 +30,7 @@ const {
   mockLockRequest,
   mockUploadStorageFilesForTable,
   mockDownloadStorageFilesForTable,
+  mockStudySessionsGet,
   registryEntries,
 } = vi.hoisted(() => {
   const mockUpsert = vi.fn().mockResolvedValue({ error: null })
@@ -55,6 +56,7 @@ const {
   const mockLockRequest = vi.fn()
   const mockUploadStorageFilesForTable = vi.fn().mockResolvedValue(undefined)
   const mockDownloadStorageFilesForTable = vi.fn().mockResolvedValue(undefined)
+  const mockStudySessionsGet = vi.fn().mockResolvedValue(undefined)
 
   const registryEntries = [
     {
@@ -71,6 +73,17 @@ const {
       priority: 0,
       fieldMap: {},
       insertOnly: true,
+      uploadColumns: [
+        'id',
+        'user_id',
+        'started_at',
+        'duration_seconds',
+        'idle_seconds',
+        'interaction_count',
+        'breaks',
+        'client_request_id',
+      ],
+      uploadColumnFallbacks: { client_request_id: 'id' },
     },
     {
       dexieTable: 'contentProgress',
@@ -139,6 +152,7 @@ const {
     mockLockRequest,
     mockUploadStorageFilesForTable,
     mockDownloadStorageFilesForTable,
+    mockStudySessionsGet,
     registryEntries,
   }
 })
@@ -164,6 +178,9 @@ vi.mock('@/db', () => ({
     },
     shelves: {
       toArray: vi.fn().mockResolvedValue([]),
+    },
+    studySessions: {
+      get: mockStudySessionsGet,
     },
   },
 }))
@@ -259,6 +276,7 @@ beforeEach(() => {
     delete: mockDelete,
   })
   mockDownloadStorageFilesForTable.mockResolvedValue(undefined)
+  mockStudySessionsGet.mockResolvedValue(undefined)
 
   // Set up navigator.locks mock — lock always acquired (callback gets a truthy lock object).
   mockLockRequest.mockImplementation(
@@ -572,15 +590,52 @@ describe('strategy routing', () => {
     expect(mockInsert).not.toHaveBeenCalled()
   })
 
-  it('uses insert() for insert-only tables (studySessions)', async () => {
+  it('uses idempotent upsert() for insert-only tables (studySessions)', async () => {
     vi.useFakeTimers()
     setQueueEntries([makeEntry({ tableName: 'studySessions' })])
 
     syncEngine.nudge()
     await vi.advanceTimersByTimeAsync(201)
 
-    expect(mockInsert).toHaveBeenCalledTimes(1)
-    expect(mockUpsert).not.toHaveBeenCalled()
+    expect(mockUpsert).toHaveBeenCalledWith(expect.any(Array), {
+      onConflict: 'id',
+      ignoreDuplicates: true,
+    })
+    expect(mockInsert).not.toHaveBeenCalled()
+  })
+
+  it('repairs legacy study-session dead letters from the local stable id', async () => {
+    mockStudySessionsGet.mockResolvedValue({
+      id: 'session-1',
+      userId: 'user-1',
+      startTime: '2026-04-28T10:00:00Z',
+      duration: 60,
+      idleTime: 0,
+      interactionCount: 1,
+      breakCount: 0,
+    })
+    const entry = makeEntry({
+      tableName: 'studySessions',
+      recordId: 'session-1',
+      status: 'dead-letter',
+      payloadVersion: 2,
+      payload: {
+        id: 'session-1',
+        user_id: 'user-1',
+        started_at: '2026-04-28T10:00:00Z',
+      },
+    })
+    setQueueEntries([entry])
+
+    await expect(syncEngine.repairLegacyPayloads()).resolves.toBe(1)
+    expect(mockUpdate).toHaveBeenCalledWith(
+      entry.id,
+      expect.objectContaining({
+        status: 'pending',
+        payloadVersion: 3,
+        payload: expect.objectContaining({ client_request_id: 'session-1' }),
+      })
+    )
   })
 
   it('uses rpc() for contentProgress (monotonic with dedicated RPC)', async () => {

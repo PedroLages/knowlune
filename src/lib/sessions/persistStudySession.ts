@@ -4,5 +4,13 @@ export async function persistStudySession(
   operation: 'add' | 'put',
   session: SyncableRecord
 ): Promise<void> {
-  await syncableWrite('studySessions', operation, session)
+  const clientRequestId =
+    typeof session.clientRequestId === 'string' && session.clientRequestId.trim() !== ''
+      ? session.clientRequestId
+      : session.id
+
+  await syncableWrite('studySessions', operation, {
+    ...session,
+    ...(clientRequestId ? { clientRequestId } : {}),
+  })
 }

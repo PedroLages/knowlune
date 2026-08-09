@@ -49,8 +49,8 @@ vi.mock('@/stores/useAuthStore', () => ({
   useAuthStore: { getState: mockGetState },
 }))
 
-vi.mock('../syncEngine', () => ({
-  syncEngine: { nudge: mockNudge },
+vi.mock('../syncCoordinator', () => ({
+  syncCoordinator: { nudge: mockNudge },
 }))
 
 // Import the module under test AFTER mocks are set up.

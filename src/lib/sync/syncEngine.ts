@@ -49,6 +49,9 @@ import { downloadStorageFilesForTable, STORAGE_DOWNLOAD_TABLES } from './storage
 import type { Note, Shelf } from '@/data/types'
 import { toast } from 'sonner'
 import { getMissingCompoundPkFields, InvalidSyncRecordError } from './recordValidation'
+import { SYNC_PAYLOAD_VERSION } from './syncProtocol'
+
+export { SYNC_PAYLOAD_VERSION } from './syncProtocol'
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -95,9 +98,6 @@ export interface SyncRunResult {
   completedAt: string
   outcome: 'complete' | 'partial' | 'offline'
 }
-
-/** Increment whenever the wire serializer changes incompatibly. */
-export const SYNC_PAYLOAD_VERSION = 2
 
 /** Retry attempts for 429 responses before giving up on a table. */
 const DOWNLOAD_429_MAX_ATTEMPTS = 3
@@ -710,10 +710,12 @@ async function _uploadBatch(
 
   try {
     if (tableEntry.insertOnly || tableEntry.conflictStrategy === 'insert-only') {
-      // INSERT ... ON CONFLICT DO NOTHING
+      // INSERT ... ON CONFLICT DO NOTHING. `ignoreDuplicates` makes an
+      // ambiguous network retry safe for append-only event tables.
+      const conflictCol = tableEntry.upsertConflictColumns ?? 'id'
       const { error } = await supabase
         .from(tableEntry.supabaseTable)
-        .insert(payloads, withDefaultToNull())
+        .upsert(payloads, withDefaultToNull({ onConflict: conflictCol, ignoreDuplicates: true }))
       if (error) {
         const isNetworkError = false
         await _handleBatchError(
@@ -723,7 +725,10 @@ async function _uploadBatch(
           async () => {
             const { error: retryError } = await supabase!
               .from(tableEntry.supabaseTable)
-              .insert(payloads, withDefaultToNull())
+              .upsert(
+                payloads,
+                withDefaultToNull({ onConflict: conflictCol, ignoreDuplicates: true })
+              )
             if (!retryError) {
               await db.syncQueue.bulkDelete(validWriteEntries.map(e => e.id!))
               return true
@@ -878,6 +883,61 @@ async function _getLocalRecord(
   }
 
   return table.get(record['id'] as string)
+}
+
+/**
+ * Recover study-session dead letters created before the required
+ * `client_request_id` serializer field existed. The existing local row ID is
+ * the stable logical-session key; generating a new UUID here would make a
+ * retry capable of duplicating analytics.
+ */
+async function _repairLegacyStudySessionPayloads(): Promise<number> {
+  const tableEntry = getTableEntry('studySessions')
+  const table = (db as unknown as Record<string, Table<Record<string, unknown>>>).studySessions
+  if (!tableEntry || !table) return 0
+
+  const failed = await db.syncQueue.where('status').equals('dead-letter').toArray()
+  const now = new Date().toISOString()
+  let repaired = 0
+
+  for (const entry of failed) {
+    if (
+      entry.tableName !== 'studySessions' ||
+      entry.operation === 'delete' ||
+      (entry.payloadVersion ?? 0) >= SYNC_PAYLOAD_VERSION
+    ) {
+      continue
+    }
+
+    const payload = entry.payload as Record<string, unknown> | null | undefined
+    if (payload?.client_request_id) continue
+
+    const local = await _getLocalRecord(
+      table,
+      tableEntry,
+      toCamelCase(tableEntry, payload ?? {}) as Record<string, unknown>
+    )
+    if (!local) continue
+
+    const repairedPayload = canonicalizeUploadPayload(tableEntry, toSnakeCase(tableEntry, local))
+    if (!repairedPayload.client_request_id) continue
+
+    await db.syncQueue.update(entry.id!, {
+      payload: repairedPayload,
+      status: 'pending',
+      attempts: 0,
+      payloadVersion: SYNC_PAYLOAD_VERSION,
+      lastError: undefined,
+      failure: undefined,
+      updatedAt: now,
+    })
+    repaired += 1
+  }
+
+  if (repaired > 0) {
+    console.info(`[syncEngine] Repaired ${repaired} legacy study-session payload(s)`)
+  }
+  return repaired
 }
 
 /**
@@ -1458,6 +1518,7 @@ async function _doFullSync(): Promise<SyncRunResult> {
   _lastTableFailures = []
   _lastAssetFailures = []
   try {
+    await _repairLegacyStudySessionPayloads()
     await _runUploadCycle()
   } catch (err) {
     console.error('[syncEngine] Upload phase error during fullSync:', err)
@@ -1761,6 +1822,11 @@ export const syncEngine = {
       _fullSyncInFlight = null
     })
     return _fullSyncInFlight
+  },
+
+  /** Repair serializer-versioned study-session dead letters before syncing. */
+  repairLegacyPayloads(): Promise<number> {
+    return _repairLegacyStudySessionPayloads()
   },
 
   /**

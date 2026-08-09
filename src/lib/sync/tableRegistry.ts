@@ -91,6 +91,17 @@ const importedVideoUploadColumns = [
   'updated_at',
 ] as const satisfies InsertColumns<'imported_videos'>
 
+const studySessionUploadColumns = [
+  'id',
+  'user_id',
+  'started_at',
+  'duration_seconds',
+  'idle_seconds',
+  'interaction_count',
+  'breaks',
+  'client_request_id',
+] as const satisfies InsertColumns<'study_sessions'>
+
 const learningPathUploadColumns = [
   'id',
   'user_id',
@@ -148,6 +159,12 @@ export interface TableRegistryEntry {
   uploadColumns?: readonly string[]
   /** Columns that must be present for a write to be valid. */
   requiredColumns?: readonly string[]
+  /**
+   * Server columns that can be recovered from another canonical server
+   * column when older queue payloads omitted them. The source is used only
+   * when the destination is absent, null, or empty.
+   */
+  uploadColumnFallbacks?: Readonly<Record<string, string>>
   /** Dexie tables that must upload before this table (parent-first ordering). */
   dependsOn?: readonly string[]
   /**
@@ -242,6 +259,11 @@ const studySessions: TableRegistryEntry = {
   },
   insertOnly: true,
   cursorField: 'created_at',
+  uploadColumns: studySessionUploadColumns,
+  requiredColumns: ['id', 'user_id', 'started_at', 'client_request_id'],
+  uploadColumnFallbacks: { client_request_id: 'id' },
+  upsertConflictColumns: 'user_id,client_request_id',
+  serverManagedFields: ['createdAt'],
   stripFields: [
     'courseId',
     'contentItemId',
