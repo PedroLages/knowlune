@@ -140,7 +140,12 @@ export function canonicalizeUploadPayload(
     const sourceValue = result[source]
     const destinationMissing =
       destinationValue === undefined || destinationValue === null || destinationValue === ''
-    if (destinationMissing && sourceValue !== undefined && sourceValue !== null && sourceValue !== '') {
+    if (
+      destinationMissing &&
+      sourceValue !== undefined &&
+      sourceValue !== null &&
+      sourceValue !== ''
+    ) {
       result[destination] = sourceValue
     }
   }

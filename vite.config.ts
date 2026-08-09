@@ -16,7 +16,7 @@ const buildId = process.env.VERCEL_GIT_COMMIT_SHA || process.env.GITHUB_SHA || (
     return pkg.version;
   }
 })();
-const syncProtocolVersion = 2;
+const syncProtocolVersion = 3;
 
 function versionManifestPlugin(): Plugin {
   return {

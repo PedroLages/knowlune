@@ -418,6 +418,7 @@ describe('tableRegistry — studySessions append-only (bridge-books)', () => {
     const entry = getTableEntry('studySessions')!
     expect(entry.requiredColumns).toEqual(['id', 'user_id', 'started_at', 'client_request_id'])
     expect(entry.uploadColumns).toContain('client_request_id')
+    expect(entry.upsertConflictColumns).toBe('user_id,client_request_id')
     expect(
       canonicalizeUploadPayload(entry, {
         id: 'session-1',
