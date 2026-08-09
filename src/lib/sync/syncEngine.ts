@@ -49,6 +49,9 @@ import { downloadStorageFilesForTable, STORAGE_DOWNLOAD_TABLES } from './storage
 import type { Note, Shelf } from '@/data/types'
 import { toast } from 'sonner'
 import { getMissingCompoundPkFields, InvalidSyncRecordError } from './recordValidation'
+import { SYNC_PAYLOAD_VERSION } from './syncProtocol'
+
+export { SYNC_PAYLOAD_VERSION } from './syncProtocol'
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -95,9 +98,6 @@ export interface SyncRunResult {
   completedAt: string
   outcome: 'complete' | 'partial' | 'offline'
 }
-
-/** Increment whenever the wire serializer changes incompatibly. */
-export const SYNC_PAYLOAD_VERSION = 2
 
 /** Retry attempts for 429 responses before giving up on a table. */
 const DOWNLOAD_429_MAX_ATTEMPTS = 3

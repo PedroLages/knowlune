@@ -128,13 +128,28 @@ export function canonicalizeUploadPayload(
     'photo_blob',
     ...serverKeys,
   ])
-  const allowlist = entry.uploadColumns ? new Set(entry.uploadColumns) : null
   const result: Record<string, unknown> = {}
 
   for (const [key, value] of Object.entries(payload)) {
     if (value === undefined || blockedKeys.has(key)) continue
-    if (allowlist && !allowlist.has(key)) continue
     result[key] = value
+  }
+
+  for (const [destination, source] of Object.entries(entry.uploadColumnFallbacks ?? {})) {
+    const destinationValue = result[destination]
+    const sourceValue = result[source]
+    const destinationMissing =
+      destinationValue === undefined || destinationValue === null || destinationValue === ''
+    if (destinationMissing && sourceValue !== undefined && sourceValue !== null && sourceValue !== '') {
+      result[destination] = sourceValue
+    }
+  }
+
+  const allowlist = entry.uploadColumns ? new Set(entry.uploadColumns) : null
+  if (allowlist) {
+    for (const key of Object.keys(result)) {
+      if (!allowlist.has(key)) delete result[key]
+    }
   }
 
   return result
